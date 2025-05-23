@@ -1,4 +1,4 @@
-<script>
+
 const score = prompt('gkrwja','')
   if (score === 4.5){
     alert('tls')
@@ -15,4 +15,3 @@ const score = prompt('gkrwja','')
   } else if (score >= 0 ){
     alert('qjfjwl')
   }
-</script>
