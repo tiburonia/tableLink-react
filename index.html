@@ -1,69 +1,156 @@
- <!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="ko">
 
 <head>
-  <title>simple HTML document</title>
-<script src="./script.js"></script>
+  <meta charset="utf-8">
+  <title>TableLink 25-6-3</title>
+  <script src="script.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+
+      // 메인 화면이 표시될 요소 선택
+      const main = document.querySelector('#main');
+
+      // 로그인 화면 렌더링 함수
+      let renderLogin = function () {
+        // 로그인 화면 HTML 삽입
+        main.innerHTML = `
+          <h1>Tablelink</h1>
+          <br>
+          <input id='id' type='text' placeholder='아이디'/>
+          <br><input id='pw' type='password' placeholder='비밀번호'/>
+          <br>
+          <button id='join'>회원가입</button>
+          <button id='login'>로그인</button>`;
+
+        // 로그인 화면의 입력 및 버튼 요소 재선택 (생성 이후)
+        const id = document.querySelector('#id');
+        const pw = document.querySelector('#pw');
+        const join = document.querySelector('#join');
+        const login = document.querySelector('#login');
+
+        // 회원가입 버튼 클릭 이벤트
+        join.addEventListener('click', () => {
+          if ((id.value === '') || (pw.value === '')) {
+            alert('회원가입에 실패했습니다');
+            return;
+          }
+          localStorage.setItem(id.value, pw.value);
+          alert('회원가입에 성공했습니다');
+        });
+
+        // 로그인 버튼 클릭 이벤트
+        login.addEventListener('click', () => {
+          if (localStorage.getItem(id.value) === pw.value) {
+            alert('로그인에 성공했습니다');
+            rendermain(); // 로그인 성공 시 메인 화면 렌더링
+          } else {
+            alert('로그인에 실패했습니다');
+          }
+        });
+      };
+
+      // 메인 화면 렌더링 함수
+      let rendermain = function () {
+
+
+
+        // 메인 화면 HTML 삽입
+        main.innerHTML = `
+          <h1>TableLink</h1>
+          <br>
+          <h4>main</h4>
+          <br>
+          <button id='TLL'>QR결제</button>
+          <input id='map' type='text' placeholder='주변매장검색'>        
+          <button id='search'>검색</button>
+          <br><br><br>
+          <button id='reset'>로그아웃</button>
+          <div id='list'></div>
+          
+        `;
+
+        // 버튼 및 입력 요소 선택
+        const TLL = document.querySelector('#TLL');
+        const map = document.querySelector('#map');
+        const search = document.querySelector('#search');
+        const reset = document.querySelector('#reset');
+        const list = document.querySelector('#list');
+
+
+        // 매장 목록을 HTML에 추가
+        stores.forEach(store => {
+          const p = document.createElement('p');
+
+          const link = document.createElement('a');
+          link.href = `#`
+          link.textContent = store.name;
+
+
+          //가게 세부 메뉴 진입 함수
+          const renderStore = (store) => {
+            main.innerHTML = `
+          
+            <h1>TableLink</h1>
+            <br>
+            <h4>main</h4>
+            <h3>${store.name}</h3>
+            <p>${store.menu.map(menu => `${menu.name} - ${menu.price}원`).join('<br>')}</p>
+       
+            <p>매장까지의 거리 : ${store.distance}</p>
+            <button id='back'>뒤로가기</button>
+
+          `
+
+            //뒤로가기 버튼
+            const back = document.querySelector('#back');
+            back.addEventListener('click', () => {
+              rendermain();
+            })
+          }
+
+          // 매장 이름 클릭 시 해당 매장 정보 표시 
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            renderStore(store);
+          });
+
+          p.appendChild(link);
+          p.append(` - ${store.category} (${store.distance})`);
+          list.appendChild(p);
+        });
+
+        // QR 결제 버튼 (현재 미구현)
+        TLL.addEventListener('click', () => {
+          alert('QR 결제 기능은 아직 준비 중입니다');
+        });
+
+        // 검색 버튼 클릭 이벤트
+        search.addEventListener('click', () => {
+          if (map.value.trim() !== '') {
+            alert(`"${map.value}"로 검색합니다`);
+          }
+        });
+
+        // 로그아웃 버튼 클릭 이벤트
+        reset.addEventListener('click', () => {
+          renderLogin(); // 로그인 화면으로 다시 돌아감
+        });
+      };
+
+      // 초기 진입: 로그인 화면 렌더링
+      renderLogin();
+    });
+  </script>
 </head>
 
 <body>
-  <h1>skfmfthrogkqslek</h1>
-  <p>chlwnsgur,20,ehs</p>
-  <hr>
-  <h2>sorkwhgdkgksmsrjtemf</h2>
-  <ul>
-    <li>ehs</li>
-    <li>dlsrksguadh</li>
-    <li>tjdrhd</li>
-  </ul>
+  <!-- 화면을 렌더링할 메인 영역 -->
+  <div id='main'></div>
 
-  <hr>
-  <h2>email</h2>
-  <a href="mailto:junhuck7150@gmail.com">
-    junhuck7150@gmail.com
-  </a>
-  <hr>
-  <img
-    src="https://image10.coupangcdn.com/image/vendor_inventory/cddc/0a72706669e33447d8114f48c2a2a5d303b77010419c1159bee87cfae4c6.jpg"
-    width="300px">
-  <hr>
-  <br>
-  <table border="1">
-    <tr>
-      <th colspan="15">wnsgurdl gkrfur</th>
-    </tr>
-    <tr>
-      <th rowspan="3">2022</th>
-      <td>wndgkrrywogkr</td>
-
-      <th rowspan="3">2023</th>
-      <td>rhemdgkrryqhrgkr</td>
-
-      <th rowspan="3">2024</th>
-      <td>rhemdgkrrywkxhl</td>
-
-      <!-- 2025 셀 -->
-      <th colspan="5" rowspan="3">2025</th>
-    </tr>
-
-    <tr>
-      <td>wndgkrrywkxhl</td>
-      <td>rhemdgkrrywogkr</td>
-      <td>rhemdgkrrywkxhl</td>
-    </tr>
-
-    <tr>
-      <td>d</td>
-      <td></td>
-      <td></td>
-    </tr>
-  </table>
-
-
-  <footer>
-    2025작성됨
-  </footer>
-
+  <!-- (현재 미사용 중) 별도로 쓰려던 리스트 영역 -->
+  <div id='list'></div>
 </body>
 
 </html>
