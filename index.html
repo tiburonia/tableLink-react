@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <title>TableLink 25-6-3</title>
-  <script src="script/script.js"></script>
+  <script src="script/data.js"></script>
 
 
 
@@ -15,335 +15,27 @@
 <body>
   <!-- 화면을 렌더링할 메인 영역 -->
   <div id='main'></div>
-
   <!-- (현재 미사용 중) 별도로 쓰려던 리스트 영역 -->
   <div id='list'></div>
-  <script>
-    // 메인 화면이 표시될 요소 선택
-    const main = document.querySelector('#main');
-  </script>
+
+
+
   <!--로그인 화면 렌더링 함수-->
   <script src="script/renderLogin.js"></script>
-
-
-
+  <!-- 메인 화면 렌더링 함수-->
+  <script src="script/renderMain.js"></script>
+  <!--가게 메뉴 화면 렌더링 함수 -->
+  <script src="script/renderStore/renderStore.js"></script>
+  <!--주문 화면 렌더링 함수-->
+  <script src="script/renderStore/renderOrderScreen.js"></script>
+  <!--예약 화면 렌더링 함수-->
+  <script src="script/renderStore/renderReservationScreen.js"></script>
   <script>
-    // 메인 화면 렌더링 함수
-    let renderMain = function () {
-
-
-
-      // 메인 화면 HTML 삽입
-      main.innerHTML = `
-            <h1>TableLink</h1>
-            <br>
-            <h4>main</h4>
-            <br>
-            <button id='TLL'>QR결제</button>
-            <input id='map' type='text' placeholder='주변매장검색'>        
-            <button id='search'>검색</button>
-            <br><br><br>
-            <button id='reset'>로그아웃</button>
-            <div id='list'></div>
-
-          `;
-
-      // 버튼 및 입력 요소 선택
-      const TLL = document.querySelector('#TLL');
-      const map = document.querySelector('#map');
-      const search = document.querySelector('#search');
-      const reset = document.querySelector('#reset');
-      const list = document.querySelector('#list');
-    
-
-
-      // 매장 목록을 HTML에 추가
-      stores.forEach(store => {
-        const p = document.createElement('p');
-
-        const link = document.createElement('a');
-        link.href = `#`
-        link.textContent = store.name;
-      }
-        </script>
-  <script>
-      
-
-
-
-
-        //가게 메뉴 진입 함수
-       const renderStore = (store) => {
-          main.innerHTML = `
-
-              <h1>TableLink</h1>
-              <br>
-              <h4>store</h4>
-              <button id = 'order'>메뉴주문</button>
-              <br><br><br>
-              <button id = 'reservation'>예약하기</button>
-              <p>매장까지의 거리 : ${store.distance}</p>
-              <button id='back'>뒤로가기</button>
-
-            `
-          //주문,예약,돌아가기 버튼
-          const order = document.querySelector('#order');
-          const reservation = document.querySelector('#reservation');
-          const back = document.querySelector('#back');
-
-
-          //메뉴주문 버튼 클릭 실행
-          order.addEventListener('click', () => {
-            main.innerHTML = `
-                <h1>TableLink</h1>
-                <br>
-                <div id= 'list'></div>
-                <br>
-                <div id= 'orderList'></div>
-                <br>
-                <button id= 'pay'>결제하기</button>
-                <button id='back'>뒤로가기</button>
-                `
-
-            const list = document.querySelector('#list');
-            const orderList = document.querySelector('#orderList');
-            const pay = document.querySelector('#pay');
-            const back = document.querySelector('#back');
-
-            //주문 목록
-            const currentOrder = {}
-
-            function renderOrderList() {
-              orderList.innerHTML = '';
-              let total = 0;
-
-              for (const item in currentOrder) {
-                const qty = currentOrder[item];
-                const menu = store.menu.find(m => m.name === item);
-                const price = menu.price * qty;
-                total += price;
-
-                const p = document.createElement('p');
-                const nameSpan = document.createElement('span');
-                const minusBtn = document.createElement('button');
-                const plusBtn = document.createElement('button');
-                const qtySpan = document.createElement('span');
-
-                nameSpan.innerHTML = `
-                    ${item}<br> - <strong>${price.toLocaleString()}원</strong><br>`;
-                minusBtn.textContent = '➖';
-                plusBtn.textContent = '➕';
-                qtySpan.textContent = ` ${qty} `;
-
-                minusBtn.addEventListener('click', () => {
-                  if (currentOrder[item] > 1) {
-                    currentOrder[item]--;
-                  } else {
-                    delete currentOrder[item];
-                  }
-                  renderOrderList();
-                });
-
-                plusBtn.addEventListener('click', () => {
-                  currentOrder[item]++;
-                  renderOrderList();
-                });
-
-                p.appendChild(nameSpan);
-                p.appendChild(minusBtn);
-                p.appendChild(qtySpan);
-                p.appendChild(plusBtn);
-                orderList.appendChild(p);
-              }
-
-              if (total > 0) {
-                const totalP = document.createElement('p');
-                totalP.innerHTML = `<hr><strong>총 금액: ${total.toLocaleString()}원</strong>`;
-                orderList.appendChild(totalP);
-              }
-            }
-
-
-
-
-            store.menu.forEach(menu => {
-              const p = document.createElement('p');
-              const span = document.createElement('span');
-              const minusBtn = document.createElement('button');
-              const plusBtn = document.createElement('button');
-              const qtyText = document.createElement('span');
-              const addBtn = document.createElement('button');
-
-
-              let qty = 0;
-              span.textContent = `${menu.name} - ${menu.price}원 `;
-              minusBtn.textContent = '➖';
-              plusBtn.textContent = '➕';
-              qtyText.textContent = `0`;
-              addBtn.textContent = '추가';
-
-              minusBtn.addEventListener('click', () => {
-                if (qty > 0) {
-                  qty--;
-                  qtyText.textContent = `${qty}`;
-                }
-              });
-
-              plusBtn.addEventListener('click', () => {
-                if (qty < 10) {
-                  qty++;
-                  qtyText.textContent = `${qty}`;
-                }
-              });
-
-              addBtn.addEventListener('click', () => {
-                if (qty === 0) return;
-
-                if (currentOrder[menu.name]) {
-                  currentOrder[menu.name] += qty;
-                } else {
-                  currentOrder[menu.name] = qty;
-                }
-
-                qty = 0;
-                qtyText.textContent = `0`;
-                renderOrderList();
-              });
-
-              p.appendChild(span);
-              p.appendChild(minusBtn);
-              p.appendChild(qtyText);
-              p.appendChild(plusBtn);
-              p.appendChild(addBtn);
-              list.appendChild(p);
-            });
-
-            //결제하기 버튼
-            pay.addEventListener('click', () => {
-              alert('결제가 완료되었습니다.')
-              currentOrder.length = 0;
-              orderList.innerHTML = '';
-              renderStore(store);
-            })
-
-            //뒤로가기
-            back.addEventListener('click', () => {
-              renderStore(store)
-            })
-          })
-
-          //예약하기 버튼 클릭 실행
-          reservation.addEventListener('click', () => {
-            reservation.addEventListener('click', () => {
-              main.innerHTML = `
-                    <h1>TableLink</h1>
-                    <br>
-                    <h4>예약하기 - ${store.name}</h4>
-                    <label>예약 날짜: <input type="date" id="resDate"></label><br><br>
-                    <label>예약 시간: <input type="time" id="resTime"></label><br><br>
-                    <label>인원 수: <input type="number" id="resPeople" min="1" value="1">
-                    </label>                    <br><br>
-                    <button id="submitReservation">예약 완료</button>
-                    <button id="back">뒤로가기</button>
-                  `;
-
-              const submitBtn = document.querySelector('#submitReservation');
-              const backBtn = document.querySelector('#back');
-
-              submitBtn.addEventListener('click', () => {
-                const date = document.querySelector('#resDate').value;
-                const time = document.querySelector('#resTime').value;
-                const people = document.querySelector('#resPeople').value;
-
-                if (!date || !time || !people) {
-                  alert('모든 항목을 입력해주세요.');
-                  return;
-                }
-
-                alert(`예약 완료!\n${store.name}\n${date} ${time} / ${people}명`);
-                renderStore(store); // 다시 매장 상세 페이지로 이동
-              });
-
-              backBtn.addEventListener('click', () => {
-                renderStore(store);
-              });
-            });
-
-          })
-
-
-          //뒤로가기 버튼(메인화면으로 이동)
-          back.addEventListener('click', () => {
-            renderMain();
-          })
-        }
-
-        // 매장 이름 클릭 시 해당 매장 정보 표시
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          renderStore(store);
-        });
-
-        p.appendChild(link);
-        p.append(` - ${store.category} (${store.distance})`);
-        list.appendChild(p);
-      });
-
-      // QR 결제 버튼 (현재 미구현)
-      TLL.addEventListener('click', () => {
-        alert('QR 결제 기능은 아직 준비 중입니다');
-      });
-
-      // 검색 버튼 클릭 이벤트
-
-      search.addEventListener('click', () => {
-        const keyword = map.value.trim().toLowerCase();
-        list.innerHTML = ''; // 기존 목록 초기화
-
-        if (keyword === '') {
-          alert('검색어를 입력하세요');
-          return;
-        }
-
-        const results = stores.filter(store =>
-          store.name.toLowerCase().includes(keyword) ||
-          store.category.toLowerCase().includes(keyword)
-        );
-
-        if (results.length === 0) {
-          list.innerHTML = '<p>검색 결과가 없습니다</p>';
-          return;
-        }
-
-        results.forEach(store => {
-          const p = document.createElement('p');
-          const link = document.createElement('a');
-          link.href = '#';
-          link.textContent = store.name;
-
-          link.addEventListener('click', (e) => {
-            e.preventDefault();
-            renderStore(store); // 기존 정의된 함수 사용
-          });
-
-          p.appendChild(link);
-          p.append(` - ${store.category} (${store.distance})`);
-          list.appendChild(p);
-        });
-      });
-
-
-      // 로그아웃 버튼 클릭 이벤트
-      reset.addEventListener('click', () => {
-        renderLogin(); // 로그인 화면으로 다시 돌아감
-      });
-    };
-
     // 초기 진입: 로그인 화면 렌더링
     renderLogin();
-
-
   </script>
+
+
 </body>
 
 </html>

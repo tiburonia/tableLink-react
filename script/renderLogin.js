@@ -1,4 +1,6 @@
-  let renderLogin = function () {
+// 메인 화면이 표시될 요소 선택
+const main = document.querySelector('#main');
+let renderLogin = function () {
     // 로그인 화면 HTML 삽입
     main.innerHTML = `
           <h1>Tablelink</h1>
