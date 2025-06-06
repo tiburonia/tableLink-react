@@ -48,3 +48,60 @@
   <p>이벤트 연결 상태 : 해제</p>
 </body>
 </html>
+
+
+
+store.menu.forEach(menu => {
+  const p = document.createElement('p');
+  const span = document.createElement('span');
+  const select = document.createElement('select');
+
+  //수량 선택 옵션
+  for (let i = 0; i <= 10; i++) {
+    const option = document.createElement('option');
+    option.value = i;
+    option.textContent = i;
+    select.appendChild(option);
+  }
+
+  //주문하기 버튼(수량 감소 미구현)
+  const ordBtn = document.createElement('button');
+  span.innerHTML = `${menu.name} - ${menu.price}원 &nbsp;`;
+  ordBtn.textContent = '주문하기'
+
+  p.appendChild(span)
+  p.appendChild(select)
+  p.appendChild(ordBtn)
+  list.appendChild(p)
+
+  ordBtn.addEventListener('click', () => {
+    const qty = parseInt(select.value);
+
+    if (currentOrder[menu.name]) {
+      currentOrder[menu.name] += qty;
+    } else {
+      currentOrder[menu.name] = qty;
+    }
+
+    orderList.innerHTML = '';
+    let total = 0; // ← 반복문 밖에서 선언
+
+    for (const item in currentOrder) {
+      const qty = currentOrder[item];
+      const foundMenu = store.menu.find(m => m.name === item); // ← 정확한 가격 찾기
+      const price = foundMenu.price * qty;
+
+      orderList.innerHTML += `
+        <p>${item} x ${qty}<br>
+        - <strong>${price.toLocaleString()}원</strong></p>
+      `;
+
+      total += price;
+    }
+
+    orderList.innerHTML += `
+    <hr><p><strong>총 금액: ${total.toLocaleString()}원</strong></p>`;
+  });
+
+})
+

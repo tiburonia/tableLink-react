@@ -86,5 +86,17 @@ const stores = [
       { name: "매운족발", price: 26000 },
       { name: "보쌈", price: 25000 }
     ]
+  },
+  {
+    id: 9,
+    name: "피자헛",
+    category: "피자",
+    distance: "730m",
+    menu: [
+      { name: "페퍼로니피자", price: 20000 },
+      { name: "치즈피자", price: 18000 },
+      { name: "콤비네이션피자", price: 22000 }
+    ]
   }
+    
 ];
