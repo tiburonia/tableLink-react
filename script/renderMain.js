@@ -96,8 +96,11 @@ function renderMain() {
   });
 
   // 마이페이지 버튼 클릭 이벤트
-  myPage.addEventListener('click', () => myPage())
-    //myPage/myPage.js 파일에서 정의된 함수 사용
+  myPage.addEventListener('click', () => {
+    renderMyPage() // 마이페이지 화면 렌더링 
+  })
+  
+  
   
 }
 

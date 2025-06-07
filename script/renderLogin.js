@@ -25,11 +25,12 @@ let renderLogin = function() {
   // 로그인 버튼 클릭 이벤트
   login.addEventListener('click', () => {
     if (users[id.value]?.pw === pw.value) {
-      userInfo = users[id.value];
-      userInfo.id = id.value; // 키값 따로 저장
+      Object.assign(userInfo, users[id.value]);
+      userInfo.id = id.value;
+      alert('로그인 성공');
       renderMain();
-    } else {
-      alert('로그인 실패');
-    }
-  })
+    } else { alert('로그인 실패') };
+  });
+
+
 }

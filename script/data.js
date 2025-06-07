@@ -100,3 +100,5 @@ const stores = [
   }
     
 ];
+
+window.stores = stores

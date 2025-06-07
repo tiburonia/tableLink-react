@@ -32,7 +32,7 @@ function renderSignUp() {
     users[id.value] = {
       pw: pw.value,
       name: name.value,
-      email: email.value,
+      phone: phone.value,
       point: 0,
       orderList: [],
       reservationList: []

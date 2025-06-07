@@ -72,7 +72,7 @@ function renderOrderScreen(store)  {
 
 
 
-
+  
   store.menu.forEach(menu => {
     const p = document.createElement('p');
     const span = document.createElement('span');
@@ -131,6 +131,12 @@ function renderOrderScreen(store)  {
     currentOrder.length = 0;
     orderList.innerHTML = '';
     renderStore(store);
+
+    //users , userInfo에 주문내역 추가
+    
+
+
+    
   })
 
   //뒤로가기
