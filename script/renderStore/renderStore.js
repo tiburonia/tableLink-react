@@ -5,6 +5,10 @@ const renderStore = (store) => {
   <h1>TableLink</h1>
   <br>
   <h4>store</h4>
+  <br>
+  <p>매장명 : ${store.name}</p>
+  <p>카테고리 : ${store.category}</p>
+  <p>매장까지의 거리 : ${store.distance}</p>
   <button id = 'order'>메뉴주문</button>
   <br><br><br>
   <button id = 'reservation'>예약하기</button>

@@ -14,6 +14,7 @@ const userInfo = {
   point: 0,
   orderList: [],
   totalCost : 0,
+  realCost : 0,
   reservationList: []
 };
 
@@ -31,9 +32,10 @@ users["12"] = {
   address: '',
   birth: '',
   gender: '',
-  point: '',
-  orderList: [],
+  point: 0,
   totalCost : 0,
+  realCost :0,
+  orderList: [] ,
   reservationList: []
 };
 
@@ -47,9 +49,10 @@ for (let i = 1; i <= 10; i++) {
     address: `서울시 가상동 ${i}번지`,
     birth: `199${i}-01-01`,
     gender: i % 2 === 0 ? '남자' : '여자',
-    point: '',
+    point: 0,
     orderList: [],
     totalCost: 0,
+    realCost: 0,
     reservationList: []
   };
 }

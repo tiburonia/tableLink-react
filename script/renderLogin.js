@@ -30,7 +30,7 @@ let renderLogin = function() {
       for (let key in userInfo) {
         if (Array.isArray(userInfo[key])) userInfo[key] = [];
         else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
-        else userInfo[key] = '';
+        else userInfo[key] = '';  
       }
 
       // users에 있는 해당 계정의 모든 정보를 userInfo에 복사
@@ -38,6 +38,26 @@ let renderLogin = function() {
       userInfo.id = id.value;
       alert('로그인 성공');
       renderMain();
+
+      // 로그인 성공 시, handleEnterKey 이벤트 리스너 제거
+      document.removeEventListener('keydown', handleEnterKey);
     } else { alert('로그인 실패') };
   });
+
+  //로그인 화면에서 엔터키로 로그인
+  
+  const handleEnterKey = (event) => {
+    if (event.key === 'Enter' && event.target.id !== 'join') {
+      login.click();
+    }
+  };
+  document.addEventListener('keydown', handleEnterKey);
+
+
+  //회원가입 엔터키로 진행
+  join.addEventListener('keydown',(event)=>{
+    if(event.key === 'Enter')
+      join.click();
+  })
+    
 }
