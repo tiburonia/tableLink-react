@@ -22,15 +22,22 @@ let renderLogin = function() {
     renderSignUp(); // 회원가입 화면 렌더링
   });
 
-  // 로그인 버튼 클릭 이벤트
+  // 로그인 버튼 클릭 이벤트 
   login.addEventListener('click', () => {
     if (users[id.value]?.pw === pw.value) {
+
+      // userInfo 리셋
+      for (let key in userInfo) {
+        if (Array.isArray(userInfo[key])) userInfo[key] = [];
+        else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
+        else userInfo[key] = '';
+      }
+
+      // users에 있는 해당 계정의 모든 정보를 userInfo에 복사
       Object.assign(userInfo, users[id.value]);
       userInfo.id = id.value;
       alert('로그인 성공');
       renderMain();
     } else { alert('로그인 실패') };
   });
-
-
 }

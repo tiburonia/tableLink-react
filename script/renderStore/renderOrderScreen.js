@@ -1,5 +1,5 @@
 //메뉴주문 버튼 클릭 실행
-function renderOrderScreen(store)  {
+function renderOrderScreen(store) {
   main.innerHTML = `
           <h1>TableLink</h1>
           <br>
@@ -72,7 +72,7 @@ function renderOrderScreen(store)  {
 
 
 
-  
+
   store.menu.forEach(menu => {
     const p = document.createElement('p');
     const span = document.createElement('span');
@@ -125,19 +125,49 @@ function renderOrderScreen(store)  {
     list.appendChild(p);
   });
 
-  //결제하기 버튼
+  //결제하기 버튼 이벤트 -> 중요함
   pay.addEventListener('click', () => {
-    alert('결제가 완료되었습니다.')
-    currentOrder.length = 0;
+
+    if (Object.keys(currentOrder).length === 0) {
+      alert('주문 내역이 없습니다.');
+      return;
+    }
+
+    // 주문 총액과 항목 구성
+    let total = 0;
+    const items = [];
+
+    for (const name in currentOrder) {
+      const qty = currentOrder[name];
+      const menu = store.menu.find(m => m.name === name);
+      const price = menu.price * qty;
+      total += price;
+      items.push({ name, qty, price });
+    }
+
+    // 주문 데이터 객체 구성
+    const orderData = {
+      store: store.name || store.title || '알 수 없는 매장',
+      date: new Date().toLocaleString(),
+      items,
+      total
+    };
+
+    // users 총 주문금액 업데이트
+    userInfo.totalCost += total;
+
+    // 주문 내역 users DB에 저장
+
+    users[userInfo.id].orderList.push(orderData);
+
+    // 초기화 및 리렌더링
+    alert('결제가 완료되었습니다.');
+    for (const key in currentOrder) delete currentOrder[key];
     orderList.innerHTML = '';
     renderStore(store);
-
-    //users , userInfo에 주문내역 추가
-    
+  });
 
 
-    
-  })
 
   //뒤로가기
   back.addEventListener('click', () => {

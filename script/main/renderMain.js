@@ -53,13 +53,18 @@ function renderMain() {
 
   // 검색 버튼 클릭 이벤트
 
-  search.addEventListener('click', () => {
+  
+  search.addEventListener('click', () => { 
+   /* 수정 많이 필요함 >> 검색기능 사용을 하면 렌더링을 다시 실행해야 할거같음
+    현재는 검색기능을 사용했을때 ui가 부자연스러워짐
+    
+    또한 검색 기능은 renderMainSearch() 렌더링 함수로 스크립트 분리 예정*/
     const keyword = map.value.trim().toLowerCase();
     list.innerHTML = ''; // 기존 목록 초기화
 
     if (keyword === '') {
       alert('검색어를 입력하세요');
-      return;
+      return;    
     }
 
     const results = stores.filter(store =>
@@ -92,7 +97,16 @@ function renderMain() {
 
   // 로그아웃 버튼 클릭 이벤트
   reset.addEventListener('click', () => {
-    renderLogin(); // 로그인 화면으로 다시 돌아감
+    
+    // userInfo 초기화 (미완성임 검증 필요)
+    Object.keys(userInfo).forEach(k => {
+      if (Array.isArray(userInfo[k])) userInfo[k] = [];
+      else if (typeof userInfo[k] === 'number') userInfo[k] = 0;
+      else userInfo[k] = '';
+    });
+    alert('로그아웃 완료');
+    renderLogin();   // 로그인 화면 렌더링
+    
   });
 
   // 마이페이지 버튼 클릭 이벤트

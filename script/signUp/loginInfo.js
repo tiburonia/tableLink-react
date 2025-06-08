@@ -13,6 +13,7 @@ const userInfo = {
   gender: '',
   point: 0,
   orderList: [],
+  totalCost : 0,
   reservationList: []
 };
 
@@ -26,8 +27,47 @@ users["12"] = {
   pw: "12",
   name: '',
   phone: '',
+  email: '',
+  address: '',
+  birth: '',
+  gender: '',
   point: '',
   orderList: [],
   totalCost : 0,
   reservationList: []
 };
+
+for (let i = 1; i <= 10; i++) {
+  const id = `user${i}`; // user1, user2, ...
+  users[id] = {
+    pw: `${i}${i}`, // ex: '11', '22', ...
+    name: `테스트유저${i}`,
+    phone: `010-0000-000${i}`,
+    email: `test${i}@example.com`,
+    address: `서울시 가상동 ${i}번지`,
+    birth: `199${i}-01-01`,
+    gender: i % 2 === 0 ? '남자' : '여자',
+    point: '',
+    orderList: [],
+    totalCost: 0,
+    reservationList: []
+  };
+}
+
+
+/*    실험용 계정 예시
+users["user3"] = {
+  pw: "33",
+  name: "테스트유저3",
+  phone: "010-0000-0003",
+  email: "test3@example.com",
+  address: "서울시 가상동 3번지",
+  birth: "1993-01-01",
+  gender: "여자",
+  point: 3000,
+  orderList: [],
+  totalCost: 15000,
+  reservationList: []
+};
+
+*/
