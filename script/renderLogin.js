@@ -35,6 +35,7 @@ let renderLogin = function() {
 
       // users에 있는 해당 계정의 모든 정보를 userInfo에 복사
       Object.assign(userInfo, users[id.value]);
+      
       userInfo.id = id.value;
       alert('로그인 성공');
       renderMain();

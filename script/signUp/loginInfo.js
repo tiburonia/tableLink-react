@@ -15,7 +15,12 @@ const userInfo = {
   orderList: [],
   totalCost : 0,
   realCost : 0,
-  reservationList: []
+  reservationList: [],
+  coupons : {
+     unused : [],
+
+      used : []
+  }
 };
 
 
@@ -36,7 +41,13 @@ users["12"] = {
   totalCost : 0,
   realCost :0,
   orderList: [] ,
-  reservationList: []
+  reservationList: [],
+  coupons : {
+     unused : [],
+    
+      used : []
+  }
+  
 };
 
 for (let i = 1; i <= 10; i++) {
@@ -53,7 +64,11 @@ for (let i = 1; i <= 10; i++) {
     orderList: [],
     totalCost: 0,
     realCost: 0,
-    reservationList: []
+    reservationList: [],
+    coupons : {
+       unused : [],
+        used : []
+    }
   };
 }
 
@@ -71,6 +86,12 @@ users["user3"] = {
   orderList: [],
   totalCost: 15000,
   reservationList: []
+  coupons : {
+     unusedCoupon : [],
+    
+      usedCoupon : []
+  }
+  realCost : 0
 };
 
 */

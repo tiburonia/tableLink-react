@@ -11,6 +11,10 @@ function renderMyPage() {
       <h2>예약내역</h2>
     </div>
     <br><br>
+    
+    <div id="couponList">
+    <h2>쿠폰 리스트</h2>
+    </div>
     <button id='info'>내 계정</button> 
     <button id='back'>뒤로가기</button>
   `;
@@ -20,6 +24,7 @@ function renderMyPage() {
   const reservationList = document.querySelector('#reservationList');
   const info = document.querySelector('#info');
   const back = document.querySelector('#back');
+  const couponList = document.querySelector('#couponList');
 
   // 주문내역 렌더링
   if (userInfo.orderList.length > 0) {
@@ -55,6 +60,24 @@ function renderMyPage() {
     empty.textContent = '예약 내역이 없습니다.';
     reservationList.appendChild(empty);
   }
+
+  // 쿠폰 리스트 렌더링
+  if (userInfo.coupons.unused.length === 0) {
+    const empty = document.createElement('p');
+    empty.textContent = '보유한 쿠폰이 없습니다.';
+    couponList.appendChild(empty);
+  } else {
+    userInfo.coupons.unused.forEach(coupon => {
+      const p = document.createElement('p');
+      p.innerHTML = `
+        • <strong>${coupon.name}</strong><br>
+        할인율: ${coupon.discountValue}${coupon.discountType === 'percent' ? '%' : '원'}<br>
+        유효기간: ${coupon.validUntil}<br><br>
+      `;
+      couponList.appendChild(p);
+    });
+  }
+
 
   // 내 계정 화면 렌더링
   info.addEventListener('click', () => {

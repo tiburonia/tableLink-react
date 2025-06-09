@@ -2,6 +2,17 @@ function renderMyAccount() {
   const main = document.getElementById('main');
 
 
+
+  // 쿠폰 정보 HTML 생성
+  const couponHTML = userInfo.coupons.unused.length > 0
+    ? userInfo.coupons.unused.map(c =>
+      `• ${c.name} (${c.discountValue}${c.discountType === 'percent' ? '%' : '원'}) - 유효기간: ${c.validUntil}`
+    ).join('<br>')
+    : '보유한 쿠폰 없음';
+
+
+
+
   // 내 계정 정보 화면 HTML 삽입
   main.innerHTML = `
     <h2>내 계정 정보</h2>
@@ -23,6 +34,9 @@ function renderMyAccount() {
       ).join('<br>')
       : '주문 내역 없음'}
       </li>
+      <li><strong>사용가능한 쿠폰:</strong><br>
+        ${couponHTML}
+        </li>
       <li><strong>예약내역:</strong><br>
         ${userInfo.reservationList.length > 0
       ? userInfo.reservationList.map(r =>

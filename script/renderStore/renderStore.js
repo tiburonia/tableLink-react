@@ -1,5 +1,12 @@
 //가게 메뉴 진입 함수
 const renderStore = (store) => {
+
+  //첫주문 쿠폰 발급 alert
+  /*if (userInfo.orderList.length === 0) {
+    alert('첫 주문 시 10% 할인 쿠폰이 발급됩니다.');
+    
+  } */
+  
   main.innerHTML = `
 
   <h1>TableLink</h1>
