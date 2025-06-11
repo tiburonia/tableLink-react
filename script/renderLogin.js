@@ -62,3 +62,14 @@ let renderLogin = function() {
   })
     
 }
+// a키로 현재 users, userInfo 콘솔에 출력
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') {
+    console.log("------------------------------------------")
+    console.log("users")
+    console.log(JSON.stringify(users, null, 2))
+    console.log("------------------------------------------")
+    console.log("userInfo")
+    console.log(JSON.stringify(userInfo, null, 2))
+  }
+});

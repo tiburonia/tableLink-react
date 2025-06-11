@@ -29,6 +29,9 @@ function renderPay(currentOrder, store) {
     <div id="couponList"></div><br>
     <p id="finalAmount">최종 결제금액: ${orderData.total.toLocaleString()}원</p>
     <p id="pointEarned">적립 예정 포인트: ${Math.floor(orderData.total * 0.1).toLocaleString()}원</p><br>
+    <hr>
+    <br>
+    <p id="discountAmount">할인된 금액: 0원</p>
     <button id="confirmPay">결제 확정</button>
     <button id="cancelPay">취소</button>
   `;
@@ -38,6 +41,9 @@ function renderPay(currentOrder, store) {
   const finalAmount = document.getElementById('finalAmount');
   const pointEarned = document.getElementById('pointEarned');
   const couponList = document.getElementById('couponList');
+  const discountAmount = document.getElementById('discountAmount');
+
+
 
   // 쿠폰 리스트 렌더링
   let select = null;
@@ -115,10 +121,16 @@ function renderPay(currentOrder, store) {
     const selectedCoupon = userInfo.coupons.unused.find(c => c.id == selectedCouponId);
 
     const result = calculateBestPayment(orderData.total, selectedCoupon, userInfo.point, enteredPoint);
+
+    // 실시간 반영
     finalAmount.textContent = `최종 결제금액: ${result.final.toLocaleString()}원`;
-    pointEarned.textContent = `
-    적립 예정 포인트: ${Math.floor((orderData.total - result.couponDiscount) * 0.1).toLocaleString()}원`;
+    pointEarned.textContent = `적립 예정 포인트: ${Math.floor(orderData.total * 0.1).toLocaleString()}원`;
+
+    // 💡 여기 추가된 부분
+    const totalDiscount = result.couponDiscount + result.appliedPoint;
+    discountAmount.textContent = `할인된 금액: ${totalDiscount.toLocaleString()}원`;
   }
+
 
   // 이벤트 등록
   usePointInput.addEventListener('keyup', updateFinalAmount);
@@ -131,14 +143,27 @@ function renderPay(currentOrder, store) {
     const selectedCoupon = userInfo.coupons.unused.find(c => c.id == selectedCouponId);
     const result = calculateBestPayment(orderData.total, selectedCoupon, userInfo.point, enteredPoint);
 
-    confirmPay(orderData, result.appliedPoint, store, currentOrder, result.final, selectedCoupon?.id || null);
-  });
+    confirmPay(
+      orderData,
+      result.appliedPoint,
+      store,
+      currentOrder,
+      result.final,
+      selectedCoupon?.id || null,
+      result.couponDiscount
+    );
 
 
-  document.getElementById('cancelPay').addEventListener('click', () => {
+  })
+
+
+  const cancelPay = document.getElementById('cancelPay');
+  cancelPay.addEventListener('click', () => {
     renderOrderScreen(store);
-  });
+  })
 
   // 최초 1회 초기 계산
   updateFinalAmount();
+
+
 }

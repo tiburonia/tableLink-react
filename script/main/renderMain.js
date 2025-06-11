@@ -98,16 +98,27 @@ function renderMain() {
   // 로그아웃 버튼 클릭 이벤트
   reset.addEventListener('click', () => {
     
-    // userInfo 초기화 (미완성임 검증 필요)
-    Object.keys(userInfo).forEach(k => {
-      if (Array.isArray(userInfo[k])) userInfo[k] = [];
-      else if (typeof userInfo[k] === 'number') userInfo[k] = 0;
-      else userInfo[k] = '';
-    });
+    // userInfo는 const로 선언 됨 -> 하나씩 재할당
+    userInfo.id = "";
+    userInfo.pw = "";
+    userInfo.name = "";
+    userInfo.phone = "";
+    userInfo.email = "";
+    userInfo.address = "";
+    userInfo.birth = "";
+    userInfo.gender = "";
+    userInfo.point = 0;
+    userInfo.totalCost = 0;
+    userInfo.realCost = 0;
+    userInfo.orderList = [];
+    userInfo.reservationList = [];
+    userInfo.coupons.unused = [];
+    userInfo.coupons.used = [];
+
     alert('로그아웃 완료');
-    renderLogin();   // 로그인 화면 렌더링
-    
+    renderLogin(); // 로그인 화면 렌더링
   });
+
 
   // 마이페이지 버튼 클릭 이벤트
   myPage.addEventListener('click', () => {

@@ -56,7 +56,7 @@ function renderMyAccount() {
   const admin = document.getElementById('admin');
 
   accountEdit.addEventListener('click', () => {
-   // renderAccountEdit()  // 계정 수정 화면 렌더링 함수 => 아직 미구현
+    // renderAccountEdit()  // 계정 수정 화면 렌더링 함수 => 아직 미구현
     alert('계정 수정 기능은 아직 준비 중입니다')
   });
 
@@ -65,7 +65,9 @@ function renderMyAccount() {
   });
 
   admin.addEventListener('click', () => {
-   console.log(JSON.stringify(users, null,2))
-   console.log(JSON.stringify(userInfo, null,2))
+    console.log(JSON.stringify(users, null, 2))
+    console.log(JSON.stringify(userInfo, null, 2))
   })
+
+  
 }

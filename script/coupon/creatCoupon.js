@@ -1,8 +1,8 @@
 let createCoupon = function(type) {
   const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10); // "2025-06-09"
+  const dateStr = today.toISOString().slice(0, 10);
   const expireDate = new Date(today);
-  expireDate.setDate(today.getDate() + 14); // 2주 후
+  expireDate.setDate(today.getDate() + 14);
 
   if (type === "welcome") {
     return {
@@ -17,8 +17,5 @@ let createCoupon = function(type) {
     };
   }
 
-  // 다른 쿠폰 타입도 여기에 추가 가능
-}
-
-const newCoupon = createCoupon("welcome");
-userInfo.coupons.unused.push(newCoupon);
+  return null; // 정의되지 않은 type이면 null
+};
