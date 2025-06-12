@@ -18,9 +18,9 @@ const userInfo = {
   reservationList: [],
   coupons : {
      unused : [],
-
       used : []
-  }
+  },
+  favorites : []
 };
 
 
@@ -46,8 +46,8 @@ users["12"] = {
      unused : [],
     
       used : []
-  }
-  
+  },
+  favorites :[]
 };
 
 for (let i = 1; i <= 10; i++) {
@@ -68,7 +68,8 @@ for (let i = 1; i <= 10; i++) {
     coupons : {
        unused : [],
         used : []
-    }
+    },
+    favorites :[]
   };
 }
 

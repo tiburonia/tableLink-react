@@ -44,6 +44,12 @@ function renderMyAccount() {
       ).join('<br>')
       : '예약 내역 없음'}
       </li>
+      <li><strong>즐겨찾기 매장:</strong><br>
+        ${userInfo.favorites.length > 0
+          ? userInfo.favorites.join('<br>')
+          : '즐겨찾기 매장 없음'
+          }
+          </li>
     </ul>
     <button id="accountEdit">수정하기</button>
     <button id="backToMain">돌아가기</button>

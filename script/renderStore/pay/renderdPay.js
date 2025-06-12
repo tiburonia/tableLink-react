@@ -126,7 +126,7 @@ function renderPay(currentOrder, store) {
     finalAmount.textContent = `최종 결제금액: ${result.final.toLocaleString()}원`;
     pointEarned.textContent = `적립 예정 포인트: ${Math.floor(orderData.total * 0.1).toLocaleString()}원`;
 
-    // 💡 여기 추가된 부분
+    // 여기 추가된 부분
     const totalDiscount = result.couponDiscount + result.appliedPoint;
     discountAmount.textContent = `할인된 금액: ${totalDiscount.toLocaleString()}원`;
   }

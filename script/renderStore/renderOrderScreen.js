@@ -12,6 +12,7 @@ function renderOrderScreen(store) {
           <div id= 'orderList'></div>
           <br>
           <button id= 'pay'>결제하기</button>
+          <button id= 'saveCart'>장바구니 저장</button>
           <button id='back'>뒤로가기</button>
           `
 
@@ -19,7 +20,8 @@ function renderOrderScreen(store) {
   const orderList = document.querySelector('#orderList');
   const pay = document.querySelector('#pay');
   const back = document.querySelector('#back');
-
+  const saveCart = document.querySelector('#saveCart');
+  
   //주문 목록
   const currentOrder = {}
 
@@ -138,6 +140,11 @@ function renderOrderScreen(store) {
       }
       renderPay(currentOrder, store);
     });
+
+  //장바구니 저장 버튼 이벤트
+  saveCart.addEventListener('click', () => {
+    saveCart(currentOrder, store)
+  })
 
 
 

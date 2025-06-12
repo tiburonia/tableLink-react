@@ -114,6 +114,7 @@ function renderMain() {
     userInfo.reservationList = [];
     userInfo.coupons.unused = [];
     userInfo.coupons.used = [];
+    userInfo.favorites = [];
 
     alert('로그아웃 완료');
     renderLogin(); // 로그인 화면 렌더링

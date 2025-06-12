@@ -1,0 +1,3 @@
+function renderCart(currentOrder, store) {
+  
+}
