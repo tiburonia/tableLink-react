@@ -21,6 +21,8 @@ const userInfo = {
       used : []
   },
   favorites : []
+ 
+  
 };
 
 
@@ -73,26 +75,3 @@ for (let i = 1; i <= 10; i++) {
   };
 }
 
-
-/*    실험용 계정 예시
-users["user3"] = {
-  pw: "33",
-  name: "테스트유저3",
-  phone: "010-0000-0003",
-  email: "test3@example.com",
-  address: "서울시 가상동 3번지",
-  birth: "1993-01-01",
-  gender: "여자",
-  point: 3000,
-  orderList: [],
-  totalCost: 15000,
-  reservationList: []
-  coupons : {
-     unusedCoupon : [],
-    
-      usedCoupon : []
-  }
-  realCost : 0
-};
-
-*/

@@ -3,13 +3,15 @@ const main = document.querySelector('#main');
 let renderLogin = function() {
   // 로그인 화면 HTML 삽입
   main.innerHTML = `
-          <h1>Tablelink</h1>
-          <br>
-          <input id='id' type='text' placeholder='아이디'/>
-          <br><input id='pw' type='password' placeholder='비밀번호'/>
-          <br>
-          <button id='join'>회원가입</button>
-          <button id='login'>로그인</button>`;
+           <div id="loginContainer">
+      <h1>TableLink</h1>
+      <input id='id' type='text' placeholder='아이디'/>
+      <input id='pw' type='password' placeholder='비밀번호'/>
+      <div>
+        <button id='join'>회원가입</button>
+        <button id='login'>로그인</button>
+      </div>
+    </div>`;
 
   // 로그인 화면의 입력 및 버튼 요소 재선택 (생성 이후)
   const id = document.querySelector('#id');
@@ -30,12 +32,12 @@ let renderLogin = function() {
       for (let key in userInfo) {
         if (Array.isArray(userInfo[key])) userInfo[key] = [];
         else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
-        else userInfo[key] = '';  
+        else userInfo[key] = '';
       }
 
       // users에 있는 해당 계정의 모든 정보를 userInfo에 복사
       Object.assign(userInfo, users[id.value]);
-      
+
       userInfo.id = id.value;
       alert('로그인 성공');
       renderMain();
@@ -46,7 +48,7 @@ let renderLogin = function() {
   });
 
   //로그인 화면에서 엔터키로 로그인
-  
+
   const handleEnterKey = (event) => {
     if (event.key === 'Enter' && event.target.id !== 'join') {
       login.click();
@@ -56,11 +58,11 @@ let renderLogin = function() {
 
 
   //회원가입 엔터키로 진행
-  join.addEventListener('keydown',(event)=>{
-    if(event.key === 'Enter')
+  join.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter')
       join.click();
   })
-    
+
 }
 // a키로 현재 users, userInfo 콘솔에 출력
 document.addEventListener('keydown', (e) => {
@@ -71,5 +73,8 @@ document.addEventListener('keydown', (e) => {
     console.log("------------------------------------------")
     console.log("userInfo")
     console.log(JSON.stringify(userInfo, null, 2))
+
+    console.log("------------------------------------------")
+    console.log(JSON.stringify(savedCart, null, 2))
   }
 });

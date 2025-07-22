@@ -3,18 +3,65 @@
 
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
   <title>TableLink 25-6-3</title>
   <script src="script/data.js"></script>
   <script src="script/signUp/loginInfo.js"></script>
-  <style src="style/favoriteStore.css"></style>
+  <link rel="stylesheet" href="css/favoriteStore.css" />
+  <link rel="stylesheet" href="css/globalBody.css" />
+   <link rel="stylesheet" href="css/renderLogin.css" />
+  <link rel="stylesheet" href="css/renderMain.css" />
+  <style>
+    #cartWidget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 10px 15px;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1000;
+      display: none; /* 처음엔 안 보이게 */
+    }
+  </style>
+  <style>
+    #main {
+      width: 390px;
+      height: 760px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);  /* 정중앙 이동 */
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border: 1px solid #ccc;
+      overflow-y: auto;
+    }
+
+
+  </style>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #f0f0f0;
+    }
+
+  </style>
+ 
 </head>
 
 <body>
   <!-- 화면을 렌더링할 메인 영역 -->
   <div id='main'></div>
-  <!-- (현재 미사용 중) 별도로 쓰려던 리스트 영역 -->
-  <div id='list'></div>
-
+  <!-- 장바구니 위젯 -->
+  <div id='cartWidget'></div>
+ 
 
 
   <!--로그인 화면 렌더링 함수-->
@@ -25,8 +72,10 @@
   <script src="script/myPage/renderMyAccount.js"></script>
   <!--마이페이지 화면 렌더링 함수-->
   <script src="script/myPage/renderMyPage.js"></script>
+  <!--검색 화면 렌더링 함수-->
+  <script src="script/main/renderSearch.js"></script>
   <!-- 메인 화면 렌더링 함수-->
-  <script src="script/main/renderMain.js"></script>
+  <script src="script/main/renderMainN.js"></script>
   <!--매장 즐겨찾기 토글 함수-->
   <script src="script/renderStore/favoriteStore/toggleFavoriteF.js"></script>
   <!--가게 메뉴 화면 렌더링 함수 -->
@@ -39,6 +88,10 @@
   <script src="script/renderStore/pay/confirmPayF.js"></script>
   <!--장바구니 화면 렌더링 함수-->
   <script src="script/renderStore/cart/saveCart.js"></script>
+  <!--장바구니 위젯 렌더링 함수-->
+  <script src="script/renderStore/cart/renderCartWidget.js"></script>
+  <!--장바구니 화면 렌더링 함수-->
+  <script src="script/renderStore/cart/renderCart.js"></script>
   <!--주문 화면 렌더링 함수-->
   <script src="script/renderStore/renderOrderScreen.js"></script>
   <!--예약 화면 렌더링 함수-->
@@ -50,5 +103,9 @@
 
 
 </body>
+
+  
+ 
+
 
 </html>

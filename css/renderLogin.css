@@ -1,0 +1,22 @@
+#loginContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+
+  height: 100%;
+  box-sizing: border-box;
+  gap: 12px;
+  padding-top: 15%;
+}
+
+#loginContainer input {
+  padding: 10px;
+  font-size: 14px;
+  width: 70%;
+}
+
+#loginContainer button {
+  padding: 10px 20px;
+  margin: 4px;
+}

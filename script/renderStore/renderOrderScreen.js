@@ -25,6 +25,8 @@ function renderOrderScreen(store) {
   //주문 목록
   const currentOrder = {}
 
+  window.currentOrder = currentOrder
+
   //주문 목록 렌더링
   function renderOrderList() {
     orderList.innerHTML = '';
@@ -143,7 +145,7 @@ function renderOrderScreen(store) {
 
   //장바구니 저장 버튼 이벤트
   saveCart.addEventListener('click', () => {
-    saveCart(currentOrder, store)
+    saveCartBtn(currentOrder, store)
   })
 
 

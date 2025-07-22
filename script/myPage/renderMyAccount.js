@@ -73,6 +73,8 @@ function renderMyAccount() {
   admin.addEventListener('click', () => {
     console.log(JSON.stringify(users, null, 2))
     console.log(JSON.stringify(userInfo, null, 2))
+
+    console
   })
 
   
