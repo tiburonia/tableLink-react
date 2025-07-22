@@ -1,0 +1,9 @@
+#main {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto; /* 중앙 정렬 핵심! */
+  height: 100vh;
+  background: #f8f8f8;
+  overflow: hidden;
+}

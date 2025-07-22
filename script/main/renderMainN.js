@@ -32,7 +32,8 @@ function renderMain() {
     }
 
     #header {
-      position: fixed;
+    
+      position: relative;
       top: 0;
       left: 0;
       width: 100%;
@@ -65,7 +66,6 @@ function renderMain() {
     #bottomBar {
       position: fixed;
       bottom: 0;
-      left: 0;
       width: 100%;
       max-width: 430px;
       height: 60px;
@@ -75,6 +75,8 @@ function renderMain() {
       align-items: center;
       border-top: 1px solid #ccc;
       z-index: 1000;
+      left: 50%;
+      transform: translateX(-50%);
     }
 
     #topControls {
@@ -103,7 +105,7 @@ function renderMain() {
 
 
     #renderMainTL {
-      transform: translateY(-15px);
+      transform: translateY(8px);
     }
 
 
@@ -147,6 +149,12 @@ function renderMain() {
     alert('QR 결제 기능은 아직 준비 중입니다');
   });
 
+  //TLA-MAP 이동 버튼 (장기 프로젝트)
+  map.addEventListener('click', () => {
+    renderMap()
+  })
+
+  
   // 로그아웃 버튼 클릭 이벤트
   logOut.addEventListener('click', () => {
     // userInfo는 const로 선언 됨 -> 하나씩 재할당

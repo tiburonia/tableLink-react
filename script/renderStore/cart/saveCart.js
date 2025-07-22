@@ -5,7 +5,7 @@ let savedCart = {
 
 
 const saveCartBtn = function(currentOrder, store) {
-  // alert("장바구니 기능은 아직 준비중입니다")
+
 
   if (Object.keys(currentOrder).length === 0) {
     alert('저장할 주문이 없습니다.');
