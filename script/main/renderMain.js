@@ -1,133 +1,168 @@
-// 메인 화면 렌더링 함수
 function renderMain() {
+  
 
 
-  console.log('renderMain 작동함')
-  // 메인 화면 HTML 삽입
   main.innerHTML = `
-          <h1>TableLink</h1>
-          <br>
-          <h4>main</h4>
-          <br>
-          <button id='TLL'>QR결제</button>
-          <input id='map' type='text' placeholder='주변매장검색'>        
-          <button id='search'>검색</button>
-          <br><br><br>
-          <button id='reset'>로그아웃</button>
-          <div id='list'></div>
-          <button id= 'myPage'>마이페이지</button>
-        `;
+    <div id="header">
+      <h2 id= "renderMainTL">TableLink</h2>
+    
+    </div>
 
-  // 버튼 및 입력 요소 선택
+    <div id="content">
+      <div id="storeList"></div>
+    </div>
+
+    <nav id="bottomBar">
+      <button id= "TLL">📱</button>
+      <button id= "search">🔍</button>
+      <button id= "map">🗺️</button>
+      <button id= "myPage">👤</button>
+      <button id= "logOut">👋</button>
+    </nav>
+    <!-- renderMain.css -->
+   <style>
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #f8f8f8;
+      font-family: sans-serif;
+      overflow: hidden; /* 💡 전체 스크롤 막고, content만 스크롤되게 */
+    }
+
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      max-width: 430px;
+      height: 45px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      padding: 0px;
+      box-sizing: border-box;
+      z-index: 1001;
+      text-align: center;
+    }
+
+
+
+    #content {
+      position: absolute;
+      top: 45px;       /* 헤더 높이만큼 */
+      bottom: 60px;    /* 바텀 바 높이만큼 */
+      left: 0;
+      width: 100%;
+      max-width: 430px;
+      overflow-y: auto;  /* ✅ 여기만 스크롤! */
+      padding: 0px;
+      box-sizing: border-box;
+      background: #fdfdfd;
+      z-index: 1;
+    }
+
+    #bottomBar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-width: 430px;
+      height: 60px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #ccc;
+      z-index: 1000;
+    }
+
+    #topControls {
+
+      transform: translateY(-30px); /* 정확히 10px 위로 올리기 */
+    }
+
+    #content {
+      position: absolute;
+      bottom: 60px;
+      left: 0;
+      width: 100%;
+      max-width: 430px;
+      overflow-y: auto;
+      padding: 20px 14px;
+      box-sizing: border-box;
+      background: #fdfdfd;
+    }
+
+    #storeList p {
+      margin: 10px 0;
+      font-size: 16px;         /* 글씨 크게 */
+      line-height: 1.5;        /* 줄간격 넉넉히 */
+    }
+
+
+
+    #renderMainTL {
+      transform: translateY(-15px);
+    }
+
+
+   
+   </style>
+
+    
+  `;
+
+  // DOM 요소 선택
   const TLL = document.querySelector('#TLL');
   const map = document.querySelector('#map');
   const search = document.querySelector('#search');
-  const reset = document.querySelector('#reset');
-  const list = document.querySelector('#list');
+  const storeList = document.querySelector('#storeList');
+  const logOut = document.querySelector('#logOut');
   const myPage = document.querySelector('#myPage');
 
-
-
-  // 매장 목록을 HTML에 추가
+  // 가게 목록 렌더링
   stores.forEach(store => {
     const p = document.createElement('p');
-
     const link = document.createElement('a');
-    link.href = `#`
+    link.href = '#';
     link.textContent = store.name;
 
     p.appendChild(link);
     p.append(` - ${store.category} (${store.distance})`);
-    list.appendChild(p);
+    storeList.appendChild(p);
 
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      renderStore(store); // 기존 정의된 함수 사용
+      renderStore(store);
     });
   });
 
+  // 검색화면 이동
+  search.addEventListener('click', () => {
+    renderSearch()
+  })
   // QR 결제 버튼 (현재 미구현)
   TLL.addEventListener('click', () => {
     alert('QR 결제 기능은 아직 준비 중입니다');
   });
 
-  // 검색 버튼 클릭 이벤트
-
-
-  search.addEventListener('click', () => {
-    /* 수정 많이 필요함 >> 검색기능 사용을 하면 렌더링을 다시 실행해야 할거같음
-     현재는 검색기능을 사용했을때 ui가 부자연스러워짐
-     
-     또한 검색 기능은 renderMainSearch() 렌더링 함수로 스크립트 분리 예정*/
-    const keyword = map.value.trim().toLowerCase();
-    list.innerHTML = ''; // 기존 목록 초기화
-
-    if (keyword === '') {
-      alert('검색어를 입력하세요');
-      return;
-    }
-
-    const results = stores.filter(store =>
-      store.name.toLowerCase().includes(keyword) ||
-      store.category.toLowerCase().includes(keyword)
-    );
-
-    if (results.length === 0) {
-      list.innerHTML = '<p>검색 결과가 없습니다</p>';
-      return;
-    }
-
-    results.forEach(store => {
-      const p = document.createElement('p');
-      const link = document.createElement('a');
-      link.href = '#';
-      link.textContent = store.name;
-
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        renderStore(store); // 기존 정의된 함수 사용
-      });
-
-      p.appendChild(link);
-      p.append(` - ${store.category} (${store.distance})`);
-      list.appendChild(p);
-    });
-  });
-
-
   // 로그아웃 버튼 클릭 이벤트
-  reset.addEventListener('click', () => {
+  logOut.addEventListener('click', () => {
+   logOutF()
+  })
 
-    // userInfo는 const로 선언 됨 -> 하나씩 재할당
-    userInfo.id = "";
-    userInfo.pw = "";
-    userInfo.name = "";
-    userInfo.phone = "";
-    userInfo.email = "";
-    userInfo.address = "";
-    userInfo.birth = "";
-    userInfo.gender = "";
-    userInfo.point = 0;
-    userInfo.totalCost = 0;
-    userInfo.realCost = 0;
-    userInfo.orderList = [];
-    userInfo.reservationList = [];
-    userInfo.coupons.unused = [];
-    userInfo.coupons.used = [];
-    userInfo.favorites = [];
-
-    alert('로그아웃 완료');
-    renderLogin(); // 로그인 화면 렌더링
-  });
-
+  // 지도 버튼 클릭 이벤트
+  map.addEventListener('click', () => {
+    renderMap()  
+  })
 
   // 마이페이지 버튼 클릭 이벤트
   myPage.addEventListener('click', () => {
-    renderMyPage() // 마이페이지 화면 렌더링 
+    renderMyPage()
   })
-
-
-
+  
 }
 
+  
 

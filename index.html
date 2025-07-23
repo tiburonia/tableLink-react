@@ -7,13 +7,14 @@
 
 
   <title>TableLink 25-6-3</title>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
   <script src="script/data.js"></script>
   <script src="script/signUp/loginInfo.js"></script>
+
+
   <link rel="stylesheet" href="css/favoriteStore.css" />
   <link rel="stylesheet" href="css/globalBody.css" />
   <link rel="stylesheet" href="css/renderLogin.css" />
-  <link rel="stylesheet" href="css/renderMain.css" />
-  <link rel="stylesheet" href="css/renderCartWidget.css" />
 
 
 </head>
@@ -28,6 +29,8 @@
 
   <!--로그인 화면 렌더링 함수-->
   <script src="script/renderLogin.js"></script>
+  <!--로그아웃로직 함수-->
+  <script src="script/logOut.js"></script>
   <!--회원가입 화면 렌더링 함수-->
   <script src="script/signUp/renderSignUp.js"></script>
   <!--내 계정 화면 렌더링 함수-->
@@ -36,8 +39,10 @@
   <script src="script/myPage/renderMyPage.js"></script>
   <!--검색 화면 렌더링 함수-->
   <script src="script/main/renderSearch.js"></script>
+  <!--지도 화면 렌더링 함수-->
+  <script src="script/TLA-MAP/renderMap.js"></script>
   <!-- 메인 화면 렌더링 함수-->
-  <script src="script/main/renderMainN.js"></script>
+  <script src="script/main/renderMain.js"></script>
   <!--매장 즐겨찾기 토글 함수-->
   <script src="script/renderStore/favoriteStore/toggleFavoriteF.js"></script>
   <!--가게 메뉴 화면 렌더링 함수 -->
@@ -59,8 +64,10 @@
   <!--예약 화면 렌더링 함수-->
   <script src="script/renderStore/renderReservationScreen.js"></script>
   <script>
-    // 초기 진입: 로그인 화면 렌더링
-    renderLogin();
+    //초기 진입 렌더링 함수
+    document.addEventListener('DOMContentLoaded', () => {
+      renderMap()
+    });
   </script>
 
 

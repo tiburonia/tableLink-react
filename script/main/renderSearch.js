@@ -21,6 +21,100 @@ function renderSearch() {
       <button onclick="renderReservation()">📅</button>
       <button onclick="renderMyPage()">👤</button>
     </nav>
+
+    <!-- renderSearch.css -->
+
+      <style>
+      <style>
+
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100%;
+          background: #f8f8f8;
+          font-family: sans-serif;
+          overflow: hidden; /* 💡 전체 스크롤 막고, content만 스크롤되게 */
+        }
+
+        #header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          height: 80px;
+          background: white;
+          border-bottom: 1px solid #ddd;
+          padding: 0px;
+          box-sizing: border-box;
+          z-index: 1001;
+          text-align: center;
+        }
+
+
+
+        #content {
+          position: absolute;
+          top: 80px;       /* 헤더 높이만큼 */
+          bottom: 60px;    /* 바텀 바 높이만큼 */
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          overflow-y: auto;  /* ✅ 여기만 스크롤! */
+          padding: 0px;
+          box-sizing: border-box;
+          background: #fdfdfd;
+          z-index: 1;
+        }
+
+        #bottomBar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          height: 60px;
+          background: white;
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          border-top: 1px solid #ccc;
+          z-index: 1000;
+        }
+
+        #topControls {
+
+          transform: translateY(-30px); /* 정확히 10px 위로 올리기 */
+        }
+
+        #content {
+          position: absolute;
+          bottom: 60px;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          overflow-y: auto;
+          padding: 20px 14px;
+          box-sizing: border-box;
+          background: #fdfdfd;
+        }
+
+        #storeList p {
+          margin: 10px 0;
+          font-size: 16px;         /* 글씨 크게 */
+          line-height: 1.5;        /* 줄간격 넉넉히 */
+        }
+
+
+
+        #renderMainTL {
+          transform: translateY(-15px);
+        }
+
+
+
+       </style>
+      </style>
   `;
 
   // 검색 기능 로직

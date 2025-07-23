@@ -270,4 +270,24 @@ const stores = [
     
 ];
 
+
+function assignRandomCoordsToStores() {
+  const centerLat = 37.5665;
+  const centerLng = 126.9780;
+
+  stores.forEach(store => {
+    const randomLat = centerLat + (Math.random() - 0.5) * 0.02; // ±0.01
+    const randomLng = centerLng + (Math.random() - 0.5) * 0.03; // ±0.015
+
+    store.coord = {
+      lat: Number(randomLat.toFixed(6)),
+      lng: Number(randomLng.toFixed(6))
+    };
+  });
+}
+
+assignRandomCoordsToStores();
+
 window.stores = stores
+
+

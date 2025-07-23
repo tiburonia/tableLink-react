@@ -11,7 +11,15 @@ let renderLogin = function() {
         <button id='join'>회원가입</button>
         <button id='login'>로그인</button>
       </div>
-    </div>`;
+    </div>
+    <style>
+   #main {
+  
+  background: #f0f8ff; /* 💡 은은한 하늘색 */
+  font-family: sans-serif;
+}
+</style>
+`;
 
   // 로그인 화면의 입력 및 버튼 요소 재선택 (생성 이후)
   const id = document.querySelector('#id');
