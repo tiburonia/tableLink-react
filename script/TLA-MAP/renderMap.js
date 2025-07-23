@@ -18,10 +18,11 @@ function renderMap() {
     </main>
 
     <nav id="bottomBar">
-      <button onclick="renderMain()">🏠</button>
+      <button id= "TLL">📱</button>
       <button onclick="renderSearch()">🔍</button>
-      <button onclick="renderMap()">📍</button>
+      <button>🗺️</button>
       <button onclick="renderMyPage()">👤</button>
+      <button onclick="LogOutF()">👋</button>
     </nav>
 
    <style>  
@@ -184,6 +185,12 @@ html, body {
     panel.style.transition = 'none';
   }
 
+  //TLL 버튼 클릭 로직
+  const TLL = document.querySelector('#TLL')
+  TLL.addEventListener('click', () => {
+    alert('QR 결제 기능은 아직 준비 중입니다');
+  })
+
   function duringDrag(y) {
     if (!isDragging) return;
     currentY = y;
@@ -228,12 +235,106 @@ html, body {
   // 가게 목록 출력
   const storeListContainer = document.getElementById('storeListContainer');
   stores.forEach(store => {
-    const p = document.createElement('p');
-    p.textContent = `${store.name} - ${store.category} (${store.distance})`;
-    p.style.cursor = 'pointer';
-    p.addEventListener('click', () => renderStore(store));
-    storeListContainer.appendChild(p);
+    const card = document.createElement('div');
+    card.className = 'storeCard';
+
+    card.innerHTML = `
+      <div class="storeInfoBox">
+        <div class="storeRatingBox"></div>
+        <div class="storeTextBox">
+          <div class="storeName">${store.name}</div>
+          <div class="storeDistance">${store.distance}</div>
+        </div>
+      </div>
+      <div class="storeImageBox">
+  <img src="TableLink.png" alt="가게 이미지" />
+</div>
+
+
+      <style>
+
+      .storeImageBox {
+        border: 2px solid black;
+        border-radius: 12px;
+        height: 120px;
+        margin-top: 8px;
+        background: #f5f5f5;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .storeImageBox img {
+        height: 100%;
+        width: auto;
+        object-fit: contain;
+        border: none;
+      }
+
+      .storeCard {
+        border: 2px solid black;
+        border-radius: 16px;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: white;
+        box-sizing: border-box;
+      }
+
+      .storeInfoBox {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+
+      /* 좌측 별점 영역 (지금은 비워둠) */
+      .storeRatingBox {
+        width: 60px;
+        height: 60px;
+        border: 2px solid black;
+        border-radius: 8px;
+        box-sizing: border-box;
+        margin-right: 8px;
+      }
+
+      /* 텍스트 영역 (이름 + 거리) */
+      .storeTextBox {
+        flex-grow: 1;
+      }
+
+      .storeName {
+        border: 2px solid black;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+
+      .storeDistance {
+        border: 2px solid black;
+        padding: 4px 8px;
+        font-size: 13px;
+      }
+
+      /* 가게 이미지 영역 */
+      .storeImageBox {
+        border: 2px solid black;
+        border-radius: 12px;
+        height: 120px;
+        margin-top: 8px;
+        text-align: center;
+        line-height: 120px;
+        font-size: 14px;
+        background: #f5f5f5;
+      }
+
+      </style>
+    `;
+
+    card.addEventListener('click', () => renderStore(store));
+    storeListContainer.appendChild(card);
   });
+
 }
 
 
