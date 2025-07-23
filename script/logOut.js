@@ -1,4 +1,4 @@
-function logOutF() {
+const logOutF= function() {
 
     // userInfo는 const로 선언 됨 -> 하나씩 재할당
     userInfo.id = "";

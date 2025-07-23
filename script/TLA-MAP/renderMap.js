@@ -22,7 +22,7 @@ function renderMap() {
       <button onclick="renderSearch()">🔍</button>
       <button>🗺️</button>
       <button onclick="renderMyPage()">👤</button>
-      <button onclick="LogOutF()">👋</button>
+      <button onclick="logOutF()">👋</button>
     </nav>
 
    <style>  
@@ -118,7 +118,7 @@ html, body {
 }
 
 #storePanel.expanded {
-  height: 550px;
+  height: 630px;
 }
 
 /* 🔷 드래그 핸들 */
@@ -208,13 +208,13 @@ html, body {
     if (delta > 50) {
       panel.classList.add('expanded');
       panel.classList.remove('collapsed');
-      panel.style.height = '550px';
+      panel.style.height = '630px';
     } else if (delta < -50) {
       panel.classList.add('collapsed');
       panel.classList.remove('expanded');
       panel.style.height = '60px';
     } else {
-      const target = panel.classList.contains('expanded') ? '550px' : '60px';
+      const target = panel.classList.contains('expanded') ? '630px' : '60px';
       panel.style.height = target;
     }
 
