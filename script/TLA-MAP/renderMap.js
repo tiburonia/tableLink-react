@@ -26,17 +26,16 @@ function renderMap() {
     </nav>
 
    <style>  
-    /* 🔷 전체 레이아웃 초기화 */
-html, body {
+    html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: sans-serif;
+  font-family: 'Noto Sans KR', sans-serif;
   background: #f8f8f8;
-  overflow: hidden; /* content만 스크롤되도록 제한 */
+  overflow: hidden;
 }
 
-/* 🔷 헤더 (상단 고정) */
+/* 헤더 */
 #header {
   position: fixed;
   top: 0;
@@ -44,107 +43,205 @@ html, body {
   width: 100%;
   max-width: 430px;
   height: 45px;
-  background: white;
-  border-bottom: 1px solid #ddd;
+  background: #fff;
+  border-bottom: 1.2px solid #e0e0ee;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1001;
 }
-
 #renderMainTL {
-  transform: translateY(-2px);
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #297efc;
+  letter-spacing: -0.5px;
 }
 
-/* 🔷 메인 콘텐츠 영역 */
+/* 콘텐츠 전체 */
 #content {
   position: absolute;
-  top: 45px;         /* header 높이 */
-  bottom: 60px;      /* bottomBar 높이 */
+  top: 45px;
+  bottom: 66px;   /* 바텀바 높이 */
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: calc(100vh - 105px); /* header + bottomBar 제외한 높이 */
+  height: calc(100vh - 111px);
   overflow: hidden;
   background: #fdfdfd;
   z-index: 1;
 }
 
-/* 🔷 지도 영역 */
+/* 지도 */
 #map {
   width: 100%;
   height: 100%;
   position: relative;
   z-index: 0;
+  border-radius: 0 0 24px 24px;
+  box-shadow: 0 3px 8px rgba(20,40,70,0.07);
 }
 
-/* 🔷 하단 고정 바 */
+/* 바텀바 */
 #bottomBar {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: 60px;
-  background: white;
-  border-top: 1px solid #ccc;
+  height: 66px;
+  background: rgba(255,255,255,0.98);
+  border-top: 1.5px solid #e2e6ee;
+  box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
   align-items: center;
   z-index: 1000;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  backdrop-filter: blur(5px);
+  gap: 0;
 }
 
-/* 🔷 스토어 패널 (밀어올리는 바) */
+#bottomBar button {
+  flex: 1 1 0;
+  margin: 0 5px;
+  height: 44px;
+  min-width: 0;
+  border: none;
+  outline: none;
+  border-radius: 13px;
+  background: #f5f7fb;
+  color: #297efc;
+  font-size: 18px;
+  font-family: inherit;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+  cursor: pointer;
+  transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: -0.2px;
+}
+#bottomBar button:active {
+  background: #eaf3ff;
+  color: #1657a0;
+  box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+}
+
+/* 패널 */
 #storePanel {
-   position: fixed;
-  bottom: 60px;
+  position: fixed;
+  bottom: 66px;
   left: 0;
   width: 100%;
   max-width: 430px;
-  z-index: 1002;
-  background: white;
+  background: #fff;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 14px rgba(30, 60, 120, 0.13);
   overflow: hidden;
-  transition: height 0.3s ease;
-  z-index: 10;
+  transition: height 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+  z-index: 11;
+  border: 1.1px solid #f1f2fb;
 }
-
-/* 접힘/펼침 상태 */
-#storePanel.collapsed {
-  height: 60px;
-}
-
-#storePanel.expanded {
-  height: 630px;
-}
-
-/* 🔷 드래그 핸들 */
+#storePanel.collapsed { height: 60px; }
+#storePanel.expanded { height: 630px; }
 #panelHandle {
-  width: 40px;
-  height: 6px;
-  background: #ccc;
-  border-radius: 3px;
-  margin: 8px auto;
+  width: 44px;
+  height: 7px;
+  background: #e0e3f3;
+  border-radius: 4px;
+  margin: 10px auto 6px auto;
   cursor: pointer;
+  opacity: 0.8;
 }
 
-/* 🔷 가게 목록 컨테이너 */
+/* 가게 목록 스크롤 영역 */
 #storeListContainer {
-  height: calc(100% - 20px); /* 핸들 공간 제외 */
+  height: calc(100% - 23px); /* 핸들 공간 빼고 */
   overflow-y: auto;
-  padding: 8px 12px;
+  padding: 8px 4px 20px 4px;
   box-sizing: border-box;
 }
+#storeListContainer::-webkit-scrollbar { width: 6px; }
+#storeListContainer::-webkit-scrollbar-thumb { background: #e3e6ee; border-radius: 3px; }
 
-#storeListContainer p {
-  margin: 8px 0;
-  font-size: 15px;
+/* 개별 가게 카드 */
+.storeCard {
+  border-radius: 16px;
+  padding: 14px 12px 11px 12px;
+  margin-bottom: 13px;
+  background: #fff;
+  box-shadow: 0 1.5px 7px rgba(40,80,170,0.08);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.13s;
+  border: 1.3px solid #e7eaf5;
   cursor: pointer;
-  line-height: 1.4;
 }
+.storeCard:active {
+  box-shadow: 0 3px 13px rgba(40,110,255,0.11);
+  border-color: #b7cdfa;
+}
+
+.storeInfoBox {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 7px;
+}
+.storeRatingBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 9px;
+  background: #f5f7fb;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  color: #f8b900;
+  box-shadow: 0 1px 3px rgba(180,170,110,0.04);
+}
+.storeTextBox {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.storeName {
+  font-weight: bold;
+  font-size: 16.5px;
+  color: #23274c;
+  margin-bottom: 3px;
+  letter-spacing: -0.1px;
+}
+.storeDistance {
+  font-size: 13.5px;
+  color: #88a;
+  font-weight: 500;
+}
+.storeImageBox {
+  border-radius: 10px;
+  height: 100px;
+  margin-top: 8px;
+  background: #f5f5f5;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.storeImageBox img {
+  height: 100%;
+  width: auto;
+  object-fit: cover;
+  border: none;
+  max-width: 100%;
+}
+
   </style>
 
   `;
@@ -330,7 +427,7 @@ html, body {
 
       </style>
     `;
-
+    // 카드 클릭 시 해당 가게의 상세 페이지로 이동
     card.addEventListener('click', () => renderStore(store));
     storeListContainer.appendChild(card);
   });
