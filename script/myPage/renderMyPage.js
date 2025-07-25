@@ -35,7 +35,7 @@ async function renderMyPage() {
       </main>
 
       <nav id="bottomBar">
-        <button onclick="renderMain()">🏠</button>
+        <button onclick="renderMap()">🏠</button>
         <button onclick="renderSearch()">🔍</button>
         <button onclick="renderMap()">📍</button>
         <button onclick="renderMyPage()">👤</button>
