@@ -1,6 +1,14 @@
-function renderMain() {
-
-
+async function renderMain() {
+  // 캐시에서 스토어 정보 가져오기 (캐시 우선, 없으면 서버에서 가져와서 캐시 저장)
+  let stores = [];
+  try {
+    stores = await cacheManager.getStores();
+    console.log('🏪 메인에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+  } catch (error) {
+    console.error('스토어 정보 로딩 실패:', error);
+    alert('스토어 정보를 불러올 수 없습니다.');
+    return;
+  }
 
   main.innerHTML = `
     <div id="header">
@@ -163,3 +171,6 @@ function renderMain() {
   })
 
 }
+
+// 전역 함수로 등록
+window.renderMain = renderMain;
