@@ -1,3 +1,4 @@
+
 let renderLogin = function () {
   main.innerHTML = `
     <div id="loginContainer">
@@ -54,7 +55,7 @@ let renderLogin = function () {
         if (!window.userInfo) {
           window.userInfo = {};
         }
-
+        
         // userInfo를 서버에서 받은 데이터로 업데이트
         window.userInfo = {
           id: data.user.id,
@@ -73,10 +74,7 @@ let renderLogin = function () {
           coupons: data.user.coupons || { unused: [], used: [] },
           favorites: data.user.favoriteStores || []
         };
-        // 사용자 정보를 캐시에 저장
-        cacheManager.cache.userInfo = data.user;
-        cacheManager.cache.lastUpdated.userInfo = Date.now();
-        console.log('로그인 성공:', userInfo);
+        
         alert('로그인 성공');
         renderMain();
         document.removeEventListener('keydown', handleEnterKey);

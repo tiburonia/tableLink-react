@@ -255,41 +255,6 @@ app.post('/api/orders/pay', async (req, res) => {
   }
 });
 
-// 사용자 정보 조회 API
-app.post('/api/users/info', async (req, res) => {
-  const { userId } = req.body;
-  
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
-    
-    const user = result.rows[0];
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || '',
-        point: user.point || 0,
-        orderList: user.order_list || [],
-        reservationList: user.reservation_list || [],
-        coupons: user.coupons || { unused: [], used: [] },
-        favoriteStores: user.favorite_stores || []
-      }
-    });
-  } catch (error) {
-    console.error('사용자 정보 조회 실패:', error);
-    res.status(500).json({ error: '사용자 정보 조회 실패' });
-  }
-});
-
 // 즐겨찾기 토글 API
 app.post('/api/users/favorite/toggle', async (req, res) => {
   const { userId, storeName, action } = req.body;
