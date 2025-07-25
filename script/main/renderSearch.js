@@ -16,7 +16,7 @@ function renderSearch() {
     </main>
 
     <nav id="bottomBar">
-      <button onclick="renderMap()">🏠</button>
+      <button onclick="renderMain()">🏠</button>
       <button onclick="renderSearch()">🔍</button>
       <button onclick="renderReservation()">📅</button>
       <button onclick="renderMyPage()">👤</button>
