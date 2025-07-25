@@ -388,8 +388,7 @@ function assignDummyReviewsToStores() {
 }
 
 
-assignDummyReviewsToStores()
-
+// 함수들을 정의만 하고 자동 실행하지 않음
 function assignRandomTablesToStores() {
   stores.forEach(store => {
     // 10~15 사이의 랜덤 개수
@@ -398,6 +397,14 @@ function assignRandomTablesToStores() {
   });
 }
 
-// 실행 예시:
+// 필요시 함수들 실행
+assignDummyReviewsToStores();
 assignRandomTablesToStores();
+
+// Node.js에서 사용할 수 있도록 exports
+module.exports = {
+  stores,
+  assignDummyReviewsToStores,
+  assignRandomTablesToStores
+};
 
