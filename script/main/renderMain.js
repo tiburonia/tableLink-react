@@ -1,4 +1,6 @@
-function renderMain() {
+async function renderMain() {
+  // 캐시에서 매장 데이터 가져오기
+  const stores = await cacheManager.getStores();
 
 
 

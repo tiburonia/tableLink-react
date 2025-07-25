@@ -26,6 +26,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
 
     // 클라이언트 userInfo 업데이트
     userInfo.point = userInfo.point - data.result.appliedPoint + data.result.earnedPoint;
+    cacheManager.setUserInfo(userInfo); // 캐시도 함께 업데이트
     
     // 쿠폰 처리
     if (selectedCouponId) {

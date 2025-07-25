@@ -1,4 +1,3 @@
-
 let renderLogin = function () {
   main.innerHTML = `
     <div id="loginContainer">
@@ -55,7 +54,7 @@ let renderLogin = function () {
         if (!window.userInfo) {
           window.userInfo = {};
         }
-        
+
         // userInfo를 서버에서 받은 데이터로 업데이트
         window.userInfo = {
           id: data.user.id,
@@ -74,7 +73,8 @@ let renderLogin = function () {
           coupons: data.user.coupons || { unused: [], used: [] },
           favorites: data.user.favoriteStores || []
         };
-        
+
+        cacheManager.setUserInfo(window.userInfo); // 캐시에 사용자 정보 저장
         alert('로그인 성공');
         renderMain();
         document.removeEventListener('keydown', handleEnterKey);

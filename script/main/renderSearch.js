@@ -140,16 +140,8 @@ function renderSearch() {
     }
 
     try {
-      // 데이터베이스에서 매장 정보 가져오기
-      const response = await fetch('/api/stores');
-      const data = await response.json();
-      const stores = data.stores || [];
-
-      // 검색 필터링
-      const results = stores.filter(store =>
-        store.name.toLowerCase().includes(keyword) ||
-        store.category.toLowerCase().includes(keyword)
-      );
+      // 캐시에서 매장 정보 가져오기 (빠른 검색)
+      const results = cacheManager.searchStores(keyword);
 
       if (results.length === 0) {
         resultArea.innerHTML += '<p>검색 결과가 없습니다.</p>';
