@@ -572,5 +572,3 @@ function renderStore(store) {
   })
 
 }
-
-window.renderStore = renderStore;
