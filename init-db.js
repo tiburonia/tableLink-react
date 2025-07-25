@@ -92,11 +92,11 @@ async function insertSampleData() {
       }
     };
 
-    // user1~user10 테스트 계정들 생성
+    // user1~user10 테스트 계정들 생성 (loginInfo.js와 동일하게)
     for (let i = 1; i <= 10; i++) {
       const userId = `user${i}`;
       testUsers[userId] = {
-        pw: `${i}${i}`,
+        pw: `${i}${i}`, // 11, 22, 33, ...
         name: `테스트유저${i}`,
         phone: `010-0000-000${i}`,
         point: 0,
