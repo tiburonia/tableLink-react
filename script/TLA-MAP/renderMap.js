@@ -1,4 +1,4 @@
-function renderMap() {
+async function renderMap() {
   const main = document.getElementById('main');
 
   main.innerHTML = `
@@ -255,7 +255,8 @@ function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 생성
+  // 매장 데이터 가져오기 및 마커 추가
+  const stores = await API.getStores();
   stores.forEach(store => {
     if (!store.coord) return;
     const marker = new kakao.maps.Marker({
@@ -433,5 +434,3 @@ function renderMap() {
   });
 
 }
-
-

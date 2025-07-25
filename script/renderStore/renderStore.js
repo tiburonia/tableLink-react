@@ -1,4 +1,4 @@
-function renderStore(store) {
+async function renderStore(store) {
   main.innerHTML = `
     <button id="backBtn" class="header-btn" onclick="renderMap()" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
@@ -451,7 +451,9 @@ function renderStore(store) {
   const storeContent = document.getElementById('storeContent');
   const favoriteBtn = document.getElementById('favoriteBtn');
 
-  
+  // 찜 여부 확인
+  const isFavorited = window.userInfo.favorites && window.userInfo.favorites.includes(store.id);
+
 
   // 즐겨찾기
   favoriteBtn.addEventListener('click', () => {
@@ -464,30 +466,30 @@ function renderStore(store) {
   function renderStoreTab(tab) {
     switch (tab) {
       case 'menu':    storeContent.innerHTML = renderMenuHTML(store);
-        
+
         break;
-        
+
       case 'review':  storeContent.innerHTML = renderReviewHTML(store); 
         const seeMoreBtn = storeContent.querySelector('.see-more-btn');
           seeMoreBtn.addEventListener('click', () => {
             renderAllReview(store); // 혹은 window.currentStore 등 원하는 store
           });
-        
+
         break;
       case 'photo':   storeContent.innerHTML = '등록된 사진이 없습니다...'     //renderPhotoHTML(store);  추후 생성
-        
+
         break;
-        
+
       case 'info':    storeContent.innerHTML = '등록된 정보가 없습니다...'     //renderInfoHTML(store); 
-        
+
         break;
-        
+
       default:        storeContent.innerHTML = '준비 중...';
     }
     adjustLayout();
   }
 
-  
+
   // 탭 네비 이벤트
   storeNavBar.addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn');

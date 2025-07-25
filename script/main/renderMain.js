@@ -1,11 +1,11 @@
-function renderMain() {
-  
+async function renderMain() {
+  try {
+    const stores = await API.getStores();
 
-
-  main.innerHTML = `
+    main.innerHTML = `
     <div id="header">
       <h2 id= "renderMainTL">TableLink</h2>
-    
+
     </div>
 
     <div id="content">
@@ -107,10 +107,10 @@ function renderMain() {
     }
 
 
-   
+
    </style>
 
-    
+
   `;
 
   // DOM 요소 선택
@@ -161,8 +161,5 @@ function renderMain() {
   myPage.addEventListener('click', () => {
     renderMyPage()
   })
-  
+
 }
-
-  
-

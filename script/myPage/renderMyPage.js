@@ -11,7 +11,7 @@ function renderMyPage() {
       <h2>예약내역</h2>
     </div>
     <br><br>
-    
+
     <div id="couponList">
     <h2>쿠폰 리스트</h2>
     </div>
@@ -33,8 +33,8 @@ function renderMyPage() {
   const couponList = document.querySelector('#couponList');
 
   // 주문내역 렌더링
-  if (userInfo.orderList.length > 0) {
-    userInfo.orderList.forEach(order => {
+  if (window.userInfo.orderList.length > 0) {
+    window.userInfo.orderList.forEach(order => {
       const p = document.createElement('p');
       const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
       p.innerHTML = `
@@ -52,8 +52,8 @@ function renderMyPage() {
   }
 
   // 예약내역 렌더링
-  if (userInfo.reservationList.length > 0) {
-    userInfo.reservationList.forEach(res => {
+  if (window.userInfo.reservationList.length > 0) {
+    window.userInfo.reservationList.forEach(res => {
       const p = document.createElement('p');
       p.innerHTML = `
         • <strong>${res.store}</strong><br>
@@ -68,12 +68,12 @@ function renderMyPage() {
   }
 
   // 쿠폰 리스트 렌더링
-  if (userInfo.coupons.unused.length === 0) {
+  if (window.userInfo.coupons.unused.length === 0) {
     const empty = document.createElement('p');
     empty.textContent = '보유한 쿠폰이 없습니다.';
     couponList.appendChild(empty);
   } else {
-    userInfo.coupons.unused.forEach(coupon => {
+    window.userInfo.coupons.unused.forEach(coupon => {
       const p = document.createElement('p');
       p.innerHTML = `
         • <strong>${coupon.name}</strong><br>
