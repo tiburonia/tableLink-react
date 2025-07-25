@@ -1,78 +1,117 @@
-
 async function renderMyPage() {
   try {
-    // 사용자 정보를 데이터베이스에서 새로 가져오기
     const response = await fetch('/api/users/info', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userInfo.id
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userInfo.id })
     });
 
-    if (!response.ok) {
-      throw new Error('사용자 정보 조회 실패');
-    }
-
+    if (!response.ok) throw new Error('사용자 정보 조회 실패');
     const data = await response.json();
     const currentUserInfo = data.user;
 
-    // 마이페이지 화면 HTML 삽입
     main.innerHTML = `
-      <h1>TableLink</h1>
-      <br>
-      <div id='orderList'>
-        <h2>주문내역</h2>
-      </div>
-      <br><br>
-      <div id='reservationList'>
-        <h2>예약내역</h2>
-      </div>
-      <br><br>
-      
-      <div id="couponList">
-      <h2>쿠폰 리스트</h2>
-      </div>
-      <button id='info'>내 계정</button> 
-      <button id='back'>뒤로가기</button>
+      <header>
+        <h1 style="margin: 20px; font-size: 24px;">📄 마이페이지</h1>
+      </header>
+
+      <main id="content" style="padding: 0 18px 80px;">
+        <section class="section-card">
+          <h2>📦 주문내역</h2>
+          <div id="orderList"></div>
+        </section>
+
+        <section class="section-card">
+          <h2>📅 예약내역</h2>
+          <div id="reservationList"></div>
+        </section>
+
+        <section class="section-card">
+          <h2>🎁 쿠폰 리스트</h2>
+          <div id="couponList"></div>
+        </section>
+
+        <button id="info" class="solid-button">내 계정 보기</button>
+      </main>
+
+      <nav id="bottomBar">
+        <button onclick="renderMain()">🏠</button>
+        <button onclick="renderSearch()">🔍</button>
+        <button onclick="renderMap()">📍</button>
+        <button onclick="renderMyPage()">👤</button>
+      </nav>
 
       <style>
-      #main {
-        overflow: scroll;
-      }
+        #main {
+          font-family: sans-serif;
+          background: #f8f9fb;
+          overflow-y: scroll;
+        }
+        .section-card {
+          background: white;
+          border-radius: 12px;
+          padding: 14px 16px;
+          margin-bottom: 18px;
+          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+        .section-card h2 {
+          margin-bottom: 10px;
+          font-size: 18px;
+          font-weight: 600;
+        }
+        .solid-button {
+          width: 100%;
+          padding: 12px 0;
+          font-size: 16px;
+          background: #297efc;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          margin-top: 20px;
+          cursor: pointer;
+        }
+        #bottomBar {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          height: 60px;
+          background: white;
+          border-top: 1px solid #ccc;
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          z-index: 1000;
+        }
       </style>
     `;
 
-    // 요소 선택
+    // DOM 요소 선택
     const orderList = document.querySelector('#orderList');
     const reservationList = document.querySelector('#reservationList');
-    const info = document.querySelector('#info');
-    const back = document.querySelector('#back');
     const couponList = document.querySelector('#couponList');
+    const info = document.querySelector('#info');
 
-    // 주문내역 렌더링
-    if (currentUserInfo.orderList && currentUserInfo.orderList.length > 0) {
+    // 주문내역
+    if (currentUserInfo.orderList?.length > 0) {
       currentUserInfo.orderList.forEach(order => {
         const p = document.createElement('p');
         const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
         p.innerHTML = `
           • <strong>${order.store}</strong><br>
           ${items}<br>
-          총 금액: ${order.total.toLocaleString()}원<br>
-          날짜: ${order.date}<br><br>
+          총 ${order.total.toLocaleString()}원<br>
+          📅 ${order.date}<br><br>
         `;
         orderList.appendChild(p);
       });
     } else {
-      const empty = document.createElement('p');
-      empty.textContent = '주문 내역이 없습니다.';
-      orderList.appendChild(empty);
+      orderList.innerHTML = `<p>주문 내역이 없습니다.</p>`;
     }
 
-    // 예약내역 렌더링
-    if (currentUserInfo.reservationList && currentUserInfo.reservationList.length > 0) {
+    // 예약내역
+    if (currentUserInfo.reservationList?.length > 0) {
       currentUserInfo.reservationList.forEach(res => {
         const p = document.createElement('p');
         p.innerHTML = `
@@ -82,16 +121,12 @@ async function renderMyPage() {
         reservationList.appendChild(p);
       });
     } else {
-      const empty = document.createElement('p');
-      empty.textContent = '예약 내역이 없습니다.';
-      reservationList.appendChild(empty);
+      reservationList.innerHTML = `<p>예약 내역이 없습니다.</p>`;
     }
 
-    // 쿠폰 리스트 렌더링
-    if (!currentUserInfo.coupons || !currentUserInfo.coupons.unused || currentUserInfo.coupons.unused.length === 0) {
-      const empty = document.createElement('p');
-      empty.textContent = '보유한 쿠폰이 없습니다.';
-      couponList.appendChild(empty);
+    // 쿠폰내역
+    if (!currentUserInfo.coupons?.unused?.length) {
+      couponList.innerHTML = `<p>보유한 쿠폰이 없습니다.</p>`;
     } else {
       currentUserInfo.coupons.unused.forEach(coupon => {
         const p = document.createElement('p');
@@ -104,15 +139,7 @@ async function renderMyPage() {
       });
     }
 
-    // 내 계정 화면 렌더링
-    info.addEventListener('click', () => {
-      renderMyAccount();
-    });
-
-    // 뒤로가기
-    back.addEventListener('click', () => {
-      renderMain();
-    });
+    info.addEventListener('click', () => renderMyAccount());
 
   } catch (error) {
     console.error('마이페이지 로딩 실패:', error);
