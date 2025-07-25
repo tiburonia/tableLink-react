@@ -12,10 +12,10 @@ async function renderMyPage() {
 
     main.innerHTML = `
       <header>
-        <h1 style="margin: 20px; font-size: 24px;">📄 마이페이지</h1>
+        <h1>📄 마이페이지</h1>
       </header>
 
-      <main id="content" style="padding: 0 18px 80px;">
+      <main id="content">
         <section class="section-card">
           <h2>📦 주문내역</h2>
           <div id="orderList"></div>
@@ -45,8 +45,42 @@ async function renderMyPage() {
         #main {
           font-family: sans-serif;
           background: #f8f9fb;
-          overflow-y: scroll;
+          overflow: hidden; /* 전체 스크롤 방지 */
         }
+        
+        header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          height: 80px;
+          background: white;
+          border-bottom: 1px solid #ddd;
+          display: flex;
+          align-items: center;
+          z-index: 1001;
+        }
+        
+        header h1 {
+          margin: 20px;
+          font-size: 24px;
+        }
+        
+        #content {
+          position: absolute;
+          top: 80px;       /* 헤더 높이만큼 */
+          bottom: 60px;    /* 바텀 바 높이만큼 */
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          overflow-y: auto;  /* 여기만 스크롤 */
+          padding: 0 18px;
+          box-sizing: border-box;
+          background: #f8f9fb;
+          z-index: 1;
+        }
+        
         .section-card {
           background: white;
           border-radius: 12px;
@@ -67,7 +101,7 @@ async function renderMyPage() {
           color: white;
           border: none;
           border-radius: 10px;
-          margin-top: 20px;
+          margin: 20px 0 80px 0; /* 바텀바 여백 확보 */
           cursor: pointer;
         }
         #bottomBar {
