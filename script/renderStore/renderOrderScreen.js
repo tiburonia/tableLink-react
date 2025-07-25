@@ -1,4 +1,5 @@
-function renderOrderScreen(store, tableNum, opts = {}) {
+
+async function renderOrderScreen(store, tableNum, opts = {}) {
   // 주문 상태
   let currentOrder = {};
 
@@ -52,64 +53,66 @@ function renderOrderScreen(store, tableNum, opts = {}) {
 
   // 렌더 메뉴 리스트
   const menuList = document.getElementById('menuList');
-  store.menu.forEach(menu => {
-    // 메뉴 아이템 카드
-    const card = document.createElement('div');
-    card.className = 'menu-item-card';
+  if (store.menu && Array.isArray(store.menu)) {
+    store.menu.forEach(menu => {
+      // 메뉴 아이템 카드
+      const card = document.createElement('div');
+      card.className = 'menu-item-card';
 
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'menu-item-info';
-    infoDiv.innerHTML = `<span class="menu-item-name">${menu.name}</span>
-      <span class="menu-item-price">${menu.price.toLocaleString()}원</span>`;
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'menu-item-info';
+      infoDiv.innerHTML = `<span class="menu-item-name">${menu.name}</span>
+        <span class="menu-item-price">${menu.price.toLocaleString()}원</span>`;
 
-    // 수량 조절
-    let qty = 0;
-    const qtyBox = document.createElement('div');
-    qtyBox.className = 'menu-qty-box';
+      // 수량 조절
+      let qty = 0;
+      const qtyBox = document.createElement('div');
+      qtyBox.className = 'menu-qty-box';
 
-    const minusBtn = document.createElement('button');
-    minusBtn.className = 'menu-qty-btn';
-    minusBtn.textContent = '➖';
-    const plusBtn = document.createElement('button');
-    plusBtn.className = 'menu-qty-btn';
-    plusBtn.textContent = '➕';
-    const qtyText = document.createElement('span');
-    qtyText.textContent = '0';
-
-    minusBtn.addEventListener('click', () => {
-      if (qty > 0) qty--;
-      qtyText.textContent = qty + '';
-    });
-    plusBtn.addEventListener('click', () => {
-      if (qty < 99) qty++;
-      qtyText.textContent = qty + '';
-    });
-
-    // 메뉴 추가 버튼
-    const addBtn = document.createElement('button');
-    addBtn.className = 'menu-add-btn';
-    addBtn.textContent = '추가';
-
-    addBtn.addEventListener('click', () => {
-      if (qty === 0) return;
-      if (currentOrder[menu.name]) {
-        currentOrder[menu.name] += qty;
-      } else {
-        currentOrder[menu.name] = qty;
-      }
-      qty = 0;
+      const minusBtn = document.createElement('button');
+      minusBtn.className = 'menu-qty-btn';
+      minusBtn.textContent = '➖';
+      const plusBtn = document.createElement('button');
+      plusBtn.className = 'menu-qty-btn';
+      plusBtn.textContent = '➕';
+      const qtyText = document.createElement('span');
       qtyText.textContent = '0';
-      renderCart();
-    });
 
-    qtyBox.appendChild(minusBtn);
-    qtyBox.appendChild(qtyText);
-    qtyBox.appendChild(plusBtn);
-    card.appendChild(infoDiv);
-    card.appendChild(qtyBox);
-    card.appendChild(addBtn);
-    menuList.appendChild(card);
-  });
+      minusBtn.addEventListener('click', () => {
+        if (qty > 0) qty--;
+        qtyText.textContent = qty + '';
+      });
+      plusBtn.addEventListener('click', () => {
+        if (qty < 99) qty++;
+        qtyText.textContent = qty + '';
+      });
+
+      // 메뉴 추가 버튼
+      const addBtn = document.createElement('button');
+      addBtn.className = 'menu-add-btn';
+      addBtn.textContent = '추가';
+
+      addBtn.addEventListener('click', () => {
+        if (qty === 0) return;
+        if (currentOrder[menu.name]) {
+          currentOrder[menu.name] += qty;
+        } else {
+          currentOrder[menu.name] = qty;
+        }
+        qty = 0;
+        qtyText.textContent = '0';
+        renderCart();
+      });
+
+      qtyBox.appendChild(minusBtn);
+      qtyBox.appendChild(qtyText);
+      qtyBox.appendChild(plusBtn);
+      card.appendChild(infoDiv);
+      card.appendChild(qtyBox);
+      card.appendChild(addBtn);
+      menuList.appendChild(card);
+    });
+  }
 
   // 렌더 카트(장바구니)
   function renderCart() {
@@ -119,6 +122,8 @@ function renderOrderScreen(store, tableNum, opts = {}) {
     let hasOrder = false;
     Object.keys(currentOrder).forEach(itemName => {
       const menu = store.menu.find(m => m.name === itemName);
+      if (!menu) return; // 메뉴를 찾을 수 없으면 스킵
+      
       const qty = currentOrder[itemName];
       const price = menu.price * qty;
       total += price;
@@ -185,12 +190,56 @@ function renderOrderScreen(store, tableNum, opts = {}) {
       return;
     }
     // 결제 flow로 넘김
-    renderPay(currentOrder, store, tableNum); // tableNum도 넘기면 좋음
+    renderPay(currentOrder, store, tableNum);
   });
-  document.getElementById('orderCartSaveBtn').addEventListener('click', () => {
-    saveCartBtn(currentOrder, store, tableNum); // 구현에 맞게 파라미터 맞춰서
-    alert('장바구니가 저장되었습니다!');
+
+  document.getElementById('orderCartSaveBtn').addEventListener('click', async () => {
+    if (Object.keys(currentOrder).length === 0) {
+      alert('장바구니가 비어있습니다!');
+      return;
+    }
+
+    try {
+      // 장바구니 데이터를 서버에 저장
+      const cartData = {
+        userId: userInfo?.id,
+        storeId: store.id,
+        storeName: store.name,
+        tableNum: tableNum,
+        order: currentOrder,
+        savedAt: new Date().toISOString()
+      };
+
+      const response = await fetch('/api/cart/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cartData)
+      });
+
+      if (response.ok) {
+        // 로컬 savedCart도 업데이트 (기존 코드와의 호환성을 위해)
+        if (typeof saveCartBtn === 'function') {
+          saveCartBtn(currentOrder, store, tableNum);
+        }
+        alert('장바구니가 저장되었습니다!');
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || '장바구니 저장에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('장바구니 저장 오류:', error);
+      // 서버 오류 시 로컬 저장으로 폴백
+      if (typeof saveCartBtn === 'function') {
+        saveCartBtn(currentOrder, store, tableNum);
+        alert('장바구니가 로컬에 저장되었습니다!');
+      } else {
+        alert('장바구니 저장에 실패했습니다.');
+      }
+    }
   });
+
   document.getElementById('orderCancelBtn').addEventListener('click', () => {
     renderStore(store); // 매장 상세로 돌아가기
   });
@@ -200,3 +249,5 @@ function renderOrderScreen(store, tableNum, opts = {}) {
     renderStore(store);
   });
 }
+
+window.renderOrderScreen = renderOrderScreen;

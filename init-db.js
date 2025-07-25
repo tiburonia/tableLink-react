@@ -1,4 +1,3 @@
-
 const pool = require('./database');
 
 async function initDatabase() {
@@ -35,11 +34,26 @@ async function initDatabase() {
       )
     `);
 
+    // carts 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS carts (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        store_id INTEGER NOT NULL,
+        store_name VARCHAR(100) NOT NULL,
+        table_num VARCHAR(10),
+        order_data JSONB NOT NULL,
+        saved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, store_id)
+      )
+    `);
+    console.log('✅ carts 테이블 생성 완료');
+
     console.log('✅ 데이터베이스 테이블 초기화 완료');
-    
+
     // 샘플 데이터 삽입 (기존 data.js의 stores 데이터 사용)
     await insertSampleData();
-    
+
   } catch (error) {
     console.error('❌ 데이터베이스 초기화 실패:', error);
   }
@@ -48,12 +62,12 @@ async function initDatabase() {
 async function insertSampleData() {
   // 기존 stores 데이터가 있는지 확인
   const existingStores = await pool.query('SELECT COUNT(*) FROM stores');
-  
+
   if (parseInt(existingStores.rows[0].count) === 0) {
     // data.js에서 stores 데이터 가져와서 삽입
     const dataModule = require('./script/data.js');
     const stores = dataModule.stores || dataModule;
-    
+
     for (const store of stores) {
       await pool.query(`
         INSERT INTO stores (id, name, category, distance, menu, coord, review_count, is_open, reviews)
@@ -70,13 +84,13 @@ async function insertSampleData() {
         JSON.stringify(store.reviews)
       ]);
     }
-    
+
     console.log('✅ 샘플 stores 데이터 삽입 완료');
   }
 
   // 기존 users 데이터가 있는지 확인
   const existingUsers = await pool.query('SELECT COUNT(*) FROM users');
-  
+
   if (parseInt(existingUsers.rows[0].count) === 0) {
     // loginInfo.js의 users 데이터 삽입
     const testUsers = {
@@ -124,7 +138,7 @@ async function insertSampleData() {
         JSON.stringify(userData.favorite_stores)
       ]);
     }
-    
+
     console.log('✅ 샘플 users 데이터 삽입 완료');
   }
 }
