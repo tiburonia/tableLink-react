@@ -9,8 +9,8 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// public 폴더 내 정적 파일 서빙 (css, js, 이미지 등)
-app.use(express.static(path.join(__dirname, 'public')));
+// 루트 디렉토리의 정적 파일 서빙 (css, js, 이미지 등)
+app.use(express.static(__dirname));
 
 // 루트(/) 접속 시 public/index.html 반환
 app.get('/', (req, res) => {
