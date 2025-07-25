@@ -7,8 +7,9 @@
 
 
   <title>TableLink 25-6-3</title>
+  <!--카카오맵 API키-->
   <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
-  <script src="script/data.js"></script>
+  <script src="script/data.js">window.stores = stores</script>
   <script src="script/signUp/loginInfo.js"></script>
 
 
@@ -33,6 +34,8 @@
   <script src="script/logOut.js"></script>
   <!--회원가입 화면 렌더링 함수-->
   <script src="script/signUp/renderSignUp.js"></script>
+  <!--QR 결제 화면 렌더링 함수-->
+  <script src="script/TLL/TLL.js"></script>
   <!--내 계정 화면 렌더링 함수-->
   <script src="script/myPage/renderMyAccount.js"></script>
   <!--마이페이지 화면 렌더링 함수-->
@@ -47,6 +50,10 @@
   <script src="script/renderStore/favoriteStore/toggleFavoriteF.js"></script>
   <!--메뉴탭 렌더링 함수-->
   <script src="script/renderStore/newStore/renderMenuHTML.js"></script>
+  <!--리뷰탭 렌더링 함수-->
+  <script src="script/renderStore/newStore/renderReviewHTML.js"></script>
+  <!--전체 리뷰 렌더링 함수-->
+  <script src="script/renderStore/review/renderAllReview.js"></script>
   <!--가게 메뉴 화면 렌더링 함수 -->
   <script src="script/renderStore/renderStore.js"></script>
   <!--결제 화면 렌더링 함수-->

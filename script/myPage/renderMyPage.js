@@ -17,6 +17,12 @@ function renderMyPage() {
     </div>
     <button id='info'>내 계정</button> 
     <button id='back'>뒤로가기</button>
+
+    <style>
+    #main {
+    overflow: scroll;
+    }
+    </style>
   `;
 
   // 요소 선택

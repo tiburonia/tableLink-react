@@ -283,9 +283,9 @@ function renderMap() {
   }
 
   //TLL 버튼 클릭 로직
-  const TLL = document.querySelector('#TLL')
-  TLL.addEventListener('click', () => {
-    alert('QR 결제 기능은 아직 준비 중입니다');
+  const renderTLL = document.querySelector('#TLL')
+  renderTLL.addEventListener('click', () => {
+   TLL();
   })
 
   function duringDrag(y) {
