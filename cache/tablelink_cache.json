@@ -1,0 +1,14 @@
+
+{
+  "stores": [],
+  "userInfo": {},
+  "lastUpdated": "",
+  "cacheVersion": "1.0.0",
+  "description": "TableLink 애플리케이션 캐시 데이터",
+  "structure": {
+    "stores": "Array - 모든 매장 정보 (id, name, category, menu, reviews, etc.)",
+    "userInfo": "Object - 현재 사용자 정보 (id, name, point, orderList, favorites, etc.)",
+    "lastUpdated": "String - 마지막 업데이트 시간 (ISO string)",
+    "cacheVersion": "String - 캐시 구조 버전"
+  }
+}
