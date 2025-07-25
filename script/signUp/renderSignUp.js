@@ -7,6 +7,7 @@ function renderSignUp() {
     <input id="phone" type="text" placeholder="전화번호"><br>
     <button id="submit">가입하기</button>
     <button id="back">뒤로가기</button>
+    
   `;
 
   const id = document.querySelector('#id');

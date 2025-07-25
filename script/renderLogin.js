@@ -1,9 +1,6 @@
-// 메인 화면이 표시될 요소 선택
-const main = document.querySelector('#main');
-let renderLogin = function() {
-  // 로그인 화면 HTML 삽입
+let renderLogin = function () {
   main.innerHTML = `
-           <div id="loginContainer">
+    <div id="loginContainer">
       <h1>TableLink</h1>
       <input id='id' type='text' placeholder='아이디'/>
       <input id='pw' type='password' placeholder='비밀번호'/>
@@ -11,51 +8,49 @@ let renderLogin = function() {
         <button id='join'>회원가입</button>
         <button id='login'>로그인</button>
       </div>
+      <hr>
+      <div>
+        <button id='adminLogin' style="background: #444; color: white; margin-top: 10px;">🛠️ 어드민 로그인 (개발용)</button>
+        <button id='goKDS' style="background: #222; color: white; margin-top: 6px;">📟 KDS 화면 이동</button>
+      </div>
     </div>
-    <style>
-   #main {
-  
-  background: #f0f8ff; /* 💡 은은한 하늘색 */
-  font-family: sans-serif;
-}
-</style>
-`;
 
-  // 로그인 화면의 입력 및 버튼 요소 재선택 (생성 이후)
+    <style>
+      #main {
+        background: #f0f8ff;
+        font-family: sans-serif;
+      }
+    </style>
+  `;
+
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
   const join = document.querySelector('#join');
   const login = document.querySelector('#login');
+  const adminLogin = document.querySelector('#adminLogin');
+  const goKDS = document.querySelector('#goKDS');
 
-  // 회원가입 버튼 클릭 이벤트
   join.addEventListener('click', () => {
-    renderSignUp(); // 회원가입 화면 렌더링
+    renderSignUp();
   });
 
-  // 로그인 버튼 클릭 이벤트 
   login.addEventListener('click', () => {
     if (users[id.value]?.pw === pw.value) {
-
-      // userInfo 리셋
       for (let key in userInfo) {
         if (Array.isArray(userInfo[key])) userInfo[key] = [];
         else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
         else userInfo[key] = '';
       }
 
-      // users에 있는 해당 계정의 모든 정보를 userInfo에 복사
       Object.assign(userInfo, users[id.value]);
-
       userInfo.id = id.value;
       alert('로그인 성공');
       renderMain();
-
-      // 로그인 성공 시, handleEnterKey 이벤트 리스너 제거
       document.removeEventListener('keydown', handleEnterKey);
-    } else { alert('로그인 실패') };
+    } else {
+      alert('로그인 실패');
+    }
   });
-
-  //로그인 화면에서 엔터키로 로그인
 
   const handleEnterKey = (event) => {
     if (event.key === 'Enter' && event.target.id !== 'join') {
@@ -64,25 +59,19 @@ let renderLogin = function() {
   };
   document.addEventListener('keydown', handleEnterKey);
 
-
-  //회원가입 엔터키로 진행
   join.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter')
-      join.click();
-  })
+    if (event.key === 'Enter') join.click();
+  });
 
-}
-// a키로 현재 users, userInfo 콘솔에 출력
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'a' || e.key === 'A' || e.key === 'ㅁ') {
-    console.log("------------------------------------------")
-    console.log("users")
-    console.log(JSON.stringify(users, null, 2))
-    console.log("------------------------------------------")
-    console.log("userInfo")
-    console.log(JSON.stringify(userInfo, null, 2))
+  // 개발용 어드민 로그인 버튼
+  adminLogin.addEventListener('click', () => {
+    alert('어드민 모드 진입');
+    renderAdminMain(); // 이 함수 네가 따로 구현해놔야 함
+  });
 
-    console.log("------------------------------------------")
-    console.log(JSON.stringify(savedCart, null, 2))
-  }
-});
+  // 개발용 KDS 버튼
+  goKDS.addEventListener('click', () => {
+    alert('KDS 화면 이동');
+    renderKDS(); // 이 함수도 따로 있어야 함
+  });
+};
