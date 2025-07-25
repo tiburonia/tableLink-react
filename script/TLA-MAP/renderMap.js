@@ -296,8 +296,8 @@ async function renderMap() {
 
   //TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')
-  renderTLL.addEventListener('click', () => {
-   TLL();
+  renderTLL.addEventListener('click', async () => {
+    await TLL();
   })
 
   function duringDrag(y) {

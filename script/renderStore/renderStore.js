@@ -3,7 +3,7 @@ function renderStore(store) {
     <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
     </button>
-    <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL()">
+    <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
       <span class="header-btn-ico">📱</span>
     </button>
     <header id="storeHeader">

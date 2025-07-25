@@ -1,5 +1,16 @@
-function TLL() {
-  // store 리스트 불러오기(전역 stores 배열 사용)
+async function TLL() {
+  // 데이터베이스에서 스토어 정보 가져오기
+  let stores = [];
+  try {
+    const response = await fetch('/api/stores');
+    const data = await response.json();
+    stores = data.stores || [];
+  } catch (error) {
+    console.error('스토어 정보 로딩 실패:', error);
+    alert('스토어 정보를 불러올 수 없습니다.');
+    return;
+  }
+
   const storeOptions = stores.map(s =>
     `<option value="${s.id}">${s.name}</option>`
   ).join('');
@@ -42,8 +53,8 @@ function TLL() {
     }
     // 선택한 매장 정보 찾기
     const store = stores.find(s => s.id === storeId);
-    // 테이블 옵션 채우기 (예시: 매장별 10개 테이블)
-    let tableNum = store.tables ? store.tables : Array.from({ length: 10 }, (_, i) => i + 1);
+    // 테이블 옵션 채우기 (기본값: 10개 테이블)
+    let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
     tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
       tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
     tableSelect.disabled = false;
