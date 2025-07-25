@@ -1,8 +1,28 @@
 async function renderMain() {
-  // 캐시에서 매장 데이터 가져오기
-  const stores = await cacheManager.getStores();
+  const main = document.getElementById('main');
 
+  // 사용자 정보 확인
+  if (!window.userInfo || !window.userInfo.id) {
+    console.error('사용자 정보가 없습니다. 로그인이 필요합니다.');
+    renderLogin();
+    return;
+  }
 
+  // 캐시에서 매장 데이터 가져오기 (빠른 렌더링)
+  let stores = [];
+  try {
+    if (window.cacheManager) {
+      stores = await window.cacheManager.getStores();
+      console.log('🏪 메인에서 캐시된 매장 데이터 사용');
+    } else {
+      console.error('캐시 매니저를 찾을 수 없습니다');
+      return;
+    }
+  } catch (error) {
+    console.error('매장 데이터 로딩 실패:', error);
+    alert('매장 정보를 불러올 수 없습니다.');
+    return;
+  }
 
   main.innerHTML = `
     <div id="header">

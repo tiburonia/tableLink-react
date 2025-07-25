@@ -36,6 +36,12 @@ let renderLogin = function () {
 
   login.addEventListener('click', async () => {
     try {
+      // 입력값 검증
+      if (!id.value || !pw.value) {
+        alert('아이디와 비밀번호를 입력해주세요');
+        return;
+      }
+
       const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: {
@@ -48,42 +54,51 @@ let renderLogin = function () {
       });
 
       const data = await response.json();
+      console.log('로그인 응답:', data);
 
-      if (response.ok) {
+      if (response.ok && data.user) {
         // 전역 userInfo 객체 초기화
-        if (!window.userInfo) {
-          window.userInfo = {};
-        }
-
-        // userInfo를 서버에서 받은 데이터로 업데이트
         window.userInfo = {
           id: data.user.id,
           pw: data.user.pw || '',
-          name: data.user.name,
-          phone: data.user.phone,
-          email: '',
-          address: '',
-          birth: '',
-          gender: '',
+          name: data.user.name || '',
+          phone: data.user.phone || '',
+          email: data.user.email || '',
+          address: data.user.address || '',
+          birth: data.user.birth || '',
+          gender: data.user.gender || '',
           point: data.user.point || 0,
           orderList: data.user.orderList || [],
-          totalCost: 0,
-          realCost: 0,
+          totalCost: data.user.totalCost || 0,
+          realCost: data.user.realCost || 0,
           reservationList: data.user.reservationList || [],
           coupons: data.user.coupons || { unused: [], used: [] },
-          favorites: data.user.favoriteStores || []
+          favorites: data.user.favoriteStores || data.user.favorites || []
         };
 
-        cacheManager.setUserInfo(window.userInfo); // 캐시에 사용자 정보 저장
+        // 캐시에 사용자 정보 저장
+        if (window.cacheManager) {
+          window.cacheManager.setUserInfo(window.userInfo);
+        }
+        
+        console.log('로그인 성공:', window.userInfo);
         alert('로그인 성공');
-        renderMain();
+        
+        // 메인 화면으로 이동
+        if (typeof renderMain === 'function') {
+          renderMain();
+        } else {
+          console.error('renderMain 함수를 찾을 수 없습니다');
+        }
+        
         document.removeEventListener('keydown', handleEnterKey);
       } else {
+        console.error('로그인 실패:', data);
         alert(data.error || '로그인 실패');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      alert('서버 연결에 실패했습니다');
+      alert('서버 연결에 실패했습니다. 네트워크 상태를 확인해주세요.');
     }
   });
 
