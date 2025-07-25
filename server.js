@@ -138,6 +138,123 @@ app.get('/api/cart/:userId', async (req, res) => {
   }
 });
 
+// 주문 처리 API
+app.post('/api/orders/pay', async (req, res) => {
+  const { 
+    userId, 
+    orderData, 
+    usedPoint, 
+    finalTotal, 
+    selectedCouponId, 
+    couponDiscount 
+  } = req.body;
+  
+  try {
+    // 사용자 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+    
+    const user = userResult.rows[0];
+    const currentCoupons = user.coupons || { unused: [], used: [] };
+    
+    // 포인트 부족 확인
+    if (usedPoint > user.point) {
+      return res.status(400).json({ error: '포인트가 부족합니다' });
+    }
+    
+    // 쿠폰 유효성 확인
+    let usedCoupon = null;
+    if (selectedCouponId) {
+      usedCoupon = currentCoupons.unused.find(c => c.id == selectedCouponId);
+      if (!usedCoupon) {
+        return res.status(400).json({ error: '유효하지 않은 쿠폰입니다' });
+      }
+    }
+    
+    // 계산
+    const appliedPoint = Math.min(usedPoint, user.point, orderData.total);
+    const realTotal = orderData.total - couponDiscount - appliedPoint;
+    const earnedPoint = Math.floor(orderData.total * 0.1);
+    
+    // 사용자 정보 업데이트
+    const newPoint = user.point - appliedPoint + earnedPoint;
+    const currentOrderList = user.order_list || [];
+    
+    // 주문 기록 생성
+    const orderRecord = {
+      ...orderData,
+      total: orderData.total,
+      usedPoint: appliedPoint,
+      couponDiscount: couponDiscount,
+      totalDiscount: appliedPoint + couponDiscount,
+      couponUsed: selectedCouponId || null,
+      realTotal: realTotal,
+      earnedPoint: earnedPoint,
+      paymentStrategy: (couponDiscount > 0 || appliedPoint > 0)
+        ? (couponDiscount >= appliedPoint ? "couponFirst" : "pointFirst")
+        : "none"
+    };
+    
+    // 쿠폰 처리
+    let newCoupons = { ...currentCoupons };
+    if (usedCoupon) {
+      const unusedIndex = newCoupons.unused.findIndex(c => c.id == selectedCouponId);
+      if (unusedIndex !== -1) {
+        const movedCoupon = newCoupons.unused.splice(unusedIndex, 1)[0];
+        newCoupons.used.push(movedCoupon);
+      }
+    }
+    
+    // 첫 주문시 웰컴 쿠폰 발급
+    let welcomeCoupon = null;
+    if (currentOrderList.length === 0) {
+      const today = new Date();
+      const expireDate = new Date(today);
+      expireDate.setDate(today.getDate() + 14);
+      
+      welcomeCoupon = {
+        id: Math.floor(Math.random() * 100000),
+        name: "첫 주문 10% 할인",
+        type: "welcome",
+        discountType: "percent",
+        discountValue: 10,
+        minOrderAmount: 5000,
+        validUntil: expireDate.toISOString().slice(0, 10),
+        issuedAt: today.toISOString().slice(0, 10)
+      };
+      
+      newCoupons.unused.push(welcomeCoupon);
+    }
+    
+    // 주문 목록 업데이트
+    const newOrderList = [...currentOrderList, orderRecord];
+    
+    // 데이터베이스 업데이트
+    await pool.query(
+      'UPDATE users SET point = $1, order_list = $2, coupons = $3 WHERE id = $4',
+      [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
+    );
+    
+    res.json({
+      success: true,
+      message: '결제가 완료되었습니다',
+      result: {
+        finalTotal: realTotal,
+        appliedPoint: appliedPoint,
+        earnedPoint: earnedPoint,
+        totalDiscount: appliedPoint + couponDiscount,
+        welcomeCoupon: welcomeCoupon
+      }
+    });
+    
+  } catch (error) {
+    console.error('결제 처리 실패:', error);
+    res.status(500).json({ error: '결제 처리 실패' });
+  }
+});
+
 // 서버 실행
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);

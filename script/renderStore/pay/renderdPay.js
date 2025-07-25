@@ -1,3 +1,4 @@
+
 function renderPay(currentOrder, store, tableNum) {
   // 주문 데이터 준비
   let total = 0;
@@ -145,14 +146,14 @@ function renderPay(currentOrder, store, tableNum) {
   usePointInput.addEventListener('input', updateFinalAmount);
   document.getElementById('selectedCoupon')?.addEventListener('change', updateFinalAmount);
 
-  document.getElementById('confirmPay').addEventListener('click', () => {
+  document.getElementById('confirmPay').addEventListener('click', async () => {
     const enteredPoint = Number(usePointInput.value) || 0;
     const selectedCouponId = document.getElementById('selectedCoupon')?.value;
     const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
 
     const result = calculateBestPayment(orderData.total, selectedCoupon, userInfo.point, enteredPoint);
 
-    confirmPay(
+    await confirmPay(
       orderData,
       result.appliedPoint,
       store,
@@ -174,3 +175,5 @@ function renderPay(currentOrder, store, tableNum) {
   // 최초 1회 초기 계산
   updateFinalAmount();
 }
+
+window.renderPay = renderPay;
