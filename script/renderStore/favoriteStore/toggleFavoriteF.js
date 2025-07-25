@@ -1,9 +1,8 @@
-
 //즐겨찾기 검증 함수
 function updateFavoriteBtn(storeName) {
   const btn = document.getElementById('favoriteBtn');
-  const isFavorited = userInfo.favorites.includes(storeName);
-  btn.textContent = isFavorited ? '♥' : '♡';
+  const favorites = currentUserInfo.favorites || currentUserInfo.favorite_stores || [];
+  const isFavorited = favorites.includes(storeName);
   btn.classList.toggle('favorited', isFavorited); // 빨간색 클래스 적용
 }
 
@@ -11,8 +10,9 @@ function updateFavoriteBtn(storeName) {
 async function toggleFavorite(storeName) {
   try {
     // 현재 즐겨찾기 상태 확인
-    const isFavorited = userInfo.favorites.includes(storeName);
-    
+    const favorites = currentUserInfo.favorites || currentUserInfo.favorite_stores || [];
+    const isFavorited = favorites.includes(storeName);
+
     // 서버에 즐겨찾기 토글 요청
     const response = await fetch('/api/users/favorite/toggle', {
       method: 'POST',
@@ -38,10 +38,10 @@ async function toggleFavorite(storeName) {
       } else {
         userInfo.favorites.push(storeName);
       }
-      
+
       // UI 업데이트
       updateFavoriteBtn(storeName);
-      
+
       console.log('즐겨찾기 상태 업데이트 성공:', data.message);
     } else {
       console.error('즐겨찾기 토글 실패:', data.error);

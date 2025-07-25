@@ -1,12 +1,11 @@
 async function renderMap() {
   const main = document.getElementById('main');
   
-  // 데이터베이스에서 스토어 정보 가져오기
+  // 캐시에서 스토어 정보 가져오기 (빠른 렌더링)
   let stores = [];
   try {
-    const response = await fetch('/api/stores');
-    const data = await response.json();
-    stores = data.stores || [];
+    stores = await cacheManager.getStores();
+    console.log('🗺️ 지도에서 캐시된 매장 데이터 사용');
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
     alert('스토어 정보를 불러올 수 없습니다.');
