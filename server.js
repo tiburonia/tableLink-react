@@ -255,6 +255,48 @@ app.post('/api/orders/pay', async (req, res) => {
   }
 });
 
+// 즐겨찾기 토글 API
+app.post('/api/users/favorite/toggle', async (req, res) => {
+  const { userId, storeName, action } = req.body;
+  
+  try {
+    // 사용자 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+    
+    const user = userResult.rows[0];
+    let favoriteStores = user.favorite_stores || [];
+    
+    if (action === 'add') {
+      // 즐겨찾기 추가
+      if (!favoriteStores.includes(storeName)) {
+        favoriteStores.push(storeName);
+      }
+    } else if (action === 'remove') {
+      // 즐겨찾기 제거
+      favoriteStores = favoriteStores.filter(store => store !== storeName);
+    }
+    
+    // 데이터베이스 업데이트
+    await pool.query(
+      'UPDATE users SET favorite_stores = $1 WHERE id = $2',
+      [JSON.stringify(favoriteStores), userId]
+    );
+    
+    res.json({
+      success: true,
+      message: action === 'add' ? '즐겨찾기에 추가되었습니다' : '즐겨찾기에서 제거되었습니다',
+      favoriteStores: favoriteStores
+    });
+    
+  } catch (error) {
+    console.error('즐겨찾기 토글 실패:', error);
+    res.status(500).json({ error: '즐겨찾기 설정 실패' });
+  }
+});
+
 // 서버 실행
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
