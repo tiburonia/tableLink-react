@@ -401,10 +401,8 @@ function assignRandomTablesToStores() {
 assignDummyReviewsToStores();
 assignRandomTablesToStores();
 
-// Node.js에서 사용할 수 있도록 exports
-module.exports = {
-  stores,
-  assignDummyReviewsToStores,
-  assignRandomTablesToStores
-};
+// 브라우저에서 전역 변수로 사용
+window.stores = stores;
+window.assignDummyReviewsToStores = assignDummyReviewsToStores;
+window.assignRandomTablesToStores = assignRandomTablesToStores;
 
