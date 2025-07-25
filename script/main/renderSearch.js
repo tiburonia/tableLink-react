@@ -12,7 +12,7 @@ function renderSearch() {
 
     <main id="content">
       <div id="searchResult"></div>
-
+     
     </main>
 
     <nav id="bottomBar">
@@ -117,27 +117,32 @@ function renderSearch() {
       </style>
   `;
 
+  // 검색 기능 로직
   const searchInput = document.getElementById('searchInput');
   const doSearch = document.getElementById('doSearch');
   const resultArea = document.getElementById('searchResult');
 
-  doSearch.addEventListener('click', async () => {
-    const keyword = searchInput.value.trim().toLowerCase();
-    resultArea.innerHTML = '';
 
+  doSearch.addEventListener('click', () => {
+    const keyword = searchInput.value.trim().toLowerCase();
+    resultArea.innerHTML = ''; // 검색 결과 초기화
+
+    // ✅ 뒤로가기 버튼이 이미 없을 때만 생성
+
+
+    // 검색어 입력 안 했을 경우
     if (!keyword) {
       resultArea.innerHTML += '<p>검색어를 입력해주세요.</p>';
       if (!document.getElementById('searchBack')) {
         const backButton = document.createElement('button');
         backButton.textContent = '← 뒤로가기';
-        backButton.id = 'searchBack';
+        backButton.id = 'searchBack'; // 중복 방지용 ID 부여
         backButton.onclick = renderMain;
         resultArea.appendChild(backButton)}
       return;
-
+      
     }
 
-    const stores = await API.getStores();
     const results = stores.filter(store =>
       store.name.toLowerCase().includes(keyword) ||
       store.category.toLowerCase().includes(keyword)
@@ -148,12 +153,13 @@ function renderSearch() {
       if (!document.getElementById('searchBack')) {
         const backButton = document.createElement('button');
         backButton.textContent = '← 뒤로가기';
-        backButton.id = 'searchBack';
+        backButton.id = 'searchBack'; // 중복 방지용 ID 부여
         backButton.onclick = renderMain;
         resultArea.appendChild(backButton)}
       return;
     }
 
+    // 검색 결과 렌더링
     results.forEach(store => {
       const p = document.createElement('p');
       const link = document.createElement('a');
@@ -172,21 +178,10 @@ function renderSearch() {
     if (!document.getElementById('searchBack')) {
       const backButton = document.createElement('button');
       backButton.textContent = '← 뒤로가기';
-      backButton.id = 'searchBack';
+      backButton.id = 'searchBack'; // 중복 방지용 ID 부여
       backButton.onclick = renderMain;
       resultArea.appendChild(backButton);
     }
-  });
-
-  // 검색 기능
-  searchInput.addEventListener('input', async (e) => {
-    const query = e.target.value.toLowerCase();
-    const stores = await API.getStores();
-    const filteredStores = stores.filter(store => 
-      store.name.toLowerCase().includes(query) || 
-      store.category.toLowerCase().includes(query)
-    );
-
   });
 
 }

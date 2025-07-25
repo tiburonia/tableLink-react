@@ -86,69 +86,12 @@ app.post('/api/users/login', async (req, res) => {
         point: user.point,
         orderList: user.order_list,
         reservationList: user.reservation_list,
-        coupons: user.coupons,
-        favorites: user.favorite_stores
+        coupons: user.coupons
       }
     });
   } catch (error) {
     console.error('로그인 실패:', error);
     res.status(500).json({ error: '로그인 실패' });
-  }
-});
-
-// 사용자 정보 업데이트 API
-app.put('/api/users/:id', async (req, res) => {
-  const userId = req.params.id;
-  const { name, phone, point, orderList, reservationList, coupons, favorites } = req.body;
-  
-  try {
-    await pool.query(`
-      UPDATE users SET 
-        name = $1, 
-        phone = $2, 
-        point = $3, 
-        order_list = $4, 
-        reservation_list = $5, 
-        coupons = $6, 
-        favorite_stores = $7
-      WHERE id = $8
-    `, [name, phone, point, JSON.stringify(orderList), JSON.stringify(reservationList), JSON.stringify(coupons), JSON.stringify(favorites), userId]);
-    
-    res.json({ success: true, message: '사용자 정보 업데이트 성공' });
-  } catch (error) {
-    console.error('사용자 정보 업데이트 실패:', error);
-    res.status(500).json({ error: '사용자 정보 업데이트 실패' });
-  }
-});
-
-// 특정 사용자 정보 조회 API
-app.get('/api/users/:id', async (req, res) => {
-  const userId = req.params.id;
-  
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
-    
-    const user = result.rows[0];
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        point: user.point,
-        orderList: user.order_list,
-        reservationList: user.reservation_list,
-        coupons: user.coupons,
-        favorites: user.favorite_stores
-      }
-    });
-  } catch (error) {
-    console.error('사용자 조회 실패:', error);
-    res.status(500).json({ error: '사용자 조회 실패' });
   }
 });
 

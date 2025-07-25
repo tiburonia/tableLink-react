@@ -1,65 +1,95 @@
-function renderLogin() {
+let renderLogin = function () {
   main.innerHTML = `
-    <h1>로그인</h1>
-    <input id="id" type="text" placeholder="아이디"><br>
-    <input id="pw" type="password" placeholder="비밀번호"><br>
-    <button id="submit">로그인</button>
-    <button id="guest">비회원으로 계속</button>
-    <button id="signUp">회원가입</button>
+    <div id="loginContainer">
+      <h1>TableLink</h1>
+      <input id='id' type='text' placeholder='아이디'/>
+      <input id='pw' type='password' placeholder='비밀번호'/>
+      <div>
+        <button id='join'>회원가입</button>
+        <button id='login'>로그인</button>
+      </div>
+      <hr>
+      <div>
+        <button id='adminLogin' style="background: #444; color: white; margin-top: 10px;">🛠️ 어드민 로그인 (개발용)</button>
+        <button id='goKDS' style="background: #222; color: white; margin-top: 6px;">📟 KDS 화면 이동</button>
+      </div>
+    </div>
+
+    <style>
+      #main {
+        background: #f0f8ff;
+        font-family: sans-serif;
+      }
+    </style>
   `;
 
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
-  const submit = document.querySelector('#submit');
-  const guest = document.querySelector('#guest');
-  const signUp = document.querySelector('#signUp');
+  const join = document.querySelector('#join');
+  const login = document.querySelector('#login');
+  const adminLogin = document.querySelector('#adminLogin');
+  const goKDS = document.querySelector('#goKDS');
 
-  submit.addEventListener('click', async () => {
-    if (!id.value || !pw.value) {
-      alert('아이디와 비밀번호를 입력해주세요');
-      return;
-    }
+  join.addEventListener('click', () => {
+    renderSignUp();
+  });
 
+  login.addEventListener('click', async () => {
     try {
-      const loginResult = await API.login(id.value, pw.value);
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id.value,
+          pw: pw.value
+        })
+      });
 
-      if (loginResult.success) {
-        // 전역 userInfo 객체에 로그인한 사용자 정보 저장
-        window.userInfo = {
-          id: loginResult.user.id,
-          name: loginResult.user.name,
-          phone: loginResult.user.phone,
-          point: loginResult.user.point,
-          orderList: loginResult.user.orderList || [],
-          reservationList: loginResult.user.reservationList || [],
-          coupons: loginResult.user.coupons || { unused: [], used: [] },
-          favorites: loginResult.user.favorites || []
-        };
+      const data = await response.json();
 
-        alert(`${loginResult.user.name || loginResult.user.id}님 환영합니다!`);
+      if (response.ok) {
+        // userInfo 초기화 후 서버 데이터로 업데이트
+        for (let key in userInfo) {
+          if (Array.isArray(userInfo[key])) userInfo[key] = [];
+          else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
+          else userInfo[key] = '';
+        }
+
+        Object.assign(userInfo, data.user);
+        alert('로그인 성공');
         renderMain();
+        document.removeEventListener('keydown', handleEnterKey);
+      } else {
+        alert(data.error || '로그인 실패');
       }
     } catch (error) {
-      alert(error.message || '로그인에 실패했습니다');
+      console.error('로그인 오류:', error);
+      alert('서버 연결에 실패했습니다');
     }
   });
 
-  guest.addEventListener('click', () => {
-    // 비회원 모드로 전역 userInfo 초기화
-    window.userInfo = {
-      id: '',
-      name: '비회원',
-      phone: '',
-      point: 0,
-      orderList: [],
-      reservationList: [],
-      coupons: { unused: [], used: [] },
-      favorites: []
-    };
-    renderMain();
+  const handleEnterKey = (event) => {
+    if (event.key === 'Enter' && event.target.id !== 'join') {
+      login.click();
+    }
+  };
+  document.addEventListener('keydown', handleEnterKey);
+
+  join.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') join.click();
   });
 
-  signUp.addEventListener('click', renderSignUp);
-}
+  // 개발용 어드민 로그인 버튼
+  adminLogin.addEventListener('click', () => {
+    alert('어드민 모드 진입');
+    renderAdminMain(); // 이 함수 네가 따로 구현해놔야 함
+  });
 
-window.renderLogin = renderLogin;
+  // 개발용 KDS 버튼
+  goKDS.addEventListener('click', () => {
+    alert('KDS 화면 이동');
+    renderKDS(); // 이 함수도 따로 있어야 함
+  });
+};
