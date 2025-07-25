@@ -1,6 +1,6 @@
 function renderStore(store) {
   main.innerHTML = `
-    <button id="backBtn" class="header-btn" onclick="renderMap()" aria-label="뒤로가기">
+    <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
     </button>
     <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL()">

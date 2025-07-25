@@ -23,12 +23,15 @@ app.get('/api/stores', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM stores ORDER BY id');
     const stores = result.rows.map(row => ({
-      ...row,
-      menu: row.menu,
-      coord: row.coord,
-      reviews: row.reviews,
-      reviewCount: row.review_count,
-      isOpen: row.is_open
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      distance: row.distance || '정보없음',
+      menu: row.menu || [],
+      coord: row.coord || { lat: 37.5665, lng: 126.9780 }, // 기본 좌표 (서울시청)
+      reviews: row.reviews || [],
+      reviewCount: row.review_count || 0,
+      isOpen: row.is_open !== false
     }));
     
     res.json({

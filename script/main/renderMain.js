@@ -1,11 +1,11 @@
 function renderMain() {
-  
+
 
 
   main.innerHTML = `
     <div id="header">
       <h2 id= "renderMainTL">TableLink</h2>
-    
+
     </div>
 
     <div id="content">
@@ -107,10 +107,10 @@ function renderMain() {
     }
 
 
-   
+
    </style>
 
-    
+
   `;
 
   // DOM 요소 선택
@@ -152,17 +152,14 @@ function renderMain() {
    logOutF()
   })
 
-  // 지도 버튼 클릭 이벤트
-  map.addEventListener('click', () => {
-    renderMap()  
+  // 지도 화면으로 이동
+  map.addEventListener('click', async () => {
+    await renderMap()
   })
 
   // 마이페이지 버튼 클릭 이벤트
   myPage.addEventListener('click', () => {
     renderMyPage()
   })
-  
+
 }
-
-  
-

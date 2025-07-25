@@ -1,5 +1,17 @@
-function renderMap() {
+async function renderMap() {
   const main = document.getElementById('main');
+  
+  // 데이터베이스에서 스토어 정보 가져오기
+  let stores = [];
+  try {
+    const response = await fetch('/api/stores');
+    const data = await response.json();
+    stores = data.stores || [];
+  } catch (error) {
+    console.error('스토어 정보 로딩 실패:', error);
+    alert('스토어 정보를 불러올 수 없습니다.');
+    return;
+  }
 
   main.innerHTML = `
     <header id="header">
@@ -337,10 +349,10 @@ function renderMap() {
 
     card.innerHTML = `
       <div class="storeInfoBox">
-        <div class="storeRatingBox"></div>
+        <div class="storeRatingBox">⭐</div>
         <div class="storeTextBox">
           <div class="storeName">${store.name}</div>
-          <div class="storeDistance">${store.distance}</div>
+          <div class="storeDistance">${store.category}</div>
         </div>
       </div>
       <div class="storeImageBox">
