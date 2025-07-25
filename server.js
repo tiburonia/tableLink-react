@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const pool = require('./database');
 
 const app = express();
 const PORT = 5000;
@@ -17,12 +18,81 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// (예시) API 엔드포인트
-app.get('/api/stores', (req, res) => {
-  res.json({
-    message: 'TableLink API 서버가 정상 작동 중입니다.',
-    stores: []
-  });
+// stores API 엔드포인트
+app.get('/api/stores', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM stores ORDER BY id');
+    const stores = result.rows.map(row => ({
+      ...row,
+      menu: row.menu,
+      coord: row.coord,
+      reviews: row.reviews,
+      reviewCount: row.review_count,
+      isOpen: row.is_open
+    }));
+    
+    res.json({
+      message: 'TableLink API 서버가 정상 작동 중입니다.',
+      stores: stores
+    });
+  } catch (error) {
+    console.error('stores 조회 실패:', error);
+    res.status(500).json({ error: 'stores 조회 실패' });
+  }
+});
+
+// 사용자 회원가입 API
+app.post('/api/users/signup', async (req, res) => {
+  const { id, pw, name, phone } = req.body;
+  
+  try {
+    await pool.query(
+      'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
+      [id, pw, name, phone]
+    );
+    res.json({ success: true, message: '회원가입 성공' });
+  } catch (error) {
+    if (error.code === '23505') { // 중복 키 에러
+      res.status(409).json({ error: '이미 존재하는 아이디입니다' });
+    } else {
+      console.error('회원가입 실패:', error);
+      res.status(500).json({ error: '회원가입 실패' });
+    }
+  }
+});
+
+// 사용자 로그인 API
+app.post('/api/users/login', async (req, res) => {
+  const { id, pw } = req.body;
+  
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
+    }
+    
+    const user = result.rows[0];
+    if (user.pw !== pw) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        point: user.point,
+        orderList: user.order_list,
+        reservationList: user.reservation_list,
+        coupons: user.coupons
+      }
+    });
+  } catch (error) {
+    console.error('로그인 실패:', error);
+    res.status(500).json({ error: '로그인 실패' });
+  }
 });
 
 // 서버 실행
