@@ -17,30 +17,39 @@ function renderSignUp() {
   const submit = document.querySelector('#submit');
   const back = document.querySelector('#back');
 
-  submit.addEventListener('click', () => {
+  submit.addEventListener('click', async () => {
     // 검증
     if (!id.value || !pw.value) {
       alert('아이디와 비밀번호는 필수입니다');
       return;
     }
 
-    if (users[id.value]) {
-      alert('이미 존재하는 아이디입니다');
-      return;
+    try {
+      const response = await fetch('/api/users/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id.value,
+          pw: pw.value,
+          name: name.value,
+          phone: phone.value
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('회원가입 성공!');
+        renderLogin(); // 로그인 화면으로 이동
+      } else {
+        alert(data.error || '회원가입 실패');
+      }
+    } catch (error) {
+      console.error('회원가입 오류:', error);
+      alert('서버 연결에 실패했습니다');
     }
-
-    // 저장
-    users[id.value] = {
-      pw: pw.value,
-      name: name.value,
-      phone: phone.value,
-      point: 0,
-      orderList: [],
-      reservationList: []
-    };
-
-    alert('회원가입 성공!');
-    renderLogin(); // 로그인 화면으로 이동
   });
 
   back.addEventListener('click', renderLogin);

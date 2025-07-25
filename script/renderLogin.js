@@ -34,21 +34,39 @@ let renderLogin = function () {
     renderSignUp();
   });
 
-  login.addEventListener('click', () => {
-    if (users[id.value]?.pw === pw.value) {
-      for (let key in userInfo) {
-        if (Array.isArray(userInfo[key])) userInfo[key] = [];
-        else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
-        else userInfo[key] = '';
-      }
+  login.addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id.value,
+          pw: pw.value
+        })
+      });
 
-      Object.assign(userInfo, users[id.value]);
-      userInfo.id = id.value;
-      alert('로그인 성공');
-      renderMain();
-      document.removeEventListener('keydown', handleEnterKey);
-    } else {
-      alert('로그인 실패');
+      const data = await response.json();
+
+      if (response.ok) {
+        // userInfo 초기화 후 서버 데이터로 업데이트
+        for (let key in userInfo) {
+          if (Array.isArray(userInfo[key])) userInfo[key] = [];
+          else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
+          else userInfo[key] = '';
+        }
+
+        Object.assign(userInfo, data.user);
+        alert('로그인 성공');
+        renderMain();
+        document.removeEventListener('keydown', handleEnterKey);
+      } else {
+        alert(data.error || '로그인 실패');
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      alert('서버 연결에 실패했습니다');
     }
   });
 
