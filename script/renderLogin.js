@@ -1,4 +1,3 @@
-
 let renderLogin = function () {
   main.innerHTML = `
     <div id="loginContainer">
@@ -55,7 +54,7 @@ let renderLogin = function () {
         if (!window.userInfo) {
           window.userInfo = {};
         }
-        
+
         // userInfo를 서버에서 받은 데이터로 업데이트
         window.userInfo = {
           id: data.user.id,
@@ -74,10 +73,25 @@ let renderLogin = function () {
           coupons: data.user.coupons || { unused: [], used: [] },
           favorites: data.user.favoriteStores || []
         };
-        
+
+        // 🍪 쿠키에 사용자 정보 저장 (7일 만료)
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+        console.log('🍪 로그인 정보 쿠키에 저장 완료');
+
+        // 🆕 캐시에 사용자 정보 저장 (캐시 매니저가 있을 때만)
+        if (typeof cacheManager !== 'undefined') {
+          cacheManager.setUserInfo(window.userInfo);
+          console.log('💾 로그인 정보 캐시에 저장 완료');
+        }
+
         alert('로그인 성공');
-        renderMain();
-        document.removeEventListener('keydown', handleEnterKey);
+
+        // renderMap 호출 전에 약간의 지연을 둬서 캐시가 완전히 저장되도록 함
+        setTimeout(() => {
+          renderMap();
+        }, 100);
       } else {
         alert(data.error || '로그인 실패');
       }
