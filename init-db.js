@@ -73,6 +73,60 @@ async function insertSampleData() {
     
     console.log('✅ 샘플 stores 데이터 삽입 완료');
   }
+
+  // 기존 users 데이터가 있는지 확인
+  const existingUsers = await pool.query('SELECT COUNT(*) FROM users');
+  
+  if (parseInt(existingUsers.rows[0].count) === 0) {
+    // loginInfo.js의 users 데이터 삽입
+    const testUsers = {
+      "12": {
+        pw: "12",
+        name: '',
+        phone: '',
+        point: 0,
+        order_list: [],
+        reservation_list: [],
+        coupons: { unused: [], used: [] },
+        favorite_stores: []
+      }
+    };
+
+    // user1~user10 테스트 계정들 생성
+    for (let i = 1; i <= 10; i++) {
+      const userId = `user${i}`;
+      testUsers[userId] = {
+        pw: `${i}${i}`,
+        name: `테스트유저${i}`,
+        phone: `010-0000-000${i}`,
+        point: 0,
+        order_list: [],
+        reservation_list: [],
+        coupons: { unused: [], used: [] },
+        favorite_stores: []
+      };
+    }
+
+    // 데이터베이스에 삽입
+    for (const [userId, userData] of Object.entries(testUsers)) {
+      await pool.query(`
+        INSERT INTO users (id, pw, name, phone, point, order_list, reservation_list, coupons, favorite_stores)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `, [
+        userId,
+        userData.pw,
+        userData.name,
+        userData.phone,
+        userData.point,
+        JSON.stringify(userData.order_list),
+        JSON.stringify(userData.reservation_list),
+        JSON.stringify(userData.coupons),
+        JSON.stringify(userData.favorite_stores)
+      ]);
+    }
+    
+    console.log('✅ 샘플 users 데이터 삽입 완료');
+  }
 }
 
 // 모듈을 직접 실행할 때만 초기화 실행
