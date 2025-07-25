@@ -3,23 +3,8 @@ async function renderMyAccount() {
   const main = document.getElementById('main');
 
   try {
-    // 사용자 정보를 데이터베이스에서 새로 가져오기
-    const response = await fetch('/api/users/info', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userInfo.id
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('사용자 정보 조회 실패');
-    }
-
-    const data = await response.json();
-    const currentUserInfo = data.user;
+    // 캐시에서 사용자 정보 가져오기 (이미 로드된 상태)
+    const currentUserInfo = cacheManager.cache.userInfo || await cacheManager.getUserInfo(userInfo.id);
 
     // 쿠폰 정보 HTML 생성
     const couponHTML = (currentUserInfo.coupons && currentUserInfo.coupons.unused && currentUserInfo.coupons.unused.length > 0)
@@ -55,32 +40,56 @@ async function renderMyAccount() {
     // 내 계정 정보 화면 HTML 삽입
     main.innerHTML = `
       <h2>내 계정 정보</h2>
-      <ul>
-        <li><strong>아이디:</strong> ${currentUserInfo.id}</li>
-        <li><strong>이름:</strong> ${currentUserInfo.name || '정보없음'}</li>
-        <li><strong>전화번호:</strong> ${currentUserInfo.phone || '정보없음'}</li>
-        <li><strong>이메일:</strong> ${currentUserInfo.email || '정보없음'}</li>
-        <li><strong>주소:</strong> ${currentUserInfo.address || '정보없음'}</li>
-        <li><strong>생년월일:</strong> ${currentUserInfo.birth || '정보없음'}</li>
-        <li><strong>성별:</strong> ${currentUserInfo.gender || '정보없음'}</li>
-        <li><strong>포인트:</strong> ${currentUserInfo.point || 0}</li>
-        <li><strong>총 주문금액:</strong> ${totalCost}원</li>
-        <li><strong>주문내역:</strong><br>
-          ${orderHistoryHTML}
+      <ul style="padding: 20px; font-family: Arial, sans-serif;">
+        <li style="margin: 10px 0;"><strong>아이디:</strong> ${currentUserInfo.id}</li>
+        <li style="margin: 10px 0;"><strong>이름:</strong> ${currentUserInfo.name || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>전화번호:</strong> ${currentUserInfo.phone || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>이메일:</strong> ${currentUserInfo.email || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>주소:</strong> ${currentUserInfo.address || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>생년월일:</strong> ${currentUserInfo.birth || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>성별:</strong> ${currentUserInfo.gender || '정보없음'}</li>
+        <li style="margin: 10px 0;"><strong>포인트:</strong> ${currentUserInfo.point || 0}</li>
+        <li style="margin: 10px 0;"><strong>총 주문금액:</strong> ${totalCost}원</li>
+        <li style="margin: 15px 0;"><strong>주문내역:</strong><br>
+          <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            ${orderHistoryHTML}
+          </div>
         </li>
-        <li><strong>사용가능한 쿠폰:</strong><br>
-          ${couponHTML}
+        <li style="margin: 15px 0;"><strong>사용가능한 쿠폰:</strong><br>
+          <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            ${couponHTML}
+          </div>
         </li>
-        <li><strong>예약내역:</strong><br>
-          ${reservationHistoryHTML}
+        <li style="margin: 15px 0;"><strong>예약내역:</strong><br>
+          <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            ${reservationHistoryHTML}
+          </div>
         </li>
-        <li><strong>즐겨찾기 매장:</strong><br>
-          ${favoritesHTML}
+        <li style="margin: 15px 0;"><strong>즐겨찾기 매장:</strong><br>
+          <div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+            ${favoritesHTML}
+          </div>
         </li>
       </ul>
       <button id="accountEdit">수정하기</button>
       <button id="backToMain">돌아가기</button>
       <button id="admin">관리자</button>
+      
+      <style>
+        button {
+          margin: 5px;
+          padding: 10px 15px;
+          background: #007bff;
+          color: white;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        
+        button:hover {
+          background: #0056b3;
+        }
+      </style>
     `;
 
     const accountEdit = document.getElementById('accountEdit');
@@ -91,6 +100,7 @@ async function renderMyAccount() {
       alert('계정 수정 기능은 아직 준비 중입니다');
     });
 
+    // 뒤로가기 (캐시된 데이터로 즉시 렌더링)
     backToMain.addEventListener('click', () => {
       renderMyPage();
     });

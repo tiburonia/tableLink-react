@@ -1,4 +1,3 @@
-
 async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal, selectedCouponId, couponDiscount) {
   try {
     // 서버에 결제 요청
@@ -25,8 +24,14 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     }
 
     // 클라이언트 userInfo 업데이트
-    userInfo.point = userInfo.point - data.result.appliedPoint + data.result.earnedPoint;
-    
+    if (response.ok) {
+        const result = data.result;
+        userInfo.point = userInfo.point - result.appliedPoint + result.earnedPoint;
+
+        // 캐시 강제 새로고침 (결제 후 최신 정보 반영)
+        cacheManager.getUserInfo(userInfo.id, true);
+    }
+
     // 쿠폰 처리
     if (selectedCouponId) {
       const idx = userInfo.coupons.unused.findIndex(c => c.id == selectedCouponId);
@@ -66,12 +71,12 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     }
 
     let alertMessage = `결제가 완료되었습니다.\n최종 금액: ${data.result.finalTotal.toLocaleString()}원\n포인트 사용: ${data.result.appliedPoint.toLocaleString()}원\n적립 포인트: ${data.result.earnedPoint.toLocaleString()}원\n할인된 금액: ${data.result.totalDiscount.toLocaleString()}원`;
-    
+
     if (selectedCouponId) {
       const usedCouponName = userInfo.coupons?.used?.find(c => c.id == selectedCouponId)?.name || '쿠폰';
       alertMessage += `\n사용된 쿠폰: ${usedCouponName}`;
     }
-    
+
     alert(alertMessage);
 
     // 초기화

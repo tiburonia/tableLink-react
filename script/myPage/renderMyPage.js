@@ -1,23 +1,18 @@
 
 async function renderMyPage() {
+  const main = document.getElementById('main');
+  
+  // 로딩 화면 표시
+  main.innerHTML = `
+    <div style="text-align: center; padding: 50px;">
+      <h1>TableLink</h1>
+      <p>마이페이지를 불러오는 중...</p>
+    </div>
+  `;
+
   try {
-    // 사용자 정보를 데이터베이스에서 새로 가져오기
-    const response = await fetch('/api/users/info', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId: userInfo.id
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('사용자 정보 조회 실패');
-    }
-
-    const data = await response.json();
-    const currentUserInfo = data.user;
+    // 캐시에서 사용자 정보 가져오기
+    const currentUserInfo = await cacheManager.getUserInfo(userInfo.id);
 
     // 마이페이지 화면 HTML 삽입
     main.innerHTML = `
@@ -41,6 +36,37 @@ async function renderMyPage() {
       <style>
       #main {
         overflow: scroll;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      
+      button {
+        margin: 5px;
+        padding: 10px 15px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      
+      button:hover {
+        background: #0056b3;
+      }
+      
+      #orderList, #reservationList, #couponList {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      
+      #orderList p, #reservationList p, #couponList p {
+        margin: 10px 0;
+        padding: 10px;
+        background: white;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
       }
       </style>
     `;
@@ -52,7 +78,7 @@ async function renderMyPage() {
     const back = document.querySelector('#back');
     const couponList = document.querySelector('#couponList');
 
-    // 주문내역 렌더링
+    // 주문내역 렌더링 (즉시 표시)
     if (currentUserInfo.orderList && currentUserInfo.orderList.length > 0) {
       currentUserInfo.orderList.forEach(order => {
         const p = document.createElement('p');
@@ -71,7 +97,7 @@ async function renderMyPage() {
       orderList.appendChild(empty);
     }
 
-    // 예약내역 렌더링
+    // 예약내역 렌더링 (즉시 표시)
     if (currentUserInfo.reservationList && currentUserInfo.reservationList.length > 0) {
       currentUserInfo.reservationList.forEach(res => {
         const p = document.createElement('p');
@@ -87,7 +113,7 @@ async function renderMyPage() {
       reservationList.appendChild(empty);
     }
 
-    // 쿠폰 리스트 렌더링
+    // 쿠폰 리스트 렌더링 (즉시 표시)
     if (!currentUserInfo.coupons || !currentUserInfo.coupons.unused || currentUserInfo.coupons.unused.length === 0) {
       const empty = document.createElement('p');
       empty.textContent = '보유한 쿠폰이 없습니다.';
@@ -104,12 +130,15 @@ async function renderMyPage() {
       });
     }
 
-    // 내 계정 화면 렌더링
+    // 전역 userInfo 업데이트 (캐시와 동기화)
+    Object.assign(userInfo, currentUserInfo);
+
+    // 내 계정 화면 렌더링 (캐시된 데이터 사용)
     info.addEventListener('click', () => {
       renderMyAccount();
     });
 
-    // 뒤로가기
+    // 뒤로가기 (서버 요청 없음)
     back.addEventListener('click', () => {
       renderMain();
     });
