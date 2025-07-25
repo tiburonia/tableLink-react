@@ -1,3 +1,4 @@
+
 let renderLogin = function () {
   main.innerHTML = `
     <div id="loginContainer">
@@ -50,14 +51,30 @@ let renderLogin = function () {
       const data = await response.json();
 
       if (response.ok) {
-        // userInfo 초기화 후 서버 데이터로 업데이트
-        for (let key in userInfo) {
-          if (Array.isArray(userInfo[key])) userInfo[key] = [];
-          else if (typeof userInfo[key] === 'number') userInfo[key] = 0;
-          else userInfo[key] = '';
+        // 전역 userInfo 객체 초기화
+        if (!window.userInfo) {
+          window.userInfo = {};
         }
-
-        Object.assign(userInfo, data.user);
+        
+        // userInfo를 서버에서 받은 데이터로 업데이트
+        window.userInfo = {
+          id: data.user.id,
+          pw: data.user.pw || '',
+          name: data.user.name,
+          phone: data.user.phone,
+          email: '',
+          address: '',
+          birth: '',
+          gender: '',
+          point: data.user.point || 0,
+          orderList: data.user.orderList || [],
+          totalCost: 0,
+          realCost: 0,
+          reservationList: data.user.reservationList || [],
+          coupons: data.user.coupons || { unused: [], used: [] },
+          favorites: data.user.favoriteStores || []
+        };
+        
         alert('로그인 성공');
         renderMain();
         document.removeEventListener('keydown', handleEnterKey);

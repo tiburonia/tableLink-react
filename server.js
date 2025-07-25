@@ -83,10 +83,11 @@ app.post('/api/users/login', async (req, res) => {
         id: user.id,
         name: user.name,
         phone: user.phone,
-        point: user.point,
-        orderList: user.order_list,
-        reservationList: user.reservation_list,
-        coupons: user.coupons
+        point: user.point || 0,
+        orderList: user.order_list || [],
+        reservationList: user.reservation_list || [],
+        coupons: user.coupons || { unused: [], used: [] },
+        favoriteStores: user.favorite_stores || []
       }
     });
   } catch (error) {
