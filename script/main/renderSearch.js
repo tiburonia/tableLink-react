@@ -122,13 +122,9 @@ function renderSearch() {
   const doSearch = document.getElementById('doSearch');
   const resultArea = document.getElementById('searchResult');
 
-
-  doSearch.addEventListener('click', () => {
+  doSearch.addEventListener('click', async () => {
     const keyword = searchInput.value.trim().toLowerCase();
     resultArea.innerHTML = ''; // 검색 결과 초기화
-
-    // ✅ 뒤로가기 버튼이 이미 없을 때만 생성
-
 
     // 검색어 입력 안 했을 경우
     if (!keyword) {
@@ -136,51 +132,72 @@ function renderSearch() {
       if (!document.getElementById('searchBack')) {
         const backButton = document.createElement('button');
         backButton.textContent = '← 뒤로가기';
-        backButton.id = 'searchBack'; // 중복 방지용 ID 부여
+        backButton.id = 'searchBack';
         backButton.onclick = renderMain;
-        resultArea.appendChild(backButton)}
+        resultArea.appendChild(backButton);
+      }
       return;
-      
     }
 
-    const results = stores.filter(store =>
-      store.name.toLowerCase().includes(keyword) ||
-      store.category.toLowerCase().includes(keyword)
-    );
+    try {
+      // 데이터베이스에서 매장 정보 가져오기
+      const response = await fetch('/api/stores');
+      const data = await response.json();
+      const stores = data.stores || [];
 
-    if (results.length === 0) {
-      resultArea.innerHTML += '<p>검색 결과가 없습니다.</p>';
+      // 검색 필터링
+      const results = stores.filter(store =>
+        store.name.toLowerCase().includes(keyword) ||
+        store.category.toLowerCase().includes(keyword)
+      );
+
+      if (results.length === 0) {
+        resultArea.innerHTML += '<p>검색 결과가 없습니다.</p>';
+        if (!document.getElementById('searchBack')) {
+          const backButton = document.createElement('button');
+          backButton.textContent = '← 뒤로가기';
+          backButton.id = 'searchBack';
+          backButton.onclick = renderMain;
+          resultArea.appendChild(backButton);
+        }
+        return;
+      }
+
+      // 검색 결과 렌더링
+      results.forEach(store => {
+        const p = document.createElement('p');
+        const link = document.createElement('a');
+        link.href = '#';
+        link.textContent = store.name;
+
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          renderStore(store);
+        });
+
+        p.appendChild(link);
+        p.append(` - ${store.category} (${store.distance})`);
+        resultArea.appendChild(p);
+      });
+
       if (!document.getElementById('searchBack')) {
         const backButton = document.createElement('button');
         backButton.textContent = '← 뒤로가기';
-        backButton.id = 'searchBack'; // 중복 방지용 ID 부여
+        backButton.id = 'searchBack';
         backButton.onclick = renderMain;
-        resultArea.appendChild(backButton)}
-      return;
-    }
+        resultArea.appendChild(backButton);
+      }
 
-    // 검색 결과 렌더링
-    results.forEach(store => {
-      const p = document.createElement('p');
-      const link = document.createElement('a');
-      link.href = '#';
-      link.textContent = store.name;
-
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        renderStore(store);
-      });
-
-      p.appendChild(link);
-      p.append(` - ${store.category} (${store.distance})`);
-      resultArea.appendChild(p);
-    });
-    if (!document.getElementById('searchBack')) {
-      const backButton = document.createElement('button');
-      backButton.textContent = '← 뒤로가기';
-      backButton.id = 'searchBack'; // 중복 방지용 ID 부여
-      backButton.onclick = renderMain;
-      resultArea.appendChild(backButton);
+    } catch (error) {
+      console.error('매장 검색 실패:', error);
+      resultArea.innerHTML += '<p>검색 중 오류가 발생했습니다.</p>';
+      if (!document.getElementById('searchBack')) {
+        const backButton = document.createElement('button');
+        backButton.textContent = '← 뒤로가기';
+        backButton.id = 'searchBack';
+        backButton.onclick = renderMain;
+        resultArea.appendChild(backButton);
+      }
     }
   });
 
