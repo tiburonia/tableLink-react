@@ -38,10 +38,10 @@ async function renderMyAccount() {
 
     main.innerHTML = `
       <header>
-        <h1 style="margin: 20px; font-size: 24px;">👤 내 계정 정보</h1>
+        <h1>👤 내 계정 정보</h1>
       </header>
 
-      <main id="content" style="padding: 0 18px 80px;">
+      <main id="content">
         <section class="section-card">
           <h2>📌 기본 정보</h2>
           <p><strong>아이디:</strong> ${currentUserInfo.id}</p>
@@ -80,6 +80,45 @@ async function renderMyAccount() {
       </main>
 
       <style>
+        #main {
+          font-family: sans-serif;
+          background: #f8f9fb;
+          overflow: hidden; /* 전체 스크롤 방지 */
+        }
+        
+        header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          height: 80px;
+          background: white;
+          border-bottom: 1px solid #ddd;
+          display: flex;
+          align-items: center;
+          z-index: 1001;
+        }
+        
+        header h1 {
+          margin: 20px;
+          font-size: 24px;
+        }
+        
+        #content {
+          position: absolute;
+          top: 80px;       /* 헤더 높이만큼 */
+          bottom: 0;       /* 바닥까지 */
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          overflow-y: auto;  /* 여기만 스크롤 */
+          padding: 0 18px;
+          box-sizing: border-box;
+          background: #f8f9fb;
+          z-index: 1;
+        }
+        
         .section-card {
           background: white;
           border-radius: 12px;
@@ -111,7 +150,7 @@ async function renderMyAccount() {
           border: 1px solid #297efc;
           border-radius: 10px;
           color: #297efc;
-          margin-top: 10px;
+          margin: 10px 0 80px 0; /* 아래 여백 확보 */
           cursor: pointer;
         }
       </style>
