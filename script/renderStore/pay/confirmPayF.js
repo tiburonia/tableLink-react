@@ -76,7 +76,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
 
     // 초기화
     for (const key in currentOrder) delete currentOrder[key];
-    renderStore(store);
+    renderMap();
 
     // 장바구니 위젯 숨기기 및 장바구니 초기화
     if (typeof savedCart !== 'undefined') {
