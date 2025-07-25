@@ -19,7 +19,6 @@ const logOutF= function() {
     userInfo.favorites = [];
 
     alert('로그아웃 완료');
-    cacheManager.clearCache(); // 캐시 초기화
     renderLogin(); // 로그인 화면 렌더링
 
 }

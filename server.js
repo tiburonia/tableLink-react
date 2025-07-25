@@ -33,7 +33,7 @@ app.get('/api/stores', async (req, res) => {
       reviewCount: row.review_count || 0,
       isOpen: row.is_open !== false
     }));
-
+    
     res.json({
       message: 'TableLink API 서버가 정상 작동 중입니다.',
       stores: stores
@@ -47,7 +47,7 @@ app.get('/api/stores', async (req, res) => {
 // 사용자 회원가입 API
 app.post('/api/users/signup', async (req, res) => {
   const { id, pw, name, phone } = req.body;
-
+  
   try {
     await pool.query(
       'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
@@ -67,42 +67,32 @@ app.post('/api/users/signup', async (req, res) => {
 // 사용자 로그인 API
 app.post('/api/users/login', async (req, res) => {
   const { id, pw } = req.body;
-
+  
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-
+    
     if (result.rows.length === 0) {
       return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
     }
-
+    
     const user = result.rows[0];
     if (user.pw !== pw) {
       return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
     }
-
-    if (user && user.pw === pw) {
-      console.log('로그인 성공:', user.id);
-      res.json({
-        success: true,
-        message: '로그인 성공',
-        user: {
-          id: user.id,
-          name: user.name || '',
-          phone: user.phone || '',
-          email: user.email || '',
-          address: user.address || '',
-          birth: user.birth || '',
-          gender: user.gender || '',
-          point: user.point || 0,
-          orderList: user.order_list || [],
-          totalCost: user.total_cost || 0,
-          realCost: user.real_cost || 0,
-          reservationList: user.reservation_list || [],
-          coupons: user.coupons || { unused: [], used: [] },
-          favoriteStores: user.favorite_stores || []
-        }
-      });
-    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        point: user.point || 0,
+        orderList: user.order_list || [],
+        reservationList: user.reservation_list || [],
+        coupons: user.coupons || { unused: [], used: [] },
+        favoriteStores: user.favorite_stores || []
+      }
+    });
   } catch (error) {
     console.error('로그인 실패:', error);
     res.status(500).json({ error: '로그인 실패' });
@@ -112,7 +102,7 @@ app.post('/api/users/login', async (req, res) => {
 // 장바구니 저장 API
 app.post('/api/cart/save', async (req, res) => {
   const { userId, storeId, storeName, tableNum, order, savedAt } = req.body;
-
+  
   try {
     await pool.query(
       'INSERT INTO carts (user_id, store_id, store_name, table_num, order_data, saved_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (user_id, store_id) DO UPDATE SET order_data = $5, saved_at = $6',
@@ -128,7 +118,7 @@ app.post('/api/cart/save', async (req, res) => {
 // 장바구니 조회 API
 app.get('/api/cart/:userId', async (req, res) => {
   const { userId } = req.params;
-
+  
   try {
     const result = await pool.query('SELECT * FROM carts WHERE user_id = $1', [userId]);
     res.json({
@@ -158,22 +148,22 @@ app.post('/api/orders/pay', async (req, res) => {
     selectedCouponId, 
     couponDiscount 
   } = req.body;
-
+  
   try {
     // 사용자 정보 조회
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-
+    
     const user = userResult.rows[0];
     const currentCoupons = user.coupons || { unused: [], used: [] };
-
+    
     // 포인트 부족 확인
     if (usedPoint > user.point) {
       return res.status(400).json({ error: '포인트가 부족합니다' });
     }
-
+    
     // 쿠폰 유효성 확인
     let usedCoupon = null;
     if (selectedCouponId) {
@@ -182,16 +172,16 @@ app.post('/api/orders/pay', async (req, res) => {
         return res.status(400).json({ error: '유효하지 않은 쿠폰입니다' });
       }
     }
-
+    
     // 계산
     const appliedPoint = Math.min(usedPoint, user.point, orderData.total);
     const realTotal = orderData.total - couponDiscount - appliedPoint;
     const earnedPoint = Math.floor(orderData.total * 0.1);
-
+    
     // 사용자 정보 업데이트
     const newPoint = user.point - appliedPoint + earnedPoint;
     const currentOrderList = user.order_list || [];
-
+    
     // 주문 기록 생성
     const orderRecord = {
       ...orderData,
@@ -206,7 +196,7 @@ app.post('/api/orders/pay', async (req, res) => {
         ? (couponDiscount >= appliedPoint ? "couponFirst" : "pointFirst")
         : "none"
     };
-
+    
     // 쿠폰 처리
     let newCoupons = { ...currentCoupons };
     if (usedCoupon) {
@@ -216,14 +206,14 @@ app.post('/api/orders/pay', async (req, res) => {
         newCoupons.used.push(movedCoupon);
       }
     }
-
+    
     // 첫 주문시 웰컴 쿠폰 발급
     let welcomeCoupon = null;
     if (currentOrderList.length === 0) {
       const today = new Date();
       const expireDate = new Date(today);
       expireDate.setDate(today.getDate() + 14);
-
+      
       welcomeCoupon = {
         id: Math.floor(Math.random() * 100000),
         name: "첫 주문 10% 할인",
@@ -234,19 +224,19 @@ app.post('/api/orders/pay', async (req, res) => {
         validUntil: expireDate.toISOString().slice(0, 10),
         issuedAt: today.toISOString().slice(0, 10)
       };
-
+      
       newCoupons.unused.push(welcomeCoupon);
     }
-
+    
     // 주문 목록 업데이트
     const newOrderList = [...currentOrderList, orderRecord];
-
+    
     // 데이터베이스 업데이트
     await pool.query(
       'UPDATE users SET point = $1, order_list = $2, coupons = $3 WHERE id = $4',
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
-
+    
     res.json({
       success: true,
       message: '결제가 완료되었습니다',
@@ -258,7 +248,7 @@ app.post('/api/orders/pay', async (req, res) => {
         welcomeCoupon: welcomeCoupon
       }
     });
-
+    
   } catch (error) {
     console.error('결제 처리 실패:', error);
     res.status(500).json({ error: '결제 처리 실패' });
@@ -268,14 +258,14 @@ app.post('/api/orders/pay', async (req, res) => {
 // 사용자 정보 조회 API
 app.post('/api/users/info', async (req, res) => {
   const { userId } = req.body;
-
+  
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-
+    
     if (result.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-
+    
     const user = result.rows[0];
     res.json({
       success: true,
@@ -303,17 +293,17 @@ app.post('/api/users/info', async (req, res) => {
 // 즐겨찾기 토글 API
 app.post('/api/users/favorite/toggle', async (req, res) => {
   const { userId, storeName, action } = req.body;
-
+  
   try {
     // 사용자 정보 조회
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-
+    
     const user = userResult.rows[0];
     let favoriteStores = user.favorite_stores || [];
-
+    
     if (action === 'add') {
       // 즐겨찾기 추가
       if (!favoriteStores.includes(storeName)) {
@@ -323,19 +313,19 @@ app.post('/api/users/favorite/toggle', async (req, res) => {
       // 즐겨찾기 제거
       favoriteStores = favoriteStores.filter(store => store !== storeName);
     }
-
+    
     // 데이터베이스 업데이트
     await pool.query(
       'UPDATE users SET favorite_stores = $1 WHERE id = $2',
       [JSON.stringify(favoriteStores), userId]
     );
-
+    
     res.json({
       success: true,
       message: action === 'add' ? '즐겨찾기에 추가되었습니다' : '즐겨찾기에서 제거되었습니다',
       favoriteStores: favoriteStores
     });
-
+    
   } catch (error) {
     console.error('즐겨찾기 토글 실패:', error);
     res.status(500).json({ error: '즐겨찾기 설정 실패' });
@@ -347,3 +337,4 @@ app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
 });
+

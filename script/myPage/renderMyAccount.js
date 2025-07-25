@@ -1,13 +1,8 @@
+
 async function renderMyAccount() {
   const main = document.getElementById('main');
 
   try {
-    // 캐시된 사용자 정보 사용
-    let currentUserInfo = cacheManager.getUserInfo();
-
-    // 필요시에만 서버에서 최신 정보 가져오기
-    if (!currentUserInfo || !cacheManager.isCacheValid()) {
-
     // 사용자 정보를 데이터베이스에서 새로 가져오기
     const response = await fetch('/api/users/info', {
       method: 'POST',
@@ -24,9 +19,7 @@ async function renderMyAccount() {
     }
 
     const data = await response.json();
-    currentUserInfo = data.user;
-    cacheManager.setUserInfo(currentUserInfo);
-    }
+    const currentUserInfo = data.user;
 
     // 쿠폰 정보 HTML 생성
     const couponHTML = (currentUserInfo.coupons && currentUserInfo.coupons.unused && currentUserInfo.coupons.unused.length > 0)
