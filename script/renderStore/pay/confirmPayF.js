@@ -65,6 +65,10 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
       alert('첫 주문시 10% 할인 쿠폰이 발급되었습니다');
     }
 
+    // 🆕 캐시에 업데이트된 사용자 정보 저장
+    cacheManager.setUserInfo(userInfo);
+    console.log('💳 결제 완료 후 사용자 정보 캐시 업데이트 완료');
+
     let alertMessage = `결제가 완료되었습니다.\n최종 금액: ${data.result.finalTotal.toLocaleString()}원\n포인트 사용: ${data.result.appliedPoint.toLocaleString()}원\n적립 포인트: ${data.result.earnedPoint.toLocaleString()}원\n할인된 금액: ${data.result.totalDiscount.toLocaleString()}원`;
     
     if (selectedCouponId) {
