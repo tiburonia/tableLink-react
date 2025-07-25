@@ -51,7 +51,8 @@ async function insertSampleData() {
   
   if (parseInt(existingStores.rows[0].count) === 0) {
     // data.js에서 stores 데이터 가져와서 삽입
-    const { stores } = require('./script/data.js');
+    const dataModule = require('./script/data.js');
+    const stores = dataModule.stores || dataModule;
     
     for (const store of stores) {
       await pool.query(`
