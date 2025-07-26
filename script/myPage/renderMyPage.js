@@ -370,8 +370,12 @@ function showReviewModal(order, orderIndex) {
       document.body.removeChild(modal);
       renderMyPage(); // 페이지 새로고침
     } catch (error) {
-      alert('리뷰 등록에 실패했습니다.');
       console.error('리뷰 등록 오류:', error);
+      if (error.message.includes('이미 리뷰를 작성한 주문입니다')) {
+        alert('이미 리뷰를 작성한 주문입니다.');
+      } else {
+        alert('리뷰 등록에 실패했습니다: ' + error.message);
+      }
     }
   });
   
