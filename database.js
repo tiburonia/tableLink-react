@@ -8,9 +8,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const pool = new Pool({
   connectionString: databaseUrl,
   max: 10, // 최대 연결 수
-  // 모든 연결에서 한국시간 사용
-  options: '-c timezone=Asia/Seoul'
-});
+  
 
 // 데이터베이스 연결 테스트
 pool.connect((err, client, release) => {
