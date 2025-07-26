@@ -67,7 +67,7 @@ async function TLL() {
       // 실제 테이블 번호로 옵션 생성
       if (tables.length > 0) {
         const tableOptions = tables.map(table => 
-          `<option value="${table.tableNumber}">${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
+          `<option value="${table.tableNumber}" ${table.isOccupied ? 'disabled' : ''}>${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
         ).join('');
 
         tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
