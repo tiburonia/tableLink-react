@@ -621,7 +621,27 @@ async function checkAndReleaseExpiredTables() {
 app.get('/api/stores/:storeId/reviews', async (req, res) => {
   try {
     const { storeId } = req.params;
-    console.log(`📖 매장 ${storeId} 리뷰 조회 요청`);
+    console.log(`\n=== 📖 매장 ${storeId} 리뷰 조회 API 시작 ===`);
+
+    // 먼저 전체 리뷰 수와 사용자 12의 리뷰 확인
+    const totalReviews = await pool.query('SELECT COUNT(*) as count FROM reviews');
+    console.log('📊 전체 리뷰 테이블 레코드 수:', totalReviews.rows[0].count);
+
+    const user12Reviews = await pool.query('SELECT * FROM reviews WHERE user_id = $1', ['12']);
+    console.log('👤 사용자 12의 전체 리뷰 수:', user12Reviews.rows.length);
+    if (user12Reviews.rows.length > 0) {
+      console.log('👤 사용자 12의 리뷰 상세:');
+      user12Reviews.rows.forEach((row, index) => {
+        console.log(`  리뷰 ${index + 1}:`, {
+          id: row.id,
+          user_id: row.user_id,
+          store_id: row.store_id,
+          rating: row.rating,
+          review_text: row.review_text,
+          created_at: row.created_at
+        });
+      });
+    }
 
     // reviews 테이블에서 매장의 모든 리뷰 조회 (사용자 이름 포함)
     const query = `
@@ -633,46 +653,73 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
     `;
 
     console.log('🔍 실행할 SQL 쿼리:', query);
-    console.log('🔍 쿼리 파라미터:', [storeId]);
-    
-    // 먼저 전체 리뷰 수 확인
-    const totalReviews = await pool.query('SELECT COUNT(*) as count FROM reviews');
-    console.log('📊 전체 리뷰 테이블 레코드 수:', totalReviews.rows[0].count);
-    
+    console.log('🔍 쿼리 파라미터 - storeId:', storeId, '(타입:', typeof storeId, ')');
+
     // 해당 매장의 리뷰 조회
-    const result = await pool.query(query, [storeId]);
+    const result = await pool.query(query, [parseInt(storeId)]);
     console.log(`🔍 데이터베이스 쿼리 결과: ${result.rows.length}개 리뷰 발견`);
-    console.log(`📊 원본 데이터:`, result.rows);
-    
-    const reviews = result.rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      userName: row.user_name || `사용자${row.user_id}`,
-      score: row.rating,
-      content: row.review_text,
-      date: row.created_at ? new Date(row.created_at).toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      }) : '날짜 없음',
-      orderDate: row.order_date,
-      user: row.user_name || `사용자${row.user_id}` // renderAllReview.js에서 사용하는 속성명
-    }));
 
-    console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 조회 완료`);
+    if (result.rows.length > 0) {
+      console.log(`📊 조회된 리뷰 원본 데이터:`, result.rows);
+      console.log(`📊 첫 번째 리뷰 상세 분석:`);
+      const firstRow = result.rows[0];
+      console.log('  - id:', firstRow.id, '(타입:', typeof firstRow.id, ')');
+      console.log('  - user_id:', firstRow.user_id, '(타입:', typeof firstRow.user_id, ')');
+      console.log('  - store_id:', firstRow.store_id, '(타입:', typeof firstRow.store_id, ')');
+      console.log('  - rating:', firstRow.rating, '(타입:', typeof firstRow.rating, ')');
+      console.log('  - review_text:', firstRow.review_text, '(타입:', typeof firstRow.review_text, ')');
+      console.log('  - created_at:', firstRow.created_at, '(타입:', typeof firstRow.created_at, ')');
+      console.log('  - user_name:', firstRow.user_name, '(타입:', typeof firstRow.user_name, ')');
+    } else {
+      console.log('❌ 조회된 리뷰가 없음. 전체 리뷰에서 매장별 분포 확인...');
+      const storeDistribution = await pool.query('SELECT store_id, COUNT(*) as count FROM reviews GROUP BY store_id ORDER BY store_id');
+      console.log('📊 매장별 리뷰 분포:', storeDistribution.rows);
 
-    res.json({
+      // 정확한 매장 ID로 다시 시도
+      console.log('🔍 다른 타입으로 매장 리뷰 재조회 시도...');
+      const retryResult = await pool.query('SELECT * FROM reviews WHERE store_id = $1', [storeId]);
+      console.log('🔄 문자열 타입으로 재조회 결과:', retryResult.rows.length, '개');
+    }
+
+    const reviews = result.rows.map((row, index) => {
+      console.log(`🔧 리뷰 ${index + 1} 매핑 중:`, row);
+      const mappedReview = {
+        id: row.id,
+        userId: row.user_id,
+        userName: row.user_name || `사용자${row.user_id}`,
+        score: row.rating,
+        content: row.review_text,
+        date: row.created_at ? new Date(row.created_at).toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric'
+        }) : '날짜 없음',
+        orderDate: row.order_date,
+        user: row.user_name || `사용자${row.user_id}` // renderAllReview.js에서 사용하는 속성명
+      };
+      console.log(`✅ 매핑된 리뷰 ${index + 1}:`, mappedReview);
+      return mappedReview;
+    });
+
+    console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 처리 완료`);
+
+    const responseData = {
       success: true,
       storeId: parseInt(storeId),
       total: reviews.length,
       reviews: reviews
-    });
+    };
+
+    console.log(`📤 클라이언트로 전송할 최종 데이터:`, JSON.stringify(responseData, null, 2));
+
+    res.json(responseData);
 
   } catch (error) {
-    console.error('❌ 리뷰 조회 오류:', error);
+    console.error('❌ 리뷰 조회 오류 (상세):', error);
+    console.error('❌ 오류 스택:', error.stack);
     res.status(500).json({
       success: false,
-      error: '리뷰 조회 중 오류가 발생했습니다'
+      error: '리뷰 조회 중 오류가 발생했습니다: ' + error.message
     });
   }
 });
@@ -684,11 +731,11 @@ app.post('/api/reviews/submit', async (req, res) => {
   console.log('📝 리뷰 등록 요청 받음:', { userId, storeId, orderIndex, rating, reviewText });
 
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
     console.log('🔍 트랜잭션 시작 - 리뷰 등록 처리 시작:', { userId, storeId, orderIndex });
-    
+
     // 사용자 정보 조회
     const userResult = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
@@ -731,16 +778,16 @@ app.post('/api/reviews/submit', async (req, res) => {
 
     // reviews 테이블에 리뷰 삽입
     console.log('📤 reviews 테이블에 삽입할 데이터:', { userId, storeId, orderIndex, rating, reviewText, orderDate });
-    
+
     const insertQuery = `
       INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *
     `;
-    
+
     console.log('🔍 실행할 INSERT 쿼리:', insertQuery);
     console.log('🔍 쿼리 파라미터:', [userId, storeId, orderIndex, rating, reviewText, orderDate]);
-    
+
     const reviewInsertResult = await client.query(insertQuery, [userId, storeId, orderIndex, rating, reviewText, orderDate]);
 
     if (reviewInsertResult.rows.length === 0) {
@@ -751,7 +798,7 @@ app.post('/api/reviews/submit', async (req, res) => {
 
     const insertedReview = reviewInsertResult.rows[0];
     console.log('✅ reviews 테이블에 리뷰 삽입 완료:', insertedReview);
-    
+
     // 삽입 후 즉시 조회해서 확인
     const verifyResult = await client.query('SELECT * FROM reviews WHERE id = $1', [insertedReview.id]);
     console.log('🔍 삽입된 리뷰 재확인:', verifyResult.rows[0]);
