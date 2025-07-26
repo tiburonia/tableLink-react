@@ -99,6 +99,42 @@ async function handleViewAllReviews() {
       console.error('❌ 현재 매장 정보를 찾을 수 없습니다');
       return;
     }
+
+    console.log('🔍 캐시에서 매장 정보 확인:', currentStore.name);
+    
+    // 캐시 매니저를 통해 최신 매장 정보 가져오기
+    let storeToUse = currentStore;
+    
+    if (window.cacheManager) {
+      try {
+        const cachedStore = await window.cacheManager.getStoreById(currentStore.id);
+        if (cachedStore) {
+          console.log('✅ 캐시에서 최신 매장 정보 사용:', cachedStore.name);
+          storeToUse = cachedStore;
+        } else {
+          console.log('⚠️ 캐시에서 매장을 찾을 수 없어 현재 정보 사용');
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ 캐시 조회 실패, 현재 정보 사용:', cacheError);
+      }
+    }
+    
+    // 리뷰 전체보기 호출
+    renderAllReview(storeToUse);
+    
+  } catch (error) {
+    console.error('❌ 전체 리뷰 보기 실패:', error);
+    // 에러 시에도 현재 매장 정보로 시도
+    if (window.currentStore) {
+      renderAllReview(window.currentStore);
+    }
+  }
+}
+
+// 전역에서 접근 가능하도록 등록
+window.handleViewAllReviews = handleViewAllReviews;보를 찾을 수 없습니다');
+      return;
+    }
     
     console.log('🔍 전체 리뷰 보기 - 매장:', currentStore.name);
     renderAllReview(currentStore);
