@@ -78,6 +78,32 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     
     alert(alertMessage);
 
+    // 테이블 점유 상태 설정 (주문이 확정되었으므로)
+    if (currentOrder.storeId && currentOrder.tableNum) {
+      try {
+        // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
+        const tableNumber = parseInt(currentOrder.tableNum.replace(/\D/g, ''));
+        
+        const occupyResponse = await fetch('/api/tables/occupy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            storeId: currentOrder.storeId,
+            tableNumber: tableNumber
+          })
+        });
+
+        if (occupyResponse.ok) {
+          const occupyData = await occupyResponse.json();
+          console.log(`🔒 테이블 점유 설정 완료: ${occupyData.message}`);
+        } else {
+          console.error('❌ 테이블 점유 설정 실패');
+        }
+      } catch (error) {
+        console.error('❌ 테이블 점유 API 호출 실패:', error);
+      }
+    }
+
     // 초기화
     for (const key in currentOrder) delete currentOrder[key];
     renderMap();

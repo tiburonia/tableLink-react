@@ -496,8 +496,97 @@ app.get('/api/admin/tables/status', async (req, res) => {
   }
 });
 
+// 테이블 점유 상태 설정 및 자동 해제 API
+app.post('/api/tables/occupy', async (req, res) => {
+  const { storeId, tableNumber } = req.body;
+
+  try {
+    // 테이블 점유 상태로 변경
+    const occupiedTime = new Date();
+    await pool.query(`
+      UPDATE store_tables 
+      SET is_occupied = true, occupied_since = $1 
+      WHERE store_id = $2 AND table_number = $3
+    `, [occupiedTime, storeId, tableNumber]);
+
+    // 2분 후 자동 해제 스케줄링
+    setTimeout(async () => {
+      try {
+        // 2분이 지난 후 해당 테이블이 여전히 점유 상태인지 확인
+        const tableResult = await pool.query(`
+          SELECT * FROM store_tables 
+          WHERE store_id = $1 AND table_number = $2 AND is_occupied = true
+        `, [storeId, tableNumber]);
+
+        if (tableResult.rows.length > 0) {
+          const table = tableResult.rows[0];
+          const occupiedSince = new Date(table.occupied_since);
+          const now = new Date();
+          const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
+
+          // 2분 이상 지났으면 해제
+          if (diffMinutes >= 2) {
+            await pool.query(`
+              UPDATE store_tables 
+              SET is_occupied = false, occupied_since = null 
+              WHERE store_id = $1 AND table_number = $2
+            `, [storeId, tableNumber]);
+            
+            console.log(`✅ 테이블 ${tableNumber}번 (매장 ID: ${storeId}) 자동 해제 완료`);
+          }
+        }
+      } catch (error) {
+        console.error('❌ 테이블 자동 해제 실패:', error);
+      }
+    }, 2 * 60 * 1000); // 2분 = 120,000ms
+
+    res.json({
+      success: true,
+      message: `테이블 ${tableNumber}번이 점유 상태로 변경되었습니다. 2분 후 자동 해제됩니다.`,
+      occupiedSince: occupiedTime
+    });
+
+  } catch (error) {
+    console.error('테이블 점유 상태 설정 실패:', error);
+    res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
+  }
+});
+
+// 점유된 테이블들의 자동 해제 체크 (서버 시작 시 복구)
+async function checkAndReleaseExpiredTables() {
+  try {
+    const result = await pool.query(`
+      SELECT store_id, table_number, occupied_since 
+      FROM store_tables 
+      WHERE is_occupied = true AND occupied_since IS NOT NULL
+    `);
+
+    const now = new Date();
+    
+    for (const table of result.rows) {
+      const occupiedSince = new Date(table.occupied_since);
+      const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
+      
+      if (diffMinutes >= 2) {
+        await pool.query(`
+          UPDATE store_tables 
+          SET is_occupied = false, occupied_since = null 
+          WHERE store_id = $1 AND table_number = $2
+        `, [table.store_id, table.table_number]);
+        
+        console.log(`✅ 서버 시작 시 만료된 테이블 ${table.table_number}번 (매장 ID: ${table.store_id}) 해제 완료`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ 만료된 테이블 체크 실패:', error);
+  }
+}
+
 // 서버 실행
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
+  
+  // 서버 시작 시 만료된 테이블들 해제
+  checkAndReleaseExpiredTables();
 });
