@@ -660,7 +660,7 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
       content: row.content,
       date: new Date(row.created_at).toLocaleDateString('ko-KR'),
       orderDate: row.order_date,
-      user: row.user_name || row.user_id || `사용자${row.user_id}`, // 사용자 이름 우선, 없으면 ID 사용
+      user: row.user_name || `사용자${row.user_id}`, // renderAllReview.js에서 사용하는 속성명
       userId: row.user_id
     }));
 
@@ -777,7 +777,7 @@ app.post('/api/reviews/submit', async (req, res) => {
       content: reviewText,
       date: new Date(createdAt).toLocaleDateString('ko-KR'),
       orderDate: orderDate,
-      user: user.name || user.id || `사용자${userId}`,
+      user: user.name || `사용자${userId}`,
       userId: userId
     };
 

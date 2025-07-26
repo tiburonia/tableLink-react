@@ -1,13 +1,13 @@
 function renderReviewHTML(store) {
   const reviews = store.reviews || [];
-  const total = store.reviewTotal || reviews.length;
-  const avgScore = total && reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.score, 0) / reviews.length).toFixed(1)
+  const total = reviews.length;
+  const avgScore = total
+    ? (reviews.reduce((sum, r) => sum + r.score, 0) / total).toFixed(1)
     : "0.0";
   // 미리보기로 2~3개만 표시 (최신순)
   const preview = reviews.slice(0, 3);
 
-
+  
   // 리뷰 없을 때 안내
   if (total === 0) {
     return `
@@ -19,7 +19,7 @@ function renderReviewHTML(store) {
           <div style="font-size:16px;font-weight:600;margin-bottom:8px;">등록된 리뷰가 없습니다.</div>
           <div style="color:#aaa;">첫 리뷰를 남겨주세요!</div>
         </div>
-        <button class="see-more-btn" style="margin-top:10px;">전체 리뷰 보기</button>
+        <button class="see-more-btn" style="margin-top:10px;" onclick="renderAllReview(window.currentStore)">전체 리뷰 보기</button>
       </div>
     `;
   }
@@ -38,9 +38,8 @@ function renderReviewHTML(store) {
         ${preview.map(r => `
           <div class="review-card">
             <div class="review-meta">
-              <span class="review-user">👤 ${r.user || r.userId || '익명'}</span>
+              <span class="review-user">${r.user}</span>
               <span class="review-score">★ ${r.score}</span>
-              <span class="review-date">${r.date || ''}</span>
             </div>
             <div class="review-text">${r.content}</div>
           </div>
@@ -87,61 +86,8 @@ function renderReviewHTML(store) {
   `;
 
 
-
-
-}
-// 전체 리뷰 보기 핸들러 함수
-async function handleViewAllReviews() {
-  try {
-    // 캐시에서 현재 매장 정보 가져오기
-    const currentStore = window.currentStore;
-    if (!currentStore) {
-      console.error('❌ 현재 매장 정보를 찾을 수 없습니다');
-      return;
-    }
-
-    console.log('🔍 캐시에서 매장 정보 확인:', currentStore.name);
-    
-    // 캐시 매니저를 통해 최신 매장 정보 가져오기
-    let storeToUse = currentStore;
-    
-    if (window.cacheManager) {
-      try {
-        const cachedStore = await window.cacheManager.getStoreById(currentStore.id);
-        if (cachedStore) {
-          console.log('✅ 캐시에서 최신 매장 정보 사용:', cachedStore.name);
-          storeToUse = cachedStore;
-        } else {
-          console.log('⚠️ 캐시에서 매장을 찾을 수 없어 현재 정보 사용');
-        }
-      } catch (cacheError) {
-        console.warn('⚠️ 캐시 조회 실패, 현재 정보 사용:', cacheError);
-      }
-    }
-    
-    // 리뷰 전체보기 호출
-    renderAllReview(storeToUse);
-    
-  } catch (error) {
-    console.error('❌ 전체 리뷰 보기 실패:', error);
-    // 에러 시에도 현재 매장 정보로 시도
-    if (window.currentStore) {
-      renderAllReview(window.currentStore);
-    }
-  }
+  
+  
 }
 
-// 전역에서 접근 가능하도록 등록
-window.handleViewAllReviews = handleViewAllReviews;보를 찾을 수 없습니다');
-      return;
-    }
-    
-    console.log('🔍 전체 리뷰 보기 - 매장:', currentStore.name);
-    renderAllReview(currentStore);
-    
-  } catch (error) {
-    console.error('❌ 전체 리뷰 보기 실패:', error);
-    alert('리뷰를 불러올 수 없습니다.');
-  }
-}
 

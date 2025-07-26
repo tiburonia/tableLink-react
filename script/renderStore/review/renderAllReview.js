@@ -1,31 +1,19 @@
+
 async function renderAllReview(store) {
   console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
-
+  
   try {
-    // 캐시에서 리뷰 데이터 가져오기 (실시간 데이터이므로 캐시하지 않고 항상 서버에서 조회)
-    let reviews = [];
-
-    try {
-      console.log('🌐 서버에서 최신 리뷰 데이터 조회 중...');
-      const response = await fetch(`/api/stores/${store.id}/reviews`);
-
-      if (!response.ok) {
-        throw new Error(`리뷰 조회 실패: ${response.status}`);
-      }
-
-      const reviewData = await response.json();
-      reviews = reviewData.reviews || [];
-
-      console.log('📖 서버에서 가져온 리뷰 데이터:', reviews);
-
-    } catch (apiError) {
-      console.error('❌ 서버 리뷰 조회 실패:', apiError);
-
-      // 서버 조회 실패 시 빈 배열로 처리하여 UI는 정상 렌더링
-      reviews = [];
-      console.log('⚠️ 리뷰 데이터를 가져올 수 없어 빈 상태로 표시합니다');
+    // 데이터베이스에서 실제 리뷰 데이터 가져오기
+    const response = await fetch(`/api/stores/${store.id}/reviews`);
+    if (!response.ok) {
+      throw new Error('리뷰 데이터 조회 실패');
     }
-
+    
+    const reviewData = await response.json();
+    const reviews = reviewData.reviews || [];
+    
+    console.log('📖 가져온 리뷰 데이터:', reviews);
+    
     const total = reviews.length;
     const avgScore = total
       ? (reviews.reduce((sum, r) => sum + r.score, 0) / total).toFixed(1)
@@ -98,7 +86,7 @@ async function renderAllReview(store) {
       body, #main {
         overflow: hidden;
       }
-
+      
       .header-btn {
         border: none;
         border-radius: 50%;
@@ -126,7 +114,7 @@ async function renderAllReview(store) {
         font-size: 20px;
         pointer-events: none;
       }
-
+      
       #allReviewScrollArea::-webkit-scrollbar {
         width: 4px;
       }
@@ -140,7 +128,7 @@ async function renderAllReview(store) {
       #allReviewScrollArea::-webkit-scrollbar-thumb:hover {
         background: #aaa;
       }
-
+      
       .review-all-header {
         margin-bottom: 20px;
         padding: 16px;
@@ -155,13 +143,13 @@ async function renderAllReview(store) {
         justify-content: center;
         gap: 8px;
       }
-
+      
       .review-all-list { 
         display: flex; 
         flex-direction: column; 
         gap: 12px; 
       }
-
+      
       .review-card {
         background: #fff;
         border-radius: 12px;
@@ -177,7 +165,7 @@ async function renderAllReview(store) {
         box-shadow: 0 4px 20px rgba(40,110,255,0.10);
         transform: translateY(-1px);
       }
-
+      
       .review-meta {
         display: flex;
         align-items: center;
@@ -200,14 +188,14 @@ async function renderAllReview(store) {
         font-size: 13px;
         margin-left: auto;
       }
-
+      
       .review-text { 
         font-size: 15px; 
         color: #333; 
         line-height: 1.6; 
         word-break: break-word;
       }
-
+      
       .review-all-empty {
         text-align: center;
         padding: 60px 20px;
@@ -215,7 +203,7 @@ async function renderAllReview(store) {
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       }
-
+      
       /* 바텀바 스타일 */
       #storeBottomBar {
         position: fixed;
@@ -234,7 +222,7 @@ async function renderAllReview(store) {
         padding: 0 16px;
         box-sizing: border-box;
       }
-
+      
       .btm-btn {
         border: none;
         outline: none;
@@ -248,7 +236,7 @@ async function renderAllReview(store) {
         font-size: 17px;
         font-weight: 600;
       }
-
+      
       .phone-btn {
         width: 48px; 
         min-width: 48px; 
@@ -264,13 +252,13 @@ async function renderAllReview(store) {
         background: #e4effd;
         transform: scale(0.95);
       }
-
+      
       .btm-btn-ico {
         font-size: 22px;
         pointer-events: none;
         line-height: 1;
       }
-
+      
       .order-btn {
         flex: 1;
         height: 44px;
@@ -287,7 +275,7 @@ async function renderAllReview(store) {
         transform: translateY(1px);
         box-shadow: 0 2px 8px rgba(41,126,252,0.2);
       }
-
+      
       @media (max-width: 480px) {
         .review-all-header { padding: 12px; }
         .review-card { padding: 14px; }
@@ -300,23 +288,10 @@ async function renderAllReview(store) {
     `;
 
     // 버튼 이벤트 바인딩
-    document.getElementById('backBtn').addEventListener('click', async () => {
-      // 캐시에서 최신 매장 정보 가져와서 renderStore 호출
-      try {
-        const cachedStore = await cacheManager.getStoreById(store.id);
-        if (cachedStore) {
-          console.log('🏪 캐시에서 매장 정보 가져와서 뒤로가기:', cachedStore.name);
-          renderStore(cachedStore);
-        } else {
-          console.log('⚠️ 캐시에서 매장 정보를 찾을 수 없어 기존 정보 사용');
-          renderStore(store);
-        }
-      } catch (error) {
-        console.error('❌ 매장 정보 조회 실패:', error);
-        renderStore(store);
-      }
+    document.getElementById('backBtn').addEventListener('click', () => {
+      renderStore(store);
     });
-
+    
     document.getElementById('TLL').addEventListener('click', () => {
       alert('QR 결제 기능은 아직 준비 중입니다');
     });
@@ -324,15 +299,14 @@ async function renderAllReview(store) {
     document.getElementById('telephone').addEventListener('click', () => {
       alert('전화 기능은 아직 준비 중입니다');
     });
-
-    const storeToUse = store;
+    
     document.getElementById('order').addEventListener('click', () => {
-      renderOrderScreen(storeToUse);
+      alert('포장·예약하기 기능은 준비 중입니다');
     });
 
   } catch (error) {
     console.error('❌ 리뷰 데이터 로딩 실패:', error);
-
+    
     // 에러 발생 시 기본 UI 렌더링
     const mainEl = document.getElementById('main');
     if (!mainEl) return;

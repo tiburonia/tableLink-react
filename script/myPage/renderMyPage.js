@@ -346,55 +346,43 @@ function showReviewModal(order, orderIndex) {
     });
   });
   
-  // 모달 닫기 함수
-  const closeModal = () => {
-    if (document.body.contains(modal)) {
-      document.body.removeChild(modal);
-    }
-  };
-  
   // 취소 버튼
-  modal.querySelector('.cancel-btn').addEventListener('click', closeModal);
+  modal.querySelector('.cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
   
   // 등록 버튼
   modal.querySelector('.submit-btn').addEventListener('click', async () => {
     const reviewText = modal.querySelector('.review-textarea').value.trim();
-    const submitBtn = modal.querySelector('.submit-btn');
     
-    // 유효성 검사
     if (selectedRating === 0) {
       alert('평점을 선택해주세요.');
       return;
     }
     
-    if (reviewText.length < 5) {
-      alert('리뷰 내용을 5자 이상 입력해주세요.');
+    if (reviewText === '') {
+      alert('리뷰 내용을 입력해주세요.');
       return;
     }
     
-    // 버튼 비활성화 (중복 클릭 방지)
-    submitBtn.disabled = true;
-    submitBtn.textContent = '등록 중...';
-    
     try {
       await submitReview(order, orderIndex, selectedRating, reviewText);
-      closeModal();
-      alert('리뷰가 성공적으로 등록되었습니다!');
+      document.body.removeChild(modal);
       renderMyPage(); // 페이지 새로고침
     } catch (error) {
       console.error('리뷰 등록 오류:', error);
-      alert('리뷰 등록에 실패했습니다: ' + error.message);
-      
-      // 버튼 다시 활성화
-      submitBtn.disabled = false;
-      submitBtn.textContent = '리뷰 등록';
+      if (error.message.includes('이미 리뷰를 작성한 주문입니다')) {
+        alert('이미 리뷰를 작성한 주문입니다.');
+      } else {
+        alert('리뷰 등록에 실패했습니다: ' + error.message);
+      }
     }
   });
   
   // 모달 배경 클릭 시 닫기
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
-      closeModal();
+      document.body.removeChild(modal);
     }
   });
 }
@@ -411,35 +399,23 @@ function updateStarDisplay(modal, rating) {
   });
 }
 
-// 매장 ID 찾기 헬퍼 함수
-async function findStoreId(storeName) {
-  try {
-    // 캐시된 매장 데이터 사용
-    const stores = await cacheManager.getStores();
-    const foundStore = stores.find(store => store.name === storeName);
-    
-    if (foundStore) {
-      console.log('🔍 캐시에서 매장 ID 찾음:', foundStore.id);
-      return foundStore.id;
-    }
-    
-    console.warn('⚠️ 매장을 찾을 수 없음, 기본값 사용:', storeName);
-    return 1; // 기본값
-    
-  } catch (error) {
-    console.warn('⚠️ 매장 ID 찾기 실패, 기본값 사용:', error);
-    return 1; // 기본값
-  }
-}
-
 // 리뷰 서버 전송
 async function submitReview(order, orderIndex, rating, reviewText) {
   console.log('📝 리뷰 등록 시도:', { order, orderIndex, rating, reviewText });
   
-  // storeId 확보
+  // storeId가 없는 경우 매장 이름으로 찾기
   let storeId = order.storeId;
   if (!storeId) {
-    storeId = await findStoreId(order.store);
+    try {
+      const storesResponse = await fetch('/api/stores');
+      const storesData = await storesResponse.json();
+      const foundStore = storesData.stores.find(store => store.name === order.store);
+      storeId = foundStore ? foundStore.id : 1; // 기본값 1
+      console.log('🔍 매장 이름으로 찾은 storeId:', storeId);
+    } catch (error) {
+      console.warn('⚠️ 매장 ID 찾기 실패, 기본값 사용:', error);
+      storeId = 1; // 기본값
+    }
   }
   
   const reviewData = {
@@ -466,29 +442,23 @@ async function submitReview(order, orderIndex, rating, reviewText) {
     console.log('📡 서버 응답 상태:', response.status, response.statusText);
     
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ 
-        error: `서버 오류 (${response.status}): ${response.statusText}` 
-      }));
-      
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        console.error('❌ 응답 파싱 실패:', parseError);
+        throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
+      }
       console.error('❌ 서버 오류 응답:', errorData);
-      throw new Error(errorData.error || '리뷰 등록에 실패했습니다');
+      throw new Error(errorData.error || '리뷰 등록 실패');
     }
     
     const result = await response.json();
-    console.log('✅리뷰 등록 성공:', result);
-    
-    // 성공 시 사용자 캐시 무효화 (최신 데이터 반영)
-    cacheManager.clearUserCache();
-    
+    console.log('✅ 리뷰 등록 성공:', result);
     return result;
     
   } catch (fetchError) {
     console.error('❌ 리뷰 등록 네트워크 오류:', fetchError);
-    
-    if (fetchError.name === 'TypeError' && fetchError.message.includes('Failed to fetch')) {
-      throw new Error('네트워크 연결을 확인해주세요');
-    }
-    
     throw fetchError;
   }
 }
