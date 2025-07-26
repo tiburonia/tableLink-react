@@ -396,6 +396,11 @@ app.get('/api/stores/:storeId/tables', async (req, res) => {
       storeName: row.store_name
     }));
 
+    const occupiedTables = tables.filter(t => t.isOccupied);
+    if (occupiedTables.length > 0) {
+      console.log(`📊 매장 ${storeId} 점유된 테이블:`, occupiedTables.map(t => `테이블 ${t.tableNumber} (${t.isOccupied})`));
+    }
+
     res.json({
       success: true,
       storeId: parseInt(storeId),
@@ -500,18 +505,38 @@ app.get('/api/admin/tables/status', async (req, res) => {
 app.post('/api/tables/occupy', async (req, res) => {
   const { storeId, tableNumber } = req.body;
 
+  console.log(`🔍 테이블 점유 요청: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+
   try {
+    // 먼저 테이블이 존재하는지 확인
+    const existingTable = await pool.query(`
+      SELECT * FROM store_tables 
+      WHERE store_id = $1 AND table_number = $2
+    `, [storeId, tableNumber]);
+
+    if (existingTable.rows.length === 0) {
+      console.log(`❌ 테이블을 찾을 수 없음: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+      return res.status(404).json({ error: '테이블을 찾을 수 없습니다' });
+    }
+
+    console.log(`📋 기존 테이블 상태:`, existingTable.rows[0]);
+
     // 테이블 점유 상태로 변경
     const occupiedTime = new Date();
-    await pool.query(`
+    const updateResult = await pool.query(`
       UPDATE store_tables 
-      SET is_occupied = true, occupied_since = $1 
-      WHERE store_id = $2 AND table_number = $3
-    `, [occupiedTime, storeId, tableNumber]);
+      SET is_occupied = $1, occupied_since = $2 
+      WHERE store_id = $3 AND table_number = $4
+      RETURNING *
+    `, [true, occupiedTime, storeId, tableNumber]);
+
+    console.log(`✅ 테이블 점유 상태 변경 완료:`, updateResult.rows[0]);
 
     // 2분 후 자동 해제 스케줄링
     setTimeout(async () => {
       try {
+        console.log(`⏰ 2분 후 자동 해제 시작: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+        
         // 2분이 지난 후 해당 테이블이 여전히 점유 상태인지 확인
         const tableResult = await pool.query(`
           SELECT * FROM store_tables 
@@ -524,16 +549,21 @@ app.post('/api/tables/occupy', async (req, res) => {
           const now = new Date();
           const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
 
+          console.log(`⏱️ 점유 시간 확인: ${diffMinutes}분 경과`);
+
           // 2분 이상 지났으면 해제
           if (diffMinutes >= 2) {
-            await pool.query(`
+            const releaseResult = await pool.query(`
               UPDATE store_tables 
-              SET is_occupied = false, occupied_since = null 
-              WHERE store_id = $1 AND table_number = $2
-            `, [storeId, tableNumber]);
+              SET is_occupied = $1, occupied_since = $2 
+              WHERE store_id = $3 AND table_number = $4
+              RETURNING *
+            `, [false, null, storeId, tableNumber]);
             
-            console.log(`✅ 테이블 ${tableNumber}번 (매장 ID: ${storeId}) 자동 해제 완료`);
+            console.log(`✅ 테이블 ${tableNumber}번 (매장 ID: ${storeId}) 자동 해제 완료:`, releaseResult.rows[0]);
           }
+        } else {
+          console.log(`ℹ️ 테이블이 이미 해제됨: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
         }
       } catch (error) {
         console.error('❌ 테이블 자동 해제 실패:', error);
@@ -543,11 +573,12 @@ app.post('/api/tables/occupy', async (req, res) => {
     res.json({
       success: true,
       message: `테이블 ${tableNumber}번이 점유 상태로 변경되었습니다. 2분 후 자동 해제됩니다.`,
-      occupiedSince: occupiedTime
+      occupiedSince: occupiedTime,
+      updatedTable: updateResult.rows[0]
     });
 
   } catch (error) {
-    console.error('테이블 점유 상태 설정 실패:', error);
+    console.error('❌ 테이블 점유 상태 설정 실패:', error);
     res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
   }
 });

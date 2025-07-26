@@ -84,6 +84,8 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
         // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
         const tableNumber = parseInt(currentOrder.tableNum.replace(/\D/g, ''));
         
+        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${currentOrder.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${currentOrder.tableNum}`);
+        
         const occupyResponse = await fetch('/api/tables/occupy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -93,15 +95,18 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
           })
         });
 
+        const occupyData = await occupyResponse.json();
+        
         if (occupyResponse.ok) {
-          const occupyData = await occupyResponse.json();
-          console.log(`🔒 테이블 점유 설정 완료: ${occupyData.message}`);
+          console.log(`🔒 테이블 점유 설정 완료:`, occupyData);
         } else {
-          console.error('❌ 테이블 점유 설정 실패');
+          console.error('❌ 테이블 점유 설정 실패:', occupyData);
         }
       } catch (error) {
         console.error('❌ 테이블 점유 API 호출 실패:', error);
       }
+    } else {
+      console.log(`⚠️ 테이블 점유 설정 건너뜀: storeId=${currentOrder.storeId}, tableNum=${currentOrder.tableNum}`);
     }
 
     // 초기화
