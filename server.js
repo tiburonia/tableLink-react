@@ -523,9 +523,9 @@ app.post('/api/tables/occupy', async (req, res) => {
 
     // 테이블 점유 상태로 변경
     const occupiedTime = new Date();
-    
+
     console.log(`🔧 SQL 쿼리 실행: UPDATE store_tables SET is_occupied = true, occupied_since = '${occupiedTime.toISOString()}' WHERE store_id = ${storeId} AND table_number = ${tableNumber}`);
-    
+
     const updateResult = await pool.query(`
       UPDATE store_tables 
       SET is_occupied = $1, occupied_since = $2 
@@ -540,7 +540,7 @@ app.post('/api/tables/occupy', async (req, res) => {
     setTimeout(async () => {
       try {
         console.log(`⏰ 2분 후 자동 해제 시작: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
-        
+
         // 2분이 지난 후 해당 테이블이 여전히 점유 상태인지 확인
         const tableResult = await pool.query(`
           SELECT * FROM store_tables 
@@ -563,7 +563,7 @@ app.post('/api/tables/occupy', async (req, res) => {
               WHERE store_id = $3 AND table_number = $4
               RETURNING *
             `, [false, null, storeId, tableNumber]);
-            
+
             console.log(`✅ 테이블 ${tableNumber}번 (매장 ID: ${storeId}) 자동 해제 완료:`, releaseResult.rows[0]);
           }
         } else {
@@ -597,18 +597,18 @@ async function checkAndReleaseExpiredTables() {
     `);
 
     const now = new Date();
-    
+
     for (const table of result.rows) {
       const occupiedSince = new Date(table.occupied_since);
       const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
-      
+
       if (diffMinutes >= 2) {
         await pool.query(`
           UPDATE store_tables 
           SET is_occupied = false, occupied_since = null 
           WHERE store_id = $1 AND table_number = $2
         `, [table.store_id, table.table_number]);
-        
+
         console.log(`✅ 서버 시작 시 만료된 테이블 ${table.table_number}번 (매장 ID: ${table.store_id}) 해제 완료`);
       }
     }
@@ -616,6 +616,51 @@ async function checkAndReleaseExpiredTables() {
     console.error('❌ 만료된 테이블 체크 실패:', error);
   }
 }
+
+// 매장별 리뷰 조회 API
+app.get('/api/stores/:storeId/reviews', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`📖 매장 ${storeId} 리뷰 조회 요청`);
+
+    // 매장의 모든 리뷰 조회
+    const query = `
+      SELECT * FROM reviews 
+      WHERE store_id = $1 
+      ORDER BY created_at DESC
+    `;
+
+    const result = await pool.query(query, [storeId]);
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      score: row.rating,
+      content: row.review_text,
+      date: new Date(row.created_at).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      }),
+      orderDate: row.order_date
+    }));
+
+    console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: reviews.length,
+      reviews: reviews
+    });
+
+  } catch (error) {
+    console.error('❌ 리뷰 조회 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '리뷰 조회 중 오류가 발생했습니다'
+    });
+  }
+});
 
 // 리뷰 제출 API
 app.post('/api/reviews/submit', async (req, res) => {
@@ -694,7 +739,7 @@ app.post('/api/reviews/submit', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
-  
+
   // 서버 시작 시 만료된 테이블들 해제
   checkAndReleaseExpiredTables();
 });
