@@ -47,6 +47,21 @@ async function initDatabase() {
         UNIQUE(user_id, store_id)
       )
     `);
+
+    // reviews 테이블 생성
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(50) NOT NULL,
+        store_id INTEGER NOT NULL,
+        order_index INTEGER NOT NULL,
+        rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+        review_text TEXT NOT NULL,
+        order_date VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, order_index)
+      )
+    `);
     console.log('✅ carts 테이블 생성 완료');
 
     console.log('✅ 데이터베이스 테이블 초기화 완료');
