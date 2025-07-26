@@ -8,7 +8,7 @@ const databaseUrl = process.env.DATABASE_URL;
 const pool = new Pool({
   connectionString: databaseUrl,
   max: 10, // 최대 연결 수
-  
+});
 
 // 데이터베이스 연결 테스트
 pool.connect((err, client, release) => {
