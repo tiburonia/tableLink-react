@@ -633,18 +633,22 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
     `;
 
     const result = await pool.query(query, [storeId]);
+    console.log(`🔍 데이터베이스 쿼리 결과: ${result.rows.length}개 리뷰 발견`);
+    console.log(`📊 원본 데이터:`, result.rows);
+    
     const reviews = result.rows.map(row => ({
       id: row.id,
       userId: row.user_id,
-      userName: row.user_name || row.user_id,
+      userName: row.user_name || `사용자${row.user_id}`,
       score: row.rating,
       content: row.review_text,
-      date: new Date(row.created_at).toLocaleDateString('ko-KR', {
+      date: row.created_at ? new Date(row.created_at).toLocaleDateString('ko-KR', {
         year: 'numeric',
         month: 'numeric',
         day: 'numeric'
-      }),
-      orderDate: row.order_date
+      }) : '날짜 없음',
+      orderDate: row.order_date,
+      user: row.user_name || `사용자${row.user_id}` // renderAllReview.js에서 사용하는 속성명
     }));
 
     console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 조회 완료`);
@@ -738,11 +742,12 @@ app.post('/api/reviews/submit', async (req, res) => {
     // 응답용 리뷰 객체 생성
     const responseReview = {
       id: insertedReview.id,
-      user: user.name || user.id,
+      user: user.name || `사용자${user.id}`,
+      userName: user.name || `사용자${user.id}`,
+      userId: insertedReview.user_id,
       score: insertedReview.rating,
       content: insertedReview.review_text,
       date: new Date(insertedReview.created_at).toLocaleDateString('ko-KR'),
-      userId: insertedReview.user_id,
       orderDate: insertedReview.order_date
     };
 
