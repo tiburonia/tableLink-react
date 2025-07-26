@@ -18,25 +18,62 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// stores API 엔드포인트
+// stores API 엔드포인트 (실시간 테이블 정보 포함)
 app.get('/api/stores', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM stores ORDER BY id');
-    const stores = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      category: row.category,
-      distance: row.distance || '정보없음',
-      menu: row.menu || [],
-      coord: row.coord || { lat: 37.5665, lng: 126.9780 }, // 기본 좌표 (서울시청)
-      reviews: row.reviews || [],
-      reviewCount: row.review_count || 0,
-      isOpen: row.is_open !== false
-    }));
-    
+    const storesResult = await pool.query('SELECT * FROM stores ORDER BY id');
+
+    // 각 매장의 테이블 정보를 실시간으로 가져오기
+    const storesWithTables = await Promise.all(
+      storesResult.rows.map(async (store) => {
+        const tablesResult = await pool.query(`
+          SELECT 
+            table_number,
+            table_name,
+            seats,
+            is_occupied,
+            occupied_since
+          FROM store_tables 
+          WHERE store_id = $1 
+          ORDER BY table_number
+        `, [store.id]);
+
+        const tables = tablesResult.rows.map(table => ({
+          tableNumber: table.table_number,
+          tableName: table.table_name,
+          seats: table.seats,
+          isOccupied: table.is_occupied,
+          occupiedSince: table.occupied_since
+        }));
+
+        const totalTables = tables.length;
+        const availableTables = tables.filter(t => !t.isOccupied).length;
+        const occupiedTables = tables.filter(t => t.isOccupied).length;
+
+        return {
+          id: store.id,
+          name: store.name,
+          category: store.category,
+          distance: store.distance || '정보없음',
+          menu: store.menu || [],
+          coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+          reviews: store.reviews || [],
+          reviewCount: store.review_count || 0,
+          isOpen: store.is_open !== false,
+          tableInfo: {
+            totalTables,
+            availableTables,
+            occupiedTables,
+            occupancyRate: totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
+          },
+          tables: tables
+        };
+      })
+    );
+
     res.json({
       message: 'TableLink API 서버가 정상 작동 중입니다.',
-      stores: stores
+      stores: storesWithTables
     });
   } catch (error) {
     console.error('stores 조회 실패:', error);
@@ -47,7 +84,7 @@ app.get('/api/stores', async (req, res) => {
 // 사용자 회원가입 API
 app.post('/api/users/signup', async (req, res) => {
   const { id, pw, name, phone } = req.body;
-  
+
   try {
     await pool.query(
       'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
@@ -67,19 +104,19 @@ app.post('/api/users/signup', async (req, res) => {
 // 사용자 로그인 API
 app.post('/api/users/login', async (req, res) => {
   const { id, pw } = req.body;
-  
+
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
     }
-    
+
     const user = result.rows[0];
     if (user.pw !== pw) {
       return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
     }
-    
+
     res.json({
       success: true,
       user: {
@@ -102,7 +139,7 @@ app.post('/api/users/login', async (req, res) => {
 // 장바구니 저장 API
 app.post('/api/cart/save', async (req, res) => {
   const { userId, storeId, storeName, tableNum, order, savedAt } = req.body;
-  
+
   try {
     await pool.query(
       'INSERT INTO carts (user_id, store_id, store_name, table_num, order_data, saved_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (user_id, store_id) DO UPDATE SET order_data = $5, saved_at = $6',
@@ -118,7 +155,7 @@ app.post('/api/cart/save', async (req, res) => {
 // 장바구니 조회 API
 app.get('/api/cart/:userId', async (req, res) => {
   const { userId } = req.params;
-  
+
   try {
     const result = await pool.query('SELECT * FROM carts WHERE user_id = $1', [userId]);
     res.json({
@@ -148,22 +185,22 @@ app.post('/api/orders/pay', async (req, res) => {
     selectedCouponId, 
     couponDiscount 
   } = req.body;
-  
+
   try {
     // 사용자 정보 조회
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-    
+
     const user = userResult.rows[0];
     const currentCoupons = user.coupons || { unused: [], used: [] };
-    
+
     // 포인트 부족 확인
     if (usedPoint > user.point) {
       return res.status(400).json({ error: '포인트가 부족합니다' });
     }
-    
+
     // 쿠폰 유효성 확인
     let usedCoupon = null;
     if (selectedCouponId) {
@@ -172,16 +209,16 @@ app.post('/api/orders/pay', async (req, res) => {
         return res.status(400).json({ error: '유효하지 않은 쿠폰입니다' });
       }
     }
-    
+
     // 계산
     const appliedPoint = Math.min(usedPoint, user.point, orderData.total);
     const realTotal = orderData.total - couponDiscount - appliedPoint;
     const earnedPoint = Math.floor(orderData.total * 0.1);
-    
+
     // 사용자 정보 업데이트
     const newPoint = user.point - appliedPoint + earnedPoint;
     const currentOrderList = user.order_list || [];
-    
+
     // 주문 기록 생성
     const orderRecord = {
       ...orderData,
@@ -196,7 +233,7 @@ app.post('/api/orders/pay', async (req, res) => {
         ? (couponDiscount >= appliedPoint ? "couponFirst" : "pointFirst")
         : "none"
     };
-    
+
     // 쿠폰 처리
     let newCoupons = { ...currentCoupons };
     if (usedCoupon) {
@@ -206,14 +243,14 @@ app.post('/api/orders/pay', async (req, res) => {
         newCoupons.used.push(movedCoupon);
       }
     }
-    
+
     // 첫 주문시 웰컴 쿠폰 발급
     let welcomeCoupon = null;
     if (currentOrderList.length === 0) {
       const today = new Date();
       const expireDate = new Date(today);
       expireDate.setDate(today.getDate() + 14);
-      
+
       welcomeCoupon = {
         id: Math.floor(Math.random() * 100000),
         name: "첫 주문 10% 할인",
@@ -224,19 +261,19 @@ app.post('/api/orders/pay', async (req, res) => {
         validUntil: expireDate.toISOString().slice(0, 10),
         issuedAt: today.toISOString().slice(0, 10)
       };
-      
+
       newCoupons.unused.push(welcomeCoupon);
     }
-    
+
     // 주문 목록 업데이트
     const newOrderList = [...currentOrderList, orderRecord];
-    
+
     // 데이터베이스 업데이트
     await pool.query(
       'UPDATE users SET point = $1, order_list = $2, coupons = $3 WHERE id = $4',
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
-    
+
     res.json({
       success: true,
       message: '결제가 완료되었습니다',
@@ -248,7 +285,7 @@ app.post('/api/orders/pay', async (req, res) => {
         welcomeCoupon: welcomeCoupon
       }
     });
-    
+
   } catch (error) {
     console.error('결제 처리 실패:', error);
     res.status(500).json({ error: '결제 처리 실패' });
@@ -258,14 +295,14 @@ app.post('/api/orders/pay', async (req, res) => {
 // 사용자 정보 조회 API
 app.post('/api/users/info', async (req, res) => {
   const { userId } = req.body;
-  
+
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-    
+
     const user = result.rows[0];
     res.json({
       success: true,
@@ -293,17 +330,17 @@ app.post('/api/users/info', async (req, res) => {
 // 즐겨찾기 토글 API
 app.post('/api/users/favorite/toggle', async (req, res) => {
   const { userId, storeName, action } = req.body;
-  
+
   try {
     // 사용자 정보 조회
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
-    
+
     const user = userResult.rows[0];
     let favoriteStores = user.favorite_stores || [];
-    
+
     if (action === 'add') {
       // 즐겨찾기 추가
       if (!favoriteStores.includes(storeName)) {
@@ -313,22 +350,149 @@ app.post('/api/users/favorite/toggle', async (req, res) => {
       // 즐겨찾기 제거
       favoriteStores = favoriteStores.filter(store => store !== storeName);
     }
-    
+
     // 데이터베이스 업데이트
     await pool.query(
       'UPDATE users SET favorite_stores = $1 WHERE id = $2',
       [JSON.stringify(favoriteStores), userId]
     );
-    
+
     res.json({
       success: true,
       message: action === 'add' ? '즐겨찾기에 추가되었습니다' : '즐겨찾기에서 제거되었습니다',
       favoriteStores: favoriteStores
     });
-    
+
   } catch (error) {
     console.error('즐겨찾기 토글 실패:', error);
     res.status(500).json({ error: '즐겨찾기 설정 실패' });
+  }
+});
+
+// 매장별 테이블 목록 조회 API
+app.get('/api/stores/:storeId/tables', async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    const result = await pool.query(`
+      SELECT t.*, s.name as store_name 
+      FROM store_tables t 
+      JOIN stores s ON t.store_id = s.id 
+      WHERE t.store_id = $1 
+      ORDER BY t.table_number
+    `, [storeId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '매장의 테이블 정보를 찾을 수 없습니다' });
+    }
+
+    const tables = result.rows.map(row => ({
+      id: row.id,
+      tableNumber: row.table_number,
+      tableName: row.table_name,
+      seats: row.seats,
+      isOccupied: row.is_occupied,
+      occupiedSince: row.occupied_since,
+      storeName: row.store_name
+    }));
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      totalTables: tables.length,
+      availableTables: tables.filter(t => !t.isOccupied).length,
+      occupiedTables: tables.filter(t => t.isOccupied).length,
+      tables: tables
+    });
+
+  } catch (error) {
+    console.error('테이블 조회 실패:', error);
+    res.status(500).json({ error: '테이블 조회 실패' });
+  }
+});
+
+// 테이블 상태 업데이트 API
+app.post('/api/stores/tables/update', async (req, res) => {
+  const { storeId, tableNumber, isOccupied } = req.body;
+
+  try {
+    // 테이블 존재 확인
+    const tableResult = await pool.query(
+      'SELECT * FROM store_tables WHERE store_id = $1 AND table_number = $2',
+      [storeId, tableNumber]
+    );
+
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({ error: '테이블을 찾을 수 없습니다' });
+    }
+
+    // 테이블 상태 업데이트
+    const occupiedSince = isOccupied ? new Date() : null;
+    await pool.query(`
+      UPDATE store_tables 
+      SET is_occupied = $1, occupied_since = $2 
+      WHERE store_id = $3 AND table_number = $4
+    `, [isOccupied, occupiedSince, storeId, tableNumber]);
+
+    // 업데이트된 테이블 정보 조회
+    const updatedTable = await pool.query(
+      'SELECT * FROM store_tables WHERE store_id = $1 AND table_number = $2',
+      [storeId, tableNumber]
+    );
+
+    res.json({
+      success: true,
+      message: `테이블 ${tableNumber}번 상태가 ${isOccupied ? '사용중' : '빈 테이블'}으로 변경되었습니다`,
+      table: {
+        id: updatedTable.rows[0].id,
+        tableNumber: updatedTable.rows[0].table_number,
+        tableName: updatedTable.rows[0].table_name,
+        seats: updatedTable.rows[0].seats,
+        isOccupied: updatedTable.rows[0].is_occupied,
+        occupiedSince: updatedTable.rows[0].occupied_since
+      }
+    });
+
+  } catch (error) {
+    console.error('테이블 상태 업데이트 실패:', error);
+    res.status(500).json({ error: '테이블 상태 업데이트 실패' });
+  }
+});
+
+// 전체 테이블 현황 조회 API (관리자용)
+app.get('/api/admin/tables/status', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        s.id as store_id,
+        s.name as store_name,
+        COUNT(t.id) as total_tables,
+        COUNT(CASE WHEN t.is_occupied = true THEN 1 END) as occupied_tables,
+        COUNT(CASE WHEN t.is_occupied = false THEN 1 END) as available_tables
+      FROM stores s
+      LEFT JOIN store_tables t ON s.id = t.store_id
+      GROUP BY s.id, s.name
+      ORDER BY s.id
+    `);
+
+    const overallStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_tables,
+        COUNT(CASE WHEN is_occupied = true THEN 1 END) as occupied_tables,
+        COUNT(CASE WHEN is_occupied = false THEN 1 END) as available_tables,
+        ROUND(COUNT(CASE WHEN is_occupied = true THEN 1 END) * 100.0 / COUNT(*), 1) as occupancy_rate
+      FROM store_tables
+    `);
+
+    res.json({
+      success: true,
+      overall: overallStats.rows[0],
+      storeStats: result.rows
+    });
+
+  } catch (error) {
+    console.error('전체 테이블 현황 조회 실패:', error);
+    res.status(500).json({ error: '전체 테이블 현황 조회 실패' });
   }
 });
 
@@ -337,4 +501,3 @@ app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
 });
-
