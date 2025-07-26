@@ -617,6 +617,79 @@ async function checkAndReleaseExpiredTables() {
   }
 }
 
+// 리뷰 제출 API
+app.post('/api/reviews/submit', async (req, res) => {
+  const { userId, storeId, storeName, orderIndex, rating, reviewText, orderDate } = req.body;
+
+  try {
+    // 사용자 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const orderList = user.order_list || [];
+
+    // 해당 주문이 존재하는지 확인
+    if (orderIndex >= orderList.length) {
+      return res.status(400).json({ error: '존재하지 않는 주문입니다' });
+    }
+
+    // 이미 리뷰를 작성했는지 확인
+    if (orderList[orderIndex].reviewId) {
+      return res.status(400).json({ error: '이미 리뷰를 작성한 주문입니다' });
+    }
+
+    // 매장 정보 조회
+    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [storeId]);
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
+    }
+
+    const store = storeResult.rows[0];
+    const currentReviews = store.reviews || [];
+
+    // 새 리뷰 객체 생성
+    const newReview = {
+      id: Date.now(), // 간단한 ID 생성
+      user: user.name || user.id,
+      score: rating,
+      content: reviewText,
+      date: new Date().toLocaleDateString(),
+      userId: userId,
+      orderDate: orderDate
+    };
+
+    // 매장의 리뷰 목록에 추가
+    const updatedReviews = [...currentReviews, newReview];
+    const newReviewCount = updatedReviews.length;
+
+    // 매장 정보 업데이트
+    await pool.query(
+      'UPDATE stores SET reviews = $1, review_count = $2 WHERE id = $3',
+      [JSON.stringify(updatedReviews), newReviewCount, storeId]
+    );
+
+    // 사용자의 주문 목록에 리뷰ID 추가
+    orderList[orderIndex].reviewId = newReview.id;
+    await pool.query(
+      'UPDATE users SET order_list = $1 WHERE id = $2',
+      [JSON.stringify(orderList), userId]
+    );
+
+    res.json({
+      success: true,
+      message: '리뷰가 성공적으로 등록되었습니다',
+      review: newReview
+    });
+
+  } catch (error) {
+    console.error('리뷰 등록 실패:', error);
+    res.status(500).json({ error: '리뷰 등록 실패' });
+  }
+});
+
 // 서버 실행
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
