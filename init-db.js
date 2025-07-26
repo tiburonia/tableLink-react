@@ -176,17 +176,24 @@ async function insertSampleData() {
   if (parseInt(existingReviews.rows[0].count) === 0) {
     console.log('📝 더미 리뷰 데이터 생성 중...');
     
-    // 더미 사용자들 먼저 생성
+    // 더미 사용자들 먼저 생성 (아이디 12 포함)
     const dummyUsers = [
+      { id: '12', name: '테스트사용자' }, // 실제 사용자 12
       { id: 'user001', name: '배고픈곰' },
       { id: 'user002', name: '익명1' },
       { id: 'user003', name: '이현수' },
       { id: 'user004', name: '푸드파이터' },
       { id: 'user005', name: '치킨광' },
-      { id: 'user006', name: '매운맛사랑' }
+      { id: 'user006', name: '매운맛사랑' },
+      { id: 'user007', name: '맛집탐험가' },
+      { id: 'user008', name: '치킨러버' },
+      { id: 'user009', name: '분식마니아' }
     ];
     
     for (const user of dummyUsers) {
+      // 아이디 12는 이미 존재하므로 건너뛰기
+      if (user.id === '12') continue;
+      
       const existingUser = await pool.query('SELECT COUNT(*) FROM users WHERE id = $1', [user.id]);
       
       if (parseInt(existingUser.rows[0].count) === 0) {
@@ -216,19 +223,22 @@ async function insertSampleData() {
       { rating: 3, text: "보통이에요. 나쁘지 않지만 특별히 좋지도 않네요.", orderDate: "2025. 1. 22. 오후 1:20:45" },
       { rating: 4, text: "가격대비 괜찮은 것 같아요. 양도 충분하고 맛도 좋습니다.", orderDate: "2025. 1. 25. 오후 8:10:22" },
       { rating: 5, text: "정말 맛있어요! 친구들과 함께 와서 즐겁게 먹었습니다.", orderDate: "2025. 1. 26. 오후 12:30:18" },
-      { rating: 4, text: "배달도 빨라요", orderDate: "2025. 1. 27. 오후 1:00:00" },
-      { rating: 3, text: "다음에 또 올게요", orderDate: "2025. 1. 28. 오후 2:00:00" },
-      { rating: 1, text: "분위기 깔끔", orderDate: "2025. 1. 29. 오후 3:00:00" },
-      { rating: 4, text: "추천합니다!", orderDate: "2025. 1. 30. 오후 4:00:00" },
-      { rating: 2, text: "가격도 괜찮고 맛도 좋음", orderDate: "2025. 2. 1. 오후 5:00:00" },
-      { rating: 1, text: "친절하고 빠름!", orderDate: "2025. 2. 2. 오후 6:00:00" }
+      { rating: 4, text: "배달도 빨라요. 포장 상태도 깔끔했어요.", orderDate: "2025. 1. 27. 오후 1:00:00" },
+      { rating: 3, text: "다음에 또 올게요. 분위기가 좋네요.", orderDate: "2025. 1. 28. 오후 2:00:00" },
+      { rating: 5, text: "음식 나오는 속도도 빠르고 맛도 좋습니다!", orderDate: "2025. 1. 29. 오후 3:00:00" },
+      { rating: 4, text: "추천합니다! 가족과 함께 먹기 좋아요.", orderDate: "2025. 1. 30. 오후 4:00:00" },
+      { rating: 2, text: "가격도 괜찮고 맛도 좋지만 양이 조금 적어요.", orderDate: "2025. 2. 1. 오후 5:00:00" },
+      { rating: 5, text: "친절하고 빠름! 단골 될 것 같아요.", orderDate: "2025. 2. 2. 오후 6:00:00" },
+      { rating: 4, text: "테스트1", orderDate: "2025. 7. 25. 오후 7:30:22" }, // 아이디 12 스타일 리뷰
+      { rating: 5, text: "너무 맛있어요! 최고입니다.", orderDate: "2025. 7. 26. 오후 7:00:29" },
+      { rating: 3, text: "괜찮네요. 다시 올 의향 있어요.", orderDate: "2025. 7. 20. 오후 6:30:15" }
     ];
 
-    let reviewId = 1;
+    let orderIndex = 100000; // 큰 숫자로 시작하여 중복 방지
     
     for (const storeId of storeIds) {
-      // 각 매장마다 8-12개의 리뷰 랜덤 생성
-      const reviewCount = Math.floor(Math.random() * 5) + 8; // 8~12개
+      // 각 매장마다 10-15개의 리뷰 생성
+      const reviewCount = Math.floor(Math.random() * 6) + 10; // 10~15개
       
       for (let i = 0; i < reviewCount; i++) {
         const randomReview = dummyReviews[Math.floor(Math.random() * dummyReviews.length)];
@@ -241,13 +251,36 @@ async function insertSampleData() {
           `, [
             randomUser.id,
             storeId,
-            reviewId++, // 고유한 order_index 사용
+            orderIndex++, // 고유한 order_index 사용
             randomReview.rating,
             randomReview.text,
             randomReview.orderDate
           ]);
         } catch (error) {
           console.error(`❌ 매장 ${storeId} 리뷰 삽입 실패:`, error.message);
+        }
+      }
+      
+      // 아이디 12 전용 리뷰 몇 개 추가 (각 매장에 1-2개씩)
+      const user12ReviewCount = Math.floor(Math.random() * 2) + 1; // 1~2개
+      
+      for (let j = 0; j < user12ReviewCount; j++) {
+        const user12Review = dummyReviews[Math.floor(Math.random() * dummyReviews.length)];
+        
+        try {
+          await pool.query(`
+            INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW() - INTERVAL '${Math.floor(Math.random() * 15)} days')
+          `, [
+            '12', // 실제 사용자 12
+            storeId,
+            orderIndex++,
+            user12Review.rating,
+            user12Review.text,
+            user12Review.orderDate
+          ]);
+        } catch (error) {
+          console.error(`❌ 매장 ${storeId} 사용자 12 리뷰 삽입 실패:`, error.message);
         }
       }
     }
