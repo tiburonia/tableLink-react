@@ -42,7 +42,7 @@ async function TLL() {
   const tableSelect = document.getElementById('tableSelect');
   const startOrderBtn = document.getElementById('startOrderBtn');
 
-  storeSelect.addEventListener('change', () => {
+  storeSelect.addEventListener('change', async () => {
     const storeId = Number(storeSelect.value);
     if (!storeId) {
       tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>`;
@@ -50,14 +50,47 @@ async function TLL() {
       startOrderBtn.disabled = true;
       return;
     }
+
     // 선택한 매장 정보 찾기
     const store = stores.find(s => s.id === storeId);
-    // 테이블 옵션 채우기 (기본값: 10개 테이블)
-    let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
-    tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
-      tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
-    tableSelect.disabled = false;
-    startOrderBtn.disabled = true;
+    
+    try {
+      // 🆕 PostgreSQL에서 실제 테이블 정보 가져오기
+      const response = await fetch(`/api/stores/${storeId}/tables`);
+      if (!response.ok) throw new Error('테이블 정보 조회 실패');
+      
+      const data = await response.json();
+      const tables = data.tables || [];
+      
+      console.log(`🏪 ${store.name}: ${tables.length}개 테이블 로드 완료`);
+      
+      // 실제 테이블 번호로 옵션 생성
+      if (tables.length > 0) {
+        const tableOptions = tables.map(table => 
+          `<option value="${table.tableNumber}">${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
+        ).join('');
+        
+        tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
+      } else {
+        // 테이블이 없는 경우 기본값 사용
+        console.warn(`⚠️ ${store.name}에 테이블 정보가 없어 기본값 사용`);
+        let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
+        tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
+          tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
+      }
+      
+      tableSelect.disabled = false;
+      startOrderBtn.disabled = true;
+      
+    } catch (error) {
+      console.error('테이블 정보 로드 오류:', error);
+      // 에러 시 기본값 사용
+      let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
+      tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
+        tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
+      tableSelect.disabled = false;
+      startOrderBtn.disabled = true;
+    }
   });
 
   tableSelect.addEventListener('change', () => {
