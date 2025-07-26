@@ -26,7 +26,8 @@ function renderStore(store) {
           </div>
           <div id="TLR" class="storeInfo" style="margin-bottom: 12px;">
             <div class="tlr-title">리뷰/리텐션 (TLR)</div>
-            <div class="tlr-desc">구상중</div>
+            <div id="tableStatusInfo" class="tlr-desc">테이블 정보 로딩중...</div>
+            <button onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">테이블 배치 보기</button>
           </div>
           <div id="reviewPreview" class="review-preview">
             <div class="review-title-row">
@@ -451,7 +452,7 @@ function renderStore(store) {
   const storeContent = document.getElementById('storeContent');
   const favoriteBtn = document.getElementById('favoriteBtn');
 
-  
+
 
   // 즐겨찾기
   favoriteBtn.addEventListener('click', () => {
@@ -464,30 +465,30 @@ function renderStore(store) {
   function renderStoreTab(tab) {
     switch (tab) {
       case 'menu':    storeContent.innerHTML = renderMenuHTML(store);
-        
+
         break;
-        
+
       case 'review':  storeContent.innerHTML = renderReviewHTML(store); 
         const seeMoreBtn = storeContent.querySelector('.see-more-btn');
           seeMoreBtn.addEventListener('click', () => {
             renderAllReview(store); // 혹은 window.currentStore 등 원하는 store
           });
-        
+
         break;
       case 'photo':   storeContent.innerHTML = '등록된 사진이 없습니다...'     //renderPhotoHTML(store);  추후 생성
-        
+
         break;
-        
+
       case 'info':    storeContent.innerHTML = '등록된 정보가 없습니다...'     //renderInfoHTML(store); 
-        
+
         break;
-        
+
       default:        storeContent.innerHTML = '준비 중...';
     }
     adjustLayout();
   }
 
-  
+
   // 탭 네비 이벤트
   storeNavBar.addEventListener('click', (e) => {
     const btn = e.target.closest('.nav-btn');
@@ -571,4 +572,312 @@ function renderStore(store) {
     renderAllReview(store)
   })
 
+  loadTableInfo(store);
+
 }
+
+// 테이블 정보 로딩 함수
+async function loadTableInfo(store) {
+  try {
+    const response = await fetch(`/api/stores/${store.id}/tables`);
+    if (!response.ok) throw new Error('테이블 정보 조회 실패');
+
+    const data = await response.json();
+    const totalSeats = data.tables.reduce((sum, table) => sum + table.seats, 0);
+    const availableSeats = data.tables.filter(t => !t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
+
+    const tableStatusInfo = document.getElementById('tableStatusInfo');
+    if (tableStatusInfo) {
+      tableStatusInfo.innerHTML = `총 좌석: ${totalSeats}석 | 잔여 좌석: ${availableSeats}석`;
+    }
+  } catch (error) {
+    console.error('테이블 정보 로딩 실패:', error);
+    const tableStatusInfo = document.getElementById('tableStatusInfo');
+    if (tableStatusInfo) {
+      tableStatusInfo.innerHTML = '테이블 정보를 불러올 수 없습니다';
+    }
+  }
+}
+
+// 테이블 배치도 렌더링 함수
+async function renderTableLayout(store) {
+  try {
+    const response = await fetch(`/api/stores/${store.id}/tables`);
+    if (!response.ok) throw new Error('테이블 정보 조회 실패');
+
+    const data = await response.json();
+    const tables = data.tables;
+
+    // 5열 2행 구조로 테이블 배치 (최대 10개 테이블)
+    const tableGrid = Array(2).fill(null).map(() => Array(5).fill(null));
+
+    tables.slice(0, 10).forEach((table, index) => {
+      const row = Math.floor(index / 5);
+      const col = index % 5;
+      tableGrid[row][col] = table;
+    });
+
+    main.innerHTML = `
+      <header class="table-layout-header">
+        <button id="tableLayoutBackBtn" class="header-btn" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+          <span class="header-btn-ico">⬅️</span>
+        </button>
+        <h2>${store.name} - 테이블 배치도</h2>
+      </header>
+
+      <div class="table-layout-container">
+        <div class="table-status-summary">
+          <div class="status-item">
+            <span class="status-dot available"></span>
+            <span>빈 테이블</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot occupied"></span>
+            <span>사용중</span>
+          </div>
+        </div>
+
+        <div class="table-grid">
+          ${tableGrid.map(row => `
+            <div class="table-row">
+              ${row.map(table => {
+                if (!table) {
+                  return `<div class="table-slot empty"></div>`;
+                }
+                const statusClass = table.isOccupied ? 'occupied' : 'available';
+                return `
+                  <div class="table-slot ${statusClass}" data-table-id="${table.id}">
+                    <div class="table-number">${table.tableNumber}</div>
+                    <div class="table-name">${table.tableName}</div>
+                    <div class="table-seats">${table.seats}석</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `).join('')}
+        </div>
+
+        <div class="table-info-panel">
+          <h3>테이블 정보</h3>
+          <div id="selectedTableInfo">테이블을 선택해주세요</div>
+        </div>
+      </div>
+
+      <style>
+        .table-layout-header {
+          position: fixed;
+          top: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          height: 80px;
+          background: white;
+          border-bottom: 1px solid #ddd;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 0 16px;
+          z-index: 1001;
+          box-sizing: border-box;
+        }
+
+        .table-layout-header h2 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .header-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          border: none;
+          background: #f8fafd;
+          color: #297efc;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 20px;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(30,110,255,0.05);
+        }
+
+        .table-layout-container {
+          position: absolute;
+          top: 80px;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          overflow-y: auto;
+          padding: 20px;
+          background: #f8f9fb;
+          box-sizing: border-box;
+        }
+
+        .table-status-summary {
+          display: flex;
+          justify-content: center;
+          gap: 24px;
+          margin-bottom: 24px;
+          padding: 16px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .status-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .status-dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+        }
+
+        .status-dot.available {
+          background: #4CAF50;
+        }
+
+        .status-dot.occupied {
+          background: #F44336;
+        }
+
+        .table-grid {
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          margin-bottom: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .table-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 16px;
+          gap: 8px;
+        }
+
+        .table-row:last-child {
+          margin-bottom: 0;
+        }
+
+        .table-slot {
+          flex: 1;
+          height: 80px;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+          border: 2px solid transparent;
+        }
+
+        .table-slot.empty {
+          background: #f5f5f5;
+          cursor: default;
+        }
+
+        .table-slot.available {
+          background: #E8F5E8;
+          border-color: #4CAF50;
+        }
+
+        .table-slot.occupied {
+          background: #FFEBEE;
+          border-color: #F44336;
+        }
+
+        .table-slot:not(.empty):hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .table-slot.selected {
+          border-color: #297efc;
+          box-shadow: 0 0 0 2px rgba(41, 126, 252, 0.2);
+        }
+
+        .table-number {
+          font-size: 16px;
+          font-weight: 700;
+          color: #333;
+        }
+
+        .table-name {
+          font-size: 12px;
+          color: #666;
+          margin: 2px 0;
+        }
+
+        .table-seats {
+          font-size: 11px;
+          color: #888;
+        }
+
+        .table-info-panel {
+          background: white;
+          border-radius: 12px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .table-info-panel h3 {
+          margin: 0 0 12px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        #selectedTableInfo {
+          font-size: 14px;
+          color: #666;
+          line-height: 1.5;
+        }
+      </style>
+    `;
+
+    // 테이블 클릭 이벤트
+    document.querySelectorAll('.table-slot:not(.empty)').forEach(slot => {
+      slot.addEventListener('click', () => {
+        // 이전 선택 제거
+        document.querySelectorAll('.table-slot').forEach(s => s.classList.remove('selected'));
+        // 현재 선택 추가
+        slot.classList.add('selected');
+
+        const tableId = slot.dataset.tableId;
+        const table = tables.find(t => t.id == tableId);
+
+        if (table) {
+          const selectedTableInfo = document.getElementById('selectedTableInfo');
+          const occupiedText = table.isOccupied 
+            ? `<span style="color: #F44336;">사용중</span> (${new Date(table.occupiedSince).toLocaleString()}부터)`
+            : `<span style="color: #4CAF50;">빈 테이블</span>`;
+
+          selectedTableInfo.innerHTML = `
+            <strong>${table.tableName}</strong><br>
+            테이블 번호: ${table.tableNumber}번<br>
+            좌석 수: ${table.seats}석<br>
+            상태: ${occupiedText}
+          `;
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('테이블 배치도 로딩 실패:', error);
+    alert('테이블 정보를 불러올 수 없습니다.');
+  }
+}
+
+window.renderStore = renderStore;
+window.renderTableLayout = renderTableLayout;
