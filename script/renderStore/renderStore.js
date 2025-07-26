@@ -298,13 +298,14 @@ function renderStore(store) {
       .tlr-info-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto;
         gap: 8px;
         margin-bottom: 14px;
       }
 
-      .tlr-info-grid .tlr-info-item:last-child {
+      .tlr-info-grid .tlr-info-item:nth-child(5) {
         grid-column: 1 / -1;
-        max-width: 200px;
+        max-width: 280px;
         margin: 0 auto;
       }
 
@@ -314,6 +315,24 @@ function renderStore(store) {
         border-radius: 8px;
         padding: 10px 8px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      }
+
+      .tlr-info-grid .tlr-info-item:nth-child(5) {
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #297efc 0%, #36a1ff 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(41, 126, 252, 0.2);
+      }
+
+      .tlr-info-grid .tlr-info-item:nth-child(5) .tlr-info-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-weight: 600;
+      }
+
+      .tlr-info-grid .tlr-info-item:nth-child(5) .tlr-info-value {
+        color: white;
+        font-size: 20px;
+        font-weight: 800;
       }
 
       .tlr-info-label {
