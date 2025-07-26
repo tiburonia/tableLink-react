@@ -99,12 +99,20 @@ async function TLL() {
 
   startOrderBtn.addEventListener('click', () => {
     const storeId = Number(storeSelect.value);
-    const tableNum = tableSelect.value;
-    if (!storeId || !tableNum) return;
+    const selectedTableNumber = tableSelect.value;
+    if (!storeId || !selectedTableNumber) return;
+    
     const store = stores.find(s => s.id === storeId);
-    // 여기서 주문 시작! (예: renderOrderScreen(store, tableNum) 등)
-    alert(`[${store.name}] ${tableNum}번 테이블 주문 시작`);
-    // 실제 주문 flow 함수로 넘기면 됨
-    renderOrderScreen(store, tableNum);
+    
+    // 🆕 선택한 테이블의 실제 이름 가져오기
+    const selectedOption = tableSelect.options[tableSelect.selectedIndex];
+    const tableName = selectedOption.textContent.replace(' (사용중)', ''); // "(사용중)" 텍스트 제거
+    
+    console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
+    
+    // 여기서 주문 시작! (테이블 이름으로 전달)
+    alert(`[${store.name}] ${tableName} 주문 시작`);
+    // 실제 주문 flow 함수로 테이블 이름 전달
+    renderOrderScreen(store, tableName);
   });
 }
