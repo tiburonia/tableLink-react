@@ -31,6 +31,14 @@ function renderStore(store) {
             </div>
             <div class="tlr-info-grid">
               <div class="tlr-info-item">
+                <div class="tlr-info-label">총 테이블</div>
+                <div class="tlr-info-value" id="totalTables">-</div>
+              </div>
+              <div class="tlr-info-item">
+                <div class="tlr-info-label">잔여 테이블</div>
+                <div class="tlr-info-value" id="availableTables">-</div>
+              </div>
+              <div class="tlr-info-item">
                 <div class="tlr-info-label">총 좌석</div>
                 <div class="tlr-info-value" id="totalSeats">-</div>
               </div>
@@ -289,9 +297,15 @@ function renderStore(store) {
 
       .tlr-info-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         margin-bottom: 14px;
+      }
+
+      .tlr-info-grid .tlr-info-item:last-child {
+        grid-column: 1 / -1;
+        max-width: 200px;
+        margin: 0 auto;
       }
 
       .tlr-info-item {
@@ -709,11 +723,15 @@ async function loadTableInfo(store) {
     - 사용률: ${occupancyRate}%`);
 
     // UI 업데이트
+    const totalTablesEl = document.getElementById('totalTables');
+    const availableTablesEl = document.getElementById('availableTables');
     const totalSeatsEl = document.getElementById('totalSeats');
     const availableSeatsEl = document.getElementById('availableSeats');
     const occupancyRateEl = document.getElementById('occupancyRate');
     const statusBadge = document.getElementById('tableStatusBadge');
 
+    if (totalTablesEl) totalTablesEl.textContent = `${totalTables}개`;
+    if (availableTablesEl) availableTablesEl.textContent = `${availableTables.length}개`;
     if (totalSeatsEl) totalSeatsEl.textContent = `${totalSeats}석`;
     if (availableSeatsEl) availableSeatsEl.textContent = `${availableSeats}석`;
     if (occupancyRateEl) occupancyRateEl.textContent = `${occupancyRate}%`;
@@ -735,11 +753,15 @@ async function loadTableInfo(store) {
     console.error('테이블 정보 로딩 실패:', error);
     
     // 에러 시 UI 업데이트
+    const totalTablesEl = document.getElementById('totalTables');
+    const availableTablesEl = document.getElementById('availableTables');
     const totalSeatsEl = document.getElementById('totalSeats');
     const availableSeatsEl = document.getElementById('availableSeats');
     const occupancyRateEl = document.getElementById('occupancyRate');
     const statusBadge = document.getElementById('tableStatusBadge');
 
+    if (totalTablesEl) totalTablesEl.textContent = '오류';
+    if (availableTablesEl) availableTablesEl.textContent = '오류';
     if (totalSeatsEl) totalSeatsEl.textContent = '오류';
     if (availableSeatsEl) availableSeatsEl.textContent = '오류';
     if (occupancyRateEl) occupancyRateEl.textContent = '오류';
