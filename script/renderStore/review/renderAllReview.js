@@ -3,16 +3,29 @@ async function renderAllReview(store) {
   console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
   
   try {
-    // 데이터베이스에서 실제 리뷰 데이터 가져오기
-    const response = await fetch(`/api/stores/${store.id}/reviews`);
-    if (!response.ok) {
-      throw new Error('리뷰 데이터 조회 실패');
+    // 캐시에서 리뷰 데이터 가져오기 (실시간 데이터이므로 캐시하지 않고 항상 서버에서 조회)
+    let reviews = [];
+    
+    try {
+      console.log('🌐 서버에서 최신 리뷰 데이터 조회 중...');
+      const response = await fetch(`/api/stores/${store.id}/reviews`);
+      
+      if (!response.ok) {
+        throw new Error(`리뷰 조회 실패: ${response.status}`);
+      }
+      
+      const reviewData = await response.json();
+      reviews = reviewData.reviews || [];
+      
+      console.log('📖 서버에서 가져온 리뷰 데이터:', reviews);
+      
+    } catch (apiError) {
+      console.error('❌ 서버 리뷰 조회 실패:', apiError);
+      
+      // 서버 조회 실패 시 빈 배열로 처리하여 UI는 정상 렌더링
+      reviews = [];
+      console.log('⚠️ 리뷰 데이터를 가져올 수 없어 빈 상태로 표시합니다');
     }
-    
-    const reviewData = await response.json();
-    const reviews = reviewData.reviews || [];
-    
-    console.log('📖 가져온 리뷰 데이터:', reviews);
     
     const total = reviews.length;
     const avgScore = total
@@ -288,8 +301,21 @@ async function renderAllReview(store) {
     `;
 
     // 버튼 이벤트 바인딩
-    document.getElementById('backBtn').addEventListener('click', () => {
-      renderStore(store);
+    document.getElementById('backBtn').addEventListener('click', async () => {
+      // 캐시에서 최신 매장 정보 가져와서 renderStore 호출
+      try {
+        const cachedStore = await cacheManager.getStoreById(store.id);
+        if (cachedStore) {
+          console.log('🏪 캐시에서 매장 정보 가져와서 뒤로가기:', cachedStore.name);
+          renderStore(cachedStore);
+        } else {
+          console.log('⚠️ 캐시에서 매장 정보를 찾을 수 없어 기존 정보 사용');
+          renderStore(store);
+        }
+      } catch (error) {
+        console.error('❌ 매장 정보 조회 실패:', error);
+        renderStore(store);
+      }
     });
     
     document.getElementById('TLL').addEventListener('click', () => {

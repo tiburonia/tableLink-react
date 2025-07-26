@@ -7,7 +7,7 @@ function renderReviewHTML(store) {
   // 미리보기로 2~3개만 표시 (최신순)
   const preview = reviews.slice(0, 3);
 
-  
+
   // 리뷰 없을 때 안내
   if (total === 0) {
     return `
@@ -19,7 +19,8 @@ function renderReviewHTML(store) {
           <div style="font-size:16px;font-weight:600;margin-bottom:8px;">등록된 리뷰가 없습니다.</div>
           <div style="color:#aaa;">첫 리뷰를 남겨주세요!</div>
         </div>
-        <button class="see-more-btn" style="margin-top:10px;" onclick="renderAllReview(window.currentStore)">전체 리뷰 보기</button>
+        <button class="see-more-btn" style="margin-top:10px;" 
+onclick="handleViewAllReviews()">전체 리뷰 보기</button>
       </div>
     `;
   }
@@ -86,8 +87,6 @@ function renderReviewHTML(store) {
   `;
 
 
-  
-  
+
+
 }
-
-

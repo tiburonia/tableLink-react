@@ -402,6 +402,13 @@ function renderStore(store) {
       .see-more-btn:hover {
         background: #f0f4ff;
       }
+      
+      /* 캐시 상태 표시 (디버깅용) */
+      .cache-status {
+        font-size: 11px;
+        color: #999;
+        margin-left: 8px;
+      }
       .review-card {
         background: #f9f9fb;
         border-radius: 8px;
