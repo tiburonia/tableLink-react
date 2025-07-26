@@ -681,15 +681,19 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
 app.post('/api/reviews/submit', async (req, res) => {
   const { userId, storeId, storeName, orderIndex, rating, reviewText, orderDate } = req.body;
 
-  console.log('📝 리뷰 등록 요청:', { userId, storeId, orderIndex, rating });
+  console.log('📝 리뷰 등록 요청 받음:', { userId, storeId, orderIndex, rating, reviewText });
 
+  const client = await pool.connect();
+  
   try {
-    console.log('🔍 리뷰 등록 처리 시작:', { userId, storeId, orderIndex });
+    await client.query('BEGIN');
+    console.log('🔍 트랜잭션 시작 - 리뷰 등록 처리 시작:', { userId, storeId, orderIndex });
     
     // 사용자 정보 조회
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const userResult = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
       console.log('❌ 사용자를 찾을 수 없음:', userId);
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
@@ -700,11 +704,12 @@ app.post('/api/reviews/submit', async (req, res) => {
     // 해당 주문이 존재하는지 확인
     if (orderIndex >= orderList.length) {
       console.log('❌ 존재하지 않는 주문:', { orderIndex, totalOrders: orderList.length });
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: '존재하지 않는 주문입니다' });
     }
 
     // 이미 리뷰를 작성했는지 확인 (reviews 테이블에서)
-    const existingReview = await pool.query(
+    const existingReview = await client.query(
       'SELECT * FROM reviews WHERE user_id = $1 AND order_index = $2',
       [userId, orderIndex]
     );
@@ -712,34 +717,48 @@ app.post('/api/reviews/submit', async (req, res) => {
     console.log('🔍 기존 리뷰 확인:', existingReview.rows.length, '개 발견');
     if (existingReview.rows.length > 0) {
       console.log('❌ 이미 리뷰 작성됨:', existingReview.rows[0]);
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: '이미 리뷰를 작성한 주문입니다' });
     }
 
     // 매장이 존재하는지 확인
-    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [storeId]);
+    const storeResult = await client.query('SELECT * FROM stores WHERE id = $1', [storeId]);
     if (storeResult.rows.length === 0) {
+      console.log('❌ 매장을 찾을 수 없음:', storeId);
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
     }
 
     // reviews 테이블에 리뷰 삽입
     console.log('📤 reviews 테이블에 삽입할 데이터:', { userId, storeId, orderIndex, rating, reviewText, orderDate });
     
-    const reviewInsertResult = await pool.query(`
-      INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date)
-      VALUES ($1, $2, $3, $4, $5, $6)
+    const insertQuery = `
+      INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
       RETURNING *
-    `, [userId, storeId, orderIndex, rating, reviewText, orderDate]);
+    `;
+    
+    console.log('🔍 실행할 INSERT 쿼리:', insertQuery);
+    console.log('🔍 쿼리 파라미터:', [userId, storeId, orderIndex, rating, reviewText, orderDate]);
+    
+    const reviewInsertResult = await client.query(insertQuery, [userId, storeId, orderIndex, rating, reviewText, orderDate]);
+
+    if (reviewInsertResult.rows.length === 0) {
+      console.log('❌ 리뷰 삽입 실패 - 반환된 행이 없음');
+      await client.query('ROLLBACK');
+      return res.status(500).json({ error: '리뷰 삽입에 실패했습니다' });
+    }
 
     const insertedReview = reviewInsertResult.rows[0];
     console.log('✅ reviews 테이블에 리뷰 삽입 완료:', insertedReview);
     
     // 삽입 후 즉시 조회해서 확인
-    const verifyResult = await pool.query('SELECT * FROM reviews WHERE id = $1', [insertedReview.id]);
+    const verifyResult = await client.query('SELECT * FROM reviews WHERE id = $1', [insertedReview.id]);
     console.log('🔍 삽입된 리뷰 재확인:', verifyResult.rows[0]);
 
     // 사용자의 주문 목록에 리뷰ID 추가
     orderList[orderIndex].reviewId = insertedReview.id;
-    await pool.query(
+    await client.query(
       'UPDATE users SET order_list = $1 WHERE id = $2',
       [JSON.stringify(orderList), userId]
     );
@@ -747,18 +766,26 @@ app.post('/api/reviews/submit', async (req, res) => {
     console.log('✅ 사용자 주문 목록 업데이트 완료');
 
     // 매장의 review_count 업데이트
-    const reviewCountResult = await pool.query(
+    const reviewCountResult = await client.query(
       'SELECT COUNT(*) as count FROM reviews WHERE store_id = $1',
       [storeId]
     );
     const newReviewCount = parseInt(reviewCountResult.rows[0].count);
 
-    await pool.query(
+    await client.query(
       'UPDATE stores SET review_count = $1 WHERE id = $2',
       [newReviewCount, storeId]
     );
 
     console.log('✅ 매장 리뷰 카운트 업데이트 완료:', newReviewCount);
+
+    // 트랜잭션 커밋
+    await client.query('COMMIT');
+    console.log('✅ 트랜잭션 커밋 완료');
+
+    // 전체 리뷰 수 다시 확인
+    const totalReviewsAfter = await pool.query('SELECT COUNT(*) as count FROM reviews');
+    console.log('📊 리뷰 등록 후 전체 리뷰 수:', totalReviewsAfter.rows[0].count);
 
     // 응답용 리뷰 객체 생성
     const responseReview = {
@@ -779,8 +806,12 @@ app.post('/api/reviews/submit', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 리뷰 등록 실패:', error);
+    await client.query('ROLLBACK');
+    console.error('❌ 리뷰 등록 실패 (상세):', error);
+    console.error('❌ 에러 스택:', error.stack);
     res.status(500).json({ error: '리뷰 등록 실패: ' + error.message });
+  } finally {
+    client.release();
   }
 });
 
