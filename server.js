@@ -523,6 +523,9 @@ app.post('/api/tables/occupy', async (req, res) => {
 
     // 테이블 점유 상태로 변경
     const occupiedTime = new Date();
+    
+    console.log(`🔧 SQL 쿼리 실행: UPDATE store_tables SET is_occupied = true, occupied_since = '${occupiedTime.toISOString()}' WHERE store_id = ${storeId} AND table_number = ${tableNumber}`);
+    
     const updateResult = await pool.query(`
       UPDATE store_tables 
       SET is_occupied = $1, occupied_since = $2 
@@ -531,6 +534,7 @@ app.post('/api/tables/occupy', async (req, res) => {
     `, [true, occupiedTime, storeId, tableNumber]);
 
     console.log(`✅ 테이블 점유 상태 변경 완료:`, updateResult.rows[0]);
+    console.log(`🔍 반영된 행 수: ${updateResult.rowCount}`);
 
     // 2분 후 자동 해제 스케줄링
     setTimeout(async () => {

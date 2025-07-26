@@ -712,6 +712,17 @@ function renderStore(store) {
 
   loadTableInfo(store);
 
+  // TLR 영역 클릭 시 테이블 정보 새로고침
+  const tlrContainer = document.getElementById('TLR');
+  if (tlrContainer) {
+    tlrContainer.addEventListener('click', () => {
+      loadTableInfo(store);
+    });
+  }
+
+  // 전역에서 접근 가능하도록 store 정보 저장
+  window.currentStore = store;
+
 }
 
 // 테이블 정보 로딩 함수

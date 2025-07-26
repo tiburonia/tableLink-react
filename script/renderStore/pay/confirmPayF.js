@@ -79,18 +79,18 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     alert(alertMessage);
 
     // 테이블 점유 상태 설정 (주문이 확정되었으므로)
-    if (currentOrder.storeId && currentOrder.tableNum) {
+    if (orderData.storeId && orderData.tableNum) {
       try {
         // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
-        const tableNumber = parseInt(currentOrder.tableNum.replace(/\D/g, ''));
+        const tableNumber = parseInt(orderData.tableNum.replace(/\D/g, ''));
         
-        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${currentOrder.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${currentOrder.tableNum}`);
+        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${orderData.tableNum}`);
         
         const occupyResponse = await fetch('/api/tables/occupy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            storeId: currentOrder.storeId,
+            storeId: orderData.storeId,
             tableNumber: tableNumber
           })
         });
@@ -99,6 +99,13 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
         
         if (occupyResponse.ok) {
           console.log(`🔒 테이블 점유 설정 완료:`, occupyData);
+          
+          // 테이블 상태 업데이트 후 즉시 렌더스토어 테이블 정보 새로고침
+          if (typeof loadTableInfo === 'function' && store) {
+            setTimeout(() => {
+              loadTableInfo(store);
+            }, 500);
+          }
         } else {
           console.error('❌ 테이블 점유 설정 실패:', occupyData);
         }
@@ -106,7 +113,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
         console.error('❌ 테이블 점유 API 호출 실패:', error);
       }
     } else {
-      console.log(`⚠️ 테이블 점유 설정 건너뜀: storeId=${currentOrder.storeId}, tableNum=${currentOrder.tableNum}`);
+      console.log(`⚠️ 테이블 점유 설정 건너뜀: storeId=${orderData.storeId}, tableNum=${orderData.tableNum}`);
     }
 
     // 초기화
