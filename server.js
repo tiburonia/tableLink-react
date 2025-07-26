@@ -617,32 +617,54 @@ async function checkAndReleaseExpiredTables() {
   }
 }
 
-// 매장별 리뷰 조회 API (stores 테이블의 reviews 컬럼에서 조회)
+// 매장별 리뷰 조회 API (reviews 테이블에서 JOIN으로 조회)
 app.get('/api/stores/:storeId/reviews', async (req, res) => {
   try {
     const { storeId } = req.params;
-    console.log(`\n=== 📖 매장 ${storeId} 리뷰 조회 API 시작 (stores 테이블에서) ===`);
+    console.log(`\n=== 📖 매장 ${storeId} 리뷰 조회 API 시작 (reviews 테이블 JOIN) ===`);
 
-    // stores 테이블에서 해당 매장의 reviews 컬럼 조회
-    const query = `SELECT id, name, reviews FROM stores WHERE id = $1`;
+    // reviews 테이블에서 매장의 모든 리뷰 조회 (사용자 이름 포함)
+    const query = `
+      SELECT 
+        r.id,
+        r.rating as score,
+        r.review_text as content,
+        r.order_date,
+        r.created_at,
+        u.name as user_name,
+        u.id as user_id
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1
+      ORDER BY r.created_at DESC
+    `;
+
     console.log('🔍 실행할 SQL 쿼리:', query);
     console.log('🔍 쿼리 파라미터 - storeId:', storeId, '(타입:', typeof storeId, ')');
 
     const result = await pool.query(query, [parseInt(storeId)]);
     
-    if (result.rows.length === 0) {
-      console.log('❌ 매장을 찾을 수 없음:', storeId);
-      return res.status(404).json({
-        success: false,
-        error: '매장을 찾을 수 없습니다'
-      });
+    console.log(`🔍 데이터베이스 쿼리 결과: ${result.rows.length}개 리뷰 발견`);
+    
+    if (result.rows.length > 0) {
+      console.log(`📊 조회된 리뷰 상세:`, result.rows);
+    } else {
+      console.log('❌ 조회된 리뷰가 없음. 전체 리뷰에서 매장별 분포 확인...');
+      const storeDistribution = await pool.query('SELECT store_id, COUNT(*) as count FROM reviews GROUP BY store_id ORDER BY store_id');
+      console.log('📊 매장별 리뷰 분포:', storeDistribution.rows);
     }
 
-    const store = result.rows[0];
-    const reviews = store.reviews || [];
-    
-    console.log(`🔍 매장 ${store.name} (ID: ${store.id})에서 ${reviews.length}개 리뷰 발견`);
-    console.log(`📊 조회된 리뷰 데이터:`, reviews);
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      score: row.score,
+      content: row.content,
+      date: new Date(row.created_at).toLocaleDateString('ko-KR'),
+      orderDate: row.order_date,
+      user: row.user_name || `사용자${row.user_id}`, // renderAllReview.js에서 사용하는 속성명
+      userId: row.user_id
+    }));
+
+    console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 처리 완료`);
 
     const responseData = {
       success: true,
@@ -665,7 +687,7 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
   }
 });
 
-// 리뷰 제출 API (stores 테이블의 reviews 컬럼에 추가)
+// 리뷰 제출 API (reviews 테이블에 저장)
 app.post('/api/reviews/submit', async (req, res) => {
   const { userId, storeId, storeName, orderIndex, rating, reviewText, orderDate } = req.body;
 
@@ -696,60 +718,33 @@ app.post('/api/reviews/submit', async (req, res) => {
       return res.status(400).json({ error: '존재하지 않는 주문입니다' });
     }
 
-    // 매장 정보 조회
-    const storeResult = await client.query('SELECT * FROM stores WHERE id = $1', [storeId]);
-    if (storeResult.rows.length === 0) {
-      console.log('❌ 매장을 찾을 수 없음:', storeId);
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
-    }
-
-    const store = storeResult.rows[0];
-    const currentReviews = store.reviews || [];
-
-    // 이미 리뷰를 작성했는지 확인 (stores.reviews에서)
-    const existingReview = currentReviews.find(review => 
-      review.userId === userId && review.orderIndex === orderIndex
+    // 이미 리뷰를 작성했는지 확인 (reviews 테이블에서)
+    const existingReview = await client.query(
+      'SELECT id FROM reviews WHERE user_id = $1 AND order_index = $2',
+      [userId, orderIndex]
     );
 
-    console.log('🔍 기존 리뷰 확인:', existingReview ? '이미 존재함' : '없음');
-    if (existingReview) {
-      console.log('❌ 이미 리뷰 작성됨:', existingReview);
+    console.log('🔍 기존 리뷰 확인:', existingReview.rows.length > 0 ? '이미 존재함' : '없음');
+    if (existingReview.rows.length > 0) {
+      console.log('❌ 이미 리뷰 작성됨:', existingReview.rows[0]);
       await client.query('ROLLBACK');
       return res.status(400).json({ error: '이미 리뷰를 작성한 주문입니다' });
     }
 
-    // 새 리뷰 객체 생성
-    const newReview = {
-      id: Date.now(), // 고유 ID 생성
-      userId: userId,
-      userName: user.name || `사용자${userId}`,
-      score: rating,
-      content: reviewText,
-      date: new Date().toLocaleDateString('ko-KR', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric'
-      }),
-      orderDate: orderDate,
-      orderIndex: orderIndex,
-      user: user.name || `사용자${userId}` // renderAllReview.js에서 사용하는 속성명
-    };
+    // reviews 테이블에 새 리뷰 삽입
+    const reviewResult = await client.query(`
+      INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, created_at
+    `, [userId, storeId, orderIndex, rating, reviewText, orderDate]);
 
-    console.log('📤 stores 테이블에 추가할 리뷰 데이터:', newReview);
+    const newReviewId = reviewResult.rows[0].id;
+    const createdAt = reviewResult.rows[0].created_at;
 
-    // stores 테이블의 reviews 배열에 새 리뷰 추가
-    const updatedReviews = [newReview, ...currentReviews]; // 최신 리뷰가 맨 앞에
-    
-    await client.query(
-      'UPDATE stores SET reviews = $1, review_count = $2 WHERE id = $3',
-      [JSON.stringify(updatedReviews), updatedReviews.length, storeId]
-    );
-
-    console.log('✅ stores 테이블에 리뷰 추가 완료');
+    console.log('✅ reviews 테이블에 리뷰 추가 완료, ID:', newReviewId);
 
     // 사용자의 주문 목록에 리뷰ID 추가
-    orderList[orderIndex].reviewId = newReview.id;
+    orderList[orderIndex].reviewId = newReviewId;
     await client.query(
       'UPDATE users SET order_list = $1 WHERE id = $2',
       [JSON.stringify(orderList), userId]
@@ -757,14 +752,39 @@ app.post('/api/reviews/submit', async (req, res) => {
 
     console.log('✅ 사용자 주문 목록 업데이트 완료');
 
+    // stores 테이블의 review_count 업데이트
+    const reviewCountResult = await client.query(
+      'SELECT COUNT(*) as count FROM reviews WHERE store_id = $1',
+      [storeId]
+    );
+    const reviewCount = parseInt(reviewCountResult.rows[0].count);
+    
+    await client.query(
+      'UPDATE stores SET review_count = $1 WHERE id = $2',
+      [reviewCount, storeId]
+    );
+
+    console.log('✅ stores 테이블 review_count 업데이트 완료:', reviewCount);
+
     // 트랜잭션 커밋
     await client.query('COMMIT');
     console.log('✅ 트랜잭션 커밋 완료');
 
+    // 응답용 리뷰 객체 생성
+    const responseReview = {
+      id: newReviewId,
+      score: rating,
+      content: reviewText,
+      date: new Date(createdAt).toLocaleDateString('ko-KR'),
+      orderDate: orderDate,
+      user: user.name || `사용자${userId}`,
+      userId: userId
+    };
+
     res.json({
       success: true,
       message: '리뷰가 성공적으로 등록되었습니다',
-      review: newReview
+      review: responseReview
     });
 
   } catch (error) {
