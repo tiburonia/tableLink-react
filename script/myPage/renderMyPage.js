@@ -286,6 +286,7 @@ async function renderMyPage() {
       btn.addEventListener('click', (e) => {
         const orderIndex = parseInt(e.target.getAttribute('data-order-index'));
         const order = currentUserInfo.orderList[orderIndex];
+        console.log('🔍 선택된 주문 정보:', order);
         showReviewModal(order, orderIndex);
       });
     });
@@ -396,9 +397,26 @@ function updateStarDisplay(modal, rating) {
 
 // 리뷰 서버 전송
 async function submitReview(order, orderIndex, rating, reviewText) {
+  console.log('📝 리뷰 등록 시도:', { order, orderIndex, rating, reviewText });
+  
+  // storeId가 없는 경우 매장 이름으로 찾기
+  let storeId = order.storeId;
+  if (!storeId) {
+    try {
+      const storesResponse = await fetch('/api/stores');
+      const storesData = await storesResponse.json();
+      const foundStore = storesData.stores.find(store => store.name === order.store);
+      storeId = foundStore ? foundStore.id : 1; // 기본값 1
+      console.log('🔍 매장 이름으로 찾은 storeId:', storeId);
+    } catch (error) {
+      console.warn('⚠️ 매장 ID 찾기 실패, 기본값 사용:', error);
+      storeId = 1; // 기본값
+    }
+  }
+  
   const reviewData = {
     userId: userInfo.id,
-    storeId: order.storeId,
+    storeId: storeId,
     storeName: order.store,
     orderIndex: orderIndex,
     rating: rating,
@@ -406,20 +424,39 @@ async function submitReview(order, orderIndex, rating, reviewText) {
     orderDate: order.date
   };
   
-  const response = await fetch('/api/reviews/submit', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(reviewData)
-  });
+  console.log('📤 서버로 전송할 리뷰 데이터:', reviewData);
   
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || '리뷰 등록 실패');
+  try {
+    const response = await fetch('/api/reviews/submit', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reviewData)
+    });
+    
+    console.log('📡 서버 응답 상태:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        console.error('❌ 응답 파싱 실패:', parseError);
+        throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
+      }
+      console.error('❌ 서버 오류 응답:', errorData);
+      throw new Error(errorData.error || '리뷰 등록 실패');
+    }
+    
+    const result = await response.json();
+    console.log('✅ 리뷰 등록 성공:', result);
+    return result;
+    
+  } catch (fetchError) {
+    console.error('❌ 리뷰 등록 네트워크 오류:', fetchError);
+    throw fetchError;
   }
-  
-  return response.json();
 }
 
 window.renderMyPage = renderMyPage;
