@@ -24,10 +24,29 @@ function renderStore(store) {
             <h2 id="storeName">${store.name}</h2>
             <p class="store-desc">여기에 간단한 가게 소개 또는 태그</p>
           </div>
-          <div id="TLR" class="storeInfo" style="margin-bottom: 12px;">
-            <div class="tlr-title">리뷰/리텐션 (TLR)</div>
-            <div id="tableStatusInfo" class="tlr-desc">테이블 정보 로딩중...</div>
-            <button onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">테이블 배치 보기</button>
+          <div id="TLR" class="tlr-container">
+            <div class="tlr-header">
+              <div class="tlr-title">🏪 테이블 현황</div>
+              <div class="tlr-status-badge" id="tableStatusBadge">로딩중...</div>
+            </div>
+            <div class="tlr-info-grid">
+              <div class="tlr-info-item">
+                <div class="tlr-info-label">총 좌석</div>
+                <div class="tlr-info-value" id="totalSeats">-</div>
+              </div>
+              <div class="tlr-info-item">
+                <div class="tlr-info-label">잔여 좌석</div>
+                <div class="tlr-info-value" id="availableSeats">-</div>
+              </div>
+              <div class="tlr-info-item">
+                <div class="tlr-info-label">사용률</div>
+                <div class="tlr-info-value" id="occupancyRate">-</div>
+              </div>
+            </div>
+            <button class="tlr-layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+              <span class="btn-icon">🗺️</span>
+              테이블 배치 보기
+            </button>
           </div>
           <div id="reviewPreview" class="review-preview">
             <div class="review-title-row">
@@ -224,16 +243,102 @@ function renderStore(store) {
         margin: 0 0 2px 1px;
       }
 
-      #TLR .tlr-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #555;
-        margin-bottom: 6px;
+      .tlr-container {
+        background: linear-gradient(135deg, #f8fafd 0%, #e8f4fd 100%);
+        border: 1px solid #d4e8fc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(41, 126, 252, 0.08);
       }
-      #TLR .tlr-desc {
-        font-size: 15px;
-        color: #888;
-        font-style: italic;
+
+      .tlr-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .tlr-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #297efc;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tlr-status-badge {
+        background: #4CAF50;
+        color: white;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .tlr-status-badge.busy {
+        background: #FF9800;
+      }
+
+      .tlr-status-badge.full {
+        background: #F44336;
+      }
+
+      .tlr-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .tlr-info-item {
+        text-align: center;
+        background: white;
+        border-radius: 8px;
+        padding: 10px 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      }
+
+      .tlr-info-label {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 4px;
+        font-weight: 500;
+      }
+
+      .tlr-info-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #297efc;
+      }
+
+      .tlr-layout-btn {
+        width: 100%;
+        background: white;
+        border: 2px solid #297efc;
+        color: #297efc;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 10px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .tlr-layout-btn:hover {
+        background: #297efc;
+        color: white;
+      }
+
+      .btn-icon {
+        font-size: 16px;
       }
 
       .review-preview {
@@ -579,22 +684,68 @@ function renderStore(store) {
 // 테이블 정보 로딩 함수
 async function loadTableInfo(store) {
   try {
+    console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
+    
     const response = await fetch(`/api/stores/${store.id}/tables`);
     if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
     const data = await response.json();
-    const totalSeats = data.tables.reduce((sum, table) => sum + table.seats, 0);
-    const availableSeats = data.tables.filter(t => !t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
+    console.log(`📊 테이블 데이터:`, data);
+    
+    const tables = data.tables || [];
+    const totalTables = tables.length;
+    const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
+    const occupiedTables = tables.filter(t => t.isOccupied);
+    const availableTables = tables.filter(t => !t.isOccupied);
+    const availableSeats = availableTables.reduce((sum, table) => sum + table.seats, 0);
+    const occupancyRate = totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0;
 
-    const tableStatusInfo = document.getElementById('tableStatusInfo');
-    if (tableStatusInfo) {
-      tableStatusInfo.innerHTML = `총 좌석: ${totalSeats}석 | 잔여 좌석: ${availableSeats}석`;
+    console.log(`🏪 ${store.name} 통계:
+    - 총 테이블: ${totalTables}개
+    - 총 좌석: ${totalSeats}석
+    - 사용중 테이블: ${occupiedTables.length}개
+    - 빈 테이블: ${availableTables.length}개
+    - 잔여 좌석: ${availableSeats}석
+    - 사용률: ${occupancyRate}%`);
+
+    // UI 업데이트
+    const totalSeatsEl = document.getElementById('totalSeats');
+    const availableSeatsEl = document.getElementById('availableSeats');
+    const occupancyRateEl = document.getElementById('occupancyRate');
+    const statusBadge = document.getElementById('tableStatusBadge');
+
+    if (totalSeatsEl) totalSeatsEl.textContent = `${totalSeats}석`;
+    if (availableSeatsEl) availableSeatsEl.textContent = `${availableSeats}석`;
+    if (occupancyRateEl) occupancyRateEl.textContent = `${occupancyRate}%`;
+    
+    if (statusBadge) {
+      statusBadge.classList.remove('busy', 'full');
+      if (occupancyRate >= 90) {
+        statusBadge.textContent = 'FULL';
+        statusBadge.classList.add('full');
+      } else if (occupancyRate >= 70) {
+        statusBadge.textContent = 'BUSY';
+        statusBadge.classList.add('busy');
+      } else {
+        statusBadge.textContent = 'OPEN';
+      }
     }
+
   } catch (error) {
     console.error('테이블 정보 로딩 실패:', error);
-    const tableStatusInfo = document.getElementById('tableStatusInfo');
-    if (tableStatusInfo) {
-      tableStatusInfo.innerHTML = '테이블 정보를 불러올 수 없습니다';
+    
+    // 에러 시 UI 업데이트
+    const totalSeatsEl = document.getElementById('totalSeats');
+    const availableSeatsEl = document.getElementById('availableSeats');
+    const occupancyRateEl = document.getElementById('occupancyRate');
+    const statusBadge = document.getElementById('tableStatusBadge');
+
+    if (totalSeatsEl) totalSeatsEl.textContent = '오류';
+    if (availableSeatsEl) availableSeatsEl.textContent = '오류';
+    if (occupancyRateEl) occupancyRateEl.textContent = '오류';
+    if (statusBadge) {
+      statusBadge.textContent = 'ERROR';
+      statusBadge.style.background = '#666';
     }
   }
 }
