@@ -632,6 +632,14 @@ app.get('/api/stores/:storeId/reviews', async (req, res) => {
       ORDER BY r.created_at DESC
     `;
 
+    console.log('🔍 실행할 SQL 쿼리:', query);
+    console.log('🔍 쿼리 파라미터:', [storeId]);
+    
+    // 먼저 전체 리뷰 수 확인
+    const totalReviews = await pool.query('SELECT COUNT(*) as count FROM reviews');
+    console.log('📊 전체 리뷰 테이블 레코드 수:', totalReviews.rows[0].count);
+    
+    // 해당 매장의 리뷰 조회
     const result = await pool.query(query, [storeId]);
     console.log(`🔍 데이터베이스 쿼리 결과: ${result.rows.length}개 리뷰 발견`);
     console.log(`📊 원본 데이터:`, result.rows);
@@ -676,17 +684,22 @@ app.post('/api/reviews/submit', async (req, res) => {
   console.log('📝 리뷰 등록 요청:', { userId, storeId, orderIndex, rating });
 
   try {
+    console.log('🔍 리뷰 등록 처리 시작:', { userId, storeId, orderIndex });
+    
     // 사용자 정보 조회
     const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
+      console.log('❌ 사용자를 찾을 수 없음:', userId);
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
     const user = userResult.rows[0];
     const orderList = user.order_list || [];
+    console.log('📋 사용자 주문 목록:', orderList.length, '개');
 
     // 해당 주문이 존재하는지 확인
     if (orderIndex >= orderList.length) {
+      console.log('❌ 존재하지 않는 주문:', { orderIndex, totalOrders: orderList.length });
       return res.status(400).json({ error: '존재하지 않는 주문입니다' });
     }
 
@@ -696,7 +709,9 @@ app.post('/api/reviews/submit', async (req, res) => {
       [userId, orderIndex]
     );
 
+    console.log('🔍 기존 리뷰 확인:', existingReview.rows.length, '개 발견');
     if (existingReview.rows.length > 0) {
+      console.log('❌ 이미 리뷰 작성됨:', existingReview.rows[0]);
       return res.status(400).json({ error: '이미 리뷰를 작성한 주문입니다' });
     }
 
@@ -707,6 +722,8 @@ app.post('/api/reviews/submit', async (req, res) => {
     }
 
     // reviews 테이블에 리뷰 삽입
+    console.log('📤 reviews 테이블에 삽입할 데이터:', { userId, storeId, orderIndex, rating, reviewText, orderDate });
+    
     const reviewInsertResult = await pool.query(`
       INSERT INTO reviews (user_id, store_id, order_index, rating, review_text, order_date)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -715,6 +732,10 @@ app.post('/api/reviews/submit', async (req, res) => {
 
     const insertedReview = reviewInsertResult.rows[0];
     console.log('✅ reviews 테이블에 리뷰 삽입 완료:', insertedReview);
+    
+    // 삽입 후 즉시 조회해서 확인
+    const verifyResult = await pool.query('SELECT * FROM reviews WHERE id = $1', [insertedReview.id]);
+    console.log('🔍 삽입된 리뷰 재확인:', verifyResult.rows[0]);
 
     // 사용자의 주문 목록에 리뷰ID 추가
     orderList[orderIndex].reviewId = insertedReview.id;
