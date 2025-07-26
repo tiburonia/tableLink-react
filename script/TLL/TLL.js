@@ -53,23 +53,23 @@ async function TLL() {
 
     // 선택한 매장 정보 찾기
     const store = stores.find(s => s.id === storeId);
-    
+
     try {
       // 🆕 PostgreSQL에서 실제 테이블 정보 가져오기
       const response = await fetch(`/api/stores/${storeId}/tables`);
       if (!response.ok) throw new Error('테이블 정보 조회 실패');
-      
+
       const data = await response.json();
       const tables = data.tables || [];
-      
+
       console.log(`🏪 ${store.name}: ${tables.length}개 테이블 로드 완료`);
-      
+
       // 실제 테이블 번호로 옵션 생성
       if (tables.length > 0) {
         const tableOptions = tables.map(table => 
           `<option value="${table.tableNumber}">${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
         ).join('');
-        
+
         tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
       } else {
         // 테이블이 없는 경우 기본값 사용
@@ -78,10 +78,10 @@ async function TLL() {
         tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
           tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
       }
-      
+
       tableSelect.disabled = false;
       startOrderBtn.disabled = true;
-      
+
     } catch (error) {
       console.error('테이블 정보 로드 오류:', error);
       // 에러 시 기본값 사용
@@ -101,15 +101,15 @@ async function TLL() {
     const storeId = Number(storeSelect.value);
     const selectedTableNumber = tableSelect.value;
     if (!storeId || !selectedTableNumber) return;
-    
+
     const store = stores.find(s => s.id === storeId);
-    
+
     // 🆕 선택한 테이블의 실제 이름 가져오기
     const selectedOption = tableSelect.options[tableSelect.selectedIndex];
     const tableName = selectedOption.textContent.replace(' (사용중)', ''); // "(사용중)" 텍스트 제거
-    
+
     console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
-    
+
     // 여기서 주문 시작! (테이블 이름으로 전달)
     alert(`[${store.name}] ${tableName} 주문 시작`);
     // 실제 주문 flow 함수로 테이블 이름 전달
