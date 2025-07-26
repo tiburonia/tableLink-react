@@ -1,5 +1,67 @@
 function renderStore(store) {
-  main.innerHTML = `
+  // 가게 정보를 윈도우 객체에 저장 (다른 함수에서 접근 가능)
+  window.currentStore = store;
+
+  const mainEl = document.getElementById('main');
+  if (!mainEl) return;
+
+  try {
+    // 서버에서 매장의 테이블 정보와 리뷰 정보 병렬로 가져오기
+    console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 정보 조회 중...`);
+
+    const [tableResponse, reviewResponse] = await Promise.all([
+      fetch(`/api/stores/${store.id}/tables`),
+      fetch(`/api/stores/${store.id}/reviews`)
+    ]);
+
+    if (!tableResponse.ok) {
+      throw new Error(`테이블 정보 조회 실패: ${tableResponse.status}`);
+    }
+
+    const tableData = await tableResponse.json();
+    console.log('📊 테이블 데이터:', tableData);
+
+    // 리뷰 데이터 처리 (실패해도 계속 진행)
+    let reviewData = { reviews: [], total: 0 };
+    if (reviewResponse.ok) {
+      reviewData = await reviewResponse.json();
+      console.log('📖 리뷰 데이터:', reviewData);
+    } else {
+      console.warn('⚠️ 리뷰 데이터 조회 실패, 빈 데이터로 진행');
+    }
+
+    if (!tableData.success) {
+      throw new Error('테이블 데이터 조회 실패');
+    }
+
+    // 테이블 통계 계산
+    const totalTables = tableData.totalTables || 0;
+    const availableTables = tableData.availableTables || 0;
+    const totalSeats = tableData.tables?.reduce((sum, table) => sum + (table.seats || 0), 0) || 0;
+    const occupiedTables = totalTables - availableTables;
+    const occupiedSeats = tableData.tables?.filter(t => t.isOccupied).reduce((sum, table) => sum + (table.seats || 0), 0) || 0;
+    const availableSeats = totalSeats - occupiedSeats;
+    const occupancyRate = totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 100) : 0;
+
+    console.log(`🏪 ${store.name} 통계:
+    - 총 테이블: ${totalTables}개
+    - 총 좌석: ${totalSeats}석
+    - 사용중 테이블: ${occupiedTables}개
+    - 빈 테이블: ${availableTables}개
+    - 잔여 좌석: ${availableSeats}석
+    - 사용률: ${occupancyRate}%`);
+
+    // 매장 정보에 실시간 리뷰 데이터 추가
+    const storeWithReviews = {
+      ...store,
+      reviews: reviewData.reviews || [],
+      reviewTotal: reviewData.total || 0
+    };
+
+    // 전역 변수 업데이트
+    window.currentStore = storeWithReviews;
+
+    mainEl.innerHTML = `
     <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
     </button>
@@ -56,24 +118,7 @@ function renderStore(store) {
               테이블 배치 보기
             </button>
           </div>
-          <div id="reviewPreview" class="review-preview">
-            <div class="review-title-row">
-              <span class="review-title">리뷰 미리보기</span>
-              <button class="see-more-btn">전체보기</button>
-            </div>
-            <div class="review-card">
-              <span class="review-user">🐤 익명</span>
-              <span class="review-score">★ 5</span>
-              <span class="review-date">1일 전</span>
-              <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
-            </div>
-            <div class="review-card">
-              <span class="review-user">🍙 user123</span>
-              <span class="review-score">★ 4</span>
-              <span class="review-date">3일 전</span>
-              <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
-            </div>
-          </div>
+          ${renderReviewHTML(storeWithReviews)}
         </div>
         <div id="storeNavBar" class="no-padding">
           <button class="nav-btn" data-tab="menu">
@@ -402,7 +447,7 @@ function renderStore(store) {
       .see-more-btn:hover {
         background: #f0f4ff;
       }
-      
+
       /* 캐시 상태 표시 (디버깅용) */
       .cache-status {
         font-size: 11px;
@@ -717,6 +762,35 @@ function renderStore(store) {
     renderAllReview(store)
   })
 
+    // 이벤트 리스너 추가
+    document.getElementById('backBtn').addEventListener('click', () => {
+      renderMap();
+    });
+
+    document.getElementById('TLL').addEventListener('click', () => {
+      alert('QR 결제 기능은 아직 준비 중입니다');
+    });
+
+    document.getElementById('favoriteBtn').addEventListener('click', () => {
+      toggleFavoriteF(store.id, document.getElementById('favoriteBtn'));
+    });
+
+    document.getElementById('telephone').addEventListener('click', () => {
+      alert('전화 기능은 아직 준비 중입니다');
+    });
+
+    document.getElementById('order').addEventListener('click', () => {
+      renderOrderScreen(store);
+    });
+
+    // 리뷰 전체보기 버튼 (동적으로 생성된 버튼에 대한 이벤트 위임)
+    mainEl.addEventListener('click', (e) => {
+      if (e.target.classList.contains('see-more-btn')) {
+        e.preventDefault();
+        renderAllReview(storeWithReviews);
+      }
+    });
+
   loadTableInfo(store);
 
   // TLR 영역 클릭 시 테이블 정보 새로고침
@@ -736,13 +810,13 @@ function renderStore(store) {
 async function loadTableInfo(store) {
   try {
     console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
-    
+
     const response = await fetch(`/api/stores/${store.id}/tables`);
     if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
     const data = await response.json();
     console.log(`📊 테이블 데이터:`, data);
-    
+
     const tables = data.tables || [];
     const totalTables = tables.length;
     const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
@@ -772,7 +846,7 @@ async function loadTableInfo(store) {
     if (totalSeatsEl) totalSeatsEl.textContent = `${totalSeats}석`;
     if (availableSeatsEl) availableSeatsEl.textContent = `${availableSeats}석`;
     if (occupancyRateEl) occupancyRateEl.textContent = `${occupancyRate}%`;
-    
+
     if (statusBadge) {
       statusBadge.classList.remove('busy', 'full');
       if (occupancyRate >= 90) {
@@ -780,7 +854,8 @@ async function loadTableInfo(store) {
         statusBadge.classList.add('full');
       } else if (occupancyRate >= 70) {
         statusBadge.textContent = 'BUSY';
-        statusBadge.classList.add('busy');
+        statusBadge.```text
+classList.add('busy');
       } else {
         statusBadge.textContent = 'OPEN';
       }
@@ -788,7 +863,7 @@ async function loadTableInfo(store) {
 
   } catch (error) {
     console.error('테이블 정보 로딩 실패:', error);
-    
+
     // 에러 시 UI 업데이트
     const totalTablesEl = document.getElementById('totalTables');
     const availableTablesEl = document.getElementById('availableTables');
