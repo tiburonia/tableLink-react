@@ -13,8 +13,10 @@ function renderPay(currentOrder, store, tableNum) {
 
   const orderData = {
     store: store.name || store.title || '알 수 없는 매장',
+    storeId: store.id, // 🆕 매장 ID 추가
     date: new Date().toLocaleString(),
     table: tableNum,
+    tableNum: tableNum, // 🆕 테이블 번호 추가 (confirmPayF에서 사용)
     items,
     total
   };
