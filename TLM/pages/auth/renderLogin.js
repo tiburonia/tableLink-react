@@ -228,10 +228,18 @@ let renderLogin = async function () {
   });
 
   const handleEnterKey = (event) => {
+    // 로그인 화면이 아니면 이벤트 무시
+    if (!document.getElementById('loginContainer')) {
+      return;
+    }
+    
     if (event.key === 'Enter' && event.target.id !== 'join') {
       login.click();
     }
   };
+  
+  // 기존 이벤트 리스너 제거 후 새로 등록
+  document.removeEventListener('keydown', handleEnterKey);
   document.addEventListener('keydown', handleEnterKey);
 
   join.addEventListener('keydown', (event) => {
