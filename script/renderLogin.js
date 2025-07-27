@@ -10,6 +10,7 @@ let renderLogin = async function () {
       </div>
       <hr>
       <div style="width: 70%; display: flex; flex-direction: column; gap: 8px;">
+        <button id='quickLogin' style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 14px;">⚡ 빠른 로그인 (user1)</button>
         <button id='adminLogin' style="width: 100%; padding: 12px; background: #444; color: white; border: none; border-radius: 6px; font-size: 14px;">🛠️ Admin 로그인</button>
         <button id='goKDS' style="width: 100%; padding: 12px; background: #222; color: white; border: none; border-radius: 6px; font-size: 14px;">📟 KDS</button>
         <button id='goPOS' style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 6px; font-size: 14px;">💳 POS</button>
@@ -28,12 +29,86 @@ let renderLogin = async function () {
   const pw = document.querySelector('#pw');
   const join = document.querySelector('#join');
   const login = document.querySelector('#login');
+  const quickLogin = document.querySelector('#quickLogin');
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
 
   join.addEventListener('click', () => {
     renderSignUp();
+  });
+
+  // 개발용 빠른 로그인
+  quickLogin.addEventListener('click', async () => {
+    try {
+      // 로딩 화면 표시
+      showLoadingScreen();
+      
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: 'user1',
+          pw: '11'
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // 전역 userInfo 객체 초기화
+        if (!window.userInfo) {
+          window.userInfo = {};
+        }
+
+        // userInfo를 서버에서 받은 데이터로 업데이트
+        window.userInfo = {
+          id: data.user.id,
+          pw: data.user.pw || '',
+          name: data.user.name,
+          phone: data.user.phone,
+          email: '',
+          address: '',
+          birth: '',
+          gender: '',
+          point: data.user.point || 0,
+          orderList: data.user.orderList || [],
+          totalCost: 0,
+          realCost: 0,
+          reservationList: data.user.reservationList || [],
+          coupons: data.user.coupons || { unused: [], used: [] },
+          favorites: data.user.favoriteStores || []
+        };
+
+        // 🍪 쿠키에 사용자 정보 저장 (7일 만료)
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+        console.log('🍪 빠른 로그인 정보 쿠키에 저장 완료');
+
+        // 🆕 캐시에 사용자 정보 저장 (캐시 매니저가 있을 때만)
+        if (typeof cacheManager !== 'undefined') {
+          cacheManager.setUserInfo(window.userInfo);
+          console.log('💾 빠른 로그인 정보 캐시에 저장 완료');
+        }
+
+        // renderMap 호출 전에 약간의 지연을 둬서 캐시가 완전히 저장되도록 함
+        setTimeout(async () => {
+          await renderMap();
+        }, 100);
+      } else {
+        // 로그인 실패 시 다시 로그인 화면으로
+        await renderLogin();
+        alert(data.error || '빠른 로그인 실패');
+      }
+    } catch (error) {
+      console.error('빠른 로그인 오류:', error);
+      // 오류 시 다시 로그인 화면으로
+      await renderLogin();
+      alert('서버 연결에 실패했습니다');
+    }
   });
 
   // 로딩 화면 함수
