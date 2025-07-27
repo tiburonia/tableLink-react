@@ -1,5 +1,4 @@
-
-function renderAdminMain() {
+const renderAdminMain = function() {
   const main = document.getElementById('main');
   main.innerHTML = `
     <div id="adminContainer" style="
