@@ -265,14 +265,14 @@ function setupAdminEventListeners() {
     
     if (backToLoginBtn) {
       backToLoginBtn.addEventListener('click', () => {
-        renderLogin();
+        window.location.href = '/';
       });
     }
     
     if (logoutAdminBtn) {
       logoutAdminBtn.addEventListener('click', () => {
         if (confirm('관리자 모드에서 로그아웃하시겠습니까?')) {
-          renderLogin();
+          window.location.href = '/';
         }
       });
     }
