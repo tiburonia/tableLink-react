@@ -206,6 +206,7 @@ app.get('/api/stores', async (req, res) => {
     );
 
     res.json({
+      success: true,
       message: 'TableLink API 서버가 정상 작동 중입니다.',
       stores: storesWithTables
     });
