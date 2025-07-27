@@ -14,6 +14,7 @@ async function renderAllReview(store) {
     const cachedReviews = localStorage.getItem(reviewCacheKey);
     
     let reviews = [];
+    let needToFetchFromServer = false;
     
     if (cachedReviews) {
       try {
@@ -27,18 +28,19 @@ async function renderAllReview(store) {
         } else {
           console.log('⏰ 리뷰 캐시가 만료됨, 서버에서 새로 가져오는 중...');
           localStorage.removeItem(reviewCacheKey);
-          throw new Error('캐시 만료');
+          needToFetchFromServer = true;
         }
       } catch (error) {
         console.log('⚠️ 캐시 데이터 파싱 실패, 서버에서 가져오는 중...');
-        throw new Error('캐시 파싱 실패');
+        needToFetchFromServer = true;
       }
     } else {
-      throw new Error('캐시 없음');
+      console.log('📭 리뷰 캐시가 없음, 서버에서 가져오는 중...');
+      needToFetchFromServer = true;
     }
     
     // 캐시가 없거나 만료된 경우 서버에서 가져오기
-    if (reviews.length === 0) {
+    if (needToFetchFromServer) {
       console.log('🌐 서버에서 리뷰 데이터 가져오는 중...');
       const response = await fetch(`/api/stores/${store.id}/reviews`);
       if (!response.ok) {
