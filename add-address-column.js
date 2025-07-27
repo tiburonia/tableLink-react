@@ -49,14 +49,14 @@ async function addAddressColumn() {
         if (!response.ok) {
           console.log(`❌ 매장 ${store.id} API 호출 실패: ${response.status}`);
           
-          // API 실패 시 좌표 기반 임시 주소 생성
-          const tempAddress = `서울특별시 중구 (위도: ${coord.lat.toFixed(4)}, 경도: ${coord.lng.toFixed(4)})`;
+          // API 실패 시 좌표 기반 상세 임시 주소 생성
+          const tempAddress = `[API실패] 서울특별시 중구 추정위치 (GPS: ${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}) - ${store.name} 매장`;
           
           await pool.query(
             'UPDATE stores SET address = $1 WHERE id = $2',
             [tempAddress, store.id]
           );
-          console.log(`⚠️ 매장 ${store.id} (${store.name}) 임시 주소 설정: ${tempAddress}`);
+          console.log(`⚠️ 매장 ${store.id} (${store.name}) 상세 임시 주소 설정: ${tempAddress}`);
           
           await new Promise(resolve => setTimeout(resolve, 100)); // API 제한 방지
           continue;
@@ -66,16 +66,61 @@ async function addAddressColumn() {
         
         let address = null;
         
-        // 도로명 주소 우선, 없으면 지번 주소 사용
+        // 도로명 주소와 세부 정보를 조합하여 완전한 주소 생성
         if (data.documents && data.documents.length > 0) {
           const doc = data.documents[0];
           
-          if (doc.road_address && doc.road_address.address_name) {
-            address = doc.road_address.address_name;
-            console.log(`📍 매장 ${store.id} 도로명 주소: ${address}`);
-          } else if (doc.address && doc.address.address_name) {
-            address = doc.address.address_name;
-            console.log(`📍 매장 ${store.id} 지번 주소: ${address}`);
+          if (doc.road_address) {
+            const roadAddr = doc.road_address;
+            
+            // 도로명 주소 조합: 시/도 + 시/군/구 + 도로명 + 건물번호 + 세부정보
+            let fullAddress = '';
+            
+            // 기본 도로명 주소
+            if (roadAddr.address_name) {
+              fullAddress = roadAddr.address_name;
+            }
+            
+            // 건물명이 있으면 추가
+            if (roadAddr.building_name) {
+              fullAddress += ` (${roadAddr.building_name})`;
+            }
+            
+            // 지하 정보가 있으면 추가
+            if (roadAddr.underground_yn === 'Y') {
+              fullAddress = '지하 ' + fullAddress;
+            }
+            
+            // 우편번호 추가
+            if (roadAddr.zone_no) {
+              fullAddress = `[${roadAddr.zone_no}] ${fullAddress}`;
+            }
+            
+            address = fullAddress;
+            console.log(`📍 매장 ${store.id} 상세 도로명 주소: ${address}`);
+            
+          } else if (doc.address) {
+            const jibunAddr = doc.address;
+            
+            // 지번 주소도 세부 정보 포함하여 조합
+            let fullAddress = '';
+            
+            if (jibunAddr.address_name) {
+              fullAddress = jibunAddr.address_name;
+            }
+            
+            // 건물명이 있으면 추가
+            if (jibunAddr.building_name) {
+              fullAddress += ` (${jibunAddr.building_name})`;
+            }
+            
+            // 우편번호 추가
+            if (jibunAddr.zip_code) {
+              fullAddress = `[${jibunAddr.zip_code}] ${fullAddress}`;
+            }
+            
+            address = fullAddress;
+            console.log(`📍 매장 ${store.id} 상세 지번 주소: ${address}`);
           }
         }
         
