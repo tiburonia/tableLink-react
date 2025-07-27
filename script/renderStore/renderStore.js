@@ -40,6 +40,10 @@ function renderStore(store) {
             <h2 id="storeName">${store.name}</h2>
             <p class="store-desc">여기에 간단한 가게 소개 또는 태그</p>
           </div>
+          <div id="storeOperationStatus" class="operation-status ${store.isOpened === false ? 'closed' : 'open'}">
+            <div class="operation-icon">${store.isOpened === false ? '🔒' : '🏪'}</div>
+            <div class="operation-text">${store.isOpened === false ? '운영 중단' : '운영중'}</div>
+          </div>
           <div id="TLR" class="tlr-container">
             <div class="tlr-header">
               <div class="tlr-title">🏪 테이블 현황</div>
@@ -118,8 +122,8 @@ function renderStore(store) {
       <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
         <span class="btm-btn-ico">📞</span>
       </button>
-      <button id="order" class="btm-btn order-btn">
-        포장·예약하기
+      <button id="order" class="btm-btn order-btn ${store.isOpened === false ? 'disabled' : ''}">
+        ${store.isOpened === false ? '운영 중단' : '포장·예약하기'}
       </button>
     </nav>
     <style>
@@ -267,6 +271,38 @@ function renderStore(store) {
         font-size: 14px;
         color: #888;
         margin: 0 0 2px 1px;
+      }
+
+      .operation-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .operation-status.open {
+        background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 100%);
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .operation-status.closed {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .operation-icon {
+        font-size: 16px;
+      }
+
+      .operation-text {
+        font-weight: 700;
+        letter-spacing: 0.5px;
       }
 
       .tlr-container {
@@ -588,6 +624,19 @@ function renderStore(store) {
         color: #e3f1ff;
       }
 
+      .order-btn.disabled {
+        background: #6c757d !important;
+        color: #fff !important;
+        cursor: not-allowed !important;
+        opacity: 0.7;
+      }
+
+      .order-btn.disabled:active {
+        background: #6c757d !important;
+        transform: none !important;
+        box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2) !important;
+      }
+
       #storePanelContainer {
         overflow-y: auto;
         /* height는 JS에서 세팅 */
@@ -781,14 +830,42 @@ function renderStore(store) {
     renderAllReview(store)
   })
 
-  loadTableInfo(store);
+  // 운영 중인 매장만 테이블 정보 로딩
+  if (store.isOpened !== false) {
+    loadTableInfo(store);
 
-  // TLR 영역 클릭 시 테이블 정보 새로고침
-  const tlrContainer = document.getElementById('TLR');
-  if (tlrContainer) {
-    tlrContainer.addEventListener('click', () => {
-      loadTableInfo(store);
-    });
+    // TLR 영역 클릭 시 테이블 정보 새로고침
+    const tlrContainer = document.getElementById('TLR');
+    if (tlrContainer) {
+      tlrContainer.addEventListener('click', () => {
+        loadTableInfo(store);
+      });
+    }
+  } else {
+    // 운영 중단 매장의 경우 테이블 정보 비활성화
+    const tlrContainer = document.getElementById('TLR');
+    if (tlrContainer) {
+      tlrContainer.style.opacity = '0.5';
+      tlrContainer.style.pointerEvents = 'none';
+      
+      const statusBadge = document.getElementById('tableStatusBadge');
+      if (statusBadge) {
+        statusBadge.textContent = '운영중단';
+        statusBadge.style.background = '#dc3545';
+      }
+
+      const totalTablesEl = document.getElementById('totalTables');
+      const availableTablesEl = document.getElementById('availableTables');
+      const totalSeatsEl = document.getElementById('totalSeats');
+      const availableSeatsEl = document.getElementById('availableSeats');
+      const occupancyRateEl = document.getElementById('occupancyRate');
+
+      if (totalTablesEl) totalTablesEl.textContent = '-';
+      if (availableTablesEl) availableTablesEl.textContent = '-';
+      if (totalSeatsEl) totalSeatsEl.textContent = '-';
+      if (availableSeatsEl) availableSeatsEl.textContent = '-';
+      if (occupancyRateEl) occupancyRateEl.textContent = '-';
+    }
   }
 
   // 전역에서 접근 가능하도록 store 정보 저장
