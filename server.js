@@ -33,6 +33,11 @@ app.get('/POS', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pos.html'));
 });
 
+// TLM 동적 라우트 (매장별 사장님 앱)
+app.get('/TLM/:storeId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
+});
+
 // stores 테이블 별점 평균 업데이트 함수
 async function updateStoreRating(storeId) {
   try {

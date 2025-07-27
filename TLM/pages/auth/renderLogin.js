@@ -14,6 +14,7 @@ let renderLogin = async function () {
         <button id='adminLogin' style="width: 100%; padding: 12px; background: #444; color: white; border: none; border-radius: 6px; font-size: 14px;">🛠️ Admin 로그인</button>
         <button id='goKDS' style="width: 100%; padding: 12px; background: #222; color: white; border: none; border-radius: 6px; font-size: 14px;">📟 KDS</button>
         <button id='goPOS' style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 6px; font-size: 14px;">💳 POS</button>
+        <button id='goTLM' style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 14px;">🏪 사장님 앱</button>
       </div>
     </div>
 
@@ -260,4 +261,35 @@ let renderLogin = async function () {
   goPOS.addEventListener('click', () => {
     window.location.href = '/POS';
   });
+
+  // 사장님 앱 버튼
+  const goTLM = document.querySelector('#goTLM');
+  goTLM.addEventListener('click', () => {
+    const storeName = prompt('가게 이름을 입력하세요:');
+    if (storeName && storeName.trim()) {
+      findStoreByName(storeName.trim());
+    }
+  });
+
+  // 가게 이름으로 매장 정보 찾기 함수
+  async function findStoreByName(storeName) {
+    try {
+      const response = await fetch('/api/stores');
+      const data = await response.json();
+      
+      if (data.success) {
+        const store = data.stores.find(s => s.name === storeName);
+        if (store) {
+          window.location.href = `/TLM/${store.id}`;
+        } else {
+          alert('해당 이름의 가게를 찾을 수 없습니다.');
+        }
+      } else {
+        alert('매장 정보를 불러오는데 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('매장 검색 오류:', error);
+      alert('서버 연결에 실패했습니다.');
+    }
+  }
 };
