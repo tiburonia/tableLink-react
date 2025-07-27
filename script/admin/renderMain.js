@@ -108,10 +108,17 @@ async function loadAdminStats() {
   try {
     console.log('📊 관리자 통계 로딩 시작...');
     
-    // 임시 데이터로 표시 (실제 API가 없으므로)
-    const mockStoresData = { total: 24, active: 22 };
-    const mockUsersData = { total: 150, activeToday: 35 };
-    const mockOrdersData = { todayCount: 45, totalRevenue: 2450000 };
+    // 실제 데이터베이스에서 통계 정보 가져오기
+    const [storesResponse, usersResponse] = await Promise.all([
+      fetch('/api/admin/stats/stores'),
+      fetch('/api/admin/stats/users')
+    ]);
+
+    const storesData = storesResponse.ok ? await storesResponse.json() : { total: 0, active: 0 };
+    const usersData = usersResponse.ok ? await usersResponse.json() : { total: 0, activeToday: 0 };
+    
+    // 주문 데이터는 아직 API가 없으므로 임시로 0으로 설정
+    const orderData = { todayCount: 0, totalRevenue: 0 };
     
     // DOM 요소 존재 확인 후 업데이트
     const totalStoresEl = document.getElementById('totalStores');
@@ -121,12 +128,12 @@ async function loadAdminStats() {
     const todayOrdersEl = document.getElementById('todayOrders');
     const totalRevenueEl = document.getElementById('totalRevenue');
     
-    if (totalStoresEl) totalStoresEl.textContent = mockStoresData.total || '0';
-    if (activeStoresEl) activeStoresEl.textContent = mockStoresData.active || '0';
-    if (totalUsersEl) totalUsersEl.textContent = mockUsersData.total || '0';
-    if (activeUsersEl) activeUsersEl.textContent = mockUsersData.activeToday || '0';
-    if (todayOrdersEl) todayOrdersEl.textContent = mockOrdersData.todayCount || '0';
-    if (totalRevenueEl) totalRevenueEl.textContent = (mockOrdersData.totalRevenue || 0).toLocaleString() + '원';
+    if (totalStoresEl) totalStoresEl.textContent = storesData.total || '0';
+    if (activeStoresEl) activeStoresEl.textContent = storesData.active || '0';
+    if (totalUsersEl) totalUsersEl.textContent = usersData.total || '0';
+    if (activeUsersEl) activeUsersEl.textContent = usersData.activeToday || '0';
+    if (todayOrdersEl) todayOrdersEl.textContent = orderData.todayCount || '0';
+    if (totalRevenueEl) totalRevenueEl.textContent = (orderData.totalRevenue || 0).toLocaleString() + '원';
     
     console.log('✅ 관리자 통계 로딩 완료');
     
