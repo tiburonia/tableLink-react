@@ -22,11 +22,16 @@ function renderKDS() {
         </div>
       </div>
       
-      <button id="backToLogin" style="background: #666; color: white; padding: 10px 20px; margin-top: 20px;">로그인 화면으로</button>
+      <button id="backToLogin" style="background: #666; color: white; padding: 10px 20px; margin-top: 20px; border: none; border-radius: 5px; cursor: pointer;">로그인 화면으로</button>
     </div>
   `;
 
   const backToLogin = document.getElementById('backToLogin');
+  if (backToLogin) {
+    backToLogin.addEventListener('click', () => {
+      window.location.href = '/';
+    });
+  } document.getElementById('backToLogin');
   backToLogin.addEventListener('click', () => {
     renderLogin();
   });
