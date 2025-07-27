@@ -39,11 +39,11 @@ async function renderMap() {
 #content {
   position: fixed;
   top: 0;
-  bottom: 66px;   /* 바텀바 높이 */
+  bottom: 84px;   /* 바텀바 높이 + 둥근 모서리 여백 */
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: calc(100vh - 66px);
+  height: calc(100vh - 84px);
   overflow: hidden;
   background: #fdfdfd;
   z-index: 1;
@@ -52,10 +52,11 @@ async function renderMap() {
 /* 지도 */
 #map {
   width: 100%;
-  height: calc(100vh - 66px);
+  height: 100%;
   position: relative;
   z-index: 0;
   overflow: hidden;
+  border-radius: 0 0 18px 18px;
 }
 
 /* 바텀바 */
