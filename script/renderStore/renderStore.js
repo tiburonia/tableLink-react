@@ -61,17 +61,19 @@ function renderStore(store) {
               <span class="review-title">리뷰 미리보기</span>
               <button class="see-more-btn">전체보기</button>
             </div>
-            <div class="review-card">
-              <span class="review-user">🐤 익명</span>
-              <span class="review-score">★ 5</span>
-              <span class="review-date">1일 전</span>
-              <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
-            </div>
-            <div class="review-card">
-              <span class="review-user">🍙 user123</span>
-              <span class="review-score">★ 4</span>
-              <span class="review-date">3일 전</span>
-              <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
+            <div id="reviewPreviewContent">
+              <div class="review-card">
+                <span class="review-user">🐤 익명</span>
+                <span class="review-score">★ 5</span>
+                <span class="review-date">1일 전</span>
+                <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
+              </div>
+              <div class="review-card">
+                <span class="review-user">🍙 user123</span>
+                <span class="review-score">★ 4</span>
+                <span class="review-date">3일 전</span>
+                <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
+              </div>
             </div>
           </div>
         </div>
@@ -589,8 +591,39 @@ function renderStore(store) {
   const storeNavBar = document.getElementById('storeNavBar');
   const storeContent = document.getElementById('storeContent');
   const favoriteBtn = document.getElementById('favoriteBtn');
+  const reviewPreviewContent = document.getElementById('reviewPreviewContent');
 
 
+  // Function to fetch and render the top 2 reviews
+  async function renderTopReviews(store) {
+    try {
+      const response = await fetch(`/api/stores/${store.id}/reviews?limit=2`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch reviews');
+      }
+      const reviews = await response.json();
+
+      if (reviewPreviewContent) {
+        reviewPreviewContent.innerHTML = reviews.map(review => `
+          <div class="review-card">
+            <span class="review-user">${review.user || '익명'}</span>
+            <span class="review-score">★ ${review.score}</span>
+            <span class="review-date">${review.date || '날짜 정보 없음'}</span>
+            <div class="review-text">${review.text}</div>
+          </div>
+        `).join('');
+      }
+    } catch (error) {
+      console.error('Error fetching and rendering reviews:', error);
+      if (reviewPreviewContent) {
+        reviewPreviewContent.innerHTML = '<p>리뷰를 불러올 수 없습니다.</p>';
+      }
+    }
+  }
+
+
+  // Call the function to render top reviews
+  renderTopReviews(store);
 
   // 즐겨찾기
   favoriteBtn.addEventListener('click', () => {
@@ -729,13 +762,13 @@ function renderStore(store) {
 async function loadTableInfo(store) {
   try {
     console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
-    
+
     const response = await fetch(`/api/stores/${store.id}/tables`);
     if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
     const data = await response.json();
     console.log(`📊 테이블 데이터:`, data);
-    
+
     const tables = data.tables || [];
     const totalTables = tables.length;
     const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
@@ -765,7 +798,7 @@ async function loadTableInfo(store) {
     if (totalSeatsEl) totalSeatsEl.textContent = `${totalSeats}석`;
     if (availableSeatsEl) availableSeatsEl.textContent = `${availableSeats}석`;
     if (occupancyRateEl) occupancyRateEl.textContent = `${occupancyRate}%`;
-    
+
     if (statusBadge) {
       statusBadge.classList.remove('busy', 'full');
       if (occupancyRate >= 90) {
@@ -781,7 +814,7 @@ async function loadTableInfo(store) {
 
   } catch (error) {
     console.error('테이블 정보 로딩 실패:', error);
-    
+
     // 에러 시 UI 업데이트
     const totalTablesEl = document.getElementById('totalTables');
     const availableTablesEl = document.getElementById('availableTables');
