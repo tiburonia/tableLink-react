@@ -89,6 +89,7 @@ app.get('/api/stores', async (req, res) => {
           name: store.name,
           category: store.category,
           distance: store.distance || '정보없음',
+          address: store.address || '주소 정보 없음',
           menu: store.menu || [],
           coord: store.coord || { lat: 37.5665, lng: 126.9780 },
           reviews: store.reviews || [],
