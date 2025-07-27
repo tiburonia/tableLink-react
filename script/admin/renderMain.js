@@ -17,7 +17,7 @@ function renderAdminMain() {
       margin: 0;
       box-sizing: border-box;
     ">
-      <div style="padding: 20px; min-height: calc(100vh - 40px);">
+      <div style="padding: 20px 20px 40px 20px; min-height: 100vh; box-sizing: border-box;">
       <header style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
         <h1 style="color: #ff6b6b; margin: 0; font-size: 28px;">🛠️ TableLink 관리자 패널</h1>
         <p style="color: #888; margin: 10px 0 0 0;">시스템 관리 및 모니터링</p>
@@ -85,7 +85,7 @@ function renderAdminMain() {
         </section>
 
         <!-- 로그아웃 -->
-        <section style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 2px solid #333;">
+        <section style="text-align: center; margin-top: 40px; margin-bottom: 40px; padding-top: 20px; padding-bottom: 20px; border-top: 2px solid #333;">
           <button id="backToLogin" style="padding: 12px 30px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">← 로그인 화면으로</button>
           <button id="logoutAdmin" style="padding: 12px 30px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">🚪 관리자 로그아웃</button>
         </section>
