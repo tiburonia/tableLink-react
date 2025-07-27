@@ -3,18 +3,15 @@ let renderTLMMain = async function (storeId) {
   console.log('🏪 TLM 매장 관리 시작, 매장 ID:', storeId);
 
   try {
-    // 매장 정보 가져오기
-    const response = await fetch('/api/stores');
+    // 개별 매장 정보 가져오기
+    const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
     
     if (!data.success) {
-      throw new Error('매장 데이터 로딩 실패');
+      throw new Error(data.error || '매장 데이터 로딩 실패');
     }
 
-    const store = data.stores.find(s => s.id === storeId);
-    if (!store) {
-      throw new Error('매장을 찾을 수 없습니다');
-    }
+    const store = data.store;
 
     // UI 렌더링
     main.innerHTML = `

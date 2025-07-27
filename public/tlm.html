@@ -52,13 +52,13 @@
     
     // TLM 메인 페이지 렌더링
     if (storeId && storeId !== 'TLM' && !isNaN(storeId)) {
-      renderTLMMain(parseInt(storeId));
+      renderTLMMain(storeId); // 문자열로 전달하여 API에서 parseInt 처리
     } else {
       document.getElementById('main').innerHTML = `
         <div style="text-align:center; color:white; font-size:18px;">
           <h1>❌ 잘못된 매장 접근</h1>
-          <p>올바른 매장 ID가 필요합니다.</p>
-          <button onclick="window.location.href='/'" style="margin-top:20px; padding:10px 20px; background:#fff; border:none; border-radius:5px; cursor:pointer;">
+          <p>올바른 매장 ID가 필요합니다. (입력값: ${storeId})</p>
+          <button onclick="window.location.href='/'" style="margin-top:20px; padding:10px 20px; background:#fff; color:#333; border:none; border-radius:5px; cursor:pointer;">
             메인으로 돌아가기
           </button>
         </div>
