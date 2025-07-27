@@ -37,7 +37,7 @@ async function renderMap() {
 
 /* 콘텐츠 전체 */
 #content {
-  position: absolute;
+  position: fixed;
   top: 0;
   bottom: 66px;   /* 바텀바 높이 */
   left: 0;
@@ -52,18 +52,18 @@ async function renderMap() {
 /* 지도 */
 #map {
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 66px);
   position: relative;
   z-index: 0;
-  border-radius: 0 0 24px 24px;
-  box-shadow: 0 3px 8px rgba(20,40,70,0.07);
+  overflow: hidden;
 }
 
 /* 바텀바 */
 #bottomBar {
   position: fixed;
   bottom: 0;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
   height: 66px;
@@ -73,7 +73,7 @@ async function renderMap() {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 1000;
+  z-index: 1001;
   padding: 0 12px;
   box-sizing: border-box;
   border-bottom-left-radius: 18px;
@@ -113,7 +113,8 @@ async function renderMap() {
 #storePanel {
   position: fixed;
   bottom: 66px;
-  left: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
   background: #fff;
@@ -122,7 +123,7 @@ async function renderMap() {
   box-shadow: 0 -2px 14px rgba(30, 60, 120, 0.13);
   overflow: hidden;
   transition: height 0.3s cubic-bezier(.68,-0.55,.27,1.55);
-  z-index: 11;
+  z-index: 1002;
   border: 1.1px solid #f1f2fb;
 }
 #storePanel.collapsed { height: 60px; }
