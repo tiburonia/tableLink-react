@@ -248,7 +248,7 @@ let renderLogin = async function () {
 
   // 개발용 어드민 로그인 버튼
   adminLogin.addEventListener('click', () => {
-    window.location.href = '/admin';
+    window.location.href = '/ADMIN';
   });
 
   // 개발용 KDS 버튼

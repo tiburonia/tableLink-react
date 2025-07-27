@@ -19,7 +19,7 @@ app.get('/', (req, res) => {
 });
 
 // 관리자 로그인 페이지
-app.get('/admin', (req, res) => {
+app.get('/ADMIN', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
