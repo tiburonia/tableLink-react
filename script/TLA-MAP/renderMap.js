@@ -145,10 +145,13 @@ async function renderMap() {
   overflow-y: auto;
   padding: 8px 4px 20px 4px;
   box-sizing: border-box;
+  /* 스크롤바 숨김 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
-#storeListContainer::-webkit-scrollbar { width: 6px; }
-#storeListContainer::-webkit-scrollbar-thumb { background: #e3e6ee; border-radius: 3px; }
-
+#storeListContainer::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
 /* 개별 가게 카드 */
 .storeCard {
   border-radius: 16px;

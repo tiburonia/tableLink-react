@@ -23,10 +23,28 @@
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   border: 1px solid #ccc;
   overflow: hidden;  /* 스크롤은 내부 content에서 처리 */
+}
 
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
   background: #f0f0f0;
+  /* 전역 스크롤바 숨김 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* 모든 스크롤 가능한 요소에 대한 전역 스크롤바 숨김 */
+*::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
