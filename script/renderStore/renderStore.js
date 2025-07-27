@@ -601,22 +601,37 @@ function renderStore(store) {
       if (!response.ok) {
         throw new Error('Failed to fetch reviews');
       }
-      const reviews = await response.json();
+      const data = await response.json();
+      const reviews = data.reviews || [];
 
       if (reviewPreviewContent) {
-        reviewPreviewContent.innerHTML = reviews.map(review => `
-          <div class="review-card">
-            <span class="review-user">${review.user || '익명'}</span>
-            <span class="review-score">★ ${review.score}</span>
-            <span class="review-date">${review.date || '날짜 정보 없음'}</span>
-            <div class="review-text">${review.text}</div>
-          </div>
-        `).join('');
+        if (reviews.length === 0) {
+          reviewPreviewContent.innerHTML = `
+            <div class="review-card" style="text-align: center; color: #888;">
+              <div>아직 등록된 리뷰가 없습니다.</div>
+              <div style="font-size: 13px; margin-top: 4px;">첫 리뷰를 남겨주세요!</div>
+            </div>
+          `;
+        } else {
+          reviewPreviewContent.innerHTML = reviews.slice(0, 2).map(review => `
+            <div class="review-card">
+              <span class="review-user">${review.user || '익명'}</span>
+              <span class="review-score">★ ${review.score}</span>
+              <span class="review-date">${review.date || '날짜 정보 없음'}</span>
+              <div class="review-text">${review.content}</div>
+            </div>
+          `).join('');
+        }
       }
     } catch (error) {
       console.error('Error fetching and rendering reviews:', error);
       if (reviewPreviewContent) {
-        reviewPreviewContent.innerHTML = '<p>리뷰를 불러올 수 없습니다.</p>';
+        reviewPreviewContent.innerHTML = `
+          <div class="review-card" style="text-align: center; color: #ff6b6b;">
+            <div>리뷰를 불러올 수 없습니다.</div>
+            <div style="font-size: 13px; margin-top: 4px;">네트워크 오류가 발생했습니다.</div>
+          </div>
+        `;
       }
     }
   }
