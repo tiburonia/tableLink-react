@@ -324,6 +324,46 @@ async function renderMap() {
 
   }
 
+// 매장 별점 정보 비동기 로딩 함수
+async function loadStoreRatingAsync(storeId) {
+  try {
+    // 1. 먼저 캐시에서 확인
+    if (typeof window.cacheManager !== 'undefined') {
+      const cachedRating = window.cacheManager.getStoreRating(storeId);
+      if (cachedRating) {
+        console.log(`⭐ 지도: 캐시된 매장 ${storeId} 별점 정보 사용: ${cachedRating.ratingAverage}점`);
+        return cachedRating;
+      }
+    }
+
+    // 2. 캐시에 없으면 서버에서 가져오기
+    console.log(`🔄 지도: 매장 ${storeId} 별점 정보 서버에서 가져오는 중...`);
+    const response = await fetch(`/api/stores/${storeId}/rating`);
+    
+    if (!response.ok) {
+      console.warn(`⚠️ 매장 ${storeId} 별점 정보 조회 실패: ${response.status}`);
+      return { ratingAverage: 0.0, reviewCount: 0 };
+    }
+
+    const data = await response.json();
+    const ratingData = {
+      ratingAverage: data.ratingAverage || 0.0,
+      reviewCount: data.reviewCount || 0
+    };
+
+    // 3. 캐시에 저장
+    if (typeof window.cacheManager !== 'undefined') {
+      window.cacheManager.setStoreRating(storeId, ratingData);
+      console.log(`✅ 지도: 매장 ${storeId} 별점 정보 캐시 저장: ${ratingData.ratingAverage}점`);
+    }
+
+    return ratingData;
+  } catch (error) {
+    console.error(`❌ 지도: 매장 ${storeId} 별점 정보 로딩 실패:`, error);
+    return { ratingAverage: 0.0, reviewCount: 0 };
+  }
+}
+
 // 비동기로 매장 데이터를 로딩하고 마커를 표시하는 함수
 async function loadStoresAndMarkers(map) {
   let stores = [];
@@ -335,7 +375,7 @@ async function loadStoresAndMarkers(map) {
     
     // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
     setTimeout(() => {
-      stores.forEach(store => {
+      stores.forEach(async (store) => {
         if (!store.coord) return;
         
         // 매장 운영 상태 확인
@@ -344,14 +384,13 @@ async function loadStoresAndMarkers(map) {
         const statusText = isOpen ? '운영중' : '운영중지';
         const statusColor = isOpen ? '#4caf50' : '#f44336';
         
-        // 별점 정보 (캐시에서 가져오거나 기본값)
+        // 별점 정보 비동기 로딩 및 캐시 처리
         let rating = '0.0';
-        if (typeof window.cacheManager !== 'undefined') {
-          const cachedRating = window.cacheManager.getStoreRating(store.id);
-          if (cachedRating) {
-            rating = parseFloat(cachedRating.ratingAverage).toFixed(1);
+        await loadStoreRatingAsync(store.id).then(ratingData => {
+          if (ratingData) {
+            rating = parseFloat(ratingData.ratingAverage).toFixed(1);
           }
-        }
+        });
 
         // 간단하고 작은 커스텀 마커 HTML 생성
         const customOverlayContent = `
@@ -475,13 +514,22 @@ async function loadStoresAndMarkers(map) {
     const storeListContainer = document.getElementById('storeListContainer');
     storeListContainer.innerHTML = ''; // 로딩 메시지 제거
     
-    stores.forEach(store => {
+    // 매장 목록에서도 별점 정보 비동기 로딩
+    stores.forEach(async (store) => {
       const card = document.createElement('div');
       card.className = 'storeCard';
 
+      // 별점 정보 비동기 로딩
+      const ratingData = await loadStoreRatingAsync(store.id);
+      const rating = parseFloat(ratingData.ratingAverage).toFixed(1);
+      const reviewCount = ratingData.reviewCount;
+
       card.innerHTML = `
         <div class="storeInfoBox">
-          <div class="storeRatingBox">⭐</div>
+          <div class="storeRatingBox">
+            <div style="font-size: 12px; font-weight: bold; color: #f39c12;">★${rating}</div>
+            <div style="font-size: 10px; color: #666;">(${reviewCount})</div>
+          </div>
           <div class="storeTextBox">
             <div class="storeName">${store.name}</div>
             <div class="storeDistance">${store.category}</div>
