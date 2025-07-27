@@ -302,6 +302,36 @@ class CacheManager {
       return [];
     }
   }
+
+  // 서버에서 매장 데이터 가져오기
+  async getStoresFromServer() {
+    try {
+      console.log('🌐 서버에서 매장 데이터 가져오는 중...');
+      const response = await fetch('/api/stores');
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.stores || !Array.isArray(data.stores)) {
+        throw new Error('서버 응답에 매장 데이터가 없습니다');
+      }
+
+      console.log(`🏪 서버에서 ${data.stores.length}개 매장 데이터 새로 가져옴`);
+
+      // 별점 정보 디버깅
+      data.stores.forEach(store => {
+        console.log(`🏪 매장 ${store.name}: 별점 평균 ${store.ratingAverage} (타입: ${typeof store.ratingAverage})`);
+      });
+
+      return data.stores;
+    } catch (error) {
+      console.error('❌ 서버에서 매장 데이터 가져오기 실패:', error);
+      throw error;
+    }
+  }
 }
 
 // 전역 캐시 매니저 인스턴스 생성

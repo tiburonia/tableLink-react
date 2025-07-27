@@ -1,21 +1,16 @@
-async function renderStore(store) {
+function renderStore(store) {
   console.log('🏪 매장 렌더링:', store.name, '별점 평균:', store.ratingAverage, '(타입:', typeof store.ratingAverage, ')');
   
-  // ratingAverage가 없거나 undefined인 경우 매장 데이터 강제 새로고침
+  // 초기 별점 값 설정 (즉시 렌더링을 위해)
+  let displayRating = '0.0';
+  if (store.ratingAverage && store.ratingAverage > 0) {
+    displayRating = parseFloat(store.ratingAverage).toFixed(1);
+  }
+  
+  // 별점 정보가 없는 경우 비동기로 업데이트 (UI 블로킹 방지)
   if (store.ratingAverage === null || store.ratingAverage === undefined || typeof store.ratingAverage === 'undefined') {
-    console.log('⚠️ 별점 정보가 없음, 매장 데이터 강제 새로고침 중...');
-    
-    try {
-      const refreshedStores = await window.cacheManager.forceRefreshStores();
-      const refreshedStore = refreshedStores.find(s => s.id === store.id);
-      
-      if (refreshedStore && refreshedStore.ratingAverage !== null && refreshedStore.ratingAverage !== undefined) {
-        console.log('✅ 매장 데이터 새로고침 완료, 업데이트된 별점:', refreshedStore.ratingAverage);
-        store = refreshedStore; // 새로고침된 데이터로 교체
-      }
-    } catch (error) {
-      console.error('❌ 매장 데이터 새로고침 실패:', error);
-    }
+    console.log('⚠️ 별점 정보가 없음, 비동기로 업데이트 시작...');
+    updateStoreRatingAsync(store);
   }
   
   main.innerHTML = `
@@ -37,7 +32,7 @@ async function renderStore(store) {
           <div class="storeInfo">
             <div class="score-row">
               <span id="reviewStar">★</span>
-              <span id="reviewScore">${(store.ratingAverage && store.ratingAverage > 0) ? parseFloat(store.ratingAverage).toFixed(1) : '0.0'}&nbsp<span id="reviewLink">></span></span> 
+              <span id="reviewScore">${displayRating}&nbsp<span id="reviewLink">></span></span> 
               <button id="favoriteBtn">♡</button>
             </div>
             <h2 id="storeName">${store.name}</h2>
@@ -873,6 +868,35 @@ async function loadTableInfo(store) {
       statusBadge.textContent = 'ERROR';
       statusBadge.style.background = '#666';
     }
+  }
+}
+
+// 비동기로 별점 정보 업데이트
+async function updateStoreRatingAsync(store) {
+  try {
+    console.log('🔄 별점 정보 비동기 업데이트 중...');
+    
+    const refreshedStores = await window.cacheManager.forceRefreshStores();
+    const refreshedStore = refreshedStores.find(s => s.id === store.id);
+    
+    if (refreshedStore && refreshedStore.ratingAverage !== null && refreshedStore.ratingAverage !== undefined) {
+      console.log('✅ 별점 정보 업데이트 완료:', refreshedStore.ratingAverage);
+      
+      // DOM에서 별점 표시 업데이트
+      const reviewScoreElement = document.getElementById('reviewScore');
+      if (reviewScoreElement) {
+        const updatedRating = parseFloat(refreshedStore.ratingAverage).toFixed(1);
+        reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
+        console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
+      }
+      
+      // 전역 store 객체도 업데이트
+      if (window.currentStore && window.currentStore.id === store.id) {
+        window.currentStore.ratingAverage = refreshedStore.ratingAverage;
+      }
+    }
+  } catch (error) {
+    console.error('❌ 별점 정보 비동기 업데이트 실패:', error);
   }
 }
 

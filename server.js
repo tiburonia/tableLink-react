@@ -93,7 +93,7 @@ app.get('/api/stores', async (req, res) => {
           coord: store.coord || { lat: 37.5665, lng: 126.9780 },
           reviews: store.reviews || [],
           reviewCount: store.review_count || 0,
-          ratingAverage: parseFloat(store.rating_average) || 0.0, // 숫자로 변환하여 별점 평균 포함
+          ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0, // null/undefined 처리 개선
           isOpen: store.is_open !== false,
           tableInfo: {
             totalTables,
