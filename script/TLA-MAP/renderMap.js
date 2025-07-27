@@ -353,115 +353,120 @@ async function loadStoresAndMarkers(map) {
           }
         }
 
-        // 커스텀 오버레이 HTML 생성
+        // 간단하고 작은 커스텀 마커 HTML 생성
         const customOverlayContent = `
-          <div class="custom-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-            <div class="marker-info">
-              <div class="marker-rating">⭐ ${rating}</div>
-              <div class="marker-status" style="color: ${statusColor};">
-                ${statusIcon} ${statusText}
+          <div class="compact-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <div class="marker-pin">
+              <div class="pin-head" style="background-color: ${statusColor};">
+                <span class="pin-rating">★${rating}</span>
               </div>
+              <div class="pin-point"></div>
             </div>
-            <div class="marker-main">
-              <div class="marker-icon">🏪</div>
-              <div class="marker-name">${store.name}</div>
+            <div class="marker-label">
+              <span class="store-name">${store.name}</span>
+              <span class="store-status" style="color: ${statusColor};">${statusIcon}</span>
             </div>
-            <div class="marker-arrow"></div>
           </div>
           
           <style>
-            .custom-marker {
+            .compact-marker {
               position: relative;
               cursor: pointer;
               transform: translateX(-50%) translateY(-100%);
               z-index: 10;
             }
             
-            .marker-info {
-              background: rgba(255, 255, 255, 0.95);
-              border: 2px solid #297efc;
-              border-radius: 8px;
-              padding: 4px 8px;
-              margin-bottom: 4px;
-              font-size: 11px;
-              font-weight: 600;
-              text-align: center;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-              backdrop-filter: blur(5px);
-              white-space: nowrap;
-            }
-            
-            .marker-rating {
-              color: #ff9800;
+            .marker-pin {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
               margin-bottom: 2px;
             }
             
-            .marker-status {
-              font-size: 10px;
-            }
-            
-            .marker-main {
-              background: linear-gradient(135deg, #297efc 0%, #1976d2 100%);
-              color: white;
-              border-radius: 12px;
-              padding: 8px 12px;
-              text-align: center;
-              font-weight: bold;
-              font-size: 12px;
-              box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
+            .pin-head {
+              width: 32px;
+              height: 32px;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
               border: 2px solid white;
-              min-width: 80px;
-              position: relative;
             }
             
-            .marker-icon {
-              font-size: 16px;
-              margin-bottom: 2px;
-            }
-            
-            .marker-name {
-              font-size: 11px;
-              line-height: 1.2;
-              max-width: 100px;
-              overflow: hidden;
-              text-overflow: ellipsis;
+            .pin-rating {
+              color: white;
+              font-size: 9px;
+              font-weight: bold;
+              transform: rotate(45deg);
               white-space: nowrap;
             }
             
-            .marker-arrow {
+            .pin-point {
               width: 0;
               height: 0;
-              border-left: 8px solid transparent;
-              border-right: 8px solid transparent;
-              border-top: 8px solid #297efc;
+              border-left: 4px solid transparent;
+              border-right: 4px solid transparent;
+              border-top: 6px solid ${statusColor};
+              margin-top: -3px;
+            }
+            
+            .marker-label {
+              background: rgba(255, 255, 255, 0.95);
+              border: 1px solid #ddd;
+              border-radius: 12px;
+              padding: 3px 8px;
+              font-size: 10px;
+              font-weight: 600;
+              text-align: center;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+              backdrop-filter: blur(3px);
+              white-space: nowrap;
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              max-width: 120px;
               position: absolute;
-              bottom: -8px;
               left: 50%;
               transform: translateX(-50%);
+              top: -8px;
             }
             
-            .custom-marker:hover .marker-main {
-              transform: scale(1.05);
-              box-shadow: 0 6px 16px rgba(41, 126, 252, 0.4);
+            .store-name {
+              color: #333;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              flex: 1;
             }
             
-            .custom-marker:hover .marker-info {
+            .store-status {
+              font-size: 8px;
+            }
+            
+            .compact-marker:hover .pin-head {
+              transform: rotate(-45deg) scale(1.1);
+              box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+            }
+            
+            .compact-marker:hover .marker-label {
               background: rgba(255, 255, 255, 1);
-              transform: scale(1.02);
+              transform: translateX(-50%) scale(1.05);
             }
             
-            .custom-marker:active .marker-main {
-              transform: scale(0.98);
+            .compact-marker:active .pin-head {
+              transform: rotate(-45deg) scale(0.95);
             }
           </style>
         `;
 
-        // 커스텀 오버레이 생성
+        // 커스텀 오버레이 생성 (정확한 위치 지정)
         const customOverlay = new kakao.maps.CustomOverlay({
           map: map,
           position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
           content: customOverlayContent,
-          yAnchor: 1
+          yAnchor: 0.9, // 핀의 끝점이 정확한 위치를 가리키도록 조정
+          xAnchor: 0.5  // 중앙 정렬
         });
       });
       console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
