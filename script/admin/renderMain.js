@@ -2,7 +2,22 @@
 function renderAdminMain() {
   const main = document.getElementById('main');
   main.innerHTML = `
-    <div style="background: #1a1a1a; color: white; min-height: 100vh; padding: 20px; font-family: Arial, sans-serif; overflow-y: auto; max-height: 100vh;">
+    <div id="adminContainer" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      background: #1a1a1a;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    ">
+      <div style="padding: 20px; min-height: calc(100vh - 40px);">"
       <header style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
         <h1 style="color: #ff6b6b; margin: 0; font-size: 28px;">🛠️ TableLink 관리자 패널</h1>
         <p style="color: #888; margin: 10px 0 0 0;">시스템 관리 및 모니터링</p>
@@ -75,6 +90,7 @@ function renderAdminMain() {
           <button id="logoutAdmin" style="padding: 12px 30px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">🚪 관리자 로그아웃</button>
         </section>
       </main>
+      </div>
     </div>
   `;
 
