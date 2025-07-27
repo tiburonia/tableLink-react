@@ -3,6 +3,12 @@ async function renderAllReview(store) {
   console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
   
   try {
+    // 세션에서 사용자 정보 가져오기
+    const currentUserInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
+    const currentUserId = currentUserInfo ? currentUserInfo.id : null;
+    
+    console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
+    
     // 데이터베이스에서 실제 리뷰 데이터 가져오기
     const response = await fetch(`/api/stores/${store.id}/reviews`);
     if (!response.ok) {
@@ -56,13 +62,25 @@ async function renderAllReview(store) {
               </div>
               <div class="review-all-list">
                 ${reviews.map(r => `
-                  <div class="review-card">
+                  <div class="review-card ${r.userId === currentUserId ? 'my-review' : ''}">
                     <div class="review-meta">
-                      <span class="review-user">👤 사용자${r.userId}</span>
+                      <span class="review-user ${r.userId === currentUserId ? 'my-user' : ''}">
+                        ${r.userId === currentUserId ? '👤 내 리뷰' : `👤 사용자${r.userId}`}
+                      </span>
                       <span class="review-score">★ ${r.score}</span>
                       <span class="review-date">${r.date || ''}</span>
                     </div>
                     <div class="review-text">${r.content}</div>
+                    ${r.userId === currentUserId ? `
+                      <div class="my-review-actions">
+                        <button class="edit-review-btn" data-review-id="${r.id}" onclick="editMyReview(${r.id}, '${r.content.replace(/'/g, "\\'")}', ${r.score})">
+                          ✏️ 수정
+                        </button>
+                        <button class="delete-review-btn" data-review-id="${r.id}" onclick="deleteMyReview(${r.id})">
+                          🗑️ 삭제
+                        </button>
+                      </div>
+                    ` : ''}
                   </div>
                 `).join("")}
               </div>
@@ -196,6 +214,45 @@ async function renderAllReview(store) {
         word-break: break-word;
       }
       
+      /* 내 리뷰 스타일 */
+      .my-review {
+        border: 2px solid #297efc;
+        background: linear-gradient(135deg, #f8fbff 0%, #f0f6ff 100%);
+      }
+      .my-user {
+        color: #297efc !important;
+        font-weight: 700;
+      }
+      .my-review-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e0e6ff;
+      }
+      .edit-review-btn, .delete-review-btn {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .edit-review-btn {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .edit-review-btn:hover {
+        background: #ffeaa7;
+      }
+      .delete-review-btn {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .delete-review-btn:hover {
+        background: #f5c6cb;
+      }
+      
       .review-all-empty {
         text-align: center;
         padding: 60px 20px;
@@ -303,6 +360,60 @@ async function renderAllReview(store) {
     document.getElementById('order').addEventListener('click', () => {
       alert('포장·예약하기 기능은 준비 중입니다');
     });
+
+    // 내 리뷰 수정/삭제 함수들을 전역으로 등록
+    window.editMyReview = async (reviewId, currentContent, currentScore) => {
+      const newContent = prompt('리뷰 내용을 수정하세요:', currentContent);
+      if (newContent && newContent !== currentContent) {
+        try {
+          const response = await fetch(`/api/reviews/${reviewId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: newContent,
+              score: currentScore,
+              userId: currentUserId
+            })
+          });
+          
+          if (response.ok) {
+            alert('리뷰가 수정되었습니다.');
+            renderAllReview(store); // 리뷰 목록 새로고침
+          } else {
+            alert('리뷰 수정에 실패했습니다.');
+          }
+        } catch (error) {
+          console.error('리뷰 수정 오류:', error);
+          alert('리뷰 수정 중 오류가 발생했습니다.');
+        }
+      }
+    };
+
+    window.deleteMyReview = async (reviewId) => {
+      if (confirm('정말로 이 리뷰를 삭제하시겠습니까?')) {
+        try {
+          const response = await fetch(`/api/reviews/${reviewId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: currentUserId })
+          });
+          
+          if (response.ok) {
+            alert('리뷰가 삭제되었습니다.');
+            renderAllReview(store); // 리뷰 목록 새로고침
+          } else {
+            alert('리뷰 삭제에 실패했습니다.');
+          }
+        } catch (error) {
+          console.error('리뷰 삭제 오류:', error);
+          alert('리뷰 삭제 중 오류가 발생했습니다.');
+        }
+      }
+    };
 
   } catch (error) {
     console.error('❌ 리뷰 데이터 로딩 실패:', error);
