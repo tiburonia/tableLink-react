@@ -1,4 +1,4 @@
-let renderLogin = function () {
+let renderLogin = async function () {
   main.innerHTML = `
     <div id="loginContainer">
       <h1>TableLink</h1>
@@ -34,8 +34,55 @@ let renderLogin = function () {
     renderSignUp();
   });
 
+  // 로딩 화면 함수
+  const showLoadingScreen = () => {
+    main.innerHTML = `
+      <div id="loadingContainer">
+        <h1>TableLink</h1>
+        <div class="loading-spinner"></div>
+        <p>로그인 중...</p>
+      </div>
+
+      <style>
+        #loadingContainer {
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          background: #f0f8ff;
+          font-family: sans-serif;
+        }
+        
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #e0e0e0;
+          border-top: 4px solid #297efc;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 20px 0;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        #loadingContainer p {
+          color: #297efc;
+          font-size: 16px;
+          margin: 10px 0;
+        }
+      </style>
+    `;
+  };
+
   login.addEventListener('click', async () => {
     try {
+      // 로딩 화면 표시
+      showLoadingScreen();
+      
       const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: {
@@ -86,17 +133,19 @@ let renderLogin = function () {
           console.log('💾 로그인 정보 캐시에 저장 완료');
         }
 
-        alert('로그인 성공');
-
         // renderMap 호출 전에 약간의 지연을 둬서 캐시가 완전히 저장되도록 함
-        setTimeout(() => {
-          renderMap();
+        setTimeout(async () => {
+          await renderMap();
         }, 100);
       } else {
+        // 로그인 실패 시 다시 로그인 화면으로
+        await renderLogin();
         alert(data.error || '로그인 실패');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
+      // 오류 시 다시 로그인 화면으로
+      await renderLogin();
       alert('서버 연결에 실패했습니다');
     }
   });

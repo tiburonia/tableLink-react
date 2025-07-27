@@ -1,17 +1,7 @@
 async function renderMap() {
   const main = document.getElementById('main');
 
-  // 캐시에서 스토어 정보 가져오기 (캐시 우선, 없으면 서버에서 가져와서 캐시 저장)
-  let stores = [];
-  try {
-    stores = await cacheManager.getStores();
-    console.log('🗺️ 지도에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
-  } catch (error) {
-    console.error('스토어 정보 로딩 실패:', error);
-    alert('스토어 정보를 불러올 수 없습니다.');
-    return;
-  }
-
+  // UI 먼저 렌더링
   main.innerHTML = `
     <header id="header">
       <h2 id="renderMainTL">📍 주변 가맹점 지도</h2>
@@ -23,7 +13,10 @@ async function renderMap() {
       <div id="storePanel" class="collapsed">
         <div id="panelHandle"></div>
         <div id="storeListContainer">
-          <!-- 여기에 가게 목록 들어감 -->
+          <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+            <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            매장 정보를 불러오는 중...
+          </div>
         </div>
       </div>
     </main>
@@ -257,7 +250,7 @@ async function renderMap() {
 
   `;
 
-  // 지도 생성
+  // 지도 즉시 생성 (UI 렉 방지)
   const container = document.getElementById('map');
   const options = {
     center: new kakao.maps.LatLng(37.5665, 126.9780),
@@ -266,19 +259,8 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 생성
-  stores.forEach(store => {
-    if (!store.coord) return;
-    const marker = new kakao.maps.Marker({
-      map,
-      position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
-      title: store.name
-    });
-
-    kakao.maps.event.addListener(marker, 'click', () => {
-      renderStore(store);
-    });
-  });
+  // 비동기로 매장 데이터 로딩 및 마커 표시
+  loadStoresAndMarkers(map);
 
   // 패널 핸들 클릭 시 열기/닫기
   const panel = document.getElementById('storePanel');
@@ -340,107 +322,126 @@ async function renderMap() {
   document.addEventListener('mouseup', endDrag);
 
 
-  // 가게 목록 출력
-  const storeListContainer = document.getElementById('storeListContainer');
-  stores.forEach(store => {
-    const card = document.createElement('div');
-    card.className = 'storeCard';
+  }
 
-    card.innerHTML = `
-      <div class="storeInfoBox">
-        <div class="storeRatingBox">⭐</div>
-        <div class="storeTextBox">
-          <div class="storeName">${store.name}</div>
-          <div class="storeDistance">${store.category}</div>
+// 비동기로 매장 데이터를 로딩하고 마커를 표시하는 함수
+async function loadStoresAndMarkers(map) {
+  let stores = [];
+  
+  try {
+    // 캐시에서 스토어 정보 가져오기
+    stores = await cacheManager.getStores();
+    console.log('🗺️ 지도에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+    
+    // 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
+    setTimeout(() => {
+      stores.forEach(store => {
+        if (!store.coord) return;
+        const marker = new kakao.maps.Marker({
+          map,
+          position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
+          title: store.name
+        });
+
+        kakao.maps.event.addListener(marker, 'click', () => {
+          renderStore(store);
+        });
+      });
+      console.log('🗺️ 마커 표시 완료:', stores.length, '개 매장');
+    }, 100);
+
+    // 가게 목록 업데이트
+    const storeListContainer = document.getElementById('storeListContainer');
+    storeListContainer.innerHTML = ''; // 로딩 메시지 제거
+    
+    stores.forEach(store => {
+      const card = document.createElement('div');
+      card.className = 'storeCard';
+
+      card.innerHTML = `
+        <div class="storeInfoBox">
+          <div class="storeRatingBox">⭐</div>
+          <div class="storeTextBox">
+            <div class="storeName">${store.name}</div>
+            <div class="storeDistance">${store.category}</div>
+          </div>
         </div>
-      </div>
-      <div class="storeImageBox">
-  <img src="TableLink.png" alt="가게 이미지" />
-</div>
+        <div class="storeImageBox">
+          <img src="TableLink.png" alt="가게 이미지" />
+        </div>
 
+        <style>
+        .storeImageBox {
+          border: 2px solid black;
+          border-radius: 12px;
+          height: 120px;
+          margin-top: 8px;
+          background: #f5f5f5;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
 
-      <style>
+        .storeImageBox img {
+          height: 100%;
+          width: auto;
+          object-fit: contain;
+          border: none;
+        }
 
-      .storeImageBox {
-        border: 2px solid black;
-        border-radius: 12px;
-        height: 120px;
-        margin-top: 8px;
-        background: #f5f5f5;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
+        .storeCard {
+          border: 2px solid black;
+          border-radius: 16px;
+          padding: 12px;
+          margin-bottom: 12px;
+          background: white;
+          box-sizing: border-box;
+        }
 
-      .storeImageBox img {
-        height: 100%;
-        width: auto;
-        object-fit: contain;
-        border: none;
-      }
+        .storeInfoBox {
+          display: flex;
+          align-items: flex-start;
+          margin-bottom: 8px;
+        }
 
-      .storeCard {
-        border: 2px solid black;
-        border-radius: 16px;
-        padding: 12px;
-        margin-bottom: 12px;
-        background: white;
-        box-sizing: border-box;
-      }
+        .storeRatingBox {
+          width: 60px;
+          height: 60px;
+          border: 2px solid black;
+          border-radius: 8px;
+          box-sizing: border-box;
+          margin-right: 8px;
+        }
 
-      .storeInfoBox {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 8px;
-      }
+        .storeTextBox {
+          flex-grow: 1;
+        }
 
-      /* 좌측 별점 영역 (지금은 비워둠) */
-      .storeRatingBox {
-        width: 60px;
-        height: 60px;
-        border: 2px solid black;
-        border-radius: 8px;
-        box-sizing: border-box;
-        margin-right: 8px;
-      }
+        .storeName {
+          border: 2px solid black;
+          padding: 4px 8px;
+          margin-bottom: 4px;
+          font-weight: bold;
+          font-size: 15px;
+        }
 
-      /* 텍스트 영역 (이름 + 거리) */
-      .storeTextBox {
-        flex-grow: 1;
-      }
-
-      .storeName {
-        border: 2px solid black;
-        padding: 4px 8px;
-        margin-bottom: 4px;
-        font-weight: bold;
-        font-size: 15px;
-      }
-
-      .storeDistance {
-        border: 2px solid black;
-        padding: 4px 8px;
-        font-size: 13px;
-      }
-
-      /* 가게 이미지 영역 */
-      .storeImageBox {
-        border: 2px solid black;
-        border-radius: 12px;
-        height: 120px;
-        margin-top: 8px;
-        text-align: center;
-        line-height: 120px;
-        font-size: 14px;
-        background: #f5f5f5;
-      }
-
-      </style>
-    `;
-    // 카드 클릭 시 해당 가게의 상세 페이지로 이동
-    card.addEventListener('click', () => renderStore(store));
-    storeListContainer.appendChild(card);
-  });
-
+        .storeDistance {
+          border: 2px solid black;
+          padding: 4px 8px;
+          font-size: 13px;
+        }
+        </style>
+      `;
+      
+      // 카드 클릭 시 해당 가게의 상세 페이지로 이동
+      card.addEventListener('click', () => renderStore(store));
+      storeListContainer.appendChild(card);
+    });
+    
+  } catch (error) {
+    console.error('스토어 정보 로딩 실패:', error);
+    const storeListContainer = document.getElementById('storeListContainer');
+    storeListContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff6b6b;">매장 정보를 불러올 수 없습니다.</div>';
+  }
 }
