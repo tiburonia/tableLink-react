@@ -1,4 +1,5 @@
 
+<old_str>
 const renderAdminMain = function() {
   const main = document.getElementById('main');
   main.innerHTML = `
@@ -575,3 +576,315 @@ function setupAdminEventListeners() {
 
 // 전역 함수로 등록
 window.renderAdminMain = renderAdminMain;
+</old_str>
+<new_str>
+const renderAdminMain = function() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div id="adminContainer" style="
+      width: 100vw;
+      height: 100vh;
+      background: #1a1a1a;
+      color: white;
+      font-family: Arial, sans-serif;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 40px;
+      box-sizing: border-box;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    ">
+      <div style="max-width: 1600px; margin: 0 auto; min-height: calc(100vh - 80px);">
+        <header style="text-align: center; margin-bottom: 50px; border-bottom: 2px solid #333; padding-bottom: 30px;">
+          <h1 style="color: #ff6b6b; margin: 0; font-size: 42px;">🛠️ TableLink 관리자 패널</h1>
+          <p style="color: #888; margin: 15px 0 0 0; font-size: 20px;">시스템 관리 및 모니터링</p>
+        </header>
+
+        <main>
+          <!-- 대시보드 통계 -->
+          <section style="margin-bottom: 50px;">
+            <h2 style="color: #4ecdc4; margin-bottom: 25px; font-size: 32px;">📊 실시간 통계</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 30px;">
+              <div id="storeStats" style="background: #2d2d2d; padding: 30px; border-radius: 16px; border-left: 6px solid #4ecdc4;">
+                <h4 style="margin: 0 0 15px 0; color: #4ecdc4; font-size: 20px;">매장 통계</h4>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">총 매장 수: <span id="totalStores">로딩중...</span></p>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">활성 매장: <span id="activeStores">로딩중...</span></p>
+              </div>
+              <div id="userStats" style="background: #2d2d2d; padding: 30px; border-radius: 16px; border-left: 6px solid #45b7d1;">
+                <h4 style="margin: 0 0 15px 0; color: #45b7d1; font-size: 20px;">사용자 통계</h4>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">총 사용자 수: <span id="totalUsers">로딩중...</span></p>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">오늘 활성 사용자: <span id="activeUsers">로딩중...</span></p>
+              </div>
+              <div id="orderStats" style="background: #2d2d2d; padding: 30px; border-radius: 16px; border-left: 6px solid #f39c12;">
+                <h4 style="margin: 0 0 15px 0; color: #f39c12; font-size: 20px;">주문 통계</h4>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">오늘 주문 수: <span id="todayOrders">로딩중...</span></p>
+                <p style="margin: 8px 0; color: #ccc; font-size: 16px;">총 매출: <span id="totalRevenue">로딩중...</span></p>
+              </div>
+            </div>
+          </section>
+
+          <!-- 관리 기능 -->
+          <section style="margin-bottom: 50px;">
+            <h2 style="color: #f39c12; margin-bottom: 25px; font-size: 32px;">⚙️ 관리 기능</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 30px;">
+              <div style="background: #2d2d2d; padding: 35px; border-radius: 16px;">
+                <h3 style="color: #ff6b6b; margin: 0 0 20px 0; font-size: 22px;">🏪 매장 관리</h3>
+                <button id="viewStores" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #ff6b6b; color: white;">매장 목록 보기</button>
+                <button id="addStore" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #ff6b6b; color: white;">새 매장 추가</button>
+                <button id="storeSettings" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #ff6b6b; color: white;">매장 설정</button>
+              </div>
+
+              <div style="background: #2d2d2d; padding: 35px; border-radius: 16px;">
+                <h3 style="color: #4ecdc4; margin: 0 0 20px 0; font-size: 22px;">👥 사용자 관리</h3>
+                <button id="viewUsers" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #4ecdc4; color: white;">사용자 목록</button>
+                <button id="userAnalytics" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #4ecdc4; color: white;">사용자 분석</button>
+                <button id="banUser" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #4ecdc4; color: white;">계정 관리</button>
+              </div>
+
+              <div style="background: #2d2d2d; padding: 35px; border-radius: 16px;">
+                <h3 style="color: #f39c12; margin: 0 0 20px 0; font-size: 22px;">📦 주문 관리</h3>
+                <button id="viewOrders" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #f39c12; color: white;">주문 현황</button>
+                <button id="orderHistory" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #f39c12; color: white;">주문 내역</button>
+                <button id="refunds" style="width: 100%; padding: 16px 20px; margin: 8px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 500; background: #f39c12; color: white;">환불 처리</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- 시스템 관리 -->
+          <section style="margin-bottom: 50px;">
+            <h2 style="color: #9b59b6; margin-bottom: 25px; font-size: 32px;">🔧 시스템 관리</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px;">
+              <button id="systemLogs" style="padding: 24px 30px; background: #9b59b6; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500;">📋 시스템 로그</button>
+              <button id="databaseBackup" style="padding: 24px 30px; background: #9b59b6; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500;">💾 데이터베이스 백업</button>
+              <button id="cacheManagement" style="padding: 24px 30px; background: #9b59b6; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500;">🗂️ 캐시 관리</button>
+              <button id="serverStatus" style="padding: 24px 30px; background: #9b59b6; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500;">⚡ 서버 상태</button>
+            </div>
+          </section>
+
+          <!-- 로그아웃 -->
+          <section style="text-align: center; margin-top: 60px; padding: 40px 0; border-top: 2px solid #333;">
+            <div style="display: flex; justify-content: center; gap: 25px; flex-wrap: wrap;">
+              <button id="backToLogin" style="padding: 18px 40px; background: #666; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500; min-width: 220px;">← 로그인 화면으로</button>
+              <button id="logoutAdmin" style="padding: 18px 40px; background: #e74c3c; color: white; border: none; border-radius: 14px; cursor: pointer; font-size: 18px; font-weight: 500; min-width: 220px;">🚪 관리자 로그아웃</button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <style>
+      /* 스크롤바 숨기기 */
+      #adminContainer::-webkit-scrollbar {
+        display: none;
+      }
+      
+      /* 버튼 호버 효과 */
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+      }
+      
+      /* 카드 호버 효과 */
+      #storeStats:hover, #userStats:hover, #orderStats:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        transition: all 0.2s ease;
+      }
+    </style>
+  `;
+
+  // 통계 데이터 로드 (비동기로 안전하게 처리)
+  setTimeout(() => {
+    loadAdminStats();
+  }, 100);
+
+  // 이벤트 리스너 등록
+  setupAdminEventListeners();
+}
+
+// 관리자 통계 데이터 로드
+async function loadAdminStats() {
+  try {
+    console.log('📊 관리자 통계 로딩 시작...');
+    
+    // 실제 데이터베이스에서 통계 정보 가져오기
+    const [storesResponse, usersResponse] = await Promise.all([
+      fetch('/api/admin/stats/stores'),
+      fetch('/api/admin/stats/users')
+    ]);
+
+    const storesData = storesResponse.ok ? await storesResponse.json() : { total: 0, active: 0 };
+    const usersData = usersResponse.ok ? await usersResponse.json() : { total: 0, activeToday: 0 };
+    
+    // 주문 데이터는 아직 API가 없으므로 임시로 0으로 설정
+    const orderData = { todayCount: 0, totalRevenue: 0 };
+    
+    // DOM 요소 존재 확인 후 업데이트
+    const totalStoresEl = document.getElementById('totalStores');
+    const activeStoresEl = document.getElementById('activeStores');
+    const totalUsersEl = document.getElementById('totalUsers');
+    const activeUsersEl = document.getElementById('activeUsers');
+    const todayOrdersEl = document.getElementById('todayOrders');
+    const totalRevenueEl = document.getElementById('totalRevenue');
+    
+    if (totalStoresEl) totalStoresEl.textContent = storesData.total || '0';
+    if (activeStoresEl) activeStoresEl.textContent = storesData.active || '0';
+    if (totalUsersEl) totalUsersEl.textContent = usersData.total || '0';
+    if (activeUsersEl) activeUsersEl.textContent = usersData.activeToday || '0';
+    if (todayOrdersEl) todayOrdersEl.textContent = orderData.todayCount || '0';
+    if (totalRevenueEl) totalRevenueEl.textContent = (orderData.totalRevenue || 0).toLocaleString() + '원';
+    
+    console.log('✅ 관리자 통계 로딩 완료');
+    
+  } catch (error) {
+    console.error('❌ 관리자 통계 로드 실패:', error);
+    // 에러 시 기본값 표시
+    const totalStoresEl = document.getElementById('totalStores');
+    const activeStoresEl = document.getElementById('activeStores');
+    const totalUsersEl = document.getElementById('totalUsers');
+    const activeUsersEl = document.getElementById('activeUsers');
+    const todayOrdersEl = document.getElementById('todayOrders');
+    const totalRevenueEl = document.getElementById('totalRevenue');
+    
+    if (totalStoresEl) totalStoresEl.textContent = 'N/A';
+    if (activeStoresEl) activeStoresEl.textContent = 'N/A';
+    if (totalUsersEl) totalUsersEl.textContent = 'N/A';
+    if (activeUsersEl) activeUsersEl.textContent = 'N/A';
+    if (todayOrdersEl) todayOrdersEl.textContent = 'N/A';
+    if (totalRevenueEl) totalRevenueEl.textContent = 'N/A';
+  }
+}
+
+// 관리자 이벤트 리스너 설정
+function setupAdminEventListeners() {
+  try {
+    console.log('🔧 관리자 이벤트 리스너 설정 중...');
+    
+    // 매장 관리
+    const viewStoresBtn = document.getElementById('viewStores');
+    const addStoreBtn = document.getElementById('addStore');
+    const storeSettingsBtn = document.getElementById('storeSettings');
+    
+    if (viewStoresBtn) {
+      viewStoresBtn.addEventListener('click', () => {
+        alert('매장 목록 보기 기능은 개발 중입니다');
+      });
+    }
+    
+    if (addStoreBtn) {
+      addStoreBtn.addEventListener('click', () => {
+        alert('새 매장 추가 기능은 개발 중입니다');
+      });
+    }
+    
+    if (storeSettingsBtn) {
+      storeSettingsBtn.addEventListener('click', () => {
+        alert('매장 설정 기능은 개발 중입니다');
+      });
+    }
+
+    // 사용자 관리
+    const viewUsersBtn = document.getElementById('viewUsers');
+    const userAnalyticsBtn = document.getElementById('userAnalytics');
+    const banUserBtn = document.getElementById('banUser');
+    
+    if (viewUsersBtn) {
+      viewUsersBtn.addEventListener('click', () => {
+        alert('사용자 목록 기능은 개발 중입니다');
+      });
+    }
+    
+    if (userAnalyticsBtn) {
+      userAnalyticsBtn.addEventListener('click', () => {
+        alert('사용자 분석 기능은 개발 중입니다');
+      });
+    }
+    
+    if (banUserBtn) {
+      banUserBtn.addEventListener('click', () => {
+        alert('계정 관리 기능은 개발 중입니다');
+      });
+    }
+
+    // 주문 관리
+    const viewOrdersBtn = document.getElementById('viewOrders');
+    const orderHistoryBtn = document.getElementById('orderHistory');
+    const refundsBtn = document.getElementById('refunds');
+    
+    if (viewOrdersBtn) {
+      viewOrdersBtn.addEventListener('click', () => {
+        alert('주문 현황 기능은 개발 중입니다');
+      });
+    }
+    
+    if (orderHistoryBtn) {
+      orderHistoryBtn.addEventListener('click', () => {
+        alert('주문 내역 기능은 개발 중입니다');
+      });
+    }
+    
+    if (refundsBtn) {
+      refundsBtn.addEventListener('click', () => {
+        alert('환불 처리 기능은 개발 중입니다');
+      });
+    }
+
+    // 시스템 관리
+    const systemLogsBtn = document.getElementById('systemLogs');
+    const databaseBackupBtn = document.getElementById('databaseBackup');
+    const cacheManagementBtn = document.getElementById('cacheManagement');
+    const serverStatusBtn = document.getElementById('serverStatus');
+    
+    if (systemLogsBtn) {
+      systemLogsBtn.addEventListener('click', () => {
+        alert('시스템 로그 기능은 개발 중입니다');
+      });
+    }
+    
+    if (databaseBackupBtn) {
+      databaseBackupBtn.addEventListener('click', () => {
+        alert('데이터베이스 백업 기능은 개발 중입니다');
+      });
+    }
+    
+    if (cacheManagementBtn) {
+      cacheManagementBtn.addEventListener('click', () => {
+        alert('캐시 관리 기능은 개발 중입니다');
+      });
+    }
+    
+    if (serverStatusBtn) {
+      serverStatusBtn.addEventListener('click', () => {
+        alert('서버 상태 기능은 개발 중입니다');
+      });
+    }
+
+    // 로그아웃 및 뒤로가기
+    const backToLoginBtn = document.getElementById('backToLogin');
+    const logoutAdminBtn = document.getElementById('logoutAdmin');
+    
+    if (backToLoginBtn) {
+      backToLoginBtn.addEventListener('click', () => {
+        window.location.href = '/';
+      });
+    }
+    
+    if (logoutAdminBtn) {
+      logoutAdminBtn.addEventListener('click', () => {
+        if (confirm('관리자 모드에서 로그아웃하시겠습니까?')) {
+          window.location.href = '/';
+        }
+      });
+    }
+    
+    console.log('✅ 관리자 이벤트 리스너 설정 완료');
+    
+  } catch (error) {
+    console.error('❌ 이벤트 리스너 설정 오류:', error);
+  }
+}
+
+// 전역 함수로 등록
+window.renderAdminMain = renderAdminMain;
+</new_str>
