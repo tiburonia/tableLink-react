@@ -9,9 +9,10 @@ let renderLogin = async function () {
         <button id='login'>로그인</button>
       </div>
       <hr>
-      <div>
-        <button id='adminLogin' style="background: #444; color: white; margin-top: 10px;">🛠️ 어드민 로그인 (개발용)</button>
-        <button id='goKDS' style="background: #222; color: white; margin-top: 6px;">📟 KDS 화면 이동</button>
+      <div style="width: 70%; display: flex; flex-direction: column; gap: 8px;">
+        <button id='adminLogin' style="width: 100%; padding: 12px; background: #444; color: white; border: none; border-radius: 6px; font-size: 14px;">🛠️ Admin 로그인</button>
+        <button id='goKDS' style="width: 100%; padding: 12px; background: #222; color: white; border: none; border-radius: 6px; font-size: 14px;">📟 KDS</button>
+        <button id='goPOS' style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 6px; font-size: 14px;">💳 POS</button>
       </div>
     </div>
 
@@ -29,6 +30,7 @@ let renderLogin = async function () {
   const login = document.querySelector('#login');
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
+  const goPOS = document.querySelector('#goPOS');
 
   join.addEventListener('click', () => {
     renderSignUp();
@@ -171,5 +173,11 @@ let renderLogin = async function () {
   goKDS.addEventListener('click', () => {
     alert('KDS 화면 이동');
     renderKDS(); // 이 함수도 따로 있어야 함
+  });
+
+  // 개발용 POS 버튼
+  goPOS.addEventListener('click', () => {
+    alert('POS 화면 이동');
+    // renderPOS(); // POS 함수가 구현되면 주석 해제
   });
 };
