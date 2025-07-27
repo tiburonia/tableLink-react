@@ -372,7 +372,7 @@ async function loadStoresAndMarkers(map) {
             .compact-marker {
               position: relative;
               cursor: pointer;
-              transform: translateX(-50%) translateY(-100%);
+              transform: translateX(-50%);
               z-index: 10;
             }
             
@@ -430,7 +430,7 @@ async function loadStoresAndMarkers(map) {
               position: absolute;
               left: 50%;
               transform: translateX(-50%);
-              top: -8px;
+              top: -45px;
             }
             
             .store-name {
@@ -465,7 +465,7 @@ async function loadStoresAndMarkers(map) {
           map: map,
           position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
           content: customOverlayContent,
-          yAnchor: 0.9, // 핀의 끝점이 정확한 위치를 가리키도록 조정
+          yAnchor: 1, // 마커의 맨 아래점이 정확한 위치를 가리키도록 설정
           xAnchor: 0.5  // 중앙 정렬
         });
       });
