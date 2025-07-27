@@ -3,10 +3,6 @@ async function renderMap() {
 
   // UI 먼저 렌더링
   main.innerHTML = `
-    <header id="header">
-      <h2 id="renderMainTL">📍 주변 가맹점 지도</h2>
-    </header>
-
     <main id="content">
       <div id="map" style="width: 100%; height: 100%; min-height: 100vh;"></div>
 
@@ -39,37 +35,15 @@ async function renderMap() {
   overflow: hidden;
 }
 
-/* 헤더 */
-#header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  max-width: 430px;
-  height: 45px;
-  background: #fff;
-  border-bottom: 1.2px solid #e0e0ee;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1001;
-}
-#renderMainTL {
-  font-size: 17px;
-  font-weight: 700;
-  color: #297efc;
-  letter-spacing: -0.5px;
-}
-
 /* 콘텐츠 전체 */
 #content {
   position: absolute;
-  top: 45px;
+  top: 0;
   bottom: 66px;   /* 바텀바 높이 */
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: calc(100vh - 111px);
+  height: calc(100vh - 66px);
   overflow: hidden;
   background: #fdfdfd;
   z-index: 1;
