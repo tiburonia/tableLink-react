@@ -333,21 +333,138 @@ async function loadStoresAndMarkers(map) {
     stores = await cacheManager.getStores();
     console.log('🗺️ 지도에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
     
-    // 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
+    // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
     setTimeout(() => {
       stores.forEach(store => {
         if (!store.coord) return;
-        const marker = new kakao.maps.Marker({
-          map,
-          position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
-          title: store.name
-        });
+        
+        // 매장 운영 상태 확인
+        const isOpen = store.isOpen !== false; // 기본값은 true로 처리
+        const statusIcon = isOpen ? '🟢' : '🔴';
+        const statusText = isOpen ? '운영중' : '운영중지';
+        const statusColor = isOpen ? '#4caf50' : '#f44336';
+        
+        // 별점 정보 (캐시에서 가져오거나 기본값)
+        let rating = '0.0';
+        if (typeof window.cacheManager !== 'undefined') {
+          const cachedRating = window.cacheManager.getStoreRating(store.id);
+          if (cachedRating) {
+            rating = parseFloat(cachedRating.ratingAverage).toFixed(1);
+          }
+        }
 
-        kakao.maps.event.addListener(marker, 'click', () => {
-          renderStore(store);
+        // 커스텀 오버레이 HTML 생성
+        const customOverlayContent = `
+          <div class="custom-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <div class="marker-info">
+              <div class="marker-rating">⭐ ${rating}</div>
+              <div class="marker-status" style="color: ${statusColor};">
+                ${statusIcon} ${statusText}
+              </div>
+            </div>
+            <div class="marker-main">
+              <div class="marker-icon">🏪</div>
+              <div class="marker-name">${store.name}</div>
+            </div>
+            <div class="marker-arrow"></div>
+          </div>
+          
+          <style>
+            .custom-marker {
+              position: relative;
+              cursor: pointer;
+              transform: translateX(-50%) translateY(-100%);
+              z-index: 10;
+            }
+            
+            .marker-info {
+              background: rgba(255, 255, 255, 0.95);
+              border: 2px solid #297efc;
+              border-radius: 8px;
+              padding: 4px 8px;
+              margin-bottom: 4px;
+              font-size: 11px;
+              font-weight: 600;
+              text-align: center;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+              backdrop-filter: blur(5px);
+              white-space: nowrap;
+            }
+            
+            .marker-rating {
+              color: #ff9800;
+              margin-bottom: 2px;
+            }
+            
+            .marker-status {
+              font-size: 10px;
+            }
+            
+            .marker-main {
+              background: linear-gradient(135deg, #297efc 0%, #1976d2 100%);
+              color: white;
+              border-radius: 12px;
+              padding: 8px 12px;
+              text-align: center;
+              font-weight: bold;
+              font-size: 12px;
+              box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
+              border: 2px solid white;
+              min-width: 80px;
+              position: relative;
+            }
+            
+            .marker-icon {
+              font-size: 16px;
+              margin-bottom: 2px;
+            }
+            
+            .marker-name {
+              font-size: 11px;
+              line-height: 1.2;
+              max-width: 100px;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+            
+            .marker-arrow {
+              width: 0;
+              height: 0;
+              border-left: 8px solid transparent;
+              border-right: 8px solid transparent;
+              border-top: 8px solid #297efc;
+              position: absolute;
+              bottom: -8px;
+              left: 50%;
+              transform: translateX(-50%);
+            }
+            
+            .custom-marker:hover .marker-main {
+              transform: scale(1.05);
+              box-shadow: 0 6px 16px rgba(41, 126, 252, 0.4);
+            }
+            
+            .custom-marker:hover .marker-info {
+              background: rgba(255, 255, 255, 1);
+              transform: scale(1.02);
+            }
+            
+            .custom-marker:active .marker-main {
+              transform: scale(0.98);
+            }
+          </style>
+        `;
+
+        // 커스텀 오버레이 생성
+        const customOverlay = new kakao.maps.CustomOverlay({
+          map: map,
+          position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
+          content: customOverlayContent,
+          yAnchor: 1
         });
       });
-      console.log('🗺️ 마커 표시 완료:', stores.length, '개 매장');
+      console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
     }, 100);
 
     // 가게 목록 업데이트
