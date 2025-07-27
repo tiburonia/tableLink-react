@@ -38,12 +38,15 @@ function renderStore(store) {
               <button id="favoriteBtn">♡</button>
             </div>
             <h2 id="storeName">${store.name}</h2>
+            <div class="store-status-row">
+              <span class="store-status ${store.isOpen ? 'open' : 'closed'}">${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}</span>
+            </div>
             <p class="store-desc">여기에 간단한 가게 소개 또는 태그</p>
           </div>
           <div id="TLR" class="tlr-container">
             <div class="tlr-header">
               <div class="tlr-title">🏪 테이블 현황</div>
-              <div class="tlr-status-badge" id="tableStatusBadge">로딩중...</div>
+              <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">${store.isOpen ? '로딩중...' : '운영중지'}</div>
             </div>
             <div class="tlr-info-grid">
               <div class="tlr-info-item">
@@ -263,6 +266,34 @@ function renderStore(store) {
         margin: 6px 0 2px 0;
         letter-spacing: -0.5px;
       }
+      .store-status-row {
+        margin: 8px 0 4px 0;
+        display: flex;
+        align-items: center;
+      }
+      
+      .store-status {
+        font-size: 13px;
+        font-weight: 600;
+        padding: 4px 8px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .store-status.open {
+        background: #e8f5e8;
+        color: #2e7d32;
+        border: 1px solid #4caf50;
+      }
+      
+      .store-status.closed {
+        background: #ffebee;
+        color: #c62828;
+        border: 1px solid #f44336;
+      }
+
       .store-desc {
         font-size: 14px;
         color: #888;
@@ -311,6 +342,11 @@ function renderStore(store) {
 
       .tlr-status-badge.full {
         background: #F44336;
+      }
+
+      .tlr-status-badge.closed {
+        background: #666;
+        color: white;
       }
 
       .tlr-info-grid {
@@ -801,6 +837,29 @@ async function loadTableInfo(store) {
   try {
     console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
 
+    // 매장이 운영중지 상태면 테이블 정보를 가져오지 않고 바로 운영중지 표시
+    if (!store.isOpen) {
+      console.log(`🔴 매장 ${store.name}이 운영중지 상태입니다.`);
+      
+      const totalTablesEl = document.getElementById('totalTables');
+      const availableTablesEl = document.getElementById('availableTables');
+      const totalSeatsEl = document.getElementById('totalSeats');
+      const availableSeatsEl = document.getElementById('availableSeats');
+      const occupancyRateEl = document.getElementById('occupancyRate');
+      const statusBadge = document.getElementById('tableStatusBadge');
+
+      if (totalTablesEl) totalTablesEl.textContent = '-';
+      if (availableTablesEl) availableTablesEl.textContent = '-';
+      if (totalSeatsEl) totalSeatsEl.textContent = '-';
+      if (availableSeatsEl) availableSeatsEl.textContent = '-';
+      if (occupancyRateEl) occupancyRateEl.textContent = '-';
+      if (statusBadge) {
+        statusBadge.textContent = '운영중지';
+        statusBadge.classList.add('closed');
+      }
+      return;
+    }
+
     const response = await fetch(`/api/stores/${store.id}/tables`);
     if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
@@ -906,6 +965,12 @@ async function updateStoreRatingAsync(store) {
 // 테이블 배치도 렌더링 함수
 async function renderTableLayout(store) {
   try {
+    // 매장이 운영중지 상태면 테이블 배치도를 보여주지 않음
+    if (!store.isOpen) {
+      alert('현재 운영중지된 매장입니다.');
+      return;
+    }
+
     const response = await fetch(`/api/stores/${store.id}/tables`);
     if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
