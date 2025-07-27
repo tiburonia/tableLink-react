@@ -18,6 +18,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// /admin 접속 시 public/admin.html 반환
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 // stores 테이블 별점 평균 업데이트 함수
 async function updateStoreRating(storeId) {
   try {

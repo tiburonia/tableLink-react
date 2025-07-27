@@ -6,10 +6,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TableLink Admin - 관리자</title>
+
   <!--카카오맵 API키-->
   <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
-  <script src="script/admin/renderAdminMain.js"></script>
-  <script src="script/admin/renderMain.js"></script>
 
   <link rel="stylesheet" href="css/favoriteStore.css" />
   <link rel="stylesheet" href="css/globalBody.css" />
@@ -20,13 +19,17 @@
   <!-- 화면을 렌더링할 메인 영역 -->
   <div id='main'></div>
 
+  <!--관리자 메인 렌더링 함수-->
+  <script src="script/admin/renderMain.js"></script>
+  <!--로그인 화면 렌더링 함수-->
+  <script src="script/renderLogin.js"></script>
   <!--로그아웃로직 함수-->
   <script src="script/logOut.js"></script>
   <!--로컬스토리지 캐시 매니저-->
   <script src="script/localStorage.js"></script>
   <!--JSON 파일 캐시 매니저-->
   <script src="script/cacheFileManager.js"></script>
-  
+
   <script>
     //관리자 페이지 초기 진입
     document.addEventListener('DOMContentLoaded', () => {
