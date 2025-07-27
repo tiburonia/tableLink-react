@@ -1,8 +1,8 @@
 
 const pool = require('./database');
 
-// 카카오 API 키 - renderMap.js에서 사용하는 것과 동일
-const KAKAO_API_KEY = '2da5b80696f4403357706514d7c56b70';
+// 카카오 REST API 키 (서버사이드용)
+const KAKAO_API_KEY = 'f3266dc51f8b4635c03d58b09a6fdecc';
 
 async function addAddressColumn() {
   try {
@@ -42,6 +42,16 @@ async function addAddressColumn() {
         
         if (!response.ok) {
           console.log(`❌ 매장 ${store.id} API 호출 실패: ${response.status}`);
+          
+          // API 실패 시 좌표 기반 임시 주소 생성
+          const tempAddress = `서울특별시 중구 (위도: ${coord.lat.toFixed(4)}, 경도: ${coord.lng.toFixed(4)})`;
+          
+          await pool.query(
+            'UPDATE stores SET address = $1 WHERE id = $2',
+            [tempAddress, store.id]
+          );
+          console.log(`⚠️ 매장 ${store.id} (${store.name}) 임시 주소 설정: ${tempAddress}`);
+          
           await new Promise(resolve => setTimeout(resolve, 100)); // API 제한 방지
           continue;
         }
