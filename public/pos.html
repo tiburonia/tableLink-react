@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TableLink POS - 포스기</title>
+
+  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
+  <link rel="stylesheet" href="shared/css/globalBody.css" />
+  <link rel="stylesheet" href="shared/css/renderLogin.css" />
+</head>
+
+<body>
+  <!-- 화면을 렌더링할 메인 영역 -->
+  <div id='main'></div>
+
+  <!--로그아웃로직 함수-->
+  <script src="shared/utils/logOut.js"></script>
+  <!--로컬스토리지 캐시 매니저-->
+  <script src="shared/utils/localStorage.js"></script>
+  <!--JSON 파일 캐시 매니저-->
+  <script src="shared/utils/cacheFileManager.js"></script>
+  
+  <script>
+    //POS 페이지 초기 진입
+    document.addEventListener('DOMContentLoaded', () => {
+      main.innerHTML = `
+        <div style="padding: 20px; background: #2c3e50; color: white; min-height: 100vh; text-align: center;">
+          <h1 style="color: #3498db;">💳 TableLink POS</h1>
+          <p style="font-size: 18px; margin-bottom: 30px;">포스기 시스템</p>
+          
+          <div style="background: #34495e; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #e74c3c; margin-bottom: 20px;">🚧 개발 중</h2>
+            <p style="font-size: 16px; line-height: 1.6;">
+              POS 시스템은 현재 개발 중입니다.<br>
+              곧 다양한 기능을 제공할 예정입니다.
+            </p>
+            
+            <div style="margin-top: 30px;">
+              <h3 style="color: #f39c12;">예정 기능:</h3>
+              <ul style="text-align: left; max-width: 400px; margin: 15px auto;">
+                <li>💰 결제 처리</li>
+                <li>📋 주문 관리</li>
+                <li>📊 매출 통계</li>
+                <li>🎫 영수증 발행</li>
+                <li>💳 카드/현금 결제</li>
+              </ul>
+            </div>
+            
+            <button onclick="location.href='/'" style="
+              background: #95a5a6; 
+              color: white; 
+              padding: 12px 25px; 
+              border: none; 
+              border-radius: 5px; 
+              font-size: 16px; 
+              cursor: pointer; 
+              margin-top: 30px;
+            ">← 메인 로그인으로</button>
+          </div>
+        </div>
+      `;
+    });
+  </script>
+</body>
+
+</html>
