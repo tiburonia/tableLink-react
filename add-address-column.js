@@ -1,8 +1,14 @@
 
 const pool = require('./database');
 
-// 카카오 REST API 키 (서버사이드용)
-const KAKAO_API_KEY = 'f3266dc51f8b4635c03d58b09a6fdecc';
+// 카카오 REST API 키 (환경변수에서 가져오기)
+const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+
+if (!KAKAO_API_KEY) {
+  console.error('❌ KAKAO_API_KEY 환경변수가 설정되지 않았습니다.');
+  console.log('💡 Secrets 도구에서 KAKAO_API_KEY를 설정해주세요.');
+  process.exit(1);
+}
 
 async function addAddressColumn() {
   try {
