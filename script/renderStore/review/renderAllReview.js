@@ -3,20 +3,60 @@ async function renderAllReview(store) {
   console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
   
   try {
-    // 세션에서 사용자 정보 가져오기
+    // localStorage에서 사용자 정보 가져오기
     const currentUserInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
     const currentUserId = currentUserInfo ? currentUserInfo.id : null;
     
     console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
     
-    // 데이터베이스에서 실제 리뷰 데이터 가져오기
-    const response = await fetch(`/api/stores/${store.id}/reviews`);
-    if (!response.ok) {
-      throw new Error('리뷰 데이터 조회 실패');
+    // localStorage에서 리뷰 캐시 확인
+    const reviewCacheKey = `tablelink_reviews_store_${store.id}`;
+    const cachedReviews = localStorage.getItem(reviewCacheKey);
+    
+    let reviews = [];
+    
+    if (cachedReviews) {
+      try {
+        const cachedData = JSON.parse(cachedReviews);
+        const cacheAge = Date.now() - cachedData.timestamp;
+        const CACHE_DURATION = 10 * 60 * 1000; // 10분
+        
+        if (cacheAge < CACHE_DURATION) {
+          console.log('📁 캐시된 리뷰 데이터 사용:', cachedData.reviews.length, '개 리뷰');
+          reviews = cachedData.reviews;
+        } else {
+          console.log('⏰ 리뷰 캐시가 만료됨, 서버에서 새로 가져오는 중...');
+          localStorage.removeItem(reviewCacheKey);
+          throw new Error('캐시 만료');
+        }
+      } catch (error) {
+        console.log('⚠️ 캐시 데이터 파싱 실패, 서버에서 가져오는 중...');
+        throw new Error('캐시 파싱 실패');
+      }
+    } else {
+      throw new Error('캐시 없음');
     }
     
-    const reviewData = await response.json();
-    const reviews = reviewData.reviews || [];
+    // 캐시가 없거나 만료된 경우 서버에서 가져오기
+    if (reviews.length === 0) {
+      console.log('🌐 서버에서 리뷰 데이터 가져오는 중...');
+      const response = await fetch(`/api/stores/${store.id}/reviews`);
+      if (!response.ok) {
+        throw new Error('리뷰 데이터 조회 실패');
+      }
+      
+      const reviewData = await response.json();
+      reviews = reviewData.reviews || [];
+      
+      // 새로 가져온 데이터를 캐시에 저장
+      const cacheData = {
+        reviews: reviews,
+        timestamp: Date.now(),
+        storeId: store.id
+      };
+      localStorage.setItem(reviewCacheKey, JSON.stringify(cacheData));
+      console.log('💾 리뷰 데이터 캐시 저장 완료:', reviews.length, '개 리뷰');
+    }
     
     console.log('📖 가져온 리뷰 데이터:', reviews);
     
