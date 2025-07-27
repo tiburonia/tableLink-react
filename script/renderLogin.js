@@ -240,16 +240,19 @@ let renderLogin = async function () {
 
   // 개발용 어드민 로그인 버튼
   adminLogin.addEventListener('click', () => {
-    window.location.href = '/admin';
+    alert('어드민 모드 진입');
+    renderAdminMain(); // 이 함수 네가 따로 구현해놔야 함
   });
 
   // 개발용 KDS 버튼
   goKDS.addEventListener('click', () => {
-    window.location.href = '/KDS';
+    alert('KDS 화면 이동');
+    renderKDS(); // 이 함수도 따로 있어야 함
   });
 
   // 개발용 POS 버튼
   goPOS.addEventListener('click', () => {
-    window.location.href = '/POS';
+    alert('POS 화면 이동');
+    // renderPOS(); // POS 함수가 구현되면 주석 해제
   });
 };

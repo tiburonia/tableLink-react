@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const pool = require('./shared/config/database');
+const pool = require('./database');
 
 const app = express();
 const PORT = 5000;
@@ -13,24 +13,9 @@ app.use(express.json());
 // 루트 디렉토리의 정적 파일 서빙 (css, js, 이미지 등)
 app.use(express.static(__dirname));
 
-// 루트(/) 접속 시 public/index.html 반환 (일반 로그인)
+// 루트(/) 접속 시 public/index.html 반환
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// 관리자 로그인 페이지
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
-
-// KDS 페이지
-app.get('/KDS', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'kds.html'));
-});
-
-// POS 페이지
-app.get('/POS', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'pos.html'));
 });
 
 // stores 테이블 별점 평균 업데이트 함수
