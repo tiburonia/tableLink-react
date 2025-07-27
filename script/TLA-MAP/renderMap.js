@@ -360,12 +360,10 @@ async function loadStoresAndMarkers(map) {
 
       card.innerHTML = `
         <div class="storeInfoBox">
-          <div class="storeRatingBox ${store.isOpened === false ? 'closed' : ''}">
-            ${store.isOpened === false ? '🔒' : '⭐'}
-          </div>
+          <div class="storeRatingBox">⭐</div>
           <div class="storeTextBox">
-            <div class="storeName ${store.isOpened === false ? 'closed' : ''}">${store.name}</div>
-            <div class="storeDistance">${store.category} ${store.isOpened === false ? '• 운영중단' : ''}</div>
+            <div class="storeName">${store.name}</div>
+            <div class="storeDistance">${store.category}</div>
           </div>
         </div>
         <div class="storeImageBox">
@@ -432,22 +430,6 @@ async function loadStoresAndMarkers(map) {
           border: 2px solid black;
           padding: 4px 8px;
           font-size: 13px;
-        }
-
-        .storeRatingBox.closed {
-          background: #f8d7da !important;
-          color: #721c24 !important;
-          border-color: #f5c6cb !important;
-        }
-
-        .storeName.closed {
-          color: #721c24 !important;
-          opacity: 0.8;
-        }
-
-        .storeCard:has(.closed) {
-          opacity: 0.8;
-          border-color: #f5c6cb !important;
         }
         </style>
       `;
