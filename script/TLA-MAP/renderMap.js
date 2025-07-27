@@ -314,7 +314,7 @@ async function loadStoreRatingAsync(storeId) {
     // 2. 캐시에 없으면 서버에서 가져오기
     console.log(`🔄 지도: 매장 ${storeId} 별점 정보 서버에서 가져오는 중...`);
     const response = await fetch(`/api/stores/${storeId}/rating`);
-    
+
     if (!response.ok) {
       console.warn(`⚠️ 매장 ${storeId} 별점 정보 조회 실패: ${response.status}`);
       return { ratingAverage: 0.0, reviewCount: 0 };
@@ -342,23 +342,23 @@ async function loadStoreRatingAsync(storeId) {
 // 비동기로 매장 데이터를 로딩하고 마커를 표시하는 함수
 async function loadStoresAndMarkers(map) {
   let stores = [];
-  
+
   try {
     // 캐시에서 스토어 정보 가져오기
     stores = await cacheManager.getStores();
     console.log('🗺️ 지도에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
-    
+
     // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
     setTimeout(() => {
       stores.forEach(async (store) => {
         if (!store.coord) return;
-        
+
         // 매장 운영 상태 확인
         const isOpen = store.isOpen !== false; // 기본값은 true로 처리
         const statusIcon = isOpen ? '🟢' : '🔴';
         const statusText = isOpen ? '운영중' : '운영중지';
         const statusColor = isOpen ? '#4caf50' : '#f44336';
-        
+
         // 별점 정보 비동기 로딩 및 캐시 처리
         let rating = '0.0';
         await loadStoreRatingAsync(store.id).then(ratingData => {
@@ -381,21 +381,21 @@ async function loadStoresAndMarkers(map) {
               <span class="store-status" style="color: ${statusColor};">${statusIcon}</span>
             </div>
           </div>
-          
+
           <style>
             .compact-marker {
               position: relative;
               cursor: pointer;
               z-index: 10;
             }
-            
+
             .marker-pin {
               display: flex;
               flex-direction: column;
               align-items: center;
               margin-bottom: 2px;
             }
-            
+
             .pin-head {
               width: 32px;
               height: 32px;
@@ -407,7 +407,7 @@ async function loadStoresAndMarkers(map) {
               box-shadow: 0 2px 6px rgba(0,0,0,0.3);
               border: 2px solid white;
             }
-            
+
             .pin-rating {
               color: white;
               font-size: 9px;
@@ -415,7 +415,7 @@ async function loadStoresAndMarkers(map) {
               transform: rotate(45deg);
               white-space: nowrap;
             }
-            
+
             .pin-point {
               width: 0;
               height: 0;
@@ -424,7 +424,7 @@ async function loadStoresAndMarkers(map) {
               border-top: 6px solid ${statusColor};
               margin-top: -3px;
             }
-            
+
             .marker-label {
               background: rgba(255, 255, 255, 0.95);
               border: 1px solid #ddd;
@@ -445,28 +445,28 @@ async function loadStoresAndMarkers(map) {
               top: -45px;
               width: 120px;
             }
-            
+
             .store-name {
               color: #333;
               overflow: hidden;
               text-overflow: ellipsis;
               flex: 1;
             }
-            
+
             .store-status {
               font-size: 8px;
             }
-            
+
             .compact-marker:hover .pin-head {
               transform: rotate(-45deg) scale(1.1);
               box-shadow: 0 3px 8px rgba(0,0,0,0.4);
             }
-            
+
             .compact-marker:hover .marker-label {
               background: rgba(255, 255, 255, 1);
               transform: translateX(-50%) scale(1.05);
             }
-            
+
             .compact-marker:active .pin-head {
               transform: rotate(-45deg) scale(0.95);
             }
@@ -488,7 +488,7 @@ async function loadStoresAndMarkers(map) {
     // 가게 목록 업데이트
     const storeListContainer = document.getElementById('storeListContainer');
     storeListContainer.innerHTML = ''; // 로딩 메시지 제거
-    
+
     // 매장 목록에서도 별점 정보 비동기 로딩
     stores.forEach(async (store) => {
       const card = document.createElement('div');
@@ -577,12 +577,12 @@ async function loadStoresAndMarkers(map) {
         }
         </style>
       `;
-      
+
       // 카드 클릭 시 해당 가게의 상세 페이지로 이동
       card.addEventListener('click', () => renderStore(store));
       storeListContainer.appendChild(card);
     });
-    
+
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
     const storeListContainer = document.getElementById('storeListContainer');
