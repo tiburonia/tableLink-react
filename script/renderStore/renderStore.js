@@ -1,4 +1,6 @@
 function renderStore(store) {
+  console.log('🏪 매장 렌더링:', store.name, '별점 평균:', store.ratingAverage, '(타입:', typeof store.ratingAverage, ')');
+  
   main.innerHTML = `
     <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
@@ -18,7 +20,7 @@ function renderStore(store) {
           <div class="storeInfo">
             <div class="score-row">
               <span id="reviewStar">★</span>
-              <span id="reviewScore">${store.ratingAverage || '0.0'}&nbsp<span id="reviewLink">></span></span> 
+              <span id="reviewScore">${(store.ratingAverage && store.ratingAverage > 0) ? parseFloat(store.ratingAverage).toFixed(1) : '0.0'}&nbsp<span id="reviewLink">></span></span> 
               <button id="favoriteBtn">♡</button>
             </div>
             <h2 id="storeName">${store.name}</h2>
