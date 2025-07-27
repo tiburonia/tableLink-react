@@ -18,7 +18,7 @@ function renderStore(store) {
           <div class="storeInfo">
             <div class="score-row">
               <span id="reviewStar">★</span>
-              <span id="reviewScore">4.5&nbsp<span id="reviewLink">></span></span> 
+              <span id="reviewScore">${store.ratingAverage || '0.0'}&nbsp<span id="reviewLink">></span></span> 
               <button id="favoriteBtn">♡</button>
             </div>
             <h2 id="storeName">${store.name}</h2>

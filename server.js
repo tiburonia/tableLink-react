@@ -18,6 +18,40 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// stores 테이블 별점 평균 업데이트 함수
+async function updateStoreRating(storeId) {
+  try {
+    console.log(`🔄 매장 ${storeId} 별점 평균 업데이트 중...`);
+    
+    // 해당 매장의 모든 리뷰 별점 조회
+    const ratingResult = await pool.query(`
+      SELECT AVG(rating) as avg_rating, COUNT(*) as review_count 
+      FROM reviews 
+      WHERE store_id = $1
+    `, [storeId]);
+    
+    const avgRating = ratingResult.rows[0].avg_rating;
+    const reviewCount = parseInt(ratingResult.rows[0].review_count);
+    
+    // 별점 평균을 소수점 1자리로 반올림, 리뷰가 없으면 0
+    const formattedRating = avgRating ? parseFloat(avgRating).toFixed(1) : 0;
+    
+    // stores 테이블 업데이트
+    await pool.query(`
+      UPDATE stores 
+      SET rating_average = $1, review_count = $2 
+      WHERE id = $3
+    `, [formattedRating, reviewCount, storeId]);
+    
+    console.log(`✅ 매장 ${storeId} 별점 평균 업데이트 완료: ${formattedRating}점 (${reviewCount}개 리뷰)`);
+    
+    return { avgRating: formattedRating, reviewCount };
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 별점 평균 업데이트 실패:`, error);
+    throw error;
+  }
+}
+
 // stores API 엔드포인트 (실시간 테이블 정보 포함)
 app.get('/api/stores', async (req, res) => {
   try {
@@ -59,6 +93,7 @@ app.get('/api/stores', async (req, res) => {
           coord: store.coord || { lat: 37.5665, lng: 126.9780 },
           reviews: store.reviews || [],
           reviewCount: store.review_count || 0,
+          ratingAverage: store.rating_average || 0, // 별점 평균 추가
           isOpen: store.is_open !== false,
           tableInfo: {
             totalTables,
@@ -752,19 +787,10 @@ app.post('/api/reviews/submit', async (req, res) => {
 
     console.log('✅ 사용자 주문 목록 업데이트 완료');
 
-    // stores 테이블의 review_count 업데이트
-    const reviewCountResult = await client.query(
-      'SELECT COUNT(*) as count FROM reviews WHERE store_id = $1',
-      [storeId]
-    );
-    const reviewCount = parseInt(reviewCountResult.rows[0].count);
-    
-    await client.query(
-      'UPDATE stores SET review_count = $1 WHERE id = $2',
-      [reviewCount, storeId]
-    );
+    // stores 테이블의 review_count와 별점 평균 업데이트
+    await updateStoreRating(storeId);
 
-    console.log('✅ stores 테이블 review_count 업데이트 완료:', reviewCount);
+    console.log('✅ stores 테이블 review_count 및 별점 평균 업데이트 완료');
 
     // 트랜잭션 커밋
     await client.query('COMMIT');
@@ -825,7 +851,7 @@ app.put('/api/reviews/:reviewId', async (req, res) => {
       UPDATE reviews 
       SET review_text = $1, rating = $2, created_at = NOW()
       WHERE id = $3 AND user_id = $4
-      RETURNING *
+      RETURNING store_id
     `, [content, score, reviewId, userId]);
 
     if (updateResult.rows.length === 0) {
@@ -833,8 +859,13 @@ app.put('/api/reviews/:reviewId', async (req, res) => {
       return res.status(400).json({ error: '리뷰 수정 실패' });
     }
 
+    const storeId = updateResult.rows[0].store_id;
+
+    // stores 테이블의 별점 평균 업데이트
+    await updateStoreRating(storeId);
+
     await client.query('COMMIT');
-    console.log('✅ 리뷰 수정 완료:', updateResult.rows[0]);
+    console.log('✅ 리뷰 수정 및 별점 평균 업데이트 완료:', updateResult.rows[0]);
 
     res.json({
       success: true,
@@ -892,19 +923,10 @@ app.delete('/api/reviews/:reviewId', async (req, res) => {
       }
     }
 
-    // stores 테이블의 review_count 업데이트
-    const reviewCountResult = await client.query(
-      'SELECT COUNT(*) as count FROM reviews WHERE store_id = $1',
-      [deletedReview.store_id]
-    );
-    const reviewCount = parseInt(reviewCountResult.rows[0].count);
-    
-    await client.query(
-      'UPDATE stores SET review_count = $1 WHERE id = $2',
-      [reviewCount, deletedReview.store_id]
-    );
+    // stores 테이블의 review_count와 별점 평균 업데이트
+    await updateStoreRating(deletedReview.store_id);
 
-    console.log('✅ stores 테이블 review_count 업데이트 완료:', reviewCount);
+    console.log('✅ stores 테이블 review_count 및 별점 평균 업데이트 완료');
 
     await client.query('COMMIT');
 
