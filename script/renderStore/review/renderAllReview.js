@@ -1,27 +1,26 @@
-
 async function renderAllReview(store) {
   console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
-  
+
   try {
     // localStorage에서 사용자 정보 가져오기
     const currentUserInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
     const currentUserId = currentUserInfo ? currentUserInfo.id : null;
-    
+
     console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
-    
+
     // localStorage에서 리뷰 캐시 확인
     const reviewCacheKey = `tablelink_reviews_store_${store.id}`;
     const cachedReviews = localStorage.getItem(reviewCacheKey);
-    
+
     let reviews = [];
     let needToFetchFromServer = false;
-    
+
     if (cachedReviews) {
       try {
         const cachedData = JSON.parse(cachedReviews);
         const cacheAge = Date.now() - cachedData.timestamp;
         const CACHE_DURATION = 10 * 60 * 1000; // 10분
-        
+
         if (cacheAge < CACHE_DURATION) {
           console.log('📁 캐시된 리뷰 데이터 사용:', cachedData.reviews.length, '개 리뷰');
           reviews = cachedData.reviews;
@@ -38,7 +37,7 @@ async function renderAllReview(store) {
       console.log('📭 리뷰 캐시가 없음, 서버에서 가져오는 중...');
       needToFetchFromServer = true;
     }
-    
+
     // 캐시가 없거나 만료된 경우 서버에서 가져오기
     if (needToFetchFromServer) {
       console.log('🌐 서버에서 리뷰 데이터 가져오는 중...');
@@ -46,10 +45,10 @@ async function renderAllReview(store) {
       if (!response.ok) {
         throw new Error('리뷰 데이터 조회 실패');
       }
-      
+
       const reviewData = await response.json();
       reviews = reviewData.reviews || [];
-      
+
       // 새로 가져온 데이터를 캐시에 저장
       const cacheData = {
         reviews: reviews,
@@ -59,9 +58,9 @@ async function renderAllReview(store) {
       localStorage.setItem(reviewCacheKey, JSON.stringify(cacheData));
       console.log('💾 리뷰 데이터 캐시 저장 완료:', reviews.length, '개 리뷰');
     }
-    
+
     console.log('📖 가져온 리뷰 데이터:', reviews);
-    
+
     const total = reviews.length;
     const avgScore = total
       ? (reviews.reduce((sum, r) => sum + r.score, 0) / total).toFixed(1)
@@ -146,7 +145,7 @@ async function renderAllReview(store) {
       body, #main {
         overflow: hidden;
       }
-      
+
       .header-btn {
         border: none;
         border-radius: 50%;
@@ -174,7 +173,7 @@ async function renderAllReview(store) {
         font-size: 20px;
         pointer-events: none;
       }
-      
+
       #allReviewScrollArea::-webkit-scrollbar {
         width: 4px;
       }
@@ -188,7 +187,7 @@ async function renderAllReview(store) {
       #allReviewScrollArea::-webkit-scrollbar-thumb:hover {
         background: #aaa;
       }
-      
+
       .review-all-header {
         margin-bottom: 20px;
         padding: 16px;
@@ -203,13 +202,13 @@ async function renderAllReview(store) {
         justify-content: center;
         gap: 8px;
       }
-      
+
       .review-all-list { 
         display: flex; 
         flex-direction: column; 
         gap: 12px; 
       }
-      
+
       .review-card {
         background: #fff;
         border-radius: 12px;
@@ -225,7 +224,7 @@ async function renderAllReview(store) {
         box-shadow: 0 4px 20px rgba(40,110,255,0.10);
         transform: translateY(-1px);
       }
-      
+
       .review-meta {
         display: flex;
         align-items: center;
@@ -248,14 +247,14 @@ async function renderAllReview(store) {
         font-size: 13px;
         margin-left: auto;
       }
-      
+
       .review-text { 
         font-size: 15px; 
         color: #333; 
         line-height: 1.6; 
         word-break: break-word;
       }
-      
+
       /* 내 리뷰 스타일 */
       .my-review {
         border: 2px solid #297efc;
@@ -294,7 +293,7 @@ async function renderAllReview(store) {
       .delete-review-btn:hover {
         background: #f5c6cb;
       }
-      
+
       .review-all-empty {
         text-align: center;
         padding: 60px 20px;
@@ -302,7 +301,7 @@ async function renderAllReview(store) {
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
       }
-      
+
       /* 바텀바 스타일 */
       #storeBottomBar {
         position: fixed;
@@ -321,7 +320,7 @@ async function renderAllReview(store) {
         padding: 0 16px;
         box-sizing: border-box;
       }
-      
+
       .btm-btn {
         border: none;
         outline: none;
@@ -335,7 +334,7 @@ async function renderAllReview(store) {
         font-size: 17px;
         font-weight: 600;
       }
-      
+
       .phone-btn {
         width: 48px; 
         min-width: 48px; 
@@ -351,13 +350,13 @@ async function renderAllReview(store) {
         background: #e4effd;
         transform: scale(0.95);
       }
-      
+
       .btm-btn-ico {
         font-size: 22px;
         pointer-events: none;
         line-height: 1;
       }
-      
+
       .order-btn {
         flex: 1;
         height: 44px;
@@ -374,7 +373,7 @@ async function renderAllReview(store) {
         transform: translateY(1px);
         box-shadow: 0 2px 8px rgba(41,126,252,0.2);
       }
-      
+
       @media (max-width: 480px) {
         .review-all-header { padding: 12px; }
         .review-card { padding: 14px; }
@@ -390,7 +389,7 @@ async function renderAllReview(store) {
     document.getElementById('backBtn').addEventListener('click', () => {
       renderStore(store);
     });
-    
+
     document.getElementById('TLL').addEventListener('click', () => {
       alert('QR 결제 기능은 아직 준비 중입니다');
     });
@@ -398,7 +397,7 @@ async function renderAllReview(store) {
     document.getElementById('telephone').addEventListener('click', () => {
       alert('전화 기능은 아직 준비 중입니다');
     });
-    
+
     document.getElementById('order').addEventListener('click', () => {
       alert('포장·예약하기 기능은 준비 중입니다');
     });
@@ -418,7 +417,7 @@ async function renderAllReview(store) {
       modal.innerHTML = `
         <div class="review-edit-modal-content">
           <h3>리뷰 수정</h3>
-          
+
           <div>
             <label>평점:</label>
             <div class="star-rating">
@@ -429,18 +428,18 @@ async function renderAllReview(store) {
               <span class="star" data-rating="5">★</span>
             </div>
           </div>
-          
+
           <div>
             <label>리뷰 내용:</label>
             <textarea class="review-edit-textarea" placeholder="리뷰 내용을 입력하세요...">${currentContent}</textarea>
           </div>
-          
+
           <div class="modal-buttons">
             <button class="modal-btn cancel-btn">취소</button>
             <button class="modal-btn submit-btn">수정 완료</button>
           </div>
         </div>
-        
+
         <style>
           .review-edit-modal {
             position: fixed;
@@ -516,11 +515,11 @@ async function renderAllReview(store) {
           }
         </style>
       `;
-      
+
       document.body.appendChild(modal);
-      
+
       let selectedRating = currentScore;
-      
+
       // 초기 별점 표시
       const updateStarDisplay = (rating) => {
         const stars = modal.querySelectorAll('.star');
@@ -532,9 +531,9 @@ async function renderAllReview(store) {
           }
         });
       };
-      
+
       updateStarDisplay(selectedRating);
-      
+
       // 별점 선택 이벤트
       modal.querySelectorAll('.star').forEach(star => {
         star.addEventListener('click', (e) => {
@@ -542,24 +541,24 @@ async function renderAllReview(store) {
           updateStarDisplay(selectedRating);
         });
       });
-      
+
       // 취소 버튼
       modal.querySelector('.cancel-btn').addEventListener('click', () => {
         document.body.removeChild(modal);
       });
-      
+
       // 수정 완료 버튼
       modal.querySelector('.submit-btn').addEventListener('click', async () => {
         const newContent = modal.querySelector('.review-edit-textarea').value.trim();
-        
+
         if (newContent === '') {
           alert('리뷰 내용을 입력해주세요.');
           return;
         }
-        
+
         try {
           console.log('✏️ 리뷰 수정 요청:', { reviewId, newContent, selectedRating });
-          
+
           const response = await fetch(`/api/reviews/${reviewId}`, {
             method: 'PUT',
             headers: {
@@ -571,15 +570,21 @@ async function renderAllReview(store) {
               userId: currentUserId
             })
           });
-          
+
           if (response.ok) {
             console.log('✅ 리뷰 수정 성공');
             alert('리뷰가 수정되었습니다.');
             document.body.removeChild(modal);
-            
+
             // 리뷰 캐시 초기화
             clearReviewCache(store.id);
-            
+
+            // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
+            if (window.cacheManager) {
+              localStorage.removeItem(`tablelink_store_rating_${store.id}`);
+              console.log(`⭐ 매장 ${store.id} 별점 캐시 초기화`);
+            }
+
             // 리뷰 목록 새로고침
             renderAllReview(store);
           } else {
@@ -592,7 +597,7 @@ async function renderAllReview(store) {
           alert('리뷰 수정 중 오류가 발생했습니다.');
         }
       });
-      
+
       // 모달 배경 클릭 시 닫기
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -605,7 +610,7 @@ async function renderAllReview(store) {
       if (confirm('정말로 이 리뷰를 삭제하시겠습니까?\n삭제된 리뷰는 복구할 수 없습니다.')) {
         try {
           console.log('🗑️ 리뷰 삭제 요청:', { reviewId, userId: currentUserId });
-          
+
           const response = await fetch(`/api/reviews/${reviewId}`, {
             method: 'DELETE',
             headers: {
@@ -613,15 +618,21 @@ async function renderAllReview(store) {
             },
             body: JSON.stringify({ userId: currentUserId })
           });
-          
+
           if (response.ok) {
             const responseData = await response.json();
             console.log('✅ 리뷰 삭제 성공:', responseData);
             alert('리뷰가 삭제되었습니다.');
-            
+
             // 리뷰 캐시 초기화
             clearReviewCache(store.id);
-            
+
+            // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
+            if (window.cacheManager) {
+              localStorage.removeItem(`tablelink_store_rating_${store.id}`);
+              console.log(`⭐ 매장 ${store.id} 별점 캐시 초기화`);
+            }
+
             // 리뷰 목록 새로고침
             renderAllReview(store);
           } else {
@@ -638,7 +649,7 @@ async function renderAllReview(store) {
 
   } catch (error) {
     console.error('❌ 리뷰 데이터 로딩 실패:', error);
-    
+
     // 에러 발생 시 기본 UI 렌더링
     const mainEl = document.getElementById('main');
     if (!mainEl) return;

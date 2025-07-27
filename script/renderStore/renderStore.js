@@ -1,15 +1,17 @@
 function renderStore(store) {
-  console.log('🏪 매장 렌더링:', store.name, '별점 평균:', store.ratingAverage, '(타입:', typeof store.ratingAverage, ')');
+  console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
   
-  // 초기 별점 값 설정 (즉시 렌더링을 위해)
+  // 초기 별점 값 설정
   let displayRating = '0.0';
-  if (store.ratingAverage && store.ratingAverage > 0) {
-    displayRating = parseFloat(store.ratingAverage).toFixed(1);
-  }
   
-  // 별점 정보가 없는 경우 비동기로 업데이트 (UI 블로킹 방지)
-  if (store.ratingAverage === null || store.ratingAverage === undefined || typeof store.ratingAverage === 'undefined') {
-    console.log('⚠️ 별점 정보가 없음, 비동기로 업데이트 시작...');
+  // localStorage에서 캐시된 별점 정보 확인
+  const cachedRating = window.cacheManager.getStoreRating(store.id);
+  if (cachedRating) {
+    displayRating = parseFloat(cachedRating.ratingAverage).toFixed(1);
+    console.log('⭐ 캐시된 별점 사용:', displayRating);
+  } else {
+    // 캐시에 없으면 비동기로 가져오기
+    console.log('⚠️ 별점 정보 캐시 없음, 서버에서 가져오는 중...');
     updateStoreRatingAsync(store);
   }
   
@@ -874,29 +876,30 @@ async function loadTableInfo(store) {
 // 비동기로 별점 정보 업데이트
 async function updateStoreRatingAsync(store) {
   try {
-    console.log('🔄 별점 정보 비동기 업데이트 중...');
+    console.log(`🔄 매장 ${store.id} 별점 정보 비동기 업데이트 중...`);
     
-    const refreshedStores = await window.cacheManager.forceRefreshStores();
-    const refreshedStore = refreshedStores.find(s => s.id === store.id);
+    // 해당 매장의 별점 정보만 서버에서 가져오기
+    const ratingData = await window.cacheManager.refreshStoreRating(store.id);
     
-    if (refreshedStore && refreshedStore.ratingAverage !== null && refreshedStore.ratingAverage !== undefined) {
-      console.log('✅ 별점 정보 업데이트 완료:', refreshedStore.ratingAverage);
+    if (ratingData && ratingData.ratingAverage !== null && ratingData.ratingAverage !== undefined) {
+      console.log(`✅ 매장 ${store.id} 별점 정보 업데이트 완료:`, ratingData.ratingAverage);
       
       // DOM에서 별점 표시 업데이트
       const reviewScoreElement = document.getElementById('reviewScore');
       if (reviewScoreElement) {
-        const updatedRating = parseFloat(refreshedStore.ratingAverage).toFixed(1);
+        const updatedRating = parseFloat(ratingData.ratingAverage).toFixed(1);
         reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
         console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
       }
       
       // 전역 store 객체도 업데이트
       if (window.currentStore && window.currentStore.id === store.id) {
-        window.currentStore.ratingAverage = refreshedStore.ratingAverage;
+        window.currentStore.ratingAverage = ratingData.ratingAverage;
+        window.currentStore.reviewCount = ratingData.reviewCount;
       }
     }
   } catch (error) {
-    console.error('❌ 별점 정보 비동기 업데이트 실패:', error);
+    console.error(`❌ 매장 ${store.id} 별점 정보 비동기 업데이트 실패:`, error);
   }
 }
 

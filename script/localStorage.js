@@ -332,6 +332,80 @@ class CacheManager {
       throw error;
     }
   }
+
+  // 특정 매장의 별점 정보 캐시 저장
+  setStoreRating(storeId, ratingData) {
+    try {
+      const cacheKey = `tablelink_store_rating_${storeId}`;
+      const cacheData = {
+        storeId: storeId,
+        ratingAverage: ratingData.ratingAverage,
+        reviewCount: ratingData.reviewCount,
+        timestamp: Date.now()
+      };
+      
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+      console.log(`⭐ 매장 ${storeId} 별점 정보 캐시 저장: ${ratingData.ratingAverage}점`);
+      return true;
+    } catch (error) {
+      console.error('❌ 매장 별점 정보 캐시 저장 실패:', error);
+      return false;
+    }
+  }
+
+  // 특정 매장의 별점 정보 캐시 가져오기
+  getStoreRating(storeId) {
+    try {
+      const cacheKey = `tablelink_store_rating_${storeId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        const ratingData = JSON.parse(cachedData);
+        const cacheAge = Date.now() - ratingData.timestamp;
+        const CACHE_DURATION = 10 * 60 * 1000; // 10분
+        
+        if (cacheAge < CACHE_DURATION) {
+          console.log(`⭐ 캐시된 매장 ${storeId} 별점 정보 사용: ${ratingData.ratingAverage}점`);
+          return ratingData;
+        } else {
+          console.log(`⏰ 매장 ${storeId} 별점 캐시 만료`);
+          localStorage.removeItem(cacheKey);
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ 매장 별점 정보 가져오기 실패:', error);
+      return null;
+    }
+  }
+
+  // 특정 매장의 별점 정보 서버에서 가져오기
+  async refreshStoreRating(storeId) {
+    try {
+      console.log(`🔄 매장 ${storeId} 별점 정보 서버에서 가져오는 중...`);
+      
+      const response = await fetch(`/api/stores/${storeId}/rating`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const ratingData = {
+        ratingAverage: data.ratingAverage || 0.0,
+        reviewCount: data.reviewCount || 0
+      };
+      
+      // 캐시에 저장
+      this.setStoreRating(storeId, ratingData);
+      
+      console.log(`✅ 매장 ${storeId} 별점 정보 업데이트: ${ratingData.ratingAverage}점`);
+      return ratingData;
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 별점 정보 서버 조회 실패:`, error);
+      return null;
+    }
+  }
 }
 
 // 전역 캐시 매니저 인스턴스 생성

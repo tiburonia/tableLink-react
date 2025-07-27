@@ -652,6 +652,40 @@ async function checkAndReleaseExpiredTables() {
   }
 }
 
+// 매장별 별점 정보 조회 API
+app.get('/api/stores/:storeId/rating', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 요청`);
+
+    // stores 테이블에서 해당 매장의 별점 정보만 조회
+    const result = await pool.query(`
+      SELECT rating_average, review_count 
+      FROM stores 
+      WHERE id = $1
+    `, [parseInt(storeId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
+    }
+
+    const store = result.rows[0];
+    const ratingData = {
+      success: true,
+      storeId: parseInt(storeId),
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    };
+
+    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 완료: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)`);
+    res.json(ratingData);
+
+  } catch (error) {
+    console.error('❌ 매장 별점 정보 조회 실패:', error);
+    res.status(500).json({ error: '매장 별점 정보 조회 실패' });
+  }
+});
+
 // 매장별 리뷰 조회 API (reviews 테이블에서 JOIN으로 조회)
 app.get('/api/stores/:storeId/reviews', async (req, res) => {
   try {
