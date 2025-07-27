@@ -17,7 +17,7 @@ function renderAdminMain() {
       margin: 0;
       box-sizing: border-box;
     ">
-      <div style="padding: 20px; min-height: calc(100vh - 40px);">"
+      <div style="padding: 20px; min-height: calc(100vh - 40px);">
       <header style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
         <h1 style="color: #ff6b6b; margin: 0; font-size: 28px;">🛠️ TableLink 관리자 패널</h1>
         <p style="color: #888; margin: 10px 0 0 0;">시스템 관리 및 모니터링</p>
