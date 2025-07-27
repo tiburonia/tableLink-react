@@ -368,6 +368,14 @@ function showReviewModal(order, orderIndex) {
     try {
       await submitReview(order, orderIndex, selectedRating, reviewText);
       document.body.removeChild(modal);
+      
+      // 리뷰 캐시 초기화 (해당 매장의 리뷰 캐시 삭제)
+      if (order.storeId) {
+        const reviewCacheKey = `tablelink_reviews_store_${order.storeId}`;
+        localStorage.removeItem(reviewCacheKey);
+        console.log('🗑️ 리뷰 등록 후 캐시 초기화 완료:', reviewCacheKey);
+      }
+      
       renderMyPage(); // 페이지 새로고침
     } catch (error) {
       console.error('리뷰 등록 오류:', error);

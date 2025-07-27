@@ -403,11 +403,163 @@ async function renderAllReview(store) {
       alert('포장·예약하기 기능은 준비 중입니다');
     });
 
+    // 리뷰 캐시 초기화 함수
+    const clearReviewCache = (storeId) => {
+      const reviewCacheKey = `tablelink_reviews_store_${storeId}`;
+      localStorage.removeItem(reviewCacheKey);
+      console.log('🗑️ 리뷰 캐시 초기화 완료:', reviewCacheKey);
+    };
+
     // 내 리뷰 수정/삭제 함수들을 전역으로 등록
     window.editMyReview = async (reviewId, currentContent, currentScore) => {
-      const newContent = prompt('리뷰 내용을 수정하세요:', currentContent);
-      if (newContent && newContent !== currentContent) {
+      // 수정 모달 생성
+      const modal = document.createElement('div');
+      modal.className = 'review-edit-modal';
+      modal.innerHTML = `
+        <div class="review-edit-modal-content">
+          <h3>리뷰 수정</h3>
+          
+          <div>
+            <label>평점:</label>
+            <div class="star-rating">
+              <span class="star" data-rating="1">★</span>
+              <span class="star" data-rating="2">★</span>
+              <span class="star" data-rating="3">★</span>
+              <span class="star" data-rating="4">★</span>
+              <span class="star" data-rating="5">★</span>
+            </div>
+          </div>
+          
+          <div>
+            <label>리뷰 내용:</label>
+            <textarea class="review-edit-textarea" placeholder="리뷰 내용을 입력하세요...">${currentContent}</textarea>
+          </div>
+          
+          <div class="modal-buttons">
+            <button class="modal-btn cancel-btn">취소</button>
+            <button class="modal-btn submit-btn">수정 완료</button>
+          </div>
+        </div>
+        
+        <style>
+          .review-edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+          }
+          .review-edit-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80%;
+            overflow-y: auto;
+          }
+          .star-rating {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+          }
+          .star {
+            font-size: 24px;
+            cursor: pointer;
+            color: #ddd;
+            transition: color 0.2s;
+          }
+          .star.active {
+            color: #ffbf00;
+          }
+          .review-edit-textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+          }
+          .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+          }
+          .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .submit-btn {
+            background: #297efc;
+            color: white;
+          }
+          .submit-btn:hover {
+            background: #1e6bd8;
+          }
+          .cancel-btn {
+            background: #f5f5f5;
+            color: #333;
+          }
+          .cancel-btn:hover {
+            background: #e8e8e8;
+          }
+        </style>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      let selectedRating = currentScore;
+      
+      // 초기 별점 표시
+      const updateStarDisplay = (rating) => {
+        const stars = modal.querySelectorAll('.star');
+        stars.forEach((star, index) => {
+          if (index < rating) {
+            star.classList.add('active');
+          } else {
+            star.classList.remove('active');
+          }
+        });
+      };
+      
+      updateStarDisplay(selectedRating);
+      
+      // 별점 선택 이벤트
+      modal.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+          selectedRating = parseInt(e.target.getAttribute('data-rating'));
+          updateStarDisplay(selectedRating);
+        });
+      });
+      
+      // 취소 버튼
+      modal.querySelector('.cancel-btn').addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      // 수정 완료 버튼
+      modal.querySelector('.submit-btn').addEventListener('click', async () => {
+        const newContent = modal.querySelector('.review-edit-textarea').value.trim();
+        
+        if (newContent === '') {
+          alert('리뷰 내용을 입력해주세요.');
+          return;
+        }
+        
         try {
+          console.log('✏️ 리뷰 수정 요청:', { reviewId, newContent, selectedRating });
+          
           const response = await fetch(`/api/reviews/${reviewId}`, {
             method: 'PUT',
             headers: {
@@ -415,27 +567,45 @@ async function renderAllReview(store) {
             },
             body: JSON.stringify({
               content: newContent,
-              score: currentScore,
+              score: selectedRating,
               userId: currentUserId
             })
           });
           
           if (response.ok) {
+            console.log('✅ 리뷰 수정 성공');
             alert('리뷰가 수정되었습니다.');
-            renderAllReview(store); // 리뷰 목록 새로고침
+            document.body.removeChild(modal);
+            
+            // 리뷰 캐시 초기화
+            clearReviewCache(store.id);
+            
+            // 리뷰 목록 새로고침
+            renderAllReview(store);
           } else {
-            alert('리뷰 수정에 실패했습니다.');
+            const errorData = await response.json();
+            console.error('❌ 리뷰 수정 실패:', errorData);
+            alert('리뷰 수정에 실패했습니다: ' + (errorData.error || '알 수 없는 오류'));
           }
         } catch (error) {
-          console.error('리뷰 수정 오류:', error);
+          console.error('❌ 리뷰 수정 오류:', error);
           alert('리뷰 수정 중 오류가 발생했습니다.');
         }
-      }
+      });
+      
+      // 모달 배경 클릭 시 닫기
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
     };
 
     window.deleteMyReview = async (reviewId) => {
-      if (confirm('정말로 이 리뷰를 삭제하시겠습니까?')) {
+      if (confirm('정말로 이 리뷰를 삭제하시겠습니까?\n삭제된 리뷰는 복구할 수 없습니다.')) {
         try {
+          console.log('🗑️ 리뷰 삭제 요청:', { reviewId, userId: currentUserId });
+          
           const response = await fetch(`/api/reviews/${reviewId}`, {
             method: 'DELETE',
             headers: {
@@ -445,13 +615,22 @@ async function renderAllReview(store) {
           });
           
           if (response.ok) {
+            const responseData = await response.json();
+            console.log('✅ 리뷰 삭제 성공:', responseData);
             alert('리뷰가 삭제되었습니다.');
-            renderAllReview(store); // 리뷰 목록 새로고침
+            
+            // 리뷰 캐시 초기화
+            clearReviewCache(store.id);
+            
+            // 리뷰 목록 새로고침
+            renderAllReview(store);
           } else {
-            alert('리뷰 삭제에 실패했습니다.');
+            const errorData = await response.json();
+            console.error('❌ 리뷰 삭제 실패:', errorData);
+            alert('리뷰 삭제에 실패했습니다: ' + (errorData.error || '알 수 없는 오류'));
           }
         } catch (error) {
-          console.error('리뷰 삭제 오류:', error);
+          console.error('❌ 리뷰 삭제 오류:', error);
           alert('리뷰 삭제 중 오류가 발생했습니다.');
         }
       }

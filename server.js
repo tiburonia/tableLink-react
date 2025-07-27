@@ -797,6 +797,132 @@ app.post('/api/reviews/submit', async (req, res) => {
   }
 });
 
+// 리뷰 수정 API
+app.put('/api/reviews/:reviewId', async (req, res) => {
+  const { reviewId } = req.params;
+  const { content, score, userId } = req.body;
+
+  console.log('✏️ 리뷰 수정 요청:', { reviewId, content, score, userId });
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 해당 리뷰가 현재 사용자의 것인지 확인
+    const reviewResult = await client.query(
+      'SELECT * FROM reviews WHERE id = $1 AND user_id = $2',
+      [reviewId, userId]
+    );
+
+    if (reviewResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: '수정 권한이 없습니다' });
+    }
+
+    // 리뷰 수정
+    const updateResult = await client.query(`
+      UPDATE reviews 
+      SET review_text = $1, rating = $2, created_at = NOW()
+      WHERE id = $3 AND user_id = $4
+      RETURNING *
+    `, [content, score, reviewId, userId]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: '리뷰 수정 실패' });
+    }
+
+    await client.query('COMMIT');
+    console.log('✅ 리뷰 수정 완료:', updateResult.rows[0]);
+
+    res.json({
+      success: true,
+      message: '리뷰가 수정되었습니다',
+      review: updateResult.rows[0]
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 리뷰 수정 실패:', error);
+    res.status(500).json({ error: '리뷰 수정 실패: ' + error.message });
+  } finally {
+    client.release();
+  }
+});
+
+// 리뷰 삭제 API
+app.delete('/api/reviews/:reviewId', async (req, res) => {
+  const { reviewId } = req.params;
+  const { userId } = req.body;
+
+  console.log('🗑️ 리뷰 삭제 요청:', { reviewId, userId });
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 해당 리뷰가 현재 사용자의 것인지 확인하고 삭제
+    const deleteResult = await client.query(`
+      DELETE FROM reviews 
+      WHERE id = $1 AND user_id = $2
+      RETURNING store_id, order_index
+    `, [reviewId, userId]);
+
+    if (deleteResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: '삭제 권한이 없거나 리뷰를 찾을 수 없습니다' });
+    }
+
+    const deletedReview = deleteResult.rows[0];
+    console.log('✅ 리뷰 삭제 완료:', deletedReview);
+
+    // 사용자의 주문 목록에서 reviewId 제거
+    const userResult = await client.query('SELECT order_list FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length > 0) {
+      const orderList = userResult.rows[0].order_list || [];
+      if (orderList[deletedReview.order_index]) {
+        delete orderList[deletedReview.order_index].reviewId;
+        await client.query(
+          'UPDATE users SET order_list = $1 WHERE id = $2',
+          [JSON.stringify(orderList), userId]
+        );
+        console.log('✅ 사용자 주문 목록에서 reviewId 제거 완료');
+      }
+    }
+
+    // stores 테이블의 review_count 업데이트
+    const reviewCountResult = await client.query(
+      'SELECT COUNT(*) as count FROM reviews WHERE store_id = $1',
+      [deletedReview.store_id]
+    );
+    const reviewCount = parseInt(reviewCountResult.rows[0].count);
+    
+    await client.query(
+      'UPDATE stores SET review_count = $1 WHERE id = $2',
+      [reviewCount, deletedReview.store_id]
+    );
+
+    console.log('✅ stores 테이블 review_count 업데이트 완료:', reviewCount);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: '리뷰가 삭제되었습니다',
+      storeId: deletedReview.store_id
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 리뷰 삭제 실패:', error);
+    res.status(500).json({ error: '리뷰 삭제 실패: ' + error.message });
+  } finally {
+    client.release();
+  }
+});
+
 // 서버 실행
 app.listen(PORT, () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
