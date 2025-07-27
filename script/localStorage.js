@@ -1,4 +1,3 @@
-
 // 로컬스토리지 기반 캐시 매니저
 class CacheManager {
   constructor() {
@@ -7,7 +6,7 @@ class CacheManager {
       USER_INFO: 'tablelink_userinfo_cache',
       CACHE_TIMESTAMP: 'tablelink_cache_timestamp'
     };
-    
+
     // 캐시 유효시간 (밀리초) - 30분
     this.CACHE_DURATION = 30 * 60 * 1000;
   }
@@ -15,11 +14,11 @@ class CacheManager {
   // 캐시 초기화
   initializeCache() {
     console.log('🔄 캐시 시스템 초기화');
-    
+
     // 기존 캐시가 있는지 확인
     const timestamp = localStorage.getItem(this.cacheKeys.CACHE_TIMESTAMP);
     const now = Date.now();
-    
+
     if (timestamp && (now - parseInt(timestamp)) < this.CACHE_DURATION) {
       console.log('✅ 유효한 캐시 발견');
       return true;
@@ -50,7 +49,7 @@ class CacheManager {
         stores: stores,
         lastUpdated: new Date().toISOString()
       };
-      
+
       localStorage.setItem(this.cacheKeys.STORES, JSON.stringify(storesData));
       this.updateTimestamp();
       console.log('💾 매장 데이터 캐시 저장 완료:', stores.length, '개 매장');
@@ -65,22 +64,22 @@ class CacheManager {
   async getStores() {
     try {
       const cachedData = localStorage.getItem(this.cacheKeys.STORES);
-      
+
       if (cachedData) {
         const storesData = JSON.parse(cachedData);
         console.log('📁 캐시된 매장 데이터 사용:', storesData.stores.length, '개 매장');
         return storesData.stores;
       } else {
         console.log('🌐 매장 데이터 서버에서 가져오는 중...');
-        
+
         const response = await fetch('/api/stores');
         const data = await response.json();
         const stores = data.stores || [];
-        
+
         // 서버에서 가져온 데이터를 캐시에 저장
         this.setStores(stores);
         console.log('✅ 매장 데이터 캐시 업데이트 완료');
-        
+
         return stores;
       }
     } catch (error) {
@@ -96,7 +95,7 @@ class CacheManager {
         userInfo: userInfo,
         lastUpdated: new Date().toISOString()
       };
-      
+
       localStorage.setItem(this.cacheKeys.USER_INFO, JSON.stringify(userData));
       this.updateTimestamp();
       console.log('💾 사용자 정보 캐시 저장 완료:', userInfo.id);
@@ -111,7 +110,7 @@ class CacheManager {
   getUserInfo() {
     try {
       const cachedData = localStorage.getItem(this.cacheKeys.USER_INFO);
-      
+
       if (cachedData) {
         const userData = JSON.parse(cachedData);
         console.log('📁 캐시된 사용자 정보 사용:', userData.userInfo.id);
@@ -130,7 +129,7 @@ class CacheManager {
   async refreshUserInfo(userId) {
     try {
       console.log('🔄 사용자 정보 서버에서 새로고침 중...');
-      
+
       const response = await fetch('/api/users/info', {
         method: 'POST',
         headers: {
@@ -145,11 +144,11 @@ class CacheManager {
 
       const data = await response.json();
       const userInfo = data.user;
-      
+
       // 캐시 업데이트
       this.setUserInfo(userInfo);
       console.log('✅ 사용자 정보 캐시 업데이트 완료');
-      
+
       return userInfo;
     } catch (error) {
       console.error('❌ 사용자 정보 새로고침 실패:', error);
@@ -162,7 +161,7 @@ class CacheManager {
     try {
       const stores = await this.getStores();
       const store = stores.find(s => s.id === storeId);
-      
+
       if (store) {
         console.log('🏪 캐시에서 매장 정보 찾음:', store.name);
         return store;
@@ -184,7 +183,7 @@ class CacheManager {
         store.name.toLowerCase().includes(keyword.toLowerCase()) ||
         store.category.toLowerCase().includes(keyword.toLowerCase())
       );
-      
+
       console.log('🔍 캐시에서 검색 완료:', results.length, '개 결과');
       return results;
     } catch (error) {
@@ -198,7 +197,7 @@ class CacheManager {
     const timestamp = localStorage.getItem(this.cacheKeys.CACHE_TIMESTAMP);
     const storesCache = localStorage.getItem(this.cacheKeys.STORES);
     const userCache = localStorage.getItem(this.cacheKeys.USER_INFO);
-    
+
     return {
       hasStoresCache: !!storesCache,
       hasUserCache: !!userCache,
@@ -213,14 +212,14 @@ class CacheManager {
       const storesData = localStorage.getItem(this.cacheKeys.STORES);
       const userData = localStorage.getItem(this.cacheKeys.USER_INFO);
       const timestamp = localStorage.getItem(this.cacheKeys.CACHE_TIMESTAMP);
-      
+
       const exportData = {
         timestamp: timestamp,
         stores: storesData ? JSON.parse(storesData) : null,
         userInfo: userData ? JSON.parse(userData) : null,
         exportedAt: new Date().toISOString()
       };
-      
+
       console.log('📤 캐시 데이터 JSON 내보내기 완료');
       return JSON.stringify(exportData, null, 2);
     } catch (error) {
@@ -233,24 +232,74 @@ class CacheManager {
   importCacheFromJson(jsonString) {
     try {
       const importData = JSON.parse(jsonString);
-      
+
       if (importData.stores) {
         localStorage.setItem(this.cacheKeys.STORES, JSON.stringify(importData.stores));
       }
-      
+
       if (importData.userInfo) {
         localStorage.setItem(this.cacheKeys.USER_INFO, JSON.stringify(importData.userInfo));
       }
-      
+
       if (importData.timestamp) {
         localStorage.setItem(this.cacheKeys.CACHE_TIMESTAMP, importData.timestamp);
       }
-      
+
       console.log('📥 JSON 데이터로 캐시 가져오기 완료');
       return true;
     } catch (error) {
       console.error('❌ JSON 데이터 가져오기 실패:', error);
       return false;
+    }
+  }
+
+  // 캐시 무효화 (특정 키)
+  invalidateCache(key) {
+    try {
+      localStorage.removeItem(key);
+      console.log(`🗑️ 캐시 무효화: ${key}`);
+    } catch (error) {
+      console.error('❌ 캐시 무효화 실패:', error);
+    }
+  }
+
+  // 매장 캐시 강제 새로고침
+  async forceRefreshStores() {
+    try {
+      console.log('🔄 매장 캐시 강제 새로고침 시작...');
+
+      // 기존 캐시 삭제
+      localStorage.removeItem('tablelink_stores_cache');
+
+      // 서버에서 최신 데이터 가져오기
+      const response = await fetch('/api/stores');
+      if (!response.ok) {
+        throw new Error('매장 데이터 조회 실패');
+      }
+
+      const data = await response.json();
+      const stores = data.stores || [];
+
+      console.log(`🏪 서버에서 ${stores.length}개 매장 데이터 새로 가져옴`);
+
+      // stores 배열의 각 항목에 ratingAverage 확인
+      stores.forEach(store => {
+        console.log(`🏪 매장 ${store.name}: 별점 평균 ${store.ratingAverage} (타입: ${typeof store.ratingAverage})`);
+      });
+
+      // 새 캐시 저장
+      const cacheData = {
+        stores: stores,
+        timestamp: Date.now()
+      };
+
+      localStorage.setItem('tablelink_stores_cache', JSON.stringify(cacheData));
+      console.log('✅ 매장 캐시 강제 새로고침 완료');
+
+      return stores;
+    } catch (error) {
+      console.error('❌ 매장 캐시 강제 새로고침 실패:', error);
+      return [];
     }
   }
 }

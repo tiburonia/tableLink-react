@@ -1,5 +1,22 @@
-function renderStore(store) {
+async function renderStore(store) {
   console.log('🏪 매장 렌더링:', store.name, '별점 평균:', store.ratingAverage, '(타입:', typeof store.ratingAverage, ')');
+  
+  // ratingAverage가 없거나 undefined인 경우 매장 데이터 강제 새로고침
+  if (store.ratingAverage === null || store.ratingAverage === undefined || typeof store.ratingAverage === 'undefined') {
+    console.log('⚠️ 별점 정보가 없음, 매장 데이터 강제 새로고침 중...');
+    
+    try {
+      const refreshedStores = await window.cacheManager.forceRefreshStores();
+      const refreshedStore = refreshedStores.find(s => s.id === store.id);
+      
+      if (refreshedStore && refreshedStore.ratingAverage !== null && refreshedStore.ratingAverage !== undefined) {
+        console.log('✅ 매장 데이터 새로고침 완료, 업데이트된 별점:', refreshedStore.ratingAverage);
+        store = refreshedStore; // 새로고침된 데이터로 교체
+      }
+    } catch (error) {
+      console.error('❌ 매장 데이터 새로고침 실패:', error);
+    }
+  }
   
   main.innerHTML = `
     <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
@@ -599,12 +616,16 @@ function renderStore(store) {
   // Function to fetch and render the top 2 reviews
   async function renderTopReviews(store) {
     try {
+      console.log(`🔍 매장 ${store.id} 리뷰 미리보기 로딩 중...`);
       const response = await fetch(`/api/stores/${store.id}/reviews?limit=2`);
       if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
+        console.error(`❌ 리뷰 API 응답 실패: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch reviews: ${response.status}`);
       }
       const data = await response.json();
       const reviews = data.reviews || [];
+      
+      console.log(`📖 리뷰 미리보기 데이터:`, reviews);
 
       if (reviewPreviewContent) {
         if (reviews.length === 0) {
@@ -624,14 +645,17 @@ function renderStore(store) {
             </div>
           `).join('');
         }
+        console.log('✅ 리뷰 미리보기 렌더링 완료');
+      } else {
+        console.warn('⚠️ reviewPreviewContent 엘리먼트를 찾을 수 없음');
       }
     } catch (error) {
-      console.error('Error fetching and rendering reviews:', error);
+      console.error('❌ 리뷰 미리보기 오류 (상세):', error);
       if (reviewPreviewContent) {
         reviewPreviewContent.innerHTML = `
           <div class="review-card" style="text-align: center; color: #ff6b6b;">
             <div>리뷰를 불러올 수 없습니다.</div>
-            <div style="font-size: 13px; margin-top: 4px;">네트워크 오류가 발생했습니다.</div>
+            <div style="font-size: 13px; margin-top: 4px;">오류: ${error.message}</div>
           </div>
         `;
       }
