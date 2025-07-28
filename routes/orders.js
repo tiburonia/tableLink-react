@@ -243,8 +243,9 @@ router.get('/recent/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.customer_name, o.order_data
+        o.order_data, u.name as customer_name
       FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1
       ORDER BY o.order_date DESC
       LIMIT $2
@@ -287,8 +288,9 @@ router.get('/store/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.customer_name, o.order_data
+        o.order_data, u.name as customer_name
       FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1
       ORDER BY o.order_date DESC
       LIMIT $2
