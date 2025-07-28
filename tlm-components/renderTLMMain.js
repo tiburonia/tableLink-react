@@ -347,6 +347,45 @@ function renderTLMInterface(store) {
   console.log('✅ TLM 매장 관리 화면 렌더링 완료');
 }
 
+// 이벤트 리스너 설정 함수
+function setupEventListeners(store) {
+  // 로그아웃 버튼
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // 매장 운영 상태 토글 버튼
+  const toggleBtn = document.getElementById('toggleStoreStatus');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', () => toggleStoreOperationStatus(store));
+  }
+
+  // 전체 주문 보기 버튼
+  const viewOrdersBtn = document.getElementById('viewAllOrders');
+  if (viewOrdersBtn) {
+    viewOrdersBtn.addEventListener('click', () => showAllOrders(store.id));
+  }
+
+  // 전체 리뷰 보기 버튼
+  const viewReviewsBtn = document.getElementById('viewAllReviews');
+  if (viewReviewsBtn) {
+    viewReviewsBtn.addEventListener('click', () => showAllReviews(store.id));
+  }
+
+  // 테이블 관리 버튼
+  const viewTablesBtn = document.getElementById('viewTables');
+  if (viewTablesBtn) {
+    viewTablesBtn.addEventListener('click', () => {
+      // 테이블 영역으로 스크롤
+      const tableArea = document.querySelector('h3:contains("🪑 테이블 관리")');
+      if (tableArea) {
+        tableArea.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  }
+}
+
 // 로그아웃 처리 함수
 async function handleLogout() {
   try {
@@ -634,10 +673,14 @@ async function loadRecentActivity(storeId) {
     activityHTML += '<div><h4 style="margin: 0 0 10px 0; color: #007bff;">📋 최근 주문</h4>';
     if (orders.length > 0) {
       orders.slice(0, 3).forEach(order => {
+        const tableNumber = order.tableNumber || order.table_number || '알 수 없음';
+        const orderDate = order.orderDate || order.order_date;
+        const finalAmount = order.finalAmount || order.final_amount || 0;
+
         activityHTML += `
           <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 14px;">
-            <div>테이블 ${order.table_number} - ${new Date(order.order_date).toLocaleString()}</div>
-            <div style="color: #666;">${order.final_amount.toLocaleString()}원</div>
+            <div>테이블 ${tableNumber} - ${new Date(orderDate).toLocaleString()}</div>
+            <div style="color: #666;">${finalAmount.toLocaleString()}원</div>
           </div>
         `;
       });
@@ -650,10 +693,14 @@ async function loadRecentActivity(storeId) {
     activityHTML += '<div><h4 style="margin: 0 0 10px 0; color: #ffc107;">⭐ 최근 리뷰</h4>';
     if (reviews.length > 0) {
       reviews.slice(0, 3).forEach(review => {
+        const rating = review.rating || review.score || 0;
+        const createdAt = review.created_at || review.date;
+        const reviewText = review.review_text || review.content || '리뷰 내용 없음';
+
         activityHTML += `
           <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 14px;">
-            <div>⭐ ${review.rating}점 - ${new Date(review.created_at).toLocaleDateString()}</div>
-            <div style="color: #666;">${review.review_text.substring(0, 50)}${review.review_text.length > 50 ? '...' : ''}</div>
+            <div>⭐ ${rating}점 - ${new Date(createdAt).toLocaleDateString()}</div>
+            <div style="color: #666;">${reviewText.substring(0, 50)}${reviewText.length > 50 ? '...' : ''}</div>
           </div>
         `;
       });
@@ -673,11 +720,11 @@ async function loadRecentActivity(storeId) {
 // 실제 주문 데이터 로드
 async function loadRecentOrders(storeId) {
   try {
-    const response = await fetch(`/api/orders/recent/${storeId}`);
+    const response = await fetch(`/api/stores/${storeId}/orders`);
     const data = await response.json();
 
     if (data.success) {
-      return data.orders || [];
+      return (data.orders || []).slice(0, 5); // 최근 5개만
     }
     return [];
   } catch (error) {
@@ -689,11 +736,11 @@ async function loadRecentOrders(storeId) {
 // 실제 리뷰 데이터 로드
 async function loadRecentReviews(storeId) {
   try {
-    const response = await fetch(`/api/reviews/recent/${storeId}`);
+    const response = await fetch(`/api/stores/${storeId}/reviews`);
     const data = await response.json();
 
     if (data.success) {
-      return data.reviews || [];
+      return (data.reviews || []).slice(0, 5); // 최근 5개만
     }
     return [];
   } catch (error) {
