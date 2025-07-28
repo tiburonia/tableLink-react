@@ -1,0 +1,275 @@
+
+const express = require('express');
+const router = express.Router();
+const pool = require('../shared/config/database');
+
+// stores 테이블 별점 평균 업데이트 함수
+async function updateStoreRating(storeId) {
+  try {
+    console.log(`🔄 매장 ${storeId} 별점 평균 업데이트 중...`);
+
+    const ratingResult = await pool.query(`
+      SELECT AVG(rating) as avg_rating, COUNT(*) as review_count 
+      FROM reviews 
+      WHERE store_id = $1
+    `, [storeId]);
+
+    const avgRating = ratingResult.rows[0].avg_rating;
+    const reviewCount = parseInt(ratingResult.rows[0].review_count);
+    const formattedRating = avgRating ? parseFloat(avgRating).toFixed(1) : 0;
+
+    await pool.query(`
+      UPDATE stores 
+      SET rating_average = $1, review_count = $2 
+      WHERE id = $3
+    `, [formattedRating, reviewCount, storeId]);
+
+    console.log(`✅ 매장 ${storeId} 별점 평균 업데이트 완료: ${formattedRating}점 (${reviewCount}개 리뷰)`);
+
+    return { avgRating: formattedRating, reviewCount };
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 별점 평균 업데이트 실패:`, error);
+    throw error;
+  }
+}
+
+// 모든 매장 조회 API
+router.get('/', async (req, res) => {
+  try {
+    const storesResult = await pool.query('SELECT * FROM stores ORDER BY id');
+
+    const storesWithTables = await Promise.all(
+      storesResult.rows.map(async (store) => {
+        const tablesResult = await pool.query(`
+          SELECT 
+            table_number, table_name, seats, is_occupied, occupied_since
+          FROM store_tables 
+          WHERE store_id = $1 
+          ORDER BY table_number
+        `, [store.id]);
+
+        const tables = tablesResult.rows.map(table => ({
+          tableNumber: table.table_number,
+          tableName: table.table_name,
+          seats: table.seats,
+          isOccupied: table.is_occupied,
+          occupiedSince: table.occupied_since
+        }));
+
+        const totalTables = tables.length;
+        const availableTables = tables.filter(t => !t.isOccupied).length;
+        const occupiedTables = tables.filter(t => t.isOccupied).length;
+
+        return {
+          id: store.id,
+          name: store.name,
+          category: store.category,
+          distance: store.distance || '정보없음',
+          address: store.address || '주소 정보 없음',
+          menu: store.menu || [],
+          coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+          reviews: store.reviews || [],
+          reviewCount: store.review_count || 0,
+          ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+          isOpen: store.is_open !== false,
+          tableInfo: {
+            totalTables,
+            availableTables,
+            occupiedTables,
+            occupancyRate: totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
+          },
+          tables: tables
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      message: 'TableLink API 서버가 정상 작동 중입니다.',
+      stores: storesWithTables
+    });
+  } catch (error) {
+    console.error('stores 조회 실패:', error);
+    res.status(500).json({ error: 'stores 조회 실패' });
+  }
+});
+
+// 개별 매장 정보 조회 API
+router.get('/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`🏪 개별 매장 정보 조회 요청: ${storeId}`);
+
+    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [parseInt(storeId)]);
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: '매장을 찾을 수 없습니다' 
+      });
+    }
+
+    const store = storeResult.rows[0];
+
+    const tablesResult = await pool.query(`
+      SELECT 
+        table_number, table_name, seats, is_occupied, occupied_since
+      FROM store_tables 
+      WHERE store_id = $1 
+      ORDER BY table_number
+    `, [parseInt(storeId)]);
+
+    const tables = tablesResult.rows.map(table => ({
+      tableNumber: table.table_number,
+      tableName: table.table_name,
+      seats: table.seats,
+      isOccupied: table.is_occupied,
+      occupiedSince: table.occupied_since
+    }));
+
+    const totalTables = tables.length;
+    const availableTables = tables.filter(t => !t.isOccupied).length;
+    const occupiedTables = tables.filter(t => t.isOccupied).length;
+
+    const storeData = {
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      distance: store.distance || '정보없음',
+      address: store.address || '주소 정보 없음',
+      menu: store.menu || [],
+      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      reviews: store.reviews || [],
+      reviewCount: store.review_count || 0,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      isOpen: store.is_open !== false,
+      tableInfo: {
+        totalTables,
+        availableTables,
+        occupiedTables,
+        occupancyRate: totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
+      },
+      tables: tables
+    };
+
+    console.log(`✅ 매장 ${storeId} 정보 조회 완료`);
+    res.json({
+      success: true,
+      store: storeData
+    });
+
+  } catch (error) {
+    console.error('❌ 개별 매장 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '매장 정보 조회 실패' 
+    });
+  }
+});
+
+// 매장 통계 API
+router.get('/:storeId/stats', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`📊 매장 ${storeId} 통계 조회 요청`);
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+
+    const todayStats = await pool.query(`
+      SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+      FROM orders 
+      WHERE store_id = $1 AND DATE(order_date) = $2
+    `, [parseInt(storeId), todayStr]);
+
+    const monthStats = await pool.query(`
+      SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+      FROM orders 
+      WHERE store_id = $1 AND order_date >= $2
+    `, [parseInt(storeId), thisMonthStart]);
+
+    const stats = {
+      todayOrders: parseInt(todayStats.rows[0].count) || 0,
+      todayRevenue: parseInt(todayStats.rows[0].revenue) || 0,
+      monthOrders: parseInt(monthStats.rows[0].count) || 0,
+      monthRevenue: parseInt(monthStats.rows[0].revenue) || 0
+    };
+
+    console.log(`✅ 매장 ${storeId} 통계 조회 완료:`, stats);
+
+    res.json({
+      success: true,
+      stats: stats
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 통계 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '통계 조회 실패: ' + error.message 
+    });
+  }
+});
+
+// 매장별 별점 정보 조회 API
+router.get('/:storeId/rating', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 요청`);
+
+    const result = await pool.query(`
+      SELECT rating_average, review_count 
+      FROM stores 
+      WHERE id = $1
+    `, [parseInt(storeId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
+    }
+
+    const store = result.rows[0];
+    const ratingData = {
+      success: true,
+      storeId: parseInt(storeId),
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    };
+
+    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 완료: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)`);
+    res.json(ratingData);
+
+  } catch (error) {
+    console.error('❌ 매장 별점 정보 조회 실패:', error);
+    res.status(500).json({ error: '매장 별점 정보 조회 실패' });
+  }
+});
+
+// 매장 운영 상태 토글
+router.post('/:storeId/toggle-status', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    const currentResult = await pool.query('SELECT is_open FROM stores WHERE id = $1', [storeId]);
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다.' });
+    }
+
+    const currentStatus = currentResult.rows[0].is_open;
+    const newStatus = !currentStatus;
+
+    await pool.query('UPDATE stores SET is_open = $1 WHERE id = $2', [newStatus, storeId]);
+
+    res.json({
+      success: true,
+      isOpen: newStatus,
+      message: `매장이 ${newStatus ? '운영중' : '운영중지'} 상태로 변경되었습니다.`
+    });
+
+  } catch (error) {
+    console.error('매장 상태 변경 실패:', error);
+    res.status(500).json({ success: false, error: '매장 상태 변경에 실패했습니다.' });
+  }
+});
+
+module.exports = { router, updateStoreRating };
