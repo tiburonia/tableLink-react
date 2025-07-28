@@ -1,10 +1,10 @@
 // TLM 매장 관리 메인 화면 렌더링
 function renderTLMMain() {
   console.log('🏪 TLM 메인 함수 호출됨');
-  
+
   // 1. 전역 변수에서 우선 가져오기
   let storeId = window.currentStoreId;
-  
+
   // 2. URL 쿼리 파라미터에서 매장 ID 추출
   if (!storeId) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -13,7 +13,7 @@ function renderTLMMain() {
       storeId = parseInt(paramStoreId);
     }
   }
-  
+
   // 3. URL 경로에서 매장 ID 추출 (/tlm/1 또는 /TLM/1 형태)
   if (!storeId) {
     const pathParts = window.location.pathname.split('/');
@@ -94,7 +94,7 @@ function renderTLMInterface(store) {
         <button id="logoutBtn" style="position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
           🔓 로그아웃
         </button>
-        
+
         <h1 style="margin: 0; color: #333; text-align: center;">🏪 ${store.name} 관리</h1>
         <p style="text-align: center; color: #666; margin: 10px 0;">매장 운영 관리 시스템</p>
         <div style="text-align: center; margin: 15px 0;">
@@ -201,6 +201,83 @@ function renderTLMInterface(store) {
     </div>
   `;
 
+  // 테이블 렌더링 추가
+  const tableArea = document.createElement('div');
+  tableArea.style.background = 'white';
+  tableArea.style.borderRadius = '10px';
+  tableArea.style.padding = '20px';
+  tableArea.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+  tableArea.innerHTML = `
+    <h3 style="margin: 0 0 15px 0; color: #333;">🪑 테이블 관리</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; text-align: center;">
+      ${store.tables.map(table => `
+          <div onclick="handleTableClick('${table.tableName}')" style="
+            background: ${table.isOccupied ? '#ffebee' : '#e8f5e8'}; 
+            border: 2px solid ${table.isOccupied ? '#f44336' : '#4caf50'}; 
+            border-radius: 8px; 
+            padding: 15px; 
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="font-weight: bold; font-size: 16px; color: #333;">
+              ${table.tableName}
+            </div>
+            <div style="font-size: 14px; color: #666; margin: 5px 0;">
+              ${table.seats}인석
+            </div>
+            <div style="
+              display: inline-block; 
+              padding: 4px 8px; 
+              border-radius: 12px; 
+              font-size: 12px; 
+              font-weight: bold;
+              background: ${table.isOccupied ? '#f44336' : '#4caf50'};
+              color: white;
+            ">
+              ${table.isOccupied ? '🔴 사용중' : '🟢 빈 테이블'}
+            </div>
+            <div style="color: #666; font-size: 12px; margin-top: 5px;">
+              클릭하여 테이블 상태 변경
+            </div>
+          </div>
+        `).join('')}</div>
+
+        <script>
+          // 테이블 클릭 이벤트 핸들러
+          function handleTableClick(tableName) {
+            console.log('🔍 테이블 클릭됨:', tableName);
+
+            fetch('/api/tables/occupy', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                storeId: ${store.id},
+                tableName: tableName
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              console.log('📡 테이블 점유 응답:', data);
+              if (data.success) {
+                alert('테이블 상태가 변경되었습니다.');
+                location.reload(); // 페이지 새로고침으로 상태 업데이트
+              } else {
+                alert('테이블 상태 변경 실패: ' + data.error);
+              }
+            })
+            .catch(error => {
+              console.error('❌ 테이블 상태 변경 실패:', error);
+              alert('테이블 상태 변경 중 오류가 발생했습니다.');
+            });
+          }
+        </script>
+  `;
+
+  main.appendChild(tableArea);
+
   // 이벤트 리스너 추가
   setupEventListeners(store);
 
@@ -229,10 +306,10 @@ async function handleLogout() {
 
     // 로컬 데이터 초기화
     window.currentStoreId = null;
-    
+
     // 메인 페이지로 이동
     window.location.href = '/';
-    
+
   } catch (error) {
     console.error('로그아웃 실패:', error);
     // 오류가 있어도 메인으로 이동
@@ -244,14 +321,14 @@ async function handleLogout() {
 async function loadStoreStats(storeId) {
   try {
     console.log('📊 매장 통계 로드 시작:', storeId);
-    
+
     const response = await fetch(`/api/stores/${storeId}/stats`);
     console.log('📊 API 응답 상태:', response.status);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log('📊 받은 통계 데이터:', data);
 
@@ -265,7 +342,7 @@ async function loadStoreStats(storeId) {
       if (todayRevenueEl) todayRevenueEl.textContent = (data.stats.todayRevenue || 0).toLocaleString() + '원';
       if (monthOrdersEl) monthOrdersEl.textContent = data.stats.monthOrders || '0';
       if (monthRevenueEl) monthRevenueEl.textContent = (data.stats.monthRevenue || 0).toLocaleString() + '원';
-      
+
       console.log('✅ 매장 통계 렌더링 완료');
     } else {
       console.error('❌ 매장 통계 데이터 형식 오류:', data);
@@ -273,7 +350,7 @@ async function loadStoreStats(storeId) {
     }
   } catch (error) {
     console.error('❌ 매장 통계 로드 실패:', error);
-    
+
     // 기본값으로 설정
     const todayOrdersEl = document.getElementById('todayOrders');
     const todayRevenueEl = document.getElementById('todayRevenue');
@@ -291,14 +368,14 @@ async function loadStoreStats(storeId) {
 async function showAllOrders(storeId) {
   try {
     console.log(`📋 전체 주문 조회 시작: 매장 ID ${storeId}`);
-    
+
     const response = await fetch(`/api/stores/${storeId}/orders`);
     console.log(`📊 API 응답 상태: ${response.status}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log(`📊 받은 주문 데이터:`, data);
 
@@ -307,7 +384,7 @@ async function showAllOrders(storeId) {
       if (data.success === true) {
         const orders = data.orders || [];
         console.log(`✅ 처리할 주문 수: ${orders.length}개`);
-        
+
         let ordersHTML = `
           <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
             <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
@@ -327,20 +404,20 @@ async function showAllOrders(storeId) {
             const finalAmount = order.finalAmount || order.final_amount || 0;
             const orderStatus = order.orderStatus || order.order_status || '알 수 없음';
             const customerName = order.customerName || order.customer_name || '고객정보없음';
-            
+
             // 주문 데이터 파싱 개선
             let orderDataStr = '주문 정보 없음';
             try {
               const rawOrderData = order.orderData || order.order_data;
               if (rawOrderData) {
                 let orderDataObj;
-                
+
                 if (typeof rawOrderData === 'string') {
                   orderDataObj = JSON.parse(rawOrderData);
                 } else {
                   orderDataObj = rawOrderData;
                 }
-                
+
                 // 다양한 주문 데이터 형식 처리
                 if (orderDataObj.items && Array.isArray(orderDataObj.items)) {
                   // items 배열 형식
@@ -361,7 +438,7 @@ async function showAllOrders(storeId) {
               console.error('주문 데이터 파싱 오류:', e);
               orderDataStr = '주문 데이터 파싱 실패';
             }
-            
+
             ordersHTML += `
               <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
@@ -385,12 +462,12 @@ async function showAllOrders(storeId) {
         }
 
         ordersHTML += '</div></div></div>';
-        
+
         const modalDiv = document.createElement('div');
         modalDiv.className = 'fixed';
         modalDiv.innerHTML = ordersHTML;
         document.body.appendChild(modalDiv);
-        
+
       } else {
         console.error('❌ API 요청 실패:', data.error || '알 수 없는 오류');
         alert('주문 내역을 불러올 수 없습니다: ' + (data.error || '서버 오류'));
@@ -409,14 +486,14 @@ async function showAllOrders(storeId) {
 async function showAllReviews(storeId) {
   try {
     console.log(`⭐ 전체 리뷰 조회 시작: 매장 ID ${storeId}`);
-    
+
     const response = await fetch(`/api/stores/${storeId}/reviews`);
     console.log(`📊 API 응답 상태: ${response.status}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log(`📊 받은 리뷰 데이터:`, data);
 
@@ -425,7 +502,7 @@ async function showAllReviews(storeId) {
       if (data.success === true) {
         const reviews = data.reviews || [];
         console.log(`✅ 처리할 리뷰 수: ${reviews.length}개`);
-        
+
         let reviewsHTML = `
           <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
             <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
@@ -445,7 +522,7 @@ async function showAllReviews(storeId) {
             const reviewText = review.review_text || review.content || '리뷰 내용 없음';
             const userName = review.user || review.user_name || `사용자${review.user_id || review.userId}`;
             const stars = '⭐'.repeat(Math.max(0, Math.min(5, rating)));
-            
+
             reviewsHTML += `
               <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
@@ -466,12 +543,12 @@ async function showAllReviews(storeId) {
         }
 
         reviewsHTML += '</div></div></div>';
-        
+
         const modalDiv = document.createElement('div');
         modalDiv.className = 'fixed';
         modalDiv.innerHTML = reviewsHTML;
         document.body.appendChild(modalDiv);
-        
+
       } else {
         console.error('❌ API 요청 실패:', data.error || '알 수 없는 오류');
         alert('리뷰를 불러올 수 없습니다: ' + (data.error || '서버 오류'));

@@ -105,6 +105,13 @@ router.post('/occupy', async (req, res) => {
   console.log(`🔍 테이블 점유 요청: 매장 ID ${storeId}, 테이블 이름 "${tableName}"`);
 
   try {
+    // 먼저 해당 매장의 모든 테이블 확인
+    const allTables = await pool.query(`
+      SELECT * FROM store_tables WHERE store_id = $1
+    `, [storeId]);
+    
+    console.log(`📊 매장 ${storeId}의 전체 테이블:`, allTables.rows.map(t => `${t.table_name} (ID: ${t.id})`));
+
     const existingTable = await pool.query(`
       SELECT * FROM store_tables 
       WHERE store_id = $1 AND table_name = $2
