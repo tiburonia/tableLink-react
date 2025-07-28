@@ -44,7 +44,7 @@ let renderLogin = async function () {
     try {
       // 로딩 화면 표시
       showLoadingScreen();
-      
+
       const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: {
@@ -131,7 +131,7 @@ let renderLogin = async function () {
           background: #f0f8ff;
           font-family: sans-serif;
         }
-        
+
         .loading-spinner {
           width: 40px;
           height: 40px;
@@ -141,12 +141,12 @@ let renderLogin = async function () {
           animation: spin 1s linear infinite;
           margin: 20px 0;
         }
-        
+
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        
+
         #loadingContainer p {
           color: #297efc;
           font-size: 16px;
@@ -160,7 +160,7 @@ let renderLogin = async function () {
     try {
       // 로딩 화면 표시
       showLoadingScreen();
-      
+
       const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: {
@@ -233,12 +233,12 @@ let renderLogin = async function () {
     if (!document.getElementById('loginContainer')) {
       return;
     }
-    
+
     if (event.key === 'Enter' && event.target.id !== 'join') {
       login.click();
     }
   };
-  
+
   // 기존 이벤트 리스너 제거 후 새로 등록
   document.removeEventListener('keydown', handleEnterKey);
   document.addEventListener('keydown', handleEnterKey);
@@ -277,7 +277,7 @@ let renderLogin = async function () {
       console.log('🔍 매장 검색 시작:', storeName);
       const response = await fetch('/api/stores');
       const data = await response.json();
-      
+
       if (data.success && data.stores) {
         console.log('📋 전체 매장 목록:', data.stores.length, '개');
         const store = data.stores.find(s => s.name === storeName);

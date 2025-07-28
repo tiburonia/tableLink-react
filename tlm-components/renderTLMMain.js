@@ -1,12 +1,18 @@
 // TLM 매장 관리 메인 화면 렌더링
 function renderTLMMain() {
-  // URL에서 매장 ID 추출
-  const pathParts = window.location.pathname.split('/');
-  const storeId = pathParts[2]; // /TLM/{storeId} 형태에서 storeId 추출
+  // URL 쿼리 파라미터에서 매장 ID 추출
+  const urlParams = new URLSearchParams(window.location.search);
+  let storeId = urlParams.get('storeId');
+  
+  // 만약 쿼리 파라미터에 없다면 전역 변수에서 가져오기
+  if (!storeId && window.currentStoreId) {
+    storeId = window.currentStoreId;
+  }
 
   console.log('🏪 TLM 매장 ID:', storeId);
 
   if (!storeId) {
+    console.error('❌ 매장 ID가 없습니다.');
     alert('매장 ID가 없습니다.');
     return;
   }

@@ -33,8 +33,8 @@ app.get('/POS', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pos.html'));
 });
 
-// TLM 동적 라우트 (매장별 사장님 앱)
-app.get('/TLM/:storeId', (req, res) => {
+// TLM 페이지 (쿼리 파라미터 방식)
+app.get('/tlm.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 

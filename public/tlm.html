@@ -36,9 +36,14 @@
       const urlParams = new URLSearchParams(window.location.search);
       const storeId = urlParams.get('storeId');
 
+      console.log('🏪 TLM 페이지 진입, 매장 ID:', storeId);
+
       if (storeId) {
-        renderTLMMain(storeId);
+        // 매장 ID를 직접 설정하고 TLM 메인 함수 호출
+        window.currentStoreId = storeId;
+        renderTLMMain();
       } else {
+        console.log('❌ 매장 ID가 없음, 로그인 화면으로 이동');
         // 매장 ID가 없으면 로그인 화면으로
         renderLogin();
       }
