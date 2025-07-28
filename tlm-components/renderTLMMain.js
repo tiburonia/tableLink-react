@@ -763,83 +763,7 @@ function setupEventListeners(store) {
 
   // 운영 상태 토글
   document.getElementById('toggleStoreStatus').addEventListener('click', async () => {
-    const currentStatus = store.isOpen;
-    const newStatus = !currentStatus;
-    const actionText = newStatus ? '운영 시작' : '운영 중지';
-
-    if (!confirm(`정말로 매장을 ${actionText}하시겠습니까?`)) {
-      return;
-    }
-
-    const toggleBtn = document.getElementById('toggleStoreStatus');
-    const originalBtnText = toggleBtn.textContent;
-    const originalBtnStyle = toggleBtn.style.background;
-    
-    // 버튼 비활성화 및 로딩 표시
-    toggleBtn.disabled = true;
-    toggleBtn.textContent = `${actionText} 중...`;
-    toggleBtn.style.background = '#6c757d';
-
-    try {
-      console.log(`🔄 매장 ${store.id} 운영 상태 변경 시도: ${currentStatus} → ${newStatus}`);
-      console.log(`📤 전송 데이터:`, { isOpen: newStatus, storeId: store.id });
-
-      const response = await fetch(`/api/stores/${store.id}/toggle-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          isOpen: newStatus,
-          storeId: store.id 
-        })
-      });
-
-      console.log(`📡 응답 상태: ${response.status}`);
-      const result = await response.json();
-      console.log(`📋 응답 데이터:`, result);
-
-      if (response.ok && result.success) {
-        console.log('✅ 매장 운영 상태 변경 성공:', result);
-
-        // store 객체 업데이트
-        store.isOpen = result.isOpen;
-
-        // UI 즉시 업데이트
-        toggleBtn.style.background = result.isOpen ? '#dc3545' : '#28a745';
-        toggleBtn.textContent = result.isOpen ? '🛑 운영 중지' : '▶️ 운영 시작';
-        toggleBtn.disabled = false;
-
-        // 상태 배지 업데이트
-        const statusElements = document.querySelectorAll('.store-status, #tableStatusBadge');
-        statusElements.forEach(el => {
-          if (el) {
-            el.textContent = result.isOpen ? '🟢 운영중' : '🔴 운영중지';
-            el.className = result.isOpen ? 'store-status open' : 'store-status closed';
-          }
-        });
-
-        // 성공 메시지
-        alert(result.message || `매장이 ${actionText}되었습니다.`);
-
-        // 매장 정보 새로고침 (3초 후)
-        setTimeout(() => {
-          location.reload();
-        }, 3000);
-
-      } else {
-        throw new Error(result.message || `운영 상태 변경 실패 (HTTP ${response.status})`);
-      }
-    } catch (error) {
-      console.error('❌ 매장 운영 상태 변경 오류:', error);
-
-      // 버튼 원상복구
-      toggleBtn.disabled = false;
-      toggleBtn.style.background = originalBtnStyle || (currentStatus ? '#dc3545' : '#28a745');
-      toggleBtn.textContent = originalBtnText || (currentStatus ? '🛑 운영 중지' : '▶️ 운영 시작');
-
-      alert(`운영 상태 변경에 실패했습니다:\n${error.message}`);
-    }
+    await toggleStoreOperationStatus(store);
   });
 
   // 전체 주문 보기
@@ -856,4 +780,110 @@ function setupEventListeners(store) {
   document.getElementById('viewTables').addEventListener('click', () => {
     alert('테이블 관리 기능은 개발 중입니다.');
   });
+}
+
+// 매장 운영 상태 토글 함수 (개선된 버전)
+async function toggleStoreOperationStatus(store) {
+  const currentStatus = store.isOpen;
+  const newStatus = !currentStatus;
+  const actionText = newStatus ? '운영 시작' : '운영 중지';
+
+  // 사용자 확인
+  if (!confirm(`정말로 매장을 ${actionText}하시겠습니까?`)) {
+    return;
+  }
+
+  const toggleBtn = document.getElementById('toggleStoreStatus');
+  const originalBtnText = toggleBtn.textContent;
+  const originalBtnStyle = toggleBtn.style.background;
+  
+  // 버튼 비활성화 및 로딩 표시
+  toggleBtn.disabled = true;
+  toggleBtn.textContent = `${actionText} 중...`;
+  toggleBtn.style.background = '#6c757d';
+  toggleBtn.style.cursor = 'not-allowed';
+
+  try {
+    console.log(`🔄 [TLM] 매장 ${store.id} 운영 상태 변경 시도: ${currentStatus} → ${newStatus}`);
+
+    const response = await fetch(`/api/stores/${store.id}/toggle-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        isOpen: newStatus 
+      })
+    });
+
+    console.log(`📡 [TLM] 응답 상태: ${response.status}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: 서버 요청 실패`);
+    }
+
+    const result = await response.json();
+    console.log(`📋 [TLM] 응답 데이터:`, result);
+
+    if (result.success) {
+      console.log('✅ [TLM] 매장 운영 상태 변경 성공');
+
+      // store 객체 업데이트
+      store.isOpen = result.isOpen;
+
+      // UI 즉시 업데이트
+      updateStoreStatusUI(result.isOpen, toggleBtn);
+
+      // 헤더의 운영 상태 배지 업데이트
+      updateHeaderStatusBadge(result.isOpen);
+
+      // 성공 메시지
+      alert(result.message || `매장이 ${result.isOpen ? '운영 시작' : '운영 중지'}되었습니다.`);
+
+      // 3초 후 페이지 새로고침으로 전체 상태 동기화
+      setTimeout(() => {
+        console.log('🔄 [TLM] 매장 정보 새로고침');
+        location.reload();
+      }, 2000);
+
+    } else {
+      throw new Error(result.message || result.error || '알 수 없는 오류');
+    }
+  } catch (error) {
+    console.error('❌ [TLM] 매장 운영 상태 변경 오류:', error);
+
+    // 버튼 원상복구
+    restoreButtonState(toggleBtn, originalBtnText, originalBtnStyle, currentStatus);
+
+    // 에러 메시지 표시
+    alert(`운영 상태 변경에 실패했습니다:\n${error.message}`);
+  }
+}
+
+// UI 상태 업데이트 함수
+function updateStoreStatusUI(isOpen, toggleBtn) {
+  // 토글 버튼 업데이트
+  toggleBtn.disabled = false;
+  toggleBtn.style.cursor = 'pointer';
+  toggleBtn.style.background = isOpen ? '#dc3545' : '#28a745';
+  toggleBtn.textContent = isOpen ? '🛑 운영 중지' : '▶️ 운영 시작';
+}
+
+// 헤더 상태 배지 업데이트 함수
+function updateHeaderStatusBadge(isOpen) {
+  const statusBadges = document.querySelectorAll('span[style*="background"]');
+  statusBadges.forEach(badge => {
+    if (badge.textContent.includes('운영')) {
+      badge.style.background = isOpen ? '#28a745' : '#dc3545';
+      badge.textContent = isOpen ? '🟢 운영중' : '🔴 운영중지';
+    }
+  });
+}
+
+// 버튼 상태 복구 함수
+function restoreButtonState(toggleBtn, originalText, originalStyle, currentStatus) {
+  toggleBtn.disabled = false;
+  toggleBtn.style.cursor = 'pointer';
+  toggleBtn.style.background = originalStyle || (currentStatus ? '#dc3545' : '#28a745');
+  toggleBtn.textContent = originalText || (currentStatus ? '🛑 운영 중지' : '▶️ 운영 시작');
 }
