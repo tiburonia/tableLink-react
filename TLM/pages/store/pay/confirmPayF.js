@@ -81,8 +81,9 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     // 테이블 점유 상태 설정 (주문이 확정되었으므로)
     if (orderData.storeId && orderData.tableNum) {
       try {
-        // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
-        const tableNumber = parseInt(orderData.tableNum.replace(/\D/g, ''));
+        // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
+        const matches = orderData.tableNum.match(/\d+/g);
+        const tableNumber = matches && matches.length > 0 ? parseInt(matches[matches.length - 1]) : null;
         
         console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${orderData.tableNum}`);
         

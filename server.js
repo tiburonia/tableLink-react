@@ -416,11 +416,15 @@ app.post('/api/orders/pay', async (req, res) => {
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
 
-    // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
+    // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
     let tableNumber = null;
     if (orderData.tableNum) {
-      const match = orderData.tableNum.toString().match(/\d+/);
-      tableNumber = match ? parseInt(match[0]) : null;
+      // 모든 숫자를 찾아서 마지막 숫자를 사용 (vip룸 2의 경우 2를 추출)
+      const matches = orderData.tableNum.toString().match(/\d+/g);
+      if (matches && matches.length > 0) {
+        // 마지막 숫자를 테이블 번호로 사용
+        tableNumber = parseInt(matches[matches.length - 1]);
+      }
     }
 
     // orders 테이블에 주문 정보 저장
