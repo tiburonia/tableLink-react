@@ -275,6 +275,47 @@ let renderLogin = async function () {
   async function findStoreByName(storeName) {
     try {
       console.log('🔍 매장 검색 시작:', storeName);
+      
+      // 캐시된 매장 목록에서 검색
+      const cachedStores = cacheManager.get('storesData');
+      if (cachedStores && cachedStores.stores) {
+        console.log('📋 전체 매장 목록:', cachedStores.stores.length, '개');
+        
+        const foundStore = cachedStores.stores.find(store => 
+          store.name.toLowerCase().includes(storeName.toLowerCase())
+        );
+        
+        if (foundStore) {
+          console.log('✅ 매장 찾음:', foundStore.name, 'ID:', foundStore.id);
+          // TLM 페이지로 리다이렉트 (매장 ID 포함)
+          window.location.href = `/tlm/${foundStore.id}`;
+          return;
+        }
+      }
+      
+      // 캐시에 없으면 서버에서 검색
+      const response = await fetch('/api/stores');
+      const data = await response.json();
+      
+      if (data.success && data.stores) {
+        const foundStore = data.stores.find(store => 
+          store.name.toLowerCase().includes(storeName.toLowerCase())
+        );
+        
+        if (foundStore) {
+          console.log('✅ 서버에서 매장 찾음:', foundStore.name, 'ID:', foundStore.id);
+          window.location.href = `/tlm/${foundStore.id}`;
+        } else {
+          alert(`'${storeName}' 매장을 찾을 수 없습니다.`);
+        }
+      } else {
+        throw new Error('매장 목록을 불러올 수 없습니다.');
+      }
+    } catch (error) {
+      console.error('❌ 매장 검색 실패:', error);
+      alert('매장 검색 중 오류가 발생했습니다.');
+    }
+  } 시작:', storeName);
       const response = await fetch('/api/stores');
       const data = await response.json();
 
