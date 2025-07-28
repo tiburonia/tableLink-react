@@ -48,6 +48,58 @@ app.get('/TLM/:storeId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 
+// 로그아웃 라우팅
+app.post('/api/logout', (req, res) => {
+  console.log('🔓 로그아웃 요청');
+  res.json({ success: true, message: '로그아웃 완료' });
+});
+
+// 매장 통계 API
+app.get('/api/stores/:storeId/stats', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`📊 매장 ${storeId} 통계 조회 요청`);
+
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = new Date().toISOString().slice(0, 7);
+
+    // 오늘 주문 통계
+    const todayStats = await pool.query(`
+      SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+      FROM orders 
+      WHERE store_id = $1 AND DATE(order_date) = $2
+    `, [storeId, today]);
+
+    // 이번달 주문 통계
+    const monthStats = await pool.query(`
+      SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
+      FROM orders 
+      WHERE store_id = $1 AND DATE_TRUNC('month', order_date) = $2
+    `, [storeId, thisMonth + '-01']);
+
+    const stats = {
+      todayOrders: parseInt(todayStats.rows[0].count),
+      todayRevenue: parseInt(todayStats.rows[0].revenue),
+      monthOrders: parseInt(monthStats.rows[0].count),
+      monthRevenue: parseInt(monthStats.rows[0].revenue)
+    };
+
+    console.log(`✅ 매장 ${storeId} 통계 조회 완료:`, stats);
+
+    res.json({
+      success: true,
+      stats: stats
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 통계 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '통계 조회 실패' 
+    });
+  }
+});
+
 // 개별 매장 정보 조회 API (TLM용)
 app.get('/api/stores/:storeId', async (req, res) => {
   try {
@@ -565,6 +617,104 @@ app.get('/api/stores/:storeId/orders', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: '주문 내역 조회 실패' 
+    });
+  }
+});
+
+// 매장의 전체 주문 조회 API (TLM용)
+app.get('/api/stores/:storeId/orders', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const limit = req.query.limit || 100; // 기본 100개 제한
+
+    console.log(`📋 매장 ${storeId} 전체 주문 조회 요청 (최대 ${limit}개)`);
+
+    const result = await pool.query(`
+      SELECT 
+        id, store_id, user_id, table_number, order_data, 
+        total_amount, discount_amount, final_amount, 
+        order_status, order_date, completed_at
+      FROM orders 
+      WHERE store_id = $1 
+      ORDER BY order_date DESC 
+      LIMIT $2
+    `, [storeId, limit]);
+
+    const orders = result.rows.map(row => ({
+      id: row.id,
+      storeId: row.store_id,
+      userId: row.user_id,
+      tableNumber: row.table_number,
+      orderData: row.order_data,
+      totalAmount: row.total_amount,
+      discountAmount: row.discount_amount,
+      finalAmount: row.final_amount,
+      orderStatus: row.order_status,
+      orderDate: row.order_date,
+      completedAt: row.completed_at
+    }));
+
+    console.log(`✅ 매장 ${storeId} 전체 주문 ${orders.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: orders.length,
+      orders: orders
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 전체 주문 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '전체 주문 조회 실패' 
+    });
+  }
+});
+
+// 매장의 전체 리뷰 조회 API (TLM용)
+app.get('/api/stores/:storeId/reviews', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const limit = req.query.limit || 100; // 기본 100개 제한
+
+    console.log(`⭐ 매장 ${storeId} 전체 리뷰 조회 요청 (최대 ${limit}개)`);
+
+    const result = await pool.query(`
+      SELECT 
+        id, user_id, store_id, order_index, rating, 
+        review_text, order_date, created_at
+      FROM reviews 
+      WHERE store_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT $2
+    `, [storeId, limit]);
+
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      storeId: row.store_id,
+      orderIndex: row.order_index,
+      rating: row.rating,
+      reviewText: row.review_text,
+      orderDate: row.order_date,
+      createdAt: row.created_at
+    }));
+
+    console.log(`✅ 매장 ${storeId} 전체 리뷰 ${reviews.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: reviews.length,
+      reviews: reviews
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 전체 리뷰 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '전체 리뷰 조회 실패' 
     });
   }
 });

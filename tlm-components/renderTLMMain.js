@@ -88,7 +88,13 @@ function renderTLMInterface(store) {
 
   main.innerHTML = `
     <div style="padding: 20px; background: #f5f5f5; min-height: 100vh; font-family: Arial, sans-serif;">
-      <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+      <!-- 헤더 영역 -->
+      <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: relative;">
+        <!-- 로그아웃 버튼 -->
+        <button id="logoutBtn" style="position: absolute; top: 15px; right: 15px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px;">
+          🔓 로그아웃
+        </button>
+        
         <h1 style="margin: 0; color: #333; text-align: center;">🏪 ${store.name} 관리</h1>
         <p style="text-align: center; color: #666; margin: 10px 0;">매장 운영 관리 시스템</p>
         <div style="text-align: center; margin: 15px 0;">
@@ -146,16 +152,39 @@ function renderTLMInterface(store) {
         </div>
       </div>
 
+      <!-- 매장 통계 -->
+      <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 15px 0; color: #333;">📊 매장 통계</h3>
+        <div id="storeStats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; text-align: center;">
+          <div style="background: #e8f4fd; padding: 15px; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #1976d2;" id="todayOrders">-</div>
+            <div style="color: #666; font-size: 12px;">오늘 주문</div>
+          </div>
+          <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #388e3c;" id="todayRevenue">-</div>
+            <div style="color: #666; font-size: 12px;">오늘 매출</div>
+          </div>
+          <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #f57c00;" id="monthOrders">-</div>
+            <div style="color: #666; font-size: 12px;">이번달 주문</div>
+          </div>
+          <div style="background: #fce4ec; padding: 15px; border-radius: 8px;">
+            <div style="font-size: 20px; font-weight: bold; color: #c2185b;" id="monthRevenue">-</div>
+            <div style="color: #666; font-size: 12px;">이번달 매출</div>
+          </div>
+        </div>
+      </div>
+
       <!-- 관리 버튼들 -->
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
         <button id="toggleStoreStatus" style="padding: 15px; background: ${store.isOpen ? '#dc3545' : '#28a745'}; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
           ${store.isOpen ? '🛑 운영 중지' : '▶️ 운영 시작'}
         </button>
-        <button id="viewOrders" style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
-          📋 주문 내역
+        <button id="viewAllOrders" style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          📋 전체 주문 보기
         </button>
-        <button id="viewReviews" style="padding: 15px; background: #ffc107; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
-          ⭐ 리뷰 관리
+        <button id="viewAllReviews" style="padding: 15px; background: #ffc107; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          ⭐ 전체 리뷰 보기
         </button>
         <button id="viewTables" style="padding: 15px; background: #6f42c1; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
           🪑 테이블 관리
@@ -178,24 +207,199 @@ function renderTLMInterface(store) {
   // 최근 활동 로드
   loadRecentActivity(store.id);
 
+  // 매장 통계 로드
+  loadStoreStats(store.id);
+
   console.log('✅ TLM 매장 관리 화면 렌더링 완료');
+}
+
+// 로그아웃 처리 함수
+async function handleLogout() {
+  try {
+    const confirmed = confirm('정말 로그아웃 하시겠습니까?');
+    if (!confirmed) return;
+
+    // 서버에 로그아웃 요청
+    await fetch('/api/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    // 로컬 데이터 초기화
+    window.currentStoreId = null;
+    
+    // 메인 페이지로 이동
+    window.location.href = '/';
+    
+  } catch (error) {
+    console.error('로그아웃 실패:', error);
+    // 오류가 있어도 메인으로 이동
+    window.location.href = '/';
+  }
+}
+
+// 매장 통계 로드
+async function loadStoreStats(storeId) {
+  try {
+    const response = await fetch(`/api/stores/${storeId}/stats`);
+    const data = await response.json();
+
+    if (data.success) {
+      document.getElementById('todayOrders').textContent = data.stats.todayOrders || '0';
+      document.getElementById('todayRevenue').textContent = (data.stats.todayRevenue || 0).toLocaleString() + '원';
+      document.getElementById('monthOrders').textContent = data.stats.monthOrders || '0';
+      document.getElementById('monthRevenue').textContent = (data.stats.monthRevenue || 0).toLocaleString() + '원';
+    }
+  } catch (error) {
+    console.error('매장 통계 로드 실패:', error);
+  }
+}
+
+// 전체 주문 보기
+async function showAllOrders(storeId) {
+  try {
+    const response = await fetch(`/api/stores/${storeId}/orders`);
+    const data = await response.json();
+
+    if (data.success) {
+      const orders = data.orders || [];
+      
+      let ordersHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+          <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 style="margin: 0; color: #333;">📋 전체 주문 내역 (${orders.length}건)</h2>
+              <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                ✕ 닫기
+              </button>
+            </div>
+            <div style="max-height: calc(100% - 80px); overflow-y: auto;">
+      `;
+
+      if (orders.length > 0) {
+        orders.forEach(order => {
+          const orderDate = new Date(order.order_date).toLocaleString();
+          ordersHTML += `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                  <strong style="color: #333;">주문 #${order.id}</strong>
+                  <div style="color: #666; font-size: 14px;">테이블 ${order.table_number} • ${orderDate}</div>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 18px; font-weight: bold; color: #007bff;">${order.final_amount.toLocaleString()}원</div>
+                  <div style="font-size: 12px; color: #666;">${order.order_status}</div>
+                </div>
+              </div>
+              <div style="background: white; padding: 10px; border-radius: 5px; font-size: 14px;">
+                ${JSON.stringify(JSON.parse(order.order_data).menu || {}, null, 2).replace(/[{}",]/g, '').replace(/\n/g, '<br>')}
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        ordersHTML += '<div style="text-align: center; padding: 40px; color: #666;">주문 내역이 없습니다.</div>';
+      }
+
+      ordersHTML += '</div></div></div>';
+      
+      const modalDiv = document.createElement('div');
+      modalDiv.className = 'fixed';
+      modalDiv.innerHTML = ordersHTML;
+      document.body.appendChild(modalDiv);
+      
+    } else {
+      alert('주문 내역을 불러올 수 없습니다.');
+    }
+  } catch (error) {
+    console.error('전체 주문 조회 실패:', error);
+    alert('주문 내역 조회 중 오류가 발생했습니다.');
+  }
+}
+
+// 전체 리뷰 보기
+async function showAllReviews(storeId) {
+  try {
+    const response = await fetch(`/api/stores/${storeId}/reviews`);
+    const data = await response.json();
+
+    if (data.success) {
+      const reviews = data.reviews || [];
+      
+      let reviewsHTML = `
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+          <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h2 style="margin: 0; color: #333;">⭐ 전체 리뷰 (${reviews.length}개)</h2>
+              <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                ✕ 닫기
+              </button>
+            </div>
+            <div style="max-height: calc(100% - 80px); overflow-y: auto;">
+      `;
+
+      if (reviews.length > 0) {
+        reviews.forEach(review => {
+          const reviewDate = new Date(review.created_at).toLocaleDateString();
+          const stars = '⭐'.repeat(review.rating);
+          
+          reviewsHTML += `
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
+              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                <div>
+                  <div style="font-size: 16px; color: #ffc107; margin-bottom: 5px;">${stars}</div>
+                  <div style="color: #666; font-size: 14px;">작성자: ${review.user_id} • ${reviewDate}</div>
+                </div>
+                <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${review.rating}점</div>
+              </div>
+              <div style="background: white; padding: 12px; border-radius: 5px; line-height: 1.5; color: #333;">
+                ${review.review_text}
+              </div>
+            </div>
+          `;
+        });
+      } else {
+        reviewsHTML += '<div style="text-align: center; padding: 40px; color: #666;">리뷰가 없습니다.</div>';
+      }
+
+      reviewsHTML += '</div></div></div>';
+      
+      const modalDiv = document.createElement('div');
+      modalDiv.className = 'fixed';
+      modalDiv.innerHTML = reviewsHTML;
+      document.body.appendChild(modalDiv);
+      
+    } else {
+      alert('리뷰를 불러올 수 없습니다.');
+    }
+  } catch (error) {
+    console.error('전체 리뷰 조회 실패:', error);
+    alert('리뷰 조회 중 오류가 발생했습니다.');
+  }
 }
 
 // 이벤트 리스너 설정
 function setupEventListeners(store) {
+  // 로그아웃 버튼
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    handleLogout();
+  });
+
   // 운영 상태 토글
   document.getElementById('toggleStoreStatus').addEventListener('click', () => {
     toggleStoreStatus(store.id);
   });
 
-  // 주문 내역 보기
-  document.getElementById('viewOrders').addEventListener('click', () => {
-    alert('주문 내역 기능은 개발 중입니다.');
+  // 전체 주문 보기
+  document.getElementById('viewAllOrders').addEventListener('click', () => {
+    showAllOrders(store.id);
   });
 
-  // 리뷰 관리
-  document.getElementById('viewReviews').addEventListener('click', () => {
-    alert('리뷰 관리 기능은 개발 중입니다.');
+  // 전체 리뷰 보기
+  document.getElementById('viewAllReviews').addEventListener('click', () => {
+    showAllReviews(store.id);
   });
 
   // 테이블 관리
