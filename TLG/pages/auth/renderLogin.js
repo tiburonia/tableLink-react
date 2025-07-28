@@ -1,4 +1,4 @@
-let renderLogin = async function () {
+async function renderLogin() {
   main.innerHTML = `
     <div id="loginContainer">
       <h1>TableLink</h1>

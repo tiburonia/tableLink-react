@@ -8,7 +8,10 @@ function renderTLMMain() {
   // 2. URL 쿼리 파라미터에서 매장 ID 추출
   if (!storeId) {
     const urlParams = new URLSearchParams(window.location.search);
-    storeId = urlParams.get('storeId');
+    const paramStoreId = urlParams.get('storeId');
+    if (paramStoreId) {
+      storeId = parseInt(paramStoreId);
+    }
   }
   
   // 3. URL 경로에서 매장 ID 추출 (/tlm/1 또는 /TLM/1 형태)
@@ -16,12 +19,15 @@ function renderTLMMain() {
     const pathParts = window.location.pathname.split('/');
     console.log('🔍 URL 경로 분석:', pathParts);
     if (pathParts.length >= 3 && (pathParts[1].toLowerCase() === 'tlm')) {
-      storeId = pathParts[2];
-      console.log('🎯 경로에서 매장 ID 추출 성공:', storeId);
+      const pathStoreId = pathParts[2];
+      if (pathStoreId && !isNaN(pathStoreId)) {
+        storeId = parseInt(pathStoreId);
+        console.log('🎯 경로에서 매장 ID 추출 성공:', storeId);
+      }
     }
   }
 
-  console.log('🏪 TLM 매장 ID:', storeId);
+  console.log('🏪 TLM 매장 ID:', storeId, '(타입:', typeof storeId, ')');
   console.log('🔍 URL 정보:', {
     pathname: window.location.pathname,
     search: window.location.search,
@@ -29,23 +35,31 @@ function renderTLMMain() {
     globalStoreId: window.currentStoreId
   });
 
-  if (!storeId || storeId === 'null' || storeId === 'undefined') {
-    console.error('❌ 매장 ID가 없습니다.');
+  // 매장 ID 유효성 검사
+  if (!storeId || isNaN(storeId) || storeId <= 0) {
+    console.error('❌ 유효하지 않은 매장 ID:', storeId);
     if (typeof renderLogin === 'function') {
       console.log('🔄 로그인 화면으로 리다이렉트');
       renderLogin();
     } else {
-      alert('매장 ID가 없습니다. 올바른 URL로 접속해주세요.');
+      document.getElementById('main').innerHTML = `
+        <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+          <h2 style="color: #dc3545;">❌ 오류</h2>
+          <p>유효하지 않은 매장 ID입니다: ${storeId}</p>
+          <button onclick="window.location.href='/'" 
+                  style="padding: 10px 20px; margin: 10px; background: #007bff; color: white; border: none; border-radius: 5px;">
+            메인으로 이동
+          </button>
+        </div>
+      `;
     }
     return;
   }
 
   console.log('🏪 TLM 매장 관리 시작, 매장 ID:', storeId);
 
-  // 캐시 시스템 초기화
-  if (typeof cacheManager !== 'undefined') {
-    cacheManager.init();
-  }
+  // 전역 변수에 저장
+  window.currentStoreId = storeId;
 
   // 매장 정보 로드
   loadStoreInfo(storeId);
