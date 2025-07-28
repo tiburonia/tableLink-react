@@ -329,6 +329,57 @@ router.get('/:storeId/tables', async (req, res) => {
   }
 });
 
+// 매장별 주문 조회 API
+router.get('/:storeId/orders', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`📋 매장 ${storeId} 주문 조회 요청`);
+
+    const ordersResult = await pool.query(`
+      SELECT 
+        id,
+        customer_name,
+        table_number,
+        order_data,
+        final_amount,
+        order_status,
+        order_date,
+        created_at
+      FROM orders 
+      WHERE store_id = $1 
+      ORDER BY order_date DESC
+      LIMIT 50
+    `, [parseInt(storeId)]);
+
+    const orders = ordersResult.rows.map(order => ({
+      id: order.id,
+      customerName: order.customer_name,
+      tableNumber: order.table_number,
+      orderData: order.order_data,
+      finalAmount: order.final_amount,
+      orderStatus: order.order_status,
+      orderDate: order.order_date,
+      createdAt: order.created_at
+    }));
+
+    console.log(`✅ 매장 ${storeId} 주문 조회 완료: ${orders.length}개`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: orders.length,
+      orders: orders
+    });
+
+  } catch (error) {
+    console.error('❌ 매장별 주문 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '주문 조회 실패: ' + error.message 
+    });
+  }
+});
+
 // 매장 운영 상태 토글
 router.post('/:storeId/toggle-status', async (req, res) => {
   const { storeId } = req.params;
@@ -404,7 +455,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 
       // 운영 상태 업데이트
       const updateResult = await client.query(
-        'UPDATE stores SET is_open = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, name, is_open',
+        'UPDATE stores SET is_open = $1 WHERE id = $2 RETURNING id, name, is_open',
         [newStatus, storeIdInt]
       );
 
