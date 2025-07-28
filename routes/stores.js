@@ -272,4 +272,54 @@ router.post('/:storeId/toggle-status', async (req, res) => {
   }
 });
 
+// 매장 검색 API (TLM용)
+router.get('/search', async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '검색어가 필요합니다' 
+      });
+    }
+
+    console.log(`🔍 매장 검색 요청: "${query}"`);
+
+    const result = await pool.query(`
+      SELECT * FROM stores 
+      WHERE name ILIKE $1 
+      ORDER BY id
+      LIMIT 20
+    `, [`%${query}%`]);
+
+    const stores = result.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address,
+      coord: store.coord,
+      isOpen: store.is_open,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    }));
+
+    console.log(`✅ 매장 검색 완료: "${query}" - ${stores.length}개 결과`);
+
+    res.json({
+      success: true,
+      query: query,
+      total: stores.length,
+      stores: stores
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 검색 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '매장 검색 실패: ' + error.message 
+    });
+  }
+});
+
 module.exports = { router, updateStoreRating };

@@ -137,4 +137,66 @@ router.post('/users/favorite/toggle', async (req, res) => {
   }
 });
 
+// 예약 추가 API
+router.post('/reservations/add', async (req, res) => {
+  const { userId, reservationData } = req.body;
+
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const currentReservations = user.reservation_list || [];
+    const newReservations = [...currentReservations, reservationData];
+
+    await pool.query(
+      'UPDATE users SET reservation_list = $1 WHERE id = $2',
+      [JSON.stringify(newReservations), userId]
+    );
+
+    res.json({
+      success: true,
+      message: '예약이 추가되었습니다',
+      reservations: newReservations
+    });
+
+  } catch (error) {
+    console.error('예약 추가 실패:', error);
+    res.status(500).json({ error: '예약 추가 실패' });
+  }
+});
+
+// 쿠폰 발급 API
+router.post('/coupons/issue', async (req, res) => {
+  const { userId, couponData } = req.body;
+
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const currentCoupons = user.coupons || { unused: [], used: [] };
+    currentCoupons.unused.push(couponData);
+
+    await pool.query(
+      'UPDATE users SET coupons = $1 WHERE id = $2',
+      [JSON.stringify(currentCoupons), userId]
+    );
+
+    res.json({
+      success: true,
+      message: '쿠폰이 발급되었습니다',
+      coupon: couponData
+    });
+
+  } catch (error) {
+    console.error('쿠폰 발급 실패:', error);
+    res.status(500).json({ error: '쿠폰 발급 실패' });
+  }
+});
+
 module.exports = router;

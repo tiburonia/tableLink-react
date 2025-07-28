@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -21,6 +22,7 @@ const reviewsRoutes = require('./routes/reviews');
 const tablesRoutes = require('./routes/tables');
 const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
+const cacheRoutes = require('./routes/cache');
 
 // 라우트 연결
 app.use('/api', authRoutes);
@@ -30,6 +32,7 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cache', cacheRoutes);
 
 // 정적 페이지 라우트
 app.get('/', (req, res) => {
