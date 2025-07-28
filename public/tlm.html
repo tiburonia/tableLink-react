@@ -1,69 +1,49 @@
-
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLink Manager - 사장님 앱</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-    
-    #main {
-      width: 100%;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-  </style>
+  <title>TableLink Manager - 매장 관리</title>
+
+  <!--카카오맵 API키-->
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
+
+  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
+  <link rel="stylesheet" href="shared/css/globalBody.css" />
+  <link rel="stylesheet" href="shared/css/renderLogin.css" />
 </head>
+
 <body>
+  <!-- 화면을 렌더링할 메인 영역 -->
   <div id='main'></div>
 
-  <!--TLM 메인 렌더링 함수-->
-  <script src="/TLM/pages/tlm/renderTLMMain.js"></script>
+  <!--TLM 매장 관리 렌더링 함수 (독립 폴더에서)-->
+  <script src="/tlm-components/renderTLMMain.js"></script>
   <!--로그인 렌더링 함수-->
-  <script src="/TLM/pages/auth/renderLogin.js"></script>
+  <script src="/TLG/pages/auth/renderLogin.js"></script>
   <!--로그아웃로직 함수-->
-  <script src="/TLM/utils/logOut.js"></script>
+  <script src="/TLG/utils/logOut.js"></script>
   <!--로컬스토리지 캐시 매니저-->
-  <script src="/TLM/utils/localStorage.js"></script>
+  <script src="/TLG/utils/localStorage.js"></script>
   <!--JSON 파일 캐시 매니저-->
-  <script src="/TLM/utils/cacheFileManager.js"></script>
+  <script src="/TLG/utils/cacheFileManager.js"></script>
 
   <script>
-    // URL에서 storeId 추출
-    const pathSegments = window.location.pathname.split('/');
-    const storeId = pathSegments[pathSegments.length - 1];
-    
-    console.log('🏪 TLM 매장 ID:', storeId);
-    
-    // TLM 메인 페이지 렌더링
-    if (storeId && storeId !== 'TLM' && !isNaN(storeId)) {
-      renderTLMMain(storeId); // 문자열로 전달하여 API에서 parseInt 처리
-    } else {
-      document.getElementById('main').innerHTML = `
-        <div style="text-align:center; color:white; font-size:18px;">
-          <h1>❌ 잘못된 매장 접근</h1>
-          <p>올바른 매장 ID가 필요합니다. (입력값: ${storeId})</p>
-          <button onclick="window.location.href='/'" style="margin-top:20px; padding:10px 20px; background:#fff; color:#333; border:none; border-radius:5px; cursor:pointer;">
-            메인으로 돌아가기
-          </button>
-        </div>
-      `;
-    }
+    //TLM 페이지 초기 진입
+    document.addEventListener('DOMContentLoaded', () => {
+      // URL에서 매장 ID 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeId = urlParams.get('storeId');
+
+      if (storeId) {
+        renderTLMMain(storeId);
+      } else {
+        // 매장 ID가 없으면 로그인 화면으로
+        renderLogin();
+      }
+    });
   </script>
 </body>
+
 </html>
