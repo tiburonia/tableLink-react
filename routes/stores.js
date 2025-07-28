@@ -235,33 +235,6 @@ router.get('/:storeId/rating', async (req, res) => {
   }
 });
 
-// 매장 운영 상태 토글
-router.post('/:storeId/toggle-status', async (req, res) => {
-  try {
-    const storeId = req.params.storeId;
-
-    const currentResult = await pool.query('SELECT is_open FROM stores WHERE id = $1', [storeId]);
-    if (currentResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다.' });
-    }
-
-    const currentStatus = currentResult.rows[0].is_open;
-    const newStatus = !currentStatus;
-
-    await pool.query('UPDATE stores SET is_open = $1 WHERE id = $2', [newStatus, storeId]);
-
-    res.json({
-      success: true,
-      isOpen: newStatus,
-      message: `매장이 ${newStatus ? '운영중' : '운영중지'} 상태로 변경되었습니다.`
-    });
-
-  } catch (error) {
-    console.error('매장 상태 변경 실패:', error);
-    res.status(500).json({ success: false, error: '매장 상태 변경에 실패했습니다.' });
-  }
-});
-
 // 매장 검색 API (TLM용)
 router.get('/search', async (req, res) => {
   try {
@@ -353,6 +326,61 @@ router.get('/:storeId/tables', async (req, res) => {
   } catch (error) {
     console.error('매장별 테이블 정보 조회 실패:', error);
     res.status(500).json({ success: false, error: '테이블 정보 조회 실패' });
+  }
+});
+
+// 매장 운영 상태 토글
+router.post('/:storeId/toggle-status', async (req, res) => {
+  const { storeId } = req.params;
+  const { isOpen } = req.body;
+
+  try {
+    console.log(`🔄 매장 ${storeId} 운영 상태 토글 요청: ${isOpen}`);
+
+    // 현재 매장 정보 확인
+    const currentStore = await pool.query(
+      'SELECT * FROM stores WHERE id = $1',
+      [storeId]
+    );
+
+    if (currentStore.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '매장을 찾을 수 없습니다.'
+      });
+    }
+
+    // 운영 상태 업데이트
+    const updateResult = await pool.query(
+      'UPDATE stores SET "isOpen" = $1 WHERE id = $2 RETURNING *',
+      [isOpen, storeId]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: '운영 상태 업데이트에 실패했습니다.'
+      });
+    }
+
+    const updatedStore = updateResult.rows[0];
+    console.log(`✅ 매장 ${storeId} 운영 상태 변경 완료: ${updatedStore.isOpen}`);
+
+    res.json({
+      success: true,
+      message: `매장이 ${isOpen ? '운영 시작' : '운영 중지'}되었습니다.`,
+      store: updatedStore,
+      previousStatus: currentStore.rows[0].isOpen,
+      newStatus: isOpen
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 운영 상태 토글 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.',
+      error: error.message
+    });
   }
 });
 
