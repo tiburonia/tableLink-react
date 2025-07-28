@@ -243,62 +243,7 @@ function renderTLMInterface(store) {
           </div>
         `).join('')}</div>
 
-        <script>
-          // 테이블 클릭 이벤트 핸들러
-          function handleTableClick(tableName) {
-            console.log('🔍 [TLM] 테이블 클릭됨:', tableName);
-
-            // 사용자에게 점유 시간 입력 받기
-            const durationInput = prompt(
-              '테이블 점유 시간을 설정하세요:\\n' +
-              '• 숫자 입력: 해당 분수만큼 점유 (예: 30)\\n' + 
-              '• 0 또는 빈값: 무제한 점유 (수동 해제 필요)\\n' +
-              '• 취소: 점유하지 않음',
-              '0'
-            );
-
-            if (durationInput === null) {
-              return; // 사용자가 취소한 경우
-            }
-
-            const duration = parseInt(durationInput) || 0;
-
-            fetch('/api/tables/occupy-manual', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                storeId: ${store.id},
-                tableName: tableName,
-                duration: duration
-              })
-            })
-            .then(response => response.json())
-            .then(data => {
-              console.log('📡 [TLM] 테이블 점유 응답:', data);
-              if (data.success) {
-                alert(data.message);
-                loadTableInfo(); // 테이블 정보 새로고침
-              } else {
-                alert('오류: ' + data.error);
-              }
-            })
-            .catch(error => {
-              console.error('❌ [TLM] 테이블 점유 요청 실패:', error);
-              alert('테이블 점유 요청에 실패했습니다.');
-            });이블 상태가 변경되었습니다.');
-                location.reload(); // 페이지 새로고침으로 상태 업데이트
-              } else {
-                alert('테이블 상태 변경 실패: ' + data.error);
-              }
-            })
-            .catch(error => {
-              console.error('❌ 테이블 상태 변경 실패:', error);
-              alert('테이블 상태 변경 중 오류가 발생했습니다.');
-            });
-          }
-        </script>
+        
   `;
 
   main.appendChild(tableArea);
@@ -311,6 +256,93 @@ function renderTLMInterface(store) {
 
   // 매장 통계 로드
   loadStoreStats(store.id);
+
+  // 테이블 클릭 핸들러를 전역으로 등록
+  window.handleTableClick = function(tableName) {
+    console.log('🔍 [TLM] 테이블 클릭됨:', tableName);
+
+    // 현재 테이블 상태 확인
+    const currentTable = store.tables.find(t => t.tableName === tableName);
+    
+    if (currentTable && currentTable.isOccupied) {
+      // 이미 점유된 테이블인 경우 해제 옵션 제공
+      const action = confirm(
+        `테이블 ${tableName}은 현재 사용중입니다.\n\n` +
+        `확인: 테이블 해제\n` +
+        `취소: 아무 작업 안함`
+      );
+      
+      if (action) {
+        // 테이블 해제
+        fetch('/api/tables/update', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            storeId: store.id,
+            tableName: tableName,
+            isOccupied: false
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          console.log('📡 [TLM] 테이블 해제 응답:', data);
+          if (data.success) {
+            alert(data.message);
+            location.reload(); // 페이지 새로고침으로 상태 업데이트
+          } else {
+            alert('오류: ' + data.error);
+          }
+        })
+        .catch(error => {
+          console.error('❌ [TLM] 테이블 해제 요청 실패:', error);
+          alert('테이블 해제 요청에 실패했습니다.');
+        });
+      }
+    } else {
+      // 빈 테이블인 경우 점유 옵션 제공
+      const durationInput = prompt(
+        `테이블 ${tableName} 점유 시간을 설정하세요:\n\n` +
+        `• 숫자 입력: 해당 분수만큼 점유 (예: 30)\n` + 
+        `• 0 또는 빈값: 무제한 점유 (수동 해제 필요)\n` +
+        `• 취소: 점유하지 않음`,
+        '0'
+      );
+
+      if (durationInput === null) {
+        return; // 사용자가 취소한 경우
+      }
+
+      const duration = parseInt(durationInput) || 0;
+
+      fetch('/api/tables/occupy-manual', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          storeId: store.id,
+          tableName: tableName,
+          duration: duration
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('📡 [TLM] 테이블 점유 응답:', data);
+        if (data.success) {
+          alert(data.message);
+          location.reload(); // 페이지 새로고침으로 상태 업데이트
+        } else {
+          alert('오류: ' + data.error);
+        }
+      })
+      .catch(error => {
+        console.error('❌ [TLM] 테이블 점유 요청 실패:', error);
+        alert('테이블 점유 요청에 실패했습니다.');
+      });
+    }
+  };
 
   console.log('✅ TLM 매장 관리 화면 렌더링 완료');
 }
