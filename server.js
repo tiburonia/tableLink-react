@@ -60,28 +60,31 @@ app.get('/api/stores/:storeId/stats', async (req, res) => {
     const { storeId } = req.params;
     console.log(`📊 매장 ${storeId} 통계 조회 요청`);
 
-    const today = new Date().toISOString().split('T')[0];
-    const thisMonth = new Date().toISOString().slice(0, 7);
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+
+    console.log(`📅 날짜 정보: 오늘=${todayStr}, 이번달시작=${thisMonthStart}`);
 
     // 오늘 주문 통계
     const todayStats = await pool.query(`
       SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
       FROM orders 
       WHERE store_id = $1 AND DATE(order_date) = $2
-    `, [storeId, today]);
+    `, [parseInt(storeId), todayStr]);
 
     // 이번달 주문 통계
     const monthStats = await pool.query(`
       SELECT COUNT(*) as count, COALESCE(SUM(final_amount), 0) as revenue
       FROM orders 
-      WHERE store_id = $1 AND DATE_TRUNC('month', order_date) = $2
-    `, [storeId, thisMonth + '-01']);
+      WHERE store_id = $1 AND order_date >= $2
+    `, [parseInt(storeId), thisMonthStart]);
 
     const stats = {
-      todayOrders: parseInt(todayStats.rows[0].count),
-      todayRevenue: parseInt(todayStats.rows[0].revenue),
-      monthOrders: parseInt(monthStats.rows[0].count),
-      monthRevenue: parseInt(monthStats.rows[0].revenue)
+      todayOrders: parseInt(todayStats.rows[0].count) || 0,
+      todayRevenue: parseInt(todayStats.rows[0].revenue) || 0,
+      monthOrders: parseInt(monthStats.rows[0].count) || 0,
+      monthRevenue: parseInt(monthStats.rows[0].revenue) || 0
     };
 
     console.log(`✅ 매장 ${storeId} 통계 조회 완료:`, stats);
@@ -92,10 +95,12 @@ app.get('/api/stores/:storeId/stats', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 매장 통계 조회 실패:', error);
+    console.error('❌ 매장 통계 조회 실패 (상세):', error);
+    console.error('❌ 오류 스택:', error.stack);
+    
     res.status(500).json({ 
       success: false, 
-      error: '통계 조회 실패' 
+      error: '통계 조회 실패: ' + error.message 
     });
   }
 });

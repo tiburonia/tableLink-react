@@ -243,17 +243,47 @@ async function handleLogout() {
 // 매장 통계 로드
 async function loadStoreStats(storeId) {
   try {
+    console.log('📊 매장 통계 로드 시작:', storeId);
+    
     const response = await fetch(`/api/stores/${storeId}/stats`);
+    console.log('📊 API 응답 상태:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
+    console.log('📊 받은 통계 데이터:', data);
 
-    if (data.success) {
-      document.getElementById('todayOrders').textContent = data.stats.todayOrders || '0';
-      document.getElementById('todayRevenue').textContent = (data.stats.todayRevenue || 0).toLocaleString() + '원';
-      document.getElementById('monthOrders').textContent = data.stats.monthOrders || '0';
-      document.getElementById('monthRevenue').textContent = (data.stats.monthRevenue || 0).toLocaleString() + '원';
+    if (data.success && data.stats) {
+      const todayOrdersEl = document.getElementById('todayOrders');
+      const todayRevenueEl = document.getElementById('todayRevenue');
+      const monthOrdersEl = document.getElementById('monthOrders');
+      const monthRevenueEl = document.getElementById('monthRevenue');
+
+      if (todayOrdersEl) todayOrdersEl.textContent = data.stats.todayOrders || '0';
+      if (todayRevenueEl) todayRevenueEl.textContent = (data.stats.todayRevenue || 0).toLocaleString() + '원';
+      if (monthOrdersEl) monthOrdersEl.textContent = data.stats.monthOrders || '0';
+      if (monthRevenueEl) monthRevenueEl.textContent = (data.stats.monthRevenue || 0).toLocaleString() + '원';
+      
+      console.log('✅ 매장 통계 렌더링 완료');
+    } else {
+      console.error('❌ 매장 통계 데이터 형식 오류:', data);
+      throw new Error('통계 데이터 형식이 올바르지 않습니다');
     }
   } catch (error) {
-    console.error('매장 통계 로드 실패:', error);
+    console.error('❌ 매장 통계 로드 실패:', error);
+    
+    // 기본값으로 설정
+    const todayOrdersEl = document.getElementById('todayOrders');
+    const todayRevenueEl = document.getElementById('todayRevenue');
+    const monthOrdersEl = document.getElementById('monthOrders');
+    const monthRevenueEl = document.getElementById('monthRevenue');
+
+    if (todayOrdersEl) todayOrdersEl.textContent = '오류';
+    if (todayRevenueEl) todayRevenueEl.textContent = '데이터 로드 실패';
+    if (monthOrdersEl) monthOrdersEl.textContent = '오류';
+    if (monthRevenueEl) monthRevenueEl.textContent = '데이터 로드 실패';
   }
 }
 
