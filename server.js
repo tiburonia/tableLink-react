@@ -63,13 +63,13 @@ app.get('/TLM/:storeId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 
-// 만료된 테이블들 자동 해제 체크
+// 만료된 TLL 주문 테이블들만 자동 해제 체크
 async function checkAndReleaseExpiredTables() {
   try {
     const result = await pool.query(`
-      SELECT store_id, table_number, occupied_since 
+      SELECT store_id, table_number, occupied_since, auto_release_source 
       FROM store_tables 
-      WHERE is_occupied = true AND occupied_since IS NOT NULL
+      WHERE is_occupied = true AND occupied_since IS NOT NULL AND auto_release_source = 'TLL'
     `);
 
     const now = new Date();
@@ -81,12 +81,23 @@ async function checkAndReleaseExpiredTables() {
       if (diffMinutes >= 2) {
         await pool.query(`
           UPDATE store_tables 
-          SET is_occupied = false, occupied_since = null 
+          SET is_occupied = false, occupied_since = null, auto_release_source = null 
           WHERE store_id = $1 AND table_number = $2
         `, [table.store_id, table.table_number]);
 
-        console.log(`✅ 서버 시작 시 만료된 테이블 ${table.table_number}번 (매장 ID: ${table.store_id}) 해제 완료`);
+        console.log(`✅ 서버 시작 시 만료된 TLL 주문 테이블 ${table.table_number}번 (매장 ID: ${table.store_id}) 해제 완료`);
       }
+    }
+
+    // TLM 수동 점유 테이블은 그대로 유지
+    const tlmTables = await pool.query(`
+      SELECT COUNT(*) as count 
+      FROM store_tables 
+      WHERE is_occupied = true AND auto_release_source = 'TLM'
+    `);
+
+    if (tlmTables.rows[0].count > 0) {
+      console.log(`📊 TLM 수동 점유 테이블 ${tlmTables.rows[0].count}개는 유지됩니다`);
     }
   } catch (error) {
     console.error('❌ 만료된 테이블 체크 실패:', error);

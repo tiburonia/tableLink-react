@@ -98,11 +98,11 @@ router.post('/update', async (req, res) => {
   }
 });
 
-// 테이블 점유 상태 설정 및 자동 해제 API
+// 테이블 점유 상태 설정 및 자동 해제 API (TLL용 - 2분 자동 해제)
 router.post('/occupy', async (req, res) => {
   const { storeId, tableName } = req.body;
 
-  console.log(`🔍 테이블 점유 요청: 매장 ID ${storeId}, 테이블 이름 "${tableName}"`);
+  console.log(`🔍 [TLL] 테이블 점유 요청: 매장 ID ${storeId}, 테이블 이름 "${tableName}"`);
 
   try {
     // 먼저 해당 매장의 모든 테이블 확인
@@ -125,19 +125,20 @@ router.post('/occupy', async (req, res) => {
     const table = existingTable.rows[0];
     const occupiedTime = new Date();
 
+    // TLL 주문용 점유 상태 설정 (auto_release_source = 'TLL')
     const updateResult = await pool.query(`
       UPDATE store_tables 
-      SET is_occupied = $1, occupied_since = $2 
-      WHERE unique_id = $3
+      SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+      WHERE unique_id = $4
       RETURNING *
-    `, [true, occupiedTime, table.unique_id]);
+    `, [true, occupiedTime, 'TLL', table.unique_id]);
 
-    // 2분 후 자동 해제 스케줄링
+    // TLL 주문에 대해서만 2분 후 자동 해제 스케줄링
     setTimeout(async () => {
       try {
         const tableResult = await pool.query(`
           SELECT * FROM store_tables 
-          WHERE unique_id = $1 AND is_occupied = true
+          WHERE unique_id = $1 AND is_occupied = true AND auto_release_source = 'TLL'
         `, [table.unique_id]);
 
         if (tableResult.rows.length > 0) {
@@ -149,15 +150,15 @@ router.post('/occupy', async (req, res) => {
           if (diffMinutes >= 2) {
             await pool.query(`
               UPDATE store_tables 
-              SET is_occupied = $1, occupied_since = $2 
-              WHERE unique_id = $3
-            `, [false, null, table.unique_id]);
+              SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+              WHERE unique_id = $4
+            `, [false, null, null, table.unique_id]);
 
-            console.log(`✅ 테이블 ${table.table_name} 자동 해제 완료`);
+            console.log(`✅ [TLL] 테이블 ${table.table_name} 자동 해제 완료`);
           }
         }
       } catch (error) {
-        console.error('❌ 테이블 자동 해제 실패:', error);
+        console.error('❌ [TLL] 테이블 자동 해제 실패:', error);
       }
     }, 2 * 60 * 1000);
 
@@ -169,7 +170,76 @@ router.post('/occupy', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ 테이블 점유 상태 설정 실패:', error);
+    console.error('❌ [TLL] 테이블 점유 상태 설정 실패:', error);
+    res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
+  }
+});
+
+// 테이블 점유 상태 설정 API (TLM용 - 수동 제어)
+router.post('/occupy-manual', async (req, res) => {
+  const { storeId, tableName, duration } = req.body; // duration: 분 단위 (0이면 무제한)
+
+  console.log(`🔍 [TLM] 수동 테이블 점유 요청: 매장 ID ${storeId}, 테이블 "${tableName}", 시간: ${duration || '무제한'}분`);
+
+  try {
+    const existingTable = await pool.query(`
+      SELECT * FROM store_tables 
+      WHERE store_id = $1 AND table_name = $2
+    `, [storeId, tableName]);
+
+    if (existingTable.rows.length === 0) {
+      return res.status(404).json({ error: '테이블을 찾을 수 없습니다' });
+    }
+
+    const table = existingTable.rows[0];
+    const occupiedTime = new Date();
+
+    // TLM 수동 점유 상태 설정 (auto_release_source = 'TLM')
+    const updateResult = await pool.query(`
+      UPDATE store_tables 
+      SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+      WHERE unique_id = $4
+      RETURNING *
+    `, [true, occupiedTime, 'TLM', table.unique_id]);
+
+    // duration이 지정된 경우에만 자동 해제 스케줄링
+    if (duration && duration > 0) {
+      setTimeout(async () => {
+        try {
+          const tableResult = await pool.query(`
+            SELECT * FROM store_tables 
+            WHERE unique_id = $1 AND is_occupied = true AND auto_release_source = 'TLM'
+          `, [table.unique_id]);
+
+          if (tableResult.rows.length > 0) {
+            await pool.query(`
+              UPDATE store_tables 
+              SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+              WHERE unique_id = $4
+            `, [false, null, null, table.unique_id]);
+
+            console.log(`✅ [TLM] 테이블 ${table.table_name} ${duration}분 후 자동 해제 완료`);
+          }
+        } catch (error) {
+          console.error('❌ [TLM] 테이블 자동 해제 실패:', error);
+        }
+      }, duration * 60 * 1000);
+    }
+
+    const message = duration > 0 
+      ? `${table.table_name}이 점유 상태로 변경되었습니다. ${duration}분 후 자동 해제됩니다.`
+      : `${table.table_name}이 점유 상태로 변경되었습니다. (수동 해제 필요)`;
+
+    res.json({
+      success: true,
+      message: message,
+      occupiedSince: occupiedTime,
+      duration: duration || 0,
+      updatedTable: updateResult.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ [TLM] 테이블 점유 상태 설정 실패:', error);
     res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
   }
 });
