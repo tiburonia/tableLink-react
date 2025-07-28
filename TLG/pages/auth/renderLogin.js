@@ -315,28 +315,5 @@ let renderLogin = async function () {
       console.error('❌ 매장 검색 실패:', error);
       alert('매장 검색 중 오류가 발생했습니다.');
     }
-  } 시작:', storeName);
-      const response = await fetch('/api/stores');
-      const data = await response.json();
-
-      if (data.success && data.stores) {
-        console.log('📋 전체 매장 목록:', data.stores.length, '개');
-        const store = data.stores.find(s => s.name === storeName);
-        if (store) {
-          console.log('✅ 매장 찾음:', store.name, 'ID:', store.id);
-          window.location.href = `/TLM/${store.id}`;
-        } else {
-          console.log('❌ 매장을 찾을 수 없음:', storeName);
-          console.log('📋 사용 가능한 매장들:', data.stores.map(s => s.name));
-          alert(`해당 이름의 가게를 찾을 수 없습니다.\n\n사용 가능한 매장:\n${data.stores.slice(0, 5).map(s => `• ${s.name}`).join('\n')}${data.stores.length > 5 ? '\n...' : ''}`);
-        }
-      } else {
-        console.error('❌ API 응답 오류:', data);
-        alert('매장 정보를 불러오는데 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('❌ 매장 검색 오류:', error);
-      alert('서버 연결에 실패했습니다.');
-    }
   }
 };
