@@ -38,6 +38,16 @@ app.get('/tlm.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 
+// TLM 동적 라우트 (매장별 사장님 앱) - 하위 호환성
+app.get('/tlm/:storeId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
+});
+
+// TLM 동적 라우트 (대문자 버전) - 하위 호환성
+app.get('/TLM/:storeId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
+});
+
 // 개별 매장 정보 조회 API (TLM용)
 app.get('/api/stores/:storeId', async (req, res) => {
   try {
