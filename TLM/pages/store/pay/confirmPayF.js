@@ -82,8 +82,13 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     if (orderData.storeId && orderData.tableNum) {
       try {
         // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
-        const matches = orderData.tableNum.match(/\d+/g);
-        const tableNumber = matches && matches.length > 0 ? parseInt(matches[matches.length - 1]) : null;
+        console.log(`🔍 클라이언트 테이블 번호 추출 시작: "${orderData.tableNum}"`);
+        
+        const numberMatches = orderData.tableNum.match(/\d+/g);
+        console.log(`🔍 클라이언트 정규식 매치 결과:`, numberMatches);
+        
+        const tableNumber = numberMatches && numberMatches.length > 0 ? parseInt(numberMatches[numberMatches.length - 1]) : null;
+        console.log(`✅ 클라이언트에서 추출된 테이블 번호: ${tableNumber}`);
         
         console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${orderData.tableNum}`);
         

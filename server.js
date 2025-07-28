@@ -419,12 +419,23 @@ app.post('/api/orders/pay', async (req, res) => {
     // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
     let tableNumber = null;
     if (orderData.tableNum) {
-      // 모든 숫자를 찾아서 마지막 숫자를 사용 (vip룸 2의 경우 2를 추출)
-      const matches = orderData.tableNum.toString().match(/\d+/g);
-      if (matches && matches.length > 0) {
+      console.log(`🔍 테이블 번호 추출 시작: "${orderData.tableNum}"`);
+      
+      // 문자열에서 모든 숫자를 찾기
+      const numberMatches = orderData.tableNum.toString().match(/\d+/g);
+      console.log(`🔍 정규식 매치 결과:`, numberMatches);
+      
+      if (numberMatches && numberMatches.length > 0) {
         // 마지막 숫자를 테이블 번호로 사용
-        tableNumber = parseInt(matches[matches.length - 1]);
+        tableNumber = parseInt(numberMatches[numberMatches.length - 1]);
+        console.log(`✅ 추출된 테이블 번호: ${tableNumber}`);
+      } else {
+        console.log(`❌ 숫자를 찾을 수 없음: "${orderData.tableNum}"`);
+        // 숫자가 없으면 null로 설정
+        tableNumber = null;
       }
+    } else {
+      console.log(`❌ tableNum이 없음`);
     }
 
     // orders 테이블에 주문 정보 저장
