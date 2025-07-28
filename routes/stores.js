@@ -352,7 +352,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 
     // 운영 상태 업데이트
     const updateResult = await pool.query(
-      'UPDATE stores SET "isOpen" = $1 WHERE id = $2 RETURNING *',
+      'UPDATE stores SET is_open = $1 WHERE id = $2 RETURNING *',
       [isOpen, storeId]
     );
 
@@ -370,8 +370,9 @@ router.post('/:storeId/toggle-status', async (req, res) => {
       success: true,
       message: `매장이 ${isOpen ? '운영 시작' : '운영 중지'}되었습니다.`,
       store: updatedStore,
-      previousStatus: currentStore.rows[0].isOpen,
-      newStatus: isOpen
+      previousStatus: currentStore.rows[0].is_open,
+      newStatus: isOpen,
+      isOpen: isOpen
     });
 
   } catch (error) {

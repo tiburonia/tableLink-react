@@ -705,72 +705,67 @@ function setupEventListeners(store) {
   });
 
   // 운영 상태 토글
-  document.getElementById('toggleStoreStatus').addEventListener('click', () => {
-    // 운영 상태 토글 버튼 이벤트
+  document.getElementById('toggleStoreStatus').addEventListener('click', async () => {
+    const currentStatus = store.isOpen;
+    const newStatus = !currentStatus;
+    const actionText = newStatus ? '운영 시작' : '운영 중지';
+
+    if (!confirm(`정말로 매장을 ${actionText}하시겠습니까?`)) {
+      return;
+    }
+
     const toggleBtn = document.getElementById('toggleStoreStatus');
-    if (toggleBtn) {
-      toggleBtn.addEventListener('click', async () => {
-        const currentStatus = store.isOpen;
-        const newStatus = !currentStatus;
-        const actionText = newStatus ? '운영 시작' : '운영 중지';
+    // 버튼 비활성화 및 로딩 표시
+    toggleBtn.disabled = true;
+    toggleBtn.textContent = `${actionText} 중...`;
 
-        if (!confirm(`정말로 매장을 ${actionText}하시겠습니까?`)) {
-          return;
-        }
+    try {
+      console.log(`🔄 매장 ${store.id} 운영 상태 변경 시도: ${currentStatus} → ${newStatus}`);
 
-        // 버튼 비활성화 및 로딩 표시
-        toggleBtn.disabled = true;
-        toggleBtn.textContent = `${actionText} 중...`;
-
-        try {
-          console.log(`🔄 매장 ${store.id} 운영 상태 변경 시도: ${currentStatus} → ${newStatus}`);
-
-          const response = await fetch(`/api/stores/${store.id}/toggle-status`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ 
-              isOpen: newStatus,
-              storeId: store.id 
-            })
-          });
-
-          const result = await response.json();
-
-          if (response.ok && result.success) {
-            console.log('✅ 매장 운영 상태 변경 성공:', result);
-
-            // store 객체 업데이트
-            store.isOpen = newStatus;
-
-            // UI 즉시 업데이트
-            toggleBtn.style.background = newStatus ? '#dc3545' : '#28a745';
-            toggleBtn.textContent = newStatus ? '🛑 운영 중지' : '▶️ 운영 시작';
-            toggleBtn.disabled = false;
-
-            // 성공 메시지
-            alert(`매장이 ${actionText}되었습니다.`);
-
-            // 매장 정보 새로고침
-            setTimeout(() => {
-              location.reload();
-            }, 1000);
-
-          } else {
-            throw new Error(result.message || '운영 상태 변경 실패');
-          }
-        } catch (error) {
-          console.error('❌ 매장 운영 상태 변경 오류:', error);
-
-          // 버튼 원상복구
-          toggleBtn.disabled = false;
-          toggleBtn.style.background = currentStatus ? '#dc3545' : '#28a745';
-          toggleBtn.textContent = currentStatus ? '🛑 운영 중지' : '▶️ 운영 시작';
-
-          alert(`운영 상태 변경에 실패했습니다: ${error.message}`);
-        }
+      const response = await fetch(`/api/stores/${store.id}/toggle-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          isOpen: newStatus,
+          storeId: store.id 
+        })
       });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ 매장 운영 상태 변경 성공:', result);
+
+        // store 객체 업데이트
+        store.isOpen = newStatus;
+
+        // UI 즉시 업데이트
+        toggleBtn.style.background = newStatus ? '#dc3545' : '#28a745';
+        toggleBtn.textContent = newStatus ? '🛑 운영 중지' : '▶️ 운영 시작';
+        toggleBtn.disabled = false;
+
+        // 성공 메시지
+        alert(`매장이 ${actionText}되었습니다.`);
+
+        // 매장 정보 새로고침
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+
+      } else {
+        throw new Error(result.message || '운영 상태 변경 실패');
+      }
+    } catch (error) {
+      console.error('❌ 매장 운영 상태 변경 오류:', error);
+
+      // 버튼 원상복구
+      toggleBtn.disabled = false;
+      toggleBtn.style.background = currentStatus ? '#dc3545' : '#28a745';
+      toggleBtn.textContent = currentStatus ? '🛑 운영 중지' : '▶️ 운영 시작';
+
+      alert(`운영 상태 변경에 실패했습니다: ${error.message}`);
     }
   });
 
