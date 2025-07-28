@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -94,32 +93,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 개별 매장 정보 조회 API
+// 특정 매장 조회 API
 router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
-    console.log(`🏪 개별 매장 정보 조회 요청: ${storeId}`);
-
-    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [parseInt(storeId)]);
+    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [storeId]);
 
     if (storeResult.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        error: '매장을 찾을 수 없습니다' 
-      });
+      return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다' });
     }
 
     const store = storeResult.rows[0];
 
+    // 테이블 정보 조회
     const tablesResult = await pool.query(`
-      SELECT 
-        table_number, table_name, seats, is_occupied, occupied_since
+      SELECT id, table_number, table_name, seats, is_occupied, occupied_since 
       FROM store_tables 
       WHERE store_id = $1 
       ORDER BY table_number
-    `, [parseInt(storeId)]);
+    `, [storeId]);
 
     const tables = tablesResult.rows.map(table => ({
+      id: table.id,
       tableNumber: table.table_number,
       tableName: table.table_name,
       seats: table.seats,
@@ -128,42 +123,37 @@ router.get('/:storeId', async (req, res) => {
     }));
 
     const totalTables = tables.length;
-    const availableTables = tables.filter(t => !t.isOccupied).length;
-    const occupiedTables = tables.filter(t => t.isOccupied).length;
+    const occupiedTables = tables.filter(t => t.is_occupied).length;
+    const availableTables = totalTables - occupiedTables;
+    const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
 
-    const storeData = {
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      distance: store.distance || '정보없음',
-      address: store.address || '주소 정보 없음',
-      menu: store.menu || [],
-      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
-      reviews: store.reviews || [],
-      reviewCount: store.review_count || 0,
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      isOpen: store.is_open !== false,
-      tableInfo: {
-        totalTables,
-        availableTables,
-        occupiedTables,
-        occupancyRate: totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
-      },
-      tables: tables
-    };
-
-    console.log(`✅ 매장 ${storeId} 정보 조회 완료`);
     res.json({
       success: true,
-      store: storeData
+      store: {
+        id: store.id,
+        name: store.name,
+        category: store.category,
+        address: store.address,
+        phone: store.phone,
+        isOpen: store.is_open,
+        ratingAverage: parseFloat(store.rating_average) || 0,
+        reviewCount: store.review_count || 0,
+        description: store.description,
+        operatingHours: store.operating_hours,
+        latitude: store.latitude,
+        longitude: store.longitude,
+        tables: tables,
+        tableInfo: {
+          totalTables: totalTables,
+          availableTables: availableTables,
+          occupiedTables: occupiedTables,
+          occupancyRate: occupancyRate
+        }
+      }
     });
-
   } catch (error) {
-    console.error('❌ 개별 매장 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '매장 정보 조회 실패' 
-    });
+    console.error('매장 조회 실패:', error);
+    res.status(500).json({ success: false, error: '매장 조회 실패' });
   }
 });
 
@@ -276,7 +266,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 router.get('/search', async (req, res) => {
   try {
     const { query } = req.query;
-    
+
     if (!query) {
       return res.status(400).json({ 
         success: false, 
