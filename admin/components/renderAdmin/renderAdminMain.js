@@ -1,26 +1,32 @@
 const renderAdminMain = function () {
-  const main = document.getElementById("main");
-  main.innerHTML = `
-              <div id="adminContainer" style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100vh;
-                background: #1a1a1a;
-                color: white;
-                font-family: Arial, sans-serif;
-                overflow-y: auto;
-                overflow-x: hidden;
-                padding: 0;
-                margin: 0;
-                box-sizing: border-box;
-              ">
-                <div style="padding: 20px 20px 40px 20px; min-height: 100vh; box-sizing: border-box;">
-                <header style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
-                  <h1 style="color: #ff6b6b; margin: 0; font-size: 28px;">🛠️ TableLink 관리자 패널</h1>
-                  <p style="color: #888; margin: 10px 0 0 0;">시스템 관리 및 모니터링</p>
-                </header>
+  try {
+    const main = document.getElementById("main");
+    if (!main) {
+      console.error('❌ main 요소를 찾을 수 없습니다');
+      return;
+    }
+
+    main.innerHTML = `
+      <div id="adminContainer" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: #1a1a1a;
+        color: white;
+        font-family: Arial, sans-serif;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+      ">
+        <div style="padding: 20px 20px 40px 20px; min-height: 100vh; box-sizing: border-box;">
+          <header style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
+            <h1 style="color: #ff6b6b; margin: 0; font-size: 28px;">🛠️ TableLink 관리자 패널</h1>
+            <p style="color: #888; margin: 10px 0 0 0;">시스템 관리 및 모니터링</p>
+          </header>
 
                 <main style="max-width: 1200px; margin: 0 auto;">
                   <!-- 대시보드 통계 -->
@@ -84,23 +90,41 @@ const renderAdminMain = function () {
                   </section>
 
                   <!-- 로그아웃 -->
-                  <section style="text-align: center; margin-top: 40px; margin-bottom: 40px; padding-top: 20px; padding-bottom: 20px; border-top: 2px solid #333;">
-                    <button id="backToLogin" style="padding: 12px 30px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">← 로그인 화면으로</button>
-                    <button id="logoutAdmin" style="padding: 12px 30px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">🚪 관리자 로그아웃</button>
-                  </section>
-                </main>
-                </div>
-              </div>
-            `;
+          <section style="text-align: center; margin-top: 40px; margin-bottom: 40px; padding-top: 20px; padding-bottom: 20px; border-top: 2px solid #333;">
+            <button id="backToLogin" style="padding: 12px 30px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">← 로그인 화면으로</button>
+            <button id="logoutAdmin" style="padding: 12px 30px; background: #e74c3c; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 10px;">🚪 관리자 로그아웃</button>
+          </section>
+        </main>
+        </div>
+      </div>
+    `;
 
-  // 통계 데이터 로드 (비동기로 안전하게 처리)
-  setTimeout(() => {
-    loadAdminStats();
-  }, 100);
+    console.log('✅ 관리자 메인 화면 렌더링 완료');
 
-  // 이벤트 리스너 등록
-  setupAdminEventListeners();
+    // 통계 데이터 로드 (비동기로 안전하게 처리)
+    setTimeout(() => {
+      loadAdminStats();
+    }, 100);
+
+    // 이벤트 리스너 등록
+    setupAdminEventListeners();
+
+  } catch (error) {
+    console.error('❌ renderAdminMain 오류:', error);
+    const main = document.getElementById("main");
+    if (main) {
+      main.innerHTML = `
+        <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif; background: #1a1a1a; color: white; height: 100vh;">
+          <h2 style="color: #ff6b6b;">❌ 관리자 페이지 로드 오류</h2>
+          <p>페이지를 로드하는 중 오류가 발생했습니다.</p>
+          <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">새로고침</button>
+        </div>
+      `;
+    }
+  }
 };
+
+  
 
 // 관리자 통계 데이터 로드
 async function loadAdminStats() {
@@ -165,28 +189,30 @@ function setupAdminEventListeners() {
   try {
     console.log("🔧 관리자 이벤트 리스너 설정 중...");
 
-    // 매장 관리
-    const viewStoresBtn = document.getElementById("viewStores");
-    const addStoreBtn = document.getElementById("addStore");
-    const storeSettingsBtn = document.getElementById("storeSettings");
+    // DOM 요소가 완전히 로드될 때까지 대기
+    setTimeout(() => {
+      // 매장 관리
+      const viewStoresBtn = document.getElementById("viewStores");
+      const addStoreBtn = document.getElementById("addStore");
+      const storeSettingsBtn = document.getElementById("storeSettings");
 
-    if (viewStoresBtn) {
-      viewStoresBtn.addEventListener("click", () => {
-        alert("매장 목록 보기 기능은 개발 중입니다");
-      });
-    }
+      if (viewStoresBtn) {
+        viewStoresBtn.addEventListener("click", () => {
+          alert("매장 목록 보기 기능은 개발 중입니다");
+        });
+      }
 
-    if (addStoreBtn) {
-      addStoreBtn.addEventListener("click", () => {
-        alert("새 매장 추가 기능은 개발 중입니다");
-      });
-    }
+      if (addStoreBtn) {
+        addStoreBtn.addEventListener("click", () => {
+          alert("새 매장 추가 기능은 개발 중입니다");
+        });
+      }
 
-    if (storeSettingsBtn) {
-      storeSettingsBtn.addEventListener("click", () => {
-        alert("매장 설정 기능은 개발 중입니다");
-      });
-    }
+      if (storeSettingsBtn) {
+        storeSettingsBtn.addEventListener("click", () => {
+          alert("매장 설정 기능은 개발 중입니다");
+        });
+      }
 
     // 사용자 관리
     const viewUsersBtn = document.getElementById("viewUsers");
@@ -265,24 +291,26 @@ function setupAdminEventListeners() {
     }
 
     // 로그아웃 및 뒤로가기
-    const backToLoginBtn = document.getElementById("backToLogin");
-    const logoutAdminBtn = document.getElementById("logoutAdmin");
+      const backToLoginBtn = document.getElementById("backToLogin");
+      const logoutAdminBtn = document.getElementById("logoutAdmin");
 
-    if (backToLoginBtn) {
-      backToLoginBtn.addEventListener("click", () => {
-        window.location.href = "/";
-      });
-    }
-
-    if (logoutAdminBtn) {
-      logoutAdminBtn.addEventListener("click", () => {
-        if (confirm("관리자 모드에서 로그아웃하시겠습니까?")) {
+      if (backToLoginBtn) {
+        backToLoginBtn.addEventListener("click", () => {
           window.location.href = "/";
-        }
-      });
-    }
+        });
+      }
 
-    console.log("✅ 관리자 이벤트 리스너 설정 완료");
+      if (logoutAdminBtn) {
+        logoutAdminBtn.addEventListener("click", () => {
+          if (confirm("관리자 모드에서 로그아웃하시겠습니까?")) {
+            window.location.href = "/";
+          }
+        });
+      }
+
+      console.log("✅ 관리자 이벤트 리스너 설정 완료");
+    }, 200); // DOM 로딩 대기
+
   } catch (error) {
     console.error("❌ 이벤트 리스너 설정 오류:", error);
   }
