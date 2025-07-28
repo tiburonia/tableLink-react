@@ -28,7 +28,7 @@ const cacheRoutes = require('./routes/cache');
 app.use('/api', authRoutes);
 app.use('/api/stores', storesRoutes);
 app.use('/api/orders', ordersRoutes);
-app.use('/api/reviews', reviewsRoutes);
+app.use('/api', reviewsRoutes);
 app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
