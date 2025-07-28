@@ -45,7 +45,7 @@ app.get('/api/stores/:storeId', async (req, res) => {
     console.log(`🏪 개별 매장 정보 조회 요청: ${storeId}`);
 
     const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [parseInt(storeId)]);
-    
+
     if (storeResult.rows.length === 0) {
       return res.status(404).json({ 
         success: false, 
@@ -419,10 +419,10 @@ app.post('/api/orders/pay', async (req, res) => {
     // 테이블 이름으로 고유 ID 및 실제 테이블 정보 찾기
     let tableUniqueId = null;
     let actualTableNumber = null;
-    
+
     if (orderData.tableNum && orderData.storeId) {
       console.log(`🔍 테이블 정보 조회 시작: "${orderData.tableNum}" (매장 ID: ${orderData.storeId})`);
-      
+
       try {
         // 매장 ID와 테이블 이름으로 실제 테이블 정보 조회
         const tableResult = await client.query(`
@@ -438,7 +438,7 @@ app.post('/api/orders/pay', async (req, res) => {
           console.log(`✅ 테이블 정보 찾음: ${table.table_name} -> unique_id: ${tableUniqueId}, table_number: ${actualTableNumber}`);
         } else {
           console.log(`❌ 테이블을 찾을 수 없음: "${orderData.tableNum}" (매장 ID: ${orderData.storeId})`);
-          
+
           // 백업: 테이블 이름에서 숫자 추출 시도
           const numberMatches = orderData.tableNum.toString().match(/\d+/g);
           if (numberMatches && numberMatches.length > 0) {
@@ -512,7 +512,7 @@ app.get('/api/stores/:storeId/orders', async (req, res) => {
       JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1
     `;
-    
+
     const params = [parseInt(storeId)];
 
     if (status) {
@@ -859,7 +859,7 @@ app.get('/api/admin/tables/status', async (req, res) => {
         COUNT(CASE WHEN is_occupied = true THEN 1 END) as occupied_tables,
         COUNT(CASE WHEN is_occupied = false THEN 1 END) as available_tables,
         ROUND(COUNT(CASE WHEN is_occupied = true THEN 1 END) * 100.0 / COUNT(*), 1) as occupancy_rate
-      FROM store_tables
+            FROM store_tables
     `);
 
     res.json({
@@ -1362,6 +1362,166 @@ app.post('/api/users/:userId/favorites/:storeId', async (req, res) => {
   } catch (error) {
     console.error('Failed to add store to favorites:', error);
     res.status(500).json({ error: 'Failed to add store to favorites' });
+  }
+});
+
+// 매장별 테이블 정보 조회
+app.get('/api/tables/store/:storeId', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    // 매장의 모든 테이블 정보 조회
+    const tablesResult = await pool.query(`
+      SELECT t.*, s.name as store_name 
+      FROM store_tables t 
+      JOIN stores s ON t.store_id = s.id 
+      WHERE t.store_id = $1 
+      ORDER BY t.table_number
+    `, [storeId]);
+
+    const tables = tablesResult.rows;
+    const totalTables = tables.length;
+    const occupiedTables = tables.filter(table => table.is_occupied).length;
+    const availableTables = totalTables - occupiedTables;
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      totalTables,
+      availableTables,
+      occupiedTables,
+      tables
+    });
+
+  } catch (error) {
+    console.error('테이블 정보 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '테이블 정보 조회에 실패했습니다.'
+    });
+  }
+});
+
+// 매장 운영 상태 토글
+app.post('/api/stores/:storeId/toggle-status', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    // 현재 상태 조회
+    const currentResult = await pool.query('SELECT is_open FROM stores WHERE id = $1', [storeId]);
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다.' });
+    }
+
+    const currentStatus = currentResult.rows[0].is_open;
+    const newStatus = !currentStatus;
+
+    // 상태 업데이트
+    await pool.query('UPDATE stores SET is_open = $1 WHERE id = $2', [newStatus, storeId]);
+
+    res.json({
+      success: true,
+      isOpen: newStatus,
+      message: `매장이 ${newStatus ? '운영중' : '운영중지'} 상태로 변경되었습니다.`
+    });
+
+  } catch (error) {
+    console.error('매장 상태 변경 실패:', error);
+    res.status(500).json({ success: false, error: '매장 상태 변경에 실패했습니다.' });
+  }
+});
+
+// 매장별 최근 주문 조회
+app.get('/api/orders/recent/:storeId', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    const ordersResult = await pool.query(`
+      SELECT o.*, t.table_name, t.table_number
+      FROM orders o
+      JOIN store_tables t ON o.table_unique_id = t.unique_id
+      WHERE t.store_id = $1
+      ORDER BY o.order_date DESC
+      LIMIT 10
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      orders: ordersResult.rows
+    });
+
+  } catch (error) {
+    console.error('최근 주문 조회 실패:', error);
+    res.status(500).json({ success: false, error: '최근 주문 조회에 실패했습니다.' });
+  }
+});
+
+// 매장별 전체 주문 조회
+app.get('/api/orders/store/:storeId', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    const ordersResult = await pool.query(`
+      SELECT o.*, t.table_name, t.table_number
+      FROM orders o
+      JOIN store_tables t ON o.table_unique_id = t.unique_id
+      WHERE t.store_id = $1
+      ORDER BY o.order_date DESC
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      orders: ordersResult.rows
+    });
+
+  } catch (error) {
+    console.error('전체 주문 조회 실패:', error);
+    res.status(500).json({ success: false, error: '전체 주문 조회에 실패했습니다.' });
+  }
+});
+
+// 매장별 최근 리뷰 조회
+app.get('/api/reviews/recent/:storeId', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    const reviewsResult = await pool.query(`
+      SELECT * FROM reviews 
+      WHERE store_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      reviews: reviewsResult.rows
+    });
+
+  } catch (error) {
+    console.error('최근 리뷰 조회 실패:', error);
+    res.status(500).json({ success: false, error: '최근 리뷰 조회에 실패했습니다.' });
+  }
+});
+
+// 매장별 전체 리뷰 조회
+app.get('/api/reviews/store/:storeId', async (req, res) => {
+  try {
+    const storeId = req.params.storeId;
+
+    const reviewsResult = await pool.query(`
+      SELECT * FROM reviews 
+      WHERE store_id = $1 
+      ORDER BY created_at DESC
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      reviews: reviewsResult.rows
+    });
+
+  } catch (error) {
+    console.error('전체 리뷰 조회 실패:', error);
+    res.status(500).json({ success: false, error: '전체 리뷰 조회에 실패했습니다.' });
   }
 });
 

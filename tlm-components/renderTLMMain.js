@@ -75,40 +75,16 @@ let renderTLMMain = async function (storeId) {
             <!-- 최근 주문 -->
             <div class="card orders-card">
               <h3>📋 최근 주문</h3>
-              <div class="recent-orders">
-                <div class="order-item">
-                  <span class="order-info">테이블 3 - 불고기덮밥 2개</span>
-                  <span class="order-time">5분 전</span>
-                </div>
-                <div class="order-item">
-                  <span class="order-info">테이블 7 - 김치찌개 1개</span>
-                  <span class="order-time">12분 전</span>
-                </div>
-                <div class="order-item">
-                  <span class="order-info">테이블 1 - 된장찌개 2개</span>
-                  <span class="order-time">18분 전</span>
-                </div>
+              <div class="recent-orders" id="recentOrdersList">
+                <div class="loading">데이터 로딩중...</div>
               </div>
             </div>
 
             <!-- 최근 리뷰 -->
             <div class="card reviews-card">
               <h3>⭐ 최근 리뷰</h3>
-              <div class="recent-reviews">
-                <div class="review-item">
-                  <div class="review-header">
-                    <span class="review-rating">⭐⭐⭐⭐⭐</span>
-                    <span class="review-time">2시간 전</span>
-                  </div>
-                  <p class="review-text">음식이 정말 맛있어요! 다시 올게요.</p>
-                </div>
-                <div class="review-item">
-                  <div class="review-header">
-                    <span class="review-rating">⭐⭐⭐⭐</span>
-                    <span class="review-time">5시간 전</span>
-                  </div>
-                  <p class="review-text">친절하고 깔끔한 매장이네요.</p>
-                </div>
+              <div class="recent-reviews" id="recentReviewsList">
+                <div class="loading">데이터 로딩중...</div>
               </div>
             </div>
           </div>
@@ -304,6 +280,13 @@ let renderTLMMain = async function (storeId) {
           opacity: 0.9;
         }
 
+        .loading, .no-data {
+          text-align: center;
+          opacity: 0.7;
+          font-style: italic;
+          padding: 20px;
+        }
+
         .action-buttons {
           display: flex;
           flex-wrap: wrap;
@@ -367,6 +350,9 @@ let renderTLMMain = async function (storeId) {
       }
     });
 
+    // 실제 데이터 로드
+    await loadRecentData(storeId);
+
     console.log('✅ TLM 매장 관리 화면 렌더링 완료');
 
   } catch (error) {
@@ -383,22 +369,180 @@ let renderTLMMain = async function (storeId) {
   }
 };
 
+// 최근 데이터 로드 및 UI 업데이트
+async function loadRecentData(storeId) {
+  // 최근 주문 로드
+  const orders = await loadRecentOrders(storeId);
+  const ordersContainer = document.getElementById('recentOrdersList');
+  
+  if (orders.length > 0) {
+    ordersContainer.innerHTML = orders.map(order => {
+      const timeAgo = getTimeAgo(new Date(order.created_at));
+      return `
+        <div class="order-item">
+          <span class="order-info">${order.table_name} - ${order.items || '주문 내역'}</span>
+          <span class="order-time">${timeAgo}</span>
+        </div>
+      `;
+    }).join('');
+  } else {
+    ordersContainer.innerHTML = '<div class="no-data">최근 주문이 없습니다.</div>';
+  }
+
+  // 최근 리뷰 로드
+  const reviews = await loadRecentReviews(storeId);
+  const reviewsContainer = document.getElementById('recentReviewsList');
+  
+  if (reviews.length > 0) {
+    reviewsContainer.innerHTML = reviews.map(review => {
+      const timeAgo = getTimeAgo(new Date(review.created_at));
+      const stars = '⭐'.repeat(review.rating);
+      return `
+        <div class="review-item">
+          <div class="review-header">
+            <span class="review-rating">${stars}</span>
+            <span class="review-time">${timeAgo}</span>
+          </div>
+          <p class="review-text">${review.review_text}</p>
+        </div>
+      `;
+    }).join('');
+  } else {
+    reviewsContainer.innerHTML = '<div class="no-data">최근 리뷰가 없습니다.</div>';
+  }
+}
+
+// 시간 차이 계산 함수
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return '방금 전';
+  if (diffMins < 60) return `${diffMins}분 전`;
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  return `${diffDays}일 전`;
+}
+
+// 실제 주문 데이터 로드
+async function loadRecentOrders(storeId) {
+  try {
+    const response = await fetch(`/api/orders/recent/${storeId}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.orders || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('최근 주문 로드 실패:', error);
+    return [];
+  }
+}
+
+// 실제 리뷰 데이터 로드
+async function loadRecentReviews(storeId) {
+  try {
+    const response = await fetch(`/api/reviews/recent/${storeId}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.reviews || [];
+    }
+    return [];
+  } catch (error) {
+    console.error('최근 리뷰 로드 실패:', error);
+    return [];
+  }
+}
+
 // 매장 운영 상태 토글 함수
-function toggleStoreStatus() {
-  alert('매장 운영 상태 변경 기능은 개발 중입니다.');
+async function toggleStoreStatus() {
+  const storeId = new URLSearchParams(window.location.search).get('storeId');
+  
+  try {
+    const response = await fetch(`/api/stores/${storeId}/toggle-status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(`매장 운영 상태가 ${data.isOpen ? '운영중' : '운영중지'}로 변경되었습니다.`);
+      location.reload(); // 페이지 새로고침으로 상태 업데이트
+    } else {
+      alert('운영 상태 변경에 실패했습니다: ' + data.error);
+    }
+  } catch (error) {
+    console.error('운영 상태 변경 실패:', error);
+    alert('운영 상태 변경 중 오류가 발생했습니다.');
+  }
 }
 
 // 전체 주문 보기 함수  
-function viewAllOrders() {
-  alert('전체 주문 보기 기능은 개발 중입니다.');
+async function viewAllOrders() {
+  const storeId = new URLSearchParams(window.location.search).get('storeId');
+  
+  try {
+    const response = await fetch(`/api/orders/store/${storeId}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      const orders = data.orders;
+      let ordersList = orders.map(order => 
+        `테이블 ${order.table_name} - ${order.items || '주문 내역'} (${new Date(order.created_at).toLocaleString()})`
+      ).join('\n');
+      
+      if (ordersList) {
+        alert(`전체 주문 목록:\n\n${ordersList}`);
+      } else {
+        alert('주문 내역이 없습니다.');
+      }
+    } else {
+      alert('주문 데이터를 불러올 수 없습니다.');
+    }
+  } catch (error) {
+    console.error('주문 데이터 로드 실패:', error);
+    alert('주문 데이터 로드 중 오류가 발생했습니다.');
+  }
 }
 
 // 전체 리뷰 보기 함수
-function viewAllReviews() {
-  alert('전체 리뷰 보기 기능은 개발 중입니다.');
+async function viewAllReviews() {
+  const storeId = new URLSearchParams(window.location.search).get('storeId');
+  
+  try {
+    const response = await fetch(`/api/reviews/store/${storeId}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      const reviews = data.reviews;
+      let reviewsList = reviews.map(review => 
+        `${'⭐'.repeat(review.rating)} (${review.rating}점)\n${review.review_text}\n- ${new Date(review.created_at).toLocaleDateString()}`
+      ).join('\n\n');
+      
+      if (reviewsList) {
+        alert(`전체 리뷰 목록:\n\n${reviewsList}`);
+      } else {
+        alert('리뷰가 없습니다.');
+      }
+    } else {
+      alert('리뷰 데이터를 불러올 수 없습니다.');
+    }
+  } catch (error) {
+    console.error('리뷰 데이터 로드 실패:', error);
+    alert('리뷰 데이터 로드 중 오류가 발생했습니다.');
+  }
 }
 
 // 메뉴 관리 함수
 function manageMenu() {
-  alert('메뉴 관리 기능은 개발 중입니다.');
+  const storeId = new URLSearchParams(window.location.search).get('storeId');
+  alert(`메뉴 관리 기능을 위해 관리자 페이지로 이동합니다.\n매장 ID: ${storeId}`);
+  window.open(`/admin.html?storeId=${storeId}`, '_blank');
 }
