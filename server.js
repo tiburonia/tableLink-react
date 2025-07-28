@@ -416,39 +416,55 @@ app.post('/api/orders/pay', async (req, res) => {
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
 
-    // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
-    let tableNumber = null;
-    if (orderData.tableNum) {
-      console.log(`🔍 테이블 번호 추출 시작: "${orderData.tableNum}"`);
+    // 테이블 이름으로 고유 ID 및 실제 테이블 정보 찾기
+    let tableUniqueId = null;
+    let actualTableNumber = null;
+    
+    if (orderData.tableNum && orderData.storeId) {
+      console.log(`🔍 테이블 정보 조회 시작: "${orderData.tableNum}" (매장 ID: ${orderData.storeId})`);
       
-      // 문자열에서 모든 숫자를 찾기
-      const numberMatches = orderData.tableNum.toString().match(/\d+/g);
-      console.log(`🔍 정규식 매치 결과:`, numberMatches);
-      
-      if (numberMatches && numberMatches.length > 0) {
-        // 마지막 숫자를 테이블 번호로 사용
-        tableNumber = parseInt(numberMatches[numberMatches.length - 1]);
-        console.log(`✅ 추출된 테이블 번호: ${tableNumber}`);
-      } else {
-        console.log(`❌ 숫자를 찾을 수 없음: "${orderData.tableNum}"`);
-        // 숫자가 없으면 null로 설정
-        tableNumber = null;
+      try {
+        // 매장 ID와 테이블 이름으로 실제 테이블 정보 조회
+        const tableResult = await client.query(`
+          SELECT unique_id, table_number, table_name 
+          FROM store_tables 
+          WHERE store_id = $1 AND table_name = $2
+        `, [orderData.storeId, orderData.tableNum]);
+
+        if (tableResult.rows.length > 0) {
+          const table = tableResult.rows[0];
+          tableUniqueId = table.unique_id;
+          actualTableNumber = table.table_number;
+          console.log(`✅ 테이블 정보 찾음: ${table.table_name} -> unique_id: ${tableUniqueId}, table_number: ${actualTableNumber}`);
+        } else {
+          console.log(`❌ 테이블을 찾을 수 없음: "${orderData.tableNum}" (매장 ID: ${orderData.storeId})`);
+          
+          // 백업: 테이블 이름에서 숫자 추출 시도
+          const numberMatches = orderData.tableNum.toString().match(/\d+/g);
+          if (numberMatches && numberMatches.length > 0) {
+            actualTableNumber = parseInt(numberMatches[numberMatches.length - 1]);
+            console.log(`🔄 백업 방식으로 테이블 번호 추출: ${actualTableNumber}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ 테이블 정보 조회 실패:`, error);
       }
     } else {
-      console.log(`❌ tableNum이 없음`);
+      console.log(`❌ tableNum 또는 storeId가 없음`);
     }
 
-    // orders 테이블에 주문 정보 저장
+    // orders 테이블에 주문 정보 저장 (table_unique_id 컬럼 추가 필요)
     await client.query(`
       INSERT INTO orders (
-        store_id, user_id, table_number, order_data, 
+        store_id, user_id, table_number, table_unique_id, order_data, 
         total_amount, discount_amount, final_amount, 
         order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
     `, [
       orderData.storeId || null,
       userId,
-      tableNumber,
+      actualTableNumber,
+      tableUniqueId,
       JSON.stringify(orderData),
       orderData.total,
       appliedPoint + couponDiscount,
@@ -770,40 +786,43 @@ app.get('/api/stores/:storeId/tables', async (req, res) => {
   }
 });
 
-// 테이블 상태 업데이트 API
+// 테이블 상태 업데이트 API (고유 ID 기반)
 app.post('/api/stores/tables/update', async (req, res) => {
-  const { storeId, tableNumber, isOccupied } = req.body;
+  const { storeId, tableName, isOccupied } = req.body;
 
   try {
     // 테이블 존재 확인
     const tableResult = await pool.query(
-      'SELECT * FROM store_tables WHERE store_id = $1 AND table_number = $2',
-      [storeId, tableNumber]
+      'SELECT * FROM store_tables WHERE store_id = $1 AND table_name = $2',
+      [storeId, tableName]
     );
 
     if (tableResult.rows.length === 0) {
       return res.status(404).json({ error: '테이블을 찾을 수 없습니다' });
     }
 
+    const table = tableResult.rows[0];
+
     // 테이블 상태 업데이트
     const occupiedSince = isOccupied ? new Date() : null;
     await pool.query(`
       UPDATE store_tables 
       SET is_occupied = $1, occupied_since = $2 
-      WHERE store_id = $3 AND table_number = $4
-    `, [isOccupied, occupiedSince, storeId, tableNumber]);
+      WHERE unique_id = $3
+    `, [isOccupied, occupiedSince, table.unique_id]);
 
     // 업데이트된 테이블 정보 조회
     const updatedTable = await pool.query(
-      'SELECT * FROM store_tables WHERE store_id = $1 AND table_number = $2',
-      [storeId, tableNumber]
+      'SELECT * FROM store_tables WHERE unique_id = $1',
+      [table.unique_id]
     );
 
     res.json({
       success: true,
-      message: `테이블 ${tableNumber}번 상태가 ${isOccupied ? '사용중' : '빈 테이블'}으로 변경되었습니다`,
+      message: `${table.table_name} 상태가 ${isOccupied ? '사용중' : '빈 테이블'}으로 변경되었습니다`,
       table: {
         id: updatedTable.rows[0].id,
+        uniqueId: updatedTable.rows[0].unique_id,
         tableNumber: updatedTable.rows[0].table_number,
         tableName: updatedTable.rows[0].table_name,
         seats: updatedTable.rows[0].seats,
@@ -855,55 +874,55 @@ app.get('/api/admin/tables/status', async (req, res) => {
   }
 });
 
-// 테이블 점유 상태 설정 및 자동 해제 API
+// 테이블 점유 상태 설정 및 자동 해제 API (고유 ID 기반)
 app.post('/api/tables/occupy', async (req, res) => {
-  const { storeId, tableNumber } = req.body;
+  const { storeId, tableName } = req.body;
 
-  console.log(`🔍 테이블 점유 요청: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+  console.log(`🔍 테이블 점유 요청: 매장 ID ${storeId}, 테이블 이름 "${tableName}"`);
 
   try {
-    // 먼저 테이블이 존재하는지 확인
+    // 매장 ID와 테이블 이름으로 실제 테이블 찾기
     const existingTable = await pool.query(`
       SELECT * FROM store_tables 
-      WHERE store_id = $1 AND table_number = $2
-    `, [storeId, tableNumber]);
+      WHERE store_id = $1 AND table_name = $2
+    `, [storeId, tableName]);
 
     if (existingTable.rows.length === 0) {
-      console.log(`❌ 테이블을 찾을 수 없음: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+      console.log(`❌ 테이블을 찾을 수 없음: 매장 ID ${storeId}, 테이블 이름 "${tableName}"`);
       return res.status(404).json({ error: '테이블을 찾을 수 없습니다' });
     }
 
-    console.log(`📋 기존 테이블 상태:`, existingTable.rows[0]);
+    const table = existingTable.rows[0];
+    console.log(`📋 기존 테이블 상태:`, table);
 
     // 테이블 점유 상태로 변경
     const occupiedTime = new Date();
 
-    console.log(`🔧 SQL 쿼리 실행: UPDATE store_tables SET is_occupied = true, occupied_since = '${occupiedTime.toISOString()}' WHERE store_id = ${storeId} AND table_number = ${tableNumber}`);
+    console.log(`🔧 테이블 점유 상태 변경: ${table.table_name} (unique_id: ${table.unique_id})`);
 
     const updateResult = await pool.query(`
       UPDATE store_tables 
       SET is_occupied = $1, occupied_since = $2 
-      WHERE store_id = $3 AND table_number = $4
+      WHERE unique_id = $3
       RETURNING *
-    `, [true, occupiedTime, storeId, tableNumber]);
+    `, [true, occupiedTime, table.unique_id]);
 
     console.log(`✅ 테이블 점유 상태 변경 완료:`, updateResult.rows[0]);
-    console.log(`🔍 반영된 행 수: ${updateResult.rowCount}`);
 
     // 2분 후 자동 해제 스케줄링
     setTimeout(async () => {
       try {
-        console.log(`⏰ 2분 후 자동 해제 시작: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+        console.log(`⏰ 2분 후 자동 해제 시작: ${table.table_name} (unique_id: ${table.unique_id})`);
 
         // 2분이 지난 후 해당 테이블이 여전히 점유 상태인지 확인
         const tableResult = await pool.query(`
           SELECT * FROM store_tables 
-          WHERE store_id = $1 AND table_number = $2 AND is_occupied = true
-        `, [storeId, tableNumber]);
+          WHERE unique_id = $1 AND is_occupied = true
+        `, [table.unique_id]);
 
         if (tableResult.rows.length > 0) {
-          const table = tableResult.rows[0];
-          const occupiedSince = new Date(table.occupied_since);
+          const currentTable = tableResult.rows[0];
+          const occupiedSince = new Date(currentTable.occupied_since);
           const now = new Date();
           const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
 
@@ -914,14 +933,14 @@ app.post('/api/tables/occupy', async (req, res) => {
             const releaseResult = await pool.query(`
               UPDATE store_tables 
               SET is_occupied = $1, occupied_since = $2 
-              WHERE store_id = $3 AND table_number = $4
+              WHERE unique_id = $3
               RETURNING *
-            `, [false, null, storeId, tableNumber]);
+            `, [false, null, table.unique_id]);
 
-            console.log(`✅ 테이블 ${tableNumber}번 (매장 ID: ${storeId}) 자동 해제 완료:`, releaseResult.rows[0]);
+            console.log(`✅ 테이블 ${table.table_name} 자동 해제 완료:`, releaseResult.rows[0]);
           }
         } else {
-          console.log(`ℹ️ 테이블이 이미 해제됨: 매장 ID ${storeId}, 테이블 번호 ${tableNumber}`);
+          console.log(`ℹ️ 테이블이 이미 해제됨: ${table.table_name}`);
         }
       } catch (error) {
         console.error('❌ 테이블 자동 해제 실패:', error);
@@ -930,7 +949,7 @@ app.post('/api/tables/occupy', async (req, res) => {
 
     res.json({
       success: true,
-      message: `테이블 ${tableNumber}번이 점유 상태로 변경되었습니다. 2분 후 자동 해제됩니다.`,
+      message: `${table.table_name}이 점유 상태로 변경되었습니다. 2분 후 자동 해제됩니다.`,
       occupiedSince: occupiedTime,
       updatedTable: updateResult.rows[0]
     });

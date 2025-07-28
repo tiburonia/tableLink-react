@@ -1,4 +1,3 @@
-
 async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal, selectedCouponId, couponDiscount) {
   try {
     // 서버에 결제 요청
@@ -26,7 +25,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
 
     // 클라이언트 userInfo 업데이트
     userInfo.point = userInfo.point - data.result.appliedPoint + data.result.earnedPoint;
-    
+
     // 쿠폰 처리
     if (selectedCouponId) {
       const idx = userInfo.coupons.unused.findIndex(c => c.id == selectedCouponId);
@@ -70,50 +69,36 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     console.log('💳 결제 완료 후 사용자 정보 캐시 업데이트 완료');
 
     let alertMessage = `결제가 완료되었습니다.\n최종 금액: ${data.result.finalTotal.toLocaleString()}원\n포인트 사용: ${data.result.appliedPoint.toLocaleString()}원\n적립 포인트: ${data.result.earnedPoint.toLocaleString()}원\n할인된 금액: ${data.result.totalDiscount.toLocaleString()}원`;
-    
+
     if (selectedCouponId) {
       const usedCouponName = userInfo.coupons?.used?.find(c => c.id == selectedCouponId)?.name || '쿠폰';
       alertMessage += `\n사용된 쿠폰: ${usedCouponName}`;
     }
-    
+
     alert(alertMessage);
 
     // 테이블 점유 상태 설정 (주문이 확정되었으므로)
     if (orderData.storeId && orderData.tableNum) {
       try {
-        // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1, "vip룸 2" -> 2)
-        console.log(`🔍 클라이언트 테이블 번호 추출 시작: "${orderData.tableNum}"`);
-        
-        const numberMatches = orderData.tableNum.match(/\d+/g);
-        console.log(`🔍 클라이언트 정규식 매치 결과:`, numberMatches);
-        
-        const tableNumber = numberMatches && numberMatches.length > 0 ? parseInt(numberMatches[numberMatches.length - 1]) : null;
-        console.log(`✅ 클라이언트에서 추출된 테이블 번호: ${tableNumber}`);
-        
-        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 번호 ${tableNumber}, 원본 테이블명: ${orderData.tableNum}`);
-        
+        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 이름: "${orderData.tableNum}"`);
+
         const occupyResponse = await fetch('/api/tables/occupy', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
             storeId: orderData.storeId,
-            tableNumber: tableNumber
+            tableName: orderData.tableNum
           })
         });
 
-        const occupyData = await occupyResponse.json();
-        
         if (occupyResponse.ok) {
-          console.log(`🔒 테이블 점유 설정 완료:`, occupyData);
-          
-          // 테이블 상태 업데이트 후 즉시 렌더스토어 테이블 정보 새로고침
-          if (typeof loadTableInfo === 'function' && store) {
-            setTimeout(() => {
-              loadTableInfo(store);
-            }, 500);
-          }
+          const occupyData = await occupyResponse.json();
+          console.log('✅ 테이블 점유 상태 설정 성공:', occupyData.message);
         } else {
-          console.error('❌ 테이블 점유 설정 실패:', occupyData);
+          const occupyError = await occupyResponse.json();
+          console.warn('⚠️ 테이블 점유 상태 설정 실패:', occupyError.error);
         }
       } catch (error) {
         console.error('❌ 테이블 점유 API 호출 실패:', error);
