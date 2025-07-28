@@ -241,14 +241,65 @@ async function renderMap() {
   // 비동기로 매장 데이터 로딩 및 마커 표시
   loadStoresAndMarkers(map);
 
-  // 패널 핸들링 설정
-  window.MapPanelManager.initializePanelHandling();
+  // 패널 핸들 클릭 시 열기/닫기
+  const panel = document.getElementById('storePanel');
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+
+  // 공통 드래그 로직
+  function startDrag(y) {
+    startY = y;
+    isDragging = true;
+    panel.style.transition = 'none';
+  }
 
   //TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')
   renderTLL.addEventListener('click', async () => {
     await TLL();
   })
+
+  function duringDrag(y) {
+    if (!isDragging) return;
+    currentY = y;
+    const delta = startY - currentY;
+    const baseHeight = panel.classList.contains('expanded') ? 550 : 60;
+    let newHeight = baseHeight + delta;
+    newHeight = Math.min(550, Math.max(60, newHeight));
+    panel.style.height = `${newHeight}px`;
+  }
+
+  function endDrag() {
+    isDragging = false;
+    const delta = startY - currentY;
+
+    if (delta > 50) {
+      panel.classList.add('expanded');
+      panel.classList.remove('collapsed');
+      panel.style.height = '630px';
+    } else if (delta < -50) {
+      panel.classList.add('collapsed');
+      panel.classList.remove('expanded');
+      panel.style.height = '60px';
+    } else {
+      const target = panel.classList.contains('expanded') ? '630px' : '60px';
+      panel.style.height = target;
+    }
+
+    panel.style.transition = 'height 0.3s ease';
+  }
+
+  // 📱 터치 이벤트
+  panel.addEventListener('touchstart', e => startDrag(e.touches[0].clientY));
+  panel.addEventListener('touchmove', e => duringDrag(e.touches[0].clientY));
+  panel.addEventListener('touchend', endDrag);
+
+  // 🖱️ 마우스 이벤트
+  panel.addEventListener('mousedown', e => startDrag(e.clientY));
+  document.addEventListener('mousemove', e => duringDrag(e.clientY));
+  document.addEventListener('mouseup', endDrag);
+
 
   }
 
@@ -438,8 +489,103 @@ async function loadStoresAndMarkers(map) {
       console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
     }, 100);
 
-    // 매장 리스트 렌더링
-    window.MapPanelManager.renderStoreList(stores);
+    // 가게 목록 업데이트
+    const storeListContainer = document.getElementById('storeListContainer');
+    storeListContainer.innerHTML = ''; // 로딩 메시지 제거
+
+    // 매장 목록에서도 별점 정보 비동기 로딩
+    stores.forEach(async (store) => {
+      const card = document.createElement('div');
+      card.className = 'storeCard';
+
+      // 별점 정보 비동기 로딩
+      const ratingData = await loadStoreRatingAsync(store.id);
+      const rating = parseFloat(ratingData.ratingAverage).toFixed(1);
+      const reviewCount = ratingData.reviewCount;
+
+      card.innerHTML = `
+        <div class="storeInfoBox">
+          <div class="storeRatingBox">
+            <div style="font-size: 12px; font-weight: bold; color: #f39c12;">★${rating}</div>
+            <div style="font-size: 10px; color: #666;">(${reviewCount})</div>
+          </div>
+          <div class="storeTextBox">
+            <div class="storeName">${store.name}</div>
+            <div class="storeDistance">${store.category}</div>
+          </div>
+        </div>
+        <div class="storeImageBox">
+          <img src="TableLink.png" alt="가게 이미지" />
+        </div>
+
+        <style>
+        .storeImageBox {
+          border: 2px solid black;
+          border-radius: 12px;
+          height: 120px;
+          margin-top: 8px;
+          background: #f5f5f5;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .storeImageBox img {
+          height: 100%;
+          width: auto;
+          object-fit: contain;
+          border: none;
+        }
+
+        .storeCard {
+          border: 2px solid black;
+          border-radius: 16px;
+          padding: 12px;
+          margin-bottom: 12px;
+          background: white;
+          box-sizing: border-box;
+        }
+
+        .storeInfoBox {
+          display: flex;
+          align-items: flex-start;
+          margin-bottom: 8px;
+        }
+
+        .storeRatingBox {
+          width: 60px;
+          height: 60px;
+          border: 2px solid black;
+          border-radius: 8px;
+          box-sizing: border-box;
+          margin-right: 8px;
+        }
+
+        .storeTextBox {
+          flex-grow: 1;
+        }
+
+        .storeName {
+          border: 2px solid black;
+          padding: 4px 8px;
+          margin-bottom: 4px;
+          font-weight: bold;
+          font-size: 15px;
+        }
+
+        .storeDistance {
+          border: 2px solid black;
+          padding: 4px 8px;
+          font-size: 13px;
+        }
+        </style>
+      `;
+
+      // 카드 클릭 시 해당 가게의 상세 페이지로 이동
+      card.addEventListener('click', () => renderStore(store));
+      storeListContainer.appendChild(card);
+    });
 
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
