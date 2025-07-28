@@ -1,429 +1,214 @@
+// TLM 매장 관리 메인 화면 렌더링
+function renderTLMMain() {
+  // URL에서 매장 ID 추출
+  const pathParts = window.location.pathname.split('/');
+  const storeId = pathParts[2]; // /TLM/{storeId} 형태에서 storeId 추출
 
-let renderTLMMain = async function (storeId) {
+  console.log('🏪 TLM 매장 ID:', storeId);
+
+  if (!storeId) {
+    alert('매장 ID가 없습니다.');
+    return;
+  }
+
   console.log('🏪 TLM 매장 관리 시작, 매장 ID:', storeId);
 
+  // 캐시 시스템 초기화
+  if (typeof cacheManager !== 'undefined') {
+    cacheManager.init();
+  }
+
+  // 매장 정보 로드
+  loadStoreInfo(storeId);
+}
+
+// 매장 정보 로드 함수
+async function loadStoreInfo(storeId) {
   try {
-    // 개별 매장 정보 가져오기
     const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || '매장 데이터 로딩 실패');
+
+    if (data.success) {
+      renderTLMInterface(data.store);
+    } else {
+      alert('매장 정보를 불러올 수 없습니다: ' + data.error);
     }
-
-    const store = data.store;
-
-    // UI 렌더링
-    main.innerHTML = `
-      <div class="tlm-container">
-        <header class="tlm-header">
-          <div class="store-info">
-            <h1 class="store-name">${store.name}</h1>
-            <p class="store-category">${store.category}</p>
-            <div class="store-status ${store.isOpen ? 'open' : 'closed'}">
-              ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
-            </div>
-          </div>
-          <button id="logoutBtn" class="logout-btn">로그아웃</button>
-        </header>
-
-        <div class="tlm-dashboard">
-          <div class="dashboard-grid">
-            <!-- 오늘의 통계 -->
-            <div class="card stats-card">
-              <h3>📊 오늘의 통계</h3>
-              <div class="stats-grid">
-                <div class="stat-item">
-                  <span class="stat-label">총 주문</span>
-                  <span class="stat-value">24건</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">매출</span>
-                  <span class="stat-value">450,000원</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">평균 별점</span>
-                  <span class="stat-value">${store.ratingAverage}점</span>
-                </div>
-                <div class="stat-item">
-                  <span class="stat-label">리뷰 수</span>
-                  <span class="stat-value">${store.reviewCount}개</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- 테이블 현황 -->
-            <div class="card table-card">
-              <h3>🏪 테이블 현황</h3>
-              <div class="table-info">
-                <div class="table-stat">
-                  <span>총 테이블: ${store.tableInfo.totalTables}개</span>
-                </div>
-                <div class="table-stat">
-                  <span>사용중: ${store.tableInfo.occupiedTables}개</span>
-                </div>
-                <div class="table-stat">
-                  <span>빈 테이블: ${store.tableInfo.availableTables}개</span>
-                </div>
-                <div class="occupancy-bar">
-                  <div class="occupancy-fill" style="width: ${store.tableInfo.occupancyRate}%"></div>
-                </div>
-                <p class="occupancy-text">사용률: ${store.tableInfo.occupancyRate}%</p>
-              </div>
-            </div>
-
-            <!-- 최근 주문 -->
-            <div class="card orders-card">
-              <h3>📋 최근 주문</h3>
-              <div class="recent-orders" id="recentOrdersList">
-                <div class="loading">데이터 로딩중...</div>
-              </div>
-            </div>
-
-            <!-- 최근 리뷰 -->
-            <div class="card reviews-card">
-              <h3>⭐ 최근 리뷰</h3>
-              <div class="recent-reviews" id="recentReviewsList">
-                <div class="loading">데이터 로딩중...</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 빠른 액션 버튼들 -->
-          <div class="action-buttons">
-            <button class="action-btn primary" onclick="toggleStoreStatus()">
-              ${store.isOpen ? '🔴 운영 중지' : '🟢 운영 시작'}
-            </button>
-            <button class="action-btn" onclick="viewAllOrders()">📋 전체 주문 보기</button>
-            <button class="action-btn" onclick="viewAllReviews()">⭐ 전체 리뷰 보기</button>
-            <button class="action-btn" onclick="manageMenu()">🍽️ 메뉴 관리</button>
-          </div>
-        </div>
-      </div>
-
-      <style>
-        .tlm-container {
-          width: 100%;
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 20px;
-          color: white;
-        }
-
-        .tlm-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 30px;
-          background: rgba(255, 255, 255, 0.1);
-          padding: 20px;
-          border-radius: 15px;
-          backdrop-filter: blur(10px);
-        }
-
-        .store-name {
-          font-size: 32px;
-          font-weight: 700;
-          margin: 0 0 5px 0;
-        }
-
-        .store-category {
-          font-size: 16px;
-          opacity: 0.8;
-          margin: 0 0 10px 0;
-        }
-
-        .store-status {
-          display: inline-block;
-          padding: 6px 12px;
-          border-radius: 20px;
-          font-size: 14px;
-          font-weight: 600;
-        }
-
-        .store-status.open {
-          background: rgba(76, 175, 80, 0.2);
-          border: 1px solid #4CAF50;
-        }
-
-        .store-status.closed {
-          background: rgba(244, 67, 54, 0.2);
-          border: 1px solid #f44336;
-        }
-
-        .logout-btn {
-          padding: 10px 20px;
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: all 0.3s ease;
-        }
-
-        .logout-btn:hover {
-          background: rgba(255, 255, 255, 0.3);
-        }
-
-        .dashboard-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-
-        .card {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 15px;
-          padding: 20px;
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .card h3 {
-          margin: 0 0 15px 0;
-          font-size: 18px;
-          font-weight: 600;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 15px;
-        }
-
-        .stat-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 10px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
-        }
-
-        .stat-label {
-          font-size: 12px;
-          opacity: 0.8;
-          margin-bottom: 5px;
-        }
-
-        .stat-value {
-          font-size: 20px;
-          font-weight: 700;
-        }
-
-        .table-info {
-          space-y: 10px;
-        }
-
-        .table-stat {
-          margin-bottom: 8px;
-          font-size: 14px;
-        }
-
-        .occupancy-bar {
-          width: 100%;
-          height: 8px;
-          background: rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
-          overflow: hidden;
-          margin: 10px 0;
-        }
-
-        .occupancy-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #4CAF50, #FFC107, #FF5722);
-          transition: width 0.3s ease;
-        }
-
-        .occupancy-text {
-          text-align: center;
-          font-size: 12px;
-          opacity: 0.8;
-          margin: 0;
-        }
-
-        .recent-orders, .recent-reviews {
-          max-height: 200px;
-          overflow-y: auto;
-        }
-
-        .order-item, .review-item {
-          padding: 10px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
-          margin-bottom: 8px;
-        }
-
-        .order-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .order-time, .review-time {
-          font-size: 12px;
-          opacity: 0.7;
-        }
-
-        .review-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 5px;
-        }
-
-        .review-text {
-          font-size: 14px;
-          margin: 0;
-          opacity: 0.9;
-        }
-
-        .loading, .no-data {
-          text-align: center;
-          opacity: 0.7;
-          font-style: italic;
-          padding: 20px;
-        }
-
-        .action-buttons {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 15px;
-          justify-content: center;
-        }
-
-        .action-btn {
-          padding: 12px 24px;
-          background: rgba(255, 255, 255, 0.2);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 14px;
-          font-weight: 600;
-          transition: all 0.3s ease;
-        }
-
-        .action-btn:hover {
-          background: rgba(255, 255, 255, 0.3);
-          transform: translateY(-2px);
-        }
-
-        .action-btn.primary {
-          background: rgba(102, 126, 234, 0.8);
-          border-color: #667eea;
-        }
-
-        .action-btn.primary:hover {
-          background: rgba(102, 126, 234, 1);
-        }
-
-        @media (max-width: 768px) {
-          .tlm-header {
-            flex-direction: column;
-            text-align: center;
-            gap: 15px;
-          }
-
-          .dashboard-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .action-buttons {
-            flex-direction: column;
-          }
-
-          .action-btn {
-            width: 100%;
-          }
-        }
-      </style>
-    `;
-
-    // 이벤트 리스너 설정
-    const logoutBtn = document.getElementById('logoutBtn');
-    logoutBtn.addEventListener('click', () => {
-      if (confirm('로그아웃하시겠습니까?')) {
-        window.location.href = '/';
-      }
-    });
-
-    // 실제 데이터 로드
-    await loadRecentData(storeId);
-
-    console.log('✅ TLM 매장 관리 화면 렌더링 완료');
-
   } catch (error) {
-    console.error('❌ TLM 로딩 실패:', error);
-    main.innerHTML = `
-      <div style="text-align:center; color:white; font-size:18px;">
-        <h1>❌ 매장 정보 로딩 실패</h1>
-        <p>${error.message}</p>
-        <button onclick="window.location.href='/'" style="margin-top:20px; padding:10px 20px; background:#fff; color:#333; border:none; border-radius:5px; cursor:pointer;">
-          메인으로 돌아가기
-        </button>
-      </div>
-    `;
-  }
-};
-
-// 최근 데이터 로드 및 UI 업데이트
-async function loadRecentData(storeId) {
-  // 최근 주문 로드
-  const orders = await loadRecentOrders(storeId);
-  const ordersContainer = document.getElementById('recentOrdersList');
-  
-  if (orders.length > 0) {
-    ordersContainer.innerHTML = orders.map(order => {
-      const timeAgo = getTimeAgo(new Date(order.created_at));
-      return `
-        <div class="order-item">
-          <span class="order-info">${order.table_name} - ${order.items || '주문 내역'}</span>
-          <span class="order-time">${timeAgo}</span>
-        </div>
-      `;
-    }).join('');
-  } else {
-    ordersContainer.innerHTML = '<div class="no-data">최근 주문이 없습니다.</div>';
-  }
-
-  // 최근 리뷰 로드
-  const reviews = await loadRecentReviews(storeId);
-  const reviewsContainer = document.getElementById('recentReviewsList');
-  
-  if (reviews.length > 0) {
-    reviewsContainer.innerHTML = reviews.map(review => {
-      const timeAgo = getTimeAgo(new Date(review.created_at));
-      const stars = '⭐'.repeat(review.rating);
-      return `
-        <div class="review-item">
-          <div class="review-header">
-            <span class="review-rating">${stars}</span>
-            <span class="review-time">${timeAgo}</span>
-          </div>
-          <p class="review-text">${review.review_text}</p>
-        </div>
-      `;
-    }).join('');
-  } else {
-    reviewsContainer.innerHTML = '<div class="no-data">최근 리뷰가 없습니다.</div>';
+    console.error('매장 정보 로드 실패:', error);
+    alert('서버 연결에 실패했습니다.');
   }
 }
 
-// 시간 차이 계산 함수
-function getTimeAgo(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
+// TLM 인터페이스 렌더링
+function renderTLMInterface(store) {
+  const main = document.getElementById('main');
 
-  if (diffMins < 1) return '방금 전';
-  if (diffMins < 60) return `${diffMins}분 전`;
-  if (diffHours < 24) return `${diffHours}시간 전`;
-  return `${diffDays}일 전`;
+  main.innerHTML = `
+    <div style="padding: 20px; background: #f5f5f5; min-height: 100vh; font-family: Arial, sans-serif;">
+      <div style="background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h1 style="margin: 0; color: #333; text-align: center;">🏪 ${store.name} 관리</h1>
+        <p style="text-align: center; color: #666; margin: 10px 0;">매장 운영 관리 시스템</p>
+        <div style="text-align: center; margin: 15px 0;">
+          <span style="display: inline-block; padding: 8px 16px; background: ${store.isOpen ? '#28a745' : '#dc3545'}; color: white; border-radius: 20px; font-size: 14px;">
+            ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+          </span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
+        <!-- 테이블 현황 -->
+        <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 15px 0; color: #333;">📊 테이블 현황</h3>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center;">
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #1976d2;">${store.tableInfo.totalTables}</div>
+              <div style="color: #666; font-size: 14px;">총 테이블</div>
+            </div>
+            <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #388e3c;">${store.tableInfo.availableTables}</div>
+              <div style="color: #666; font-size: 14px;">빈 테이블</div>
+            </div>
+            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #d32f2f;">${store.tableInfo.occupiedTables}</div>
+              <div style="color: #666; font-size: 14px;">사용중</div>
+            </div>
+            <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;">${store.tableInfo.occupancyRate}%</div>
+              <div style="color: #666; font-size: 14px;">사용률</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 매장 정보 -->
+        <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 15px 0; color: #333;">🏪 매장 정보</h3>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">매장명:</span>
+              <span style="font-weight: bold;">${store.name}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">카테고리:</span>
+              <span>${store.category}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">평점:</span>
+              <span>⭐ ${store.ratingAverage}점 (${store.reviewCount}개)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #666;">주소:</span>
+              <span style="font-size: 14px; text-align: right; max-width: 60%;">${store.address}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 관리 버튼들 -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <button id="toggleStoreStatus" style="padding: 15px; background: ${store.isOpen ? '#dc3545' : '#28a745'}; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          ${store.isOpen ? '🛑 운영 중지' : '▶️ 운영 시작'}
+        </button>
+        <button id="viewOrders" style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          📋 주문 내역
+        </button>
+        <button id="viewReviews" style="padding: 15px; background: #ffc107; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          ⭐ 리뷰 관리
+        </button>
+        <button id="viewTables" style="padding: 15px; background: #6f42c1; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+          🪑 테이블 관리
+        </button>
+      </div>
+
+      <!-- 최근 활동 -->
+      <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 15px 0; color: #333;">📈 최근 활동</h3>
+        <div id="recentActivity" style="color: #666;">
+          로딩중...
+        </div>
+      </div>
+    </div>
+  `;
+
+  // 이벤트 리스너 추가
+  setupEventListeners(store);
+
+  // 최근 활동 로드
+  loadRecentActivity(store.id);
+
+  console.log('✅ TLM 매장 관리 화면 렌더링 완료');
+}
+
+// 이벤트 리스너 설정
+function setupEventListeners(store) {
+  // 운영 상태 토글
+  document.getElementById('toggleStoreStatus').addEventListener('click', () => {
+    toggleStoreStatus(store.id);
+  });
+
+  // 주문 내역 보기
+  document.getElementById('viewOrders').addEventListener('click', () => {
+    alert('주문 내역 기능은 개발 중입니다.');
+  });
+
+  // 리뷰 관리
+  document.getElementById('viewReviews').addEventListener('click', () => {
+    alert('리뷰 관리 기능은 개발 중입니다.');
+  });
+
+  // 테이블 관리
+  document.getElementById('viewTables').addEventListener('click', () => {
+    alert('테이블 관리 기능은 개발 중입니다.');
+  });
+}
+
+// 최근 활동 로드
+async function loadRecentActivity(storeId) {
+  try {
+    const orders = await loadRecentOrders(storeId);
+    const reviews = await loadRecentReviews(storeId);
+
+    const activityDiv = document.getElementById('recentActivity');
+
+    let activityHTML = '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">';
+
+    // 최근 주문
+    activityHTML += '<div><h4 style="margin: 0 0 10px 0; color: #007bff;">📋 최근 주문</h4>';
+    if (orders.length > 0) {
+      orders.slice(0, 3).forEach(order => {
+        activityHTML += `
+          <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 14px;">
+            <div>테이블 ${order.table_number} - ${new Date(order.order_date).toLocaleString()}</div>
+            <div style="color: #666;">${order.final_amount.toLocaleString()}원</div>
+          </div>
+        `;
+      });
+    } else {
+      activityHTML += '<div style="color: #999; font-style: italic;">최근 주문이 없습니다.</div>';
+    }
+    activityHTML += '</div>';
+
+    // 최근 리뷰
+    activityHTML += '<div><h4 style="margin: 0 0 10px 0; color: #ffc107;">⭐ 최근 리뷰</h4>';
+    if (reviews.length > 0) {
+      reviews.slice(0, 3).forEach(review => {
+        activityHTML += `
+          <div style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 8px; font-size: 14px;">
+            <div>⭐ ${review.rating}점 - ${new Date(review.created_at).toLocaleDateString()}</div>
+            <div style="color: #666;">${review.review_text.substring(0, 50)}${review.review_text.length > 50 ? '...' : ''}</div>
+          </div>
+        `;
+      });
+    } else {
+      activityHTML += '<div style="color: #999; font-style: italic;">최근 리뷰가 없습니다.</div>';
+    }
+    activityHTML += '</div></div>';
+
+    activityDiv.innerHTML = activityHTML;
+
+  } catch (error) {
+    console.error('최근 활동 로드 실패:', error);
+    document.getElementById('recentActivity').innerHTML = '<div style="color: #dc3545;">데이터 로드에 실패했습니다.</div>';
+  }
 }
 
 // 실제 주문 데이터 로드
@@ -431,7 +216,7 @@ async function loadRecentOrders(storeId) {
   try {
     const response = await fetch(`/api/orders/recent/${storeId}`);
     const data = await response.json();
-    
+
     if (data.success) {
       return data.orders || [];
     }
@@ -447,7 +232,7 @@ async function loadRecentReviews(storeId) {
   try {
     const response = await fetch(`/api/reviews/recent/${storeId}`);
     const data = await response.json();
-    
+
     if (data.success) {
       return data.reviews || [];
     }
@@ -459,9 +244,7 @@ async function loadRecentReviews(storeId) {
 }
 
 // 매장 운영 상태 토글 함수
-async function toggleStoreStatus() {
-  const storeId = new URLSearchParams(window.location.search).get('storeId');
-  
+async function toggleStoreStatus(storeId) {
   try {
     const response = await fetch(`/api/stores/${storeId}/toggle-status`, {
       method: 'POST',
@@ -469,9 +252,9 @@ async function toggleStoreStatus() {
         'Content-Type': 'application/json'
       }
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       alert(`매장 운영 상태가 ${data.isOpen ? '운영중' : '운영중지'}로 변경되었습니다.`);
       location.reload(); // 페이지 새로고침으로 상태 업데이트
@@ -480,69 +263,6 @@ async function toggleStoreStatus() {
     }
   } catch (error) {
     console.error('운영 상태 변경 실패:', error);
-    alert('운영 상태 변경 중 오류가 발생했습니다.');
+    alert('운영 상태 변경에 실패했습니다.');
   }
-}
-
-// 전체 주문 보기 함수  
-async function viewAllOrders() {
-  const storeId = new URLSearchParams(window.location.search).get('storeId');
-  
-  try {
-    const response = await fetch(`/api/orders/store/${storeId}`);
-    const data = await response.json();
-    
-    if (data.success) {
-      const orders = data.orders;
-      let ordersList = orders.map(order => 
-        `테이블 ${order.table_name} - ${order.items || '주문 내역'} (${new Date(order.created_at).toLocaleString()})`
-      ).join('\n');
-      
-      if (ordersList) {
-        alert(`전체 주문 목록:\n\n${ordersList}`);
-      } else {
-        alert('주문 내역이 없습니다.');
-      }
-    } else {
-      alert('주문 데이터를 불러올 수 없습니다.');
-    }
-  } catch (error) {
-    console.error('주문 데이터 로드 실패:', error);
-    alert('주문 데이터 로드 중 오류가 발생했습니다.');
-  }
-}
-
-// 전체 리뷰 보기 함수
-async function viewAllReviews() {
-  const storeId = new URLSearchParams(window.location.search).get('storeId');
-  
-  try {
-    const response = await fetch(`/api/reviews/store/${storeId}`);
-    const data = await response.json();
-    
-    if (data.success) {
-      const reviews = data.reviews;
-      let reviewsList = reviews.map(review => 
-        `${'⭐'.repeat(review.rating)} (${review.rating}점)\n${review.review_text}\n- ${new Date(review.created_at).toLocaleDateString()}`
-      ).join('\n\n');
-      
-      if (reviewsList) {
-        alert(`전체 리뷰 목록:\n\n${reviewsList}`);
-      } else {
-        alert('리뷰가 없습니다.');
-      }
-    } else {
-      alert('리뷰 데이터를 불러올 수 없습니다.');
-    }
-  } catch (error) {
-    console.error('리뷰 데이터 로드 실패:', error);
-    alert('리뷰 데이터 로드 중 오류가 발생했습니다.');
-  }
-}
-
-// 메뉴 관리 함수
-function manageMenu() {
-  const storeId = new URLSearchParams(window.location.search).get('storeId');
-  alert(`메뉴 관리 기능을 위해 관리자 페이지로 이동합니다.\n매장 ID: ${storeId}`);
-  window.open(`/admin.html?storeId=${storeId}`, '_blank');
 }
