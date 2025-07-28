@@ -416,6 +416,13 @@ app.post('/api/orders/pay', async (req, res) => {
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
 
+    // 테이블 번호에서 숫자만 추출 (예: "테이블 1" -> 1)
+    let tableNumber = null;
+    if (orderData.tableNum) {
+      const match = orderData.tableNum.toString().match(/\d+/);
+      tableNumber = match ? parseInt(match[0]) : null;
+    }
+
     // orders 테이블에 주문 정보 저장
     await client.query(`
       INSERT INTO orders (
@@ -426,7 +433,7 @@ app.post('/api/orders/pay', async (req, res) => {
     `, [
       orderData.storeId || null,
       userId,
-      orderData.tableNum || null,
+      tableNumber,
       JSON.stringify(orderData),
       orderData.total,
       appliedPoint + couponDiscount,
