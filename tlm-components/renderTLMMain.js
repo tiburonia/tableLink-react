@@ -302,81 +302,102 @@ async function showAllOrders(storeId) {
     const data = await response.json();
     console.log(`📊 받은 주문 데이터:`, data);
 
-    if (data.success && data.orders) {
-      const orders = data.orders || [];
-      console.log(`✅ 처리할 주문 수: ${orders.length}개`);
-      
-      let ordersHTML = `
-        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
-          <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-              <h2 style="margin: 0; color: #333;">📋 전체 주문 내역 (${orders.length}건)</h2>
-              <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ✕ 닫기
-              </button>
-            </div>
-            <div style="max-height: calc(100% - 80px); overflow-y: auto;">
-      `;
+    // 데이터 유효성 검사 개선
+    if (data && typeof data === 'object' && data.hasOwnProperty('success')) {
+      if (data.success === true) {
+        const orders = data.orders || [];
+        console.log(`✅ 처리할 주문 수: ${orders.length}개`);
+        
+        let ordersHTML = `
+          <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+            <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #333;">📋 전체 주문 내역 (${orders.length}건)</h2>
+                <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  ✕ 닫기
+                </button>
+              </div>
+              <div style="max-height: calc(100% - 80px); overflow-y: auto;">
+        `;
 
-      if (orders.length > 0) {
-        orders.forEach(order => {
-          const orderDate = new Date(order.orderDate || order.order_date).toLocaleString();
-          const tableNumber = order.tableNumber || order.table_number || '알 수 없음';
-          const finalAmount = order.finalAmount || order.final_amount || 0;
-          const orderStatus = order.orderStatus || order.order_status || '알 수 없음';
-          const customerName = order.customerName || order.customer_name || '고객정보없음';
-          
-          // 주문 데이터 파싱
-          let orderDataStr = '주문 정보 없음';
-          try {
-            if (order.orderData || order.order_data) {
-              const orderDataObj = typeof (order.orderData || order.order_data) === 'string' 
-                ? JSON.parse(order.orderData || order.order_data) 
-                : (order.orderData || order.order_data);
-              
-              if (orderDataObj.menu) {
-                orderDataStr = Object.entries(orderDataObj.menu)
-                  .map(([item, qty]) => `${item}: ${qty}개`)
-                  .join(', ');
+        if (orders.length > 0) {
+          orders.forEach(order => {
+            const orderDate = new Date(order.orderDate || order.order_date).toLocaleString();
+            const tableNumber = order.tableNumber || order.table_number || '알 수 없음';
+            const finalAmount = order.finalAmount || order.final_amount || 0;
+            const orderStatus = order.orderStatus || order.order_status || '알 수 없음';
+            const customerName = order.customerName || order.customer_name || '고객정보없음';
+            
+            // 주문 데이터 파싱 개선
+            let orderDataStr = '주문 정보 없음';
+            try {
+              const rawOrderData = order.orderData || order.order_data;
+              if (rawOrderData) {
+                let orderDataObj;
+                
+                if (typeof rawOrderData === 'string') {
+                  orderDataObj = JSON.parse(rawOrderData);
+                } else {
+                  orderDataObj = rawOrderData;
+                }
+                
+                // 다양한 주문 데이터 형식 처리
+                if (orderDataObj.items && Array.isArray(orderDataObj.items)) {
+                  // items 배열 형식
+                  orderDataStr = orderDataObj.items
+                    .map(item => `${item.name}: ${item.qty}개`)
+                    .join(', ');
+                } else if (orderDataObj.menu && typeof orderDataObj.menu === 'object') {
+                  // menu 객체 형식
+                  orderDataStr = Object.entries(orderDataObj.menu)
+                    .map(([item, qty]) => `${item}: ${qty}개`)
+                    .join(', ');
+                } else {
+                  // 기타 형식
+                  orderDataStr = JSON.stringify(orderDataObj).substring(0, 100) + '...';
+                }
               }
+            } catch (e) {
+              console.error('주문 데이터 파싱 오류:', e);
+              orderDataStr = '주문 데이터 파싱 실패';
             }
-          } catch (e) {
-            console.error('주문 데이터 파싱 오류:', e);
-            orderDataStr = '주문 데이터 파싱 실패';
-          }
-          
-          ordersHTML += `
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff;">
-              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                <div>
-                  <strong style="color: #333;">주문 #${order.id}</strong>
-                  <div style="color: #666; font-size: 14px;">테이블 ${tableNumber} • ${customerName} • ${orderDate}</div>
+            
+            ordersHTML += `
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                  <div>
+                    <strong style="color: #333;">주문 #${order.id}</strong>
+                    <div style="color: #666; font-size: 14px;">테이블 ${tableNumber} • ${customerName} • ${orderDate}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 18px; font-weight: bold; color: #007bff;">${finalAmount.toLocaleString()}원</div>
+                    <div style="font-size: 12px; color: #666;">${orderStatus}</div>
+                  </div>
                 </div>
-                <div style="text-align: right;">
-                  <div style="font-size: 18px; font-weight: bold; color: #007bff;">${finalAmount.toLocaleString()}원</div>
-                  <div style="font-size: 12px; color: #666;">${orderStatus}</div>
+                <div style="background: white; padding: 10px; border-radius: 5px; font-size: 14px;">
+                  ${orderDataStr}
                 </div>
               </div>
-              <div style="background: white; padding: 10px; border-radius: 5px; font-size: 14px;">
-                ${orderDataStr}
-              </div>
-            </div>
-          `;
-        });
-      } else {
-        ordersHTML += '<div style="text-align: center; padding: 40px; color: #666;">주문 내역이 없습니다.</div>';
-      }
+            `;
+          });
+        } else {
+          ordersHTML += '<div style="text-align: center; padding: 40px; color: #666;">주문 내역이 없습니다.</div>';
+        }
 
-      ordersHTML += '</div></div></div>';
-      
-      const modalDiv = document.createElement('div');
-      modalDiv.className = 'fixed';
-      modalDiv.innerHTML = ordersHTML;
-      document.body.appendChild(modalDiv);
-      
+        ordersHTML += '</div></div></div>';
+        
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'fixed';
+        modalDiv.innerHTML = ordersHTML;
+        document.body.appendChild(modalDiv);
+        
+      } else {
+        console.error('❌ API 요청 실패:', data.error || '알 수 없는 오류');
+        alert('주문 내역을 불러올 수 없습니다: ' + (data.error || '서버 오류'));
+      }
     } else {
-      console.error('❌ API 응답 형식 오류:', data);
-      alert('주문 내역을 불러올 수 없습니다: ' + (data.error || '알 수 없는 오류'));
+      console.error('❌ 예상하지 못한 응답 형식:', data);
+      alert('서버 응답 형식이 올바르지 않습니다.');
     }
   } catch (error) {
     console.error('❌ 전체 주문 조회 실패:', error);
@@ -399,59 +420,65 @@ async function showAllReviews(storeId) {
     const data = await response.json();
     console.log(`📊 받은 리뷰 데이터:`, data);
 
-    if (data.success && data.reviews) {
-      const reviews = data.reviews || [];
-      console.log(`✅ 처리할 리뷰 수: ${reviews.length}개`);
-      
-      let reviewsHTML = `
-        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
-          <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-              <h2 style="margin: 0; color: #333;">⭐ 전체 리뷰 (${reviews.length}개)</h2>
-              <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
-                ✕ 닫기
-              </button>
-            </div>
-            <div style="max-height: calc(100% - 80px); overflow-y: auto;">
-      `;
+    // 데이터 유효성 검사 개선
+    if (data && typeof data === 'object' && data.hasOwnProperty('success')) {
+      if (data.success === true) {
+        const reviews = data.reviews || [];
+        console.log(`✅ 처리할 리뷰 수: ${reviews.length}개`);
+        
+        let reviewsHTML = `
+          <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
+            <div style="background: white; width: 90%; max-width: 800px; height: 80%; border-radius: 10px; padding: 20px; overflow-y: auto;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #333;">⭐ 전체 리뷰 (${reviews.length}개)</h2>
+                <button onclick="this.closest('.fixed').remove()" style="padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                  ✕ 닫기
+                </button>
+              </div>
+              <div style="max-height: calc(100% - 80px); overflow-y: auto;">
+        `;
 
-      if (reviews.length > 0) {
-        reviews.forEach(review => {
-          const reviewDate = new Date(review.created_at || review.date).toLocaleDateString();
-          const rating = review.rating || review.score || 0;
-          const reviewText = review.review_text || review.content || '리뷰 내용 없음';
-          const userName = review.user || review.user_name || `사용자${review.user_id || review.userId}`;
-          const stars = '⭐'.repeat(Math.max(0, Math.min(5, rating)));
-          
-          reviewsHTML += `
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
-              <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                <div>
-                  <div style="font-size: 16px; color: #ffc107; margin-bottom: 5px;">${stars}</div>
-                  <div style="color: #666; font-size: 14px;">작성자: ${userName} • ${reviewDate}</div>
+        if (reviews.length > 0) {
+          reviews.forEach(review => {
+            const reviewDate = new Date(review.created_at || review.date).toLocaleDateString();
+            const rating = review.rating || review.score || 0;
+            const reviewText = review.review_text || review.content || '리뷰 내용 없음';
+            const userName = review.user || review.user_name || `사용자${review.user_id || review.userId}`;
+            const stars = '⭐'.repeat(Math.max(0, Math.min(5, rating)));
+            
+            reviewsHTML += `
+              <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                  <div>
+                    <div style="font-size: 16px; color: #ffc107; margin-bottom: 5px;">${stars}</div>
+                    <div style="color: #666; font-size: 14px;">작성자: ${userName} • ${reviewDate}</div>
+                  </div>
+                  <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${rating}점</div>
                 </div>
-                <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${rating}점</div>
+                <div style="background: white; padding: 12px; border-radius: 5px; line-height: 1.5; color: #333;">
+                  ${reviewText}
+                </div>
               </div>
-              <div style="background: white; padding: 12px; border-radius: 5px; line-height: 1.5; color: #333;">
-                ${reviewText}
-              </div>
-            </div>
-          `;
-        });
-      } else {
-        reviewsHTML += '<div style="text-align: center; padding: 40px; color: #666;">리뷰가 없습니다.</div>';
-      }
+            `;
+          });
+        } else {
+          reviewsHTML += '<div style="text-align: center; padding: 40px; color: #666;">리뷰가 없습니다.</div>';
+        }
 
-      reviewsHTML += '</div></div></div>';
-      
-      const modalDiv = document.createElement('div');
-      modalDiv.className = 'fixed';
-      modalDiv.innerHTML = reviewsHTML;
-      document.body.appendChild(modalDiv);
-      
+        reviewsHTML += '</div></div></div>';
+        
+        const modalDiv = document.createElement('div');
+        modalDiv.className = 'fixed';
+        modalDiv.innerHTML = reviewsHTML;
+        document.body.appendChild(modalDiv);
+        
+      } else {
+        console.error('❌ API 요청 실패:', data.error || '알 수 없는 오류');
+        alert('리뷰를 불러올 수 없습니다: ' + (data.error || '서버 오류'));
+      }
     } else {
-      console.error('❌ API 응답 형식 오류:', data);
-      alert('리뷰를 불러올 수 없습니다: ' + (data.error || '알 수 없는 오류'));
+      console.error('❌ 예상하지 못한 응답 형식:', data);
+      alert('서버 응답 형식이 올바르지 않습니다.');
     }
   } catch (error) {
     console.error('❌ 전체 리뷰 조회 실패:', error);
