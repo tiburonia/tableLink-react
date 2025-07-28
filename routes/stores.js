@@ -312,4 +312,48 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// 매장별 테이블 정보 조회 API
+router.get('/:storeId/tables', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`🪑 매장 ${storeId} 테이블 정보 조회 요청`);
+
+    const tablesResult = await pool.query(`
+      SELECT 
+        id, table_number, table_name, seats, is_occupied, occupied_since
+      FROM store_tables 
+      WHERE store_id = $1 
+      ORDER BY table_number
+    `, [storeId]);
+
+    const tables = tablesResult.rows.map(table => ({
+      id: table.id,
+      tableNumber: table.table_number,
+      tableName: table.table_name,
+      seats: table.seats,
+      isOccupied: table.is_occupied,
+      occupiedSince: table.occupied_since
+    }));
+
+    const totalTables = tables.length;
+    const occupiedTables = tables.filter(t => t.isOccupied).length;
+    const availableTables = totalTables - occupiedTables;
+
+    console.log(`✅ 매장 ${storeId} 테이블 정보 조회 완료: 총 ${totalTables}개, 사용중 ${occupiedTables}개, 빈 테이블 ${availableTables}개`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      totalTables: totalTables,
+      availableTables: availableTables,
+      occupiedTables: occupiedTables,
+      tables: tables
+    });
+
+  } catch (error) {
+    console.error('매장별 테이블 정보 조회 실패:', error);
+    res.status(500).json({ success: false, error: '테이블 정보 조회 실패' });
+  }
+});
+
 module.exports = { router, updateStoreRating };
