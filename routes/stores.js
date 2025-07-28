@@ -337,23 +337,24 @@ router.get('/:storeId/orders', async (req, res) => {
 
     const ordersResult = await pool.query(`
       SELECT 
-        id,
-        customer_name,
-        table_number,
-        order_data,
-        final_amount,
-        order_status,
-        order_date,
-        created_at
-      FROM orders 
-      WHERE store_id = $1 
-      ORDER BY order_date DESC
+        o.id,
+        u.name as customer_name,
+        o.table_number,
+        o.order_data,
+        o.final_amount,
+        o.order_status,
+        o.order_date,
+        o.created_at
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id 
+      WHERE o.store_id = $1 
+      ORDER BY o.order_date DESC
       LIMIT 50
     `, [parseInt(storeId)]);
 
     const orders = ordersResult.rows.map(order => ({
       id: order.id,
-      customerName: order.customer_name,
+      customerName: order.customer_name || '고객정보없음',
       tableNumber: order.table_number,
       orderData: order.order_data,
       finalAmount: order.final_amount,
