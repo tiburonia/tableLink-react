@@ -20,19 +20,29 @@ window.MapPanelUI = {
     const reviewCount = ratingData.reviewCount;
 
     return `
-      <div class="storeCard">
-        <div class="storeInfoBox">
-          <div class="storeRatingBox">
-            <div style="font-size: 12px; font-weight: bold; color: #f39c12;">★${rating}</div>
-            <div style="font-size: 10px; color: #666;">(${reviewCount})</div>
-          </div>
-          <div class="storeTextBox">
-            <div class="storeName">${store.name}</div>
-            <div class="storeDistance">${store.category}</div>
-          </div>
-        </div>
+      <div class="storeCard" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="storeImageBox">
           <img src="TableLink.png" alt="가게 이미지" />
+          <div class="storeStatus ${store.isOpen ? 'open' : 'closed'}">
+            ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+          </div>
+        </div>
+        <div class="storeInfoBox">
+          <div class="storeHeader">
+            <div class="storeName">${store.name}</div>
+            <div class="storeRating">
+              <span class="ratingStars">★</span>
+              <span class="ratingValue">${rating}</span>
+              <span class="reviewCount">(${reviewCount})</span>
+            </div>
+          </div>
+          <div class="storeCategory">${store.category}</div>
+          <div class="storeActions">
+            <div class="actionButton primary">
+              <span class="actionIcon">🍽️</span>
+              <span class="actionText">메뉴보기</span>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -86,136 +96,174 @@ window.MapPanelUI = {
 
         /* 개별 가게 카드 */
         .storeCard {
-          border-radius: 16px;
-          padding: 14px 12px 11px 12px;
-          margin-bottom: 13px;
+          border-radius: 20px;
+          padding: 0;
+          margin-bottom: 16px;
           background: #fff;
-          box-shadow: 0 1.5px 7px rgba(40,80,170,0.08);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          transition: box-shadow 0.13s;
-          border: 1.3px solid #e7eaf5;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          border: none;
           cursor: pointer;
+          overflow: hidden;
         }
+        
+        .storeCard:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+        
         .storeCard:active {
-          box-shadow: 0 3px 13px rgba(40,110,255,0.11);
-          border-color: #b7cdfa;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
         }
 
-        .storeInfoBox {
-          display: flex;
-          align-items: flex-start;
-          margin-bottom: 7px;
-        }
-        .storeRatingBox {
-          width: 48px;
-          height: 48px;
-          border-radius: 9px;
-          background: #f5f7fb;
-          margin-right: 8px;
+        .storeImageBox {
+          position: relative;
+          height: 140px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 17px;
-          color: #f8b900;
-          box-shadow: 0 1px 3px rgba(180,170,110,0.04);
         }
-        .storeTextBox {
-          flex-grow: 1;
+        
+        .storeImageBox::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+          z-index: 1;
+        }
+        
+        .storeImageBox img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          position: relative;
+          z-index: 0;
+        }
+        
+        .storeStatus {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+          z-index: 2;
+        }
+        
+        .storeStatus.open {
+          background: rgba(76, 175, 80, 0.9);
+          color: white;
+        }
+        
+        .storeStatus.closed {
+          background: rgba(244, 67, 54, 0.9);
+          color: white;
+        }
+
+        .storeInfoBox {
+          padding: 20px;
           display: flex;
           flex-direction: column;
-          justify-content: center;
+          gap: 12px;
         }
+        
+        .storeHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+        
         .storeName {
-          font-weight: bold;
-          font-size: 16.5px;
-          color: #23274c;
-          margin-bottom: 3px;
-          letter-spacing: -0.1px;
+          font-weight: 700;
+          font-size: 18px;
+          color: #1a1a1a;
+          letter-spacing: -0.3px;
+          line-height: 1.3;
+          flex: 1;
         }
-        .storeDistance {
-          font-size: 13.5px;
-          color: #88a;
+        
+        .storeRating {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+        
+        .ratingStars {
+          font-size: 16px;
+          color: #FFB000;
+        }
+        
+        .ratingValue {
+          font-weight: 700;
+          font-size: 16px;
+          color: #1a1a1a;
+        }
+        
+        .reviewCount {
+          font-size: 14px;
+          color: #666;
           font-weight: 500;
         }
-        .storeImageBox {
-          border-radius: 10px;
-          height: 100px;
-          margin-top: 8px;
-          background: #f5f5f5;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .storeImageBox img {
-          height: 100%;
-          width: auto;
-          object-fit: cover;
-          border: none;
-          max-width: 100%;
-        }
-
-        /* 카드 스타일 오버라이드 */
-        .storeImageBox {
-          border: 2px solid black;
-          border-radius: 12px;
-          height: 120px;
-          margin-top: 8px;
-          background: #f5f5f5;
-          overflow: hidden;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .storeImageBox img {
-          height: 100%;
-          width: auto;
-          object-fit: contain;
-          border: none;
-        }
-
-        .storeCard {
-          border: 2px solid black;
-          border-radius: 16px;
-          padding: 12px;
-          margin-bottom: 12px;
-          background: white;
-          box-sizing: border-box;
-        }
-
-        .storeInfoBox {
-          display: flex;
-          align-items: flex-start;
-          margin-bottom: 8px;
-        }
-
-        .storeRatingBox {
-          width: 60px;
-          height: 60px;
-          border: 2px solid black;
+        
+        .storeCategory {
+          font-size: 14px;
+          color: #666;
+          font-weight: 500;
+          padding: 6px 12px;
+          background: #f8f9fa;
           border-radius: 8px;
-          box-sizing: border-box;
-          margin-right: 8px;
+          display: inline-block;
+          width: fit-content;
         }
-
-        .storeTextBox {
-          flex-grow: 1;
+        
+        .storeActions {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
         }
-
-        .storeName {
-          border: 2px solid black;
-          padding: 4px 8px;
-          margin-bottom: 4px;
-          font-weight: bold;
-          font-size: 15px;
+        
+        .actionButton {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 16px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          border: none;
+          background: none;
         }
-
-        .storeDistance {
-          border: 2px solid black;
-          padding: 4px 8px;
+        
+        .actionButton.primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+        
+        .actionButton.primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .actionIcon {
+          font-size: 16px;
+        }
+        
+        .actionText {
           font-size: 13px;
         }
       </style>
