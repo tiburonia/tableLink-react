@@ -81,6 +81,40 @@ async function initDatabase() {
       )
     `);
 
+    // orders 테이블 생성 (주문 관리용)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        store_id INTEGER NOT NULL,
+        user_id VARCHAR(50) NOT NULL,
+        table_number INTEGER,
+        order_data JSONB NOT NULL,
+        total_amount INTEGER NOT NULL,
+        discount_amount INTEGER DEFAULT 0,
+        final_amount INTEGER NOT NULL,
+        payment_method VARCHAR(50) DEFAULT 'card',
+        order_status VARCHAR(20) DEFAULT 'pending',
+        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // orders 테이블 인덱스 생성
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_orders_store_id ON orders(store_id);
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
+    `);
+    
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(order_date);
+    `);
+
     console.log('✅ 데이터베이스 테이블 초기화 완료');
 
     // 기존 stores 테이블에서 reviews 컬럼 제거 (이미 존재하는 경우)

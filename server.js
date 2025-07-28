@@ -310,7 +310,7 @@ app.get('/api/cart/:userId', async (req, res) => {
   }
 });
 
-// 주문 처리 API
+// 주문 처리 API (orders 테이블에도 저장)
 app.post('/api/orders/pay', async (req, res) => {
   const { 
     userId, 
@@ -321,10 +321,15 @@ app.post('/api/orders/pay', async (req, res) => {
     couponDiscount 
   } = req.body;
 
+  const client = await pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // 사용자 정보 조회
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const userResult = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
     if (userResult.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
@@ -333,6 +338,7 @@ app.post('/api/orders/pay', async (req, res) => {
 
     // 포인트 부족 확인
     if (usedPoint > user.point) {
+      await client.query('ROLLBACK');
       return res.status(400).json({ error: '포인트가 부족합니다' });
     }
 
@@ -341,6 +347,7 @@ app.post('/api/orders/pay', async (req, res) => {
     if (selectedCouponId) {
       usedCoupon = currentCoupons.unused.find(c => c.id == selectedCouponId);
       if (!usedCoupon) {
+        await client.query('ROLLBACK');
         return res.status(400).json({ error: '유효하지 않은 쿠폰입니다' });
       }
     }
@@ -403,11 +410,31 @@ app.post('/api/orders/pay', async (req, res) => {
     // 주문 목록 업데이트
     const newOrderList = [...currentOrderList, orderRecord];
 
-    // 데이터베이스 업데이트
-    await pool.query(
+    // 사용자 테이블 업데이트
+    await client.query(
       'UPDATE users SET point = $1, order_list = $2, coupons = $3 WHERE id = $4',
       [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
     );
+
+    // orders 테이블에 주문 정보 저장
+    await client.query(`
+      INSERT INTO orders (
+        store_id, user_id, table_number, order_data, 
+        total_amount, discount_amount, final_amount, 
+        order_status, order_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+    `, [
+      orderData.storeId || null,
+      userId,
+      orderData.tableNum || null,
+      JSON.stringify(orderData),
+      orderData.total,
+      appliedPoint + couponDiscount,
+      realTotal,
+      'completed'
+    ]);
+
+    await client.query('COMMIT');
 
     res.json({
       success: true,
@@ -422,8 +449,178 @@ app.post('/api/orders/pay', async (req, res) => {
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('결제 처리 실패:', error);
     res.status(500).json({ error: '결제 처리 실패' });
+  } finally {
+    client.release();
+  }
+});
+
+// 매장별 주문 내역 조회 API (TLM용)
+app.get('/api/stores/:storeId/orders', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { status, limit = 50 } = req.query;
+
+    console.log(`📋 매장 ${storeId} 주문 내역 조회 요청`);
+
+    let query = `
+      SELECT 
+        o.*,
+        u.name as customer_name,
+        u.phone as customer_phone
+      FROM orders o
+      JOIN users u ON o.user_id = u.id
+      WHERE o.store_id = $1
+    `;
+    
+    const params = [parseInt(storeId)];
+
+    if (status) {
+      query += ` AND o.order_status = $${params.length + 1}`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY o.order_date DESC LIMIT $${params.length + 1}`;
+    params.push(parseInt(limit));
+
+    const result = await pool.query(query, params);
+
+    const orders = result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      customerName: row.customer_name,
+      customerPhone: row.customer_phone,
+      tableNumber: row.table_number,
+      orderData: row.order_data,
+      totalAmount: row.total_amount,
+      discountAmount: row.discount_amount,
+      finalAmount: row.final_amount,
+      paymentMethod: row.payment_method,
+      orderStatus: row.order_status,
+      orderDate: row.order_date,
+      completedAt: row.completed_at
+    }));
+
+    console.log(`✅ 매장 ${storeId} 주문 내역 ${orders.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: orders.length,
+      orders: orders
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 주문 내역 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '주문 내역 조회 실패' 
+    });
+  }
+});
+
+// 주문 상태 업데이트 API (TLM용)
+app.put('/api/orders/:orderId/status', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    console.log(`🔄 주문 ${orderId} 상태 변경 요청: ${status}`);
+
+    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: '유효하지 않은 주문 상태입니다' });
+    }
+
+    const completedAt = status === 'completed' ? new Date() : null;
+
+    const result = await pool.query(`
+      UPDATE orders 
+      SET order_status = $1, completed_at = $2
+      WHERE id = $3
+      RETURNING *
+    `, [status, completedAt, orderId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '주문을 찾을 수 없습니다' });
+    }
+
+    console.log(`✅ 주문 ${orderId} 상태 변경 완료: ${status}`);
+
+    res.json({
+      success: true,
+      message: `주문 상태가 ${status}로 변경되었습니다`,
+      order: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 상태 업데이트 실패:', error);
+    res.status(500).json({ error: '주문 상태 업데이트 실패' });
+  }
+});
+
+// 매장별 주문 통계 API (TLM용)
+app.get('/api/stores/:storeId/orders/stats', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { period = 'today' } = req.query;
+
+    console.log(`📊 매장 ${storeId} 주문 통계 조회 요청 (기간: ${period})`);
+
+    let dateCondition = '';
+    switch (period) {
+      case 'today':
+        dateCondition = "AND DATE(order_date) = CURRENT_DATE";
+        break;
+      case 'week':
+        dateCondition = "AND order_date >= NOW() - INTERVAL '7 days'";
+        break;
+      case 'month':
+        dateCondition = "AND order_date >= NOW() - INTERVAL '30 days'";
+        break;
+      default:
+        dateCondition = "AND DATE(order_date) = CURRENT_DATE";
+    }
+
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_orders,
+        COUNT(CASE WHEN order_status = 'completed' THEN 1 END) as completed_orders,
+        COUNT(CASE WHEN order_status = 'pending' THEN 1 END) as pending_orders,
+        COUNT(CASE WHEN order_status = 'preparing' THEN 1 END) as preparing_orders,
+        COALESCE(SUM(CASE WHEN order_status = 'completed' THEN final_amount ELSE 0 END), 0) as total_revenue,
+        COALESCE(AVG(CASE WHEN order_status = 'completed' THEN final_amount ELSE NULL END), 0) as avg_order_value
+      FROM orders 
+      WHERE store_id = $1 ${dateCondition}
+    `;
+
+    const result = await pool.query(statsQuery, [parseInt(storeId)]);
+    const stats = result.rows[0];
+
+    console.log(`✅ 매장 ${storeId} 주문 통계 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      period: period,
+      stats: {
+        totalOrders: parseInt(stats.total_orders),
+        completedOrders: parseInt(stats.completed_orders),
+        pendingOrders: parseInt(stats.pending_orders),
+        preparingOrders: parseInt(stats.preparing_orders),
+        totalRevenue: parseInt(stats.total_revenue),
+        avgOrderValue: Math.round(parseFloat(stats.avg_order_value))
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 주문 통계 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '주문 통계 조회 실패' 
+    });
   }
 });
 
