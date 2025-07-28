@@ -1,21 +1,25 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 const { updateStoreRating } = require('./stores');
 
-// 매장별 리뷰 조회 API
+// 매장별 리뷰 조회 API (TLM용)
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
     const limit = req.query.limit || 100;
 
-    console.log(`=== 📖 매장 ${storeId} 리뷰 조회 API 시작 ===`);
+    console.log(`=== 📖 매장 ${storeId} 리뷰 조회 API 시작 (reviews 테이블 JOIN) ===`);
 
     const query = `
       SELECT 
-        r.id, r.rating as score, r.review_text as content,
-        r.order_date, r.created_at, u.name as user_name, u.id as user_id
+        r.id,
+        r.rating as score,
+        r.review_text as content,
+        r.order_date,
+        r.created_at,
+        u.name as user_name,
+        u.id as user_id
       FROM reviews r
       JOIN users u ON r.user_id = u.id
       WHERE r.store_id = $1
@@ -23,7 +27,13 @@ router.get('/stores/:storeId', async (req, res) => {
       LIMIT $2
     `;
 
+    console.log('🔍 실행할 SQL 쿼리:', query);
+    console.log('🔍 쿼리 파라미터 - storeId:', storeId, '(타입:', typeof storeId, '), limit:', limit);
+
     const result = await pool.query(query, [storeId, limit]);
+
+    console.log('🔍 데이터베이스 쿼리 결과:', result.rows.length + '개 리뷰 발견');
+    console.log('📊 조회된 리뷰 상세:', result.rows);
 
     const reviews = result.rows.map(row => ({
       id: row.id,
@@ -37,15 +47,20 @@ router.get('/stores/:storeId', async (req, res) => {
 
     console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 처리 완료`);
 
-    res.json({
+    const responseData = {
       success: true,
       storeId: parseInt(storeId),
       total: reviews.length,
       reviews: reviews
-    });
+    };
+
+    console.log('📤 클라이언트로 전송할 최종 데이터:', JSON.stringify(responseData, null, 2));
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('❌ 매장 리뷰 조회 실패:', error);
+    console.error('❌ 오류 스택:', error.stack);
     res.status(500).json({ 
       success: false, 
       error: '리뷰 조회 실패: ' + error.message
@@ -53,7 +68,7 @@ router.get('/stores/:storeId', async (req, res) => {
   }
 });
 
-// 최근 리뷰 조회 API
+// 최근 리뷰 조회 API (TLM용)
 router.get('/recent/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -63,8 +78,10 @@ router.get('/recent/:storeId', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        r.id, r.rating, r.review_text, r.created_at
+        r.id, r.rating, r.review_text, r.created_at,
+        u.name as user_name
       FROM reviews r
+      JOIN users u ON r.user_id = u.id
       WHERE r.store_id = $1
       ORDER BY r.created_at DESC
       LIMIT $2
@@ -74,7 +91,8 @@ router.get('/recent/:storeId', async (req, res) => {
       id: row.id,
       rating: row.rating,
       review_text: row.review_text,
-      created_at: row.created_at
+      created_at: row.created_at,
+      user_name: row.user_name
     }));
 
     console.log(`✅ 매장 ${storeId} 최근 리뷰 ${reviews.length}개 조회 완료`);
@@ -89,6 +107,49 @@ router.get('/recent/:storeId', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: '최근 리뷰 조회 실패' 
+    });
+  }
+});
+
+// 리뷰 미리보기 API (매장 상세 페이지용)
+router.get('/preview/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const limit = 3; // 미리보기는 3개만
+
+    console.log(`👁️ 매장 ${storeId} 리뷰 미리보기 조회`);
+
+    const result = await pool.query(`
+      SELECT 
+        r.id, r.rating, r.review_text, r.created_at,
+        u.name as user_name
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT $2
+    `, [parseInt(storeId), limit]);
+
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      rating: row.rating,
+      content: row.review_text,
+      date: new Date(row.created_at).toLocaleDateString('ko-KR'),
+      user: row.user_name
+    }));
+
+    console.log(`✅ 매장 ${storeId} 리뷰 미리보기 ${reviews.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      reviews: reviews
+    });
+
+  } catch (error) {
+    console.error('❌ 리뷰 미리보기 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '리뷰 미리보기 조회 실패' 
     });
   }
 });

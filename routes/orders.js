@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -233,7 +232,7 @@ router.get('/stores/:storeId', async (req, res) => {
   }
 });
 
-// 최근 주문 조회 API
+// 최근 주문 조회 API (TLM용)
 router.get('/recent/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -243,7 +242,8 @@ router.get('/recent/:storeId', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        o.id, o.table_number, o.final_amount, o.order_date, o.order_status
+        o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
+        o.customer_name, o.order_data
       FROM orders o
       WHERE o.store_id = $1
       ORDER BY o.order_date DESC
@@ -255,7 +255,9 @@ router.get('/recent/:storeId', async (req, res) => {
       table_number: row.table_number,
       final_amount: row.final_amount,
       order_date: row.order_date,
-      order_status: row.order_status
+      order_status: row.order_status,
+      customer_name: row.customer_name,
+      order_data: row.order_data
     }));
 
     console.log(`✅ 매장 ${storeId} 최근 주문 ${orders.length}개 조회 완료`);
@@ -274,43 +276,88 @@ router.get('/recent/:storeId', async (req, res) => {
   }
 });
 
-// 주문 상태 업데이트 API
+// 전체 주문 조회 API (TLM용)
+router.get('/store/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const limit = req.query.limit || 50;
+
+    console.log(`📋 매장 ${storeId} 전체 주문 조회 (최대 ${limit}개)`);
+
+    const result = await pool.query(`
+      SELECT 
+        o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
+        o.customer_name, o.order_data
+      FROM orders o
+      WHERE o.store_id = $1
+      ORDER BY o.order_date DESC
+      LIMIT $2
+    `, [parseInt(storeId), limit]);
+
+    const orders = result.rows.map(row => ({
+      id: row.id,
+      table_number: row.table_number,
+      final_amount: row.final_amount,
+      order_date: row.order_date,
+      order_status: row.order_status,
+      customer_name: row.customer_name,
+      order_data: row.order_data
+    }));
+
+    console.log(`✅ 매장 ${storeId} 전체 주문 ${orders.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      total: orders.length,
+      orders: orders
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 주문 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '전체 주문 조회 실패: ' + error.message 
+    });
+  }
+});
+
+// 주문 상태 업데이트 API (TLM용)
 router.put('/:orderId/status', async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    console.log(`🔄 주문 ${orderId} 상태 변경 요청: ${status}`);
-
-    const validStatuses = ['pending', 'preparing', 'ready', 'completed', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ error: '유효하지 않은 주문 상태입니다' });
-    }
-
-    const completedAt = status === 'completed' ? new Date() : null;
+    console.log(`📝 주문 ${orderId} 상태 업데이트: ${status}`);
 
     const result = await pool.query(`
       UPDATE orders 
-      SET order_status = $1, completed_at = $2
-      WHERE id = $3
+      SET order_status = $1, updated_at = NOW()
+      WHERE id = $2
       RETURNING *
-    `, [status, completedAt, orderId]);
+    `, [status, parseInt(orderId)]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: '주문을 찾을 수 없습니다' });
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
     }
 
-    console.log(`✅ 주문 ${orderId} 상태 변경 완료: ${status}`);
+    console.log(`✅ 주문 ${orderId} 상태 업데이트 완료: ${status}`);
 
     res.json({
       success: true,
-      message: `주문 상태가 ${status}로 변경되었습니다`,
-      order: result.rows[0]
+      order: result.rows[0],
+      message: `주문 상태가 ${status}로 변경되었습니다`
     });
 
   } catch (error) {
     console.error('❌ 주문 상태 업데이트 실패:', error);
-    res.status(500).json({ error: '주문 상태 업데이트 실패' });
+    res.status(500).json({ 
+      success: false, 
+      error: '주문 상태 업데이트 실패' 
+    });
   }
 });
 
