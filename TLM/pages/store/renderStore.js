@@ -977,14 +977,11 @@ async function renderTableLayout(store) {
     const data = await response.json();
     const tables = data.tables;
 
-    // 5열 2행 구조로 테이블 배치 (최대 10개 테이블)
-    const tableGrid = Array(2).fill(null).map(() => Array(5).fill(null));
-
-    tables.slice(0, 10).forEach((table, index) => {
-      const row = Math.floor(index / 5);
-      const col = index % 5;
-      tableGrid[row][col] = table;
-    });
+    // 테이블을 카테고리별로 분류
+    const regularTables = tables.filter(t => t.tableName.includes('테이블'));
+    const vipTables = tables.filter(t => t.tableName.includes('VIP룸'));
+    const coupleTables = tables.filter(t => t.tableName.includes('커플석'));
+    const groupTables = tables.filter(t => t.tableName.includes('단체석'));
 
     main.innerHTML = `
       <header class="table-layout-header">
@@ -998,21 +995,23 @@ async function renderTableLayout(store) {
         <div class="table-status-summary">
           <div class="status-item">
             <span class="status-dot available"></span>
-            <span>빈 테이블</span>
+            <span>빈 테이블 (${tables.filter(t => !t.isOccupied).length})</span>
           </div>
           <div class="status-item">
             <span class="status-dot occupied"></span>
-            <span>사용중</span>
+            <span>사용중 (${tables.filter(t => t.isOccupied).length})</span>
+          </div>
+          <div class="status-item">
+            <span class="status-dot total"></span>
+            <span>전체 ${tables.length}개</span>
           </div>
         </div>
 
-        <div class="table-grid">
-          ${tableGrid.map(row => `
-            <div class="table-row">
-              ${row.map(table => {
-                if (!table) {
-                  return `<div class="table-slot empty"></div>`;
-                }
+        ${regularTables.length > 0 ? `
+          <div class="table-section">
+            <h3 class="section-title">🍽️ 일반 테이블</h3>
+            <div class="table-grid regular">
+              ${regularTables.map(table => {
                 const statusClass = table.isOccupied ? 'occupied' : 'available';
                 return `
                   <div class="table-slot ${statusClass}" data-table-id="${table.id}">
@@ -1023,8 +1022,62 @@ async function renderTableLayout(store) {
                 `;
               }).join('')}
             </div>
-          `).join('')}
-        </div>
+          </div>
+        ` : ''}
+
+        ${vipTables.length > 0 ? `
+          <div class="table-section">
+            <h3 class="section-title">👑 VIP룸</h3>
+            <div class="table-grid vip">
+              ${vipTables.map(table => {
+                const statusClass = table.isOccupied ? 'occupied' : 'available';
+                return `
+                  <div class="table-slot ${statusClass} vip-room" data-table-id="${table.id}">
+                    <div class="table-number">${table.tableNumber}</div>
+                    <div class="table-name">${table.tableName}</div>
+                    <div class="table-seats">${table.seats}석</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${coupleTables.length > 0 ? `
+          <div class="table-section">
+            <h3 class="section-title">💕 커플석</h3>
+            <div class="table-grid couple">
+              ${coupleTables.map(table => {
+                const statusClass = table.isOccupied ? 'occupied' : 'available';
+                return `
+                  <div class="table-slot ${statusClass} couple-seat" data-table-id="${table.id}">
+                    <div class="table-number">${table.tableNumber}</div>
+                    <div class="table-name">${table.tableName}</div>
+                    <div class="table-seats">${table.seats}석</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${groupTables.length > 0 ? `
+          <div class="table-section">
+            <h3 class="section-title">👥 단체석</h3>
+            <div class="table-grid group">
+              ${groupTables.map(table => {
+                const statusClass = table.isOccupied ? 'occupied' : 'available';
+                return `
+                  <div class="table-slot ${statusClass} group-seat" data-table-id="${table.id}">
+                    <div class="table-number">${table.tableNumber}</div>
+                    <div class="table-name">${table.tableName}</div>
+                    <div class="table-seats">${table.seats}석</div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div class="table-info-panel">
           <h3>테이블 정보</h3>
@@ -1088,8 +1141,8 @@ async function renderTableLayout(store) {
 
         .table-status-summary {
           display: flex;
-          justify-content: center;
-          gap: 24px;
+          justify-content: space-around;
+          gap: 12px;
           margin-bottom: 24px;
           padding: 16px;
           background: white;
@@ -1101,7 +1154,7 @@ async function renderTableLayout(store) {
           display: flex;
           align-items: center;
           gap: 8px;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 500;
         }
 
@@ -1119,29 +1172,50 @@ async function renderTableLayout(store) {
           background: #F44336;
         }
 
+        .status-dot.total {
+          background: #2196F3;
+        }
+
+        .table-section {
+          margin-bottom: 24px;
+        }
+
+        .section-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 12px;
+          padding: 0 4px;
+        }
+
         .table-grid {
           background: white;
           border-radius: 12px;
-          padding: 24px;
-          margin-bottom: 20px;
+          padding: 20px;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          display: grid;
+          gap: 12px;
         }
 
-        .table-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 16px;
-          gap: 8px;
+        .table-grid.regular {
+          grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
         }
 
-        .table-row:last-child {
-          margin-bottom: 0;
+        .table-grid.vip {
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        }
+
+        .table-grid.couple {
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        }
+
+        .table-grid.group {
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         }
 
         .table-slot {
-          flex: 1;
-          height: 80px;
-          border-radius: 8px;
+          height: 85px;
+          border-radius: 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1149,48 +1223,82 @@ async function renderTableLayout(store) {
           cursor: pointer;
           transition: all 0.2s;
           border: 2px solid transparent;
+          position: relative;
         }
 
-        .table-slot.empty {
-          background: #f5f5f5;
-          cursor: default;
+        .table-slot.vip-room {
+          background: linear-gradient(135deg, #FFD700 0%, #FFA000 100%);
+          border-color: #FF8F00;
+          color: #8B4513;
         }
 
-        .table-slot.available {
-          background: #E8F5E8;
-          border-color: #4CAF50;
-        }
-
-        .table-slot.occupied {
-          background: #FFEBEE;
+        .table-slot.vip-room.occupied {
+          background: linear-gradient(135deg, #FFB74D 0%, #FF8A65 100%);
           border-color: #F44336;
         }
 
-        .table-slot:not(.empty):hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .table-slot.couple-seat {
+          background: linear-gradient(135deg, #FCE4EC 0%, #F8BBD9 100%);
+          border-color: #E91E63;
+          color: #880E4F;
+        }
+
+        .table-slot.couple-seat.occupied {
+          background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
+          border-color: #F44336;
+        }
+
+        .table-slot.group-seat {
+          background: linear-gradient(135deg, #E8F5E8 0%, #A5D6A7 100%);
+          border-color: #4CAF50;
+          color: #2E7D32;
+        }
+
+        .table-slot.group-seat.occupied {
+          background: linear-gradient(135deg, #FFCDD2 0%, #EF9A9A 100%);
+          border-color: #F44336;
+        }
+
+        .table-slot.available {
+          background: linear-gradient(135deg, #E8F5E8 0%, #C8E6C9 100%);
+          border-color: #4CAF50;
+          color: #2E7D32;
+        }
+
+        .table-slot.occupied {
+          background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
+          border-color: #F44336;
+          color: #C62828;
+        }
+
+        .table-slot:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.15);
         }
 
         .table-slot.selected {
           border-color: #297efc;
-          box-shadow: 0 0 0 2px rgba(41, 126, 252, 0.2);
+          box-shadow: 0 0 0 3px rgba(41, 126, 252, 0.3);
+          transform: translateY(-2px);
         }
 
         .table-number {
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 700;
-          color: #333;
+          margin-bottom: 2px;
         }
 
         .table-name {
-          font-size: 12px;
-          color: #666;
+          font-size: 11px;
+          font-weight: 600;
           margin: 2px 0;
+          text-align: center;
         }
 
         .table-seats {
-          font-size: 11px;
-          color: #888;
+          font-size: 10px;
+          font-weight: 500;
+          opacity: 0.8;
         }
 
         .table-info-panel {
