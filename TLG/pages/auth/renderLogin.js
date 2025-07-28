@@ -1,4 +1,7 @@
+
 async function renderLogin() {
+  const main = document.getElementById('main');
+  
   main.innerHTML = `
     <div id="loginContainer">
       <h1>TableLink</h1>
@@ -34,81 +37,13 @@ async function renderLogin() {
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
+  const goTLM = document.querySelector('#goTLM');
 
   join.addEventListener('click', () => {
-    renderSignUp();
-  });
-
-  // 개발용 빠른 로그인
-  quickLogin.addEventListener('click', async () => {
-    try {
-      // 로딩 화면 표시
-      showLoadingScreen();
-
-      const response = await fetch('/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: 'user1',
-          pw: '11'
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // 전역 userInfo 객체 초기화
-        if (!window.userInfo) {
-          window.userInfo = {};
-        }
-
-        // userInfo를 서버에서 받은 데이터로 업데이트
-        window.userInfo = {
-          id: data.user.id,
-          pw: data.user.pw || '',
-          name: data.user.name,
-          phone: data.user.phone,
-          email: '',
-          address: '',
-          birth: '',
-          gender: '',
-          point: data.user.point || 0,
-          orderList: data.user.orderList || [],
-          totalCost: 0,
-          realCost: 0,
-          reservationList: data.user.reservationList || [],
-          coupons: data.user.coupons || { unused: [], used: [] },
-          favorites: data.user.favoriteStores || []
-        };
-
-        // 🍪 쿠키에 사용자 정보 저장 (7일 만료)
-        const expires = new Date();
-        expires.setDate(expires.getDate() + 7);
-        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-        console.log('🍪 빠른 로그인 정보 쿠키에 저장 완료');
-
-        // 🆕 캐시에 사용자 정보 저장 (캐시 매니저가 있을 때만)
-        if (typeof cacheManager !== 'undefined') {
-          cacheManager.setUserInfo(window.userInfo);
-          console.log('💾 빠른 로그인 정보 캐시에 저장 완료');
-        }
-
-        // renderMap 호출 전에 약간의 지연을 둬서 캐시가 완전히 저장되도록 함
-        setTimeout(async () => {
-          await renderMap();
-        }, 100);
-      } else {
-        // 로그인 실패 시 다시 로그인 화면으로
-        await renderLogin();
-        alert(data.error || '빠른 로그인 실패');
-      }
-    } catch (error) {
-      console.error('빠른 로그인 오류:', error);
-      // 오류 시 다시 로그인 화면으로
-      await renderLogin();
-      alert('서버 연결에 실패했습니다');
+    if (typeof renderSignUp === 'function') {
+      renderSignUp();
+    } else {
+      alert('회원가입 기능이 로드되지 않았습니다.');
     }
   });
 
@@ -156,9 +91,9 @@ async function renderLogin() {
     `;
   };
 
-  login.addEventListener('click', async () => {
+  // 개발용 빠른 로그인
+  quickLogin.addEventListener('click', async () => {
     try {
-      // 로딩 화면 표시
       showLoadingScreen();
 
       const response = await fetch('/api/users/login', {
@@ -167,20 +102,18 @@ async function renderLogin() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          id: id.value,
-          pw: pw.value
+          id: 'user1',
+          pw: '11'
         })
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        // 전역 userInfo 객체 초기화
         if (!window.userInfo) {
           window.userInfo = {};
         }
 
-        // userInfo를 서버에서 받은 데이터로 업데이트
         window.userInfo = {
           id: data.user.id,
           pw: data.user.pw || '',
@@ -199,37 +132,99 @@ async function renderLogin() {
           favorites: data.user.favoriteStores || []
         };
 
-        // 🍪 쿠키에 사용자 정보 저장 (7일 만료)
         const expires = new Date();
         expires.setDate(expires.getDate() + 7);
         document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-        console.log('🍪 로그인 정보 쿠키에 저장 완료');
 
-        // 🆕 캐시에 사용자 정보 저장 (캐시 매니저가 있을 때만)
-        if (typeof cacheManager !== 'undefined') {
+        if (typeof cacheManager !== 'undefined' && cacheManager.setUserInfo) {
           cacheManager.setUserInfo(window.userInfo);
-          console.log('💾 로그인 정보 캐시에 저장 완료');
         }
 
-        // renderMap 호출 전에 약간의 지연을 둬서 캐시가 완전히 저장되도록 함
         setTimeout(async () => {
-          await renderMap();
+          if (typeof renderMap === 'function') {
+            await renderMap();
+          } else {
+            window.location.href = '/';
+          }
         }, 100);
       } else {
-        // 로그인 실패 시 다시 로그인 화면으로
+        await renderLogin();
+        alert(data.error || '빠른 로그인 실패');
+      }
+    } catch (error) {
+      console.error('빠른 로그인 오류:', error);
+      await renderLogin();
+      alert('서버 연결에 실패했습니다');
+    }
+  });
+
+  login.addEventListener('click', async () => {
+    try {
+      showLoadingScreen();
+
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: id.value,
+          pw: pw.value
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        if (!window.userInfo) {
+          window.userInfo = {};
+        }
+
+        window.userInfo = {
+          id: data.user.id,
+          pw: data.user.pw || '',
+          name: data.user.name,
+          phone: data.user.phone,
+          email: '',
+          address: '',
+          birth: '',
+          gender: '',
+          point: data.user.point || 0,
+          orderList: data.user.orderList || [],
+          totalCost: 0,
+          realCost: 0,
+          reservationList: data.user.reservationList || [],
+          coupons: data.user.coupons || { unused: [], used: [] },
+          favorites: data.user.favoriteStores || []
+        };
+
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 7);
+        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+
+        if (typeof cacheManager !== 'undefined' && cacheManager.setUserInfo) {
+          cacheManager.setUserInfo(window.userInfo);
+        }
+
+        setTimeout(async () => {
+          if (typeof renderMap === 'function') {
+            await renderMap();
+          } else {
+            window.location.href = '/';
+          }
+        }, 100);
+      } else {
         await renderLogin();
         alert(data.error || '로그인 실패');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
-      // 오류 시 다시 로그인 화면으로
       await renderLogin();
       alert('서버 연결에 실패했습니다');
     }
   });
 
   const handleEnterKey = (event) => {
-    // 로그인 화면이 아니면 이벤트 무시
     if (!document.getElementById('loginContainer')) {
       return;
     }
@@ -239,7 +234,6 @@ async function renderLogin() {
     }
   };
 
-  // 기존 이벤트 리스너 제거 후 새로 등록
   document.removeEventListener('keydown', handleEnterKey);
   document.addEventListener('keydown', handleEnterKey);
 
@@ -247,23 +241,19 @@ async function renderLogin() {
     if (event.key === 'Enter') join.click();
   });
 
-  // 개발용 어드민 로그인 버튼
   adminLogin.addEventListener('click', () => {
     window.location.href = '/ADMIN';
   });
 
-  // 개발용 KDS 버튼
   goKDS.addEventListener('click', () => {
     window.location.href = '/KDS';
   });
 
-  // 개발용 POS 버튼
   goPOS.addEventListener('click', () => {
     window.location.href = '/POS';
   });
 
   // 사장님 앱 버튼
-  const goTLM = document.querySelector('#goTLM');
   goTLM.addEventListener('click', () => {
     const storeName = prompt('가게 이름을 입력하세요:');
     if (storeName && storeName.trim()) {
@@ -276,31 +266,13 @@ async function renderLogin() {
     try {
       console.log('🔍 매장 검색 시작:', storeName);
       
-      // cacheManager가 정의되어 있는지 확인
-      if (typeof cacheManager !== 'undefined') {
-        // 캐시된 매장 목록에서 검색
-        const cachedStores = cacheManager.get('storesData');
-        if (cachedStores && cachedStores.stores) {
-          console.log('📋 전체 매장 목록:', cachedStores.stores.length, '개');
-          
-          const foundStore = cachedStores.stores.find(store => 
-            store.name.toLowerCase().includes(storeName.toLowerCase())
-          );
-          
-          if (foundStore) {
-            console.log('✅ 매장 찾음:', foundStore.name, 'ID:', foundStore.id);
-            // TLM 페이지로 리다이렉트 (매장 ID 포함)
-            window.location.href = `/tlm/${foundStore.id}`;
-            return;
-          }
-        }
-      }
-      
-      // 캐시에 없으면 서버에서 검색
+      // 서버에서 검색
       const response = await fetch('/api/stores');
       const data = await response.json();
       
       if (data.success && data.stores) {
+        console.log('📋 전체 매장 목록:', data.stores.length, '개');
+        
         const foundStore = data.stores.find(store => 
           store.name.toLowerCase().includes(storeName.toLowerCase())
         );
@@ -319,4 +291,4 @@ async function renderLogin() {
       alert('매장 검색 중 오류가 발생했습니다.');
     }
   }
-};
+}
