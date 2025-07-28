@@ -1,32 +1,42 @@
 // TLM 매장 관리 메인 화면 렌더링
 function renderTLMMain() {
-  // 1. URL 쿼리 파라미터에서 매장 ID 추출
-  const urlParams = new URLSearchParams(window.location.search);
-  let storeId = urlParams.get('storeId');
+  console.log('🏪 TLM 메인 함수 호출됨');
   
-  // 2. URL 경로에서 매장 ID 추출 (/tlm/1 또는 /TLM/1 형태)
+  // 1. 전역 변수에서 우선 가져오기
+  let storeId = window.currentStoreId;
+  
+  // 2. URL 쿼리 파라미터에서 매장 ID 추출
   if (!storeId) {
-    const pathParts = window.location.pathname.split('/');
-    if (pathParts.length >= 3 && (pathParts[1].toLowerCase() === 'tlm')) {
-      storeId = pathParts[2];
-    }
+    const urlParams = new URLSearchParams(window.location.search);
+    storeId = urlParams.get('storeId');
   }
   
-  // 3. 전역 변수에서 가져오기
-  if (!storeId && window.currentStoreId) {
-    storeId = window.currentStoreId;
+  // 3. URL 경로에서 매장 ID 추출 (/tlm/1 또는 /TLM/1 형태)
+  if (!storeId) {
+    const pathParts = window.location.pathname.split('/');
+    console.log('🔍 URL 경로 분석:', pathParts);
+    if (pathParts.length >= 3 && (pathParts[1].toLowerCase() === 'tlm')) {
+      storeId = pathParts[2];
+      console.log('🎯 경로에서 매장 ID 추출 성공:', storeId);
+    }
   }
 
   console.log('🏪 TLM 매장 ID:', storeId);
   console.log('🔍 URL 정보:', {
     pathname: window.location.pathname,
     search: window.location.search,
-    extractedStoreId: storeId
+    extractedStoreId: storeId,
+    globalStoreId: window.currentStoreId
   });
 
-  if (!storeId) {
+  if (!storeId || storeId === 'null' || storeId === 'undefined') {
     console.error('❌ 매장 ID가 없습니다.');
-    alert('매장 ID가 없습니다.');
+    if (typeof renderLogin === 'function') {
+      console.log('🔄 로그인 화면으로 리다이렉트');
+      renderLogin();
+    } else {
+      alert('매장 ID가 없습니다. 올바른 URL로 접속해주세요.');
+    }
     return;
   }
 

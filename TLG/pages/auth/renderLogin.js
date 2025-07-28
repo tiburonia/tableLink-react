@@ -276,20 +276,23 @@ let renderLogin = async function () {
     try {
       console.log('🔍 매장 검색 시작:', storeName);
       
-      // 캐시된 매장 목록에서 검색
-      const cachedStores = cacheManager.get('storesData');
-      if (cachedStores && cachedStores.stores) {
-        console.log('📋 전체 매장 목록:', cachedStores.stores.length, '개');
-        
-        const foundStore = cachedStores.stores.find(store => 
-          store.name.toLowerCase().includes(storeName.toLowerCase())
-        );
-        
-        if (foundStore) {
-          console.log('✅ 매장 찾음:', foundStore.name, 'ID:', foundStore.id);
-          // TLM 페이지로 리다이렉트 (매장 ID 포함)
-          window.location.href = `/tlm/${foundStore.id}`;
-          return;
+      // cacheManager가 정의되어 있는지 확인
+      if (typeof cacheManager !== 'undefined') {
+        // 캐시된 매장 목록에서 검색
+        const cachedStores = cacheManager.get('storesData');
+        if (cachedStores && cachedStores.stores) {
+          console.log('📋 전체 매장 목록:', cachedStores.stores.length, '개');
+          
+          const foundStore = cachedStores.stores.find(store => 
+            store.name.toLowerCase().includes(storeName.toLowerCase())
+          );
+          
+          if (foundStore) {
+            console.log('✅ 매장 찾음:', foundStore.name, 'ID:', foundStore.id);
+            // TLM 페이지로 리다이렉트 (매장 ID 포함)
+            window.location.href = `/tlm/${foundStore.id}`;
+            return;
+          }
         }
       }
       
