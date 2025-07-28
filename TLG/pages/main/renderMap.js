@@ -177,6 +177,16 @@ async function renderMap() {
   document.addEventListener('mousemove', e => duringDrag(e.clientY));
   document.addEventListener('mouseup', endDrag);
 
+  // 주기적으로 매장 상태 업데이트 (30초마다)
+  const updateInterval = setInterval(() => {
+    console.log('🔄 지도: 매장 상태 주기적 업데이트 시작');
+    loadStoresAndMarkers(map);
+  }, 30000);
+
+  // 페이지 떠날 때 인터벌 정리
+  window.addEventListener('beforeunload', () => {
+    clearInterval(updateInterval);
+  });
 
   }
 
@@ -225,9 +235,23 @@ async function loadStoresAndMarkers(map) {
   let stores = [];
 
   try {
-    // 캐시에서 스토어 정보 가져오기
-    stores = await cacheManager.getStores();
-    console.log('🗺️ 지도에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+    // 서버에서 직접 최신 매장 정보 가져오기
+    console.log('🔄 서버에서 최신 매장 정보 로딩 중...');
+    const response = await fetch('/api/stores');
+    const data = await response.json();
+    
+    if (data.success) {
+      stores = data.stores;
+      console.log('🗺️ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+      
+      // 캐시도 업데이트
+      if (typeof window.cacheManager !== 'undefined') {
+        window.cacheManager.setStores(stores);
+        console.log('📁 매장 데이터 캐시 업데이트 완료');
+      }
+    } else {
+      throw new Error(data.error || '매장 데이터를 불러올 수 없습니다');
+    }
 
     // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
     setTimeout(async () => {
@@ -242,20 +266,23 @@ async function loadStoresAndMarkers(map) {
     storeListContainer.innerHTML = ''; // 로딩 메시지 제거
 
     // 매장 목록에서도 별점 정보 비동기 로딩
-    stores.forEach(async (store) => {
+    for (const store of stores) {
       const card = document.createElement('div');
       card.className = 'storeCard';
 
       // 별점 정보 비동기 로딩
       const ratingData = await loadStoreRatingAsync(store.id);
       
-      // 모듈에서 카드 HTML 생성
+      // 운영 상태 실시간 확인
+      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
+      
+      // 카드 HTML 생성
       card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
 
       // 카드 클릭 시 해당 가게의 상세 페이지로 이동
       card.addEventListener('click', () => renderStore(store));
       storeListContainer.appendChild(card);
-    });
+    }
 
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
