@@ -332,15 +332,24 @@ router.get('/:storeId/tables', async (req, res) => {
 // 매장 운영 상태 토글
 router.post('/:storeId/toggle-status', async (req, res) => {
   const { storeId } = req.params;
-  const { isOpen } = req.body;
+  let { isOpen } = req.body;
 
   try {
     console.log(`🔄 매장 ${storeId} 운영 상태 토글 요청: ${isOpen}`);
 
+    // storeId를 정수로 변환
+    const storeIdInt = parseInt(storeId);
+    if (isNaN(storeIdInt)) {
+      return res.status(400).json({
+        success: false,
+        message: '잘못된 매장 ID입니다.'
+      });
+    }
+
     // 현재 매장 정보 확인
     const currentStore = await pool.query(
-      'SELECT * FROM stores WHERE id = $1',
-      [storeId]
+      'SELECT id, name, is_open FROM stores WHERE id = $1',
+      [storeIdInt]
     );
 
     if (currentStore.rows.length === 0) {
@@ -350,13 +359,26 @@ router.post('/:storeId/toggle-status', async (req, res) => {
       });
     }
 
+    const currentStoreData = currentStore.rows[0];
+    console.log(`📋 현재 매장 상태: ${currentStoreData.name} - ${currentStoreData.is_open}`);
+
+    // isOpen이 정의되지 않은 경우 현재 상태를 토글
+    if (isOpen === undefined || isOpen === null) {
+      isOpen = !currentStoreData.is_open;
+    }
+
+    // boolean으로 변환
+    const newStatus = Boolean(isOpen);
+    console.log(`🔄 상태 변경: ${currentStoreData.is_open} → ${newStatus}`);
+
     // 운영 상태 업데이트
     const updateResult = await pool.query(
-      'UPDATE stores SET is_open = $1 WHERE id = $2 RETURNING *',
-      [isOpen, storeId]
+      'UPDATE stores SET is_open = $1 WHERE id = $2 RETURNING id, name, is_open',
+      [newStatus, storeIdInt]
     );
 
     if (updateResult.rows.length === 0) {
+      console.error('❌ 업데이트 결과가 없습니다.');
       return res.status(500).json({
         success: false,
         message: '운영 상태 업데이트에 실패했습니다.'
@@ -364,22 +386,26 @@ router.post('/:storeId/toggle-status', async (req, res) => {
     }
 
     const updatedStore = updateResult.rows[0];
-    console.log(`✅ 매장 ${storeId} 운영 상태 변경 완료: ${updatedStore.isOpen}`);
+    console.log(`✅ 매장 ${storeIdInt} 운영 상태 변경 완료: ${updatedStore.is_open}`);
 
     res.json({
       success: true,
-      message: `매장이 ${isOpen ? '운영 시작' : '운영 중지'}되었습니다.`,
-      store: updatedStore,
-      previousStatus: currentStore.rows[0].is_open,
-      newStatus: isOpen,
-      isOpen: isOpen
+      message: `매장이 ${newStatus ? '운영 시작' : '운영 중지'}되었습니다.`,
+      store: {
+        id: updatedStore.id,
+        name: updatedStore.name,
+        isOpen: updatedStore.is_open
+      },
+      previousStatus: currentStoreData.is_open,
+      newStatus: newStatus,
+      isOpen: newStatus
     });
 
   } catch (error) {
     console.error('❌ 매장 운영 상태 토글 오류:', error);
     res.status(500).json({
       success: false,
-      message: '서버 오류가 발생했습니다.',
+      message: '서버 오류가 발생했습니다: ' + error.message,
       error: error.message
     });
   }
