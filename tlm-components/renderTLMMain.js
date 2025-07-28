@@ -290,11 +290,21 @@ async function loadStoreStats(storeId) {
 // 전체 주문 보기
 async function showAllOrders(storeId) {
   try {
+    console.log(`📋 전체 주문 조회 시작: 매장 ID ${storeId}`);
+    
     const response = await fetch(`/api/stores/${storeId}/orders`);
+    console.log(`📊 API 응답 상태: ${response.status}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
+    console.log(`📊 받은 주문 데이터:`, data);
 
-    if (data.success) {
+    if (data.success && data.orders) {
       const orders = data.orders || [];
+      console.log(`✅ 처리할 주문 수: ${orders.length}개`);
       
       let ordersHTML = `
         <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
@@ -310,21 +320,45 @@ async function showAllOrders(storeId) {
 
       if (orders.length > 0) {
         orders.forEach(order => {
-          const orderDate = new Date(order.order_date).toLocaleString();
+          const orderDate = new Date(order.orderDate || order.order_date).toLocaleString();
+          const tableNumber = order.tableNumber || order.table_number || '알 수 없음';
+          const finalAmount = order.finalAmount || order.final_amount || 0;
+          const orderStatus = order.orderStatus || order.order_status || '알 수 없음';
+          const customerName = order.customerName || order.customer_name || '고객정보없음';
+          
+          // 주문 데이터 파싱
+          let orderDataStr = '주문 정보 없음';
+          try {
+            if (order.orderData || order.order_data) {
+              const orderDataObj = typeof (order.orderData || order.order_data) === 'string' 
+                ? JSON.parse(order.orderData || order.order_data) 
+                : (order.orderData || order.order_data);
+              
+              if (orderDataObj.menu) {
+                orderDataStr = Object.entries(orderDataObj.menu)
+                  .map(([item, qty]) => `${item}: ${qty}개`)
+                  .join(', ');
+              }
+            }
+          } catch (e) {
+            console.error('주문 데이터 파싱 오류:', e);
+            orderDataStr = '주문 데이터 파싱 실패';
+          }
+          
           ordersHTML += `
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #007bff;">
               <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                 <div>
                   <strong style="color: #333;">주문 #${order.id}</strong>
-                  <div style="color: #666; font-size: 14px;">테이블 ${order.table_number} • ${orderDate}</div>
+                  <div style="color: #666; font-size: 14px;">테이블 ${tableNumber} • ${customerName} • ${orderDate}</div>
                 </div>
                 <div style="text-align: right;">
-                  <div style="font-size: 18px; font-weight: bold; color: #007bff;">${order.final_amount.toLocaleString()}원</div>
-                  <div style="font-size: 12px; color: #666;">${order.order_status}</div>
+                  <div style="font-size: 18px; font-weight: bold; color: #007bff;">${finalAmount.toLocaleString()}원</div>
+                  <div style="font-size: 12px; color: #666;">${orderStatus}</div>
                 </div>
               </div>
               <div style="background: white; padding: 10px; border-radius: 5px; font-size: 14px;">
-                ${JSON.stringify(JSON.parse(order.order_data).menu || {}, null, 2).replace(/[{}",]/g, '').replace(/\n/g, '<br>')}
+                ${orderDataStr}
               </div>
             </div>
           `;
@@ -341,22 +375,33 @@ async function showAllOrders(storeId) {
       document.body.appendChild(modalDiv);
       
     } else {
-      alert('주문 내역을 불러올 수 없습니다.');
+      console.error('❌ API 응답 형식 오류:', data);
+      alert('주문 내역을 불러올 수 없습니다: ' + (data.error || '알 수 없는 오류'));
     }
   } catch (error) {
-    console.error('전체 주문 조회 실패:', error);
-    alert('주문 내역 조회 중 오류가 발생했습니다.');
+    console.error('❌ 전체 주문 조회 실패:', error);
+    alert('주문 내역 조회 중 오류가 발생했습니다: ' + error.message);
   }
 }
 
 // 전체 리뷰 보기
 async function showAllReviews(storeId) {
   try {
+    console.log(`⭐ 전체 리뷰 조회 시작: 매장 ID ${storeId}`);
+    
     const response = await fetch(`/api/stores/${storeId}/reviews`);
+    console.log(`📊 API 응답 상태: ${response.status}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
+    console.log(`📊 받은 리뷰 데이터:`, data);
 
-    if (data.success) {
+    if (data.success && data.reviews) {
       const reviews = data.reviews || [];
+      console.log(`✅ 처리할 리뷰 수: ${reviews.length}개`);
       
       let reviewsHTML = `
         <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; justify-content: center; align-items: center;">
@@ -372,20 +417,23 @@ async function showAllReviews(storeId) {
 
       if (reviews.length > 0) {
         reviews.forEach(review => {
-          const reviewDate = new Date(review.created_at).toLocaleDateString();
-          const stars = '⭐'.repeat(review.rating);
+          const reviewDate = new Date(review.created_at || review.date).toLocaleDateString();
+          const rating = review.rating || review.score || 0;
+          const reviewText = review.review_text || review.content || '리뷰 내용 없음';
+          const userName = review.user || review.user_name || `사용자${review.user_id || review.userId}`;
+          const stars = '⭐'.repeat(Math.max(0, Math.min(5, rating)));
           
           reviewsHTML += `
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #ffc107;">
               <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                 <div>
                   <div style="font-size: 16px; color: #ffc107; margin-bottom: 5px;">${stars}</div>
-                  <div style="color: #666; font-size: 14px;">작성자: ${review.user_id} • ${reviewDate}</div>
+                  <div style="color: #666; font-size: 14px;">작성자: ${userName} • ${reviewDate}</div>
                 </div>
-                <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${review.rating}점</div>
+                <div style="font-size: 18px; font-weight: bold; color: #ffc107;">${rating}점</div>
               </div>
               <div style="background: white; padding: 12px; border-radius: 5px; line-height: 1.5; color: #333;">
-                ${review.review_text}
+                ${reviewText}
               </div>
             </div>
           `;
@@ -402,11 +450,12 @@ async function showAllReviews(storeId) {
       document.body.appendChild(modalDiv);
       
     } else {
-      alert('리뷰를 불러올 수 없습니다.');
+      console.error('❌ API 응답 형식 오류:', data);
+      alert('리뷰를 불러올 수 없습니다: ' + (data.error || '알 수 없는 오류'));
     }
   } catch (error) {
-    console.error('전체 리뷰 조회 실패:', error);
-    alert('리뷰 조회 중 오류가 발생했습니다.');
+    console.error('❌ 전체 리뷰 조회 실패:', error);
+    alert('리뷰 조회 중 오류가 발생했습니다: ' + error.message);
   }
 }
 
