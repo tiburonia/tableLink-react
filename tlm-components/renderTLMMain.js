@@ -243,7 +243,7 @@ function renderTLMInterface(store) {
           </div>
         `).join('')}</div>
 
-        
+
   `;
 
   main.appendChild(tableArea);
@@ -263,7 +263,7 @@ function renderTLMInterface(store) {
 
     // 현재 테이블 상태 확인
     const currentTable = store.tables.find(t => t.tableName === tableName);
-    
+
     if (currentTable && currentTable.isOccupied) {
       // 이미 점유된 테이블인 경우 해제 옵션 제공
       const action = confirm(
@@ -271,7 +271,7 @@ function renderTLMInterface(store) {
         `확인: 테이블 해제\n` +
         `취소: 아무 작업 안함`
       );
-      
+
       if (action) {
         // 테이블 해제
         fetch('/api/tables/update', {
@@ -620,34 +620,6 @@ async function showAllReviews(storeId) {
   }
 }
 
-// 이벤트 리스너 설정
-function setupEventListeners(store) {
-  // 로그아웃 버튼
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    handleLogout();
-  });
-
-  // 운영 상태 토글
-  document.getElementById('toggleStoreStatus').addEventListener('click', () => {
-    toggleStoreStatus(store.id);
-  });
-
-  // 전체 주문 보기
-  document.getElementById('viewAllOrders').addEventListener('click', () => {
-    showAllOrders(store.id);
-  });
-
-  // 전체 리뷰 보기
-  document.getElementById('viewAllReviews').addEventListener('click', () => {
-    showAllReviews(store.id);
-  });
-
-  // 테이블 관리
-  document.getElementById('viewTables').addEventListener('click', () => {
-    alert('테이블 관리 기능은 개발 중입니다.');
-  });
-}
-
 // 최근 활동 로드
 async function loadRecentActivity(storeId) {
   try {
@@ -730,58 +702,6 @@ async function loadRecentReviews(storeId) {
   }
 }
 
-// 매장 운영 상태 토글 함수
-async function toggleStoreStatus(storeId) {
-  try {
-    const response = await fetch(`/api/stores/${storeId}/toggle-status`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      alert(`매장 운영 상태가 ${data.isOpen ? '운영중' : '운영중지'}로 변경되었습니다.`);
-      location.reload(); // 페이지 새로고침으로 상태 업데이트
-    } else {
-      alert('운영 상태 변경에 실패했습니다: ' + data.error);
-    }
-  } catch (error) {
-    console.error('운영 상태 변경 실패:', error);
-    alert('운영 상태 변경에 실패했습니다.');
-  }
-}
-
-// 이벤트 리스너 설정
-function setupEventListeners(store) {
-  // 로그아웃 버튼
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    handleLogout();
-  });
-
-  // 운영 상태 토글
-  document.getElementById('toggleStoreStatus').addEventListener('click', async () => {
-    await toggleStoreOperationStatus(store);
-  });
-
-  // 전체 주문 보기
-  document.getElementById('viewAllOrders').addEventListener('click', () => {
-    showAllOrders(store.id);
-  });
-
-  // 전체 리뷰 보기
-  document.getElementById('viewAllReviews').addEventListener('click', () => {
-    showAllReviews(store.id);
-  });
-
-  // 테이블 관리
-  document.getElementById('viewTables').addEventListener('click', () => {
-    alert('테이블 관리 기능은 개발 중입니다.');
-  });
-}
-
 // 매장 운영 상태 토글 함수 (개선된 버전)
 async function toggleStoreOperationStatus(store) {
   const currentStatus = store.isOpen;
@@ -796,7 +716,7 @@ async function toggleStoreOperationStatus(store) {
   const toggleBtn = document.getElementById('toggleStoreStatus');
   const originalBtnText = toggleBtn.textContent;
   const originalBtnStyle = toggleBtn.style.background;
-  
+
   // 버튼 비활성화 및 로딩 표시
   toggleBtn.disabled = true;
   toggleBtn.textContent = `${actionText} 중...`;
@@ -817,7 +737,7 @@ async function toggleStoreOperationStatus(store) {
     });
 
     console.log(`📡 [TLM] 응답 상태: ${response.status}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: 서버 요청 실패`);
     }
