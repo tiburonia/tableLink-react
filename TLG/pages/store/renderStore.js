@@ -122,6 +122,41 @@ async function renderTableLayout(store) {
   await window.TableInfoManager.renderTableLayout(store);
 }
 
+// 매장 정보 로드 및 렌더링
+  async function loadAndRenderStore(storeId) {
+    try {
+      console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
+      const response = await fetch(`/api/stores/${storeId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        window.currentStore = data.store;
+        console.log(`📊 매장 ${data.store.name} 운영 상태: ${data.store.isOpen}`);
+
+        StoreUI.renderStoreHTML(data.store);
+
+        // 테이블 정보 로드 (실시간 상태 동기화 포함)
+        if (typeof TableInfoManager !== 'undefined') {
+          TableInfoManager.loadTableInfo(data.store);
+        }
+
+        // 주기적으로 매장 상태 확인 (30초마다)
+        setInterval(() => {
+          if (window.currentStore && window.currentStore.id === storeId) {
+            TableInfoManager.loadTableInfo(window.currentStore);
+          }
+        }, 30000);
+
+        console.log(`✅ 매장 ${data.store.name} 렌더링 완료`);
+      } else {
+        throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+      }
+    } catch (error) {
+      console.error('매장 정보 로드 실패:', error);
+      alert('매장 정보를 불러올 수 없습니다.');
+    }
+  }
+
 // 전역 함수 등록
 window.renderStore = renderStore;
 window.renderTableLayout = renderTableLayout;

@@ -1,4 +1,3 @@
-
 // 테이블 정보 관리자
 window.TableInfoManager = {
   async loadTableInfo(store) {
@@ -63,7 +62,7 @@ window.TableInfoManager = {
         statusText: statusText,
         statusClass: statusClass
       });
-      
+
     } catch (error) {
       console.error('테이블 정보 로딩 실패:', error);
       this.updateTableInfoUI({
@@ -78,32 +77,40 @@ window.TableInfoManager = {
     }
   },
 
-  updateTableInfoUI(data) {
-    const elements = {
-      totalTables: document.getElementById('totalTables'),
-      availableTables: document.getElementById('availableTables'),
-      totalSeats: document.getElementById('totalSeats'),
-      availableSeats: document.getElementById('availableSeats'),
-      occupancyRate: document.getElementById('occupancyRate'),
-      statusBadge: document.getElementById('tableStatusBadge')
-    };
+  updateTableInfoUI(info) {
+    const totalTablesEl = document.getElementById('totalTables');
+    const availableTablesEl = document.getElementById('availableTables');
+    const totalSeatsEl = document.getElementById('totalSeats');
+    const availableSeatsEl = document.getElementById('availableSeats');
+    const occupancyRateEl = document.getElementById('occupancyRate');
+    const statusBadgeEl = document.getElementById('tableStatusBadge');
 
-    if (elements.totalTables) elements.totalTables.textContent = data.totalTables;
-    if (elements.availableTables) elements.availableTables.textContent = data.availableTables;
-    if (elements.totalSeats) elements.totalSeats.textContent = data.totalSeats;
-    if (elements.availableSeats) elements.availableSeats.textContent = data.availableSeats;
-    if (elements.occupancyRate) elements.occupancyRate.textContent = data.occupancyRate;
+    if (totalTablesEl) totalTablesEl.textContent = info.totalTables;
+    if (availableTablesEl) availableTablesEl.textContent = info.availableTables;
+    if (totalSeatsEl) totalSeatsEl.textContent = info.totalSeats;
+    if (availableSeatsEl) availableSeatsEl.textContent = info.availableSeats;
+    if (occupancyRateEl) occupancyRateEl.textContent = info.occupancyRate + (info.occupancyRate !== '-' ? '%' : '');
 
-    if (elements.statusBadge) {
-      elements.statusBadge.classList.remove('busy', 'full', 'closed');
-      elements.statusBadge.textContent = data.statusText;
-      if (data.statusClass) {
-        elements.statusBadge.classList.add(data.statusClass);
-      }
-      if (data.statusClass === 'error') {
-        elements.statusBadge.style.background = '#666';
-      }
+    if (statusBadgeEl) {
+      statusBadgeEl.textContent = info.statusText;
+      statusBadgeEl.className = `tlr-status-badge ${info.statusClass || ''}`;
     }
+
+    // 헤더의 매장 운영 상태도 함께 업데이트
+    this.updateStoreHeaderStatus(info.statusText, info.statusClass);
+
+    console.log(`✅ 테이블 정보 UI 업데이트 완료: ${info.statusText}`);
+  },
+
+  updateStoreHeaderStatus(statusText, statusClass) {
+    // 매장 상세 페이지의 헤더에 있는 운영 상태 요소들도 업데이트
+    const storeStatusElements = document.querySelectorAll('.store-status, .status-badge');
+    storeStatusElements.forEach(element => {
+      if (element) {
+        element.textContent = statusText === '운영중지' ? '🔴 운영중지' : '🟢 운영중';
+        element.className = element.className.replace(/\b(open|closed)\b/g, '') + ` ${statusClass || ''}`;
+      }
+    });
   },
 
   async renderTableLayout(store) {
@@ -180,7 +187,7 @@ window.TableInfoManager = {
 
   getTableSectionHTML(title, tables, gridClass) {
     if (tables.length === 0) return '';
-    
+
     return `
       <div class="table-section">
         <h3 class="section-title">${title}</h3>
