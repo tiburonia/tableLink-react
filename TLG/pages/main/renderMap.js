@@ -139,6 +139,22 @@ async function renderMap() {
         const storeListContainer = document.getElementById('storeListContainer');
         const storePanel = document.getElementById('storePanel');
         
+        // 전체 DOM 구조 확인을 위한 디버깅
+        console.log('🔍 현재 DOM 구조 확인:');
+        console.log('- document.body.innerHTML 길이:', document.body.innerHTML.length);
+        console.log('- storePanel 존재:', !!storePanel);
+        console.log('- storeListContainer 존재:', !!storeListContainer);
+        
+        if (storePanel) {
+          console.log('- storePanel 내부 HTML:', storePanel.innerHTML.substring(0, 200) + '...');
+          const containerInPanel = storePanel.querySelector('#storeListContainer');
+          console.log('- storePanel 내부에서 storeListContainer 찾기:', !!containerInPanel);
+        }
+        
+        // 모든 ID 요소들 확인
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('- 문서 내 모든 ID들:', allIds);
+        
         if (storeListContainer && storePanel) {
           console.log(`✅ DOM 요소 확인됨 (시도 ${checkCount}회): storeListContainer, storePanel`);
           resolve(true);
@@ -150,6 +166,12 @@ async function renderMap() {
           setTimeout(checkDOM, 100);
         } else {
           console.error('❌ 최대 시도 횟수 초과: DOM 요소를 찾을 수 없음');
+          console.error('❌ 최종 DOM 상태:', {
+            bodyLength: document.body.innerHTML.length,
+            storePanel: !!storePanel,
+            storeListContainer: !!storeListContainer,
+            allIds: Array.from(document.querySelectorAll('[id]')).map(el => el.id)
+          });
           resolve(false);
         }
       };
