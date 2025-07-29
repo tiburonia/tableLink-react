@@ -129,23 +129,32 @@ async function renderMap() {
   const map = new kakao.maps.Map(container, options);
 
   // DOM이 완전히 렌더링될 때까지 기다린 후 매장 데이터 로딩
-  const waitForDOM = (retryCount = 0, maxRetries = 50) => {
-    const storeListContainer = document.getElementById('storeListContainer');
-    if (storeListContainer) {
-      console.log('✅ storeListContainer DOM 요소 확인됨, 매장 데이터 로딩 시작');
-      loadStoresAndMarkers(map);
-    } else if (retryCount < maxRetries) {
-      console.log(`⏳ storeListContainer DOM 요소 대기 중... (시도 ${retryCount + 1}/${maxRetries})`);
-      setTimeout(() => waitForDOM(retryCount + 1, maxRetries), 100);
-    } else {
-      console.error('❌ storeListContainer DOM 요소를 찾을 수 없어 매장 데이터 로딩을 포기합니다.');
-      // 매장 마커만이라도 표시
-      loadStoresAndMarkers(map);
-    }
+  const waitForDOM = () => {
+    return new Promise((resolve) => {
+      const checkDOM = (retryCount = 0, maxRetries = 100) => {
+        const storeListContainer = document.getElementById('storeListContainer');
+        const storePanel = document.getElementById('storePanel');
+        
+        if (storeListContainer && storePanel) {
+          console.log('✅ storeListContainer와 storePanel DOM 요소 모두 확인됨, 매장 데이터 로딩 시작');
+          resolve(true);
+        } else if (retryCount < maxRetries) {
+          console.log(`⏳ DOM 요소 대기 중... (시도 ${retryCount + 1}/${maxRetries}) - storeListContainer: ${!!storeListContainer}, storePanel: ${!!storePanel}`);
+          setTimeout(() => checkDOM(retryCount + 1, maxRetries), 50);
+        } else {
+          console.error('❌ DOM 요소들을 찾을 수 없어 매장 데이터 로딩을 포기합니다.');
+          resolve(false);
+        }
+      };
+      checkDOM();
+    });
   };
 
-  // 더 긴 대기 시간 후 DOM 확인 시작
-  setTimeout(() => waitForDOM(), 300);
+  // DOM 렌더링 완료 대기 후 매장 데이터 로딩
+  setTimeout(async () => {
+    const domReady = await waitForDOM();
+    loadStoresAndMarkers(map);
+  }, 500);
 
   // 패널 핸들 클릭 시 열기/닫기
   const panel = document.getElementById('storePanel');
