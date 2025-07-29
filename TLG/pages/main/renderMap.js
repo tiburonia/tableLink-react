@@ -273,8 +273,8 @@ async function renderMap() {
 
   }
 
-// 매장 별점 정보 비동기 로딩 함수
-async function loadStoreRatingAsync(storeId) {
+// 매장 별점 정보 비동기 로딩 함수 (전역 함수로 정의)
+window.loadStoreRatingAsync = async function(storeId) {
   try {
     // 1. 먼저 캐시에서 확인
     if (typeof window.cacheManager !== 'undefined') {
@@ -408,7 +408,7 @@ async function updateStoreList(stores, storeListContainer) {
       card.className = 'storeCard';
 
       // 별점 정보 비동기 로딩
-      const ratingData = await loadStoreRatingAsync(store.id);
+      const ratingData = await window.loadStoreRatingAsync(store.id);
 
       // 운영 상태 실시간 확인
       console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);

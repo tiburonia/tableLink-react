@@ -14,7 +14,7 @@ window.MapMarkerManager = {
 
     // 별점 정보 비동기 로딩
     let rating = '0.0';
-    await loadStoreRatingAsync(store.id).then(ratingData => {
+    await window.loadStoreRatingAsync(store.id).then(ratingData => {
       if (ratingData) {
         rating = parseFloat(ratingData.ratingAverage).toFixed(1);
       }
