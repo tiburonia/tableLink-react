@@ -128,8 +128,10 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 비동기로 매장 데이터 로딩 및 마커 표시
-  loadStoresAndMarkers(map);
+  // DOM이 완전히 렌더링된 후 매장 데이터 로딩
+  setTimeout(() => {
+    loadStoresAndMarkers(map);
+  }, 200);
 
   // 패널 핸들 클릭 시 열기/닫기
   const panel = document.getElementById('storePanel');
@@ -309,13 +311,28 @@ async function loadStoresAndMarkers(map) {
     console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
   }, 100);
 
-  // 가게 목록 업데이트 (안전한 null 체크 포함)
-  const storeListContainer = document.getElementById('storeListContainer');
+  // 가게 목록 업데이트 (재시도 로직 포함)
+  let storeListContainer = document.getElementById('storeListContainer');
   
+  // DOM 요소가 없으면 잠깐 기다린 후 재시도
   if (!storeListContainer) {
-    console.warn('⚠️ storeListContainer 요소를 찾을 수 없습니다. 매장 목록 업데이트를 건너뜁니다.');
+    console.warn('⚠️ storeListContainer 요소를 찾을 수 없습니다. 0.5초 후 재시도합니다.');
+    setTimeout(() => {
+      storeListContainer = document.getElementById('storeListContainer');
+      if (!storeListContainer) {
+        console.error('❌ storeListContainer 요소를 찾을 수 없어 매장 목록 업데이트를 포기합니다.');
+        return;
+      }
+      updateStoreList(stores, storeListContainer);
+    }, 500);
     return;
   }
+  
+  updateStoreList(stores, storeListContainer);
+}
+
+// 매장 목록 업데이트 함수 분리
+async function updateStoreList(stores, storeListContainer) {
 
   try {
     storeListContainer.innerHTML = ''; // 로딩 메시지 제거
