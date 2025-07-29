@@ -13,18 +13,29 @@ class CacheManager {
 
   // 캐시 초기화
   initializeCache() {
-    console.log('🔄 캐시 시스템 초기화');
+    try {
+      console.log('🔄 캐시 시스템 초기화');
 
-    // 기존 캐시가 있는지 확인
-    const timestamp = localStorage.getItem(this.cacheKeys.CACHE_TIMESTAMP);
-    const now = Date.now();
+      // localStorage 접근 가능 여부 확인
+      if (typeof Storage === 'undefined') {
+        console.error('❌ localStorage를 사용할 수 없습니다');
+        return false;
+      }
 
-    if (timestamp && (now - parseInt(timestamp)) < this.CACHE_DURATION) {
-      console.log('✅ 유효한 캐시 발견');
-      return true;
-    } else {
-      console.log('⚠️ 캐시가 만료되었거나 없음');
-      this.clearCache();
+      // 기존 캐시가 있는지 확인
+      const timestamp = localStorage.getItem(this.cacheKeys.CACHE_TIMESTAMP);
+      const now = Date.now();
+
+      if (timestamp && (now - parseInt(timestamp)) < this.CACHE_DURATION) {
+        console.log('✅ 유효한 캐시 발견');
+        return true;
+      } else {
+        console.log('⚠️ 캐시가 만료되었거나 없음');
+        this.clearCache();
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ 캐시 초기화 실패:', error);
       return false;
     }
   }
@@ -159,14 +170,27 @@ class CacheManager {
   // 특정 매장 정보 가져오기
   async getStoreById(storeId) {
     try {
+      if (!storeId) {
+        console.error('❌ 유효하지 않은 매장 ID:', storeId);
+        return null;
+      }
+
+      console.log(`🔍 매장 ID ${storeId} 정보 조회 중...`);
       const stores = await this.getStores();
-      const store = stores.find(s => s.id === storeId);
+      
+      if (!Array.isArray(stores)) {
+        console.error('❌ 매장 데이터가 배열이 아닙니다:', typeof stores);
+        return null;
+      }
+
+      const store = stores.find(s => s.id === parseInt(storeId) || s.id === storeId);
 
       if (store) {
         console.log('🏪 캐시에서 매장 정보 찾음:', store.name);
         return store;
       } else {
         console.log('⚠️ 매장 정보를 찾을 수 없음:', storeId);
+        console.log('📋 사용 가능한 매장 ID들:', stores.map(s => s.id));
         return null;
       }
     } catch (error) {

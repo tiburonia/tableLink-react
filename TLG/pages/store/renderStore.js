@@ -133,40 +133,63 @@ async function renderTableLayout(store) {
 }
 
 // 매장 정보 로드 및 렌더링
-  async function loadAndRenderStore(storeId) {
-    try {
-      console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
-      const response = await fetch(`/api/stores/${storeId}`);
-      const data = await response.json();
+async function loadAndRenderStore(storeId) {
+  try {
+    console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
+    
+    // 캐시 매니저 초기화 확인
+    if (!window.cacheManager) {
+      console.warn('⚠️ 캐시 매니저가 초기화되지 않음');
+      return;
+    }
 
-      if (data.success) {
-        window.currentStore = data.store;
-        console.log(`📊 매장 ${data.store.name} 운영 상태: ${data.store.isOpen}`);
+    const response = await fetch(`/api/stores/${storeId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-        StoreUI.renderStoreHTML(data.store);
+    const data = await response.json();
 
-        // 테이블 정보 로드 (실시간 상태 동기화 포함)
-        if (typeof TableInfoManager !== 'undefined') {
-          TableInfoManager.loadTableInfo(data.store);
-        }
+    if (data.success && data.store) {
+      window.currentStore = data.store;
+      console.log(`📊 매장 ${data.store.name} 운영 상태: ${data.store.isOpen}`);
 
-        // 주기적으로 매장 상태 확인 (30초마다)
-        setInterval(() => {
-          if (window.currentStore && window.currentStore.id === storeId) {
-            TableInfoManager.loadTableInfo(window.currentStore);
-          }
-        }, 30000);
-
-        console.log(`✅ 매장 ${data.store.name} 렌더링 완료`);
+      // UI 렌더링 (null 체크 포함)
+      if (window.StoreUIManager && typeof window.StoreUIManager.renderStoreHTML === 'function') {
+        window.StoreUIManager.renderStoreHTML(data.store);
       } else {
-        throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+        console.error('❌ StoreUIManager를 찾을 수 없습니다');
+        return;
       }
-    } catch (error) {
-      console.error('매장 정보 로드 실패:', error);
-      alert('매장 정보를 불러올 수 없습니다.');
+
+      // 이벤트 리스너 설정
+      setupEventListeners(data.store);
+
+      // 초기 데이터 로드
+      loadInitialData(data.store);
+
+      console.log(`✅ 매장 ${data.store.name} 렌더링 완료`);
+    } else {
+      throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+    }
+  } catch (error) {
+    console.error('❌ 매장 정보 로드 실패:', error);
+    
+    // DOM 요소가 있을 때만 오류 메시지 표시
+    const mainElement = document.getElementById('main');
+    if (mainElement) {
+      mainElement.innerHTML = `
+        <div style="padding: 20px; text-align: center;">
+          <h2>🚫 매장 정보를 불러올 수 없습니다</h2>
+          <p>오류: ${error.message}</p>
+          <button onclick="location.reload()">다시 시도</button>
+        </div>
+      `;
     }
   }
+}
 
 // 전역 함수 등록
 window.renderStore = renderStore;
 window.renderTableLayout = renderTableLayout;
+window.loadAndRenderStore = loadAndRenderStore;
