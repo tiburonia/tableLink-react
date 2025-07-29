@@ -156,11 +156,23 @@ async function renderMap() {
           console.log('- storePanel 첫 100글자:', storePanel.innerHTML.substring(0, 100));
           
           // storePanel 내부에서 직접 찾아보기
-          const containerInPanel = storePanel.querySelector('#storeListContainer');
+          let containerInPanel = storePanel.querySelector('#storeListContainer');
           console.log('- storePanel 내부 storeListContainer 직접 검색:', !!containerInPanel);
           
+          // 찾을 수 없으면 강제로 생성
+          if (!containerInPanel) {
+            console.log('🔧 DOM 대기 중 storeListContainer 강제 생성');
+            storePanel.innerHTML = `
+              <div id="panelHandle" style="width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;"></div>
+              <div id="storeListContainer" style="height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;">
+                <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">매장 정보를 불러오는 중...</div>
+              </div>
+            `;
+            containerInPanel = storePanel.querySelector('#storeListContainer');
+          }
+          
           if (containerInPanel) {
-            console.log('✅ storePanel 내부에서 storeListContainer 발견!');
+            console.log('✅ storePanel 내부에서 storeListContainer 발견/생성 완료!');
             resolve(true);
             return;
           }
@@ -393,7 +405,7 @@ async function loadStoresAndMarkers(map) {
   // 매장 데이터를 전역에 저장 (DOM 준비 후 재사용을 위해)
   window.lastLoadedStores = stores;
 
-  // 가게 목록 업데이트 시도 (더 안전한 방식)
+  // 가게 목록 업데이트 시도 (강제 생성 방식)
   setTimeout(() => {
     let storeListContainer = document.getElementById('storeListContainer');
     
@@ -406,30 +418,41 @@ async function loadStoresAndMarkers(map) {
       }
     }
     
+    // 여전히 찾을 수 없으면 강제로 생성
+    if (!storeListContainer) {
+      const storePanel = document.getElementById('storePanel');
+      if (storePanel) {
+        console.log('🔧 storeListContainer를 찾을 수 없어 강제로 생성합니다');
+        
+        // storePanel 내용 전체를 다시 설정
+        storePanel.innerHTML = `
+          <div id="panelHandle" style="width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;"></div>
+          <div id="storeListContainer" style="height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;">
+            <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+              <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+              매장 정보를 불러오는 중...
+            </div>
+          </div>
+        `;
+        
+        // 숨겨진 웹킷 스크롤바 스타일 추가
+        const style = document.createElement('style');
+        style.textContent = `
+          #storeListContainer::-webkit-scrollbar { display: none; }
+        `;
+        document.head.appendChild(style);
+        
+        storeListContainer = document.getElementById('storeListContainer');
+        console.log('✅ storeListContainer 강제 생성 완료:', !!storeListContainer);
+      }
+    }
+    
     if (storeListContainer) {
-      console.log('✅ storeListContainer 찾음, 매장 목록 업데이트 진행');
+      console.log('✅ storeListContainer 준비됨, 매장 목록 업데이트 진행');
       updateStoreList(stores, storeListContainer);
     } else {
-      console.warn('⚠️ storeListContainer를 찾을 수 없음, DOM 준비 대기 중...');
+      console.error('❌ 모든 시도에서 storeListContainer 생성/발견 실패');
       console.log('💾 매장 데이터를 전역 변수에 저장:', stores.length, '개 매장');
-      
-      // 추가 시도를 위해 조금 더 기다린 후 재시도
-      setTimeout(() => {
-        let retryContainer = document.getElementById('storeListContainer');
-        if (!retryContainer) {
-          const storePanel = document.getElementById('storePanel');
-          if (storePanel) {
-            retryContainer = storePanel.querySelector('#storeListContainer');
-          }
-        }
-        
-        if (retryContainer) {
-          console.log('✅ 재시도에서 storeListContainer 발견, 매장 목록 업데이트');
-          updateStoreList(stores, retryContainer);
-        } else {
-          console.error('❌ 재시도에서도 storeListContainer를 찾지 못함');
-        }
-      }, 500);
     }
   }, 200);
 }
