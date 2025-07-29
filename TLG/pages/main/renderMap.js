@@ -131,30 +131,54 @@ async function renderMap() {
   // DOM이 완전히 렌더링될 때까지 기다린 후 매장 데이터 로딩
   const waitForDOM = () => {
     return new Promise((resolve) => {
-      const checkDOM = (retryCount = 0, maxRetries = 100) => {
+      // DOM이 준비되었는지 즉시 확인
+      const storeListContainer = document.getElementById('storeListContainer');
+      if (storeListContainer) {
+        console.log('✅ storeListContainer DOM 요소 즉시 확인됨');
+        resolve(true);
+        return;
+      }
+
+      // MutationObserver를 사용하여 DOM 변화 감지
+      const observer = new MutationObserver((mutations) => {
         const storeListContainer = document.getElementById('storeListContainer');
-        const storePanel = document.getElementById('storePanel');
-        
-        if (storeListContainer && storePanel) {
-          console.log('✅ storeListContainer와 storePanel DOM 요소 모두 확인됨, 매장 데이터 로딩 시작');
+        if (storeListContainer) {
+          console.log('✅ MutationObserver로 storeListContainer DOM 요소 확인됨');
+          observer.disconnect();
           resolve(true);
-        } else if (retryCount < maxRetries) {
-          console.log(`⏳ DOM 요소 대기 중... (시도 ${retryCount + 1}/${maxRetries}) - storeListContainer: ${!!storeListContainer}, storePanel: ${!!storePanel}`);
-          setTimeout(() => checkDOM(retryCount + 1, maxRetries), 50);
-        } else {
-          console.error('❌ DOM 요소들을 찾을 수 없어 매장 데이터 로딩을 포기합니다.');
-          resolve(false);
         }
-      };
-      checkDOM();
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      // 백업 타이머 (5초 후 포기)
+      setTimeout(() => {
+        observer.disconnect();
+        console.error('❌ 5초 대기 후에도 storeListContainer를 찾을 수 없음');
+        resolve(false);
+      }, 5000);
     });
   };
 
-  // DOM 렌더링 완료 대기 후 매장 데이터 로딩
-  setTimeout(async () => {
-    const domReady = await waitForDOM();
-    loadStoresAndMarkers(map);
-  }, 500);
+  // 즉시 매장 데이터 로딩 시작 (DOM 준비와 병렬 처리)
+  loadStoresAndMarkers(map);
+
+  // DOM 준비 확인은 별도로 처리
+  waitForDOM().then((success) => {
+    if (success) {
+      console.log('✅ DOM 준비 완료, 매장 목록 업데이트 재시도');
+      // DOM이 준비되면 매장 목록만 다시 업데이트
+      setTimeout(() => {
+        const storeListContainer = document.getElementById('storeListContainer');
+        if (storeListContainer && window.lastLoadedStores) {
+          updateStoreList(window.lastLoadedStores, storeListContainer);
+        }
+      }, 100);
+    }
+  });
 
   // 패널 핸들 클릭 시 열기/닫기
   const panel = document.getElementById('storePanel');
@@ -334,24 +358,17 @@ async function loadStoresAndMarkers(map) {
     console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
   }, 100);
 
-  // 가게 목록 업데이트 (재시도 로직 포함)
-  let storeListContainer = document.getElementById('storeListContainer');
+  // 매장 데이터를 전역에 저장 (DOM 준비 후 재사용을 위해)
+  window.lastLoadedStores = stores;
 
-  // DOM 요소가 없으면 잠깐 기다린 후 재시도
-  if (!storeListContainer) {
-    console.warn('⚠️ storeListContainer 요소를 찾을 수 없습니다. 0.5초 후 재시도합니다.');
-    setTimeout(() => {
-      storeListContainer = document.getElementById('storeListContainer');
-      if (!storeListContainer) {
-        console.error('❌ storeListContainer 요소를 찾을 수 없어 매장 목록 업데이트를 포기합니다.');
-        return;
-      }
-      updateStoreList(stores, storeListContainer);
-    }, 500);
-    return;
+  // 가게 목록 업데이트 시도
+  const storeListContainer = document.getElementById('storeListContainer');
+  if (storeListContainer) {
+    console.log('✅ storeListContainer 찾음, 매장 목록 업데이트 진행');
+    updateStoreList(stores, storeListContainer);
+  } else {
+    console.warn('⚠️ storeListContainer를 찾을 수 없음, DOM 준비 대기 중...');
   }
-
-  updateStoreList(stores, storeListContainer);
 }
 
 // 매장 목록 업데이트 함수 분리
