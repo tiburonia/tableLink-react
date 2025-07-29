@@ -49,7 +49,7 @@ function setupEventListeners(store) {
     updateFavoriteBtn(store.name);
   }
 
-  // 리뷰 링크 이벤트
+  // 리뷰 링크 이벤트 (null 체크 강화)
   const reviewLink = document.getElementById('reviewLink');
   if (reviewLink) {
     reviewLink.addEventListener('click', () => {
@@ -58,7 +58,7 @@ function setupEventListeners(store) {
   }
 
   const reviewSeeMoreBtns = document.getElementsByClassName('see-more-btn');
-  if (reviewSeeMoreBtns[0]) {
+  if (reviewSeeMoreBtns && reviewSeeMoreBtns.length > 0 && reviewSeeMoreBtns[0]) {
     reviewSeeMoreBtns[0].addEventListener('click', () => {
       renderAllReview(store);
     });
@@ -98,12 +98,22 @@ async function updateStoreRatingAsync(store) {
     if (ratingData && ratingData.ratingAverage !== null && ratingData.ratingAverage !== undefined) {
       console.log(`✅ 매장 ${store.id} 별점 정보 업데이트 완료:`, ratingData.ratingAverage);
 
-      // DOM에서 별점 표시 업데이트
+      // DOM에서 별점 표시 업데이트 (null 체크 강화)
       const reviewScoreElement = document.getElementById('reviewScore');
       if (reviewScoreElement) {
         const updatedRating = parseFloat(ratingData.ratingAverage).toFixed(1);
         reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
         console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
+        
+        // 새로 생성된 reviewLink에 이벤트 리스너 추가
+        const newReviewLink = document.getElementById('reviewLink');
+        if (newReviewLink) {
+          newReviewLink.addEventListener('click', () => {
+            renderAllReview(store);
+          });
+        }
+      } else {
+        console.warn('⚠️ reviewScore 요소를 찾을 수 없어서 별점 업데이트를 건너뜁니다');
       }
 
       // 전역 store 객체도 업데이트

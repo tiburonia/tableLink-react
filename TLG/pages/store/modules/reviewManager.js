@@ -1,4 +1,3 @@
-
 // 리뷰 관리자
 window.ReviewManager = {
   async renderTopReviews(store) {
@@ -11,7 +10,7 @@ window.ReviewManager = {
       }
       const data = await response.json();
       const reviews = data.reviews || [];
-      
+
       console.log(`📖 리뷰 미리보기 데이터:`, reviews);
 
       const reviewPreviewContent = document.getElementById('reviewPreviewContent');
