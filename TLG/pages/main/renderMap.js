@@ -1,6 +1,19 @@
 async function renderMap() {
   const main = document.getElementById('main');
 
+  // MapPanelUI 의존성 체크
+  if (!window.MapPanelUI || typeof window.MapPanelUI.renderPanelHTML !== 'function') {
+    console.error('❌ MapPanelUI가 로드되지 않았습니다. 필수 스크립트를 확인하세요.');
+    main.innerHTML = `
+      <div style="padding: 20px; text-align: center; color: red;">
+        <h2>🚫 지도 로딩 실패</h2>
+        <p>MapPanelUI 모듈을 찾을 수 없습니다.</p>
+        <button onclick="location.reload()">다시 시도</button>
+      </div>
+    `;
+    return;
+  }
+
   // UI 먼저 렌더링
   main.innerHTML = `
     <main id="content">
@@ -296,27 +309,59 @@ async function loadStoresAndMarkers(map) {
     console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
   }, 100);
 
-  // 가게 목록 업데이트
+  // 가게 목록 업데이트 (안전한 null 체크 포함)
   const storeListContainer = document.getElementById('storeListContainer');
-  storeListContainer.innerHTML = ''; // 로딩 메시지 제거
+  
+  if (!storeListContainer) {
+    console.warn('⚠️ storeListContainer 요소를 찾을 수 없습니다. 매장 목록 업데이트를 건너뜁니다.');
+    return;
+  }
 
-  // 매장 목록에서도 별점 정보 비동기 로딩
-  for (const store of stores) {
-    const card = document.createElement('div');
-    card.className = 'storeCard';
+  try {
+    storeListContainer.innerHTML = ''; // 로딩 메시지 제거
 
-    // 별점 정보 비동기 로딩
-    const ratingData = await loadStoreRatingAsync(store.id);
+    // 매장 목록에서도 별점 정보 비동기 로딩
+    for (const store of stores) {
+      const card = document.createElement('div');
+      card.className = 'storeCard';
 
-    // 운영 상태 실시간 확인
-    console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
+      // 별점 정보 비동기 로딩
+      const ratingData = await loadStoreRatingAsync(store.id);
 
-    // 카드 HTML 생성
-    card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
+      // 운영 상태 실시간 확인
+      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
 
-    // 카드 클릭 시 해당 가게의 상세 페이지로 이동
-    card.addEventListener('click', () => renderStore(store));
-    storeListContainer.appendChild(card);
+      // MapPanelUI가 존재하는지 확인
+      if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreCard === 'function') {
+        // 카드 HTML 생성
+        card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
+      } else {
+        console.warn(`⚠️ MapPanelUI를 찾을 수 없어 기본 카드를 생성합니다: ${store.name}`);
+        card.innerHTML = `
+          <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px;">
+            <h3>${store.name}</h3>
+            <p>카테고리: ${store.category || 'N/A'}</p>
+            <p>상태: ${store.isOpen ? '운영중' : '운영중지'}</p>
+            <p>별점: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)</p>
+          </div>
+        `;
+      }
+
+      // 카드 클릭 시 해당 가게의 상세 페이지로 이동
+      card.addEventListener('click', () => {
+        if (typeof renderStore === 'function') {
+          renderStore(store);
+        } else {
+          console.warn('⚠️ renderStore 함수를 찾을 수 없습니다');
+        }
+      });
+      
+      storeListContainer.appendChild(card);
+    }
+    
+    console.log(`✅ 매장 목록 업데이트 완료: ${stores.length}개 매장`);
+  } catch (error) {
+    console.error('❌ 매장 목록 업데이트 중 오류:', error);
   }
 
 }
