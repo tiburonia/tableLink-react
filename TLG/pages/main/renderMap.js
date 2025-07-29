@@ -238,55 +238,85 @@ async function loadStoresAndMarkers(map) {
     // 서버에서 직접 최신 매장 정보 가져오기
     console.log('🔄 서버에서 최신 매장 정보 로딩 중...');
     const response = await fetch('/api/stores');
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
     const data = await response.json();
-    
-    if (data.success) {
+
+    if (data.success && Array.isArray(data.stores)) {
       stores = data.stores;
       console.log('🗺️ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
-      
-      // 캐시도 업데이트
-      if (typeof window.cacheManager !== 'undefined') {
-        window.cacheManager.setStores(stores);
-        console.log('📁 매장 데이터 캐시 업데이트 완료');
+
+      // 캐시 업데이트 (안전하게 처리)
+      if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.setStores === 'function') {
+        try {
+          const cacheResult = window.cacheManager.setStores(stores);
+          if (cacheResult) {
+            console.log('✅ 매장 데이터 캐시 업데이트 완료');
+          } else {
+            console.warn('⚠️ 매장 데이터 캐시 업데이트 실패');
+          }
+        } catch (cacheError) {
+          console.warn('⚠️ 캐시 업데이트 중 오류:', cacheError);
+        }
       }
     } else {
-      throw new Error(data.error || '매장 데이터를 불러올 수 없습니다');
+      throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
     }
-
-    // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
-    setTimeout(async () => {
-      for (const store of stores) {
-        await window.MapMarkerManager.createCustomMarker(store, map);
-      }
-      console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
-    }, 100);
-
-    // 가게 목록 업데이트
-    const storeListContainer = document.getElementById('storeListContainer');
-    storeListContainer.innerHTML = ''; // 로딩 메시지 제거
-
-    // 매장 목록에서도 별점 정보 비동기 로딩
-    for (const store of stores) {
-      const card = document.createElement('div');
-      card.className = 'storeCard';
-
-      // 별점 정보 비동기 로딩
-      const ratingData = await loadStoreRatingAsync(store.id);
-      
-      // 운영 상태 실시간 확인
-      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
-      
-      // 카드 HTML 생성
-      card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
-
-      // 카드 클릭 시 해당 가게의 상세 페이지로 이동
-      card.addEventListener('click', () => renderStore(store));
-      storeListContainer.appendChild(card);
-    }
-
   } catch (error) {
-    console.error('스토어 정보 로딩 실패:', error);
-    const storeListContainer = document.getElementById('storeListContainer');
-    storeListContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #ff6b6b;">매장 정보를 불러올 수 없습니다.</div>';
+    console.error('❌ 서버에서 매장 데이터 로드 실패:', error);
+
+    // 서버 요청 실패 시 캐시에서 데이터 사용
+    if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.getStores === 'function') {
+      try {
+        stores = await window.cacheManager.getStores();
+        if (Array.isArray(stores) && stores.length > 0) {
+          console.log('📁 캐시에서 매장 데이터 사용:', stores.length, '개 매장');
+        } else {
+          console.error('❌ 캐시에서 가져온 데이터가 유효하지 않음');
+          return;
+        }
+      } catch (cacheError) {
+        console.error('❌ 캐시에서도 매장 데이터를 가져올 수 없음:', cacheError);
+        return;
+      }
+    } else {
+      console.error('❌ 캐시 매니저를 사용할 수 없음');
+      return;
+    }
   }
+
+  // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
+  setTimeout(async () => {
+    for (const store of stores) {
+      await window.MapMarkerManager.createCustomMarker(store, map);
+    }
+    console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
+  }, 100);
+
+  // 가게 목록 업데이트
+  const storeListContainer = document.getElementById('storeListContainer');
+  storeListContainer.innerHTML = ''; // 로딩 메시지 제거
+
+  // 매장 목록에서도 별점 정보 비동기 로딩
+  for (const store of stores) {
+    const card = document.createElement('div');
+    card.className = 'storeCard';
+
+    // 별점 정보 비동기 로딩
+    const ratingData = await loadStoreRatingAsync(store.id);
+
+    // 운영 상태 실시간 확인
+    console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
+
+    // 카드 HTML 생성
+    card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
+
+    // 카드 클릭 시 해당 가게의 상세 페이지로 이동
+    card.addEventListener('click', () => renderStore(store));
+    storeListContainer.appendChild(card);
+  }
+
 }
