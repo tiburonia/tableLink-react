@@ -159,16 +159,27 @@ async function renderMap() {
           let containerInPanel = storePanel.querySelector('#storeListContainer');
           console.log('- storePanel 내부 storeListContainer 직접 검색:', !!containerInPanel);
           
-          // 찾을 수 없으면 강제로 생성
+          // 찾을 수 없으면 안전하게 생성 (기존 상태 보존)
           if (!containerInPanel) {
-            console.log('🔧 DOM 대기 중 storeListContainer 강제 생성');
-            storePanel.innerHTML = `
-              <div id="panelHandle" style="width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;"></div>
-              <div id="storeListContainer" style="height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;">
-                <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">매장 정보를 불러오는 중...</div>
-              </div>
-            `;
-            containerInPanel = storePanel.querySelector('#storeListContainer');
+            console.log('🔧 DOM 대기 중 storeListContainer 안전 생성 (패널 상태 보존)');
+            
+            // 기존 핸들이 없으면 생성
+            let existingHandle = storePanel.querySelector('#panelHandle');
+            if (!existingHandle) {
+              const handleDiv = document.createElement('div');
+              handleDiv.id = 'panelHandle';
+              handleDiv.style.cssText = 'width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;';
+              storePanel.insertBefore(handleDiv, storePanel.firstChild);
+            }
+            
+            // 컨테이너만 새로 생성
+            const containerDiv = document.createElement('div');
+            containerDiv.id = 'storeListContainer';
+            containerDiv.style.cssText = 'height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;';
+            containerDiv.innerHTML = '<div class="loading-message" style="text-align: center; padding: 20px; color: #666;">매장 정보를 불러오는 중...</div>';
+            
+            storePanel.appendChild(containerDiv);
+            containerInPanel = containerDiv;
           }
           
           if (containerInPanel) {
@@ -405,7 +416,7 @@ async function loadStoresAndMarkers(map) {
   // 매장 데이터를 전역에 저장 (DOM 준비 후 재사용을 위해)
   window.lastLoadedStores = stores;
 
-  // 가게 목록 업데이트 시도 (강제 생성 방식)
+  // 가게 목록 업데이트 시도 (UI 보존 방식)
   setTimeout(() => {
     let storeListContainer = document.getElementById('storeListContainer');
     
@@ -418,32 +429,38 @@ async function loadStoresAndMarkers(map) {
       }
     }
     
-    // 여전히 찾을 수 없으면 강제로 생성
+    // 여전히 찾을 수 없으면 안전하게 생성 (기존 패널 상태 보존)
     if (!storeListContainer) {
       const storePanel = document.getElementById('storePanel');
       if (storePanel) {
-        console.log('🔧 storeListContainer를 찾을 수 없어 강제로 생성합니다');
+        console.log('🔧 storeListContainer만 안전하게 생성합니다 (패널 상태 보존)');
         
-        // storePanel 내용 전체를 다시 설정
-        storePanel.innerHTML = `
-          <div id="panelHandle" style="width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;"></div>
-          <div id="storeListContainer" style="height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;">
-            <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
-              <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-              매장 정보를 불러오는 중...
-            </div>
+        // 기존 패널 핸들은 유지하고 컨테이너만 추가
+        let panelHandle = storePanel.querySelector('#panelHandle');
+        if (!panelHandle) {
+          const handleDiv = document.createElement('div');
+          handleDiv.id = 'panelHandle';
+          handleDiv.style.cssText = 'width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;';
+          storePanel.insertBefore(handleDiv, storePanel.firstChild);
+        }
+        
+        // storeListContainer만 새로 생성
+        const containerDiv = document.createElement('div');
+        containerDiv.id = 'storeListContainer';
+        containerDiv.style.cssText = 'height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;';
+        
+        // 로딩 메시지 추가
+        containerDiv.innerHTML = `
+          <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+            <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            매장 정보를 불러오는 중...
           </div>
         `;
         
-        // 숨겨진 웹킷 스크롤바 스타일 추가
-        const style = document.createElement('style');
-        style.textContent = `
-          #storeListContainer::-webkit-scrollbar { display: none; }
-        `;
-        document.head.appendChild(style);
+        storePanel.appendChild(containerDiv);
+        storeListContainer = containerDiv;
         
-        storeListContainer = document.getElementById('storeListContainer');
-        console.log('✅ storeListContainer 강제 생성 완료:', !!storeListContainer);
+        console.log('✅ storeListContainer 안전 생성 완료 (패널 상태 유지)');
       }
     }
     
