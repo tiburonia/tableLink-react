@@ -59,9 +59,6 @@ app.get('/tlm/:storeId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 
-app.get('/TLM/:storeId', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
-});
 
 // 만료된 TLL 주문 테이블들만 자동 해제 체크
 async function checkAndReleaseExpiredTables() {

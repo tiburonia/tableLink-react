@@ -68,6 +68,10 @@ window.StoreUIManager = {
     `;
   },
 
+  renderEventHTML(store) {
+    
+  },
+
   renderTableStatusHTML(store) {
     return `
       <div id="TLR" class="tlr-container">
