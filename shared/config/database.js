@@ -15,7 +15,7 @@ pool.connect((err, client, release) => {
   if (err) {
     return console.error('데이터베이스 연결 실패:', err);
   }
-  console.log('✅ PostgreSQL 데이터베이스 연결 성공');
+  console.log('✅ PostgreSQL 데이터베이스 연결 ');
   release();
 });
 

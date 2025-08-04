@@ -69,7 +69,7 @@ window.StoreUIManager = {
   },
 
   renderEventHTML(store) {
-    
+    // TLR 이벤트 ex) 사장님 자율쿠폰 등등
   },
 
   renderTableStatusHTML(store) {
