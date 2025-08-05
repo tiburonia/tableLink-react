@@ -118,11 +118,11 @@ function renderTLMInterface(store) {
               <div style="color: #666; font-size: 14px;">빈 테이블</div>
             </div>
             <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #f57c00;" data-info="total-seats">${store.tableInfo.totalSeats}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #f57c00;" data-info="total-seats">${store.tableInfo.totalTables}</div>
               <div style="color: #666; font-size: 14px;">총 좌석</div>
             </div>
             <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;" data-info="available-seats">${store.tableInfo.availableSeats}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;" data-info="available-seats">${store.tableInfo.availableTables}</div>
               <div style="color: #666; font-size: 14px;">잔여 좌석</div>
             </div>
             <div style="background: #e1f5fe; padding: 15px; border-radius: 8px;">
@@ -257,6 +257,7 @@ function renderTLMInterface(store) {
             isOccupied: false
           })
         })
+        .then(res => res.json())
         .then(data => {
           console.log('📡 [TLM] 테이블 점유 응답:', data);
           if (data.success) {
@@ -299,6 +300,7 @@ function renderTLMInterface(store) {
           duration: duration
         })
       })
+      .then(res => res.json())
       .then(data => {
           console.log('📡 [TLM] 테이블 점유 응답:', data);
           if (data.success) {

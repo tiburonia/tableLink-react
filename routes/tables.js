@@ -242,6 +242,7 @@ router.post('/occupy-manual', async (req, res) => {
     console.error('❌ [TLM] 테이블 점유 상태 설정 실패:', error);
     res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
   }
+  
 });
 
 module.exports = router;
