@@ -106,23 +106,27 @@ function renderTLMInterface(store) {
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
         <!-- 테이블 현황 -->
-        <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div class="tlm-table-status" style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
           <h3 style="margin: 0 0 15px 0; color: #333;">📊 테이블 현황</h3>
           <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: center;">
             <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #1976d2;">${store.tableInfo.totalTables}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #1976d2;" data-info="total-tables">${store.tableInfo.totalTables}</div>
               <div style="color: #666; font-size: 14px;">총 테이블</div>
             </div>
             <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #388e3c;">${store.tableInfo.availableTables}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #388e3c;" data-info="available-tables">${store.tableInfo.availableTables}</div>
               <div style="color: #666; font-size: 14px;">빈 테이블</div>
             </div>
-            <div style="background: #ffebee; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #d32f2f;">${store.tableInfo.occupiedTables}</div>
-              <div style="color: #666; font-size: 14px;">사용중</div>
+            <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #f57c00;" data-info="total-seats">${store.tableInfo.totalSeats}</div>
+              <div style="color: #666; font-size: 14px;">총 좌석</div>
             </div>
             <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;">${store.tableInfo.occupancyRate}%</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;" data-info="available-seats">${store.tableInfo.availableSeats}</div>
+              <div style="color: #666; font-size: 14px;">잔여 좌석</div>
+            </div>
+            <div style="background: #e1f5fe; padding: 15px; border-radius: 8px;">
+              <div style="font-size: 24px; font-weight: bold; color: #0277bd;" data-info="occupancy-rate">${store.tableInfo.occupancyRate}%</div>
               <div style="color: #666; font-size: 14px;">사용률</div>
             </div>
           </div>
@@ -209,41 +213,9 @@ function renderTLMInterface(store) {
   tableArea.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
   tableArea.innerHTML = `
     <h3 style="margin: 0 0 15px 0; color: #333;">🪑 테이블 관리</h3>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; text-align: center;">
-      ${store.tables.map(table => `
-          <div onclick="handleTableClick('${table.tableName}')" style="
-            background: ${table.isOccupied ? '#ffebee' : '#e8f5e8'}; 
-            border: 2px solid ${table.isOccupied ? '#f44336' : '#4caf50'}; 
-            border-radius: 8px; 
-            padding: 15px; 
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-          " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="font-weight: bold; font-size: 16px; color: #333;">
-              ${table.tableName}
-            </div>
-            <div style="font-size: 14px; color: #666; margin: 5px 0;">
-              ${table.seats}인석
-            </div>
-            <div style="
-              display: inline-block; 
-              padding: 4px 8px; 
-              border-radius: 12px; 
-              font-size: 12px; 
-              font-weight: bold;
-              background: ${table.isOccupied ? '#f44336' : '#4caf50'};
-              color: white;
-            ">
-              ${table.isOccupied ? '🔴 사용중' : '🟢 빈 테이블'}
-            </div>
-            <div style="color: #666; font-size: 12px; margin-top: 5px;">
-              클릭하여 테이블 상태 변경
-            </div>
-          </div>
-        `).join('')}</div>
-
-
+    <div id="tablesGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 15px; text-align: center;">
+      ${renderTables(store.tables || [])}
+    </div>
   `;
 
   main.appendChild(tableArea);
@@ -285,12 +257,12 @@ function renderTLMInterface(store) {
             isOccupied: false
           })
         })
-        .then(response => response.json())
         .then(data => {
-          console.log('📡 [TLM] 테이블 해제 응답:', data);
+          console.log('📡 [TLM] 테이블 점유 응답:', data);
           if (data.success) {
             alert(data.message);
-            location.reload(); // 페이지 새로고침으로 상태 업데이트
+            // 페이지 전체 새로고침 대신 테이블 정보만 업데이트
+            updateTableInfoAfterChange();
           } else {
             alert('오류: ' + data.error);
           }
@@ -327,16 +299,16 @@ function renderTLMInterface(store) {
           duration: duration
         })
       })
-      .then(response => response.json())
       .then(data => {
-        console.log('📡 [TLM] 테이블 점유 응답:', data);
-        if (data.success) {
-          alert(data.message);
-          location.reload(); // 페이지 새로고침으로 상태 업데이트
-        } else {
-          alert('오류: ' + data.error);
-        }
-      })
+          console.log('📡 [TLM] 테이블 점유 응답:', data);
+          if (data.success) {
+            alert(data.message);
+            // 페이지 전체 새로고침 대신 테이블 정보만 업데이트
+            updateTableInfoAfterChange();
+          } else {
+            alert('오류: ' + data.error);
+          }
+        })
       .catch(error => {
         console.error('❌ [TLM] 테이블 점유 요청 실패:', error);
         alert('테이블 점유 요청에 실패했습니다.');
@@ -346,6 +318,96 @@ function renderTLMInterface(store) {
 
   console.log('✅ TLM 매장 관리 화면 렌더링 완료');
 }
+
+// 테이블 그리드 렌더링 함수
+function renderTables(tables) {
+  return tables.map(table => `
+    <div onclick="handleTableClick('${table.tableName}')" style="
+      background: ${table.isOccupied ? '#ffebee' : '#e8f5e8'}; 
+      border: 2px solid ${table.isOccupied ? '#f44336' : '#4caf50'}; 
+      border-radius: 8px; 
+      padding: 15px; 
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+      <div style="font-weight: bold; font-size: 16px; color: #333;">
+        ${table.tableName}
+      </div>
+      <div style="font-size: 14px; color: #666; margin: 5px 0;">
+        ${table.seats}인석
+      </div>
+      <div style="
+        display: inline-block; 
+        padding: 4px 8px; 
+        border-radius: 12px; 
+        font-size: 12px; 
+        font-weight: bold;
+        background: ${table.isOccupied ? '#f44336' : '#4caf50'};
+        color: white;
+      ">
+        ${table.isOccupied ? '🔴 사용중' : '🟢 빈 테이블'}
+      </div>
+      <div style="color: #666; font-size: 12px; margin-top: 5px;">
+        클릭하여 테이블 상태 변경
+      </div>
+    </div>
+  `).join('');
+}
+
+
+// 테이블 상태 변경 후 현황 카드 업데이트 함수
+async function updateTableInfoAfterChange() {
+  try {
+    console.log('🔄 [TLM] 테이블 현황 카드 업데이트 중...');
+
+    if (!window.currentStoreId) {
+      console.warn('⚠️ currentStoreId가 없습니다');
+      return;
+    }
+
+    // 매장 정보 다시 로드
+    const response = await fetch(`/api/stores/${window.currentStoreId}`);
+    const data = await response.json();
+
+    if (data.success && data.store) {
+      // 테이블 현황 카드만 업데이트
+      const tableInfoElement = document.querySelector('.tlm-table-status');
+      if (tableInfoElement) {
+        const tables = data.store.tables || [];
+        const totalTables = tables.length;
+        const availableTables = tables.filter(t => !t.isOccupied).length;
+        const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
+        const availableSeats = tables.filter(t => !t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
+        const occupancyRate = totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0;
+
+        // 현황 카드 내용 업데이트
+        const totalTablesEl = tableInfoElement.querySelector('[data-info="total-tables"]');
+        const availableTablesEl = tableInfoElement.querySelector('[data-info="available-tables"]');
+        const totalSeatsEl = tableInfoElement.querySelector('[data-info="total-seats"]');
+        const availableSeatsEl = tableInfoElement.querySelector('[data-info="available-seats"]');
+        const occupancyRateEl = tableInfoElement.querySelector('[data-info="occupancy-rate"]');
+
+        if (totalTablesEl) totalTablesEl.textContent = totalTables;
+        if (availableTablesEl) availableTablesEl.textContent = availableTables;
+        if (totalSeatsEl) totalSeatsEl.textContent = totalSeats;
+        if (availableSeatsEl) availableSeatsEl.textContent = availableSeats;
+        if (occupancyRateEl) occupancyRateEl.textContent = occupancyRate + '%';
+
+        console.log('✅ [TLM] 테이블 현황 카드 업데이트 완료');
+      }
+
+      // 테이블 그리드도 업데이트
+      document.getElementById('tablesGrid').innerHTML = renderTables(data.store.tables || []);
+
+    } else {
+      console.error('❌ [TLM] 매장 정보 로드 실패:', data.error);
+    }
+  } catch (error) {
+    console.error('❌ [TLM] 테이블 현황 업데이트 실패:', error);
+  }
+}
+
 
 // 이벤트 리스너 설정 함수
 function setupEventListeners(store) {
@@ -378,7 +440,7 @@ function setupEventListeners(store) {
   if (viewTablesBtn) {
     viewTablesBtn.addEventListener('click', () => {
       // 테이블 영역으로 스크롤
-      const tableArea = document.querySelector('h3:contains("🪑 테이블 관리")');
+      const tableArea = document.getElementById('tablesGrid');
       if (tableArea) {
         tableArea.scrollIntoView({ behavior: 'smooth' });
       }
@@ -854,3 +916,7 @@ function restoreButtonState(toggleBtn, originalText, originalStyle, currentStatu
   toggleBtn.style.background = originalStyle || (currentStatus ? '#dc3545' : '#28a745');
   toggleBtn.textContent = originalText || (currentStatus ? '🛑 운영 중지' : '▶️ 운영 시작');
 }
+
+// 전역 함수로 등록
+window.renderTLMMain = renderTLMMain;
+window.updateTableInfoAfterChange = updateTableInfoAfterChange;
