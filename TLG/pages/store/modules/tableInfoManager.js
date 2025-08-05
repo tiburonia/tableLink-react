@@ -19,7 +19,7 @@ window.TableInfoManager = {
         return;
       }
 
-      const response = await fetch(`/api/stores/${store.id}/tables`);
+      const response = await fetch(`/api/stores/${store.id}/tables?_t=${Date.now()}`);
       if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
       const data = await response.json();
@@ -121,7 +121,7 @@ window.TableInfoManager = {
         return;
       }
 
-      const response = await fetch(`/api/stores/${store.id}/tables`);
+      const response = await fetch(`/api/stores/${store.id}/tables?_t=${Date.now()}`);
       if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
       const data = await response.json();
@@ -481,5 +481,24 @@ window.TableInfoManager = {
         }
       </style>
     `;
-  }
+  },
+
+  // 주기적으로 테이블 정보 갱신
+  startAutoRefresh(store, intervalMs = 30000) {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+
+    this.refreshInterval = setInterval(() => {
+      console.log('🔄 테이블 정보 자동 갱신...');
+      this.loadTableInfo(store);
+    }, intervalMs);
+  },
+
+  stopAutoRefresh() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+  },
 };

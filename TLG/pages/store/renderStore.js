@@ -78,8 +78,15 @@ function loadInitialData(store) {
   // 리뷰 미리보기 로드
   window.ReviewManager.renderTopReviews(store);
 
-  // 테이블 정보 로드
-  window.TableInfoManager.loadTableInfo(store);
+  // 테이블 정보 로드 (항상 최신 정보로 갱신)
+  if (window.TableInfoManager) {
+    console.log('🔄 테이블 정보 새로고침 시작...');
+    setTimeout(() => {
+      window.TableInfoManager.loadTableInfo(store);
+      // 30초마다 자동 갱신 시작
+      window.TableInfoManager.startAutoRefresh(store, 30000);
+    }, 500); // 페이지 렌더링 후 테이블 정보 로드
+  }
 
   // 첫 화면(메뉴 탭) 설정
   window.StoreTabManager.renderStoreTab('menu', store);
@@ -104,7 +111,7 @@ async function updateStoreRatingAsync(store) {
         const updatedRating = parseFloat(ratingData.ratingAverage).toFixed(1);
         reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
         console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
-        
+
         // 새로 생성된 reviewLink에 이벤트 리스너 추가
         const newReviewLink = document.getElementById('reviewLink');
         if (newReviewLink) {
@@ -136,7 +143,7 @@ async function renderTableLayout(store) {
 async function loadAndRenderStore(storeId) {
   try {
     console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
-    
+
     // 캐시 매니저 초기화 확인
     if (!window.cacheManager) {
       console.warn('⚠️ 캐시 매니저가 초기화되지 않음');
@@ -174,7 +181,7 @@ async function loadAndRenderStore(storeId) {
     }
   } catch (error) {
     console.error('❌ 매장 정보 로드 실패:', error);
-    
+
     // DOM 요소가 있을 때만 오류 메시지 표시
     const mainElement = document.getElementById('main');
     if (mainElement) {
