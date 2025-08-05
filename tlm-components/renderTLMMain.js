@@ -263,12 +263,11 @@ function renderTLMInterface(store) {
             isOccupied: false
           })
         })
-        .then(res => res.json())
         .then(data => {
-          console.log('📡 [TLM] 테이블 점유 응답:', data);
+          console.log('📡 [TLM] 테이블 해제 응답:', data);
           if (data.success) {
             alert(data.message);
-            // 페이지 전체 새로고침 대신 테이블 정보만 업데이트
+            // 테이블 정보 업데이트
             updateTableInfoAfterChange();
           } else {
             alert('오류: ' + data.error);
@@ -306,12 +305,11 @@ function renderTLMInterface(store) {
           duration: duration
         })
       })
-      .then(res => res.json())
       .then(data => {
-          console.log('📡 [TLM] 테이블 점유 응답:', data);
+          console.log('📡 [TLM] 테이블 해제 응답:', data);
           if (data.success) {
             alert(data.message);
-            // 페이지 전체 새로고침 대신 테이블 정보만 업데이트
+            // 테이블 정보 업데이트
             updateTableInfoAfterChange();
           } else {
             alert('오류: ' + data.error);
