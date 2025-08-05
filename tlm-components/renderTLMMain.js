@@ -244,10 +244,22 @@ function renderTLMInterface(store) {
   window.handleTableClick = function(tableName) {
     console.log('🔍 [TLM] 테이블 클릭됨:', tableName);
 
-    // 현재 테이블 상태 확인
-    const currentTable = store.tables.find(t => t.tableName === tableName);
+    // DOM에서 현재 테이블 상태 확인 (CSS 클래스나 텍스트로 판단)
+    const tableElements = document.querySelectorAll('[onclick*="' + tableName + '"]');
+    let isCurrentlyOccupied = false;
+    
+    if (tableElements.length > 0) {
+      const tableElement = tableElements[0];
+      const statusText = tableElement.textContent || '';
+      // '사용중' 텍스트가 있거나 빨간색 배경이면 점유 상태
+      isCurrentlyOccupied = statusText.includes('사용중') || statusText.includes('🔴') || 
+                           tableElement.style.background.includes('#ffebee') ||
+                           tableElement.style.borderColor.includes('#f44336');
+    }
 
-    if (currentTable && currentTable.isOccupied) {
+    console.log('🔍 [TLM] 테이블', tableName, '현재 점유 상태:', isCurrentlyOccupied);
+
+    if (isCurrentlyOccupied) {
       // 이미 점유된 테이블인 경우 해제 옵션 제공
       const action = confirm(
         `테이블 ${tableName}은 현재 사용중입니다.\n\n` +
