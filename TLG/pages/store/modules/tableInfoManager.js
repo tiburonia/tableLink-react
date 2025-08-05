@@ -58,7 +58,7 @@ window.TableInfoManager = {
         availableTables: `${availableTables.length}개`,
         totalSeats: `${totalSeats}석`,
         availableSeats: `${availableSeats}석`,
-        occupancyRate: `${occupancyRate}%`,
+        occupancyRate: `${occupancyRate}`,
         statusText: statusText,
         statusClass: statusClass
       });
