@@ -124,15 +124,20 @@ function renderTLMInterface(store) {
               <div style="color: #666; font-size: 14px;">빈 테이블</div>
             </div>
             <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #f57c00;" data-info="total-seats">${store.tableInfo.totalTables}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #f57c00;" data-info="total-seats">${(store.tables || []).reduce((sum, table) => sum + table.seats, 0)}</div>
               <div style="color: #666; font-size: 14px;">총 좌석</div>
             </div>
             <div style="background: #f3e5f5; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;" data-info="available-seats">${store.tableInfo.availableTables}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #7b1fa2;" data-info="available-seats">${(store.tables || []).filter(t => !t.isOccupied).reduce((sum, table) => sum + table.seats, 0)}</div>
               <div style="color: #666; font-size: 14px;">잔여 좌석</div>
             </div>
             <div style="background: #e1f5fe; padding: 15px; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #0277bd;" data-info="occupancy-rate">${store.tableInfo.occupancyRate}%</div>
+              <div style="font-size: 24px; font-weight: bold; color: #0277bd;" data-info="occupancy-rate">${(() => {
+                const tables = store.tables || [];
+                const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
+                const occupiedSeats = tables.filter(t => t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
+                return totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 100) : 0;
+              })()}%</div>
               <div style="color: #666; font-size: 14px;">사용률</div>
             </div>
           </div>
@@ -383,9 +388,21 @@ async function updateTableInfoAfterChange() {
         const tables = data.store.tables || [];
         const totalTables = tables.length;
         const availableTables = tables.filter(t => !t.isOccupied).length;
+        const occupiedTables = tables.filter(t => t.isOccupied).length;
         const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
         const availableSeats = tables.filter(t => !t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
-        const occupancyRate = totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0;
+        const occupiedSeats = tables.filter(t => t.isOccupied).reduce((sum, table) => sum + table.seats, 0);
+        const occupancyRate = totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 100) : 0;
+
+        console.log(`🔍 [TLM] 테이블 현황 계산:`, {
+          totalTables,
+          availableTables,
+          occupiedTables,
+          totalSeats,
+          availableSeats,
+          occupiedSeats,
+          occupancyRate: occupancyRate + '%'
+        });
 
         // 현황 카드 내용 업데이트
         const totalTablesEl = tableInfoElement.querySelector('[data-info="total-tables"]');
