@@ -68,10 +68,16 @@ function renderTLMMain() {
 // 매장 정보 로드 함수
 async function loadStoreInfo(storeId) {
   try {
+    console.log(`🔍 매장 ${storeId} 정보 DB에서 실시간 조회 시작`);
     const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
 
     if (data.success) {
+      console.log(`📊 DB에서 받은 테이블 정보:`, {
+        totalTables: data.store.tableInfo.totalTables,
+        availableTables: data.store.tableInfo.availableTables,
+        occupiedTables: data.store.tableInfo.occupiedTables
+      });
       renderTLMInterface(data.store);
     } else {
       alert('매장 정보를 불러올 수 없습니다: ' + data.error);
