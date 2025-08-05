@@ -240,6 +240,9 @@ function renderTLMInterface(store) {
   // 매장 통계 로드
   loadStoreStats(store.id);
 
+  // 🆕 초기 렌더링 후 즉시 DB에서 최신 테이블 정보로 현황 카드 업데이트
+  updateTableInfoAfterChange();
+
   // 테이블 클릭 핸들러를 전역으로 등록
   window.handleTableClick = function(tableName) {
     console.log('🔍 [TLM] 테이블 클릭됨:', tableName);
