@@ -228,6 +228,132 @@ function renderPromotionDetail(store) {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
+
+      /* 단골 등급별 혜택 스타일 */
+      .loyalty-benefits-section {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #2c3e50;
+      }
+
+      .title-icon {
+        font-size: 20px;
+      }
+
+      .loyalty-levels-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .loyalty-level-card {
+        border-radius: 12px;
+        padding: 16px;
+        border: 2px solid;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .loyalty-level-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      }
+
+      .loyalty-level-card.bronze {
+        background: linear-gradient(135deg, #cd7f32 0%, #b8860b 100%);
+        border-color: #cd7f32;
+        color: white;
+      }
+
+      .loyalty-level-card.silver {
+        background: linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 100%);
+        border-color: #c0c0c0;
+        color: #2c3e50;
+      }
+
+      .loyalty-level-card.gold {
+        background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+        border-color: #ffd700;
+        color: #2c3e50;
+      }
+
+      .loyalty-level-card.diamond {
+        background: linear-gradient(135deg, #b9f2ff 0%, #667eea 100%);
+        border-color: #667eea;
+        color: white;
+      }
+
+      .level-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      .level-icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+
+      .level-name {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .level-requirement {
+        font-size: 11px;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+
+      .level-benefits {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .benefit-item {
+        font-size: 11px;
+        line-height: 1.3;
+        opacity: 0.95;
+        font-weight: 500;
+      }
+
+      .loyalty-level-card.bronze .benefit-item,
+      .loyalty-level-card.diamond .benefit-item {
+        color: rgba(255, 255, 255, 0.95);
+      }
+
+      .loyalty-level-card.silver .benefit-item,
+      .loyalty-level-card.gold .benefit-item {
+        color: rgba(44, 62, 80, 0.85);
+      }
+
+      /* 반응형 조정 */
+      @media (max-width: 380px) {
+        .loyalty-levels-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .loyalty-level-card {
+          padding: 14px;
+        }
+      }
     </style>
 
     <div class="promotion-container">
@@ -240,6 +366,69 @@ function renderPromotionDetail(store) {
       </div>
 
       <div class="promotions-content">
+        <!-- 단골 등급별 혜택 안내 -->
+        <div class="loyalty-benefits-section">
+          <div class="section-title">
+            <span class="title-icon">👑</span>
+            <span class="title-text">단골 등급별 혜택</span>
+          </div>
+          <div class="loyalty-levels-grid">
+            <div class="loyalty-level-card bronze">
+              <div class="level-header">
+                <span class="level-icon">🥉</span>
+                <span class="level-name">브론즈</span>
+                <span class="level-requirement">방문 1-4회</span>
+              </div>
+              <div class="level-benefits">
+                <div class="benefit-item">• 기본 포인트 적립 2%</div>
+                <div class="benefit-item">• 생일 축하 쿠폰</div>
+              </div>
+            </div>
+            
+            <div class="loyalty-level-card silver">
+              <div class="level-header">
+                <span class="level-icon">🥈</span>
+                <span class="level-name">실버</span>
+                <span class="level-requirement">방문 5-9회</span>
+              </div>
+              <div class="level-benefits">
+                <div class="benefit-item">• 포인트 적립 3%</div>
+                <div class="benefit-item">• 월 1회 무료 음료</div>
+                <div class="benefit-item">• 생일 특별 할인 10%</div>
+              </div>
+            </div>
+            
+            <div class="loyalty-level-card gold">
+              <div class="level-header">
+                <span class="level-icon">🥇</span>
+                <span class="level-name">골드</span>
+                <span class="level-requirement">방문 10-19회</span>
+              </div>
+              <div class="level-benefits">
+                <div class="benefit-item">• 포인트 적립 5%</div>
+                <div class="benefit-item">• 모든 메뉴 5% 추가 할인</div>
+                <div class="benefit-item">• 월 2회 무료 음료</div>
+                <div class="benefit-item">• 우선 예약 서비스</div>
+              </div>
+            </div>
+            
+            <div class="loyalty-level-card diamond">
+              <div class="level-header">
+                <span class="level-icon">💎</span>
+                <span class="level-name">다이아몬드</span>
+                <span class="level-requirement">방문 20회+</span>
+              </div>
+              <div class="level-benefits">
+                <div class="benefit-item">• 포인트 적립 7%</div>
+                <div class="benefit-item">• 모든 메뉴 10% 추가 할인</div>
+                <div class="benefit-item">• 주 1회 무료 음료</div>
+                <div class="benefit-item">• VIP 전용 메뉴 이용</div>
+                <div class="benefit-item">• 전용 고객센터</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div id="promotionsContainer">
           <div class="loading-spinner"></div>
           혜택 정보를 불러오는 중...
