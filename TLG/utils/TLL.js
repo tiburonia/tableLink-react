@@ -10,7 +10,10 @@ async function TLL() {
     return;
   }
 
-  const storeOptions = stores.map(s =>
+  // 운영 중인 매장만 필터링
+  const openStores = stores.filter(store => store.isOpen === true);
+  
+  const storeOptions = openStores.map(s =>
     `<option value="${s.id}">${s.name}</option>`
   ).join('');
 
