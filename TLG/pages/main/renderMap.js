@@ -32,7 +32,7 @@ async function renderMap() {
     <nav id="bottomBar">
       <button id= "TLL">📱</button>
       <button id="focusSearchBtn">🔍</button>
-      <button>🗺️</button>
+      <button id="notificationBtn">🔔</button>
       <button onclick="renderMyPage()">👤</button>
       <button onclick="logOutF()">👋</button>
     </nav>
@@ -372,6 +372,16 @@ async function renderMap() {
   renderTLL.addEventListener('click', async () => {
     await TLL();
   })
+
+  // 알림 버튼 클릭 로직
+  const notificationBtn = document.querySelector('#notificationBtn');
+  notificationBtn.addEventListener('click', () => {
+    if (typeof renderNotification === 'function') {
+      renderNotification();
+    } else {
+      console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
+    }
+  });
 
   // 검색 기능 구현
   const searchInput = document.getElementById('searchInput');
