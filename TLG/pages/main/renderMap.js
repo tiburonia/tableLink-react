@@ -132,6 +132,7 @@ async function renderMap() {
   if (!window.currentMarkers) {
     window.currentMarkers = [];
     window.lastStoreData = [];
+    window.markerMap = new Map();
   }
 
 
@@ -418,30 +419,60 @@ async function loadStoresAndMarkers(map) {
     window.lastStoreData = [];
   }
 
-  // 데이터 비교 함수
-  function compareStoreData(oldStores, newStores) {
-    if (!oldStores || oldStores.length !== newStores.length) {
-      return false; // 길이가 다르면 변경됨
+  // 개별 매장 변경사항 감지 함수
+  function getStoreChanges(oldStores, newStores) {
+    const changes = {
+      added: [],
+      updated: [],
+      removed: [],
+      unchanged: []
+    };
+
+    // 기존 매장 배열이 없으면 모든 매장을 추가로 처리
+    if (!oldStores || oldStores.length === 0) {
+      changes.added = [...newStores];
+      return changes;
     }
 
-    for (let i = 0; i < newStores.length; i++) {
-      const oldStore = oldStores.find(s => s.id === newStores[i].id);
+    // 새로운 매장들을 확인
+    newStores.forEach(newStore => {
+      const oldStore = oldStores.find(s => s.id === newStore.id);
+      
       if (!oldStore) {
-        return false; // 새로운 매장이 추가됨
-      }
+        // 새로 추가된 매장
+        changes.added.push(newStore);
+      } else {
+        // 기존 매장의 변경사항 확인
+        const hasChanges = 
+          oldStore.isOpen !== newStore.isOpen ||
+          oldStore.name !== newStore.name ||
+          JSON.stringify(oldStore.coord) !== JSON.stringify(newStore.coord) ||
+          oldStore.ratingAverage !== newStore.ratingAverage;
 
-      // 중요한 필드들만 비교
-      if (oldStore.isOpen !== newStores[i].isOpen ||
-          oldStore.name !== newStores[i].name ||
-          JSON.stringify(oldStore.coord) !== JSON.stringify(newStores[i].coord)) {
-        return false; // 변경사항 발견
+        if (hasChanges) {
+          changes.updated.push({ old: oldStore, new: newStore });
+        } else {
+          changes.unchanged.push(newStore);
+        }
       }
-    }
-    return true; // 변경사항 없음
+    });
+
+    // 삭제된 매장들 확인
+    oldStores.forEach(oldStore => {
+      const exists = newStores.find(s => s.id === oldStore.id);
+      if (!exists) {
+        changes.removed.push(oldStore);
+      }
+    });
+
+    return changes;
   }
 
-  // 데이터가 동일하면 마커 업데이트 건너뛰기
-  if (compareStoreData(window.lastStoreData, stores)) {
+  // 매장별 변경사항 확인
+  const storeChanges = getStoreChanges(window.lastStoreData, stores);
+  const totalChanges = storeChanges.added.length + storeChanges.updated.length + storeChanges.removed.length;
+
+  if (totalChanges === 0) {
     console.log('📍 매장 데이터 변경사항 없음 - 마커 업데이트 건너뛰기');
     // 매장 목록은 업데이트 (UI 새로고침 용도)
     setTimeout(() => {
@@ -453,28 +484,57 @@ async function loadStoresAndMarkers(map) {
     return;
   }
 
-  console.log('🔄 매장 데이터 변경 감지 - 마커 업데이트 진행');
+  console.log(`🔄 매장 변경사항 감지 - 추가: ${storeChanges.added.length}, 수정: ${storeChanges.updated.length}, 삭제: ${storeChanges.removed.length}개`);
 
-  // 기존 마커들 제거
-  if (window.currentMarkers && Array.isArray(window.currentMarkers)) {
-    window.currentMarkers.forEach(marker => {
-      if (marker && typeof marker.setMap === 'function') {
-        marker.setMap(null);
-      }
-    });
-    console.log('🧹 기존 마커', window.currentMarkers.length, '개 제거 완료');
+  // 마커 맵 초기화 (마커 ID로 관리)
+  if (!window.markerMap) {
+    window.markerMap = new Map();
   }
-  window.currentMarkers = [];
 
-  // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
+  // 삭제된 매장의 마커 제거
+  storeChanges.removed.forEach(removedStore => {
+    const existingMarker = window.markerMap.get(removedStore.id);
+    if (existingMarker) {
+      existingMarker.setMap(null);
+      window.markerMap.delete(removedStore.id);
+      console.log(`🗑️ 매장 ${removedStore.name} 마커 제거`);
+    }
+  });
+
+  // 수정된 매장의 마커 업데이트
+  storeChanges.updated.forEach(({ old: oldStore, new: newStore }) => {
+    const existingMarker = window.markerMap.get(oldStore.id);
+    if (existingMarker) {
+      existingMarker.setMap(null);
+      window.markerMap.delete(oldStore.id);
+      console.log(`🔄 매장 ${oldStore.name} 마커 업데이트 준비`);
+    }
+  });
+
+  // 새로운/수정된 마커 생성 (비동기로 처리)
   setTimeout(async () => {
-    for (const store of stores) {
+    // 새로 추가된 매장의 마커 생성
+    for (const store of storeChanges.added) {
       const marker = await window.MapMarkerManager.createCustomMarker(store, map);
       if (marker) {
-        window.currentMarkers.push(marker);
+        window.markerMap.set(store.id, marker);
+        console.log(`➕ 매장 ${store.name} 새 마커 생성`);
       }
     }
-    console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
+
+    // 수정된 매장의 마커 재생성
+    for (const { new: store } of storeChanges.updated) {
+      const marker = await window.MapMarkerManager.createCustomMarker(store, map);
+      if (marker) {
+        window.markerMap.set(store.id, marker);
+        console.log(`🔄 매장 ${store.name} 마커 업데이트 완료`);
+      }
+    }
+
+    // 현재 마커 배열 업데이트 (역호환성 유지)
+    window.currentMarkers = Array.from(window.markerMap.values());
+
+    console.log(`✅ 마커 업데이트 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
 
     // 현재 데이터를 저장 (다음 비교용)
     window.lastStoreData = JSON.parse(JSON.stringify(stores));

@@ -1,4 +1,3 @@
-
 // 지도 마커 관리자
 window.MapMarkerManager = {
   async createCustomMarker(store, map) {
@@ -9,7 +8,7 @@ window.MapMarkerManager = {
     const statusIcon = isOpen ? '🟢' : '🔴';
     const statusText = isOpen ? '운영중' : '운영중지';
     const statusColor = isOpen ? '#4caf50' : '#f44336';
-    
+
     console.log(`🏪 마커 생성: ${store.name} - ${statusText} (DB 값: ${store.isOpen})`);
 
     // 별점 정보 비동기 로딩
@@ -31,6 +30,12 @@ window.MapMarkerManager = {
       yAnchor: 0.95,
       xAnchor: 0.5
     });
+
+    // 마커에 매장 메타데이터 추가
+    customOverlay.storeId = store.id;
+    customOverlay.storeName = store.name;
+    customOverlay.isOpen = store.isOpen;
+    customOverlay.createdAt = new Date().toISOString();
 
     return customOverlay;
   },
