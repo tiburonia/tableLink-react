@@ -135,20 +135,19 @@ async function renderMyAccount() {
   console.log('🔧 renderMyAccount 시작');
   
   const main = document.getElementById('main');
-
-  // body와 html의 스크롤 강제 활성화 및 기존 스타일 제거
-  document.body.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
-  document.documentElement.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
   
-  // main 요소도 스크롤 가능하도록 설정
+  // 전역 스타일 완전 리셋
+  document.body.style.cssText = '';
+  document.documentElement.style.cssText = '';
+  
+  // main 컨테이너도 리셋
   if (main) {
-    main.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+    main.style.cssText = '';
   }
 
-  // UI 프레임을 먼저 렌더링 (로딩 상태)
   main.innerHTML = `
     <div class="account-container">
-      <button id="backBtn" class="back-button" onclick="renderMyPage()">←</button>
+      <button class="back-button" id="backBtn">←</button>
       
       <div class="account-content">
         <!-- 프로필 헤더 -->
@@ -274,27 +273,38 @@ async function renderMyAccount() {
     </div>
 
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      /* 전역 리셋 */
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        overflow: visible !important;
+        position: static !important;
+        background: #f0f0f0 !important;
       }
 
-      html, body, #main {
-        overflow: auto !important;
-        height: auto !important;
-        position: static !important;
-        -webkit-overflow-scrolling: touch !important;
+      #main {
+        width: 390px !important;
+        height: 760px !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        background: white !important;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1) !important;
+        border: 1px solid #ccc !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
       }
 
       .account-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
-        position: static !important;
-        overflow: visible !important;
+        position: relative;
+        overflow: visible;
         padding-bottom: 40px;
-        height: auto !important;
       }
 
       .back-button {
@@ -315,7 +325,7 @@ async function renderMyAccount() {
         color: #667eea;
         transition: all 0.3s ease;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        z-index: 1000;
+        z-index: 9999;
       }
 
       .back-button:hover {
@@ -328,10 +338,6 @@ async function renderMyAccount() {
         padding: 80px 20px 40px 20px;
         max-width: 430px;
         margin: 0 auto;
-        overflow: visible !important;
-        position: static !important;
-        height: auto !important;
-        -webkit-overflow-scrolling: touch;
       }
 
       .profile-header {
@@ -381,12 +387,13 @@ async function renderMyAccount() {
         font-weight: 700;
         color: #333;
         margin-bottom: 4px;
+        margin: 0;
       }
 
       .user-email {
         color: #666;
         font-size: 14px;
-        margin-bottom: 16px;
+        margin: 4px 0 16px 0;
       }
 
       .user-stats {
@@ -425,6 +432,7 @@ async function renderMyAccount() {
         font-size: 18px;
         margin-bottom: 16px;
         font-weight: 600;
+        margin-top: 0;
       }
 
       .summary-grid {
@@ -546,6 +554,7 @@ async function renderMyAccount() {
         color: #333;
         font-size: 18px;
         font-weight: 600;
+        margin: 0;
       }
 
       .view-all-btn, .edit-btn {
@@ -763,7 +772,7 @@ async function renderMyAccount() {
         display: flex;
         justify-content: center;
         align-items: center;
-        z-index: 2000;
+        z-index: 10000;
       }
       
       .modal-content {
@@ -851,27 +860,11 @@ async function renderMyAccount() {
     </style>
   `;
 
-  console.log('🔧 이벤트 리스너 설정 시작');
-  
-  // DOM이 완전히 생성된 후 이벤트 리스너 등록 및 스크롤 재설정
-  requestAnimationFrame(() => {
-    // 스크롤 재설정 (다른 스크립트에 의한 간섭 방지)
-    document.body.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
-    document.documentElement.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
-    
+  // DOM이 완전히 렌더링된 후 이벤트 리스너 설정
+  setTimeout(() => {
     setupEventListeners();
     loadAccountData();
-    
-    // 추가 스크롤 확인
-    setTimeout(() => {
-      console.log('📱 스크롤 상태 확인:', {
-        body: document.body.style.overflow,
-        html: document.documentElement.style.overflow,
-        bodyHeight: document.body.scrollHeight,
-        windowHeight: window.innerHeight
-      });
-    }, 500);
-  });
+  }, 100);
 }
 
 // 이벤트 리스너 설정
@@ -891,7 +884,7 @@ function setupEventListeners() {
 
   if (backBtn) {
     console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록');
-    backBtn.onclick = function(e) {
+    backBtn.addEventListener('click', function(e) {
       e.preventDefault();
       e.stopPropagation();
       console.log('🔙 뒤로가기 버튼 클릭됨');
@@ -900,76 +893,74 @@ function setupEventListeners() {
       } else {
         console.error('❌ renderMyPage 함수를 찾을 수 없음');
       }
-    };
-  } else {
-    console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
+    });
   }
 
   if (backToMyPageBtn) {
-    backToMyPageBtn.onclick = function(e) {
+    backToMyPageBtn.addEventListener('click', function(e) {
       e.preventDefault();
       if (typeof renderMyPage === 'function') {
         renderMyPage();
       }
-    };
+    });
   }
 
   if (logoutBtn) {
-    logoutBtn.onclick = function(e) {
+    logoutBtn.addEventListener('click', function(e) {
       e.preventDefault();
       if (confirm('정말 로그아웃 하시겠습니까?')) {
         window.location.href = '/';
       }
-    };
+    });
   }
 
   if (editProfileBtn) {
-    editProfileBtn.onclick = function(e) {
+    editProfileBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showEditProfileModal();
-    };
+    });
   }
 
   if (couponBtn) {
-    couponBtn.onclick = function(e) {
+    couponBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showCouponModal();
-    };
+    });
   }
 
   if (favoritesBtn) {
-    favoritesBtn.onclick = function(e) {
+    favoritesBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showFavoritesModal();
-    };
+    });
   }
 
   if (achievementsBtn) {
-    achievementsBtn.onclick = function(e) {
+    achievementsBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAchievementsModal();
-    };
+    });
   }
 
   if (viewAllOrdersBtn) {
-    viewAllOrdersBtn.onclick = function(e) {
+    viewAllOrdersBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAllOrdersModal();
-    };
+    });
   }
 
   if (viewAllReservationsBtn) {
-    viewAllReservationsBtn.onclick = function(e) {
+    viewAllReservationsBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAllReservationsModal();
-    };
+    });
   }
 
   if (editPersonalInfoBtn) {
-    editPersonalInfoBtn.onclick = function(e) {
+    editPersonalInfoBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showEditPersonalInfoModal();
-    };
+    });
   }
   
   console.log('✅ 모든 이벤트 리스너 설정 완료');
