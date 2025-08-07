@@ -28,6 +28,13 @@ async function renderMyPage() {
         </div>
       </section>
 
+      <section class="section-card">
+        <h2>⭐ 내 리뷰 내역</h2>
+        <div id="reviewList">
+          <p>📝 리뷰 내역을 불러오는 중...</p>
+        </div>
+      </section>
+
       
     </main>
 
@@ -262,6 +269,56 @@ async function renderMyPage() {
       .more-orders-btn:hover {
         background: #5a6268;
       }
+      .review-item {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid #e9ecef;
+        transition: background 0.2s;
+      }
+      .review-item:hover {
+        background: #e9ecef;
+      }
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .review-store {
+        font-weight: 600;
+        color: #333;
+      }
+      .review-rating {
+        color: #ffbf00;
+        font-weight: bold;
+      }
+      .review-content {
+        color: #666;
+        font-size: 14px;
+        line-height: 1.4;
+        margin-bottom: 6px;
+      }
+      .review-date {
+        color: #999;
+        font-size: 12px;
+      }
+      .view-all-reviews-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .view-all-reviews-btn:hover {
+        background: #138496;
+      }
     </style>
   `;
 
@@ -324,6 +381,9 @@ async function loadUserData() {
     
     // 쿠폰내역 업데이트
     updateCouponList(currentUserInfo);
+    
+    // 리뷰내역 업데이트
+    updateReviewList(currentUserInfo);
 
   } catch (error) {
     console.error('사용자 데이터 로딩 실패:', error);
@@ -332,10 +392,12 @@ async function loadUserData() {
     const orderList = document.querySelector('#orderList');
     const reservationList = document.querySelector('#reservationList');
     const couponList = document.querySelector('#couponList');
+    const reviewList = document.querySelector('#reviewList');
     
     if (orderList) orderList.innerHTML = `<p>❌ 주문내역을 불러올 수 없습니다.</p>`;
     if (reservationList) reservationList.innerHTML = `<p>❌ 예약내역을 불러올 수 없습니다.</p>`;
     if (couponList) couponList.innerHTML = `<p>❌ 쿠폰 정보를 불러올 수 없습니다.</p>`;
+    if (reviewList) reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
   }
 }
 
@@ -612,5 +674,151 @@ function updateCouponList(currentUserInfo) {
     });
   }
 }
+
+// 리뷰 내역 업데이트 함수 (DB에서 실제 데이터 가져오기)
+async function updateReviewList(currentUserInfo) {
+  const reviewList = document.querySelector('#reviewList');
+  if (!reviewList) return;
+
+  reviewList.innerHTML = '<p>📝 리뷰 내역을 불러오는 중...</p>'; // 로딩 상태
+
+  try {
+    console.log('📖 사용자 리뷰 내역 조회 시작, userId:', currentUserInfo.id);
+    
+    const response = await fetch(`/api/users/${currentUserInfo.id}/reviews?limit=3`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('📖 받은 리뷰 데이터:', data);
+
+    reviewList.innerHTML = ''; // 로딩 메시지 제거
+
+    if (data.success && data.reviews && data.reviews.length > 0) {
+      // 최근 3개 리뷰만 표시
+      data.reviews.forEach(review => {
+        const reviewDiv = document.createElement('div');
+        reviewDiv.className = 'review-item';
+        reviewDiv.innerHTML = `
+          <div class="review-header">
+            <span class="review-store">${review.storeName}</span>
+            <span class="review-rating">★ ${review.score}</span>
+          </div>
+          <div class="review-content">${review.content}</div>
+          <div class="review-date">${review.date}</div>
+        `;
+        
+        // 리뷰 클릭 시 해당 매장으로 이동
+        reviewDiv.addEventListener('click', () => {
+          if (typeof renderStore === 'function') {
+            // 매장 정보를 가져와서 렌더링
+            fetch(`/api/stores/${review.storeId}`)
+              .then(response => response.json())
+              .then(storeData => {
+                if (storeData.success && storeData.store) {
+                  renderStore(storeData.store);
+                }
+              })
+              .catch(error => {
+                console.error('매장 정보 가져오기 실패:', error);
+              });
+          }
+        });
+        
+        reviewList.appendChild(reviewDiv);
+      });
+
+      // 전체 리뷰 보기 버튼 (3개보다 많은 리뷰가 있을 경우)
+      if (data.total > 3) {
+        const viewAllBtn = document.createElement('button');
+        viewAllBtn.className = 'view-all-reviews-btn';
+        viewAllBtn.innerHTML = `📝 전체 리뷰 보기 (${data.total}개)`;
+        viewAllBtn.addEventListener('click', () => {
+          showAllReviewsModal(currentUserInfo);
+        });
+        reviewList.appendChild(viewAllBtn);
+      }
+    } else {
+      reviewList.innerHTML = `<p>작성한 리뷰가 없습니다.</p>`;
+    }
+
+  } catch (error) {
+    console.error('❌ 리뷰 내역 조회 실패:', error);
+    reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
+  }
+}
+
+// 전체 리뷰 보기 모달
+async function showAllReviewsModal(currentUserInfo) {
+  try {
+    const response = await fetch(`/api/users/${currentUserInfo.id}/reviews`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error('리뷰 데이터 조회 실패');
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'review-modal';
+    modal.innerHTML = `
+      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+          <h3>⭐ 내 리뷰 전체보기 (${data.total}개)</h3>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
+        </div>
+        <div class="all-reviews-list">
+          ${data.reviews.map(review => `
+            <div class="review-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${review.storeId})">
+              <div class="review-header">
+                <span class="review-store">${review.storeName}</span>
+                <span class="review-rating">★ ${review.score}</span>
+              </div>
+              <div class="review-content">${review.content}</div>
+              <div class="review-date">${review.date} • ${review.storeCategory}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 모달 배경 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 리뷰 조회 실패:', error);
+    alert('리뷰 목록을 불러올 수 없습니다.');
+  }
+}
+
+// 모달 닫고 매장으로 이동하는 전역 함수
+window.closeModalAndGoToStore = function(storeId) {
+  // 모달 닫기
+  const modal = document.querySelector('.review-modal');
+  if (modal) {
+    document.body.removeChild(modal);
+  }
+
+  // 매장으로 이동
+  if (typeof renderStore === 'function') {
+    fetch(`/api/stores/${storeId}`)
+      .then(response => response.json())
+      .then(storeData => {
+        if (storeData.success && storeData.store) {
+          renderStore(storeData.store);
+        }
+      })
+      .catch(error => {
+        console.error('매장 정보 가져오기 실패:', error);
+      });
+  }
+};
 
 window.renderMyPage = renderMyPage;

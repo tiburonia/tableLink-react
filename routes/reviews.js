@@ -285,6 +285,67 @@ router.put('/reviews/:reviewId', async (req, res) => {
   }
 });
 
+// 사용자별 리뷰 내역 조회 API
+router.get('/users/:userId/reviews', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const limit = req.query.limit || 10;
+
+    console.log(`📖 사용자 ${userId} 리뷰 내역 조회 (최대 ${limit}개)`);
+
+    const query = `
+      SELECT 
+        r.id,
+        r.rating as score,
+        r.review_text as content,
+        r.order_date,
+        r.created_at,
+        r.store_id,
+        s.name as store_name,
+        s.category as store_category
+      FROM reviews r
+      JOIN stores s ON r.store_id = s.id
+      WHERE r.user_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT $2
+    `;
+
+    console.log('🔍 실행할 SQL 쿼리:', query);
+    console.log('🔍 쿼리 파라미터 - userId:', userId, 'limit:', limit);
+
+    const result = await pool.query(query, [userId, limit]);
+
+    console.log('🔍 데이터베이스 쿼리 결과:', result.rows.length + '개 리뷰 발견');
+
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      score: row.score,
+      content: row.content,
+      date: new Date(row.created_at).toLocaleDateString('ko-KR'),
+      orderDate: row.order_date,
+      storeId: row.store_id,
+      storeName: row.store_name,
+      storeCategory: row.store_category
+    }));
+
+    console.log(`✅ 사용자 ${userId} 리뷰 ${reviews.length}개 처리 완료`);
+
+    res.json({
+      success: true,
+      userId: userId,
+      total: reviews.length,
+      reviews: reviews
+    });
+
+  } catch (error) {
+    console.error('❌ 사용자 리뷰 내역 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '리뷰 내역 조회 실패: ' + error.message
+    });
+  }
+});
+
 // 리뷰 삭제 API
 router.delete('/reviews/:reviewId', async (req, res) => {
   const { reviewId } = req.params;

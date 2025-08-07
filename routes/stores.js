@@ -402,7 +402,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 
     // 트랜잭션 시작
     const client = await pool.connect();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -473,7 +473,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 
       const updatedStore = updateResult.rows[0];
       const actionText = newStatus ? '운영 시작' : '운영 중지';
-      
+
       console.log(`✅ [API] 매장 ${storeIdInt} 운영 상태 변경 완료: ${updatedStore.is_open} (${actionText})`);
 
       // 성공 응답
@@ -500,10 +500,10 @@ router.post('/:storeId/toggle-status', async (req, res) => {
 
   } catch (error) {
     console.error('❌ [API] 매장 운영 상태 토글 오류:', error);
-    
+
     // 상세한 에러 정보 로깅
     console.error('❌ [API] 에러 스택:', error.stack);
-    
+
     res.status(500).json({
       success: false,
       message: '서버 내부 오류가 발생했습니다.',
