@@ -105,7 +105,7 @@ async function renderMap() {
 }
 
 #searchBtn, #clearBtn {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
   border: 1px solid rgba(41, 126, 252, 0.1);
   font-size: 18px;
   cursor: pointer;
@@ -384,7 +384,7 @@ async function renderMap() {
   if (!window.markerMap) {
     window.markerMap = new Map();
   }
-  
+
   console.log('🔄 renderMap: 마커 데이터 확인 완료 - 기존 마커:', window.markerMap.size, '개');
 
 
@@ -488,17 +488,14 @@ async function renderMap() {
         console.log('📝 저장된 매장 데이터로 목록 업데이트:', window.lastLoadedStores.length, '개 매장');
         updateStoreList(window.lastLoadedStores, storeListContainer);
         // 필터링 기능 초기화
-        window.MapPanelUI.initializeFiltering();
-      }
-    } else {
-      console.warn('⚠️ DOM 준비 실패, 기본 처리로 진행');
-    }
-  });teStoreList(window.lastLoadedStores, storeListContainer);
+        if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
+          window.MapPanelUI.initializeFiltering();
+        }
       } else {
         console.warn('⚠️ DOM은 준비되었지만 매장 데이터가 없거나 컨테이너를 찾을 수 없음');
       }
     } else {
-      console.error('❌ DOM 준비 실패: 매장 목록 업데이트 불가');
+      console.warn('⚠️ DOM 준비 실패, 기본 처리로 진행');
     }
   });
 
@@ -588,11 +585,11 @@ async function renderMap() {
               map.setCenter(position);
               map.setLevel(2); // 줌 레벨 설정
             }
-            
+
             // 검색 결과 숨기기 및 입력창 초기화
             searchResults.classList.add('hidden');
             searchInput.value = store.name;
-            
+
             // 매장 상세 페이지로 이동 (선택사항)
             setTimeout(() => {
               if (typeof renderStore === 'function') {
@@ -603,7 +600,7 @@ async function renderMap() {
         });
       });
     }
-    
+
     searchResults.classList.remove('hidden');
   }
 
@@ -611,7 +608,7 @@ async function renderMap() {
   searchInput.addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     const keyword = e.target.value.trim();
-    
+
     if (keyword) {
       clearBtn.style.display = 'flex';
       searchTimeout = setTimeout(() => performSearch(keyword), 300);
@@ -836,7 +833,7 @@ async function loadStoresAndMarkers(map) {
     // 새로운 매장들을 확인
     newStores.forEach(newStore => {
       const oldStore = oldStores.find(s => s.id === newStore.id);
-      
+
       if (!oldStore) {
         // 새로 추가된 매장
         changes.added.push(newStore);
@@ -875,12 +872,12 @@ async function loadStoresAndMarkers(map) {
   const isMapReset = !window.currentMap || window.currentMap !== map;
   const hasNoMarkers = !window.markerMap || window.markerMap.size === 0;
   const isInitialRender = !window.lastStoreData || window.lastStoreData.length === 0;
-  
+
   // 지도가 새로 생성되었으면 모든 마커를 다시 생성해야 함
   if (isMapReset) {
     console.log('🗺️ 지도가 새로 생성됨 - 모든 마커를 지도에 다시 표시');
     window.currentMap = map;
-    
+
     // 기존 마커들을 새 지도에 다시 연결
     if (window.markerMap.size > 0) {
       console.log('🔄 기존 마커들을 새 지도에 연결:', window.markerMap.size, '개');
@@ -891,7 +888,7 @@ async function loadStoresAndMarkers(map) {
       });
     }
   }
-  
+
   if (totalChanges === 0 && !hasNoMarkers && !isInitialRender && !isMapReset) {
     console.log('📍 매장 데이터 변경사항 없음 - 마커 업데이트 건너뛰기');
     // 매장 목록은 업데이트 (UI 새로고침 용도)
@@ -900,12 +897,14 @@ async function loadStoresAndMarkers(map) {
       if (storeListContainer) {
         updateStoreList(stores, storeListContainer);
         // 필터링 기능 초기화
-        window.MapPanelUI.initializeFiltering();
+        if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
+          window.MapPanelUI.initializeFiltering();
+        }
       }
     }, 100);
     return;
   }
-  
+
   if (hasNoMarkers || isInitialRender || isMapReset) {
     console.log('🔄 마커가 없거나 초기 렌더링 또는 지도 리셋 - 모든 마커를 새로 생성');
     // 기존 마커들 정리 (지도 리셋인 경우)
