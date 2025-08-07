@@ -16,17 +16,16 @@ async function renderMap() {
 
   // UI 먼저 렌더링
   main.innerHTML = `
-    <div id="searchBar">
-      <div class="search-container">
-        <input id="searchInput" type="text" placeholder="매장명 또는 카테고리 검색...">
-        <button id="searchBtn">🔍</button>
-        <button id="clearBtn">✕</button>
-      </div>
-      <div id="searchResults" class="search-results hidden"></div>
-    </div>
-
     <main id="content">
       <div id="map" style="width: 100%; height: 100%; min-height: 100vh;"></div>
+      <div id="searchBar">
+        <div class="search-container">
+          <input id="searchInput" type="text" placeholder="매장명 또는 카테고리 검색...">
+          <button id="searchBtn">🔍</button>
+          <button id="clearBtn">✕</button>
+        </div>
+        <div id="searchResults" class="search-results hidden"></div>
+      </div>
       ${window.MapPanelUI.renderPanelHTML()}
     </main>
 
@@ -49,16 +48,14 @@ async function renderMap() {
   overflow: hidden;
 }
 
-/* 검색바 */
+/* 검색바 - 지도 위 오버레이 */
 #searchBar {
-  position: fixed;
-  top: 80px;
-  left: 0;
-  width: 100%;
-  max-width: 430px;
+  position: absolute;
+  top: 20px;
+  left: 16px;
+  right: 16px;
   z-index: 1002;
-  padding: 12px 16px;
-  box-sizing: border-box;
+  pointer-events: auto;
 }
 
 .search-container {
@@ -154,15 +151,15 @@ async function renderMap() {
   color: #666;
 }
 
-/* 콘텐츠 전체 - 검색바 공간 확보 */
+/* 콘텐츠 전체 */
 #content {
   position: fixed;
-  top: 140px;   /* 검색바 공간 확보 */
+  top: 0;
   bottom: 84px;   /* 바텀바 높이 + 둥근 모서리 여백 */
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: calc(100vh - 224px);
+  height: calc(100vh - 84px);
   overflow: hidden;
   background: #fdfdfd;
   z-index: 1;
