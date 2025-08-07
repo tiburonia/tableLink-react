@@ -177,6 +177,24 @@ function setupEventListeners(store) {
       console.log('✅ TLR 영역 이벤트 설정 완료');
     }
 
+    // 프로모션 관련 버튼들 이벤트 설정 (추가 안전장치)
+    setTimeout(() => {
+      const allPromotionBtns = document.querySelectorAll('.promotion-detail-btn, .promotion-more-btn, [onclick*="showAllPromotions"]');
+      allPromotionBtns.forEach((btn, index) => {
+        if (btn && !btn.hasAttribute('data-event-set')) {
+          btn.setAttribute('data-event-set', 'true');
+          btn.removeAttribute('onclick');
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(`🎯 프로모션 버튼 ${index + 1} 클릭됨`);
+            showAllPromotions(store);
+          });
+          console.log(`✅ 프로모션 버튼 ${index + 1} 이벤트 설정 완료`);
+        }
+      });
+    }, 300);
+
     console.log('✅ 모든 이벤트 리스너 설정 완료');
   } catch (error) {
     console.error('❌ 이벤트 리스너 설정 중 오류:', error);
@@ -358,15 +376,36 @@ function loadPromotionData(store) {
   // 실제로는 API에서 가져올 데이터, 현재는 목업 데이터 사용
   console.log(`🎉 매장 ${store.id} 프로모션 정보 로드`);
   
-  // 프로모션 더보기 버튼 이벤트 추가
+  // 프로모션 더보기 버튼 이벤트 추가 (여러 클래스 확인)
   setTimeout(() => {
-    const promotionMoreBtn = document.querySelector('.promotion-more-btn');
-    if (promotionMoreBtn) {
-      promotionMoreBtn.addEventListener('click', () => {
+    const promotionBtns = [
+      document.querySelector('.promotion-more-btn'),
+      document.querySelector('.promotion-detail-btn'),
+      document.querySelector('[onclick="showAllPromotions()"]')
+    ];
+    
+    promotionBtns.forEach(btn => {
+      if (btn) {
+        console.log('🎯 프로모션 버튼 이벤트 설정:', btn.className);
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          console.log('🎉 프로모션 자세히 보기 클릭됨');
+          showAllPromotions(store);
+        });
+      }
+    });
+
+    // onclick 속성으로 설정된 버튼들도 처리
+    const onclickBtns = document.querySelectorAll('[onclick*="showAllPromotions"]');
+    onclickBtns.forEach(btn => {
+      btn.removeAttribute('onclick');
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🎉 onclick 프로모션 버튼 클릭됨');
         showAllPromotions(store);
       });
-    }
-  }, 100);
+    });
+  }, 200);
 }
 
 // 단골 레벨 데이터 로드
@@ -432,13 +471,32 @@ function updateLoyaltyUI(data) {
 
 // 모든 프로모션 보기
 function showAllPromotions(store) {
-  if (typeof renderPromotionDetail === 'function') {
-    renderPromotionDetail(store);
-  } else {
-    console.error('❌ renderPromotionDetail 함수를 찾을 수 없습니다.');
-    alert(`매장 ${store.name}의 모든 프로모션을 확인할 수 있는 페이지로 이동합니다.`);
+  console.log('🎯 showAllPromotions 호출됨:', store.name);
+  
+  try {
+    if (typeof renderPromotionDetail === 'function') {
+      console.log('✅ renderPromotionDetail 함수 발견, 실행 중...');
+      renderPromotionDetail(store);
+    } else {
+      console.error('❌ renderPromotionDetail 함수를 찾을 수 없습니다.');
+      
+      // 전역에서 함수 찾기 시도
+      if (window.renderPromotionDetail && typeof window.renderPromotionDetail === 'function') {
+        console.log('✅ window.renderPromotionDetail 발견, 실행 중...');
+        window.renderPromotionDetail(store);
+      } else {
+        console.error('❌ 전역에서도 renderPromotionDetail 함수를 찾을 수 없습니다.');
+        alert(`매장 ${store.name}의 프로모션 상세 페이지를 불러올 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ showAllPromotions 실행 중 오류:', error);
+    alert('프로모션 상세 페이지를 불러오는 중 오류가 발생했습니다.');
   }
 }
+
+// 전역 함수로도 등록
+window.showAllPromotions = showAllPromotions;
 
 // 전역 함수 등록
 window.renderStore = renderStore;
