@@ -30,7 +30,7 @@ async function renderMap() {
     </nav>
 
     ${window.MapPanelUI.getPanelStyles()}
-   <style>  
+   <style>
     html, body {
   margin: 0;
   padding: 0;
@@ -128,41 +128,48 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
+  // 마커 배열 및 데이터 초기화 (첫 로드 시에만)
+  if (!window.currentMarkers) {
+    window.currentMarkers = [];
+    window.lastStoreData = [];
+  }
+
+
   // DOM 즉시 확인 및 강제 재렌더링
   const waitForDOM = () => {
     return new Promise((resolve) => {
       let checkCount = 0;
       const maxChecks = 30;
-      
+
       const checkDOM = () => {
         checkCount++;
         console.log(`🔍 DOM 요소 확인 시도 ${checkCount}/${maxChecks}`);
-        
+
         const storeListContainer = document.getElementById('storeListContainer');
         const storePanel = document.getElementById('storePanel');
-        
+
         // 전체 DOM 구조 상세 확인
         console.log('📋 현재 DOM 상태:');
         console.log('- storePanel 존재:', !!storePanel);
         console.log('- storeListContainer 존재:', !!storeListContainer);
-        
+
         // 모든 ID가 있는 요소들 확인
         const allElementsWithId = document.querySelectorAll('[id]');
         const allIds = Array.from(allElementsWithId).map(el => el.id);
         console.log('- 현재 문서의 모든 ID들:', allIds);
-        
+
         if (storePanel) {
           console.log('- storePanel innerHTML 길이:', storePanel.innerHTML.length);
           console.log('- storePanel 첫 100글자:', storePanel.innerHTML.substring(0, 100));
-          
+
           // storePanel 내부에서 직접 찾아보기
           let containerInPanel = storePanel.querySelector('#storeListContainer');
           console.log('- storePanel 내부 storeListContainer 직접 검색:', !!containerInPanel);
-          
+
           // 찾을 수 없으면 안전하게 생성 (기존 상태 보존)
           if (!containerInPanel) {
             console.log('🔧 DOM 대기 중 storeListContainer 안전 생성 (패널 상태 보존)');
-            
+
             // 기존 핸들이 없으면 생성
             let existingHandle = storePanel.querySelector('#panelHandle');
             if (!existingHandle) {
@@ -171,35 +178,35 @@ async function renderMap() {
               handleDiv.style.cssText = 'width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;';
               storePanel.insertBefore(handleDiv, storePanel.firstChild);
             }
-            
+
             // 컨테이너만 새로 생성
             const containerDiv = document.createElement('div');
             containerDiv.id = 'storeListContainer';
             containerDiv.style.cssText = 'height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;';
             containerDiv.innerHTML = '<div class="loading-message" style="text-align: center; padding: 20px; color: #666;">매장 정보를 불러오는 중...</div>';
-            
+
             storePanel.appendChild(containerDiv);
             containerInPanel = containerDiv;
           }
-          
+
           if (containerInPanel) {
             console.log('✅ storePanel 내부에서 storeListContainer 발견/생성 완료!');
             resolve(true);
             return;
           }
         }
-        
+
         if (storeListContainer && storePanel) {
           console.log(`✅ 두 요소 모두 발견됨 (시도 ${checkCount}회)`);
           resolve(true);
           return;
         }
-        
+
         if (checkCount < maxChecks) {
           setTimeout(checkDOM, 150);
         } else {
           console.error('❌ DOM 요소를 찾을 수 없음. 강제로 계속 진행합니다.');
-          
+
           // 최후의 수단: storePanel이라도 있으면 성공으로 처리
           if (storePanel) {
             console.log('⚠️ storePanel만 발견되어 진행합니다.');
@@ -209,7 +216,7 @@ async function renderMap() {
           }
         }
       };
-      
+
       // 바로 확인 시작
       checkDOM();
     });
@@ -405,12 +412,72 @@ async function loadStoresAndMarkers(map) {
     }
   }
 
+  // 기존 마커 데이터와 비교
+  if (!window.currentMarkers) {
+    window.currentMarkers = [];
+    window.lastStoreData = [];
+  }
+
+  // 데이터 비교 함수
+  function compareStoreData(oldStores, newStores) {
+    if (!oldStores || oldStores.length !== newStores.length) {
+      return false; // 길이가 다르면 변경됨
+    }
+
+    for (let i = 0; i < newStores.length; i++) {
+      const oldStore = oldStores.find(s => s.id === newStores[i].id);
+      if (!oldStore) {
+        return false; // 새로운 매장이 추가됨
+      }
+
+      // 중요한 필드들만 비교
+      if (oldStore.isOpen !== newStores[i].isOpen ||
+          oldStore.name !== newStores[i].name ||
+          JSON.stringify(oldStore.coord) !== JSON.stringify(newStores[i].coord)) {
+        return false; // 변경사항 발견
+      }
+    }
+    return true; // 변경사항 없음
+  }
+
+  // 데이터가 동일하면 마커 업데이트 건너뛰기
+  if (compareStoreData(window.lastStoreData, stores)) {
+    console.log('📍 매장 데이터 변경사항 없음 - 마커 업데이트 건너뛰기');
+    // 매장 목록은 업데이트 (UI 새로고침 용도)
+    setTimeout(() => {
+      const storeListContainer = document.getElementById('storeListContainer');
+      if (storeListContainer) {
+        updateStoreList(stores, storeListContainer);
+      }
+    }, 100);
+    return;
+  }
+
+  console.log('🔄 매장 데이터 변경 감지 - 마커 업데이트 진행');
+
+  // 기존 마커들 제거
+  if (window.currentMarkers && Array.isArray(window.currentMarkers)) {
+    window.currentMarkers.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
+    console.log('🧹 기존 마커', window.currentMarkers.length, '개 제거 완료');
+  }
+  window.currentMarkers = [];
+
   // 커스텀 마커 생성 (비동기로 처리하여 UI 블로킹 방지)
   setTimeout(async () => {
     for (const store of stores) {
-      await window.MapMarkerManager.createCustomMarker(store, map);
+      const marker = await window.MapMarkerManager.createCustomMarker(store, map);
+      if (marker) {
+        window.currentMarkers.push(marker);
+      }
     }
     console.log('🗺️ 커스텀 마커 표시 완료:', stores.length, '개 매장');
+
+    // 현재 데이터를 저장 (다음 비교용)
+    window.lastStoreData = JSON.parse(JSON.stringify(stores));
   }, 100);
 
   // 매장 데이터를 전역에 저장 (DOM 준비 후 재사용을 위해)
@@ -419,7 +486,7 @@ async function loadStoresAndMarkers(map) {
   // 가게 목록 업데이트 시도 (UI 보존 방식)
   setTimeout(() => {
     let storeListContainer = document.getElementById('storeListContainer');
-    
+
     // 직접 찾기 실패 시 storePanel 내부에서 검색
     if (!storeListContainer) {
       const storePanel = document.getElementById('storePanel');
@@ -428,13 +495,13 @@ async function loadStoresAndMarkers(map) {
         console.log('🔍 storePanel 내부에서 storeListContainer 검색 결과:', !!storeListContainer);
       }
     }
-    
+
     // 여전히 찾을 수 없으면 안전하게 생성 (기존 패널 상태 보존)
     if (!storeListContainer) {
       const storePanel = document.getElementById('storePanel');
       if (storePanel) {
         console.log('🔧 storeListContainer만 안전하게 생성합니다 (패널 상태 보존)');
-        
+
         // 기존 패널 핸들은 유지하고 컨테이너만 추가
         let panelHandle = storePanel.querySelector('#panelHandle');
         if (!panelHandle) {
@@ -443,12 +510,12 @@ async function loadStoresAndMarkers(map) {
           handleDiv.style.cssText = 'width: 44px; height: 7px; background: #e0e3f3; border-radius: 4px; margin: 10px auto 6px auto; cursor: pointer; opacity: 0.8;';
           storePanel.insertBefore(handleDiv, storePanel.firstChild);
         }
-        
+
         // storeListContainer만 새로 생성
         const containerDiv = document.createElement('div');
         containerDiv.id = 'storeListContainer';
         containerDiv.style.cssText = 'height: calc(100% - 23px); overflow-y: auto; padding: 8px 4px 20px 4px; box-sizing: border-box; scrollbar-width: none; -ms-overflow-style: none;';
-        
+
         // 로딩 메시지 추가
         containerDiv.innerHTML = `
           <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
@@ -456,14 +523,14 @@ async function loadStoresAndMarkers(map) {
             매장 정보를 불러오는 중...
           </div>
         `;
-        
+
         storePanel.appendChild(containerDiv);
         storeListContainer = containerDiv;
-        
+
         console.log('✅ storeListContainer 안전 생성 완료 (패널 상태 유지)');
       }
     }
-    
+
     if (storeListContainer) {
       console.log('✅ storeListContainer 준비됨, 매장 목록 업데이트 진행');
       updateStoreList(stores, storeListContainer);
