@@ -269,11 +269,16 @@ async function renderMyAccount() {
         padding: 0;
       }
 
+      body, html {
+        overflow: auto !important;
+      }
+
       .account-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         position: relative;
+        overflow-y: auto;
       }
 
       .back-button {
@@ -307,6 +312,9 @@ async function renderMyAccount() {
         padding: 80px 20px 40px 20px;
         max-width: 430px;
         margin: 0 auto;
+        overflow-y: auto;
+        height: auto;
+        min-height: calc(100vh - 40px);
       }
 
       .profile-header {
@@ -826,17 +834,17 @@ async function renderMyAccount() {
     </style>
   `;
 
-  // 즉시 이벤트 리스너 등록
-  setupEventListeners();
-
-  // 비동기로 데이터 로드 및 UI 업데이트
+  // DOM이 완전히 생성된 후 이벤트 리스너 등록
   setTimeout(() => {
+    setupEventListeners();
     loadAccountData();
-  }, 500); // 로딩 효과를 위한 딜레이
+  }, 100); // DOM 생성 대기
 }
 
 // 이벤트 리스너 설정
 function setupEventListeners() {
+  console.log('🔧 이벤트 리스너 설정 시작');
+  
   const backBtn = document.getElementById('backBtn');
   const backToMyPageBtn = document.getElementById('backToMyPageBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -849,15 +857,24 @@ function setupEventListeners() {
   const editPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
 
   if (backBtn) {
-    backBtn.addEventListener('click', () => {
+    console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록');
+    backBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🔙 뒤로가기 버튼 클릭됨');
       if (typeof renderMyPage === 'function') {
         renderMyPage();
+      } else {
+        console.error('❌ renderMyPage 함수를 찾을 수 없음');
       }
     });
+  } else {
+    console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
   }
 
   if (backToMyPageBtn) {
-    backToMyPageBtn.addEventListener('click', () => {
+    backToMyPageBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       if (typeof renderMyPage === 'function') {
         renderMyPage();
       }
@@ -865,7 +882,8 @@ function setupEventListeners() {
   }
 
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       if (confirm('정말 로그아웃 하시겠습니까?')) {
         window.location.href = '/';
       }
@@ -873,32 +891,55 @@ function setupEventListeners() {
   }
 
   if (editProfileBtn) {
-    editProfileBtn.addEventListener('click', showEditProfileModal);
+    editProfileBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showEditProfileModal();
+    });
   }
 
   if (couponBtn) {
-    couponBtn.addEventListener('click', showCouponModal);
+    couponBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showCouponModal();
+    });
   }
 
   if (favoritesBtn) {
-    favoritesBtn.addEventListener('click', showFavoritesModal);
+    favoritesBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showFavoritesModal();
+    });
   }
 
   if (achievementsBtn) {
-    achievementsBtn.addEventListener('click', showAchievementsModal);
+    achievementsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAchievementsModal();
+    });
   }
 
   if (viewAllOrdersBtn) {
-    viewAllOrdersBtn.addEventListener('click', showAllOrdersModal);
+    viewAllOrdersBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAllOrdersModal();
+    });
   }
 
   if (viewAllReservationsBtn) {
-    viewAllReservationsBtn.addEventListener('click', showAllReservationsModal);
+    viewAllReservationsBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showAllReservationsModal();
+    });
   }
 
   if (editPersonalInfoBtn) {
-    editPersonalInfoBtn.addEventListener('click', showEditPersonalInfoModal);
+    editPersonalInfoBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showEditPersonalInfoModal();
+    });
   }
+  
+  console.log('✅ 모든 이벤트 리스너 설정 완료');
 }
 
 // 계정 데이터 로드
