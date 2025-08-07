@@ -255,13 +255,16 @@ function renderPromotionDetail(store) {
       .loyalty-levels-grid {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
+        align-items: center;
+        padding: 0 10px;
       }
 
       .loyalty-level-card {
-        width: 100%;
-        border-radius: 8px;
-        padding: 12px 16px;
+        width: 95%;
+        max-width: 360px;
+        border-radius: 12px;
+        padding: 16px 20px;
         border: 2px solid;
         transition: all 0.3s ease;
         position: relative;
@@ -269,7 +272,8 @@ function renderPromotionDetail(store) {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        min-height: 60px;
+        min-height: 70px;
+        margin: 0 auto;
       }
 
       .loyalty-level-card:hover {
@@ -304,14 +308,14 @@ function renderPromotionDetail(store) {
       .level-header {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         margin-bottom: 0;
         text-align: left;
-        min-width: 120px;
+        min-width: 130px;
       }
 
       .level-icon {
-        font-size: 20px;
+        font-size: 22px;
         margin-bottom: 0;
       }
 
@@ -321,14 +325,14 @@ function renderPromotionDetail(store) {
       }
 
       .level-name {
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 700;
-        margin-bottom: 2px;
+        margin-bottom: 3px;
         line-height: 1.2;
       }
 
       .level-requirement {
-        font-size: 10px;
+        font-size: 11px;
         opacity: 0.9;
         font-weight: 500;
         line-height: 1.2;
@@ -337,18 +341,19 @@ function renderPromotionDetail(store) {
       .level-benefits {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 8px;
         flex: 1;
+        justify-content: flex-end;
       }
 
       .benefit-item {
-        font-size: 10px;
-        line-height: 1.2;
+        font-size: 11px;
+        line-height: 1.3;
         opacity: 0.95;
         font-weight: 500;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 2px 6px;
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 4px 8px;
+        border-radius: 6px;
         white-space: nowrap;
       }
 
@@ -364,17 +369,36 @@ function renderPromotionDetail(store) {
 
       /* 반응형 조정 */
       @media (max-width: 380px) {
+        .loyalty-levels-grid {
+          padding: 0 5px;
+        }
+        
         .loyalty-level-card {
-          padding: 10px 14px;
-          min-height: 55px;
+          width: 98%;
+          padding: 14px 16px;
+          min-height: 65px;
         }
         
         .level-header {
-          min-width: 100px;
+          min-width: 110px;
+          gap: 8px;
+        }
+        
+        .level-icon {
+          font-size: 20px;
+        }
+        
+        .level-name {
+          font-size: 13px;
+        }
+        
+        .level-requirement {
+          font-size: 10px;
         }
         
         .benefit-item {
-          font-size: 9px;
+          font-size: 10px;
+          padding: 3px 6px;
         }
       }
     </style>
