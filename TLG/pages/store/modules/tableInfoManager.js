@@ -96,42 +96,10 @@ window.TableInfoManager = {
       statusBadgeEl.className = `tlr-status-badge ${info.statusClass || ''}`;
     }
 
-    // 미니 테이블 UI 업데이트
-    this.updateMiniTableUI(info);
-
     // 헤더의 매장 운영 상태도 함께 업데이트
     this.updateStoreHeaderStatus(info.statusText, info.statusClass);
 
     console.log(`✅ 테이블 정보 UI 업데이트 완료: ${info.statusText}`);
-  },
-
-  updateMiniTableUI(info) {
-    // 퀵 스탯 업데이트 (헤더 오른쪽)
-    const quickAvailableEl = document.getElementById('quickAvailableTables');
-    if (quickAvailableEl) {
-      quickAvailableEl.textContent = info.availableTables;
-    }
-
-    // 미니 테이블 현황 업데이트
-    const miniElements = {
-      totalTables: document.getElementById('miniTotalTables'),
-      availableTables: document.getElementById('miniAvailableTables'),
-      occupiedTables: document.getElementById('miniOccupiedTables'),
-      usageRate: document.getElementById('miniUsageRate'),
-      usageFill: document.getElementById('miniUsageFill'),
-      statusBadge: document.getElementById('miniTableStatusBadge')
-    };
-
-    if (miniElements.totalTables) miniElements.totalTables.textContent = info.totalTables;
-    if (miniElements.availableTables) miniElements.availableTables.textContent = info.availableTables;
-    if (miniElements.occupiedTables) miniElements.occupiedTables.textContent = info.occupiedTables;
-    if (miniElements.usageRate) miniElements.usageRate.textContent = `${info.occupancyRate}%`;
-    if (miniElements.usageFill) miniElements.usageFill.style.width = `${info.occupancyRate}%`;
-    
-    if (miniElements.statusBadge) {
-      miniElements.statusBadge.textContent = info.statusText;
-      miniElements.statusBadge.className = `table-status-badge ${info.statusClass || ''}`;
-    }
   },
 
   updateStoreHeaderStatus(statusText, statusClass) {

@@ -1,7 +1,7 @@
 
 // 매장 UI 렌더링 관리자
 window.StoreUIManager = {
-  renderStoreHTML(store, displayRating, reviewCount = 0) {
+  renderStoreHTML(store, displayRating) {
     const main = document.getElementById('main');
 
     main.innerHTML = `
@@ -21,186 +21,31 @@ window.StoreUIManager = {
         <div id="panelHandle"></div>
         <div id="storePanelContainer">
           <div id="storeInfoContainer">
-            <div class="store-main-header">
-              <div class="header-left">
-                <div class="rating-section">
-                  <span id="reviewStar">★</span>
-                  <span id="reviewScore">${displayRating}</span>
-                  <span id="reviewLink" class="review-link">리뷰 보기 (${reviewCount})</span>
-                </div>
-                <h2 id="storeName">${store.name}</h2>
-                <div class="status-tags">
-                  <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
-                    ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
-                  </span>
-                  <span class="category-tag">음식점</span>
-                </div>
-              </div>
-              <div class="header-right">
-                <button id="favoriteBtn" class="favorite-btn">♡</button>
-                <div class="quick-stats">
-                  <div class="quick-stat">
-                    <span class="stat-number" id="quickAvailableTables">-</span>
-                    <span class="stat-label">빈 테이블</span>
+            <div class="storeInfo">
+              <div class="store-header-section">
+                <div class="store-main-info">
+                  <div class="score-row">
+                    <div class="rating-container">
+                      <span id="reviewStar">★</span>
+                      <span id="reviewScore">${displayRating}</span>
+                      <span id="reviewLink" class="review-link">리뷰 보기</span>
+                    </div>
+                    <button id="favoriteBtn" class="favorite-btn">♡</button>
+                  </div>
+                  <h2 id="storeName">${store.name}</h2>
+                  <div class="store-status-container">
+                    <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
+                      ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+                    </span>
+                    <span class="store-category-tag">음식점</span>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <div class="info-grid">
-              <div class="promotion-section">
-                <div class="section-header">
-                  <div class="header-left">
-                    <span class="section-icon">🎁</span>
-                    <h3 class="section-title">혜택 정보</h3>
-                  </div>
-                  <span class="live-indicator">LIVE</span>
-                </div>
-                <div class="promotion-items">
-                  <div class="promo-item">
-                    <div class="promo-content">
-                      <span class="promo-name">신규 고객 할인</span>
-                      <span class="promo-desc">첫 주문 시</span>
-                    </div>
-                    <span class="promo-badge">10%</span>
-                  </div>
-                  <div class="promo-item">
-                    <div class="promo-content">
-                      <span class="promo-name">단골 추가 혜택</span>
-                      <span class="promo-desc">VIP 등급 시</span>
-                    </div>
-                    <span class="promo-badge vip">VIP</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="loyalty-section">
-                <div class="section-header">
-                  <div class="header-left">
-                    <span class="section-icon">👑</span>
-                    <h3 class="section-title">단골 등급</h3>
-                  </div>
-                  <span class="level-badge">골드</span>
-                </div>
-                <div class="loyalty-content">
-                  <div class="progress-container">
-                    <div class="progress-info">
-                      <span class="current-level">Lv.3</span>
-                      <span class="next-level">→ Lv.4까지 3회 방문</span>
-                    </div>
-                    <div class="progress-bar">
-                      <div class="progress-fill" style="width: 75%;"></div>
-                    </div>
-                  </div>
-                  <div class="benefits-row">
-                    <div class="benefit-item">
-                      <span class="benefit-icon">🎁</span>
-                      <span class="benefit-text">무료음료</span>
-                    </div>
-                    <div class="benefit-item">
-                      <span class="benefit-icon">⚡</span>
-                      <span class="benefit-text">우선주문</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="table-section">
-                <div class="section-header">
-                  <div class="header-left">
-                    <span class="section-icon">🏪</span>
-                    <h3 class="section-title">테이블 현황</h3>
-                  </div>
-                  <span class="status-indicator" id="miniTableStatusBadge">로딩중</span>
-                </div>
-                <div class="table-content">
-                  <div class="table-stats">
-                    <div class="stat-group">
-                      <div class="stat-item total">
-                        <span class="stat-number" id="miniTotalTables">-</span>
-                        <span class="stat-label">전체</span>
-                      </div>
-                      <div class="stat-item available">
-                        <span class="stat-number" id="miniAvailableTables">-</span>
-                        <span class="stat-label">빈 테이블</span>
-                      </div>
-                      <div class="stat-item occupied">
-                        <span class="stat-number" id="miniOccupiedTables">-</span>
-                        <span class="stat-label">사용중</span>
-                      </div>
-                    </div>
-                    <div class="usage-display">
-                      <span class="usage-label">사용률</span>
-                      <div class="usage-bar">
-                        <div class="usage-fill" id="miniUsageFill"></div>
-                      </div>
-                      <span class="usage-percent" id="miniUsageRate">-%</span>
-                    </div>
-                  </div>
-                  <button class="layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-                    <span class="btn-icon">🗺️</span>
-                    <span class="btn-text">테이블 배치도 보기</span>
-                  </button>
-                </div>
-              </div>
-              
-              <div class="review-section">
-                <div class="section-header">
-                  <div class="header-left">
-                    <span class="section-icon">💬</span>
-                    <h3 class="section-title">리뷰</h3>
-                  </div>
-                  <button class="more-btn">전체보기</button>
-                </div>
-                <div class="review-content">
-                  <div class="review-preview">
-                    <div class="review-item">
-                      <div class="reviewer-info">
-                        <span class="reviewer-name">🐤 익명</span>
-                        <span class="review-rating">★★★★★</span>
-                      </div>
-                      <p class="review-text">매장이 깔끔하고 음식도 맛있어요!</p>
-                    </div>
-                    <div class="review-item">
-                      <div class="reviewer-info">
-                        <span class="reviewer-name">🍙 user123</span>
-                        <span class="review-rating">★★★★☆</span>
-                      </div>
-                      <p class="review-text">포장 주문했는데 빨리 나와서 좋았습니다</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="info-section">
-                <div class="section-header">
-                  <div class="header-left">
-                    <span class="section-icon">ℹ️</span>
-                    <h3 class="section-title">매장 정보</h3>
-                  </div>
-                </div>
-                <div class="info-content">
-                  <div class="info-items">
-                    <div class="info-row">
-                      <span class="info-label">📍 거리</span>
-                      <span class="info-value">도보 3분</span>
-                    </div>
-                    <div class="info-row">
-                      <span class="info-label">🕐 운영시간</span>
-                      <span class="info-value">11:00-22:00</span>
-                    </div>
-                    <div class="info-row">
-                      <span class="info-label">📞 주문</span>
-                      <span class="info-value">전화주문 가능</span>
-                    </div>
-                    <div class="info-row special">
-                      <span class="info-label">🔥 인기</span>
-                      <span class="info-value">인기 매장</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            ${this.renderPromotionCardHTML(store)}
+            ${this.renderLoyaltyLevelHTML()}
+            ${this.renderTableStatusHTML(store)}
+            ${this.renderReviewPreviewHTML()}
           </div>
           <div id="storeNavBar" class="modern-nav">
             <button class="nav-btn" data-tab="menu">
@@ -236,7 +81,162 @@ window.StoreUIManager = {
     `;
   },
 
-  
+  renderTableStatusHTML(store) {
+    return `
+      <div id="TLR" class="tlr-container modern-card">
+        <div class="tlr-header">
+          <div class="tlr-title">
+            <span class="tlr-icon">🏪</span>
+            <span>실시간 테이블 현황</span>
+          </div>
+          <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">
+            ${store.isOpen ? '로딩중...' : '운영중지'}
+          </div>
+        </div>
+        <div class="tlr-stats-grid">
+          <div class="stat-card primary">
+            <div class="stat-value" id="totalTables">-</div>
+            <div class="stat-label">총 테이블</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-value" id="availableTables">-</div>
+            <div class="stat-label">이용 가능</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-value" id="totalSeats">-</div>
+            <div class="stat-label">총 좌석</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-value" id="availableSeats">-</div>
+            <div class="stat-label">잔여 좌석</div>
+          </div>
+        </div>
+        <div class="usage-rate-container">
+          <div class="usage-rate-header">
+            <span>테이블 사용률</span>
+            <span class="usage-percentage" id="occupancyRate">-%</span>
+          </div>
+          <div class="usage-rate-bar">
+            <div class="usage-rate-fill" id="usageRateFill"></div>
+          </div>
+        </div>
+        <button class="tlr-layout-btn modern-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+          <span class="btn-icon">🗺️</span>
+          <span>테이블 배치도 보기</span>
+        </button>
+      </div>
+    `;
+  },
+
+  renderReviewPreviewHTML() {
+    return `
+      <div id="reviewPreview" class="review-preview modern-card">
+        <div class="section-header">
+          <h3 class="section-title">최근 리뷰</h3>
+          <button class="see-more-btn modern-text-btn">전체보기</button>
+        </div>
+        <div id="reviewPreviewContent" class="review-content">
+          <div class="review-card modern-review">
+            <div class="review-header">
+              <span class="review-user">🐤 익명</span>
+              <div class="review-meta">
+                <span class="review-score">★ 5</span>
+                <span class="review-date">1일 전</span>
+              </div>
+            </div>
+            <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
+          </div>
+          <div class="review-card modern-review">
+            <div class="review-header">
+              <span class="review-user">🍙 user123</span>
+              <div class="review-meta">
+                <span class="review-score">★ 4</span>
+                <span class="review-date">3일 전</span>
+              </div>
+            </div>
+            <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderPromotionCardHTML(store) {
+    return `
+      <div class="promotion-card modern-gradient-card">
+        <div class="promotion-header">
+          <div class="promotion-title">
+            <span class="promotion-emoji">🎉</span>
+            <span>진행중인 혜택</span>
+          </div>
+          <span class="promotion-badge live">LIVE</span>
+        </div>
+        <div class="promotion-content">
+          <div class="promotion-item featured">
+            <div class="promotion-left">
+              <span class="promotion-icon">🎁</span>
+              <div class="promotion-info">
+                <div class="promotion-name">신규 방문 혜택</div>
+                <div class="promotion-desc">첫 방문 시 10% 할인</div>
+              </div>
+            </div>
+            <div class="promotion-discount">10%</div>
+          </div>
+          <div class="promotion-item">
+            <div class="promotion-left">
+              <span class="promotion-icon">⭐</span>
+              <div class="promotion-info">
+                <div class="promotion-name">단골 고객 혜택</div>
+                <div class="promotion-desc">레벨 3 이상 5% 추가 할인</div>
+              </div>
+            </div>
+            <div class="promotion-tag">VIP</div>
+          </div>
+        </div>
+        <button class="promotion-detail-btn">
+          <span>혜택 자세히 보기</span>
+          <span class="arrow">→</span>
+        </button>
+      </div>
+    `;
+  },
+
+  renderLoyaltyLevelHTML() {
+    return `
+      <div class="loyalty-card modern-gradient-card loyalty-theme">
+        <div class="loyalty-header">
+          <div class="loyalty-title">
+            <span class="loyalty-crown">👑</span>
+            <span>내 단골 등급</span>
+          </div>
+          <div class="loyalty-level-badge">골드</div>
+        </div>
+        <div class="loyalty-progress-section">
+          <div class="progress-info">
+            <span class="current-level">Lv.3 골드 단골</span>
+            <span class="next-level">다음 등급까지 3회</span>
+          </div>
+          <div class="loyalty-progress-bar modern-progress">
+            <div class="loyalty-progress-fill" style="width: 75%;"></div>
+          </div>
+        </div>
+        <div class="loyalty-benefits-grid">
+          <div class="benefit-item">
+            <span class="benefit-icon">🎁</span>
+            <span class="benefit-text">무료 음료</span>
+          </div>
+          <div class="benefit-item">
+            <span class="benefit-icon">⚡</span>
+            <span class="benefit-text">우선 주문</span>
+          </div>
+          <div class="benefit-item">
+            <span class="benefit-icon">🎂</span>
+            <span class="benefit-text">생일 쿠폰</span>
+          </div>
+        </div>
+      </div>
+    `;
+  },
 
   getStoreStyles() {
     return `
@@ -384,62 +384,53 @@ window.StoreUIManager = {
 
         .modern-card {
           background: white;
-          border-radius: 12px 18px 14px 16px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
-          margin-bottom: 18px;
-          border: 1px solid rgba(0,0,0,0.06);
-          transform: rotate(0.2deg);
-        }
-        
-        .modern-card:nth-child(even) {
-          transform: rotate(-0.3deg);
-          border-radius: 16px 12px 18px 14px;
-        }
-        
-        .modern-card:nth-child(3n) {
-          transform: rotate(0.1deg);
-          border-radius: 15px 17px 13px 19px;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+          margin-bottom: 16px;
+          border: 1px solid rgba(0,0,0,0.04);
         }
 
-        .store-main-header {
-          padding: 16px 20px;
+        .storeInfo {
+          padding: 24px 20px 20px 20px;
+        }
+
+        .store-header-section {
           display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .score-row {
+          display: flex;
+          align-items: center;
           justify-content: space-between;
-          align-items: flex-start;
-          gap: 16px;
-          background: white;
           margin-bottom: 8px;
         }
 
-        .header-left {
-          flex: 1;
-        }
-
-        .rating-section {
+        .rating-container {
           display: flex;
           align-items: center;
           gap: 6px;
-          margin-bottom: 8px;
         }
 
         #reviewStar {
-          font-size: 18px;
+          font-size: 20px;
           color: #fbbf24;
         }
 
         #reviewScore {
           font-weight: 700;
-          font-size: 16px;
+          font-size: 18px;
           color: #111827;
         }
 
         .review-link {
           color: #3b82f6;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
           cursor: pointer;
-          padding: 3px 6px;
-          border-radius: 4px;
+          padding: 4px 8px;
+          border-radius: 6px;
           transition: background 0.2s ease;
         }
         
@@ -447,30 +438,45 @@ window.StoreUIManager = {
           background: #eff6ff;
         }
 
-        #storeName {
+        .favorite-btn {
+          border: none;
+          background: none;
           font-size: 24px;
+          color: #ef4444;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 12px;
+          transition: all 0.2s ease;
+        }
+        
+        .favorite-btn:hover {
+          background: #fef2f2;
+          transform: scale(1.1);
+        }
+
+        #storeName {
+          font-size: 28px;
           font-weight: 800;
           color: #111827;
-          margin: 0 0 8px 0;
-          letter-spacing: -0.3px;
+          margin: 0 0 12px 0;
+          letter-spacing: -0.5px;
           line-height: 1.2;
         }
 
-        .status-tags {
+        .store-status-container {
           display: flex;
           align-items: center;
-          gap: 6px;
-          flex-wrap: wrap;
+          gap: 8px;
         }
 
         .store-status {
-          font-size: 11px;
+          font-size: 13px;
           font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 12px;
+          padding: 6px 12px;
+          border-radius: 20px;
           display: inline-flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
         }
 
         .store-status.open {
@@ -485,515 +491,18 @@ window.StoreUIManager = {
           border: 1px solid #fecaca;
         }
 
-        .category-tag {
+        .store-category-tag {
           background: #f3f4f6;
           color: #6b7280;
-          font-size: 10px;
-          font-weight: 500;
-          padding: 3px 6px;
-          border-radius: 8px;
-        }
-
-        .header-right {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 8px;
-        }
-
-        .favorite-btn {
-          border: none;
-          background: none;
-          font-size: 20px;
-          color: #ef4444;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 8px;
-          transition: all 0.2s ease;
-        }
-        
-        .favorite-btn:hover {
-          background: #fef2f2;
-          transform: scale(1.05);
-        }
-
-        .quick-stats {
-          display: flex;
-          gap: 8px;
-        }
-
-        .quick-stat {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 6px 8px;
-          background: #f0f9ff;
-          border-radius: 8px;
-          border: 1px solid #e0f2fe;
-        }
-
-        .stat-number {
-          font-size: 16px;
-          font-weight: 700;
-          color: #0369a1;
-        }
-
-        .stat-label {
-          font-size: 9px;
-          color: #64748b;
-          font-weight: 500;
-        }
-
-        /* 정보 그리드 레이아웃 */
-        .info-grid {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-          padding: 0 20px 24px 20px;
-        }
-
-        .info-grid > div {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-          border: 1px solid rgba(0,0,0,0.04);
-          overflow: hidden;
-        }
-
-        .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 18px 20px 16px 20px;
-          border-bottom: 1px solid #f1f3f4;
-          background: #fafbfc;
-        }
-
-        .header-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .section-icon {
-          font-size: 20px;
-        }
-
-        .section-title {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        /* 프로모션 섹션 */
-        .live-indicator {
-          background: #ef4444;
-          color: white;
-          font-size: 11px;
-          font-weight: 700;
-          padding: 4px 10px;
-          border-radius: 12px;
-          animation: pulse 2s infinite;
-        }
-
-        .promotion-items {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .promo-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .promo-content {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .promo-name {
-          font-size: 15px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .promo-desc {
-          font-size: 13px;
-          color: #6b7280;
-        }
-
-        .promo-badge {
-          background: #3b82f6;
-          color: white;
-          font-size: 14px;
-          font-weight: 700;
-          padding: 8px 16px;
-          border-radius: 20px;
-        }
-
-        .promo-badge.vip {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        }
-
-        /* 단골 등급 섹션 */
-        .level-badge {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: white;
           font-size: 12px;
-          font-weight: 700;
-          padding: 6px 14px;
-          border-radius: 16px;
-        }
-
-        .loyalty-content {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .progress-container {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .progress-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .current-level {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .next-level {
-          font-size: 13px;
-          color: #6b7280;
-        }
-
-        .progress-bar {
-          width: 100%;
-          height: 8px;
-          background: #e5e7eb;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
-          border-radius: 4px;
-          transition: width 0.3s ease;
-        }
-
-        .benefits-row {
-          display: flex;
-          gap: 12px;
-        }
-
-        .benefit-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          background: #f0f9ff;
-          border-radius: 20px;
-          border: 1px solid #bae6fd;
-        }
-
-        .benefit-icon {
-          font-size: 16px;
-        }
-
-        .benefit-text {
-          font-size: 13px;
-          font-weight: 600;
-          color: #0369a1;
-        }
-
-        /* 테이블 섹션 */
-        .status-indicator {
-          background: #10b981;
-          color: white;
-          font-size: 11px;
-          font-weight: 600;
-          padding: 4px 10px;
+          font-weight: 500;
+          padding: 4px 8px;
           border-radius: 12px;
-        }
-
-        .status-indicator.busy {
-          background: #f59e0b;
-        }
-
-        .status-indicator.full {
-          background: #ef4444;
-        }
-
-        .status-indicator.closed {
-          background: #6b7280;
-        }
-
-        .table-content {
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 18px;
-        }
-
-        .table-stats {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .stat-group {
-          display: flex;
-          justify-content: space-between;
-          gap: 8px;
-        }
-
-        .stat-item {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 12px 8px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .stat-item.total {
-          background: #f0f9ff;
-          border-color: #bae6fd;
-        }
-
-        .stat-item.available {
-          background: #f0fdf4;
-          border-color: #bbf7d0;
-        }
-
-        .stat-item.occupied {
-          background: #fef2f2;
-          border-color: #fecaca;
-        }
-
-        .stat-number {
-          font-size: 18px;
-          font-weight: 800;
-          margin-bottom: 4px;
-        }
-
-        .stat-item.total .stat-number {
-          color: #0369a1;
-        }
-
-        .stat-item.available .stat-number {
-          color: #059669;
-        }
-
-        .stat-item.occupied .stat-number {
-          color: #dc2626;
-        }
-
-        .stat-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7280;
-        }
-
-        .usage-display {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: #f8fafc;
-          border-radius: 12px;
-        }
-
-        .usage-label {
-          font-size: 14px;
-          font-weight: 600;
-          color: #374151;
-          min-width: 50px;
-        }
-
-        .usage-bar {
-          flex: 1;
-          height: 8px;
-          background: #e5e7eb;
-          border-radius: 4px;
-          overflow: hidden;
-        }
-
-        .usage-fill {
-          height: 100%;
-          background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-          border-radius: 4px;
-          transition: width 0.3s ease;
-          width: 0%;
-        }
-
-        .usage-percent {
-          font-size: 14px;
-          font-weight: 700;
-          color: #3b82f6;
-          min-width: 40px;
-          text-align: right;
-        }
-
-        .layout-btn {
-          width: 100%;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          border: none;
-          color: white;
-          font-size: 15px;
-          font-weight: 600;
-          padding: 14px 20px;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .layout-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-icon {
-          font-size: 18px;
-        }
-
-        .btn-text {
-          font-weight: 600;
-        }
-
-        /* 리뷰 섹션 */
-        .more-btn {
-          background: none;
-          border: none;
-          color: #3b82f6;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 6px 12px;
-          border-radius: 8px;
-          transition: background 0.2s ease;
-        }
-
-        .more-btn:hover {
-          background: #eff6ff;
-        }
-
-        .review-content {
-          padding: 20px;
-        }
-
-        .review-preview {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .review-item {
-          padding: 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .reviewer-info {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-
-        .reviewer-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: #3b82f6;
-        }
-
-        .review-rating {
-          font-size: 14px;
-          color: #fbbf24;
-        }
-
-        .review-text {
-          margin: 0;
-          font-size: 14px;
-          color: #374151;
-          line-height: 1.5;
-        }
-
-        /* 정보 섹션 */
-        .info-content {
-          padding: 20px;
-        }
-
-        .info-items {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .info-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .info-row.special {
-          background: linear-gradient(135deg, #ff6366 0%, #ff9a56 100%);
-          color: white;
-          border: none;
-        }
-
-        .info-label {
-          font-size: 14px;
-          font-weight: 600;
-          color: #6b7280;
-        }
-
-        .info-row.special .info-label {
-          color: white;
-        }
-
-        .info-value {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1f2937;
-        }
-
-        .info-row.special .info-value {
-          color: white;
         }
 
         /* 테이블 현황 스타일 */
         .tlr-container {
-          padding: 18px 22px 20px 18px;
+          padding: 20px;
         }
 
         .tlr-header {
@@ -1042,38 +551,22 @@ window.StoreUIManager = {
         .tlr-stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 10px 14px;
-          margin-bottom: 22px;
+          gap: 12px;
+          margin-bottom: 20px;
         }
 
         .stat-card {
           background: #f8fafc;
-          border-radius: 10px 14px 12px 11px;
-          padding: 15px 11px 17px 13px;
+          border-radius: 12px;
+          padding: 16px 12px;
           text-align: center;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
-          transform: rotate(0.5deg);
-        }
-        
-        .stat-card:nth-child(2) {
-          transform: rotate(-0.8deg);
-          border-radius: 13px 9px 15px 12px;
-        }
-        
-        .stat-card:nth-child(3) {
-          transform: rotate(0.3deg);
-          border-radius: 11px 13px 10px 14px;
-        }
-        
-        .stat-card:nth-child(4) {
-          transform: rotate(-0.4deg);
-          border-radius: 14px 10px 13px 11px;
         }
 
         .stat-card:hover {
-          transform: translateY(-2px) rotate(0deg);
-          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .stat-card.primary {
@@ -1269,17 +762,9 @@ window.StoreUIManager = {
 
         .modern-review {
           background: #f8fafc;
-          border-radius: 10px 14px 11px 13px;
-          padding: 15px 17px 16px 15px;
+          border-radius: 12px;
+          padding: 16px;
           border: 1px solid #e2e8f0;
-          transform: rotate(0.2deg);
-          margin: 10px 2px 14px 1px;
-        }
-        
-        .modern-review:nth-child(even) {
-          transform: rotate(-0.3deg);
-          border-radius: 13px 10px 14px 11px;
-          margin: 14px 1px 10px 2px;
         }
 
         .review-header {
@@ -1371,20 +856,12 @@ window.StoreUIManager = {
 
         .promotion-item {
           background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px 14px 11px 13px;
-          padding: 13px 15px 14px 13px;
+          border-radius: 12px;
+          padding: 14px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           backdrop-filter: blur(10px);
-          transform: rotate(0.3deg);
-          margin: 8px 2px 12px 1px;
-        }
-        
-        .promotion-item:nth-child(even) {
-          transform: rotate(-0.4deg);
-          border-radius: 13px 11px 14px 10px;
-          margin: 12px 1px 8px 2px;
         }
 
         .promotion-item.featured {
@@ -1528,26 +1005,14 @@ window.StoreUIManager = {
 
         .benefit-item {
           background: rgba(255, 255, 255, 0.1);
-          padding: 11px 7px 13px 9px;
-          border-radius: 8px 12px 9px 11px;
+          padding: 12px 8px;
+          border-radius: 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 6px;
           flex: 1;
           backdrop-filter: blur(10px);
-          transform: rotate(0.6deg);
-        }
-        
-        .benefit-item:nth-child(2) {
-          transform: rotate(-0.5deg);
-          border-radius: 11px 8px 12px 9px;
-          padding: 13px 9px 11px 7px;
-        }
-        
-        .benefit-item:nth-child(3) {
-          transform: rotate(0.2deg);
-          border-radius: 9px 11px 8px 12px;
         }
 
         .benefit-icon {
