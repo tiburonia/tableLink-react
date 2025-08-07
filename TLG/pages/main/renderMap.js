@@ -16,6 +16,15 @@ async function renderMap() {
 
   // UI 먼저 렌더링
   main.innerHTML = `
+    <div id="searchBar">
+      <div class="search-container">
+        <input id="searchInput" type="text" placeholder="매장명 또는 카테고리 검색...">
+        <button id="searchBtn">🔍</button>
+        <button id="clearBtn">✕</button>
+      </div>
+      <div id="searchResults" class="search-results hidden"></div>
+    </div>
+
     <main id="content">
       <div id="map" style="width: 100%; height: 100%; min-height: 100vh;"></div>
       ${window.MapPanelUI.renderPanelHTML()}
@@ -23,7 +32,7 @@ async function renderMap() {
 
     <nav id="bottomBar">
       <button id= "TLL">📱</button>
-      <button onclick="renderSearch()">🔍</button>
+      <button id="focusSearchBtn">🔍</button>
       <button>🗺️</button>
       <button onclick="renderMyPage()">👤</button>
       <button onclick="logOutF()">👋</button>
@@ -40,15 +49,120 @@ async function renderMap() {
   overflow: hidden;
 }
 
-/* 콘텐츠 전체 */
+/* 검색바 */
+#searchBar {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  width: 100%;
+  max-width: 430px;
+  z-index: 1002;
+  padding: 12px 16px;
+  box-sizing: border-box;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 25px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+#searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 16px;
+  color: #333;
+  padding: 8px 12px;
+}
+
+#searchInput::placeholder {
+  color: #999;
+}
+
+#searchBtn, #clearBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+#searchBtn:hover, #clearBtn:hover {
+  background: rgba(41, 126, 252, 0.1);
+}
+
+#clearBtn {
+  color: #999;
+  font-size: 14px;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 0 0 15px 15px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+  margin-top: 4px;
+}
+
+.search-results.hidden {
+  display: none;
+}
+
+.search-result-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.search-result-item:hover {
+  background: rgba(41, 126, 252, 0.05);
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.result-info {
+  font-size: 14px;
+  color: #666;
+}
+
+/* 콘텐츠 전체 - 검색바 공간 확보 */
 #content {
   position: fixed;
-  top: 0;
+  top: 140px;   /* 검색바 공간 확보 */
   bottom: 84px;   /* 바텀바 높이 + 둥근 모서리 여백 */
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: calc(100vh - 84px);
+  height: calc(100vh - 224px);
   overflow: hidden;
   background: #fdfdfd;
   z-index: 1;
@@ -261,6 +375,138 @@ async function renderMap() {
   renderTLL.addEventListener('click', async () => {
     await TLL();
   })
+
+  // 검색 기능 구현
+  const searchInput = document.getElementById('searchInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const searchResults = document.getElementById('searchResults');
+
+  let searchTimeout;
+
+  // 검색 함수
+  async function performSearch(keyword) {
+    if (!keyword.trim()) {
+      searchResults.classList.add('hidden');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/stores');
+      const data = await response.json();
+      const stores = data.stores || [];
+
+      const results = stores.filter(store =>
+        store.name.toLowerCase().includes(keyword.toLowerCase()) ||
+        store.category.toLowerCase().includes(keyword.toLowerCase())
+      );
+
+      displaySearchResults(results);
+    } catch (error) {
+      console.error('검색 실패:', error);
+      searchResults.innerHTML = '<div class="search-result-item">검색 중 오류가 발생했습니다.</div>';
+      searchResults.classList.remove('hidden');
+    }
+  }
+
+  // 검색 결과 표시
+  function displaySearchResults(results) {
+    if (results.length === 0) {
+      searchResults.innerHTML = '<div class="search-result-item">검색 결과가 없습니다.</div>';
+    } else {
+      searchResults.innerHTML = results.slice(0, 10).map(store => `
+        <div class="search-result-item" data-store-id="${store.id}">
+          <div class="result-name">${store.name}</div>
+          <div class="result-info">${store.category} • ${store.isOpen ? '운영중' : '운영중지'} • ★${store.ratingAverage || '0.0'}</div>
+        </div>
+      `).join('');
+
+      // 검색 결과 클릭 이벤트
+      searchResults.querySelectorAll('.search-result-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const storeId = parseInt(item.dataset.storeId);
+          const store = results.find(s => s.id === storeId);
+          if (store) {
+            // 지도 중심을 해당 매장으로 이동
+            if (store.coord && store.coord.lat && store.coord.lng) {
+              const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
+              map.setCenter(position);
+              map.setLevel(2); // 줌 레벨 설정
+            }
+            
+            // 검색 결과 숨기기 및 입력창 초기화
+            searchResults.classList.add('hidden');
+            searchInput.value = store.name;
+            
+            // 매장 상세 페이지로 이동 (선택사항)
+            setTimeout(() => {
+              if (typeof renderStore === 'function') {
+                renderStore(store);
+              }
+            }, 500);
+          }
+        });
+      });
+    }
+    
+    searchResults.classList.remove('hidden');
+  }
+
+  // 입력 이벤트 (실시간 검색)
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    const keyword = e.target.value.trim();
+    
+    if (keyword) {
+      clearBtn.style.display = 'flex';
+      searchTimeout = setTimeout(() => performSearch(keyword), 300);
+    } else {
+      clearBtn.style.display = 'none';
+      searchResults.classList.add('hidden');
+    }
+  });
+
+  // 검색 버튼 클릭
+  searchBtn.addEventListener('click', () => {
+    performSearch(searchInput.value.trim());
+  });
+
+  // Enter 키 검색
+  searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      performSearch(searchInput.value.trim());
+    }
+  });
+
+  // 초기화 버튼
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchResults.classList.add('hidden');
+    clearBtn.style.display = 'none';
+    searchInput.focus();
+  });
+
+  // 검색 결과 외부 클릭시 숨기기
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target) && !searchBtn.contains(e.target)) {
+      searchResults.classList.add('hidden');
+    }
+  });
+
+  // 초기 상태에서 초기화 버튼 숨기기
+  clearBtn.style.display = 'none';
+
+  // 바텀바 검색 버튼 클릭시 검색창으로 포커스
+  const focusSearchBtn = document.getElementById('focusSearchBtn');
+  focusSearchBtn.addEventListener('click', () => {
+    searchInput.focus();
+    // 패널이 열려있으면 닫기
+    if (panel.classList.contains('expanded')) {
+      panel.classList.add('collapsed');
+      panel.classList.remove('expanded');
+      panel.style.height = '60px';
+    }
+  });
 
   function duringDrag(y) {
     if (!isDragging) return;
