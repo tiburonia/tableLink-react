@@ -88,6 +88,10 @@ function loadInitialData(store) {
     }, 500); // 페이지 렌더링 후 테이블 정보 로드
   }
 
+  // 프로모션 및 단골 레벨 정보 로드
+  loadPromotionData(store);
+  loadLoyaltyData(store);
+
   // 첫 화면(메뉴 탭) 설정
   window.StoreTabManager.renderStoreTab('menu', store);
   const menuBtn = document.querySelector('[data-tab="menu"]');
@@ -196,7 +200,92 @@ async function loadAndRenderStore(storeId) {
   }
 }
 
+// 프로모션 데이터 로드
+function loadPromotionData(store) {
+  // 실제로는 API에서 가져올 데이터, 현재는 목업 데이터 사용
+  console.log(`🎉 매장 ${store.id} 프로모션 정보 로드`);
+  
+  // 프로모션 더보기 버튼 이벤트 추가
+  setTimeout(() => {
+    const promotionMoreBtn = document.querySelector('.promotion-more-btn');
+    if (promotionMoreBtn) {
+      promotionMoreBtn.addEventListener('click', () => {
+        showAllPromotions(store);
+      });
+    }
+  }, 100);
+}
+
+// 단골 레벨 데이터 로드
+async function loadLoyaltyData(store) {
+  try {
+    console.log(`⭐ 매장 ${store.id} 단골 레벨 정보 로드`);
+    
+    // 현재 로그인한 사용자 정보 가져오기
+    const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
+    
+    if (!userInfo) {
+      console.log('👤 로그인하지 않은 사용자 - 기본 단골 레벨 표시');
+      updateLoyaltyUI({
+        level: '신규 고객',
+        visitCount: 0,
+        progressPercent: 0,
+        nextLevelVisits: 5,
+        benefits: ['첫방문 할인', '웰컴 쿠폰', '신규 혜택']
+      });
+      return;
+    }
+
+    // 실제 API 호출 (현재는 목업 데이터)
+    // const response = await fetch(`/api/stores/${store.id}/loyalty/${userInfo.id}`);
+    
+    // 목업 데이터
+    const loyaltyData = {
+      level: '골드 단골',
+      visitCount: 13,
+      progressPercent: 65,
+      nextLevelVisits: 7,
+      benefits: ['5% 적립', '우선 주문', '특별 할인']
+    };
+
+    updateLoyaltyUI(loyaltyData);
+    
+  } catch (error) {
+    console.error('❌ 단골 레벨 정보 로드 실패:', error);
+  }
+}
+
+// 단골 레벨 UI 업데이트
+function updateLoyaltyUI(data) {
+  const levelElement = document.querySelector('.loyalty-level');
+  const progressFill = document.querySelector('.loyalty-progress-fill');
+  const progressText = document.querySelector('.loyalty-progress-text');
+  
+  if (levelElement) {
+    levelElement.textContent = data.level;
+  }
+  
+  if (progressFill) {
+    progressFill.style.width = `${data.progressPercent}%`;
+  }
+  
+  if (progressText) {
+    progressText.innerHTML = `
+      <span>현재 ${data.progressPercent}% (${data.visitCount}회 방문)</span>
+      <span>다음 레벨까지 ${data.nextLevelVisits}회</span>
+    `;
+  }
+}
+
+// 모든 프로모션 보기
+function showAllPromotions(store) {
+  alert(`매장 ${store.name}의 모든 프로모션을 확인할 수 있는 페이지로 이동합니다.`);
+  // 실제로는 전체 프로모션 페이지로 이동하는 로직 구현
+}
+
 // 전역 함수 등록
 window.renderStore = renderStore;
 window.renderTableLayout = renderTableLayout;
 window.loadAndRenderStore = loadAndRenderStore;
+window.loadPromotionData = loadPromotionData;
+window.loadLoyaltyData = loadLoyaltyData;

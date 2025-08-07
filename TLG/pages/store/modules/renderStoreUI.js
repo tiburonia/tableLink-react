@@ -1,9 +1,8 @@
-
 // 매장 UI 렌더링 관리자
 window.StoreUIManager = {
   renderStoreHTML(store, displayRating) {
     const main = document.getElementById('main');
-    
+
     main.innerHTML = `
       <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
         <span class="header-btn-ico">⬅️</span>
@@ -32,6 +31,8 @@ window.StoreUIManager = {
               </div>
               <p class="store-desc">여기에 간단한 가게 소개 또는 태그</p>
             </div>
+            ${this.renderPromotionCardHTML(store)}
+            ${this.renderLoyaltyLevelHTML()}
             ${this.renderTableStatusHTML(store)}
             ${this.renderReviewPreviewHTML()}
           </div>
@@ -128,6 +129,82 @@ window.StoreUIManager = {
             <span class="review-score">★ 4</span>
             <span class="review-date">3일 전</span>
             <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderPromotionCardHTML(store) {
+    // 임시 데이터로 프로모션 카드 UI를 생성합니다. 실제 데이터 연동 시 수정 필요.
+    return `
+      <div class="promotion-card">
+        <div class="promotion-header">
+          <span class="promotion-title">
+            🎉 오늘의 프로모션
+          </span>
+          <span class="promotion-badge">진행중</span>
+        </div>
+        <div class="promotion-content">
+          <div class="promotion-item">
+            <span class="promotion-icon">🎁</span>
+            <div class="promotion-info">
+              <div class="promotion-name">방문 감사 스탬프</div>
+              <div class="promotion-desc">매장 방문 시 스탬프 1개 지급</div>
+              <div class="promotion-period">~ 2024.12.31</div>
+            </div>
+            <span class="promotion-discount">5%</span>
+          </div>
+          <div class="promotion-item active">
+            <span class="promotion-icon">⭐</span>
+            <div class="promotion-info">
+              <div class="promotion-name">단골 고객 할인</div>
+              <div class="promotion-desc">단골 레벨 3 이상 고객 대상</div>
+              <div class="promotion-period">상시</div>
+            </div>
+            <span class="promotion-tag">단골</span>
+          </div>
+        </div>
+        <button class="promotion-more-btn">
+          자세히 보기
+          <span class="arrow">➡️</span>
+        </button>
+      </div>
+    `;
+  },
+
+  renderLoyaltyLevelHTML() {
+    // 임시 데이터로 단골 레벨 UI를 생성합니다. 실제 데이터 연동 시 수정 필요.
+    return `
+      <div class="loyalty-card">
+        <div class="loyalty-header">
+          <span class="loyalty-title">
+            <span class="loyalty-icon">👑</span>
+            단골 레벨
+          </span>
+          <span class="loyalty-level">Lv. 3 (VIP)</span>
+        </div>
+        <div class="loyalty-progress-container">
+          <div class="loyalty-progress-bar">
+            <div class="loyalty-progress-fill" style="width: 75%;"></div>
+          </div>
+          <div class="loyalty-progress-text">
+            <span>다음 레벨까지 3,000원 남음</span>
+            <span>현재: 7,000원</span>
+          </div>
+        </div>
+        <div class="loyalty-benefits">
+          <div class="loyalty-benefit-item">
+            <span class="benefit-icon">🎁</span>
+            <span class="benefit-text">무료 음료 쿠폰</span>
+          </div>
+          <div class="loyalty-benefit-item">
+            <span class="benefit-icon">⭐</span>
+            <span class="benefit-text">VIP 전용 혜택</span>
+          </div>
+          <div class="loyalty-benefit-item">
+            <span class="benefit-icon">🎈</span>
+            <span class="benefit-text">생일 쿠폰</span>
           </div>
         </div>
       </div>
@@ -282,7 +359,7 @@ window.StoreUIManager = {
           display: flex;
           align-items: center;
         }
-        
+
         .store-status {
           font-size: 13px;
           font-weight: 600;
@@ -292,13 +369,13 @@ window.StoreUIManager = {
           align-items: center;
           gap: 4px;
         }
-        
+
         .store-status.open {
           background: #e8f5e8;
           color: #2e7d32;
           border: 1px solid #4caf50;
         }
-        
+
         .store-status.closed {
           background: #ffebee;
           color: #c62828;
@@ -634,7 +711,226 @@ window.StoreUIManager = {
           background: linear-gradient(90deg, #297efc 0%, #36a1ff 100%);
           color: #e3f1ff;
         }
-      </style>
-    `;
+
+        /* 프로모션 카드 스타일 */
+        .promotion-card {
+          background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+          color: white;
+          box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
+        }
+
+        .promotion-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .promotion-title {
+          font-size: 16px;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .promotion-badge {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 10px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+        }
+
+        .promotion-content {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .promotion-item {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 8px;
+          padding: 10px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          backdrop-filter: blur(10px);
+        }
+
+        .promotion-item.active {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .promotion-icon {
+          font-size: 20px;
+          width: 32px;
+          text-align: center;
+        }
+
+        .promotion-info {
+          flex: 1;
+        }
+
+        .promotion-name {
+          font-size: 14px;
+          font-weight: 600;
+          margin-bottom: 2px;
+        }
+
+        .promotion-desc {
+          font-size: 12px;
+          opacity: 0.9;
+          margin-bottom: 2px;
+        }
+
+        .promotion-period {
+          font-size: 11px;
+          opacity: 0.7;
+        }
+
+        .promotion-discount {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .promotion-tag {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .promotion-more-btn {
+          width: 100%;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: white;
+          padding: 8px 12px;
+          border-radius: 8px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s;
+        }
+
+        .promotion-more-btn:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+
+        .promotion-more-btn .arrow {
+          transition: transform 0.2s;
+        }
+
+        .promotion-more-btn:hover .arrow {
+          transform: translateX(2px);
+        }
+
+        /* 단골 레벨 카드 스타일 */
+        .loyalty-card {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+          color: white;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .loyalty-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+
+        .loyalty-title {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 16px;
+          font-weight: 700;
+        }
+
+        .loyalty-icon {
+          font-size: 18px;
+        }
+
+        .loyalty-level {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+        }
+
+        .loyalty-progress-container {
+          margin-bottom: 12px;
+        }
+
+        .loyalty-progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 6px;
+        }
+
+        .loyalty-progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
+          border-radius: 4px;
+          transition: width 0.3s ease;
+        }
+
+        .loyalty-progress-text {
+          display: flex;
+          justify-content: space-between;
+          font-size: 11px;
+          opacity: 0.9;
+        }
+
+        .loyalty-benefits {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+        }
+
+        .loyalty-benefit-item {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 8px 6px;
+          border-radius: 8px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          flex: 1;
+          backdrop-filter: blur(10px);
+        }
+
+        .benefit-icon {
+          font-size: 16px;
+        }
+
+        .benefit-text {
+          font-size: 10px;
+          font-weight: 500;
+          text-align: center;
+        }
+      </style>`;
   }
 };
