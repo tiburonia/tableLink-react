@@ -47,11 +47,11 @@ window.renderNotification = async function renderNotification() {
       #content {
         position: fixed;
         top: 0;
-        bottom: 84px;
+        bottom: 78px;
         left: 0;
         width: 100%;
         max-width: 430px;
-        height: calc(100vh - 84px);
+        height: calc(100vh - 78px);
         overflow: hidden;
         background: #fdfdfd;
         z-index: 1;
@@ -282,54 +282,89 @@ window.renderNotification = async function renderNotification() {
         transform: translateX(-50%);
         width: 100%;
         max-width: 430px;
-        height: 66px;
-        background: rgba(255,255,255,0.98);
-        border-top: 1.5px solid #e2e6ee;
-        box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
+        height: 78px;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
+        border-top: 1px solid rgba(255,255,255,0.3);
+        box-shadow: 
+          0 -8px 32px rgba(41, 126, 252, 0.08),
+          0 -4px 16px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
         display: flex;
-        justify-content: space-between;
+        justify-content: space-around;
         align-items: center;
         z-index: 1001;
-        padding: 0 12px;
+        padding: 8px 16px 12px 16px;
         box-sizing: border-box;
-        border-bottom-left-radius: 18px;
-        border-bottom-right-radius: 18px;
-        backdrop-filter: blur(5px);
-        gap: 0;
+        border-radius: 24px 24px 0 0;
+        backdrop-filter: blur(20px);
+        gap: 8px;
       }
 
       #bottomBar button {
-        flex: 1 1 0;
-        margin: 0 5px;
-        height: 44px;
+        position: relative;
+        flex: 1;
+        height: 52px;
         min-width: 0;
         border: none;
         outline: none;
-        border-radius: 13px;
-        background: #f5f7fb;
-        color: #297efc;
-        font-size: 18px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+        color: #6B7280;
+        font-size: 20px;
         font-family: inherit;
-        font-weight: 700;
-        box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+        font-weight: 600;
         cursor: pointer;
-        transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        letter-spacing: -0.2px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+
+      #bottomBar button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(41, 126, 252, 0.05), rgba(79, 70, 229, 0.03));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-radius: 16px;
+      }
+
+      #bottomBar button:hover {
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+        color: #297efc;
+        transform: translateY(-2px);
+        box-shadow: 
+          0 8px 24px rgba(41, 126, 252, 0.12),
+          0 4px 12px rgba(0, 0, 0, 0.05);
+        border-color: rgba(41, 126, 252, 0.2);
+      }
+
+      #bottomBar button:hover::before {
+        opacity: 1;
       }
 
       #bottomBar button.active {
-        background: #eaf3ff;
-        color: #1657a0;
-        box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+        background: linear-gradient(135deg, #297efc, #4f46e5);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 
+          0 8px 24px rgba(41, 126, 252, 0.3),
+          0 4px 12px rgba(79, 70, 229, 0.2);
+        border-color: transparent;
       }
 
       #bottomBar button:active {
-        background: #eaf3ff;
-        color: #1657a0;
-        box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+        transform: translateY(0px);
+        box-shadow: 
+          0 4px 16px rgba(41, 126, 252, 0.15),
+          0 2px 8px rgba(0, 0, 0, 0.05);
       }
     </style>
   `;
