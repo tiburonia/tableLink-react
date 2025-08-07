@@ -1,5 +1,5 @@
 
-async function renderNotification() {
+window.renderNotification = async function renderNotification() {
   const main = document.getElementById('main');
 
   // UI 렌더링
