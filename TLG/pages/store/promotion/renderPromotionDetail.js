@@ -257,14 +257,16 @@ function renderPromotionDetail(store) {
         flex-direction: column;
         gap: 12px;
         align-items: center;
-        padding: 0 10px;
+        padding: 0 15px;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .loyalty-level-card {
-        width: 95%;
-        max-width: 360px;
+        width: 100%;
+        max-width: 350px;
         border-radius: 12px;
-        padding: 16px 20px;
+        padding: 16px 18px;
         border: 2px solid;
         transition: all 0.3s ease;
         position: relative;
@@ -274,6 +276,7 @@ function renderPromotionDetail(store) {
         justify-content: space-between;
         min-height: 70px;
         margin: 0 auto;
+        box-sizing: border-box;
       }
 
       .loyalty-level-card:hover {
@@ -341,9 +344,11 @@ function renderPromotionDetail(store) {
       .level-benefits {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
         flex: 1;
-        justify-content: flex-end;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
       }
 
       .benefit-item {
@@ -370,11 +375,11 @@ function renderPromotionDetail(store) {
       /* 반응형 조정 */
       @media (max-width: 380px) {
         .loyalty-levels-grid {
-          padding: 0 5px;
+          padding: 0 10px;
         }
         
         .loyalty-level-card {
-          width: 98%;
+          width: 100%;
           padding: 14px 16px;
           min-height: 65px;
         }
@@ -394,6 +399,11 @@ function renderPromotionDetail(store) {
         
         .level-requirement {
           font-size: 10px;
+        }
+        
+        .level-benefits {
+          justify-content: center;
+          gap: 4px;
         }
         
         .benefit-item {
