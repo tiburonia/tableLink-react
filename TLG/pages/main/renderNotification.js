@@ -27,8 +27,8 @@ window.renderNotification = async function renderNotification() {
     </main>
 
     <nav id="bottomBar">
+      <button id="TLL">📱</button>
       <button onclick="renderMap()">🗺️</button>
-      <button id="renderMapBtn">🗺️</button>
       <button id="notificationBtn" class="active">🔔</button>
       <button onclick="renderMyPage()">👤</button>
       <button onclick="logOutF()">👋</button>
@@ -327,6 +327,12 @@ window.renderNotification = async function renderNotification() {
         box-shadow: 0 2px 16px rgba(34,153,252,0.13);
       }
 
+      #bottomBar button.active {
+        background: #eaf3ff;
+        color: #1657a0;
+        box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+      }
+
       #bottomBar button:active {
         background: #eaf3ff;
         color: #1657a0;
@@ -342,6 +348,12 @@ window.renderNotification = async function renderNotification() {
     } else {
       history.back();
     }
+  });
+
+  // TLL 버튼 클릭 로직
+  const renderTLL = document.querySelector('#TLL');
+  renderTLL.addEventListener('click', async () => {
+    await TLL();
   });
 
   // 탭 버튼 이벤트

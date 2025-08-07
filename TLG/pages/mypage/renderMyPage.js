@@ -34,10 +34,11 @@ async function renderMyPage() {
     </main>
 
     <nav id="bottomBar">
-      <button onclick="renderMain()">🏠</button>
-      <button onclick="renderSearch()">🔍</button>
-      <button onclick="renderMap()">📍</button>
+      <button id="TLL">📱</button>
+      <button onclick="renderMap()">🗺️</button>
+      <button id="notificationBtn">🔔</button>
       <button onclick="renderMyPage()">👤</button>
+      <button onclick="logOutF()">👋</button>
     </nav>
 
     <style>
@@ -106,16 +107,52 @@ async function renderMyPage() {
       #bottomBar {
         position: fixed;
         bottom: 0;
-        left: 0;
+        left: 50%;
+        transform: translateX(-50%);
         width: 100%;
         max-width: 430px;
-        height: 60px;
-        background: white;
-        border-top: 1px solid #ccc;
+        height: 66px;
+        background: rgba(255,255,255,0.98);
+        border-top: 1.5px solid #e2e6ee;
+        box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
         display: flex;
-        justify-content: space-around;
+        justify-content: space-between;
         align-items: center;
-        z-index: 1000;
+        z-index: 1001;
+        padding: 0 12px;
+        box-sizing: border-box;
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+        backdrop-filter: blur(5px);
+        gap: 0;
+      }
+
+      #bottomBar button {
+        flex: 1 1 0;
+        margin: 0 5px;
+        height: 44px;
+        min-width: 0;
+        border: none;
+        outline: none;
+        border-radius: 13px;
+        background: #f5f7fb;
+        color: #297efc;
+        font-size: 18px;
+        font-family: inherit;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+        cursor: pointer;
+        transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: -0.2px;
+      }
+
+      #bottomBar button:active {
+        background: #eaf3ff;
+        color: #1657a0;
+        box-shadow: 0 2px 16px rgba(34,153,252,0.13);
       }
       .order-item {
         background: #fff;
@@ -215,6 +252,22 @@ async function renderMyPage() {
   // 내 계정 보기 버튼 이벤트 리스너 (즉시 설정)
   const info = document.querySelector('#info');
   info.addEventListener('click', () => renderMyAccount());
+
+  // TLL 버튼 클릭 로직
+  const renderTLL = document.querySelector('#TLL');
+  renderTLL.addEventListener('click', async () => {
+    await TLL();
+  });
+
+  // 알림 버튼 클릭 로직
+  const notificationBtn = document.querySelector('#notificationBtn');
+  notificationBtn.addEventListener('click', () => {
+    if (typeof renderNotification === 'function') {
+      renderNotification();
+    } else {
+      console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
+    }
+  });
 
   // 비동기로 사용자 정보 로드 및 업데이트
   loadUserData();
