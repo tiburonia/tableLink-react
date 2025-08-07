@@ -1,3 +1,4 @@
+
 // 매장 UI 렌더링 관리자
 window.StoreUIManager = {
   renderStoreHTML(store, displayRating) {
@@ -12,7 +13,8 @@ window.StoreUIManager = {
       </button>
       <header id="storeHeader">
         <div class="imgWrapper">
-          <img src="TableLink2.png" alt="메뉴이미지" />
+          <img src="TableLink.png" alt="메뉴이미지" />
+          <div class="header-overlay"></div>
         </div>
       </header>
       <div id="storePanel" class="collapsed">
@@ -20,23 +22,32 @@ window.StoreUIManager = {
         <div id="storePanelContainer">
           <div id="storeInfoContainer">
             <div class="storeInfo">
-              <div class="score-row">
-                <span id="reviewStar">★</span>
-                <span id="reviewScore">${displayRating}&nbsp<span id="reviewLink">></span></span> 
-                <button id="favoriteBtn">♡</button>
+              <div class="store-header-section">
+                <div class="store-main-info">
+                  <div class="score-row">
+                    <div class="rating-container">
+                      <span id="reviewStar">★</span>
+                      <span id="reviewScore">${displayRating}</span>
+                      <span id="reviewLink" class="review-link">리뷰 보기</span>
+                    </div>
+                    <button id="favoriteBtn" class="favorite-btn">♡</button>
+                  </div>
+                  <h2 id="storeName">${store.name}</h2>
+                  <div class="store-status-container">
+                    <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
+                      ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+                    </span>
+                    <span class="store-category-tag">음식점</span>
+                  </div>
+                </div>
               </div>
-              <h2 id="storeName">${store.name}</h2>
-              <div class="store-status-row">
-                <span class="store-status ${store.isOpen ? 'open' : 'closed'}">${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}</span>
-              </div>
-              <p class="store-desc">여기에 간단한 가게 소개 또는 태그</p>
             </div>
             ${this.renderPromotionCardHTML(store)}
             ${this.renderLoyaltyLevelHTML()}
             ${this.renderTableStatusHTML(store)}
             ${this.renderReviewPreviewHTML()}
           </div>
-          <div id="storeNavBar" class="no-padding">
+          <div id="storeNavBar" class="modern-nav">
             <button class="nav-btn" data-tab="menu">
               <span class="nav-ico">🍽️</span>
               <span class="nav-label">메뉴</span>
@@ -46,12 +57,12 @@ window.StoreUIManager = {
               <span class="nav-label">리뷰</span>
             </button>
             <button class="nav-btn" data-tab="photo">
-              <span class="nav-ico">🖼️</span>
+              <span class="nav-ico">📸</span>
               <span class="nav-label">사진</span>
             </button>
             <button class="nav-btn" data-tab="info">
               <span class="nav-ico">ℹ️</span>
-              <span class="nav-label">매장 정보</span>
+              <span class="nav-label">정보</span>
             </button>
           </div>
           <div id="storeContent"></div>
@@ -62,49 +73,56 @@ window.StoreUIManager = {
           <span class="btm-btn-ico">📞</span>
         </button>
         <button id="order" class="btm-btn order-btn">
-          포장·예약하기
+          <span class="order-text">포장·예약하기</span>
+          <span class="order-arrow">→</span>
         </button>
       </nav>
       ${this.getStoreStyles()}
     `;
   },
 
-  renderEventHTML(store) {
-    // TLR 이벤트 ex) 사장님 자율쿠폰 등등
-  },
-
   renderTableStatusHTML(store) {
     return `
-      <div id="TLR" class="tlr-container">
+      <div id="TLR" class="tlr-container modern-card">
         <div class="tlr-header">
-          <div class="tlr-title">🏪 테이블 현황</div>
-          <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">${store.isOpen ? '로딩중...' : '운영중지'}</div>
-        </div>
-        <div class="tlr-info-grid">
-          <div class="tlr-info-item">
-            <div class="tlr-info-label">총 테이블</div>
-            <div class="tlr-info-value" id="totalTables">-</div>
+          <div class="tlr-title">
+            <span class="tlr-icon">🏪</span>
+            <span>실시간 테이블 현황</span>
           </div>
-          <div class="tlr-info-item">
-            <div class="tlr-info-label">잔여 테이블</div>
-            <div class="tlr-info-value" id="availableTables">-</div>
-          </div>
-          <div class="tlr-info-item">
-            <div class="tlr-info-label">총 좌석</div>
-            <div class="tlr-info-value" id="totalSeats">-</div>
-          </div>
-          <div class="tlr-info-item">
-            <div class="tlr-info-label">잔여 좌석</div>
-            <div class="tlr-info-value" id="availableSeats">-</div>
-          </div>
-          <div class="tlr-info-item">
-            <div class="tlr-info-label">사용률</div>
-            <div class="tlr-info-value" id="occupancyRate">-</div>
+          <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">
+            ${store.isOpen ? '로딩중...' : '운영중지'}
           </div>
         </div>
-        <button class="tlr-layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+        <div class="tlr-stats-grid">
+          <div class="stat-card primary">
+            <div class="stat-value" id="totalTables">-</div>
+            <div class="stat-label">총 테이블</div>
+          </div>
+          <div class="stat-card success">
+            <div class="stat-value" id="availableTables">-</div>
+            <div class="stat-label">이용 가능</div>
+          </div>
+          <div class="stat-card info">
+            <div class="stat-value" id="totalSeats">-</div>
+            <div class="stat-label">총 좌석</div>
+          </div>
+          <div class="stat-card warning">
+            <div class="stat-value" id="availableSeats">-</div>
+            <div class="stat-label">잔여 좌석</div>
+          </div>
+        </div>
+        <div class="usage-rate-container">
+          <div class="usage-rate-header">
+            <span>테이블 사용률</span>
+            <span class="usage-percentage" id="occupancyRate">-%</span>
+          </div>
+          <div class="usage-rate-bar">
+            <div class="usage-rate-fill" id="usageRateFill"></div>
+          </div>
+        </div>
+        <button class="tlr-layout-btn modern-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
           <span class="btn-icon">🗺️</span>
-          테이블 배치 보기
+          <span>테이블 배치도 보기</span>
         </button>
       </div>
     `;
@@ -112,22 +130,30 @@ window.StoreUIManager = {
 
   renderReviewPreviewHTML() {
     return `
-      <div id="reviewPreview" class="review-preview">
-        <div class="review-title-row">
-          <span class="review-title">리뷰 미리보기</span>
-          <button class="see-more-btn">전체보기</button>
+      <div id="reviewPreview" class="review-preview modern-card">
+        <div class="section-header">
+          <h3 class="section-title">최근 리뷰</h3>
+          <button class="see-more-btn modern-text-btn">전체보기</button>
         </div>
-        <div id="reviewPreviewContent">
-          <div class="review-card">
-            <span class="review-user">🐤 익명</span>
-            <span class="review-score">★ 5</span>
-            <span class="review-date">1일 전</span>
+        <div id="reviewPreviewContent" class="review-content">
+          <div class="review-card modern-review">
+            <div class="review-header">
+              <span class="review-user">🐤 익명</span>
+              <div class="review-meta">
+                <span class="review-score">★ 5</span>
+                <span class="review-date">1일 전</span>
+              </div>
+            </div>
             <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
           </div>
-          <div class="review-card">
-            <span class="review-user">🍙 user123</span>
-            <span class="review-score">★ 4</span>
-            <span class="review-date">3일 전</span>
+          <div class="review-card modern-review">
+            <div class="review-header">
+              <span class="review-user">🍙 user123</span>
+              <div class="review-meta">
+                <span class="review-score">★ 4</span>
+                <span class="review-date">3일 전</span>
+              </div>
+            </div>
             <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
           </div>
         </div>
@@ -136,74 +162,75 @@ window.StoreUIManager = {
   },
 
   renderPromotionCardHTML(store) {
-    // 임시 데이터로 프로모션 카드 UI를 생성합니다. 실제 데이터 연동 시 수정 필요.
     return `
-      <div class="promotion-card">
+      <div class="promotion-card modern-gradient-card">
         <div class="promotion-header">
-          <span class="promotion-title">
-            🎉 오늘의 프로모션
-          </span>
-          <span class="promotion-badge">진행중</span>
+          <div class="promotion-title">
+            <span class="promotion-emoji">🎉</span>
+            <span>진행중인 혜택</span>
+          </div>
+          <span class="promotion-badge live">LIVE</span>
         </div>
         <div class="promotion-content">
-          <div class="promotion-item">
-            <span class="promotion-icon">🎁</span>
-            <div class="promotion-info">
-              <div class="promotion-name">방문 감사 스탬프</div>
-              <div class="promotion-desc">매장 방문 시 스탬프 1개 지급</div>
-              <div class="promotion-period">~ 2024.12.31</div>
+          <div class="promotion-item featured">
+            <div class="promotion-left">
+              <span class="promotion-icon">🎁</span>
+              <div class="promotion-info">
+                <div class="promotion-name">신규 방문 혜택</div>
+                <div class="promotion-desc">첫 방문 시 10% 할인</div>
+              </div>
             </div>
-            <span class="promotion-discount">5%</span>
+            <div class="promotion-discount">10%</div>
           </div>
-          <div class="promotion-item active">
-            <span class="promotion-icon">⭐</span>
-            <div class="promotion-info">
-              <div class="promotion-name">단골 고객 할인</div>
-              <div class="promotion-desc">단골 레벨 3 이상 고객 대상</div>
-              <div class="promotion-period">상시</div>
+          <div class="promotion-item">
+            <div class="promotion-left">
+              <span class="promotion-icon">⭐</span>
+              <div class="promotion-info">
+                <div class="promotion-name">단골 고객 혜택</div>
+                <div class="promotion-desc">레벨 3 이상 5% 추가 할인</div>
+              </div>
             </div>
-            <span class="promotion-tag">단골</span>
+            <div class="promotion-tag">VIP</div>
           </div>
         </div>
-        <button class="promotion-more-btn">
-          자세히 보기
-          <span class="arrow">➡️</span>
+        <button class="promotion-detail-btn">
+          <span>혜택 자세히 보기</span>
+          <span class="arrow">→</span>
         </button>
       </div>
     `;
   },
 
   renderLoyaltyLevelHTML() {
-    // 임시 데이터로 단골 레벨 UI를 생성합니다. 실제 데이터 연동 시 수정 필요.
     return `
-      <div class="loyalty-card">
+      <div class="loyalty-card modern-gradient-card loyalty-theme">
         <div class="loyalty-header">
-          <span class="loyalty-title">
-            <span class="loyalty-icon">👑</span>
-            단골 레벨
-          </span>
-          <span class="loyalty-level">Lv. 3 (VIP)</span>
+          <div class="loyalty-title">
+            <span class="loyalty-crown">👑</span>
+            <span>내 단골 등급</span>
+          </div>
+          <div class="loyalty-level-badge">골드</div>
         </div>
-        <div class="loyalty-progress-container">
-          <div class="loyalty-progress-bar">
+        <div class="loyalty-progress-section">
+          <div class="progress-info">
+            <span class="current-level">Lv.3 골드 단골</span>
+            <span class="next-level">다음 등급까지 3회</span>
+          </div>
+          <div class="loyalty-progress-bar modern-progress">
             <div class="loyalty-progress-fill" style="width: 75%;"></div>
           </div>
-          <div class="loyalty-progress-text">
-            <span>다음 레벨까지 3,000원 남음</span>
-            <span>현재: 7,000원</span>
-          </div>
         </div>
-        <div class="loyalty-benefits">
-          <div class="loyalty-benefit-item">
+        <div class="loyalty-benefits-grid">
+          <div class="benefit-item">
             <span class="benefit-icon">🎁</span>
-            <span class="benefit-text">무료 음료 쿠폰</span>
+            <span class="benefit-text">무료 음료</span>
           </div>
-          <div class="loyalty-benefit-item">
-            <span class="benefit-icon">⭐</span>
-            <span class="benefit-text">VIP 전용 혜택</span>
+          <div class="benefit-item">
+            <span class="benefit-icon">⚡</span>
+            <span class="benefit-text">우선 주문</span>
           </div>
-          <div class="loyalty-benefit-item">
-            <span class="benefit-icon">🎈</span>
+          <div class="benefit-item">
+            <span class="benefit-icon">🎂</span>
             <span class="benefit-text">생일 쿠폰</span>
           </div>
         </div>
@@ -214,13 +241,19 @@ window.StoreUIManager = {
   getStoreStyles() {
     return `
       <style>
+        * {
+          box-sizing: border-box;
+        }
+        
         html, body {
           margin: 0;
           padding: 0;
           height: 100%;
-          font-family: 'Noto Sans KR', sans-serif;
-          background: #f8f8f8;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+          background: #f8f9fa;
           overflow: hidden;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
 
         #storeHeader {
@@ -233,6 +266,7 @@ window.StoreUIManager = {
           height: 200px;
           background: white;
           z-index: 2;
+          overflow: hidden;
         }
 
         .imgWrapper {
@@ -241,27 +275,51 @@ window.StoreUIManager = {
           overflow: hidden;
           position: relative;
         }
+        
         .imgWrapper img {
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-190px, -100px);
+          filter: brightness(1.1) contrast(1.05);
         }
 
-        #backBtn,
-        #TLL {
+        .header-overlay {
           position: absolute;
-          top: 10px;
-          width: 30px;
-          height: 30px;
-          background: white;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: linear-gradient(transparent, rgba(0,0,0,0.1));
+          pointer-events: none;
+        }
+
+        #backBtn, #TLL {
+          position: absolute;
+          top: 15px;
+          width: 40px;
+          height: 40px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
           border: none;
-          font-size: 20px;
+          border-radius: 12px;
+          font-size: 18px;
           cursor: pointer;
           z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+          transition: all 0.2s ease;
         }
-        #backBtn { left: 10px; }
-        #TLL { right: 10px; }
+        
+        #backBtn { left: 15px; }
+        #TLL { right: 15px; }
+        
+        #backBtn:hover, #TLL:hover {
+          background: white;
+          transform: scale(1.05);
+        }
 
         #storePanel {
           position: fixed;
@@ -270,32 +328,41 @@ window.StoreUIManager = {
           width: 100%;
           max-width: 430px;
           background: white;
-          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
-          transition: all 0.3s;
+          box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 10;
         }
+        
         #storePanel.collapsed {
           top: 200px;
-          bottom: 60px;
-          height: calc(100vh - 260px);
-          border-radius: 16px 16px 0 0;
+          bottom: 70px;
+          height: calc(100vh - 270px);
+          border-radius: 20px 20px 0 0;
         }
+        
         #storePanel.expanded {
           top: 0;
-          bottom: 60px;
-          height: calc(100vh - 60px);
+          bottom: 70px;
+          height: calc(100vh - 70px);
           border-radius: 0;
           z-index: 99;
         }
+
         #panelHandle {
-          width: 60px;
-          height: 8px;
-          background: #ccc;
-          border-radius: 4px;
-          margin: 12px auto;
+          width: 40px;
+          height: 4px;
+          background: #d1d5db;
+          border-radius: 2px;
+          margin: 12px auto 8px auto;
           cursor: grab;
           touch-action: none;
+          transition: background 0.2s ease;
         }
+        
+        #panelHandle:hover {
+          background: #9ca3af;
+        }
+
         #storePanelContainer {
           position: relative;
           height: calc(100% - 24px);
@@ -303,295 +370,317 @@ window.StoreUIManager = {
           box-sizing: border-box;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
-          padding: 0 16px 80px 16px;
+          padding: 0 20px 100px 20px;
         }
-        #storePanelContainer::-webkit-scrollbar { width: 6px; }
-        #storePanelContainer::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        
+        #storePanelContainer::-webkit-scrollbar {
+          width: 3px;
+        }
+        
+        #storePanelContainer::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 2px;
+        }
 
-        .storeInfo,
-        .review-preview {
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-          padding: 16px 14px 12px 14px;
-          margin: 0 0 14px 0;
+        .modern-card {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+          margin-bottom: 16px;
+          border: 1px solid rgba(0,0,0,0.04);
+        }
+
+        .storeInfo {
+          padding: 24px 20px 20px 20px;
+        }
+
+        .store-header-section {
           display: flex;
           flex-direction: column;
-          align-items: flex-start;
+          gap: 4px;
         }
+
         .score-row {
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 2px;
+          justify-content: space-between;
+          margin-bottom: 8px;
         }
-        #reviewStar {
-          font-size: 20px;
-          color: #ffc107;
-          margin-right: 2px;
-        }
-        #reviewScore {
-          font-weight: bold;
-          font-size: 16px;
-          color: #222;
-        }
-        #favoriteBtn {
-          margin-left: 10px;
-          border: none;
-          background: none;
-          font-size: 19px;
-          color: #ff5777;
-          cursor: pointer;
-          transition: transform 0.15s;
-        }
-        #favoriteBtn:active {
-          transform: scale(1.18);
-        }
-        #storeName {
-          font-size: 22px;
-          font-weight: 700;
-          color: #111;
-          margin: 6px 0 2px 0;
-          letter-spacing: -0.5px;
-        }
-        .store-status-row {
-          margin: 8px 0 4px 0;
+
+        .rating-container {
           display: flex;
           align-items: center;
+          gap: 6px;
+        }
+
+        #reviewStar {
+          font-size: 20px;
+          color: #fbbf24;
+        }
+
+        #reviewScore {
+          font-weight: 700;
+          font-size: 18px;
+          color: #111827;
+        }
+
+        .review-link {
+          color: #3b82f6;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s ease;
+        }
+        
+        .review-link:hover {
+          background: #eff6ff;
+        }
+
+        .favorite-btn {
+          border: none;
+          background: none;
+          font-size: 24px;
+          color: #ef4444;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 12px;
+          transition: all 0.2s ease;
+        }
+        
+        .favorite-btn:hover {
+          background: #fef2f2;
+          transform: scale(1.1);
+        }
+
+        #storeName {
+          font-size: 28px;
+          font-weight: 800;
+          color: #111827;
+          margin: 0 0 12px 0;
+          letter-spacing: -0.5px;
+          line-height: 1.2;
+        }
+
+        .store-status-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .store-status {
           font-size: 13px;
           font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 12px;
+          padding: 6px 12px;
+          border-radius: 20px;
           display: inline-flex;
           align-items: center;
           gap: 4px;
         }
 
         .store-status.open {
-          background: #e8f5e8;
-          color: #2e7d32;
-          border: 1px solid #4caf50;
+          background: #dcfce7;
+          color: #166534;
+          border: 1px solid #bbf7d0;
         }
 
         .store-status.closed {
-          background: #ffebee;
-          color: #c62828;
-          border: 1px solid #f44336;
+          background: #fee2e2;
+          color: #dc2626;
+          border: 1px solid #fecaca;
         }
 
-        .store-desc {
-          font-size: 14px;
-          color: #888;
-          margin: 0 0 2px 1px;
-        }
-
-        .tlr-container {
-          background: linear-gradient(135deg, #f8fafd 0%, #e8f4fd 100%);
-          border: 1px solid #d4e8fc;
+        .store-category-tag {
+          background: #f3f4f6;
+          color: #6b7280;
+          font-size: 12px;
+          font-weight: 500;
+          padding: 4px 8px;
           border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 12px;
-          box-shadow: 0 2px 8px rgba(41, 126, 252, 0.08);
+        }
+
+        /* 테이블 현황 스타일 */
+        .tlr-container {
+          padding: 20px;
         }
 
         .tlr-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 20px;
         }
 
         .tlr-title {
-          font-size: 16px;
-          font-weight: 700;
-          color: #297efc;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
+          font-size: 18px;
+          font-weight: 700;
+          color: #111827;
+        }
+
+        .tlr-icon {
+          font-size: 20px;
         }
 
         .tlr-status-badge {
-          background: #4CAF50;
+          background: #10b981;
           color: white;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 600;
-          padding: 4px 8px;
-          border-radius: 12px;
+          padding: 6px 12px;
+          border-radius: 16px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
         .tlr-status-badge.busy {
-          background: #FF9800;
+          background: #f59e0b;
         }
 
         .tlr-status-badge.full {
-          background: #F44336;
+          background: #ef4444;
         }
 
         .tlr-status-badge.closed {
-          background: #666;
-          color: white;
+          background: #6b7280;
         }
 
-        .tlr-info-grid {
+        .tlr-stats-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          grid-template-rows: auto auto auto;
-          gap: 8px;
-          margin-bottom: 14px;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          margin-bottom: 20px;
         }
 
-        .tlr-info-grid .tlr-info-item:nth-child(5) {
-          grid-column: 1 / -1;
-          max-width: 280px;
-          margin: 0 auto;
-        }
-
-        .tlr-info-item {
+        .stat-card {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 16px 12px;
           text-align: center;
-          background: white;
-          border-radius: 8px;
-          padding: 10px 8px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
         }
 
-        .tlr-info-grid .tlr-info-item:nth-child(5) {
-          padding: 12px 16px;
-          background: linear-gradient(135deg, #297efc 0%, #36a1ff 100%);
+        .stat-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-card.primary {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           color: white;
-          box-shadow: 0 2px 8px rgba(41, 126, 252, 0.2);
+          border: none;
         }
 
-        .tlr-info-grid .tlr-info-item:nth-child(5) .tlr-info-label {
-          color: rgba(255, 255, 255, 0.9);
-          font-weight: 600;
-        }
-
-        .tlr-info-grid .tlr-info-item:nth-child(5) .tlr-info-value {
+        .stat-card.success {
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           color: white;
-          font-size: 20px;
+          border: none;
+        }
+
+        .stat-card.info {
+          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+          color: white;
+          border: none;
+        }
+
+        .stat-card.warning {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          color: white;
+          border: none;
+        }
+
+        .stat-value {
+          font-size: 24px;
           font-weight: 800;
-        }
-
-        .tlr-info-label {
-          font-size: 12px;
-          color: #666;
           margin-bottom: 4px;
+        }
+
+        .stat-label {
+          font-size: 12px;
           font-weight: 500;
+          opacity: 0.9;
         }
 
-        .tlr-info-value {
-          font-size: 18px;
-          font-weight: 700;
-          color: #297efc;
+        .usage-rate-container {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 16px;
         }
 
-        .tlr-layout-btn {
-          width: 100%;
-          background: white;
-          border: 2px solid #297efc;
-          color: #297efc;
+        .usage-rate-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
           font-size: 14px;
           font-weight: 600;
-          padding: 10px 16px;
-          border-radius: 8px;
+          color: #374151;
+        }
+
+        .usage-percentage {
+          color: #3b82f6;
+          font-weight: 700;
+        }
+
+        .usage-rate-bar {
+          width: 100%;
+          height: 8px;
+          background: #e5e7eb;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .usage-rate-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+          border-radius: 4px;
+          transition: width 0.3s ease;
+          width: 0%;
+        }
+
+        .modern-btn {
+          width: 100%;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border: none;
+          color: white;
+          font-size: 15px;
+          font-weight: 600;
+          padding: 14px 20px;
+          border-radius: 12px;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
+          gap: 8px;
         }
 
-        .tlr-layout-btn:hover {
-          background: #297efc;
-          color: white;
+        .modern-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
 
-        .btn-icon {
-          font-size: 16px;
-        }
-
-        .review-preview {
-          padding: 13px 14px 11px 14px;
-          gap: 7px;
-        }
-        .review-title-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 4px;
-        }
-        .review-title {
-          font-size: 15px;
-          font-weight: 600;
-          color: #333;
-        }
-        .see-more-btn {
-          font-size: 13px;
-          color: #5599ee;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 2px 7px;
-          border-radius: 6px;
-          transition: background 0.15s;
-        }
-        .see-more-btn:hover {
-          background: #f0f4ff;
-        }
-        .review-card {
-          background: #f9f9fb;
-          border-radius: 8px;
-          padding: 10px 12px 9px 12px;
-          margin-bottom: 3px;
-          display: flex;
-          flex-direction: column;
-          gap: 3px;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.01);
-        }
-        .review-user {
-          font-size: 13px;
-          color: #488;
-          font-weight: 600;
-          margin-right: 4px;
-        }
-        .review-score {
-          font-size: 13px;
-          color: #ffc107;
-          font-weight: 600;
-          margin-right: 4px;
-        }
-        .review-date {
-          font-size: 12px;
-          color: #aaa;
-        }
-        .review-text {
-          font-size: 14px;
-          color: #222;
-          margin-top: 2px;
-          line-height: 1.5;
-        }
-
-        #storeNavBar.no-padding {
+        /* 네비게이션 바 */
+        .modern-nav {
           margin: 0;
           width: 100%;
           border-radius: 0;
-          border-top: none;
-          border-bottom: 1px solid #eee;
-          background: #fff;
+          border: none;
+          background: white;
           display: flex;
           justify-content: space-between;
           padding: 0;
-          margin-bottom: 8px;
+          margin-bottom: 16px;
           gap: 0;
           position: sticky;
           top: 0;
           z-index: 5;
+          border-bottom: 1px solid #f3f4f6;
         }
 
         .nav-btn {
@@ -600,294 +689,305 @@ window.StoreUIManager = {
           border: none;
           outline: none;
           font-family: inherit;
-          font-size: 15px;
-          color: #666;
-          padding: 14px 0 10px 0;
+          font-size: 14px;
+          color: #6b7280;
+          padding: 16px 0 12px 0;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
           position: relative;
           cursor: pointer;
-          transition: color 0.18s;
-          border-bottom: 2.5px solid transparent;
+          transition: all 0.2s ease;
+          border-bottom: 3px solid transparent;
         }
-        .nav-btn:active {
-          background: #f4f7ff;
+
+        .nav-btn:hover {
+          background: #f9fafb;
+          color: #374151;
         }
+
         .nav-btn .nav-ico {
-          font-size: 18px;
+          font-size: 20px;
           margin-bottom: 2px;
         }
+
         .nav-btn.active {
-          color: #297efc;
-          font-weight: 700;
-          border-bottom: 2.5px solid #297efc;
-          background: #f4f7ff;
+          color: #3b82f6;
+          font-weight: 600;
+          border-bottom: 3px solid #3b82f6;
+          background: #eff6ff;
         }
 
-        #storeContent {
-          margin: 0 0 0 0;
-          padding: 14px 14px 8px 14px;
-          font-size: 15px;
-          min-height: 80px;
-          color: #222;
-          background: #fff;
-          border-radius: 10px;
-          box-shadow: 0 1px 4px rgba(0,0,0,0.02);
+        /* 리뷰 프리뷰 */
+        .review-preview {
+          padding: 20px;
         }
 
-        #storeBottomBar {
-          position: fixed;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 100%;
-          max-width: 430px;
-          height: 64px;
-          background: #fff;
-          border-top: 1.5px solid #e2e6ee;
+        .section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          z-index: 1000;
-          padding: 0 16px;
-          box-sizing: border-box;
-          gap: 0;
+          margin-bottom: 16px;
         }
 
-        .btm-btn {
+        .section-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0;
+        }
+
+        .modern-text-btn {
+          background: none;
           border: none;
-          outline: none;
-          font-family: inherit;
-          transition: background 0.12s, box-shadow 0.13s, color 0.12s;
+          color: #3b82f6;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          height: 44px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          transition: background 0.2s ease;
+        }
+
+        .modern-text-btn:hover {
+          background: #eff6ff;
+        }
+
+        .review-content {
           display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .modern-review {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 16px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .review-header {
+          display: flex;
+          justify-content: space-between;
           align-items: center;
-          justify-content: center;
-          font-size: 17px;
-          box-shadow: 0 1.5px 6px rgba(0,0,0,0.04);
+          margin-bottom: 8px;
+        }
+
+        .review-user {
+          font-size: 14px;
+          color: #3b82f6;
           font-weight: 600;
         }
 
-        .phone-btn {
-          width: 48px;
-          min-width: 48px;
-          max-width: 48px;
-          border-radius: 50%;
-          background: #f6fafd;
-          color: #2299fc;
-          margin-right: 12px;
-          font-size: 22px;
-          box-shadow: 0 2px 8px rgba(34,153,252,0.06);
-        }
-        .phone-btn:active {
-          background: #e4effd;
-          color: #1657a0;
-        }
-        .btm-btn-ico {
-          font-size: 23px;
-          pointer-events: none;
-          line-height: 1;
-        }
-
-        .order-btn {
-          flex: 1;
-          height: 44px;
-          min-width: 0;
-          border-radius: 13px;
-          background: linear-gradient(90deg, #36a1ff 0%, #297efc 100%);
-          color: #fff;
-          margin-left: 0;
-          font-size: 17px;
-          letter-spacing: 0.2px;
-          box-shadow: 0 2px 12px rgba(34,153,252,0.09);
+        .review-meta {
           display: flex;
-          justify-content: center;
           align-items: center;
-        }
-        .order-btn:active {
-          background: linear-gradient(90deg, #297efc 0%, #36a1ff 100%);
-          color: #e3f1ff;
+          gap: 8px;
         }
 
-        /* 프로모션 카드 스타일 */
-        .promotion-card {
-          background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 12px;
+        .review-score {
+          font-size: 13px;
+          color: #fbbf24;
+          font-weight: 600;
+        }
+
+        .review-date {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
+        .review-text {
+          font-size: 14px;
+          color: #374151;
+          line-height: 1.5;
+        }
+
+        /* 프로모션 카드 */
+        .modern-gradient-card {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 16px;
           color: white;
-          box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+          border: none;
         }
 
         .promotion-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
 
         .promotion-title {
-          font-size: 16px;
-          font-weight: 700;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
+          font-size: 18px;
+          font-weight: 700;
         }
 
-        .promotion-badge {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 4px 8px;
-          border-radius: 8px;
-          font-size: 10px;
-          font-weight: 600;
-          backdrop-filter: blur(10px);
+        .promotion-emoji {
+          font-size: 20px;
+        }
+
+        .promotion-badge.live {
+          background: rgba(239, 68, 68, 0.9);
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 700;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
         }
 
         .promotion-content {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          margin-bottom: 12px;
+          gap: 12px;
+          margin-bottom: 16px;
         }
 
         .promotion-item {
           background: rgba(255, 255, 255, 0.1);
-          border-radius: 8px;
-          padding: 10px;
+          border-radius: 12px;
+          padding: 14px;
           display: flex;
+          justify-content: space-between;
           align-items: center;
-          gap: 10px;
           backdrop-filter: blur(10px);
         }
 
-        .promotion-item.active {
+        .promotion-item.featured {
           background: rgba(255, 255, 255, 0.2);
           border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
+        .promotion-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
         .promotion-icon {
           font-size: 20px;
-          width: 32px;
+          width: 36px;
           text-align: center;
         }
 
-        .promotion-info {
-          flex: 1;
-        }
-
         .promotion-name {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 600;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .promotion-desc {
-          font-size: 12px;
+          font-size: 13px;
           opacity: 0.9;
-          margin-bottom: 2px;
-        }
-
-        .promotion-period {
-          font-size: 11px;
-          opacity: 0.7;
         }
 
         .promotion-discount {
           background: rgba(255, 255, 255, 0.2);
-          padding: 4px 8px;
-          border-radius: 6px;
-          font-size: 12px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 14px;
           font-weight: 700;
         }
 
         .promotion-tag {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 4px 8px;
-          border-radius: 6px;
+          background: rgba(251, 191, 36, 0.9);
+          color: #92400e;
+          padding: 6px 12px;
+          border-radius: 8px;
           font-size: 12px;
           font-weight: 700;
         }
 
-        .promotion-more-btn {
+        .promotion-detail-btn {
           width: 100%;
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: white;
-          padding: 8px 12px;
-          border-radius: 8px;
+          padding: 12px 16px;
+          border-radius: 10px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 500;
-          transition: all 0.2s;
+          transition: all 0.2s ease;
         }
 
-        .promotion-more-btn:hover {
+        .promotion-detail-btn:hover {
           background: rgba(255, 255, 255, 0.2);
+          transform: translateY(-1px);
         }
 
-        .promotion-more-btn .arrow {
-          transition: transform 0.2s;
-        }
-
-        .promotion-more-btn:hover .arrow {
-          transform: translateX(2px);
-        }
-
-        /* 단골 레벨 카드 스타일 */
-        .loyalty-card {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 12px;
-          color: white;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        /* 단골 레벨 카드 */
+        .loyalty-theme {
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
 
         .loyalty-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
 
         .loyalty-title {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 16px;
+          gap: 8px;
+          font-size: 18px;
           font-weight: 700;
         }
 
-        .loyalty-icon {
-          font-size: 18px;
+        .loyalty-crown {
+          font-size: 20px;
         }
 
-        .loyalty-level {
+        .loyalty-level-badge {
           background: rgba(255, 255, 255, 0.2);
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 600;
+          padding: 6px 16px;
+          border-radius: 16px;
+          font-size: 13px;
+          font-weight: 700;
           backdrop-filter: blur(10px);
         }
 
-        .loyalty-progress-container {
-          margin-bottom: 12px;
+        .loyalty-progress-section {
+          margin-bottom: 16px;
         }
 
-        .loyalty-progress-bar {
+        .progress-info {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+
+        .current-level {
+          font-weight: 600;
+        }
+
+        .next-level {
+          opacity: 0.9;
+        }
+
+        .modern-progress {
           width: 100%;
           height: 8px;
           background: rgba(255, 255, 255, 0.2);
           border-radius: 4px;
           overflow: hidden;
-          margin-bottom: 6px;
         }
 
         .loyalty-progress-fill {
@@ -897,39 +997,145 @@ window.StoreUIManager = {
           transition: width 0.3s ease;
         }
 
-        .loyalty-progress-text {
-          display: flex;
-          justify-content: space-between;
-          font-size: 11px;
-          opacity: 0.9;
-        }
-
-        .loyalty-benefits {
+        .loyalty-benefits-grid {
           display: flex;
           justify-content: space-between;
           gap: 8px;
         }
 
-        .loyalty-benefit-item {
+        .benefit-item {
           background: rgba(255, 255, 255, 0.1);
-          padding: 8px 6px;
-          border-radius: 8px;
+          padding: 12px 8px;
+          border-radius: 10px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           flex: 1;
           backdrop-filter: blur(10px);
         }
 
         .benefit-icon {
-          font-size: 16px;
+          font-size: 18px;
         }
 
         .benefit-text {
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 500;
           text-align: center;
+        }
+
+        #storeContent {
+          margin: 0;
+          padding: 20px;
+          font-size: 15px;
+          min-height: 80px;
+          color: #374151;
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        /* 하단 바 */
+        #storeBottomBar {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          height: 70px;
+          background: white;
+          border-top: 1px solid #f3f4f6;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          z-index: 1000;
+          padding: 0 20px;
+          box-sizing: border-box;
+          gap: 16px;
+        }
+
+        .btm-btn {
+          border: none;
+          outline: none;
+          font-family: inherit;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .phone-btn {
+          width: 50px;
+          min-width: 50px;
+          max-width: 50px;
+          border-radius: 50%;
+          background: #f0f9ff;
+          color: #3b82f6;
+          font-size: 20px;
+          border: 2px solid #dbeafe;
+          transition: all 0.2s ease;
+        }
+
+        .phone-btn:hover {
+          background: #dbeafe;
+          transform: scale(1.05);
+        }
+
+        .order-btn {
+          flex: 1;
+          height: 50px;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          font-size: 16px;
+          letter-spacing: 0.2px;
+          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .order-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        .order-text {
+          font-weight: 600;
+        }
+
+        .order-arrow {
+          font-size: 18px;
+          transition: transform 0.2s ease;
+        }
+
+        .order-btn:hover .order-arrow {
+          transform: translateX(2px);
+        }
+
+        @media (max-width: 480px) {
+          .tlr-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .loyalty-benefits-grid {
+            gap: 6px;
+          }
+          
+          .benefit-item {
+            padding: 10px 6px;
+          }
+          
+          .benefit-text {
+            font-size: 10px;
+          }
         }
       </style>`;
   }
