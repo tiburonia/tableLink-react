@@ -239,12 +239,18 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 배열 및 데이터 초기화 (재렌더링 시에도 초기화)
-  window.currentMarkers = [];
-  window.lastStoreData = [];
-  window.markerMap = new Map();
+  // 마커 배열 및 데이터 초기화 (첫 렌더링시만)
+  if (!window.currentMarkers) {
+    window.currentMarkers = [];
+  }
+  if (!window.lastStoreData) {
+    window.lastStoreData = [];
+  }
+  if (!window.markerMap) {
+    window.markerMap = new Map();
+  }
   
-  console.log('🔄 renderMap: 마커 데이터 초기화 완료');
+  console.log('🔄 renderMap: 마커 데이터 확인 완료 - 기존 마커:', window.markerMap.size, '개');
 
 
   // DOM 즉시 확인 및 강제 재렌더링
@@ -723,11 +729,28 @@ async function loadStoresAndMarkers(map) {
   const storeChanges = getStoreChanges(window.lastStoreData, stores);
   const totalChanges = storeChanges.added.length + storeChanges.updated.length + storeChanges.removed.length;
 
-  // 렌더링이 새로 시작되었거나 마커가 없는 경우 강제로 모든 마커 생성
+  // 지도 객체가 새로 생성되었는지 확인
+  const isMapReset = !window.currentMap || window.currentMap !== map;
   const hasNoMarkers = !window.markerMap || window.markerMap.size === 0;
   const isInitialRender = !window.lastStoreData || window.lastStoreData.length === 0;
   
-  if (totalChanges === 0 && !hasNoMarkers && !isInitialRender) {
+  // 지도가 새로 생성되었으면 모든 마커를 다시 생성해야 함
+  if (isMapReset) {
+    console.log('🗺️ 지도가 새로 생성됨 - 모든 마커를 지도에 다시 표시');
+    window.currentMap = map;
+    
+    // 기존 마커들을 새 지도에 다시 연결
+    if (window.markerMap.size > 0) {
+      console.log('🔄 기존 마커들을 새 지도에 연결:', window.markerMap.size, '개');
+      Array.from(window.markerMap.values()).forEach(marker => {
+        if (marker && marker.setMap) {
+          marker.setMap(map);
+        }
+      });
+    }
+  }
+  
+  if (totalChanges === 0 && !hasNoMarkers && !isInitialRender && !isMapReset) {
     console.log('📍 매장 데이터 변경사항 없음 - 마커 업데이트 건너뛰기');
     // 매장 목록은 업데이트 (UI 새로고침 용도)
     setTimeout(() => {
@@ -739,8 +762,13 @@ async function loadStoresAndMarkers(map) {
     return;
   }
   
-  if (hasNoMarkers || isInitialRender) {
-    console.log('🔄 마커가 없거나 초기 렌더링 - 모든 마커를 새로 생성');
+  if (hasNoMarkers || isInitialRender || isMapReset) {
+    console.log('🔄 마커가 없거나 초기 렌더링 또는 지도 리셋 - 모든 마커를 새로 생성');
+    // 기존 마커들 정리 (지도 리셋인 경우)
+    if (isMapReset && window.markerMap.size > 0) {
+      window.markerMap.clear();
+      console.log('🗑️ 지도 리셋으로 기존 마커 맵 클리어');
+    }
     // 모든 매장을 새로 추가할 매장으로 처리
     storeChanges.added = [...stores];
     storeChanges.updated = [];
