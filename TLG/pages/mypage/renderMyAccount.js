@@ -147,7 +147,8 @@ async function renderMyAccount() {
 
   main.innerHTML = `
     <div class="account-container">
-      <button class="back-button" id="backBtn">←</button>
+      <button class="back-button" id="backBtn"
+      onclick="renderMyPage()">←</button>
       
       <div class="account-content">
         <!-- 프로필 헤더 -->
