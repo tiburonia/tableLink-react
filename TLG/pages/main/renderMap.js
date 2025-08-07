@@ -128,12 +128,12 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 배열 및 데이터 초기화 (첫 로드 시에만)
-  if (!window.currentMarkers) {
-    window.currentMarkers = [];
-    window.lastStoreData = [];
-    window.markerMap = new Map();
-  }
+  // 마커 배열 및 데이터 초기화 (재렌더링 시에도 초기화)
+  window.currentMarkers = [];
+  window.lastStoreData = [];
+  window.markerMap = new Map();
+  
+  console.log('🔄 renderMap: 마커 데이터 초기화 완료');
 
 
   // DOM 즉시 확인 및 강제 재렌더링
@@ -472,7 +472,11 @@ async function loadStoresAndMarkers(map) {
   const storeChanges = getStoreChanges(window.lastStoreData, stores);
   const totalChanges = storeChanges.added.length + storeChanges.updated.length + storeChanges.removed.length;
 
-  if (totalChanges === 0) {
+  // 렌더링이 새로 시작되었거나 마커가 없는 경우 강제로 모든 마커 생성
+  const hasNoMarkers = !window.markerMap || window.markerMap.size === 0;
+  const isInitialRender = !window.lastStoreData || window.lastStoreData.length === 0;
+  
+  if (totalChanges === 0 && !hasNoMarkers && !isInitialRender) {
     console.log('📍 매장 데이터 변경사항 없음 - 마커 업데이트 건너뛰기');
     // 매장 목록은 업데이트 (UI 새로고침 용도)
     setTimeout(() => {
@@ -482,6 +486,14 @@ async function loadStoresAndMarkers(map) {
       }
     }, 100);
     return;
+  }
+  
+  if (hasNoMarkers || isInitialRender) {
+    console.log('🔄 마커가 없거나 초기 렌더링 - 모든 마커를 새로 생성');
+    // 모든 매장을 새로 추가할 매장으로 처리
+    storeChanges.added = [...stores];
+    storeChanges.updated = [];
+    storeChanges.removed = [];
   }
 
   console.log(`🔄 매장 변경사항 감지 - 추가: ${storeChanges.added.length}, 수정: ${storeChanges.updated.length}, 삭제: ${storeChanges.removed.length}개`);
