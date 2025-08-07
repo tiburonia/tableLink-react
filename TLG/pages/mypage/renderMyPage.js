@@ -5,7 +5,7 @@ async function renderMyPage() {
   // UI 먼저 렌더링 (로딩 상태로)
   main.innerHTML = `
     <header>
-      <h1>📄 마이페이지</h1>
+      <button id="settingsBtn" class="settings-button">⚙️</button>
     </header>
 
     <main id="content">
@@ -30,7 +30,7 @@ async function renderMyPage() {
         </div>
       </section>
 
-      <button id="info" class="solid-button">내 계정 보기</button>
+      
     </main>
 
     <nav id="bottomBar">
@@ -54,22 +54,46 @@ async function renderMyPage() {
         left: 0;
         width: 100%;
         max-width: 430px;
-        height: 80px;
+        height: 60px;
         background: white;
         border-bottom: 1px solid #ddd;
         display: flex;
         align-items: center;
+        justify-content: flex-end;
+        padding: 0 20px;
+        box-sizing: border-box;
         z-index: 1001;
       }
 
-      header h1 {
-        margin: 20px;
-        font-size: 24px;
+      .settings-button {
+        width: 40px;
+        height: 40px;
+        border: none;
+        background: #f5f7fb;
+        border-radius: 50%;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #297efc;
+        transition: background 0.2s, transform 0.1s;
+        box-shadow: 0 2px 8px rgba(41,126,252,0.1);
+      }
+
+      .settings-button:hover {
+        background: #eaf3ff;
+        transform: scale(1.05);
+      }
+
+      .settings-button:active {
+        background: #d4edff;
+        transform: scale(0.95);
       }
 
       #content {
         position: absolute;
-        top: 80px;       /* 헤더 높이만큼 */
+        top: 60px;       /* 헤더 높이만큼 */
         bottom: 60px;    /* 바텀 바 높이만큼 */
         left: 0;
         width: 100%;
@@ -93,17 +117,7 @@ async function renderMyPage() {
         font-size: 18px;
         font-weight: 600;
       }
-      .solid-button {
-        width: 100%;
-        padding: 12px 0;
-        font-size: 16px;
-        background: #297efc;
-        color: white;
-        border: none;
-        border-radius: 10px;
-        margin: 20px 0 80px 0; /* 바텀바 여백 확보 */
-        cursor: pointer;
-      }
+      
       #bottomBar {
         position: fixed;
         bottom: 0;
@@ -264,9 +278,9 @@ async function renderMyPage() {
     </style>
   `;
 
-  // 내 계정 보기 버튼 이벤트 리스너 (즉시 설정)
-  const info = document.querySelector('#info');
-  info.addEventListener('click', () => renderMyAccount());
+  // 설정 버튼 이벤트 리스너 (즉시 설정)
+  const settingsBtn = document.querySelector('#settingsBtn');
+  settingsBtn.addEventListener('click', () => renderMyAccount());
 
   // 바텀 네비게이션 이벤트 리스너 추가
   const renderTLL = document.querySelector('#TLL');
