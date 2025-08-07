@@ -2,100 +2,253 @@
 // renderStoreUI.js, storeTabManager.js, tablePanelManager.js, reviewManager.js가 먼저 로드되어야 함
 
 function renderStore(store) {
-  console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
+  try {
+    console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
 
-  // 초기 별점 값 설정
-  let displayRating = '0.0';
+    // 필수 데이터 검증
+    if (!store || !store.id || !store.name) {
+      console.error('❌ 유효하지 않은 매장 데이터:', store);
+      throw new Error('매장 데이터가 유효하지 않습니다');
+    }
 
-  // localStorage에서 캐시된 별점 정보 확인
-  const cachedRating = window.cacheManager.getStoreRating(store.id);
-  if (cachedRating) {
-    displayRating = parseFloat(cachedRating.ratingAverage).toFixed(1);
-    console.log('⭐ 캐시된 별점 사용:', displayRating);
-  } else {
-    // 캐시에 없으면 비동기로 가져오기
-    console.log('⚠️ 별점 정보 캐시 없음, 서버에서 가져오는 중...');
-    updateStoreRatingAsync(store);
+    // 필수 모듈 로딩 확인
+    if (!window.StoreUIManager || typeof window.StoreUIManager.renderStoreHTML !== 'function') {
+      console.error('❌ StoreUIManager가 로드되지 않았습니다');
+      throw new Error('필수 UI 모듈을 찾을 수 없습니다');
+    }
+
+    // 초기 별점 값 설정
+    let displayRating = '0.0';
+
+    // localStorage에서 캐시된 별점 정보 확인 (안전하게)
+    try {
+      if (window.cacheManager && typeof window.cacheManager.getStoreRating === 'function') {
+        const cachedRating = window.cacheManager.getStoreRating(store.id);
+        if (cachedRating && cachedRating.ratingAverage !== null && cachedRating.ratingAverage !== undefined) {
+          displayRating = parseFloat(cachedRating.ratingAverage).toFixed(1);
+          console.log('⭐ 캐시된 별점 사용:', displayRating);
+        } else {
+          console.log('⚠️ 별점 정보 캐시 없음, 서버에서 가져오는 중...');
+          updateStoreRatingAsync(store);
+        }
+      } else {
+        console.warn('⚠️ 캐시 매니저가 사용 불가능');
+      }
+    } catch (cacheError) {
+      console.warn('⚠️ 캐시 접근 중 오류:', cacheError);
+    }
+
+    // UI 렌더링
+    window.StoreUIManager.renderStoreHTML(store, displayRating);
+
+    // DOM 렌더링 완료 후 이벤트 설정
+    setTimeout(() => {
+      try {
+        setupEventListeners(store);
+        loadInitialData(store);
+        console.log('✅ 매장 렌더링 완료:', store.name);
+      } catch (setupError) {
+        console.error('❌ 이벤트 설정 중 오류:', setupError);
+      }
+    }, 100);
+
+    // 전역에서 접근 가능하도록 store 정보 저장
+    window.currentStore = store;
+
+  } catch (error) {
+    console.error('❌ renderStore 실행 중 오류:', error);
+    
+    // 오류 발생 시 기본 오류 화면 표시
+    const main = document.getElementById('main');
+    if (main) {
+      main.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #666;">
+          <h2>🚫 매장을 불러올 수 없습니다</h2>
+          <p style="color: #999; margin: 10px 0;">${error.message}</p>
+          <button onclick="renderMap()" style="
+            padding: 10px 20px; 
+            background: #297efc; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer;
+            font-size: 16px;
+          ">지도로 돌아가기</button>
+        </div>
+      `;
+    }
   }
-
-  // UI 렌더링
-  window.StoreUIManager.renderStoreHTML(store, displayRating);
-
-  // 이벤트 리스너 설정
-  setupEventListeners(store);
-
-  // 초기 데이터 로드
-  loadInitialData(store);
-
-  // 전역에서 접근 가능하도록 store 정보 저장
-  window.currentStore = store;
 }
 
 // 이벤트 리스너 설정
 function setupEventListeners(store) {
-  // 패널 핸들링
-  window.StorePanelManager.initializePanelHandling();
+  try {
+    console.log('🔧 이벤트 리스너 설정 시작...');
 
-  // 탭 네비게이션
-  window.StoreTabManager.initializeTabNavigation(store);
+    // 패널 핸들링 (안전하게)
+    if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
+      window.StorePanelManager.initializePanelHandling();
+      console.log('✅ 패널 핸들링 초기화 완료');
+    } else {
+      console.warn('⚠️ StorePanelManager를 찾을 수 없음');
+    }
 
-  // 즐겨찾기 버튼
-  const favoriteBtn = document.getElementById('favoriteBtn');
-  if (favoriteBtn) {
-    favoriteBtn.addEventListener('click', () => {
-      toggleFavorite(store.name);
-      updateFavoriteBtn(store.name);
-    });
-    updateFavoriteBtn(store.name);
-  }
+    // 탭 네비게이션 (안전하게)
+    if (window.StoreTabManager && typeof window.StoreTabManager.initializeTabNavigation === 'function') {
+      window.StoreTabManager.initializeTabNavigation(store);
+      console.log('✅ 탭 네비게이션 초기화 완료');
+    } else {
+      console.warn('⚠️ StoreTabManager를 찾을 수 없음');
+    }
 
-  // 리뷰 링크 이벤트 (null 체크 강화)
-  const reviewLink = document.getElementById('reviewLink');
-  if (reviewLink) {
-    reviewLink.addEventListener('click', () => {
-      renderAllReview(store);
-    });
-  }
+    // 즐겨찾기 버튼
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => {
+        try {
+          if (typeof toggleFavorite === 'function' && typeof updateFavoriteBtn === 'function') {
+            toggleFavorite(store.name);
+            updateFavoriteBtn(store.name);
+          } else {
+            console.warn('⚠️ 즐겨찾기 함수를 찾을 수 없음');
+          }
+        } catch (favoriteError) {
+          console.error('❌ 즐겨찾기 처리 중 오류:', favoriteError);
+        }
+      });
+      
+      // 초기 즐겨찾기 상태 설정
+      if (typeof updateFavoriteBtn === 'function') {
+        updateFavoriteBtn(store.name);
+      }
+      console.log('✅ 즐겨찾기 버튼 이벤트 설정 완료');
+    } else {
+      console.warn('⚠️ favoriteBtn 요소를 찾을 수 없음');
+    }
 
-  const reviewSeeMoreBtns = document.getElementsByClassName('see-more-btn');
-  if (reviewSeeMoreBtns && reviewSeeMoreBtns.length > 0 && reviewSeeMoreBtns[0]) {
-    reviewSeeMoreBtns[0].addEventListener('click', () => {
-      renderAllReview(store);
-    });
-  }
+    // 리뷰 링크 이벤트 (null 체크 강화)
+    const reviewLink = document.getElementById('reviewLink');
+    if (reviewLink) {
+      reviewLink.addEventListener('click', () => {
+        try {
+          if (typeof renderAllReview === 'function') {
+            renderAllReview(store);
+          } else {
+            console.warn('⚠️ renderAllReview 함수를 찾을 수 없음');
+          }
+        } catch (reviewError) {
+          console.error('❌ 리뷰 링크 처리 중 오류:', reviewError);
+        }
+      });
+      console.log('✅ 리뷰 링크 이벤트 설정 완료');
+    }
 
-  // TLR 영역 클릭 시 테이블 정보 새로고침
-  const tlrContainer = document.getElementById('TLR');
-  if (tlrContainer) {
-    tlrContainer.addEventListener('click', () => {
-      window.TableInfoManager.loadTableInfo(store);
-    });
+    // 리뷰 더보기 버튼들
+    const reviewSeeMoreBtns = document.getElementsByClassName('see-more-btn');
+    if (reviewSeeMoreBtns && reviewSeeMoreBtns.length > 0 && reviewSeeMoreBtns[0]) {
+      reviewSeeMoreBtns[0].addEventListener('click', () => {
+        try {
+          if (typeof renderAllReview === 'function') {
+            renderAllReview(store);
+          } else {
+            console.warn('⚠️ renderAllReview 함수를 찾을 수 없음');
+          }
+        } catch (reviewError) {
+          console.error('❌ 리뷰 더보기 처리 중 오류:', reviewError);
+        }
+      });
+      console.log('✅ 리뷰 더보기 버튼 이벤트 설정 완료');
+    }
+
+    // TLR 영역 클릭 시 테이블 정보 새로고침
+    const tlrContainer = document.getElementById('TLR');
+    if (tlrContainer) {
+      tlrContainer.addEventListener('click', () => {
+        try {
+          if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+            window.TableInfoManager.loadTableInfo(store);
+          } else {
+            console.warn('⚠️ TableInfoManager를 찾을 수 없음');
+          }
+        } catch (tableError) {
+          console.error('❌ 테이블 정보 로드 중 오류:', tableError);
+        }
+      });
+      console.log('✅ TLR 영역 이벤트 설정 완료');
+    }
+
+    console.log('✅ 모든 이벤트 리스너 설정 완료');
+  } catch (error) {
+    console.error('❌ 이벤트 리스너 설정 중 오류:', error);
   }
 }
 
 // 초기 데이터 로드
 function loadInitialData(store) {
-  // 리뷰 미리보기 로드
-  window.ReviewManager.renderTopReviews(store);
+  try {
+    console.log('📊 초기 데이터 로드 시작...');
 
-  // 테이블 정보 로드 (항상 최신 정보로 갱신)
-  if (window.TableInfoManager) {
-    console.log('🔄 테이블 정보 새로고침 시작...');
+    // 리뷰 미리보기 로드 (안전하게)
+    if (window.ReviewManager && typeof window.ReviewManager.renderTopReviews === 'function') {
+      window.ReviewManager.renderTopReviews(store);
+      console.log('✅ 리뷰 미리보기 로드 완료');
+    } else {
+      console.warn('⚠️ ReviewManager를 찾을 수 없음');
+    }
+
+    // 테이블 정보 로드 (항상 최신 정보로 갱신)
+    if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+      console.log('🔄 테이블 정보 새로고침 시작...');
+      setTimeout(() => {
+        try {
+          window.TableInfoManager.loadTableInfo(store);
+          // 30초마다 자동 갱신 시작
+          if (typeof window.TableInfoManager.startAutoRefresh === 'function') {
+            window.TableInfoManager.startAutoRefresh(store, 30000);
+          }
+          console.log('✅ 테이블 정보 로드 완료');
+        } catch (tableError) {
+          console.error('❌ 테이블 정보 로드 중 오류:', tableError);
+        }
+      }, 500); // 페이지 렌더링 후 테이블 정보 로드
+    } else {
+      console.warn('⚠️ TableInfoManager를 찾을 수 없음');
+    }
+
+    // 프로모션 및 단골 레벨 정보 로드
+    try {
+      loadPromotionData(store);
+      loadLoyaltyData(store);
+      console.log('✅ 프로모션/단골 데이터 로드 완료');
+    } catch (promoError) {
+      console.error('❌ 프로모션/단골 데이터 로드 중 오류:', promoError);
+    }
+
+    // 첫 화면(메뉴 탭) 설정
     setTimeout(() => {
-      window.TableInfoManager.loadTableInfo(store);
-      // 30초마다 자동 갱신 시작
-      window.TableInfoManager.startAutoRefresh(store, 30000);
-    }, 500); // 페이지 렌더링 후 테이블 정보 로드
+      try {
+        if (window.StoreTabManager && typeof window.StoreTabManager.renderStoreTab === 'function') {
+          window.StoreTabManager.renderStoreTab('menu', store);
+          
+          const menuBtn = document.querySelector('[data-tab="menu"]');
+          if (menuBtn) {
+            menuBtn.classList.add('active');
+            console.log('✅ 메뉴 탭 활성화 완료');
+          } else {
+            console.warn('⚠️ 메뉴 탭 버튼을 찾을 수 없음');
+          }
+        } else {
+          console.warn('⚠️ StoreTabManager를 찾을 수 없음');
+        }
+      } catch (tabError) {
+        console.error('❌ 탭 설정 중 오류:', tabError);
+      }
+    }, 200);
+
+    console.log('✅ 초기 데이터 로드 완료');
+  } catch (error) {
+    console.error('❌ 초기 데이터 로드 중 오류:', error);
   }
-
-  // 프로모션 및 단골 레벨 정보 로드
-  loadPromotionData(store);
-  loadLoyaltyData(store);
-
-  // 첫 화면(메뉴 탭) 설정
-  window.StoreTabManager.renderStoreTab('menu', store);
-  const menuBtn = document.querySelector('[data-tab="menu"]');
-  if (menuBtn) menuBtn.classList.add('active');
 }
 
 // 비동기로 별점 정보 업데이트
