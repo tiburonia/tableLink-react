@@ -136,9 +136,14 @@ async function renderMyAccount() {
   
   const main = document.getElementById('main');
 
-  // body와 html의 스크롤 강제 활성화
-  document.body.style.overflow = 'auto';
-  document.documentElement.style.overflow = 'auto';
+  // body와 html의 스크롤 강제 활성화 및 기존 스타일 제거
+  document.body.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+  document.documentElement.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+  
+  // main 요소도 스크롤 가능하도록 설정
+  if (main) {
+    main.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+  }
 
   // UI 프레임을 먼저 렌더링 (로딩 상태)
   main.innerHTML = `
@@ -275,19 +280,21 @@ async function renderMyAccount() {
         padding: 0;
       }
 
-      html, body {
+      html, body, #main {
         overflow: auto !important;
         height: auto !important;
         position: static !important;
+        -webkit-overflow-scrolling: touch !important;
       }
 
       .account-container {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
-        position: static;
-        overflow: visible;
+        position: static !important;
+        overflow: visible !important;
         padding-bottom: 40px;
+        height: auto !important;
       }
 
       .back-button {
@@ -321,9 +328,10 @@ async function renderMyAccount() {
         padding: 80px 20px 40px 20px;
         max-width: 430px;
         margin: 0 auto;
-        overflow: visible;
-        position: static;
-        height: auto;
+        overflow: visible !important;
+        position: static !important;
+        height: auto !important;
+        -webkit-overflow-scrolling: touch;
       }
 
       .profile-header {
@@ -845,10 +853,24 @@ async function renderMyAccount() {
 
   console.log('🔧 이벤트 리스너 설정 시작');
   
-  // DOM이 완전히 생성된 후 이벤트 리스너 등록 (requestAnimationFrame 사용)
+  // DOM이 완전히 생성된 후 이벤트 리스너 등록 및 스크롤 재설정
   requestAnimationFrame(() => {
+    // 스크롤 재설정 (다른 스크립트에 의한 간섭 방지)
+    document.body.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+    document.documentElement.style.cssText = 'overflow: auto !important; height: auto !important; position: static !important;';
+    
     setupEventListeners();
     loadAccountData();
+    
+    // 추가 스크롤 확인
+    setTimeout(() => {
+      console.log('📱 스크롤 상태 확인:', {
+        body: document.body.style.overflow,
+        html: document.documentElement.style.overflow,
+        bodyHeight: document.body.scrollHeight,
+        windowHeight: window.innerHeight
+      });
+    }, 500);
   });
 }
 
