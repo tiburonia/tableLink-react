@@ -209,6 +209,21 @@ async function renderMyPage() {
         background: #f0f0f0;
         color: #333;
       }
+      .more-orders-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .more-orders-btn:hover {
+        background: #5a6268;
+      }
     </style>
   `;
 
@@ -256,7 +271,7 @@ async function loadUserData() {
   }
 }
 
-// 주문내역 업데이트 함수
+// 주문내역 업데이트 함수 (최근 3개만 표시)
 function updateOrderList(currentUserInfo) {
   const orderList = document.querySelector('#orderList');
   if (!orderList) return;
@@ -264,7 +279,10 @@ function updateOrderList(currentUserInfo) {
   orderList.innerHTML = ''; // 기존 내용 초기화
 
   if (currentUserInfo.orderList?.length > 0) {
-    currentUserInfo.orderList.forEach((order, index) => {
+    // 최근 3개만 표시
+    const recentOrders = currentUserInfo.orderList.slice(0, 3);
+    
+    recentOrders.forEach((order, index) => {
       const orderDiv = document.createElement('div');
       orderDiv.className = 'order-item';
       const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
@@ -289,6 +307,17 @@ function updateOrderList(currentUserInfo) {
       `;
       orderList.appendChild(orderDiv);
     });
+
+    // 더보기 버튼 추가 (전체 주문이 3개보다 많을 때만)
+    if (currentUserInfo.orderList.length > 3) {
+      const moreBtn = document.createElement('button');
+      moreBtn.className = 'more-orders-btn';
+      moreBtn.innerHTML = `📋 전체 주문내역 보기 (${currentUserInfo.orderList.length}건)`;
+      moreBtn.addEventListener('click', () => {
+        renderAllOrderHTML(userInfo);
+      });
+      orderList.appendChild(moreBtn);
+    }
 
     // 리뷰 작성 버튼 이벤트 리스너
     document.querySelectorAll('.review-btn').forEach(btn => {
