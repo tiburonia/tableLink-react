@@ -120,12 +120,13 @@ async function renderMyPage() {
       .order-item {
         background: #fff;
         border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 12px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
         border: 1px solid #f0f0f0;
       }
       .order-info {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+        line-height: 1.3;
       }
       .review-section {
         display: flex;
@@ -271,7 +272,7 @@ async function loadUserData() {
   }
 }
 
-// 주문내역 업데이트 함수 (최근 3개만 표시)
+// 주문내역 업데이트 함수 (최근 2개만 표시)
 function updateOrderList(currentUserInfo) {
   const orderList = document.querySelector('#orderList');
   if (!orderList) return;
@@ -279,8 +280,8 @@ function updateOrderList(currentUserInfo) {
   orderList.innerHTML = ''; // 기존 내용 초기화
 
   if (currentUserInfo.orderList?.length > 0) {
-    // 최근 3개만 표시
-    const recentOrders = currentUserInfo.orderList.slice(0, 3);
+    // 최근 2개만 표시
+    const recentOrders = currentUserInfo.orderList.slice(0, 2);
     
     recentOrders.forEach((order, index) => {
       const orderDiv = document.createElement('div');
@@ -294,8 +295,7 @@ function updateOrderList(currentUserInfo) {
         <div class="order-info">
           • <strong>${order.store}</strong><br>
           ${items}<br>
-          총 ${order.total.toLocaleString()}원<br>
-          📅 ${order.date}<br>
+          총 ${order.total.toLocaleString()}원 | 📅 ${order.date}
         </div>
         <div class="review-section">
           ${hasReview ?
@@ -308,8 +308,8 @@ function updateOrderList(currentUserInfo) {
       orderList.appendChild(orderDiv);
     });
 
-    // 더보기 버튼 추가 (전체 주문이 3개보다 많을 때만)
-    if (currentUserInfo.orderList.length > 3) {
+    // 더보기 버튼 추가 (전체 주문이 2개보다 많을 때만)
+    if (currentUserInfo.orderList.length > 2) {
       const moreBtn = document.createElement('button');
       moreBtn.className = 'more-orders-btn';
       moreBtn.innerHTML = `📋 전체 주문내역 보기 (${currentUserInfo.orderList.length}건)`;
