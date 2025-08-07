@@ -502,36 +502,36 @@ window.StoreUIManager = {
 
         /* 테이블 현황 스타일 */
         .tlr-container {
-          padding: 20px;
+          padding: 16px;
         }
 
         .tlr-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 14px;
         }
 
         .tlr-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
+          gap: 6px;
+          font-size: 16px;
           font-weight: 700;
           color: #111827;
         }
 
         .tlr-icon {
-          font-size: 20px;
+          font-size: 18px;
         }
 
         .tlr-status-badge {
           background: #10b981;
           color: white;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 16px;
+          padding: 4px 10px;
+          border-radius: 14px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -551,14 +551,14 @@ window.StoreUIManager = {
         .tlr-stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
+          gap: 10px;
+          margin-bottom: 14px;
         }
 
         .stat-card {
           background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px 12px;
+          border-radius: 10px;
+          padding: 12px 8px;
           text-align: center;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
@@ -594,30 +594,30 @@ window.StoreUIManager = {
         }
 
         .stat-value {
-          font-size: 24px;
+          font-size: 20px;
           font-weight: 800;
-          margin-bottom: 4px;
+          margin-bottom: 2px;
         }
 
         .stat-label {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 500;
           opacity: 0.9;
         }
 
         .usage-rate-container {
           background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 16px;
+          border-radius: 10px;
+          padding: 12px;
+          margin-bottom: 12px;
         }
 
         .usage-rate-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
-          font-size: 14px;
+          margin-bottom: 6px;
+          font-size: 13px;
           font-weight: 600;
           color: #374151;
         }
@@ -629,16 +629,16 @@ window.StoreUIManager = {
 
         .usage-rate-bar {
           width: 100%;
-          height: 8px;
+          height: 6px;
           background: #e5e7eb;
-          border-radius: 4px;
+          border-radius: 3px;
           overflow: hidden;
         }
 
         .usage-rate-fill {
           height: 100%;
           background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-          border-radius: 4px;
+          border-radius: 3px;
           transition: width 0.3s ease;
           width: 0%;
         }
@@ -721,18 +721,18 @@ window.StoreUIManager = {
 
         /* 리뷰 프리뷰 */
         .review-preview {
-          padding: 20px;
+          padding: 16px;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .section-title {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
           color: #111827;
           margin: 0;
@@ -742,11 +742,11 @@ window.StoreUIManager = {
           background: none;
           border: none;
           color: #3b82f6;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          padding: 6px 12px;
-          border-radius: 8px;
+          padding: 4px 10px;
+          border-radius: 6px;
           transition: background 0.2s ease;
         }
 
@@ -757,13 +757,13 @@ window.StoreUIManager = {
         .review-content {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 10px;
         }
 
         .modern-review {
           background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
+          border-radius: 10px;
+          padding: 12px;
           border: 1px solid #e2e8f0;
         }
 
@@ -771,11 +771,11 @@ window.StoreUIManager = {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .review-user {
-          font-size: 14px;
+          font-size: 13px;
           color: #3b82f6;
           font-weight: 600;
         }
@@ -783,34 +783,34 @@ window.StoreUIManager = {
         .review-meta {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         .review-score {
-          font-size: 13px;
+          font-size: 12px;
           color: #fbbf24;
           font-weight: 600;
         }
 
         .review-date {
-          font-size: 12px;
+          font-size: 11px;
           color: #9ca3af;
         }
 
         .review-text {
-          font-size: 14px;
+          font-size: 13px;
           color: #374151;
-          line-height: 1.5;
+          line-height: 1.4;
         }
 
         /* 프로모션 카드 */
         .modern-gradient-card {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          padding: 20px;
-          margin-bottom: 16px;
+          border-radius: 14px;
+          padding: 16px;
+          margin-bottom: 14px;
           color: white;
-          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+          box-shadow: 0 6px 24px rgba(102, 126, 234, 0.2);
           border: none;
         }
 
@@ -818,26 +818,26 @@ window.StoreUIManager = {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .promotion-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
+          gap: 6px;
+          font-size: 16px;
           font-weight: 700;
         }
 
         .promotion-emoji {
-          font-size: 20px;
+          font-size: 18px;
         }
 
         .promotion-badge.live {
           background: rgba(239, 68, 68, 0.9);
-          padding: 4px 10px;
-          border-radius: 12px;
-          font-size: 11px;
+          padding: 3px 8px;
+          border-radius: 10px;
+          font-size: 10px;
           font-weight: 700;
           animation: pulse 2s infinite;
         }
@@ -850,14 +850,14 @@ window.StoreUIManager = {
         .promotion-content {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: 10px;
+          margin-bottom: 12px;
         }
 
         .promotion-item {
           background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 14px;
+          border-radius: 10px;
+          padding: 12px;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -872,40 +872,40 @@ window.StoreUIManager = {
         .promotion-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
         }
 
         .promotion-icon {
-          font-size: 20px;
-          width: 36px;
+          font-size: 18px;
+          width: 30px;
           text-align: center;
         }
 
         .promotion-name {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 600;
-          margin-bottom: 4px;
+          margin-bottom: 3px;
         }
 
         .promotion-desc {
-          font-size: 13px;
+          font-size: 12px;
           opacity: 0.9;
         }
 
         .promotion-discount {
           background: rgba(255, 255, 255, 0.2);
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 5px 10px;
+          border-radius: 6px;
+          font-size: 13px;
           font-weight: 700;
         }
 
         .promotion-tag {
           background: rgba(251, 191, 36, 0.9);
           color: #92400e;
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 12px;
+          padding: 5px 10px;
+          border-radius: 6px;
+          font-size: 11px;
           font-weight: 700;
         }
 
@@ -914,13 +914,13 @@ window.StoreUIManager = {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: white;
-          padding: 12px 16px;
-          border-radius: 10px;
+          padding: 10px 14px;
+          border-radius: 8px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 13px;
           font-weight: 500;
           transition: all 0.2s ease;
         }
@@ -939,39 +939,39 @@ window.StoreUIManager = {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .loyalty-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
+          gap: 6px;
+          font-size: 16px;
           font-weight: 700;
         }
 
         .loyalty-crown {
-          font-size: 20px;
+          font-size: 18px;
         }
 
         .loyalty-level-badge {
           background: rgba(255, 255, 255, 0.2);
-          padding: 6px 16px;
-          border-radius: 16px;
-          font-size: 13px;
+          padding: 4px 12px;
+          border-radius: 14px;
+          font-size: 12px;
           font-weight: 700;
           backdrop-filter: blur(10px);
         }
 
         .loyalty-progress-section {
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .progress-info {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 8px;
-          font-size: 13px;
+          margin-bottom: 6px;
+          font-size: 12px;
         }
 
         .current-level {
@@ -984,43 +984,43 @@ window.StoreUIManager = {
 
         .modern-progress {
           width: 100%;
-          height: 8px;
+          height: 6px;
           background: rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
+          border-radius: 3px;
           overflow: hidden;
         }
 
         .loyalty-progress-fill {
           height: 100%;
           background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
-          border-radius: 4px;
+          border-radius: 3px;
           transition: width 0.3s ease;
         }
 
         .loyalty-benefits-grid {
           display: flex;
           justify-content: space-between;
-          gap: 8px;
+          gap: 6px;
         }
 
         .benefit-item {
           background: rgba(255, 255, 255, 0.1);
-          padding: 12px 8px;
-          border-radius: 10px;
+          padding: 10px 6px;
+          border-radius: 8px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
           flex: 1;
           backdrop-filter: blur(10px);
         }
 
         .benefit-icon {
-          font-size: 18px;
+          font-size: 16px;
         }
 
         .benefit-text {
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 500;
           text-align: center;
         }

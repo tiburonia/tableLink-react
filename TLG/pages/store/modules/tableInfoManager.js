@@ -84,12 +84,30 @@ window.TableInfoManager = {
     const availableSeatsEl = document.getElementById('availableSeats');
     const occupancyRateEl = document.getElementById('occupancyRate');
     const statusBadgeEl = document.getElementById('tableStatusBadge');
+    const usageRateFillEl = document.getElementById('usageRateFill');
 
     if (totalTablesEl) totalTablesEl.textContent = info.totalTables;
     if (availableTablesEl) availableTablesEl.textContent = info.availableTables;
     if (totalSeatsEl) totalSeatsEl.textContent = info.totalSeats;
     if (availableSeatsEl) availableSeatsEl.textContent = info.availableSeats;
     if (occupancyRateEl) occupancyRateEl.textContent = info.occupancyRate + (info.occupancyRate !== '-' ? '%' : '');
+
+    // 사용률 바 업데이트
+    if (usageRateFillEl && info.occupancyRate !== '-') {
+      const percentage = parseInt(info.occupancyRate) || 0;
+      usageRateFillEl.style.width = percentage + '%';
+      
+      // 사용률에 따라 바 색상 변경
+      if (percentage >= 90) {
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'; // 빨간색
+      } else if (percentage >= 70) {
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'; // 주황색
+      } else {
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)'; // 기본 초록-파랑
+      }
+    } else if (usageRateFillEl) {
+      usageRateFillEl.style.width = '0%';
+    }
 
     if (statusBadgeEl) {
       statusBadgeEl.textContent = info.statusText;
@@ -99,7 +117,7 @@ window.TableInfoManager = {
     // 헤더의 매장 운영 상태도 함께 업데이트
     this.updateStoreHeaderStatus(info.statusText, info.statusClass);
 
-    console.log(`✅ 테이블 정보 UI 업데이트 완료: ${info.statusText}`);
+    console.log(`✅ 테이블 정보 UI 업데이트 완료: ${info.statusText} (사용률: ${info.occupancyRate}%)`);
   },
 
   updateStoreHeaderStatus(statusText, statusClass) {
