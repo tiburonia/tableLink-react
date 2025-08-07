@@ -4,27 +4,11 @@ window.MapPanelUI = {
   renderPanelHTML() {
     return `
       <div id="storePanel" class="collapsed">
-        <div id="panelHandle">
-          <div class="handle-indicator"></div>
-        </div>
+        <div id="panelHandle"></div>
         <div id="storeListContainer">
-          <div class="panel-header">
-            <h3 class="panel-title">
-              <span class="title-icon">🏪</span>
-              주변 매장
-            </h3>
-            <div class="panel-subtitle">터치하여 매장 정보를 확인하세요</div>
-          </div>
-          <div class="loading-message">
-            <div class="loading-spinner-container">
-              <div class="loading-spinner"></div>
-              <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-            <div class="loading-text">매장 정보를 불러오는 중...</div>
+          <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+            <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            매장 정보를 불러오는 중...
           </div>
         </div>
       </div>
@@ -75,79 +59,32 @@ window.MapPanelUI = {
           transform: translateX(-50%);
           width: 100%;
           max-width: 430px;
-          background: rgba(255, 255, 255, 0.98);
-          border-top-left-radius: 20px;
-          border-top-right-radius: 20px;
-          box-shadow: 0 -4px 25px rgba(20, 40, 90, 0.15), 0 -2px 10px rgba(70, 110, 180, 0.08);
+          background: #fff;
+          border-top-left-radius: 16px;
+          border-top-right-radius: 16px;
+          box-shadow: 0 -2px 14px rgba(30, 60, 120, 0.13);
           overflow: hidden;
-          transition: height 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+          transition: height 0.3s cubic-bezier(.68,-0.55,.27,1.55);
           z-index: 1002;
-          border: 1.5px solid rgba(230, 235, 250, 0.6);
-          backdrop-filter: blur(10px);
+          border: 1.1px solid #f1f2fb;
         }
-        #storePanel.collapsed { height: 65px; }
+        #storePanel.collapsed { height: 60px; }
         #storePanel.expanded { height: 630px; }
-        
         #panelHandle {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          height: 24px;
+          width: 44px;
+          height: 7px;
+          background: #e0e3f3;
+          border-radius: 4px;
+          margin: 10px auto 6px auto;
           cursor: pointer;
-          padding: 12px 0 8px 0;
-          transition: all 0.2s ease;
-        }
-        
-        #panelHandle:hover {
-          background: rgba(41, 126, 252, 0.05);
-        }
-        
-        .handle-indicator {
-          width: 48px;
-          height: 5px;
-          background: linear-gradient(90deg, #e2e6ee 0%, #c8d1e8 100%);
-          border-radius: 3px;
-          transition: all 0.3s ease;
-        }
-        
-        #panelHandle:hover .handle-indicator {
-          background: linear-gradient(90deg, #297efc 0%, #4a90fc 100%);
-          width: 56px;
-        }
-
-        /* 패널 헤더 */
-        .panel-header {
-          padding: 16px 20px 8px 20px;
-          border-bottom: 1px solid rgba(230, 235, 250, 0.8);
-          background: rgba(248, 250, 254, 0.6);
-          backdrop-filter: blur(5px);
-        }
-        
-        .panel-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin: 0 0 4px 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1a1a1a;
-          letter-spacing: -0.3px;
-        }
-        
-        .title-icon {
-          font-size: 20px;
-        }
-        
-        .panel-subtitle {
-          font-size: 13px;
-          color: #666;
-          font-weight: 500;
+          opacity: 0.8;
         }
 
         /* 가게 목록 스크롤 영역 */
         #storeListContainer {
-          height: calc(100% - 44px); /* 핸들 공간 빼고 */
+          height: calc(100% - 23px); /* 핸들 공간 빼고 */
           overflow-y: auto;
+          padding: 8px 4px 20px 4px;
           box-sizing: border-box;
           /* 스크롤바 숨김 */
           scrollbar-width: none; /* Firefox */
@@ -157,103 +94,30 @@ window.MapPanelUI = {
           display: none; /* Chrome, Safari, Opera */
         }
 
-        /* 로딩 스타일 */
-        .loading-message {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 20px;
-          text-align: center;
-          gap: 16px;
-        }
-        
-        .loading-spinner-container {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .loading-spinner {
-          width: 36px;
-          height: 36px;
-          border: 3px solid rgba(41, 126, 252, 0.1);
-          border-top: 3px solid #297efc;
-          border-radius: 50%;
-          animation: spin 1.2s linear infinite;
-        }
-        
-        .loading-dots {
-          position: absolute;
-          display: flex;
-          gap: 4px;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-        }
-        
-        .loading-dots span {
-          width: 4px;
-          height: 4px;
-          background: #297efc;
-          border-radius: 50%;
-          animation: loading-dots 1.4s ease-in-out infinite both;
-        }
-        
-        .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-        .loading-dots span:nth-child(3) { animation-delay: 0s; }
-        
-        .loading-text {
-          font-size: 15px;
-          color: #666;
-          font-weight: 500;
-          letter-spacing: -0.2px;
-        }
-        
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes loading-dots {
-          0%, 80%, 100% { 
-            transform: scale(0);
-            opacity: 0.5;
-          }
-          40% { 
-            transform: scale(1);
-            opacity: 1;
-          }
-        }
-
         /* 개별 가게 카드 */
         .storeCard {
-          border-radius: 18px;
+          border-radius: 20px;
           padding: 0;
-          margin: 0 16px 16px 16px;
-          background: rgba(255, 255, 255, 0.95);
-          box-shadow: 0 3px 16px rgba(20, 40, 90, 0.08), 0 1px 6px rgba(70, 110, 180, 0.04);
+          margin-bottom: 16px;
+          background: #fff;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
           box-sizing: border-box;
           display: flex;
           flex-direction: column;
-          transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
-          border: 1px solid rgba(230, 235, 250, 0.5);
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          border: none;
           cursor: pointer;
           overflow: hidden;
-          backdrop-filter: blur(5px);
         }
         
         .storeCard:hover {
-          transform: translateY(-6px) scale(1.02);
-          box-shadow: 0 12px 35px rgba(20, 40, 90, 0.15), 0 4px 15px rgba(70, 110, 180, 0.08);
-          border-color: rgba(41, 126, 252, 0.3);
+          transform: translateY(-4px);
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
         }
         
         .storeCard:active {
-          transform: translateY(-3px) scale(1.01);
-          box-shadow: 0 8px 25px rgba(20, 40, 90, 0.12), 0 2px 10px rgba(70, 110, 180, 0.06);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
         }
 
         .storeImageBox {
