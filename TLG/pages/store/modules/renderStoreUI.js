@@ -1,7 +1,7 @@
 
 // 매장 UI 렌더링 관리자
 window.StoreUIManager = {
-  renderStoreHTML(store, displayRating) {
+  renderStoreHTML(store, displayRating, reviewCount = 0) {
     const main = document.getElementById('main');
 
     main.innerHTML = `
@@ -28,7 +28,7 @@ window.StoreUIManager = {
                     <div class="rating-container">
                       <span id="reviewStar">★</span>
                       <span id="reviewScore">${displayRating}</span>
-                      <span id="reviewLink" class="review-link">리뷰 보기</span>
+                      <span id="reviewLink" class="review-link">리뷰 보기 (${reviewCount})</span>
                     </div>
                     <button id="favoriteBtn" class="favorite-btn">♡</button>
                   </div>
@@ -384,10 +384,21 @@ window.StoreUIManager = {
 
         .modern-card {
           background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
-          margin-bottom: 16px;
-          border: 1px solid rgba(0,0,0,0.04);
+          border-radius: 12px 18px 14px 16px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.12);
+          margin-bottom: 18px;
+          border: 1px solid rgba(0,0,0,0.06);
+          transform: rotate(0.2deg);
+        }
+        
+        .modern-card:nth-child(even) {
+          transform: rotate(-0.3deg);
+          border-radius: 16px 12px 18px 14px;
+        }
+        
+        .modern-card:nth-child(3n) {
+          transform: rotate(0.1deg);
+          border-radius: 15px 17px 13px 19px;
         }
 
         .storeInfo {
@@ -502,7 +513,7 @@ window.StoreUIManager = {
 
         /* 테이블 현황 스타일 */
         .tlr-container {
-          padding: 20px;
+          padding: 18px 22px 20px 18px;
         }
 
         .tlr-header {
@@ -551,22 +562,38 @@ window.StoreUIManager = {
         .tlr-stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
+          gap: 10px 14px;
+          margin-bottom: 22px;
         }
 
         .stat-card {
           background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px 12px;
+          border-radius: 10px 14px 12px 11px;
+          padding: 15px 11px 17px 13px;
           text-align: center;
           border: 1px solid #e2e8f0;
           transition: all 0.2s ease;
+          transform: rotate(0.5deg);
+        }
+        
+        .stat-card:nth-child(2) {
+          transform: rotate(-0.8deg);
+          border-radius: 13px 9px 15px 12px;
+        }
+        
+        .stat-card:nth-child(3) {
+          transform: rotate(0.3deg);
+          border-radius: 11px 13px 10px 14px;
+        }
+        
+        .stat-card:nth-child(4) {
+          transform: rotate(-0.4deg);
+          border-radius: 14px 10px 13px 11px;
         }
 
         .stat-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transform: translateY(-2px) rotate(0deg);
+          box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         }
 
         .stat-card.primary {
@@ -762,9 +789,17 @@ window.StoreUIManager = {
 
         .modern-review {
           background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
+          border-radius: 10px 14px 11px 13px;
+          padding: 15px 17px 16px 15px;
           border: 1px solid #e2e8f0;
+          transform: rotate(0.2deg);
+          margin: 10px 2px 14px 1px;
+        }
+        
+        .modern-review:nth-child(even) {
+          transform: rotate(-0.3deg);
+          border-radius: 13px 10px 14px 11px;
+          margin: 14px 1px 10px 2px;
         }
 
         .review-header {
@@ -856,12 +891,20 @@ window.StoreUIManager = {
 
         .promotion-item {
           background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 14px;
+          border-radius: 10px 14px 11px 13px;
+          padding: 13px 15px 14px 13px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           backdrop-filter: blur(10px);
+          transform: rotate(0.3deg);
+          margin: 8px 2px 12px 1px;
+        }
+        
+        .promotion-item:nth-child(even) {
+          transform: rotate(-0.4deg);
+          border-radius: 13px 11px 14px 10px;
+          margin: 12px 1px 8px 2px;
         }
 
         .promotion-item.featured {
@@ -1005,14 +1048,26 @@ window.StoreUIManager = {
 
         .benefit-item {
           background: rgba(255, 255, 255, 0.1);
-          padding: 12px 8px;
-          border-radius: 10px;
+          padding: 11px 7px 13px 9px;
+          border-radius: 8px 12px 9px 11px;
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 6px;
           flex: 1;
           backdrop-filter: blur(10px);
+          transform: rotate(0.6deg);
+        }
+        
+        .benefit-item:nth-child(2) {
+          transform: rotate(-0.5deg);
+          border-radius: 11px 8px 12px 9px;
+          padding: 13px 9px 11px 7px;
+        }
+        
+        .benefit-item:nth-child(3) {
+          transform: rotate(0.2deg);
+          border-radius: 9px 11px 8px 12px;
         }
 
         .benefit-icon {

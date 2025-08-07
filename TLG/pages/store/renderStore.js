@@ -18,8 +18,9 @@ function renderStore(store) {
     updateStoreRatingAsync(store);
   }
 
-  // UI 렌더링
-  window.StoreUIManager.renderStoreHTML(store, displayRating);
+  // UI 렌더링 (리뷰 수 포함)
+  const reviewCount = store.reviewCount || 0;
+  window.StoreUIManager.renderStoreHTML(store, displayRating, reviewCount);
 
   // 이벤트 리스너 설정
   setupEventListeners(store);
@@ -113,7 +114,8 @@ async function updateStoreRatingAsync(store) {
       const reviewScoreElement = document.getElementById('reviewScore');
       if (reviewScoreElement) {
         const updatedRating = parseFloat(ratingData.ratingAverage).toFixed(1);
-        reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
+        const reviewCount = ratingData.reviewCount || 0;
+        reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기 (${reviewCount})</span>`;
         console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
 
         // 새로 생성된 reviewLink에 이벤트 리스너 추가
