@@ -34,7 +34,6 @@ async function renderMap() {
       <button id="renderMapBtn">🗺️</button>
       <button id="notificationBtn">🔔</button>
       <button onclick="renderMyPage()">👤</button>
-      <button onclick="logOutF()">👋</button>
     </nav>
 
     ${window.MapPanelUI.getPanelStyles()}

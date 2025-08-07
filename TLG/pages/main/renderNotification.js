@@ -27,11 +27,10 @@ window.renderNotification = async function renderNotification() {
     </main>
 
     <nav id="bottomBar">
-      <button onclick="renderMap()">🗺️</button>
+      <button onclick="TLL()">📱</button>
       <button id="renderMapBtn">🗺️</button>
       <button id="notificationBtn" class="active">🔔</button>
       <button onclick="renderMyPage()">👤</button>
-      <button onclick="logOutF()">👋</button>
     </nav>
 
     <style>
