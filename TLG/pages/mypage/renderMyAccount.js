@@ -4,11 +4,13 @@ async function renderMyAccount() {
 
   // UI 프레임을 먼저 렌더링 (로딩 상태)
   main.innerHTML = `
-    <header>
-      <h1>👤 내 계정 정보</h1>
-    </header>
+    <button id="backBtn" class="back-button">←</button>
 
     <main id="content">
+      <section class="section-card title-section">
+        <h1>👤 내 계정 정보</h1>
+      </section>
+
       <section class="section-card">
         <h2>📌 기본 정보</h2>
         <div id="basicInfo">
@@ -55,34 +57,48 @@ async function renderMyAccount() {
         overflow: hidden; /* 전체 스크롤 방지 */
       }
       
-      header {
+      .back-button {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        max-width: 430px;
-        height: 80px;
-        background: white;
-        border-bottom: 1px solid #ddd;
+        top: 20px;
+        left: 20px;
+        width: 50px;
+        height: 50px;
+        border: none;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        font-size: 24px;
+        cursor: pointer;
         display: flex;
         align-items: center;
-        z-index: 1001;
+        justify-content: center;
+        color: #297efc;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px rgba(41, 126, 252, 0.15);
+        z-index: 9999;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(41, 126, 252, 0.1);
       }
-      
-      header h1 {
-        margin: 20px;
-        font-size: 24px;
+
+      .back-button:hover {
+        background: rgba(41, 126, 252, 0.1);
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(41, 126, 252, 0.25);
+      }
+
+      .back-button:active {
+        background: rgba(41, 126, 252, 0.2);
+        transform: scale(0.95);
       }
       
       #content {
         position: absolute;
-        top: 80px;       /* 헤더 높이만큼 */
+        top: 0;          /* 탑바 삭제로 0부터 시작 */
         bottom: 0;       /* 바닥까지 */
         left: 0;
         width: 100%;
         max-width: 430px;
         overflow-y: auto;  /* 여기만 스크롤 */
-        padding: 0 18px;
+        padding: 80px 18px 20px 18px; /* 상단에 뒤로가기 버튼 공간 확보 */
         box-sizing: border-box;
         background: #f8f9fb;
         z-index: 1;
@@ -94,6 +110,19 @@ async function renderMyAccount() {
         padding: 14px 16px;
         margin-bottom: 18px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+      }
+      
+      .title-section {
+        text-align: center;
+        padding: 20px 16px;
+        margin-bottom: 24px;
+      }
+      
+      .title-section h1 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #333;
       }
       .section-card h2 {
         font-size: 18px;
@@ -126,6 +155,10 @@ async function renderMyAccount() {
   `;
 
   // 즉시 이벤트 리스너 등록
+  document.getElementById('backBtn').addEventListener('click', () => {
+    renderMyPage();
+  });
+
   document.getElementById('accountEdit').addEventListener('click', () => {
     alert('계정 수정 기능은 아직 준비 중입니다');
   });
