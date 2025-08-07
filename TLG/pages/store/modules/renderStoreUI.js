@@ -1,43 +1,44 @@
 
-// 매장 UI 렌더링 관리자
+// 매장 UI 렌더링 관리자 - 상업적 감성 디자인
 window.StoreUIManager = {
   renderStoreHTML(store, displayRating) {
     const main = document.getElementById('main');
 
     main.innerHTML = `
-      <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
-        <span class="header-btn-ico">⬅️</span>
+      <button id="backBtn" class="header-btn premium-glass" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
+        <span class="header-btn-ico glow-effect">⬅️</span>
       </button>
-      <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
-        <span class="header-btn-ico">📱</span>
+      <button id="TLL" class="header-btn premium-glass" aria-label="QR결제" onclick="TLL().catch(console.error)">
+        <span class="header-btn-ico glow-effect">📱</span>
       </button>
       <header id="storeHeader">
         <div class="imgWrapper">
           <img src="TableLink.png" alt="메뉴이미지" />
-          <div class="header-overlay"></div>
+          <div class="header-gradient-overlay"></div>
+          <div class="floating-badge hot-badge">🔥 인기 매장</div>
         </div>
       </header>
-      <div id="storePanel" class="collapsed">
-        <div id="panelHandle"></div>
+      <div id="storePanel" class="collapsed premium-panel">
+        <div id="panelHandle" class="premium-handle"></div>
         <div id="storePanelContainer">
           <div id="storeInfoContainer">
-            <div class="storeInfo">
-              <div class="store-header-section">
+            <div class="storeInfo premium-store-info">
+              <div class="store-header-section fade-up-animation">
                 <div class="store-main-info">
                   <div class="score-row">
-                    <div class="rating-container">
-                      <span id="reviewStar">★</span>
-                      <span id="reviewScore">${displayRating}</span>
-                      <span id="reviewLink" class="review-link">리뷰 보기</span>
+                    <div class="rating-container premium-rating">
+                      <span id="reviewStar" class="star-glow">⭐</span>
+                      <span id="reviewScore" class="rating-value">${displayRating}</span>
+                      <span id="reviewLink" class="review-link premium-link pulse-animation">💌 후기 확인</span>
                     </div>
-                    <button id="favoriteBtn" class="favorite-btn">♡</button>
+                    <button id="favoriteBtn" class="favorite-btn premium-heart">💖</button>
                   </div>
-                  <h2 id="storeName">${store.name}</h2>
+                  <h2 id="storeName" class="premium-store-name">${store.name}</h2>
                   <div class="store-status-container">
-                    <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
-                      ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+                    <span class="store-status premium-status ${store.isOpen ? 'open' : 'closed'}">
+                      ${store.isOpen ? '✨ 지금 주문 가능!' : '💤 잠시 휴식중'}
                     </span>
-                    <span class="store-category-tag">음식점</span>
+                    <span class="store-category-tag premium-category">🍽️ 맛집</span>
                   </div>
                 </div>
               </div>
@@ -47,34 +48,38 @@ window.StoreUIManager = {
             ${this.renderTableStatusHTML(store)}
             ${this.renderReviewPreviewHTML()}
           </div>
-          <div id="storeNavBar" class="modern-nav">
-            <button class="nav-btn" data-tab="menu">
-              <span class="nav-ico">🍽️</span>
+          <div id="storeNavBar" class="premium-nav">
+            <button class="nav-btn premium-nav-btn" data-tab="menu">
+              <span class="nav-ico glow-ico">🍽️</span>
               <span class="nav-label">메뉴</span>
+              <div class="nav-ripple"></div>
             </button>
-            <button class="nav-btn" data-tab="review">
-              <span class="nav-ico">💬</span>
-              <span class="nav-label">리뷰</span>
+            <button class="nav-btn premium-nav-btn" data-tab="review">
+              <span class="nav-ico glow-ico">💭</span>
+              <span class="nav-label">후기</span>
+              <div class="nav-ripple"></div>
             </button>
-            <button class="nav-btn" data-tab="photo">
-              <span class="nav-ico">📸</span>
+            <button class="nav-btn premium-nav-btn" data-tab="photo">
+              <span class="nav-ico glow-ico">📸</span>
               <span class="nav-label">사진</span>
+              <div class="nav-ripple"></div>
             </button>
-            <button class="nav-btn" data-tab="info">
-              <span class="nav-ico">ℹ️</span>
+            <button class="nav-btn premium-nav-btn" data-tab="info">
+              <span class="nav-ico glow-ico">ℹ️</span>
               <span class="nav-label">정보</span>
+              <div class="nav-ripple"></div>
             </button>
           </div>
-          <div id="storeContent"></div>
+          <div id="storeContent" class="premium-content"></div>
         </div>
       </div>
-      <nav id="storeBottomBar">
-        <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
-          <span class="btm-btn-ico">📞</span>
+      <nav id="storeBottomBar" class="premium-bottom-bar">
+        <button id="telephone" class="btm-btn phone-btn premium-phone" aria-label="전화">
+          <span class="btm-btn-ico phone-pulse">📞</span>
         </button>
-        <button id="order" class="btm-btn order-btn">
-          <span class="order-text">포장·예약하기</span>
-          <span class="order-arrow">→</span>
+        <button id="order" class="btm-btn order-btn premium-order">
+          <span class="order-text">🛒 지금 주문하기</span>
+          <span class="order-arrow bounce-arrow">→</span>
         </button>
       </nav>
       ${this.getStoreStyles()}
@@ -83,46 +88,52 @@ window.StoreUIManager = {
 
   renderTableStatusHTML(store) {
     return `
-      <div id="TLR" class="tlr-container modern-card">
+      <div id="TLR" class="tlr-container premium-table-card slide-up-animation">
         <div class="tlr-header">
-          <div class="tlr-title">
-            <span class="tlr-icon">🏪</span>
-            <span>실시간 테이블 현황</span>
+          <div class="tlr-title premium-title">
+            <span class="tlr-icon pulse-glow">🏪</span>
+            <span>🔥 실시간 테이블 현황</span>
           </div>
-          <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">
-            ${store.isOpen ? '로딩중...' : '운영중지'}
+          <div class="tlr-status-badge premium-badge ${store.isOpen ? 'live-badge' : 'closed'}" id="tableStatusBadge">
+            ${store.isOpen ? '⚡ LIVE' : '💤 운영중지'}
           </div>
         </div>
-        <div class="tlr-stats-grid">
-          <div class="stat-card primary">
-            <div class="stat-value" id="totalTables">-</div>
+        <div class="tlr-stats-grid premium-stats">
+          <div class="stat-card premium-stat primary hover-lift">
+            <div class="stat-value glow-number" id="totalTables">-</div>
             <div class="stat-label">총 테이블</div>
+            <div class="stat-bg-icon">🏪</div>
           </div>
-          <div class="stat-card success">
-            <div class="stat-value" id="availableTables">-</div>
+          <div class="stat-card premium-stat success hover-lift">
+            <div class="stat-value glow-number" id="availableTables">-</div>
             <div class="stat-label">이용 가능</div>
+            <div class="stat-bg-icon">✅</div>
           </div>
-          <div class="stat-card info">
-            <div class="stat-value" id="totalSeats">-</div>
+          <div class="stat-card premium-stat info hover-lift">
+            <div class="stat-value glow-number" id="totalSeats">-</div>
             <div class="stat-label">총 좌석</div>
+            <div class="stat-bg-icon">💺</div>
           </div>
-          <div class="stat-card warning">
-            <div class="stat-value" id="availableSeats">-</div>
+          <div class="stat-card premium-stat warning hover-lift">
+            <div class="stat-value glow-number" id="availableSeats">-</div>
             <div class="stat-label">잔여 좌석</div>
+            <div class="stat-bg-icon">🎯</div>
           </div>
         </div>
-        <div class="usage-rate-container">
+        <div class="usage-rate-container premium-usage">
           <div class="usage-rate-header">
-            <span>테이블 사용률</span>
-            <span class="usage-percentage" id="occupancyRate">-%</span>
+            <span>📊 테이블 사용률</span>
+            <span class="usage-percentage premium-percentage" id="occupancyRate">-%</span>
           </div>
-          <div class="usage-rate-bar">
-            <div class="usage-rate-fill" id="usageRateFill"></div>
+          <div class="usage-rate-bar premium-progress">
+            <div class="usage-rate-fill animated-fill" id="usageRateFill"></div>
+            <div class="progress-sparkle"></div>
           </div>
         </div>
-        <button class="tlr-layout-btn modern-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-          <span class="btn-icon">🗺️</span>
-          <span>테이블 배치도 보기</span>
+        <button class="tlr-layout-btn premium-action-btn hover-glow" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+          <span class="btn-icon floating-icon">🗺️</span>
+          <span>✨ 테이블 배치도 보기</span>
+          <div class="btn-particles"></div>
         </button>
       </div>
     `;
@@ -130,31 +141,39 @@ window.StoreUIManager = {
 
   renderReviewPreviewHTML() {
     return `
-      <div id="reviewPreview" class="review-preview modern-card">
-        <div class="section-header">
-          <h3 class="section-title">최근 리뷰</h3>
-          <button class="see-more-btn modern-text-btn">전체보기</button>
+      <div id="reviewPreview" class="review-preview premium-review-card fade-up-animation">
+        <div class="section-header premium-section-header">
+          <h3 class="section-title premium-title">💬 고객 생생 후기</h3>
+          <button class="see-more-btn premium-see-more hover-glow">전체보기 ✨</button>
         </div>
         <div id="reviewPreviewContent" class="review-content">
-          <div class="review-card modern-review">
+          <div class="review-card premium-review-item hover-lift">
             <div class="review-header">
-              <span class="review-user">🐤 익명</span>
+              <span class="review-user premium-user">🎭 익명의 미식가</span>
               <div class="review-meta">
-                <span class="review-score">★ 5</span>
+                <span class="review-score star-rating">⭐⭐⭐⭐⭐</span>
                 <span class="review-date">1일 전</span>
               </div>
             </div>
-            <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
+            <div class="review-text premium-review-text">🔥 완전 대박! 이런 맛집이 있다니... 친구들에게 바로 추천했어요! 💕</div>
+            <div class="review-tags">
+              <span class="review-tag hot-tag">🔥 맛있어요</span>
+              <span class="review-tag">🎉 재방문</span>
+            </div>
           </div>
-          <div class="review-card modern-review">
+          <div class="review-card premium-review-item hover-lift">
             <div class="review-header">
-              <span class="review-user">🍙 user123</span>
+              <span class="review-user premium-user">🍀 럭키가이</span>
               <div class="review-meta">
-                <span class="review-score">★ 4</span>
+                <span class="review-score star-rating">⭐⭐⭐⭐</span>
                 <span class="review-date">3일 전</span>
               </div>
             </div>
-            <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
+            <div class="review-text premium-review-text">⚡ 포장 주문 완전 빨라요! 바쁜 직장인에게 최고 👍</div>
+            <div class="review-tags">
+              <span class="review-tag speed-tag">⚡ 빨라요</span>
+              <span class="review-tag">👍 추천</span>
+            </div>
           </div>
         </div>
       </div>
@@ -163,39 +182,39 @@ window.StoreUIManager = {
 
   renderPromotionCardHTML(store) {
     return `
-      <div class="promotion-card modern-gradient-card">
+      <div class="promotion-card premium-promotion-card pulse-animation">
         <div class="promotion-header">
-          <div class="promotion-title">
-            <span class="promotion-emoji">🎉</span>
-            <span>진행중인 혜택</span>
+          <div class="promotion-title premium-promo-title">
+            <span class="promotion-emoji sparkle-animation">🎁</span>
+            <span>🎖️ 특별 혜택 대방출!</span>
           </div>
-          <span class="promotion-badge live">LIVE</span>
+          <span class="promotion-badge live-promotion pulse-glow">🔥 HOT</span>
         </div>
         <div class="promotion-content">
-          <div class="promotion-item featured">
+          <div class="promotion-item featured premium-promo-item hover-glow">
             <div class="promotion-left">
-              <span class="promotion-icon">🎁</span>
+              <span class="promotion-icon floating-icon">🎊</span>
               <div class="promotion-info">
-                <div class="promotion-name">신규 방문 혜택</div>
-                <div class="promotion-desc">첫 방문 시 10% 할인</div>
+                <div class="promotion-name premium-promo-name">💌 첫 방문 고객님께 특별 선물!</div>
+                <div class="promotion-desc">✨ 지금 주문하면 10% 할인 + 무료 음료 증정</div>
               </div>
             </div>
-            <div class="promotion-discount">10%</div>
+            <div class="promotion-discount premium-discount glow-effect">10%</div>
           </div>
-          <div class="promotion-item">
+          <div class="promotion-item premium-promo-item hover-glow">
             <div class="promotion-left">
-              <span class="promotion-icon">⭐</span>
+              <span class="promotion-icon floating-icon">👑</span>
               <div class="promotion-info">
-                <div class="promotion-name">단골 고객 혜택</div>
-                <div class="promotion-desc">레벨 3 이상 5% 추가 할인</div>
+                <div class="promotion-name premium-promo-name">🏆 VIP 단골 고객 혜택</div>
+                <div class="promotion-desc">💎 레벨 3 이상 고객님께 5% 추가 할인</div>
               </div>
             </div>
-            <div class="promotion-tag">VIP</div>
+            <div class="promotion-tag vip-tag glow-effect">VIP</div>
           </div>
         </div>
-        <button class="promotion-detail-btn">
-          <span>혜택 자세히 보기</span>
-          <span class="arrow">→</span>
+        <button class="promotion-detail-btn premium-detail-btn hover-lift">
+          <span>🎁 더 많은 혜택 확인하기</span>
+          <span class="arrow bounce-arrow">💫</span>
         </button>
       </div>
     `;
@@ -203,35 +222,42 @@ window.StoreUIManager = {
 
   renderLoyaltyLevelHTML() {
     return `
-      <div class="loyalty-card modern-gradient-card loyalty-theme">
+      <div class="loyalty-card premium-loyalty-card slide-up-animation">
         <div class="loyalty-header">
-          <div class="loyalty-title">
-            <span class="loyalty-crown">👑</span>
-            <span>내 단골 등급</span>
+          <div class="loyalty-title premium-loyalty-title">
+            <span class="loyalty-crown sparkle-animation">👑</span>
+            <span>💎 골드 등급 고객님!</span>
           </div>
-          <div class="loyalty-level-badge">골드</div>
+          <div class="loyalty-level-badge premium-level-badge glow-effect">GOLD</div>
+        </div>
+        <div class="loyalty-greeting premium-greeting">
+          🎖️ 골드 등급 고객님! 특별 쿠폰이 도착했어요 💌
         </div>
         <div class="loyalty-progress-section">
-          <div class="progress-info">
-            <span class="current-level">Lv.3 골드 단골</span>
-            <span class="next-level">다음 등급까지 3회</span>
+          <div class="progress-info premium-progress-info">
+            <span class="current-level">🏆 Lv.3 골드 단골</span>
+            <span class="next-level">✨ 플래티넘까지 3회</span>
           </div>
-          <div class="loyalty-progress-bar modern-progress">
-            <div class="loyalty-progress-fill" style="width: 75%;"></div>
+          <div class="loyalty-progress-bar premium-loyalty-progress">
+            <div class="loyalty-progress-fill animated-progress" style="width: 75%;"></div>
+            <div class="progress-sparkle moving-sparkle"></div>
           </div>
         </div>
-        <div class="loyalty-benefits-grid">
-          <div class="benefit-item">
-            <span class="benefit-icon">🎁</span>
+        <div class="loyalty-benefits-grid premium-benefits">
+          <div class="benefit-item premium-benefit hover-lift">
+            <span class="benefit-icon floating-icon">🍹</span>
             <span class="benefit-text">무료 음료</span>
+            <div class="benefit-glow"></div>
           </div>
-          <div class="benefit-item">
-            <span class="benefit-icon">⚡</span>
+          <div class="benefit-item premium-benefit hover-lift">
+            <span class="benefit-icon floating-icon">⚡</span>
             <span class="benefit-text">우선 주문</span>
+            <div class="benefit-glow"></div>
           </div>
-          <div class="benefit-item">
-            <span class="benefit-icon">🎂</span>
+          <div class="benefit-item premium-benefit hover-lift">
+            <span class="benefit-icon floating-icon">🎂</span>
             <span class="benefit-text">생일 쿠폰</span>
+            <div class="benefit-glow"></div>
           </div>
         </div>
       </div>
@@ -250,12 +276,117 @@ window.StoreUIManager = {
           padding: 0;
           height: 100%;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
-          background: #f8f9fa;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           overflow: hidden;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
 
+        /* 애니메이션 정의 */
+        @keyframes fadeUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.8; }
+        }
+
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.5); }
+          50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.6); }
+        }
+
+        @keyframes sparkle {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
+          50% { transform: scale(1.2) rotate(180deg); opacity: 0.7; }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(5px); }
+        }
+
+        @keyframes floating {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+
+        @keyframes movingSparkle {
+          0% { left: -10px; opacity: 0; }
+          50% { opacity: 1; }
+          100% { left: 100%; opacity: 0; }
+        }
+
+        @keyframes ripple {
+          0% { transform: scale(0); opacity: 1; }
+          100% { transform: scale(4); opacity: 0; }
+        }
+
+        /* 애니메이션 클래스 */
+        .fade-up-animation {
+          animation: fadeUp 0.8s ease-out;
+        }
+
+        .slide-up-animation {
+          animation: slideUp 0.8s ease-out;
+        }
+
+        .pulse-animation {
+          animation: pulse 2s infinite;
+        }
+
+        .sparkle-animation {
+          animation: sparkle 3s infinite;
+        }
+
+        .bounce-arrow {
+          animation: bounce 1s infinite;
+        }
+
+        .floating-icon {
+          animation: floating 2s ease-in-out infinite;
+        }
+
+        .glow-effect {
+          animation: glow 2s infinite;
+        }
+
+        .pulse-glow {
+          animation: pulse 1.5s infinite, glow 2s infinite;
+        }
+
+        .moving-sparkle {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .moving-sparkle::after {
+          content: '✨';
+          position: absolute;
+          top: -5px;
+          animation: movingSparkle 3s infinite;
+        }
+
+        /* 헤더 스타일 */
         #storeHeader {
           position: fixed;
           top: 0;
@@ -267,6 +398,8 @@ window.StoreUIManager = {
           background: white;
           z-index: 2;
           overflow: hidden;
+          border-radius: 0 0 20px 20px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
 
         .imgWrapper {
@@ -284,63 +417,86 @@ window.StoreUIManager = {
           filter: brightness(1.1) contrast(1.05);
         }
 
-        .header-overlay {
+        .header-gradient-overlay {
           position: absolute;
           bottom: 0;
           left: 0;
           right: 0;
-          height: 60px;
-          background: linear-gradient(transparent, rgba(0,0,0,0.1));
+          height: 80px;
+          background: linear-gradient(transparent, rgba(0,0,0,0.3));
           pointer-events: none;
         }
 
-        #backBtn, #TLL {
+        .floating-badge {
+          position: absolute;
+          top: 20px;
+          right: 20px;
+          background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+          color: white;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 700;
+          box-shadow: 0 4px 15px rgba(238, 90, 36, 0.4);
+          animation: pulse 2s infinite;
+        }
+
+        .hot-badge {
+          animation: pulse 1.5s infinite, glow 2s infinite;
+        }
+
+        .premium-glass {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .header-btn {
           position: absolute;
           top: 15px;
-          width: 40px;
-          height: 40px;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
+          width: 44px;
+          height: 44px;
           border: none;
-          border-radius: 12px;
+          border-radius: 22px;
           font-size: 18px;
           cursor: pointer;
           z-index: 1000;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         #backBtn { left: 15px; }
         #TLL { right: 15px; }
         
-        #backBtn:hover, #TLL:hover {
-          background: white;
-          transform: scale(1.05);
+        .header-btn:hover {
+          transform: scale(1.1) translateY(-2px);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.2);
         }
 
-        #storePanel {
+        /* 패널 스타일 */
+        .premium-panel {
           position: fixed;
           left: 50%;
           transform: translateX(-50%);
           width: 100%;
           max-width: 430px;
-          background: white;
-          box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.2);
+          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 10;
+          border-radius: 25px 25px 0 0;
         }
         
-        #storePanel.collapsed {
+        .premium-panel.collapsed {
           top: 200px;
           bottom: 70px;
           height: calc(100vh - 270px);
-          border-radius: 20px 20px 0 0;
         }
         
-        #storePanel.expanded {
+        .premium-panel.expanded {
           top: 0;
           bottom: 70px;
           height: calc(100vh - 70px);
@@ -348,342 +504,436 @@ window.StoreUIManager = {
           z-index: 99;
         }
 
-        #panelHandle {
-          width: 40px;
-          height: 4px;
-          background: #d1d5db;
-          border-radius: 2px;
-          margin: 12px auto 8px auto;
+        .premium-handle {
+          width: 50px;
+          height: 5px;
+          background: linear-gradient(90deg, #d1d5db, #9ca3af);
+          border-radius: 3px;
+          margin: 15px auto 10px auto;
           cursor: grab;
           touch-action: none;
-          transition: background 0.2s ease;
+          transition: all 0.3s ease;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        #panelHandle:hover {
-          background: #9ca3af;
+        .premium-handle:hover {
+          background: linear-gradient(90deg, #9ca3af, #6b7280);
+          transform: scaleY(1.5);
         }
 
         #storePanelContainer {
           position: relative;
-          height: calc(100% - 24px);
+          height: calc(100% - 30px);
           overflow-y: auto;
-          box-sizing: border-box;
+          padding: 0 20px 100px 20px;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
-          padding: 0 20px 100px 20px;
         }
         
         #storePanelContainer::-webkit-scrollbar {
-          width: 3px;
+          width: 4px;
         }
         
         #storePanelContainer::-webkit-scrollbar-thumb {
-          background: #d1d5db;
+          background: linear-gradient(45deg, #667eea, #764ba2);
           border-radius: 2px;
         }
 
-        .modern-card {
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
-          margin-bottom: 16px;
-          border: 1px solid rgba(0,0,0,0.04);
-        }
-
-        .storeInfo {
-          padding: 24px 20px 20px 20px;
-        }
-
-        .store-header-section {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
+        /* 매장 정보 스타일 */
+        .premium-store-info {
+          padding: 25px 20px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          border: 1px solid rgba(255,255,255,0.3);
         }
 
         .score-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
         }
 
-        .rating-container {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        #reviewStar {
-          font-size: 20px;
-          color: #fbbf24;
-        }
-
-        #reviewScore {
-          font-weight: 700;
-          font-size: 18px;
-          color: #111827;
-        }
-
-        .review-link {
-          color: #3b82f6;
-          font-size: 14px;
-          font-weight: 500;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 6px;
-          transition: background 0.2s ease;
-        }
-        
-        .review-link:hover {
-          background: #eff6ff;
-        }
-
-        .favorite-btn {
-          border: none;
-          background: none;
-          font-size: 24px;
-          color: #ef4444;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 12px;
-          transition: all 0.2s ease;
-        }
-        
-        .favorite-btn:hover {
-          background: #fef2f2;
-          transform: scale(1.1);
-        }
-
-        #storeName {
-          font-size: 28px;
-          font-weight: 800;
-          color: #111827;
-          margin: 0 0 12px 0;
-          letter-spacing: -0.5px;
-          line-height: 1.2;
-        }
-
-        .store-status-container {
+        .premium-rating {
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
-        .store-status {
+        .star-glow {
+          font-size: 22px;
+          color: #fbbf24;
+          filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.6));
+          animation: pulse 2s infinite;
+        }
+
+        .rating-value {
+          font-weight: 800;
+          font-size: 20px;
+          color: #111827;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .premium-link {
+          color: #3b82f6;
+          font-size: 14px;
+          font-weight: 600;
+          padding: 6px 12px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #eff6ff, #dbeafe);
+          border: 1px solid #bfdbfe;
+          transition: all 0.3s ease;
+          cursor: pointer;
+        }
+        
+        .premium-link:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+          background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        }
+
+        .premium-heart {
+          border: none;
+          background: linear-gradient(135deg, #fecaca, #f87171);
+          font-size: 24px;
+          color: #dc2626;
+          cursor: pointer;
+          padding: 10px;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(248, 113, 113, 0.3);
+        }
+        
+        .premium-heart:hover {
+          transform: scale(1.2) rotate(10deg);
+          box-shadow: 0 8px 25px rgba(248, 113, 113, 0.5);
+        }
+
+        .premium-store-name {
+          font-size: 32px;
+          font-weight: 900;
+          color: #111827;
+          margin: 0 0 15px 0;
+          letter-spacing: -0.8px;
+          line-height: 1.1;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          background: linear-gradient(135deg, #111827, #374151);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+
+        .store-status-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .premium-status {
+          font-size: 14px;
+          font-weight: 700;
+          padding: 8px 16px;
+          border-radius: 25px;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+          transition: all 0.3s ease;
+        }
+
+        .premium-status.open {
+          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+          color: #166534;
+          border: 2px solid #86efac;
+        }
+
+        .premium-status.closed {
+          background: linear-gradient(135deg, #fee2e2, #fecaca);
+          color: #dc2626;
+          border: 2px solid #fca5a5;
+        }
+
+        .premium-category {
+          background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+          color: #6b7280;
           font-size: 13px;
           font-weight: 600;
           padding: 6px 12px;
-          border-radius: 20px;
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .store-status.open {
-          background: #dcfce7;
-          color: #166534;
-          border: 1px solid #bbf7d0;
-        }
-
-        .store-status.closed {
-          background: #fee2e2;
-          color: #dc2626;
-          border: 1px solid #fecaca;
-        }
-
-        .store-category-tag {
-          background: #f3f4f6;
-          color: #6b7280;
-          font-size: 12px;
-          font-weight: 500;
-          padding: 4px 8px;
-          border-radius: 12px;
+          border-radius: 15px;
+          border: 1px solid #d1d5db;
         }
 
         /* 테이블 현황 스타일 */
-        .tlr-container {
-          padding: 20px;
+        .premium-table-card {
+          padding: 25px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+          border: 1px solid rgba(255,255,255,0.3);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-table-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #667eea, #764ba2);
         }
 
         .tlr-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 25px;
         }
 
-        .tlr-title {
+        .premium-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
-          font-weight: 700;
+          gap: 10px;
+          font-size: 19px;
+          font-weight: 800;
           color: #111827;
+          text-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .tlr-icon {
-          font-size: 20px;
+        .pulse-glow {
+          font-size: 22px;
         }
 
-        .tlr-status-badge {
-          background: #10b981;
-          color: white;
+        .premium-badge {
           font-size: 12px;
-          font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 16px;
+          font-weight: 700;
+          padding: 8px 16px;
+          border-radius: 20px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.8px;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         }
 
-        .tlr-status-badge.busy {
-          background: #f59e0b;
+        .live-badge {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          animation: pulse 1.5s infinite;
         }
 
-        .tlr-status-badge.full {
-          background: #ef4444;
-        }
-
-        .tlr-status-badge.closed {
-          background: #6b7280;
-        }
-
-        .tlr-stats-grid {
+        .premium-stats {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-          margin-bottom: 20px;
+          gap: 15px;
+          margin-bottom: 25px;
         }
 
-        .stat-card {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px 12px;
+        .premium-stat {
+          background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+          border-radius: 16px;
+          padding: 20px 15px;
           text-align: center;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
+          border: 2px solid transparent;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+          cursor: pointer;
         }
 
-        .stat-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .premium-stat::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
 
-        .stat-card.primary {
+        .hover-lift:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .hover-lift:hover::before {
+          opacity: 1;
+        }
+
+        .premium-stat.primary {
           background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           color: white;
-          border: none;
+          border: 2px solid #60a5fa;
         }
 
-        .stat-card.success {
+        .premium-stat.success {
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
           color: white;
-          border: none;
+          border: 2px solid #34d399;
         }
 
-        .stat-card.info {
+        .premium-stat.info {
           background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
           color: white;
-          border: none;
+          border: 2px solid #a78bfa;
         }
 
-        .stat-card.warning {
+        .premium-stat.warning {
           background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
           color: white;
-          border: none;
+          border: 2px solid #fbbf24;
         }
 
-        .stat-value {
-          font-size: 24px;
-          font-weight: 800;
-          margin-bottom: 4px;
+        .glow-number {
+          font-size: 28px;
+          font-weight: 900;
+          margin-bottom: 6px;
+          text-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
 
         .stat-label {
-          font-size: 12px;
-          font-weight: 500;
+          font-size: 13px;
+          font-weight: 600;
           opacity: 0.9;
         }
 
-        .usage-rate-container {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 16px;
+        .stat-bg-icon {
+          position: absolute;
+          top: 10px;
+          right: 15px;
+          font-size: 24px;
+          opacity: 0.3;
+        }
+
+        .premium-usage {
+          background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 20px;
+          border: 2px solid #e2e8f0;
         }
 
         .usage-rate-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
-          font-size: 14px;
-          font-weight: 600;
+          margin-bottom: 12px;
+          font-size: 15px;
+          font-weight: 700;
           color: #374151;
         }
 
-        .usage-percentage {
+        .premium-percentage {
           color: #3b82f6;
-          font-weight: 700;
+          font-weight: 800;
+          font-size: 18px;
+          text-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
         }
 
-        .usage-rate-bar {
+        .premium-progress {
           width: 100%;
-          height: 8px;
-          background: #e5e7eb;
-          border-radius: 4px;
+          height: 12px;
+          background: linear-gradient(90deg, #e5e7eb, #f3f4f6);
+          border-radius: 6px;
+          overflow: hidden;
+          position: relative;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .animated-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+          border-radius: 6px;
+          transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
           overflow: hidden;
         }
 
-        .usage-rate-fill {
+        .animated-fill::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
           height: 100%;
-          background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-          border-radius: 4px;
-          transition: width 0.3s ease;
-          width: 0%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+          animation: shimmer 2s infinite;
         }
 
-        .modern-btn {
+        @keyframes shimmer {
+          0% { left: -100%; }
+          100% { left: 100%; }
+        }
+
+        .progress-sparkle {
+          position: absolute;
+          top: 50%;
+          right: 10px;
+          transform: translateY(-50%);
+          color: white;
+          font-size: 10px;
+          animation: sparkle 2s infinite;
+        }
+
+        .premium-action-btn {
           width: 100%;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           border: none;
           color: white;
-          font-size: 15px;
-          font-weight: 600;
-          padding: 14px 20px;
-          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 700;
+          padding: 18px 25px;
+          border-radius: 16px;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
+          gap: 10px;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
 
-        .modern-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+        .hover-glow:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-particles {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 0%, transparent 70%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .premium-action-btn:hover .btn-particles {
+          opacity: 1;
         }
 
         /* 네비게이션 바 */
-        .modern-nav {
-          margin: 0;
-          width: 100%;
-          border-radius: 0;
-          border: none;
-          background: white;
+        .premium-nav {
+          margin: 0 -20px 20px -20px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
           display: flex;
           justify-content: space-between;
           padding: 0;
-          margin-bottom: 16px;
           gap: 0;
           position: sticky;
           top: 0;
           z-index: 5;
-          border-bottom: 1px solid #f3f4f6;
+          border-bottom: 3px solid #f3f4f6;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .nav-btn {
+        .premium-nav-btn {
           flex: 1;
           background: none;
           border: none;
@@ -691,353 +941,479 @@ window.StoreUIManager = {
           font-family: inherit;
           font-size: 14px;
           color: #6b7280;
-          padding: 16px 0 12px 0;
+          padding: 20px 0 15px 0;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 6px;
           position: relative;
           cursor: pointer;
-          transition: all 0.2s ease;
-          border-bottom: 3px solid transparent;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border-bottom: 4px solid transparent;
+          overflow: hidden;
         }
 
-        .nav-btn:hover {
-          background: #f9fafb;
-          color: #374151;
+        .premium-nav-btn:hover {
+          background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+          color: #0369a1;
+          transform: translateY(-2px);
         }
 
-        .nav-btn .nav-ico {
-          font-size: 20px;
-          margin-bottom: 2px;
+        .glow-ico {
+          font-size: 22px;
+          margin-bottom: 4px;
+          transition: all 0.3s ease;
         }
 
-        .nav-btn.active {
-          color: #3b82f6;
-          font-weight: 600;
-          border-bottom: 3px solid #3b82f6;
-          background: #eff6ff;
+        .premium-nav-btn:hover .glow-ico {
+          transform: scale(1.2);
+          filter: drop-shadow(0 0 8px rgba(3, 105, 161, 0.5));
+        }
+
+        .premium-nav-btn.active {
+          color: #0369a1;
+          font-weight: 700;
+          border-bottom: 4px solid #0369a1;
+          background: linear-gradient(135deg, #e0f2fe, #b0e7ff);
+        }
+
+        .nav-ripple {
+          position: absolute;
+          border-radius: 50%;
+          background: rgba(3, 105, 161, 0.3);
+          transform: scale(0);
+          animation: ripple 0.6s linear;
+          pointer-events: none;
         }
 
         /* 리뷰 프리뷰 */
-        .review-preview {
-          padding: 20px;
+        .premium-review-card {
+          padding: 25px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          margin-bottom: 20px;
+          box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+          border: 1px solid rgba(255,255,255,0.3);
         }
 
-        .section-header {
+        .premium-section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 20px;
         }
 
-        .section-title {
-          font-size: 18px;
-          font-weight: 700;
-          color: #111827;
-          margin: 0;
-        }
-
-        .modern-text-btn {
-          background: none;
+        .premium-see-more {
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+          color: white;
           border: none;
-          color: #3b82f6;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          padding: 6px 12px;
-          border-radius: 8px;
-          transition: background 0.2s ease;
-        }
-
-        .modern-text-btn:hover {
-          background: #eff6ff;
-        }
-
-        .review-content {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .modern-review {
-          background: #f8fafc;
+          padding: 8px 16px;
           border-radius: 12px;
-          padding: 16px;
-          border: 1px solid #e2e8f0;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .premium-review-item {
+          background: linear-gradient(135deg, #f8fafc, #ffffff);
+          border-radius: 16px;
+          padding: 20px;
+          border: 2px solid #e2e8f0;
+          margin-bottom: 15px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          cursor: pointer;
+        }
+
+        .premium-review-item:hover {
+          border-color: #3b82f6;
+          box-shadow: 0 12px 30px rgba(59, 130, 246, 0.2);
         }
 
         .review-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
+          margin-bottom: 12px;
         }
 
-        .review-user {
-          font-size: 14px;
+        .premium-user {
+          font-size: 15px;
           color: #3b82f6;
-          font-weight: 600;
+          font-weight: 700;
         }
 
         .review-meta {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
-        .review-score {
-          font-size: 13px;
+        .star-rating {
+          font-size: 14px;
           color: #fbbf24;
-          font-weight: 600;
+          filter: drop-shadow(0 1px 3px rgba(251, 191, 36, 0.3));
         }
 
         .review-date {
           font-size: 12px;
           color: #9ca3af;
+          font-weight: 500;
         }
 
-        .review-text {
-          font-size: 14px;
+        .premium-review-text {
+          font-size: 15px;
           color: #374151;
-          line-height: 1.5;
+          line-height: 1.6;
+          margin-bottom: 12px;
+          font-weight: 500;
+        }
+
+        .review-tags {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .review-tag {
+          background: linear-gradient(135deg, #e0f2fe, #b0e7ff);
+          color: #0369a1;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 12px;
+          border: 1px solid #7dd3fc;
+        }
+
+        .hot-tag {
+          background: linear-gradient(135deg, #fee2e2, #fecaca);
+          color: #dc2626;
+          border: 1px solid #fca5a5;
+          animation: pulse 2s infinite;
+        }
+
+        .speed-tag {
+          background: linear-gradient(135deg, #fef3c7, #fde68a);
+          color: #d97706;
+          border: 1px solid #fcd34d;
         }
 
         /* 프로모션 카드 */
-        .modern-gradient-card {
+        .premium-promotion-card {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 16px;
-          padding: 20px;
-          margin-bottom: 16px;
+          border-radius: 20px;
+          padding: 25px;
+          margin-bottom: 20px;
           color: white;
-          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
-          border: none;
+          box-shadow: 0 20px 50px rgba(102, 126, 234, 0.3);
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-promotion-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          animation: shimmer 3s infinite;
         }
 
         .promotion-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 20px;
         }
 
-        .promotion-title {
+        .premium-promo-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
-          font-weight: 700;
+          gap: 10px;
+          font-size: 19px;
+          font-weight: 800;
         }
 
-        .promotion-emoji {
-          font-size: 20px;
-        }
-
-        .promotion-badge.live {
-          background: rgba(239, 68, 68, 0.9);
-          padding: 4px 10px;
-          border-radius: 12px;
+        .live-promotion {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          padding: 6px 14px;
+          border-radius: 15px;
           font-size: 11px;
-          font-weight: 700;
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
+          font-weight: 800;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
         }
 
         .promotion-content {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          margin-bottom: 16px;
+          gap: 15px;
+          margin-bottom: 20px;
         }
 
-        .promotion-item {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          padding: 14px;
+        .premium-promo-item {
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 16px;
+          padding: 18px;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          backdrop-filter: blur(10px);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
         }
 
-        .promotion-item.featured {
-          background: rgba(255, 255, 255, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+        .premium-promo-item.featured {
+          background: rgba(255, 255, 255, 0.25);
+          border: 2px solid rgba(255, 255, 255, 0.4);
+          box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .premium-promo-item:hover {
+          transform: translateY(-3px);
+          background: rgba(255, 255, 255, 0.25);
         }
 
         .promotion-left {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 15px;
         }
 
-        .promotion-icon {
-          font-size: 20px;
-          width: 36px;
-          text-align: center;
-        }
-
-        .promotion-name {
-          font-size: 15px;
-          font-weight: 600;
-          margin-bottom: 4px;
+        .premium-promo-name {
+          font-size: 16px;
+          font-weight: 700;
+          margin-bottom: 6px;
         }
 
         .promotion-desc {
           font-size: 13px;
           opacity: 0.9;
+          font-weight: 500;
         }
 
-        .promotion-discount {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 700;
+        .premium-discount {
+          background: rgba(255, 255, 255, 0.25);
+          padding: 8px 16px;
+          border-radius: 12px;
+          font-size: 16px;
+          font-weight: 900;
+          border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
-        .promotion-tag {
-          background: rgba(251, 191, 36, 0.9);
+        .vip-tag {
+          background: linear-gradient(135deg, #fbbf24, #f59e0b);
           color: #92400e;
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 12px;
-          font-weight: 700;
+          padding: 8px 16px;
+          border-radius: 12px;
+          font-size: 13px;
+          font-weight: 800;
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
         }
 
-        .promotion-detail-btn {
+        .premium-detail-btn {
           width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.15);
+          border: 2px solid rgba(255, 255, 255, 0.3);
           color: white;
-          padding: 12px 16px;
-          border-radius: 10px;
+          padding: 15px 20px;
+          border-radius: 14px;
           display: flex;
           justify-content: space-between;
           align-items: center;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: 500;
-          transition: all 0.2s ease;
+          font-size: 15px;
+          font-weight: 600;
+          transition: all 0.3s ease;
+          backdrop-filter: blur(20px);
         }
 
-        .promotion-detail-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: translateY(-1px);
+        .premium-detail-btn:hover {
+          background: rgba(255, 255, 255, 0.25);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
 
         /* 단골 레벨 카드 */
-        .loyalty-theme {
+        .premium-loyalty-card {
           background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          border-radius: 20px;
+          padding: 25px;
+          margin-bottom: 20px;
+          color: white;
+          box-shadow: 0 20px 50px rgba(240, 147, 251, 0.3);
+          border: 2px solid rgba(255, 255, 255, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-loyalty-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          animation: shimmer 4s infinite;
         }
 
         .loyalty-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 15px;
         }
 
-        .loyalty-title {
+        .premium-loyalty-title {
           display: flex;
           align-items: center;
-          gap: 8px;
-          font-size: 18px;
-          font-weight: 700;
+          gap: 10px;
+          font-size: 19px;
+          font-weight: 800;
         }
 
-        .loyalty-crown {
-          font-size: 20px;
+        .premium-level-badge {
+          background: rgba(255, 255, 255, 0.25);
+          padding: 8px 18px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 800;
+          backdrop-filter: blur(20px);
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
 
-        .loyalty-level-badge {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 6px 16px;
-          border-radius: 16px;
-          font-size: 13px;
-          font-weight: 700;
-          backdrop-filter: blur(10px);
+        .premium-greeting {
+          background: rgba(255, 255, 255, 0.15);
+          padding: 15px;
+          border-radius: 12px;
+          margin-bottom: 20px;
+          font-weight: 600;
+          text-align: center;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
 
         .loyalty-progress-section {
-          margin-bottom: 16px;
+          margin-bottom: 20px;
         }
 
-        .progress-info {
+        .premium-progress-info {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 8px;
-          font-size: 13px;
+          margin-bottom: 10px;
+          font-size: 14px;
         }
 
         .current-level {
-          font-weight: 600;
+          font-weight: 700;
         }
 
         .next-level {
           opacity: 0.9;
+          font-weight: 500;
         }
 
-        .modern-progress {
+        .premium-loyalty-progress {
           width: 100%;
-          height: 8px;
+          height: 10px;
           background: rgba(255, 255, 255, 0.2);
-          border-radius: 4px;
+          border-radius: 5px;
           overflow: hidden;
+          position: relative;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .loyalty-progress-fill {
+        .animated-progress {
           height: 100%;
           background: linear-gradient(90deg, #ffd700 0%, #ffed4e 100%);
-          border-radius: 4px;
-          transition: width 0.3s ease;
+          border-radius: 5px;
+          transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
-        .loyalty-benefits-grid {
+        .animated-progress::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+          animation: shimmer 2s infinite;
+        }
+
+        .premium-benefits {
           display: flex;
           justify-content: space-between;
-          gap: 8px;
+          gap: 10px;
         }
 
-        .benefit-item {
-          background: rgba(255, 255, 255, 0.1);
-          padding: 12px 8px;
-          border-radius: 10px;
+        .premium-benefit {
+          background: rgba(255, 255, 255, 0.15);
+          padding: 15px 10px;
+          border-radius: 14px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           flex: 1;
-          backdrop-filter: blur(10px);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-benefit:hover {
+          transform: translateY(-5px);
+          background: rgba(255, 255, 255, 0.25);
+        }
+
+        .benefit-glow {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, transparent 70%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .premium-benefit:hover .benefit-glow {
+          opacity: 1;
         }
 
         .benefit-icon {
-          font-size: 18px;
+          font-size: 20px;
         }
 
         .benefit-text {
-          font-size: 11px;
-          font-weight: 500;
+          font-size: 12px;
+          font-weight: 600;
           text-align: center;
         }
 
-        #storeContent {
+        .premium-content {
           margin: 0;
-          padding: 20px;
-          font-size: 15px;
-          min-height: 80px;
+          padding: 25px;
+          font-size: 16px;
+          min-height: 100px;
           color: #374151;
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+          border: 1px solid rgba(255,255,255,0.3);
         }
 
         /* 하단 바 */
-        #storeBottomBar {
+        .premium-bottom-bar {
           position: fixed;
           bottom: 0;
           left: 50%;
@@ -1045,96 +1421,116 @@ window.StoreUIManager = {
           width: 100%;
           max-width: 430px;
           height: 70px;
-          background: white;
-          border-top: 1px solid #f3f4f6;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border-top: 3px solid #e5e7eb;
           display: flex;
           justify-content: space-between;
           align-items: center;
           z-index: 1000;
           padding: 0 20px;
           box-sizing: border-box;
-          gap: 16px;
+          gap: 20px;
+          box-shadow: 0 -10px 30px rgba(0,0,0,0.1);
         }
 
         .btm-btn {
           border: none;
           outline: none;
           font-family: inherit;
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
           height: 50px;
           display: flex;
           align-items: center;
           justify-content: center;
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
         }
 
-        .phone-btn {
+        .premium-phone {
           width: 50px;
           min-width: 50px;
           max-width: 50px;
           border-radius: 50%;
-          background: #f0f9ff;
-          color: #3b82f6;
+          background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+          color: #0369a1;
           font-size: 20px;
-          border: 2px solid #dbeafe;
-          transition: all 0.2s ease;
+          border: 3px solid #7dd3fc;
+          transition: all 0.3s ease;
+          box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
         }
 
-        .phone-btn:hover {
-          background: #dbeafe;
-          transform: scale(1.05);
+        .phone-pulse {
+          animation: pulse 2s infinite;
         }
 
-        .order-btn {
+        .premium-phone:hover {
+          background: linear-gradient(135deg, #e0f2fe, #b0e7ff);
+          transform: scale(1.1) rotate(10deg);
+          box-shadow: 0 10px 30px rgba(14, 165, 233, 0.4);
+        }
+
+        .premium-order {
           flex: 1;
           height: 50px;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border-radius: 25px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           font-size: 16px;
-          letter-spacing: 0.2px;
-          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+          letter-spacing: 0.3px;
+          box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
           display: flex;
           justify-content: center;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
+          position: relative;
+          overflow: hidden;
         }
 
-        .order-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        .premium-order::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: left 0.5s ease;
+        }
+
+        .premium-order:hover::before {
+          left: 100%;
+        }
+
+        .premium-order:hover {
+          transform: translateY(-3px);
+          box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
         }
 
         .order-text {
-          font-weight: 600;
-        }
-
-        .order-arrow {
-          font-size: 18px;
-          transition: transform 0.2s ease;
-        }
-
-        .order-btn:hover .order-arrow {
-          transform: translateX(2px);
+          font-weight: 700;
         }
 
         @media (max-width: 480px) {
-          .tlr-stats-grid {
+          .premium-stats {
             grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
           }
           
-          .loyalty-benefits-grid {
-            gap: 6px;
+          .premium-benefits {
+            gap: 8px;
           }
           
-          .benefit-item {
-            padding: 10px 6px;
+          .premium-benefit {
+            padding: 12px 8px;
           }
           
           .benefit-text {
-            font-size: 10px;
+            font-size: 11px;
+          }
+          
+          .premium-store-name {
+            font-size: 28px;
           }
         }
       </style>`;
