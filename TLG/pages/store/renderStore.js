@@ -279,8 +279,12 @@ function updateLoyaltyUI(data) {
 
 // 모든 프로모션 보기
 function showAllPromotions(store) {
-  alert(`매장 ${store.name}의 모든 프로모션을 확인할 수 있는 페이지로 이동합니다.`);
-  // 실제로는 전체 프로모션 페이지로 이동하는 로직 구현
+  if (typeof renderPromotionDetail === 'function') {
+    renderPromotionDetail(store);
+  } else {
+    console.error('❌ renderPromotionDetail 함수를 찾을 수 없습니다.');
+    alert(`매장 ${store.name}의 모든 프로모션을 확인할 수 있는 페이지로 이동합니다.`);
+  }
 }
 
 // 전역 함수 등록
