@@ -317,7 +317,11 @@ function updateOrderList(currentUserInfo) {
   orderList.innerHTML = ''; // 기존 내용 초기화
 
   if (currentUserInfo.orderList?.length > 0) {
-    currentUserInfo.orderList.forEach((order, index) => {
+    const SHOW_COUNT = 3; // 처음에 보여줄 주문 개수
+    const recentOrders = currentUserInfo.orderList.slice(0, SHOW_COUNT);
+    const hasMoreOrders = currentUserInfo.orderList.length > SHOW_COUNT;
+
+    recentOrders.forEach((order, index) => {
       const orderDiv = document.createElement('div');
       orderDiv.className = 'order-item';
       const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
@@ -342,6 +346,40 @@ function updateOrderList(currentUserInfo) {
       `;
       orderList.appendChild(orderDiv);
     });
+
+    // 더보기 버튼 추가
+    if (hasMoreOrders) {
+      const moreButton = document.createElement('button');
+      moreButton.className = 'more-orders-btn';
+      moreButton.innerHTML = `📋 전체 주문내역 보기 (${currentUserInfo.orderList.length}개)`;
+      moreButton.style.cssText = `
+        width: 100%;
+        padding: 12px;
+        background: #f8f9fa;
+        color: #297efc;
+        border: 1px solid #e0e6ff;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 10px;
+      `;
+      
+      moreButton.addEventListener('click', () => {
+        renderAllOrders(currentUserInfo);
+      });
+
+      moreButton.addEventListener('mouseenter', () => {
+        moreButton.style.background = '#e0e6ff';
+      });
+
+      moreButton.addEventListener('mouseleave', () => {
+        moreButton.style.background = '#f8f9fa';
+      });
+
+      orderList.appendChild(moreButton);
+    }
 
     // 리뷰 작성 버튼 이벤트 리스너
     document.querySelectorAll('.review-btn').forEach(btn => {
@@ -568,6 +606,360 @@ function updateCouponList(currentUserInfo) {
       couponList.appendChild(p);
     });
   }
+}
+
+// 전체 주문내역 렌더링 함수
+function renderAllOrders(currentUserInfo) {
+  console.log('📋 전체 주문내역 보기 렌더링 중...');
+
+  const main = document.getElementById('main');
+  if (!main) return;
+
+  main.innerHTML = `
+    <!-- 상단 헤더 (고정) -->
+    <div id="allOrdersHeader" style="position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:60px;background:#fff;border-bottom:1px solid #e8eefe;z-index:1001;">
+      <button id="backBtn" class="header-btn" style="position:absolute;left:16px;top:10px;" aria-label="뒤로가기">
+        <span class="header-btn-ico" style="font-size:22px;">⬅️</span>
+      </button>
+      <div style="height: 100%; display:flex; align-items: center; justify-content: center;">
+        <span style="font-size:18px;font-weight:700;">📋 전체 주문내역</span>
+      </div>
+    </div>
+
+    <!-- 스크롤 가능한 컨텐츠 영역 -->
+    <div id="allOrdersScrollArea" style="position:fixed;top:60px;bottom:66px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:1;">
+      <div id="allOrdersContent" style="padding:16px;background:#f8f9fb;min-height:100%;">
+        ${
+          !currentUserInfo.orderList || currentUserInfo.orderList.length === 0
+          ? `
+            <div class="orders-all-empty">
+              <div style="font-size:18px;font-weight:600;margin-bottom:10px;color:#333;">주문 내역이 없습니다.</div>
+              <div style="color:#888;font-size:15px;">첫 주문을 시작해보세요!</div>
+            </div>
+          `
+          : `
+            <div class="orders-all-header">
+              <div class="orders-all-stats">
+                <span style="font-size:20px;color:#297efc;font-weight:700;">총 ${currentUserInfo.orderList.length}개 주문</span>
+              </div>
+            </div>
+            <div class="orders-all-list">
+              ${currentUserInfo.orderList.map((order, index) => {
+                const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
+                const hasReview = order.reviewId ? true : false;
+                
+                return `
+                  <div class="order-card">
+                    <div class="order-meta">
+                      <span class="order-store">🏪 ${order.store}</span>
+                      <span class="order-date">${order.date}</span>
+                    </div>
+                    <div class="order-items">${items}</div>
+                    <div class="order-amount">총 ${order.total.toLocaleString()}원</div>
+                    <div class="order-review-section">
+                      ${hasReview ?
+                        `<span style="color: #297efc; font-size: 14px;">✅ 리뷰 작성 완료</span>` :
+                        `<button class="review-btn-all" data-order-index="${index}">📝 리뷰 작성하기</button>`
+                      }
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          `
+        }
+      </div>
+    </div>
+
+    <!-- 하단 바텀바 (고정) -->
+    <nav id="bottomBar">
+      <button id="TLL">📱</button>
+      <button onclick="renderMap()">🗺️</button>
+      <button id="notificationBtn">🔔</button>
+      <button onclick="renderMyPage()">👤</button>
+      <button onclick="logOutF()">👋</button>
+    </nav>
+
+    <!-- 스타일 -->
+    <style>
+      body, #main {
+        overflow: hidden;
+      }
+
+      .header-btn {
+        border: none;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(40,110,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+        color: #297efc;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        padding: 0;
+        border: 1px solid #f0f4ff;
+      }
+      .header-btn:active {
+        background: #f0f6ff;
+        transform: scale(0.95);
+        box-shadow: 0 1px 4px rgba(40,110,255,0.12);
+      }
+
+      #allOrdersScrollArea::-webkit-scrollbar {
+        width: 4px;
+      }
+      #allOrdersScrollArea::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #allOrdersScrollArea::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+      }
+
+      .orders-all-header {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        text-align: center;
+      }
+
+      .orders-all-list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+      }
+
+      .order-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(40,110,255,0.06);
+        padding: 16px;
+        display: flex; 
+        flex-direction: column;
+        gap: 8px;
+        transition: all 0.2s ease;
+        border: 1px solid #f5f7fa;
+      }
+      .order-card:hover {
+        box-shadow: 0 4px 20px rgba(40,110,255,0.10);
+        transform: translateY(-1px);
+      }
+
+      .order-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .order-store { 
+        font-weight: 600; 
+        color: #2d5aa0; 
+        font-size: 15px; 
+      }
+      .order-date {
+        color: #999;
+        font-size: 13px;
+      }
+
+      .order-items { 
+        font-size: 14px; 
+        color: #666; 
+        line-height: 1.4; 
+        margin-bottom: 4px;
+      }
+
+      .order-amount {
+        font-size: 16px;
+        font-weight: 700;
+        color: #297efc;
+        margin-bottom: 8px;
+      }
+
+      .order-review-section {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .review-btn-all {
+        background: #297efc;
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .review-btn-all:hover {
+        background: #2266d9;
+      }
+
+      .orders-all-empty {
+        text-align: center;
+        padding: 60px 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+
+      /* 바텀바 스타일 */
+      #bottomBar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 66px;
+        background: rgba(255,255,255,0.98);
+        border-top: 1.5px solid #e2e6ee;
+        box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1001;
+        padding: 0 12px;
+        box-sizing: border-box;
+        border-bottom-left-radius: 18px;
+        border-bottom-right-radius: 18px;
+        backdrop-filter: blur(5px);
+        gap: 0;
+      }
+
+      #bottomBar button {
+        flex: 1 1 0;
+        margin: 0 5px;
+        height: 44px;
+        min-width: 0;
+        border: none;
+        outline: none;
+        border-radius: 13px;
+        background: #f5f7fb;
+        color: #297efc;
+        font-size: 18px;
+        font-family: inherit;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+        cursor: pointer;
+        transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        letter-spacing: -0.2px;
+      }
+
+      #bottomBar button:active {
+        background: #eaf3ff;
+        color: #1657a0;
+        box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+      }
+
+      /* 리뷰 모달 스타일 */
+      .review-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+      .review-modal-content {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 400px;
+        max-height: 80%;
+        overflow-y: auto;
+      }
+      .star-rating {
+        display: flex;
+        gap: 5px;
+        margin: 10px 0;
+      }
+      .star {
+        font-size: 24px;
+        cursor: pointer;
+        color: #ddd;
+        transition: color 0.2s;
+      }
+      .star.active {
+        color: #ffbf00;
+      }
+      .review-textarea {
+        width: 100%;
+        height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 8px;
+        font-size: 14px;
+        resize: vertical;
+      }
+      .modal-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .modal-btn {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .submit-btn {
+        background: #297efc;
+        color: white;
+      }
+      .cancel-btn {
+        background: #f0f0f0;
+        color: #333;
+      }
+    </style>
+  `;
+
+  // 버튼 이벤트 바인딩
+  document.getElementById('backBtn').addEventListener('click', () => {
+    renderMyPage();
+  });
+
+  // TLL 버튼 클릭 로직
+  const renderTLL = document.querySelector('#TLL');
+  renderTLL.addEventListener('click', async () => {
+    await TLL();
+  });
+
+  // 알림 버튼 클릭 로직
+  const notificationBtn = document.querySelector('#notificationBtn');
+  notificationBtn.addEventListener('click', () => {
+    if (typeof renderNotification === 'function') {
+      renderNotification();
+    } else {
+      console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
+    }
+  });
+
+  // 리뷰 작성 버튼 이벤트 리스너
+  document.querySelectorAll('.review-btn-all').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const orderIndex = parseInt(e.target.getAttribute('data-order-index'));
+      const order = currentUserInfo.orderList[orderIndex];
+      console.log('🔍 선택된 주문 정보:', order);
+      showReviewModal(order, orderIndex);
+    });
+  });
 }
 
 window.renderMyPage = renderMyPage;
