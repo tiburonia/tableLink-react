@@ -4,10 +4,6 @@ async function renderMyPage() {
 
   // UI 먼저 렌더링 (로딩 상태로)
   main.innerHTML = `
-    <header>
-      <button id="settingsBtn" class="settings-button">⚙️</button>
-    </header>
-
     <main id="content">
       <section class="section-card">
         <h2>📦 주문내역</h2>
@@ -48,58 +44,15 @@ async function renderMyPage() {
         overflow: hidden; /* 전체 스크롤 방지 */
       }
 
-      header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        max-width: 430px;
-        height: 60px;
-        background: white;
-        border-bottom: 1px solid #ddd;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding: 0 20px;
-        box-sizing: border-box;
-        z-index: 1001;
-      }
-
-      .settings-button {
-        width: 40px;
-        height: 40px;
-        border: none;
-        background: #f5f7fb;
-        border-radius: 50%;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #297efc;
-        transition: background 0.2s, transform 0.1s;
-        box-shadow: 0 2px 8px rgba(41,126,252,0.1);
-      }
-
-      .settings-button:hover {
-        background: #eaf3ff;
-        transform: scale(1.05);
-      }
-
-      .settings-button:active {
-        background: #d4edff;
-        transform: scale(0.95);
-      }
-
       #content {
         position: absolute;
-        top: 60px;       /* 헤더 높이만큼 */
+        top: 0;          /* 헤더 삭제로 0부터 시작 */
         bottom: 60px;    /* 바텀 바 높이만큼 */
         left: 0;
         width: 100%;
         max-width: 430px;
         overflow-y: auto;  /* 여기만 스크롤 */
-        padding: 0 18px;
+        padding: 18px 18px 0 18px;  /* 상단 패딩 추가 */
         box-sizing: border-box;
         background: #f8f9fb;
         z-index: 1;
@@ -278,9 +231,7 @@ async function renderMyPage() {
     </style>
   `;
 
-  // 설정 버튼 이벤트 리스너 (즉시 설정)
-  const settingsBtn = document.querySelector('#settingsBtn');
-  settingsBtn.addEventListener('click', () => renderMyAccount());
+  // 헤더 삭제로 설정 버튼 이벤트 리스너 제거
 
   // 바텀 네비게이션 이벤트 리스너 추가
   const renderTLL = document.querySelector('#TLL');
