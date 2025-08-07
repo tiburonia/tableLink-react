@@ -253,18 +253,23 @@ function renderPromotionDetail(store) {
       }
 
       .loyalty-levels-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       .loyalty-level-card {
-        border-radius: 12px;
-        padding: 16px;
+        width: 100%;
+        border-radius: 8px;
+        padding: 12px 16px;
         border: 2px solid;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 60px;
       }
 
       .loyalty-level-card:hover {
@@ -298,40 +303,53 @@ function renderPromotionDetail(store) {
 
       .level-header {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        margin-bottom: 12px;
-        text-align: center;
+        gap: 8px;
+        margin-bottom: 0;
+        text-align: left;
+        min-width: 120px;
       }
 
       .level-icon {
-        font-size: 24px;
-        margin-bottom: 4px;
+        font-size: 20px;
+        margin-bottom: 0;
+      }
+
+      .level-info {
+        display: flex;
+        flex-direction: column;
       }
 
       .level-name {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 700;
         margin-bottom: 2px;
+        line-height: 1.2;
       }
 
       .level-requirement {
-        font-size: 11px;
+        font-size: 10px;
         opacity: 0.9;
         font-weight: 500;
+        line-height: 1.2;
       }
 
       .level-benefits {
         display: flex;
-        flex-direction: column;
-        gap: 4px;
+        flex-wrap: wrap;
+        gap: 6px;
+        flex: 1;
       }
 
       .benefit-item {
-        font-size: 11px;
-        line-height: 1.3;
+        font-size: 10px;
+        line-height: 1.2;
         opacity: 0.95;
         font-weight: 500;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
       }
 
       .loyalty-level-card.bronze .benefit-item,
@@ -346,12 +364,17 @@ function renderPromotionDetail(store) {
 
       /* 반응형 조정 */
       @media (max-width: 380px) {
-        .loyalty-levels-grid {
-          grid-template-columns: 1fr;
+        .loyalty-level-card {
+          padding: 10px 14px;
+          min-height: 55px;
         }
         
-        .loyalty-level-card {
-          padding: 14px;
+        .level-header {
+          min-width: 100px;
+        }
+        
+        .benefit-item {
+          font-size: 9px;
         }
       }
     </style>
@@ -376,54 +399,62 @@ function renderPromotionDetail(store) {
             <div class="loyalty-level-card bronze">
               <div class="level-header">
                 <span class="level-icon">🥉</span>
-                <span class="level-name">브론즈</span>
-                <span class="level-requirement">방문 1-4회</span>
+                <div class="level-info">
+                  <span class="level-name">브론즈</span>
+                  <span class="level-requirement">방문 1-4회</span>
+                </div>
               </div>
               <div class="level-benefits">
-                <div class="benefit-item">• 기본 포인트 적립 2%</div>
-                <div class="benefit-item">• 생일 축하 쿠폰</div>
+                <div class="benefit-item">포인트 2%</div>
+                <div class="benefit-item">생일 쿠폰</div>
               </div>
             </div>
             
             <div class="loyalty-level-card silver">
               <div class="level-header">
                 <span class="level-icon">🥈</span>
-                <span class="level-name">실버</span>
-                <span class="level-requirement">방문 5-9회</span>
+                <div class="level-info">
+                  <span class="level-name">실버</span>
+                  <span class="level-requirement">방문 5-9회</span>
+                </div>
               </div>
               <div class="level-benefits">
-                <div class="benefit-item">• 포인트 적립 3%</div>
-                <div class="benefit-item">• 월 1회 무료 음료</div>
-                <div class="benefit-item">• 생일 특별 할인 10%</div>
+                <div class="benefit-item">포인트 3%</div>
+                <div class="benefit-item">월 1회 무료음료</div>
+                <div class="benefit-item">생일 10% 할인</div>
               </div>
             </div>
             
             <div class="loyalty-level-card gold">
               <div class="level-header">
                 <span class="level-icon">🥇</span>
-                <span class="level-name">골드</span>
-                <span class="level-requirement">방문 10-19회</span>
+                <div class="level-info">
+                  <span class="level-name">골드</span>
+                  <span class="level-requirement">방문 10-19회</span>
+                </div>
               </div>
               <div class="level-benefits">
-                <div class="benefit-item">• 포인트 적립 5%</div>
-                <div class="benefit-item">• 모든 메뉴 5% 추가 할인</div>
-                <div class="benefit-item">• 월 2회 무료 음료</div>
-                <div class="benefit-item">• 우선 예약 서비스</div>
+                <div class="benefit-item">포인트 5%</div>
+                <div class="benefit-item">전체 5% 할인</div>
+                <div class="benefit-item">월 2회 무료음료</div>
+                <div class="benefit-item">우선 예약</div>
               </div>
             </div>
             
             <div class="loyalty-level-card diamond">
               <div class="level-header">
                 <span class="level-icon">💎</span>
-                <span class="level-name">다이아몬드</span>
-                <span class="level-requirement">방문 20회+</span>
+                <div class="level-info">
+                  <span class="level-name">다이아몬드</span>
+                  <span class="level-requirement">방문 20회+</span>
+                </div>
               </div>
               <div class="level-benefits">
-                <div class="benefit-item">• 포인트 적립 7%</div>
-                <div class="benefit-item">• 모든 메뉴 10% 추가 할인</div>
-                <div class="benefit-item">• 주 1회 무료 음료</div>
-                <div class="benefit-item">• VIP 전용 메뉴 이용</div>
-                <div class="benefit-item">• 전용 고객센터</div>
+                <div class="benefit-item">포인트 7%</div>
+                <div class="benefit-item">전체 10% 할인</div>
+                <div class="benefit-item">주 1회 무료음료</div>
+                <div class="benefit-item">VIP 메뉴</div>
+                <div class="benefit-item">전용 고객센터</div>
               </div>
             </div>
           </div>
