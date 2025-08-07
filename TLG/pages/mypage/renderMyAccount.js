@@ -309,14 +309,14 @@ async function renderMyAccount() {
       }
 
       .back-button {
-        position: fixed;
-        top: 20px;
-        left: 20px;
+        position: fixed !important;
+        top: 20px !important;
+        left: 20px !important;
         width: 48px;
         height: 48px;
         border: none;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(15px);
         border-radius: 50%;
         font-size: 20px;
         cursor: pointer;
@@ -325,8 +325,10 @@ async function renderMyAccount() {
         justify-content: center;
         color: #667eea;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        z-index: 9999;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+        z-index: 99999 !important;
+        pointer-events: auto !important;
+        user-select: none;
       }
 
       .back-button:hover {
