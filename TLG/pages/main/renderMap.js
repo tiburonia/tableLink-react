@@ -30,10 +30,18 @@ async function renderMap() {
     </main>
 
     <nav id="bottomBar">
-      <button id= "TLL">📱</button>
-      <button id="renderMapBtn">🗺️</button>
-      <button id="notificationBtn">🔔</button>
-      <button onclick="renderMyPage()">👤</button>
+      <button id="TLL" title="QR 주문">
+        <span style="font-size: 22px;">📱</span>
+      </button>
+      <button id="renderMapBtn" class="active" title="지도">
+        <span style="font-size: 22px;">🗺️</span>
+      </button>
+      <button id="notificationBtn" title="알림">
+        <span style="font-size: 22px;">🔔</span>
+      </button>
+      <button onclick="renderMyPage()" title="마이페이지">
+        <span style="font-size: 22px;">👤</span>
+      </button>
     </nav>
 
     ${window.MapPanelUI.getPanelStyles()}
@@ -60,12 +68,24 @@ async function renderMap() {
 .search-container {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 25px;
-  padding: 8px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border-radius: 28px;
+  padding: 10px 16px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 4px 16px rgba(41, 126, 252, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.search-container:hover {
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(41, 126, 252, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  border-color: rgba(41, 126, 252, 0.2);
 }
 
 #searchInput {
@@ -74,36 +94,51 @@ async function renderMap() {
   outline: none;
   background: transparent;
   font-size: 16px;
-  color: #333;
-  padding: 8px 12px;
+  color: #1f2937;
+  padding: 10px 12px;
+  font-weight: 500;
 }
 
 #searchInput::placeholder {
-  color: #999;
+  color: #9ca3af;
+  font-weight: 400;
 }
 
 #searchBtn, #clearBtn {
-  background: none;
-  border: none;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(41, 126, 252, 0.1);
   font-size: 18px;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
   border-radius: 50%;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #6b7280;
 }
 
-#searchBtn:hover, #clearBtn:hover {
-  background: rgba(41, 126, 252, 0.1);
+#searchBtn:hover {
+  background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
+  border-color: transparent;
+}
+
+#clearBtn:hover {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 #clearBtn {
-  color: #999;
-  font-size: 14px;
+  font-size: 16px;
+  margin-left: 4px;
 }
 
 .search-results {
@@ -111,13 +146,17 @@ async function renderMap() {
   top: 100%;
   left: 0;
   width: 100%;
-  max-height: 300px;
+  max-height: 350px;
   overflow-y: auto;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 0 0 15px 15px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
-  margin-top: 4px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border-radius: 0 0 20px 20px;
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.12),
+    0 6px 20px rgba(41, 126, 252, 0.08);
+  backdrop-filter: blur(20px);
+  margin-top: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-top: none;
 }
 
 .search-results.hidden {
@@ -125,29 +164,50 @@ async function renderMap() {
 }
 
 .search-result-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.search-result-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(135deg, #297efc, #4f46e5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .search-result-item:hover {
-  background: rgba(41, 126, 252, 0.05);
+  background: linear-gradient(135deg, rgba(41, 126, 252, 0.08), rgba(79, 70, 229, 0.05));
+  transform: translateX(4px);
+}
+
+.search-result-item:hover::before {
+  opacity: 1;
 }
 
 .search-result-item:last-child {
   border-bottom: none;
+  border-radius: 0 0 20px 20px;
 }
 
 .result-name {
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 6px;
+  font-size: 15px;
 }
 
 .result-info {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
 }
 
 /* 콘텐츠 전체 */
@@ -182,47 +242,123 @@ async function renderMap() {
   transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  height: 66px;
-  background: rgba(255,255,255,0.98);
-  border-top: 1.5px solid #e2e6ee;
-  box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
+  height: 78px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
+  border-top: 1px solid rgba(255,255,255,0.3);
+  box-shadow: 
+    0 -8px 32px rgba(41, 126, 252, 0.08),
+    0 -4px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   align-items: center;
   z-index: 1001;
-  padding: 0 12px;
+  padding: 8px 16px 12px 16px;
   box-sizing: border-box;
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
-  backdrop-filter: blur(5px);
-  gap: 0;
+  border-radius: 24px 24px 0 0;
+  backdrop-filter: blur(20px);
+  gap: 8px;
 }
 
 #bottomBar button {
-  flex: 1 1 0;
-  margin: 0 5px;
-  height: 44px;
+  position: relative;
+  flex: 1;
+  height: 52px;
   min-width: 0;
   border: none;
   outline: none;
-  border-radius: 13px;
-  background: #f5f7fb;
-  color: #297efc;
-  font-size: 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  color: #6B7280;
+  font-size: 20px;
   font-family: inherit;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  letter-spacing: -0.2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
+
+#bottomBar button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(41, 126, 252, 0.1), rgba(99, 102, 241, 0.05));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: inherit;
+}
+
+#bottomBar button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  color: #297efc;
+  box-shadow: 
+    0 8px 25px rgba(41, 126, 252, 0.15),
+    0 3px 10px rgba(0, 0, 0, 0.1);
+  border-color: rgba(41, 126, 252, 0.2);
+}
+
+#bottomBar button:hover::before {
+  opacity: 1;
+}
+
 #bottomBar button:active {
-  background: #eaf3ff;
-  color: #1657a0;
-  box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+  transform: translateY(0);
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #1e40af;
+  box-shadow: 
+    0 4px 15px rgba(41, 126, 252, 0.2),
+    inset 0 2px 4px rgba(41, 126, 252, 0.1);
+}
+
+/* 현재 활성 페이지 표시 */
+#bottomBar button.active {
+  background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 6px 20px rgba(41, 126, 252, 0.25),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#bottomBar button.active::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  opacity: 1;
+}
+
+/* 버튼별 고유 색상 */
+#bottomBar button#TLL:hover {
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.2);
+}
+
+#bottomBar button#renderMapBtn:hover,
+#bottomBar button#renderMapBtn.active {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+#bottomBar button#renderMapBtn.active {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+#bottomBar button#notificationBtn:hover {
+  color: #d97706;
+  border-color: rgba(217, 119, 6, 0.2);
+}
+
+#bottomBar button[onclick*="renderMyPage"]:hover {
+  color: #7c3aed;
+  border-color: rgba(124, 58, 237, 0.2);
 }
 
   </style>
