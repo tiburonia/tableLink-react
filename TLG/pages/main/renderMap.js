@@ -174,55 +174,153 @@ async function renderMap() {
   border-radius: 0 0 18px 18px;
 }
 
-/* 바텀바 */
+/* 바텀바 - 현대적인 글래스모피즘 디자인 */
 #bottomBar {
   position: fixed;
-  bottom: 0;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
-  width: 100%;
-  max-width: 430px;
-  height: 66px;
-  background: rgba(255,255,255,0.98);
-  border-top: 1.5px solid #e2e6ee;
-  box-shadow: 0 -2px 16px 2px rgba(20,40,90,0.07), 0 -1.5px 6px rgba(70,110,180,0.06);
+  width: calc(100% - 32px);
+  max-width: 398px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(31, 38, 135, 0.2),
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
   align-items: center;
   z-index: 1001;
-  padding: 0 12px;
+  padding: 0 8px;
   box-sizing: border-box;
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
-  backdrop-filter: blur(5px);
-  gap: 0;
+  border-radius: 24px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+#bottomBar::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%);
+  border-radius: 24px;
+  z-index: -1;
 }
 
 #bottomBar button {
-  flex: 1 1 0;
-  margin: 0 5px;
-  height: 44px;
-  min-width: 0;
+  position: relative;
+  width: 56px;
+  height: 56px;
   border: none;
   outline: none;
-  border-radius: 13px;
-  background: #f5f7fb;
-  color: #297efc;
-  font-size: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.3);
+  color: #6B7280;
+  font-size: 24px;
   font-family: inherit;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(40,110,255,0.06);
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.13s, color 0.12s, box-shadow 0.13s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  letter-spacing: -0.2px;
+  overflow: hidden;
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
+
+#bottomBar button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(41, 126, 252, 0) 0%,
+    rgba(41, 126, 252, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 18px;
+}
+
+#bottomBar button:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.5);
+  color: #297efc;
+  box-shadow: 
+    0 8px 24px rgba(41, 126, 252, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+#bottomBar button:hover::before {
+  opacity: 1;
+}
+
 #bottomBar button:active {
-  background: #eaf3ff;
-  color: #1657a0;
-  box-shadow: 0 2px 16px rgba(34,153,252,0.13);
+  transform: translateY(0px);
+  background: rgba(41, 126, 252, 0.15);
+  color: #1e40af;
+  box-shadow: 
+    0 4px 16px rgba(41, 126, 252, 0.25),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#bottomBar button.active {
+  background: linear-gradient(135deg, 
+    rgba(41, 126, 252, 0.9) 0%,
+    rgba(59, 130, 246, 0.8) 100%);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 
+    0 8px 24px rgba(41, 126, 252, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+#bottomBar button.active::before {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0) 100%);
+  opacity: 1;
+}
+
+/* 아이콘 애니메이션 효과 */
+#bottomBar button {
+  font-size: 22px;
+}
+
+#bottomBar button:hover {
+  font-size: 24px;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0,-8px,0);
+  }
+  70% {
+    transform: translate3d(0,-4px,0);
+  }
+  90% {
+    transform: translate3d(0,-2px,0);
+  }
+}
+
+#bottomBar button.active {
+  animation: bounce 0.6s ease;
 }
 
   </style>
