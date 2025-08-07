@@ -368,12 +368,15 @@ window.MapPanelUI = {
     `;
   },
 
-  // 필터링 이벤트 설정
+  // 필터링 이벤트 설정 (패널 토글 없이 필터링만)
   setupFilterEvents() {
     const allFilterTabs = document.querySelectorAll('.filter-tab');
 
     allFilterTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // 이벤트 전파 중지
+
         const clickedTab = e.target;
         const filterType = clickedTab.getAttribute('data-type');
 
@@ -383,9 +386,10 @@ window.MapPanelUI = {
         // 클릭된 탭 활성화
         clickedTab.classList.add('active');
 
-        // 필터링 실행
-        const filterValue = clickedTab.getAttribute('data-filter');
+        // 필터링 실행 (패널 상태는 변경하지 않음)
         this.applyFilters();
+
+        console.log('🔍 필터 변경됨:', filterType, '=', clickedTab.getAttribute('data-filter'));
       });
     });
   },
@@ -449,7 +453,7 @@ window.MapPanelUI = {
     }, 100);
   },
 
-  // 패널 확장/축소 및 드래그 기능 설정
+  // 패널 확장/축소 및 드래그 기능 설정 (드래그로만 제한)
   setupPanelDrag() {
     const storePanel = document.getElementById('storePanel');
     const panelHandle = document.getElementById('panelHandle');
@@ -463,7 +467,9 @@ window.MapPanelUI = {
     if (currentHeight === 60) storePanel.classList.add('collapsed');
     else storePanel.classList.add('expanded');
 
+    // 마우스 드래그 이벤트
     panelHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
       isDragging = true;
       startY = e.clientY;
       startHeight = currentHeight;
@@ -478,7 +484,7 @@ window.MapPanelUI = {
       const deltaY = e.clientY - startY;
       let newHeight = startHeight - deltaY;
 
-      // 최대/최소 높이 제한 (예시 값)
+      // 최대/최소 높이 제한
       const maxHeight = 630;
       const minHeight = 60; // collapsed 상태 높이
 
@@ -488,10 +494,10 @@ window.MapPanelUI = {
       currentHeight = newHeight;
 
       // 패널 상태 클래스 업데이트
-      if (newHeight === minHeight) {
+      if (newHeight <= minHeight + 10) {
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-      } else if (newHeight === maxHeight) {
+      } else if (newHeight >= maxHeight - 10) {
         storePanel.classList.add('expanded');
         storePanel.classList.remove('collapsed');
       } else {
@@ -506,29 +512,90 @@ window.MapPanelUI = {
       panelHandle.style.cursor = 'grab'; // 커서 복구
       document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
 
-      // 드래그 종료 후 높이에 따라 클래스 결정 및 고정 (축소/확대)
-      const panelRect = storePanel.getBoundingClientRect();
-      const midPoint = 300; // 패널을 열거나 닫을 임계값 (예시)
+      // 드래그 종료 후 높이에 따라 클래스 결정 및 고정
+      const midPoint = 300; // 패널을 열거나 닫을 임계값
 
-      if (panelRect.height < midPoint || storePanel.classList.contains('collapsed')) {
+      if (currentHeight < midPoint) {
         storePanel.style.height = '60px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
+        currentHeight = 60;
       } else {
         storePanel.style.height = '630px';
         storePanel.classList.add('expanded');
         storePanel.classList.remove('collapsed');
+        currentHeight = 630;
       }
-      currentHeight = parseInt(storePanel.style.height, 10);
     });
 
-    // 필터 버튼 클릭 시 패널 자동 토글 비활성화
-    const filterButtons = document.querySelectorAll('.filter-tab');
-    filterButtons.forEach(button => {
-      button.addEventListener('click', (e) => {
-        e.stopPropagation(); // 이벤트 전파 중지
-      });
+    // 터치 드래그 이벤트 (모바일 지원)
+    panelHandle.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startHeight = currentHeight;
+      storePanel.style.transition = 'none';
+      document.body.style.userSelect = 'none';
     });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+
+      const deltaY = e.touches[0].clientY - startY;
+      let newHeight = startHeight - deltaY;
+
+      const maxHeight = 630;
+      const minHeight = 60;
+
+      newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+      storePanel.style.height = `${newHeight}px`;
+      currentHeight = newHeight;
+
+      if (newHeight <= minHeight + 10) {
+        storePanel.classList.add('collapsed');
+        storePanel.classList.remove('expanded');
+      } else if (newHeight >= maxHeight - 10) {
+        storePanel.classList.add('expanded');
+        storePanel.classList.remove('collapsed');
+      } else {
+        storePanel.classList.remove('collapsed', 'expanded');
+      }
+    });
+
+    document.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)';
+      document.body.style.userSelect = '';
+
+      const midPoint = 300;
+
+      if (currentHeight < midPoint) {
+        storePanel.style.height = '60px';
+        storePanel.classList.add('collapsed');
+        storePanel.classList.remove('expanded');
+        currentHeight = 60;
+      } else {
+        storePanel.style.height = '630px';
+        storePanel.classList.add('expanded');
+        storePanel.classList.remove('collapsed');
+        currentHeight = 630;
+      }
+    });
+
+    // 패널 내부 요소들의 클릭 이벤트가 패널 토글에 영향주지 않도록 방지
+    storePanel.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    // 필터 탭 클릭 시 패널 상태 변경 방지
+    const filterContainer = document.getElementById('filterContainer');
+    if (filterContainer) {
+      filterContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
   },
 
   // 초기화 함수
