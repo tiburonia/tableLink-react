@@ -4,6 +4,8 @@ async function renderMyPage() {
 
   // UI 먼저 렌더링 (로딩 상태로)
   main.innerHTML = `
+    <button id="settingsBtn" class="settings-button">⚙️</button>
+    
     <main id="content">
       <section class="section-card">
         <h2>📦 주문내역</h2>
@@ -42,6 +44,39 @@ async function renderMyPage() {
         font-family: sans-serif;
         background: #f8f9fb;
         overflow: hidden; /* 전체 스크롤 방지 */
+      }
+
+      .settings-button {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        border: none;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        font-size: 24px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #297efc;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px rgba(41, 126, 252, 0.15);
+        z-index: 9999;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(41, 126, 252, 0.1);
+      }
+
+      .settings-button:hover {
+        background: rgba(41, 126, 252, 0.1);
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 6px 20px rgba(41, 126, 252, 0.25);
+      }
+
+      .settings-button:active {
+        background: rgba(41, 126, 252, 0.2);
+        transform: scale(0.95) rotate(90deg);
       }
 
       #content {
@@ -231,7 +266,15 @@ async function renderMyPage() {
     </style>
   `;
 
-  // 헤더 삭제로 설정 버튼 이벤트 리스너 제거
+  // 설정 버튼 이벤트 리스너 추가
+  const settingsBtn = document.querySelector('#settingsBtn');
+  settingsBtn.addEventListener('click', () => {
+    if (typeof renderMyAccount === 'function') {
+      renderMyAccount();
+    } else {
+      console.warn('⚠️ renderMyAccount 함수를 찾을 수 없습니다');
+    }
+  });
 
   // 바텀 네비게이션 이벤트 리스너 추가
   const renderTLL = document.querySelector('#TLL');
