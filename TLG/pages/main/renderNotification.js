@@ -28,7 +28,7 @@ async function renderNotification() {
 
     <nav id="bottomBar">
       <button onclick="renderMap()">🗺️</button>
-      <button id="focusSearchBtn">🔍</button>
+      <button id="renderMapBtn">🗺️</button>
       <button id="notificationBtn" class="active">🔔</button>
       <button onclick="renderMyPage()">👤</button>
       <button onclick="logOutF()">👋</button>

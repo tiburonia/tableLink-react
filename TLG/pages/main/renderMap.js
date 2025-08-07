@@ -31,7 +31,7 @@ async function renderMap() {
 
     <nav id="bottomBar">
       <button id= "TLL">📱</button>
-      <button id="focusSearchBtn">🔍</button>
+      <button id="renderMapBtn">🗺️</button>
       <button id="notificationBtn">🔔</button>
       <button onclick="renderMyPage()">👤</button>
       <button onclick="logOutF()">👋</button>
@@ -503,15 +503,13 @@ async function renderMap() {
   // 초기 상태에서 초기화 버튼 숨기기
   clearBtn.style.display = 'none';
 
-  // 바텀바 검색 버튼 클릭시 검색창으로 포커스
-  const focusSearchBtn = document.getElementById('focusSearchBtn');
-  focusSearchBtn.addEventListener('click', () => {
-    searchInput.focus();
-    // 패널이 열려있으면 닫기
-    if (panel.classList.contains('expanded')) {
-      panel.classList.add('collapsed');
-      panel.classList.remove('expanded');
-      panel.style.height = '60px';
+  // 바텀바 지도 버튼 클릭시 (현재 페이지 새로고침)
+  const renderMapBtn = document.getElementById('renderMapBtn');
+  renderMapBtn.addEventListener('click', () => {
+    if (typeof renderMap === 'function') {
+      renderMap();
+    } else {
+      location.reload();
     }
   });
 
