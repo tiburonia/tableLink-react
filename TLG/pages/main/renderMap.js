@@ -487,6 +487,13 @@ async function renderMap() {
       if (storeListContainer && window.lastLoadedStores) {
         console.log('📝 저장된 매장 데이터로 목록 업데이트:', window.lastLoadedStores.length, '개 매장');
         updateStoreList(window.lastLoadedStores, storeListContainer);
+        // 필터링 기능 초기화
+        window.MapPanelUI.initializeFiltering();
+      }
+    } else {
+      console.warn('⚠️ DOM 준비 실패, 기본 처리로 진행');
+    }
+  });teStoreList(window.lastLoadedStores, storeListContainer);
       } else {
         console.warn('⚠️ DOM은 준비되었지만 매장 데이터가 없거나 컨테이너를 찾을 수 없음');
       }
@@ -892,6 +899,8 @@ async function loadStoresAndMarkers(map) {
       const storeListContainer = document.getElementById('storeListContainer');
       if (storeListContainer) {
         updateStoreList(stores, storeListContainer);
+        // 필터링 기능 초기화
+        window.MapPanelUI.initializeFiltering();
       }
     }, 100);
     return;
