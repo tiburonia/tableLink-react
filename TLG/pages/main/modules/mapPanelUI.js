@@ -62,6 +62,12 @@ window.MapPanelUI = {
   getPanelStyles() {
     return `
       <style>
+        /* 로딩 스피너 애니메이션 */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
         /* 패널 */
         #storePanel {
           position: fixed;
@@ -126,6 +132,7 @@ window.MapPanelUI = {
           color: white;
           font-weight: 600;
         }
+
         #panelHandle {
           width: 44px;
           height: 7px;
@@ -324,8 +331,7 @@ window.MapPanelUI = {
         }
       </style>
     `;
-  }
-},
+  },
 
   // 필터링 이벤트 설정
   setupFilterEvents() {
