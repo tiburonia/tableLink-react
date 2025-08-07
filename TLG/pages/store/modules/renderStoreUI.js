@@ -366,11 +366,14 @@ window.StoreUIManager = {
         #storePanelContainer {
           position: relative;
           height: calc(100% - 24px);
-          overflow-y: auto;
+          overflow-y: auto !important;
+          overflow-x: hidden;
           box-sizing: border-box;
           overscroll-behavior: contain;
           -webkit-overflow-scrolling: touch;
           padding: 0 20px 100px 20px;
+          scroll-behavior: smooth;
+          will-change: scroll-position;
         }
         
         #storePanelContainer::-webkit-scrollbar {
