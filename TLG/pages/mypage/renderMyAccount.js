@@ -143,7 +143,7 @@ async function renderMyAccount() {
   // UI 프레임을 먼저 렌더링 (로딩 상태)
   main.innerHTML = `
     <div class="account-container">
-      <button id="backBtn" class="back-button">←</button>
+      <button id="backBtn" class="back-button" onclick="renderMyPage()">←</button>
       
       <div class="account-content">
         <!-- 프로필 헤더 -->
