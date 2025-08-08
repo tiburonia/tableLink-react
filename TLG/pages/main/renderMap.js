@@ -1,4 +1,3 @@
-
 async function renderMap() {
   const main = document.getElementById('main');
 
@@ -384,13 +383,11 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 관리용 전역 변수 초기화
-  if (!window.currentMarkers) {
-    window.currentMarkers = [];
-  }
-  if (!window.markerMap) {
-    window.markerMap = new Map();
-  }
+  // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
+  window.currentMarkers = [];
+  window.markerMap = new Map();
+
+  console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
 
   console.log('🗺️ 지도 렌더링 완료');
 
@@ -524,14 +521,14 @@ async function renderMap() {
   const refreshBtn = document.getElementById('refreshBtn');
   refreshBtn.addEventListener('click', async () => {
     console.log('🔄 수동 새로고침 버튼 클릭됨 - 캐시 삭제 후 새로 로딩');
-    
+
     refreshBtn.style.transform = 'scale(1.05) rotate(360deg)';
     refreshBtn.style.pointerEvents = 'none';
-    
+
     try {
       // 기존 캐시 삭제
       window.storeCache.clearCache();
-      
+
       // 강제 새로고침으로 서버에서 데이터 가져오기
       await loadStoresAndMarkers(map, true);
       console.log('✅ 수동 새로고침 완료');
@@ -591,10 +588,10 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
       stores = window.storeCache.getStoreData();
       if (stores && stores.length > 0) {
         console.log('📁 캐시된 매장 데이터 사용:', stores.length, '개 매장');
-        
+
         // 캐시 데이터로 마커 생성 (중복 방지)
         await createMarkersFromCache(stores, map);
-        
+
         // 매장 목록도 업데이트
         setTimeout(() => {
           const storeListContainer = document.getElementById('storeListContainer');
@@ -602,7 +599,7 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
             updateStoreList(stores, storeListContainer);
           }
         }, 100);
-        
+
         return; // 캐시 사용 시 여기서 종료
       }
     }
@@ -611,7 +608,7 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
     console.log(forceRefresh ? 
       '🔄 강제 새로고침 - 서버에서 최신 데이터 요청 중...' : 
       '🌐 서버에서 매장 기본 정보 로딩 중...');
-    
+
     const response = await fetch('/api/stores/batch/basic-info');
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -658,7 +655,7 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
 // 기존 마커 완전 삭제 함수
 function clearAllMarkers() {
   console.log('🧹 기존 마커 완전 삭제 시작');
-  
+
   // Map에서 마커 제거
   if (window.markerMap && window.markerMap.size > 0) {
     window.markerMap.forEach((marker, storeId) => {
@@ -687,13 +684,9 @@ function clearAllMarkers() {
 // 캐시 데이터로 마커 생성 (중복 방지)
 async function createMarkersFromCache(stores, map) {
   console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
-  
-  // 이미 마커가 생성되어 있는지 확인
-  if (window.markerMap && window.markerMap.size > 0) {
-    console.log('⚠️ 이미 마커가 존재함 - 중복 생성 방지');
-    return;
-  }
 
+  // DOM 재생성 후에는 항상 마커를 새로 생성해야 함
+  console.log('🔄 캐시 데이터로 새 마커 생성 시작');
   await createMarkersFromData(stores, map);
 }
 
@@ -703,7 +696,7 @@ async function createMarkersFromData(stores, map) {
 
   if (window.MapMarkerManager && typeof window.MapMarkerManager.createMarkersInBatch === 'function') {
     const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
-    
+
     // 마커 Map과 배열에 저장
     newMarkers.forEach(marker => {
       if (marker && marker.storeId) {
@@ -761,7 +754,7 @@ async function updateStoreList(stores, storeListContainer) {
     });
 
     storeListContainer.appendChild(fragment);
-    
+
     console.log(`✅ 매장 목록 업데이트 완료: ${stores.length}개 매장`);
 
   } catch (error) {
