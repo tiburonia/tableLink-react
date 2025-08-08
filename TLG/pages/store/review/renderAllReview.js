@@ -8,56 +8,15 @@ async function renderAllReview(store) {
 
     console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
 
-    // localStorage에서 리뷰 캐시 확인
-    const reviewCacheKey = `tablelink_reviews_store_${store.id}`;
-    const cachedReviews = localStorage.getItem(reviewCacheKey);
-
-    let reviews = [];
-    let needToFetchFromServer = false;
-
-    if (cachedReviews) {
-      try {
-        const cachedData = JSON.parse(cachedReviews);
-        const cacheAge = Date.now() - cachedData.timestamp;
-        const CACHE_DURATION = 10 * 60 * 1000; // 10분
-
-        if (cacheAge < CACHE_DURATION) {
-          console.log('📁 캐시된 리뷰 데이터 사용:', cachedData.reviews.length, '개 리뷰');
-          reviews = cachedData.reviews;
-        } else {
-          console.log('⏰ 리뷰 캐시가 만료됨, 서버에서 새로 가져오는 중...');
-          localStorage.removeItem(reviewCacheKey);
-          needToFetchFromServer = true;
-        }
-      } catch (error) {
-        console.log('⚠️ 캐시 데이터 파싱 실패, 서버에서 가져오는 중...');
-        needToFetchFromServer = true;
-      }
-    } else {
-      console.log('📭 리뷰 캐시가 없음, 서버에서 가져오는 중...');
-      needToFetchFromServer = true;
+    // 매번 서버에서 리뷰 데이터 직접 요청
+    console.log('🌐 서버에서 리뷰 데이터 가져오는 중... (캐시 사용 안함)');
+    const response = await fetch(`/api/stores/${store.id}/reviews`);
+    if (!response.ok) {
+      throw new Error('리뷰 데이터 조회 실패');
     }
 
-    // 캐시가 없거나 만료된 경우 서버에서 가져오기
-    if (needToFetchFromServer) {
-      console.log('🌐 서버에서 리뷰 데이터 가져오는 중...');
-      const response = await fetch(`/api/stores/${store.id}/reviews`);
-      if (!response.ok) {
-        throw new Error('리뷰 데이터 조회 실패');
-      }
-
-      const reviewData = await response.json();
-      reviews = reviewData.reviews || [];
-
-      // 새로 가져온 데이터를 캐시에 저장
-      const cacheData = {
-        reviews: reviews,
-        timestamp: Date.now(),
-        storeId: store.id
-      };
-      localStorage.setItem(reviewCacheKey, JSON.stringify(cacheData));
-      console.log('💾 리뷰 데이터 캐시 저장 완료:', reviews.length, '개 리뷰');
-    }
+    const reviewData = await response.json();
+    const reviews = reviewData.reviews || [];
 
     console.log('📖 가져온 리뷰 데이터:', reviews);
 
@@ -402,12 +361,7 @@ async function renderAllReview(store) {
       alert('포장·예약하기 기능은 준비 중입니다');
     });
 
-    // 리뷰 캐시 초기화 함수
-    const clearReviewCache = (storeId) => {
-      const reviewCacheKey = `tablelink_reviews_store_${storeId}`;
-      localStorage.removeItem(reviewCacheKey);
-      console.log('🗑️ 리뷰 캐시 초기화 완료:', reviewCacheKey);
-    };
+    
 
     // 내 리뷰 수정/삭제 함수들을 전역으로 등록
     window.editMyReview = async (reviewId, currentContent, currentScore) => {
@@ -576,9 +530,6 @@ async function renderAllReview(store) {
             alert('리뷰가 수정되었습니다.');
             document.body.removeChild(modal);
 
-            // 리뷰 캐시 초기화
-            clearReviewCache(store.id);
-
             // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
             if (window.cacheManager) {
               localStorage.removeItem(`tablelink_store_rating_${store.id}`);
@@ -623,9 +574,6 @@ async function renderAllReview(store) {
             const responseData = await response.json();
             console.log('✅ 리뷰 삭제 성공:', responseData);
             alert('리뷰가 삭제되었습니다.');
-
-            // 리뷰 캐시 초기화
-            clearReviewCache(store.id);
 
             // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
             if (window.cacheManager) {
