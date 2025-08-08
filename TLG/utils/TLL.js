@@ -1,9 +1,26 @@
 async function TLL() {
-  // 캐시에서 스토어 정보 가져오기 (캐시 우선, 없으면 서버에서 가져와서 캐시 저장)
+  // 매번 서버에서 매장 데이터 직접 요청 (캐시 사용 안함)
   let stores = [];
   try {
-    stores = await cacheManager.getStores();
-    console.log('📱 TLL에서 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+    console.log('🌐 TLL - 서버에서 매장 데이터 직접 가져오는 중... (캐시 사용 안함)');
+    const response = await fetch('/api/stores', {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('매장 데이터 조회 실패');
+    }
+    
+    const data = await response.json();
+    if (data.success && data.stores) {
+      stores = data.stores;
+      console.log('📱 TLL에서 서버 매장 데이터 사용:', stores.length, '개 매장');
+    } else {
+      throw new Error(data.error || '매장 데이터 형식 오류');
+    }
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
     alert('스토어 정보를 불러올 수 없습니다.');
@@ -58,14 +75,20 @@ async function TLL() {
     const store = stores.find(s => s.id === storeId);
 
     try {
-      // 🆕 PostgreSQL에서 실제 테이블 정보 가져오기
-      const response = await fetch(`/api/stores/${storeId}/tables`);
+      // 테이블 정보 서버에서 직접 요청 (캐시 사용 안함)
+      console.log(`🌐 TLL - 매장 ${storeId} 테이블 정보 서버에서 직접 조회 중... (캐시 사용 안함)`);
+      const response = await fetch(`/api/stores/${storeId}/tables`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) throw new Error('테이블 정보 조회 실패');
 
       const data = await response.json();
       const tables = data.tables || [];
 
-      console.log(`🏪 ${store.name}: ${tables.length}개 테이블 로드 완료`);
+      console.log(`🏪 ${store.name}: ${tables.length}개 테이블 서버에서 직접 로드 완료`);
 
       // 실제 테이블 번호로 옵션 생성
       if (tables.length > 0) {
