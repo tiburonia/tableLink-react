@@ -22,6 +22,7 @@ async function renderMap() {
         <div class="search-container">
           <input id="searchInput" type="text" placeholder="매장명 또는 카테고리 검색...">
           <button id="searchBtn">🔍</button>
+          <button id="refreshBtn" title="매장 정보 새로고침">🔄</button>
           <button id="clearBtn">✕</button>
         </div>
         <div id="searchResults" class="search-results hidden"></div>
@@ -104,7 +105,7 @@ async function renderMap() {
   font-weight: 400;
 }
 
-#searchBtn, #clearBtn {
+#searchBtn, #refreshBtn, #clearBtn {
   background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
   border: 1px solid rgba(41, 126, 252, 0.1);
   font-size: 18px;
@@ -125,6 +126,14 @@ async function renderMap() {
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
+  border-color: transparent;
+}
+
+#refreshBtn:hover {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  transform: scale(1.05) rotate(180deg);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
   border-color: transparent;
 }
 
@@ -615,6 +624,30 @@ async function renderMap() {
     performSearch(searchInput.value.trim());
   });
 
+  // 새로고침 버튼 클릭
+  const refreshBtn = document.getElementById('refreshBtn');
+  refreshBtn.addEventListener('click', async () => {
+    console.log('🔄 수동 새로고침 버튼 클릭됨');
+    
+    // 버튼 회전 애니메이션
+    refreshBtn.style.transform = 'scale(1.05) rotate(360deg)';
+    refreshBtn.style.pointerEvents = 'none'; // 중복 클릭 방지
+    
+    try {
+      // 통합 API 호출로 매장 정보 새로고침
+      await loadStoresAndMarkers(map);
+      console.log('✅ 수동 새로고침 완료');
+    } catch (error) {
+      console.error('❌ 수동 새로고침 실패:', error);
+    } finally {
+      // 버튼 상태 복원
+      setTimeout(() => {
+        refreshBtn.style.transform = '';
+        refreshBtn.style.pointerEvents = '';
+      }, 500);
+    }
+  });
+
   // Enter 키 검색
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -652,11 +685,11 @@ async function renderMap() {
 
   // 패널 드래그 기능은 MapPanelUI.setupPanelDrag()에서 전담 처리
 
-  // 주기적으로 매장 상태 업데이트 (30초마다)
+  // 주기적으로 매장 상태 업데이트 (30분마다)
   const updateInterval = setInterval(() => {
-    console.log('🔄 지도: 매장 상태 주기적 업데이트 시작');
+    console.log('🔄 지도: 매장 상태 주기적 업데이트 시작 (30분 간격)');
     loadStoresAndMarkers(map);
-  }, 30000);
+  }, 30 * 60 * 1000); // 30분 = 30 * 60 * 1000ms
 
   // 페이지 떠날 때 인터벌 정리
   window.addEventListener('beforeunload', () => {
