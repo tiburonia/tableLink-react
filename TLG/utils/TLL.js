@@ -1,4 +1,4 @@
-async function TLL() {
+window.TLL = async function TLL() {
   // 1. UI 프레임 먼저 렌더링 (로딩 상태)
   main.innerHTML = `
   <button id="backBtn" onclick="renderMap()"></button>
@@ -100,7 +100,6 @@ async function TLL() {
 
   // 이벤트 바인딩
   const tableSelect = document.getElementById('tableSelect');
-  const startOrderBtn = document.getElementById('startOrderBtn');
 
   storeSelect.addEventListener('change', async () => {
     const storeId = Number(storeSelect.value);
@@ -181,4 +180,4 @@ async function TLL() {
     // 실제 주문 flow 함수로 테이블 이름 전달
     renderOrderScreen(store, tableName);
   });
-}
+};
