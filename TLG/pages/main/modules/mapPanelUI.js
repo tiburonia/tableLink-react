@@ -453,7 +453,7 @@ window.MapPanelUI = {
     }, 100);
   },
 
-  // 패널 확장/축소 및 드래그 기능 설정 (드래그로만 제한)
+  // 패널 드래그 기능 설정 (드래그로만 제어, 클릭 토글 완전 제거)
   setupPanelDrag() {
     const storePanel = document.getElementById('storePanel');
     const panelHandle = document.getElementById('panelHandle');
@@ -467,9 +467,10 @@ window.MapPanelUI = {
     if (currentHeight === 60) storePanel.classList.add('collapsed');
     else storePanel.classList.add('expanded');
 
-    // 마우스 드래그 이벤트
+    // 핸들에서만 드래그 시작 (패널 클릭 토글 완전 제거)
     panelHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       isDragging = true;
       startY = e.clientY;
       startHeight = currentHeight;
@@ -478,8 +479,10 @@ window.MapPanelUI = {
       document.body.style.userSelect = 'none'; // 드래그 중 텍스트 선택 방지
     });
 
+    // 드래그 이벤트는 document에서 처리
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
+      e.preventDefault();
 
       const deltaY = e.clientY - startY;
       let newHeight = startHeight - deltaY;
@@ -505,7 +508,7 @@ window.MapPanelUI = {
       }
     });
 
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', (e) => {
       if (!isDragging) return;
       isDragging = false;
       storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
@@ -528,77 +531,35 @@ window.MapPanelUI = {
       }
     });
 
-    // 터치 드래그 이벤트 (모바일 지원)
-    /*
-    panelHandle.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      isDragging = true;
-      startY = e.touches[0].clientY;
-      startHeight = currentHeight;
-      storePanel.style.transition = 'none';
-      document.body.style.userSelect = 'none';
-    });
-
-    document.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-
-      const deltaY = e.touches[0].clientY - startY;
-      let newHeight = startHeight - deltaY;
-
-      const maxHeight = 630;
-      const minHeight = 60;
-
-      newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
-
-      storePanel.style.height = `${newHeight}px`;
-      currentHeight = newHeight;
-
-      if (newHeight <= minHeight + 10) {
-        storePanel.classList.add('collapsed');
-        storePanel.classList.remove('expanded');
-      } else if (newHeight >= maxHeight - 10) {
-        storePanel.classList.add('expanded');
-        storePanel.classList.remove('collapsed');
-      } else {
-        storePanel.classList.remove('collapsed', 'expanded');
-      }
-    });
-
-    document.addEventListener('touchend', () => {
-      if (!isDragging) return;
-      isDragging = false;
-      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)';
-      document.body.style.userSelect = '';
-
-      const midPoint = 300;
-
-      if (currentHeight < midPoint) {
-        storePanel.style.height = '60px';
-        storePanel.classList.add('collapsed');
-        storePanel.classList.remove('expanded');
-        currentHeight = 60;
-      } else {
-        storePanel.style.height = '630px';
-        storePanel.classList.add('expanded');
-        storePanel.classList.remove('collapsed');
-        currentHeight = 630;
-      }
-    });
-
-    */
-
-    // 패널 내부 요소들의 클릭 이벤트가 패널 토글에 영향주지 않도록 방지
+    // 패널 전체에서 클릭 이벤트 완전 차단 (renderStore처럼)
     storePanel.addEventListener('click', (e) => {
       e.stopPropagation();
+      // 클릭으로 인한 패널 토글 완전 방지
     });
 
-    // 필터 탭 클릭 시 패널 상태 변경 방지
+    // 패널 전체에서 더블클릭도 차단
+    storePanel.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+    });
+
+    // 필터 컨테이너에서도 이벤트 전파 차단
     const filterContainer = document.getElementById('filterContainer');
     if (filterContainer) {
       filterContainer.addEventListener('click', (e) => {
         e.stopPropagation();
       });
     }
+
+    // 스토어 리스트 컨테이너에서도 이벤트 전파 차단
+    const storeListContainer = document.getElementById('storeListContainer');
+    if (storeListContainer) {
+      storeListContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료 (클릭 토글 비활성화)');
   },
 
   // 초기화 함수
