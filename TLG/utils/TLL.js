@@ -98,8 +98,19 @@ window.TLL = async function TLL() {
     loadingIndicator.style.display = 'none';
   }
 
-  // 이벤트 바인딩
+  // 이벤트 바인딩 (null 체크 추가)
   const tableSelect = document.getElementById('tableSelect');
+  
+  // DOM 요소 존재 확인
+  if (!storeSelect) {
+    console.error('❌ storeSelect 요소를 찾을 수 없습니다');
+    return;
+  }
+  
+  if (!tableSelect) {
+    console.error('❌ tableSelect 요소를 찾을 수 없습니다');
+    return;
+  }
 
   storeSelect.addEventListener('change', async () => {
     const storeId = Number(storeSelect.value);
@@ -159,10 +170,13 @@ window.TLL = async function TLL() {
   });
 
   tableSelect.addEventListener('change', () => {
-    startOrderBtn.disabled = !tableSelect.value;
+    if (startOrderBtn) {
+      startOrderBtn.disabled = !tableSelect.value;
+    }
   });
 
-  startOrderBtn.addEventListener('click', () => {
+  if (startOrderBtn) {
+    startOrderBtn.addEventListener('click', () => {
     const storeId = Number(storeSelect.value);
     const selectedTableNumber = tableSelect.value;
     if (!storeId || !selectedTableNumber) return;
@@ -179,5 +193,8 @@ window.TLL = async function TLL() {
     alert(`[${store.name}] ${tableName} 주문 시작`);
     // 실제 주문 flow 함수로 테이블 이름 전달
     renderOrderScreen(store, tableName);
-  });
+    });
+  } else {
+    console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');
+  }
 };
