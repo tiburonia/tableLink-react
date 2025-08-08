@@ -529,6 +529,7 @@ window.MapPanelUI = {
     });
 
     // 터치 드래그 이벤트 (모바일 지원)
+    /*
     panelHandle.addEventListener('touchstart', (e) => {
       e.preventDefault();
       isDragging = true;
@@ -583,6 +584,8 @@ window.MapPanelUI = {
         currentHeight = 630;
       }
     });
+
+    */
 
     // 패널 내부 요소들의 클릭 이벤트가 패널 토글에 영향주지 않도록 방지
     storePanel.addEventListener('click', (e) => {
