@@ -1270,13 +1270,32 @@ async function loadStoresAndMarkers(map) {
 // 통합 API 호출을 사용한 매장 목록 업데이트 함수
 async function updateStoreList(stores, storeListContainer) {
   try {
-    // 중복 업데이트 방지 체크
-    if (storeListContainer.dataset.lastUpdateHash === JSON.stringify(stores.map(s => s.id)).hashCode()) {
+    // 업데이트 진행 상태 체크 (중복 실행 방지)
+    if (storeListContainer.dataset.updating === 'true') {
+      console.log('🚫 이미 업데이트 중 - 중복 실행 방지');
+      return;
+    }
+
+    // 중복 업데이트 방지 체크 (강화된 해시 비교)
+    const storeHash = JSON.stringify(stores.map(s => ({ id: s.id, name: s.name, isOpen: s.isOpen })));
+    const currentHash = storeHash.hashCode().toString();
+    
+    if (storeListContainer.dataset.lastUpdateHash === currentHash) {
       console.log('🚫 동일한 매장 목록 - 중복 업데이트 건너뛰기');
       return;
     }
 
-    storeListContainer.innerHTML = ''; // 기존 내용 완전 제거
+    // 업데이트 시작 플래그 설정
+    storeListContainer.dataset.updating = 'true';
+
+    console.log(`🔄 매장 목록 업데이트 시작: ${stores.length}개 매장`);
+
+    // 기존 카드 수 확인 (디버깅용)
+    const existingCards = storeListContainer.querySelectorAll('.storeCard').length;
+    console.log(`📊 업데이트 전 기존 카드 수: ${existingCards}개`);
+
+    // 기존 내용 완전 제거
+    storeListContainer.innerHTML = '';
 
     // 1. 모든 매장의 별점 정보를 일괄 조회
     const storeIds = stores.map(store => store.id);
@@ -1285,15 +1304,17 @@ async function updateStoreList(stores, storeListContainer) {
     console.log(`✅ 일괄 별점 조회 완료 - ${Object.keys(allRatings).length}개 매장 별점 정보 준비됨`);
 
     // 2. 각 매장 카드 렌더링 (별점 정보는 이미 준비됨)
-    stores.forEach(store => {
+    const fragment = document.createDocumentFragment(); // 성능 최적화
+
+    stores.forEach((store, index) => {
       const card = document.createElement('div');
       card.className = 'storeCard';
+      
+      // 고유 ID 설정 (중복 방지)
+      card.setAttribute('data-store-id', store.id);
 
       // 일괄 조회한 별점 정보 사용
       const ratingData = allRatings[store.id] || { ratingAverage: 0.0, reviewCount: 0 };
-
-      // 운영 상태 확인
-      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}, 별점: ${ratingData.ratingAverage}점`);
 
       // MapPanelUI가 존재하는지 확인
       if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreCard === 'function') {
@@ -1320,21 +1341,51 @@ async function updateStoreList(stores, storeListContainer) {
         }
       });
 
-      storeListContainer.appendChild(card);
+      fragment.appendChild(card);
+      
+      // 진행 상황 로깅 (5개씩)
+      if ((index + 1) % 5 === 0 || index === stores.length - 1) {
+        console.log(`📝 카드 생성 진행: ${index + 1}/${stores.length}개 완료`);
+      }
     });
 
+    // 한 번에 DOM에 추가 (성능 최적화)
+    storeListContainer.appendChild(fragment);
+
     // 업데이트 완료 후 해시 저장
-    storeListContainer.dataset.lastUpdateHash = JSON.stringify(stores.map(s => s.id)).hashCode();
+    storeListContainer.dataset.lastUpdateHash = currentHash;
     
     // 실제 DOM에 추가된 카드 수 확인
     const actualCards = storeListContainer.querySelectorAll('.storeCard').length;
-    console.log(`✅ 통합 API 호출로 매장 목록 업데이트 완료: ${stores.length}개 매장 → 실제 DOM: ${actualCards}개 카드`);
+    const uniqueStoreIds = new Set(Array.from(storeListContainer.querySelectorAll('.storeCard')).map(card => card.getAttribute('data-store-id'))).size;
     
-    if (actualCards !== stores.length) {
-      console.warn(`⚠️ 매장 수와 DOM 카드 수 불일치! 예상: ${stores.length}, 실제: ${actualCards}`);
+    console.log(`✅ 매장 목록 업데이트 완료:`);
+    console.log(`   - 입력 매장 수: ${stores.length}개`);
+    console.log(`   - 실제 DOM 카드 수: ${actualCards}개`);
+    console.log(`   - 고유 매장 ID 수: ${uniqueStoreIds}개`);
+    
+    if (actualCards !== stores.length || uniqueStoreIds !== stores.length) {
+      console.error(`❌ 매장 수와 DOM 카드 수 불일치!`);
+      console.error(`   예상: ${stores.length}, DOM 카드: ${actualCards}, 고유 ID: ${uniqueStoreIds}`);
+      
+      // 중복 카드 확인
+      const storeIdCounts = {};
+      Array.from(storeListContainer.querySelectorAll('.storeCard')).forEach(card => {
+        const storeId = card.getAttribute('data-store-id');
+        storeIdCounts[storeId] = (storeIdCounts[storeId] || 0) + 1;
+      });
+      
+      const duplicates = Object.entries(storeIdCounts).filter(([id, count]) => count > 1);
+      if (duplicates.length > 0) {
+        console.error(`🔍 중복 카드 발견:`, duplicates);
+      }
     }
+
   } catch (error) {
     console.error('❌ 매장 목록 업데이트 중 오류:', error);
+  } finally {
+    // 업데이트 완료 플래그 해제
+    storeListContainer.dataset.updating = 'false';
   }
 }
 
