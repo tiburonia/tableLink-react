@@ -806,57 +806,88 @@ window.loadStoreRatingAsync = async function(storeId) {
 // 비동기로 매장 데이터를 로딩하고 마커를 표시하는 함수
 async function loadStoresAndMarkers(map) {
   let stores = [];
+  let usedCache = false;
 
   try {
-    // 서버에서 직접 최신 매장 정보 가져오기
-    console.log('🔄 서버에서 최신 매장 정보 로딩 중...');
-    const response = await fetch('/api/stores');
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    if (data.success && Array.isArray(data.stores)) {
-      stores = data.stores;
-      console.log('🗺️ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
-
-      // 캐시 업데이트 (안전하게 처리)
-      if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.setStores === 'function') {
+    // 1. 먼저 캐시에서 데이터 확인
+    if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.getCacheStatus === 'function') {
+      const cacheStatus = window.cacheManager.getCacheStatus();
+      
+      if (cacheStatus.isValid && cacheStatus.hasStoresCache) {
+        console.log('📁 유효한 캐시 발견 - 캐시에서 매장 데이터 로드 중...');
+        
         try {
-          const cacheResult = window.cacheManager.setStores(stores);
-          if (cacheResult) {
-            console.log('✅ 매장 데이터 캐시 업데이트 완료');
-          } else {
-            console.warn('⚠️ 매장 데이터 캐시 업데이트 실패');
+          const cachedData = localStorage.getItem('tablelink_stores_cache');
+          if (cachedData) {
+            const parsedData = JSON.parse(cachedData);
+            if (parsedData.stores && Array.isArray(parsedData.stores) && parsedData.stores.length > 0) {
+              stores = parsedData.stores;
+              usedCache = true;
+              console.log('✅ 캐시에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+            }
           }
         } catch (cacheError) {
-          console.warn('⚠️ 캐시 업데이트 중 오류:', cacheError);
+          console.warn('⚠️ 캐시 데이터 파싱 실패:', cacheError);
         }
+      } else {
+        console.log('⚠️ 캐시가 유효하지 않거나 비어있음 - 서버에서 데이터 가져옴');
       }
-    } else {
-      throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
+    }
+
+    // 2. 캐시에 데이터가 없거나 유효하지 않은 경우만 서버 요청
+    if (!usedCache || stores.length === 0) {
+      console.log('🌐 서버에서 최신 매장 정보 로딩 중...');
+      const response = await fetch('/api/stores');
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && Array.isArray(data.stores)) {
+        stores = data.stores;
+        console.log('🗺️ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+
+        // 캐시 업데이트
+        if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.setStores === 'function') {
+          try {
+            const cacheResult = window.cacheManager.setStores(stores);
+            if (cacheResult) {
+              console.log('✅ 매장 데이터 캐시 업데이트 완료');
+            } else {
+              console.warn('⚠️ 매장 데이터 캐시 업데이트 실패');
+            }
+          } catch (cacheError) {
+            console.warn('⚠️ 캐시 업데이트 중 오류:', cacheError);
+          }
+        }
+      } else {
+        throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
+      }
     }
   } catch (error) {
-    console.error('❌ 서버에서 매장 데이터 로드 실패:', error);
+    console.error('❌ 매장 데이터 로드 실패:', error);
 
-    // 서버 요청 실패 시 캐시에서 데이터 사용
-    if (typeof window.cacheManager !== 'undefined' && typeof window.cacheManager.getStores === 'function') {
+    // 3. 서버 요청 실패 시 캐시에서 fallback 시도 (캐시를 사용하지 않았던 경우)
+    if (!usedCache && typeof window.cacheManager !== 'undefined') {
       try {
-        stores = await window.cacheManager.getStores();
-        if (Array.isArray(stores) && stores.length > 0) {
-          console.log('📁 캐시에서 매장 데이터 사용:', stores.length, '개 매장');
-        } else {
-          console.error('❌ 캐시에서 가져온 데이터가 유효하지 않음');
-          return;
+        const fallbackData = localStorage.getItem('tablelink_stores_cache');
+        if (fallbackData) {
+          const parsedData = JSON.parse(fallbackData);
+          if (parsedData.stores && Array.isArray(parsedData.stores)) {
+            stores = parsedData.stores;
+            console.log('🆘 fallback으로 캐시 데이터 사용:', stores.length, '개 매장');
+          }
         }
-      } catch (cacheError) {
-        console.error('❌ 캐시에서도 매장 데이터를 가져올 수 없음:', cacheError);
+      } catch (fallbackError) {
+        console.error('❌ fallback 시도도 실패:', fallbackError);
         return;
       }
-    } else {
-      console.error('❌ 캐시 매니저를 사용할 수 없음');
+    }
+
+    if (stores.length === 0) {
+      console.error('❌ 모든 데이터 소스에서 매장 정보를 가져올 수 없음');
       return;
     }
   }
