@@ -65,71 +65,26 @@ function renderTLMMain() {
   loadStoreInfo(storeId);
 }
 
-// 매장 정보 로드 함수 (캐시 없이 직접 서버 요청)
+// 매장 정보 로드 함수
 async function loadStoreInfo(storeId) {
   try {
-    console.log(`🔍 [TLM] 매장 ${storeId} 정보 서버에서 직접 조회 시작 (캐시 사용 안함)`);
-    
-    // 캐시 없이 항상 서버에서 최신 데이터 요청
-    const response = await fetch(`/api/stores/${storeId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache', // 캐시 방지
-        'Pragma': 'no-cache'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: 서버 요청 실패`);
-    }
-    
+    console.log(`🔍 매장 ${storeId} 정보 DB에서 실시간 조회 시작`);
+    const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
 
-    if (data.success && data.store) {
-      console.log(`📊 [TLM] 서버에서 받은 매장 정보:`, {
-        storeId: data.store.id,
-        name: data.store.name,
-        isOpen: data.store.isOpen,
-        totalTables: data.store.tableInfo?.totalTables || 0,
-        availableTables: data.store.tableInfo?.availableTables || 0,
-        occupiedTables: data.store.tableInfo?.occupiedTables || 0
+    if (data.success) {
+      console.log(`📊 DB에서 받은 테이블 정보:`, {
+        totalTables: data.store.tableInfo.totalTables,
+        availableTables: data.store.tableInfo.availableTables,
+        occupiedTables: data.store.tableInfo.occupiedTables
       });
-      
-      // 즉시 TLM 인터페이스 렌더링
       renderTLMInterface(data.store);
     } else {
-      throw new Error(data.error || '매장 정보를 찾을 수 없습니다');
+      alert('매장 정보를 불러올 수 없습니다: ' + data.error);
     }
   } catch (error) {
-    console.error('❌ [TLM] 매장 정보 로드 실패:', error);
-    
-    // 에러 상세 표시
-    const errorMessage = error.message || '서버 연결에 실패했습니다';
-    alert(`매장 정보 로드 실패:\n${errorMessage}`);
-    
-    // 에러 페이지 표시
-    document.getElementById('main').innerHTML = `
-      <div style="padding: 40px; text-align: center; font-family: Arial, sans-serif; background: #f8f9fa; min-height: 100vh;">
-        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto;">
-          <h2 style="color: #dc3545; margin-bottom: 20px;">❌ 오류 발생</h2>
-          <p style="color: #666; margin-bottom: 30px;">매장 정보를 불러올 수 없습니다</p>
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 30px;">
-            <code style="color: #333; font-size: 14px;">${errorMessage}</code>
-          </div>
-          <div style="display: flex; gap: 10px; justify-content: center;">
-            <button onclick="window.location.reload()" 
-                    style="padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
-              🔄 다시 시도
-            </button>
-            <button onclick="window.location.href='/'" 
-                    style="padding: 12px 24px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
-              🏠 메인으로
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
+    console.error('매장 정보 로드 실패:', error);
+    alert('서버 연결에 실패했습니다.');
   }
 }
 
