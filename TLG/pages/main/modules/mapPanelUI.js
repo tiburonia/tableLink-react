@@ -50,7 +50,7 @@ window.MapPanelUI = {
     const reviewCount = ratingData.reviewCount;
 
     return `
-      <div class="storeCard" data-status="${store.isOpen}" data-category="${store.category}" data-rating="${rating}" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+      <div class="storeCard" data-status="${store.isOpen ? 'true' : 'false'}" data-category="${store.category}" data-rating="${rating}" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="storeImageBox">
           <img src="TableLink.png" alt="가게 이미지" />
           <div class="storeStatus ${store.isOpen ? 'open' : 'closed'}">
@@ -408,35 +408,36 @@ window.MapPanelUI = {
     const storeCards = document.querySelectorAll('.storeCard');
 
     storeCards.forEach(card => {
-      // data 속성에서 직접 값 가져오기 (더 정확함)
-      const storeCategory = card.dataset.category || card.querySelector('.storeCategory')?.textContent;
-      const storeStatusFromData = card.dataset.status; // "true" 또는 "false" 문자열
-      const storeRatingFromData = parseFloat(card.dataset.rating);
+      // data 속성에서 직접 값 가져오기
+      const storeCategory = card.dataset.category;
+      const storeStatus = card.dataset.status; // "true" 또는 "false" 문자열
+      const storeRating = parseFloat(card.dataset.rating);
 
       let categoryMatch = true;
       let statusMatch = true;
       let ratingMatch = true;
 
       // 카테고리 필터
-      if (activeFilters.category && activeFilters.category !== 'all') {
+      if (activeFilters.category) {
         categoryMatch = storeCategory === activeFilters.category;
       }
 
-      // 상태 필터 (문자열 비교로 수정)
-      if (activeFilters.status && activeFilters.status !== 'all') {
+      // 운영 상태 필터 - 정확한 문자열 비교
+      if (activeFilters.status) {
         if (activeFilters.status === 'open') {
-          statusMatch = storeStatusFromData === 'true'; // 운영중인 매장
+          statusMatch = storeStatus === 'true';
         } else if (activeFilters.status === 'closed') {
-          statusMatch = storeStatusFromData === 'false'; // 운영중지인 매장
+          statusMatch = storeStatus === 'false';
         }
       }
 
       // 별점 필터
-      if (activeFilters.rating && activeFilters.rating !== 'all') {
+      if (activeFilters.rating) {
         const requiredRating = parseFloat(activeFilters.rating.replace('+', ''));
-        ratingMatch = !isNaN(storeRatingFromData) && storeRatingFromData >= requiredRating;
+        ratingMatch = !isNaN(storeRating) && storeRating >= requiredRating;
       }
 
+      // 모든 조건 만족시 표시
       if (categoryMatch && statusMatch && ratingMatch) {
         card.style.display = 'flex';
       } else {
@@ -444,8 +445,23 @@ window.MapPanelUI = {
       }
     });
 
+    // 필터링 결과 디버깅
+    const visibleCards = document.querySelectorAll('.storeCard[style*="flex"], .storeCard:not([style*="none"])');
     console.log('🔍 필터링 적용:', activeFilters);
-    console.log('📊 필터링 결과 - 총', document.querySelectorAll('.storeCard[style*="flex"]').length, '개 매장 표시');
+    console.log('📊 필터링 결과 - 총', visibleCards.length, '개 매장 표시');
+    
+    // 각 필터별 매칭 상태 디버깅
+    if (Object.keys(activeFilters).length > 0) {
+      console.log('🔍 필터별 상세 정보:');
+      storeCards.forEach(card => {
+        const cardCategory = card.dataset.category;
+        const cardStatus = card.dataset.status;
+        const cardRating = card.dataset.rating;
+        const storeName = card.querySelector('.storeName')?.textContent || 'Unknown';
+        
+        console.log(`  - ${storeName}: 카테고리=${cardCategory}, 상태=${cardStatus}, 별점=${cardRating}`);
+      });
+    }
   },
 
   // 스토어 카드 렌더링 후 필터 이벤트 설정 및 초기화
