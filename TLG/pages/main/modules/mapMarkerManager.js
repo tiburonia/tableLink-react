@@ -5,9 +5,8 @@ window.MapMarkerManager = {
 
     // 매장 운영 상태 확인
     const isOpen = store.isOpen !== false;
-    const statusIcon = isOpen ? '🟢' : '🔴';
-    const statusText = isOpen ? '운영중' : '운영중지';
-    const statusColor = isOpen ? '#4caf50' : '#f44336';
+    const statusText = isOpen ? '운영중' : '운영준비중';
+    const statusColor = isOpen ? '#4caf50' : '#ff9800';
 
     console.log(`🏪 마커 생성: ${store.name} - ${statusText} (DB 값: ${store.isOpen})`);
 
@@ -25,7 +24,7 @@ window.MapMarkerManager = {
     }
 
     // 커스텀 마커 HTML 생성
-    const customOverlayContent = this.getMarkerHTML(store, rating, statusIcon, statusColor);
+    const customOverlayContent = this.getMarkerHTML(store, rating, statusColor, statusText);
 
     // 커스텀 오버레이 생성
     const customOverlay = new kakao.maps.CustomOverlay({
@@ -72,10 +71,10 @@ window.MapMarkerManager = {
     return markers;
   },
 
-  getMarkerHTML(store, rating, statusIcon, statusColor) {
+  getMarkerHTML(store, rating, statusColor, statusText) {
     const gradientColor = statusColor === '#4caf50' ? 
       'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' : 
-      'linear-gradient(135deg, #f44336 0%, #ef5350 50%, #e57373 100%)';
+      'linear-gradient(135deg, #ff9800 0%, #ffb74d 50%, #ffcc02 100%)';
     
     return `
       <div class="modern-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
@@ -83,8 +82,8 @@ window.MapMarkerManager = {
           <div class="store-name-label">${store.name}</div>
           <div class="marker-rectangle" style="background: ${gradientColor};">
             <div class="marker-inner">
-              <div class="status-indicator" style="background: ${statusColor};">
-                <span class="status-emoji">${statusIcon}</span>
+              <div class="status-text-display">
+                <span class="status-text">${statusText}</span>
               </div>
               <div class="rating-display">
                 <span class="star-icon">⭐</span>
@@ -157,21 +156,19 @@ window.MapMarkerManager = {
           padding: 0 8px;
         }
 
-        .status-indicator {
-          width: 16px;
-          height: 16px;
-          border-radius: 50%;
+        .status-text-display {
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid rgba(255,255,255,0.8);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
           flex-shrink: 0;
         }
 
-        .status-emoji {
-          font-size: 8px;
-          filter: brightness(1.2);
+        .status-text {
+          color: white;
+          font-size: 9px;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+          white-space: nowrap;
         }
 
         .rating-display {
