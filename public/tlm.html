@@ -19,10 +19,8 @@
   <!-- 화면을 렌더링할 메인 영역 -->
   <div id='main'></div>
 
-  <!--로컬스토리지 캐시 매니저-->
-  <script src="/TLG/utils/localStorage.js"></script>
-  <!--JSON 파일 캐시 매니저-->
-  <script src="/TLG/utils/cacheFileManager.js"></script>
+  <!--매장 캐시 시스템-->
+  <script src="/TLG/utils/storeCache.js"></script>
   <!--로그아웃로직 함수-->
   <script src="/TLG/utils/logOut.js"></script>
   <!--로그인 화면 렌더링 함수-->
@@ -31,15 +29,9 @@
   <script src="/tlm-components/renderTLMMain.js"></script>
 
   <script>
-    // 전역 변수 초기화
-    window.cacheManager = new CacheManager();
-    
     //TLM 페이지 초기 진입
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🏪 TLM 페이지 로딩 시작');
-      
-      // 캐시 시스템 초기화
-      window.cacheManager.initializeCache();
       
       // URL에서 매장 ID 추출 시도
       let storeId = null;
