@@ -22,8 +22,7 @@
   background: white;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   border: 1px solid #ccc;
-  overflow-y: auto;  /* main 컨테이너에서 세로 스크롤 허용 */
-  overflow-x: hidden; /* 가로 스크롤은 여전히 숨김 */
+  overflow: hidden; /* 전체 스크롤 비활성화, 각 페이지별로 내부 콘텐츠만 스크롤 */
 }
 
 html, body {
