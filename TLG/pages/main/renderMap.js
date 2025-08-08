@@ -586,52 +586,57 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
   try {
     let stores = [];
 
-    // 새로고침이 아니고 캐시에 데이터가 있다면 캐시 사용
+    // 새로고침/주기적 요청인 경우 기존 캐시 완전 삭제
+    if (forceRefresh) {
+      console.log('🗑️ 강제 새로고침 - 기존 캐시 삭제');
+      window.storeCache.clearCache();
+      clearAllMarkers(); // 기존 마커 완전 삭제
+    }
+
+    // 캐시에 데이터가 있는지 확인
     if (!forceRefresh && window.storeCache.hasCachedData()) {
       stores = window.storeCache.getStoreData();
-      if (stores) {
+      if (stores && stores.length > 0) {
         console.log('📁 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+        
+        // 캐시 데이터로 마커 생성 (중복 방지)
+        await createMarkersFromCache(stores, map);
+        
+        // 매장 목록도 업데이트
+        setTimeout(() => {
+          const storeListContainer = document.getElementById('storeListContainer');
+          if (storeListContainer) {
+            updateStoreList(stores, storeListContainer);
+          }
+        }, 100);
+        
+        return; // 캐시 사용 시 여기서 종료
       }
     }
 
-    // 캐시에 데이터가 없거나 새로고침인 경우 서버에서 가져오기
-    if (!stores || stores.length === 0) {
-      console.log('🌐 서버에서 매장 기본 정보 로딩 중...');
-      
-      const response = await fetch('/api/stores/batch/basic-info');
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      if (!data.success || !Array.isArray(data.stores)) {
-        throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
-      }
-
-      stores = data.stores;
-      console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
-
-      // 새로운 데이터를 캐시에 저장
-      window.storeCache.setStoreData(stores);
+    // 캐시에 데이터가 없는 경우에만 서버에서 가져오기
+    console.log('🌐 서버에서 매장 기본 정보 로딩 중...');
+    
+    const response = await fetch('/api/stores/batch/basic-info');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    // 기존 마커 제거
-    window.markerMap.clear();
-    window.currentMarkers = [];
-
-    // 새 마커 생성
-    if (window.MapMarkerManager && typeof window.MapMarkerManager.createMarkersInBatch === 'function') {
-      const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
-      
-      newMarkers.forEach(marker => {
-        if (marker && marker.storeId) {
-          window.markerMap.set(marker.storeId, marker);
-        }
-      });
-
-      window.currentMarkers = Array.from(window.markerMap.values());
-      console.log(`✅ 마커 생성 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
+    const data = await response.json();
+    if (!data.success || !Array.isArray(data.stores)) {
+      throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
     }
+
+    stores = data.stores;
+    console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+
+    // 새로운 데이터를 캐시에 저장
+    window.storeCache.setStoreData(stores);
+    console.log('💾 새로운 매장 데이터 캐시 저장 완료');
+
+    // 기존 마커 완전 삭제 후 새로 생성
+    clearAllMarkers();
+    await createMarkersFromData(stores, map);
 
     // 매장 목록 업데이트
     setTimeout(() => {
@@ -643,6 +648,67 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
 
   } catch (error) {
     console.error('❌ 매장 데이터 로드 실패:', error);
+  }
+}
+
+// 기존 마커 완전 삭제 함수
+function clearAllMarkers() {
+  console.log('🧹 기존 마커 완전 삭제 시작');
+  
+  // Map에서 마커 제거
+  if (window.markerMap && window.markerMap.size > 0) {
+    window.markerMap.forEach((marker, storeId) => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null); // 지도에서 제거
+      }
+    });
+    window.markerMap.clear();
+    console.log('🗑️ markerMap 클리어 완료');
+  }
+
+  // 배열에서 마커 제거
+  if (window.currentMarkers && window.currentMarkers.length > 0) {
+    window.currentMarkers.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null); // 지도에서 제거
+      }
+    });
+    window.currentMarkers = [];
+    console.log('🗑️ currentMarkers 배열 클리어 완료');
+  }
+
+  console.log('✅ 기존 마커 완전 삭제 완료');
+}
+
+// 캐시 데이터로 마커 생성 (중복 방지)
+async function createMarkersFromCache(stores, map) {
+  console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
+  
+  // 이미 마커가 생성되어 있는지 확인
+  if (window.markerMap && window.markerMap.size > 0) {
+    console.log('⚠️ 이미 마커가 존재함 - 중복 생성 방지');
+    return;
+  }
+
+  await createMarkersFromData(stores, map);
+}
+
+// 실제 마커 생성 함수
+async function createMarkersFromData(stores, map) {
+  console.log('🔄 새 마커 생성 시작:', stores.length, '개 매장');
+
+  if (window.MapMarkerManager && typeof window.MapMarkerManager.createMarkersInBatch === 'function') {
+    const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
+    
+    // 마커 Map과 배열에 저장
+    newMarkers.forEach(marker => {
+      if (marker && marker.storeId) {
+        window.markerMap.set(marker.storeId, marker);
+      }
+    });
+
+    window.currentMarkers = Array.from(window.markerMap.values());
+    console.log(`✅ 새 마커 생성 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
   }
 }
 
