@@ -68,8 +68,13 @@ function renderTLMMain() {
 // 매장 정보 로드 함수
 async function loadStoreInfo(storeId) {
   try {
-    console.log(`🔍 매장 ${storeId} 정보 DB에서 실시간 조회 시작`);
-    const response = await fetch(`/api/stores/${storeId}`);
+    console.log(`🔍 TLM - 매장 ${storeId} 정보 DB에서 실시간 조회 시작 (캐시 사용 안함)`);
+    const response = await fetch(`/api/stores/${storeId}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
     const data = await response.json();
 
     if (data.success) {
