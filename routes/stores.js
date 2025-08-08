@@ -386,6 +386,45 @@ router.get('/:storeId/tables', async (req, res) => {
   }
 });
 
+// 일괄 매장 정보 조회 API (캐시용)
+router.get('/batch/basic-info', async (req, res) => {
+  try {
+    console.log('📦 일괄 매장 기본 정보 조회 요청');
+
+    const storesResult = await pool.query(`
+      SELECT id, name, category, address, coord, is_open, rating_average, review_count
+      FROM stores 
+      ORDER BY id
+    `);
+
+    const stores = storesResult.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      isOpen: store.is_open !== false,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    }));
+
+    console.log(`✅ 일괄 매장 기본 정보 조회 완료: ${stores.length}개 매장`);
+
+    res.json({
+      success: true,
+      stores: stores,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ 일괄 매장 기본 정보 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '일괄 매장 기본 정보 조회 실패: ' + error.message 
+    });
+  }
+});
+
 // 매장별 주문 조회 API
 router.get('/:storeId/orders', async (req, res) => {
   try {

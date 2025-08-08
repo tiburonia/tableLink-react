@@ -17,25 +17,21 @@ function renderStore(store) {
       throw new Error('필수 UI 모듈을 찾을 수 없습니다');
     }
 
-    // 초기 별점 값 설정
+    // 초기 별점 값 설정 (캐시된 매장 정보에서 가져오기)
     let displayRating = '0.0';
 
-    // localStorage에서 캐시된 별점 정보 확인 (안전하게)
+    // 캐시된 매장 정보에서 별점 확인
     try {
-      if (window.cacheManager && typeof window.cacheManager.getStoreRating === 'function') {
-        const cachedRating = window.cacheManager.getStoreRating(store.id);
-        if (cachedRating && cachedRating.ratingAverage !== null && cachedRating.ratingAverage !== undefined) {
-          displayRating = parseFloat(cachedRating.ratingAverage).toFixed(1);
-          console.log('⭐ 캐시된 별점 사용:', displayRating);
-        } else {
-          console.log('⚠️ 별점 정보 캐시 없음, 서버에서 가져오는 중...');
-          updateStoreRatingAsync(store);
-        }
+      if (store.ratingAverage !== undefined && store.ratingAverage !== null) {
+        displayRating = parseFloat(store.ratingAverage).toFixed(1);
+        console.log('⭐ 캐시된 별점 사용:', displayRating);
       } else {
-        console.warn('⚠️ 캐시 매니저가 사용 불가능');
+        console.log('⚠️ 별점 정보 없음, 서버에서 가져오는 중...');
+        updateStoreRatingAsync(store);
       }
-    } catch (cacheError) {
-      console.warn('⚠️ 캐시 접근 중 오류:', cacheError);
+    } catch (error) {
+      console.warn('⚠️ 별점 정보 처리 중 오류:', error);
+      updateStoreRatingAsync(store);
     }
 
     // UI 렌더링
@@ -274,8 +270,13 @@ async function updateStoreRatingAsync(store) {
   try {
     console.log(`🔄 매장 ${store.id} 별점 정보 비동기 업데이트 중...`);
 
-    // 해당 매장의 별점 정보만 서버에서 가져오기
-    const ratingData = await window.cacheManager.refreshStoreRating(store.id);
+    // 서버에서 직접 별점 정보 가져오기
+    const response = await fetch(`/api/stores/${store.id}/rating`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const ratingData = await response.json();
 
     if (ratingData && ratingData.ratingAverage !== null && ratingData.ratingAverage !== undefined) {
       console.log(`✅ 매장 ${store.id} 별점 정보 업데이트 완료:`, ratingData.ratingAverage);

@@ -523,13 +523,17 @@ async function renderMap() {
   // 새로고침 버튼 클릭
   const refreshBtn = document.getElementById('refreshBtn');
   refreshBtn.addEventListener('click', async () => {
-    console.log('🔄 수동 새로고침 버튼 클릭됨');
+    console.log('🔄 수동 새로고침 버튼 클릭됨 - 캐시 삭제 후 새로 로딩');
     
     refreshBtn.style.transform = 'scale(1.05) rotate(360deg)';
     refreshBtn.style.pointerEvents = 'none';
     
     try {
-      await loadStoresAndMarkers(map);
+      // 기존 캐시 삭제
+      window.storeCache.clearCache();
+      
+      // 강제 새로고침으로 서버에서 데이터 가져오기
+      await loadStoresAndMarkers(map, true);
       console.log('✅ 수동 새로고침 완료');
     } catch (error) {
       console.error('❌ 수동 새로고침 실패:', error);
@@ -577,23 +581,39 @@ async function renderMap() {
   });
 }
 
-// 매장 데이터를 서버에서 직접 로딩하고 마커를 표시하는 함수
-async function loadStoresAndMarkers(map) {
+// 매장 데이터를 캐시 우선으로 로딩하고 마커를 표시하는 함수
+async function loadStoresAndMarkers(map, forceRefresh = false) {
   try {
-    console.log('🌐 서버에서 매장 데이터 로딩 중...');
-    
-    const response = await fetch('/api/stores');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    let stores = [];
+
+    // 새로고침이 아니고 캐시에 데이터가 있다면 캐시 사용
+    if (!forceRefresh && window.storeCache.hasCachedData()) {
+      stores = window.storeCache.getStoreData();
+      if (stores) {
+        console.log('📁 캐시된 매장 데이터 사용:', stores.length, '개 매장');
+      }
     }
 
-    const data = await response.json();
-    if (!data.success || !Array.isArray(data.stores)) {
-      throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
-    }
+    // 캐시에 데이터가 없거나 새로고침인 경우 서버에서 가져오기
+    if (!stores || stores.length === 0) {
+      console.log('🌐 서버에서 매장 기본 정보 로딩 중...');
+      
+      const response = await fetch('/api/stores/batch/basic-info');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-    const stores = data.stores;
-    console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+      const data = await response.json();
+      if (!data.success || !Array.isArray(data.stores)) {
+        throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
+      }
+
+      stores = data.stores;
+      console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
+
+      // 새로운 데이터를 캐시에 저장
+      window.storeCache.setStoreData(stores);
+    }
 
     // 기존 마커 제거
     window.markerMap.clear();
@@ -626,7 +646,7 @@ async function loadStoresAndMarkers(map) {
   }
 }
 
-// 매장 목록 업데이트 함수 (캐시 제거)
+// 매장 목록 업데이트 함수 (캐시된 데이터 사용)
 async function updateStoreList(stores, storeListContainer) {
   try {
     console.log(`🔄 매장 목록 업데이트 시작: ${stores.length}개 매장`);
@@ -634,13 +654,7 @@ async function updateStoreList(stores, storeListContainer) {
     // 기존 내용 제거
     storeListContainer.innerHTML = '';
 
-    // 일괄 별점 정보 조회
-    const storeIds = stores.map(store => store.id);
-    const allRatings = await loadAllStoreRatings(storeIds);
-    
-    console.log(`✅ 일괄 별점 조회 완료 - ${Object.keys(allRatings).length}개 매장 별점 정보`);
-
-    // 매장 카드 생성
+    // 매장 카드 생성 (캐시된 별점 정보 사용)
     const fragment = document.createDocumentFragment();
 
     stores.forEach((store, index) => {
@@ -648,7 +662,11 @@ async function updateStoreList(stores, storeListContainer) {
       card.className = 'storeCard';
       card.setAttribute('data-store-id', store.id);
 
-      const ratingData = allRatings[store.id] || { ratingAverage: 0.0, reviewCount: 0 };
+      // 캐시된 데이터에 이미 별점 정보가 포함되어 있음
+      const ratingData = {
+        ratingAverage: store.ratingAverage || 0.0,
+        reviewCount: store.reviewCount || 0
+      };
 
       if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreCard === 'function') {
         card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
