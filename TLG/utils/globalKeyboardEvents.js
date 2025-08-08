@@ -1,3 +1,4 @@
+
 // 전역 키보드 이벤트 관리자
 class GlobalKeyboardEvents {
   constructor() {
@@ -34,6 +35,16 @@ class GlobalKeyboardEvents {
   }
 }
 
-// 전역 인스턴스 생성 및 자동 초기화
-window.globalKeyboardEvents = new GlobalKeyboardEvents();
-window.globalKeyboardEvents.initialize();
+// 전역 인스턴스 생성 및 초기화
+if (typeof window !== 'undefined') {
+  window.globalKeyboardEvents = new GlobalKeyboardEvents();
+  
+  // DOM이 준비되면 자동으로 초기화
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      window.globalKeyboardEvents.initialize();
+    });
+  } else {
+    window.globalKeyboardEvents.initialize();
+  }
+}
