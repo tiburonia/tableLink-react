@@ -1,5 +1,33 @@
 async function TLL() {
-  // 매번 서버에서 매장 데이터 직접 요청 (캐시 사용 안함)
+  // 1. UI 프레임 먼저 렌더링 (로딩 상태)
+  main.innerHTML = `
+  <button id="backBtn" onclick="renderMap()"></button>
+    <div class="tll-container">
+      <h2 style="margin:20px 0 16px 0;font-weight:700;">QR 주문 시뮬레이터 (데스크탑)</h2>
+      <label style="display:block;margin-bottom:6px;font-size:15px;">매장 선택</label>
+      <select id="storeSelect" style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;" disabled>
+        <option value="">매장 정보를 불러오는 중...</option>
+      </select>
+      <label style="display:block;margin:18px 0 6px 0;font-size:15px;">테이블 번호</label>
+      <select id="tableSelect" style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;" disabled>
+        <option value="">테이블을 선택하세요</option>
+      </select>
+      <button id="startOrderBtn" style="width:100%;margin-top:24px;padding:10px 0;font-size:17px;border-radius:10px;background:#ccc;color:#666;border:none;cursor:not-allowed;" disabled>
+        주문 시작
+      </button>
+      <div id="loadingIndicator" style="text-align:center;margin-top:16px;color:#666;font-size:14px;">
+        🔄 매장 정보를 불러오고 있습니다...
+      </div>
+    </div>
+    <style>
+      .tll-container { max-width:400px;margin:30px auto 0;background:#fff;border-radius:16px;box-shadow:0 2px 18px rgba(30,110,255,0.06);padding:28px 18px 38px 18px;}
+      @media (max-width: 480px) { .tll-container { margin-top:10px; padding:12px 4px 20px 4px; } }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #e0e0e0; border-top: 2px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
+    </style>
+  `;
+
+  // 2. 비동기로 매장 데이터 로드
   let stores = [];
   try {
     console.log('🌐 TLL - 서버에서 매장 데이터 직접 가져오는 중... (캐시 사용 안함)');
@@ -23,39 +51,52 @@ async function TLL() {
     }
   } catch (error) {
     console.error('스토어 정보 로딩 실패:', error);
+    
+    // 에러 시 UI 업데이트
+    const storeSelect = document.getElementById('storeSelect');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    
+    if (storeSelect) {
+      storeSelect.innerHTML = '<option value="">매장 정보 로드 실패</option>';
+      storeSelect.style.color = '#dc3545';
+    }
+    if (loadingIndicator) {
+      loadingIndicator.innerHTML = '❌ 매장 정보를 불러올 수 없습니다.';
+      loadingIndicator.style.color = '#dc3545';
+    }
+    
     alert('스토어 정보를 불러올 수 없습니다.');
     return;
   }
 
-  // 운영 중인 매장만 필터링
+  // 3. 성공 시 UI 업데이트
   const openStores = stores.filter(store => store.isOpen === true);
-  
   const storeOptions = openStores.map(s =>
     `<option value="${s.id}">${s.name}</option>`
   ).join('');
 
-  main.innerHTML = `
-  <button id="backBtn" onclick="renderMap()"></button>
-    <div class="tll-container">
-      <h2 style="margin:20px 0 16px 0;font-weight:700;">QR 주문 시뮬레이터 (데스크탑)</h2>
-      <label style="display:block;margin-bottom:6px;font-size:15px;">매장 선택</label>
-      <select id="storeSelect" style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;">
-        <option value="">매장을 선택하세요</option>
-        ${storeOptions}
-      </select>
-      <label style="display:block;margin:18px 0 6px 0;font-size:15px;">테이블 번호</label>
-      <select id="tableSelect" style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;" disabled>
-        <option value="">테이블을 선택하세요</option>
-      </select>
-      <button id="startOrderBtn" style="width:100%;margin-top:24px;padding:10px 0;font-size:17px;border-radius:10px;background:#297efc;color:#fff;border:none;cursor:pointer;" disabled>
-        주문 시작
-      </button>
-    </div>
-    <style>
-      .tll-container { max-width:400px;margin:30px auto 0;background:#fff;border-radius:16px;box-shadow:0 2px 18px rgba(30,110,255,0.06);padding:28px 18px 38px 18px;}
-      @media (max-width: 480px) { .tll-container { margin-top:10px; padding:12px 4px 20px 4px; } }
-    </style>
-  `;
+  const storeSelect = document.getElementById('storeSelect');
+  const startOrderBtn = document.getElementById('startOrderBtn');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+
+  if (storeSelect) {
+    storeSelect.innerHTML = `
+      <option value="">매장을 선택하세요</option>
+      ${storeOptions}
+    `;
+    storeSelect.disabled = false;
+    storeSelect.style.color = '#333';
+  }
+
+  if (startOrderBtn) {
+    startOrderBtn.style.background = '#297efc';
+    startOrderBtn.style.color = '#fff';
+    startOrderBtn.style.cursor = 'pointer';
+  }
+
+  if (loadingIndicator) {
+    loadingIndicator.style.display = 'none';
+  }
 
   // 이벤트 바인딩
   const storeSelect = document.getElementById('storeSelect');
