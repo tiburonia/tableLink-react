@@ -484,8 +484,16 @@ async function renderMap() {
     });
   };
 
-  // 즉시 매장 데이터 로딩 시작 (DOM 준비와 병렬 처리)
-  loadStoresAndMarkers(map);
+  // 캐시 확인 후 필요시에만 서버 요청
+  const shouldLoadFromServer = await checkIfServerRequestNeeded();
+  if (shouldLoadFromServer) {
+    console.log('🌐 서버에서 매장 데이터 로딩 필요 - 요청 시작');
+    loadStoresAndMarkers(map);
+  } else {
+    console.log('📁 캐시 데이터 사용 - 서버 요청 건너뛰기');
+    // 캐시된 데이터로 UI 업데이트
+    await loadFromCacheOnly(map);
+  }
 
   // DOM 준비 확인은 별도로 처리
   waitForDOM().then((success) => {
@@ -800,6 +808,134 @@ window.loadStoreRatingAsync = async function(storeId) {
   } catch (error) {
     console.error(`❌ 지도: 매장 ${storeId} 별점 정보 로딩 실패:`, error);
     return { ratingAverage: 0.0, reviewCount: 0 };
+  }
+}
+
+// 서버 요청이 필요한지 확인하는 함수
+async function checkIfServerRequestNeeded() {
+  try {
+    // 1. 캐시 매니저가 있는지 확인
+    if (!window.cacheManager || typeof window.cacheManager.getCacheStatus !== 'function') {
+      console.log('⚠️ 캐시 매니저 없음 - 서버 요청 필요');
+      return true;
+    }
+
+    // 2. 캐시 상태 확인
+    const cacheStatus = window.cacheManager.getCacheStatus();
+    
+    if (!cacheStatus.isValid || !cacheStatus.hasStoresCache) {
+      console.log('⚠️ 캐시가 만료되었거나 없음 - 서버 요청 필요');
+      return true;
+    }
+
+    // 3. 캐시 데이터 실제 확인
+    const cachedData = localStorage.getItem('tablelink_stores_cache');
+    if (!cachedData) {
+      console.log('⚠️ 실제 캐시 데이터 없음 - 서버 요청 필요');
+      return true;
+    }
+
+    try {
+      const parsedData = JSON.parse(cachedData);
+      if (!parsedData.stores || !Array.isArray(parsedData.stores) || parsedData.stores.length === 0) {
+        console.log('⚠️ 캐시 데이터가 유효하지 않음 - 서버 요청 필요');
+        return true;
+      }
+
+      console.log('✅ 유효한 캐시 데이터 발견 - 서버 요청 불필요');
+      return false;
+    } catch (parseError) {
+      console.warn('⚠️ 캐시 데이터 파싱 실패 - 서버 요청 필요:', parseError);
+      return true;
+    }
+  } catch (error) {
+    console.error('❌ 캐시 확인 중 오류 - 서버 요청 필요:', error);
+    return true;
+  }
+}
+
+// 캐시에서만 데이터를 로딩하는 함수
+async function loadFromCacheOnly(map) {
+  try {
+    const cachedData = localStorage.getItem('tablelink_stores_cache');
+    if (!cachedData) {
+      console.error('❌ 캐시 데이터가 없어서 처리할 수 없음');
+      return;
+    }
+
+    const parsedData = JSON.parse(cachedData);
+    const stores = parsedData.stores;
+
+    console.log('📁 캐시에서 매장 데이터 사용:', stores.length, '개 매장');
+
+    // 기존 마커가 있다면 재사용 (지도 객체만 다시 연결)
+    if (window.markerMap && window.markerMap.size > 0) {
+      console.log('🔄 기존 마커들을 지도에 다시 연결:', window.markerMap.size, '개');
+      Array.from(window.markerMap.values()).forEach(marker => {
+        if (marker && marker.setMap) {
+          marker.setMap(map);
+        }
+      });
+      window.currentMap = map;
+    } else {
+      // 마커가 없으면 새로 생성
+      console.log('🆕 캐시 데이터로 새 마커 생성');
+      await createMarkersFromCache(stores, map);
+    }
+
+    // 매장 데이터를 전역에 저장
+    window.lastLoadedStores = stores;
+    window.lastStoreData = JSON.parse(JSON.stringify(stores));
+
+    // UI 업데이트
+    setTimeout(() => {
+      const storeListContainer = document.getElementById('storeListContainer');
+      if (storeListContainer) {
+        console.log('📝 캐시 데이터로 매장 목록 업데이트');
+        updateStoreList(stores, storeListContainer);
+      }
+    }, 100);
+
+  } catch (error) {
+    console.error('❌ 캐시 전용 로딩 실패:', error);
+    // 실패시 일반 로딩으로 fallback
+    loadStoresAndMarkers(map);
+  }
+}
+
+// 캐시 데이터로부터 마커 생성
+async function createMarkersFromCache(stores, map) {
+  try {
+    if (!window.MapMarkerManager) {
+      console.error('❌ MapMarkerManager를 찾을 수 없음');
+      return;
+    }
+
+    // 마커 맵 초기화
+    if (!window.markerMap) {
+      window.markerMap = new Map();
+    }
+
+    console.log(`🔄 캐시 데이터로 ${stores.length}개 매장 마커 생성 중...`);
+    
+    // 일괄 마커 생성
+    const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
+    
+    // 마커 맵에 추가
+    newMarkers.forEach(marker => {
+      if (marker && marker.storeId) {
+        window.markerMap.set(marker.storeId, marker);
+      }
+    });
+
+    // 현재 마커 배열 업데이트 (역호환성 유지)
+    window.currentMarkers = Array.from(window.markerMap.values());
+    window.currentMap = map;
+
+    console.log(`✅ 캐시 데이터로 마커 생성 완료 - 총 ${window.markerMap.size}개 마커`);
+
+  } catch (error) {
+    console.error('❌ 캐시 마커 생성 실패:', error);
   }
 }
 
