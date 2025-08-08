@@ -586,14 +586,7 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
   try {
     let stores = [];
 
-    // 새로고침/주기적 요청인 경우 기존 캐시 완전 삭제
-    if (forceRefresh) {
-      console.log('🗑️ 강제 새로고침 - 기존 캐시 삭제');
-      window.storeCache.clearCache();
-      clearAllMarkers(); // 기존 마커 완전 삭제
-    }
-
-    // 캐시에 데이터가 있는지 확인
+    // 캐시에 데이터가 있는지 확인 (forceRefresh인 경우에도 일단 캐시 확인)
     if (!forceRefresh && window.storeCache.hasCachedData()) {
       stores = window.storeCache.getStoreData();
       if (stores && stores.length > 0) {
@@ -614,8 +607,10 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
       }
     }
 
-    // 캐시에 데이터가 없는 경우에만 서버에서 가져오기
-    console.log('🌐 서버에서 매장 기본 정보 로딩 중...');
+    // 캐시에 데이터가 없거나 새로고침인 경우 서버에서 가져오기
+    console.log(forceRefresh ? 
+      '🔄 강제 새로고침 - 서버에서 최신 데이터 요청 중...' : 
+      '🌐 서버에서 매장 기본 정보 로딩 중...');
     
     const response = await fetch('/api/stores/batch/basic-info');
     if (!response.ok) {
@@ -630,12 +625,21 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
     stores = data.stores;
     console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
 
+    // 서버 응답 후 기존 캐시 삭제 및 새로운 데이터로 업데이트
+    if (forceRefresh) {
+      console.log('🗑️ 서버 응답 완료 - 기존 캐시 삭제 후 업데이트');
+      await window.storeCache.clearCacheAsync();
+      clearAllMarkers(); // 기존 마커 완전 삭제
+    }
+
     // 새로운 데이터를 캐시에 저장
-    window.storeCache.setStoreData(stores);
+    await window.storeCache.setStoreDataAsync(stores);
     console.log('💾 새로운 매장 데이터 캐시 저장 완료');
 
-    // 기존 마커 완전 삭제 후 새로 생성
-    clearAllMarkers();
+    // 기존 마커 완전 삭제 후 새로 생성 (forceRefresh가 아닌 경우에만)
+    if (!forceRefresh) {
+      clearAllMarkers();
+    }
     await createMarkersFromData(stores, map);
 
     // 매장 목록 업데이트

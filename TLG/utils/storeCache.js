@@ -49,6 +49,25 @@ class StoreCache {
     }
   }
 
+  // 캐시에 매장 데이터 저장 (비동기)
+  async setStoreDataAsync(stores) {
+    return new Promise((resolve) => {
+      try {
+        const cacheData = {
+          stores: stores,
+          timestamp: Date.now()
+        };
+
+        localStorage.setItem(this.cacheKey, JSON.stringify(cacheData));
+        console.log('💾 매장 데이터 캐시 저장 완료 (비동기) - 매장 수:', stores.length);
+        resolve();
+      } catch (error) {
+        console.error('❌ 매장 캐시 저장 실패 (비동기):', error);
+        resolve(); // 에러가 나도 완료 처리
+      }
+    });
+  }
+
   // 캐시 삭제
   clearCache() {
     try {
@@ -57,6 +76,20 @@ class StoreCache {
     } catch (error) {
       console.error('❌ 매장 캐시 삭제 실패:', error);
     }
+  }
+
+  // 캐시 삭제 (비동기)
+  async clearCacheAsync() {
+    return new Promise((resolve) => {
+      try {
+        localStorage.removeItem(this.cacheKey);
+        console.log('🗑️ 매장 캐시 삭제 완료 (비동기)');
+        resolve();
+      } catch (error) {
+        console.error('❌ 매장 캐시 삭제 실패 (비동기):', error);
+        resolve(); // 에러가 나도 완료 처리
+      }
+    });
   }
 
   // 캐시 상태 확인
