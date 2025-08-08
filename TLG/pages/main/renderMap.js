@@ -665,7 +665,72 @@ async function renderMap() {
 
   }
 
-// 매장 별점 정보 비동기 로딩 함수 (전역 함수로 정의)
+// 통합 별점 정보 로딩 시스템 (일괄 조회)
+window.loadAllStoreRatings = async function(storeIds) {
+  try {
+    if (!Array.isArray(storeIds) || storeIds.length === 0) {
+      console.warn('⚠️ 빈 매장 ID 배열이 전달됨');
+      return {};
+    }
+
+    console.log(`🔄 일괄 별점 정보 로딩 시작: ${storeIds.length}개 매장`);
+
+    // 1. 캐시에서 먼저 확인
+    const ratingsCache = {};
+    const uncachedStoreIds = [];
+
+    if (typeof window.cacheManager !== 'undefined') {
+      storeIds.forEach(storeId => {
+        const cachedRating = window.cacheManager.getStoreRating(storeId);
+        if (cachedRating) {
+          ratingsCache[storeId] = cachedRating;
+        } else {
+          uncachedStoreIds.push(storeId);
+        }
+      });
+
+      console.log(`📁 캐시에서 ${Object.keys(ratingsCache).length}개 매장 별점 정보 발견`);
+      console.log(`🌐 서버에서 가져올 매장: ${uncachedStoreIds.length}개`);
+    } else {
+      uncachedStoreIds.push(...storeIds);
+    }
+
+    // 2. 캐시에 없는 매장들만 일괄 조회
+    if (uncachedStoreIds.length > 0) {
+      const storeIdsParam = uncachedStoreIds.join(',');
+      const response = await fetch(`/api/stores/ratings/batch?storeIds=${storeIdsParam}`);
+
+      if (!response.ok) {
+        console.error(`❌ 일괄 별점 정보 조회 실패: ${response.status}`);
+        // 실패해도 캐시된 데이터라도 반환
+        return ratingsCache;
+      }
+
+      const data = await response.json();
+      if (data.success && data.ratings) {
+        // 3. 새로 가져온 데이터를 캐시에 저장하고 결과에 추가
+        Object.keys(data.ratings).forEach(storeId => {
+          const ratingData = data.ratings[storeId];
+          ratingsCache[storeId] = ratingData;
+
+          // 캐시에 저장
+          if (typeof window.cacheManager !== 'undefined') {
+            window.cacheManager.setStoreRating(parseInt(storeId), ratingData);
+          }
+        });
+
+        console.log(`✅ 일괄 별점 정보 로딩 완료: 총 ${Object.keys(ratingsCache).length}개 매장`);
+      }
+    }
+
+    return ratingsCache;
+  } catch (error) {
+    console.error('❌ 일괄 별점 정보 로딩 실패:', error);
+    return {};
+  }
+}
+
+// 개별 매장 별점 정보 조회 (기존 호환성 유지, 일괄 조회 우선 사용)
 window.loadStoreRatingAsync = async function(storeId) {
   try {
     // 1. 먼저 캐시에서 확인
@@ -677,8 +742,8 @@ window.loadStoreRatingAsync = async function(storeId) {
       }
     }
 
-    // 2. 캐시에 없으면 서버에서 가져오기
-    console.log(`🔄 지도: 매장 ${storeId} 별점 정보 서버에서 가져오는 중...`);
+    // 2. 개별 조회 (비효율적이지만 기존 호환성 유지)
+    console.log(`🔄 지도: 매장 ${storeId} 별점 정보 개별 조회 중...`);
     const response = await fetch(`/api/stores/${storeId}/rating`);
 
     if (!response.ok) {
@@ -899,30 +964,33 @@ async function loadStoresAndMarkers(map) {
     }
   });
 
-  // 새로운/수정된 마커 생성 (비동기로 처리)
+  // 통합 API 호출로 새로운/수정된 마커 생성
   setTimeout(async () => {
-    // 새로 추가된 매장의 마커 생성
-    for (const store of storeChanges.added) {
-      const marker = await window.MapMarkerManager.createCustomMarker(store, map);
-      if (marker) {
-        window.markerMap.set(store.id, marker);
-        console.log(`➕ 매장 ${store.name} 새 마커 생성`);
-      }
-    }
-
-    // 수정된 매장의 마커 재생성
-    for (const { new: store } of storeChanges.updated) {
-      const marker = await window.MapMarkerManager.createCustomMarker(store, map);
-      if (marker) {
-        window.markerMap.set(store.id, marker);
-        console.log(`🔄 매장 ${store.name} 마커 업데이트 완료`);
-      }
+    const storesToCreateMarkers = [...storeChanges.added, ...storeChanges.updated.map(u => u.new)];
+    
+    if (storesToCreateMarkers.length > 0) {
+      console.log(`🔄 통합 API 호출로 ${storesToCreateMarkers.length}개 매장 마커 생성/업데이트 중...`);
+      
+      // 일괄 마커 생성 (통합 별점 조회 포함)
+      const newMarkers = await window.MapMarkerManager.createMarkersInBatch(storesToCreateMarkers, map);
+      
+      // 마커 맵에 추가/업데이트
+      newMarkers.forEach(marker => {
+        if (marker && marker.storeId) {
+          window.markerMap.set(marker.storeId, marker);
+          
+          // 로깅
+          const isUpdate = storeChanges.updated.some(u => u.new.id === marker.storeId);
+          const action = isUpdate ? '🔄 업데이트' : '➕ 생성';
+          console.log(`${action} 매장 ${marker.storeName} 마커 완료`);
+        }
+      });
     }
 
     // 현재 마커 배열 업데이트 (역호환성 유지)
     window.currentMarkers = Array.from(window.markerMap.values());
 
-    console.log(`✅ 마커 업데이트 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
+    console.log(`✅ 통합 API 호출로 마커 업데이트 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
 
     // 현재 데이터를 저장 (다음 비교용)
     window.lastStoreData = JSON.parse(JSON.stringify(stores));
@@ -989,22 +1057,27 @@ async function loadStoresAndMarkers(map) {
   }, 200);
 }
 
-// 매장 목록 업데이트 함수 분리
+// 통합 API 호출을 사용한 매장 목록 업데이트 함수
 async function updateStoreList(stores, storeListContainer) {
-
   try {
     storeListContainer.innerHTML = ''; // 로딩 메시지 제거
 
-    // 매장 목록에서도 별점 정보 비동기 로딩
-    for (const store of stores) {
+    // 1. 모든 매장의 별점 정보를 일괄 조회
+    const storeIds = stores.map(store => store.id);
+    const allRatings = await window.loadAllStoreRatings(storeIds);
+    
+    console.log(`✅ 일괄 별점 조회 완료 - ${Object.keys(allRatings).length}개 매장 별점 정보 준비됨`);
+
+    // 2. 각 매장 카드 렌더링 (별점 정보는 이미 준비됨)
+    stores.forEach(store => {
       const card = document.createElement('div');
       card.className = 'storeCard';
 
-      // 별점 정보 비동기 로딩
-      const ratingData = await window.loadStoreRatingAsync(store.id);
+      // 일괄 조회한 별점 정보 사용
+      const ratingData = allRatings[store.id] || { ratingAverage: 0.0, reviewCount: 0 };
 
-      // 운영 상태 실시간 확인
-      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}`);
+      // 운영 상태 확인
+      console.log(`🏪 매장 ${store.name} 운영 상태: ${store.isOpen ? '운영중' : '운영중지'}, 별점: ${ratingData.ratingAverage}점`);
 
       // MapPanelUI가 존재하는지 확인
       if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreCard === 'function') {
@@ -1032,11 +1105,10 @@ async function updateStoreList(stores, storeListContainer) {
       });
 
       storeListContainer.appendChild(card);
-    }
+    });
 
-    console.log(`✅ 매장 목록 업데이트 완료: ${stores.length}개 매장`);
+    console.log(`✅ 통합 API 호출로 매장 목록 업데이트 완료: ${stores.length}개 매장`);
   } catch (error) {
     console.error('❌ 매장 목록 업데이트 중 오류:', error);
   }
-
 }
