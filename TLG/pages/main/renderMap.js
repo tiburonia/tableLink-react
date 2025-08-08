@@ -491,6 +491,11 @@ async function renderMap() {
         if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
           window.MapPanelUI.initializeFiltering();
         }
+        // 패널 드래그 기능 초기화 (중복 방지를 위해 DOM 준비 후 한 번만 실행)
+        if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
+          window.MapPanelUI.setupPanelDrag();
+          console.log('✅ MapPanelUI 드래그 시스템 초기화 완료');
+        }
       } else {
         console.warn('⚠️ DOM은 준비되었지만 매장 데이터가 없거나 컨테이너를 찾을 수 없음');
       }
@@ -498,19 +503,6 @@ async function renderMap() {
       console.warn('⚠️ DOM 준비 실패, 기본 처리로 진행');
     }
   });
-
-  // 패널 핸들 클릭 시 열기/닫기
-  const panel = document.getElementById('storePanel');
-  let startY = 0;
-  let currentY = 0;
-  let isDragging = false;
-
-  // 공통 드래그 로직
-  function startDrag(y) {
-    startY = y;
-    isDragging = true;
-    panel.style.transition = 'none';
-  }
 
   //TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')
@@ -658,45 +650,7 @@ async function renderMap() {
     }
   });
 
-  function duringDrag(y) {
-    if (!isDragging) return;
-    currentY = y;
-    const delta = startY - currentY;
-    const baseHeight = panel.classList.contains('expanded') ? 550 : 60;
-    let newHeight = baseHeight + delta;
-    newHeight = Math.min(550, Math.max(60, newHeight));
-    panel.style.height = `${newHeight}px`;
-  }
-
-  function endDrag() {
-    isDragging = false;
-    const delta = startY - currentY;
-
-    if (delta > 50) {
-      panel.classList.add('expanded');
-      panel.classList.remove('collapsed');
-      panel.style.height = '630px';
-    } else if (delta < -50) {
-      panel.classList.add('collapsed');
-      panel.classList.remove('expanded');
-      panel.style.height = '60px';
-    } else {
-      const target = panel.classList.contains('expanded') ? '630px' : '60px';
-      panel.style.height = target;
-    }
-
-    panel.style.transition = 'height 0.3s ease';
-  }
-
-  // 📱 터치 이벤트
-  panel.addEventListener('touchstart', e => startDrag(e.touches[0].clientY));
-  panel.addEventListener('touchmove', e => duringDrag(e.touches[0].clientY));
-  panel.addEventListener('touchend', endDrag);
-
-  // 🖱️ 마우스 이벤트
-  panel.addEventListener('mousedown', e => startDrag(e.clientY));
-  document.addEventListener('mousemove', e => duringDrag(e.clientY));
-  document.addEventListener('mouseup', endDrag);
+  // 패널 드래그 기능은 MapPanelUI.setupPanelDrag()에서 전담 처리
 
   // 주기적으로 매장 상태 업데이트 (30초마다)
   const updateInterval = setInterval(() => {
