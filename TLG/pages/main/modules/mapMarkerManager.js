@@ -80,29 +80,20 @@ window.MapMarkerManager = {
     return `
       <div class="modern-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="marker-container">
-          <div class="marker-circle" style="background: ${gradientColor};">
+          <div class="store-name-label">${store.name}</div>
+          <div class="marker-rectangle" style="background: ${gradientColor};">
             <div class="marker-inner">
+              <div class="status-indicator" style="background: ${statusColor};">
+                <span class="status-emoji">${statusIcon}</span>
+              </div>
               <div class="rating-display">
                 <span class="star-icon">⭐</span>
                 <span class="rating-text">${rating}</span>
-              </div>
-              <div class="status-indicator" style="background: ${statusColor};">
-                <span class="status-emoji">${statusIcon}</span>
               </div>
             </div>
             <div class="marker-pulse" style="background: ${statusColor};"></div>
           </div>
           <div class="marker-point"></div>
-        </div>
-        <div class="marker-tooltip">
-          <div class="tooltip-content">
-            <div class="store-title">${store.name}</div>
-            <div class="store-meta">
-              <span class="category-tag">${store.category || '음식점'}</span>
-              <span class="rating-info">★ ${rating}</span>
-            </div>
-          </div>
-          <div class="tooltip-arrow"></div>
         </div>
       </div>
 
@@ -122,10 +113,26 @@ window.MapMarkerManager = {
           position: relative;
         }
 
-        .marker-circle {
-          width: 48px;
-          height: 48px;
-          border-radius: 50%;
+        .store-name-label {
+          background: rgba(255, 255, 255, 0.95);
+          color: #333;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
+          margin-bottom: 5px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          border: 1px solid rgba(0,0,0,0.1);
+          white-space: nowrap;
+          max-width: 120px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .marker-rectangle {
+          width: 80px;
+          height: 36px;
+          border-radius: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -140,20 +147,38 @@ window.MapMarkerManager = {
 
         .marker-inner {
           display: flex;
-          flex-direction: column;
+          flex-direction: row;
           align-items: center;
-          justify-content: center;
+          justify-content: space-between;
           width: 100%;
           height: 100%;
           position: relative;
           z-index: 2;
+          padding: 0 8px;
+        }
+
+        .status-indicator {
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid rgba(255,255,255,0.8);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+          flex-shrink: 0;
+        }
+
+        .status-emoji {
+          font-size: 8px;
+          filter: brightness(1.2);
         }
 
         .rating-display {
           display: flex;
           align-items: center;
           gap: 2px;
-          margin-bottom: 2px;
+          flex-shrink: 0;
         }
 
         .star-icon {
@@ -168,29 +193,13 @@ window.MapMarkerManager = {
           text-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
 
-        .status-indicator {
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid rgba(255,255,255,0.8);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-
-        .status-emoji {
-          font-size: 8px;
-          filter: brightness(1.2);
-        }
-
         .marker-pulse {
           position: absolute;
           top: -3px;
           left: -3px;
           right: -3px;
           bottom: -3px;
-          border-radius: 50%;
+          border-radius: 18px;
           opacity: 0.4;
           animation: pulse 2s infinite;
           z-index: 1;
@@ -202,11 +211,11 @@ window.MapMarkerManager = {
             opacity: 0.6;
           }
           50% {
-            transform: scale(1.1);
+            transform: scale(1.05);
             opacity: 0.3;
           }
           100% {
-            transform: scale(1.2);
+            transform: scale(1.1);
             opacity: 0;
           }
         }
@@ -214,80 +223,11 @@ window.MapMarkerManager = {
         .marker-point {
           width: 0;
           height: 0;
-          border-left: 8px solid transparent;
-          border-right: 8px solid transparent;
-          border-top: 12px solid white;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 8px solid white;
           margin-top: -2px;
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
-        }
-
-        .marker-tooltip {
-          position: absolute;
-          bottom: 65px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
-          border-radius: 16px;
-          padding: 12px 16px;
-          box-shadow: 
-            0 8px 32px rgba(0,0,0,0.12),
-            0 4px 16px rgba(0,0,0,0.08);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.6);
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          z-index: 20;
-          white-space: nowrap;
-          max-width: 200px;
-        }
-
-        .tooltip-content {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .store-title {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1f2937;
-          text-align: center;
-        }
-
-        .store-meta {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .category-tag {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 2px 8px;
-          border-radius: 8px;
-          font-size: 10px;
-          font-weight: 600;
-        }
-
-        .rating-info {
-          color: #fbbf24;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .tooltip-arrow {
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 8px solid transparent;
-          border-right: 8px solid transparent;
-          border-top: 8px solid rgba(255,255,255,0.98);
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
         .modern-marker:hover {
@@ -295,10 +235,9 @@ window.MapMarkerManager = {
           filter: drop-shadow(0 8px 16px rgba(0,0,0,0.25));
         }
 
-        .modern-marker:hover .marker-tooltip {
-          opacity: 1;
-          visibility: visible;
-          transform: translateX(-50%) translateY(-4px);
+        .modern-marker:hover .store-name-label {
+          background: rgba(255, 255, 255, 1);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
         .modern-marker:hover .marker-pulse {
@@ -310,7 +249,7 @@ window.MapMarkerManager = {
           filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
         }
 
-        .modern-marker:active .marker-circle {
+        .modern-marker:active .marker-rectangle {
           transform: scale(0.95);
         }
       </style>
