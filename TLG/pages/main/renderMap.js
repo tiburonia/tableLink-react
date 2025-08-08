@@ -498,23 +498,30 @@ async function renderMap() {
   // DOM 준비 확인은 별도로 처리
   waitForDOM().then((success) => {
     if (success) {
-      console.log('✅ DOM 준비 완료, 매장 목록 업데이트 시작');
-      // DOM이 준비되면 매장 목록 즉시 업데이트
-      const storeListContainer = document.getElementById('storeListContainer');
-      if (storeListContainer && window.lastLoadedStores) {
-        console.log('📝 저장된 매장 데이터로 목록 업데이트:', window.lastLoadedStores.length, '개 매장');
-        updateStoreList(window.lastLoadedStores, storeListContainer);
-        // 필터링 기능 초기화
-        if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
-          window.MapPanelUI.initializeFiltering();
-        }
-        // 패널 드래그 기능 초기화 (중복 방지를 위해 DOM 준비 후 한 번만 실행)
-        if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
-          window.MapPanelUI.setupPanelDrag();
-          console.log('✅ MapPanelUI 드래그 시스템 초기화 완료');
-        }
+      console.log('✅ DOM 준비 완료');
+      
+      // 캐시 로딩이 완료된 경우 중복 업데이트 방지
+      if (window.cacheLoadingComplete) {
+        console.log('🚫 캐시 로딩 완료됨 - DOM 준비 후 중복 업데이트 건너뛰기');
       } else {
-        console.warn('⚠️ DOM은 준비되었지만 매장 데이터가 없거나 컨테이너를 찾을 수 없음');
+        // 서버에서 데이터를 가져온 경우에만 DOM 준비 후 업데이트
+        const storeListContainer = document.getElementById('storeListContainer');
+        if (storeListContainer && window.lastLoadedStores) {
+          console.log('📝 저장된 매장 데이터로 목록 업데이트:', window.lastLoadedStores.length, '개 매장');
+          updateStoreList(window.lastLoadedStores, storeListContainer);
+        } else {
+          console.warn('⚠️ DOM은 준비되었지만 매장 데이터가 없거나 컨테이너를 찾을 수 없음');
+        }
+      }
+
+      // UI 초기화는 항상 실행
+      if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
+        window.MapPanelUI.initializeFiltering();
+      }
+      // 패널 드래그 기능 초기화 (중복 방지를 위해 DOM 준비 후 한 번만 실행)
+      if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
+        window.MapPanelUI.setupPanelDrag();
+        console.log('✅ MapPanelUI 드래그 시스템 초기화 완료');
       }
     } else {
       console.warn('⚠️ DOM 준비 실패, 기본 처리로 진행');
@@ -887,7 +894,10 @@ async function loadFromCacheOnly(map) {
     window.lastLoadedStores = stores;
     window.lastStoreData = JSON.parse(JSON.stringify(stores));
 
-    // UI 업데이트
+    // 캐시 로딩 완료 플래그 설정
+    window.cacheLoadingComplete = true;
+
+    // UI 업데이트 (캐시 전용 로딩에서는 DOM 준비 후 업데이트하지 않음)
     setTimeout(() => {
       const storeListContainer = document.getElementById('storeListContainer');
       if (storeListContainer) {
@@ -1260,7 +1270,13 @@ async function loadStoresAndMarkers(map) {
 // 통합 API 호출을 사용한 매장 목록 업데이트 함수
 async function updateStoreList(stores, storeListContainer) {
   try {
-    storeListContainer.innerHTML = ''; // 로딩 메시지 제거
+    // 중복 업데이트 방지 체크
+    if (storeListContainer.dataset.lastUpdateHash === JSON.stringify(stores.map(s => s.id)).hashCode()) {
+      console.log('🚫 동일한 매장 목록 - 중복 업데이트 건너뛰기');
+      return;
+    }
+
+    storeListContainer.innerHTML = ''; // 기존 내용 완전 제거
 
     // 1. 모든 매장의 별점 정보를 일괄 조회
     const storeIds = stores.map(store => store.id);
@@ -1307,8 +1323,29 @@ async function updateStoreList(stores, storeListContainer) {
       storeListContainer.appendChild(card);
     });
 
-    console.log(`✅ 통합 API 호출로 매장 목록 업데이트 완료: ${stores.length}개 매장`);
+    // 업데이트 완료 후 해시 저장
+    storeListContainer.dataset.lastUpdateHash = JSON.stringify(stores.map(s => s.id)).hashCode();
+    
+    // 실제 DOM에 추가된 카드 수 확인
+    const actualCards = storeListContainer.querySelectorAll('.storeCard').length;
+    console.log(`✅ 통합 API 호출로 매장 목록 업데이트 완료: ${stores.length}개 매장 → 실제 DOM: ${actualCards}개 카드`);
+    
+    if (actualCards !== stores.length) {
+      console.warn(`⚠️ 매장 수와 DOM 카드 수 불일치! 예상: ${stores.length}, 실제: ${actualCards}`);
+    }
   } catch (error) {
     console.error('❌ 매장 목록 업데이트 중 오류:', error);
   }
 }
+
+// 간단한 해시 함수 추가
+String.prototype.hashCode = function() {
+  var hash = 0;
+  if (this.length == 0) return hash;
+  for (var i = 0; i < this.length; i++) {
+    var char = this.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash;
+};
