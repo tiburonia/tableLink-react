@@ -99,7 +99,6 @@ async function TLL() {
   }
 
   // 이벤트 바인딩
-  const storeSelect = document.getElementById('storeSelect');
   const tableSelect = document.getElementById('tableSelect');
   const startOrderBtn = document.getElementById('startOrderBtn');
 
