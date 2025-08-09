@@ -125,15 +125,27 @@ async function create2000Stores() {
       // 배치 단위로 데이터베이스에 삽입
       console.log(`💾 배치 ${batch + 1} 데이터베이스 삽입 중...`);
 
-      const values = storeData.map((store) => `(${store.map(() => '?').join(', ')})`).join(',');
-      const insertQuery = `
-        INSERT INTO stores (name, category, distance, menu, coord, review_count, rating_average, is_open, address, address_status, sido, sigungu)
-        VALUES ${values}
-      `;
-
       try {
-        const queryParams = storeData.flat();
-        await pool.query(insertQuery, queryParams);
+        // PostgreSQL용 VALUES 절 생성
+        const valuesClauses = [];
+        const allParams = [];
+        let paramIndex = 1;
+
+        for (const store of storeData) {
+          const placeholders = [];
+          for (let i = 0; i < store.length; i++) {
+            placeholders.push(`$${paramIndex++}`);
+            allParams.push(store[i]);
+          }
+          valuesClauses.push(`(${placeholders.join(', ')})`);
+        }
+
+        const insertQuery = `
+          INSERT INTO stores (name, category, distance, menu, coord, review_count, rating_average, is_open, address, address_status, sido, sigungu)
+          VALUES ${valuesClauses.join(', ')}
+        `;
+
+        await pool.query(insertQuery, allParams);
         console.log(`✅ 배치 ${batch + 1} 완료 (${batchSize}개 매장)`);
 
         // 배치 삽입 후 즉시 확인
