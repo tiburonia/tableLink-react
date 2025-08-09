@@ -1,26 +1,19 @@
 // 지도 마커 관리자
 window.MapMarkerManager = {
   async createCustomMarker(store, map, preloadedRating = null) {
-    if (!store.coord) return;
+    if (!store.coord) return null;
 
     // 매장 운영 상태 확인
     const isOpen = store.isOpen !== false;
     const statusText = isOpen ? '운영중' : '운영준비중';
     const statusColor = isOpen ? '#4caf50' : '#ff9800';
 
-    console.log(`🏪 마커 생성: ${store.name} - ${statusText} (DB 값: ${store.isOpen})`);
-
-    // 별점 정보 사용 (미리 로드된 경우 사용, 아니면 개별 조회)
+    // 별점 정보 사용 (미리 로드된 경우 우선 사용)
     let rating = '0.0';
     if (preloadedRating) {
-      rating = parseFloat(preloadedRating.ratingAverage).toFixed(1);
-      console.log(`📊 마커: ${store.name} 미리 로드된 별점 사용: ${rating}점`);
-    } else {
-      const ratingData = await window.loadStoreRatingAsync(store.id);
-      if (ratingData) {
-        rating = parseFloat(ratingData.ratingAverage).toFixed(1);
-        console.log(`📊 마커: ${store.name} 개별 별점 조회: ${rating}점`);
-      }
+      rating = parseFloat(preloadedRating.ratingAverage || 0).toFixed(1);
+    } else if (store.ratingAverage !== undefined) {
+      rating = parseFloat(store.ratingAverage || 0).toFixed(1);
     }
 
     // 커스텀 마커 HTML 생성
@@ -44,7 +37,7 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 일괄 마커 생성 함수 (통합 호출 방식)
+  // 일괄 마커 생성 함수 (최적화된 배치 처리)
   async createMarkersInBatch(stores, map) {
     if (!Array.isArray(stores) || stores.length === 0) {
       console.warn('⚠️ 생성할 매장 목록이 비어있음');
@@ -57,13 +50,35 @@ window.MapMarkerManager = {
     const storeIds = stores.map(store => store.id);
     const allRatings = await window.loadAllStoreRatings(storeIds);
 
-    // 2. 각 매장 마커 생성 (별점 정보는 이미 준비됨)
+    // 2. 마커 생성을 배치 단위로 처리 (50개씩)
+    const batchSize = 50;
     const markers = [];
-    for (const store of stores) {
-      const preloadedRating = allRatings[store.id];
-      const marker = await this.createCustomMarker(store, map, preloadedRating);
-      if (marker) {
-        markers.push(marker);
+    const batches = [];
+
+    for (let i = 0; i < stores.length; i += batchSize) {
+      batches.push(stores.slice(i, i + batchSize));
+    }
+
+    console.log(`📦 ${batches.length}개 배치로 마커 생성 시작 (배치당 ${batchSize}개)`);
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      
+      // 각 배치를 병렬로 처리
+      const batchPromises = batch.map(store => {
+        const preloadedRating = allRatings[store.id];
+        return this.createCustomMarker(store, map, preloadedRating);
+      });
+
+      const batchMarkers = await Promise.all(batchPromises);
+      const validMarkers = batchMarkers.filter(marker => marker !== null);
+      markers.push(...validMarkers);
+
+      console.log(`✅ 배치 ${batchIndex + 1}/${batches.length} 완료: ${validMarkers.length}개 마커 생성`);
+
+      // DOM 업데이트를 위한 짧은 대기 (마지막 배치가 아닌 경우에만)
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
     }
 
