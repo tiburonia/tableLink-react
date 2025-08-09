@@ -81,6 +81,10 @@ async function create2000Stores() {
     let currentMaxId = parseInt(maxIdResult.rows[0].max_id);
 
     console.log(`📊 현재 최대 매장 ID: ${currentMaxId}`);
+    
+    // 시퀀스 값을 현재 최대 ID + 1로 설정
+    await pool.query(`SELECT setval('stores_id_seq', $1, false)`, [currentMaxId + 1]);
+    console.log(`🔄 시퀀스를 ${currentMaxId + 1}로 재설정 완료`);
 
     const categories = Object.keys(STORE_TEMPLATES);
     const storesPerBatch = 100; // 배치 단위
@@ -143,6 +147,7 @@ async function create2000Stores() {
         const insertQuery = `
           INSERT INTO stores (name, category, distance, menu, coord, review_count, rating_average, is_open, address, address_status, sido, sigungu)
           VALUES ${valuesClauses.join(', ')}
+          RETURNING id
         `;
 
         await pool.query(insertQuery, allParams);
