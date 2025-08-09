@@ -290,7 +290,7 @@ async function add2000Stores() {
             JSON.stringify(menu),
             JSON.stringify(coord),
             reviewCount,
-            ratingAverage,
+            parseFloat(ratingAverage),
             isOpen,
             phoneNumber,
             description,
