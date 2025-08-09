@@ -61,12 +61,13 @@ router.get('/viewport', async (req, res) => {
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
     
     const storesResult = await pool.query(`
-      SELECT id, name, category, address, coord, is_open, rating_average, review_count
-      FROM stores 
-      WHERE coord IS NOT NULL
-        AND (coord->>'lat')::float BETWEEN $1 AND $3
-        AND (coord->>'lng')::float BETWEEN $2 AND $4
-      ORDER BY id
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.coord, s.is_open, s.rating_average, s.review_count
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE s.coord IS NOT NULL
+        AND (s.coord->>'lat')::float BETWEEN $1 AND $3
+        AND (s.coord->>'lng')::float BETWEEN $2 AND $4
+      ORDER BY s.id
       LIMIT 200
     `, queryParams);
     
@@ -219,9 +220,10 @@ router.get('/batch/basic-info', async (req, res) => {
     console.log('📦 일괄 매장 기본 정보 조회 요청');
 
     const storesResult = await pool.query(`
-      SELECT id, name, category, address, coord, is_open, rating_average, review_count
-      FROM stores 
-      ORDER BY id
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.coord, s.is_open, s.rating_average, s.review_count
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      ORDER BY s.id
     `);
 
     const stores = storesResult.rows.map(store => ({
@@ -255,7 +257,12 @@ router.get('/batch/basic-info', async (req, res) => {
 // 모든 매장 조회 API
 router.get('/', async (req, res) => {
   try {
-    const storesResult = await pool.query('SELECT * FROM stores ORDER BY id');
+    const storesResult = await pool.query(`
+      SELECT s.*, sa.address_full as address 
+      FROM stores s 
+      LEFT JOIN store_address sa ON s.id = sa.store_id 
+      ORDER BY s.id
+    `);
 
     const storesWithTables = await Promise.all(
       storesResult.rows.map(async (store) => {
@@ -319,7 +326,12 @@ router.get('/', async (req, res) => {
 router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
-    const storeResult = await pool.query('SELECT * FROM stores WHERE id = $1', [storeId]);
+    const storeResult = await pool.query(`
+      SELECT s.*, sa.address_full as address 
+      FROM stores s 
+      LEFT JOIN store_address sa ON s.id = sa.store_id 
+      WHERE s.id = $1
+    `, [storeId]);
 
     if (storeResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다' });
