@@ -392,6 +392,23 @@ async function renderMap() {
 
   console.log('🗺️ 지도 렌더링 완료');
 
+  // 지도 레벨 변경 이벤트 추가
+  kakao.maps.event.addListener(map, 'zoom_changed', function() {
+    const level = map.getLevel();
+    console.log(`🔍 지도 레벨 변경됨: ${level}`);
+    
+    // 캐시된 매장 데이터가 있는지 확인
+    if (window.storeCache && window.storeCache.hasCachedData()) {
+      const cachedStores = window.storeCache.getStoreData();
+      console.log(`✅ 유효한 매장 캐시 발견 - 매장 수: ${cachedStores.length}`);
+      
+      // 동적 마커 업데이트
+      if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+        window.MapMarkerManager.handleMapLevelChange(level, cachedStores, map);
+      }
+    }
+  });
+
   // 매장 데이터 로딩 및 마커 생성
   setTimeout(() => {
     loadStoresAndMarkers(map);

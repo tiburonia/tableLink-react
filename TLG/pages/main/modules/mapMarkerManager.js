@@ -18,13 +18,16 @@ window.MapMarkerManager = {
     this.hideAllMarkers();
 
     const mode = this.determineModeByLevel(level);
+    console.log(`📊 레벨 ${level} -> 모드: ${mode}`);
 
     if (mode === 'store') {
       // 개별 매장 마커 표시
+      console.log(`🏪 개별 매장 마커 모드 (레벨 ${level})`);
       await this.showIndividualMarkers(stores, map);
     } else {
       // 집계 마커 표시
       const tier = this.getRegionTierByLevel(level);
+      console.log(`🏘️ 집계 마커 모드 (레벨 ${level}, tier: ${tier})`);
       await this.showClusterMarkers(stores, map, tier);
     }
 
@@ -75,6 +78,12 @@ window.MapMarkerManager = {
 
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
+    console.log(`📊 ${tier} 그룹화 결과: ${clusters.size}개 지역`);
+    
+    // 각 지역별 매장 수 출력
+    for (const [regionKey, regionStores] of clusters.entries()) {
+      console.log(`  - ${regionKey}: ${regionStores.length}개 매장`);
+    }
     
     for (const [regionKey, regionStores] of clusters.entries()) {
       const clusterId = `${tier}_${regionKey}`;
@@ -83,13 +92,18 @@ window.MapMarkerManager = {
       if (this.clusterMarkers.has(clusterId)) {
         const marker = this.clusterMarkers.get(clusterId);
         marker.setMap(map);
+        console.log(`♻️ 기존 집계 마커 재사용: ${regionKey}`);
         continue;
       }
 
       // 새 집계 마커 생성
+      console.log(`🆕 새 집계 마커 생성: ${regionKey} (${regionStores.length}개 매장)`);
       const marker = await this.createClusterMarker(regionKey, regionStores, map, tier);
       if (marker) {
         this.clusterMarkers.set(clusterId, marker);
+        console.log(`✅ 집계 마커 생성 성공: ${regionKey}`);
+      } else {
+        console.log(`❌ 집계 마커 생성 실패: ${regionKey}`);
       }
     }
 
@@ -119,17 +133,20 @@ window.MapMarkerManager = {
   extractRegionName(address, tier) {
     if (!address) return null;
 
-    // 기본 주소 파싱 (예: "서울특별시 강남구 역삼동")
-    const parts = address.split(' ');
+    // 대괄호와 괄호 제거 후 주소 파싱
+    const cleanAddress = address.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
+    const parts = cleanAddress.split(' ').filter(part => part.length > 0);
+    
+    console.log(`🗺️ 주소 파싱: "${address}" -> [${parts.join(', ')}] (tier: ${tier})`);
     
     if (tier === 'sido') {
       // 시/도 (첫 번째 부분)
       return parts[0] || null;
     } else if (tier === 'sigungu') {
-      // 시/군/구 (두 번째 부분)
+      // 시/군/구 (두 번째 부분까지)
       return parts.length >= 2 ? `${parts[0]} ${parts[1]}` : null;
     } else if (tier === 'dong') {
-      // 읍/면/동 (세 번째 부분)
+      // 읍/면/동 (세 번째 부분까지)
       return parts.length >= 3 ? `${parts[0]} ${parts[1]} ${parts[2]}` : null;
     }
 
@@ -190,7 +207,7 @@ window.MapMarkerManager = {
     }[tier] || '지역';
 
     return `
-      <div class="cluster-marker" onclick="MapMarkerManager.handleClusterClick('${regionName}', '${tier}')">
+      <div class="cluster-marker" onclick="window.MapMarkerManager.handleClusterClick('${regionName}', '${tier}')"
         <div class="cluster-container">
           <div class="cluster-label">${regionName}</div>
           <div class="cluster-circle">
