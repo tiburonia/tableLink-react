@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -37,7 +36,7 @@ async function updateStoreRating(storeId) {
 router.get('/viewport', async (req, res) => {
   try {
     const { swLat, swLng, neLat, neLng, level } = req.query;
-    
+
     if (!swLat || !swLng || !neLat || !neLng) {
       return res.status(400).json({
         success: false,
@@ -51,29 +50,29 @@ router.get('/viewport', async (req, res) => {
     // 뷰포트 범위 내 매장만 조회
     const queryParams = [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)];
     console.log(`📊 쿼리 파라미터: swLat=${queryParams[0]}, swLng=${queryParams[1]}, neLat=${queryParams[2]}, neLng=${queryParams[3]}`);
-    
+
     // 전체 매장 수 확인
     const totalCountResult = await pool.query('SELECT COUNT(*) as total FROM stores');
     console.log(`📋 전체 매장 수: ${totalCountResult.rows[0].total}`);
-    
+
     // 좌표가 있는 매장 수 확인
     const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM stores WHERE coord IS NOT NULL');
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
-    
+
     const storesResult = await pool.query(`
-      SELECT s.id, s.name, s.category, sa.address_full as address, s.coord, s.is_open, s.rating_average, s.review_count
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE s.coord IS NOT NULL
-        AND (s.coord->>'lat')::float BETWEEN $1 AND $3
-        AND (s.coord->>'lng')::float BETWEEN $2 AND $4
+      WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
+        AND sa.latitude BETWEEN $1 AND $3
+        AND sa.longitude BETWEEN $2 AND $4
       ORDER BY s.id
       LIMIT 200
     `, queryParams);
-    
+
     console.log(`🔍 뷰포트 쿼리 결과: ${storesResult.rows.length}개 매장`);
     if (storesResult.rows.length > 0) {
-      console.log(`📍 첫 번째 매장: ${storesResult.rows[0].name} (${storesResult.rows[0].coord})`);
+      console.log(`📍 첫 번째 매장: ${storesResult.rows[0].name} (Lat: ${storesResult.rows[0].latitude}, Lng: ${storesResult.rows[0].longitude})`);
     }
 
     const stores = storesResult.rows.map(store => ({
@@ -81,7 +80,9 @@ router.get('/viewport', async (req, res) => {
       name: store.name,
       category: store.category,
       address: store.address || '주소 정보 없음',
-      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : { lat: 37.5665, lng: 126.9780 },
       isOpen: store.is_open !== false,
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0
@@ -179,9 +180,11 @@ router.get('/search', async (req, res) => {
     console.log(`🔍 매장 검색 요청: "${query}"`);
 
     const result = await pool.query(`
-      SELECT * FROM stores 
-      WHERE name ILIKE $1 
-      ORDER BY id
+      SELECT s.*, sa.address_full as address, sa.latitude, sa.longitude
+      FROM stores s 
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE s.name ILIKE $1 
+      ORDER BY s.id
       LIMIT 20
     `, [`%${query}%`]);
 
@@ -190,7 +193,9 @@ router.get('/search', async (req, res) => {
       name: store.name,
       category: store.category,
       address: store.address,
-      coord: store.coord,
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : { lat: 37.5665, lng: 126.9780 },
       isOpen: store.is_open,
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0
@@ -220,7 +225,7 @@ router.get('/batch/basic-info', async (req, res) => {
     console.log('📦 일괄 매장 기본 정보 조회 요청');
 
     const storesResult = await pool.query(`
-      SELECT s.id, s.name, s.category, sa.address_full as address, s.coord, s.is_open, s.rating_average, s.review_count
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
       ORDER BY s.id
@@ -231,7 +236,9 @@ router.get('/batch/basic-info', async (req, res) => {
       name: store.name,
       category: store.category,
       address: store.address || '주소 정보 없음',
-      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : { lat: 37.5665, lng: 126.9780 },
       isOpen: store.is_open !== false,
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0
@@ -258,7 +265,7 @@ router.get('/batch/basic-info', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const storesResult = await pool.query(`
-      SELECT s.*, sa.address_full as address 
+      SELECT s.*, sa.address_full as address, sa.latitude, sa.longitude
       FROM stores s 
       LEFT JOIN store_address sa ON s.id = sa.store_id 
       ORDER BY s.id
@@ -293,7 +300,9 @@ router.get('/', async (req, res) => {
           distance: store.distance || '정보없음',
           address: store.address || '주소 정보 없음',
           menu: store.menu || [],
-          coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+          coord: store.latitude && store.longitude 
+            ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+            : { lat: 37.5665, lng: 126.9780 },
           reviews: store.reviews || [],
           reviewCount: store.review_count || 0,
           ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
@@ -327,7 +336,7 @@ router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
     const storeResult = await pool.query(`
-      SELECT s.*, sa.address_full as address 
+      SELECT s.*, sa.address_full as address, sa.latitude, sa.longitude
       FROM stores s 
       LEFT JOIN store_address sa ON s.id = sa.store_id 
       WHERE s.id = $1
