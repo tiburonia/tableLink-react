@@ -378,7 +378,8 @@ async function renderMap() {
   const container = document.getElementById('map');
   const options = {
     center: new kakao.maps.LatLng(37.5665, 126.9780),
-    level: 3
+    level: 3,
+    maxLevel: 12  // 최대 줌 레벨을 12로 제한
   };
 
   const map = new kakao.maps.Map(container, options);
