@@ -392,34 +392,41 @@ async function renderMap() {
   window.markerMap = new Map();
 
   console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
-
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 지도 레벨 변경 이벤트
+  // 지도 레벨 및 뷰포트 변경 이벤트
   kakao.maps.event.addListener(map, 'zoom_changed', () => {
     const level = map.getLevel();
     console.log('🔍 지도 레벨 변경됨:', level);
 
-    // 캐시된 매장 데이터가 있는지 확인
-    if (window.storeCache.hasCachedData()) {
-      const stores = window.storeCache.getStoreData();
-      console.log('✅ 유효한 매장 캐시 발견 - 매장 수:', stores.length);
-
-      // **항상 MapMarkerManager 사용** (통합 마커 관리)
-      if (window.MapMarkerManager) {
-        window.MapMarkerManager.handleMapLevelChange(level, stores, map);
-      } else {
-        console.error('❌ MapMarkerManager가 로드되지 않음');
-      }
+    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
     } else {
-      console.log('⚠️ 캐시된 매장 데이터 없음 - 서버에서 다시 로드 필요');
+      console.error('❌ MapMarkerManager가 로드되지 않음');
     }
   });
 
-  // 매장 데이터 로딩 및 마커 생성
+  // 지도 이동 완료 이벤트
+  kakao.maps.event.addListener(map, 'dragend', () => {
+    const level = map.getLevel();
+    console.log('🗺️ 지도 이동 완료 - 레벨:', level);
+
+    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
+    }
+  });
+
+  // 초기 마커 로딩
   setTimeout(() => {
-    loadStoresAndMarkers(map);
-  }, 100);
+    const level = map.getLevel();
+    console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
+
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
+    }
+  }, 300);
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
@@ -463,16 +470,11 @@ async function renderMap() {
     }
 
     try {
-      const response = await fetch('/api/stores');
+      const response = await fetch('/api/stores/search?query=' + encodeURIComponent(keyword));
       const data = await response.json();
       const stores = data.stores || [];
 
-      const results = stores.filter(store =>
-        store.name.toLowerCase().includes(keyword.toLowerCase()) ||
-        store.category.toLowerCase().includes(keyword.toLowerCase())
-      );
-
-      displaySearchResults(results);
+      displaySearchResults(stores);
     } catch (error) {
       console.error('검색 실패:', error);
       searchResults.innerHTML = '<div class="search-result-item">검색 중 오류가 발생했습니다.</div>';
@@ -545,17 +547,23 @@ async function renderMap() {
   // 새로고침 버튼 클릭
   const refreshBtn = document.getElementById('refreshBtn');
   refreshBtn.addEventListener('click', async () => {
-    console.log('🔄 수동 새로고침 버튼 클릭됨 - 캐시 삭제 후 새로 로딩');
+    console.log('🔄 수동 새로고침 버튼 클릭됨 - 뷰포트 기반 새로 로딩');
 
     refreshBtn.style.transform = 'scale(1.05) rotate(360deg)';
     refreshBtn.style.pointerEvents = 'none';
 
     try {
-      // 기존 캐시 삭제
-      window.storeCache.clearCache();
+      // 기존 마커 모두 제거
+      if (window.MapMarkerManager) {
+        window.MapMarkerManager.clearAllMarkers();
+      }
 
-      // 강제 새로고침으로 서버에서 데이터 가져오기
-      await loadStoresAndMarkers(map, true);
+      // 현재 레벨에서 뷰포트 기반 새로고침
+      const level = map.getLevel();
+      if (window.MapMarkerManager) {
+        await window.MapMarkerManager.handleMapLevelChange(level, map);
+      }
+
       console.log('✅ 수동 새로고침 완료');
     } catch (error) {
       console.error('❌ 수동 새로고침 실패:', error);
@@ -603,227 +611,7 @@ async function renderMap() {
   });
 }
 
-// 매장 데이터를 캐시 우선으로 로딩하고 마커를 표시하는 함수
-async function loadStoresAndMarkers(map, forceRefresh = false) {
-  try {
-    let stores = [];
-
-    // 캐시에 데이터가 있는지 확인 (forceRefresh인 경우에도 일단 캐시 확인)
-    if (!forceRefresh && window.storeCache.hasCachedData()) {
-      stores = window.storeCache.getStoreData();
-      if (stores && stores.length > 0) {
-        console.log('📁 캐시된 매장 데이터 사용:', stores.length, '개 매장');
-
-        // 캐시 데이터로 마커 생성 (중복 방지)
-        await createMarkersFromCache(stores, map);
-
-        // 매장 목록도 업데이트
-        setTimeout(() => {
-          const storeListContainer = document.getElementById('storeListContainer');
-          if (storeListContainer) {
-            updateStoreList(stores, storeListContainer);
-          }
-        }, 100);
-
-        return; // 캐시 사용 시 여기서 종료
-      }
-    }
-
-    // 캐시에 데이터가 없거나 새로고침인 경우 서버에서 가져오기
-    console.log(forceRefresh ?
-      '🔄 강제 새로고침 - 서버에서 최신 데이터 요청 중...' :
-      '🌐 서버에서 매장 기본 정보 로딩 중...');
-
-    const response = await fetch('/api/stores/batch/basic-info');
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    if (!data.success || !Array.isArray(data.stores)) {
-      throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
-    }
-
-    stores = data.stores;
-    console.log('✅ 서버에서 매장 데이터 로드 성공:', stores.length, '개 매장');
-
-    // 서버 응답 후 기존 캐시 삭제 및 새로운 데이터로 업데이트
-    if (forceRefresh) {
-      console.log('🗑️ 서버 응답 완료 - 기존 캐시 삭제 후 업데이트');
-      await window.storeCache.clearCacheAsync();
-      clearAllMarkers(); // 기존 마커 완전 삭제
-    }
-
-    // 새로운 데이터를 캐시에 저장
-    await window.storeCache.setStoreDataAsync(stores);
-    console.log('💾 새로운 매장 데이터 캐시 저장 완료');
-
-    // 기존 마커 완전 삭제 (모든 경우)
-    clearAllMarkers();
-    
-    // MapMarkerManager를 통해서만 마커 생성
-    if (window.MapMarkerManager) {
-      const currentLevel = map.getLevel();
-      console.log('🎯 MapMarkerManager를 통한 마커 생성 - 현재 레벨:', currentLevel);
-      await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
-    } else {
-      console.error('❌ MapMarkerManager가 로드되지 않음');
-    }
-
-    // 매장 목록 업데이트
-    setTimeout(() => {
-      const storeListContainer = document.getElementById('storeListContainer');
-      if (storeListContainer) {
-        updateStoreList(stores, storeListContainer);
-      }
-    }, 100);
-
-  } catch (error) {
-    console.error('❌ 매장 데이터 로드 실패:', error);
-  }
-}
-
-// 기존 마커 완전 삭제 함수
-function clearAllMarkers() {
-  console.log('🧹 기존 마커 완전 삭제 시작');
-
-  // Map에서 마커 제거
-  if (window.markerMap && window.markerMap.size > 0) {
-    window.markerMap.forEach((marker, storeId) => {
-      if (marker && typeof marker.setMap === 'function') {
-        marker.setMap(null); // 지도에서 제거
-      }
-    });
-    window.markerMap.clear();
-    console.log('🗑️ markerMap 클리어 완료');
-  }
-
-  // 배열에서 마커 제거
-  if (window.currentMarkers && window.currentMarkers.length > 0) {
-    window.currentMarkers.forEach(marker => {
-      if (marker && typeof marker.setMap === 'function') {
-        marker.setMap(null); // 지도에서 제거
-      }
-    });
-    window.currentMarkers = [];
-    console.log('🗑️ currentMarkers 배열 클리어 완료');
-  }
-
-  console.log('✅ 기존 마커 완전 삭제 완료');
-}
-
-// 캐시 데이터로 마커 생성 (중복 방지)
-async function createMarkersFromCache(stores, map) {
-  console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
-
-  // DOM 재생성 후에는 항상 마커를 새로 생성해야 함
-  console.log('🔄 캐시 데이터로 MapMarkerManager를 통한 마커 생성');
-  if (window.MapMarkerManager) {
-    const currentLevel = map.getLevel();
-    await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
-  }
-}
-
-// 실제 마커 생성 함수 (MapMarkerManager 통합)
-async function createMarkersFromData(stores, map) {
-  console.log('🔄 새 마커 생성 시작:', stores.length, '개 매장');
-
-  // 1. 지도 레벨 확인
-  const currentLevel = map.getLevel();
-  console.log(`🔄 지도 레벨 ${currentLevel}에 따른 마커 생성: ${stores.length}개 매장`);
-
-  // 2. **항상 MapMarkerManager 사용** (통합 마커 관리)
-  if (window.MapMarkerManager) {
-    await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
-    console.log('✅ MapMarkerManager를 통한 마커 생성 완료');
-    return;
-  }
-
-  // 3. MapMarkerManager가 없는 경우 에러
-  console.error('❌ MapMarkerManager가 로드되지 않음 - 마커 생성 실패');
-}
-
-// 매장 목록 업데이트 함수 (캐시된 데이터 사용)
-async function updateStoreList(stores, storeListContainer) {
-  try {
-    console.log(`🔄 매장 목록 업데이트 시작: ${stores.length}개 매장`);
-
-    // 기존 내용 제거
-    storeListContainer.innerHTML = '';
-
-    // 매장 카드 생성 (캐시된 별점 정보 사용)
-    const fragment = document.createDocumentFragment();
-
-    stores.forEach((store, index) => {
-      const card = document.createElement('div');
-      card.className = 'storeCard';
-      card.setAttribute('data-store-id', store.id);
-
-      // 캐시된 데이터에 이미 별점 정보가 포함되어 있음
-      const ratingData = {
-        ratingAverage: store.ratingAverage || 0.0,
-        reviewCount: store.reviewCount || 0
-      };
-
-      if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreCard === 'function') {
-        card.innerHTML = window.MapPanelUI.renderStoreCard(store, ratingData);
-      } else {
-        card.innerHTML = `
-          <div style="padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px;">
-            <h3>${store.name}</h3>
-            <p>카테고리: ${store.category || 'N/A'}</p>
-            <p>상태: ${store.isOpen ? '운영중' : '운영중지'}</p>
-            <p>별점: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)</p>
-          </div>
-        `;
-      }
-
-      card.addEventListener('click', () => {
-        if (typeof renderStore === 'function') {
-          renderStore(store);
-        }
-      });
-
-      fragment.appendChild(card);
-    });
-
-    storeListContainer.appendChild(fragment);
-
-    console.log(`✅ 매장 목록 업데이트 완료: ${stores.length}개 매장`);
-
-  } catch (error) {
-    console.error('❌ 매장 목록 업데이트 중 오류:', error);
-  }
-}
-
-// 일괄 별점 정보 로딩 (직접 API 호출)
-async function loadAllStoreRatings(storeIds) {
-  try {
-    if (!Array.isArray(storeIds) || storeIds.length === 0) {
-      return {};
-    }
-
-    const storeIdsParam = storeIds.join(',');
-    const response = await fetch(`/api/stores/ratings/batch?storeIds=${storeIdsParam}`);
-
-    if (!response.ok) {
-      console.error(`❌ 일괄 별점 정보 조회 실패: ${response.status}`);
-      return {};
-    }
-
-    const data = await response.json();
-    if (data.success && data.ratings) {
-      return data.ratings;
-    }
-
-    return {};
-  } catch (error) {
-    console.error('❌ 일괄 별점 정보 로딩 실패:', error);
-    return {};
-  }
-}
-
-// 개별 매장 별점 정보 조회
+// 개별 매장 별점 정보 조회 (MapMarkerManager에서 사용)
 async function loadStoreRatingAsync(storeId) {
   try {
     const response = await fetch(`/api/stores/${storeId}/rating`);
@@ -845,5 +633,4 @@ async function loadStoreRatingAsync(storeId) {
 }
 
 // 전역 함수로 설정
-window.loadAllStoreRatings = loadAllStoreRatings;
 window.loadStoreRatingAsync = loadStoreRatingAsync;

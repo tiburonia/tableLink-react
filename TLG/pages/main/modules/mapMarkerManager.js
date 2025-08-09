@@ -1,10 +1,11 @@
-// 지도 마커 관리자 (완전 리팩토링)
+
+// 뷰포트 기반 지도 마커 관리자
 window.MapMarkerManager = {
   // 전역 마커 저장소
   individualMarkers: new Map(), // 개별 매장 마커 (레벨 1-5)
   clusterMarkers: new Map(),    // 집계 마커 (레벨 6+)
   currentLevel: 0,
-  currentStores: [],
+  currentViewport: null,
 
   // 마커 생성 프로세스 제어
   isProcessing: false,          
@@ -13,33 +14,40 @@ window.MapMarkerManager = {
   debounceTimer: null,          
 
   // 레벨에 따른 동적 마커 업데이트 (메인 엔트리 포인트)
-  async handleMapLevelChange(level, stores, map) {
+  async handleMapLevelChange(level, map) {
     // 디바운싱: 빠른 연속 호출 방지
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
 
     this.debounceTimer = setTimeout(async () => {
-      await this._doHandleMapLevelChange(level, stores, map);
-    }, 100);
+      await this._doHandleMapLevelChange(level, map);
+    }, 200);
   },
 
   // 실제 레벨 변경 처리 함수
-  async _doHandleMapLevelChange(level, stores, map) {
+  async _doHandleMapLevelChange(level, map) {
     console.log(`🔄 레벨 ${level} 변경에 따른 마커 업데이트 시작`);
 
-    // 동일한 레벨이면 무시
-    if (this.currentLevel === level && this.currentStores.length === stores.length) {
-      console.log(`⏸️ 동일한 레벨 ${level} - 마커 업데이트 생략`);
+    // 뷰포트 정보 가져오기
+    const bounds = map.getBounds();
+    const viewport = {
+      swLat: bounds.getSouthWest().getLat(),
+      swLng: bounds.getSouthWest().getLng(),
+      neLat: bounds.getNorthEast().getLat(),
+      neLng: bounds.getNorthEast().getLng()
+    };
+
+    // 동일한 레벨과 뷰포트면 무시
+    if (this.currentLevel === level && this.isSameViewport(viewport)) {
+      console.log(`⏸️ 동일한 레벨과 뷰포트 - 마커 업데이트 생략`);
       return;
     }
 
     // 기존 프로세스가 진행중이면 중단
     if (this.isProcessing) {
-      console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청 (이전 레벨: ${this.currentLevel})`);
+      console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청`);
       this.shouldCancel = true;
-
-      // 짧은 대기 후 강제 중단 (비동기 프로세스 완전 정리)
       await this.waitForProcessCompletion(800);
     }
 
@@ -52,7 +60,7 @@ window.MapMarkerManager = {
     console.log(`🆕 새 마커 프로세스 시작 (ID: ${processId}, 레벨: ${level})`);
 
     this.currentLevel = level;
-    this.currentStores = stores;
+    this.currentViewport = viewport;
 
     // **하드 스위치: 모든 마커/오버레이 강제 제거**
     this.hardHideAllMarkersAndOverlays(map);
@@ -61,19 +69,19 @@ window.MapMarkerManager = {
     if (level >= 1 && level <= 5) {
       // 개별 매장 마커 표시 (레벨 1-5)
       console.log(`🏪 개별 매장 마커 모드 (레벨 ${level})`);
-      await this.showIndividualMarkers(stores, map);
+      await this.showIndividualMarkers(map, viewport);
     } else if (level >= 6 && level <= 7) {
       // 읍/면/동 집계 마커 (레벨 6-7)
       console.log(`🏘️ 읍/면/동 집계 마커 모드 (레벨 ${level})`);
-      await this.showClusterMarkers(stores, map, 'dong');
+      await this.showClusterMarkers(map, viewport, 'dong');
     } else if (level >= 8 && level <= 10) {
       // 시/군/구 집계 마커 (레벨 8-10)
       console.log(`🏙️ 시/군/구 집계 마커 모드 (레벨 ${level})`);
-      await this.showClusterMarkers(stores, map, 'sigungu');
+      await this.showClusterMarkers(map, viewport, 'sigungu');
     } else if (level >= 11) {
       // 시/도 집계 마커 (레벨 11+)
       console.log(`🗺️ 시/도 집계 마커 모드 (레벨 ${level})`);
-      await this.showClusterMarkers(stores, map, 'sido');
+      await this.showClusterMarkers(map, viewport, 'sido');
     }
 
     // 프로세스가 중단되었는지 확인
@@ -86,6 +94,47 @@ window.MapMarkerManager = {
     console.log(`✅ 레벨 ${level} 마커 업데이트 완료 (ID: ${processId})`);
     this.isProcessing = false;
     this.currentProcessId = null;
+  },
+
+  // 뷰포트 비교
+  isSameViewport(newViewport) {
+    if (!this.currentViewport) return false;
+    
+    const threshold = 0.001; // 좌표 차이 임계값
+    return Math.abs(this.currentViewport.swLat - newViewport.swLat) < threshold &&
+           Math.abs(this.currentViewport.swLng - newViewport.swLng) < threshold &&
+           Math.abs(this.currentViewport.neLat - newViewport.neLat) < threshold &&
+           Math.abs(this.currentViewport.neLng - newViewport.neLng) < threshold;
+  },
+
+  // 뷰포트 범위 내 매장 데이터 요청
+  async fetchStoresInViewport(viewport, level) {
+    try {
+      const params = new URLSearchParams({
+        swLat: viewport.swLat,
+        swLng: viewport.swLng,
+        neLat: viewport.neLat,
+        neLng: viewport.neLng,
+        level: level
+      });
+
+      const response = await fetch(`/api/stores/viewport?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      if (!data.success || !Array.isArray(data.stores)) {
+        throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
+      }
+
+      console.log(`📍 뷰포트 매장 데이터 수신: ${data.stores.length}개 매장`);
+      return data.stores;
+
+    } catch (error) {
+      console.error('❌ 뷰포트 매장 데이터 요청 실패:', error);
+      return [];
+    }
   },
 
   // 기존 프로세스 완료 대기
@@ -104,36 +153,29 @@ window.MapMarkerManager = {
   },
 
   // 개별 매장 마커 표시 (레벨 1-5)
-  async showIndividualMarkers(stores, map) {
-    console.log(`🏪 개별 매장 마커 생성: ${stores.length}개`);
+  async showIndividualMarkers(map, viewport) {
+    console.log(`🏪 개별 매장 마커 생성 시작`);
 
     const processId = this.currentProcessId;
+    
+    // 뷰포트 범위 내 매장 데이터 요청
+    const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
+    
+    if (this.shouldCancel || this.currentProcessId !== processId) {
+      console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
+      return;
+    }
+
     let createdCount = 0;
 
-    // 뷰포트 필터링: 화면 내 매장만 대상
-    const bounds = map.getBounds();
-    const visibleStores = stores.filter(store => {
-      if (!store.coord || !store.coord.lat || !store.coord.lng) return false;
-
-      const lat = Number(store.coord.lat);
-      const lng = Number(store.coord.lng);
-
-      if (isNaN(lat) || isNaN(lng)) return false;
-
-      const storeLatLng = new kakao.maps.LatLng(lat, lng);
-      return bounds.contain(storeLatLng);
-    });
-
-    console.log(`📍 뷰포트 내 매장: ${visibleStores.length}/${stores.length}개`);
-
-    for (let i = 0; i < visibleStores.length; i++) {
+    for (let i = 0; i < stores.length; i++) {
       // 프로세스 중단 확인 (매 10개마다)
       if (i % 10 === 0 && (this.shouldCancel || this.currentProcessId !== processId)) {
-        console.log(`⏸️ 개별 마커 생성 중단 (${createdCount}/${visibleStores.length}개 완료)`);
+        console.log(`⏸️ 개별 마커 생성 중단 (${createdCount}/${stores.length}개 완료)`);
         return;
       }
 
-      const store = visibleStores[i];
+      const store = stores[i];
       const storeKey = this.ensureStoreKey(store);
       const markerId = `store_${storeKey}`;
 
@@ -170,10 +212,18 @@ window.MapMarkerManager = {
   },
 
   // 집계 마커 표시 (레벨 6+)
-  async showClusterMarkers(stores, map, tier) {
-    console.log(`🏘️ ${tier} 집계 마커 생성: ${stores.length}개 매장`);
+  async showClusterMarkers(map, viewport, tier) {
+    console.log(`🏘️ ${tier} 집계 마커 생성 시작`);
 
     const processId = this.currentProcessId;
+
+    // 뷰포트 범위 내 매장 데이터 요청
+    const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
+    
+    if (this.shouldCancel || this.currentProcessId !== processId) {
+      console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
+      return;
+    }
 
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
@@ -755,14 +805,22 @@ window.MapMarkerManager = {
       let centerCoord = await this.getAdministrativeOfficeCoordinate(regionName, tier);
 
       if (!centerCoord) {
-        // 행정기관 좌표를 찾을 수 없으면 해당 지역 매장들의 센트로이드 사용
-        const stores = this.currentStores.filter(store => {
+        // 행정기관 좌표를 찾을 수 없으면 현재 뷰포트 내 해당 지역 매장들의 센트로이드 사용
+        const viewport = {
+          swLat: this.currentViewport.swLat,
+          swLng: this.currentViewport.swLng,
+          neLat: this.currentViewport.neLat,
+          neLng: this.currentViewport.neLng
+        };
+
+        const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
+        const regionStores = stores.filter(store => {
           if (!store.address) return false;
           const extractedRegion = this.extractRegionName(store.address, tier);
           return extractedRegion === regionName;
         });
 
-        centerCoord = this.calculateCenterCoordinate(stores);
+        centerCoord = this.calculateCenterCoordinate(regionStores);
       }
 
       if (centerCoord) {
@@ -907,6 +965,8 @@ window.MapMarkerManager = {
     let rating = '0.0';
     if (preloadedRating) {
       rating = parseFloat(preloadedRating.ratingAverage).toFixed(1);
+    } else if (store.ratingAverage) {
+      rating = parseFloat(store.ratingAverage).toFixed(1);
     } else {
       const ratingData = await window.loadStoreRatingAsync(storeKey);
       if (ratingData) {

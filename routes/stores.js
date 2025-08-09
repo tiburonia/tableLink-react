@@ -386,7 +386,62 @@ router.get('/:storeId/tables', async (req, res) => {
   }
 });
 
-// 일괄 매장 정보 조회 API (캐시용)
+// 뷰포트 범위 내 매장 조회 API
+router.get('/viewport', async (req, res) => {
+  try {
+    const { swLat, swLng, neLat, neLng, level } = req.query;
+    
+    if (!swLat || !swLng || !neLat || !neLng) {
+      return res.status(400).json({
+        success: false,
+        error: '뷰포트 좌표가 필요합니다 (swLat, swLng, neLat, neLng)'
+      });
+    }
+
+    const currentLevel = parseInt(level) || 1;
+    console.log(`📍 뷰포트 매장 조회 - 레벨 ${currentLevel}, 범위: (${swLat},${swLng}) ~ (${neLat},${neLng})`);
+
+    // 뷰포트 범위 내 매장만 조회
+    const storesResult = await pool.query(`
+      SELECT id, name, category, address, coord, is_open, rating_average, review_count
+      FROM stores 
+      WHERE coord->>'lat' BETWEEN $1 AND $3
+        AND coord->>'lng' BETWEEN $2 AND $4
+      ORDER BY id
+    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
+
+    const stores = storesResult.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      isOpen: store.is_open !== false,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    }));
+
+    console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개 매장 (레벨 ${currentLevel})`);
+
+    res.json({
+      success: true,
+      stores: stores,
+      viewport: { swLat, swLng, neLat, neLng },
+      level: currentLevel,
+      total: stores.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ 뷰포트 매장 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '뷰포트 매장 조회 실패: ' + error.message 
+    });
+  }
+});
+
+// 일괄 매장 정보 조회 API (캐시용) - 유지 (하위 호환성)
 router.get('/batch/basic-info', async (req, res) => {
   try {
     console.log('📦 일괄 매장 기본 정보 조회 요청');
