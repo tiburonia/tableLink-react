@@ -56,7 +56,7 @@ router.get('/viewport', async (req, res) => {
     console.log(`📋 전체 매장 수: ${totalCountResult.rows[0].total}`);
 
     // 좌표가 있는 매장 수 확인
-    const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM stores WHERE coord IS NOT NULL');
+    const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM store_address WHERE latitude IS NOT NULL AND longitude IS NOT NULL');
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
 
     const storesResult = await pool.query(`
