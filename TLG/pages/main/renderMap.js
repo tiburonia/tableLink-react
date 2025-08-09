@@ -72,7 +72,7 @@ async function renderMap() {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
   border-radius: 28px;
   padding: 10px 16px;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 4px 16px rgba(41, 126, 252, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -82,7 +82,7 @@ async function renderMap() {
 }
 
 .search-container:hover {
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.12),
     0 6px 20px rgba(41, 126, 252, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -159,7 +159,7 @@ async function renderMap() {
   overflow-y: auto;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
   border-radius: 0 0 20px 20px;
-  box-shadow: 
+  box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.12),
     0 6px 20px rgba(41, 126, 252, 0.08);
   backdrop-filter: blur(20px);
@@ -254,7 +254,7 @@ async function renderMap() {
   height: 78px;
   background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
   border-top: 1px solid rgba(255,255,255,0.3);
-  box-shadow: 
+  box-shadow:
     0 -8px 32px rgba(41, 126, 252, 0.08),
     0 -4px 16px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -309,7 +309,7 @@ async function renderMap() {
   transform: translateY(-2px);
   background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
   color: #297efc;
-  box-shadow: 
+  box-shadow:
     0 8px 25px rgba(41, 126, 252, 0.15),
     0 3px 10px rgba(0, 0, 0, 0.1);
   border-color: rgba(41, 126, 252, 0.2);
@@ -323,7 +323,7 @@ async function renderMap() {
   transform: translateY(0);
   background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
   color: #1e40af;
-  box-shadow: 
+  box-shadow:
     0 4px 15px rgba(41, 126, 252, 0.2),
     inset 0 2px 4px rgba(41, 126, 252, 0.1);
 }
@@ -333,7 +333,7 @@ async function renderMap() {
   background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
   color: white;
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 6px 20px rgba(41, 126, 252, 0.25),
     0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -606,8 +606,8 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
     }
 
     // 캐시에 데이터가 없거나 새로고침인 경우 서버에서 가져오기
-    console.log(forceRefresh ? 
-      '🔄 강제 새로고침 - 서버에서 최신 데이터 요청 중...' : 
+    console.log(forceRefresh ?
+      '🔄 강제 새로고침 - 서버에서 최신 데이터 요청 중...' :
       '🌐 서버에서 매장 기본 정보 로딩 중...');
 
     const response = await fetch('/api/stores/batch/basic-info');
@@ -695,18 +695,22 @@ async function createMarkersFromCache(stores, map) {
 async function createMarkersFromData(stores, map) {
   console.log('🔄 새 마커 생성 시작:', stores.length, '개 매장');
 
-  if (window.MapMarkerManager && typeof window.MapMarkerManager.createMarkersInBatch === 'function') {
-    const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
+  try {
+    // 기존 전역 변수들 초기화
+    if (!window.markerMap) window.markerMap = new Map();
+    if (!window.currentMarkers) window.currentMarkers = [];
 
-    // 마커 Map과 배열에 저장
-    newMarkers.forEach(marker => {
-      if (marker && marker.storeId) {
-        window.markerMap.set(marker.storeId, marker);
-      }
-    });
+    // 현재 지도 레벨 가져오기
+    const currentLevel = map.getLevel();
+    console.log(`🔄 지도 레벨 ${currentLevel}에 따른 마커 생성: ${stores.length}개 매장`);
 
-    window.currentMarkers = Array.from(window.markerMap.values());
-    console.log(`✅ 새 마커 생성 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
+    // 동적 마커 시스템 사용
+    await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
+
+    console.log('✅ 새 마커 생성 완료 - 총', stores.length, '개 매장 처리');
+
+  } catch (error) {
+    console.error('❌ 마커 생성 실패:', error);
   }
 }
 
