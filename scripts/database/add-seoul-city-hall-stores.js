@@ -196,14 +196,12 @@ async function addSeoulCityHallStores() {
       
       // stores 테이블에 매장 추가
       await pool.query(`
-        INSERT INTO stores (id, name, category, distance, address, menu, coord, review_count, rating_average, is_open)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        INSERT INTO stores (id, name, category, menu, coord, review_count, rating_average, is_open)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `, [
         newStoreId,
         storeName,
         category,
-        `시청에서 ${distance.toFixed(1)}km`,
-        addressInfo.fullAddress,
         JSON.stringify([]),
         JSON.stringify(coord),
         0,
