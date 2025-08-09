@@ -270,21 +270,19 @@ async function add2000Stores() {
         const reviewCount = hasReviews ? Math.floor(Math.random() * 50) + 1 : 0;
         const ratingAverage = hasReviews ? (Math.random() * 2 + 3).toFixed(1) : '0.0'; // 3.0-5.0 점
         
-        const newStoreId = currentMaxId + storeIndex + 1;
-        
-        console.log(`🏪 매장 ${newStoreId}: ${storeName} (${category}, ${city.name})`);
+        console.log(`🏪 매장 생성: ${storeName} (${category}, ${city.name})`);
         
         try {
-          // 매장 데이터 삽입
-          await pool.query(`
+          // 매장 데이터 삽입하고 생성된 ID 반환받기
+          const storeResult = await pool.query(`
             INSERT INTO stores (
-              id, name, category, distance, address, menu, coord, 
+              name, category, distance, address, menu, coord, 
               review_count, rating_average, is_open, phone, 
               description, operating_hours
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id
           `, [
-            newStoreId,
             storeName,
             category,
             '정보없음',
@@ -298,6 +296,9 @@ async function add2000Stores() {
             description,
             operatingHours
           ]);
+          
+          const newStoreId = storeResult.rows[0].id;
+          console.log(`✅ 매장 ${newStoreId} 생성 완료: ${storeName}`);
           
           // 각 매장에 기본 테이블 2-6개 추가
           const tableCount = Math.floor(Math.random() * 5) + 2; // 2-6개
