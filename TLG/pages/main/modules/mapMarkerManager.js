@@ -55,8 +55,8 @@ window.MapMarkerManager = {
     this.currentLevel = level;
     this.currentStores = stores;
 
-    // **모든 마커 완전 제거 (renderMap.js 전역 마커 포함)**
-    this.clearAllMarkersCompletely();
+    // **하드 스위치: 모든 마커/오버레이 강제 제거 (안전장치)**
+    this.hardHideAllMarkersAndOverlays(map);
 
     const mode = this.determineModeByLevel(level);
     console.log(`📊 레벨 ${level} -> 모드: ${mode}`);
@@ -119,18 +119,33 @@ window.MapMarkerManager = {
 
     const processId = this.currentProcessId;
     let createdCount = 0;
+    
+    // 뷰포트 필터링: 화면 내 매장만 대상
+    const bounds = map.getBounds();
+    const visibleStores = stores.filter(store => {
+      if (!store.coord || !store.coord.lat || !store.coord.lng) return false;
+      
+      const lat = Number(store.coord.lat);
+      const lng = Number(store.coord.lng);
+      
+      if (isNaN(lat) || isNaN(lng)) return false;
+      
+      const storeLatLng = new kakao.maps.LatLng(lat, lng);
+      return bounds.contain(storeLatLng);
+    });
+    
+    console.log(`📍 뷰포트 내 매장: ${visibleStores.length}/${stores.length}개`);
 
-    for (let i = 0; i < stores.length; i++) {
+    for (let i = 0; i < visibleStores.length; i++) {
       // 프로세스 중단 확인 (매 10개마다)
       if (i % 10 === 0 && (this.shouldCancel || this.currentProcessId !== processId)) {
-        console.log(`⏸️ 개별 마커 생성 중단 (${createdCount}/${stores.length}개 완료)`);
+        console.log(`⏸️ 개별 마커 생성 중단 (${createdCount}/${visibleStores.length}개 완료)`);
         return;
       }
 
-      const store = stores[i];
-      if (!store.coord) continue;
-
-      const markerId = `store_${store.id}`;
+      const store = visibleStores[i];
+      const storeKey = this.ensureStoreKey(store);
+      const markerId = `store_${storeKey}`;
       
       // 이미 생성된 마커가 있으면 재사용
       if (this.individualMarkers.has(markerId)) {
@@ -252,7 +267,9 @@ window.MapMarkerManager = {
       }
 
       const [regionKey, regionStores] = clusterArray[i];
-      const clusterId = `${tier}_${regionKey}`;
+      // 집계 마커 키도 정규화
+      const normalizedRegionKey = String(regionKey).replace(/[^a-zA-Z0-9가-힣\s]/g, '_');
+      const clusterId = `${tier}_${normalizedRegionKey}`;
       
       // 이미 생성된 집계 마커가 있으면 재사용
       if (this.clusterMarkers.has(clusterId)) {
@@ -700,16 +717,26 @@ window.MapMarkerManager = {
     console.log('✅ 모든 마커 완전 삭제 완료');
   },
 
-  // 모든 마커 완전 삭제 (renderMap.js 전역 마커 포함)
-  clearAllMarkersCompletely() {
-    console.log('🧹 모든 마커 완전 삭제 시작 (전역 마커 포함)');
+  // 하드 스위치: 모든 마커/오버레이 강제 제거 (안전장치)
+  hardHideAllMarkersAndOverlays(map) {
+    console.log('🛡️ 하드 스위치 시작 - 모든 마커/오버레이 강제 제거');
     
-    // 1. MapMarkerManager 내부 마커 삭제
-    this.hideAllMarkers();
+    // 1. MapMarkerManager 내부 마커 완전 제거
+    this.individualMarkers.forEach((marker, markerId) => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
     this.individualMarkers.clear();
+    
+    this.clusterMarkers.forEach((marker, markerId) => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
     this.clusterMarkers.clear();
     
-    // 2. renderMap.js 전역 마커 삭제
+    // 2. renderMap.js 전역 마커 완전 제거
     if (window.markerMap && window.markerMap.size > 0) {
       window.markerMap.forEach((marker, storeId) => {
         if (marker && typeof marker.setMap === 'function') {
@@ -717,7 +744,7 @@ window.MapMarkerManager = {
         }
       });
       window.markerMap.clear();
-      console.log('🗑️ 전역 markerMap 클리어 완료');
+      console.log('🗑️ 전역 markerMap 강제 클리어');
     }
 
     if (window.currentMarkers && window.currentMarkers.length > 0) {
@@ -727,15 +754,75 @@ window.MapMarkerManager = {
         }
       });
       window.currentMarkers = [];
-      console.log('🗑️ 전역 currentMarkers 배열 클리어 완료');
+      console.log('🗑️ 전역 currentMarkers 강제 클리어');
     }
+    
+    // 3. 지역 오버레이 제거 (집계 마커 관련)
+    if (window.RegionOverlays && window.RegionOverlays.length > 0) {
+      window.RegionOverlays.forEach(overlay => {
+        if (overlay && typeof overlay.setMap === 'function') {
+          overlay.setMap(null);
+        }
+      });
+      window.RegionOverlays = [];
+      console.log('🗑️ 지역 오버레이 강제 클리어');
+    }
+    
+    // 4. 클러스터러 제거 (혹시 있다면)
+    if (window.Clusterer && typeof window.Clusterer.clear === 'function') {
+      window.Clusterer.clear();
+      console.log('🗑️ 클러스터러 강제 클리어');
+    }
+    
+    // 5. 지도에서 모든 오버레이 제거 (마지막 안전장치)
+    if (map && typeof map.setMap === 'function') {
+      // 카카오맵에는 전체 오버레이를 한번에 지우는 API가 없으므로 우리가 관리하는 것만 처리
+    }
+    
+    console.log('✅ 하드 스위치 완료 - 모든 마커/오버레이 강제 제거');
+  },
 
-    console.log('✅ 모든 마커 완전 삭제 완료 (전역 마커 포함)');
+  // 매장 키 정규화 (ID 통일 및 중복 방지)
+  ensureStoreKey(store) {
+    // ID를 문자열로 통일, 누락 시 좌표 기반 대체키 생성
+    let key = store.id || store.storeId || store._id;
+    
+    if (!key && store.coord && store.coord.lat && store.coord.lng) {
+      // 좌표 기반 대체키 (소수점 6자리까지)
+      const lat = Number(store.coord.lat).toFixed(6);
+      const lng = Number(store.coord.lng).toFixed(6);
+      key = `coord_${lat}_${lng}`;
+    }
+    
+    if (!key) {
+      // 최후의 수단: 랜덤키
+      key = `unknown_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      console.warn(`⚠️ 매장 키 생성 실패 - 랜덤키 사용: ${key}`, store);
+    }
+    
+    return String(key);
+  },
+
+  // 모든 마커 완전 삭제 (레거시 호환)
+  clearAllMarkersCompletely() {
+    this.hardHideAllMarkersAndOverlays();
   },
 
   // 기존 개별 마커 생성 함수 (유지)
   async createCustomMarker(store, map, preloadedRating = null) {
-    if (!store.coord) return;
+    if (!store.coord) return null;
+    
+    // 좌표 정규화 (문자열 → 숫자)
+    const lat = Number(store.coord.lat);
+    const lng = Number(store.coord.lng);
+    
+    if (isNaN(lat) || isNaN(lng)) {
+      console.warn(`⚠️ 유효하지 않은 좌표: ${store.name} (${store.coord.lat}, ${store.coord.lng})`);
+      return null;
+    }
+
+    // 매장 키 정규화
+    const storeKey = this.ensureStoreKey(store);
 
     // 매장 운영 상태 확인
     const isOpen = store.isOpen !== false;
@@ -747,7 +834,7 @@ window.MapMarkerManager = {
     if (preloadedRating) {
       rating = parseFloat(preloadedRating.ratingAverage).toFixed(1);
     } else {
-      const ratingData = await window.loadStoreRatingAsync(store.id);
+      const ratingData = await window.loadStoreRatingAsync(storeKey);
       if (ratingData) {
         rating = parseFloat(ratingData.ratingAverage).toFixed(1);
       }
@@ -756,17 +843,17 @@ window.MapMarkerManager = {
     // 커스텀 마커 HTML 생성
     const customOverlayContent = this.getMarkerHTML(store, rating, statusColor, statusText);
 
-    // 커스텀 오버레이 생성
+    // 커스텀 오버레이 생성 (정규화된 좌표 사용)
     const customOverlay = new kakao.maps.CustomOverlay({
       map: map,
-      position: new kakao.maps.LatLng(store.coord.lat, store.coord.lng),
+      position: new kakao.maps.LatLng(lat, lng),
       content: customOverlayContent,
       yAnchor: 0.95,
       xAnchor: 0.5
     });
 
-    // 마커에 매장 메타데이터 추가
-    customOverlay.storeId = store.id;
+    // 마커에 매장 메타데이터 추가 (정규화된 키 사용)
+    customOverlay.storeId = storeKey;
     customOverlay.storeName = store.name;
     customOverlay.isOpen = store.isOpen;
     customOverlay.createdAt = new Date().toISOString();
