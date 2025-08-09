@@ -384,6 +384,9 @@ async function renderMap() {
 
   const map = new kakao.maps.Map(container, options);
 
+  // 지도 인스턴스를 전역 변수로 저장
+  window.currentMap = map;
+
   // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
   window.currentMarkers = [];
   window.markerMap = new Map();

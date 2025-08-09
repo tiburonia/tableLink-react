@@ -534,6 +534,7 @@ window.MapMarkerManager = {
     customOverlay.regionName = regionName;
     customOverlay.stores = stores;
     customOverlay.tier = tier;
+    customOverlay.mapInstance = map;
 
     return customOverlay;
   },
@@ -558,7 +559,7 @@ window.MapMarkerManager = {
     const displayName = this.extractDisplayName(regionName, tier);
 
     return `
-      <div class="cluster-marker" onclick="window.MapMarkerManager.handleClusterClick('${regionName}', '${tier}')">
+      <div class="cluster-marker" onclick="window.MapMarkerManager.handleClusterClick('${regionName}', '${tier}', this.closest('.cluster-marker').mapInstance)"></old_str>
         <div class="cluster-container">
           <div class="cluster-rectangle">
             <div class="cluster-left">
@@ -589,18 +590,20 @@ window.MapMarkerManager = {
         }
 
         .cluster-rectangle {
-          width: 70px;
-          height: 30px;
+          min-width: 80px;
+          max-width: 150px;
+          width: auto;
+          height: 32px;
           background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
-          border-radius: 15px;
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           border: 2px solid white;
           box-shadow: 0 3px 15px rgba(41, 126, 252, 0.3);
-          padding: 0 8px;
+          padding: 0 10px;
           position: relative;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .cluster-left {
@@ -610,18 +613,19 @@ window.MapMarkerManager = {
           align-items: flex-start;
           justify-content: center;
           gap: 1px;
+          min-width: 0;
         }
 
         .cluster-name {
           color: white;
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 700;
-          line-height: 1;
+          line-height: 1.1;
           text-shadow: 0 1px 2px rgba(0,0,0,0.4);
           white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 40px;
+          overflow: visible;
+          text-overflow: none;
+          max-width: none;
         }
 
         .cluster-info {
@@ -803,9 +807,62 @@ window.MapMarkerManager = {
   },
 
   // 집계 마커 클릭 처리
-  handleClusterClick(regionName, tier) {
+  async handleClusterClick(regionName, tier, mapInstance = null) {
     console.log(`📍 ${tier} 집계 마커 클릭: ${regionName}`);
-    // TODO: 해당 지역으로 지도 확대 또는 매장 목록 필터링
+    
+    try {
+      // 해당 지역의 좌표를 찾아서 지도 이동
+      let centerCoord = await this.getAdministrativeOfficeCoordinate(regionName, tier);
+      
+      if (!centerCoord) {
+        // 행정기관 좌표를 찾을 수 없으면 해당 지역 매장들의 센트로이드 사용
+        const stores = this.currentStores.filter(store => {
+          if (!store.address) return false;
+          const extractedRegion = this.extractRegionName(store.address, tier);
+          return extractedRegion === regionName;
+        });
+        
+        centerCoord = this.calculateCenterCoordinate(stores);
+      }
+      
+      if (centerCoord) {
+        // 저장된 지도 인스턴스를 우선 사용, 없으면 전역에서 찾기
+        let map = mapInstance;
+        
+        if (!map) {
+          // renderMap.js에서 생성된 지도를 전역 변수로 저장했다면 사용
+          if (window.currentMap) {
+            map = window.currentMap;
+          } else {
+            // 마지막 수단: 카카오맵 인스턴스에서 찾기
+            const mapElement = document.getElementById('map');
+            if (mapElement && mapElement._map) {
+              map = mapElement._map;
+            }
+          }
+        }
+        
+        if (map && map.panTo && map.setLevel) {
+          const moveLatLng = new kakao.maps.LatLng(centerCoord.lat, centerCoord.lng);
+          
+          // 부드러운 이동 효과
+          map.panTo(moveLatLng);
+          
+          // 레벨을 4로 설정
+          setTimeout(() => {
+            map.setLevel(4);
+            console.log(`✅ ${regionName} 지역으로 이동 완료 (레벨 4)`);
+          }, 300);
+        } else {
+          console.warn('⚠️ 유효한 지도 인스턴스를 찾을 수 없음');
+        }
+      } else {
+        console.warn(`⚠️ ${regionName} 지역의 좌표를 찾을 수 없음`);
+      }
+      
+    } catch (error) {
+      console.error('❌ 집계 마커 클릭 처리 중 오류:', error);
+    }
   },
 
   // 모든 마커 숨기기
