@@ -655,11 +655,17 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
     await window.storeCache.setStoreDataAsync(stores);
     console.log('💾 새로운 매장 데이터 캐시 저장 완료');
 
-    // 기존 마커 완전 삭제 후 새로 생성 (forceRefresh가 아닌 경우에만)
-    if (!forceRefresh) {
-      clearAllMarkers();
+    // 기존 마커 완전 삭제 (모든 경우)
+    clearAllMarkers();
+    
+    // MapMarkerManager를 통해서만 마커 생성
+    if (window.MapMarkerManager) {
+      const currentLevel = map.getLevel();
+      console.log('🎯 MapMarkerManager를 통한 마커 생성 - 현재 레벨:', currentLevel);
+      await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
+    } else {
+      console.error('❌ MapMarkerManager가 로드되지 않음');
     }
-    await createMarkersFromData(stores, map);
 
     // 매장 목록 업데이트
     setTimeout(() => {
@@ -708,8 +714,11 @@ async function createMarkersFromCache(stores, map) {
   console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
 
   // DOM 재생성 후에는 항상 마커를 새로 생성해야 함
-  console.log('🔄 캐시 데이터로 새 마커 생성 시작');
-  await createMarkersFromData(stores, map);
+  console.log('🔄 캐시 데이터로 MapMarkerManager를 통한 마커 생성');
+  if (window.MapMarkerManager) {
+    const currentLevel = map.getLevel();
+    await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
+  }
 }
 
 // 실제 마커 생성 함수 (MapMarkerManager 통합)
