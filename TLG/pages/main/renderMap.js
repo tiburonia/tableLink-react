@@ -396,8 +396,14 @@ async function renderMap() {
     console.log(`🔍 지도 레벨 변경됨: ${currentLevel}`);
     
     // 레벨 변경시 마커 다시 생성
-    setTimeout(() => {
-      handleMapLevelChange(map, currentLevel);
+    setTimeout(async () => {
+      // 캐시된 매장 데이터 가져오기
+      const cachedStores = window.storeCache.getStores();
+      if (cachedStores && cachedStores.length > 0) {
+        console.log(`🔄 레벨 ${currentLevel} 변경에 따른 마커 업데이트 시작`);
+        await window.MapMarkerManager.handleMapLevelChange(map, cachedStores);
+        console.log(`✅ 레벨 ${currentLevel} 마커 업데이트 완료: ${window.MapMarkerManager.currentMarkers.length}개`);
+      }
     }, 100);
   });
 

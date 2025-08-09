@@ -1,7 +1,331 @@
+
 // 지도 마커 관리자
 window.MapMarkerManager = {
-  // 현재 표시 모드 (individual: 개별 매장, cluster: 지역 집계)
-  currentDisplayMode: 'individual',
+  // 전역 상태 관리
+  currentDisplayMode: 'individual', // 'individual' | 'cluster'
+  currentMarkers: [],
+  regionCache: {
+    dong: null,
+    sigungu: null, 
+    sido: null
+  },
+
+  // 레벨별 모드 판정
+  getModeByLevel(level) {
+    return level <= 5 ? 'individual' : 'cluster';
+  },
+
+  // 레벨별 지역 티어 판정
+  getRegionTierByLevel(level) {
+    if (level >= 10) return 'sido';        // 도/특별시/광역시
+    if (level >= 8) return 'sigungu';      // 시/군/구
+    if (level >= 6) return 'dong';         // 읍/면/동
+    return null;
+  },
+
+  // 지도 레벨 변경 핸들러 (메인 전환 로직)
+  async handleMapLevelChange(map, stores) {
+    const currentLevel = map.getLevel();
+    const newMode = this.getModeByLevel(currentLevel);
+    
+    console.log(`🔄 지도 레벨 ${currentLevel} - 모드: ${newMode}`);
+
+    // 기존 마커 완전 제거
+    this.clearAllMarkers();
+
+    if (newMode === 'individual') {
+      // 개별 매장 마커 표시
+      this.currentDisplayMode = 'individual';
+      const markers = await this.createIndividualMarkers(stores, map);
+      this.currentMarkers = markers;
+      console.log(`✅ 개별 마커 표시: ${markers.length}개`);
+    } else {
+      // 지역 집계 마커 표시
+      this.currentDisplayMode = 'cluster';
+      const tier = this.getRegionTierByLevel(currentLevel);
+      const clusterMarkers = await this.createClusterMarkers(stores, map, tier);
+      this.currentMarkers = clusterMarkers;
+      console.log(`✅ ${tier} 집계 마커 표시: ${clusterMarkers.length}개`);
+    }
+  },
+
+  // 기존 마커 완전 삭제
+  clearAllMarkers() {
+    if (this.currentMarkers && this.currentMarkers.length > 0) {
+      this.currentMarkers.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(null);
+        }
+      });
+      this.currentMarkers = [];
+    }
+
+    // 전역 변수도 정리
+    if (window.currentMarkers) {
+      window.currentMarkers.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(null);
+        }
+      });
+      window.currentMarkers = [];
+    }
+
+    if (window.markerMap) {
+      window.markerMap.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(null);
+        }
+      });
+      window.markerMap.clear();
+    }
+  },
+
+  // 개별 매장 마커 생성
+  async createIndividualMarkers(stores, map) {
+    console.log(`🏪 개별 매장 마커 생성: ${stores.length}개`);
+
+    // 1. 모든 매장의 별점 정보 일괄 조회
+    const storeIds = stores.map(store => store.id);
+    const allRatings = await window.loadAllStoreRatings(storeIds);
+
+    // 2. 각 매장 마커 생성
+    const markers = [];
+    for (const store of stores) {
+      const preloadedRating = allRatings[store.id];
+      const marker = await this.createCustomMarker(store, map, preloadedRating);
+      if (marker) {
+        markers.push(marker);
+      }
+    }
+
+    console.log(`✅ 개별 마커 생성 완료: ${markers.length}개`);
+    return markers;
+  },
+
+  // 지역별 집계 마커 생성
+  async createClusterMarkers(stores, map, tier) {
+    console.log(`🗺️ ${tier} 집계 마커 생성 - ${stores.length}개 매장 처리`);
+
+    // 캐시된 그룹핑 결과 확인
+    if (this.regionCache[tier]) {
+      console.log(`📁 ${tier} 캐시 사용`);
+      return this.createMarkersFromGroups(this.regionCache[tier], map);
+    }
+
+    // 새로운 그룹핑 수행
+    const regionGroups = this.groupStoresByTier(stores, tier);
+    this.regionCache[tier] = regionGroups;
+
+    console.log(`📍 ${tier} 그룹핑 결과:`, Object.keys(regionGroups).map(region => 
+      `${region}: ${regionGroups[region].stores.length}개`
+    ));
+
+    return this.createMarkersFromGroups(regionGroups, map);
+  },
+
+  // 그룹핑 결과로부터 마커 생성
+  createMarkersFromGroups(regionGroups, map) {
+    const clusterMarkers = [];
+    
+    for (const [regionName, regionData] of Object.entries(regionGroups)) {
+      if (regionData.stores.length > 0) {
+        const clusterMarker = this.createClusterMarker(
+          regionName, 
+          regionData.stores.length, 
+          regionData.centerCoord, 
+          map
+        );
+
+        clusterMarker.includedStores = regionData.stores;
+        clusterMarker.regionName = regionName;
+        clusterMarkers.push(clusterMarker);
+      }
+    }
+
+    return clusterMarkers;
+  },
+
+  // 한국 주소 파싱 (개선된 버전)
+  parseKoreanAddress(address) {
+    if (!address || typeof address !== 'string') {
+      return { sido: '미상', sigungu: '미상', dong: '미상' };
+    }
+
+    try {
+      // 우편번호와 괄호 내용 제거
+      const cleanAddress = address
+        .replace(/^\[\d{5}\]\s*/, '')  // 우편번호 제거
+        .replace(/\([^)]*\)/g, '')    // 괄호 내용 제거
+        .trim();
+
+      const addressParts = cleanAddress.split(' ').filter(part => part.length > 0);
+
+      if (addressParts.length === 0) {
+        return { sido: '미상', sigungu: '미상', dong: '미상' };
+      }
+
+      // 시/도 정규화
+      let sido = this.normalizeSido(addressParts[0] || '');
+      let sigungu = this.normalizeSigungu(addressParts[1] || '');
+      let dong = this.normalizeDong(addressParts[2] || '');
+
+      // 동 정보가 없으면 더 뒤에서 찾기
+      if (dong === '미상' && addressParts.length > 3) {
+        for (let i = 2; i < addressParts.length; i++) {
+          const candidate = this.normalizeDong(addressParts[i]);
+          if (candidate !== '미상') {
+            dong = candidate;
+            break;
+          }
+        }
+      }
+
+      return { sido, sigungu, dong };
+
+    } catch (error) {
+      console.warn('주소 파싱 오류:', address, error);
+      return { sido: '파싱오류', sigungu: '파싱오류', dong: '파싱오류' };
+    }
+  },
+
+  // 시/도 정규화 (중복 제거)
+  normalizeSido(sido) {
+    if (!sido) return '미상';
+
+    // 정규화 매핑
+    const sidoMap = {
+      '서울특별시': '서울',
+      '서울시': '서울',
+      '서울': '서울',
+      '부산광역시': '부산',
+      '부산시': '부산', 
+      '부산': '부산',
+      '대구광역시': '대구',
+      '대구시': '대구',
+      '대구': '대구',
+      '인천광역시': '인천',
+      '인천시': '인천',
+      '인천': '인천',
+      '광주광역시': '광주',
+      '광주시': '광주',
+      '광주': '광주',
+      '대전광역시': '대전',
+      '대전시': '대전',
+      '대전': '대전',
+      '울산광역시': '울산',
+      '울산시': '울산',
+      '울산': '울산',
+      '세종특별자치시': '세종',
+      '세종시': '세종',
+      '세종': '세종',
+      '경기도': '경기',
+      '경기': '경기',
+      '강원도': '강원',
+      '강원특별자치도': '강원',
+      '강원': '강원',
+      '충청북도': '충북',
+      '충북': '충북',
+      '충청남도': '충남',
+      '충남': '충남',
+      '전라북도': '전북',
+      '전북': '전북',
+      '전라남도': '전남',
+      '전남': '전남',
+      '경상북도': '경북',
+      '경북': '경북',
+      '경상남도': '경남',
+      '경남': '경남',
+      '제주특별자치도': '제주',
+      '제주도': '제주',
+      '제주': '제주'
+    };
+
+    return sidoMap[sido] || sido || '미상';
+  },
+
+  // 시/군/구 정규화
+  normalizeSigungu(sigungu) {
+    if (!sigungu) return '미상';
+
+    // 기본 정규화 (시, 군, 구 제거)
+    const normalized = sigungu
+      .replace(/(시|군|구)$/, '')
+      .trim();
+
+    return normalized || '미상';
+  },
+
+  // 읍/면/동 정규화
+  normalizeDong(dong) {
+    if (!dong) return '미상';
+
+    // 읍/면/동으로 끝나는지 확인
+    if (/[읍면동]$/.test(dong)) {
+      return dong;
+    }
+
+    return '미상';
+  },
+
+  // 티어별 매장 그룹핑
+  groupStoresByTier(stores, tier) {
+    const regionGroups = {};
+
+    stores.forEach(store => {
+      if (!store.coord || !store.address) return;
+
+      const parsed = this.parseKoreanAddress(store.address);
+      let regionKey;
+
+      // 티어에 따른 지역 키 생성
+      switch (tier) {
+        case 'sido':
+          regionKey = parsed.sido;
+          break;
+        case 'sigungu':
+          regionKey = `${parsed.sido} ${parsed.sigungu}`;
+          break;
+        case 'dong':
+          regionKey = `${parsed.sido} ${parsed.sigungu} ${parsed.dong}`;
+          break;
+        default:
+          regionKey = '미상 지역';
+      }
+
+      if (!regionGroups[regionKey]) {
+        regionGroups[regionKey] = {
+          stores: [],
+          totalLat: 0,
+          totalLng: 0,
+          centerCoord: null
+        };
+      }
+
+      regionGroups[regionKey].stores.push(store);
+      regionGroups[regionKey].totalLat += store.coord.lat;
+      regionGroups[regionKey].totalLng += store.coord.lng;
+    });
+
+    // 각 지역의 중심 좌표 계산
+    Object.keys(regionGroups).forEach(regionKey => {
+      const group = regionGroups[regionKey];
+      const storeCount = group.stores.length;
+
+      group.centerCoord = {
+        lat: group.totalLat / storeCount,
+        lng: group.totalLng / storeCount
+      };
+    });
+
+    return regionGroups;
+  },
+
+  // 지도 레벨에 따른 동적 마커 표시 (기존 호환성)
+  async createMarkersInBatch(stores, map) {
+    const currentLevel = map.getLevel();
+    await this.handleMapLevelChange(map, stores);
+    return this.currentMarkers;
+  },
 
   async createCustomMarker(store, map, preloadedRating = null) {
     if (!store.coord) return;
@@ -65,162 +389,20 @@ window.MapMarkerManager = {
     return clusterOverlay;
   },
 
-  // 지도 레벨에 따른 동적 마커 표시
-  async createMarkersInBatch(stores, map) {
-    if (!Array.isArray(stores) || stores.length === 0) {
-      console.warn('⚠️ 생성할 매장 목록이 비어있음');
-      return [];
-    }
-
-    const currentLevel = map.getLevel();
-    console.log(`🔄 지도 레벨 ${currentLevel}에 따른 마커 생성: ${stores.length}개 매장`);
-
-    // 레벨 1-5: 개별 매장 마커 표시
-    if (currentLevel <= 5) {
-      this.currentDisplayMode = 'individual';
-      return await this.createIndividualMarkers(stores, map);
-    } 
-    // 레벨 6+: 지역별 집계 마커 표시
-    else {
-      this.currentDisplayMode = 'cluster';
-      return await this.createClusterMarkers(stores, map, currentLevel);
-    }
-  },
-
-  // 개별 매장 마커 생성 (기존 로직)
-  async createIndividualMarkers(stores, map) {
-    console.log(`🏪 개별 매장 마커 생성: ${stores.length}개`);
-
-    // 1. 모든 매장의 별점 정보 일괄 조회
-    const storeIds = stores.map(store => store.id);
-    const allRatings = await window.loadAllStoreRatings(storeIds);
-
-    // 2. 각 매장 마커 생성 (별점 정보는 이미 준비됨)
-    const markers = [];
-    for (const store of stores) {
-      const preloadedRating = allRatings[store.id];
-      const marker = await this.createCustomMarker(store, map, preloadedRating);
-      if (marker) {
-        markers.push(marker);
-      }
-    }
-
-    console.log(`✅ 개별 마커 생성 완료: ${markers.length}개`);
-    return markers;
-  },
-
-  // 지역별 집계 마커 생성
-  async createClusterMarkers(stores, map, level) {
-    console.log(`🗺️ 지역별 집계 마커 생성 (레벨 ${level}) - ${stores.length}개 매장 처리`);
-
-    // 주소 기반 지역 그룹핑
-    const regionGroups = this.groupStoresByRegion(stores, level);
-    console.log(`📍 지역 그룹핑 결과:`, Object.keys(regionGroups).map(region => 
-      `${region}: ${regionGroups[region].stores.length}개`
-    ));
-
-    const clusterMarkers = [];
-    for (const [regionName, regionData] of Object.entries(regionGroups)) {
-      if (regionData.stores.length > 0) {
-        console.log(`🏗️ 클러스터 마커 생성: ${regionName} (${regionData.stores.length}개 매장)`);
-
-        const clusterMarker = this.createClusterMarker(
-          regionName, 
-          regionData.stores.length, 
-          regionData.centerCoord, 
-          map
-        );
-
-        // 클러스터에 포함된 매장 정보 저장
-        clusterMarker.includedStores = regionData.stores;
-        clusterMarker.regionName = regionName;
-        clusterMarkers.push(clusterMarker);
-      }
-    }
-
-    console.log(`✅ 지역별 집계 마커 생성 완료: ${clusterMarkers.length}개 지역`);
-    return clusterMarkers;
-  },
-
-  // 주소 기반 지역 그룹핑
-  groupStoresByRegion(stores, level) {
-    const regionGroups = {};
-
-    stores.forEach(store => {
-      if (!store.coord || !store.address) return;
-
-      // 주소에서 지역 추출 (레벨에 따라 다른 단위)
-      const regionName = this.extractRegionFromAddress(store.address, level);
-
-      if (!regionGroups[regionName]) {
-        regionGroups[regionName] = {
-          stores: [],
-          totalLat: 0,
-          totalLng: 0,
-          centerCoord: null
-        };
-      }
-
-      regionGroups[regionName].stores.push(store);
-      regionGroups[regionName].totalLat += store.coord.lat;
-      regionGroups[regionName].totalLng += store.coord.lng;
-    });
-
-    // 각 지역의 중심 좌표 계산
-    Object.keys(regionGroups).forEach(regionName => {
-      const group = regionGroups[regionName];
-      const storeCount = group.stores.length;
-
-      group.centerCoord = {
-        lat: group.totalLat / storeCount,
-        lng: group.totalLng / storeCount
-      };
-    });
-
-    return regionGroups;
-  },
-
-  // 주소에서 지역명 추출 (레벨별)
+  // 주소에서 지역명 추출 (하위 호환성)
   extractRegionFromAddress(address, level) {
-    if (!address || typeof address !== 'string') return '미상 지역';
+    const parsed = this.parseKoreanAddress(address);
+    const tier = this.getRegionTierByLevel(level);
 
-    try {
-      // 우편번호와 괄호 내용 제거 후 주소 파싱
-      const cleanAddress = address
-        .replace(/^\[\d{5}\]\s*/, '')  // 우편번호 제거
-        .replace(/\([^)]*\)/g, '')    // 괄호 내용 제거
-        .trim();
-
-      const addressParts = cleanAddress.split(' ').filter(part => part.length > 0);
-
-      if (addressParts.length === 0) return '미상 지역';
-
-      // 레벨에 따른 지역 단위 결정
-      if (level >= 10) {
-        // 레벨 10+: 도/특별시/광역시 단위
-        return addressParts[0] || '미상 도/시';
-      } else if (level >= 8) {
-        // 레벨 8-9: 시/군/구 단위
-        const region1 = addressParts[0] || '';
-        const region2 = addressParts[1] || '';
-        return region2 ? `${region1} ${region2}` : (region1 || '미상 시/군/구');
-      } else if (level >= 6) {
-        // 레벨 6-7: 읍/면/동 단위
-        const region1 = addressParts[0] || '';
-        const region2 = addressParts[1] || '';
-        const region3 = addressParts[2] || '';
-
-        if (region3) return `${region1} ${region2} ${region3}`;
-        if (region2) return `${region1} ${region2}`;
-        return region1 || '미상 읍/면/동';
-      } else {
-        // 레벨 1-5: 개별 매장 표시 (이 함수가 호출되지 않아야 함)
-        console.warn(`⚠️ 레벨 ${level}에서 지역 추출이 호출됨 - 개별 마커를 표시해야 함`);
+    switch (tier) {
+      case 'sido':
+        return parsed.sido;
+      case 'sigungu':
+        return `${parsed.sido} ${parsed.sigungu}`;
+      case 'dong':
+        return `${parsed.sido} ${parsed.sigungu} ${parsed.dong}`;
+      default:
         return '개별 매장';
-      }
-    } catch (error) {
-      console.warn('주소 파싱 오류:', address, error);
-      return '파싱 오류';
     }
   },
 
