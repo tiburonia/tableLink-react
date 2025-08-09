@@ -138,9 +138,33 @@ async function insertSampleData() {
   const existingStores = await pool.query('SELECT COUNT(*) FROM stores');
 
   if (parseInt(existingStores.rows[0].count) === 0) {
-    // data.js에서 stores 데이터 가져와서 삽입 (reviews 제외)
-    const dataModule = require('./script/data.js');
-    const stores = dataModule.stores || dataModule;
+    // 직접 매장 데이터 정의
+    const stores = [
+      { id: 1, name: "맛있는 한식당", category: "한식", isOpen: true, coord: { lat: 37.5665, lng: 126.9780 }, menu: [] },
+      { id: 2, name: "중화요리 명가", category: "중식", isOpen: true, coord: { lat: 37.5670, lng: 126.9785 }, menu: [] },
+      { id: 3, name: "스시 전문점", category: "일식", isOpen: true, coord: { lat: 37.5660, lng: 126.9775 }, menu: [] },
+      { id: 4, name: "이탈리아 레스토랑", category: "양식", isOpen: true, coord: { lat: 37.5675, lng: 126.9790 }, menu: [] },
+      { id: 5, name: "아늑한 카페", category: "카페", isOpen: true, coord: { lat: 37.5655, lng: 126.9770 }, menu: [] },
+      { id: 6, name: "치킨 전문점", category: "치킨", isOpen: true, coord: { lat: 37.5680, lng: 126.9795 }, menu: [] },
+      { id: 7, name: "전통 한식", category: "한식", isOpen: false, coord: { lat: 37.5650, lng: 126.9765 }, menu: [] },
+      { id: 8, name: "프렌치 비스트로", category: "양식", isOpen: true, coord: { lat: 37.5685, lng: 126.9800 }, menu: [] },
+      { id: 9, name: "라멘 전문점", category: "일식", isOpen: true, coord: { lat: 37.5645, lng: 126.9760 }, menu: [] },
+      { id: 10, name: "디저트 카페", category: "카페", isOpen: true, coord: { lat: 37.5690, lng: 126.9805 }, menu: [] },
+      { id: 11, name: "김치찌개 맛집", category: "한식", isOpen: true, coord: { lat: 37.5640, lng: 126.9755 }, menu: [] },
+      { id: 12, name: "마라탕 전문점", category: "중식", isOpen: true, coord: { lat: 37.5695, lng: 126.9810 }, menu: [] },
+      { id: 13, name: "돈카츠 하우스", category: "일식", isOpen: false, coord: { lat: 37.5635, lng: 126.9750 }, menu: [] },
+      { id: 14, name: "스테이크 전문점", category: "양식", isOpen: true, coord: { lat: 37.5700, lng: 126.9815 }, menu: [] },
+      { id: 15, name: "브런치 카페", category: "카페", isOpen: true, coord: { lat: 37.5630, lng: 126.9745 }, menu: [] },
+      { id: 16, name: "양념치킨 맛집", category: "치킨", isOpen: true, coord: { lat: 37.5705, lng: 126.9820 }, menu: [] },
+      { id: 17, name: "비빔밥 전문점", category: "한식", isOpen: true, coord: { lat: 37.5625, lng: 126.9740 }, menu: [] },
+      { id: 18, name: "딤섬 전문점", category: "중식", isOpen: false, coord: { lat: 37.5710, lng: 126.9825 }, menu: [] },
+      { id: 19, name: "우동 전문점", category: "일식", isOpen: true, coord: { lat: 37.5620, lng: 126.9735 }, menu: [] },
+      { id: 20, name: "파스타 전문점", category: "양식", isOpen: true, coord: { lat: 37.5715, lng: 126.9830 }, menu: [] },
+      { id: 21, name: "로스터리 카페", category: "카페", isOpen: true, coord: { lat: 37.5615, lng: 126.9730 }, menu: [] },
+      { id: 22, name: "후라이드 치킨", category: "치킨", isOpen: true, coord: { lat: 37.5720, lng: 126.9835 }, menu: [] },
+      { id: 23, name: "국밥 전문점", category: "한식", isOpen: true, coord: { lat: 37.5610, lng: 126.9725 }, menu: [] },
+      { id: 24, name: "짜장면 맛집", category: "중식", isOpen: true, coord: { lat: 37.5725, lng: 126.9840 }, menu: [] }
+    ];
 
     for (const store of stores) {
       await pool.query(`
@@ -150,7 +174,7 @@ async function insertSampleData() {
         store.id,
         store.name,
         store.category,
-        store.distance || '정보없음',
+        '정보없음',
         JSON.stringify(store.menu || []),
         JSON.stringify(store.coord || { lat: 37.5665, lng: 126.9780 }),
         0, // review_count는 나중에 계산
