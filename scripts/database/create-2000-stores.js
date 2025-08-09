@@ -108,10 +108,9 @@ async function create2000Stores() {
         
         const newStoreId = currentMaxId + storeIndex + 1;
         
-        console.log(`🏪 매장 ${newStoreId}: ${storeName} (${category}) - ${coord.lat}, ${coord.lng}`);
+        console.log(`🏪 매장 생성 예정: ${storeName} (${category}) - ${coord.lat}, ${coord.lng}`);
         
         storeData.push({
-          id: newStoreId,
           name: storeName,
           category: category,
           coord: coord,
@@ -125,7 +124,8 @@ async function create2000Stores() {
       console.log(`💾 배치 ${batch + 1} 데이터베이스 삽입 중...`);
       
       for (const store of storeData) {
-        await pool.query(`
+        // ID를 자동 생성하도록 INSERT 쿼리 수정
+        const insertResult = await pool.query(`
           INSERT INTO stores (
             name, 
             category, 
@@ -143,6 +143,7 @@ async function create2000Stores() {
             region_code
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          RETURNING id
         `, [
           store.name,
           store.category,
@@ -160,6 +161,9 @@ async function create2000Stores() {
           null  // region_code
         ]);
         
+        const actualStoreId = insertResult.rows[0].id;
+        console.log(`✅ 매장 생성 완료 - 실제 ID: ${actualStoreId}, 이름: ${store.name}`);
+        
         // 각 매장에 기본 테이블 2-6개 추가
         const tableCount = Math.floor(Math.random() * 5) + 2; // 2-6개
         for (let tableNum = 1; tableNum <= tableCount; tableNum++) {
@@ -167,7 +171,7 @@ async function create2000Stores() {
           await pool.query(`
             INSERT INTO store_tables (store_id, table_number, table_name, seats, is_occupied)
             VALUES ($1, $2, $3, $4, $5)
-          `, [store.id, tableNum, `테이블 ${tableNum}`, seats, false]);
+          `, [actualStoreId, tableNum, `테이블 ${tableNum}`, seats, false]);
         }
       }
       
