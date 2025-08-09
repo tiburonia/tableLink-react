@@ -49,13 +49,29 @@ router.get('/viewport', async (req, res) => {
     console.log(`📍 뷰포트 매장 조회 - 레벨 ${currentLevel}, 범위: (${swLat},${swLng}) ~ (${neLat},${neLng})`);
 
     // 뷰포트 범위 내 매장만 조회
+    const queryParams = [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)];
+    console.log(`📊 쿼리 파라미터: swLat=${queryParams[0]}, swLng=${queryParams[1]}, neLat=${queryParams[2]}, neLng=${queryParams[3]}`);
+    
+    // 전체 매장 수 확인
+    const totalCountResult = await pool.query('SELECT COUNT(*) as total FROM stores');
+    console.log(`📋 전체 매장 수: ${totalCountResult.rows[0].total}`);
+    
+    // 좌표가 있는 매장 수 확인
+    const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM stores WHERE coord IS NOT NULL');
+    console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
+    
     const storesResult = await pool.query(`
       SELECT id, name, category, address, coord, is_open, rating_average, review_count
       FROM stores 
       WHERE coord->>'lat' BETWEEN $1 AND $3
         AND coord->>'lng' BETWEEN $2 AND $4
       ORDER BY id
-    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
+    `, queryParams);
+    
+    console.log(`🔍 뷰포트 쿼리 결과: ${storesResult.rows.length}개 매장`);
+    if (storesResult.rows.length > 0) {
+      console.log(`📍 첫 번째 매장: ${storesResult.rows[0].name} (${storesResult.rows[0].coord})`);
+    }
 
     const stores = storesResult.rows.map(store => ({
       id: store.id,
