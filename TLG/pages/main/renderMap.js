@@ -378,21 +378,17 @@ async function renderMap() {
   const container = document.getElementById('map');
   const options = {
     center: new kakao.maps.LatLng(37.5665, 126.9780),
-    level: 3,
-    maxLevel: 12  // 최대 줌 레벨을 12로 제한
+    level: 3
   };
 
   const map = new kakao.maps.Map(container, options);
 
-  // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
-  window.currentMarkers = [];
-  window.markerMap = new Map();
-
-  console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
+  // 전역 맵 참조 저장
+  window.currentMap = map;
 
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 매장 데이터 로딩 및 마커 생성
+  // 매장 데이터 로딩 및 새 마커 시스템 초기화
   setTimeout(() => {
     loadStoresAndMarkers(map);
   }, 100);
@@ -653,57 +649,46 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
   }
 }
 
-// 기존 마커 완전 삭제 함수 (동적 시스템 연동)
+// 기존 마커 완전 삭제 함수
 function clearAllMarkers() {
-  console.log('🧹 기존 마커 완전 삭제 시작');
+  console.log('🧹 동적 마커 시스템 클리어 시작');
 
-  // 동적 마커 시스템의 마커 삭제
+  // 새로운 마커 시스템 클리어
   if (window.MapMarkerManager) {
-    window.MapMarkerManager.hideStoreMarkers();
+    window.MapMarkerManager.clearStoreMarkers();
     window.MapMarkerManager.clearRegionOverlays();
-    window.MapMarkerManager.storeMarkers.clear();
-    window.MapMarkerManager.regionCache = {
-      dong: new Map(),
-      sigungu: new Map(),
-      sido: new Map()
-    };
-    console.log('🗑️ 동적 마커 시스템 클리어 완료');
+    window.MapMarkerManager.regionCache = {};
   }
 
-  // 호환성을 위한 전역 변수 클리어
+  // 기존 전역 변수도 클리어 (호환성)
   if (window.markerMap) {
     window.markerMap.clear();
-    console.log('🗑️ markerMap 클리어 완료');
   }
-
   if (window.currentMarkers) {
     window.currentMarkers = [];
-    console.log('🗑️ currentMarkers 배열 클리어 완료');
   }
 
-  console.log('✅ 기존 마커 완전 삭제 완료');
+  console.log('✅ 동적 마커 시스템 클리어 완료');
 }
 
-// 캐시 데이터로 마커 생성 (동적 시스템 사용)
+// 캐시 데이터로 마커 생성 (중복 방지)
 async function createMarkersFromCache(stores, map) {
-  console.log('📁 캐시 데이터로 동적 마커 생성 시작:', stores.length, '개 매장');
+  console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
 
-  // 동적 마커 시스템으로 생성
+  // DOM 재생성 후에는 항상 마커를 새로 생성해야 함
+  console.log('🔄 캐시 데이터로 새 마커 생성 시작');
   await createMarkersFromData(stores, map);
 }
 
-// 동적 마커 시스템으로 마커 생성
+// 실제 마커 생성 함수
 async function createMarkersFromData(stores, map) {
-  console.log('🔄 동적 마커 시스템으로 마커 생성:', stores.length, '개 매장');
+  console.log('🔄 새 동적 마커 시스템 초기화 시작:', stores.length, '개 매장');
 
   if (window.MapMarkerManager && typeof window.MapMarkerManager.initMapWithMarkers === 'function') {
     await window.MapMarkerManager.initMapWithMarkers(map, stores);
-    
-    // 호환성을 위해 전역 변수 업데이트
-    window.currentMarkers = Array.from(window.MapMarkerManager.storeMarkers.values());
-    window.markerMap = window.MapMarkerManager.storeMarkers;
-    
-    console.log(`✅ 동적 마커 시스템 초기화 완료 - 총 ${window.MapMarkerManager.storeMarkers.size}개 마커 준비`);
+    console.log('✅ 동적 마커 시스템 초기화 완료');
+  } else {
+    console.error('❌ MapMarkerManager.initMapWithMarkers 함수를 찾을 수 없습니다');
   }
 }
 
