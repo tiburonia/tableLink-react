@@ -98,15 +98,12 @@ async function create2000Stores() {
       
       // 배치별 매장 데이터 생성
       for (let i = 0; i < batchSize; i++) {
-        const storeIndex = batchStart + i;
         const category = categories[Math.floor(Math.random() * categories.length)];
         const coord = getRandomCoordinate();
         const storeName = generateStoreName(category);
         const isOpen = Math.random() > 0.1; // 90% 확률로 운영중
         const ratingAverage = (Math.random() * 4 + 1).toFixed(1); // 1.0-5.0 사이 평점
         const reviewCount = Math.floor(Math.random() * 100); // 0-99개 리뷰
-        
-        const newStoreId = currentMaxId + storeIndex + 1;
         
         console.log(`🏪 매장 생성 예정: ${storeName} (${category}) - ${coord.lat}, ${coord.lng}`);
         
@@ -185,12 +182,11 @@ async function create2000Stores() {
     console.log(`\n🎉 2000개 매장 더미데이터 생성 완료!`);
     console.log(`📊 데이터베이스 총 매장 수: ${totalStoresInDB}개`);
     
-    // 카테고리별 분포 확인
-    console.log('\n🍽️ 카테고리별 매장 분포:');
+    // 카테고리별 분포 확인 (새로 추가된 매장만)
+    console.log('\n🍽️ 카테고리별 매장 분포 (전체):');
     const categoryDistribution = await pool.query(`
       SELECT category, COUNT(*) as count
       FROM stores 
-      WHERE id > ${currentMaxId}
       GROUP BY category
       ORDER BY count DESC
     `);
@@ -199,7 +195,7 @@ async function create2000Stores() {
       console.log(`  - ${row.category}: ${row.count}개`);
     });
     
-    // null 필드 확인
+    // null 필드 확인 (전체 매장)
     console.log('\n📍 null 필드 확인:');
     const nullFieldsCheck = await pool.query(`
       SELECT 
@@ -208,7 +204,6 @@ async function create2000Stores() {
         COUNT(CASE WHEN sido IS NULL THEN 1 END) as null_sido,
         COUNT(CASE WHEN sigungu IS NULL THEN 1 END) as null_sigungu
       FROM stores 
-      WHERE id > ${currentMaxId}
     `);
     
     const nullStats = nullFieldsCheck.rows[0];
