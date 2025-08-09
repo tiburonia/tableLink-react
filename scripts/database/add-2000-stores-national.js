@@ -234,12 +234,6 @@ async function add2000Stores() {
   try {
     console.log('🏪 전국 2000개 매장 더미데이터 생성 시작...');
     
-    // 현재 최대 매장 ID 조회
-    const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) as max_id FROM stores');
-    let currentMaxId = parseInt(maxIdResult.rows[0].max_id);
-    
-    console.log(`📊 현재 최대 매장 ID: ${currentMaxId}`);
-    
     const categories = Object.keys(STORE_TEMPLATES);
     const storesPerBatch = 100; // 배치 단위
     const totalStores = 2000;
@@ -268,7 +262,7 @@ async function add2000Stores() {
         // 별점과 리뷰 수 생성 (랜덤)
         const hasReviews = Math.random() > 0.3; // 70% 확률로 리뷰 존재
         const reviewCount = hasReviews ? Math.floor(Math.random() * 50) + 1 : 0;
-        const ratingAverage = hasReviews ? (Math.random() * 2 + 3).toFixed(1) : '0.0'; // 3.0-5.0 점
+        const ratingAverage = hasReviews ? parseFloat((Math.random() * 2 + 3).toFixed(1)) : 0.0; // 3.0-5.0 점
         
         console.log(`🏪 매장 생성: ${storeName} (${category}, ${city.name})`);
         
@@ -290,7 +284,7 @@ async function add2000Stores() {
             JSON.stringify(menu),
             JSON.stringify(coord),
             reviewCount,
-            parseFloat(ratingAverage),
+            ratingAverage,
             isOpen,
             phoneNumber,
             description,
@@ -320,7 +314,7 @@ async function add2000Stores() {
           }
           
         } catch (error) {
-          console.error(`❌ 매장 ${newStoreId} 생성 실패:`, error.message);
+          console.error(`❌ 매장 생성 실패:`, error.message);
         }
       }
       
@@ -365,7 +359,6 @@ async function add2000Stores() {
         END as region,
         COUNT(*) as count
       FROM stores 
-      WHERE id > ${currentMaxId}
       GROUP BY region
       ORDER BY count DESC
     `);
@@ -379,7 +372,6 @@ async function add2000Stores() {
     const categoryDistribution = await pool.query(`
       SELECT category, COUNT(*) as count
       FROM stores 
-      WHERE id > ${currentMaxId}
       GROUP BY category
       ORDER BY count DESC
     `);
@@ -394,7 +386,6 @@ async function add2000Stores() {
         CASE WHEN is_open THEN '운영중' ELSE '운영중지' END as status,
         COUNT(*) as count
       FROM stores 
-      WHERE id > ${currentMaxId}
       GROUP BY is_open
     `);
     
