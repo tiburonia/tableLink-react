@@ -36,8 +36,8 @@ window.MapMarkerManager = {
     this.currentLevel = level;
     this.currentStores = stores;
 
-    // 기존 마커 모두 숨기기
-    this.hideAllMarkers();
+    // **모든 마커 완전 제거 (renderMap.js 전역 마커 포함)**
+    this.clearAllMarkersCompletely();
 
     const mode = this.determineModeByLevel(level);
     console.log(`📊 레벨 ${level} -> 모드: ${mode}`);
@@ -151,13 +151,31 @@ window.MapMarkerManager = {
 
     const processId = this.currentProcessId;
 
-    // 먼저 개별 마커 모두 숨기기 (집계 마커 전환 시)
+    // 먼저 모든 개별 마커 완전 제거 (집계 마커 전환 시)
     this.individualMarkers.forEach(marker => {
       if (marker && marker.setMap) {
         marker.setMap(null);
       }
     });
-    console.log(`🚫 개별 마커 ${this.individualMarkers.size}개 숨김`);
+    
+    // 전역 개별 마커도 완전 제거
+    if (window.markerMap) {
+      window.markerMap.forEach(marker => {
+        if (marker && marker.setMap) {
+          marker.setMap(null);
+        }
+      });
+    }
+    
+    if (window.currentMarkers) {
+      window.currentMarkers.forEach(marker => {
+        if (marker && marker.setMap) {
+          marker.setMap(null);
+        }
+      });
+    }
+    
+    console.log(`🚫 모든 개별 마커 완전 제거 (MapMarkerManager: ${this.individualMarkers.size}개, 전역: ${window.markerMap?.size || 0}개)`);
 
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
@@ -561,6 +579,39 @@ window.MapMarkerManager = {
     this.clusterMarkers.clear();
     
     console.log('✅ 모든 마커 완전 삭제 완료');
+  },
+
+  // 모든 마커 완전 삭제 (renderMap.js 전역 마커 포함)
+  clearAllMarkersCompletely() {
+    console.log('🧹 모든 마커 완전 삭제 시작 (전역 마커 포함)');
+    
+    // 1. MapMarkerManager 내부 마커 삭제
+    this.hideAllMarkers();
+    this.individualMarkers.clear();
+    this.clusterMarkers.clear();
+    
+    // 2. renderMap.js 전역 마커 삭제
+    if (window.markerMap && window.markerMap.size > 0) {
+      window.markerMap.forEach((marker, storeId) => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(null);
+        }
+      });
+      window.markerMap.clear();
+      console.log('🗑️ 전역 markerMap 클리어 완료');
+    }
+
+    if (window.currentMarkers && window.currentMarkers.length > 0) {
+      window.currentMarkers.forEach(marker => {
+        if (marker && typeof marker.setMap === 'function') {
+          marker.setMap(null);
+        }
+      });
+      window.currentMarkers = [];
+      console.log('🗑️ 전역 currentMarkers 배열 클리어 완료');
+    }
+
+    console.log('✅ 모든 마커 완전 삭제 완료 (전역 마커 포함)');
   },
 
   // 기존 개별 마커 생성 함수 (유지)

@@ -392,20 +392,24 @@ async function renderMap() {
 
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 지도 레벨 변경 이벤트 추가
-  kakao.maps.event.addListener(map, 'zoom_changed', function() {
+  // 지도 레벨 변경 이벤트
+  kakao.maps.event.addListener(map, 'zoom_changed', () => {
     const level = map.getLevel();
-    console.log(`🔍 지도 레벨 변경됨: ${level}`);
-    
+    console.log('🔍 지도 레벨 변경됨:', level);
+
     // 캐시된 매장 데이터가 있는지 확인
-    if (window.storeCache && window.storeCache.hasCachedData()) {
-      const cachedStores = window.storeCache.getStoreData();
-      console.log(`✅ 유효한 매장 캐시 발견 - 매장 수: ${cachedStores.length}`);
-      
-      // 동적 마커 업데이트
-      if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
-        window.MapMarkerManager.handleMapLevelChange(level, cachedStores, map);
+    if (window.storeCache.hasCachedData()) {
+      const stores = window.storeCache.getStoreData();
+      console.log('✅ 유효한 매장 캐시 발견 - 매장 수:', stores.length);
+
+      // **항상 MapMarkerManager 사용** (통합 마커 관리)
+      if (window.MapMarkerManager) {
+        window.MapMarkerManager.handleMapLevelChange(level, stores, map);
+      } else {
+        console.error('❌ MapMarkerManager가 로드되지 않음');
       }
+    } else {
+      console.log('⚠️ 캐시된 매장 데이터 없음 - 서버에서 다시 로드 필요');
     }
   });
 
@@ -708,27 +712,23 @@ async function createMarkersFromCache(stores, map) {
   await createMarkersFromData(stores, map);
 }
 
-// 실제 마커 생성 함수
+// 실제 마커 생성 함수 (MapMarkerManager 통합)
 async function createMarkersFromData(stores, map) {
   console.log('🔄 새 마커 생성 시작:', stores.length, '개 매장');
 
-  try {
-    // 기존 전역 변수들 초기화
-    if (!window.markerMap) window.markerMap = new Map();
-    if (!window.currentMarkers) window.currentMarkers = [];
+  // 1. 지도 레벨 확인
+  const currentLevel = map.getLevel();
+  console.log(`🔄 지도 레벨 ${currentLevel}에 따른 마커 생성: ${stores.length}개 매장`);
 
-    // 현재 지도 레벨 가져오기
-    const currentLevel = map.getLevel();
-    console.log(`🔄 지도 레벨 ${currentLevel}에 따른 마커 생성: ${stores.length}개 매장`);
-
-    // 동적 마커 시스템 사용
+  // 2. **항상 MapMarkerManager 사용** (통합 마커 관리)
+  if (window.MapMarkerManager) {
     await window.MapMarkerManager.handleMapLevelChange(currentLevel, stores, map);
-
-    console.log('✅ 새 마커 생성 완료 - 총', stores.length, '개 매장 처리');
-
-  } catch (error) {
-    console.error('❌ 마커 생성 실패:', error);
+    console.log('✅ MapMarkerManager를 통한 마커 생성 완료');
+    return;
   }
+
+  // 3. MapMarkerManager가 없는 경우 에러
+  console.error('❌ MapMarkerManager가 로드되지 않음 - 마커 생성 실패');
 }
 
 // 매장 목록 업데이트 함수 (캐시된 데이터 사용)
