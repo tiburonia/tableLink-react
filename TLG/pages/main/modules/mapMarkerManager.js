@@ -82,9 +82,9 @@ window.MapMarkerManager = {
 
   // 1. 모드 결정 (개별 vs 집계)
   determineModeByLevel(level) {
-    // 레벨 1-3: 개별 매장 마커
-    // 레벨 4+: 집계 마커
-    return level <= 3 ? 'store' : 'region';
+    // 레벨 1-5: 개별 매장 마커
+    // 레벨 6+: 집계 마커
+    return level <= 5 ? 'store' : 'region';
   },
 
   // 2. 레벨별 지역 단위 결정
