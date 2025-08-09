@@ -1,0 +1,115 @@
+📌 Replit AI 작업지시 (마커 생성 로직만 수정)
+목표
+기존 stores 더미데이터(구조: { id, name, address, lat, lng })는 그대로 사용.
+
+지도 레벨별 표시 정책으로 마커 표시 로직만 교체.
+
+레벨 1–5: 개별 매장 마커 만
+
+레벨 6–7: 읍/면/동 집계 마커 (동은 원본 법정동명 유지: 예. 종로1가, 을지로2가)
+
+레벨 8–10: 시/군/구 집계 마커
+
+레벨 11+: 특별시/광역시/도/특별자치시 집계 마커
+
+개별/집계 마커가 동시에 보이지 않게 전환.
+
+뷰포트(지도 화면) 내 데이터만 대상으로 렌더(성능 최적화).
+
+수정 범위 (기존 코드 교체/추가 포인트)
+상태 관리 추가
+
+storeMarkers를 Map<id, kakao.maps.Marker>로 관리(최초 1회만 생성, show/hide).
+
+regionOverlays(kakao.maps.CustomOverlay[]) 별도 관리.
+
+currentMode( 'store' | 'region') 보관.
+
+regionCache(dong/sigungu/sido 그룹 결과 캐시) 보관.
+
+레벨 분기 유틸
+
+getModeByLevel(level): 'store' | 'region'
+
+getRegionTierByLevel(level): 'dong' | 'sigungu' | 'sido'
+
+1–5 → store
+
+6–7 → dong
+
+8–10 → sigungu
+
+11+ → sido
+
+주소 파싱 (가 유지)
+
+parseKoreanAddressKeepGa(addr): { sido, sigungu, legalDongGa }
+
+괄호 속 …동/…가 힌트 우선 사용.
+
+동 집계 시 legalDongGa를 그대로 그룹 키로 사용(1가~n가 유지).
+
+읍/면은 그대로 사용.
+
+뷰포트 필터링
+
+map.getBounds()로 화면 경계 얻고, 경계 내 매장만 대상으로 그룹핑/마커 표시.
+
+경계 약간 확장(패딩 200300m) 디바운스(100150ms) 적용.
+
+그룹핑
+
+groupByTier(storesInView, tier):
+
+tier === 'dong' → key: ${sido} ${sigungu} ${legalDongGa}
+
+tier === 'sigungu' → key: ${sido} ${sigungu}
+
+tier === 'sido' → key: ${sido}
+
+각 그룹의 센트로이드(lat/lng 평균)와 count 포함.
+
+표시/숨김 규칙 (중요)
+
+개별 모드: storeMarkers 보여주고 regionOverlays는 전부 hide.
+
+집계 모드: storeMarkers 전부 hide, 그룹 결과로 regionOverlays 표시.
+
+개별 마커는 재생성 금지(이미 있으면 위치만 유지하고 show/hide만).
+
+단일 전환 스위치
+
+handleMapLevelChange(map, stores) 한 함수에서만 전환 처리.
+
+레벨 읽기 → 모드 판단 → 뷰포트 내 데이터 필터 → (집계면 캐시 사용) → 표시.
+
+기존에 createMarkersInBatch 같은 곳에서 레벨 분기/렌더를 했으면,
+그 호출을 전부 handleMapLevelChange로 라우팅하도록 변경.
+
+이벤트 연결
+
+idle(또는 zoom_changed)에서 오직 handleMapLevelChange(map, stores)만 호출.
+
+초기 진입 시에도 한 번 호출해서 상태 반영.
+
+수용 기준 (테스트 체크리스트)
+ 1–5레벨: 개별 마커만 보이고 집계 마커는 0.
+
+ 6–7레벨: 읍/면/동 집계만 보이고, 동은 1가/2가 등 그대로 표시.
+
+ 8–10레벨: 시/군/구 집계만 표시.
+
+ 11+레벨: 시/도 집계만 표시.
+
+ 지도 이동/확대축소 시, 뷰포트 내 데이터만 대상으로 렌더(화면 밖 매장은 표시/집계 제외).
+
+ 전환 시 마커 재생성으로 인한 깜빡임 없음(개별 마커는 최초 1회 생성).
+
+ handleMapLevelChange 외에 임의의 생성/표시 로직이 동작하지 않음.
+
+참고(중요)
+기존 더미데이터 스키마는 변경하지 말 것.
+
+기존 전역/모듈 네이밍과 충돌 시, 래핑하거나 동일 이름으로 교체해 바로 붙일 수 있게 구현.
+
+집계 배지는 kakao.maps.CustomOverlay 간단 템플릿(이름/개수)로 표시하고 클릭 시 한 단계 확대(옵션).
