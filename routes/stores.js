@@ -93,7 +93,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 뷰포트 범위 내 매장 조회 API (storeId 라우트보다 먼저 배치)
+// === 특정 경로 라우트들 (/:storeId보다 먼저 배치) ===
+
+// 뷰포트 범위 내 매장 조회 API
 router.get('/viewport', async (req, res) => {
   try {
     const { swLat, swLng, neLat, neLng, level } = req.query;
@@ -147,6 +149,154 @@ router.get('/viewport', async (req, res) => {
     });
   }
 });
+
+// 일괄 별점 정보 조회 API
+router.get('/ratings/batch', async (req, res) => {
+  try {
+    const { storeIds } = req.query; // 쉼표로 구분된 매장 ID들 (예: "1,2,3,4,5")
+
+    if (!storeIds) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '매장 ID 목록이 필요합니다 (예: ?storeIds=1,2,3)' 
+      });
+    }
+
+    const storeIdArray = storeIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+    if (storeIdArray.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '유효한 매장 ID가 없습니다' 
+      });
+    }
+
+    console.log(`⭐ 일괄 별점 정보 조회 요청: ${storeIdArray.length}개 매장 [${storeIdArray.join(', ')}]`);
+
+    const placeholders = storeIdArray.map((_, index) => `$${index + 1}`).join(',');
+    const result = await pool.query(`
+      SELECT id, rating_average, review_count 
+      FROM stores 
+      WHERE id IN (${placeholders})
+      ORDER BY id
+    `, storeIdArray);
+
+    const ratingsMap = {};
+    result.rows.forEach(store => {
+      ratingsMap[store.id] = {
+        storeId: store.id,
+        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+        reviewCount: store.review_count || 0
+      };
+    });
+
+    console.log(`⭐ 일괄 별점 정보 조회 완료: ${result.rows.length}개 매장 처리`);
+
+    res.json({
+      success: true,
+      total: result.rows.length,
+      ratings: ratingsMap
+    });
+
+  } catch (error) {
+    console.error('❌ 일괄 별점 정보 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '일괄 별점 정보 조회 실패: ' + error.message 
+    });
+  }
+});
+
+// 매장 검색 API
+router.get('/search', async (req, res) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ 
+        success: false, 
+        error: '검색어가 필요합니다' 
+      });
+    }
+
+    console.log(`🔍 매장 검색 요청: "${query}"`);
+
+    const result = await pool.query(`
+      SELECT * FROM stores 
+      WHERE name ILIKE $1 
+      ORDER BY id
+      LIMIT 20
+    `, [`%${query}%`]);
+
+    const stores = result.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address,
+      coord: store.coord,
+      isOpen: store.is_open,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    }));
+
+    console.log(`✅ 매장 검색 완료: "${query}" - ${stores.length}개 결과`);
+
+    res.json({
+      success: true,
+      query: query,
+      total: stores.length,
+      stores: stores
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 검색 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '매장 검색 실패: ' + error.message 
+    });
+  }
+});
+
+// 일괄 매장 정보 조회 API (캐시용)
+router.get('/batch/basic-info', async (req, res) => {
+  try {
+    console.log('📦 일괄 매장 기본 정보 조회 요청');
+
+    const storesResult = await pool.query(`
+      SELECT id, name, category, address, coord, is_open, rating_average, review_count
+      FROM stores 
+      ORDER BY id
+    `);
+
+    const stores = storesResult.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
+      isOpen: store.is_open !== false,
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0
+    }));
+
+    console.log(`✅ 일괄 매장 기본 정보 조회 완료: ${stores.length}개 매장`);
+
+    res.json({
+      success: true,
+      stores: stores,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ 일괄 매장 기본 정보 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '일괄 매장 기본 정보 조회 실패: ' + error.message 
+    });
+  }
+});
+
+// === 매개변수 라우트들 (특정 경로 라우트 이후에 배치) ===
 
 // 특정 매장 조회 API
 router.get('/:storeId', async (req, res) => {
@@ -257,63 +407,6 @@ router.get('/:storeId/stats', async (req, res) => {
   }
 });
 
-// 일괄 별점 정보 조회 API (여러 매장을 한 번에 조회)
-router.get('/ratings/batch', async (req, res) => {
-  try {
-    const { storeIds } = req.query; // 쉼표로 구분된 매장 ID들 (예: "1,2,3,4,5")
-
-    if (!storeIds) {
-      return res.status(400).json({ 
-        success: false, 
-        error: '매장 ID 목록이 필요합니다 (예: ?storeIds=1,2,3)' 
-      });
-    }
-
-    const storeIdArray = storeIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
-
-    if (storeIdArray.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        error: '유효한 매장 ID가 없습니다' 
-      });
-    }
-
-    console.log(`⭐ 일괄 별점 정보 조회 요청: ${storeIdArray.length}개 매장 [${storeIdArray.join(', ')}]`);
-
-    const placeholders = storeIdArray.map((_, index) => `$${index + 1}`).join(',');
-    const result = await pool.query(`
-      SELECT id, rating_average, review_count 
-      FROM stores 
-      WHERE id IN (${placeholders})
-      ORDER BY id
-    `, storeIdArray);
-
-    const ratingsMap = {};
-    result.rows.forEach(store => {
-      ratingsMap[store.id] = {
-        storeId: store.id,
-        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-        reviewCount: store.review_count || 0
-      };
-    });
-
-    console.log(`⭐ 일괄 별점 정보 조회 완료: ${result.rows.length}개 매장 처리`);
-
-    res.json({
-      success: true,
-      total: result.rows.length,
-      ratings: ratingsMap
-    });
-
-  } catch (error) {
-    console.error('❌ 일괄 별점 정보 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '일괄 별점 정보 조회 실패: ' + error.message 
-    });
-  }
-});
-
 // 매장별 별점 정보 조회 API (개별 조회용, 기존 호환성 유지)
 router.get('/:storeId/rating', async (req, res) => {
   try {
@@ -344,56 +437,6 @@ router.get('/:storeId/rating', async (req, res) => {
   } catch (error) {
     console.error('❌ 매장 별점 정보 조회 실패:', error);
     res.status(500).json({ error: '매장 별점 정보 조회 실패' });
-  }
-});
-
-// 매장 검색 API (TLM용)
-router.get('/search', async (req, res) => {
-  try {
-    const { query } = req.query;
-
-    if (!query) {
-      return res.status(400).json({ 
-        success: false, 
-        error: '검색어가 필요합니다' 
-      });
-    }
-
-    console.log(`🔍 매장 검색 요청: "${query}"`);
-
-    const result = await pool.query(`
-      SELECT * FROM stores 
-      WHERE name ILIKE $1 
-      ORDER BY id
-      LIMIT 20
-    `, [`%${query}%`]);
-
-    const stores = result.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address,
-      coord: store.coord,
-      isOpen: store.is_open,
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0
-    }));
-
-    console.log(`✅ 매장 검색 완료: "${query}" - ${stores.length}개 결과`);
-
-    res.json({
-      success: true,
-      query: query,
-      total: stores.length,
-      stores: stores
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 검색 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '매장 검색 실패: ' + error.message 
-    });
   }
 });
 
@@ -440,47 +483,6 @@ router.get('/:storeId/tables', async (req, res) => {
     res.status(500).json({ success: false, error: '테이블 정보 조회 실패' });
   }
 });
-
-// 일괄 매장 정보 조회 API (캐시용) - 유지 (하위 호환성)
-router.get('/batch/basic-info', async (req, res) => {
-  try {
-    console.log('📦 일괄 매장 기본 정보 조회 요청');
-
-    const storesResult = await pool.query(`
-      SELECT id, name, category, address, coord, is_open, rating_average, review_count
-      FROM stores 
-      ORDER BY id
-    `);
-
-    const stores = storesResult.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      coord: store.coord || { lat: 37.5665, lng: 126.9780 },
-      isOpen: store.is_open !== false,
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0
-    }));
-
-    console.log(`✅ 일괄 매장 기본 정보 조회 완료: ${stores.length}개 매장`);
-
-    res.json({
-      success: true,
-      stores: stores,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('❌ 일괄 매장 기본 정보 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '일괄 매장 기본 정보 조회 실패: ' + error.message 
-    });
-  }
-});
-
-
 
 // 매장별 주문 조회 API
 router.get('/:storeId/orders', async (req, res) => {
