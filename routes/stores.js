@@ -59,6 +59,31 @@ router.get('/viewport', async (req, res) => {
     const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM store_address WHERE latitude IS NOT NULL AND longitude IS NOT NULL');
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
 
+    // 뷰포트 내 매장 조회 전 범위 확인
+    const rangeCheckResult = await pool.query(`
+      SELECT COUNT(*) as in_range_count,
+             MIN(sa.latitude) as min_lat, MAX(sa.latitude) as max_lat,
+             MIN(sa.longitude) as min_lng, MAX(sa.longitude) as max_lng
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
+    `);
+
+    console.log(`📊 전체 좌표 범위: Lat(${rangeCheckResult.rows[0].min_lat} ~ ${rangeCheckResult.rows[0].max_lat}), Lng(${rangeCheckResult.rows[0].min_lng} ~ ${rangeCheckResult.rows[0].max_lng})`);
+    console.log(`📊 요청된 뷰포트: Lat(${queryParams[0]} ~ ${queryParams[2]}), Lng(${queryParams[1]} ~ ${queryParams[3]})`);
+
+    // 뷰포트 범위 내 매장 수 미리 확인
+    const viewportCountResult = await pool.query(`
+      SELECT COUNT(*) as viewport_count
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
+        AND sa.latitude BETWEEN $1 AND $3
+        AND sa.longitude BETWEEN $2 AND $4
+    `, queryParams);
+
+    console.log(`📍 뷰포트 범위 내 매장 수: ${viewportCountResult.rows[0].viewport_count}개`);
+
     const storesResult = await pool.query(`
       SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude
       FROM stores s
