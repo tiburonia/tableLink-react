@@ -63,9 +63,11 @@ router.get('/viewport', async (req, res) => {
     const storesResult = await pool.query(`
       SELECT id, name, category, address, coord, is_open, rating_average, review_count
       FROM stores 
-      WHERE coord->>'lat' BETWEEN $1 AND $3
-        AND coord->>'lng' BETWEEN $2 AND $4
+      WHERE coord IS NOT NULL
+        AND (coord->>'lat')::float BETWEEN $1 AND $3
+        AND (coord->>'lng')::float BETWEEN $2 AND $4
       ORDER BY id
+      LIMIT 200
     `, queryParams);
     
     console.log(`🔍 뷰포트 쿼리 결과: ${storesResult.rows.length}개 매장`);

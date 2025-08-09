@@ -1,4 +1,3 @@
-
 // 뷰포트 기반 지도 마커 관리자
 window.MapMarkerManager = {
   // 전역 마커 저장소
@@ -12,6 +11,8 @@ window.MapMarkerManager = {
   currentProcessId: null,       
   shouldCancel: false,          
   debounceTimer: null,          
+  viewportCache: null,          // 뷰포트 데이터 캐시
+  markerPool: [],               // 마커 재사용 풀
 
   // 레벨에 따른 동적 마커 업데이트 (메인 엔트리 포인트)
   async handleMapLevelChange(level, map) {
@@ -99,7 +100,7 @@ window.MapMarkerManager = {
   // 뷰포트 비교
   isSameViewport(newViewport) {
     if (!this.currentViewport) return false;
-    
+
     const threshold = 0.001; // 좌표 차이 임계값
     return Math.abs(this.currentViewport.swLat - newViewport.swLat) < threshold &&
            Math.abs(this.currentViewport.swLng - newViewport.swLng) < threshold &&
@@ -107,33 +108,53 @@ window.MapMarkerManager = {
            Math.abs(this.currentViewport.neLng - newViewport.neLng) < threshold;
   },
 
-  // 뷰포트 범위 내 매장 데이터 요청
-  async fetchStoresInViewport(viewport, level) {
+  // 뷰포트 범위 내 매장 데이터 가져오기 (디바운싱 및 캐싱 적용)
+  async fetchStoresInViewport(bounds, level) {
     try {
+      const viewportKey = `${bounds.getSouthWest().getLat().toFixed(4)}_${bounds.getSouthWest().getLng().toFixed(4)}_${bounds.getNorthEast().getLat().toFixed(4)}_${bounds.getNorthEast().getLng().toFixed(4)}_${level}`;
+
+      // 캐시 확인 (1분간 유효)
+      if (this.viewportCache && this.viewportCache.key === viewportKey && 
+          Date.now() - this.viewportCache.timestamp < 60000) {
+        console.log(`🚀 캐시된 뷰포트 데이터 사용: ${this.viewportCache.data.length}개 매장`);
+        return this.viewportCache.data;
+      }
+
       const params = new URLSearchParams({
-        swLat: viewport.swLat,
-        swLng: viewport.swLng,
-        neLat: viewport.neLat,
-        neLng: viewport.neLng,
+        swLat: bounds.getSouthWest().getLat(),
+        swLng: bounds.getSouthWest().getLng(),
+        neLat: bounds.getNorthEast().getLat(),
+        neLng: bounds.getNorthEast().getLng(),
         level: level
       });
 
+      console.log(`📍 뷰포트 매장 데이터 요청:`, params.toString());
+
       const response = await fetch(`/api/stores/viewport?${params}`);
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
-      if (!data.success || !Array.isArray(data.stores)) {
-        throw new Error('서버 응답에 유효한 매장 데이터가 없습니다');
+
+      if (!data.success) {
+        throw new Error(data.error || '뷰포트 매장 데이터 조회 실패');
       }
 
-      console.log(`📍 뷰포트 매장 데이터 수신: ${data.stores.length}개 매장`);
+      // 캐시 저장
+      this.viewportCache = {
+        key: viewportKey,
+        data: data.stores,
+        timestamp: Date.now()
+      };
+
+      console.log(`✅ 뷰포트 매장 데이터 수신: ${data.stores.length}개 매장`);
       return data.stores;
 
     } catch (error) {
       console.error('❌ 뷰포트 매장 데이터 요청 실패:', error);
-      return [];
+      throw error;
     }
   },
 
@@ -157,10 +178,10 @@ window.MapMarkerManager = {
     console.log(`🏪 개별 매장 마커 생성 시작`);
 
     const processId = this.currentProcessId;
-    
+
     // 뷰포트 범위 내 매장 데이터 요청
-    const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
-    
+    const stores = await this.fetchStoresInViewport(map.getBounds(), this.currentLevel);
+
     if (this.shouldCancel || this.currentProcessId !== processId) {
       console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
       return;
@@ -179,7 +200,7 @@ window.MapMarkerManager = {
       const storeKey = this.ensureStoreKey(store);
       const markerId = `store_${storeKey}`;
 
-      // 이미 생성된 마커가 있으면 재사용
+      // 이미 생성된 마커가 있으면 재사용 (개별 마커는 풀링보다 개별 관리)
       if (this.individualMarkers.has(markerId)) {
         const marker = this.individualMarkers.get(markerId);
         if (marker && marker.setMap) {
@@ -218,8 +239,8 @@ window.MapMarkerManager = {
     const processId = this.currentProcessId;
 
     // 뷰포트 범위 내 매장 데이터 요청
-    const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
-    
+    const stores = await this.fetchStoresInViewport(map.getBounds(), this.currentLevel);
+
     if (this.shouldCancel || this.currentProcessId !== processId) {
       console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
       return;
@@ -813,7 +834,7 @@ window.MapMarkerManager = {
           neLng: this.currentViewport.neLng
         };
 
-        const stores = await this.fetchStoresInViewport(viewport, this.currentLevel);
+        const stores = await this.fetchStoresInViewport(mapInstance.getBounds(), this.currentLevel);
         const regionStores = stores.filter(store => {
           if (!store.address) return false;
           const extractedRegion = this.extractRegionName(store.address, tier);
@@ -883,6 +904,51 @@ window.MapMarkerManager = {
     console.log('✅ 모든 마커 완전 삭제 완료');
   },
 
+  // 하드 스위치: 모든 마커와 오버레이 강제 제거 (풀링 적용)
+  hardSwitch() {
+    console.log('🛡️ 하드 스위치 시작 - 모든 마커/오버레이 강제 제거');
+
+    // 모든 매장 마커를 풀에 반환
+    this.storeMarkers.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+        this.markerPool.push(marker); // 풀에 반환
+      }
+    });
+
+    // 모든 클러스터 마커 제거  
+    this.clusterMarkers.forEach(marker => {
+      if (marker && typeof marker.setMap === 'function') {
+        marker.setMap(null);
+      }
+    });
+
+    // 모든 오버레이 제거
+    this.overlays.forEach(overlay => {
+      if (overlay && typeof overlay.setMap === 'function') {
+        overlay.setMap(null);
+      }
+    });
+
+    // InfoWindow 제거
+    if (this.infoWindow) {
+      this.infoWindow.close();
+    }
+
+    // 맵 초기화 (풀 크기 제한)
+    this.storeMarkers.clear();
+    this.clusteredMarkers.clear();
+    this.overlays.clear();
+    this.stores.clear();
+
+    // 마커 풀 크기 제한 (메모리 절약)
+    if (this.markerPool.length > 100) {
+      this.markerPool = this.markerPool.slice(0, 100);
+    }
+
+    console.log('✅ 하드 스위치 완료 - 모든 마커/오버레이 강제 제거');
+  },
+
   // 하드 스위치: 모든 마커/오버레이 강제 제거
   hardHideAllMarkersAndOverlays(map) {
     console.log('🛡️ 하드 스위치 시작 - 모든 마커/오버레이 강제 제거');
@@ -944,16 +1010,31 @@ window.MapMarkerManager = {
     return String(key);
   },
 
-  // 개별 마커 생성
-  async createCustomMarker(store, map, preloadedRating = null) {
-    if (!store.coord) return null;
-
-    const lat = Number(store.coord.lat);
-    const lng = Number(store.coord.lng);
-
-    if (isNaN(lat) || isNaN(lng)) {
-      console.warn(`⚠️ 유효하지 않은 좌표: ${store.name} (${store.coord.lat}, ${store.coord.lng})`);
+  // 개별 매장 마커 생성 (풀링 사용)
+  createCustomMarker(store, map, preloadedRating = null) {
+    if (!store.coord || !store.coord.lat || !store.coord.lng) {
+      console.warn(`⚠️ 매장 ${store.id} 좌표 정보 없음`);
       return null;
+    }
+
+    const markerPosition = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
+
+    // 마커 풀에서 재사용 가능한 마커 찾기
+    let marker = this.markerPool.pop();
+
+    if (!marker) {
+      // 새 마커 생성
+      marker = new kakao.maps.Marker({
+        position: markerPosition,
+        title: store.name,
+        image: this.getMarkerImage(store),
+        clickable: true
+      });
+    } else {
+      // 기존 마커 재활용
+      marker.setPosition(markerPosition);
+      marker.setTitle(store.name);
+      marker.setImage(this.getMarkerImage(store));
     }
 
     const storeKey = this.ensureStoreKey(store);
@@ -968,7 +1049,7 @@ window.MapMarkerManager = {
     } else if (store.ratingAverage) {
       rating = parseFloat(store.ratingAverage).toFixed(1);
     } else {
-      const ratingData = await window.loadStoreRatingAsync(storeKey);
+      const ratingData = window.loadStoreRatingAsync(storeKey); // 비동기 로드
       if (ratingData) {
         rating = parseFloat(ratingData.ratingAverage).toFixed(1);
       }
@@ -976,9 +1057,10 @@ window.MapMarkerManager = {
 
     const customOverlayContent = this.getMarkerHTML(store, rating, statusColor, statusText);
 
+    // 커스텀 오버레이 생성 (마커 위에 표시될 정보 창)
     const customOverlay = new kakao.maps.CustomOverlay({
       map: map,
-      position: new kakao.maps.LatLng(lat, lng),
+      position: markerPosition, // 마커 위치에 설정
       content: customOverlayContent,
       yAnchor: 0.95,
       xAnchor: 0.5
@@ -989,7 +1071,26 @@ window.MapMarkerManager = {
     customOverlay.isOpen = store.isOpen;
     customOverlay.createdAt = new Date().toISOString();
 
+    // 개별 마커는 풀링하지 않고 개별 관리
+    this.individualMarkers.set(`store_${storeKey}`, customOverlay);
+
     return customOverlay;
+  },
+
+  // 마커 이미지 가져오기 (상태에 따라 동적)
+  getMarkerImage(store) {
+    const isOpen = store.isOpen !== false;
+    const imageUrl = isOpen ?
+      'https://t1.daumcdn.net/localimg/localimages/02/2023/common/marker_custom_01.png' :
+      'https://t1.daumcdn.net/localimg/localimages/02/2023/common/marker_custom_02.png'; // 운영 준비중
+
+    return new kakao.maps.MarkerImage(
+      imageUrl,
+      new kakao.maps.Size(36, 36), // 마커 크기
+      {
+        offset: new kakao.maps.Point(18, 36) // 마커 이미지의 기준점 (오른쪽 하단)
+      }
+    );
   },
 
   // 마커 HTML 생성
