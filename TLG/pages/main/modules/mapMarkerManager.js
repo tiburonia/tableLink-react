@@ -11,18 +11,37 @@ window.MapMarkerManager = {
   isProcessing: false,          // 현재 마커 생성 중인지
   currentProcessId: null,       // 현재 진행중인 프로세스 ID
   shouldCancel: false,          // 현재 프로세스를 취소해야 하는지
+  debounceTimer: null,          // 디바운싱 타이머
 
   // 레벨에 따른 동적 마커 업데이트 (메인 엔트리 포인트)
   async handleMapLevelChange(level, stores, map) {
+    // 디바운싱: 빠른 연속 호출 방지
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+    
+    this.debounceTimer = setTimeout(async () => {
+      await this._doHandleMapLevelChange(level, stores, map);
+    }, 100);
+  },
+
+  // 실제 레벨 변경 처리 함수
+  async _doHandleMapLevelChange(level, stores, map) {
     console.log(`🔄 레벨 ${level} 변경에 따른 마커 업데이트 시작`);
     
+    // 동일한 레벨이면 무시
+    if (this.currentLevel === level && this.currentStores.length === stores.length) {
+      console.log(`⏸️ 동일한 레벨 ${level} - 마커 업데이트 생략`);
+      return;
+    }
+
     // 기존 프로세스가 진행중이면 중단
     if (this.isProcessing) {
       console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청 (이전 레벨: ${this.currentLevel})`);
       this.shouldCancel = true;
       
       // 짧은 대기 후 강제 중단 (비동기 프로세스 완전 정리)
-      await this.waitForProcessCompletion(500);
+      await this.waitForProcessCompletion(800);
     }
     
     // 새로운 프로세스 시작
@@ -31,7 +50,7 @@ window.MapMarkerManager = {
     this.isProcessing = true;
     this.shouldCancel = false;
     
-    console.log(`🆕 새 마커 프로세스 시작 (ID: ${processId})`);
+    console.log(`🆕 새 마커 프로세스 시작 (ID: ${processId}, 레벨: ${level})`);
     
     this.currentLevel = level;
     this.currentStores = stores;
@@ -226,7 +245,7 @@ window.MapMarkerManager = {
     const clusterArray = Array.from(clusters.entries());
     
     for (let i = 0; i < clusterArray.length; i++) {
-      // 프로세스 중단 확인
+      // 프로세스 중단 확인 (매번)
       if (this.shouldCancel || this.currentProcessId !== processId) {
         console.log(`⏸️ 집계 마커 생성 중단 (${createdCount}/${clusterArray.length}개 완료)`);
         return;
@@ -238,14 +257,33 @@ window.MapMarkerManager = {
       // 이미 생성된 집계 마커가 있으면 재사용
       if (this.clusterMarkers.has(clusterId)) {
         const marker = this.clusterMarkers.get(clusterId);
-        marker.setMap(map);
-        console.log(`♻️ 기존 집계 마커 재사용: ${regionKey}`);
+        if (marker && marker.setMap) {
+          marker.setMap(map);
+          console.log(`♻️ 기존 집계 마커 재사용: ${regionKey}`);
+          createdCount++;
+        }
         continue;
+      }
+
+      // 중간 중단 체크
+      if (this.shouldCancel || this.currentProcessId !== processId) {
+        console.log(`⏸️ 집계 마커 생성 중단 (중간 체크): ${regionKey}`);
+        return;
       }
 
       // 새 집계 마커 생성
       console.log(`🆕 새 집계 마커 생성: ${regionKey} (${regionStores.length}개 매장)`);
       const marker = await this.createClusterMarker(regionKey, regionStores, map, tier);
+      
+      // 생성 후 중단 체크
+      if (this.shouldCancel || this.currentProcessId !== processId) {
+        console.log(`⏸️ 집계 마커 생성 중단 (생성 후): ${regionKey}`);
+        if (marker && marker.setMap) {
+          marker.setMap(null); // 생성된 마커 제거
+        }
+        return;
+      }
+
       if (marker) {
         this.clusterMarkers.set(clusterId, marker);
         marker.setMap(map); // 명시적으로 지도에 표시
@@ -255,9 +293,15 @@ window.MapMarkerManager = {
         console.log(`❌ 집계 마커 생성 실패: ${regionKey}`);
       }
 
-      // CPU 양보 (매 5개마다)
-      if (i % 5 === 0) {
+      // CPU 양보 (매 3개마다)
+      if (i % 3 === 0) {
         await new Promise(resolve => setTimeout(resolve, 1));
+        
+        // CPU 양보 후에도 중단 체크
+        if (this.shouldCancel || this.currentProcessId !== processId) {
+          console.log(`⏸️ 집계 마커 생성 중단 (CPU 양보 후): ${i}/${clusterArray.length}`);
+          return;
+        }
       }
     }
 
