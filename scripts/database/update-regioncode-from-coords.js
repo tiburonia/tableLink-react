@@ -79,14 +79,13 @@ async function setupColumns() {
   try {
     console.log('📋 필요한 컬럼들 확인 및 추가...');
     
-    // stores 테이블에 행정구역 컬럼들 추가
+    // store_address 테이블에 행정구역 컬럼들 추가 (이미 있다면 무시)
     await pool.query(`
-      ALTER TABLE stores 
+      ALTER TABLE store_address 
       ADD COLUMN IF NOT EXISTS sido VARCHAR(50),
       ADD COLUMN IF NOT EXISTS sigungu VARCHAR(100),
       ADD COLUMN IF NOT EXISTS dong VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS region_code VARCHAR(20),
-      ADD COLUMN IF NOT EXISTS address_update_status VARCHAR(50) DEFAULT 'pending'
+      ADD COLUMN IF NOT EXISTS region_code VARCHAR(20)
     `);
     
     console.log('✅ 컬럼 설정 완료');
@@ -101,12 +100,13 @@ async function updateRegionFromCoordinates() {
   try {
     console.log('🏛️ 좌표 기반 행정구역 정보 업데이트 시작...');
     
-    // 좌표가 있는 모든 매장 조회
+    // store_address 테이블에서 좌표가 있는 모든 매장 조회
     const result = await pool.query(`
-      SELECT id, name, coord 
-      FROM stores 
-      WHERE coord IS NOT NULL 
-      ORDER BY id
+      SELECT sa.store_id, s.name, sa.latitude, sa.longitude
+      FROM store_address sa
+      LEFT JOIN stores s ON sa.store_id = s.id
+      WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
+      ORDER BY sa.store_id
     `);
     
     console.log(`🏪 총 ${result.rows.length}개 매장의 행정구역 정보 업데이트 대상`);
@@ -121,33 +121,22 @@ async function updateRegionFromCoordinates() {
     
     for (let i = 0; i < result.rows.length; i++) {
       const store = result.rows[i];
-      const { id, name, coord } = store;
+      const { store_id, name, latitude, longitude } = store;
       
-      console.log(`\n📍 [${i + 1}/${result.rows.length}] ${name} (ID: ${id}) 처리 중...`);
+      console.log(`\n📍 [${i + 1}/${result.rows.length}] ${name} (ID: ${store_id}) 처리 중...`);
       
-      // 좌표 파싱
-      let lat, lng;
-      try {
-        if (typeof coord === 'object' && coord !== null) {
-          lat = coord.lat;
-          lng = coord.lng;
-        } else if (typeof coord === 'string') {
-          const parsedCoord = JSON.parse(coord);
-          lat = parsedCoord.lat;
-          lng = parsedCoord.lng;
-        }
-        
-        if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-          throw new Error('좌표 정보 없음');
-        }
-      } catch (error) {
-        console.log(`⚠️ 좌표 파싱 실패: ${error.message}`);
+      // 좌표 검증
+      const lat = parseFloat(latitude);
+      const lng = parseFloat(longitude);
+      
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        console.log(`⚠️ 좌표 정보 없음 또는 잘못됨`);
         
         await pool.query(`
-          UPDATE stores 
+          UPDATE store_address 
           SET address_update_status = 'no_coordinates' 
-          WHERE id = $1
-        `, [id]);
+          WHERE store_id = $1
+        `, [store_id]);
         
         failCount++;
         continue;
@@ -161,24 +150,25 @@ async function updateRegionFromCoordinates() {
         await delay(300); // API 제한 방지
         
         if (regionInfo) {
-          // 기존 address 컬럼을 새로운 행정구역 정보로 덮어쓰기
+          // store_address 테이블의 기존 주소 정보를 새로운 행정구역 정보로 덮어쓰기
           await pool.query(`
-            UPDATE stores 
+            UPDATE store_address 
             SET 
-              address = $1,
+              address_full = $1,
               sido = $2,
               sigungu = $3,
               dong = $4,
               region_code = $5,
-              address_update_status = 'success'
-            WHERE id = $6
+              address_status = 'success',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $6
           `, [
             regionInfo.fullAddress,
             regionInfo.sido,
             regionInfo.sigungu,
             regionInfo.dong,
             regionInfo.regionCode,
-            id
+            store_id
           ]);
           
           console.log(`   ✅ 주소: ${regionInfo.fullAddress}`);
@@ -191,10 +181,10 @@ async function updateRegionFromCoordinates() {
           console.log(`   ❌ API 조회 실패`);
           
           await pool.query(`
-            UPDATE stores 
-            SET address_update_status = 'lookup_failed' 
-            WHERE id = $1
-          `, [id]);
+            UPDATE store_address 
+            SET address_status = 'lookup_failed' 
+            WHERE store_id = $1
+          `, [store_id]);
           
           failCount++;
         }
@@ -203,10 +193,10 @@ async function updateRegionFromCoordinates() {
         console.error(`   ❌ 처리 중 오류:`, error);
         
         await pool.query(`
-          UPDATE stores 
-          SET address_update_status = 'api_error' 
-          WHERE id = $1
-        `, [id]);
+          UPDATE store_address 
+          SET address_status = 'api_error' 
+          WHERE store_id = $1
+        `, [store_id]);
         
         failCount++;
       }
@@ -237,21 +227,21 @@ async function checkResults() {
     
     // 상태별 통계
     const statusStats = await pool.query(`
-      SELECT address_update_status, COUNT(*) as count 
-      FROM stores 
-      GROUP BY address_update_status 
+      SELECT address_status, COUNT(*) as count 
+      FROM store_address 
+      GROUP BY address_status 
       ORDER BY count DESC
     `);
     
     console.log('\n📈 상태별 통계:');
     statusStats.rows.forEach(stat => {
-      console.log(`   ${stat.address_update_status}: ${stat.count}개`);
+      console.log(`   ${stat.address_status}: ${stat.count}개`);
     });
     
     // 시도별 분포
     const sidoStats = await pool.query(`
       SELECT sido, COUNT(*) as count 
-      FROM stores 
+      FROM store_address 
       WHERE sido IS NOT NULL 
       GROUP BY sido 
       ORDER BY count DESC
@@ -265,7 +255,7 @@ async function checkResults() {
     // 시군구별 분포 (상위 10개)
     const sigunguStats = await pool.query(`
       SELECT sigungu, COUNT(*) as count 
-      FROM stores 
+      FROM store_address 
       WHERE sigungu IS NOT NULL 
       GROUP BY sigungu 
       ORDER BY count DESC
@@ -279,17 +269,18 @@ async function checkResults() {
     
     // 업데이트된 주소 샘플
     const samples = await pool.query(`
-      SELECT id, name, address, sido, sigungu, dong, region_code, address_update_status 
-      FROM stores 
-      WHERE address_update_status = 'success' 
+      SELECT sa.store_id, s.name, sa.address_full, sa.sido, sa.sigungu, sa.dong, sa.region_code, sa.address_status 
+      FROM store_address sa
+      LEFT JOIN stores s ON sa.store_id = s.id
+      WHERE sa.address_status = 'success' 
       ORDER BY RANDOM() 
       LIMIT 10
     `);
     
     console.log('\n📍 업데이트된 주소 샘플:');
     samples.rows.forEach(store => {
-      console.log(`   [${store.id}] ${store.name}`);
-      console.log(`       주소: ${store.address}`);
+      console.log(`   [${store.store_id}] ${store.name}`);
+      console.log(`       주소: ${store.address_full}`);
       console.log(`       행정구역: ${store.sido} ${store.sigungu} ${store.dong}`);
       console.log(`       지역코드: ${store.region_code}`);
     });
