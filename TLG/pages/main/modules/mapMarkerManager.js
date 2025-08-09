@@ -525,21 +525,22 @@ window.MapMarkerManager = {
 
   // 집계 마커 HTML 생성
   getClusterMarkerHTML(regionName, totalCount, openCount, tier) {
-    const tierLabel = {
-      'sido': '시/도',
-      'sigungu': '시/군/구', 
-      'dong': '동/읍/면'
-    }[tier] || '지역';
+    // 지역명에서 마지막 부분만 추출 (예: "서울특별시 중구 을지로동" -> "을지로동")
+    const displayName = this.extractDisplayName(regionName, tier);
 
     return `
-      <div class="cluster-marker" onclick="window.MapMarkerManager.handleClusterClick('${regionName}', '${tier}')"
+      <div class="cluster-marker" onclick="window.MapMarkerManager.handleClusterClick('${regionName}', '${tier}')">
         <div class="cluster-container">
-          <div class="cluster-label">${regionName}</div>
-          <div class="cluster-circle">
-            <div class="cluster-count">${totalCount}</div>
-            <div class="cluster-type">${tierLabel}</div>
+          <div class="cluster-rectangle">
+            <div class="cluster-left">
+              <div class="cluster-name">${displayName}</div>
+              <div class="cluster-info">운영중 ${openCount}개</div>
+            </div>
+            <div class="cluster-right">
+              <div class="cluster-count">${totalCount}</div>
+            </div>
           </div>
-          <div class="cluster-info">운영중 ${openCount}개</div>
+          <div class="cluster-point"></div>
         </div>
       </div>
 
@@ -549,6 +550,7 @@ window.MapMarkerManager = {
           cursor: pointer;
           z-index: 10;
           transition: all 0.3s ease;
+          filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2));
         }
 
         .cluster-container {
@@ -557,67 +559,115 @@ window.MapMarkerManager = {
           align-items: center;
         }
 
-        .cluster-label {
-          background: rgba(255, 255, 255, 0.95);
-          color: #333;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-          margin-bottom: 5px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-          white-space: nowrap;
-          max-width: 100px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .cluster-circle {
-          width: 60px;
-          height: 60px;
+        .cluster-rectangle {
+          width: 100px;
+          height: 42px;
           background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
-          border-radius: 50%;
+          border-radius: 21px;
           display: flex;
-          flex-direction: column;
           align-items: center;
-          justify-content: center;
+          justify-content: space-between;
           border: 3px solid white;
           box-shadow: 0 4px 20px rgba(41, 126, 252, 0.3);
+          padding: 0 12px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .cluster-left {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 1px;
+        }
+
+        .cluster-name {
+          color: white;
+          font-size: 12px;
+          font-weight: 700;
+          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 60px;
+        }
+
+        .cluster-info {
+          color: rgba(255, 255, 255, 0.9);
+          font-size: 9px;
+          font-weight: 500;
+          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .cluster-right {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 12px;
+          width: 24px;
+          height: 24px;
         }
 
         .cluster-count {
           color: white;
-          font-size: 18px;
+          font-size: 13px;
           font-weight: 700;
-          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
 
-        .cluster-type {
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 9px;
-          font-weight: 500;
-          line-height: 1;
-        }
-
-        .cluster-info {
-          background: rgba(41, 126, 252, 0.1);
-          color: #297efc;
-          padding: 2px 6px;
-          border-radius: 8px;
-          font-size: 10px;
-          font-weight: 500;
-          margin-top: 3px;
+        .cluster-point {
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+          border-top: 8px solid white;
+          margin-top: -2px;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
         }
 
         .cluster-marker:hover {
           transform: translateY(-2px) scale(1.05);
+          filter: drop-shadow(0 8px 20px rgba(0,0,0,0.25));
         }
 
-        .cluster-marker:hover .cluster-circle {
+        .cluster-marker:hover .cluster-rectangle {
           box-shadow: 0 6px 25px rgba(41, 126, 252, 0.4);
+        }
+
+        .cluster-marker:active {
+          transform: translateY(0) scale(1.02);
+        }
+
+        .cluster-marker:active .cluster-rectangle {
+          transform: scale(0.95);
         }
       </style>
     `;
+  },
+
+  // 지역명에서 표시할 이름 추출
+  extractDisplayName(regionName, tier) {
+    if (!regionName) return '지역';
+    
+    const parts = regionName.split(' ').filter(part => part.length > 0);
+    
+    if (tier === 'sido') {
+      // 시/도 레벨: 전체 이름 (예: "서울특별시")
+      return parts[0] || regionName;
+    } else if (tier === 'sigungu') {
+      // 시/군/구 레벨: 마지막 부분 (예: "중구")
+      return parts.length >= 2 ? parts[1] : regionName;
+    } else if (tier === 'dong') {
+      // 동/읍/면 레벨: 마지막 부분 (예: "을지로동")
+      return parts.length >= 3 ? parts[2] : regionName;
+    }
+    
+    return regionName;
   },
 
   // 집계 마커 클릭 처리
