@@ -160,14 +160,7 @@ const DESCRIPTIONS = [
   '신선한 재료만을 사용하여 건강한 음식을 만듭니다.'
 ];
 
-// 전화번호 생성 함수
-function generatePhoneNumber() {
-  const areaCode = ['02', '031', '032', '033', '041', '042', '043', '044', '051', '052', '053', '054', '055', '061', '062', '063', '064'];
-  const area = areaCode[Math.floor(Math.random() * areaCode.length)];
-  const middle = Math.floor(Math.random() * 9000) + 1000;
-  const last = Math.floor(Math.random() * 9000) + 1000;
-  return `${area}-${middle}-${last}`;
-}
+
 
 // 좌표 생성 함수
 function generateCoordinate(city) {
@@ -255,7 +248,6 @@ async function add2000Stores() {
         const address = generateAddress(city, coord);
         const menu = generateMenu(category);
         const isOpen = Math.random() > 0.15; // 85% 확률로 운영중
-        const phoneNumber = generatePhoneNumber();
         const operatingHours = OPERATING_HOURS[Math.floor(Math.random() * OPERATING_HOURS.length)];
         const description = DESCRIPTIONS[Math.floor(Math.random() * DESCRIPTIONS.length)];
         
@@ -271,10 +263,10 @@ async function add2000Stores() {
           const storeResult = await pool.query(`
             INSERT INTO stores (
               name, category, distance, address, menu, coord, 
-              review_count, rating_average, is_open, phone, 
+              review_count, rating_average, is_open, 
               description, operating_hours
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             RETURNING id
           `, [
             storeName,
@@ -286,7 +278,6 @@ async function add2000Stores() {
             reviewCount,
             ratingAverage,
             isOpen,
-            phoneNumber,
             description,
             operatingHours
           ]);
