@@ -472,10 +472,18 @@ window.MapMarkerManager = {
   async createClusterMarker(regionName, stores, map, tier) {
     if (!stores || stores.length === 0) return null;
 
-    // 중심 좌표 계산 (매장들의 평균 위치)
-    let centerCoord = this.calculateCenterCoordinate(stores);
+    // 1단계: 행정기관 좌표 스냅 시도
+    let centerCoord = await this.getAdministrativeCoordinate(regionName, tier);
     
-    // 주소 없는 매장 그룹인 경우 기본 서울 중심 좌표 사용
+    // 2단계: 행정기관 좌표를 찾을 수 없으면 센터로이드 사용 (매장들의 평균 위치)
+    if (!centerCoord) {
+      console.log(`⚠️ ${regionName} 행정기관 좌표 찾기 실패 - 센터로이드로 대체`);
+      centerCoord = this.calculateCenterCoordinate(stores);
+    } else {
+      console.log(`📍 ${regionName} 행정기관 좌표 스냅 성공: ${centerCoord.lat}, ${centerCoord.lng}`);
+    }
+    
+    // 3단계: 센터로이드도 실패한 경우 기본 좌표 사용
     if (!centerCoord && regionName === '위치 미확인') {
       centerCoord = { lat: 37.5665, lng: 126.9780 }; // 서울 중심
       console.log(`📍 위치 미확인 매장 그룹 - 기본 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
@@ -509,7 +517,97 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 중심 좌표 계산
+  // 행정기관 좌표 조회 (카카오 장소 검색 API 사용)
+  async getAdministrativeCoordinate(regionName, tier) {
+    try {
+      // 행정기관 검색 키워드 생성
+      let searchKeyword = this.generateAdministrativeKeyword(regionName, tier);
+      
+      if (!searchKeyword) {
+        console.log(`⚠️ ${regionName} (${tier}) - 행정기관 검색 키워드 생성 실패`);
+        return null;
+      }
+
+      console.log(`🔍 ${regionName} 행정기관 좌표 검색: "${searchKeyword}"`);
+
+      // 카카오 장소 검색 API 호출
+      const response = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(searchKeyword)}&size=1`,
+        {
+          headers: {
+            'Authorization': 'KakaoAK 2da5b80696f4403357706514d7c56b70'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        console.log(`❌ ${regionName} 카카오 API 호출 실패: ${response.status}`);
+        return null;
+      }
+
+      const data = await response.json();
+      
+      if (data.documents && data.documents.length > 0) {
+        const place = data.documents[0];
+        const coord = {
+          lat: parseFloat(place.y),
+          lng: parseFloat(place.x)
+        };
+        
+        console.log(`✅ ${regionName} 행정기관 좌표 발견: ${place.place_name} (${coord.lat}, ${coord.lng})`);
+        return coord;
+      } else {
+        console.log(`⚠️ ${regionName} 행정기관 검색 결과 없음: "${searchKeyword}"`);
+        return null;
+      }
+      
+    } catch (error) {
+      console.error(`❌ ${regionName} 행정기관 좌표 조회 오류:`, error);
+      return null;
+    }
+  },
+
+  // 행정기관 검색 키워드 생성
+  generateAdministrativeKeyword(regionName, tier) {
+    if (!regionName) return null;
+    
+    const parts = regionName.split(' ').filter(part => part.length > 0);
+    
+    if (tier === 'sido') {
+      // 시/도청
+      const sido = parts[0];
+      if (sido.includes('특별시')) return `${sido}청`;
+      if (sido.includes('광역시')) return `${sido}청`;
+      if (sido.includes('특별자치시')) return `${sido}청`;
+      if (sido.includes('특별자치도')) return `${sido}청`;
+      if (sido.includes('도')) return `${sido}청`;
+      return `${sido}청`;
+      
+    } else if (tier === 'sigungu') {
+      // 시/군/구청
+      if (parts.length >= 2) {
+        const sigungu = parts[1];
+        if (sigungu.includes('구')) return `${sigungu}청`;
+        if (sigungu.includes('시')) return `${sigungu}청`;
+        if (sigungu.includes('군')) return `${sigungu}청`;
+        return `${sigungu}청`;
+      }
+      
+    } else if (tier === 'dong') {
+      // 동사무소/읍사무소/면사무소
+      if (parts.length >= 3) {
+        const dong = parts[2];
+        if (dong.includes('동')) return `${dong}사무소`;
+        if (dong.includes('읍')) return `${dong}사무소`;
+        if (dong.includes('면')) return `${dong}사무소`;
+        return `${dong}사무소`;
+      }
+    }
+    
+    return null;
+  },
+
+  // 중심 좌표 계산 (센터로이드)
   calculateCenterCoordinate(stores) {
     const validStores = stores.filter(s => s.coord && s.coord.lat && s.coord.lng);
     if (validStores.length === 0) return null;
@@ -517,6 +615,8 @@ window.MapMarkerManager = {
     const sumLat = validStores.reduce((sum, s) => sum + s.coord.lat, 0);
     const sumLng = validStores.reduce((sum, s) => sum + s.coord.lng, 0);
 
+    console.log(`📊 센터로이드 계산: ${validStores.length}개 매장의 평균 좌표`);
+    
     return {
       lat: sumLat / validStores.length,
       lng: sumLng / validStores.length
