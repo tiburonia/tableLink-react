@@ -82,14 +82,16 @@ window.MapMarkerManager = {
 
   // 1. 모드 결정 (개별 vs 집계)
   determineModeByLevel(level) {
+    // 레벨 1-5: 개별 매장 마커
+    // 레벨 6+: 집계 마커
     return level <= 5 ? 'store' : 'region';
   },
 
   // 2. 레벨별 지역 단위 결정
   getRegionTierByLevel(level) {
-    if (level >= 11) return 'sido';        // 11+ -> 시/도 집계
-    if (level >= 8) return 'sigungu';      // 8-10 -> 시/군/구 집계
-    return 'dong';                         // 6-7 -> 읍/면/동 집계
+    if (level >= 11) return 'sido';        // 11+ -> 특별시,광역시,도,특별자치시 집계
+    if (level >= 8) return 'sigungu';      // 8-10 -> 시,군,구 집계
+    return 'dong';                         // 6-7 -> 읍,면,동 집계
   },
 
   // 개별 매장 마커 표시
@@ -149,9 +151,28 @@ window.MapMarkerManager = {
 
     const processId = this.currentProcessId;
 
+    // 먼저 개별 마커 모두 숨기기 (집계 마커 전환 시)
+    this.individualMarkers.forEach(marker => {
+      if (marker && marker.setMap) {
+        marker.setMap(null);
+      }
+    });
+    console.log(`🚫 개별 마커 ${this.individualMarkers.size}개 숨김`);
+
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
     console.log(`📊 ${tier} 그룹화 결과: ${clusters.size}개 지역`);
+    
+    // 주소가 없는 매장 확인
+    const storesWithoutAddress = stores.filter(store => !store.address);
+    if (storesWithoutAddress.length > 0) {
+      console.log(`⚠️ 주소 없는 매장 ${storesWithoutAddress.length}개 발견 - 기본 위치로 그룹화`);
+      
+      // 주소 없는 매장들을 "위치 미확인" 그룹으로 추가
+      if (storesWithoutAddress.length > 0) {
+        clusters.set('위치 미확인', storesWithoutAddress);
+      }
+    }
     
     // 각 지역별 매장 수 출력
     for (const [regionKey, regionStores] of clusters.entries()) {
@@ -184,7 +205,8 @@ window.MapMarkerManager = {
       const marker = await this.createClusterMarker(regionKey, regionStores, map, tier);
       if (marker) {
         this.clusterMarkers.set(clusterId, marker);
-        console.log(`✅ 집계 마커 생성 성공: ${regionKey}`);
+        marker.setMap(map); // 명시적으로 지도에 표시
+        console.log(`✅ 집계 마커 생성 및 표시 성공: ${regionKey}`);
         createdCount++;
       } else {
         console.log(`❌ 집계 마커 생성 실패: ${regionKey}`);
@@ -364,8 +386,18 @@ window.MapMarkerManager = {
     if (!stores || stores.length === 0) return null;
 
     // 중심 좌표 계산 (매장들의 평균 위치)
-    const centerCoord = this.calculateCenterCoordinate(stores);
-    if (!centerCoord) return null;
+    let centerCoord = this.calculateCenterCoordinate(stores);
+    
+    // 주소 없는 매장 그룹인 경우 기본 서울 중심 좌표 사용
+    if (!centerCoord && regionName === '위치 미확인') {
+      centerCoord = { lat: 37.5665, lng: 126.9780 }; // 서울 중심
+      console.log(`📍 위치 미확인 매장 그룹 - 기본 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
+    }
+    
+    if (!centerCoord) {
+      console.log(`❌ ${regionName} 집계 마커 - 유효한 좌표를 찾을 수 없음`);
+      return null;
+    }
 
     const storeCount = stores.length;
     const openCount = stores.filter(s => s.isOpen !== false).length;
