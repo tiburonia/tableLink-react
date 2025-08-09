@@ -262,30 +262,23 @@ window.MapMarkerManager = {
 
       console.log('🔄 레벨', level, '변경에 따른 마커 업데이트 시작');
 
-      // 뷰포트 내 매장만 필터링
-      const storesInView = this.getStoresInViewport(stores, map);
-
       if (newMode === 'store') {
-        // 개별 모드
+        // 개별 모드 - 모든 매장 마커 표시 (뷰포트 필터링 제거)
         this.hideRegionOverlays();
         this.clearRegionOverlays();
 
-        // 뷰포트 내 매장만 표시
-        this.hideStoreMarkers();
-        storesInView.forEach(store => {
-          const marker = this.storeMarkers.get(store.id);
-          if (marker) {
-            marker.setMap(map);
-          }
-        });
+        // 모든 개별 마커 표시
+        this.showStoreMarkers(map);
 
         this.currentMode = 'store';
-        console.log('🏪 개별 매장 마커 모드:', storesInView.length, '개 표시');
+        console.log('🏪 개별 매장 마커 모드:', this.storeMarkers.size, '개 표시');
 
       } else {
         // 집계 모드
         this.hideStoreMarkers();
 
+        // 뷰포트 내 매장만 필터링 (집계에서만 사용)
+        const storesInView = this.getStoresInViewport(stores, map);
         const tier = this.getRegionTierByLevel(level);
         const cacheKey = `${tier}_${level}_${storesInView.length}`;
 
@@ -323,12 +316,6 @@ window.MapMarkerManager = {
     // 이벤트 연결
     kakao.maps.event.addListener(map, 'idle', () => {
       this.handleMapLevelChange(map, stores);
-    });
-
-    // 강제로 모든 마커 표시 (디버깅용)
-    console.log('🔧 강제 마커 표시:', this.storeMarkers.size, '개');
-    this.storeMarkers.forEach(marker => {
-      marker.setMap(map);
     });
 
     console.log('✅ 동적 마커 시스템 초기화 완료');
