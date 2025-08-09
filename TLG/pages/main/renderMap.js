@@ -653,28 +653,30 @@ async function loadStoresAndMarkers(map, forceRefresh = false) {
   }
 }
 
-// 기존 마커 완전 삭제 함수
+// 기존 마커 완전 삭제 함수 (동적 시스템 연동)
 function clearAllMarkers() {
   console.log('🧹 기존 마커 완전 삭제 시작');
 
-  // Map에서 마커 제거
-  if (window.markerMap && window.markerMap.size > 0) {
-    window.markerMap.forEach((marker, storeId) => {
-      if (marker && typeof marker.setMap === 'function') {
-        marker.setMap(null); // 지도에서 제거
-      }
-    });
+  // 동적 마커 시스템의 마커 삭제
+  if (window.MapMarkerManager) {
+    window.MapMarkerManager.hideStoreMarkers();
+    window.MapMarkerManager.clearRegionOverlays();
+    window.MapMarkerManager.storeMarkers.clear();
+    window.MapMarkerManager.regionCache = {
+      dong: new Map(),
+      sigungu: new Map(),
+      sido: new Map()
+    };
+    console.log('🗑️ 동적 마커 시스템 클리어 완료');
+  }
+
+  // 호환성을 위한 전역 변수 클리어
+  if (window.markerMap) {
     window.markerMap.clear();
     console.log('🗑️ markerMap 클리어 완료');
   }
 
-  // 배열에서 마커 제거
-  if (window.currentMarkers && window.currentMarkers.length > 0) {
-    window.currentMarkers.forEach(marker => {
-      if (marker && typeof marker.setMap === 'function') {
-        marker.setMap(null); // 지도에서 제거
-      }
-    });
+  if (window.currentMarkers) {
     window.currentMarkers = [];
     console.log('🗑️ currentMarkers 배열 클리어 완료');
   }
@@ -682,31 +684,26 @@ function clearAllMarkers() {
   console.log('✅ 기존 마커 완전 삭제 완료');
 }
 
-// 캐시 데이터로 마커 생성 (중복 방지)
+// 캐시 데이터로 마커 생성 (동적 시스템 사용)
 async function createMarkersFromCache(stores, map) {
-  console.log('📁 캐시 데이터로 마커 생성 시작:', stores.length, '개 매장');
+  console.log('📁 캐시 데이터로 동적 마커 생성 시작:', stores.length, '개 매장');
 
-  // DOM 재생성 후에는 항상 마커를 새로 생성해야 함
-  console.log('🔄 캐시 데이터로 새 마커 생성 시작');
+  // 동적 마커 시스템으로 생성
   await createMarkersFromData(stores, map);
 }
 
-// 실제 마커 생성 함수
+// 동적 마커 시스템으로 마커 생성
 async function createMarkersFromData(stores, map) {
-  console.log('🔄 새 마커 생성 시작:', stores.length, '개 매장');
+  console.log('🔄 동적 마커 시스템으로 마커 생성:', stores.length, '개 매장');
 
-  if (window.MapMarkerManager && typeof window.MapMarkerManager.createMarkersInBatch === 'function') {
-    const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
-
-    // 마커 Map과 배열에 저장
-    newMarkers.forEach(marker => {
-      if (marker && marker.storeId) {
-        window.markerMap.set(marker.storeId, marker);
-      }
-    });
-
-    window.currentMarkers = Array.from(window.markerMap.values());
-    console.log(`✅ 새 마커 생성 완료 - 총 ${window.markerMap.size}개 마커 활성화`);
+  if (window.MapMarkerManager && typeof window.MapMarkerManager.initMapWithMarkers === 'function') {
+    await window.MapMarkerManager.initMapWithMarkers(map, stores);
+    
+    // 호환성을 위해 전역 변수 업데이트
+    window.currentMarkers = Array.from(window.MapMarkerManager.storeMarkers.values());
+    window.markerMap = window.MapMarkerManager.storeMarkers;
+    
+    console.log(`✅ 동적 마커 시스템 초기화 완료 - 총 ${window.MapMarkerManager.storeMarkers.size}개 마커 준비`);
   }
 }
 
