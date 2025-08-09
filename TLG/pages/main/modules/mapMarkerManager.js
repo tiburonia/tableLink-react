@@ -8,18 +8,14 @@ window.MapMarkerManager = {
     const statusText = isOpen ? '운영중' : '운영준비중';
     const statusColor = isOpen ? '#4caf50' : '#ff9800';
 
-    console.log(`🏪 마커 생성: ${store.name} - ${statusText} (DB 값: ${store.isOpen})`);
-
     // 별점 정보 사용 (미리 로드된 경우 사용, 아니면 개별 조회)
     let rating = '0.0';
     if (preloadedRating) {
       rating = parseFloat(preloadedRating.ratingAverage).toFixed(1);
-      console.log(`📊 마커: ${store.name} 미리 로드된 별점 사용: ${rating}점`);
     } else {
       const ratingData = await window.loadStoreRatingAsync(store.id);
       if (ratingData) {
         rating = parseFloat(ratingData.ratingAverage).toFixed(1);
-        console.log(`📊 마커: ${store.name} 개별 별점 조회: ${rating}점`);
       }
     }
 
@@ -51,7 +47,7 @@ window.MapMarkerManager = {
       return [];
     }
 
-    console.log(`🔄 일괄 마커 생성 시작: ${stores.length}개 매장`);
+    console.log(`🔄 일괄 마커 생성: ${stores.length}개 매장`);
 
     // 1. 모든 매장의 별점 정보 일괄 조회
     const storeIds = stores.map(store => store.id);
@@ -67,7 +63,7 @@ window.MapMarkerManager = {
       }
     }
 
-    console.log(`✅ 일괄 마커 생성 완료: ${markers.length}개 마커`);
+    console.log(`✅ 마커 생성 완료: ${markers.length}개`);
     return markers;
   },
 
