@@ -2,7 +2,9 @@
 const pool = require('../../shared/config/database');
 
 // 카카오 REST API 키
-const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+const KAKAO_API_KEY = process.env.KAKAO_API_KEY || '2da5b80696f4403357706514d7c56b70';
+
+console.log('🔑 카카오 API 키 확인:', KAKAO_API_KEY ? '✅ 설정됨' : '❌ 없음');
 
 if (!KAKAO_API_KEY) {
   console.error('❌ KAKAO_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -143,6 +145,11 @@ async function updateAllStoreAddresses() {
   try {
     console.log('🚀 모든 매장 주소 업데이트 시작');
     
+    // PostgreSQL 연결 확인
+    console.log('🔌 데이터베이스 연결 확인 중...');
+    const connectionTest = await pool.query('SELECT NOW()');
+    console.log('✅ 데이터베이스 연결 성공:', connectionTest.rows[0].now);
+    
     // 필요한 컬럼 추가
     await addAddressStatusColumn();
     await addRegionColumns();
@@ -166,8 +173,23 @@ async function updateAllStoreAddresses() {
       
       console.log(`\n📍 [${i + 1}/${result.rows.length}] 매장 ${id} (${name}) 처리 중...`);
       
-      if (!coord || !coord.lat || !coord.lng) {
-        console.log(`⚠️ 좌표 정보가 불완전함 - SKIP`);
+      // 좌표 유효성 검사
+      let lat, lng;
+      if (typeof coord === 'object' && coord !== null) {
+        lat = coord.lat;
+        lng = coord.lng;
+      } else if (typeof coord === 'string') {
+        try {
+          const parsedCoord = JSON.parse(coord);
+          lat = parsedCoord.lat;
+          lng = parsedCoord.lng;
+        } catch (e) {
+          console.log(`⚠️ 좌표 파싱 실패: ${coord}`);
+        }
+      }
+      
+      if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        console.log(`⚠️ 좌표 정보가 불완전함 - SKIP (lat: ${lat}, lng: ${lng})`);
         await pool.query(`
           UPDATE stores 
           SET address_status = 'no_coordinates' 
@@ -177,16 +199,15 @@ async function updateAllStoreAddresses() {
         continue;
       }
       
-      const { lat, lng } = coord;
       console.log(`   좌표: ${lat}, ${lng}`);
       
       // 1. 주소 정보 조회
       const addressInfo = await getAddressFromCoordinates(lat, lng);
-      await delay(100); // API 제한 방지
+      await delay(200); // API 제한 방지 (더 길게)
       
       // 2. 행정구역 정보 조회
       const regionInfo = await getRegionCodeFromCoordinates(lat, lng);
-      await delay(100); // API 제한 방지
+      await delay(200); // API 제한 방지 (더 길게)
       
       if (addressInfo || regionInfo) {
         try {
