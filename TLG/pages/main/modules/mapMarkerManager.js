@@ -68,10 +68,10 @@ window.MapMarkerManager = {
   },
 
   getMarkerHTML(store, rating, statusColor, statusText) {
-    const gradientColor = statusColor === '#4caf50' ? 
-      'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' : 
+    const gradientColor = statusColor === '#4caf50' ?
+      'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' :
       'linear-gradient(135deg, #ff9800 0%, #ffb74d 50%, #ffcc02 100%)';
-    
+
     return `
       <div class="modern-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="marker-container">
@@ -133,7 +133,7 @@ window.MapMarkerManager = {
           justify-content: center;
           position: relative;
           border: 3px solid white;
-          box-shadow: 
+          box-shadow:
             0 4px 20px rgba(0,0,0,0.15),
             0 2px 8px rgba(0,0,0,0.1),
             inset 0 1px 0 rgba(255,255,255,0.3);
@@ -247,5 +247,17 @@ window.MapMarkerManager = {
         }
       </style>
     `;
-  }
+  },
+
+  // 1. 모드 결정 (개별 vs 집계)
+  determineModeByLevel(level) {
+    return level <= 5 ? 'store' : 'region';
+  },
+
+  // 2. 레벨별 지역 단위 결정
+  getRegionTierByLevel(level) {
+    if (level >= 11) return 'sido';        // 11+ -> 시/도 집계
+    if (level >= 8) return 'sigungu';      // 8-10 -> 시/군/구 집계
+    return 'dong';                         // 6-7 -> 읍/면/동 집계
+  },
 };
