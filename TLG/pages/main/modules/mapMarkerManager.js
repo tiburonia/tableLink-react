@@ -560,16 +560,16 @@ window.MapMarkerManager = {
         }
 
         .cluster-rectangle {
-          width: 100px;
-          height: 42px;
+          width: 70px;
+          height: 30px;
           background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
-          border-radius: 21px;
+          border-radius: 15px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          border: 3px solid white;
-          box-shadow: 0 4px 20px rgba(41, 126, 252, 0.3);
-          padding: 0 12px;
+          border: 2px solid white;
+          box-shadow: 0 3px 15px rgba(41, 126, 252, 0.3);
+          padding: 0 8px;
           position: relative;
           overflow: hidden;
         }
@@ -585,19 +585,19 @@ window.MapMarkerManager = {
 
         .cluster-name {
           color: white;
-          font-size: 12px;
+          font-size: 10px;
           font-weight: 700;
           line-height: 1;
           text-shadow: 0 1px 2px rgba(0,0,0,0.4);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          max-width: 60px;
+          max-width: 40px;
         }
 
         .cluster-info {
           color: rgba(255, 255, 255, 0.9);
-          font-size: 9px;
+          font-size: 8px;
           font-weight: 500;
           line-height: 1;
           text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -608,14 +608,14 @@ window.MapMarkerManager = {
           align-items: center;
           justify-content: center;
           background: rgba(255, 255, 255, 0.2);
-          border-radius: 12px;
-          width: 24px;
-          height: 24px;
+          border-radius: 8px;
+          width: 18px;
+          height: 18px;
         }
 
         .cluster-count {
           color: white;
-          font-size: 13px;
+          font-size: 10px;
           font-weight: 700;
           text-shadow: 0 1px 2px rgba(0,0,0,0.4);
         }
