@@ -23,7 +23,7 @@ window.MapMarkerManager = {
 
     this.debounceTimer = setTimeout(async () => {
       await this._doHandleMapLevelChange(level, map);
-    }, 200);
+    }, 150);
   },
 
   // 실제 레벨 변경 처리 함수
@@ -49,7 +49,7 @@ window.MapMarkerManager = {
     if (this.isProcessing) {
       console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청`);
       this.shouldCancel = true;
-      await this.waitForProcessCompletion(800);
+      await this.waitForProcessCompletion(500);
     }
 
     // 새로운 프로세스 시작
@@ -101,7 +101,7 @@ window.MapMarkerManager = {
   isSameViewport(newViewport) {
     if (!this.currentViewport) return false;
 
-    const threshold = 0.001; // 좌표 차이 임계값
+    const threshold = 0.0001; // 좌표 차이 임계값 (더 정밀하게)
     return Math.abs(this.currentViewport.swLat - newViewport.swLat) < threshold &&
            Math.abs(this.currentViewport.swLng - newViewport.swLng) < threshold &&
            Math.abs(this.currentViewport.neLat - newViewport.neLat) < threshold &&
@@ -111,24 +111,30 @@ window.MapMarkerManager = {
   // 뷰포트 범위 내 매장 데이터 가져오기 (디바운싱 및 캐싱 적용)
   async fetchStoresInViewport(bounds, level) {
     try {
-      const viewportKey = `${bounds.getSouthWest().getLat().toFixed(4)}_${bounds.getSouthWest().getLng().toFixed(4)}_${bounds.getNorthEast().getLat().toFixed(4)}_${bounds.getNorthEast().getLng().toFixed(4)}_${level}`;
+      const swLat = bounds.getSouthWest().getLat();
+      const swLng = bounds.getSouthWest().getLng();
+      const neLat = bounds.getNorthEast().getLat();
+      const neLng = bounds.getNorthEast().getLng();
+      
+      const viewportKey = `${swLat.toFixed(4)}_${swLng.toFixed(4)}_${neLat.toFixed(4)}_${neLng.toFixed(4)}_${level}`;
 
-      // 캐시 확인 (1분간 유효)
+      // 캐시 확인 (30초간 유효)
       if (this.viewportCache && this.viewportCache.key === viewportKey && 
-          Date.now() - this.viewportCache.timestamp < 60000) {
+          Date.now() - this.viewportCache.timestamp < 30000) {
         console.log(`🚀 캐시된 뷰포트 데이터 사용: ${this.viewportCache.data.length}개 매장`);
         return this.viewportCache.data;
       }
 
       const params = new URLSearchParams({
-        swLat: bounds.getSouthWest().getLat(),
-        swLng: bounds.getSouthWest().getLng(),
-        neLat: bounds.getNorthEast().getLat(),
-        neLng: bounds.getNorthEast().getLng(),
+        swLat: swLat,
+        swLng: swLng,
+        neLat: neLat,
+        neLng: neLng,
         level: level
       });
 
-      console.log(`📍 뷰포트 매장 데이터 요청:`, params.toString());
+      console.log(`📍 뷰포트 매장 데이터 요청 (${tier || 'individual'}):`, params.toString());
+      console.log(`📊 뷰포트 범위: SW(${swLat.toFixed(6)}, ${swLng.toFixed(6)}) ~ NE(${neLat.toFixed(6)}, ${neLng.toFixed(6)})`);
 
       const response = await fetch(`/api/stores/viewport?${params}`);
 
@@ -238,11 +244,21 @@ window.MapMarkerManager = {
 
     const processId = this.currentProcessId;
 
-    // 뷰포트 범위 내 매장 데이터 요청
-    const stores = await this.fetchStoresInViewport(map.getBounds(), this.currentLevel);
+    try {
+      // 뷰포트 범위 내 매장 데이터 요청
+      const stores = await this.fetchStoresInViewport(map.getBounds(), this.currentLevel);
 
-    if (this.shouldCancel || this.currentProcessId !== processId) {
-      console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
+      if (this.shouldCancel || this.currentProcessId !== processId) {
+        console.log(`⏸️ 매장 데이터 수신 후 프로세스 중단`);
+        return;
+      }
+
+      if (!stores || stores.length === 0) {
+        console.log(`ℹ️ ${tier} 집계 마커 - 뷰포트 내 매장 없음`);
+        return;
+      }
+    } catch (error) {
+      console.error(`❌ ${tier} 집계 마커 데이터 요청 실패:`, error);
       return;
     }
 

@@ -64,8 +64,8 @@ router.get('/viewport', async (req, res) => {
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
       WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
-        AND sa.latitude BETWEEN $1 AND $3
-        AND sa.longitude BETWEEN $2 AND $4
+        AND sa.latitude >= $1 AND sa.latitude <= $3
+        AND sa.longitude >= $2 AND sa.longitude <= $4
       ORDER BY s.id
       LIMIT 200
     `, queryParams);
