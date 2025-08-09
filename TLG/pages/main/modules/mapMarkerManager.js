@@ -492,20 +492,12 @@ window.MapMarkerManager = {
     // 앵커 좌표 결정 (행정기관 우선, 실패시 센트로이드)
     let centerCoord = null;
     
-    // 읍/면/동 레벨(tier === 'dong')인 경우 행정기관 좌표 우선 시도
-    if (tier === 'dong') {
-      centerCoord = await this.getAdministrativeOfficeCoordinate(regionName);
-      if (centerCoord) {
-        console.log(`🏛️ ${regionName} 행정기관 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
-      } else {
-        console.log(`⚠️ ${regionName} 행정기관 좌표를 찾을 수 없음 - 센트로이드 사용`);
-        centerCoord = this.calculateCenterCoordinate(stores);
-        if (centerCoord) {
-          console.log(`📍 ${regionName} 센트로이드 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
-        }
-      }
+    // 모든 레벨에서 행정기관 좌표 우선 시도
+    centerCoord = await this.getAdministrativeOfficeCoordinate(regionName, tier);
+    if (centerCoord) {
+      console.log(`🏛️ ${regionName} 행정기관 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
     } else {
-      // 시/도, 시/군/구 레벨은 기존대로 센트로이드 사용
+      console.log(`⚠️ ${regionName} 행정기관 좌표를 찾을 수 없음 - 센트로이드 사용`);
       centerCoord = this.calculateCenterCoordinate(stores);
       if (centerCoord) {
         console.log(`📍 ${regionName} 센트로이드 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
@@ -707,39 +699,72 @@ window.MapMarkerManager = {
     return regionName;
   },
 
-  // 행정기관 좌표 조회 (읍사무소, 면사무소, 동사무소 등)
-  async getAdministrativeOfficeCoordinate(regionName) {
+  // 행정기관 좌표 조회 (시청, 구청, 군청, 읍사무소, 면사무소, 동사무소 등)
+  async getAdministrativeOfficeCoordinate(regionName, tier = 'dong') {
     try {
       if (!regionName || typeof regionName !== 'string') {
         return null;
       }
 
-      // 지역명에서 읍/면/동 추출
       const parts = regionName.split(' ').filter(part => part.length > 0);
-      if (parts.length < 3) {
-        return null;
-      }
+      let query = '';
 
-      const sido = parts[0]; // 시/도
-      const sigungu = parts[1]; // 시/군/구  
-      const dong = parts[2]; // 읍/면/동
-
-      // 행정기관명 생성 (읍사무소, 면사무소, 동사무소)
-      let officeName = '';
-      if (dong.endsWith('읍')) {
-        officeName = dong + '사무소';
-      } else if (dong.endsWith('면')) {
-        officeName = dong + '사무소';
-      } else if (dong.endsWith('동')) {
-        officeName = dong + '사무소';
+      if (tier === 'sido') {
+        // 시/도 레벨: 도청, 시청 등
+        if (parts.length < 1) return null;
+        
+        const sido = parts[0];
+        if (sido.includes('특별시') || sido.includes('광역시')) {
+          query = `${sido}청`;
+        } else if (sido.includes('도')) {
+          query = `${sido}청`;
+        } else if (sido.includes('특별자치시') || sido.includes('특별자치도')) {
+          query = `${sido}청`;
+        } else {
+          query = `${sido} 청사`;
+        }
+        
+      } else if (tier === 'sigungu') {
+        // 시/군/구 레벨: 시청, 군청, 구청 등
+        if (parts.length < 2) return null;
+        
+        const sido = parts[0];
+        const sigungu = parts[1];
+        
+        if (sigungu.includes('구')) {
+          query = `${sido} ${sigungu}청`;
+        } else if (sigungu.includes('시')) {
+          query = `${sigungu}청`;
+        } else if (sigungu.includes('군')) {
+          query = `${sigungu}청`;
+        } else {
+          query = `${sido} ${sigungu} 청사`;
+        }
+        
       } else {
-        // 읍/면/동으로 끝나지 않으면 동사무소로 가정
-        officeName = dong + '동사무소';
+        // 읍/면/동 레벨: 읍사무소, 면사무소, 동사무소
+        if (parts.length < 3) return null;
+        
+        const sido = parts[0];
+        const sigungu = parts[1];
+        const dong = parts[2];
+
+        let officeName = '';
+        if (dong.endsWith('읍')) {
+          officeName = dong + '사무소';
+        } else if (dong.endsWith('면')) {
+          officeName = dong + '사무소';
+        } else if (dong.endsWith('동')) {
+          officeName = dong + '사무소';
+        } else {
+          // 읍/면/동으로 끝나지 않으면 동사무소로 가정
+          officeName = dong + '동사무소';
+        }
+        
+        query = `${sido} ${sigungu} ${officeName}`;
       }
 
-      // 카카오 장소 검색 API를 사용하여 행정기관 좌표 조회
-      const query = `${sido} ${sigungu} ${officeName}`;
-      console.log(`🔍 행정기관 검색: ${query}`);
+      console.log(`🔍 ${tier} 행정기관 검색: ${query}`);
 
       return new Promise((resolve) => {
         if (!window.kakao || !window.kakao.maps || !window.kakao.maps.services) {
@@ -759,10 +784,10 @@ window.MapMarkerManager = {
               lng: parseFloat(place.x)
             };
             
-            console.log(`✅ 행정기관 좌표 발견: ${place.place_name} (${coord.lat}, ${coord.lng})`);
+            console.log(`✅ ${tier} 행정기관 좌표 발견: ${place.place_name} (${coord.lat}, ${coord.lng})`);
             resolve(coord);
           } else {
-            console.log(`❌ 행정기관 검색 실패: ${query} (상태: ${status})`);
+            console.log(`❌ ${tier} 행정기관 검색 실패: ${query} (상태: ${status})`);
             resolve(null);
           }
         }, {
