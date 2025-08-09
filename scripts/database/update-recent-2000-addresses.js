@@ -131,18 +131,18 @@ async function ensureColumns() {
   }
 }
 
-// 최근 2000개 매장 주소 정보 업데이트
-async function updateRecent2000StoreAddresses() {
+// 최근 4000개 매장 주소 정보 업데이트
+async function updateRecent4000StoreAddresses() {
   try {
-    console.log('🏠 최근 2000개 매장 주소 정보 업데이트 시작...');
+    console.log('🏠 최근 4000개 매장 주소 정보 업데이트 시작...');
     
-    // 최근 2000개 매장 조회 (ID 기준 내림차순으로 최근 것들)
+    // 최근 4000개 매장 조회 (ID 기준 내림차순으로 최근 것들)
     const result = await pool.query(`
       SELECT id, name, coord 
       FROM stores 
       WHERE coord IS NOT NULL 
       ORDER BY id DESC 
-      LIMIT 2000
+      LIMIT 4000
     `);
     
     console.log(`🏪 총 ${result.rows.length}개 매장 주소 업데이트 대상`);
@@ -285,7 +285,7 @@ async function updateRecent2000StoreAddresses() {
       }
     }
     
-    console.log('\n🎉 최근 2000개 매장 주소 업데이트 완료!');
+    console.log('\n🎉 최근 4000개 매장 주소 업데이트 완료!');
     console.log(`📊 최종 결과:`);
     console.log(`   ✅ 성공: ${successCount}개`);
     console.log(`   ❌ 실패: ${failCount}개`);
@@ -302,16 +302,16 @@ async function checkResults() {
   try {
     console.log('\n📊 최종 결과 확인...');
     
-    // 최근 2000개 매장의 상태별 통계
+    // 최근 4000개 매장의 상태별 통계
     const statusStats = await pool.query(`
       SELECT address_status, COUNT(*) as count 
       FROM stores 
-      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 2000)
+      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 4000)
       GROUP BY address_status 
       ORDER BY count DESC
     `);
     
-    console.log('\n📈 최근 2000개 매장 상태별 통계:');
+    console.log('\n📈 최근 4000개 매장 상태별 통계:');
     statusStats.rows.forEach(stat => {
       console.log(`   ${stat.address_status || 'null'}: ${stat.count}개`);
     });
@@ -320,7 +320,7 @@ async function checkResults() {
     const regionStats = await pool.query(`
       SELECT sido, COUNT(*) as count 
       FROM stores 
-      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 2000)
+      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 4000)
         AND sido IS NOT NULL 
         AND address_status = 'success'
       GROUP BY sido 
@@ -336,7 +336,7 @@ async function checkResults() {
     const samples = await pool.query(`
       SELECT id, name, address, sido, sigungu, dong, region_code, address_status 
       FROM stores 
-      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 2000)
+      WHERE id IN (SELECT id FROM stores ORDER BY id DESC LIMIT 4000)
         AND address_status = 'success' 
       ORDER BY RANDOM() 
       LIMIT 10
@@ -373,10 +373,10 @@ async function checkResults() {
 // 메인 실행 함수
 async function main() {
   try {
-    console.log('🚀 최근 2000개 매장 주소 정보 업데이트 시작');
+    console.log('🚀 최근 4000개 매장 주소 정보 업데이트 시작');
     console.log('📋 작업 순서:');
     console.log('  1. 데이터베이스 컬럼 확인 및 설정');
-    console.log('  2. 최근 2000개 매장 조회');
+    console.log('  2. 최근 4000개 매장 조회');
     console.log('  3. 카카오 API를 통한 주소 정보 업데이트');
     console.log('  4. 결과 확인');
     console.log('');
@@ -384,8 +384,8 @@ async function main() {
     // 1. 컬럼 설정
     await ensureColumns();
     
-    // 2. 최근 2000개 매장 주소 업데이트
-    await updateRecent2000StoreAddresses();
+    // 2. 최근 4000개 매장 주소 업데이트
+    await updateRecent4000StoreAddresses();
     
     // 3. 결과 확인
     await checkResults();
@@ -402,7 +402,7 @@ async function main() {
 if (require.main === module) {
   main()
     .then(() => {
-      console.log('🎉 최근 2000개 매장 주소 정보 업데이트 완료');
+      console.log('🎉 최근 4000개 매장 주소 정보 업데이트 완료');
       process.exit(0);
     })
     .catch(error => {
@@ -414,6 +414,6 @@ if (require.main === module) {
 module.exports = {
   main,
   ensureColumns,
-  updateRecent2000StoreAddresses,
+  updateRecent4000StoreAddresses,
   checkResults
 };
