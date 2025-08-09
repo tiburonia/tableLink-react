@@ -1,4 +1,3 @@
-
 // 지도 마커 관리자 - 동적 마커 시스템
 window.MapMarkerManager = {
   // 전역 상태 관리
@@ -85,10 +84,10 @@ window.MapMarkerManager = {
 
     return stores.filter(store => {
       if (!store.coord || !store.coord.lat || !store.coord.lng) return false;
-      
+
       const lat = store.coord.lat;
       const lng = store.coord.lng;
-      
+
       return lat >= extendedSW.getLat() && lat <= extendedNE.getLat() &&
              lng >= extendedSW.getLng() && lng <= extendedNE.getLng();
     });
@@ -151,7 +150,7 @@ window.MapMarkerManager = {
   // 개별 매장 마커 생성 (최초 1회만)
   async buildStoreMarkers(stores, map) {
     console.log('🏪 개별 매장 마커 생성:', stores.length, '개');
-    
+
     for (const store of stores) {
       if (!store.coord || this.storeMarkers.has(store.id)) continue;
 
@@ -260,17 +259,17 @@ window.MapMarkerManager = {
     this.debounceTimer = setTimeout(() => {
       const level = map.getLevel();
       const newMode = this.getModeByLevel(level);
-      
+
       console.log('🔄 레벨', level, '변경에 따른 마커 업데이트 시작');
 
       // 뷰포트 내 매장만 필터링
       const storesInView = this.getStoresInViewport(stores, map);
-      
+
       if (newMode === 'store') {
         // 개별 모드
         this.hideRegionOverlays();
         this.clearRegionOverlays();
-        
+
         // 뷰포트 내 매장만 표시
         this.hideStoreMarkers();
         storesInView.forEach(store => {
@@ -279,17 +278,17 @@ window.MapMarkerManager = {
             marker.setMap(map);
           }
         });
-        
+
         this.currentMode = 'store';
         console.log('🏪 개별 매장 마커 모드:', storesInView.length, '개 표시');
-        
+
       } else {
         // 집계 모드
         this.hideStoreMarkers();
-        
+
         const tier = this.getRegionTierByLevel(level);
         const cacheKey = `${tier}_${level}_${storesInView.length}`;
-        
+
         let groups;
         if (this.regionCache[tier].has(cacheKey)) {
           groups = this.regionCache[tier].get(cacheKey);
@@ -299,14 +298,14 @@ window.MapMarkerManager = {
           this.regionCache[tier].set(cacheKey, groups);
           console.log('🆕 새로운 집계 데이터 생성:', tier, groups.length, '개 그룹');
         }
-        
+
         this.buildRegionOverlaysFromGroups(groups, map);
         this.showRegionOverlays(map);
-        
+
         this.currentMode = 'region';
         console.log('🏘️ 집계 마커 모드:', tier, groups.length, '개 그룹 표시');
       }
-      
+
       console.log('✅ 레벨', level, '마커 업데이트 완료:', this.currentMode, '모드');
     }, 150);
   },
@@ -314,18 +313,24 @@ window.MapMarkerManager = {
   // 초기화
   async initMapWithMarkers(map, stores) {
     console.log('🔄 지도 레벨', map.getLevel(), '에 따른 마커 생성:', stores.length, '개 매장');
-    
+
     // 개별 마커 미리 생성 (숨김 상태)
     await this.buildStoreMarkers(stores, map);
-    
+
     // 현재 레벨에 따른 표시
     this.handleMapLevelChange(map, stores);
-    
+
     // 이벤트 연결
     kakao.maps.event.addListener(map, 'idle', () => {
       this.handleMapLevelChange(map, stores);
     });
-    
+
+    // 강제로 모든 마커 표시 (디버깅용)
+    console.log('🔧 강제 마커 표시:', this.storeMarkers.size, '개');
+    this.storeMarkers.forEach(marker => {
+      marker.setMap(map);
+    });
+
     console.log('✅ 동적 마커 시스템 초기화 완료');
   },
 
@@ -373,10 +378,10 @@ window.MapMarkerManager = {
 
   // 마커 HTML 생성 (기존 유지)
   getMarkerHTML(store, rating, statusColor, statusText) {
-    const gradientColor = statusColor === '#4caf50' ? 
-      'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' : 
+    const gradientColor = statusColor === '#4caf50' ?
+      'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' :
       'linear-gradient(135deg, #ff9800 0%, #ffb74d 50%, #ffcc02 100%)';
-    
+
     return `
       <div class="modern-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="marker-container">
@@ -438,7 +443,7 @@ window.MapMarkerManager = {
           justify-content: center;
           position: relative;
           border: 3px solid white;
-          box-shadow: 
+          box-shadow:
             0 4px 20px rgba(0,0,0,0.15),
             0 2px 8px rgba(0,0,0,0.1),
             inset 0 1px 0 rgba(255,255,255,0.3);

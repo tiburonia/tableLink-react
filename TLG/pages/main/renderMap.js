@@ -704,6 +704,24 @@ async function createMarkersFromData(stores, map) {
     window.markerMap = window.MapMarkerManager.storeMarkers;
     
     console.log(`✅ 동적 마커 시스템 초기화 완료 - 총 ${window.MapMarkerManager.storeMarkers.size}개 마커 준비`);
+    
+    // 마커가 정말 안 보이면 강제로 모든 마커 표시
+    setTimeout(() => {
+      console.log('🔧 3초 후 강제 마커 표시 확인');
+      let visibleMarkers = 0;
+      window.MapMarkerManager.storeMarkers.forEach(marker => {
+        if (marker.getMap()) visibleMarkers++;
+      });
+      
+      if (visibleMarkers === 0) {
+        console.log('⚠️ 마커가 하나도 안 보임 - 강제 표시');
+        window.MapMarkerManager.storeMarkers.forEach(marker => {
+          marker.setMap(map);
+        });
+      } else {
+        console.log('✅ 현재 표시된 마커:', visibleMarkers, '개');
+      }
+    }, 3000);
   }
 }
 
