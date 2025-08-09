@@ -868,10 +868,26 @@ function handleClusterClick(regionName, storeCount) {
   // 해당 지역으로 지도 확대
   if (window.currentMapInstance) {
     const currentLevel = window.currentMapInstance.getLevel();
-    const newLevel = Math.max(1, currentLevel - 2); // 2단계 확대
-    window.currentMapInstance.setLevel(newLevel);
+    let newLevel;
     
+    // 현재 레벨에 따라 적절한 확대 단계 결정
+    if (currentLevel >= 10) {
+      newLevel = 8; // 도/시 → 시/군/구
+    } else if (currentLevel >= 8) {
+      newLevel = 6; // 시/군/구 → 읍/면/동
+    } else if (currentLevel >= 6) {
+      newLevel = 3; // 읍/면/동 → 개별 매장
+    } else {
+      newLevel = Math.max(1, currentLevel - 1); // 기본 1단계 확대
+    }
+    
+    window.currentMapInstance.setLevel(newLevel);
     console.log(`🔍 ${regionName} 지역으로 확대: 레벨 ${currentLevel} → ${newLevel}`);
+    
+    // 확대 후 약간의 딜레이를 두고 마커 업데이트
+    setTimeout(() => {
+      handleMapLevelChange(window.currentMapInstance, newLevel);
+    }, 300);
   }
 }
 

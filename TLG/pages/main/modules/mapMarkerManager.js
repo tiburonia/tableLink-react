@@ -2,7 +2,7 @@
 window.MapMarkerManager = {
   // 현재 표시 모드 (individual: 개별 매장, cluster: 지역 집계)
   currentDisplayMode: 'individual',
-  
+
   async createCustomMarker(store, map, preloadedRating = null) {
     if (!store.coord) return;
 
@@ -111,23 +111,31 @@ window.MapMarkerManager = {
 
   // 지역별 집계 마커 생성
   async createClusterMarkers(stores, map, level) {
-    console.log(`🗺️ 지역별 집계 마커 생성 (레벨 ${level})`);
+    console.log(`🗺️ 지역별 집계 마커 생성 (레벨 ${level}) - ${stores.length}개 매장 처리`);
 
     // 주소 기반 지역 그룹핑
     const regionGroups = this.groupStoresByRegion(stores, level);
-    
+    console.log(`📍 지역 그룹핑 결과:`, Object.keys(regionGroups).map(region => 
+      `${region}: ${regionGroups[region].stores.length}개`
+    ));
+
     const clusterMarkers = [];
     for (const [regionName, regionData] of Object.entries(regionGroups)) {
-      const clusterMarker = this.createClusterMarker(
-        regionName, 
-        regionData.stores.length, 
-        regionData.centerCoord, 
-        map
-      );
-      
-      // 클러스터에 포함된 매장 정보 저장
-      clusterMarker.includedStores = regionData.stores;
-      clusterMarkers.push(clusterMarker);
+      if (regionData.stores.length > 0) {
+        console.log(`🏗️ 클러스터 마커 생성: ${regionName} (${regionData.stores.length}개 매장)`);
+
+        const clusterMarker = this.createClusterMarker(
+          regionName, 
+          regionData.stores.length, 
+          regionData.centerCoord, 
+          map
+        );
+
+        // 클러스터에 포함된 매장 정보 저장
+        clusterMarker.includedStores = regionData.stores;
+        clusterMarker.regionName = regionName;
+        clusterMarkers.push(clusterMarker);
+      }
     }
 
     console.log(`✅ 지역별 집계 마커 생성 완료: ${clusterMarkers.length}개 지역`);
@@ -143,7 +151,7 @@ window.MapMarkerManager = {
 
       // 주소에서 지역 추출 (레벨에 따라 다른 단위)
       const regionName = this.extractRegionFromAddress(store.address, level);
-      
+
       if (!regionGroups[regionName]) {
         regionGroups[regionName] = {
           stores: [],
@@ -162,7 +170,7 @@ window.MapMarkerManager = {
     Object.keys(regionGroups).forEach(regionName => {
       const group = regionGroups[regionName];
       const storeCount = group.stores.length;
-      
+
       group.centerCoord = {
         lat: group.totalLat / storeCount,
         lng: group.totalLng / storeCount
@@ -174,30 +182,45 @@ window.MapMarkerManager = {
 
   // 주소에서 지역명 추출 (레벨별)
   extractRegionFromAddress(address, level) {
-    if (!address) return '미상 지역';
+    if (!address || typeof address !== 'string') return '미상 지역';
 
-    // 우편번호 제거 후 주소 파싱
-    const cleanAddress = address.replace(/^\[\d{5}\]\s*/, '');
-    const addressParts = cleanAddress.split(' ');
+    try {
+      // 우편번호와 괄호 내용 제거 후 주소 파싱
+      const cleanAddress = address
+        .replace(/^\[\d{5}\]\s*/, '')  // 우편번호 제거
+        .replace(/\([^)]*\)/g, '')    // 괄호 내용 제거
+        .trim();
 
-    // 레벨에 따른 지역 단위 결정
-    if (level >= 10) {
-      // 레벨 10+: 도/특별시/광역시 단위
-      return addressParts[0] || '미상 도/시';
-    } else if (level >= 8) {
-      // 레벨 8-9: 시/군/구 단위
-      const region1 = addressParts[0] || '';
-      const region2 = addressParts[1] || '';
-      return region2 ? `${region1} ${region2}` : (region1 || '미상 시/군/구');
-    } else {
-      // 레벨 6-7: 읍/면/동 단위
-      const region1 = addressParts[0] || '';
-      const region2 = addressParts[1] || '';
-      const region3 = addressParts[2] || '';
-      
-      if (region3) return `${region1} ${region2} ${region3}`;
-      if (region2) return `${region1} ${region2}`;
-      return region1 || '미상 읍/면/동';
+      const addressParts = cleanAddress.split(' ').filter(part => part.length > 0);
+
+      if (addressParts.length === 0) return '미상 지역';
+
+      // 레벨에 따른 지역 단위 결정
+      if (level >= 10) {
+        // 레벨 10+: 도/특별시/광역시 단위
+        return addressParts[0] || '미상 도/시';
+      } else if (level >= 8) {
+        // 레벨 8-9: 시/군/구 단위
+        const region1 = addressParts[0] || '';
+        const region2 = addressParts[1] || '';
+        return region2 ? `${region1} ${region2}` : (region1 || '미상 시/군/구');
+      } else if (level >= 6) {
+        // 레벨 6-7: 읍/면/동 단위
+        const region1 = addressParts[0] || '';
+        const region2 = addressParts[1] || '';
+        const region3 = addressParts[2] || '';
+
+        if (region3) return `${region1} ${region2} ${region3}`;
+        if (region2) return `${region1} ${region2}`;
+        return region1 || '미상 읍/면/동';
+      } else {
+        // 레벨 1-5: 개별 매장 표시 (이 함수가 호출되지 않아야 함)
+        console.warn(`⚠️ 레벨 ${level}에서 지역 추출이 호출됨 - 개별 마커를 표시해야 함`);
+        return '개별 매장';
+      }
+    } catch (error) {
+      console.warn('주소 파싱 오류:', address, error);
+      return '파싱 오류';
     }
   },
 
@@ -205,7 +228,7 @@ window.MapMarkerManager = {
   getClusterMarkerHTML(regionName, storeCount) {
     const sizeClass = storeCount > 50 ? 'large' : storeCount > 20 ? 'medium' : 'small';
     const bgColor = storeCount > 50 ? '#e53e3e' : storeCount > 20 ? '#fd7e14' : '#4f46e5';
-    
+
     return `
       <div class="cluster-marker ${sizeClass}" onclick="handleClusterClick('${regionName}', ${storeCount})">
         <div class="cluster-circle" style="background: ${bgColor};">
@@ -303,7 +326,7 @@ window.MapMarkerManager = {
     const gradientColor = statusColor === '#4caf50' ? 
       'linear-gradient(135deg, #4caf50 0%, #66bb6a 50%, #81c784 100%)' : 
       'linear-gradient(135deg, #ff9800 0%, #ffb74d 50%, #ffcc02 100%)';
-    
+
     return `
       <div class="modern-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="marker-container">
