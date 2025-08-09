@@ -386,26 +386,8 @@ async function renderMap() {
   // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
   window.currentMarkers = [];
   window.markerMap = new Map();
-  window.currentMapInstance = map; // 전역 접근용
 
   console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
-
-  // 지도 레벨 변경 이벤트 리스너 추가
-  kakao.maps.event.addListener(map, 'zoom_changed', function() {
-    const currentLevel = map.getLevel();
-    console.log(`🔍 지도 레벨 변경됨: ${currentLevel}`);
-    
-    // 레벨 변경시 마커 다시 생성
-    setTimeout(async () => {
-      // 캐시된 매장 데이터 가져오기
-      const cachedStores = window.storeCache.getStores();
-      if (cachedStores && cachedStores.length > 0) {
-        console.log(`🔄 레벨 ${currentLevel} 변경에 따른 마커 업데이트 시작`);
-        await window.MapMarkerManager.handleMapLevelChange(map, cachedStores);
-        console.log(`✅ 레벨 ${currentLevel} 마커 업데이트 완료: ${window.MapMarkerManager.currentMarkers.length}개`);
-      }
-    }, 100);
-  });
 
   console.log('🗺️ 지도 렌더링 완료');
 
@@ -828,76 +810,6 @@ async function loadStoreRatingAsync(storeId) {
   }
 }
 
-// 지도 레벨 변경 핸들러
-async function handleMapLevelChange(map, currentLevel) {
-  try {
-    // 캐시된 매장 데이터 가져오기
-    let stores = [];
-    if (window.storeCache.hasCachedData()) {
-      stores = window.storeCache.getStoreData();
-    }
-
-    if (stores.length === 0) {
-      console.log('⚠️ 레벨 변경 시 캐시된 매장 데이터 없음');
-      return;
-    }
-
-    console.log(`🔄 레벨 ${currentLevel} 변경에 따른 마커 업데이트 시작`);
-
-    // 기존 마커 삭제
-    clearAllMarkers();
-
-    // 새로운 레벨에 맞는 마커 생성
-    if (window.MapMarkerManager) {
-      const newMarkers = await window.MapMarkerManager.createMarkersInBatch(stores, map);
-      
-      // 마커 저장
-      newMarkers.forEach(marker => {
-        if (marker.markerType === 'individual' && marker.storeId) {
-          window.markerMap.set(marker.storeId, marker);
-        }
-      });
-
-      window.currentMarkers = newMarkers;
-      console.log(`✅ 레벨 ${currentLevel} 마커 업데이트 완료: ${newMarkers.length}개`);
-    }
-
-  } catch (error) {
-    console.error('❌ 지도 레벨 변경 처리 실패:', error);
-  }
-}
-
-// 클러스터 마커 클릭 핸들러
-function handleClusterClick(regionName, storeCount) {
-  console.log(`🗺️ 클러스터 클릭: ${regionName} (${storeCount}개 매장)`);
-  
-  // 해당 지역으로 지도 확대
-  if (window.currentMapInstance) {
-    const currentLevel = window.currentMapInstance.getLevel();
-    let newLevel;
-    
-    // 현재 레벨에 따라 적절한 확대 단계 결정
-    if (currentLevel >= 10) {
-      newLevel = 8; // 도/시 → 시/군/구
-    } else if (currentLevel >= 8) {
-      newLevel = 6; // 시/군/구 → 읍/면/동
-    } else if (currentLevel >= 6) {
-      newLevel = 3; // 읍/면/동 → 개별 매장
-    } else {
-      newLevel = Math.max(1, currentLevel - 1); // 기본 1단계 확대
-    }
-    
-    window.currentMapInstance.setLevel(newLevel);
-    console.log(`🔍 ${regionName} 지역으로 확대: 레벨 ${currentLevel} → ${newLevel}`);
-    
-    // 확대 후 약간의 딜레이를 두고 마커 업데이트
-    setTimeout(() => {
-      handleMapLevelChange(window.currentMapInstance, newLevel);
-    }, 300);
-  }
-}
-
 // 전역 함수로 설정
 window.loadAllStoreRatings = loadAllStoreRatings;
 window.loadStoreRatingAsync = loadStoreRatingAsync;
-window.handleClusterClick = handleClusterClick;
