@@ -140,17 +140,128 @@ window.MapMarkerManager = {
     console.log(`🗺️ 주소 파싱: "${address}" -> [${parts.join(', ')}] (tier: ${tier})`);
     
     if (tier === 'sido') {
-      // 시/도 (첫 번째 부분)
-      return parts[0] || null;
+      // 시/도 (첫 번째 부분) - 정규화 적용
+      const rawSido = parts[0] || null;
+      return rawSido ? this.normalizeSidoName(rawSido) : null;
     } else if (tier === 'sigungu') {
-      // 시/군/구 (두 번째 부분까지)
-      return parts.length >= 2 ? `${parts[0]} ${parts[1]}` : null;
+      // 시/군/구 (두 번째 부분까지) - 정규화 적용
+      if (parts.length >= 2) {
+        const normalizedSido = this.normalizeSidoName(parts[0]);
+        const normalizedSigungu = this.normalizeSigunguName(parts[1]);
+        return `${normalizedSido} ${normalizedSigungu}`;
+      }
+      return null;
     } else if (tier === 'dong') {
-      // 읍/면/동 (세 번째 부분까지)
-      return parts.length >= 3 ? `${parts[0]} ${parts[1]} ${parts[2]}` : null;
+      // 읍/면/동 (세 번째 부분까지) - 정규화 적용
+      if (parts.length >= 3) {
+        const normalizedSido = this.normalizeSidoName(parts[0]);
+        const normalizedSigungu = this.normalizeSigunguName(parts[1]);
+        const normalizedDong = this.normalizeDongName(parts[2]);
+        return `${normalizedSido} ${normalizedSigungu} ${normalizedDong}`;
+      }
+      return null;
     }
 
     return null;
+  },
+
+  // 시/도명 정규화
+  normalizeSidoName(sidoName) {
+    if (!sidoName) return sidoName;
+    
+    const normalizeMap = {
+      '서울': '서울특별시',
+      '서울시': '서울특별시',
+      '서울특별시': '서울특별시',
+      
+      '부산': '부산광역시',
+      '부산시': '부산광역시',
+      '부산광역시': '부산광역시',
+      
+      '대구': '대구광역시',
+      '대구시': '대구광역시',
+      '대구광역시': '대구광역시',
+      
+      '인천': '인천광역시',
+      '인천시': '인천광역시',
+      '인천광역시': '인천광역시',
+      
+      '광주': '광주광역시',
+      '광주시': '광주광역시',
+      '광주광역시': '광주광역시',
+      
+      '대전': '대전광역시',
+      '대전시': '대전광역시',
+      '대전광역시': '대전광역시',
+      
+      '울산': '울산광역시',
+      '울산시': '울산광역시',
+      '울산광역시': '울산광역시',
+      
+      '세종': '세종특별자치시',
+      '세종시': '세종특별자치시',
+      '세종특별자치시': '세종특별자치시',
+      
+      '경기': '경기도',
+      '경기도': '경기도',
+      
+      '강원': '강원도',
+      '강원도': '강원도',
+      
+      '충북': '충청북도',
+      '충청북도': '충청북도',
+      
+      '충남': '충청남도',
+      '충청남도': '충청남도',
+      
+      '전북': '전라북도',
+      '전라북도': '전라북도',
+      
+      '전남': '전라남도',
+      '전라남도': '전라남도',
+      
+      '경북': '경상북도',
+      '경상북도': '경상북도',
+      
+      '경남': '경상남도',
+      '경상남도': '경상남도',
+      
+      '제주': '제주특별자치도',
+      '제주도': '제주특별자치도',
+      '제주특별자치도': '제주특별자치도'
+    };
+    
+    return normalizeMap[sidoName] || sidoName;
+  },
+
+  // 시/군/구명 정규화
+  normalizeSigunguName(sigunguName) {
+    if (!sigunguName) return sigunguName;
+    
+    // 구/시/군 표기 통일
+    if (sigunguName.endsWith('구') && !sigunguName.includes('시')) {
+      return sigunguName; // 이미 구로 끝나면 그대로
+    }
+    if (sigunguName.endsWith('시')) {
+      return sigunguName; // 이미 시로 끝나면 그대로
+    }
+    if (sigunguName.endsWith('군')) {
+      return sigunguName; // 이미 군으로 끝나면 그대로
+    }
+    
+    return sigunguName;
+  },
+
+  // 동/읍/면명 정규화
+  normalizeDongName(dongName) {
+    if (!dongName) return dongName;
+    
+    // 동/읍/면 표기 통일
+    if (dongName.endsWith('동') || dongName.endsWith('읍') || dongName.endsWith('면')) {
+      return dongName; // 이미 동/읍/면으로 끝나면 그대로
+    }
+    
+    return dongName;
   },
 
   // 집계 마커 생성
