@@ -1,4 +1,3 @@
-
 // 지도 마커 관리자
 window.MapMarkerManager = {
   // 전역 마커 저장소
@@ -6,7 +5,7 @@ window.MapMarkerManager = {
   clusterMarkers: new Map(),    // 집계 마커
   currentLevel: 0,
   currentStores: [],
-  
+
   // 마커 생성 프로세스 제어
   isProcessing: false,          // 현재 마커 생성 중인지
   currentProcessId: null,       // 현재 진행중인 프로세스 ID
@@ -15,24 +14,24 @@ window.MapMarkerManager = {
   // 레벨에 따른 동적 마커 업데이트 (메인 엔트리 포인트)
   async handleMapLevelChange(level, stores, map) {
     console.log(`🔄 레벨 ${level} 변경에 따른 마커 업데이트 시작`);
-    
+
     // 기존 프로세스가 진행중이면 중단
     if (this.isProcessing) {
       console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청 (이전 레벨: ${this.currentLevel})`);
       this.shouldCancel = true;
-      
+
       // 짧은 대기 후 강제 중단 (비동기 프로세스 완전 정리)
       await this.waitForProcessCompletion(500);
     }
-    
+
     // 새로운 프로세스 시작
     const processId = Date.now() + Math.random();
     this.currentProcessId = processId;
     this.isProcessing = true;
     this.shouldCancel = false;
-    
+
     console.log(`🆕 새 마커 프로세스 시작 (ID: ${processId})`);
-    
+
     this.currentLevel = level;
     this.currentStores = stores;
 
@@ -68,11 +67,11 @@ window.MapMarkerManager = {
   // 기존 프로세스 완료 대기
   async waitForProcessCompletion(maxWaitMs = 1000) {
     const startTime = Date.now();
-    
+
     while (this.isProcessing && (Date.now() - startTime) < maxWaitMs) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    
+
     if (this.isProcessing) {
       console.log(`⚠️ 기존 프로세스 강제 중단 (대기 시간 초과)`);
       this.isProcessing = false;
@@ -112,7 +111,7 @@ window.MapMarkerManager = {
       if (!store.coord) continue;
 
       const markerId = `store_${store.id}`;
-      
+
       // 이미 생성된 마커가 있으면 재사용
       if (this.individualMarkers.has(markerId)) {
         const marker = this.individualMarkers.get(markerId);
@@ -153,7 +152,7 @@ window.MapMarkerManager = {
 
     // 집계 마커 모드에서는 모든 개별 마커를 강제로 완전 제거
     console.log(`🚫 집계 마커 모드 진입 - 모든 개별 마커 강제 제거 시작`);
-    
+
     // 1. MapMarkerManager 내부 개별 마커 제거
     this.individualMarkers.forEach((marker, markerId) => {
       if (marker && marker.setMap) {
@@ -161,7 +160,7 @@ window.MapMarkerManager = {
       }
     });
     this.individualMarkers.clear();
-    
+
     // 2. 전역 markerMap 완전 제거
     if (window.markerMap && window.markerMap.size > 0) {
       window.markerMap.forEach((marker, storeId) => {
@@ -171,7 +170,7 @@ window.MapMarkerManager = {
       });
       window.markerMap.clear();
     }
-    
+
     // 3. 전역 currentMarkers 배열 완전 제거
     if (window.currentMarkers && window.currentMarkers.length > 0) {
       window.currentMarkers.forEach(marker => {
@@ -181,23 +180,23 @@ window.MapMarkerManager = {
       });
       window.currentMarkers = [];
     }
-    
+
     console.log(`✅ 모든 개별 마커 강제 제거 완료 - 집계 마커 모드 준비`);
 
-    // 지역별로 매장 그룹화
+    // 지역별로 매장 그룹화 (주소 없는 매장도 포함)
     const clusters = this.groupStoresByRegion(stores, tier);
     console.log(`📊 ${tier} 그룹화 결과: ${clusters.size}개 지역`);
-    
+
     // 주소가 없는 매장들을 처리 (좌표 기반으로 지역 추정)
     const storesWithoutAddress = stores.filter(store => !store.address);
     if (storesWithoutAddress.length > 0) {
       console.log(`⚠️ 주소 없는 매장 ${storesWithoutAddress.length}개 발견 - 좌표 기반 지역 추정`);
-      
+
       storesWithoutAddress.forEach(store => {
         if (store.coord && store.coord.lat && store.coord.lng) {
           // 좌표 기반으로 대략적인 지역 추정
           let estimatedRegion;
-          
+
           if (tier === 'sido') {
             estimatedRegion = '서울특별시'; // 기본값
           } else if (tier === 'sigungu') {
@@ -205,18 +204,18 @@ window.MapMarkerManager = {
           } else {
             estimatedRegion = '서울특별시 중구 을지로동'; // 기본값
           }
-          
+
           // 기존 그룹에 추가하거나 새 그룹 생성
           if (!clusters.has(estimatedRegion)) {
             clusters.set(estimatedRegion, []);
           }
           clusters.get(estimatedRegion).push(store);
-          
+
           console.log(`📍 매장 ${store.id} (${store.name}) - 추정 지역: ${estimatedRegion}`);
         }
       });
     }
-    
+
     // 각 지역별 매장 수 출력
     for (const [regionKey, regionStores] of clusters.entries()) {
       console.log(`  - ${regionKey}: ${regionStores.length}개 매장`);
@@ -224,7 +223,7 @@ window.MapMarkerManager = {
 
     let createdCount = 0;
     const clusterArray = Array.from(clusters.entries());
-    
+
     for (let i = 0; i < clusterArray.length; i++) {
       // 프로세스 중단 확인
       if (this.shouldCancel || this.currentProcessId !== processId) {
@@ -234,7 +233,7 @@ window.MapMarkerManager = {
 
       const [regionKey, regionStores] = clusterArray[i];
       const clusterId = `${tier}_${regionKey}`;
-      
+
       // 이미 생성된 집계 마커가 있으면 재사용
       if (this.clusterMarkers.has(clusterId)) {
         const marker = this.clusterMarkers.get(clusterId);
@@ -270,21 +269,49 @@ window.MapMarkerManager = {
     console.log(`✅ ${tier} 집계 마커 생성 완료: ${createdCount}개`);
   },
 
-  // 지역별 매장 그룹화
+  // 지역별로 매장 그룹화 (주소 없는 매장도 포함)
   groupStoresByRegion(stores, tier) {
     const clusters = new Map();
+    const noAddressStores = [];
 
     stores.forEach(store => {
-      if (!store.address) return;
+      if (!store.address) {
+        // 주소 없는 매장은 별도로 수집
+        noAddressStores.push(store);
+        return;
+      }
 
       const regionName = this.extractRegionName(store.address, tier);
-      if (!regionName) return;
+      if (!regionName) {
+        // 주소는 있지만 파싱 실패한 경우도 별도 수집
+        noAddressStores.push(store);
+        return;
+      }
 
       if (!clusters.has(regionName)) {
         clusters.set(regionName, []);
       }
       clusters.get(regionName).push(store);
     });
+
+    // 주소 없는 매장들을 기본 그룹에 추가
+    if (noAddressStores.length > 0) {
+      let defaultRegionName;
+      if (tier === 'sido') {
+        defaultRegionName = '서울특별시';
+      } else if (tier === 'sigungu') {
+        defaultRegionName = '서울특별시 중구';
+      } else {
+        defaultRegionName = '서울특별시 중구 을지로동';
+      }
+
+      if (!clusters.has(defaultRegionName)) {
+        clusters.set(defaultRegionName, []);
+      }
+      clusters.get(defaultRegionName).push(...noAddressStores);
+
+      console.log(`📍 주소 없는 매장 ${noAddressStores.length}개를 ${defaultRegionName}에 강제 포함`);
+    }
 
     return clusters;
   },
@@ -296,9 +323,9 @@ window.MapMarkerManager = {
     // 대괄호와 괄호 제거 후 주소 파싱
     const cleanAddress = address.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '').trim();
     const parts = cleanAddress.split(' ').filter(part => part.length > 0);
-    
+
     console.log(`🗺️ 주소 파싱: "${address}" -> [${parts.join(', ')}] (tier: ${tier})`);
-    
+
     if (tier === 'sido') {
       // 시/도 (첫 번째 부분) - 정규화 적용
       const rawSido = parts[0] || null;
@@ -312,7 +339,7 @@ window.MapMarkerManager = {
       }
       return null;
     } else if (tier === 'dong') {
-      // 읍/면/동 (세 번째 부분까지) - 정규화 적용
+      // 동/읍/면 (세 번째 부분까지) - 정규화 적용
       if (parts.length >= 3) {
         const normalizedSido = this.normalizeSidoName(parts[0]);
         const normalizedSigungu = this.normalizeSigunguName(parts[1]);
@@ -328,76 +355,76 @@ window.MapMarkerManager = {
   // 시/도명 정규화
   normalizeSidoName(sidoName) {
     if (!sidoName) return sidoName;
-    
+
     const normalizeMap = {
       '서울': '서울특별시',
       '서울시': '서울특별시',
       '서울특별시': '서울특별시',
-      
+
       '부산': '부산광역시',
       '부산시': '부산광역시',
       '부산광역시': '부산광역시',
-      
+
       '대구': '대구광역시',
       '대구시': '대구광역시',
       '대구광역시': '대구광역시',
-      
+
       '인천': '인천광역시',
       '인천시': '인천광역시',
       '인천광역시': '인천광역시',
-      
+
       '광주': '광주광역시',
       '광주시': '광주광역시',
       '광주광역시': '광주광역시',
-      
+
       '대전': '대전광역시',
       '대전시': '대전광역시',
       '대전광역시': '대전광역시',
-      
+
       '울산': '울산광역시',
       '울산시': '울산광역시',
       '울산광역시': '울산광역시',
-      
+
       '세종': '세종특별자치시',
       '세종시': '세종특별자치시',
       '세종특별자치시': '세종특별자치시',
-      
+
       '경기': '경기도',
       '경기도': '경기도',
-      
+
       '강원': '강원도',
       '강원도': '강원도',
-      
+
       '충북': '충청북도',
       '충청북도': '충청북도',
-      
+
       '충남': '충청남도',
       '충청남도': '충청남도',
-      
+
       '전북': '전라북도',
       '전라북도': '전라북도',
-      
+
       '전남': '전라남도',
       '전라남도': '전라남도',
-      
+
       '경북': '경상북도',
       '경상북도': '경상북도',
-      
+
       '경남': '경상남도',
       '경상남도': '경상남도',
-      
+
       '제주': '제주특별자치도',
       '제주도': '제주특별자치도',
       '제주특별자치도': '제주특별자치도'
     };
-    
+
     return normalizeMap[sidoName] || sidoName;
   },
 
   // 시/군/구명 정규화
   normalizeSigunguName(sigunguName) {
     if (!sigunguName) return sigunguName;
-    
+
     // 구/시/군 표기 통일
     if (sigunguName.endsWith('구') && !sigunguName.includes('시')) {
       return sigunguName; // 이미 구로 끝나면 그대로
@@ -408,19 +435,19 @@ window.MapMarkerManager = {
     if (sigunguName.endsWith('군')) {
       return sigunguName; // 이미 군으로 끝나면 그대로
     }
-    
+
     return sigunguName;
   },
 
   // 동/읍/면명 정규화
   normalizeDongName(dongName) {
     if (!dongName) return dongName;
-    
+
     // 동/읍/면 표기 통일
     if (dongName.endsWith('동') || dongName.endsWith('읍') || dongName.endsWith('면')) {
       return dongName; // 이미 동/읍/면으로 끝나면 그대로
     }
-    
+
     return dongName;
   },
 
@@ -430,13 +457,13 @@ window.MapMarkerManager = {
 
     // 중심 좌표 계산 (매장들의 평균 위치)
     let centerCoord = this.calculateCenterCoordinate(stores);
-    
+
     // 주소 없는 매장 그룹인 경우 기본 서울 중심 좌표 사용
     if (!centerCoord && regionName === '위치 미확인') {
       centerCoord = { lat: 37.5665, lng: 126.9780 }; // 서울 중심
       console.log(`📍 위치 미확인 매장 그룹 - 기본 좌표 사용: ${centerCoord.lat}, ${centerCoord.lng}`);
     }
-    
+
     if (!centerCoord) {
       console.log(`❌ ${regionName} 집계 마커 - 유효한 좌표를 찾을 수 없음`);
       return null;
@@ -483,7 +510,7 @@ window.MapMarkerManager = {
   getClusterMarkerHTML(regionName, totalCount, openCount, tier) {
     const tierLabel = {
       'sido': '시/도',
-      'sigungu': '시/군/구', 
+      'sigungu': '시/군/구',
       'dong': '동/읍/면'
     }[tier] || '지역';
 
@@ -598,23 +625,23 @@ window.MapMarkerManager = {
   // 모든 마커 완전 삭제
   clearAllMarkers() {
     console.log('🧹 모든 마커 완전 삭제 시작');
-    
+
     this.hideAllMarkers();
     this.individualMarkers.clear();
     this.clusterMarkers.clear();
-    
+
     console.log('✅ 모든 마커 완전 삭제 완료');
   },
 
   // 모든 마커 완전 삭제 (renderMap.js 전역 마커 포함)
   clearAllMarkersCompletely() {
     console.log('🧹 모든 마커 완전 삭제 시작 (전역 마커 포함)');
-    
+
     // 1. MapMarkerManager 내부 마커 삭제
     this.hideAllMarkers();
     this.individualMarkers.clear();
     this.clusterMarkers.clear();
-    
+
     // 2. renderMap.js 전역 마커 삭제
     if (window.markerMap && window.markerMap.size > 0) {
       window.markerMap.forEach((marker, storeId) => {
