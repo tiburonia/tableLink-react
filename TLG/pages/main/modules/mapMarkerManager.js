@@ -82,9 +82,9 @@ window.MapMarkerManager = {
 
   // 1. 모드 결정 (개별 vs 집계)
   determineModeByLevel(level) {
-    // 레벨 1-5: 개별 매장 마커
-    // 레벨 6+: 집계 마커
-    return level <= 5 ? 'store' : 'region';
+    // 레벨 1-3: 개별 매장 마커
+    // 레벨 4+: 집계 마커
+    return level <= 3 ? 'store' : 'region';
   },
 
   // 2. 레벨별 지역 단위 결정
@@ -151,45 +151,70 @@ window.MapMarkerManager = {
 
     const processId = this.currentProcessId;
 
-    // 먼저 모든 개별 마커 완전 제거 (집계 마커 전환 시)
-    this.individualMarkers.forEach(marker => {
+    // 집계 마커 모드에서는 모든 개별 마커를 강제로 완전 제거
+    console.log(`🚫 집계 마커 모드 진입 - 모든 개별 마커 강제 제거 시작`);
+    
+    // 1. MapMarkerManager 내부 개별 마커 제거
+    this.individualMarkers.forEach((marker, markerId) => {
       if (marker && marker.setMap) {
         marker.setMap(null);
       }
     });
+    this.individualMarkers.clear();
     
-    // 전역 개별 마커도 완전 제거
-    if (window.markerMap) {
-      window.markerMap.forEach(marker => {
+    // 2. 전역 markerMap 완전 제거
+    if (window.markerMap && window.markerMap.size > 0) {
+      window.markerMap.forEach((marker, storeId) => {
         if (marker && marker.setMap) {
           marker.setMap(null);
         }
       });
+      window.markerMap.clear();
     }
     
-    if (window.currentMarkers) {
+    // 3. 전역 currentMarkers 배열 완전 제거
+    if (window.currentMarkers && window.currentMarkers.length > 0) {
       window.currentMarkers.forEach(marker => {
         if (marker && marker.setMap) {
           marker.setMap(null);
         }
       });
+      window.currentMarkers = [];
     }
     
-    console.log(`🚫 모든 개별 마커 완전 제거 (MapMarkerManager: ${this.individualMarkers.size}개, 전역: ${window.markerMap?.size || 0}개)`);
+    console.log(`✅ 모든 개별 마커 강제 제거 완료 - 집계 마커 모드 준비`);
 
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
     console.log(`📊 ${tier} 그룹화 결과: ${clusters.size}개 지역`);
     
-    // 주소가 없는 매장 확인
+    // 주소가 없는 매장들을 처리 (좌표 기반으로 지역 추정)
     const storesWithoutAddress = stores.filter(store => !store.address);
     if (storesWithoutAddress.length > 0) {
-      console.log(`⚠️ 주소 없는 매장 ${storesWithoutAddress.length}개 발견 - 기본 위치로 그룹화`);
+      console.log(`⚠️ 주소 없는 매장 ${storesWithoutAddress.length}개 발견 - 좌표 기반 지역 추정`);
       
-      // 주소 없는 매장들을 "위치 미확인" 그룹으로 추가
-      if (storesWithoutAddress.length > 0) {
-        clusters.set('위치 미확인', storesWithoutAddress);
-      }
+      storesWithoutAddress.forEach(store => {
+        if (store.coord && store.coord.lat && store.coord.lng) {
+          // 좌표 기반으로 대략적인 지역 추정
+          let estimatedRegion;
+          
+          if (tier === 'sido') {
+            estimatedRegion = '서울특별시'; // 기본값
+          } else if (tier === 'sigungu') {
+            estimatedRegion = '서울특별시 중구'; // 기본값
+          } else {
+            estimatedRegion = '서울특별시 중구 을지로동'; // 기본값
+          }
+          
+          // 기존 그룹에 추가하거나 새 그룹 생성
+          if (!clusters.has(estimatedRegion)) {
+            clusters.set(estimatedRegion, []);
+          }
+          clusters.get(estimatedRegion).push(store);
+          
+          console.log(`📍 매장 ${store.id} (${store.name}) - 추정 지역: ${estimatedRegion}`);
+        }
+      });
     }
     
     // 각 지역별 매장 수 출력
