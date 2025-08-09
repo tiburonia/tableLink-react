@@ -1,4 +1,3 @@
-
 const pool = require('../../shared/config/database');
 
 // 카카오 REST API 키
@@ -16,7 +15,7 @@ const SEOUL_CITY_HALL = { lat: 37.5665, lng: 126.9780 };
 // 매장 카테고리별 이름 템플릿
 const STORE_TEMPLATES = {
   한식: [
-    '한식당', '밥집', '국밥집', '정식집', '갈비집', '삼겹살집', '불고기집', '비빔밥집', 
+    '한식당', '밥집', '국밥집', '정식집', '갈비집', '삼겹살집', '불고기집', '비빔밥집',
     '김치찌개집', '된장찌개집', '순두부찌개집', '부대찌개집', '김치볶음밥집', '제육볶음집'
   ],
   중식: [
@@ -47,21 +46,21 @@ const NEARBY_AREAS = [
 function getRandomCoordinateNearSeoulCityHall() {
   // 10km = 약 0.09도 (위도/경도)
   const radiusInDegrees = 0.09;
-  
+
   // 랜덤 각도와 거리
   const angle = Math.random() * 2 * Math.PI;
   const distance = Math.random() * radiusInDegrees;
-  
+
   // 극좌표를 직교좌표로 변환
   const deltaLat = distance * Math.cos(angle);
   const deltaLng = distance * Math.sin(angle);
-  
+
   const lat = SEOUL_CITY_HALL.lat + deltaLat;
   const lng = SEOUL_CITY_HALL.lng + deltaLng;
-  
-  return { 
-    lat: parseFloat(lat.toFixed(6)), 
-    lng: parseFloat(lng.toFixed(6)) 
+
+  return {
+    lat: parseFloat(lat.toFixed(6)),
+    lng: parseFloat(lng.toFixed(6))
   };
 }
 
@@ -69,13 +68,13 @@ function getRandomCoordinateNearSeoulCityHall() {
 function generateStoreName(category) {
   const templates = STORE_TEMPLATES[category];
   const template = templates[Math.floor(Math.random() * templates.length)];
-  
+
   const prefixes = ['맛있는', '유명한', '전통', '신선한', '특별한', '프리미엄', '고급', '정통', '본격'];
   const suffixes = ['본점', '1호점', '시청점', '명동점', '을지로점', '중구점', '종로점'];
-  
+
   const usePrefix = Math.random() > 0.5;
   const useSuffix = Math.random() > 0.3;
-  
+
   let name = template;
   if (usePrefix) {
     name = prefixes[Math.floor(Math.random() * prefixes.length)] + ' ' + name;
@@ -83,7 +82,7 @@ function generateStoreName(category) {
   if (useSuffix) {
     name = name + ' ' + suffixes[Math.floor(Math.random() * suffixes.length)];
   }
-  
+
   return name;
 }
 
@@ -91,7 +90,7 @@ function generateStoreName(category) {
 async function getAddressFromCoordinates(lat, lng) {
   try {
     console.log(`📍 좌표 (${lat}, ${lng})에서 주소 조회 중...`);
-    
+
     const response = await fetch(
       `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}`,
       {
@@ -112,15 +111,15 @@ async function getAddressFromCoordinates(lat, lng) {
     }
 
     const data = await response.json();
-    
+
     if (data.documents && data.documents.length > 0) {
       const doc = data.documents[0];
-      
+
       let fullAddress = '';
       let sido = '';
       let sigungu = '';
       let dong = '';
-      
+
       if (doc.road_address && doc.road_address.address_name) {
         fullAddress = doc.road_address.address_name;
         sido = doc.road_address.region_1depth_name || '서울특별시';
@@ -132,18 +131,18 @@ async function getAddressFromCoordinates(lat, lng) {
         sigungu = doc.address.region_2depth_name || '중구';
         dong = doc.address.region_3depth_name || '을지로동';
       }
-      
+
       console.log(`✅ 주소 조회 성공: ${fullAddress}`);
       return { fullAddress, sido, sigungu, dong };
     }
-    
+
     return {
       fullAddress: `GPS 위치 (${lat.toFixed(6)}, ${lng.toFixed(6)})`,
       sido: '서울특별시',
       sigungu: '중구',
       dong: '을지로동'
     };
-    
+
   } catch (error) {
     console.error('주소 조회 오류:', error.message);
     return {
@@ -158,57 +157,57 @@ async function getAddressFromCoordinates(lat, lng) {
 async function addSeoulCityHallStores() {
   try {
     console.log('🏢 서울시청 근처 10km 반경에 15개 매장 추가 시작...');
-    
+
     // 현재 최대 매장 ID 조회
     const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) as max_id FROM stores');
     let currentMaxId = parseInt(maxIdResult.rows[0].max_id);
-    
+
     console.log(`📊 현재 최대 매장 ID: ${currentMaxId}`);
-    
+
     const categories = Object.keys(STORE_TEMPLATES);
     const storeCount = 15;
-    
+
     console.log(`📍 서울시청 좌표: ${SEOUL_CITY_HALL.lat}, ${SEOUL_CITY_HALL.lng}`);
     console.log(`🎯 10km 반경 내 ${storeCount}개 매장 생성 시작\n`);
-    
+
     for (let i = 0; i < storeCount; i++) {
       const storeIndex = i + 1;
       const category = categories[Math.floor(Math.random() * categories.length)];
       const coord = getRandomCoordinateNearSeoulCityHall();
       const storeName = generateStoreName(category);
       const isOpen = Math.random() > 0.1; // 90% 확률로 운영중
-      
+
       const newStoreId = currentMaxId + storeIndex;
-      
+
       // 시청으로부터의 거리 계산 (대략적)
       const latDiff = Math.abs(coord.lat - SEOUL_CITY_HALL.lat);
       const lngDiff = Math.abs(coord.lng - SEOUL_CITY_HALL.lng);
       const distance = Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111; // km 변환
-      
+
       console.log(`🏪 [${storeIndex}/${storeCount}] 매장 ${newStoreId}: ${storeName}`);
       console.log(`📍 좌표: ${coord.lat}, ${coord.lng} (시청에서 약 ${distance.toFixed(1)}km)`);
       console.log(`🏷️ 카테고리: ${category}, 운영상태: ${isOpen ? '운영중' : '운영중지'}`);
-      
+
       // 주소 조회
       const addressInfo = await getAddressFromCoordinates(coord.lat, coord.lng);
       console.log(`📍 주소: ${addressInfo.fullAddress}`);
       console.log(`🏛️ 행정구역: ${addressInfo.sido} ${addressInfo.sigungu} ${addressInfo.dong}\n`);
-      
+
       // stores 테이블에 매장 추가
+      // Removed 'coord' column from INSERT statement as it no longer exists in 'stores' table.
       await pool.query(`
-        INSERT INTO stores (id, name, category, menu, coord, review_count, rating_average, is_open)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO stores (id, name, category, menu, review_count, rating_average, is_open)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
       `, [
         newStoreId,
         storeName,
         category,
         JSON.stringify([]),
-        JSON.stringify(coord),
         0,
-        '0.0',
+        4.5,
         isOpen
       ]);
-      
+
       // store_address 테이블에 주소 정보 추가
       await pool.query(`
         INSERT INTO store_address (store_id, address_full, sido, sigungu, dong, latitude, longitude, coord)
@@ -231,7 +230,7 @@ async function addSeoulCityHallStores() {
         coord.lng,
         JSON.stringify(coord)
       ]);
-      
+
       // 각 매장에 기본 테이블 2-4개 추가
       const tableCount = Math.floor(Math.random() * 3) + 2; // 2-4개
       for (let tableNum = 1; tableNum <= tableCount; tableNum++) {
@@ -241,18 +240,18 @@ async function addSeoulCityHallStores() {
           VALUES ($1, $2, $3, $4, $5)
         `, [newStoreId, tableNum, `테이블 ${tableNum}`, seats, false]);
       }
-      
+
       // API 제한 방지 (200ms 딜레이)
       await new Promise(resolve => setTimeout(resolve, 200));
     }
-    
+
     // 최종 결과 확인
     const finalResult = await pool.query('SELECT COUNT(*) as total FROM stores');
     const totalStoresInDB = parseInt(finalResult.rows[0].total);
-    
+
     console.log(`\n🎉 서울시청 근처 15개 매장 추가 완료!`);
     console.log(`📊 데이터베이스 총 매장 수: ${totalStoresInDB}개`);
-    
+
     // 새로 추가된 매장들 확인
     console.log('\n📍 새로 추가된 매장 목록:');
     const newStores = await pool.query(`
@@ -262,27 +261,27 @@ async function addSeoulCityHallStores() {
       WHERE s.id > $1
       ORDER BY s.id
     `, [currentMaxId]);
-    
+
     newStores.rows.forEach((store, index) => {
       console.log(`  ${index + 1}. 매장 ${store.id}: ${store.name} (${store.category})`);
       console.log(`     📍 ${store.address_full}`);
       console.log(`     📏 ${store.distance}`);
     });
-    
+
     // 카테고리별 분포 확인
     console.log('\n🍽️ 새로 추가된 매장 카테고리별 분포:');
     const categoryDistribution = await pool.query(`
       SELECT category, COUNT(*) as count
-      FROM stores 
+      FROM stores
       WHERE id > $1
       GROUP BY category
       ORDER BY count DESC
     `, [currentMaxId]);
-    
+
     categoryDistribution.rows.forEach(row => {
       console.log(`  - ${row.category}: ${row.count}개`);
     });
-    
+
   } catch (error) {
     console.error('❌ 서울시청 근처 매장 추가 실패:', error);
   } finally {
