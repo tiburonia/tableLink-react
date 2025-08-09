@@ -6,10 +6,32 @@ window.MapMarkerManager = {
   clusterMarkers: new Map(),    // 집계 마커
   currentLevel: 0,
   currentStores: [],
+  
+  // 마커 생성 프로세스 제어
+  isProcessing: false,          // 현재 마커 생성 중인지
+  currentProcessId: null,       // 현재 진행중인 프로세스 ID
+  shouldCancel: false,          // 현재 프로세스를 취소해야 하는지
 
   // 레벨에 따른 동적 마커 업데이트 (메인 엔트리 포인트)
   async handleMapLevelChange(level, stores, map) {
     console.log(`🔄 레벨 ${level} 변경에 따른 마커 업데이트 시작`);
+    
+    // 기존 프로세스가 진행중이면 중단
+    if (this.isProcessing) {
+      console.log(`⏸️ 기존 마커 생성 프로세스 중단 요청 (이전 레벨: ${this.currentLevel})`);
+      this.shouldCancel = true;
+      
+      // 짧은 대기 후 강제 중단 (비동기 프로세스 완전 정리)
+      await this.waitForProcessCompletion(500);
+    }
+    
+    // 새로운 프로세스 시작
+    const processId = Date.now() + Math.random();
+    this.currentProcessId = processId;
+    this.isProcessing = true;
+    this.shouldCancel = false;
+    
+    console.log(`🆕 새 마커 프로세스 시작 (ID: ${processId})`);
     
     this.currentLevel = level;
     this.currentStores = stores;
@@ -31,7 +53,31 @@ window.MapMarkerManager = {
       await this.showClusterMarkers(stores, map, tier);
     }
 
-    console.log(`✅ 레벨 ${level} 마커 업데이트 완료`);
+    // 프로세스가 중단되었는지 확인
+    if (this.shouldCancel || this.currentProcessId !== processId) {
+      console.log(`❌ 마커 프로세스 중단됨 (ID: ${processId})`);
+      this.isProcessing = false;
+      return;
+    }
+
+    console.log(`✅ 레벨 ${level} 마커 업데이트 완료 (ID: ${processId})`);
+    this.isProcessing = false;
+    this.currentProcessId = null;
+  },
+
+  // 기존 프로세스 완료 대기
+  async waitForProcessCompletion(maxWaitMs = 1000) {
+    const startTime = Date.now();
+    
+    while (this.isProcessing && (Date.now() - startTime) < maxWaitMs) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    if (this.isProcessing) {
+      console.log(`⚠️ 기존 프로세스 강제 중단 (대기 시간 초과)`);
+      this.isProcessing = false;
+      this.currentProcessId = null;
+    }
   },
 
   // 1. 모드 결정 (개별 vs 집계)
@@ -50,7 +96,17 @@ window.MapMarkerManager = {
   async showIndividualMarkers(stores, map) {
     console.log(`🏪 개별 매장 마커 생성: ${stores.length}개`);
 
-    for (const store of stores) {
+    const processId = this.currentProcessId;
+    let createdCount = 0;
+
+    for (let i = 0; i < stores.length; i++) {
+      // 프로세스 중단 확인 (매 10개마다)
+      if (i % 10 === 0 && (this.shouldCancel || this.currentProcessId !== processId)) {
+        console.log(`⏸️ 개별 마커 생성 중단 (${createdCount}/${stores.length}개 완료)`);
+        return;
+      }
+
+      const store = stores[i];
       if (!store.coord) continue;
 
       const markerId = `store_${store.id}`;
@@ -58,7 +114,10 @@ window.MapMarkerManager = {
       // 이미 생성된 마커가 있으면 재사용
       if (this.individualMarkers.has(markerId)) {
         const marker = this.individualMarkers.get(markerId);
-        marker.setMap(map);
+        if (marker && marker.setMap) {
+          marker.setMap(map);
+          createdCount++;
+        }
         continue;
       }
 
@@ -66,15 +125,29 @@ window.MapMarkerManager = {
       const marker = await this.createCustomMarker(store, map);
       if (marker) {
         this.individualMarkers.set(markerId, marker);
+        createdCount++;
+      }
+
+      // CPU 양보 (매 20개마다)
+      if (i % 20 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1));
       }
     }
 
-    console.log(`✅ 개별 마커 생성 완료: ${this.individualMarkers.size}개`);
+    // 최종 중단 확인
+    if (this.shouldCancel || this.currentProcessId !== processId) {
+      console.log(`⏸️ 개별 마커 생성 최종 중단 (${createdCount}/${stores.length}개 완료)`);
+      return;
+    }
+
+    console.log(`✅ 개별 마커 생성 완료: ${createdCount}개`);
   },
 
   // 집계 마커 표시
   async showClusterMarkers(stores, map, tier) {
     console.log(`🏘️ ${tier} 집계 마커 생성: ${stores.length}개 매장`);
+
+    const processId = this.currentProcessId;
 
     // 지역별로 매장 그룹화
     const clusters = this.groupStoresByRegion(stores, tier);
@@ -84,8 +157,18 @@ window.MapMarkerManager = {
     for (const [regionKey, regionStores] of clusters.entries()) {
       console.log(`  - ${regionKey}: ${regionStores.length}개 매장`);
     }
+
+    let createdCount = 0;
+    const clusterArray = Array.from(clusters.entries());
     
-    for (const [regionKey, regionStores] of clusters.entries()) {
+    for (let i = 0; i < clusterArray.length; i++) {
+      // 프로세스 중단 확인
+      if (this.shouldCancel || this.currentProcessId !== processId) {
+        console.log(`⏸️ 집계 마커 생성 중단 (${createdCount}/${clusterArray.length}개 완료)`);
+        return;
+      }
+
+      const [regionKey, regionStores] = clusterArray[i];
       const clusterId = `${tier}_${regionKey}`;
       
       // 이미 생성된 집계 마커가 있으면 재사용
@@ -102,12 +185,24 @@ window.MapMarkerManager = {
       if (marker) {
         this.clusterMarkers.set(clusterId, marker);
         console.log(`✅ 집계 마커 생성 성공: ${regionKey}`);
+        createdCount++;
       } else {
         console.log(`❌ 집계 마커 생성 실패: ${regionKey}`);
       }
+
+      // CPU 양보 (매 5개마다)
+      if (i % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 1));
+      }
     }
 
-    console.log(`✅ ${tier} 집계 마커 생성 완료: ${clusters.size}개`);
+    // 최종 중단 확인
+    if (this.shouldCancel || this.currentProcessId !== processId) {
+      console.log(`⏸️ 집계 마커 생성 최종 중단 (${createdCount}/${clusterArray.length}개 완료)`);
+      return;
+    }
+
+    console.log(`✅ ${tier} 집계 마커 생성 완료: ${createdCount}개`);
   },
 
   // 지역별 매장 그룹화
