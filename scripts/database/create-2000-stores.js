@@ -1,10 +1,9 @@
-
 const pool = require('../../shared/config/database');
 
 // 매장 카테고리별 이름 템플릿
 const STORE_TEMPLATES = {
   한식: [
-    '한식당', '밥집', '국밥집', '정식집', '갈비집', '삼겹살집', '불고기집', '비빔밥집', 
+    '한식당', '밥집', '국밥집', '정식집', '갈비집', '삼겹살집', '불고기집', '비빔밥집',
     '김치찌개집', '된장찌개집', '순두부찌개집', '부대찌개집', '김치볶음밥집', '제육볶음집',
     '한정식', '백반집', '보쌈집', '족발집', '닭갈비집', '돼지갈비집'
   ],
@@ -55,13 +54,13 @@ function getRandomCoordinate() {
 function generateStoreName(category) {
   const templates = STORE_TEMPLATES[category];
   const template = templates[Math.floor(Math.random() * templates.length)];
-  
+
   const prefixes = ['맛있는', '유명한', '전통', '신선한', '특별한', '프리미엄', '고급', '정통', '본격', '진짜'];
   const suffixes = ['본점', '1호점', '강남점', '역삼점', '명동점', '홍대점', '신촌점', '분점'];
-  
+
   const usePrefix = Math.random() > 0.6;
   const useSuffix = Math.random() > 0.4;
-  
+
   let name = template;
   if (usePrefix) {
     name = prefixes[Math.floor(Math.random() * prefixes.length)] + ' ' + name;
@@ -69,33 +68,33 @@ function generateStoreName(category) {
   if (useSuffix) {
     name = name + ' ' + suffixes[Math.floor(Math.random() * suffixes.length)];
   }
-  
+
   return name;
 }
 
 async function create2000Stores() {
   try {
     console.log('🏪 2000개 매장 더미데이터 생성 시작...');
-    
+
     // 현재 최대 매장 ID 조회
     const maxIdResult = await pool.query('SELECT COALESCE(MAX(id), 0) as max_id FROM stores');
     let currentMaxId = parseInt(maxIdResult.rows[0].max_id);
-    
+
     console.log(`📊 현재 최대 매장 ID: ${currentMaxId}`);
-    
+
     const categories = Object.keys(STORE_TEMPLATES);
     const storesPerBatch = 100; // 배치 단위
     const totalStores = 2000;
-    
+
     for (let batch = 0; batch < Math.ceil(totalStores / storesPerBatch); batch++) {
       const batchStart = batch * storesPerBatch;
       const batchEnd = Math.min((batch + 1) * storesPerBatch, totalStores);
       const batchSize = batchEnd - batchStart;
-      
+
       console.log(`\n📦 배치 ${batch + 1}/${Math.ceil(totalStores / storesPerBatch)} 처리 중... (${batchStart + 1}-${batchEnd}번째 매장)`);
-      
+
       const storeData = [];
-      
+
       // 배치별 매장 데이터 생성
       for (let i = 0; i < batchSize; i++) {
         const category = categories[Math.floor(Math.random() * categories.length)];
@@ -104,114 +103,86 @@ async function create2000Stores() {
         const isOpen = Math.random() > 0.1; // 90% 확률로 운영중
         const ratingAverage = (Math.random() * 4 + 1).toFixed(1); // 1.0-5.0 사이 평점
         const reviewCount = Math.floor(Math.random() * 100); // 0-99개 리뷰
-        
+
         console.log(`🏪 매장 생성 예정: ${storeName} (${category}) - ${coord.lat}, ${coord.lng}`);
-        
-        storeData.push({
-          name: storeName,
-          category: category,
-          coord: coord,
-          isOpen: isOpen,
-          ratingAverage: ratingAverage,
-          reviewCount: reviewCount
-        });
+
+        storeData.push([
+          storeName,           // name
+          category,            // category
+          '정보없음',          // distance
+          JSON.stringify([]),  // menu
+          JSON.stringify(coord), // coord
+          reviewCount,         // review_count
+          ratingAverage,       // rating_average
+          isOpen,              // is_open
+          null,                // address (null로 설정)
+          'unknown',           // address_status (기본값)
+          null,                // sido (null로 설정)
+          null                 // sigungu (null로 설정)
+        ]);
       }
-      
+
       // 배치 단위로 데이터베이스에 삽입
       console.log(`💾 배치 ${batch + 1} 데이터베이스 삽입 중...`);
-      
-      for (const store of storeData) {
-        // ID를 자동 생성하도록 INSERT 쿼리 수정
-        const insertResult = await pool.query(`
-          INSERT INTO stores (
-            name, 
-            category, 
-            distance, 
-            menu, 
-            coord, 
-            review_count, 
-            is_open, 
-            rating_average,
-            address,
-            address_status,
-            sido,
-            sigungu,
-            dong,
-            region_code
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-          RETURNING id
-        `, [
-          store.name,
-          store.category,
-          '정보없음',
-          JSON.stringify([]),
-          JSON.stringify(store.coord),
-          store.reviewCount,
-          store.isOpen,
-          store.ratingAverage,
-          null, // address
-          null, // address_status 
-          null, // sido
-          null, // sigungu
-          null, // dong
-          null  // region_code
-        ]);
-        
-        const actualStoreId = insertResult.rows[0].id;
-        console.log(`✅ 매장 생성 완료 - 실제 ID: ${actualStoreId}, 이름: ${store.name}`);
-        
-        // 각 매장에 기본 테이블 2-6개 추가
-        const tableCount = Math.floor(Math.random() * 5) + 2; // 2-6개
-        for (let tableNum = 1; tableNum <= tableCount; tableNum++) {
-          const seats = [2, 4, 6][Math.floor(Math.random() * 3)]; // 2, 4, 6인석 중 랜덤
-          await pool.query(`
-            INSERT INTO store_tables (store_id, table_number, table_name, seats, is_occupied)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [actualStoreId, tableNum, `테이블 ${tableNum}`, seats, false]);
-        }
+
+      const values = storeData.map((store) => `(${store.map(() => '?').join(', ')})`).join(',');
+      const insertQuery = `
+        INSERT INTO stores (name, category, distance, menu, coord, review_count, rating_average, is_open, address, address_status, sido, sigungu)
+        VALUES ${values}
+      `;
+
+      try {
+        const queryParams = storeData.flat();
+        await pool.query(insertQuery, queryParams);
+        console.log(`✅ 배치 ${batch + 1} 완료 (${batchSize}개 매장)`);
+
+        // 배치 삽입 후 즉시 확인
+        const batchCheckResult = await pool.query('SELECT COUNT(*) as count FROM stores');
+        console.log(`📊 현재 데이터베이스 매장 수: ${batchCheckResult.rows[0].count}개`);
+      } catch (insertError) {
+        console.error(`❌ 배치 ${batch + 1} 삽입 오류:`, insertError);
+        // 오류 발생 시에도 다음 배치를 계속 진행하거나, 여기서 중단할 수 있습니다.
+        // 현재는 오류 로그만 남기고 계속 진행합니다.
       }
-      
-      console.log(`✅ 배치 ${batch + 1} 완료 (${batchSize}개 매장)`);
     }
-    
+
     // 최종 결과 확인
-    const finalResult = await pool.query('SELECT COUNT(*) as total FROM stores');
-    const totalStoresInDB = parseInt(finalResult.rows[0].total);
-    
+    const finalCountResult = await pool.query('SELECT COUNT(*) as total FROM stores');
+    const totalStoresInDB = parseInt(finalCountResult.rows[0].total);
+
     console.log(`\n🎉 2000개 매장 더미데이터 생성 완료!`);
     console.log(`📊 데이터베이스 총 매장 수: ${totalStoresInDB}개`);
-    
+
     // 카테고리별 분포 확인 (새로 추가된 매장만)
     console.log('\n🍽️ 카테고리별 매장 분포 (전체):');
     const categoryDistribution = await pool.query(`
       SELECT category, COUNT(*) as count
-      FROM stores 
+      FROM stores
       GROUP BY category
       ORDER BY count DESC
     `);
-    
+
     categoryDistribution.rows.forEach(row => {
       console.log(`  - ${row.category}: ${row.count}개`);
     });
-    
+
     // null 필드 확인 (전체 매장)
     console.log('\n📍 null 필드 확인:');
     const nullFieldsCheck = await pool.query(`
-      SELECT 
+      SELECT
         COUNT(CASE WHEN address IS NULL THEN 1 END) as null_address,
         COUNT(CASE WHEN address_status IS NULL THEN 1 END) as null_address_status,
         COUNT(CASE WHEN sido IS NULL THEN 1 END) as null_sido,
         COUNT(CASE WHEN sigungu IS NULL THEN 1 END) as null_sigungu
-      FROM stores 
+      FROM stores
     `);
-    
+
     const nullStats = nullFieldsCheck.rows[0];
     console.log(`  - address null: ${nullStats.null_address}개`);
     console.log(`  - address_status null: ${nullStats.null_address_status}개`);
     console.log(`  - sido null: ${nullStats.null_sido}개`);
     console.log(`  - sigungu null: ${nullStats.null_sigungu}개`);
-    
+
   } catch (error) {
     console.error('❌ 2000개 매장 생성 실패:', error);
   } finally {
