@@ -178,10 +178,15 @@ window.MapMarkerManager = {
     const storeCount = stores.length;
     const openCount = stores.filter(s => s.isOpen !== false).length;
     
+    // 표시용 지역명 계산 (첫 번째 매장 기준)
+    const displayName = stores.length > 0 ? 
+      this.getDisplayRegionName(stores[0], this.currentLevel) || regionName : 
+      regionName;
+    
     const content = `
       <div class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${centerCoord.lat}, ${centerCoord.lng})">
         <div class="cluster-info">
-          <div class="region-name">${regionName}</div>
+          <div class="region-name">${displayName}</div>
           <div class="cluster-count">${storeCount}개 매장 (운영중 ${openCount}개)</div>
         </div>
       </div>
@@ -265,6 +270,34 @@ window.MapMarkerManager = {
       }
     } else {
       // 시/도 단위 (sido만)
+      return sido;
+    }
+  },
+
+  // 집계 마커에 표시할 지역명 (레벨별로 해당 컬럼명만)
+  getDisplayRegionName(store, level) {
+    const { sido, sigungu, eupmyeondong } = store;
+    
+    if (!sido) return null;
+    
+    if (level <= 7) {
+      // 읍면동 집계 마커 - eupmyeondong만 표시
+      if (eupmyeondong) {
+        return eupmyeondong;
+      } else if (sigungu) {
+        return sigungu;
+      } else {
+        return sido;
+      }
+    } else if (level <= 10) {
+      // 시군구 집계 마커 - sigungu만 표시
+      if (sigungu) {
+        return sigungu;
+      } else {
+        return sido;
+      }
+    } else {
+      // 시도 집계 마커 - sido만 표시
       return sido;
     }
   },
