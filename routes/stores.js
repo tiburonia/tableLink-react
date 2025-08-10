@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
-const fetch = require('node-fetch'); // node-fetch 모듈을 가져옵니다.
 
 // stores 테이블 별점 평균 업데이트 함수
 async function updateStoreRating(storeId) {
@@ -33,53 +32,6 @@ async function updateStoreRating(storeId) {
   }
 }
 
-// 카카오 장소 검색 API 프록시
-router.get('/search-place', async (req, res) => {
-  try {
-    const { query, x, y, radius = 20000 } = req.query;
-
-    if (!query) {
-      return res.status(400).json({
-        success: false,
-        error: '검색 키워드가 필요합니다'
-      });
-    }
-
-    const kakaoApiKey = process.env.KAKAO_API_KEY || '8b85ede876c3b97074b5f6fa8e999c55';
-
-    const apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&x=${x}&y=${y}&radius=${radius}&sort=distance`;
-
-    const response = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `KakaoAK ${kakaoApiKey}`
-      }
-    });
-
-    if (!response.ok) {
-      console.error('❌ 카카오 API 호출 실패:', response.status);
-      return res.status(500).json({
-        success: false,
-        error: '카카오 API 호출 실패'
-      });
-    }
-
-    const data = await response.json();
-
-    res.json({
-      success: true,
-      places: data.documents || [],
-      meta: data.meta || {}
-    });
-
-  } catch (error) {
-    console.error('❌ 장소 검색 프록시 오류:', error);
-    res.status(500).json({
-      success: false,
-      error: '서버 오류가 발생했습니다'
-    });
-  }
-});
-
 // 뷰포트 범위 내 매장 조회 API (가장 먼저 배치)
 router.get('/viewport', async (req, res) => {
   try {
@@ -107,7 +59,7 @@ router.get('/viewport', async (req, res) => {
     const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM store_address WHERE latitude IS NOT NULL AND longitude IS NOT NULL');
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
 
-    // 뷰포트 범위 내 매장 조회 전 범위 확인
+    // 뷰포트 내 매장 조회 전 범위 확인
     const rangeCheckResult = await pool.query(`
       SELECT COUNT(*) as in_range_count,
              MIN(sa.latitude) as min_lat, MAX(sa.latitude) as max_lat,

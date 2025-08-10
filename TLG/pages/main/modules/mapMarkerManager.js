@@ -132,61 +132,37 @@ window.MapMarkerManager = {
       </div>
       <style>
         .store-marker {
-          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+          background: white;
           border: 2px solid ${isOpen ? '#4caf50' : '#ff9800'};
-          border-radius: 12px;
-          padding: 10px 12px;
+          border-radius: 8px;
+          padding: 6px 8px;
           cursor: pointer;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-          min-width: 120px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+          min-width: 100px;
           position: relative;
           z-index: 200;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          backdrop-filter: blur(10px);
-        }
-        .store-marker::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, ${isOpen ? '#4caf50' : '#ff9800'}, ${isOpen ? '#66bb6a' : '#ffb74d'});
-          border-radius: 12px 12px 0 0;
+          transition: all 0.2s ease;
         }
         .store-marker-hoverable:hover {
-          transform: scale(1.08) translateY(-3px) !important;
+          transform: scale(1.1) !important;
           z-index: 9999 !important;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.25) !important;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
           border-width: 3px !important;
-          background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%) !important;
         }
         .store-name {
-          font-weight: 700;
-          color: #1a1a1a;
+          font-weight: bold;
+          color: #333;
           font-size: 12px;
-          margin-bottom: 4px;
-          line-height: 1.3;
-          text-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
+          margin-bottom: 2px;
+          line-height: 1.2;
         }
         .store-status {
           font-size: 10px;
-          font-weight: 600;
+          font-weight: 500;
           line-height: 1.2;
-          padding: 2px 6px;
-          border-radius: 6px;
-          display: inline-flex;
-          align-items: center;
-          gap: 2px;
         }
-        .store-status.open { 
-          color: #2e7d32; 
-          background: rgba(76, 175, 80, 0.1);
-        }
-        .store-status.closed { 
-          color: #ef6c00; 
-          background: rgba(255, 152, 0, 0.1);
-        }
+        .store-status.open { color: #4caf50; }
+        .store-status.closed { color: #ff9800; }
       </style>
     `;
     
@@ -200,22 +176,15 @@ window.MapMarkerManager = {
     return overlay;
   },
 
-  // 집계 마커 생성 (6각형 표지판 모양)
+  // 집계 마커 생성
   createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
     
-    // 앵커 좌표 계산 (행정기관 API 우선, 없으면 센트로이드)
-    this.calculateAnchorPositionAsync(stores, this.currentLevel).then(anchorCoord => {
-      if (anchorCoord) {
-        this.updateMarkerPosition(markerId, anchorCoord);
-      }
-    });
+    // 앵커 좌표 계산 (행정기관 우선, 없으면 센트로이드)
+    const anchorCoord = this.calculateAnchorPosition(stores, this.currentLevel);
+    if (!anchorCoord) return null;
     
-    // 임시로 센트로이드 사용
-    const tempAnchorCoord = this.calculateCentroid(stores.filter(s => s.coord?.lat && s.coord?.lng));
-    if (!tempAnchorCoord) return null;
-    
-    const position = new kakao.maps.LatLng(tempAnchorCoord.lat, tempAnchorCoord.lng);
+    const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
     const storeCount = stores.length;
     const openCount = stores.filter(s => s.isOpen !== false).length;
     
@@ -228,96 +197,44 @@ window.MapMarkerManager = {
     const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
     
     const content = `
-      <div id="${markerId}" class="cluster-marker cluster-marker-hoverable" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${tempAnchorCoord.lat}, ${tempAnchorCoord.lng})">
+      <div id="${markerId}" class="cluster-marker cluster-marker-hoverable" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
         <div class="cluster-info">
           <div class="region-name">${displayName}</div>
-          <div class="cluster-count">${storeCount}개</div>
+          <div class="cluster-count">${storeCount}</div>
         </div>
       </div>
       <style>
         .cluster-marker {
-          position: relative;
-          background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+          background: linear-gradient(135deg, #297efc, #4f46e5);
           color: white;
-          padding: 12px 20px;
+          border-radius: 6px;
+          padding: 2px 5px;
           cursor: pointer;
-          min-width: 100px;
-          max-width: 160px;
+          box-shadow: 0 1px 3px rgba(41,126,252,0.3);
+          min-width: 32px;
           text-align: center;
-          z-index: 100;
-          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-          font-size: 11px;
-          border: 2px solid rgba(255,255,255,0.4);
-          backdrop-filter: blur(10px);
-          box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25), 0 2px 8px rgba(0,0,0,0.1);
-          
-          /* 6각형 클립패스로 표지판 모양 생성 */
-          clip-path: polygon(15% 0%, 85% 0%, 100% 50%, 85% 100%, 15% 100%, 0% 50%);
-          
-          /* 그라데이션 보더 효과 */
-          background-image: 
-            linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%),
-            linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%);
-          background-origin: border-box;
-          background-clip: padding-box, border-box;
-        }
-        
-        .cluster-marker::before {
-          content: '';
-          position: absolute;
-          inset: -1px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%);
-          clip-path: inherit;
-          z-index: -1;
-        }
-        
-        .cluster-marker::after {
-          content: '';
-          position: absolute;
-          inset: 2px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(0,0,0,0.05) 100%);
-          clip-path: inherit;
-          z-index: -1;
-        }
-        
-        .cluster-marker-hoverable:hover {
-          transform: scale(1.1) translateY(-3px) !important;
-          z-index: 9998 !important;
-          box-shadow: 
-            0 8px 35px rgba(37, 99, 235, 0.4) !important,
-            0 4px 15px rgba(0,0,0,0.15) !important;
-          filter: brightness(1.15) saturate(1.1);
-          border-color: rgba(255,255,255,0.6) !important;
-        }
-        
-        .cluster-info {
           position: relative;
-          z-index: 1;
-        }
-        
-        .region-name {
-          font-weight: 800;
-          font-size: 11px;
-          line-height: 1.3;
-          margin-bottom: 3px;
-          text-shadow: 0 1px 3px rgba(0,0,0,0.2);
-          letter-spacing: -0.3px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 120px;
-        }
-        
-        .cluster-count {
+          z-index: 100;
+          transition: all 0.2s ease;
           font-size: 9px;
-          opacity: 0.95;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+        .cluster-marker-hoverable:hover {
+          transform: scale(1.2) !important;
+          z-index: 9998 !important;
+          box-shadow: 0 4px 15px rgba(41,126,252,0.6) !important;
+          border-color: rgba(255,255,255,0.4) !important;
+        }
+        .region-name {
+          font-weight: bold;
+          font-size: 8px;
+          line-height: 1.1;
+          margin-bottom: 1px;
+        }
+        .cluster-count {
+          font-size: 7px;
+          opacity: 0.9;
           line-height: 1;
-          font-weight: 600;
-          background: rgba(255,255,255,0.25);
-          padding: 2px 6px;
-          border-radius: 8px;
-          display: inline-block;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
       </style>
     `;
@@ -423,45 +340,6 @@ window.MapMarkerManager = {
     const centroid = this.calculateCentroid(validStores);
     console.log(`📍 센트로이드 앵커: (${centroid.lat}, ${centroid.lng})`);
     return centroid;
-  },
-
-  // 비동기 앵커 위치 계산 (카카오 API 사용)
-  async calculateAnchorPositionAsync(stores, level) {
-    const validStores = stores.filter(s => s.coord?.lat && s.coord?.lng);
-    if (validStores.length === 0) return null;
-    
-    // 먼저 매장 데이터에서 행정기관 찾기
-    const govStore = this.findGovernmentOffice(validStores, level);
-    if (govStore) {
-      console.log(`📍 매장 데이터 행정기관 앵커: ${govStore.name}`);
-      return govStore.coord;
-    }
-    
-    // 카카오 API로 행정기관 위치 검색
-    const apiResult = await this.findGovernmentOfficeByAPI(validStores, level);
-    if (apiResult) {
-      return apiResult;
-    }
-    
-    // 모두 실패하면 센트로이드 사용
-    const centroid = this.calculateCentroid(validStores);
-    console.log(`📍 최종 센트로이드 앵커: (${centroid.lat}, ${centroid.lng})`);
-    return centroid;
-  },
-
-  // 마커 위치 업데이트
-  updateMarkerPosition(markerId, newCoord) {
-    const markerElement = document.getElementById(markerId);
-    if (markerElement) {
-      const marker = this.currentMarkers.find(m => 
-        m.getContent && m.getContent().includes(markerId)
-      );
-      if (marker) {
-        const newPosition = new kakao.maps.LatLng(newCoord.lat, newCoord.lng);
-        marker.setPosition(newPosition);
-        console.log(`✅ 마커 ${markerId} 위치 업데이트: (${newCoord.lat}, ${newCoord.lng})`);
-      }
-    }
   },
 
   // 행정기관 찾기
