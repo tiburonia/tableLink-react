@@ -375,29 +375,29 @@ async function renderMap() {
   `;
 
   // 지도 즉시 생성
-  const container = document.getElementById('map');
   const options = {
     center: new kakao.maps.LatLng(37.5665, 126.9780),
     level: 3,
     maxLevel: 12  // 최대 줌 레벨을 12로 제한
   };
 
-  const map = new kakao.maps.Map(container, options);
+  const map = new kakao.maps.Map(document.getElementById('map'), options);
 
   // 지도 인스턴스를 전역 변수로 저장
   window.currentMap = map;
 
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 타일 기반 마커 관리자 초기화
-  setTimeout(() => {
+  // 기존 마커 시스템 완전 비활성화 - 타일 시스템 사용
+    console.log('🚫 기존 마커 시스템 비활성화됨 - 타일 시스템 사용');
+
+    // 타일 기반 마커 관리자만 사용
     if (window.MapMarkerManager) {
-      console.log('🚀 타일 기반 마커 시스템 초기화');
+      console.log('🗺️ 타일 기반 마커 관리자 초기화');
       window.MapMarkerManager.initialize(map);
     } else {
-      console.error('❌ MapMarkerManager가 로드되지 않음');
+      console.error('❌ 타일 마커 관리자를 찾을 수 없습니다');
     }
-  }, 300);
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
