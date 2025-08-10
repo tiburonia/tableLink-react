@@ -304,8 +304,19 @@ window.MapMarkerManager = {
 
   // 타일 피처들을 캔버스에 렌더링
   renderTileFeatures(features) {
+    if (!Array.isArray(features)) {
+      console.warn('⚠️ features가 배열이 아닙니다:', typeof features);
+      return;
+    }
+
     features.forEach(feature => {
-      if (feature.properties.cluster) {
+      // 안전한 속성 접근
+      if (!feature || !feature.properties || !feature.geometry) {
+        console.warn('⚠️ 유효하지 않은 feature:', feature);
+        return;
+      }
+
+      if (feature.properties.cluster === true) {
         this.renderCluster(feature);
       } else {
         this.renderStore(feature);
@@ -315,12 +326,17 @@ window.MapMarkerManager = {
 
   // 클러스터 렌더링
   renderCluster(feature) {
+    if (!feature.geometry || !feature.geometry.coordinates || !Array.isArray(feature.geometry.coordinates)) {
+      console.warn('⚠️ 클러스터 좌표 정보 없음:', feature);
+      return;
+    }
+
     const [lng, lat] = feature.geometry.coordinates;
     const point = this.lngLatToPixel(lng, lat);
     
     if (!point) return;
     
-    const count = feature.properties.point_count;
+    const count = feature.properties.point_count || 1;
     const radius = Math.min(30, Math.max(15, Math.log(count) * 5));
     
     // 클러스터 원 그리기
@@ -342,12 +358,17 @@ window.MapMarkerManager = {
 
   // 개별 매장 렌더링
   renderStore(feature) {
+    if (!feature.geometry || !feature.geometry.coordinates || !Array.isArray(feature.geometry.coordinates)) {
+      console.warn('⚠️ 매장 좌표 정보 없음:', feature);
+      return;
+    }
+
     const [lng, lat] = feature.geometry.coordinates;
     const point = this.lngLatToPixel(lng, lat);
     
     if (!point) return;
     
-    const isOpen = feature.properties.isOpen;
+    const isOpen = feature.properties.isOpen !== false; // 기본값 true
     
     // 매장 마커 그리기
     this.ctx.beginPath();
@@ -419,13 +440,17 @@ window.MapMarkerManager = {
       if (!tileData) continue;
       
       for (const feature of tileData.features) {
+        if (!feature || !feature.geometry || !feature.geometry.coordinates || !feature.properties) {
+          continue;
+        }
+
         const [lng, lat] = feature.geometry.coordinates;
         const point = this.lngLatToPixel(lng, lat);
         
         if (!point) continue;
         
-        const radius = feature.properties.cluster ? 
-          Math.min(30, Math.max(15, Math.log(feature.properties.point_count) * 5)) : 6;
+        const radius = feature.properties.cluster === true ? 
+          Math.min(30, Math.max(15, Math.log(feature.properties.point_count || 1) * 5)) : 6;
         
         const distance = Math.sqrt(Math.pow(x - point.x, 2) + Math.pow(y - point.y, 2));
         
