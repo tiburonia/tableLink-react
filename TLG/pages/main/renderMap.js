@@ -400,12 +400,23 @@ async function renderMap() {
 
       console.log('🚫 기존 마커 시스템 완전 비활성화 - 타일 시스템만 사용');
 
-      // 타일 기반 마커 관리자 초기화
+      // 전역 디버깅용 지도 참조
+      window.__MAP__ = map;
+
+      // 타일 시스템 초기화 (강제)
       if (window.MapMarkerManager) {
-        console.log('🗺️ 타일 기반 마커 관리자 초기화');
-        window.MapMarkerManager.initialize(map);
+        console.log('🎯 타일 기반 마커 관리자 강제 초기화');
+        window.MapMarkerManager.initialize(map, {
+          debounceMs: 180,
+          maxVisibleMarkers: 400
+        });
       } else {
         console.error('❌ 타일 마커 관리자를 찾을 수 없습니다');
+      }
+
+      // 레거시 시스템 차단 확인
+      if (window.LegacyMarkerManager) {
+        console.log('✅ 레거시 마커 관리자 차단 가드 활성화됨');
       }
 
     } else {

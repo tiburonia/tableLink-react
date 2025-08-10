@@ -1,6 +1,9 @@
 
 // 타일 기반 클러스터링 마커 관리자
 window.MapMarkerManager = {
+  // 초기화 상태 플래그
+  _initialized: false,
+  
   // 지도 인스턴스
   map: null,
 
@@ -24,12 +27,29 @@ window.MapMarkerManager = {
   // 현재 줌 레벨
   currentZoom: 0,
 
-  // 메인 진입점 - 지도 이벤트 등록
-  initialize(map) {
+  // 설정 옵션
+  opts: {
+    debounceMs: 180,
+    maxVisibleMarkers: 400
+  },
+
+  // 메인 진입점 - 지도 이벤트 등록 (중복 방지)
+  initialize(map, options = {}) {
+    if (this._initialized) {
+      console.log('ℹ️ MapMarkerManager already initialized - 중복 초기화 방지');
+      return;
+    }
+
+    this._initialized = true;
     this.map = map;
     this.currentZoom = map.getLevel();
+    this.opts = { ...this.opts, ...options };
 
-    console.log('🗺️ 타일 기반 마커 관리자 초기화');
+    console.log('🗺️ 타일 기반 마커 관리자 초기화 시작');
+    console.log(`⚙️ 설정: debounce=${this.opts.debounceMs}ms, maxMarkers=${this.opts.maxVisibleMarkers}`);
+
+    // 기존 시스템 완전 차단 확인
+    this.blockLegacySystem();
 
     // 캔버스 오버레이 생성
     this.createCanvasOverlay();
@@ -39,6 +59,23 @@ window.MapMarkerManager = {
 
     // 초기 타일 로딩
     this.debouncedLoadVisibleTiles();
+    
+    console.log('✅ 타일 기반 마커 관리자 초기화 완료');
+  },
+
+  // 레거시 시스템 차단 확인
+  blockLegacySystem() {
+    // 기존 지도 이벤트 리스너 제거 (혹시 남아있을 수 있는 레거시 이벤트)
+    try {
+      // 카카오맵 이벤트 전체 정리 후 재등록
+      kakao.maps.event.removeListener(this.map, 'idle');
+      kakao.maps.event.removeListener(this.map, 'zoom_changed');
+      kakao.maps.event.removeListener(this.map, 'dragend');
+      kakao.maps.event.removeListener(this.map, 'bounds_changed');
+      console.log('🧹 기존 지도 이벤트 리스너 정리 완료');
+    } catch (error) {
+      console.log('ℹ️ 기존 이벤트 리스너 정리 중 에러 (정상):', error.message);
+    }
   },
 
   // 캔버스 오버레이 생성
@@ -104,21 +141,11 @@ window.MapMarkerManager = {
     console.log(`🎨 캔버스 크기 조정: ${rect.width}x${rect.height}`);
   },
 
-  // 지도 이벤트 설정
+  // 지도 이벤트 설정 (idle만 사용하여 중복 방지)
   setupMapEvents() {
-    // 지도 이동/줌 완료 시
+    // 지도 이동/줌 완료 시만 처리 (중복 방지)
     kakao.maps.event.addListener(this.map, 'idle', () => {
-      console.log('🗺️ 지도 idle 이벤트');
-      this.debouncedLoadVisibleTiles();
-    });
-
-    // 지도 줌 변경 시
-    kakao.maps.event.addListener(this.map, 'zoom_changed', () => {
-      const newZoom = this.map.getLevel();
-      console.log(`🔍 줌 레벨 변경: ${this.currentZoom} → ${newZoom}`);
-      
-      this.currentZoom = newZoom;
-      this.clearCanvas();
+      console.log('🗺️ 지도 idle 이벤트 - 타일 시스템 처리');
       this.debouncedLoadVisibleTiles();
     });
 
@@ -127,14 +154,16 @@ window.MapMarkerManager = {
       this.resizeCanvas();
       this.renderAllTiles();
     });
+
+    console.log('🎯 타일 시스템 이벤트 등록 완료 (idle만 사용)');
   },
 
-  // 디바운스된 타일 로딩
+  // 디바운스된 타일 로딩 (설정값 사용)
   debouncedLoadVisibleTiles() {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       this.loadVisibleTiles();
-    }, 180); // 180ms 디바운스
+    }, this.opts.debounceMs);
   },
 
   // 현재 뷰포트의 타일 목록 계산
@@ -274,7 +303,7 @@ window.MapMarkerManager = {
       }
     });
     
-    console.log(`🎨 캔버스 렌더링 완료: ${totalFeatures}개 피처`);
+    console.log(`🖼️ 캔버스 렌더 완료 count=${totalFeatures}`);
   },
 
   // 타일 피처들을 캔버스에 렌더링

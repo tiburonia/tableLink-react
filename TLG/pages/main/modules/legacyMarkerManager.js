@@ -1,33 +1,41 @@
 
-// 기존 마커 시스템 비활성화 - 타일 시스템으로 대체됨
-window.LegacyMarkerManager = {
-  // 빈 메서드들로 대체하여 기존 호출에서 에러 방지
-  initialize: () => {
-    console.log('⚠️ 기존 마커 시스템이 비활성화됨 - 타일 시스템 사용 중');
-  },
-  
-  updateMarkersForLevel: () => {
-    // 아무것도 하지 않음
-  },
-  
-  clearAllMarkers: () => {
-    // 아무것도 하지 않음  
-  },
-  
-  cleanup: () => {
-    // 아무것도 하지 않음
+// 레거시 마커 시스템 완전 차단 가드
+console.log('🚫 레거시 마커 시스템 차단 가드 로드됨');
+
+// 모든 레거시 호출을 차단하는 Proxy
+window.LegacyMarkerManager = new Proxy({}, {
+  get(target, prop) {
+    console.warn(`🚫 LegacyMarkerManager.${prop} 호출 차단됨 - 타일 시스템 사용 중`);
+    return () => {
+      console.warn(`🚫 LegacyMarkerManager.${prop}() 실행 차단됨`);
+    };
   }
-};
+});
 
-// 기존 전역 함수들도 비활성화
+// 레거시 전역 함수들도 차단
 window.loadViewportStores = () => {
-  console.log('⚠️ loadViewportStores 비활성화됨 - 타일 시스템 사용 중');
+  console.warn('🚫 loadViewportStores 호출 차단됨 - 타일 시스템 사용 중');
 };
 
+window.renderLegacyMarkers = () => {
+  console.warn('🚫 renderLegacyMarkers 호출 차단됨 - 타일 시스템 사용 중');
+};
+
+window.updateLegacyMarkers = () => {
+  console.warn('🚫 updateLegacyMarkers 호출 차단됨 - 타일 시스템 사용 중');
+};
+
+// 읍면동 관련 함수들도 차단
+window.aggregateByDong = () => {
+  console.warn('🚫 aggregateByDong 호출 차단됨 - 타일 시스템 사용 중');
+};
+
+// 매장 상세 정보 표시는 유지 (타일 시스템에서 사용)
 window.renderStore = (store) => {
   console.log('🏪 매장 선택:', store.name);
-  // 매장 상세 정보 표시 로직은 유지
   if (typeof showStoreDetail === 'function') {
     showStoreDetail(store);
   }
 };
+
+console.log('✅ 레거시 마커 시스템 차단 완료');
