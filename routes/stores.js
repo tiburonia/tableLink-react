@@ -92,7 +92,6 @@ router.get('/viewport', async (req, res) => {
         AND sa.latitude >= $1 AND sa.latitude <= $3
         AND sa.longitude >= $2 AND sa.longitude <= $4
       ORDER BY s.id
-      LIMIT 200
     `, queryParams);
 
     console.log(`🔍 뷰포트 쿼리 결과: ${storesResult.rows.length}개 매장`);
