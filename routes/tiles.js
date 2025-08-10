@@ -63,10 +63,26 @@ router.get('/:z/:x/:y', async (req, res) => {
         AND sa.longitude <= $3
         AND sa.latitude >= $2 
         AND sa.latitude <= $4
+      LIMIT 1000
     `, [west, south, east, north]);
 
     const stores = result.rows;
     console.log(`📊 타일 내 매장 수: ${stores.length}개`);
+
+    // 빈 타일인 경우 빈 응답 반환
+    if (stores.length === 0) {
+      return res.json({
+        success: true,
+        tile: { z: zoom, x: tileX, y: tileY },
+        bbox: bbox,
+        data: { type: 'FeatureCollection', features: [] },
+        meta: {
+          totalFeatures: 0,
+          clusters: 0,
+          stores: 0
+        }
+      });
+    }
 
     // GeoJSON Point 형태로 변환
     const points = stores.map(store => ({
@@ -101,12 +117,18 @@ router.get('/:z/:x/:y', async (req, res) => {
     supercluster.load(points);
 
     // 해당 타일의 클러스터 데이터 가져오기
-    const clusters = supercluster.getTile(zoom, tileX, tileY);
+    let clusters;
+    try {
+      clusters = supercluster.getTile(zoom, tileX, tileY);
+    } catch (tileError) {
+      console.warn(`⚠️ 타일 ${zoom}/${tileX}/${tileY} 클러스터링 실패:`, tileError);
+      clusters = null;
+    }
 
     // GeoJSON FeatureCollection 형태로 응답
     const featureCollection = {
       type: 'FeatureCollection',
-      features: clusters ? clusters.features : []
+      features: clusters ? (clusters.features || []) : []
     };
 
     console.log(`✅ 타일 응답: ${featureCollection.features.length}개 피처`);

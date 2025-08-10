@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -34,7 +33,7 @@ app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
-app.use('/api/tiles', tilesRoutes);
+app.use('/api/tiles', tilesRoutes); // 타일 라우트 추가
 
 // 정적 페이지 라우트
 app.get('/', (req, res) => {
