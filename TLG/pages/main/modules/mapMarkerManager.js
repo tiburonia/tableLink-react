@@ -37,12 +37,12 @@ window.MapMarkerManager = {
 
     this.isLoading = true;
     this.shouldCancel = false;
-
+    
     // 마커 타입이 같으면 기존 마커 유지하고 추가 마커만 생성
     if (prevMarkerType === newMarkerType) {
       console.log(`✨ 마커 타입 동일 (${newMarkerType}) - 기존 마커 유지하고 새 영역 추가`);
       this.currentLevel = level;
-
+      
       try {
         // 같은 마커 타입 내에서 추가 마커 생성
         await this.addMarkersForCurrentType(map, level, newMarkerType);
@@ -55,7 +55,7 @@ window.MapMarkerManager = {
       }
       return;
     }
-
+    
     // 마커 타입이 바뀔 때만 기존 마커 제거
     this.clearAllMarkers();
     this.currentLevel = level;
@@ -148,7 +148,7 @@ window.MapMarkerManager = {
 
     // 모든 마커를 한번에 생성
     const markers = this.createStoreMarkersBatch(validStores, map);
-
+    
     // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
       this.currentMarkers.push(...markers);
@@ -165,13 +165,13 @@ window.MapMarkerManager = {
     console.log(`🏘️ 집계 마커 표시 시작 (레벨 ${level})`);
 
     const stores = await this.fetchStores(map);
-
+    
     // 작업 취소 확인
     if (this.shouldCancel) {
       console.log('🚫 집계 마커 생성 취소됨 (레벨 변경)');
       return;
     }
-
+    
     console.log(`📍 조회된 매장 수: ${stores.length}개`);
 
     // 지역별 그룹화
@@ -185,7 +185,7 @@ window.MapMarkerManager = {
 
     // 모든 집계 마커를 한번에 생성
     const markers = await this.createClusterMarkersBatch(clusters, map);
-
+    
     // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
       this.currentMarkers.push(...markers);
@@ -200,10 +200,10 @@ window.MapMarkerManager = {
   // 개별 매장 마커 배치 생성
   createStoreMarkersBatch(stores, map) {
     console.log(`📦 개별 매장 마커 배치 생성: ${stores.length}개`);
-
+    
     // 모든 마커를 한번에 생성
     const markers = stores.map(store => this.createStoreMarker(store, map));
-
+    
     console.log(`✅ 배치 생성 완료: ${markers.length}개 마커`);
     return markers;
   },
@@ -272,67 +272,36 @@ window.MapMarkerManager = {
     return overlay;
   },
 
-  // 집계 마커 배치 생성 (최적화된 버전)
+  // 집계 마커 배치 생성
   async createClusterMarkersBatch(clusters, map) {
     console.log(`📦 집계 마커 배치 생성: ${clusters.size}개`);
-
+    
     // 작업 취소 확인
     if (this.shouldCancel) {
       console.log('🚫 집계 마커 배치 생성 중단됨');
       return [];
     }
-
+    
+    // 모든 집계 마커를 병렬로 한번에 생성
     const clusterEntries = Array.from(clusters.entries());
-
-    // 1단계: 모든 행정기관 좌표를 배치로 조회
-    const adminCoords = await this.batchGetAdministrativeCoords(clusterEntries);
-
-    // 작업 취소 확인
-    if (this.shouldCancel) {
-      console.log('🚫 집계 마커 배치 생성 중단됨 (좌표 조회 후)');
-      return [];
-    }
-
-    // 2단계: 좌표와 함께 마커 생성 (DB 조회 없이)
-    const markerPromises = clusterEntries.map(([regionName, regionStores], index) => 
-      this.createClusterMarkerWithCoord(regionName, regionStores, map, adminCoords[index])
+    const markerPromises = clusterEntries.map(([regionName, regionStores]) => 
+      this.createClusterMarker(regionName, regionStores, map)
     );
-
+    
     const markers = await Promise.all(markerPromises);
     const validMarkers = markers.filter(marker => marker !== null);
-
+    
     console.log(`✅ 배치 생성 완료: ${validMarkers.length}개 마커`);
     return validMarkers;
   },
 
-  // 좌표가 미리 제공된 집계 마커 생성 (성능 최적화)
-  async createClusterMarkerWithCoord(regionName, stores, map, preCalculatedCoord) {
-    if (!stores || stores.length === 0) return null;
-
-    let anchorCoord = preCalculatedCoord;
-
-    // 미리 계산된 좌표가 없으면 기존 방식 사용
-    if (!anchorCoord) {
-      anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
-      if (!anchorCoord) return null;
-    }
-
-    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
-  },
-
-  // 집계 마커 생성 (기존 메서드)
+  // 집계 마커 생성
   async createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
 
     // 앵커 좌표 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
     const anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
     if (!anchorCoord) return null;
-
-    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
-  },
-
-  // 마커 엘리먼트 생성 (공통 로직)
-  createClusterMarkerElement(regionName, stores, map, anchorCoord) {
 
     const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
     const storeCount = stores.length;
@@ -472,7 +441,7 @@ window.MapMarkerManager = {
     }
   },
 
-  // 집계 마커 앵커 위치 계산 (매장 평균 좌표 기반)
+  // 집계 마커 앵커 위치 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
   async calculateAnchorPosition(stores, level) {
     // 작업 취소 확인
     if (this.shouldCancel) {
@@ -493,36 +462,45 @@ window.MapMarkerManager = {
       return null;
     }
 
-    // 매장들의 평균 좌표 계산
+    const firstStore = validStores[0];
+
+    if (level >= 11) {
+      // 레벨 11+ - 시도 레벨만, DB에서 도청/시청 좌표 조회
+      const coord = await this.getAdministrativeOfficeCoord('sido', firstStore.sido);
+      if (this.shouldCancel) return null;
+      if (coord) {
+        console.log(`🏛️ 시도청 앵커: ${firstStore.sido} (${coord.lat}, ${coord.lng})`);
+        return coord;
+      }
+    } else if (level >= 8) {
+      // 시군구 레벨 - DB에서 시청/군청/구청 좌표 조회
+      if (firstStore.sigungu) {
+        const coord = await this.getAdministrativeOfficeCoord('sigungu', firstStore.sigungu);
+        if (this.shouldCancel) return null;
+        if (coord) {
+          console.log(`🏛️ 시군구청 앵커: ${firstStore.sigungu} (${coord.lat}, ${coord.lng})`);
+          return coord;
+        }
+      }
+    } else {
+      // 읍면동 레벨 - ST_PointOnSurface로 중심점 계산
+      if (firstStore.sido && firstStore.sigungu && firstStore.eupmyeondong) {
+        const coord = await this.getEupmyeondongCenter(firstStore.sido, firstStore.sigungu, firstStore.eupmyeondong);
+        if (this.shouldCancel) return null;
+        if (coord) {
+          console.log(`📍 읍면동 중심점 앵커: ${firstStore.eupmyeondong} (${coord.lat}, ${coord.lng})`);
+          return coord;
+        }
+      }
+    }
+
+    // 모든 방법이 실패하면 센트로이드 사용
     const centroid = this.calculateCentroid(validStores);
-    console.log(`📍 매장 평균 좌표 앵커: (${centroid.lat}, ${centroid.lng})`);
+    console.log(`📍 센트로이드 앵커(fallback): (${centroid.lat}, ${centroid.lng})`);
     return centroid;
   },
 
-  // 행정기관 좌표 배치 조회 (기존 메서드 유지 - 실제 사용되지 않음)
-  async batchGetAdministrativeCoords(clusterEntries) {
-    // 각 지역별 매장들의 평균 좌표를 미리 계산
-    const results = clusterEntries.map(([regionName, regionStores]) => {
-      const validStores = regionStores.filter(s => {
-        return s && s.coord && 
-               typeof s.coord.lat === 'number' && 
-               typeof s.coord.lng === 'number' &&
-               !isNaN(s.coord.lat) && 
-               !isNaN(s.coord.lng);
-      });
-
-      if (validStores.length === 0) {
-        return null;
-      }
-
-      return this.calculateCentroid(validStores);
-    });
-
-    console.log(`✅ 배치 좌표 계산 완료: ${results.filter(r => r !== null).length}개`);
-    return results;
-  },
-
-  // DB에서 행정기관 좌표 조회 (기존 메서드 유지 - 실제 사용되지 않음)
+  // DB에서 행정기관 좌표 조회
   async getAdministrativeOfficeCoord(regionType, regionName) {
     try {
       const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
@@ -542,7 +520,7 @@ window.MapMarkerManager = {
     }
   },
 
-  // 읍면동 중심점 계산 (ST_PointOnSurface - 기존 메서드 유지, 실제 사용되지 않음)
+  // 읍면동 중심점 계산 (ST_PointOnSurface)
   async getEupmyeondongCenter(sido, sigungu, eupmyeondong) {
     try {
       const params = new URLSearchParams({
@@ -568,7 +546,7 @@ window.MapMarkerManager = {
     }
   },
 
-
+  
 
   // 센트로이드 계산 (기존 중심 좌표 계산)
   calculateCentroid(stores) {
@@ -627,12 +605,12 @@ window.MapMarkerManager = {
     // 유효한 좌표를 가진 매장들 필터링 및 중복 제거
     const validStores = stores.filter(store => {
       if (!store.coord?.lat || !store.coord?.lng) return false;
-
+      
       // 기존 마커와 중복되는지 확인 (10m 이내는 중복으로 간주)
       const isDuplicate = existingPositions.some(pos => 
         this.calculateDistance(store.coord.lat, store.coord.lng, pos.lat, pos.lng) < 10
       );
-
+      
       return !isDuplicate;
     });
 
@@ -645,7 +623,7 @@ window.MapMarkerManager = {
 
     // 새로운 마커들을 한번에 생성
     const newMarkers = this.createStoreMarkersBatch(validStores, map);
-
+    
     // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
       this.currentMarkers.push(...newMarkers);
@@ -662,31 +640,40 @@ window.MapMarkerManager = {
     console.log(`🏘️ 집계 추가 마커 표시 시작 (레벨 ${level})`);
 
     const stores = await this.fetchStores(map);
-
+    
     // 작업 취소 확인
     if (this.shouldCancel) {
       console.log('🚫 집계 추가 마커 생성 취소됨 (레벨 변경)');
       return;
     }
-
+    
     console.log(`📍 조회된 매장 수: ${stores.length}개`);
 
     // 지역별 그룹화
     const clusters = this.groupStoresByRegion(stores, level);
     console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
 
-    // 기존 마커의 지역명 추출 (중복 방지용)
-    const existingRegions = this.getExistingMarkerRegions();
+    // 기존 마커 위치 추출 (중복 방지용)
+    const existingPositions = this.getExistingMarkerPositions();
 
-    // 새로운 지역만 필터링 (지역명 기반 중복 제거)
+    // 새로운 지역만 필터링 (중복 제거)
     const newClusters = new Map();
     for (const [regionName, regionStores] of clusters.entries()) {
-      if (!existingRegions.has(regionName)) {
+      // 해당 지역의 앵커 위치 계산
+      const anchorCoord = await this.calculateAnchorPosition(regionStores, level);
+      if (!anchorCoord || this.shouldCancel) continue;
+
+      // 기존 마커와 중복되는지 확인 (100m 이내는 중복으로 간주)
+      const isDuplicate = existingPositions.some(pos => 
+        this.calculateDistance(anchorCoord.lat, anchorCoord.lng, pos.lat, pos.lng) < 100
+      );
+
+      if (!isDuplicate) {
         newClusters.set(regionName, regionStores);
       }
     }
 
-    console.log(`📍 기존 지역: ${existingRegions.size}개, 새로운 지역: ${newClusters.size}개`);
+    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 지역: ${newClusters.size}개`);
 
     if (newClusters.size === 0) {
       console.log('ℹ️ 추가할 새로운 지역이 없습니다');
@@ -700,7 +687,7 @@ window.MapMarkerManager = {
 
     // 새로운 집계 마커들을 한번에 생성
     const newMarkers = await this.createClusterMarkersBatch(newClusters, map);
-
+    
     // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
       this.currentMarkers.push(...newMarkers);
@@ -715,7 +702,7 @@ window.MapMarkerManager = {
   // 기존 마커들의 위치 추출
   getExistingMarkerPositions() {
     const positions = [];
-
+    
     this.currentMarkers.forEach(marker => {
       try {
         if (marker && marker.getPosition) {
@@ -733,29 +720,6 @@ window.MapMarkerManager = {
     });
 
     return positions;
-  },
-
-  // 기존 마커들의 지역명 추출 (중복 방지용)
-  getExistingMarkerRegions() {
-    const regions = new Set();
-
-    this.currentMarkers.forEach(marker => {
-      try {
-        if (marker && marker.getContent) {
-          const content = marker.getContent();
-          // onclick 속성에서 지역명 추출
-          const match = content.match(/zoomToRegion\('([^']+)'/);
-          if (match && match[1]) {
-            regions.add(match[1]);
-          }
-        }
-      } catch (error) {
-        // 지역명 추출 실패시 무시
-      }
-    });
-
-    console.log(`🗂️ 기존 마커 지역명: ${Array.from(regions).join(', ')}`);
-    return regions;
   },
 
   // 두 지점 간 거리 계산 (미터 단위)
