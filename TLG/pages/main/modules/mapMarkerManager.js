@@ -272,7 +272,7 @@ window.MapMarkerManager = {
     return overlay;
   },
 
-  // 집계 마커 배치 생성
+  // 집계 마커 배치 생성 (최적화된 버전)
   async createClusterMarkersBatch(clusters, map) {
     console.log(`📦 집계 마커 배치 생성: ${clusters.size}개`);
     
@@ -282,10 +282,20 @@ window.MapMarkerManager = {
       return [];
     }
     
-    // 모든 집계 마커를 병렬로 한번에 생성
     const clusterEntries = Array.from(clusters.entries());
-    const markerPromises = clusterEntries.map(([regionName, regionStores]) => 
-      this.createClusterMarker(regionName, regionStores, map)
+    
+    // 1단계: 모든 행정기관 좌표를 배치로 조회
+    const adminCoords = await this.batchGetAdministrativeCoords(clusterEntries);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 배치 생성 중단됨 (좌표 조회 후)');
+      return [];
+    }
+    
+    // 2단계: 좌표와 함께 마커 생성 (DB 조회 없이)
+    const markerPromises = clusterEntries.map(([regionName, regionStores], index) => 
+      this.createClusterMarkerWithCoord(regionName, regionStores, map, adminCoords[index])
     );
     
     const markers = await Promise.all(markerPromises);
@@ -295,13 +305,34 @@ window.MapMarkerManager = {
     return validMarkers;
   },
 
-  // 집계 마커 생성
+  // 좌표가 미리 제공된 집계 마커 생성 (성능 최적화)
+  async createClusterMarkerWithCoord(regionName, stores, map, preCalculatedCoord) {
+    if (!stores || stores.length === 0) return null;
+
+    let anchorCoord = preCalculatedCoord;
+    
+    // 미리 계산된 좌표가 없으면 기존 방식 사용
+    if (!anchorCoord) {
+      anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
+      if (!anchorCoord) return null;
+    }
+
+    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
+  },
+
+  // 집계 마커 생성 (기존 메서드)
   async createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
 
     // 앵커 좌표 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
     const anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
     if (!anchorCoord) return null;
+
+    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
+  },
+
+  // 마커 엘리먼트 생성 (공통 로직)
+  createClusterMarkerElement(regionName, stores, map, anchorCoord) {
 
     const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
     const storeCount = stores.length;
@@ -500,7 +531,74 @@ window.MapMarkerManager = {
     return centroid;
   },
 
-  // DB에서 행정기관 좌표 조회
+  // 행정기관 좌표 배치 조회 (성능 최적화)
+  async batchGetAdministrativeCoords(clusterEntries) {
+    const coordRequests = clusterEntries.map(([regionName, regionStores]) => {
+      const firstStore = regionStores[0];
+      let regionType, targetRegion;
+      
+      if (this.currentLevel >= 11) {
+        regionType = 'sido';
+        targetRegion = firstStore.sido;
+      } else if (this.currentLevel >= 8) {
+        regionType = 'sigungu';
+        targetRegion = firstStore.sigungu;
+      } else {
+        // 읍면동은 배치 조회 안함 (ST_PointOnSurface 필요)
+        return null;
+      }
+      
+      return { regionType, regionName: targetRegion };
+    });
+    
+    // null이 아닌 요청들만 필터링
+    const validRequests = coordRequests.filter(req => req !== null);
+    
+    if (validRequests.length === 0) {
+      return new Array(clusterEntries.length).fill(null);
+    }
+    
+    try {
+      console.log(`🚀 행정기관 좌표 배치 조회: ${validRequests.length}개`);
+      
+      const response = await fetch('/api/stores/administrative-offices-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: validRequests })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`✅ 배치 좌표 조회 완료: ${data.offices.length}개`);
+        
+        // 결과를 원래 순서에 맞게 매핑
+        const results = new Array(clusterEntries.length).fill(null);
+        let validIndex = 0;
+        
+        coordRequests.forEach((req, index) => {
+          if (req !== null) {
+            const office = data.offices[validIndex];
+            if (office) {
+              results[index] = {
+                lat: office.latitude,
+                lng: office.longitude
+              };
+            }
+            validIndex++;
+          }
+        });
+        
+        return results;
+      }
+    } catch (error) {
+      console.error('❌ 배치 좌표 조회 실패:', error);
+    }
+    
+    return new Array(clusterEntries.length).fill(null);
+  },
+
+  // DB에서 행정기관 좌표 조회 (기존 메서드 유지)
   async getAdministrativeOfficeCoord(regionType, regionName) {
     try {
       const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
