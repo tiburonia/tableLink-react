@@ -170,11 +170,11 @@ window.MapMarkerManager = {
   createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
     
-    // 중심 좌표 계산
-    const centerCoord = this.calculateCenter(stores);
-    if (!centerCoord) return null;
+    // 앵커 좌표 계산 (행정기관 우선, 없으면 센트로이드)
+    const anchorCoord = this.calculateAnchorPosition(stores, this.currentLevel);
+    if (!anchorCoord) return null;
     
-    const position = new kakao.maps.LatLng(centerCoord.lat, centerCoord.lng);
+    const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
     const storeCount = stores.length;
     const openCount = stores.filter(s => s.isOpen !== false).length;
     
@@ -194,24 +194,24 @@ window.MapMarkerManager = {
         .cluster-marker {
           background: linear-gradient(135deg, #297efc, #4f46e5);
           color: white;
-          border-radius: 16px;
-          padding: 10px 14px;
+          border-radius: 12px;
+          padding: 6px 10px;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(41,126,252,0.3);
-          min-width: 100px;
+          box-shadow: 0 2px 8px rgba(41,126,252,0.3);
+          min-width: 70px;
           text-align: center;
         }
         .cluster-marker:hover {
-          transform: scale(1.1);
-          box-shadow: 0 6px 20px rgba(41,126,252,0.4);
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(41,126,252,0.4);
         }
         .region-name {
           font-weight: bold;
-          font-size: 14px;
-          margin-bottom: 4px;
+          font-size: 12px;
+          margin-bottom: 2px;
         }
         .cluster-count {
-          font-size: 11px;
+          font-size: 10px;
           opacity: 0.9;
         }
       </style>
@@ -302,15 +302,56 @@ window.MapMarkerManager = {
     }
   },
 
-  // 중심 좌표 계산
-  calculateCenter(stores) {
+  // 집계 마커 앵커 위치 계산 (행정기관 우선, 없으면 센트로이드)
+  calculateAnchorPosition(stores, level) {
     const validStores = stores.filter(s => s.coord?.lat && s.coord?.lng);
     if (validStores.length === 0) return null;
     
-    const avgLat = validStores.reduce((sum, s) => sum + s.coord.lat, 0) / validStores.length;
-    const avgLng = validStores.reduce((sum, s) => sum + s.coord.lng, 0) / validStores.length;
+    // 행정기관으로 추정되는 매장 찾기
+    const govStore = this.findGovernmentOffice(validStores, level);
+    if (govStore) {
+      console.log(`📍 행정기관 앵커: ${govStore.name} (${govStore.coord.lat}, ${govStore.coord.lng})`);
+      return govStore.coord;
+    }
+    
+    // 행정기관이 없으면 센트로이드 사용
+    const centroid = this.calculateCentroid(validStores);
+    console.log(`📍 센트로이드 앵커: (${centroid.lat}, ${centroid.lng})`);
+    return centroid;
+  },
+
+  // 행정기관 찾기
+  findGovernmentOffice(stores, level) {
+    // 행정기관 키워드
+    const govKeywords = [
+      '구청', '시청', '군청', '도청', '시군구청', '읍사무소', '면사무소', '동사무소',
+      '행정복지센터', '주민센터', '군청사', '시청사', '구청사', '도청사'
+    ];
+    
+    // 매장명에 행정기관 키워드가 포함된 매장 찾기
+    for (const keyword of govKeywords) {
+      const govStore = stores.find(store => 
+        store.name && store.name.includes(keyword)
+      );
+      if (govStore) {
+        return govStore;
+      }
+    }
+    
+    return null;
+  },
+
+  // 센트로이드 계산 (기존 중심 좌표 계산)
+  calculateCentroid(stores) {
+    const avgLat = stores.reduce((sum, s) => sum + s.coord.lat, 0) / stores.length;
+    const avgLng = stores.reduce((sum, s) => sum + s.coord.lng, 0) / stores.length;
     
     return { lat: avgLat, lng: avgLng };
+  },
+
+  // 중심 좌표 계산 (기존 함수 유지 - 호환성)
+  calculateCenter(stores) {
+    return this.calculateCentroid(stores);
   },
 
   // 지역 확대
