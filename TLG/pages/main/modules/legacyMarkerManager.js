@@ -1,4 +1,3 @@
-
 // 레거시 마커 시스템 완전 차단 가드
 console.log('🚫 레거시 마커 시스템 차단 가드 로드됨');
 
@@ -39,3 +38,13 @@ window.renderStore = (store) => {
 };
 
 console.log('✅ 레거시 마커 시스템 차단 완료');
+
+// 메인 진입점 - 지도 이벤트 등록
+  initialize(map, options = {}) {
+    // 레거시 시스템 비활성화 체크
+    if (window.DISABLE_LEGACY_MARKERS) {
+      console.log('🚫 레거시 마커 시스템 비활성화됨 - 초기화 중단');
+      return;
+    }
+
+    this.map = map;

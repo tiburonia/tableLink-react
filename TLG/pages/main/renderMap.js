@@ -393,6 +393,36 @@ async function renderMap() {
     if (document.readyState === 'complete') {
       console.log('🎯 DOM 완전 로드 완료');
 
+      // 🚫 레거시 마커 시스템 완전 비활성화
+      console.log('🚫 레거시 마커 시스템 완전 비활성화');
+      window.DISABLE_LEGACY_MARKERS = true;
+      
+      // 기존 마커들 모두 제거
+      if (window.markers && Array.isArray(window.markers)) {
+        window.markers.forEach(marker => {
+          if (marker && marker.setMap) {
+            marker.setMap(null);
+          }
+        });
+        window.markers = [];
+      }
+
+      // 타일 기반 마커 시스템 초기화
+      console.log('🗺️ 타일 시스템 강제 초기화 시작');
+      if (window.MapMarkerManager && typeof window.MapMarkerManager.initialize === 'function') {
+        try {
+          window.MapMarkerManager.initialize(map, {
+            debounceMs: 150,
+            maxVisibleMarkers: 500
+          });
+          console.log('✅ 타일 시스템 초기화 성공');
+        } catch (error) {
+          console.error('❌ 타일 시스템 초기화 실패:', error);
+        }
+      } else {
+        console.error('❌ MapMarkerManager.initialize 함수를 찾을 수 없습니다');
+      }
+
       // 지도 패널 UI 초기화
       if (window.MapPanelUI && typeof window.MapPanelUI.initialize === 'function') {
         window.MapPanelUI.initialize();
@@ -406,7 +436,7 @@ async function renderMap() {
         console.error('❌ MapPanelUI.initialize 함수를 찾을 수 없습니다');
       }
 
-      console.log('🚫 기존 마커 시스템 완전 비활성화 - 타일 시스템만 사용');
+      console.log('🎯 타일 시스템 전용 모드 활성화 완료');
 
       // 전역 디버깅용 지도 참조
       window.__MAP__ = map;
