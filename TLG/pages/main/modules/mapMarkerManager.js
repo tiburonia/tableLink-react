@@ -35,10 +35,17 @@ window.MapMarkerManager = {
       }
     }
 
+    // 마커 타입이 같으면 기존 마커 유지
+    if (prevMarkerType === newMarkerType) {
+      console.log(`✨ 마커 타입 동일 (${newMarkerType}) - 기존 마커 유지`);
+      this.currentLevel = level;
+      return;
+    }
+
     this.isLoading = true;
     this.shouldCancel = false;
     
-    // 레벨이 바뀔 때마다 항상 기존 마커 모두 제거
+    // 마커 타입이 바뀔 때만 기존 마커 제거
     this.clearAllMarkers();
     this.currentLevel = level;
 
