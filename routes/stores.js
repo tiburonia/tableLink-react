@@ -2,18 +2,15 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// node-fetch를 동적으로 import하는 함수
-async function fetch(url, options) {
-  const { default: nodeFetch } = await import('node-fetch');
-  return nodeFetch(url, options);
-}
-
 // 카카오 장소 검색 프록시 API (맨 앞에 배치하여 충돌 방지)
 router.get('/search-place', async (req, res) => {
   try {
     const { query, x, y, radius } = req.query;
     
+    console.log(`🔍 프록시 장소 검색 요청: query="${query}", x=${x}, y=${y}, radius=${radius}`);
+    
     if (!query) {
+      console.error('❌ 검색어가 없습니다');
       return res.status(400).json({
         success: false,
         error: '검색어가 필요합니다'
@@ -21,14 +18,17 @@ router.get('/search-place', async (req, res) => {
     }
 
     const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+    console.log(`🔑 카카오 API 키 상태: ${KAKAO_API_KEY ? '✅ 설정됨' : '❌ 없음'}`);
+    
     if (!KAKAO_API_KEY) {
+      console.error('❌ KAKAO_API_KEY 환경변수가 설정되지 않았습니다');
       return res.status(500).json({
         success: false,
         error: 'KAKAO_API_KEY가 설정되지 않았습니다'
       });
     }
 
-    // 카카오 장소 검색 API 호출
+    // 카카오 장소 검색 API 호출 (node.js 18+ 내장 fetch 사용)
     const params = new URLSearchParams({
       query: query,
       ...(x && { x: x }),
@@ -36,24 +36,30 @@ router.get('/search-place', async (req, res) => {
       ...(radius && { radius: radius })
     });
 
-    const response = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
-      {
-        headers: {
-          'Authorization': `KakaoAK ${KAKAO_API_KEY}`
-        }
+    const apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`;
+    console.log(`📡 카카오 API 호출: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `KakaoAK ${KAKAO_API_KEY}`,
+        'Content-Type': 'application/json'
       }
-    );
+    });
+
+    console.log(`📡 카카오 API 응답 상태: ${response.status}`);
 
     if (!response.ok) {
-      console.error('❌ 카카오 API 호출 실패:', response.status);
+      const errorText = await response.text();
+      console.error(`❌ 카카오 API 호출 실패: ${response.status} - ${errorText}`);
       return res.status(500).json({
         success: false,
-        error: `카카오 API 호출 실패: ${response.status}`
+        error: `카카오 API 호출 실패: ${response.status}`,
+        details: errorText
       });
     }
 
     const data = await response.json();
+    console.log(`✅ 카카오 API 응답 성공: ${data.documents?.length || 0}개 결과`);
     
     res.json({
       success: true,
