@@ -26,9 +26,9 @@ router.post('/administrative-offices-batch', async (req, res) => {
     if (sidoRequests.length > 0) {
       const sidoNames = sidoRequests.map(req => `%${req.regionName}%`);
       const sidoQuery = `
-        SELECT latitude, longitude, name
+        SELECT latitude, longitude, region_name as name
         FROM administrative_offices 
-        WHERE type = 'sido' AND (${sidoNames.map((_, i) => `name LIKE $${i + 1}`).join(' OR ')})
+        WHERE region_type = 'sido' AND (${sidoNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
       `;
       const sidoResult = await pool.query(sidoQuery, sidoNames);
       offices.push(...sidoResult.rows);
@@ -38,9 +38,9 @@ router.post('/administrative-offices-batch', async (req, res) => {
     if (sigunguRequests.length > 0) {
       const sigunguNames = sigunguRequests.map(req => `%${req.regionName}%`);
       const sigunguQuery = `
-        SELECT latitude, longitude, name
+        SELECT latitude, longitude, region_name as name
         FROM administrative_offices 
-        WHERE type = 'sigungu' AND (${sigunguNames.map((_, i) => `name LIKE $${i + 1}`).join(' OR ')})
+        WHERE region_type = 'sigungu' AND (${sigunguNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
       `;
       const sigunguResult = await pool.query(sigunguQuery, sigunguNames);
       offices.push(...sigunguResult.rows);
@@ -78,16 +78,16 @@ router.get('/administrative-office', async (req, res) => {
     let query;
     if (regionType === 'sido') {
       query = `
-        SELECT latitude, longitude, name
+        SELECT latitude, longitude, region_name as name
         FROM administrative_offices 
-        WHERE type = 'sido' AND name LIKE $1
+        WHERE region_type = 'sido' AND region_name LIKE $1
         LIMIT 1
       `;
     } else {
       query = `
-        SELECT latitude, longitude, name
+        SELECT latitude, longitude, region_name as name
         FROM administrative_offices 
-        WHERE type = 'sigungu' AND name LIKE $1
+        WHERE region_type = 'sigungu' AND region_name LIKE $1
         LIMIT 1
       `;
     }
