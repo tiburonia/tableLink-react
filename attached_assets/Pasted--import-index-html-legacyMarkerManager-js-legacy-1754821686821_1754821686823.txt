@@ -1,0 +1,119 @@
+. 레거시 시스템 완전 차단
+import/스크립트 로드 제거
+
+index.html/엔트리에서 legacyMarkerManager.js 로드 라인 제거.
+
+다른 파일에서 legacyMarkerManager 관련 import 전체 삭제.
+
+호출 경로 차단
+
+renderMap.js, store/map/*, events/* 등에서 아래 키워드 전수 검색해 제거/주석:
+
+LegacyMarkerManager, legacyMarkerManager, renderLegacyMarkers, updateLegacyMarkers, 읍면동, dong, umyeon, aggregateByDong
+
+혹시 남아있으면 임시로 방어:
+
+js
+복사
+편집
+// guard.js (앱 초기 로드 시)
+window.LegacyMarkerManager = new Proxy({}, {
+  get() { 
+    console.warn('🚫 LegacyMarkerManager 호출 차단'); 
+    return () => {};
+  }
+});
+→ 남은 호출이 있으면 콘솔 경고로 잡히게.
+
+ESLint 룰(선택)
+
+no-restricted-imports로 legacyMarkerManager.js 금지.
+
+B. 타일 시스템 초기화 강제
+renderMap.js 내 지도 생성 직후 단 한 줄 확실히 호출:
+
+js
+복사
+편집
+import { MapMarkerManager } from './mapMarkerManager.js';
+
+export async function renderMap() {
+  const map = initKakaoMap(); // 기존 로직
+  window.__MAP__ = map; // 디버깅 편의
+
+  // ✅ 타일 시스템 초기화
+  MapMarkerManager.initialize(map, {
+    debounceMs: 180,
+    maxVisibleMarkers: 400
+  });
+}
+중복 방지: initialize가 여러 번 불려도 안전하도록 idempotent 처리:
+
+js
+복사
+편집
+// mapMarkerManager.js
+let _initialized = false;
+
+export const MapMarkerManager = {
+  initialize(map, opts = {}) {
+    if (_initialized) { 
+      console.log('ℹ️ MapMarkerManager already initialized'); 
+      return; 
+    }
+    _initialized = true;
+    this.map = map;
+    this.opts = { debounceMs: 180, maxVisibleMarkers: 400, ...opts };
+    this._wireEvents();
+    this._refreshTiles('init');
+  },
+  // ...
+};
+이벤트 연결
+
+카카오맵 idle에만 묶고, zoom_changed, drag 등에서는 호출 금지(중복 방지).
+
+내부에서 AbortController + debounce 적용.
+
+로그 포맷 고정:
+
+타일 요청: 📡 tiles z/x/y 요청
+
+캐시 적중: ✅ 타일 캐시됨 z/x/y
+
+렌더 끝: 🖼️ 캔버스 렌더 완료 count=N
+
+C. 타일 렌더 경로 고정(단일 소스)
+캔버스 레이어 1장만 사용하고, Kakao Marker/CustomOverlay 대량 생성 금지.
+
+diff 렌더(추가/삭제만) 적용.
+
+D. 환경 플래그로 토글(혹시 롤백 대비)
+전역 window.FEATURE_TILE_MARKERS = true 기본값 on.
+
+if (!window.FEATURE_TILE_MARKERS) return; 가드 한 줄로 전체 비활성 가능.
+
+E. 테스트 & 수락 기준
+페이지 로드 → 레거시 로그 전혀 없음(특히 🔄 지도 레벨 7 변경, 읍면동 집계).
+
+지도 이동/줌 후 타일 로그 출력 확인:
+
+📡 tiles ... → ✅ 타일 캐시됨 ... → 🖼️ 캔버스 렌더 완료 count=...
+
+빠르게 드래그/줌해도 중복 요청 취소(AbortError 제외) 및 FPS 유지.
+
+클러스터 클릭 시 줌 인 동작(또는 하위 요청) 정상.
+
+참고(필요시 넣어줘)
+설치 보장: npm i supercluster @mapbox/tilebelt
+
+서버 /api/tiles는 동작 확인됨 → FE만 연결 정리하면 됨.
+
+변경이 필요한 대표 파일
+public/index.html or 엔트리: legacyMarkerManager.js 제거
+
+src/renderMap.js: MapMarkerManager.initialize(map) 호출 추가
+
+src/mapMarkerManager.js: idempotent init + idle 이벤트 + Abort/debounce + 캔버스 렌더
+
+src/guard.js(선택): 레거시 호출 가드
