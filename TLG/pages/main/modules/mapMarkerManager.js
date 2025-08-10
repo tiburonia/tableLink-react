@@ -284,39 +284,113 @@ window.MapMarkerManager = {
     const tiles = this.getVisibleTiles();
     if (!tiles.length) return;
 
-    // 총 피처 수
-    let total = 0;
+    // 현재 줌 레벨과 피처 수집
+    const currentZoom = this.getTileZoom();
+    const allFeatures = [];
+    
     for (const t of tiles) {
       const k = `${t.z}/${t.x}/${t.y}`;
       const td = this.tileCache.get(k);
-      if (td?.features) total += td.features.length;
-    }
-    const tooMany = total > this.opts.maxVisibleMarkers;
-
-    let drawn = 0;
-    for (const t of tiles) {
-      const k = `${t.z}/${t.x}/${t.y}`;
-      const td = this.tileCache.get(k);
-      if (!td?.features) continue;
-
-      for (const f of td.features) {
-        if (!f?.geometry?.coordinates || !f.properties) continue;
-        const [lng, lat] = f.geometry.coordinates;
-        const p = this.lngLatToPixel(lng, lat);
-        if (!p) continue;
-
-        // 과다 시 개별 포인트 스킵(클러스터만)
-        if (tooMany && !f.properties.cluster) continue;
-
-        const r = f.properties.cluster
-          ? this._drawCluster(p.x, p.y, f.properties.point_count || 1)
-          : this._drawStore(p.x, p.y, f);
-
-        this.drawIndex.push({ x: p.x, y: p.y, r, feature: f });
-        drawn++;
+      if (td?.features) {
+        allFeatures.push(...td.features.filter(f => 
+          f?.geometry?.coordinates && f.properties
+        ));
       }
     }
-    console.log(`🖼️ 렌더 완료: ${drawn}${tooMany ? ' (개별포인트 일부 생략)' : ''}`);
+
+    if (!allFeatures.length) return;
+
+    // 렌더링 우선순위: 1) 클러스터 2) 개별 매장
+    const clusters = [];
+    const stores = [];
+    
+    for (const feature of allFeatures) {
+      if (feature.properties.cluster) {
+        clusters.push(feature);
+      } else {
+        stores.push(feature);
+      }
+    }
+
+    // 성능 제한 적용
+    const totalFeatures = clusters.length + stores.length;
+    const shouldLimitStores = totalFeatures > this.opts.maxVisibleMarkers;
+    const maxStores = shouldLimitStores ? 
+      Math.max(50, this.opts.maxVisibleMarkers - clusters.length) : 
+      stores.length;
+
+    let rendered = { clusters: 0, stores: 0 };
+
+    // 1. 클러스터 렌더링 (항상 우선)
+    for (const cluster of clusters) {
+      if (this._renderFeature(cluster, currentZoom)) {
+        rendered.clusters++;
+      }
+    }
+
+    // 2. 개별 매장 렌더링 (제한 적용)
+    const storesToRender = shouldLimitStores ? 
+      this._selectBestStores(stores, maxStores, currentZoom) : 
+      stores;
+
+    for (const store of storesToRender) {
+      if (this._renderFeature(store, currentZoom)) {
+        rendered.stores++;
+      }
+    }
+
+    const summary = shouldLimitStores ? 
+      ` (성능 최적화: 매장 ${rendered.stores}/${stores.length}개만 표시)` : '';
+    
+    console.log(`🖼️ 렌더 완료 z${currentZoom}: 클러스터 ${rendered.clusters}개, 매장 ${rendered.stores}개${summary}`);
+  },
+
+  _renderFeature(feature, zoom) {
+    const [lng, lat] = feature.geometry.coordinates;
+    const p = this.lngLatToPixel(lng, lat);
+    if (!p) return false;
+
+    const r = feature.properties.cluster
+      ? this._drawCluster(p.x, p.y, feature.properties.point_count || 1, zoom)
+      : this._drawStore(p.x, p.y, feature, zoom);
+
+    this.drawIndex.push({ x: p.x, y: p.y, r, feature });
+    return true;
+  },
+
+  _selectBestStores(stores, maxCount, zoom) {
+    if (stores.length <= maxCount) return stores;
+
+    // 우선순위: 1) 운영중 2) 평점 높은 순 3) 리뷰 많은 순
+    return stores
+      .map(store => ({
+        store,
+        priority: this._calculateStorePriority(store, zoom)
+      }))
+      .sort((a, b) => b.priority - a.priority)
+      .slice(0, maxCount)
+      .map(item => item.store);
+  },
+
+  _calculateStorePriority(store, zoom) {
+    const props = store.properties;
+    let priority = 0;
+    
+    // 운영상태 (가중치 높음)
+    if (props.isOpen !== false) priority += 100;
+    
+    // 평점 (0-50점)
+    const rating = parseFloat(props.ratingAverage) || 0;
+    priority += rating * 10;
+    
+    // 리뷰 수 (로그 스케일, 0-30점)
+    const reviews = parseInt(props.reviewCount) || 0;
+    priority += Math.min(30, Math.log(reviews + 1) * 5);
+    
+    // 줌 레벨에 따른 보정 (고줌일수록 더 많은 매장 표시)
+    priority += zoom * 2;
+    
+    return priority;
   },
 
   lngLatToPixel(lng, lat) {
@@ -347,72 +421,240 @@ window.MapMarkerManager = {
     }
   },
 
-  _drawCluster(x, y, count) {
-    const r = Math.min(30, Math.max(15, Math.log(count) * 5));
+  _drawCluster(x, y, count, zoom = 10) {
+    // 줌 레벨과 클러스터 크기에 따른 동적 반지름
+    const baseRadius = Math.min(35, Math.max(12, Math.log(count) * 4));
+    const zoomMultiplier = Math.max(0.7, Math.min(1.3, zoom / 10));
+    const r = Math.round(baseRadius * zoomMultiplier);
+
+    // 클러스터 크기별 색상 구분
+    let fillColor, strokeColor;
+    if (count >= 100) {
+      fillColor = '#d32f2f';      // 대형 클러스터 (빨강)
+      strokeColor = '#ffffff';
+    } else if (count >= 50) {
+      fillColor = '#f57c00';      // 중형 클러스터 (주황)
+      strokeColor = '#ffffff';
+    } else if (count >= 10) {
+      fillColor = '#1976d2';      // 소형 클러스터 (파랑)
+      strokeColor = '#ffffff';
+    } else {
+      fillColor = '#388e3c';      // 미니 클러스터 (초록)
+      strokeColor = '#ffffff';
+    }
+
+    // 외곽 그림자 효과
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    this.ctx.shadowBlur = 3;
+    this.ctx.shadowOffsetX = 1;
+    this.ctx.shadowOffsetY = 1;
+
+    // 메인 원
     this.ctx.beginPath();
     this.ctx.arc(x, y, r, 0, Math.PI * 2);
-    this.ctx.fillStyle = '#297efc';
+    this.ctx.fillStyle = fillColor;
     this.ctx.fill();
-    this.ctx.strokeStyle = '#ffffff';
-    this.ctx.lineWidth = 2;
+
+    // 그림자 제거
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetX = 0;
+    this.ctx.shadowOffsetY = 0;
+
+    // 테두리
+    this.ctx.strokeStyle = strokeColor;
+    this.ctx.lineWidth = Math.max(1, Math.round(r / 8));
     this.ctx.stroke();
 
+    // 텍스트
     this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 12px Arial';
+    const fontSize = Math.max(10, Math.min(16, r / 2));
+    this.ctx.font = `bold ${fontSize}px Arial`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(String(count), x, y);
-    return r;
+    
+    // 큰 숫자는 축약 표시
+    const displayText = count >= 1000 ? 
+      `${Math.round(count / 100) / 10}k` : 
+      String(count);
+    
+    this.ctx.fillText(displayText, x, y);
+    return r + 2; // 히트 테스트용 여유 공간
   },
 
-  _drawStore(x, y, feature) {
-    const isOpen = feature.properties.isOpen !== false;
-    const r = 6;
+  _drawStore(x, y, feature, zoom = 10) {
+    const props = feature.properties;
+    const isOpen = props.isOpen !== false;
+    const hasHighRating = (parseFloat(props.ratingAverage) || 0) >= 4.0;
+    const hasReviews = (parseInt(props.reviewCount) || 0) > 10;
+
+    // 줌 레벨에 따른 크기 조절
+    const baseRadius = zoom >= 14 ? 7 : zoom >= 12 ? 6 : 5;
+    const r = hasHighRating && hasReviews ? baseRadius + 1 : baseRadius;
+
+    // 매장 상태별 색상 및 스타일
+    let fillColor, strokeColor, strokeWidth;
+    
+    if (!isOpen) {
+      fillColor = '#757575';      // 폐점/휴무 (회색)
+      strokeColor = '#ffffff';
+      strokeWidth = 1;
+    } else if (hasHighRating && hasReviews) {
+      fillColor = '#4caf50';      // 인기 매장 (진초록)
+      strokeColor = '#fff';
+      strokeWidth = 2;
+    } else if (hasReviews) {
+      fillColor = '#8bc34a';      // 일반 매장 (연초록)
+      strokeColor = '#ffffff';
+      strokeWidth = 1;
+    } else {
+      fillColor = '#ffc107';      // 신규/정보부족 (노랑)
+      strokeColor = '#ffffff';
+      strokeWidth = 1;
+    }
+
+    // 인기 매장 하이라이트 효과
+    if (isOpen && hasHighRating && hasReviews) {
+      this.ctx.shadowColor = 'rgba(76, 175, 80, 0.4)';
+      this.ctx.shadowBlur = 4;
+    }
+
+    // 메인 원
     this.ctx.beginPath();
     this.ctx.arc(x, y, r, 0, Math.PI * 2);
-    this.ctx.fillStyle = isOpen ? '#4caf50' : '#ff9800';
+    this.ctx.fillStyle = fillColor;
     this.ctx.fill();
-    this.ctx.strokeStyle = '#ffffff';
-    this.ctx.lineWidth = 1;
+
+    // 그림자 제거
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+
+    // 테두리
+    this.ctx.strokeStyle = strokeColor;
+    this.ctx.lineWidth = strokeWidth;
     this.ctx.stroke();
-    return r;
+
+    // 고평점 매장 별표 표시 (고줌에서만)
+    if (isOpen && hasHighRating && zoom >= 13) {
+      this._drawStar(x, y - r - 3, 3);
+    }
+
+    return r + 1;
+  },
+
+  _drawStar(x, y, size) {
+    const spikes = 5;
+    const outerRadius = size;
+    const innerRadius = size * 0.4;
+    
+    this.ctx.beginPath();
+    for (let i = 0; i < spikes * 2; i++) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = (i * Math.PI) / spikes - Math.PI / 2;
+      const px = x + Math.cos(angle) * radius;
+      const py = y + Math.sin(angle) * radius;
+      
+      if (i === 0) this.ctx.moveTo(px, py);
+      else this.ctx.lineTo(px, py);
+    }
+    this.ctx.closePath();
+    this.ctx.fillStyle = '#ffd700';
+    this.ctx.fill();
+    this.ctx.strokeStyle = '#fff';
+    this.ctx.lineWidth = 0.5;
+    this.ctx.stroke();
   },
 
   // ---- 히트테스트/상호작용 ----
   findFeatureAtPoint(x, y) {
-    // 상단부터(마지막 그린 것부터) 검사
+    // 클릭 허용 오차 범위 (터치 등 고려)
+    const tolerance = 3;
+    let bestMatch = null;
+    let minDistance = Infinity;
+
+    // 상단부터(마지막 그린 것부터) 검사하되, 가장 가까운 것 선택
     for (let i = this.drawIndex.length - 1; i >= 0; i--) {
       const d = this.drawIndex[i];
       const dx = x - d.x;
       const dy = y - d.y;
-      if ((dx * dx + dy * dy) <= d.r * d.r) return d.feature;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const hitRadius = d.r + tolerance;
+      
+      if (distance <= hitRadius && distance < minDistance) {
+        minDistance = distance;
+        bestMatch = d.feature;
+        
+        // 클러스터는 우선 선택 (같은 위치에 여러 요소가 있을 때)
+        if (d.feature.properties?.cluster) {
+          break;
+        }
+      }
     }
-    return null;
+    
+    return bestMatch;
   },
 
   zoomToCluster(clusterFeature) {
     const [lng, lat] = clusterFeature.geometry.coordinates;
     const pos = new kakao.maps.LatLng(lat, lng);
+    const currentLevel = this.map.getLevel();
+    
+    // 클러스터 크기에 따른 적응형 줌
+    const pointCount = clusterFeature.properties.point_count || 1;
+    let targetLevel;
+    
+    if (pointCount >= 100) {
+      targetLevel = Math.max(1, currentLevel - 3);
+    } else if (pointCount >= 50) {
+      targetLevel = Math.max(1, currentLevel - 2);
+    } else if (pointCount >= 10) {
+      targetLevel = Math.max(1, currentLevel - 2);
+    } else {
+      targetLevel = Math.max(1, currentLevel - 1);
+    }
+
+    console.log(`📍 클러스터 확대: ${pointCount}개 매장 → 줌 ${currentLevel}→${targetLevel}`);
+    
+    // 부드러운 애니메이션으로 이동
     this.map.setCenter(pos);
-    this.map.setLevel(Math.max(1, this.map.getLevel() - 2));
+    this.map.setLevel(targetLevel);
   },
 
   showStoreDetail(storeFeature) {
     const props = storeFeature.properties || {};
+    const coord = storeFeature.geometry.coordinates;
+    
     const store = {
       id: props.id,
-      name: props.name,
-      category: props.category,
-      isOpen: props.isOpen,
-      ratingAverage: props.ratingAverage,
-      reviewCount: props.reviewCount,
+      name: props.name || '매장명 없음',
+      category: props.category || '기타',
+      isOpen: props.isOpen !== false,
+      ratingAverage: parseFloat(props.ratingAverage) || 0,
+      reviewCount: parseInt(props.reviewCount) || 0,
       coord: {
-        lat: storeFeature.geometry.coordinates[1],
-        lng: storeFeature.geometry.coordinates[0]
+        lat: coord[1],
+        lng: coord[0]
+      },
+      // 추가 주소 정보
+      address: {
+        sido: props.sido || '',
+        sigungu: props.sigungu || '', 
+        eupmyeondong: props.eupmyeondong || ''
       }
     };
-    console.log(`🏪 매장 상세: ${store.name ?? store.id ?? 'unknown'}`);
-    if (typeof window.renderStore === 'function') window.renderStore(store);
+
+    console.log(`🏪 매장 선택: ${store.name} (${store.isOpen ? '영업중' : '휴무'}) ⭐${store.ratingAverage}/5.0 (${store.reviewCount}리뷰)`);
+    
+    // 매장 상세 패널 열기
+    if (typeof window.renderStore === 'function') {
+      window.renderStore(store);
+    } else {
+      console.warn('⚠️ renderStore 함수를 찾을 수 없음');
+    }
+
+    // 지도 중심을 매장 위치로 부드럽게 이동
+    const pos = new kakao.maps.LatLng(coord[1], coord[0]);
+    this.map.panTo(pos);
   },
 
   // ---- 캐시 관리 ----
