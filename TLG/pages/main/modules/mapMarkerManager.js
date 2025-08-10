@@ -136,10 +136,14 @@ window.MapMarkerManager = {
           cursor: pointer;
           box-shadow: 0 4px 12px rgba(0,0,0,0.15);
           min-width: 120px;
+          position: relative;
+          z-index: 200;
+          transition: all 0.2s ease;
         }
         .store-marker:hover {
           transform: scale(1.05);
           box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+          z-index: 1000;
         }
         .store-name {
           font-weight: bold;
@@ -184,7 +188,7 @@ window.MapMarkerManager = {
       regionName;
     
     const content = `
-      <div class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${centerCoord.lat}, ${centerCoord.lng})">
+      <div class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
         <div class="cluster-info">
           <div class="region-name">${displayName}</div>
           <div class="cluster-count">${storeCount}개 매장 (운영중 ${openCount}개)</div>
@@ -200,10 +204,14 @@ window.MapMarkerManager = {
           box-shadow: 0 2px 8px rgba(41,126,252,0.3);
           min-width: 70px;
           text-align: center;
+          position: relative;
+          z-index: 100;
+          transition: all 0.2s ease;
         }
         .cluster-marker:hover {
           transform: scale(1.05);
           box-shadow: 0 4px 12px rgba(41,126,252,0.4);
+          z-index: 999;
         }
         .region-name {
           font-weight: bold;
