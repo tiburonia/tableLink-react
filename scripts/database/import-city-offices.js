@@ -13,7 +13,7 @@ if (!KAKAO_API_KEY) {
 // API 호출 딜레이
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// 전국 시군구 목록 (2024년 기준)
+// 전국 시군구 목록 (2024년 기준) - 정확한 229개
 const CITY_OFFICES = [
   // 서울특별시 (25개 구)
   '서울특별시 종로구청', '서울특별시 중구청', '서울특별시 용산구청', '서울특별시 성동구청', '서울특별시 광진구청',
@@ -100,47 +100,60 @@ const CITY_OFFICES = [
   '제주특별자치도 제주시청', '제주특별자치도 서귀포시청'
 ];
 
-// 카카오 장소 검색 API 호출
+// 카카오 장소 검색 API 호출 (여러 검색어 시도)
 async function searchOfficeLocation(officeName) {
-  try {
-    const response = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(officeName)}`,
-      {
-        headers: {
-          'Authorization': `KakaoAK ${KAKAO_API_KEY}`
+  const searchTerms = [
+    officeName,
+    officeName.replace('청', ''),
+    officeName + ' 청사',
+    officeName.replace('특별자치도', '도').replace('광역시', '시').replace('특별시', '시')
+  ];
+
+  for (const searchTerm of searchTerms) {
+    try {
+      const response = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(searchTerm)}`,
+        {
+          headers: {
+            'Authorization': `KakaoAK ${KAKAO_API_KEY}`
+          }
         }
+      );
+
+      if (!response.ok) {
+        console.log(`❌ ${searchTerm} API 호출 실패: ${response.status}`);
+        continue;
       }
-    );
 
-    if (!response.ok) {
-      console.log(`❌ ${officeName} API 호출 실패: ${response.status}`);
-      return null;
+      const data = await response.json();
+      
+      if (data.documents && data.documents.length > 0) {
+        const place = data.documents[0]; // 첫 번째 결과 사용
+        console.log(`✅ ${officeName} 검색 성공 (검색어: ${searchTerm})`);
+        return {
+          name: officeName,
+          latitude: parseFloat(place.y),
+          longitude: parseFloat(place.x)
+        };
+      }
+      
+      // 다음 검색어로 시도하기 전 잠시 대기
+      await delay(100);
+      
+    } catch (error) {
+      console.error(`❌ ${searchTerm} 검색 실패:`, error.message);
+      continue;
     }
-
-    const data = await response.json();
-    
-    if (data.documents && data.documents.length > 0) {
-      const place = data.documents[0]; // 첫 번째 결과 사용
-      return {
-        name: officeName,
-        latitude: parseFloat(place.y),
-        longitude: parseFloat(place.x)
-      };
-    }
-    
-    console.log(`⚠️ ${officeName} 검색 결과 없음`);
-    return null;
-    
-  } catch (error) {
-    console.error(`❌ ${officeName} 검색 실패:`, error.message);
-    return null;
   }
+  
+  console.log(`⚠️ ${officeName} 모든 검색어로 시도했으나 결과 없음`);
+  return null;
 }
 
 // 지역명 파싱 함수
 function parseRegionInfo(officeName) {
   const parts = officeName.split(' ');
-  let regionType = '';
+  let regionType = 'sigungu';
   let regionName = '';
   
   if (parts.length >= 2) {
@@ -148,13 +161,10 @@ function parseRegionInfo(officeName) {
     const sigunguPart = parts[1].replace('청', '');
     
     if (sidoPart.includes('특별시') || sidoPart.includes('광역시') || sidoPart.includes('특별자치시')) {
-      regionType = 'sigungu';
       regionName = sigunguPart;
     } else if (sidoPart.includes('도')) {
-      regionType = 'sigungu';
       regionName = sigunguPart;
     } else {
-      regionType = 'sigungu';
       regionName = sidoPart + ' ' + sigunguPart;
     }
   }
@@ -173,6 +183,7 @@ async function importCityOffices() {
     
     let successCount = 0;
     let failCount = 0;
+    const failedOffices = [];
     
     for (let i = 0; i < CITY_OFFICES.length; i++) {
       const officeName = CITY_OFFICES[i];
@@ -202,17 +213,56 @@ async function importCityOffices() {
         } catch (error) {
           console.error(`❌ ${officeName} DB 저장 실패:`, error.message);
           failCount++;
+          failedOffices.push(officeName);
         }
       } else {
         failCount++;
+        failedOffices.push(officeName);
       }
       
-      // API 호출 제한을 위한 딜레이 (200ms)
-      await delay(200);
+      // API 호출 제한을 위한 딜레이 (300ms로 증가)
+      await delay(300);
       
       // 진행상황 표시
       if ((i + 1) % 25 === 0) {
         console.log(`📊 진행상황: ${i + 1}/${CITY_OFFICES.length} (성공: ${successCount}, 실패: ${failCount})`);
+      }
+    }
+    
+    // 실패한 관청들 재시도
+    if (failedOffices.length > 0) {
+      console.log(`\n🔄 실패한 ${failedOffices.length}개 관청 재시도 중...`);
+      
+      for (let i = 0; i < failedOffices.length; i++) {
+        const officeName = failedOffices[i];
+        console.log(`🔍 재시도 [${i + 1}/${failedOffices.length}] ${officeName}`);
+        
+        const result = await searchOfficeLocation(officeName);
+        
+        if (result) {
+          try {
+            const { regionType, regionName } = parseRegionInfo(officeName);
+            
+            await pool.query(`
+              INSERT INTO administrative_offices (region_type, region_name, office_name, latitude, longitude)
+              VALUES ($1, $2, $3, $4, $5)
+              ON CONFLICT (region_type, region_name) 
+              DO UPDATE SET 
+                office_name = EXCLUDED.office_name,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude
+            `, [regionType, regionName, result.name, result.latitude, result.longitude]);
+            
+            console.log(`✅ 재시도 성공 ${result.name}: (${result.latitude}, ${result.longitude})`);
+            successCount++;
+            failCount--;
+            
+          } catch (error) {
+            console.error(`❌ 재시도 DB 저장 실패 ${officeName}:`, error.message);
+          }
+        }
+        
+        await delay(500); // 재시도시 더 긴 딜레이
       }
     }
     
@@ -238,19 +288,24 @@ async function importCityOffices() {
       console.log(`  - ${stat.region_type}: ${stat.count}개`);
     });
     
-    // 검증: 목표 250개와 비교
+    // 검증: 목표 229개와 비교
     const actualCount = parseInt(totalResult.rows[0].count);
-    const expectedCount = 250;
+    const expectedCount = 229;
     
     console.log(`\n🔍 검증 결과:`);
-    console.log(`  - 목표 시군구 관청 수: ${expectedCount}개`);
+    console.log(`  - 실제 전국 시군구 수: ${expectedCount}개`);
     console.log(`  - 실제 저장된 수: ${actualCount}개`);
     console.log(`  - 차이: ${Math.abs(expectedCount - actualCount)}개`);
+    console.log(`  - 성공률: ${((actualCount / expectedCount) * 100).toFixed(1)}%`);
     
-    if (actualCount >= 240) { // 96% 이상이면 성공으로 간주
+    if (actualCount >= 220) { // 96% 이상이면 성공으로 간주
       console.log(`✅ 검증 성공! 충분한 수의 시군구 관청 좌표를 수집했습니다.`);
     } else {
       console.log(`⚠️ 검증 주의! 일부 시군구 관청 좌표를 가져오지 못했습니다.`);
+      console.log(`❌ 실패한 관청들:`);
+      for (const failed of failedOffices.slice(-Math.min(10, failedOffices.length))) {
+        console.log(`    - ${failed}`);
+      }
     }
     
     // 샘플 데이터 확인
