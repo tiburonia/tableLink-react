@@ -35,15 +35,26 @@ window.MapMarkerManager = {
       }
     }
 
-    // 마커 타입이 같으면 기존 마커 유지
-    if (prevMarkerType === newMarkerType) {
-      console.log(`✨ 마커 타입 동일 (${newMarkerType}) - 기존 마커 유지`);
-      this.currentLevel = level;
-      return;
-    }
-
     this.isLoading = true;
     this.shouldCancel = false;
+    
+    // 마커 타입이 같으면 기존 마커 유지하고 추가 마커만 생성
+    if (prevMarkerType === newMarkerType) {
+      console.log(`✨ 마커 타입 동일 (${newMarkerType}) - 기존 마커 유지하고 새 영역 추가`);
+      this.currentLevel = level;
+      
+      try {
+        // 같은 마커 타입 내에서 추가 마커 생성
+        await this.addMarkersForCurrentType(map, level, newMarkerType);
+      } catch (error) {
+        if (!this.shouldCancel) {
+          console.error('❌ 추가 마커 생성 실패:', error);
+        }
+      } finally {
+        this.isLoading = false;
+      }
+      return;
+    }
     
     // 마커 타입이 바뀔 때만 기존 마커 제거
     this.clearAllMarkers();
@@ -559,6 +570,169 @@ window.MapMarkerManager = {
       window.currentMap.setCenter(position);
       window.currentMap.setLevel(4);
     }
+  },
+
+  // 같은 마커 타입에서 추가 마커 생성
+  async addMarkersForCurrentType(map, level, markerType) {
+    console.log(`➕ ${markerType} 타입 추가 마커 생성 시작 (레벨 ${level})`);
+
+    if (markerType === 'individual') {
+      // 개별 매장 마커 추가
+      await this.addStoreMarkers(map);
+    } else {
+      // 집계 마커 추가
+      await this.addClusterMarkers(map, level);
+    }
+
+    console.log(`✅ ${markerType} 타입 추가 마커 생성 완료`);
+  },
+
+  // 개별 매장 마커 추가 (중복 방지)
+  async addStoreMarkers(map) {
+    console.log('🏪 개별 매장 추가 마커 표시 시작');
+
+    const stores = await this.fetchStores(map);
+
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 개별 매장 추가 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+
+    // 기존 마커 위치 추출 (중복 방지용)
+    const existingPositions = this.getExistingMarkerPositions();
+
+    // 유효한 좌표를 가진 매장들 필터링 및 중복 제거
+    const validStores = stores.filter(store => {
+      if (!store.coord?.lat || !store.coord?.lng) return false;
+      
+      // 기존 마커와 중복되는지 확인 (10m 이내는 중복으로 간주)
+      const isDuplicate = existingPositions.some(pos => 
+        this.calculateDistance(store.coord.lat, store.coord.lng, pos.lat, pos.lng) < 10
+      );
+      
+      return !isDuplicate;
+    });
+
+    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 매장: ${validStores.length}개`);
+
+    if (validStores.length === 0) {
+      console.log('ℹ️ 추가할 새로운 매장이 없습니다');
+      return;
+    }
+
+    // 새로운 마커들을 한번에 생성
+    const newMarkers = this.createStoreMarkersBatch(validStores, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...newMarkers);
+      console.log(`✅ 개별 추가 마커 ${newMarkers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 개별 매장 추가 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      newMarkers.forEach(marker => marker.setMap(null));
+    }
+  },
+
+  // 집계 마커 추가 (중복 방지)
+  async addClusterMarkers(map, level) {
+    console.log(`🏘️ 집계 추가 마커 표시 시작 (레벨 ${level})`);
+
+    const stores = await this.fetchStores(map);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 추가 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+    
+    console.log(`📍 조회된 매장 수: ${stores.length}개`);
+
+    // 지역별 그룹화
+    const clusters = this.groupStoresByRegion(stores, level);
+    console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
+
+    // 기존 마커 위치 추출 (중복 방지용)
+    const existingPositions = this.getExistingMarkerPositions();
+
+    // 새로운 지역만 필터링 (중복 제거)
+    const newClusters = new Map();
+    for (const [regionName, regionStores] of clusters.entries()) {
+      // 해당 지역의 앵커 위치 계산
+      const anchorCoord = await this.calculateAnchorPosition(regionStores, level);
+      if (!anchorCoord || this.shouldCancel) continue;
+
+      // 기존 마커와 중복되는지 확인 (100m 이내는 중복으로 간주)
+      const isDuplicate = existingPositions.some(pos => 
+        this.calculateDistance(anchorCoord.lat, anchorCoord.lng, pos.lat, pos.lng) < 100
+      );
+
+      if (!isDuplicate) {
+        newClusters.set(regionName, regionStores);
+      }
+    }
+
+    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 지역: ${newClusters.size}개`);
+
+    if (newClusters.size === 0) {
+      console.log('ℹ️ 추가할 새로운 지역이 없습니다');
+      return;
+    }
+
+    // 각 지역별 매장 수 로그
+    for (const [regionName, regionStores] of newClusters.entries()) {
+      console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
+    }
+
+    // 새로운 집계 마커들을 한번에 생성
+    const newMarkers = await this.createClusterMarkersBatch(newClusters, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...newMarkers);
+      console.log(`✅ 집계 추가 마커 ${newMarkers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 집계 추가 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      newMarkers.forEach(marker => marker.setMap(null));
+    }
+  },
+
+  // 기존 마커들의 위치 추출
+  getExistingMarkerPositions() {
+    const positions = [];
+    
+    this.currentMarkers.forEach(marker => {
+      try {
+        if (marker && marker.getPosition) {
+          const pos = marker.getPosition();
+          if (pos && pos.getLat && pos.getLng) {
+            positions.push({
+              lat: pos.getLat(),
+              lng: pos.getLng()
+            });
+          }
+        }
+      } catch (error) {
+        // 위치 추출 실패시 무시
+      }
+    });
+
+    return positions;
+  },
+
+  // 두 지점 간 거리 계산 (미터 단위)
+  calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371000; // 지구 반지름 (미터)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
   },
 
   // 모든 마커 제거
