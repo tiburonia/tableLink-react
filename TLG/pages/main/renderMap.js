@@ -394,8 +394,16 @@ async function renderMap() {
       console.log('🎯 DOM 완전 로드 완료');
 
       // 지도 패널 UI 초기화
-      if (window.MapPanelUI) {
+      if (window.MapPanelUI && typeof window.MapPanelUI.initialize === 'function') {
         window.MapPanelUI.initialize();
+        // 샘플 데이터 로드
+        setTimeout(() => {
+          if (typeof window.MapPanelUI.loadSampleData === 'function') {
+            window.MapPanelUI.loadSampleData();
+          }
+        }, 100);
+      } else {
+        console.error('❌ MapPanelUI.initialize 함수를 찾을 수 없습니다');
       }
 
       console.log('🚫 기존 마커 시스템 완전 비활성화 - 타일 시스템만 사용');

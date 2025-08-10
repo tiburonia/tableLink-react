@@ -583,61 +583,44 @@ window.MapPanelUI = {
   },
 
   // 초기화 함수
-  init() {
-    // DOM이 준비되면 실행
-    document.addEventListener('DOMContentLoaded', () => {
-      // TODO: 실제 스토어 데이터와 평점 데이터 가져오는 로직 추가
+  initialize() {
+    console.log('🎨 MapPanelUI 초기화 시작');
+      // 샘플 데이터는 렌더링 시점에 표시
+    console.log('✅ MapPanelUI 초기화 완료');
+  },
 
-      // 예시 데이터 (실제로는 API 호출 등으로 받아와야 함)
-      const sampleStores = [
-        { id: 1, name: "맛있는 식당", category: "한식", isOpen: true, rating: 4.5, reviews: 150 },
-        { id: 2, name: "중화요리 명가", category: "중식", isOpen: false, rating: 4.2, reviews: 80 },
-        { id: 3, name: "스시 🍣", category: "일식", isOpen: true, rating: 4.8, reviews: 200 },
-        { id: 4, name: "이탈리아노", category: "양식", isOpen: true, rating: 3.9, reviews: 120 },
-        { id: 5, name: "커피 한잔", category: "카페", isOpen: true, rating: 4.0, reviews: 50 },
-        { id: 6, name: "치킨 마니아", category: "치킨", isOpen: false, rating: 3.5, reviews: 90 },
-        { id: 7, name: "매콤한 떡볶이", category: "한식", isOpen: true, rating: 4.1, reviews: 110 },
-        { id: 8, name: "프랑스 요리", category: "양식", isOpen: false, rating: 4.6, reviews: 75 },
-        { id: 9, name: "라멘 세상", category: "일식", isOpen: true, rating: 4.3, reviews: 130 },
-        { id: 10, name: "디저트 카페", category: "카페", isOpen: true, rating: 3.8, reviews: 60 },
-      ];
+  // 샘플 데이터로 패널 렌더링
+  loadSampleData() {
+    const sampleStores = [
+      { id: 1, name: "맛있는 식당", category: "한식", isOpen: true, rating: 4.5, reviews: 150 },
+      { id: 2, name: "중화요리 명가", category: "중식", isOpen: false, rating: 4.2, reviews: 80 },
+      { id: 3, name: "스시 🍣", category: "일식", isOpen: true, rating: 4.8, reviews: 200 },
+      { id: 4, name: "이탈리아노", category: "양식", isOpen: true, rating: 3.9, reviews: 120 },
+      { id: 5, name: "커피 한잔", category: "카페", isOpen: true, rating: 4.0, reviews: 50 },
+      { id: 6, name: "치킨 마니아", category: "치킨", isOpen: false, rating: 3.5, reviews: 90 }
+    ];
 
-      const sampleRatingData = sampleStores.map(store => ({
-        storeId: store.id,
-        ratingAverage: store.rating,
-        reviewCount: store.reviews
-      }));
+    const sampleRatingData = sampleStores.map(store => ({
+      storeId: store.id,
+      ratingAverage: store.rating,
+      reviewCount: store.reviews
+    }));
 
-      // 패널 HTML 렌더링
-      document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
-      document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
+    const storeListContainer = document.getElementById('storeListContainer');
+    if (storeListContainer) {
+      storeListContainer.innerHTML = '';
 
-      const storeListContainer = document.getElementById('storeListContainer');
-      storeListContainer.innerHTML = ''; // 로딩 메시지 제거
-
-      sampleStores.forEach((store, index) => {
+      sampleStores.forEach((store) => {
         const ratingInfo = sampleRatingData.find(r => r.storeId === store.id);
         if (ratingInfo) {
-          // store 객체에 isOpen, category, rating, reviews 정보를 직접 추가하거나,
-          // renderStoreCard 함수 내에서 접근할 수 있도록 데이터를 구성해야 합니다.
-          // 여기서는 renderStoreCard 함수가 store 객체와 ratingData를 받으므로 그대로 사용합니다.
-          // ratingData에는 isOpen, category 등도 포함하도록 수정해야 할 수 있습니다.
-          // 예시를 위해 store 객체 자체에 ratingInfo의 값을 통합합니다.
-          const combinedStoreData = {
-            ...store,
-            isOpen: store.isOpen,
-            category: store.category,
-            rating: store.rating,
-            reviews: store.reviews
-          };
-          storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(combinedStoreData, ratingInfo));
+          storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingInfo));
         }
       });
+    }
 
-      // 필터링 및 드래그 이벤트 설정
-      this.initializeFiltering();
-      this.setupPanelDrag();
-    });
+    // 필터링 및 드래그 이벤트 설정
+    this.initializeFiltering();
+    this.setupPanelDrag();
   }
 };
 
