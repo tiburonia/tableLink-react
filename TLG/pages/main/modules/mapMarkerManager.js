@@ -113,23 +113,21 @@ window.MapMarkerManager = {
       return;
     }
 
-    let processedCount = 0;
-    for (const store of stores) {
-      // 작업 취소 확인
-      if (this.shouldCancel) {
-        console.log(`🚫 개별 매장 마커 생성 중단됨 (${processedCount}/${stores.length}개 완료)`);
-        return;
-      }
+    // 유효한 좌표를 가진 매장들 필터링
+    const validStores = stores.filter(store => store.coord?.lat && store.coord?.lng);
+    console.log(`📍 유효한 매장 수: ${validStores.length}개`);
 
-      if (!store.coord?.lat || !store.coord?.lng) continue;
-
-      const marker = this.createStoreMarker(store, map);
-      this.currentMarkers.push(marker);
-      processedCount++;
-    }
-
+    // 모든 마커를 한번에 생성
+    const markers = this.createStoreMarkersBatch(validStores, map);
+    
+    // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
-      console.log(`✅ 개별 마커 ${this.currentMarkers.length}개 생성 완료`);
+      this.currentMarkers.push(...markers);
+      console.log(`✅ 개별 마커 ${markers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 개별 매장 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      markers.forEach(marker => marker.setMap(null));
     }
   },
 
@@ -152,32 +150,36 @@ window.MapMarkerManager = {
     console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
 
     // 각 지역별 매장 수 로그
-    let processedCount = 0;
     for (const [regionName, regionStores] of clusters.entries()) {
-      // 작업 취소 확인
-      if (this.shouldCancel) {
-        console.log(`🚫 집계 마커 생성 중단됨 (${processedCount}/${clusters.size}개 완료)`);
-        return;
-      }
-
       console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
-      const marker = await this.createClusterMarker(regionName, regionStores, map);
-      
-      // 마커 생성 후 다시 취소 확인
-      if (this.shouldCancel) {
-        console.log(`🚫 집계 마커 생성 중단됨 (${processedCount + 1}/${clusters.size}개 완료)`);
-        return;
-      }
-
-      if (marker) {
-        this.currentMarkers.push(marker);
-      }
-      processedCount++;
     }
 
+    // 모든 집계 마커를 한번에 생성
+    const markers = await this.createClusterMarkersBatch(clusters, map);
+    
+    // 작업 취소 최종 확인 후 추가
     if (!this.shouldCancel) {
-      console.log(`✅ 집계 마커 ${this.currentMarkers.length}개 생성 완료`);
+      this.currentMarkers.push(...markers);
+      console.log(`✅ 집계 마커 ${markers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 집계 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      markers.forEach(marker => marker.setMap(null));
     }
+  },
+
+  // 개별 매장 마커 배치 생성
+  createStoreMarkersBatch(stores, map) {
+    console.log(`📦 개별 매장 마커 배치 생성: ${stores.length}개`);
+    
+    const markers = [];
+    
+    for (const store of stores) {
+      const marker = this.createStoreMarker(store, map);
+      markers.push(marker);
+    }
+    
+    return markers;
   },
 
   // 개별 매장 마커 생성
@@ -242,6 +244,28 @@ window.MapMarkerManager = {
     });
 
     return overlay;
+  },
+
+  // 집계 마커 배치 생성
+  async createClusterMarkersBatch(clusters, map) {
+    console.log(`📦 집계 마커 배치 생성: ${clusters.size}개`);
+    
+    const markers = [];
+    
+    for (const [regionName, regionStores] of clusters.entries()) {
+      // 작업 취소 확인
+      if (this.shouldCancel) {
+        console.log('🚫 집계 마커 배치 생성 중단됨');
+        break;
+      }
+      
+      const marker = await this.createClusterMarker(regionName, regionStores, map);
+      if (marker) {
+        markers.push(marker);
+      }
+    }
+    
+    return markers;
   },
 
   // 집계 마커 생성
