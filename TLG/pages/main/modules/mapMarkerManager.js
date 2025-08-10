@@ -48,8 +48,8 @@ window.MapMarkerManager = {
     console.log('🗺️ 타일 기반 마커 관리자 초기화 시작');
     console.log(`⚙️ 설정: debounce=${this.opts.debounceMs}ms, maxMarkers=${this.opts.maxVisibleMarkers}`);
 
-    // 기존 시스템 완전 차단 확인
-    this.blockLegacySystem();
+    // 기존 이벤트 정리
+    this.cleanupEvents();
 
     // 캔버스 오버레이 생성
     this.createCanvasOverlay();
@@ -63,18 +63,14 @@ window.MapMarkerManager = {
     console.log('✅ 타일 기반 마커 관리자 초기화 완료');
   },
 
-  // 레거시 시스템 차단 확인
-  blockLegacySystem() {
-    // 기존 지도 이벤트 리스너 제거 (혹시 남아있을 수 있는 레거시 이벤트)
+  // 이벤트 리스너 정리
+  cleanupEvents() {
+    // 기존 이벤트 리스너 정리
     try {
-      // 카카오맵 이벤트 전체 정리 후 재등록
       kakao.maps.event.removeListener(this.map, 'idle');
-      kakao.maps.event.removeListener(this.map, 'zoom_changed');
-      kakao.maps.event.removeListener(this.map, 'dragend');
-      kakao.maps.event.removeListener(this.map, 'bounds_changed');
-      console.log('🧹 기존 지도 이벤트 리스너 정리 완료');
+      console.log('🧹 기존 이벤트 리스너 정리 완료');
     } catch (error) {
-      console.log('ℹ️ 기존 이벤트 리스너 정리 중 에러 (정상):', error.message);
+      console.log('ℹ️ 이벤트 리스너 정리 중 에러 (정상):', error.message);
     }
   },
 

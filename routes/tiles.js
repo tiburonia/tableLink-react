@@ -52,7 +52,7 @@ router.get('/:z/:x/:y', async (req, res) => {
 
     console.log(`📍 타일 bbox: [${west}, ${south}, ${east}, ${north}]`);
 
-    // PostgreSQL에서 해당 bbox 내의 매장 데이터 조회 (더 안전한 조인)
+    // PostgreSQL에서 해당 bbox 내의 매장 데이터 조회 (store_address 테이블만 사용)
     const result = await pool.query(`
       SELECT 
         s.id, 
@@ -61,33 +61,19 @@ router.get('/:z/:x/:y', async (req, res) => {
         s.is_open, 
         s.rating_average, 
         s.review_count,
-        COALESCE(sa.latitude, 
-          CASE 
-            WHEN s.coord IS NOT NULL THEN (s.coord->>'lat')::decimal 
-            ELSE NULL 
-          END
-        ) as latitude,
-        COALESCE(sa.longitude,
-          CASE 
-            WHEN s.coord IS NOT NULL THEN (s.coord->>'lng')::decimal 
-            ELSE NULL 
-          END
-        ) as longitude,
+        sa.latitude,
+        sa.longitude,
         COALESCE(sa.sido, '') as sido,
         COALESCE(sa.sigungu, '') as sigungu,
         COALESCE(sa.eupmyeondong, '') as eupmyeondong
       FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE (
-        (sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL) OR
-        (s.coord IS NOT NULL AND s.coord->>'lat' IS NOT NULL AND s.coord->>'lng' IS NOT NULL)
-      )
-      AND (
-        COALESCE(sa.longitude, (s.coord->>'lng')::decimal) >= $1 
-        AND COALESCE(sa.longitude, (s.coord->>'lng')::decimal) <= $3
-        AND COALESCE(sa.latitude, (s.coord->>'lat')::decimal) >= $2 
-        AND COALESCE(sa.latitude, (s.coord->>'lat')::decimal) <= $4
-      )
+      INNER JOIN store_address sa ON s.id = sa.store_id
+      WHERE sa.latitude IS NOT NULL 
+        AND sa.longitude IS NOT NULL
+        AND sa.longitude >= $1 
+        AND sa.longitude <= $3
+        AND sa.latitude >= $2 
+        AND sa.latitude <= $4
       LIMIT 1000
     `, [west, south, east, north]);
 
