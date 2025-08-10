@@ -178,13 +178,72 @@ router.get('/:z/:x/:y', async (req, res) => {
       clusters = null;
     }
 
-    // GeoJSON FeatureCollection 형태로 응답 (더 안전한 처리)
+    // Supercluster getTile 결과를 GeoJSON 형태로 변환
     let features = [];
     
-    if (clusters && clusters.features && Array.isArray(clusters.features)) {
-      features = clusters.features;
-    } else if (clusters && Array.isArray(clusters)) {
-      features = clusters;
+    if (clusters && Array.isArray(clusters)) {
+      // Supercluster getTile 결과를 GeoJSON Feature로 변환
+      features = clusters.map(item => {
+        if (item.type === 1) {
+          // 클러스터인 경우
+          const point_count = item.tags.point_count || 1;
+          const cluster_id = item.tags.cluster_id;
+          
+          // 클러스터의 실제 좌표를 getClusterExpansionZoom을 통해 계산
+          let clusterCoords = [0, 0];
+          try {
+            const expansionZoom = supercluster.getClusterExpansionZoom(cluster_id);
+            const children = supercluster.getChildren(cluster_id);
+            if (children && children.length > 0) {
+              // 자식 포인트들의 평균 좌표 계산
+              let totalLng = 0, totalLat = 0;
+              children.forEach(child => {
+                if (child.geometry && child.geometry.coordinates) {
+                  totalLng += child.geometry.coordinates[0];
+                  totalLat += child.geometry.coordinates[1];
+                }
+              });
+              clusterCoords = [totalLng / children.length, totalLat / children.length];
+            }
+          } catch (clusterError) {
+            console.warn('클러스터 좌표 계산 실패:', clusterError);
+          }
+          
+          return {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: clusterCoords
+            },
+            properties: {
+              cluster: true,
+              cluster_id: cluster_id,
+              point_count: point_count,
+              point_count_abbreviated: point_count >= 1000 ? `${Math.round(point_count/1000)}k` : point_count.toString()
+            }
+          };
+        } else {
+          // 개별 포인트인 경우 - tags를 properties로 변환
+          return {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [parseFloat(item.tags.longitude), parseFloat(item.tags.latitude)]
+            },
+            properties: {
+              id: item.tags.id,
+              name: item.tags.name,
+              category: item.tags.category,
+              isOpen: item.tags.isOpen,
+              ratingAverage: item.tags.ratingAverage,
+              reviewCount: item.tags.reviewCount,
+              sido: item.tags.sido,
+              sigungu: item.tags.sigungu,
+              eupmyeondong: item.tags.eupmyeondong
+            }
+          };
+        }
+      });
     } else {
       // Supercluster 실패 시 원본 포인트 반환
       features = points;
