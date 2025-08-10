@@ -23,6 +23,7 @@ const tablesRoutes = require('./routes/tables');
 const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
 const cacheRoutes = require('./routes/cache');
+const tilesRoutes = require('./routes/tiles');
 
 // 라우트 연결
 app.use('/api', authRoutes);
@@ -33,6 +34,7 @@ app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/tiles', tilesRoutes);
 
 // 정적 페이지 라우트
 app.get('/', (req, res) => {

@@ -387,44 +387,15 @@ async function renderMap() {
   // 지도 인스턴스를 전역 변수로 저장
   window.currentMap = map;
 
-  // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
-  window.currentMarkers = [];
-  window.markerMap = new Map();
-
-  console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 지도 레벨 및 뷰포트 변경 이벤트
-  kakao.maps.event.addListener(map, 'zoom_changed', () => {
-    const level = map.getLevel();
-    console.log('🔍 지도 레벨 변경됨:', level);
-
-    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
+  // 타일 기반 마커 관리자 초기화
+  setTimeout(() => {
     if (window.MapMarkerManager) {
-      window.MapMarkerManager.handleMapLevelChange(level, map);
+      console.log('🚀 타일 기반 마커 시스템 초기화');
+      window.MapMarkerManager.initialize(map);
     } else {
       console.error('❌ MapMarkerManager가 로드되지 않음');
-    }
-  });
-
-  // 지도 이동 완료 이벤트
-  kakao.maps.event.addListener(map, 'dragend', () => {
-    const level = map.getLevel();
-    console.log('🗺️ 지도 이동 완료 - 레벨:', level);
-
-    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
-    if (window.MapMarkerManager) {
-      window.MapMarkerManager.handleMapLevelChange(level, map);
-    }
-  });
-
-  // 초기 마커 로딩
-  setTimeout(() => {
-    const level = map.getLevel();
-    console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
-
-    if (window.MapMarkerManager) {
-      window.MapMarkerManager.handleMapLevelChange(level, map);
     }
   }, 300);
 

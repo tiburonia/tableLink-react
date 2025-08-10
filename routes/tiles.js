@@ -1,0 +1,226 @@
+
+const express = require('express');
+const router = express.Router();
+const pool = require('../shared/config/database');
+const tilebelt = require('@mapbox/tilebelt');
+const Supercluster = require('supercluster');
+const compression = require('compression');
+
+// gzip 압축 미들웨어 적용
+router.use(compression());
+
+// 타일 데이터 조회 API
+router.get('/:z/:x/:y', async (req, res) => {
+  try {
+    const { z, x, y } = req.params;
+    const zoom = parseInt(z);
+    const tileX = parseInt(x);
+    const tileY = parseInt(y);
+
+    // 타일 좌표 유효성 검사
+    if (isNaN(zoom) || isNaN(tileX) || isNaN(tileY)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 타일 좌표입니다'
+      });
+    }
+
+    // 줌 레벨 제한 (0~18)
+    if (zoom < 0 || zoom > 18) {
+      return res.status(400).json({
+        success: false,
+        error: '지원하지 않는 줌 레벨입니다 (0-18)'
+      });
+    }
+
+    console.log(`🗺️ 타일 요청: z=${zoom}, x=${tileX}, y=${tileY}`);
+
+    // 타일의 bbox 계산
+    const bbox = tilebelt.tileToBBOX([tileX, tileY, zoom]);
+    const [west, south, east, north] = bbox;
+
+    console.log(`📍 타일 bbox: [${west}, ${south}, ${east}, ${north}]`);
+
+    // PostgreSQL에서 해당 bbox 내의 매장 데이터 조회
+    const result = await pool.query(`
+      SELECT 
+        s.id, 
+        s.name, 
+        s.category, 
+        s.is_open, 
+        s.rating_average, 
+        s.review_count,
+        sa.latitude, 
+        sa.longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE sa.latitude IS NOT NULL 
+        AND sa.longitude IS NOT NULL
+        AND sa.longitude >= $1 
+        AND sa.longitude <= $3
+        AND sa.latitude >= $2 
+        AND sa.latitude <= $4
+    `, [west, south, east, north]);
+
+    const stores = result.rows;
+    console.log(`📊 타일 내 매장 수: ${stores.length}개`);
+
+    // GeoJSON Point 형태로 변환
+    const points = stores.map(store => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [parseFloat(store.longitude), parseFloat(store.latitude)]
+      },
+      properties: {
+        id: store.id,
+        name: store.name,
+        category: store.category,
+        isOpen: store.is_open !== false,
+        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+        reviewCount: store.review_count || 0,
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      }
+    }));
+
+    // Supercluster 인스턴스 생성
+    const supercluster = new Supercluster({
+      radius: 60,     // 클러스터링 반경 (픽셀)
+      maxZoom: 16,    // 최대 클러스터링 줌 레벨
+      minZoom: 0,     // 최소 클러스터링 줌 레벨
+      minPoints: 2,   // 클러스터 생성을 위한 최소 포인트 수
+      generateId: true
+    });
+
+    // 포인트 데이터 로드
+    supercluster.load(points);
+
+    // 해당 타일의 클러스터 데이터 가져오기
+    const clusters = supercluster.getTile(zoom, tileX, tileY);
+
+    // GeoJSON FeatureCollection 형태로 응답
+    const featureCollection = {
+      type: 'FeatureCollection',
+      features: clusters ? clusters.features : []
+    };
+
+    console.log(`✅ 타일 응답: ${featureCollection.features.length}개 피처`);
+
+    // 클러스터와 개별 매장 구분을 위한 로그
+    const clusterCount = featureCollection.features.filter(f => f.properties.cluster).length;
+    const storeCount = featureCollection.features.filter(f => !f.properties.cluster).length;
+    console.log(`   📦 클러스터: ${clusterCount}개, 개별 매장: ${storeCount}개`);
+
+    res.json({
+      success: true,
+      tile: { z: zoom, x: tileX, y: tileY },
+      bbox: bbox,
+      data: featureCollection,
+      meta: {
+        totalFeatures: featureCollection.features.length,
+        clusters: clusterCount,
+        stores: storeCount
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 타일 데이터 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '타일 데이터 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 행정구역 캐싱 API (Kakao 좌표→주소 변환)
+router.post('/cache-admin-region', async (req, res) => {
+  try {
+    const { storeId, latitude, longitude } = req.body;
+
+    if (!storeId || !latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        error: 'storeId, latitude, longitude가 필요합니다'
+      });
+    }
+
+    console.log(`🏛️ 행정구역 캐싱: 매장 ${storeId} (${latitude}, ${longitude})`);
+
+    // Kakao 좌표→주소 API 호출
+    const kakaoResponse = await fetch(
+      `https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=${longitude}&y=${latitude}&input_coord=WGS84`,
+      {
+        headers: {
+          'Authorization': `KakaoAK ${process.env.KAKAO_API_KEY}`
+        }
+      }
+    );
+
+    if (!kakaoResponse.ok) {
+      throw new Error(`Kakao API 호출 실패: ${kakaoResponse.status}`);
+    }
+
+    const kakaoData = await kakaoResponse.json();
+    const regions = kakaoData.documents || [];
+
+    if (regions.length === 0) {
+      console.warn(`⚠️ 행정구역 정보 없음: 매장 ${storeId}`);
+      return res.json({
+        success: false,
+        error: '해당 좌표의 행정구역 정보를 찾을 수 없습니다'
+      });
+    }
+
+    // 행정동 정보 추출 (H 타입)
+    const adminRegion = regions.find(r => r.region_type === 'H');
+    if (!adminRegion) {
+      console.warn(`⚠️ 행정동 정보 없음: 매장 ${storeId}`);
+      return res.json({
+        success: false,
+        error: '행정동 정보를 찾을 수 없습니다'
+      });
+    }
+
+    // store_address 테이블 업데이트
+    await pool.query(`
+      UPDATE store_address 
+      SET 
+        sido = $1,
+        sigungu = $2,
+        eupmyeondong = $3,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE store_id = $4
+    `, [
+      adminRegion.region_1depth_name,  // 시도
+      adminRegion.region_2depth_name,  // 시군구
+      adminRegion.region_3depth_name,  // 읍면동
+      storeId
+    ]);
+
+    console.log(`✅ 행정구역 캐싱 완료: ${adminRegion.region_1depth_name} ${adminRegion.region_2depth_name} ${adminRegion.region_3depth_name}`);
+
+    res.json({
+      success: true,
+      storeId: storeId,
+      adminRegion: {
+        sido: adminRegion.region_1depth_name,
+        sigungu: adminRegion.region_2depth_name,
+        eupmyeondong: adminRegion.region_3depth_name
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 행정구역 캐싱 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '행정구역 캐싱 실패: ' + error.message
+    });
+  }
+});
+
+module.exports = router;
