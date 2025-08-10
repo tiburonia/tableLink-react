@@ -168,12 +168,25 @@ router.get('/:z/:x/:y', async (req, res) => {
     // 포인트 데이터 로드
     supercluster.load(points);
 
+    // 클러스터링을 위한 적절한 줌 레벨 계산 (타일 줌을 Supercluster 줌으로 변환)
+    const clusterZoom = Math.min(Math.max(zoom - 2, 0), 16);
+
     // 해당 타일의 bbox로 클러스터 데이터 가져오기 (getClusters 사용)
     let features;
     try {
       // getClusters 메서드로 올바른 GeoJSON Feature 형식 데이터 획득
-      features = supercluster.getClusters(bbox, zoom);
-      console.log(`🔧 Supercluster 클러스터 응답: ${features.length}개 피처`);
+      features = supercluster.getClusters(bbox, clusterZoom);
+      console.log(`🔧 Supercluster 클러스터 응답 (줌 ${clusterZoom}): ${features.length}개 피처`);
+      
+      // 타일 범위 밖의 피처들 필터링
+      features = features.filter(feature => {
+        if (!feature.geometry || !feature.geometry.coordinates) return false;
+        const [lng, lat] = feature.geometry.coordinates;
+        return lng >= west && lng <= east && lat >= south && lat <= north;
+      });
+      
+      console.log(`📍 타일 범위 내 피처: ${features.length}개`);
+      
     } catch (clusterError) {
       console.warn(`⚠️ 타일 ${zoom}/${tileX}/${tileY} 클러스터링 실패:`, clusterError);
       features = points; // 실패 시 원본 포인트 반환

@@ -165,10 +165,12 @@ window.MapMarkerManager = {
   // 현재 뷰포트의 타일 목록 계산
   getVisibleTiles() {
     const bounds = this.map.getBounds();
-    const zoom = this.map.getLevel();
+    const kakaoLevel = this.map.getLevel();
     
-    // 카카오맵 레벨을 타일 줌으로 변환 (카카오맵은 레벨이 높을수록 축소)
-    const tileZoom = Math.max(0, Math.min(18, 18 - zoom + 2));
+    // 카카오맵 레벨을 타일 줌으로 변환
+    // 카카오맵: 레벨 1(최대확대) ~ 14(최대축소)
+    // 타일맵: 줌 0(최대축소) ~ 18(최대확대)
+    const tileZoom = Math.max(1, Math.min(16, 18 - kakaoLevel));
     
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
@@ -179,13 +181,19 @@ window.MapMarkerManager = {
     
     const tiles = [];
     
-    for (let x = swTile.x; x <= neTile.x; x++) {
-      for (let y = neTile.y; y <= swTile.y; y++) {
+    // 타일 범위 확장 (인접 타일도 포함)
+    const minX = Math.max(0, Math.min(swTile.x, neTile.x) - 1);
+    const maxX = Math.min(Math.pow(2, tileZoom) - 1, Math.max(swTile.x, neTile.x) + 1);
+    const minY = Math.max(0, Math.min(swTile.y, neTile.y) - 1);
+    const maxY = Math.min(Math.pow(2, tileZoom) - 1, Math.max(swTile.y, neTile.y) + 1);
+    
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
         tiles.push({ z: tileZoom, x, y });
       }
     }
     
-    console.log(`📍 가시 타일 계산: 줌=${tileZoom}, 타일 수=${tiles.length}개`);
+    console.log(`📍 가시 타일 계산: 카카오레벨=${kakaoLevel}, 타일줌=${tileZoom}, 타일 수=${tiles.length}개`);
     return tiles;
   },
 
@@ -309,19 +317,35 @@ window.MapMarkerManager = {
       return;
     }
 
+    let renderedCount = 0;
     features.forEach(feature => {
-      // 안전한 속성 접근
-      if (!feature || !feature.properties || !feature.geometry) {
-        console.warn('⚠️ 유효하지 않은 feature:', feature);
-        return;
+      // 안전한 속성 접근 및 GeoJSON Feature 형식 확인
+      if (!feature || 
+          feature.type !== 'Feature' || 
+          !feature.properties || 
+          !feature.geometry ||
+          !feature.geometry.coordinates ||
+          !Array.isArray(feature.geometry.coordinates) ||
+          feature.geometry.coordinates.length < 2) {
+        return; // 유효하지 않은 feature는 조용히 건너뜀
       }
+
+      // 화면 범위 내에 있는지 확인
+      const [lng, lat] = feature.geometry.coordinates;
+      const point = this.lngLatToPixel(lng, lat);
+      if (!point) return;
 
       if (feature.properties.cluster === true) {
         this.renderCluster(feature);
       } else {
         this.renderStore(feature);
       }
+      renderedCount++;
     });
+    
+    if (renderedCount !== features.length) {
+      console.log(`📊 렌더링: ${renderedCount}/${features.length}개 피처 (${features.length - renderedCount}개 필터링됨)`);
+    }
   },
 
   // 클러스터 렌더링
@@ -383,9 +407,14 @@ window.MapMarkerManager = {
   // 위도/경도를 화면 픽셀로 변환
   lngLatToPixel(lng, lat) {
     try {
+      // 좌표 유효성 검사
+      if (typeof lng !== 'number' || typeof lat !== 'number' || 
+          isNaN(lng) || isNaN(lat) ||
+          lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+        return null;
+      }
+      
       const position = new kakao.maps.LatLng(lat, lng);
-      const point = this.map.getProjection().pointFromCoords(position);
-      const mapCenter = this.map.getProjection().pointFromCoords(this.map.getCenter());
       
       // 카카오맵 컨테이너 직접 접근
       const mapContainer = document.getElementById('map');
@@ -393,16 +422,23 @@ window.MapMarkerManager = {
       
       const rect = mapContainer.getBoundingClientRect();
       
-      const x = (point.x - mapCenter.x) + rect.width / 2;
-      const y = (point.y - mapCenter.y) + rect.height / 2;
+      // 카카오맵의 좌표 변환 API 사용
+      const projection = this.map.getProjection();
+      const point = projection.pointFromCoords(position);
+      const centerPoint = projection.pointFromCoords(this.map.getCenter());
       
-      // 화면 범위 내에 있는지 확인
-      if (x >= -50 && x <= rect.width + 50 && y >= -50 && y <= rect.height + 50) {
+      const x = (point.x - centerPoint.x) + rect.width / 2;
+      const y = (point.y - centerPoint.y) + rect.height / 2;
+      
+      // 화면 범위 확장 (여유분 포함)
+      const margin = 100;
+      if (x >= -margin && x <= rect.width + margin && y >= -margin && y <= rect.height + margin) {
         return { x, y };
       }
       
       return null;
     } catch (error) {
+      console.warn('좌표 변환 실패:', lng, lat, error.message);
       return null;
     }
   },
