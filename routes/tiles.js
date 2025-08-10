@@ -52,7 +52,7 @@ router.get('/:z/:x/:y', async (req, res) => {
 
     console.log(`📍 타일 bbox: [${west}, ${south}, ${east}, ${north}]`);
 
-    // PostgreSQL에서 해당 bbox 내의 매장 데이터 조회
+    // PostgreSQL에서 해당 bbox 내의 매장 데이터 조회 (더 안전한 조인)
     const result = await pool.query(`
       SELECT 
         s.id, 
@@ -61,19 +61,33 @@ router.get('/:z/:x/:y', async (req, res) => {
         s.is_open, 
         s.rating_average, 
         s.review_count,
-        sa.latitude, 
-        sa.longitude,
-        sa.sido,
-        sa.sigungu,
-        sa.eupmyeondong
+        COALESCE(sa.latitude, 
+          CASE 
+            WHEN s.coord IS NOT NULL THEN (s.coord->>'lat')::decimal 
+            ELSE NULL 
+          END
+        ) as latitude,
+        COALESCE(sa.longitude,
+          CASE 
+            WHEN s.coord IS NOT NULL THEN (s.coord->>'lng')::decimal 
+            ELSE NULL 
+          END
+        ) as longitude,
+        COALESCE(sa.sido, '') as sido,
+        COALESCE(sa.sigungu, '') as sigungu,
+        COALESCE(sa.eupmyeondong, '') as eupmyeondong
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE sa.latitude IS NOT NULL 
-        AND sa.longitude IS NOT NULL
-        AND sa.longitude >= $1 
-        AND sa.longitude <= $3
-        AND sa.latitude >= $2 
-        AND sa.latitude <= $4
+      WHERE (
+        (sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL) OR
+        (s.coord IS NOT NULL AND s.coord->>'lat' IS NOT NULL AND s.coord->>'lng' IS NOT NULL)
+      )
+      AND (
+        COALESCE(sa.longitude, (s.coord->>'lng')::decimal) >= $1 
+        AND COALESCE(sa.longitude, (s.coord->>'lng')::decimal) <= $3
+        AND COALESCE(sa.latitude, (s.coord->>'lat')::decimal) >= $2 
+        AND COALESCE(sa.latitude, (s.coord->>'lat')::decimal) <= $4
+      )
       LIMIT 1000
     `, [west, south, east, north]);
 
@@ -172,22 +186,38 @@ router.get('/:z/:x/:y', async (req, res) => {
     let clusters;
     try {
       clusters = supercluster.getTile(zoom, tileX, tileY);
+      console.log(`🔧 Supercluster 타일 응답:`, clusters ? 'OK' : 'NULL');
     } catch (tileError) {
       console.warn(`⚠️ 타일 ${zoom}/${tileX}/${tileY} 클러스터링 실패:`, tileError);
       clusters = null;
     }
 
-    // GeoJSON FeatureCollection 형태로 응답
+    // GeoJSON FeatureCollection 형태로 응답 (더 안전한 처리)
+    let features = [];
+    
+    if (clusters && clusters.features && Array.isArray(clusters.features)) {
+      features = clusters.features;
+    } else if (clusters && Array.isArray(clusters)) {
+      features = clusters;
+    } else {
+      // Supercluster 실패 시 원본 포인트 반환
+      features = points;
+    }
+
     const featureCollection = {
       type: 'FeatureCollection',
-      features: clusters ? (clusters.features || []) : []
+      features: features
     };
 
     console.log(`✅ 타일 응답: ${featureCollection.features.length}개 피처`);
 
-    // 클러스터와 개별 매장 구분을 위한 로그
-    const clusterCount = featureCollection.features.filter(f => f.properties.cluster).length;
-    const storeCount = featureCollection.features.filter(f => !f.properties.cluster).length;
+    // 클러스터와 개별 매장 구분을 위한 로그 (안전한 속성 확인)
+    const clusterCount = featureCollection.features.filter(f => 
+      f && f.properties && f.properties.cluster === true
+    ).length;
+    const storeCount = featureCollection.features.filter(f => 
+      f && f.properties && !f.properties.cluster
+    ).length;
     console.log(`   📦 클러스터: ${clusterCount}개, 개별 매장: ${storeCount}개`);
 
     res.json({
