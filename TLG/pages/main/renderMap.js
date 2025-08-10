@@ -388,26 +388,25 @@ async function renderMap() {
 
   console.log('🗺️ 지도 렌더링 완료');
 
-  // 기존 마커 시스템 완전 비활성화 - 타일 시스템 사용
-    console.log('🚫 기존 마커 시스템 비활성화됨 - 타일 시스템 사용');
-
-    // 타일 기반 마커 관리자만 사용
-    if (window.MapMarkerManager) {
-      console.log('🗺️ 타일 기반 마커 관리자 초기화');
-      window.MapMarkerManager.initialize(map);
-    } else {
-      console.error('❌ 타일 마커 관리자를 찾을 수 없습니다');
-    }
-
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
-    if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
-      window.MapPanelUI.initializeFiltering();
+    if (document.readyState === 'complete') {
+      console.log('🎯 DOM 완전 로드 완료');
+
+      // 지도 패널 UI 초기화
+      if (window.MapPanelUI) {
+        window.MapPanelUI.initialize();
+      }
+
+      console.log('🚫 기존 마커 시스템 완전 비활성화 - 타일 시스템만 사용');
+
+      // 기존 시스템 대신 타일 시스템만 사용
+      // 지도 이벤트는 타일 마커 관리자에서 처리함
+
+    } else {
+      console.log('⏳ DOM 로딩 대기 중...');
     }
-    if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
-      window.MapPanelUI.setupPanelDrag();
-    }
-  }, 200);
+  }, 500);
 
   //TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')
