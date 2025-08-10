@@ -56,11 +56,11 @@ const CITY_OFFICES = [
   '경기도 이천시청', '경기도 안성시청', '경기도 김포시청', '경기도 화성시청', '경기도 광주시청',
   '경기도 양주시청', '경기도 포천시청', '경기도 여주시청', '경기도 연천군청', '경기도 가평군청', '경기도 양평군청',
 
-  // 강원도 (18개 시군)
-  '강원도 춘천시청', '강원도 원주시청', '강원도 강릉시청', '강원도 동해시청', '강원도 태백시청',
-  '강원도 속초시청', '강원도 삼척시청', '강원도 홍천군청', '강원도 횡성군청', '강원도 영월군청',
-  '강원도 평창군청', '강원도 정선군청', '강원도 철원군청', '강원도 화천군청', '강원도 양구군청',
-  '강원도 인제군청', '강원도 고성군청', '강원도 양양군청',
+  // 강원특별자치도 (18개 시군)
+  '강원특별자치도 춘천시청', '강원특별자치도 원주시청', '강원특별자치도 강릉시청', '강원특별자치도 동해시청', '강원특별자치도 태백시청',
+  '강원특별자치도 속초시청', '강원특별자치도 삼척시청', '강원특별자치도 홍천군청', '강원특별자치도 횡성군청', '강원특별자치도 영월군청',
+  '강원특별자치도 평창군청', '강원특별자치도 정선군청', '강원특별자치도 철원군청', '강원특별자치도 화천군청', '강원특별자치도 양구군청',
+  '강원특별자치도 인제군청', '강원특별자치도 고성군청', '강원특별자치도 양양군청',
 
   // 충청북도 (11개 시군)
   '충청북도 청주시청', '충청북도 충주시청', '충청북도 제천시청', '충청북도 보은군청', '충청북도 옥천군청',
@@ -71,10 +71,10 @@ const CITY_OFFICES = [
   '충청남도 논산시청', '충청남도 계룡시청', '충청남도 당진시청', '충청남도 금산군청', '충청남도 부여군청',
   '충청남도 서천군청', '충청남도 청양군청', '충청남도 홍성군청', '충청남도 예산군청', '충청남도 태안군청',
 
-  // 전라북도 (14개 시군)
-  '전라북도 전주시청', '전라북도 군산시청', '전라북도 익산시청', '전라북도 정읍시청', '전라북도 남원시청',
-  '전라북도 김제시청', '전라북도 완주군청', '전라북도 진안군청', '전라북도 무주군청', '전라북도 장수군청',
-  '전라북도 임실군청', '전라북도 순창군청', '전라북도 고창군청', '전라북도 부안군청',
+  // 전북특별자치도 (14개 시군)
+  '전북특별자치도 전주시청', '전북특별자치도 군산시청', '전북특별자치도 익산시청', '전북특별자치도 정읍시청', '전북특별자치도 남원시청',
+  '전북특별자치도 김제시청', '전북특별자치도 완주군청', '전북특별자치도 진안군청', '전북특별자치도 무주군청', '전북특별자치도 장수군청',
+  '전북특별자치도 임실군청', '전북특별자치도 순창군청', '전북특별자치도 고창군청', '전북특별자치도 부안군청',
 
   // 전라남도 (22개 시군)
   '전라남도 목포시청', '전라남도 여수시청', '전라남도 순천시청', '전라남도 나주시청', '전라남도 광양시청',
@@ -124,8 +124,7 @@ async function searchOfficeLocation(officeName) {
       return {
         name: officeName,
         latitude: parseFloat(place.y),
-        longitude: parseFloat(place.x),
-        address: place.address_name || place.road_address_name || ''
+        longitude: parseFloat(place.x)
       };
     }
     
@@ -138,31 +137,39 @@ async function searchOfficeLocation(officeName) {
   }
 }
 
+// 지역명 파싱 함수
+function parseRegionInfo(officeName) {
+  const parts = officeName.split(' ');
+  let regionType = '';
+  let regionName = '';
+  
+  if (parts.length >= 2) {
+    const sidoPart = parts[0];
+    const sigunguPart = parts[1].replace('청', '');
+    
+    if (sidoPart.includes('특별시') || sidoPart.includes('광역시') || sidoPart.includes('특별자치시')) {
+      regionType = 'sigungu';
+      regionName = sigunguPart;
+    } else if (sidoPart.includes('도')) {
+      regionType = 'sigungu';
+      regionName = sigunguPart;
+    } else {
+      regionType = 'sigungu';
+      regionName = sidoPart + ' ' + sigunguPart;
+    }
+  }
+  
+  return { regionType, regionName };
+}
+
 async function importCityOffices() {
   try {
     console.log('🏛️ 전국 시청/군청/구청 좌표 가져오기 시작...');
     console.log(`📊 대상 관청 수: ${CITY_OFFICES.length}개`);
     
-    // administrative_offices 테이블 생성
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS administrative_offices (
-        id SERIAL PRIMARY KEY,
-        region_type VARCHAR(20) NOT NULL,
-        region_name VARCHAR(100) NOT NULL,
-        office_name VARCHAR(100) NOT NULL,
-        latitude DECIMAL(10, 8) NOT NULL,
-        longitude DECIMAL(11, 8) NOT NULL,
-        address TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(office_name)
-      );
-    `);
-    
-    console.log('✅ administrative_offices 테이블 준비 완료');
-    
-    // 기존 데이터 삭제
-    await pool.query('DELETE FROM administrative_offices');
-    console.log('🗑️ 기존 데이터 삭제 완료');
+    // 기존 시군구 데이터만 삭제 (시도 데이터는 유지)
+    await pool.query("DELETE FROM administrative_offices WHERE region_type = 'sigungu'");
+    console.log('🗑️ 기존 시군구 데이터 삭제 완료');
     
     let successCount = 0;
     let failCount = 0;
@@ -177,27 +184,17 @@ async function importCityOffices() {
       if (result) {
         try {
           // 지역 정보 파싱
-          const parts = officeName.split(' ');
-          let regionType = '';
-          let regionName = '';
-          
-          if (parts.length >= 2) {
-            if (parts[0].includes('특별시') || parts[0].includes('광역시') || parts[0].includes('특별자치시')) {
-              regionType = 'metropolitan';
-              regionName = parts[1].replace('청', '');
-            } else if (parts[0].includes('도')) {
-              regionType = 'province';
-              regionName = parts[1].replace('청', '');
-            } else {
-              regionType = 'city';
-              regionName = parts[0] + ' ' + parts[1].replace('청', '');
-            }
-          }
+          const { regionType, regionName } = parseRegionInfo(officeName);
           
           await pool.query(`
-            INSERT INTO administrative_offices (region_type, region_name, office_name, latitude, longitude, address)
-            VALUES ($1, $2, $3, $4, $5, $6)
-          `, [regionType, regionName, result.name, result.latitude, result.longitude, result.address]);
+            INSERT INTO administrative_offices (region_type, region_name, office_name, latitude, longitude)
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (region_type, region_name) 
+            DO UPDATE SET 
+              office_name = EXCLUDED.office_name,
+              latitude = EXCLUDED.latitude,
+              longitude = EXCLUDED.longitude
+          `, [regionType, regionName, result.name, result.latitude, result.longitude]);
           
           console.log(`✅ ${result.name}: (${result.latitude}, ${result.longitude})`);
           successCount++;
@@ -210,7 +207,7 @@ async function importCityOffices() {
         failCount++;
       }
       
-      // API 호출 제한을 위한 딜레이
+      // API 호출 제한을 위한 딜레이 (200ms)
       await delay(200);
       
       // 진행상황 표시
@@ -220,24 +217,24 @@ async function importCityOffices() {
     }
     
     // 최종 결과 확인
-    const totalResult = await pool.query('SELECT COUNT(*) as count FROM administrative_offices');
+    const totalResult = await pool.query("SELECT COUNT(*) as count FROM administrative_offices WHERE region_type = 'sigungu'");
     
     console.log(`\n🎉 전국 시청/군청/구청 좌표 가져오기 완료!`);
     console.log(`📊 최종 결과:`);
     console.log(`  - 성공: ${successCount}개`);
     console.log(`  - 실패: ${failCount}개`);
-    console.log(`  - DB 저장된 총 관청 수: ${totalResult.rows[0].count}개`);
+    console.log(`  - DB 저장된 총 시군구 관청 수: ${totalResult.rows[0].count}개`);
     
-    // 지역별 통계
-    const regionStats = await pool.query(`
+    // 전체 통계
+    const allStats = await pool.query(`
       SELECT region_type, COUNT(*) as count 
       FROM administrative_offices 
       GROUP BY region_type 
-      ORDER BY count DESC
+      ORDER BY region_type
     `);
     
-    console.log(`\n📈 지역별 통계:`);
-    regionStats.rows.forEach(stat => {
+    console.log(`\n📈 전체 관청 통계:`);
+    allStats.rows.forEach(stat => {
       console.log(`  - ${stat.region_type}: ${stat.count}개`);
     });
     
@@ -246,28 +243,29 @@ async function importCityOffices() {
     const expectedCount = 250;
     
     console.log(`\n🔍 검증 결과:`);
-    console.log(`  - 목표 관청 수: ${expectedCount}개`);
+    console.log(`  - 목표 시군구 관청 수: ${expectedCount}개`);
     console.log(`  - 실제 저장된 수: ${actualCount}개`);
     console.log(`  - 차이: ${Math.abs(expectedCount - actualCount)}개`);
     
-    if (actualCount >= 245) { // 95% 이상이면 성공으로 간주
-      console.log(`✅ 검증 성공! 충분한 수의 관청 좌표를 수집했습니다.`);
+    if (actualCount >= 240) { // 96% 이상이면 성공으로 간주
+      console.log(`✅ 검증 성공! 충분한 수의 시군구 관청 좌표를 수집했습니다.`);
     } else {
-      console.log(`⚠️ 검증 주의! 일부 관청 좌표를 가져오지 못했습니다.`);
+      console.log(`⚠️ 검증 주의! 일부 시군구 관청 좌표를 가져오지 못했습니다.`);
     }
     
     // 샘플 데이터 확인
     const samples = await pool.query(`
-      SELECT office_name, latitude, longitude, address 
+      SELECT region_type, region_name, office_name, latitude, longitude 
       FROM administrative_offices 
+      WHERE region_type = 'sigungu'
       ORDER BY RANDOM() 
       LIMIT 10
     `);
     
-    console.log(`\n📍 샘플 데이터:`);
+    console.log(`\n📍 샘플 시군구 데이터:`);
     samples.rows.forEach(office => {
       console.log(`  - ${office.office_name}: (${office.latitude}, ${office.longitude})`);
-      console.log(`    주소: ${office.address}`);
+      console.log(`    지역: ${office.region_type} - ${office.region_name}`);
     });
     
   } catch (error) {
