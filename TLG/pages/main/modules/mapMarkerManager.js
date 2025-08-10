@@ -392,7 +392,7 @@ window.MapMarkerManager = {
     return centroid;
   },
 
-  // 카카오 API로 행정기관 위치 검색 (백엔드 프록시 사용)
+  // 카카오 API로 행정기관 위치 검색
   async findGovernmentOfficeByAPI(stores, level) {
     try {
       // 센트로이드 계산
@@ -402,20 +402,24 @@ window.MapMarkerManager = {
       const searchKeyword = this.getGovernmentSearchKeyword(stores[0], level);
       if (!searchKeyword) return null;
       
-      console.log(`🔍 백엔드 프록시를 통한 행정기관 검색: "${searchKeyword}" 주변 (${centroid.lat}, ${centroid.lng})`);
+      console.log(`🔍 카카오 API 행정기관 검색: "${searchKeyword}" 주변 (${centroid.lat}, ${centroid.lng})`);
       
-      // 백엔드 프록시를 통해 카카오 API 호출
-      const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=20000`);
+      // 카카오 장소 검색 API 호출
+      const response = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=20000&sort=distance`, {
+        headers: {
+          'Authorization': 'KakaoAK 8b85ede876c3b97074b5f6fa8e999c55'
+        }
+      });
       
       if (!response.ok) {
-        console.log('❌ 백엔드 프록시 호출 실패:', response.status);
+        console.log('❌ 카카오 API 호출 실패:', response.status);
         return null;
       }
       
       const data = await response.json();
       
-      if (data.success && data.places && data.places.length > 0) {
-        const place = data.places[0];
+      if (data.documents && data.documents.length > 0) {
+        const place = data.documents[0];
         console.log(`✅ 행정기관 발견: ${place.place_name} (${place.y}, ${place.x})`);
         
         return {
@@ -424,11 +428,11 @@ window.MapMarkerManager = {
         };
       }
       
-      console.log('🔍 백엔드에서 행정기관을 찾지 못함');
+      console.log('🔍 카카오 API에서 행정기관을 찾지 못함');
       return null;
       
     } catch (error) {
-      console.error('❌ 백엔드 프록시 행정기관 검색 실패:', error);
+      console.error('❌ 카카오 API 행정기관 검색 실패:', error);
       return null;
     }
   },
