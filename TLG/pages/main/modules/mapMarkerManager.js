@@ -132,37 +132,61 @@ window.MapMarkerManager = {
       </div>
       <style>
         .store-marker {
-          background: white;
+          background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
           border: 2px solid ${isOpen ? '#4caf50' : '#ff9800'};
-          border-radius: 8px;
-          padding: 6px 8px;
+          border-radius: 12px;
+          padding: 10px 12px;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-          min-width: 100px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          min-width: 120px;
           position: relative;
           z-index: 200;
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          backdrop-filter: blur(10px);
+        }
+        .store-marker::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, ${isOpen ? '#4caf50' : '#ff9800'}, ${isOpen ? '#66bb6a' : '#ffb74d'});
+          border-radius: 12px 12px 0 0;
         }
         .store-marker-hoverable:hover {
-          transform: scale(1.1) !important;
+          transform: scale(1.08) translateY(-3px) !important;
           z-index: 9999 !important;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+          box-shadow: 0 12px 40px rgba(0,0,0,0.25) !important;
           border-width: 3px !important;
+          background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%) !important;
         }
         .store-name {
-          font-weight: bold;
-          color: #333;
+          font-weight: 700;
+          color: #1a1a1a;
           font-size: 12px;
-          margin-bottom: 2px;
-          line-height: 1.2;
+          margin-bottom: 4px;
+          line-height: 1.3;
+          text-shadow: 0 0.5px 1px rgba(0,0,0,0.05);
         }
         .store-status {
           font-size: 10px;
-          font-weight: 500;
+          font-weight: 600;
           line-height: 1.2;
+          padding: 2px 6px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          gap: 2px;
         }
-        .store-status.open { color: #4caf50; }
-        .store-status.closed { color: #ff9800; }
+        .store-status.open { 
+          color: #2e7d32; 
+          background: rgba(76, 175, 80, 0.1);
+        }
+        .store-status.closed { 
+          color: #ef6c00; 
+          background: rgba(255, 152, 0, 0.1);
+        }
       </style>
     `;
     
@@ -205,36 +229,52 @@ window.MapMarkerManager = {
       </div>
       <style>
         .cluster-marker {
-          background: linear-gradient(135deg, #297efc, #4f46e5);
+          background: linear-gradient(135deg, #297efc 0%, #4f46e5 50%, #667eea 100%);
           color: white;
-          border-radius: 6px;
-          padding: 2px 5px;
+          border-radius: 12px;
+          padding: 8px 12px;
           cursor: pointer;
-          box-shadow: 0 1px 3px rgba(41,126,252,0.3);
-          min-width: 32px;
+          box-shadow: 0 4px 16px rgba(41,126,252,0.35);
+          min-width: 60px;
           text-align: center;
           position: relative;
           z-index: 100;
-          transition: all 0.2s ease;
-          font-size: 9px;
-          border: 1px solid rgba(255,255,255,0.2);
+          transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+          font-size: 11px;
+          border: 2px solid rgba(255,255,255,0.3);
+          backdrop-filter: blur(8px);
+        }
+        .cluster-marker::before {
+          content: '';
+          position: absolute;
+          inset: -2px;
+          border-radius: 14px;
+          background: linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+          z-index: -1;
         }
         .cluster-marker-hoverable:hover {
-          transform: scale(1.2) !important;
+          transform: scale(1.15) translateY(-2px) !important;
           z-index: 9998 !important;
-          box-shadow: 0 4px 15px rgba(41,126,252,0.6) !important;
-          border-color: rgba(255,255,255,0.4) !important;
+          box-shadow: 0 8px 30px rgba(41,126,252,0.65) !important;
+          border-color: rgba(255,255,255,0.6) !important;
+          filter: brightness(1.1);
         }
         .region-name {
-          font-weight: bold;
-          font-size: 8px;
-          line-height: 1.1;
-          margin-bottom: 1px;
+          font-weight: 700;
+          font-size: 10px;
+          line-height: 1.2;
+          margin-bottom: 2px;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
         .cluster-count {
-          font-size: 7px;
-          opacity: 0.9;
+          font-size: 8px;
+          opacity: 0.95;
           line-height: 1;
+          font-weight: 500;
+          background: rgba(255,255,255,0.15);
+          padding: 1px 4px;
+          border-radius: 4px;
+          display: inline-block;
         }
       </style>
     `;
