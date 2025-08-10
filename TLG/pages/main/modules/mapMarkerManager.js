@@ -172,13 +172,10 @@ window.MapMarkerManager = {
   createStoreMarkersBatch(stores, map) {
     console.log(`📦 개별 매장 마커 배치 생성: ${stores.length}개`);
     
-    const markers = [];
+    // 모든 마커를 한번에 생성
+    const markers = stores.map(store => this.createStoreMarker(store, map));
     
-    for (const store of stores) {
-      const marker = this.createStoreMarker(store, map);
-      markers.push(marker);
-    }
-    
+    console.log(`✅ 배치 생성 완료: ${markers.length}개 마커`);
     return markers;
   },
 
@@ -250,22 +247,23 @@ window.MapMarkerManager = {
   async createClusterMarkersBatch(clusters, map) {
     console.log(`📦 집계 마커 배치 생성: ${clusters.size}개`);
     
-    const markers = [];
-    
-    for (const [regionName, regionStores] of clusters.entries()) {
-      // 작업 취소 확인
-      if (this.shouldCancel) {
-        console.log('🚫 집계 마커 배치 생성 중단됨');
-        break;
-      }
-      
-      const marker = await this.createClusterMarker(regionName, regionStores, map);
-      if (marker) {
-        markers.push(marker);
-      }
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 배치 생성 중단됨');
+      return [];
     }
     
-    return markers;
+    // 모든 집계 마커를 병렬로 한번에 생성
+    const clusterEntries = Array.from(clusters.entries());
+    const markerPromises = clusterEntries.map(([regionName, regionStores]) => 
+      this.createClusterMarker(regionName, regionStores, map)
+    );
+    
+    const markers = await Promise.all(markerPromises);
+    const validMarkers = markers.filter(marker => marker !== null);
+    
+    console.log(`✅ 배치 생성 완료: ${validMarkers.length}개 마커`);
+    return validMarkers;
   },
 
   // 집계 마커 생성
