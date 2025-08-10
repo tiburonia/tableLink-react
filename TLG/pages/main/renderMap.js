@@ -400,8 +400,13 @@ async function renderMap() {
 
       console.log('🚫 기존 마커 시스템 완전 비활성화 - 타일 시스템만 사용');
 
-      // 기존 시스템 대신 타일 시스템만 사용
-      // 지도 이벤트는 타일 마커 관리자에서 처리함
+      // 타일 기반 마커 관리자 초기화
+      if (window.MapMarkerManager) {
+        console.log('🗺️ 타일 기반 마커 관리자 초기화');
+        window.MapMarkerManager.initialize(map);
+      } else {
+        console.error('❌ 타일 마커 관리자를 찾을 수 없습니다');
+      }
 
     } else {
       console.log('⏳ DOM 로딩 대기 중...');
