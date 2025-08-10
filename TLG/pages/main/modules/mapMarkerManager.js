@@ -91,14 +91,18 @@ window.MapMarkerManager = {
 
   // 집계 마커 표시
   async showClusterMarkers(map, level) {
-    console.log('🏘️ 집계 마커 표시 시작');
+    console.log(`🏘️ 집계 마커 표시 시작 (레벨 ${level})`);
     
     const stores = await this.fetchStores(map);
+    console.log(`📍 조회된 매장 수: ${stores.length}개`);
     
     // 지역별 그룹화
     const clusters = this.groupStoresByRegion(stores, level);
+    console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
     
+    // 각 지역별 매장 수 로그
     for (const [regionName, regionStores] of clusters.entries()) {
+      console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
       const marker = this.createClusterMarker(regionName, regionStores, map);
       if (marker) {
         this.currentMarkers.push(marker);
@@ -218,14 +222,12 @@ window.MapMarkerManager = {
     return overlay;
   },
 
-  // 지역별 매장 그룹화
+  // 지역별 매장 그룹화 (sido, sigungu, eupmyeondong 컬럼 사용)
   groupStoresByRegion(stores, level) {
     const clusters = new Map();
     
     stores.forEach(store => {
-      if (!store.address) return;
-      
-      const region = this.extractRegion(store.address, level);
+      const region = this.getRegionByLevel(store, level);
       if (!region) return;
       
       if (!clusters.has(region)) {
@@ -234,22 +236,36 @@ window.MapMarkerManager = {
       clusters.get(region).push(store);
     });
     
+    console.log(`📊 레벨 ${level}에서 ${stores.length}개 매장을 ${clusters.size}개 지역으로 그룹화`);
+    
     return clusters;
   },
 
-  // 주소에서 지역명 추출
-  extractRegion(address, level) {
-    const parts = address.split(' ').filter(part => part.trim());
+  // 레벨에 따른 지역명 결정 (DB 컬럼 직접 사용)
+  getRegionByLevel(store, level) {
+    const { sido, sigungu, eupmyeondong } = store;
+    
+    if (!sido) return null;
     
     if (level <= 7) {
-      // 동/읍/면 단위 (3번째 부분까지)
-      return parts.slice(0, 3).join(' ');
+      // 동/읍/면 단위 (sido + sigungu + eupmyeondong)
+      if (eupmyeondong && sigungu) {
+        return `${sido} ${sigungu} ${eupmyeondong}`;
+      } else if (sigungu) {
+        return `${sido} ${sigungu}`;
+      } else {
+        return sido;
+      }
     } else if (level <= 10) {
-      // 시/군/구 단위 (2번째 부분까지)
-      return parts.slice(0, 2).join(' ');
+      // 시/군/구 단위 (sido + sigungu)
+      if (sigungu) {
+        return `${sido} ${sigungu}`;
+      } else {
+        return sido;
+      }
     } else {
-      // 시/도 단위 (1번째 부분까지)
-      return parts[0] || null;
+      // 시/도 단위 (sido만)
+      return sido;
     }
   },
 

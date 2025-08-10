@@ -85,7 +85,8 @@ router.get('/viewport', async (req, res) => {
     console.log(`📍 뷰포트 범위 내 매장 수: ${viewportCountResult.rows[0].viewport_count}개`);
 
     const storesResult = await pool.query(`
-      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude,
+             sa.sido, sa.sigungu, sa.eupmyeondong
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
       WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
@@ -109,7 +110,10 @@ router.get('/viewport', async (req, res) => {
         : { lat: 37.5665, lng: 126.9780 },
       isOpen: store.is_open !== false,
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0
+      reviewCount: store.review_count || 0,
+      sido: store.sido,
+      sigungu: store.sigungu,
+      eupmyeondong: store.eupmyeondong
     }));
 
     console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개 매장 (레벨 ${currentLevel})`);
