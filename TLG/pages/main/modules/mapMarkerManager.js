@@ -118,8 +118,13 @@ window.MapMarkerManager = {
     const isOpen = store.isOpen !== false;
     const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
     
+    // 고유 ID 생성으로 z-index 문제 해결
+    const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
+    
     const content = `
-      <div class="store-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+      <div id="${markerId}" class="store-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})"
+           onmouseover="this.style.zIndex='1000'; this.style.transform='scale(1.05)'" 
+           onmouseout="this.style.zIndex='200'; this.style.transform='scale(1)'">
         <div class="marker-info">
           <div class="store-name">${store.name}</div>
           <div class="store-status ${isOpen ? 'open' : 'closed'}">
@@ -141,9 +146,7 @@ window.MapMarkerManager = {
           transition: all 0.2s ease;
         }
         .store-marker:hover {
-          transform: scale(1.05);
           box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-          z-index: 1000;
         }
         .store-name {
           font-weight: bold;
@@ -187,40 +190,46 @@ window.MapMarkerManager = {
       this.getDisplayRegionName(stores[0], this.currentLevel) || regionName : 
       regionName;
     
+    // 고유 ID 생성으로 z-index 문제 해결
+    const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
+    
     const content = `
-      <div class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
+      <div id="${markerId}" class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})" 
+           onmouseover="this.style.zIndex='999'; this.style.transform='scale(1.1)'" 
+           onmouseout="this.style.zIndex='100'; this.style.transform='scale(1)'">
         <div class="cluster-info">
           <div class="region-name">${displayName}</div>
-          <div class="cluster-count">${storeCount}개 매장 (운영중 ${openCount}개)</div>
+          <div class="cluster-count">${storeCount}개</div>
         </div>
       </div>
       <style>
         .cluster-marker {
           background: linear-gradient(135deg, #297efc, #4f46e5);
           color: white;
-          border-radius: 12px;
-          padding: 6px 10px;
+          border-radius: 8px;
+          padding: 3px 6px;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(41,126,252,0.3);
-          min-width: 70px;
+          box-shadow: 0 1px 4px rgba(41,126,252,0.3);
+          min-width: 40px;
           text-align: center;
           position: relative;
           z-index: 100;
           transition: all 0.2s ease;
+          font-size: 10px;
         }
         .cluster-marker:hover {
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(41,126,252,0.4);
-          z-index: 999;
+          box-shadow: 0 2px 8px rgba(41,126,252,0.5);
         }
         .region-name {
           font-weight: bold;
-          font-size: 12px;
-          margin-bottom: 2px;
+          font-size: 9px;
+          line-height: 1.2;
+          margin-bottom: 1px;
         }
         .cluster-count {
-          font-size: 10px;
+          font-size: 8px;
           opacity: 0.9;
+          line-height: 1;
         }
       </style>
     `;
@@ -330,19 +339,32 @@ window.MapMarkerManager = {
 
   // 행정기관 찾기
   findGovernmentOffice(stores, level) {
-    // 행정기관 키워드
+    // 행정기관 키워드 (우선순위별로 정렬)
     const govKeywords = [
-      '구청', '시청', '군청', '도청', '시군구청', '읍사무소', '면사무소', '동사무소',
-      '행정복지센터', '주민센터', '군청사', '시청사', '구청사', '도청사'
+      // 주요 행정기관
+      '시청', '구청', '군청', '도청', '청사',
+      // 하위 행정기관
+      '읍사무소', '면사무소', '동사무소', '행정복지센터', '주민센터',
+      // 공공기관
+      '시청사', '구청사', '군청사', '도청사', '행정타운', '시민회관',
+      // 추가 키워드
+      '청', '사무소', '센터'
     ];
     
-    // 매장명에 행정기관 키워드가 포함된 매장 찾기
+    // 우선순위별로 행정기관 찾기
     for (const keyword of govKeywords) {
-      const govStore = stores.find(store => 
+      const govStores = stores.filter(store => 
         store.name && store.name.includes(keyword)
       );
-      if (govStore) {
-        return govStore;
+      
+      if (govStores.length > 0) {
+        // 여러 개가 있으면 가장 짧은 이름의 매장 선택 (일반적으로 더 공식적)
+        const bestGovStore = govStores.reduce((best, current) => 
+          current.name.length < best.name.length ? current : best
+        );
+        
+        console.log(`🏛️ 행정기관 발견: ${bestGovStore.name} (키워드: ${keyword})`);
+        return bestGovStore;
       }
     }
     
