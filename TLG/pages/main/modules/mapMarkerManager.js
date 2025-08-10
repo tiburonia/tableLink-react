@@ -9,21 +9,41 @@ window.MapMarkerManager = {
   // 처리 중 플래그
   isLoading: false,
 
+  // 현재 작업 취소 플래그
+  shouldCancel: false,
+
   // 메인 진입점 - 레벨 변경시 호출
   async handleMapLevelChange(level, map) {
     console.log(`🔄 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
 
+    // 이전 레벨과 현재 레벨의 집계 마커 타입 확인
+    const prevMarkerType = this.getMarkerType(this.currentLevel);
+    const newMarkerType = this.getMarkerType(level);
+
     if (this.isLoading) {
-      console.log('⏸️ 이미 로딩 중 - 무시');
-      return;
+      // 집계 마커 타입이 바뀌면 기존 작업 취소하고 새로 시작
+      if (prevMarkerType !== newMarkerType) {
+        console.log(`🔄 집계 마커 타입 변경 (${prevMarkerType} → ${newMarkerType}) - 기존 작업 취소`);
+        this.shouldCancel = true;
+        this.clearAllMarkers();
+        // 잠시 대기 후 새 작업 시작
+        setTimeout(() => this.handleMapLevelChange(level, map), 100);
+        return;
+      } else {
+        console.log('⏸️ 동일한 집계 마커 타입 - 기존 작업 유지');
+        return;
+      }
     }
 
     this.isLoading = true;
+    this.shouldCancel = false;
     this.currentLevel = level;
 
     try {
-      // 기존 마커 모두 제거
-      this.clearAllMarkers();
+      // 집계 마커 타입이 바뀔 때만 기존 마커 제거
+      if (prevMarkerType !== newMarkerType) {
+        this.clearAllMarkers();
+      }
 
       // 새 마커 생성
       if (level <= 5) {
@@ -35,12 +55,21 @@ window.MapMarkerManager = {
       }
 
     } catch (error) {
-      console.error('❌ 마커 업데이트 실패:', error);
+      if (!this.shouldCancel) {
+        console.error('❌ 마커 업데이트 실패:', error);
+      }
     } finally {
       this.isLoading = false;
     }
 
-    console.log(`✅ 지도 레벨 ${level} 마커 업데이트 완료`);
+    if (!this.shouldCancel) {
+      console.log(`✅ 지도 레벨 ${level} 마커 업데이트 완료`);
+    }
+  },
+
+  // 마커 타입 결정 (개별/집계)
+  getMarkerType(level) {
+    return level <= 5 ? 'individual' : 'cluster';
   },
 
   // 뷰포트 내 매장 데이터 가져오기
@@ -78,14 +107,30 @@ window.MapMarkerManager = {
 
     const stores = await this.fetchStores(map);
 
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 개별 매장 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+
+    let processedCount = 0;
     for (const store of stores) {
+      // 작업 취소 확인
+      if (this.shouldCancel) {
+        console.log(`🚫 개별 매장 마커 생성 중단됨 (${processedCount}/${stores.length}개 완료)`);
+        return;
+      }
+
       if (!store.coord?.lat || !store.coord?.lng) continue;
 
       const marker = this.createStoreMarker(store, map);
       this.currentMarkers.push(marker);
+      processedCount++;
     }
 
-    console.log(`✅ 개별 마커 ${this.currentMarkers.length}개 생성 완료`);
+    if (!this.shouldCancel) {
+      console.log(`✅ 개별 마커 ${this.currentMarkers.length}개 생성 완료`);
+    }
   },
 
   // 집계 마커 표시
@@ -93,6 +138,13 @@ window.MapMarkerManager = {
     console.log(`🏘️ 집계 마커 표시 시작 (레벨 ${level})`);
 
     const stores = await this.fetchStores(map);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+    
     console.log(`📍 조회된 매장 수: ${stores.length}개`);
 
     // 지역별 그룹화
@@ -100,15 +152,32 @@ window.MapMarkerManager = {
     console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
 
     // 각 지역별 매장 수 로그
+    let processedCount = 0;
     for (const [regionName, regionStores] of clusters.entries()) {
+      // 작업 취소 확인
+      if (this.shouldCancel) {
+        console.log(`🚫 집계 마커 생성 중단됨 (${processedCount}/${clusters.size}개 완료)`);
+        return;
+      }
+
       console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
       const marker = await this.createClusterMarker(regionName, regionStores, map);
+      
+      // 마커 생성 후 다시 취소 확인
+      if (this.shouldCancel) {
+        console.log(`🚫 집계 마커 생성 중단됨 (${processedCount + 1}/${clusters.size}개 완료)`);
+        return;
+      }
+
       if (marker) {
         this.currentMarkers.push(marker);
       }
+      processedCount++;
     }
 
-    console.log(`✅ 집계 마커 ${this.currentMarkers.length}개 생성 완료`);
+    if (!this.shouldCancel) {
+      console.log(`✅ 집계 마커 ${this.currentMarkers.length}개 생성 완료`);
+    }
   },
 
   // 개별 매장 마커 생성
@@ -323,6 +392,11 @@ window.MapMarkerManager = {
 
   // 집계 마커 앵커 위치 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
   async calculateAnchorPosition(stores, level) {
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      return null;
+    }
+
     // 좌표가 유효한 매장만 필터링
     const validStores = stores.filter(s => {
       return s && s.coord && 
@@ -342,6 +416,7 @@ window.MapMarkerManager = {
     if (level >= 11) {
       // 시도 레벨 - DB에서 도청/시청 좌표 조회
       const coord = await this.getAdministrativeOfficeCoord('sido', firstStore.sido);
+      if (this.shouldCancel) return null;
       if (coord) {
         console.log(`🏛️ 시도청 앵커: ${firstStore.sido} (${coord.lat}, ${coord.lng})`);
         return coord;
@@ -350,6 +425,7 @@ window.MapMarkerManager = {
       // 시군구 레벨 - DB에서 시청/군청/구청 좌표 조회
       if (firstStore.sigungu) {
         const coord = await this.getAdministrativeOfficeCoord('sigungu', firstStore.sigungu);
+        if (this.shouldCancel) return null;
         if (coord) {
           console.log(`🏛️ 시군구청 앵커: ${firstStore.sigungu} (${coord.lat}, ${coord.lng})`);
           return coord;
@@ -359,6 +435,7 @@ window.MapMarkerManager = {
       // 읍면동 레벨 - ST_PointOnSurface로 중심점 계산
       if (firstStore.sido && firstStore.sigungu && firstStore.eupmyeondong) {
         const coord = await this.getEupmyeondongCenter(firstStore.sido, firstStore.sigungu, firstStore.eupmyeondong);
+        if (this.shouldCancel) return null;
         if (coord) {
           console.log(`📍 읍면동 중심점 앵커: ${firstStore.eupmyeondong} (${coord.lat}, ${coord.lng})`);
           return coord;
