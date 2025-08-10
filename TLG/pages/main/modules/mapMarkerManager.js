@@ -83,7 +83,13 @@ window.MapMarkerManager = {
 
   // 캔버스 크기 조정
   resizeCanvas() {
-    const mapContainer = this.map.getContainer();
+    // 카카오맵에서는 지도 컨테이너를 document.getElementById로 직접 접근
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) {
+      console.error('❌ 지도 컨테이너를 찾을 수 없습니다');
+      return;
+    }
+    
     const rect = mapContainer.getBoundingClientRect();
     
     const devicePixelRatio = window.devicePixelRatio || 1;
@@ -334,7 +340,11 @@ window.MapMarkerManager = {
       const position = new kakao.maps.LatLng(lat, lng);
       const point = this.map.getProjection().pointFromCoords(position);
       const mapCenter = this.map.getProjection().pointFromCoords(this.map.getCenter());
-      const mapContainer = this.map.getContainer();
+      
+      // 카카오맵 컨테이너 직접 접근
+      const mapContainer = document.getElementById('map');
+      if (!mapContainer) return null;
+      
       const rect = mapContainer.getBoundingClientRect();
       
       const x = (point.x - mapCenter.x) + rect.width / 2;
