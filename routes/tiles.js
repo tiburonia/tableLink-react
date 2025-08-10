@@ -1,13 +1,24 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 const tilebelt = require('@mapbox/tilebelt');
-const Supercluster = require('supercluster');
 const compression = require('compression');
 
-// gzip 압축 미들웨어 적용
-router.use(compression());
+// Supercluster 모듈 임포트 (다양한 방식으로 시도)
+let Supercluster;
+try {
+  // CommonJS 방식으로 시도
+  Supercluster = require('supercluster');
+
+  // 만약 default export라면
+  if (Supercluster.default && typeof Supercluster.default === 'function') {
+    Supercluster = Supercluster.default;
+  }
+
+  console.log('✅ Supercluster 모듈 로드 성공:', typeof Supercluster);
+} catch (error) {
+  console.error('❌ Supercluster 모듈 로드 실패:', error);
+}
 
 // 타일 데이터 조회 API
 router.get('/:z/:x/:y', async (req, res) => {
@@ -104,14 +115,55 @@ router.get('/:z/:x/:y', async (req, res) => {
       }
     }));
 
+    // Supercluster 모듈 확인 및 생성
+    let supercluster;
+
+    if (!Supercluster || typeof Supercluster !== 'function') {
+      console.error('❌ Supercluster 모듈이 올바르게 로드되지 않음:', typeof Supercluster);
+
+      // Supercluster 없이 개별 포인트만 반환
+      const featureCollection = {
+        type: 'FeatureCollection',
+        features: points
+      };
+
+      return res.json({
+        success: true,
+        tile: { z: zoom, x: tileX, y: tileY },
+        bbox: bbox,
+        data: featureCollection,
+        meta: {
+          totalFeatures: featureCollection.features.length,
+          clusters: 0,
+          stores: featureCollection.features.length
+        }
+      });
+    }
+
     // Supercluster 인스턴스 생성
-    const supercluster = new Supercluster({
-      radius: 60,     // 클러스터링 반경 (픽셀)
-      maxZoom: 16,    // 최대 클러스터링 줌 레벨
-      minZoom: 0,     // 최소 클러스터링 줌 레벨
-      minPoints: 2,   // 클러스터 생성을 위한 최소 포인트 수
-      generateId: true
-    });
+    try {
+      console.log('🔧 Supercluster 인스턴스 생성 시도...');
+
+      supercluster = new Supercluster({
+        radius: 60,     // 클러스터링 반경 (픽셀)
+        maxZoom: 16,    // 최대 클러스터링 줌 레벨
+        minZoom: 0,     // 최소 클러스터링 줌 레벨
+        minPoints: 2,   // 클러스터 생성을 위한 최소 포인트 수
+        generateId: true
+      });
+
+      console.log('✅ Supercluster 인스턴스 생성 성공');
+
+    } catch (error) {
+      console.error('❌ Supercluster 초기화 실패:', error);
+      console.error('Supercluster type:', typeof Supercluster);
+      console.error('Supercluster value:', Supercluster);
+
+      return res.status(500).json({
+        success: false,
+        error: 'Supercluster 초기화 실패: ' + error.message
+      });
+    }
 
     // 포인트 데이터 로드
     supercluster.load(points);
