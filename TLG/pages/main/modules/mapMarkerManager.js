@@ -675,27 +675,18 @@ window.MapMarkerManager = {
     const clusters = this.groupStoresByRegion(stores, level);
     console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
 
-    // 기존 마커 위치 추출 (중복 방지용)
-    const existingPositions = this.getExistingMarkerPositions();
+    // 기존 마커의 지역명 추출 (중복 방지용)
+    const existingRegions = this.getExistingMarkerRegions();
 
-    // 새로운 지역만 필터링 (중복 제거)
+    // 새로운 지역만 필터링 (지역명 기반 중복 제거)
     const newClusters = new Map();
     for (const [regionName, regionStores] of clusters.entries()) {
-      // 해당 지역의 앵커 위치 계산
-      const anchorCoord = await this.calculateAnchorPosition(regionStores, level);
-      if (!anchorCoord || this.shouldCancel) continue;
-
-      // 기존 마커와 중복되는지 확인 (100m 이내는 중복으로 간주)
-      const isDuplicate = existingPositions.some(pos => 
-        this.calculateDistance(anchorCoord.lat, anchorCoord.lng, pos.lat, pos.lng) < 100
-      );
-
-      if (!isDuplicate) {
+      if (!existingRegions.has(regionName)) {
         newClusters.set(regionName, regionStores);
       }
     }
 
-    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 지역: ${newClusters.size}개`);
+    console.log(`📍 기존 지역: ${existingRegions.size}개, 새로운 지역: ${newClusters.size}개`);
 
     if (newClusters.size === 0) {
       console.log('ℹ️ 추가할 새로운 지역이 없습니다');
@@ -742,6 +733,29 @@ window.MapMarkerManager = {
     });
 
     return positions;
+  },
+
+  // 기존 마커들의 지역명 추출 (중복 방지용)
+  getExistingMarkerRegions() {
+    const regions = new Set();
+
+    this.currentMarkers.forEach(marker => {
+      try {
+        if (marker && marker.getContent) {
+          const content = marker.getContent();
+          // onclick 속성에서 지역명 추출
+          const match = content.match(/zoomToRegion\('([^']+)'/);
+          if (match && match[1]) {
+            regions.add(match[1]);
+          }
+        }
+      } catch (error) {
+        // 지역명 추출 실패시 무시
+      }
+    });
+
+    console.log(`🗂️ 기존 마커 지역명: ${Array.from(regions).join(', ')}`);
+    return regions;
   },
 
   // 두 지점 간 거리 계산 (미터 단위)
