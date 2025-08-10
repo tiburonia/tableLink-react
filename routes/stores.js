@@ -1,6 +1,69 @@
 const express = require('express');
+const fetch = require('node-fetch');
 const router = express.Router();
 const pool = require('../shared/config/database');
+
+// 카카오 장소 검색 프록시 API (맨 앞에 배치하여 충돌 방지)
+router.get('/search-place', async (req, res) => {
+  try {
+    const { query, x, y, radius } = req.query;
+    
+    if (!query) {
+      return res.status(400).json({
+        success: false,
+        error: '검색어가 필요합니다'
+      });
+    }
+
+    const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+    if (!KAKAO_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'KAKAO_API_KEY가 설정되지 않았습니다'
+      });
+    }
+
+    // 카카오 장소 검색 API 호출
+    const params = new URLSearchParams({
+      query: query,
+      ...(x && { x: x }),
+      ...(y && { y: y }),
+      ...(radius && { radius: radius })
+    });
+
+    const response = await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?${params}`,
+      {
+        headers: {
+          'Authorization': `KakaoAK ${KAKAO_API_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error('❌ 카카오 API 호출 실패:', response.status);
+      return res.status(500).json({
+        success: false,
+        error: `카카오 API 호출 실패: ${response.status}`
+      });
+    }
+
+    const data = await response.json();
+    
+    res.json({
+      success: true,
+      places: data.documents || [],
+      meta: data.meta || {}
+    });
+
+  } catch (error) {
+    console.error('❌ 장소 검색 프록시 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '장소 검색 실패: ' + error.message
+    });
+  }
+});
 
 // stores 테이블 별점 평균 업데이트 함수
 async function updateStoreRating(storeId) {

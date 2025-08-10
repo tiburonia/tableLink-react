@@ -325,12 +325,23 @@ window.MapMarkerManager = {
 
   // 집계 마커 앵커 위치 계산 (행정기관 우선, 없으면 센트로이드)
   calculateAnchorPosition(stores, level) {
-    const validStores = stores.filter(s => s.coord?.lat && s.coord?.lng);
-    if (validStores.length === 0) return null;
+    // 좌표가 유효한 매장만 필터링
+    const validStores = stores.filter(s => {
+      return s && s.coord && 
+             typeof s.coord.lat === 'number' && 
+             typeof s.coord.lng === 'number' &&
+             !isNaN(s.coord.lat) && 
+             !isNaN(s.coord.lng);
+    });
+
+    if (validStores.length === 0) {
+      console.warn('⚠️ 유효한 좌표를 가진 매장이 없습니다');
+      return null;
+    }
 
     // 행정기관으로 추정되는 매장 찾기
     const govStore = this.findGovernmentOffice(validStores, level);
-    if (govStore) {
+    if (govStore && govStore.coord) {
       console.log(`📍 행정기관 앵커: ${govStore.name} (${govStore.coord.lat}, ${govStore.coord.lng})`);
       return govStore.coord;
     }
