@@ -102,7 +102,7 @@ window.MapMarkerManager = {
     // 각 지역별 매장 수 로그
     for (const [regionName, regionStores] of clusters.entries()) {
       console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
-      const marker = this.createClusterMarker(regionName, regionStores, map);
+      const marker = await this.createClusterMarker(regionName, regionStores, map);
       if (marker) {
         this.currentMarkers.push(marker);
       }
@@ -176,11 +176,11 @@ window.MapMarkerManager = {
   },
 
   // 집계 마커 생성
-  createClusterMarker(regionName, stores, map) {
+  async createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
 
-    // 앵커 좌표 계산 (행정기관 우선, 없으면 센트로이드)
-    const anchorCoord = this.calculateAnchorPosition(stores, this.currentLevel);
+    // 앵커 좌표 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
+    const anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
     if (!anchorCoord) return null;
 
     const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
@@ -321,8 +321,8 @@ window.MapMarkerManager = {
     }
   },
 
-  // 집계 마커 앵커 위치 계산 (행정기관 우선, 없으면 센트로이드)
-  calculateAnchorPosition(stores, level) {
+  // 집계 마커 앵커 위치 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
+  async calculateAnchorPosition(stores, level) {
     // 좌표가 유효한 매장만 필터링
     const validStores = stores.filter(s => {
       return s && s.coord && 
@@ -337,162 +337,88 @@ window.MapMarkerManager = {
       return null;
     }
 
-    // 행정기관으로 추정되는 매장 찾기
-    const govStore = this.findGovernmentOffice(validStores, level);
-    if (govStore && govStore.coord) {
-      console.log(`📍 행정기관 앵커: ${govStore.name} (${govStore.coord.lat}, ${govStore.coord.lng})`);
-      return govStore.coord;
+    const firstStore = validStores[0];
+
+    if (level >= 11) {
+      // 시도 레벨 - DB에서 도청/시청 좌표 조회
+      const coord = await this.getAdministrativeOfficeCoord('sido', firstStore.sido);
+      if (coord) {
+        console.log(`🏛️ 시도청 앵커: ${firstStore.sido} (${coord.lat}, ${coord.lng})`);
+        return coord;
+      }
+    } else if (level >= 8) {
+      // 시군구 레벨 - DB에서 시청/군청/구청 좌표 조회
+      if (firstStore.sigungu) {
+        const coord = await this.getAdministrativeOfficeCoord('sigungu', firstStore.sigungu);
+        if (coord) {
+          console.log(`🏛️ 시군구청 앵커: ${firstStore.sigungu} (${coord.lat}, ${coord.lng})`);
+          return coord;
+        }
+      }
+    } else {
+      // 읍면동 레벨 - ST_PointOnSurface로 중심점 계산
+      if (firstStore.sido && firstStore.sigungu && firstStore.eupmyeondong) {
+        const coord = await this.getEupmyeondongCenter(firstStore.sido, firstStore.sigungu, firstStore.eupmyeondong);
+        if (coord) {
+          console.log(`📍 읍면동 중심점 앵커: ${firstStore.eupmyeondong} (${coord.lat}, ${coord.lng})`);
+          return coord;
+        }
+      }
     }
 
-    // 행정기관이 없으면 센트로이드 사용
+    // 모든 방법이 실패하면 센트로이드 사용
     const centroid = this.calculateCentroid(validStores);
-    console.log(`📍 센트로이드 앵커: (${centroid.lat}, ${centroid.lng})`);
+    console.log(`📍 센트로이드 앵커(fallback): (${centroid.lat}, ${centroid.lng})`);
     return centroid;
   },
 
-  // 행정기관 찾기 (키워드 기반)
-  findGovernmentOffice(stores, level) {
-    // 행정기관 키워드 (우선순위별로 정렬)
-    const govKeywords = [
-      // 주요 행정기관
-      '시청', '구청', '군청', '도청', '청사',
-      // 하위 행정기관
-      '읍사무소', '면사무소', '동사무소', '행정복지센터', '주민센터',
-      // 공공기관
-      '시청사', '구청사', '군청사', '도청사', '행정타운', '시민회관',
-      // 추가 키워드
-      '청', '사무소', '센터'
-    ];
-
-    // 우선순위별로 행정기관 찾기
-    for (const keyword of govKeywords) {
-      const govStores = stores.filter(store =>
-        store.name && store.name.includes(keyword)
-      );
-
-      if (govStores.length > 0) {
-        // 여러 개가 있으면 가장 짧은 이름의 매장 선택 (일반적으로 더 공식적)
-        const bestGovStore = govStores.reduce((best, current) =>
-          current.name.length < best.name.length ? current : best
-        );
-
-        console.log(`🏛️ 행정기관 발견 (키워드): ${bestGovStore.name} (키워드: ${keyword})`);
-        return bestGovStore;
-      }
-    }
-
-    // 키워드 기반 검색 실패 시, API 기반으로 다시 시도
-    return this.findGovernmentOfficeByAPI(stores, level);
-  },
-
-  // 카카오 API로 행정기관 위치 검색 (백엔드 프록시 사용)
-  async findGovernmentOfficeByAPI(stores, level) {
+  // DB에서 행정기관 좌표 조회
+  async getAdministrativeOfficeCoord(regionType, regionName) {
     try {
-      // 센트로이드 계산
-      const centroid = this.calculateCentroid(stores);
-      const searchKeyword = this.getGovernmentSearchKeyword(stores[0], level);
-      if (!searchKeyword) return null;
-
-      console.log(`🔍 백엔드 프록시를 통한 행정기관 검색: "${searchKeyword}" 주변 (${centroid.lat}, ${centroid.lng})`);
-
-      // 백엔드 프록시를 통해 카카오 API 호출
-      const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=20000`);
-
-      if (!response.ok) {
-        console.log('❌ 백엔드 프록시 호출 실패:', response.status);
-        return null;
-      }
-
+      const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
       const data = await response.json();
 
-      if (data.success && data.places && data.places.length > 0) {
-        // 가장 정확한 행정기관 찾기
-        const validPlace = this.selectBestGovernmentOffice(data.places, searchKeyword);
-        if (validPlace) {
-          console.log(`✅ 행정기관 발견: ${validPlace.place_name} (${validPlace.y}, ${validPlace.x})`);
-
-          return {
-            lat: parseFloat(validPlace.y),
-            lng: parseFloat(validPlace.x),
-            name: validPlace.place_name
-          };
-        }
+      if (data.success && data.office) {
+        return {
+          lat: data.office.latitude,
+          lng: data.office.longitude
+        };
       }
 
-      console.log('🔍 백엔드에서 적절한 행정기관을 찾지 못함');
       return null;
-
     } catch (error) {
-      console.error('❌ 백엔드 프록시 행정기관 검색 실패:', error);
+      console.error('❌ 행정기관 좌표 조회 실패:', error);
       return null;
     }
   },
 
-  // 검색 결과에서 가장 적절한 행정기관 선택
-  selectBestGovernmentOffice(places, searchKeyword) {
-    // 우선순위: 정확한 키워드 매치 > 공공기관 카테고리 > 이름 길이
-    const govKeywords = ['청', '시청', '군청', '구청', '도청', '사무소', '행정복지센터'];
+  // 읍면동 중심점 계산 (ST_PointOnSurface)
+  async getEupmyeondongCenter(sido, sigungu, eupmyeondong) {
+    try {
+      const params = new URLSearchParams({
+        sido: sido,
+        sigungu: sigungu,
+        eupmyeondong: eupmyeondong
+      });
 
-    for (const place of places) {
-      const name = place.place_name || '';
-      const category = place.category_name || '';
+      const response = await fetch(`/api/stores/eupmyeondong-center?${params}`);
+      const data = await response.json();
 
-      // 정확한 행정기관 키워드 포함 확인
-      const hasGovKeyword = govKeywords.some(keyword => name.includes(keyword));
-
-      // 공공기관 카테고리 확인
-      const isPublicOffice = category.includes('공공기관') || category.includes('행정기관');
-
-      if (hasGovKeyword || isPublicOffice) {
-        return place;
+      if (data.success && data.center) {
+        return {
+          lat: data.center.latitude,
+          lng: data.center.longitude
+        };
       }
-    }
 
-    // 적절한 행정기관이 없으면 첫 번째 결과 반환
-    return places[0];
-  },
-
-  // 행정기관 검색 키워드 생성
-  getGovernmentSearchKeyword(store, level) {
-    if (!store || !store.sido) return null;
-
-    if (level >= 11) {
-      // 시도 레벨 - 도청/시청
-      if (store.sido.includes('도')) {
-        return `${store.sido} 도청`;
-      } else if (store.sido.includes('시')) {
-        return `${store.sido} 시청`;
-      } else {
-        return `${store.sido} 청`;
-      }
-    } else if (level >= 8) {
-      // 시군구 레벨 - 시청/군청/구청
-      if (!store.sigungu) return null;
-
-      if (store.sigungu.includes('시')) {
-        return `${store.sigungu} 시청`;
-      } else if (store.sigungu.includes('군')) {
-        return `${store.sigungu} 군청`;
-      } else if (store.sigungu.includes('구')) {
-        return `${store.sigungu} 구청`;
-      } else {
-        return `${store.sigungu} 청사`;
-      }
-    } else {
-      // 읍면동 레벨 - 읍사무소/면사무소/동사무소
-      if (!store.eupmyeondong) return null;
-
-      if (store.eupmyeondong.includes('읍')) {
-        return `${store.eupmyeondong} 읍사무소`;
-      } else if (store.eupmyeondong.includes('면')) {
-        return `${store.eupmyeondong} 면사무소`;
-      } else if (store.eupmyeondong.includes('동')) {
-        return `${store.eupmyeondong} 동사무소`;
-      } else {
-        return `${store.eupmyeondong} 행정복지센터`;
-      }
+      return null;
+    } catch (error) {
+      console.error('❌ 읍면동 중심점 계산 실패:', error);
+      return null;
     }
   },
+
+  
 
   // 센트로이드 계산 (기존 중심 좌표 계산)
   calculateCentroid(stores) {

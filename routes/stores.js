@@ -2,6 +2,119 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
+// 행정기관 좌표 조회 API
+router.get('/administrative-office', async (req, res) => {
+  try {
+    const { regionType, regionName } = req.query;
+    
+    if (!regionType || !regionName) {
+      return res.status(400).json({
+        success: false,
+        error: 'regionType과 regionName이 필요합니다'
+      });
+    }
+
+    console.log(`🏛️ 행정기관 좌표 조회: ${regionType} - ${regionName}`);
+
+    const result = await pool.query(`
+      SELECT office_name, latitude, longitude 
+      FROM administrative_offices 
+      WHERE region_type = $1 AND region_name = $2
+    `, [regionType, regionName]);
+
+    if (result.rows.length === 0) {
+      console.log(`⚠️ 행정기관 좌표 없음: ${regionType} - ${regionName}`);
+      return res.json({
+        success: false,
+        error: '해당 지역의 행정기관 좌표를 찾을 수 없습니다'
+      });
+    }
+
+    const office = result.rows[0];
+    console.log(`✅ 행정기관 좌표 발견: ${office.office_name} (${office.latitude}, ${office.longitude})`);
+
+    res.json({
+      success: true,
+      office: {
+        name: office.office_name,
+        latitude: parseFloat(office.latitude),
+        longitude: parseFloat(office.longitude)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 행정기관 좌표 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '행정기관 좌표 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 읍면동 중심점 좌표 계산 API (ST_PointOnSurface 사용)
+router.get('/eupmyeondong-center', async (req, res) => {
+  try {
+    const { sido, sigungu, eupmyeondong } = req.query;
+    
+    if (!sido || !sigungu || !eupmyeondong) {
+      return res.status(400).json({
+        success: false,
+        error: 'sido, sigungu, eupmyeondong이 모두 필요합니다'
+      });
+    }
+
+    console.log(`📍 읍면동 중심점 계산: ${sido} ${sigungu} ${eupmyeondong}`);
+
+    // 해당 읍면동의 모든 매장 좌표로 폴리곤 생성 후 중심점 계산
+    const result = await pool.query(`
+      WITH store_points AS (
+        SELECT ST_SetSRID(ST_MakePoint(sa.longitude, sa.latitude), 4326) as geom
+        FROM store_address sa
+        WHERE sa.sido = $1 
+          AND sa.sigungu = $2 
+          AND sa.eupmyeondong = $3
+          AND sa.latitude IS NOT NULL 
+          AND sa.longitude IS NOT NULL
+      ),
+      convex_hull AS (
+        SELECT ST_ConvexHull(ST_Collect(geom)) as hull_geom
+        FROM store_points
+      )
+      SELECT 
+        ST_Y(ST_PointOnSurface(hull_geom)) as center_lat,
+        ST_X(ST_PointOnSurface(hull_geom)) as center_lng
+      FROM convex_hull
+      WHERE hull_geom IS NOT NULL;
+    `, [sido, sigungu, eupmyeondong]);
+
+    if (result.rows.length === 0 || !result.rows[0].center_lat) {
+      console.log(`⚠️ 읍면동 중심점 계산 실패: ${sido} ${sigungu} ${eupmyeondong}`);
+      return res.json({
+        success: false,
+        error: '해당 읍면동의 중심점을 계산할 수 없습니다'
+      });
+    }
+
+    const center = result.rows[0];
+    console.log(`✅ 읍면동 중심점: ${sido} ${sigungu} ${eupmyeondong} (${center.center_lat}, ${center.center_lng})`);
+
+    res.json({
+      success: true,
+      center: {
+        latitude: parseFloat(center.center_lat),
+        longitude: parseFloat(center.center_lng)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 읍면동 중심점 계산 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '읍면동 중심점 계산 실패: ' + error.message
+    });
+  }
+});
+
 // 카카오 장소 검색 프록시 API (맨 앞에 배치하여 충돌 방지)
 router.get('/search-place', async (req, res) => {
   try {
