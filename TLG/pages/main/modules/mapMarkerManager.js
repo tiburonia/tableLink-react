@@ -357,7 +357,7 @@ window.MapMarkerManager = {
         return sido;
       }
     } else {
-      // 시/도 단위 (sido만)
+      // 레벨 11+ - 시/도 단위만 (sido만)
       return sido;
     }
   },
@@ -385,7 +385,7 @@ window.MapMarkerManager = {
         return sido;
       }
     } else {
-      // 시도 집계 마커 - sido만 표시
+      // 레벨 11+ - 시도 집계 마커만, sido만 표시
       return sido;
     }
   },
@@ -414,7 +414,7 @@ window.MapMarkerManager = {
     const firstStore = validStores[0];
 
     if (level >= 11) {
-      // 시도 레벨 - DB에서 도청/시청 좌표 조회
+      // 레벨 11+ - 시도 레벨만, DB에서 도청/시청 좌표 조회
       const coord = await this.getAdministrativeOfficeCoord('sido', firstStore.sido);
       if (this.shouldCancel) return null;
       if (coord) {
