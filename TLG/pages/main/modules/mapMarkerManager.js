@@ -100,13 +100,16 @@ window.MapMarkerManager = {
     const clusters = this.groupStoresByRegion(stores, level);
     console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
     
-    // 각 지역별 매장 수 로그
+    // 각 지역별 마커 생성 (순차적으로 처리하여 API 제한 방지)
     for (const [regionName, regionStores] of clusters.entries()) {
       console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
-      const marker = this.createClusterMarker(regionName, regionStores, map);
+      const marker = await this.createClusterMarker(regionName, regionStores, map);
       if (marker) {
         this.currentMarkers.push(marker);
       }
+      
+      // API 호출 간격 조절 (1초 대기)
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
     console.log(`✅ 집계 마커 ${this.currentMarkers.length}개 생성 완료`);
@@ -201,11 +204,11 @@ window.MapMarkerManager = {
   },
 
   // 집계 마커 생성
-  createClusterMarker(regionName, stores, map) {
+  async createClusterMarker(regionName, stores, map) {
     if (!stores || stores.length === 0) return null;
     
-    // 앵커 좌표 계산 (행정기관 우선, 없으면 센트로이드)
-    const anchorCoord = this.calculateAnchorPosition(stores, this.currentLevel);
+    // 앵커 좌표 계산 (카카오 API 행정기관 우선, 없으면 센트로이드)
+    const anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
     if (!anchorCoord) return null;
     
     const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
@@ -364,15 +367,22 @@ window.MapMarkerManager = {
     }
   },
 
-  // 집계 마커 앵커 위치 계산 (행정기관 우선, 없으면 센트로이드)
-  calculateAnchorPosition(stores, level) {
+  // 집계 마커 앵커 위치 계산 (카카오 API 행정기관 위치 우선, 없으면 센트로이드)
+  async calculateAnchorPosition(stores, level) {
     const validStores = stores.filter(s => s.coord?.lat && s.coord?.lng);
     if (validStores.length === 0) return null;
     
-    // 행정기관으로 추정되는 매장 찾기
+    // 카카오 API로 행정기관 위치 검색
+    const govCoord = await this.findGovernmentOfficeByAPI(validStores, level);
+    if (govCoord) {
+      console.log(`📍 카카오 API 행정기관 앵커: (${govCoord.lat}, ${govCoord.lng})`);
+      return govCoord;
+    }
+    
+    // API로 찾지 못하면 매장명 기반 행정기관 찾기
     const govStore = this.findGovernmentOffice(validStores, level);
     if (govStore) {
-      console.log(`📍 행정기관 앵커: ${govStore.name} (${govStore.coord.lat}, ${govStore.coord.lng})`);
+      console.log(`📍 매장명 기반 행정기관 앵커: ${govStore.name} (${govStore.coord.lat}, ${govStore.coord.lng})`);
       return govStore.coord;
     }
     
@@ -382,7 +392,98 @@ window.MapMarkerManager = {
     return centroid;
   },
 
-  // 행정기관 찾기
+  // 카카오 API로 행정기관 위치 검색
+  async findGovernmentOfficeByAPI(stores, level) {
+    try {
+      // 센트로이드 계산
+      const centroid = this.calculateCentroid(stores);
+      
+      // 레벨별 검색 키워드 결정
+      const searchKeyword = this.getGovernmentSearchKeyword(stores[0], level);
+      if (!searchKeyword) return null;
+      
+      console.log(`🔍 카카오 API 행정기관 검색: "${searchKeyword}" 주변 (${centroid.lat}, ${centroid.lng})`);
+      
+      // 카카오 장소 검색 API 호출
+      const response = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=20000&sort=distance`, {
+        headers: {
+          'Authorization': 'KakaoAK 8b85ede876c3b97074b5f6fa8e999c55'
+        }
+      });
+      
+      if (!response.ok) {
+        console.log('❌ 카카오 API 호출 실패:', response.status);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (data.documents && data.documents.length > 0) {
+        const place = data.documents[0];
+        console.log(`✅ 행정기관 발견: ${place.place_name} (${place.y}, ${place.x})`);
+        
+        return {
+          lat: parseFloat(place.y),
+          lng: parseFloat(place.x)
+        };
+      }
+      
+      console.log('🔍 카카오 API에서 행정기관을 찾지 못함');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ 카카오 API 행정기관 검색 실패:', error);
+      return null;
+    }
+  },
+
+  // 레벨별 행정기관 검색 키워드 생성
+  getGovernmentSearchKeyword(store, level) {
+    const { sido, sigungu, eupmyeondong } = store;
+    
+    if (!sido) return null;
+    
+    if (level <= 7) {
+      // 읍면동 단위 - 읍사무소/면사무소/동사무소
+      if (eupmyeondong) {
+        if (eupmyeondong.includes('읍')) {
+          return `${sido} ${sigungu} ${eupmyeondong} 읍사무소`;
+        } else if (eupmyeondong.includes('면')) {
+          return `${sido} ${sigungu} ${eupmyeondong} 면사무소`;
+        } else {
+          return `${sido} ${sigungu} ${eupmyeondong} 동사무소`;
+        }
+      } else if (sigungu) {
+        return `${sido} ${sigungu} 구청`;
+      } else {
+        return `${sido} 시청`;
+      }
+    } else if (level <= 10) {
+      // 시군구 단위 - 시청/군청/구청
+      if (sigungu) {
+        if (sigungu.includes('시')) {
+          return `${sido} ${sigungu} 시청`;
+        } else if (sigungu.includes('군')) {
+          return `${sido} ${sigungu} 군청`;
+        } else if (sigungu.includes('구')) {
+          return `${sido} ${sigungu} 구청`;
+        } else {
+          return `${sido} ${sigungu}청`;
+        }
+      } else {
+        return `${sido} 시청`;
+      }
+    } else {
+      // 시도 단위 - 시청/도청
+      if (sido.includes('도')) {
+        return `${sido} 도청`;
+      } else {
+        return `${sido} 시청`;
+      }
+    }
+  },
+
+  // 매장명 기반 행정기관 찾기 (기존 방식)
   findGovernmentOffice(stores, level) {
     // 행정기관 키워드 (우선순위별로 정렬)
     const govKeywords = [
