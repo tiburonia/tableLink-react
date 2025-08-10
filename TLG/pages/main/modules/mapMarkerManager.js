@@ -16,41 +16,49 @@ window.MapMarkerManager = {
   async handleMapLevelChange(level, map) {
     console.log(`🔄 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
 
-    // 이전 레벨과 현재 레벨의 집계 마커 타입 확인
+    // 이전 레벨과 현재 레벨의 마커 타입 확인
     const prevMarkerType = this.getMarkerType(this.currentLevel);
     const newMarkerType = this.getMarkerType(level);
 
     if (this.isLoading) {
-      // 집계 마커 타입이 바뀌면 기존 작업 취소하고 새로 시작
+      // 마커 타입이 바뀌면 기존 작업 취소하고 새로 시작
       if (prevMarkerType !== newMarkerType) {
-        console.log(`🔄 집계 마커 타입 변경 (${prevMarkerType} → ${newMarkerType}) - 기존 작업 취소`);
+        console.log(`🔄 마커 타입 변경 (${prevMarkerType} → ${newMarkerType}) - 기존 작업 취소`);
         this.shouldCancel = true;
         this.clearAllMarkers();
         // 잠시 대기 후 새 작업 시작
         setTimeout(() => this.handleMapLevelChange(level, map), 100);
         return;
       } else {
-        console.log('⏸️ 동일한 집계 마커 타입 - 기존 작업 유지');
+        console.log('⏸️ 이미 로딩 중 - 무시');
         return;
       }
     }
 
     this.isLoading = true;
     this.shouldCancel = false;
+    
+    // 레벨이 바뀔 때마다 항상 기존 마커 모두 제거
+    this.clearAllMarkers();
     this.currentLevel = level;
 
     try {
-      // 집계 마커 타입이 바뀔 때만 기존 마커 제거
-      if (prevMarkerType !== newMarkerType) {
-        this.clearAllMarkers();
-      }
-
-      // 새 마커 생성
+      // 레벨별 마커 생성
       if (level <= 5) {
-        // 개별 매장 마커 (레벨 1-5)
+        // 개별 매장 마커만 (레벨 1-5)
+        console.log(`🏪 레벨 ${level}: 개별 매장 마커만 표시`);
         await this.showStoreMarkers(map);
+      } else if (level <= 7) {
+        // 읍면동 집계 마커만 (레벨 6-7)
+        console.log(`🏘️ 레벨 ${level}: 읍면동 집계 마커만 표시`);
+        await this.showClusterMarkers(map, level);
+      } else if (level <= 10) {
+        // 시군구 집계 마커만 (레벨 8-10)
+        console.log(`🏛️ 레벨 ${level}: 시군구 집계 마커만 표시`);
+        await this.showClusterMarkers(map, level);
       } else {
-        // 집계 마커 (레벨 6+)
+        // 시도 집계 마커만 (레벨 11+)
+        console.log(`🗺️ 레벨 ${level}: 시도 집계 마커만 표시`);
         await this.showClusterMarkers(map, level);
       }
 
@@ -67,9 +75,12 @@ window.MapMarkerManager = {
     }
   },
 
-  // 마커 타입 결정 (개별/집계)
+  // 마커 타입 결정 (레벨별 세분화)
   getMarkerType(level) {
-    return level <= 5 ? 'individual' : 'cluster';
+    if (level <= 5) return 'individual';      // 개별 매장
+    if (level <= 7) return 'eupmyeondong';    // 읍면동 집계
+    if (level <= 10) return 'sigungu';        // 시군구 집계
+    return 'sido';                            // 시도 집계
   },
 
   // 뷰포트 내 매장 데이터 가져오기
