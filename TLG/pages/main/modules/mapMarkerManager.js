@@ -12,9 +12,15 @@ window.MapMarkerManager = {
   // 현재 작업 취소 플래그
   shouldCancel: false,
 
+  // 현재 진행 중인 fetch 요청 취소용 AbortController
+  currentAbortController: null,
+
   // 메인 진입점 - 레벨 변경시 호출
   async handleMapLevelChange(level, map) {
     console.log(`🔄 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
+
+    // 이전 fetch 요청 취소
+    this.cancelCurrentRequest();
 
     // 이전 레벨과 현재 레벨의 마커 타입 확인
     const prevMarkerType = this.getMarkerType(this.currentLevel);
@@ -119,44 +125,66 @@ window.MapMarkerManager = {
 
     console.log(`📍 뷰포트 매장 데이터 요청: ${params.toString()}`);
 
-    const response = await fetch(`/api/stores/viewport?${params}`);
-    const data = await response.json();
+    // 새로운 AbortController 생성
+    this.currentAbortController = new AbortController();
 
-    if (!data.success) {
-      throw new Error(data.error || '매장 데이터 조회 실패');
+    try {
+      const response = await fetch(`/api/stores/viewport?${params}`, {
+        signal: this.currentAbortController.signal
+      });
+      
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '매장 데이터 조회 실패');
+      }
+
+      console.log(`✅ 매장 데이터 수신: ${data.stores.length}개`);
+      return data.stores;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 매장 데이터 요청이 취소되었습니다');
+        throw error;
+      }
+      throw error;
     }
-
-    console.log(`✅ 매장 데이터 수신: ${data.stores.length}개`);
-    return data.stores;
   },
 
   // 개별 매장 마커 표시
   async showStoreMarkers(map) {
     console.log('🏪 개별 매장 마커 표시 시작');
 
-    const stores = await this.fetchStores(map);
+    try {
+      const stores = await this.fetchStores(map);
 
-    // 작업 취소 확인
-    if (this.shouldCancel) {
-      console.log('🚫 개별 매장 마커 생성 취소됨 (레벨 변경)');
-      return;
-    }
+      // 작업 취소 확인
+      if (this.shouldCancel) {
+        console.log('🚫 개별 매장 마커 생성 취소됨 (레벨 변경)');
+        return;
+      }
 
-    // 유효한 좌표를 가진 매장들 필터링
-    const validStores = stores.filter(store => store.coord?.lat && store.coord?.lng);
-    console.log(`📍 유효한 매장 수: ${validStores.length}개`);
+      // 유효한 좌표를 가진 매장들 필터링
+      const validStores = stores.filter(store => store.coord?.lat && store.coord?.lng);
+      console.log(`📍 유효한 매장 수: ${validStores.length}개`);
 
-    // 모든 마커를 한번에 생성
-    const markers = this.createStoreMarkersBatch(validStores, map);
-    
-    // 작업 취소 최종 확인 후 추가
-    if (!this.shouldCancel) {
-      this.currentMarkers.push(...markers);
-      console.log(`✅ 개별 마커 ${markers.length}개 생성 완료`);
-    } else {
-      console.log('🚫 개별 매장 마커 생성 취소됨 (마커 생성 후)');
-      // 생성된 마커들 정리
-      markers.forEach(marker => marker.setMap(null));
+      // 모든 마커를 한번에 생성
+      const markers = this.createStoreMarkersBatch(validStores, map);
+      
+      // 작업 취소 최종 확인 후 추가
+      if (!this.shouldCancel) {
+        this.currentMarkers.push(...markers);
+        console.log(`✅ 개별 마커 ${markers.length}개 생성 완료`);
+      } else {
+        console.log('🚫 개별 매장 마커 생성 취소됨 (마커 생성 후)');
+        // 생성된 마커들 정리
+        markers.forEach(marker => marker.setMap(null));
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 개별 매장 마커 표시가 취소되었습니다');
+        return;
+      }
+      throw error;
     }
   },
 
@@ -164,36 +192,44 @@ window.MapMarkerManager = {
   async showClusterMarkers(map, level) {
     console.log(`🏘️ 집계 마커 표시 시작 (레벨 ${level})`);
 
-    const stores = await this.fetchStores(map);
-    
-    // 작업 취소 확인
-    if (this.shouldCancel) {
-      console.log('🚫 집계 마커 생성 취소됨 (레벨 변경)');
-      return;
-    }
-    
-    console.log(`📍 조회된 매장 수: ${stores.length}개`);
+    try {
+      const stores = await this.fetchStores(map);
+      
+      // 작업 취소 확인
+      if (this.shouldCancel) {
+        console.log('🚫 집계 마커 생성 취소됨 (레벨 변경)');
+        return;
+      }
+      
+      console.log(`📍 조회된 매장 수: ${stores.length}개`);
 
-    // 지역별 그룹화
-    const clusters = this.groupStoresByRegion(stores, level);
-    console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
+      // 지역별 그룹화
+      const clusters = this.groupStoresByRegion(stores, level);
+      console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
 
-    // 각 지역별 매장 수 로그
-    for (const [regionName, regionStores] of clusters.entries()) {
-      console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
-    }
+      // 각 지역별 매장 수 로그
+      for (const [regionName, regionStores] of clusters.entries()) {
+        console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
+      }
 
-    // 모든 집계 마커를 한번에 생성
-    const markers = await this.createClusterMarkersBatch(clusters, map);
-    
-    // 작업 취소 최종 확인 후 추가
-    if (!this.shouldCancel) {
-      this.currentMarkers.push(...markers);
-      console.log(`✅ 집계 마커 ${markers.length}개 생성 완료`);
-    } else {
-      console.log('🚫 집계 마커 생성 취소됨 (마커 생성 후)');
-      // 생성된 마커들 정리
-      markers.forEach(marker => marker.setMap(null));
+      // 모든 집계 마커를 한번에 생성
+      const markers = await this.createClusterMarkersBatch(clusters, map);
+      
+      // 작업 취소 최종 확인 후 추가
+      if (!this.shouldCancel) {
+        this.currentMarkers.push(...markers);
+        console.log(`✅ 집계 마커 ${markers.length}개 생성 완료`);
+      } else {
+        console.log('🚫 집계 마커 생성 취소됨 (마커 생성 후)');
+        // 생성된 마커들 정리
+        markers.forEach(marker => marker.setMap(null));
+      }
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 집계 마커 표시가 취소되었습니다');
+        return;
+      }
+      throw error;
     }
   },
 
@@ -564,7 +600,8 @@ window.MapMarkerManager = {
       const response = await fetch('/api/stores/administrative-offices-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requests: validRequests })
+        body: JSON.stringify({ requests: validRequests }),
+        signal: this.currentAbortController?.signal
       });
       
       const data = await response.json();
@@ -592,6 +629,10 @@ window.MapMarkerManager = {
         return results;
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 배치 좌표 조회가 취소되었습니다');
+        throw error;
+      }
       console.error('❌ 배치 좌표 조회 실패:', error);
     }
     
@@ -601,7 +642,9 @@ window.MapMarkerManager = {
   // DB에서 행정기관 좌표 조회 (기존 메서드 유지)
   async getAdministrativeOfficeCoord(regionType, regionName) {
     try {
-      const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
+      const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`, {
+        signal: this.currentAbortController?.signal
+      });
       const data = await response.json();
 
       if (data.success && data.office) {
@@ -613,6 +656,10 @@ window.MapMarkerManager = {
 
       return null;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 행정기관 좌표 조회가 취소되었습니다');
+        throw error;
+      }
       console.error('❌ 행정기관 좌표 조회 실패:', error);
       return null;
     }
@@ -627,7 +674,9 @@ window.MapMarkerManager = {
         eupmyeondong: eupmyeondong
       });
 
-      const response = await fetch(`/api/stores/eupmyeondong-center?${params}`);
+      const response = await fetch(`/api/stores/eupmyeondong-center?${params}`, {
+        signal: this.currentAbortController?.signal
+      });
       const data = await response.json();
 
       if (data.success && data.center) {
@@ -639,6 +688,10 @@ window.MapMarkerManager = {
 
       return null;
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('🚫 읍면동 중심점 계산이 취소되었습니다');
+        throw error;
+      }
       console.error('❌ 읍면동 중심점 계산 실패:', error);
       return null;
     }
@@ -831,6 +884,15 @@ window.MapMarkerManager = {
       Math.sin(dLng/2) * Math.sin(dLng/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+  },
+
+  // 현재 진행 중인 요청 취소
+  cancelCurrentRequest() {
+    if (this.currentAbortController) {
+      console.log('🚫 이전 요청 취소');
+      this.currentAbortController.abort();
+      this.currentAbortController = null;
+    }
   },
 
   // 모든 마커 제거
