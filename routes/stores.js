@@ -59,7 +59,7 @@ router.get('/viewport', async (req, res) => {
     const coordCountResult = await pool.query('SELECT COUNT(*) as coord_count FROM store_address WHERE latitude IS NOT NULL AND longitude IS NOT NULL');
     console.log(`📍 좌표가 있는 매장 수: ${coordCountResult.rows[0].coord_count}`);
 
-    // 뷰포트 내 매장 조회 전 범위 확인
+    // 뷰포트 범위 내 매장 조회 전 범위 확인
     const rangeCheckResult = await pool.query(`
       SELECT COUNT(*) as in_range_count,
              MIN(sa.latitude) as min_lat, MAX(sa.latitude) as max_lat,
