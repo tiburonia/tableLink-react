@@ -65,26 +65,19 @@ router.get('/eupmyeondong-center', async (req, res) => {
 
     console.log(`📍 읍면동 중심점 계산: ${sido} ${sigungu} ${eupmyeondong}`);
 
-    // 해당 읍면동의 모든 매장 좌표로 폴리곤 생성 후 중심점 계산
+    // PostGIS가 없는 경우 단순 평균 좌표로 중심점 계산
     const result = await pool.query(`
-      WITH store_points AS (
-        SELECT ST_SetSRID(ST_MakePoint(sa.longitude, sa.latitude), 4326) as geom
-        FROM store_address sa
-        WHERE sa.sido = $1 
-          AND sa.sigungu = $2 
-          AND sa.eupmyeondong = $3
-          AND sa.latitude IS NOT NULL 
-          AND sa.longitude IS NOT NULL
-      ),
-      convex_hull AS (
-        SELECT ST_ConvexHull(ST_Collect(geom)) as hull_geom
-        FROM store_points
-      )
       SELECT 
-        ST_Y(ST_PointOnSurface(hull_geom)) as center_lat,
-        ST_X(ST_PointOnSurface(hull_geom)) as center_lng
-      FROM convex_hull
-      WHERE hull_geom IS NOT NULL;
+        AVG(sa.latitude) as center_lat,
+        AVG(sa.longitude) as center_lng,
+        COUNT(*) as store_count
+      FROM store_address sa
+      WHERE sa.sido = $1 
+        AND sa.sigungu = $2 
+        AND sa.eupmyeondong = $3
+        AND sa.latitude IS NOT NULL 
+        AND sa.longitude IS NOT NULL
+      HAVING COUNT(*) > 0;
     `, [sido, sigungu, eupmyeondong]);
 
     if (result.rows.length === 0 || !result.rows[0].center_lat) {
