@@ -215,8 +215,6 @@ window.MapMarkerManager = {
           position: relative;
           z-index: 100;
           transition: all 0.2s ease;
-          font-size: 9px;
-          border: 1px solid rgba(255,255,255,0.2);
         }
         .cluster-marker-hoverable:hover {
           transform: scale(1.2) !important;
@@ -398,7 +396,7 @@ window.MapMarkerManager = {
       console.log(`🔍 백엔드 프록시를 통한 행정기관 검색: "${searchKeyword}" 주변 (${centroid.lat}, ${centroid.lng})`);
 
       // 백엔드 프록시를 통해 카카오 API 호출
-      const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=50000`);
+      const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(searchKeyword)}&x=${centroid.lng}&y=${centroid.lat}&radius=20000`);
 
       if (!response.ok) {
         console.log('❌ 백엔드 프록시 호출 실패:', response.status);
