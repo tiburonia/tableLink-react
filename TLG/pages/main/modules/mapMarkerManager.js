@@ -118,13 +118,11 @@ window.MapMarkerManager = {
     const isOpen = store.isOpen !== false;
     const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
     
-    // 고유 ID 생성으로 z-index 문제 해결
+    // 고유 ID 생성
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
     
     const content = `
-      <div id="${markerId}" class="store-marker" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})"
-           onmouseover="this.style.zIndex='1000'; this.style.transform='scale(1.05)'" 
-           onmouseout="this.style.zIndex='200'; this.style.transform='scale(1)'">
+      <div id="${markerId}" class="store-marker store-marker-hoverable" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
         <div class="marker-info">
           <div class="store-name">${store.name}</div>
           <div class="store-status ${isOpen ? 'open' : 'closed'}">
@@ -136,27 +134,32 @@ window.MapMarkerManager = {
         .store-marker {
           background: white;
           border: 2px solid ${isOpen ? '#4caf50' : '#ff9800'};
-          border-radius: 12px;
-          padding: 8px;
+          border-radius: 8px;
+          padding: 6px 8px;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-          min-width: 120px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+          min-width: 100px;
           position: relative;
           z-index: 200;
           transition: all 0.2s ease;
         }
-        .store-marker:hover {
-          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        .store-marker-hoverable:hover {
+          transform: scale(1.1) !important;
+          z-index: 9999 !important;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+          border-width: 3px !important;
         }
         .store-name {
           font-weight: bold;
           color: #333;
-          font-size: 13px;
-          margin-bottom: 4px;
+          font-size: 12px;
+          margin-bottom: 2px;
+          line-height: 1.2;
         }
         .store-status {
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 500;
+          line-height: 1.2;
         }
         .store-status.open { color: #4caf50; }
         .store-status.closed { color: #ff9800; }
@@ -190,44 +193,46 @@ window.MapMarkerManager = {
       this.getDisplayRegionName(stores[0], this.currentLevel) || regionName : 
       regionName;
     
-    // 고유 ID 생성으로 z-index 문제 해결
+    // 고유 ID 생성
     const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
     
     const content = `
-      <div id="${markerId}" class="cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})" 
-           onmouseover="this.style.zIndex='999'; this.style.transform='scale(1.1)'" 
-           onmouseout="this.style.zIndex='100'; this.style.transform='scale(1)'">
+      <div id="${markerId}" class="cluster-marker cluster-marker-hoverable" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
         <div class="cluster-info">
           <div class="region-name">${displayName}</div>
-          <div class="cluster-count">${storeCount}개</div>
+          <div class="cluster-count">${storeCount}</div>
         </div>
       </div>
       <style>
         .cluster-marker {
           background: linear-gradient(135deg, #297efc, #4f46e5);
           color: white;
-          border-radius: 8px;
-          padding: 3px 6px;
+          border-radius: 6px;
+          padding: 2px 5px;
           cursor: pointer;
-          box-shadow: 0 1px 4px rgba(41,126,252,0.3);
-          min-width: 40px;
+          box-shadow: 0 1px 3px rgba(41,126,252,0.3);
+          min-width: 32px;
           text-align: center;
           position: relative;
           z-index: 100;
           transition: all 0.2s ease;
-          font-size: 10px;
+          font-size: 9px;
+          border: 1px solid rgba(255,255,255,0.2);
         }
-        .cluster-marker:hover {
-          box-shadow: 0 2px 8px rgba(41,126,252,0.5);
+        .cluster-marker-hoverable:hover {
+          transform: scale(1.2) !important;
+          z-index: 9998 !important;
+          box-shadow: 0 4px 15px rgba(41,126,252,0.6) !important;
+          border-color: rgba(255,255,255,0.4) !important;
         }
         .region-name {
           font-weight: bold;
-          font-size: 9px;
-          line-height: 1.2;
+          font-size: 8px;
+          line-height: 1.1;
           margin-bottom: 1px;
         }
         .cluster-count {
-          font-size: 8px;
+          font-size: 7px;
           opacity: 0.9;
           line-height: 1;
         }
