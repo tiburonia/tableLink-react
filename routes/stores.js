@@ -1,7 +1,12 @@
 const express = require('express');
-const fetch = require('node-fetch');
 const router = express.Router();
 const pool = require('../shared/config/database');
+
+// node-fetch를 동적으로 import하는 함수
+async function fetch(url, options) {
+  const { default: nodeFetch } = await import('node-fetch');
+  return nodeFetch(url, options);
+}
 
 // 카카오 장소 검색 프록시 API (맨 앞에 배치하여 충돌 방지)
 router.get('/search-place', async (req, res) => {
