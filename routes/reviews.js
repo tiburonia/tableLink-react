@@ -97,6 +97,91 @@ router.get('/reviews/recent/:storeId', async (req, res) => {
 
     console.log(`✅ 매장 ${storeId} 최근 리뷰 ${reviews.length}개 조회 완료`);
 
+
+
+// orders 테이블 기반 리뷰 제출 API
+router.post('/submit-from-orders', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { 
+      userId, 
+      storeId, 
+      storeName, 
+      orderId,
+      rating, 
+      reviewText, 
+      orderDate 
+    } = req.body;
+
+    console.log('📝 orders 기반 리뷰 등록 요청:', {
+      userId, storeId, storeName, orderId, rating
+    });
+
+    await client.query('BEGIN');
+
+    // 이미 해당 주문에 대한 리뷰가 있는지 확인
+    const existingReview = await client.query(
+      'SELECT id FROM reviews WHERE user_id = $1 AND store_id = $2 AND order_id = $3',
+      [userId, storeId, orderId]
+    );
+
+    if (existingReview.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ 
+        success: false, 
+        error: '이미 리뷰를 작성한 주문입니다' 
+      });
+    }
+
+    // 리뷰 저장
+    const reviewResult = await client.query(`
+      INSERT INTO reviews (
+        user_id, store_id, order_id, rating, review_text, order_date, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      RETURNING id, created_at
+    `, [
+      userId,
+      storeId, 
+      orderId,
+      rating,
+      reviewText,
+      orderDate
+    ]);
+
+    const newReview = reviewResult.rows[0];
+
+    await client.query('COMMIT');
+
+    console.log('✅ orders 기반 리뷰 등록 완료:', newReview.id);
+
+    res.json({
+      success: true,
+      message: '리뷰가 성공적으로 등록되었습니다',
+      review: {
+        id: newReview.id,
+        userId: userId,
+        storeId: storeId,
+        storeName: storeName,
+        orderId: orderId,
+        rating: rating,
+        content: reviewText,
+        createdAt: newReview.created_at
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ orders 기반 리뷰 등록 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '리뷰 등록 실패: ' + error.message 
+    });
+  } finally {
+    client.release();
+  }
+});
+
     res.json({
       success: true,
       reviews: reviews

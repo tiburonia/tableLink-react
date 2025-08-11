@@ -58,21 +58,6 @@ router.post('/pay', async (req, res) => {
     const earnedPoint = Math.floor(orderData.total * 0.1);
 
     const newPoint = user.point - appliedPoint + earnedPoint;
-    const currentOrderList = user.order_list || [];
-
-    const orderRecord = {
-      ...orderData,
-      total: orderData.total,
-      usedPoint: appliedPoint,
-      couponDiscount: couponDiscount,
-      totalDiscount: appliedPoint + (couponDiscount || 0),
-      couponUsed: selectedCouponId || null,
-      realTotal: finalAmount,
-      earnedPoint: earnedPoint,
-      paymentStrategy: ((couponDiscount || 0) > 0 || appliedPoint > 0)
-        ? ((couponDiscount || 0) >= appliedPoint ? "couponFirst" : "pointFirst")
-        : "none"
-    };
 
     let newCoupons = { ...currentCoupons };
     if (usedCoupon) {
@@ -83,8 +68,15 @@ router.post('/pay', async (req, res) => {
       }
     }
 
+    // 첫 주문 여부 확인 (orders 테이블에서)
+    const orderCountResult = await client.query(
+      'SELECT COUNT(*) as order_count FROM orders WHERE user_id = $1',
+      [userId]
+    );
+    const isFirstOrder = parseInt(orderCountResult.rows[0].order_count) === 0;
+
     let welcomeCoupon = null;
-    if (currentOrderList.length === 0) {
+    if (isFirstOrder) {
       const today = new Date();
       const expireDate = new Date(today);
       expireDate.setDate(today.getDate() + 14);
@@ -103,11 +95,10 @@ router.post('/pay', async (req, res) => {
       newCoupons.unused.push(welcomeCoupon);
     }
 
-    const newOrderList = [...currentOrderList, orderRecord];
-
+    // users 테이블에서 포인트와 쿠폰만 업데이트
     await client.query(
-      'UPDATE users SET point = $1, order_list = $2, coupons = $3 WHERE id = $4',
-      [newPoint, JSON.stringify(newOrderList), JSON.stringify(newCoupons), userId]
+      'UPDATE users SET point = $1, coupons = $2 WHERE id = $3',
+      [newPoint, JSON.stringify(newCoupons), userId]
     );
 
     // 테이블 정보 처리
@@ -206,6 +197,65 @@ router.get('/stores/:storeId', async (req, res) => {
       SELECT 
         o.id, o.store_id, o.user_id, o.table_number, o.order_data, 
         o.original_amount, o.used_point, o.coupon_discount, o.final_amount, 
+
+
+// 사용자별 주문 내역 조회 API
+router.get('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 10 } = req.query;
+
+    console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
+
+    const result = await pool.query(`
+      SELECT 
+        o.id, o.store_id, o.table_number, o.order_data, 
+        o.total_amount, o.original_amount, o.used_point, 
+        o.coupon_discount, o.final_amount, o.order_status, 
+        o.order_date, o.created_at,
+        s.name as store_name, s.category as store_category
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.user_id = $1
+      ORDER BY o.order_date DESC
+      LIMIT $2
+    `, [userId, parseInt(limit)]);
+
+    const orders = result.rows.map(row => ({
+      id: row.id,
+      store_id: row.store_id,
+      store_name: row.store_name,
+      store_category: row.store_category,
+      table_number: row.table_number,
+      order_data: row.order_data,
+      total_amount: row.total_amount,
+      original_amount: row.original_amount,
+      used_point: row.used_point || 0,
+      coupon_discount: row.coupon_discount || 0,
+      final_amount: row.final_amount,
+      order_status: row.order_status,
+      order_date: row.order_date,
+      created_at: row.created_at
+    }));
+
+    console.log(`✅ 사용자 ${userId} 주문 내역 ${orders.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      userId: userId,
+      total: orders.length,
+      orders: orders
+    });
+
+  } catch (error) {
+    console.error('❌ 사용자 주문 내역 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '주문 내역 조회 실패: ' + error.message 
+    });
+  }
+});
+
         o.order_status, o.order_date, o.created_at,
         u.name as customer_name, u.phone as customer_phone,
         s.name as store_name

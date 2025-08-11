@@ -395,18 +395,27 @@ async function renderMyPage() {
 // 사용자 데이터를 비동기로 로드하는 함수
 async function loadUserData() {
   try {
-    const response = await fetch('/api/users/info', {
+    // 사용자 기본 정보 가져오기
+    const userResponse = await fetch('/api/users/info', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId: userInfo.id })
     });
 
-    if (!response.ok) throw new Error('사용자 정보 조회 실패');
-    const data = await response.json();
-    const currentUserInfo = data.user;
+    if (!userResponse.ok) throw new Error('사용자 정보 조회 실패');
+    const userData = await userResponse.json();
+    const currentUserInfo = userData.user;
+
+    // orders 테이블에서 주문 내역 가져오기
+    const ordersResponse = await fetch(`/api/users/${userInfo.id}/orders?limit=2`);
+    let ordersData = [];
+    if (ordersResponse.ok) {
+      const ordersResult = await ordersResponse.json();
+      ordersData = ordersResult.orders || [];
+    }
 
     // 주문내역 업데이트
-    updateOrderList(currentUserInfo);
+    updateOrderList(currentUserInfo, ordersData);
     
     // 예약내역 업데이트
     updateReservationList(currentUserInfo);
@@ -434,34 +443,35 @@ async function loadUserData() {
 }
 
 // 주문내역 업데이트 함수 (최근 2개만 표시)
-function updateOrderList(currentUserInfo) {
+function updateOrderList(currentUserInfo, ordersData) {
   const orderList = document.querySelector('#orderList');
   if (!orderList) return;
 
   orderList.innerHTML = ''; // 기존 내용 초기화
 
-  if (currentUserInfo.orderList?.length > 0) {
-    // 최근 2개만 표시
-    const recentOrders = currentUserInfo.orderList.slice(0, 2);
-    
-    recentOrders.forEach((order, index) => {
+  if (ordersData && ordersData.length > 0) {
+    ordersData.forEach((order, index) => {
       const orderDiv = document.createElement('div');
       orderDiv.className = 'order-item';
-      const items = order.items.map(i => `${i.name}(${i.qty}개)`).join(', ');
+      
+      // order_data에서 메뉴 정보 추출
+      const orderData = order.order_data || {};
+      const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
+      const storeName = orderData.store || order.store_name || '매장 정보 없음';
 
-      // 이미 리뷰를 작성했는지 확인
-      const hasReview = order.reviewId ? true : false;
+      // 리뷰 작성 여부 확인 (reviews 테이블에서)
+      const hasReview = false; // 실제로는 API 호출로 확인해야 함
 
       orderDiv.innerHTML = `
         <div class="order-info">
-          • <strong>${order.store}</strong><br>
+          • <strong>${storeName}</strong><br>
           ${items}<br>
-          총 ${order.total.toLocaleString()}원 | 📅 ${order.date}
+          총 ${order.final_amount?.toLocaleString() || order.total_amount?.toLocaleString() || '0'}원 | 📅 ${new Date(order.order_date).toLocaleDateString()}
         </div>
         <div class="review-section">
           ${hasReview ?
             `<p style="color: #297efc; font-size: 14px;">✅ 리뷰 작성 완료</p>` :
-            `<button class="review-btn" data-order-index="${index}">📝 리뷰 작성하기</button>`
+            `<button class="review-btn" data-order-id="${order.id}" data-order-index="${index}">📝 리뷰 작성하기</button>`
           }
         </div>
         <br>
@@ -469,24 +479,23 @@ function updateOrderList(currentUserInfo) {
       orderList.appendChild(orderDiv);
     });
 
-    // 더보기 버튼 추가 (전체 주문이 2개보다 많을 때만)
-    if (currentUserInfo.orderList.length > 2) {
-      const moreBtn = document.createElement('button');
-      moreBtn.className = 'more-orders-btn';
-      moreBtn.innerHTML = `📋 전체 주문내역 보기 (${currentUserInfo.orderList.length}건)`;
-      moreBtn.addEventListener('click', () => {
-        renderAllOrderHTML(userInfo);
-      });
-      orderList.appendChild(moreBtn);
-    }
+    // 더보기 버튼 추가
+    const moreBtn = document.createElement('button');
+    moreBtn.className = 'more-orders-btn';
+    moreBtn.innerHTML = `📋 전체 주문내역 보기`;
+    moreBtn.addEventListener('click', () => {
+      renderAllOrderHTML(userInfo);
+    });
+    orderList.appendChild(moreBtn);
 
     // 리뷰 작성 버튼 이벤트 리스너
     document.querySelectorAll('.review-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const orderIndex = parseInt(e.target.getAttribute('data-order-index'));
-        const order = currentUserInfo.orderList[orderIndex];
+        const orderId = e.target.getAttribute('data-order-id');
+        const order = ordersData[orderIndex];
         console.log('🔍 선택된 주문 정보:', order);
-        showReviewModal(order, orderIndex);
+        showReviewModalFromOrders(order, orderIndex);
       });
     });
   } else {
@@ -494,7 +503,101 @@ function updateOrderList(currentUserInfo) {
   }
 }
 
-// 리뷰 작성 모달 표시
+// orders 테이블 기반 리뷰 작성 모달 표시
+function showReviewModalFromOrders(order, orderIndex) {
+  const orderData = order.order_data || {};
+  const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
+  const storeName = orderData.store || order.store_name || '매장 정보 없음';
+
+  const modal = document.createElement('div');
+  modal.className = 'review-modal';
+  modal.innerHTML = `
+    <div class="review-modal-content">
+      <h3>리뷰 작성</h3>
+      <p><strong>매장:</strong> ${storeName}</p>
+      <p><strong>주문:</strong> ${items}</p>
+
+      <div>
+        <label>평점:</label>
+        <div class="star-rating">
+          <span class="star" data-rating="1">★</span>
+          <span class="star" data-rating="2">★</span>
+          <span class="star" data-rating="3">★</span>
+          <span class="star" data-rating="4">★</span>
+          <span class="star" data-rating="5">★</span>
+        </div>
+      </div>
+
+      <div>
+        <label>리뷰 내용:</label>
+        <textarea class="review-textarea" placeholder="음식과 서비스에 대한 솔직한 후기를 남겨주세요..."></textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="modal-btn cancel-btn">취소</button>
+        <button class="modal-btn submit-btn">리뷰 등록</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let selectedRating = 0;
+
+  // 별점 선택 이벤트
+  modal.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', (e) => {
+      selectedRating = parseInt(e.target.getAttribute('data-rating'));
+      updateStarDisplay(modal, selectedRating);
+    });
+  });
+
+  // 취소 버튼
+  modal.querySelector('.cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+
+  // 등록 버튼
+  modal.querySelector('.submit-btn').addEventListener('click', async () => {
+    const reviewText = modal.querySelector('.review-textarea').value.trim();
+
+    if (selectedRating === 0) {
+      alert('평점을 선택해주세요.');
+      return;
+    }
+
+    if (reviewText === '') {
+      alert('리뷰 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await submitReviewFromOrders(order, selectedRating, reviewText);
+      document.body.removeChild(modal);
+
+      // 리뷰 캐시 초기화
+      if (order.store_id) {
+        const reviewCacheKey = `tablelink_reviews_store_${order.store_id}`;
+        localStorage.removeItem(reviewCacheKey);
+        console.log('🗑️ 리뷰 등록 후 캐시 초기화 완료:', reviewCacheKey);
+      }
+
+      renderMyPage(); // 페이지 새로고침
+    } catch (error) {
+      console.error('리뷰 등록 오류:', error);
+      alert('리뷰 등록에 실패했습니다: ' + error.message);
+    }
+  });
+
+  // 모달 배경 클릭 시 닫기
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+}
+
+// 리뷰 작성 모달 표시 (레거시 호환용)
 function showReviewModal(order, orderIndex) {
   const modal = document.createElement('div');
   modal.className = 'review-modal';
@@ -600,7 +703,59 @@ function updateStarDisplay(modal, rating) {
   });
 }
 
-// 리뷰 서버 전송
+// orders 테이블 기반 리뷰 서버 전송
+async function submitReviewFromOrders(order, rating, reviewText) {
+  console.log('📝 orders 테이블 기반 리뷰 등록 시도:', { order, rating, reviewText });
+
+  const orderData = order.order_data || {};
+  const storeName = orderData.store || order.store_name || '매장 정보 없음';
+
+  const reviewData = {
+    userId: userInfo.id,
+    storeId: order.store_id,
+    storeName: storeName,
+    orderId: order.id,
+    rating: rating,
+    reviewText: reviewText,
+    orderDate: new Date(order.order_date).toISOString().slice(0, 10)
+  };
+
+  console.log('📤 서버로 전송할 리뷰 데이터:', reviewData);
+
+  try {
+    const response = await fetch('/api/reviews/submit-from-orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(reviewData)
+    });
+
+    console.log('📡 서버 응답 상태:', response.status, response.statusText);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        console.error('❌ 응답 파싱 실패:', parseError);
+        throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
+      }
+      console.error('❌ 서버 오류 응답:', errorData);
+      throw new Error(errorData.error || '리뷰 등록 실패');
+    }
+
+    const result = await response.json();
+    console.log('✅ 리뷰 등록 성공:', result);
+    return result;
+
+  } catch (fetchError) {
+    console.error('❌ 리뷰 등록 네트워크 오류:', fetchError);
+    throw fetchError;
+  }
+}
+
+// 리뷰 서버 전송 (레거시 호환용)
 async function submitReview(order, orderIndex, rating, reviewText) {
   console.log('📝 리뷰 등록 시도:', { order, orderIndex, rating, reviewText });
 
