@@ -431,6 +431,36 @@ router.get('/users/:userId/reviews', async (req, res) => {
   }
 });
 
+// 주문별 리뷰 작성 여부 확인 API
+router.get('/check-order-review/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🔍 주문 ${orderId} 리뷰 작성 여부 확인`);
+
+    const result = await pool.query(`
+      SELECT id FROM reviews WHERE order_id = $1
+    `, [parseInt(orderId)]);
+
+    const hasReview = result.rows.length > 0;
+
+    console.log(`✅ 주문 ${orderId} 리뷰 작성 여부: ${hasReview ? '작성됨' : '미작성'}`);
+
+    res.json({
+      success: true,
+      hasReview: hasReview,
+      reviewId: hasReview ? result.rows[0].id : null
+    });
+
+  } catch (error) {
+    console.error('❌ 리뷰 작성 여부 확인 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '리뷰 작성 여부 확인 실패' 
+    });
+  }
+});
+
 // 리뷰 삭제 API
 router.delete('/reviews/:reviewId', async (req, res) => {
   const { reviewId } = req.params;
