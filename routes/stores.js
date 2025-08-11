@@ -2,51 +2,117 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// 행정기관 좌표 조회 API
+// 행정기관 좌표 배치 조회 (성능 최적화)
+router.post('/administrative-offices-batch', async (req, res) => {
+  try {
+    const { requests } = req.body;
+
+    if (!requests || !Array.isArray(requests)) {
+      return res.status(400).json({
+        success: false,
+        error: '요청 배열이 필요합니다'
+      });
+    }
+
+    console.log(`🚀 행정기관 좌표 배치 조회: ${requests.length}개 요청`);
+
+    // 요청을 타입별로 그룹화
+    const sidoRequests = requests.filter(req => req.regionType === 'sido');
+    const sigunguRequests = requests.filter(req => req.regionType === 'sigungu');
+
+    const offices = [];
+
+    // 시도 단위 배치 조회
+    if (sidoRequests.length > 0) {
+      const sidoNames = sidoRequests.map(req => `%${req.regionName}%`);
+      const sidoQuery = `
+        SELECT latitude, longitude, region_name as name
+        FROM administrative_offices 
+        WHERE region_type = 'sido' AND (${sidoNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
+      `;
+      const sidoResult = await pool.query(sidoQuery, sidoNames);
+      offices.push(...sidoResult.rows);
+    }
+
+    // 시군구 단위 배치 조회
+    if (sigunguRequests.length > 0) {
+      const sigunguNames = sigunguRequests.map(req => `%${req.regionName}%`);
+      const sigunguQuery = `
+        SELECT latitude, longitude, region_name as name
+        FROM administrative_offices 
+        WHERE region_type = 'sigungu' AND (${sigunguNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
+      `;
+      const sigunguResult = await pool.query(sigunguQuery, sigunguNames);
+      offices.push(...sigunguResult.rows);
+    }
+
+    console.log(`✅ 배치 조회 완료: ${offices.length}개 행정기관`);
+
+    res.json({
+      success: true,
+      offices: offices
+    });
+  } catch (error) {
+    console.error('❌ 행정기관 배치 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '서버 오류'
+    });
+  }
+});
+
+// 행정기관 좌표 조회 (기존 API 유지)
 router.get('/administrative-office', async (req, res) => {
   try {
     const { regionType, regionName } = req.query;
-    
+
     if (!regionType || !regionName) {
       return res.status(400).json({
         success: false,
-        error: 'regionType과 regionName이 필요합니다'
+        error: '지역 타입과 이름이 필요합니다'
       });
     }
 
     console.log(`🏛️ 행정기관 좌표 조회: ${regionType} - ${regionName}`);
 
-    const result = await pool.query(`
-      SELECT office_name, latitude, longitude 
-      FROM administrative_offices 
-      WHERE region_type = $1 AND region_name = $2
-    `, [regionType, regionName]);
-
-    if (result.rows.length === 0) {
-      console.log(`⚠️ 행정기관 좌표 없음: ${regionType} - ${regionName}`);
-      return res.json({
-        success: false,
-        error: '해당 지역의 행정기관 좌표를 찾을 수 없습니다'
-      });
+    let query;
+    if (regionType === 'sido') {
+      query = `
+        SELECT latitude, longitude, region_name as name
+        FROM administrative_offices 
+        WHERE region_type = 'sido' AND region_name LIKE $1
+        LIMIT 1
+      `;
+    } else {
+      query = `
+        SELECT latitude, longitude, region_name as name
+        FROM administrative_offices 
+        WHERE region_type = 'sigungu' AND region_name LIKE $1
+        LIMIT 1
+      `;
     }
 
-    const office = result.rows[0];
-    console.log(`✅ 행정기관 좌표 발견: ${office.office_name} (${office.latitude}, ${office.longitude})`);
+    const result = await pool.query(query, [`%${regionName}%`]);
 
-    res.json({
-      success: true,
-      office: {
-        name: office.office_name,
-        latitude: parseFloat(office.latitude),
-        longitude: parseFloat(office.longitude)
-      }
-    });
-
+    if (result.rows.length > 0) {
+      const office = result.rows[0];
+      console.log(`✅ 행정기관 좌표 발견: ${office.name} (${office.latitude}, ${office.longitude})`);
+      res.json({
+        success: true,
+        office: office
+      });
+    } else {
+      console.log(`⚠️ 행정기관 좌표 없음: ${regionType} - ${regionName}`);
+      res.json({
+        success: false,
+        error: '행정기관을 찾을 수 없습니다'
+      });
+    }
   } catch (error) {
     console.error('❌ 행정기관 좌표 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '행정기관 좌표 조회 실패: ' + error.message
+      error: '서버 오류'
     });
   }
 });
@@ -55,7 +121,7 @@ router.get('/administrative-office', async (req, res) => {
 router.get('/eupmyeondong-center', async (req, res) => {
   try {
     const { sido, sigungu, eupmyeondong } = req.query;
-    
+
     if (!sido || !sigungu || !eupmyeondong) {
       return res.status(400).json({
         success: false,
@@ -112,9 +178,9 @@ router.get('/eupmyeondong-center', async (req, res) => {
 router.get('/search-place', async (req, res) => {
   try {
     const { query, x, y, radius } = req.query;
-    
+
     console.log(`🔍 프록시 장소 검색 요청: query="${query}", x=${x}, y=${y}, radius=${radius}`);
-    
+
     if (!query) {
       console.error('❌ 검색어가 없습니다');
       return res.status(400).json({
@@ -125,7 +191,7 @@ router.get('/search-place', async (req, res) => {
 
     const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
     console.log(`🔑 카카오 API 키 상태: ${KAKAO_API_KEY ? '✅ 설정됨' : '❌ 없음'}`);
-    
+
     if (!KAKAO_API_KEY) {
       console.error('❌ KAKAO_API_KEY 환경변수가 설정되지 않았습니다');
       return res.status(500).json({
@@ -166,7 +232,7 @@ router.get('/search-place', async (req, res) => {
 
     const data = await response.json();
     console.log(`✅ 카카오 API 응답 성공: ${data.documents?.length || 0}개 결과`);
-    
+
     res.json({
       success: true,
       places: data.documents || [],

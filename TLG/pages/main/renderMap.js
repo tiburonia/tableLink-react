@@ -375,65 +375,68 @@ async function renderMap() {
   `;
 
   // 지도 즉시 생성
+  const container = document.getElementById('map');
   const options = {
     center: new kakao.maps.LatLng(37.5665, 126.9780),
     level: 3,
     maxLevel: 12  // 최대 줌 레벨을 12로 제한
   };
 
-  const map = new kakao.maps.Map(document.getElementById('map'), options);
+  const map = new kakao.maps.Map(container, options);
 
   // 지도 인스턴스를 전역 변수로 저장
   window.currentMap = map;
 
+  // 마커 관리용 전역 변수 초기화 (DOM 재생성 시 기존 참조 무효화)
+  window.currentMarkers = [];
+  window.markerMap = new Map();
+
+  console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
   console.log('🗺️ 지도 렌더링 완료');
+
+  // 지도 레벨 및 뷰포트 변경 이벤트
+  kakao.maps.event.addListener(map, 'zoom_changed', () => {
+    const level = map.getLevel();
+    console.log('🔍 지도 레벨 변경됨:', level);
+
+    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
+    } else {
+      console.error('❌ MapMarkerManager가 로드되지 않음');
+    }
+  });
+
+  // 지도 이동 완료 이벤트
+  kakao.maps.event.addListener(map, 'dragend', () => {
+    const level = map.getLevel();
+    console.log('🗺️ 지도 이동 완료 - 레벨:', level);
+
+    // MapMarkerManager를 통한 뷰포트 기반 마커 관리
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
+    }
+  });
+
+  // 초기 마커 로딩
+  setTimeout(() => {
+    const level = map.getLevel();
+    console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
+
+    if (window.MapMarkerManager) {
+      window.MapMarkerManager.handleMapLevelChange(level, map);
+    }
+  }, 300);
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
-    if (document.readyState === 'complete') {
-      console.log('🎯 DOM 완전 로드 완료');
-
-      // 🗑️ 레거시 시스템 제거됨 - 타일 시스템만 사용
-      console.log('🗑️ 레거시 시스템 제거됨 - 타일 시스템 전용');
-
-      // 타일 기반 마커 시스템 초기화
-      console.log('🗺️ 타일 시스템 강제 초기화 시작');
-      if (window.MapMarkerManager && typeof window.MapMarkerManager.initialize === 'function') {
-        try {
-          window.MapMarkerManager.initialize(map, {
-            debounceMs: 150,
-            maxVisibleMarkers: 500
-          });
-          console.log('✅ 타일 시스템 초기화 성공');
-        } catch (error) {
-          console.error('❌ 타일 시스템 초기화 실패:', error);
-        }
-      } else {
-        console.error('❌ MapMarkerManager.initialize 함수를 찾을 수 없습니다');
-      }
-
-      // 지도 패널 UI 초기화
-      if (window.MapPanelUI && typeof window.MapPanelUI.initialize === 'function') {
-        window.MapPanelUI.initialize();
-        // 샘플 데이터 로드
-        setTimeout(() => {
-          if (typeof window.MapPanelUI.loadSampleData === 'function') {
-            window.MapPanelUI.loadSampleData();
-          }
-        }, 100);
-      } else {
-        console.error('❌ MapPanelUI.initialize 함수를 찾을 수 없습니다');
-      }
-
-      console.log('🎯 타일 시스템 전용 모드 활성화 완료');
-
-      // 전역 디버깅용 지도 참조
-      window.__MAP__ = map;
-
-    } else {
-      console.log('⏳ DOM 로딩 대기 중...');
+    if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
+      window.MapPanelUI.initializeFiltering();
     }
-  }, 500);
+    if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
+      window.MapPanelUI.setupPanelDrag();
+    }
+  }, 200);
 
   //TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')

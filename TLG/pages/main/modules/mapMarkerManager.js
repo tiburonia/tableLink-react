@@ -1,699 +1,848 @@
-// 타일 기반 클러스터링 마커 관리자 (통합 최적화 버전)
+// 새로운 간단한 지도 마커 관리자
 window.MapMarkerManager = {
-  // ---- 상태 ----
-  _initialized: false,
-  map: null,
+  // 현재 표시된 마커들
+  currentMarkers: [],
 
-  // 캔버스
-  canvas: null,
-  ctx: null,
-  dpr: 1,
+  // 현재 지도 레벨
+  currentLevel: 0,
 
-  // 렌더 스로틀
-  _rafId: 0,
-  _pendingRender: false,
+  // 처리 중 플래그
+  isLoading: false,
 
-  // 타일/로딩/히트테스트
-  tileCache: new Map(),      // key -> { tile, features, meta, timestamp }
-  loadingTiles: new Set(),   // 진행중 타일 키
-  abortController: new AbortController(),
-  drawIndex: [],             // [{x,y,r,feature}, ...]
+  // 현재 작업 취소 플래그
+  shouldCancel: false,
 
-  // 타이머
-  debounceTimer: null,
-  _cacheSweepTimer: null,
+  // 메인 진입점 - 레벨 변경시 호출
+  async handleMapLevelChange(level, map) {
+    console.log(`🔄 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
 
-  // 옵션
-  opts: {
-    debounceMs: 180,
-    maxVisibleMarkers: 400,
-    tileLruLimit: 100,
-    requestConcurrency: 6,
-    tileZoomMin: 1,
-    tileZoomMax: 16,
-    tileBuffer: 1
-  },
+    // 이전 레벨과 현재 레벨의 마커 타입 확인
+    const prevMarkerType = this.getMarkerType(this.currentLevel);
+    const newMarkerType = this.getMarkerType(level);
 
-  // ---- 초기화 ----
-  initialize(map, options = {}) {
-    if (this._initialized) {
-      console.log('ℹ️ MapMarkerManager already initialized');
-      return;
-    }
-    this._initialized = true;
-    this.map = map;
-    this.opts = { ...this.opts, ...options };
-
-    console.log('🗺️ 타일 기반 마커 관리자 초기화');
-    console.log(`⚙️ debounce=${this.opts.debounceMs}ms, maxMarkers=${this.opts.maxVisibleMarkers}, LRU=${this.opts.tileLruLimit}`);
-
-    this.setupCanvas();
-    this.setupMapEvents();
-    this.debouncedLoadVisibleTiles();
-
-    this._cacheSweepTimer = setInterval(() => this.cleanupCache(), 5 * 60 * 1000);
-
-    console.log('✅ 초기화 완료');
-  },
-
-  // ---- 캔버스 ----
-  setupCanvas() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) {
-      console.error('❌ #map 컨테이너를 찾지 못함');
-      return;
-    }
-
-    // 기존 제거
-    if (this.canvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
-
-    // 새 캔버스
-    this.canvas = document.createElement('canvas');
-    this.canvas.style.position = 'absolute';
-    this.canvas.style.left = '0';
-    this.canvas.style.top = '0';
-    this.canvas.style.width = '100%';
-    this.canvas.style.height = '100%';
-    this.canvas.style.pointerEvents = 'none'; // ✅ 지도 이동/줌 방해 금지
-    this.canvas.style.zIndex = '100';
-
-    mapContainer.appendChild(this.canvas);
-    this.ctx = this.canvas.getContext('2d');
-
-    this.resizeCanvas();
-  },
-
-  resizeCanvas() {
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer || !this.ctx) return;
-
-    const rect = mapContainer.getBoundingClientRect();
-    this.dpr = window.devicePixelRatio || 1;
-
-    this.canvas.width  = Math.max(1, Math.floor(rect.width  * this.dpr));
-    this.canvas.height = Math.max(1, Math.floor(rect.height * this.dpr));
-    this.canvas.style.width  = rect.width + 'px';
-    this.canvas.style.height = rect.height + 'px';
-
-    // 스케일 누적 방지
-    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-
-    this.requestRender();
-    console.log(`🎨 캔버스 리사이즈: ${rect.width}x${rect.height} (dpr=${this.dpr})`);
-  },
-
-  // ---- 이벤트 ----
-  setupMapEvents() {
-    // 이동/줌 종료 후만 처리
-    kakao.maps.event.addListener(this.map, 'idle', () => {
-      this.debouncedLoadVisibleTiles();
-    });
-
-    // 지도 클릭 → 히트테스트
-    kakao.maps.event.addListener(this.map, 'click', (mouseEvent) => {
-      const latlng = mouseEvent.latLng;
-      const prj = this.map.getProjection();
-      const pt = prj.pointFromCoords(latlng);
-      const cpt = prj.pointFromCoords(this.map.getCenter());
-      const rect = document.getElementById('map').getBoundingClientRect();
-      const x = (pt.x - cpt.x) + rect.width / 2;
-      const y = (pt.y - cpt.y) + rect.height / 2;
-
-      const f = this.findFeatureAtPoint(x, y);
-      if (!f) return;
-      if (f.properties?.cluster) this.zoomToCluster(f);
-      else this.showStoreDetail(f);
-    });
-
-    window.addEventListener('resize', () => this.resizeCanvas());
-
-    console.log('🎯 이벤트 등록 완료 (idle/resize/click)');
-  },
-
-  debouncedLoadVisibleTiles() {
-    clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(() => this.loadVisibleTiles(), this.opts.debounceMs);
-  },
-
-  // ---- 타일 계산 ----
-  getTileZoom() {
-    // Kakao: level 1(최대확대)~14(최대축소)
-    // Tile:  z 16(최대확대)~0(최대축소) 방향이라 대략 18-level
-    const level = this.map.getLevel();
-    return Math.max(this.opts.tileZoomMin, Math.min(this.opts.tileZoomMax, 18 - level));
-  },
-
-  lngLatToTile(lng, lat, z) {
-    const x = Math.floor((lng + 180) / 360 * Math.pow(2, z));
-    const y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
-    return { x, y };
-  },
-
-  getVisibleTiles() {
-    const bounds = this.map.getBounds();
-    if (!bounds) return [];
-    const z = this.getTileZoom();
-
-    const sw = bounds.getSouthWest();
-    const ne = bounds.getNorthEast();
-    const swt = this.lngLatToTile(sw.getLng(), sw.getLat(), z);
-    const net = this.lngLatToTile(ne.getLng(), ne.getLat(), z);
-
-    const n = Math.pow(2, z);
-    const buf = this.opts.tileBuffer;
-    const minX = Math.max(0, Math.min(swt.x, net.x) - buf);
-    const maxX = Math.min(n - 1, Math.max(swt.x, net.x) + buf);
-    const minY = Math.max(0, Math.min(swt.y, net.y) - buf);
-    const maxY = Math.min(n - 1, Math.max(swt.y, net.y) + buf);
-
-    const tiles = [];
-    for (let x = minX; x <= maxX; x++) {
-      for (let y = minY; y <= maxY; y++) tiles.push({ z, x, y });
-    }
-
-    if (tiles.length > 64) {
-      console.warn('⚠️ 가시 타일 과다:', tiles.length, '→ 64로 제한');
-      return tiles.slice(0, 64);
-    }
-    return tiles;
-  },
-
-  // ---- 타일 로딩 ----
-  async loadVisibleTiles() {
-    const tiles = this.getVisibleTiles();
-    if (!tiles.length) return;
-
-    // 기존 요청 중단
-    this.abortController.abort();
-    this.abortController = new AbortController();
-
-    console.log(`🔄 타일 로딩 시작: ${tiles.length}개 (z=${tiles[0].z})`);
-
-    // 필요한 것만 선별 + 비가시 캐시 제거
-    const need = [];
-    const visibleKeySet = new Set();
-    for (const t of tiles) {
-      const key = `${t.z}/${t.x}/${t.y}`;
-      visibleKeySet.add(key);
-      if (!this.tileCache.has(key) && !this.loadingTiles.has(key)) {
-        need.push({ key, tile: t });
-      }
-    }
-    for (const key of this.tileCache.keys()) {
-      if (!visibleKeySet.has(key)) this.tileCache.delete(key);
-    }
-
-    // 동시 요청 제한
-    const N = Math.max(1, this.opts.requestConcurrency);
-    let idx = 0;
-    const workers = Array.from({ length: N }, async () => {
-      while (idx < need.length) {
-        const { key, tile } = need[idx++];
-        await this._loadTile(key, tile);
-      }
-    });
-    await Promise.allSettled(workers);
-
-    // LRU 상한
-    this._enforceTileLRU(this.opts.tileLruLimit);
-
-    // 렌더(스로틀)
-    this.requestRender();
-  },
-
-  async _loadTile(tileKey, tile) {
-    if (this.loadingTiles.has(tileKey)) return;
-    this.loadingTiles.add(tileKey);
-
-    try {
-      // console.log(`📡 타일 요청: ${tileKey}`);
-      const res = await fetch(`/api/tiles/${tile.z}/${tile.x}/${tile.y}`, {
-        signal: this.abortController.signal
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      if (data?.success && data?.data?.features) {
-        this.tileCache.set(tileKey, {
-          tile,
-          features: data.data.features,
-          meta: data.meta || {},
-          timestamp: Date.now()
-        });
-        // console.log(`✅ 캐시됨: ${tileKey} (${data.meta?.totalFeatures ?? data.data.features.length})`);
-      }
-    } catch (e) {
-      if (e.name !== 'AbortError') console.error(`❌ 타일 실패: ${tileKey}`, e.message);
-    } finally {
-      this.loadingTiles.delete(tileKey);
-    }
-  },
-
-  _enforceTileLRU(limit = 100) {
-    const keys = Array.from(this.tileCache.keys());
-    if (keys.length <= limit) return;
-    const arr = keys
-      .map(k => ({ k, t: this.tileCache.get(k)?.timestamp || 0 }))
-      .sort((a, b) => a.t - b.t);
-    const over = arr.length - limit;
-    for (let i = 0; i < over; i++) this.tileCache.delete(arr[i].k);
-  },
-
-  // ---- 렌더링 ----
-  requestRender() {
-    if (this._pendingRender) return;
-    this._pendingRender = true;
-    this._rafId && cancelAnimationFrame(this._rafId);
-    this._rafId = requestAnimationFrame(() => {
-      this._pendingRender = false;
-      this.renderAllTiles();
-    });
-  },
-
-  clearCanvas() {
-    if (!this.ctx || !this.canvas) return;
-    const w = this.canvas.width / this.dpr;
-    const h = this.canvas.height / this.dpr;
-    this.ctx.clearRect(0, 0, w, h);
-  },
-
-  renderAllTiles() {
-    this.clearCanvas();
-    this.drawIndex = [];
-
-    const tiles = this.getVisibleTiles();
-    if (!tiles.length) return;
-
-    // 현재 줌 레벨과 피처 수집
-    const currentZoom = this.getTileZoom();
-    const allFeatures = [];
-    
-    for (const t of tiles) {
-      const k = `${t.z}/${t.x}/${t.y}`;
-      const td = this.tileCache.get(k);
-      if (td?.features) {
-        allFeatures.push(...td.features.filter(f => 
-          f?.geometry?.coordinates && f.properties
-        ));
-      }
-    }
-
-    if (!allFeatures.length) return;
-
-    // 렌더링 우선순위: 1) 클러스터 2) 개별 매장
-    const clusters = [];
-    const stores = [];
-    
-    for (const feature of allFeatures) {
-      if (feature.properties.cluster) {
-        clusters.push(feature);
+    if (this.isLoading) {
+      // 마커 타입이 바뀌면 기존 작업 취소하고 새로 시작
+      if (prevMarkerType !== newMarkerType) {
+        console.log(`🔄 마커 타입 변경 (${prevMarkerType} → ${newMarkerType}) - 기존 작업 취소`);
+        this.shouldCancel = true;
+        this.clearAllMarkers();
+        // 잠시 대기 후 새 작업 시작
+        setTimeout(() => this.handleMapLevelChange(level, map), 100);
+        return;
       } else {
-        stores.push(feature);
+        console.log('⏸️ 이미 로딩 중 - 무시');
+        return;
       }
     }
 
-    // 성능 제한 적용
-    const totalFeatures = clusters.length + stores.length;
-    const shouldLimitStores = totalFeatures > this.opts.maxVisibleMarkers;
-    const maxStores = shouldLimitStores ? 
-      Math.max(50, this.opts.maxVisibleMarkers - clusters.length) : 
-      stores.length;
-
-    let rendered = { clusters: 0, stores: 0 };
-
-    // 1. 클러스터 렌더링 (항상 우선)
-    for (const cluster of clusters) {
-      if (this._renderFeature(cluster, currentZoom)) {
-        rendered.clusters++;
+    this.isLoading = true;
+    this.shouldCancel = false;
+    
+    // 마커 타입이 같으면 기존 마커 유지하고 추가 마커만 생성
+    if (prevMarkerType === newMarkerType) {
+      console.log(`✨ 마커 타입 동일 (${newMarkerType}) - 기존 마커 유지하고 새 영역 추가`);
+      this.currentLevel = level;
+      
+      try {
+        // 같은 마커 타입 내에서 추가 마커 생성
+        await this.addMarkersForCurrentType(map, level, newMarkerType);
+      } catch (error) {
+        if (!this.shouldCancel) {
+          console.error('❌ 추가 마커 생성 실패:', error);
+        }
+      } finally {
+        this.isLoading = false;
       }
+      return;
     }
-
-    // 2. 개별 매장 렌더링 (제한 적용)
-    const storesToRender = shouldLimitStores ? 
-      this._selectBestStores(stores, maxStores, currentZoom) : 
-      stores;
-
-    for (const store of storesToRender) {
-      if (this._renderFeature(store, currentZoom)) {
-        rendered.stores++;
-      }
-    }
-
-    const summary = shouldLimitStores ? 
-      ` (성능 최적화: 매장 ${rendered.stores}/${stores.length}개만 표시)` : '';
     
-    console.log(`🖼️ 렌더 완료 z${currentZoom}: 클러스터 ${rendered.clusters}개, 매장 ${rendered.stores}개${summary}`);
-  },
+    // 마커 타입이 바뀔 때만 기존 마커 제거
+    this.clearAllMarkers();
+    this.currentLevel = level;
 
-  _renderFeature(feature, zoom) {
-    const [lng, lat] = feature.geometry.coordinates;
-    const p = this.lngLatToPixel(lng, lat);
-    if (!p) return false;
-
-    const r = feature.properties.cluster
-      ? this._drawCluster(p.x, p.y, feature.properties.point_count || 1, zoom)
-      : this._drawStore(p.x, p.y, feature, zoom);
-
-    this.drawIndex.push({ x: p.x, y: p.y, r, feature });
-    return true;
-  },
-
-  _selectBestStores(stores, maxCount, zoom) {
-    if (stores.length <= maxCount) return stores;
-
-    // 우선순위: 1) 운영중 2) 평점 높은 순 3) 리뷰 많은 순
-    return stores
-      .map(store => ({
-        store,
-        priority: this._calculateStorePriority(store, zoom)
-      }))
-      .sort((a, b) => b.priority - a.priority)
-      .slice(0, maxCount)
-      .map(item => item.store);
-  },
-
-  _calculateStorePriority(store, zoom) {
-    const props = store.properties;
-    let priority = 0;
-    
-    // 운영상태 (가중치 높음)
-    if (props.isOpen !== false) priority += 100;
-    
-    // 평점 (0-50점)
-    const rating = parseFloat(props.ratingAverage) || 0;
-    priority += rating * 10;
-    
-    // 리뷰 수 (로그 스케일, 0-30점)
-    const reviews = parseInt(props.reviewCount) || 0;
-    priority += Math.min(30, Math.log(reviews + 1) * 5);
-    
-    // 줌 레벨에 따른 보정 (고줌일수록 더 많은 매장 표시)
-    priority += zoom * 2;
-    
-    return priority;
-  },
-
-  lngLatToPixel(lng, lat) {
     try {
-      if (typeof lng !== 'number' || typeof lat !== 'number' || isNaN(lng) || isNaN(lat)) return null;
-      const position = new kakao.maps.LatLng(lat, lng);
-      const projection = this.map.getProjection();
-      if (!projection) return null;
-
-      const pt = projection.pointFromCoords(position);
-      const cpt = projection.pointFromCoords(this.map.getCenter());
-
-      const mapContainer = document.getElementById('map');
-      if (!mapContainer) return null;
-      const rect = mapContainer.getBoundingClientRect();
-
-      const x = (pt.x - cpt.x) + rect.width / 2;
-      const y = (pt.y - cpt.y) + rect.height / 2;
-
-      const margin = 100;
-      if (x >= -margin && x <= rect.width + margin && y >= -margin && y <= rect.height + margin) {
-        return { x, y };
+      // 레벨별 마커 생성
+      if (level <= 5) {
+        // 개별 매장 마커만 (레벨 1-5)
+        console.log(`🏪 레벨 ${level}: 개별 매장 마커만 표시`);
+        await this.showStoreMarkers(map);
+      } else if (level <= 7) {
+        // 읍면동 집계 마커만 (레벨 6-7)
+        console.log(`🏘️ 레벨 ${level}: 읍면동 집계 마커만 표시`);
+        await this.showClusterMarkers(map, level);
+      } else if (level <= 10) {
+        // 시군구 집계 마커만 (레벨 8-10)
+        console.log(`🏛️ 레벨 ${level}: 시군구 집계 마커만 표시`);
+        await this.showClusterMarkers(map, level);
+      } else {
+        // 시도 집계 마커만 (레벨 11+)
+        console.log(`🗺️ 레벨 ${level}: 시도 집계 마커만 표시`);
+        await this.showClusterMarkers(map, level);
       }
-      return null;
-    } catch (e) {
-      // 좌표 변환 실패시 무시
-      return null;
+
+    } catch (error) {
+      if (!this.shouldCancel) {
+        console.error('❌ 마커 업데이트 실패:', error);
+      }
+    } finally {
+      this.isLoading = false;
+    }
+
+    if (!this.shouldCancel) {
+      console.log(`✅ 지도 레벨 ${level} 마커 업데이트 완료`);
     }
   },
 
-  _drawCluster(x, y, count, zoom = 10) {
-    // 줌 레벨과 클러스터 크기에 따른 동적 반지름
-    const baseRadius = Math.min(35, Math.max(12, Math.log(count) * 4));
-    const zoomMultiplier = Math.max(0.7, Math.min(1.3, zoom / 10));
-    const r = Math.round(baseRadius * zoomMultiplier);
+  // 마커 타입 결정 (레벨별 세분화)
+  getMarkerType(level) {
+    if (level <= 5) return 'individual';      // 개별 매장
+    if (level <= 7) return 'eupmyeondong';    // 읍면동 집계
+    if (level <= 10) return 'sigungu';        // 시군구 집계
+    return 'sido';                            // 시도 집계
+  },
 
-    // 클러스터 크기별 색상 구분
-    let fillColor, strokeColor;
-    if (count >= 100) {
-      fillColor = '#d32f2f';      // 대형 클러스터 (빨강)
-      strokeColor = '#ffffff';
-    } else if (count >= 50) {
-      fillColor = '#f57c00';      // 중형 클러스터 (주황)
-      strokeColor = '#ffffff';
-    } else if (count >= 10) {
-      fillColor = '#1976d2';      // 소형 클러스터 (파랑)
-      strokeColor = '#ffffff';
+  // 뷰포트 내 매장 데이터 가져오기
+  async fetchStores(map) {
+    const bounds = map.getBounds();
+    const swLat = bounds.getSouthWest().getLat();
+    const swLng = bounds.getSouthWest().getLng();
+    const neLat = bounds.getNorthEast().getLat();
+    const neLng = bounds.getNorthEast().getLng();
+
+    const params = new URLSearchParams({
+      swLat: swLat,
+      swLng: swLng,
+      neLat: neLat,
+      neLng: neLng,
+      level: this.currentLevel
+    });
+
+    console.log(`📍 뷰포트 매장 데이터 요청: ${params.toString()}`);
+
+    const response = await fetch(`/api/stores/viewport?${params}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '매장 데이터 조회 실패');
+    }
+
+    console.log(`✅ 매장 데이터 수신: ${data.stores.length}개`);
+    return data.stores;
+  },
+
+  // 개별 매장 마커 표시
+  async showStoreMarkers(map) {
+    console.log('🏪 개별 매장 마커 표시 시작');
+
+    const stores = await this.fetchStores(map);
+
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 개별 매장 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+
+    // 유효한 좌표를 가진 매장들 필터링
+    const validStores = stores.filter(store => store.coord?.lat && store.coord?.lng);
+    console.log(`📍 유효한 매장 수: ${validStores.length}개`);
+
+    // 모든 마커를 한번에 생성
+    const markers = this.createStoreMarkersBatch(validStores, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...markers);
+      console.log(`✅ 개별 마커 ${markers.length}개 생성 완료`);
     } else {
-      fillColor = '#388e3c';      // 미니 클러스터 (초록)
-      strokeColor = '#ffffff';
+      console.log('🚫 개별 매장 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      markers.forEach(marker => marker.setMap(null));
     }
-
-    // 외곽 그림자 효과
-    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    this.ctx.shadowBlur = 3;
-    this.ctx.shadowOffsetX = 1;
-    this.ctx.shadowOffsetY = 1;
-
-    // 메인 원
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, r, 0, Math.PI * 2);
-    this.ctx.fillStyle = fillColor;
-    this.ctx.fill();
-
-    // 그림자 제거
-    this.ctx.shadowColor = 'transparent';
-    this.ctx.shadowBlur = 0;
-    this.ctx.shadowOffsetX = 0;
-    this.ctx.shadowOffsetY = 0;
-
-    // 테두리
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = Math.max(1, Math.round(r / 8));
-    this.ctx.stroke();
-
-    // 텍스트
-    this.ctx.fillStyle = '#ffffff';
-    const fontSize = Math.max(10, Math.min(16, r / 2));
-    this.ctx.font = `bold ${fontSize}px Arial`;
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    
-    // 큰 숫자는 축약 표시
-    const displayText = count >= 1000 ? 
-      `${Math.round(count / 100) / 10}k` : 
-      String(count);
-    
-    this.ctx.fillText(displayText, x, y);
-    return r + 2; // 히트 테스트용 여유 공간
   },
 
-  _drawStore(x, y, feature, zoom = 10) {
-    const props = feature.properties;
-    const isOpen = props.isOpen !== false;
-    const hasHighRating = (parseFloat(props.ratingAverage) || 0) >= 4.0;
-    const hasReviews = (parseInt(props.reviewCount) || 0) > 10;
+  // 집계 마커 표시
+  async showClusterMarkers(map, level) {
+    console.log(`🏘️ 집계 마커 표시 시작 (레벨 ${level})`);
 
-    // 줌 레벨에 따른 크기 조절
-    const baseRadius = zoom >= 14 ? 7 : zoom >= 12 ? 6 : 5;
-    const r = hasHighRating && hasReviews ? baseRadius + 1 : baseRadius;
-
-    // 매장 상태별 색상 및 스타일
-    let fillColor, strokeColor, strokeWidth;
+    const stores = await this.fetchStores(map);
     
-    if (!isOpen) {
-      fillColor = '#757575';      // 폐점/휴무 (회색)
-      strokeColor = '#ffffff';
-      strokeWidth = 1;
-    } else if (hasHighRating && hasReviews) {
-      fillColor = '#4caf50';      // 인기 매장 (진초록)
-      strokeColor = '#fff';
-      strokeWidth = 2;
-    } else if (hasReviews) {
-      fillColor = '#8bc34a';      // 일반 매장 (연초록)
-      strokeColor = '#ffffff';
-      strokeWidth = 1;
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+    
+    console.log(`📍 조회된 매장 수: ${stores.length}개`);
+
+    // 지역별 그룹화
+    const clusters = this.groupStoresByRegion(stores, level);
+    console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
+
+    // 각 지역별 매장 수 로그
+    for (const [regionName, regionStores] of clusters.entries()) {
+      console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
+    }
+
+    // 모든 집계 마커를 한번에 생성
+    const markers = await this.createClusterMarkersBatch(clusters, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...markers);
+      console.log(`✅ 집계 마커 ${markers.length}개 생성 완료`);
     } else {
-      fillColor = '#ffc107';      // 신규/정보부족 (노랑)
-      strokeColor = '#ffffff';
-      strokeWidth = 1;
+      console.log('🚫 집계 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      markers.forEach(marker => marker.setMap(null));
     }
-
-    // 인기 매장 하이라이트 효과
-    if (isOpen && hasHighRating && hasReviews) {
-      this.ctx.shadowColor = 'rgba(76, 175, 80, 0.4)';
-      this.ctx.shadowBlur = 4;
-    }
-
-    // 메인 원
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, r, 0, Math.PI * 2);
-    this.ctx.fillStyle = fillColor;
-    this.ctx.fill();
-
-    // 그림자 제거
-    this.ctx.shadowColor = 'transparent';
-    this.ctx.shadowBlur = 0;
-
-    // 테두리
-    this.ctx.strokeStyle = strokeColor;
-    this.ctx.lineWidth = strokeWidth;
-    this.ctx.stroke();
-
-    // 고평점 매장 별표 표시 (고줌에서만)
-    if (isOpen && hasHighRating && zoom >= 13) {
-      this._drawStar(x, y - r - 3, 3);
-    }
-
-    return r + 1;
   },
 
-  _drawStar(x, y, size) {
-    const spikes = 5;
-    const outerRadius = size;
-    const innerRadius = size * 0.4;
+  // 개별 매장 마커 배치 생성
+  createStoreMarkersBatch(stores, map) {
+    console.log(`📦 개별 매장 마커 배치 생성: ${stores.length}개`);
     
-    this.ctx.beginPath();
-    for (let i = 0; i < spikes * 2; i++) {
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      const angle = (i * Math.PI) / spikes - Math.PI / 2;
-      const px = x + Math.cos(angle) * radius;
-      const py = y + Math.sin(angle) * radius;
-      
-      if (i === 0) this.ctx.moveTo(px, py);
-      else this.ctx.lineTo(px, py);
-    }
-    this.ctx.closePath();
-    this.ctx.fillStyle = '#ffd700';
-    this.ctx.fill();
-    this.ctx.strokeStyle = '#fff';
-    this.ctx.lineWidth = 0.5;
-    this.ctx.stroke();
+    // 모든 마커를 한번에 생성
+    const markers = stores.map(store => this.createStoreMarker(store, map));
+    
+    console.log(`✅ 배치 생성 완료: ${markers.length}개 마커`);
+    return markers;
   },
 
-  // ---- 히트테스트/상호작용 ----
-  findFeatureAtPoint(x, y) {
-    // 클릭 허용 오차 범위 (터치 등 고려)
-    const tolerance = 3;
-    let bestMatch = null;
-    let minDistance = Infinity;
+  // 개별 매장 마커 생성
+  createStoreMarker(store, map) {
+    const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
+    const isOpen = store.isOpen !== false;
+    const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
 
-    // 상단부터(마지막 그린 것부터) 검사하되, 가장 가까운 것 선택
-    for (let i = this.drawIndex.length - 1; i >= 0; i--) {
-      const d = this.drawIndex[i];
-      const dx = x - d.x;
-      const dy = y - d.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      const hitRadius = d.r + tolerance;
-      
-      if (distance <= hitRadius && distance < minDistance) {
-        minDistance = distance;
-        bestMatch = d.feature;
-        
-        // 클러스터는 우선 선택 (같은 위치에 여러 요소가 있을 때)
-        if (d.feature.properties?.cluster) {
-          break;
+    // 고유 ID 생성
+    const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
+
+    const content = `
+      <div id="${markerId}" class="store-marker store-marker-hoverable" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+        <div class="marker-info">
+          <div class="store-name">${store.name}</div>
+          <div class="store-status ${isOpen ? 'open' : 'closed'}">
+            ${isOpen ? '운영중' : '운영준비중'} ⭐${rating}
+          </div>
+        </div>
+      </div>
+      <style>
+        .store-marker {
+          background: white;
+          border: 2px solid ${isOpen ? '#4caf50' : '#ff9800'};
+          border-radius: 8px;
+          padding: 6px 8px;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+          min-width: 100px;
+          position: relative;
+          z-index: 200;
+          transition: all 0.2s ease;
+        }
+        .store-marker-hoverable:hover {
+          transform: scale(1.1) !important;
+          z-index: 9999 !important;
+          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
+          border-width: 3px !important;
+        }
+        .store-name {
+          font-weight: bold;
+          color: #333;
+          font-size: 12px;
+          margin-bottom: 2px;
+          line-height: 1.2;
+        }
+        .store-status {
+          font-size: 10px;
+          font-weight: 500;
+          line-height: 1.2;
+        }
+        .store-status.open { color: #4caf50; }
+        .store-status.closed { color: #ff9800; }
+      </style>
+    `;
+
+    const overlay = new kakao.maps.CustomOverlay({
+      position: position,
+      content: content,
+      yAnchor: 1,
+      map: map
+    });
+
+    return overlay;
+  },
+
+  // 집계 마커 배치 생성 (최적화된 버전)
+  async createClusterMarkersBatch(clusters, map) {
+    console.log(`📦 집계 마커 배치 생성: ${clusters.size}개`);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 배치 생성 중단됨');
+      return [];
+    }
+    
+    const clusterEntries = Array.from(clusters.entries());
+    
+    // 1단계: 모든 행정기관 좌표를 배치로 조회
+    const adminCoords = await this.batchGetAdministrativeCoords(clusterEntries);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 마커 배치 생성 중단됨 (좌표 조회 후)');
+      return [];
+    }
+    
+    // 2단계: 좌표와 함께 마커 생성 (DB 조회 없이)
+    const markerPromises = clusterEntries.map(([regionName, regionStores], index) => 
+      this.createClusterMarkerWithCoord(regionName, regionStores, map, adminCoords[index])
+    );
+    
+    const markers = await Promise.all(markerPromises);
+    const validMarkers = markers.filter(marker => marker !== null);
+    
+    console.log(`✅ 배치 생성 완료: ${validMarkers.length}개 마커`);
+    return validMarkers;
+  },
+
+  // 좌표가 미리 제공된 집계 마커 생성 (성능 최적화)
+  async createClusterMarkerWithCoord(regionName, stores, map, preCalculatedCoord) {
+    if (!stores || stores.length === 0) return null;
+
+    let anchorCoord = preCalculatedCoord;
+    
+    // 미리 계산된 좌표가 없으면 기존 방식 사용
+    if (!anchorCoord) {
+      anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
+      if (!anchorCoord) return null;
+    }
+
+    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
+  },
+
+  // 집계 마커 생성 (기존 메서드)
+  async createClusterMarker(regionName, stores, map) {
+    if (!stores || stores.length === 0) return null;
+
+    // 앵커 좌표 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
+    const anchorCoord = await this.calculateAnchorPosition(stores, this.currentLevel);
+    if (!anchorCoord) return null;
+
+    return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
+  },
+
+  // 마커 엘리먼트 생성 (공통 로직)
+  createClusterMarkerElement(regionName, stores, map, anchorCoord) {
+
+    const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
+    const storeCount = stores.length;
+    const openCount = stores.filter(s => s.isOpen !== false).length;
+
+    // 표시용 지역명 계산 (첫 번째 매장 기준)
+    const displayName = stores.length > 0 ?
+      this.getDisplayRegionName(stores[0], this.currentLevel) || regionName :
+      regionName;
+
+    // 고유 ID 생성
+    const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
+
+    const content = `
+      <div id="${markerId}" class="cluster-marker cluster-marker-hoverable" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
+        <div class="cluster-info">
+          <div class="region-name">${displayName}</div>
+          <div class="cluster-count">${storeCount}</div>
+        </div>
+      </div>
+      <style>
+        .cluster-marker {
+          background: linear-gradient(135deg, #297efc, #4f46e5);
+          color: white;
+          border-radius: 6px;
+          padding: 2px 5px;
+          cursor: pointer;
+          box-shadow: 0 1px 3px rgba(41,126,252,0.3);
+          min-width: 32px;
+          text-align: center;
+          position: relative;
+          z-index: 100;
+          transition: all 0.2s ease;
+        }
+        .cluster-marker-hoverable:hover {
+          transform: scale(1.2) !important;
+          z-index: 9998 !important;
+          box-shadow: 0 4px 15px rgba(41,126,252,0.6) !important;
+          border-color: rgba(255,255,255,0.4) !important;
+        }
+        .region-name {
+          font-weight: bold;
+          font-size: 8px;
+          line-height: 1.1;
+          margin-bottom: 1px;
+        }
+        .cluster-count {
+          font-size: 7px;
+          opacity: 0.9;
+          line-height: 1;
+        }
+      </style>
+    `;
+
+    const overlay = new kakao.maps.CustomOverlay({
+      position: position,
+      content: content,
+      yAnchor: 1,
+      map: map
+    });
+
+    return overlay;
+  },
+
+  // 지역별 매장 그룹화 (sido, sigungu, eupmyeondong 컬럼 사용)
+  groupStoresByRegion(stores, level) {
+    const clusters = new Map();
+
+    stores.forEach(store => {
+      const region = this.getRegionByLevel(store, level);
+      if (!region) return;
+
+      if (!clusters.has(region)) {
+        clusters.set(region, []);
+      }
+      clusters.get(region).push(store);
+    });
+
+    console.log(`📊 레벨 ${level}에서 ${stores.length}개 매장을 ${clusters.size}개 지역으로 그룹화`);
+
+    return clusters;
+  },
+
+  // 레벨에 따른 지역명 결정 (DB 컬럼 직접 사용)
+  getRegionByLevel(store, level) {
+    const { sido, sigungu, eupmyeondong } = store;
+
+    if (!sido) return null;
+
+    if (level <= 7) {
+      // 동/읍/면 단위 (sido + sigungu + eupmyeondong)
+      if (eupmyeondong && sigungu) {
+        return `${sido} ${sigungu} ${eupmyeondong}`;
+      } else if (sigungu) {
+        return `${sido} ${sigungu}`;
+      } else {
+        return sido;
+      }
+    } else if (level <= 10) {
+      // 시/군/구 단위 (sido + sigungu)
+      if (sigungu) {
+        return `${sido} ${sigungu}`;
+      } else {
+        return sido;
+      }
+    } else {
+      // 레벨 11+ - 시/도 단위만 (sido만)
+      return sido;
+    }
+  },
+
+  // 집계 마커에 표시할 지역명 (레벨별로 해당 컬럼명만)
+  getDisplayRegionName(store, level) {
+    const { sido, sigungu, eupmyeondong } = store;
+
+    if (!sido) return null;
+
+    if (level <= 7) {
+      // 읍면동 집계 마커 - eupmyeondong만 표시
+      if (eupmyeondong) {
+        return eupmyeondong;
+      } else if (sigungu) {
+        return sigungu;
+      } else {
+        return sido;
+      }
+    } else if (level <= 10) {
+      // 시군구 집계 마커 - sigungu만 표시
+      if (sigungu) {
+        return sigungu;
+      } else {
+        return sido;
+      }
+    } else {
+      // 레벨 11+ - 시도 집계 마커만, sido만 표시
+      return sido;
+    }
+  },
+
+  // 집계 마커 앵커 위치 계산 (DB 행정기관 좌표 우선, 읍면동은 ST_PointOnSurface)
+  async calculateAnchorPosition(stores, level) {
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      return null;
+    }
+
+    // 좌표가 유효한 매장만 필터링
+    const validStores = stores.filter(s => {
+      return s && s.coord && 
+             typeof s.coord.lat === 'number' && 
+             typeof s.coord.lng === 'number' &&
+             !isNaN(s.coord.lat) && 
+             !isNaN(s.coord.lng);
+    });
+
+    if (validStores.length === 0) {
+      console.warn('⚠️ 유효한 좌표를 가진 매장이 없습니다');
+      return null;
+    }
+
+    const firstStore = validStores[0];
+
+    if (level >= 11) {
+      // 레벨 11+ - 시도 레벨만, DB에서 도청/시청 좌표 조회
+      const coord = await this.getAdministrativeOfficeCoord('sido', firstStore.sido);
+      if (this.shouldCancel) return null;
+      if (coord) {
+        console.log(`🏛️ 시도청 앵커: ${firstStore.sido} (${coord.lat}, ${coord.lng})`);
+        return coord;
+      }
+    } else if (level >= 8) {
+      // 시군구 레벨 - DB에서 시청/군청/구청 좌표 조회
+      if (firstStore.sigungu) {
+        const coord = await this.getAdministrativeOfficeCoord('sigungu', firstStore.sigungu);
+        if (this.shouldCancel) return null;
+        if (coord) {
+          console.log(`🏛️ 시군구청 앵커: ${firstStore.sigungu} (${coord.lat}, ${coord.lng})`);
+          return coord;
+        }
+      }
+    } else {
+      // 읍면동 레벨 - ST_PointOnSurface로 중심점 계산
+      if (firstStore.sido && firstStore.sigungu && firstStore.eupmyeondong) {
+        const coord = await this.getEupmyeondongCenter(firstStore.sido, firstStore.sigungu, firstStore.eupmyeondong);
+        if (this.shouldCancel) return null;
+        if (coord) {
+          console.log(`📍 읍면동 중심점 앵커: ${firstStore.eupmyeondong} (${coord.lat}, ${coord.lng})`);
+          return coord;
         }
       }
     }
-    
-    return bestMatch;
+
+    // 모든 방법이 실패하면 센트로이드 사용
+    const centroid = this.calculateCentroid(validStores);
+    console.log(`📍 센트로이드 앵커(fallback): (${centroid.lat}, ${centroid.lng})`);
+    return centroid;
   },
 
-  zoomToCluster(clusterFeature) {
-    const [lng, lat] = clusterFeature.geometry.coordinates;
-    const pos = new kakao.maps.LatLng(lat, lng);
-    const currentLevel = this.map.getLevel();
-    
-    // 클러스터 크기에 따른 적응형 줌
-    const pointCount = clusterFeature.properties.point_count || 1;
-    let targetLevel;
-    
-    if (pointCount >= 100) {
-      targetLevel = Math.max(1, currentLevel - 3);
-    } else if (pointCount >= 50) {
-      targetLevel = Math.max(1, currentLevel - 2);
-    } else if (pointCount >= 10) {
-      targetLevel = Math.max(1, currentLevel - 2);
-    } else {
-      targetLevel = Math.max(1, currentLevel - 1);
-    }
-
-    console.log(`📍 클러스터 확대: ${pointCount}개 매장 → 줌 ${currentLevel}→${targetLevel}`);
-    
-    // 부드러운 애니메이션으로 이동
-    this.map.setCenter(pos);
-    this.map.setLevel(targetLevel);
-  },
-
-  showStoreDetail(storeFeature) {
-    const props = storeFeature.properties || {};
-    const coord = storeFeature.geometry.coordinates;
-    
-    const store = {
-      id: props.id,
-      name: props.name || '매장명 없음',
-      category: props.category || '기타',
-      isOpen: props.isOpen !== false,
-      ratingAverage: parseFloat(props.ratingAverage) || 0,
-      reviewCount: parseInt(props.reviewCount) || 0,
-      coord: {
-        lat: coord[1],
-        lng: coord[0]
-      },
-      // 추가 주소 정보
-      address: {
-        sido: props.sido || '',
-        sigungu: props.sigungu || '', 
-        eupmyeondong: props.eupmyeondong || ''
+  // 행정기관 좌표 배치 조회 (성능 최적화)
+  async batchGetAdministrativeCoords(clusterEntries) {
+    const coordRequests = clusterEntries.map(([regionName, regionStores]) => {
+      const firstStore = regionStores[0];
+      let regionType, targetRegion;
+      
+      if (this.currentLevel >= 11) {
+        regionType = 'sido';
+        targetRegion = firstStore.sido;
+      } else if (this.currentLevel >= 8) {
+        regionType = 'sigungu';
+        targetRegion = firstStore.sigungu;
+      } else {
+        // 읍면동은 배치 조회 안함 (ST_PointOnSurface 필요)
+        return null;
       }
-    };
-
-    console.log(`🏪 매장 선택: ${store.name} (${store.isOpen ? '영업중' : '휴무'}) ⭐${store.ratingAverage}/5.0 (${store.reviewCount}리뷰)`);
+      
+      return { regionType, regionName: targetRegion };
+    });
     
-    // 매장 상세 패널 열기
-    if (typeof window.renderStore === 'function') {
-      window.renderStore(store);
-    } else {
-      console.warn('⚠️ renderStore 함수를 찾을 수 없음');
+    // null이 아닌 요청들만 필터링
+    const validRequests = coordRequests.filter(req => req !== null);
+    
+    if (validRequests.length === 0) {
+      return new Array(clusterEntries.length).fill(null);
     }
-
-    // 지도 중심을 매장 위치로 부드럽게 이동
-    const pos = new kakao.maps.LatLng(coord[1], coord[0]);
-    this.map.panTo(pos);
+    
+    try {
+      console.log(`🚀 행정기관 좌표 배치 조회: ${validRequests.length}개`);
+      
+      const response = await fetch('/api/stores/administrative-offices-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requests: validRequests })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log(`✅ 배치 좌표 조회 완료: ${data.offices.length}개`);
+        
+        // 결과를 원래 순서에 맞게 매핑
+        const results = new Array(clusterEntries.length).fill(null);
+        let validIndex = 0;
+        
+        coordRequests.forEach((req, index) => {
+          if (req !== null) {
+            const office = data.offices[validIndex];
+            if (office) {
+              results[index] = {
+                lat: office.latitude,
+                lng: office.longitude
+              };
+            }
+            validIndex++;
+          }
+        });
+        
+        return results;
+      }
+    } catch (error) {
+      console.error('❌ 배치 좌표 조회 실패:', error);
+    }
+    
+    return new Array(clusterEntries.length).fill(null);
   },
 
-  // ---- 캐시 관리 ----
-  cleanupCache() {
-    const now = Date.now();
-    const maxAge = 5 * 60 * 1000; // 5분
-    let removed = 0;
-    for (const [k, v] of this.tileCache.entries()) {
-      if (now - (v.timestamp || 0) > maxAge) {
-        this.tileCache.delete(k);
-        removed++;
+  // DB에서 행정기관 좌표 조회 (기존 메서드 유지)
+  async getAdministrativeOfficeCoord(regionType, regionName) {
+    try {
+      const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
+      const data = await response.json();
+
+      if (data.success && data.office) {
+        return {
+          lat: data.office.latitude,
+          lng: data.office.longitude
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ 행정기관 좌표 조회 실패:', error);
+      return null;
+    }
+  },
+
+  // 읍면동 중심점 계산 (ST_PointOnSurface)
+  async getEupmyeondongCenter(sido, sigungu, eupmyeondong) {
+    try {
+      const params = new URLSearchParams({
+        sido: sido,
+        sigungu: sigungu,
+        eupmyeondong: eupmyeondong
+      });
+
+      const response = await fetch(`/api/stores/eupmyeondong-center?${params}`);
+      const data = await response.json();
+
+      if (data.success && data.center) {
+        return {
+          lat: data.center.latitude,
+          lng: data.center.longitude
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ 읍면동 중심점 계산 실패:', error);
+      return null;
+    }
+  },
+
+  
+
+  // 센트로이드 계산 (기존 중심 좌표 계산)
+  calculateCentroid(stores) {
+    const avgLat = stores.reduce((sum, s) => sum + s.coord.lat, 0) / stores.length;
+    const avgLng = stores.reduce((sum, s) => sum + s.coord.lng, 0) / stores.length;
+
+    return { lat: avgLat, lng: avgLng };
+  },
+
+  // 중심 좌표 계산 (기존 함수 유지 - 호환성)
+  calculateCenter(stores) {
+    return this.calculateCentroid(stores);
+  },
+
+  // 지역 확대
+  zoomToRegion(regionName, lat, lng) {
+    console.log(`📍 ${regionName} 지역으로 확대`);
+
+    if (window.currentMap) {
+      const position = new kakao.maps.LatLng(lat, lng);
+      window.currentMap.setCenter(position);
+      window.currentMap.setLevel(4);
+    }
+  },
+
+  // 같은 마커 타입에서 추가 마커 생성
+  async addMarkersForCurrentType(map, level, markerType) {
+    console.log(`➕ ${markerType} 타입 추가 마커 생성 시작 (레벨 ${level})`);
+
+    if (markerType === 'individual') {
+      // 개별 매장 마커 추가
+      await this.addStoreMarkers(map);
+    } else {
+      // 집계 마커 추가
+      await this.addClusterMarkers(map, level);
+    }
+
+    console.log(`✅ ${markerType} 타입 추가 마커 생성 완료`);
+  },
+
+  // 개별 매장 마커 추가 (중복 방지)
+  async addStoreMarkers(map) {
+    console.log('🏪 개별 매장 추가 마커 표시 시작');
+
+    const stores = await this.fetchStores(map);
+
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 개별 매장 추가 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+
+    // 기존 마커 위치 추출 (중복 방지용)
+    const existingPositions = this.getExistingMarkerPositions();
+
+    // 유효한 좌표를 가진 매장들 필터링 및 중복 제거
+    const validStores = stores.filter(store => {
+      if (!store.coord?.lat || !store.coord?.lng) return false;
+      
+      // 기존 마커와 중복되는지 확인 (10m 이내는 중복으로 간주)
+      const isDuplicate = existingPositions.some(pos => 
+        this.calculateDistance(store.coord.lat, store.coord.lng, pos.lat, pos.lng) < 10
+      );
+      
+      return !isDuplicate;
+    });
+
+    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 매장: ${validStores.length}개`);
+
+    if (validStores.length === 0) {
+      console.log('ℹ️ 추가할 새로운 매장이 없습니다');
+      return;
+    }
+
+    // 새로운 마커들을 한번에 생성
+    const newMarkers = this.createStoreMarkersBatch(validStores, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...newMarkers);
+      console.log(`✅ 개별 추가 마커 ${newMarkers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 개별 매장 추가 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      newMarkers.forEach(marker => marker.setMap(null));
+    }
+  },
+
+  // 집계 마커 추가 (중복 방지)
+  async addClusterMarkers(map, level) {
+    console.log(`🏘️ 집계 추가 마커 표시 시작 (레벨 ${level})`);
+
+    const stores = await this.fetchStores(map);
+    
+    // 작업 취소 확인
+    if (this.shouldCancel) {
+      console.log('🚫 집계 추가 마커 생성 취소됨 (레벨 변경)');
+      return;
+    }
+    
+    console.log(`📍 조회된 매장 수: ${stores.length}개`);
+
+    // 지역별 그룹화
+    const clusters = this.groupStoresByRegion(stores, level);
+    console.log(`🗂️ 그룹화 결과: ${clusters.size}개 지역`);
+
+    // 기존 마커 위치 추출 (중복 방지용)
+    const existingPositions = this.getExistingMarkerPositions();
+
+    // 새로운 지역만 필터링 (중복 제거)
+    const newClusters = new Map();
+    for (const [regionName, regionStores] of clusters.entries()) {
+      // 해당 지역의 앵커 위치 계산
+      const anchorCoord = await this.calculateAnchorPosition(regionStores, level);
+      if (!anchorCoord || this.shouldCancel) continue;
+
+      // 기존 마커와 중복되는지 확인 (100m 이내는 중복으로 간주)
+      const isDuplicate = existingPositions.some(pos => 
+        this.calculateDistance(anchorCoord.lat, anchorCoord.lng, pos.lat, pos.lng) < 100
+      );
+
+      if (!isDuplicate) {
+        newClusters.set(regionName, regionStores);
       }
     }
-    if (removed) {
-      // console.log(`🗑️ 만료 타일 ${removed}개 제거`);
+
+    console.log(`📍 기존 마커: ${existingPositions.length}개, 새로운 지역: ${newClusters.size}개`);
+
+    if (newClusters.size === 0) {
+      console.log('ℹ️ 추가할 새로운 지역이 없습니다');
+      return;
+    }
+
+    // 각 지역별 매장 수 로그
+    for (const [regionName, regionStores] of newClusters.entries()) {
+      console.log(`   📍 ${regionName}: ${regionStores.length}개 매장`);
+    }
+
+    // 새로운 집계 마커들을 한번에 생성
+    const newMarkers = await this.createClusterMarkersBatch(newClusters, map);
+    
+    // 작업 취소 최종 확인 후 추가
+    if (!this.shouldCancel) {
+      this.currentMarkers.push(...newMarkers);
+      console.log(`✅ 집계 추가 마커 ${newMarkers.length}개 생성 완료`);
+    } else {
+      console.log('🚫 집계 추가 마커 생성 취소됨 (마커 생성 후)');
+      // 생성된 마커들 정리
+      newMarkers.forEach(marker => marker.setMap(null));
     }
   },
 
-  // ---- 파기 ----
-  cleanup() {
-    console.log('🧹 마커 관리자 정리');
-    clearTimeout(this.debounceTimer);
-    this._rafId && cancelAnimationFrame(this._rafId);
-    this._pendingRender = false;
+  // 기존 마커들의 위치 추출
+  getExistingMarkerPositions() {
+    const positions = [];
+    
+    this.currentMarkers.forEach(marker => {
+      try {
+        if (marker && marker.getPosition) {
+          const pos = marker.getPosition();
+          if (pos && pos.getLat && pos.getLng) {
+            positions.push({
+              lat: pos.getLat(),
+              lng: pos.getLng()
+            });
+          }
+        }
+      } catch (error) {
+        // 위치 추출 실패시 무시
+      }
+    });
 
-    this.abortController.abort();
-    this.loadingTiles.clear();
+    return positions;
+  },
 
-    if (this.canvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
-    this.canvas = null;
-    this.ctx = null;
+  // 두 지점 간 거리 계산 (미터 단위)
+  calculateDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371000; // 지구 반지름 (미터)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  },
 
-    this.tileCache.clear();
-    this.drawIndex = [];
+  // 모든 마커 제거
+  clearAllMarkers() {
+    console.log(`🧹 기존 마커 ${this.currentMarkers.length}개 제거`);
 
-    clearInterval(this._cacheSweepTimer);
-    this._initialized = false;
+    this.currentMarkers.forEach(marker => {
+      if (marker && marker.setMap) {
+        marker.setMap(null);
+      }
+    });
+
+    this.currentMarkers = [];
   }
 };
-
-// 필요하면 주기 캐시 정리 외부에서 켜도 됨 (initialize에 이미 포함됨)
-// setInterval(() => window.MapMarkerManager?.cleanupCache(), 5 * 60 * 1000);
