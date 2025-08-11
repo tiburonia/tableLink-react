@@ -542,6 +542,12 @@ async function renderMap() {
 
   // 검색 결과 표시
   function displaySearchResults(results) {
+    // 현재 위치 UI 숨기기 (검색 결과가 표시될 때)
+    const locationInfo = document.getElementById('locationInfo');
+    if (locationInfo) {
+      locationInfo.style.display = 'none';
+    }
+
     if (results.length === 0) {
       searchResults.innerHTML = '<div class="search-result-item">검색 결과가 없습니다.</div>';
     } else {
@@ -566,7 +572,7 @@ async function renderMap() {
             }
 
             // 검색 결과 숨기기 및 입력창 업데이트
-            searchResults.classList.add('hidden');
+            hideSearchResults();
             searchInput.value = store.name;
 
             console.log(`📍 ${store.name} 위치로 지도 이동 완료`);
@@ -576,6 +582,17 @@ async function renderMap() {
     }
 
     searchResults.classList.remove('hidden');
+  }
+
+  // 검색 결과 숨기기 함수
+  function hideSearchResults() {
+    searchResults.classList.add('hidden');
+    
+    // 현재 위치 UI 다시 보이기
+    const locationInfo = document.getElementById('locationInfo');
+    if (locationInfo) {
+      locationInfo.style.display = 'block';
+    }
   }
 
   // 입력 이벤트 (실시간 검색)
@@ -588,7 +605,7 @@ async function renderMap() {
       searchTimeout = setTimeout(() => performSearch(keyword), 300);
     } else {
       clearBtn.style.display = 'none';
-      searchResults.classList.add('hidden');
+      hideSearchResults();
     }
   });
 
@@ -648,7 +665,7 @@ async function renderMap() {
   // 초기화 버튼
   clearBtn.addEventListener('click', () => {
     searchInput.value = '';
-    searchResults.classList.add('hidden');
+    hideSearchResults();
     clearBtn.style.display = 'none';
     searchInput.focus();
   });
@@ -656,7 +673,7 @@ async function renderMap() {
   // 검색 결과 외부 클릭시 숨기기
   document.addEventListener('click', (e) => {
     if (!searchInput.contains(e.target) && !searchResults.contains(e.target) && !searchBtn.contains(e.target)) {
-      searchResults.classList.add('hidden');
+      hideSearchResults();
     }
   });
 
