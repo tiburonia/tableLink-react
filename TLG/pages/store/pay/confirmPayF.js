@@ -1,5 +1,14 @@
+
 async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal, selectedCouponId, couponDiscount) {
   try {
+    console.log('💳 결제 처리 시작:', {
+      orderData,
+      usedPoint,
+      finalTotal,
+      storeId: store?.id,
+      storeName: store?.name
+    });
+
     // 서버에 결제 요청
     const response = await fetch('/api/orders/pay', {
       method: 'POST',
@@ -8,6 +17,9 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
       },
       body: JSON.stringify({
         userId: userInfo.id,
+        storeId: store.id,
+        storeName: store.name,
+        tableNumber: orderData.tableNum,
         orderData: orderData,
         usedPoint: usedPoint,
         finalTotal: finalTotal,
@@ -22,6 +34,8 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
       alert(data.error || '결제 처리 중 오류가 발생했습니다');
       return;
     }
+
+    console.log('✅ 서버 결제 처리 완료:', data);
 
     // 클라이언트 userInfo 업데이트
     userInfo.point = userInfo.point - data.result.appliedPoint + data.result.earnedPoint;
@@ -38,6 +52,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     // 주문 내역 추가
     const orderRecord = {
       ...orderData,
+      orderId: data.result.orderId,
       total: orderData.total,
       usedPoint: data.result.appliedPoint,
       couponDiscount: couponDiscount,
@@ -64,9 +79,11 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
       alert('첫 주문시 10% 할인 쿠폰이 발급되었습니다');
     }
 
-    // 🆕 캐시에 업데이트된 사용자 정보 저장
-    cacheManager.setUserInfo(userInfo);
-    console.log('💳 결제 완료 후 사용자 정보 캐시 업데이트 완료');
+    // 캐시에 업데이트된 사용자 정보 저장
+    if (window.cacheManager) {
+      window.cacheManager.setUserInfo(userInfo);
+      console.log('💳 결제 완료 후 사용자 정보 캐시 업데이트 완료');
+    }
 
     let alertMessage = `결제가 완료되었습니다.\n최종 금액: ${data.result.finalTotal.toLocaleString()}원\n포인트 사용: ${data.result.appliedPoint.toLocaleString()}원\n적립 포인트: ${data.result.earnedPoint.toLocaleString()}원\n할인된 금액: ${data.result.totalDiscount.toLocaleString()}원`;
 
@@ -78,9 +95,9 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
     alert(alertMessage);
 
     // 테이블 점유 상태 설정 (주문이 확정되었으므로)
-    if (orderData.storeId && orderData.tableNum) {
+    if (store?.id && orderData.tableNum) {
       try {
-        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${orderData.storeId}, 테이블 이름: "${orderData.tableNum}"`);
+        console.log(`🔍 테이블 점유 요청 준비: 매장 ID ${store.id}, 테이블 이름: "${orderData.tableNum}"`);
 
         const occupyResponse = await fetch('/api/tables/occupy', {
           method: 'POST',
@@ -88,7 +105,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            storeId: orderData.storeId,
+            storeId: store.id,
             tableName: orderData.tableNum
           })
         });
@@ -104,7 +121,7 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
         console.error('❌ 테이블 점유 API 호출 실패:', error);
       }
     } else {
-      console.log(`⚠️ 테이블 점유 설정 건너뜀: storeId=${orderData.storeId}, tableNum=${orderData.tableNum}`);
+      console.log(`⚠️ 테이블 점유 설정 건너뜀: storeId=${store?.id}, tableNum=${orderData.tableNum}`);
     }
 
     // 초기화

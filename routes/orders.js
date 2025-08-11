@@ -2,20 +2,31 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// 주문 처리 API
+// 결제 처리 API
 router.post('/pay', async (req, res) => {
-  const { 
-    userId, 
-    orderData, 
-    usedPoint, 
-    finalTotal, 
-    selectedCouponId, 
-    couponDiscount 
-  } = req.body;
-
-  const client = await pool.connect();
-
   try {
+    const { 
+      userId, 
+      storeId, 
+      storeName, 
+      tableNumber,
+      orderData, 
+      usedPoint, 
+      finalTotal, 
+      selectedCouponId, 
+      couponDiscount 
+    } = req.body;
+
+    console.log('💳 결제 처리 요청:', {
+      userId,
+      storeId,
+      storeName,
+      tableNumber,
+      orderTotal: orderData?.total,
+      usedPoint,
+      finalTotal
+    });
+
     await client.query('BEGIN');
 
     const userResult = await client.query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -42,7 +53,7 @@ router.post('/pay', async (req, res) => {
     }
 
     const appliedPoint = Math.min(usedPoint, user.point, orderData.total);
-    const realTotal = orderData.total - couponDiscount - appliedPoint;
+    const finalAmount = orderData.total - (couponDiscount || 0) - appliedPoint;
     const earnedPoint = Math.floor(orderData.total * 0.1);
 
     const newPoint = user.point - appliedPoint + earnedPoint;
@@ -53,12 +64,12 @@ router.post('/pay', async (req, res) => {
       total: orderData.total,
       usedPoint: appliedPoint,
       couponDiscount: couponDiscount,
-      totalDiscount: appliedPoint + couponDiscount,
+      totalDiscount: appliedPoint + (couponDiscount || 0),
       couponUsed: selectedCouponId || null,
-      realTotal: realTotal,
+      realTotal: finalAmount,
       earnedPoint: earnedPoint,
-      paymentStrategy: (couponDiscount > 0 || appliedPoint > 0)
-        ? (couponDiscount >= appliedPoint ? "couponFirst" : "pointFirst")
+      paymentStrategy: ((couponDiscount || 0) > 0 || appliedPoint > 0)
+        ? ((couponDiscount || 0) >= appliedPoint ? "couponFirst" : "pointFirst")
         : "none"
     };
 
@@ -102,45 +113,51 @@ router.post('/pay', async (req, res) => {
     let tableUniqueId = null;
     let actualTableNumber = null;
 
-    if (orderData.tableNum && orderData.storeId) {
+    if (tableNumber && storeId) {
       try {
         const tableResult = await client.query(`
           SELECT unique_id, table_number, table_name 
           FROM store_tables 
-          WHERE store_id = $1 AND table_name = $2
-        `, [orderData.storeId, orderData.tableNum]);
+          WHERE store_id = $1 AND table_number = $2
+        `, [storeId, tableNumber]);
 
         if (tableResult.rows.length > 0) {
           const table = tableResult.rows[0];
           tableUniqueId = table.unique_id;
           actualTableNumber = table.table_number;
         } else {
-          const numberMatches = orderData.tableNum.toString().match(/\d+/g);
-          if (numberMatches && numberMatches.length > 0) {
-            actualTableNumber = parseInt(numberMatches[numberMatches.length - 1]);
-          }
+          // 테이블 정보가 없을 경우, 받은 tableNumber을 그대로 사용하거나 추가 로직 필요
+          actualTableNumber = tableNumber;
         }
       } catch (error) {
         console.error(`❌ 테이블 정보 조회 실패:`, error);
       }
     }
 
-    await client.query(`
+    // 주문 데이터 저장 (새로운 DB 구조에 맞게)
+    const orderResult = await pool.query(`
       INSERT INTO orders (
-        store_id, user_id, table_number, table_unique_id, order_data, 
-        total_amount, discount_amount, final_amount, 
+        user_id, store_id, table_number, order_data, 
+        original_amount, used_point, coupon_discount, final_amount, 
         order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id
     `, [
-      orderData.storeId || null,
       userId,
+      storeId,
       actualTableNumber,
-      tableUniqueId,
-      JSON.stringify(orderData),
+      JSON.stringify({
+        ...orderData,
+        storeId: storeId,
+        storeName: storeName,
+        tableNumber: tableNumber
+      }),
       orderData.total,
-      appliedPoint + couponDiscount,
-      realTotal,
-      'completed'
+      appliedPoint,
+      couponDiscount || 0,
+      finalTotal,
+      'completed',
+      new Date()
     ]);
 
     await client.query('COMMIT');
@@ -149,10 +166,11 @@ router.post('/pay', async (req, res) => {
       success: true,
       message: '결제가 완료되었습니다',
       result: {
-        finalTotal: realTotal,
+        orderId: orderResult.rows[0].id,
         appliedPoint: appliedPoint,
         earnedPoint: earnedPoint,
-        totalDiscount: appliedPoint + couponDiscount,
+        finalTotal: finalTotal,
+        totalDiscount: appliedPoint + (couponDiscount || 0),
         welcomeCoupon: welcomeCoupon
       }
     });
@@ -179,9 +197,11 @@ router.get('/stores/:storeId', async (req, res) => {
         o.id, o.store_id, o.user_id, o.table_number, o.order_data, 
         o.total_amount, o.discount_amount, o.final_amount, 
         o.order_status, o.order_date, o.completed_at,
-        u.name as customer_name, u.phone as customer_phone
+        u.name as customer_name, u.phone as customer_phone,
+        s.name as store_name
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.store_id = $1
     `;
 
@@ -200,6 +220,7 @@ router.get('/stores/:storeId', async (req, res) => {
     const orders = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
+      storeName: row.store_name,
       userId: row.user_id,
       customerName: row.customer_name || '알 수 없음',
       customerPhone: row.customer_phone || '정보없음',
@@ -243,9 +264,10 @@ router.get('/recent/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.order_data, u.name as customer_name
+        o.order_data, u.name as customer_name, s.name as store_name
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.store_id = $1
       ORDER BY o.order_date DESC
       LIMIT $2
@@ -258,7 +280,8 @@ router.get('/recent/:storeId', async (req, res) => {
       order_date: row.order_date,
       order_status: row.order_status,
       customer_name: row.customer_name,
-      order_data: row.order_data
+      order_data: row.order_data,
+      store_name: row.store_name
     }));
 
     console.log(`✅ 매장 ${storeId} 최근 주문 ${orders.length}개 조회 완료`);
@@ -288,9 +311,10 @@ router.get('/store/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.order_data, u.name as customer_name
+        o.order_data, u.name as customer_name, s.name as store_name
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.store_id = $1
       ORDER BY o.order_date DESC
       LIMIT $2
@@ -303,7 +327,8 @@ router.get('/store/:storeId', async (req, res) => {
       order_date: row.order_date,
       order_status: row.order_status,
       customer_name: row.customer_name,
-      order_data: row.order_data
+      order_data: row.order_data,
+      store_name: row.store_name
     }));
 
     console.log(`✅ 매장 ${storeId} 전체 주문 ${orders.length}개 조회 완료`);

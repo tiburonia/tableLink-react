@@ -773,18 +773,23 @@ router.get('/', async (req, res) => {
 router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
+    console.log(`🏪 매장 ${storeId} 상세 정보 조회 요청`);
+
     const storeResult = await pool.query(`
-      SELECT s.*, sa.address_full as address, sa.latitude, sa.longitude
+      SELECT s.*, sa.address_full as address, sa.latitude, sa.longitude,
+             sa.sido, sa.sigungu, sa.eupmyeondong
       FROM stores s 
       LEFT JOIN store_address sa ON s.id = sa.store_id 
       WHERE s.id = $1
     `, [storeId]);
 
     if (storeResult.rows.length === 0) {
+      console.log(`❌ 매장 ${storeId}를 찾을 수 없음`);
       return res.status(404).json({ success: false, error: '매장을 찾을 수 없습니다' });
     }
 
     const store = storeResult.rows[0];
+    console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
 
     // 테이블 정보 조회
     const tablesResult = await pool.query(`
@@ -808,32 +813,47 @@ router.get('/:storeId', async (req, res) => {
     const availableTables = totalTables - occupiedTables;
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
 
+    console.log(`🪑 테이블 정보: 총 ${totalTables}개, 사용중 ${occupiedTables}개, 빈 테이블 ${availableTables}개`);
+
     // 메뉴 데이터 처리 (JSON 문자열인 경우 파싱)
     let menuData = store.menu || [];
     if (typeof menuData === 'string') {
       try {
         menuData = JSON.parse(menuData);
+        console.log(`🍽️ 메뉴 JSON 파싱 성공: ${menuData.length}개 메뉴`);
       } catch (error) {
         console.warn(`⚠️ 매장 ${store.id} 메뉴 JSON 파싱 실패:`, error);
         menuData = [];
       }
+    } else if (Array.isArray(menuData)) {
+      console.log(`🍽️ 메뉴 배열 형태: ${menuData.length}개 메뉴`);
+    } else {
+      console.warn(`⚠️ 매장 ${store.id} 메뉴 데이터 형태 불명:`, typeof menuData);
+      menuData = [];
     }
 
-    res.json({
+    // 좌표 정보 처리
+    const coord = store.latitude && store.longitude 
+      ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+      : null;
+
+    const responseData = {
       success: true,
       store: {
         id: store.id,
         name: store.name,
         category: store.category,
-        address: store.address,
+        address: store.address || '주소 정보 없음',
         phone: store.phone,
-        isOpen: store.is_open,
-        ratingAverage: parseFloat(store.rating_average) || 0,
+        isOpen: store.is_open !== false,
+        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
         reviewCount: store.review_count || 0,
         description: store.description,
         operatingHours: store.operating_hours,
-        latitude: store.latitude,
-        longitude: store.longitude,
+        coord: coord,
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong,
         menu: menuData,
         tables: tables,
         tableInfo: {
@@ -843,10 +863,14 @@ router.get('/:storeId', async (req, res) => {
           occupancyRate: occupancyRate
         }
       }
-    });
+    };
+
+    console.log(`✅ 매장 ${storeId} 상세 정보 조회 완료`);
+    res.json(responseData);
+
   } catch (error) {
-    console.error('매장 조회 실패:', error);
-    res.status(500).json({ success: false, error: '매장 조회 실패' });
+    console.error(`❌ 매장 ${req.params.storeId} 조회 실패:`, error);
+    res.status(500).json({ success: false, error: '매장 조회 실패: ' + error.message });
   }
 });
 

@@ -1,25 +1,46 @@
 
 function renderPay(currentOrder, store, tableNum) {
+  console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
+
+  // 매장 메뉴 데이터 안전하게 처리
+  let menuData = [];
+  if (store.menu && Array.isArray(store.menu)) {
+    menuData = store.menu;
+  } else if (typeof store.menu === 'string') {
+    try {
+      menuData = JSON.parse(store.menu);
+    } catch (error) {
+      console.warn('⚠️ 매장 메뉴 JSON 파싱 실패:', error);
+      menuData = [];
+    }
+  }
+
   // 주문 데이터 준비
   let total = 0;
   const items = [];
   for (const name in currentOrder) {
     const qty = currentOrder[name];
-    const menu = store.menu.find(m => m.name === name);
+    const menu = menuData.find(m => m.name === name);
+    if (!menu) {
+      console.warn(`⚠️ 메뉴 "${name}"를 찾을 수 없습니다`);
+      continue;
+    }
     const price = menu.price * qty;
     total += price;
-    items.push({ name, qty, price });
+    items.push({ name, qty, price: menu.price, totalPrice: price });
   }
 
   const orderData = {
-    store: store.name || store.title || '알 수 없는 매장',
-    storeId: store.id, // 🆕 매장 ID 추가
+    store: store.name,
+    storeId: store.id,
     date: new Date().toLocaleString(),
     table: tableNum,
-    tableNum: tableNum, // 🆕 테이블 번호 추가 (confirmPayF에서 사용)
+    tableNum: tableNum,
     items,
     total
   };
+
+  console.log('💳 주문 데이터 준비 완료:', orderData);
 
   // HTML 렌더링
   main.innerHTML = `
@@ -30,6 +51,15 @@ function renderPay(currentOrder, store, tableNum) {
     <div class="pay-info">
       <p><strong>매장:</strong> ${orderData.store}</p>
       <p><strong>테이블:</strong> ${orderData.table}</p>
+      <div class="order-items">
+        <h3>주문 내역</h3>
+        ${items.map(item => `
+          <div class="order-item">
+            <span>${item.name} x ${item.qty}</span>
+            <span>${item.totalPrice.toLocaleString()}원</span>
+          </div>
+        `).join('')}
+      </div>
       <p><strong>결제금액:</strong> ${orderData.total.toLocaleString()}원</p>
       <p><strong>현재 포인트:</strong> ${userInfo.point.toLocaleString()}원</p>
       <label>포인트 사용:
@@ -51,6 +81,9 @@ function renderPay(currentOrder, store, tableNum) {
       .pay-header h2 { font-size:21px; font-weight:700; margin:0;}
       .header-btn { width:36px;height:36px; border-radius:50%;border:none;background:#f8fafd; color:#297efc;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(30,110,255,0.05);}
       .pay-info { background:#fff;border-radius:14px;box-shadow:0 2px 14px rgba(30,110,255,0.06);padding:22px 16px 22px 16px;max-width:400px;margin:25px auto 0 auto;}
+      .order-items { margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; }
+      .order-items h3 { margin: 0 0 10px 0; font-size: 16px; }
+      .order-item { display: flex; justify-content: space-between; margin: 5px 0; font-size: 14px; }
       .pay-summary p { font-size:15px; margin:7px 0;}
       .pay-btn-row { display:flex;gap:8px;margin-top:18px;}
       .main-btn { flex:1; font-size:16px; padding:10px 0; border-radius:9px; border:none; font-weight:700; background:#297efc; color:#fff; cursor:pointer; transition:background 0.13s;}

@@ -1,3 +1,4 @@
+
 window.TLL = async function TLL() {
   // 1. UI 프레임 먼저 렌더링 (검색 기능 포함)
   main.innerHTML = `
@@ -126,34 +127,36 @@ window.TLL = async function TLL() {
 
   // 매장 선택 함수 (전역으로 등록)
   window.selectStore = async function(storeId, storeName) {
-    selectedStore = { id: storeId, name: storeName };
-    
-    // UI 업데이트
-    storeSearchInput.value = storeName;
-    storeSearchResults.style.display = 'none';
-    selectedStoreDiv.style.display = 'block';
-    selectedStoreName.textContent = storeName;
+    console.log(`🏪 TLL - 매장 선택: ${storeName} (ID: ${storeId})`);
 
-    console.log(`✅ TLL - 매장 선택: ${storeName} (ID: ${storeId})`);
-
-    // 테이블 정보 로드
     try {
-      console.log(`🌐 TLL - 매장 ${storeId} 테이블 정보 서버에서 직접 조회 중...`);
-      const response = await fetch(`/api/stores/${storeId}/tables`, {
+      // 새로운 DB 구조로 매장 정보 조회
+      const storeResponse = await fetch(`/api/stores/${storeId}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
       
-      if (!response.ok) throw new Error('테이블 정보 조회 실패');
+      if (!storeResponse.ok) throw new Error('매장 정보 조회 실패');
+      
+      const storeData = await storeResponse.json();
+      if (!storeData.success) throw new Error('매장 정보 조회 실패');
+      
+      selectedStore = storeData.store; // 전체 매장 정보 저장
+      
+      // UI 업데이트
+      storeSearchInput.value = storeName;
+      storeSearchResults.style.display = 'none';
+      selectedStoreDiv.style.display = 'block';
+      selectedStoreName.textContent = storeName;
 
-      const data = await response.json();
-      const tables = data.tables || [];
+      console.log(`✅ TLL - 매장 정보 로드 완료:`, selectedStore);
 
-      console.log(`🏪 ${storeName}: ${tables.length}개 테이블 서버에서 직접 로드 완료`);
+      // 테이블 정보 로드
+      const tables = selectedStore.tables || [];
+      console.log(`🏪 ${storeName}: ${tables.length}개 테이블 정보 로드 완료`);
 
-      // 실제 테이블 번호로 옵션 생성
       if (tables.length > 0) {
         const tableOptions = tables.map(table => 
           `<option value="${table.tableNumber}" ${table.isOccupied ? 'disabled' : ''}>${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
@@ -172,8 +175,9 @@ window.TLL = async function TLL() {
       startOrderBtn.disabled = true;
 
     } catch (error) {
-      console.error('테이블 정보 로드 오류:', error);
+      console.error('매장 정보 로드 오류:', error);
       // 에러 시 기본값 사용
+      selectedStore = { id: storeId, name: storeName, menu: [] };
       let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
       tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
         tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
@@ -192,6 +196,15 @@ window.TLL = async function TLL() {
   tableSelect.addEventListener('change', () => {
     if (startOrderBtn) {
       startOrderBtn.disabled = !tableSelect.value;
+      if (tableSelect.value) {
+        startOrderBtn.style.background = '#297efc';
+        startOrderBtn.style.color = '#fff';
+        startOrderBtn.style.cursor = 'pointer';
+      } else {
+        startOrderBtn.style.background = '#ccc';
+        startOrderBtn.style.color = '#666';
+        startOrderBtn.style.cursor = 'not-allowed';
+      }
     }
   });
 
@@ -208,12 +221,11 @@ window.TLL = async function TLL() {
       const selectedOption = tableSelect.options[tableSelect.selectedIndex];
       const tableName = selectedOption.textContent.replace(' (사용중)', ''); // "(사용중)" 텍스트 제거
 
-      console.log(`🏪 선택된 매장: ${selectedStore.name} (ID: ${selectedStore.id})`);
+      console.log(`🏪 선택된 매장:`, selectedStore);
       console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
 
-      // 여기서 주문 시작! (테이블 이름으로 전달)
+      // 주문 시작
       alert(`[${selectedStore.name}] ${tableName} 주문 시작`);
-      // 실제 주문 flow 함수로 테이블 이름 전달
       renderOrderScreen(selectedStore, tableName);
     });
   } else {
