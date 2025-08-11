@@ -439,6 +439,85 @@ router.get('/ratings/batch', async (req, res) => {
   }
 });
 
+// 좌표 → 주소 변환 API (현재 뷰포트 위치 정보용)
+router.get('/coord-to-address', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        error: '위도와 경도가 필요합니다'
+      });
+    }
+    
+    console.log(`📍 좌표 → 주소 변환 요청: (${lat}, ${lng})`);
+    
+    // 카카오 API를 통한 좌표 → 주소 변환
+    const kakaoResponse = await fetch(
+      `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}&input_coord=WGS84`,
+      {
+        headers: {
+          'Authorization': `KakaoAK ${process.env.KAKAO_API_KEY || 'your-kakao-api-key'}`
+        }
+      }
+    );
+    
+    if (!kakaoResponse.ok) {
+      console.error('❌ 카카오 API 호출 실패:', kakaoResponse.status);
+      return res.json({
+        success: false,
+        error: '주소 변환 API 호출 실패'
+      });
+    }
+    
+    const kakaoData = await kakaoResponse.json();
+    
+    if (kakaoData.documents && kakaoData.documents.length > 0) {
+      const document = kakaoData.documents[0];
+      const roadAddress = document.road_address;
+      const landAddress = document.address;
+      
+      // 도로명 주소 우선, 없으면 지번 주소 사용
+      const addressData = roadAddress || landAddress;
+      
+      if (addressData) {
+        const address = {
+          sido: addressData.region_1depth_name || null,
+          sigungu: addressData.region_2depth_name || null,
+          eupmyeondong: addressData.region_3depth_name || null,
+          fullAddress: roadAddress ? roadAddress.address_name : landAddress.address_name
+        };
+        
+        console.log(`✅ 주소 변환 성공:`, address);
+        
+        res.json({
+          success: true,
+          address: address
+        });
+      } else {
+        res.json({
+          success: false,
+          error: '주소 정보를 찾을 수 없습니다'
+        });
+      }
+    } else {
+      console.log('⚠️ 카카오 API 응답에 주소 정보 없음');
+      res.json({
+        success: false,
+        error: '해당 좌표의 주소를 찾을 수 없습니다'
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ 좌표 → 주소 변환 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '서버 오류'
+    });
+  }
+});
+
 // 매장 검색 API
 router.get('/search', async (req, res) => {
   try {

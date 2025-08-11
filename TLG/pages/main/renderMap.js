@@ -370,6 +370,44 @@ async function renderMap() {
   border-color: rgba(124, 58, 237, 0.2);
 }
 
+/* 위치 정보 표시 */
+#locationInfo {
+  position: absolute;
+  top: 90px;
+  left: 16px;
+  right: 16px;
+  z-index: 1001;
+  pointer-events: none;
+}
+
+.location-container {
+  background: linear-gradient(135deg, rgba(41, 126, 252, 0.95), rgba(79, 70, 229, 0.90));
+  color: white;
+  border-radius: 20px;
+  padding: 8px 16px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.location-container:hover {
+  background: linear-gradient(135deg, rgba(41, 126, 252, 1), rgba(79, 70, 229, 0.95));
+  box-shadow: 0 6px 20px rgba(41, 126, 252, 0.25);
+  transform: translateY(-1px);
+}
+
+#locationText {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* 버튼별 고유 색상 */
   </style>
 
   `;
@@ -431,7 +469,7 @@ async function renderMap() {
       console.error('❌ 지도 인스턴스가 사라짐 - 초기 마커 로딩 취소');
       return;
     }
-    
+
     const level = map.getLevel();
     console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
 
@@ -456,7 +494,7 @@ async function renderMap() {
     }
   }, 200);
 
-  //TLL 버튼 클릭 로직
+  // TLL 버튼 클릭 로직
   const renderTLL = document.querySelector('#TLL')
   renderTLL.addEventListener('click', async () => {
     await TLL();
@@ -632,28 +670,91 @@ async function renderMap() {
       location.reload();
     }
   });
-}
 
-// 개별 매장 별점 정보 조회 (MapMarkerManager에서 사용)
-async function loadStoreRatingAsync(storeId) {
-  try {
-    const response = await fetch(`/api/stores/${storeId}/rating`);
+  // 지도 이동 또는 확대/축소 시 현재 위치 정보를 업데이트하는 로직 추가
+  const updateLocationInfo = async () => {
+    const center = map.getCenter();
+    const lat = center.getLat();
+    const lng = center.getLng();
 
-    if (!response.ok) {
-      console.warn(`⚠️ 매장 ${storeId} 별점 정보 조회 실패: ${response.status}`);
+    try {
+      const response = await fetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?input_coord=WGS84&output=json&x=${lng}&y=${lat}`, {
+        headers: {
+          'Authorization': 'KakaoAK b293f061d64835827c5792302598d7c9' // 실제 API 키로 교체해야 합니다.
+        }
+      });
+      const data = await response.json();
+
+      if (data.documents && data.documents.length > 0) {
+        const location = data.documents[0];
+        // 가장 상세한 지역 정보 (예: '서울특별시 종로구 삼청동')
+        const address = location.road_address ? location.road_address.address_name : location.address_name;
+
+        // 읍면동 정보 추출 (한국어 주소 기준)
+        const addressParts = address.split(' ');
+        let district = '';
+        if (addressParts.length >= 3) {
+          district = `${addressParts[0]} ${addressParts[1]} ${addressParts[2]}`;
+        } else {
+          district = address;
+        }
+
+        const locationTextElement = document.getElementById('locationText');
+        if (locationTextElement) {
+          locationTextElement.innerHTML = `
+            <span style="font-size: 16px;">📍</span> ${district}
+          `;
+        }
+      }
+    } catch (error) {
+      console.error('현재 위치 정보 로딩 실패:', error);
+      const locationTextElement = document.getElementById('locationText');
+      if (locationTextElement) {
+        locationTextElement.innerHTML = '<span style="font-size: 16px;">📍</span> 위치 정보 없음';
+      }
+    }
+  };
+
+  // 위치 정보 UI 생성
+  const locationInfoDiv = document.createElement('div');
+  locationInfoDiv.id = 'locationInfo';
+  locationInfoDiv.innerHTML = `
+    <div class="location-container">
+      <div id="locationText">
+        <span style="font-size: 16px;">⏳</span> 위치 정보 로딩 중...
+      </div>
+    </div>
+  `;
+  main.appendChild(locationInfoDiv);
+
+  // 초기 위치 정보 로드
+  updateLocationInfo();
+
+  // 지도 이동 또는 확대/축소 시 위치 정보 업데이트
+  kakao.maps.event.addListener(map, 'idle', updateLocationInfo); // 'idle' 이벤트는 지도 이동/확대/축소 완료 시 발생
+
+
+  // 개별 매장 별점 정보 조회 (MapMarkerManager에서 사용)
+  async function loadStoreRatingAsync(storeId) {
+    try {
+      const response = await fetch(`/api/stores/${storeId}/rating`);
+
+      if (!response.ok) {
+        console.warn(`⚠️ 매장 ${storeId} 별점 정보 조회 실패: ${response.status}`);
+        return { ratingAverage: 0.0, reviewCount: 0 };
+      }
+
+      const data = await response.json();
+      return {
+        ratingAverage: data.ratingAverage || 0.0,
+        reviewCount: data.reviewCount || 0
+      };
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 별점 정보 로딩 실패:`, error);
       return { ratingAverage: 0.0, reviewCount: 0 };
     }
-
-    const data = await response.json();
-    return {
-      ratingAverage: data.ratingAverage || 0.0,
-      reviewCount: data.reviewCount || 0
-    };
-  } catch (error) {
-    console.error(`❌ 매장 ${storeId} 별점 정보 로딩 실패:`, error);
-    return { ratingAverage: 0.0, reviewCount: 0 };
   }
-}
 
-// 전역 함수로 설정
-window.loadStoreRatingAsync = loadStoreRatingAsync;
+  // 전역 함수로 설정
+  window.loadStoreRatingAsync = loadStoreRatingAsync;
+}
