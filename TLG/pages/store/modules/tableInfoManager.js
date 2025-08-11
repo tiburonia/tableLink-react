@@ -502,13 +502,13 @@ window.TableInfoManager = {
   },
 
   // 자동 갱신 기능 완전 제거됨
-  startAutoRefresh(store, intervalMs = 30000) {
-    // 폴링 시스템 완전 제거 - 아무 작업 안함
+  startAutoRefresh() {
+    console.log('ℹ️ 자동 갱신 기능이 비활성화되었습니다');
     return;
   },
 
   stopAutoRefresh() {
-    // 폴링 시스템 완전 제거 - 아무 작업 안함
+    console.log('ℹ️ 자동 갱신 기능이 이미 비활성화되었습니다');
     return;
   },
 };

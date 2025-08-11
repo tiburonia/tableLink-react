@@ -653,42 +653,25 @@ window.MapPanelUI = {
         return;
       }
 
-      // 일괄 별점 정보 조회
-      let storesWithRatings = [...stores];
+      // 뷰포트 매장 데이터는 이미 별점 정보가 포함되어 있으므로 추가 API 호출 불필요
+      const storesWithRatings = stores.map(store => ({
+        ...store,
+        ratingAverage: store.ratingAverage || 0.0,
+        reviewCount: store.reviewCount || 0
+      }));
 
-      if (stores.length > 0) {
-        try {
-          const storeIds = stores.map(store => store.id).join(',');
-          const response = await fetch(`/api/stores/ratings/batch?storeIds=${storeIds}`);
-
-          if (response.ok) {
-            const ratingData = await response.json();
-
-            if (ratingData.success && ratingData.ratings) {
-              storesWithRatings = stores.map(store => ({
-                ...store,
-                ratingAverage: ratingData.ratings[store.id]?.ratingAverage || store.ratingAverage || 0.0,
-                reviewCount: ratingData.ratings[store.id]?.reviewCount || store.reviewCount || 0
-              }));
-
-              console.log(`✅ 일괄 별점 정보 적용 완료: ${stores.length}개 매장`);
-            } else {
-              console.warn('⚠️ 일괄 별점 정보 응답 형식 오류:', ratingData);
-            }
-          } else {
-            console.warn(`⚠️ 일괄 별점 정보 조회 실패: ${response.status}`);
-          }
-        } catch (error) {
-          console.warn('⚠️ 일괄 별점 정보 로딩 실패:', error);
-        }
-      }
+      console.log(`✅ 뷰포트 매장 데이터 처리 완료: ${storesWithRatings.length}개 매장`);
 
       // 매장 카드 렌더링
-      storesWithRatings.forEach(({ store, ratingAverage, reviewCount }) => {
-        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, { ratingAverage, reviewCount }));
+      storesWithRatings.forEach(store => {
+        const ratingData = {
+          ratingAverage: store.ratingAverage || 0.0,
+          reviewCount: store.reviewCount || 0
+        };
+        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
       });
 
-      console.log(`✅ 패널 업데이트 완료: ${storesWithRatings.length}개 매장`);
+      console.log(`✅ 뷰포트 기반 패널 업데이트 완료: ${storesWithRatings.length}개 매장`);
 
       // 필터링 재적용
       this.applyFilters();
