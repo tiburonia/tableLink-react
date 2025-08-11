@@ -46,27 +46,34 @@ window.MapPanelUI = {
   },
 
   renderStoreCard(store, ratingData) {
-    const rating = parseFloat(ratingData.ratingAverage).toFixed(1);
-    const reviewCount = ratingData.reviewCount;
+    // 안전한 기본값 설정
+    const rating = parseFloat(ratingData?.ratingAverage || 0).toFixed(1);
+    const reviewCount = ratingData?.reviewCount || 0;
+    const storeName = store?.name || '이름 없음';
+    const storeCategory = store?.category || '기타';
+    const isOpen = store?.isOpen !== false; // null, undefined는 true로 처리
+    
+    // JSON 안전 처리
+    const safeStoreData = JSON.stringify(store || {}).replace(/"/g, '&quot;');
 
     return `
-      <div class="storeCard" data-status="${store.isOpen ? 'true' : 'false'}" data-category="${store.category}" data-rating="${rating}" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${safeStoreData})">
         <div class="storeImageBox">
           <img src="TableLink.png" alt="가게 이미지" />
-          <div class="storeStatus ${store.isOpen ? 'open' : 'closed'}">
-            ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+          <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
+            ${isOpen ? '🟢 운영중' : '🔴 운영중지'}
           </div>
         </div>
         <div class="storeInfoBox">
           <div class="storeHeader">
-            <div class="storeName">${store.name}</div>
+            <div class="storeName">${storeName}</div>
             <div class="storeRating">
               <span class="ratingStars">★</span>
               <span class="ratingValue">${rating}</span>
               <span class="reviewCount">(${reviewCount})</span>
             </div>
           </div>
-          <div class="storeCategory">${store.category}</div>
+          <div class="storeCategory">${storeCategory}</div>
           <div class="storeActions">
             <div class="actionButton primary">
               <span class="actionIcon">🍽️</span>
@@ -662,13 +669,23 @@ window.MapPanelUI = {
 
       console.log(`✅ 뷰포트 매장 데이터 처리 완료: ${storesWithRatings.length}개 매장`);
 
-      // 매장 카드 렌더링
-      storesWithRatings.forEach(store => {
+      // 매장 카드 렌더링 (데이터 검증 포함)
+      storesWithRatings.forEach((store, index) => {
+        if (!store) {
+          console.warn(`⚠️ 매장 데이터가 null입니다 (인덱스: ${index})`);
+          return;
+        }
+
         const ratingData = {
           ratingAverage: store.ratingAverage || 0.0,
           reviewCount: store.reviewCount || 0
         };
-        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
+        
+        try {
+          storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
+        } catch (error) {
+          console.error(`❌ 매장 카드 렌더링 실패 (${store?.name || 'Unknown'}):`, error);
+        }
       });
 
       console.log(`✅ 뷰포트 기반 패널 업데이트 완료: ${storesWithRatings.length}개 매장`);
