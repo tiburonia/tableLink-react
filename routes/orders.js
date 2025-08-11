@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -148,26 +147,27 @@ router.post('/pay', async (req, res) => {
     const orderResult = await client.query(`
       INSERT INTO orders (
         user_id, store_id, table_number, order_data, 
-        original_amount, used_point, coupon_discount, final_amount, 
+        total_amount, original_amount, used_point, coupon_discount, final_amount, 
         order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
     `, [
-      userId,
-      storeId,
-      actualTableNumber,
-      JSON.stringify({
+      userId,                 // $1
+      storeId,               // $2
+      actualTableNumber,     // $3
+      JSON.stringify({       // $4
         ...orderData,
         storeId: storeId,
         storeName: storeName,
         tableNumber: tableNumber
       }),
-      orderData.total,
-      appliedPoint,
-      couponDiscount || 0,
-      finalTotal,
-      'completed',
-      new Date()
+      orderData.total,       // $5 - total_amount
+      orderData.total,       // $6 - original_amount  
+      appliedPoint,          // $7 - used_point
+      couponDiscount || 0,   // $8 - coupon_discount
+      finalAmount,           // $9 - final_amount
+      'completed',           // $10 - order_status
+      new Date()            // $11 - order_date
     ]);
 
     await client.query('COMMIT');
