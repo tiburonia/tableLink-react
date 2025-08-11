@@ -734,23 +734,36 @@ async function submitReviewFromOrders(order, rating, reviewText) {
 
     if (!response.ok) {
       let errorData;
+      let errorMessage = `서버 오류 (${response.status}): ${response.statusText}`;
       try {
         errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
       } catch (parseError) {
         console.error('❌ 응답 파싱 실패:', parseError);
-        throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
       }
       console.error('❌ 서버 오류 응답:', errorData);
-      throw new Error(errorData.error || '리뷰 등록 실패');
+      alert('리뷰 등록에 실패했습니다: ' + errorMessage);
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     console.log('✅ 리뷰 등록 성공:', result);
     return result;
 
-  } catch (fetchError) {
-    console.error('❌ 리뷰 등록 네트워크 오류:', fetchError);
-    throw fetchError;
+  } catch (error) {
+    console.error('❌ 리뷰 등록 과정에서 오류 발생:', error);
+    console.error('❌ 오류 스택:', error.stack);
+
+    let userFriendlyMessage = '리뷰 등록에 실패했습니다.';
+
+    if (error.message.includes('404')) {
+      userFriendlyMessage = '리뷰 서비스를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.';
+    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      userFriendlyMessage = '네트워크 연결 오류가 발생했습니다. 인터넷 연결을 확인해주세요.';
+    }
+
+    alert(userFriendlyMessage);
+    throw error;
   }
 }
 
@@ -798,23 +811,25 @@ async function submitReview(order, orderIndex, rating, reviewText) {
 
     if (!response.ok) {
       let errorData;
+      let errorMessage = `서버 오류 (${response.status}): ${response.statusText}`;
       try {
         errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
       } catch (parseError) {
         console.error('❌ 응답 파싱 실패:', parseError);
-        throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
       }
       console.error('❌ 서버 오류 응답:', errorData);
-      throw new Error(errorData.error || '리뷰 등록 실패');
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
     console.log('✅ 리뷰 등록 성공:', result);
     return result;
 
-  } catch (fetchError) {
-    console.error('❌ 리뷰 등록 네트워크 오류:', fetchError);
-    throw fetchError;
+  } catch (error) {
+    console.error('❌ 리뷰 등록 과정에서 오류 발생:', error);
+    console.error('❌ 오류 스택:', error.stack);
+    throw error;
   }
 }
 

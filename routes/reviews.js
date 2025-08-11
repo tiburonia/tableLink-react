@@ -97,12 +97,24 @@ router.get('/reviews/recent/:storeId', async (req, res) => {
 
     console.log(`✅ 매장 ${storeId} 최근 리뷰 ${reviews.length}개 조회 완료`);
 
+    res.json({
+      success: true,
+      reviews: reviews
+    });
 
+  } catch (error) {
+    console.error('❌ 최근 리뷰 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '최근 리뷰 조회 실패' 
+    });
+  }
+});
 
 // orders 테이블 기반 리뷰 제출 API
 router.post('/submit-from-orders', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { 
       userId, 
@@ -179,20 +191,6 @@ router.post('/submit-from-orders', async (req, res) => {
     });
   } finally {
     client.release();
-  }
-});
-
-    res.json({
-      success: true,
-      reviews: reviews
-    });
-
-  } catch (error) {
-    console.error('❌ 최근 리뷰 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '최근 리뷰 조회 실패' 
-    });
   }
 });
 
