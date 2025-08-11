@@ -391,6 +391,13 @@ async function renderMap() {
   window.currentMarkers = [];
   window.markerMap = new Map();
 
+  // MapMarkerManager 상태 완전 초기화
+  if (window.MapMarkerManager && typeof window.MapMarkerManager.reset === 'function') {
+    window.MapMarkerManager.reset();
+  } else {
+    console.warn('⚠️ MapMarkerManager 또는 reset 메서드를 찾을 수 없음');
+  }
+
   console.log('🔄 지도 재진입 - 마커 상태 완전 초기화');
   console.log('🗺️ 지도 렌더링 완료');
 
@@ -418,15 +425,22 @@ async function renderMap() {
     }
   });
 
-  // 초기 마커 로딩
+  // 초기 마커 로딩 (충분한 딜레이로 안정성 확보)
   setTimeout(() => {
+    if (!window.currentMap) {
+      console.error('❌ 지도 인스턴스가 사라짐 - 초기 마커 로딩 취소');
+      return;
+    }
+    
     const level = map.getLevel();
     console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
 
-    if (window.MapMarkerManager) {
+    if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
       window.MapMarkerManager.handleMapLevelChange(level, map);
+    } else {
+      console.error('❌ MapMarkerManager가 준비되지 않음');
     }
-  }, 300);
+  }, 500);
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {

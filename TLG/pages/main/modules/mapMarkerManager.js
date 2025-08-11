@@ -16,6 +16,12 @@ window.MapMarkerManager = {
   async handleMapLevelChange(level, map) {
     console.log(`🔄 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
 
+    // 지도 인스턴스 유효성 검사
+    if (!map) {
+      console.error('❌ 지도 인스턴스가 유효하지 않음');
+      return;
+    }
+
     // 이전 레벨과 현재 레벨의 마커 타입 확인
     const prevMarkerType = this.getMarkerType(this.currentLevel);
     const newMarkerType = this.getMarkerType(level);
@@ -844,5 +850,23 @@ window.MapMarkerManager = {
     });
 
     this.currentMarkers = [];
+  },
+
+  // 완전 초기화 (지도 재렌더링 시 사용)
+  reset() {
+    console.log('🔄 MapMarkerManager 완전 초기화');
+    
+    // 기존 작업 취소
+    this.shouldCancel = true;
+    
+    // 모든 마커 제거
+    this.clearAllMarkers();
+    
+    // 상태 초기화
+    this.currentLevel = 0;
+    this.isLoading = false;
+    this.shouldCancel = false;
+    
+    console.log('✅ MapMarkerManager 초기화 완료');
   }
 };
