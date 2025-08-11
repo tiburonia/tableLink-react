@@ -582,62 +582,187 @@ window.MapPanelUI = {
     console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료 (클릭 토글 비활성화)');
   },
 
+  // 뷰포트 기반 매장 데이터 로딩
+  async loadViewportStores(map) {
+    if (!map) {
+      console.warn('⚠️ 지도 인스턴스가 없습니다');
+      return [];
+    }
+
+    try {
+      const bounds = map.getBounds();
+      const swLat = bounds.getSouthWest().getLat();
+      const swLng = bounds.getSouthWest().getLng();
+      const neLat = bounds.getNorthEast().getLat();
+      const neLng = bounds.getNorthEast().getLng();
+      const level = map.getLevel();
+
+      const params = new URLSearchParams({
+        swLat: swLat,
+        swLng: swLng,
+        neLat: neLat,
+        neLng: neLng,
+        level: level
+      });
+
+      console.log(`📱 패널 매장 데이터 요청: ${params.toString()}`);
+
+      const response = await fetch(`/api/stores/viewport?${params}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '매장 데이터 조회 실패');
+      }
+
+      console.log(`✅ 패널 매장 데이터 수신: ${data.stores.length}개`);
+      return data.stores;
+    } catch (error) {
+      console.error('❌ 뷰포트 매장 데이터 로딩 실패:', error);
+      return [];
+    }
+  },
+
+  // 패널 매장 리스트 업데이트
+  async updateStoreList(map) {
+    const storeListContainer = document.getElementById('storeListContainer');
+    if (!storeListContainer) return;
+
+    // 로딩 상태 표시
+    storeListContainer.innerHTML = `
+      <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
+        <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        매장 정보를 불러오는 중...
+      </div>
+    `;
+
+    try {
+      // 뷰포트 매장 데이터 로딩
+      const stores = await this.loadViewportStores(map);
+
+      // 로딩 메시지 제거
+      storeListContainer.innerHTML = '';
+
+      if (stores.length === 0) {
+        storeListContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: #666;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">매장이 없습니다</div>
+            <div style="font-size: 14px;">지도를 이동하거나 확대해보세요</div>
+          </div>
+        `;
+        return;
+      }
+
+      // 각 매장의 별점 정보를 병렬로 로딩
+      const storePromises = stores.map(async (store) => {
+        try {
+          // 별점 정보 조회
+          const ratingResponse = await fetch(`/api/stores/${store.id}/rating`);
+          if (ratingResponse.ok) {
+            const ratingData = await ratingResponse.json();
+            return {
+              store,
+              ratingData: {
+                ratingAverage: ratingData.ratingAverage || 0.0,
+                reviewCount: ratingData.reviewCount || 0
+              }
+            };
+          } else {
+            return {
+              store,
+              ratingData: { ratingAverage: 0.0, reviewCount: 0 }
+            };
+          }
+        } catch (error) {
+          console.warn(`⚠️ 매장 ${store.id} 별점 정보 로딩 실패:`, error);
+          return {
+            store,
+            ratingData: { ratingAverage: 0.0, reviewCount: 0 }
+          };
+        }
+      });
+
+      const storeResults = await Promise.all(storePromises);
+
+      // 매장 카드 렌더링
+      storeResults.forEach(({ store, ratingData }) => {
+        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
+      });
+
+      console.log(`✅ 패널 업데이트 완료: ${stores.length}개 매장`);
+
+      // 필터링 재적용
+      this.applyFilters();
+
+    } catch (error) {
+      console.error('❌ 매장 리스트 업데이트 실패:', error);
+      storeListContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #dc2626;">
+          <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">로딩 실패</div>
+          <div style="font-size: 14px;">잠시 후 다시 시도해주세요</div>
+        </div>
+      `;
+    }
+  },
+
+  // 지도 이벤트와 연동하여 패널 업데이트
+  connectToMap(map) {
+    if (!map) {
+      console.warn('⚠️ 지도 인스턴스가 없어 패널 연동을 건너뜁니다');
+      return;
+    }
+
+    console.log('🔗 지도와 패널 연동 시작');
+
+    // 초기 로딩
+    this.updateStoreList(map);
+
+    // 지도 이동 완료 시 패널 업데이트
+    kakao.maps.event.addListener(map, 'dragend', () => {
+      console.log('🗺️ 지도 이동 - 패널 업데이트');
+      this.updateStoreList(map);
+    });
+
+    // 지도 줌 변경 시 패널 업데이트
+    kakao.maps.event.addListener(map, 'zoom_changed', () => {
+      console.log('🔍 지도 줌 변경 - 패널 업데이트');
+      this.updateStoreList(map);
+    });
+  },
+
   // 초기화 함수
   init() {
     // DOM이 준비되면 실행
     document.addEventListener('DOMContentLoaded', () => {
-      // TODO: 실제 스토어 데이터와 평점 데이터 가져오는 로직 추가
-
-      // 예시 데이터 (실제로는 API 호출 등으로 받아와야 함)
-      const sampleStores = [
-        { id: 1, name: "맛있는 식당", category: "한식", isOpen: true, rating: 4.5, reviews: 150 },
-        { id: 2, name: "중화요리 명가", category: "중식", isOpen: false, rating: 4.2, reviews: 80 },
-        { id: 3, name: "스시 🍣", category: "일식", isOpen: true, rating: 4.8, reviews: 200 },
-        { id: 4, name: "이탈리아노", category: "양식", isOpen: true, rating: 3.9, reviews: 120 },
-        { id: 5, name: "커피 한잔", category: "카페", isOpen: true, rating: 4.0, reviews: 50 },
-        { id: 6, name: "치킨 마니아", category: "치킨", isOpen: false, rating: 3.5, reviews: 90 },
-        { id: 7, name: "매콤한 떡볶이", category: "한식", isOpen: true, rating: 4.1, reviews: 110 },
-        { id: 8, name: "프랑스 요리", category: "양식", isOpen: false, rating: 4.6, reviews: 75 },
-        { id: 9, name: "라멘 세상", category: "일식", isOpen: true, rating: 4.3, reviews: 130 },
-        { id: 10, name: "디저트 카페", category: "카페", isOpen: true, rating: 3.8, reviews: 60 },
-      ];
-
-      const sampleRatingData = sampleStores.map(store => ({
-        storeId: store.id,
-        ratingAverage: store.rating,
-        reviewCount: store.reviews
-      }));
-
       // 패널 HTML 렌더링
       document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
       document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
 
-      const storeListContainer = document.getElementById('storeListContainer');
-      storeListContainer.innerHTML = ''; // 로딩 메시지 제거
-
-      sampleStores.forEach((store, index) => {
-        const ratingInfo = sampleRatingData.find(r => r.storeId === store.id);
-        if (ratingInfo) {
-          // store 객체에 isOpen, category, rating, reviews 정보를 직접 추가하거나,
-          // renderStoreCard 함수 내에서 접근할 수 있도록 데이터를 구성해야 합니다.
-          // 여기서는 renderStoreCard 함수가 store 객체와 ratingData를 받으므로 그대로 사용합니다.
-          // ratingData에는 isOpen, category 등도 포함하도록 수정해야 할 수 있습니다.
-          // 예시를 위해 store 객체 자체에 ratingInfo의 값을 통합합니다.
-          const combinedStoreData = {
-            ...store,
-            isOpen: store.isOpen,
-            category: store.category,
-            rating: store.rating,
-            reviews: store.reviews
-          };
-          storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(combinedStoreData, ratingInfo));
-        }
-      });
-
       // 필터링 및 드래그 이벤트 설정
       this.initializeFiltering();
       this.setupPanelDrag();
+
+      // 지도가 준비되면 연동
+      const checkMapReady = () => {
+        if (window.currentMap) {
+          this.connectToMap(window.currentMap);
+        } else {
+          setTimeout(checkMapReady, 100);
+        }
+      };
+      checkMapReady();
     });
+  },
+
+  // 수동 새로고침 메서드 (새로고침 버튼 등에서 호출)
+  async refresh() {
+    if (window.currentMap) {
+      console.log('🔄 패널 수동 새로고침');
+      await this.updateStoreList(window.currentMap);
+    } else {
+      console.warn('⚠️ 지도가 준비되지 않아 패널 새로고침을 건너뜁니다');
+    }
   }
 };
 

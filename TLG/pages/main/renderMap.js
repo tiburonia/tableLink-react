@@ -436,6 +436,10 @@ async function renderMap() {
     if (window.MapPanelUI && typeof window.MapPanelUI.setupPanelDrag === 'function') {
       window.MapPanelUI.setupPanelDrag();
     }
+    // 지도와 패널 연동
+    if (window.MapPanelUI && typeof window.MapPanelUI.connectToMap === 'function') {
+      window.MapPanelUI.connectToMap(map);
+    }
   }, 200);
 
   //TLL 버튼 클릭 로직
@@ -562,6 +566,11 @@ async function renderMap() {
       const level = map.getLevel();
       if (window.MapMarkerManager) {
         await window.MapMarkerManager.handleMapLevelChange(level, map);
+      }
+
+      // 패널도 함께 새로고침
+      if (window.MapPanelUI && typeof window.MapPanelUI.refresh === 'function') {
+        await window.MapPanelUI.refresh();
       }
 
       console.log('✅ 수동 새로고침 완료');
