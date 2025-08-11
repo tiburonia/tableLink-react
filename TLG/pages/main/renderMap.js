@@ -374,8 +374,8 @@ async function renderMap() {
 /* 위치 정보 표시 */
 #locationInfo {
   position: absolute;
-  top: 80px;
-  left: 16px;
+  top: 90px;
+  left: 20px;
   z-index: 1000;
   pointer-events: none;
 }
