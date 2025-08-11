@@ -62,7 +62,7 @@ function renderMenuHTML(store) {
                 <span class="menu-name">${menuName}</span>
                 <span class="menu-price">${parseInt(menuPrice).toLocaleString()}원</span>
               </div>
-              <div class="menu-desc">${menuDesc}</div>
+              ${menuDesc ? `<div class="menu-desc">${menuDesc}</div>` : ''}
             </div>
           </div>
         `;
@@ -71,115 +71,12 @@ function renderMenuHTML(store) {
 
     <style>
       .menu-list {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
-        padding: 16px;
-      }
-
-      .menu-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-      }
-
-      .menu-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      }
-
-      .menu-img-wrap {
-        position: relative;
-        width: 100%;
-        height: 160px;
-        overflow: hidden;
-        background: #f5f5f5;
-      }
-
-      .menu-img-wrap img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.3s ease;
-      }
-
-      .menu-card:hover .menu-img-wrap img {
-        transform: scale(1.05);
-      }
-
-      .menu-info {
-        padding: 16px;
-      }
-
-      .menu-title-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .menu-name {
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        flex: 1;
-        margin-right: 8px;
-      }
-
-      .menu-price {
-        font-size: 16px;
-        font-weight: 700;
-        color: #297efc;
-        white-space: nowrap;
-      }
-
-      .menu-desc {
-        font-size: 14px;
-        color: #666;
-        line-height: 1.4;
-        margin-top: 4px;
-      }
-
-      .empty-menu {
-        text-align: center;
-        padding: 40px 20px;
-        color: #999;
-        font-size: 16px;
-        background: white;
-        border-radius: 12px;
-        margin: 16px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      }
-
-      @media (max-width: 480px) {
-        .menu-list {
-          grid-template-columns: 1fr;
-          gap: 12px;
-          padding: 12px;
-        }
-        
-        .menu-card {
-          border-radius: 8px;
-        }
-        
-        .menu-img-wrap {
-          height: 140px;
-        }
-      }
-    </style>
-  `;/div>
-        </div>
-      `).join('')}
-    </div>
-
-    <style>
-      .menu-list {
         display: flex;
         flex-direction: column;
         gap: 13px;
+        padding: 16px;
       }
+
       .menu-card {
         display: flex;
         background: #f6f7fa;
@@ -188,7 +85,14 @@ function renderMenuHTML(store) {
         overflow: hidden;
         min-height: 90px;
         align-items: stretch;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
+
+      .menu-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      }
+
       .menu-img-wrap {
         width: 90px;
         height: 90px;
@@ -198,12 +102,14 @@ function renderMenuHTML(store) {
         align-items: center;
         justify-content: center;
       }
+
       .menu-img-wrap img {
         width: 76px;
         height: 76px;
         object-fit: cover;
         border-radius: 10px;
       }
+
       .menu-info {
         flex: 1;
         padding: 12px 16px 11px 13px;
@@ -211,6 +117,7 @@ function renderMenuHTML(store) {
         flex-direction: column;
         justify-content: center;
       }
+
       .menu-title-row {
         display: flex;
         align-items: baseline;
@@ -218,28 +125,71 @@ function renderMenuHTML(store) {
         gap: 5px;
         margin-bottom: 4px;
       }
+
       .menu-name {
         font-size: 16px;
         font-weight: 700;
         color: #252525;
+        flex: 1;
       }
+
       .menu-price {
         font-size: 16px;
         font-weight: 600;
         color: #3e85f6;
+        white-space: nowrap;
       }
+
       .menu-desc {
         font-size: 13px;
         color: #666;
         margin-top: 3px;
+        line-height: 1.4;
       }
+
       .empty-menu {
-        padding: 38px 0;
+        padding: 38px 20px;
         text-align: center;
         color: #aaa;
         font-size: 15px;
+        background: white;
+        border-radius: 12px;
+        margin: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
 
+      @media (max-width: 480px) {
+        .menu-list {
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .menu-card {
+          min-height: 80px;
+        }
+
+        .menu-img-wrap {
+          width: 80px;
+          height: 80px;
+        }
+
+        .menu-img-wrap img {
+          width: 68px;
+          height: 68px;
+        }
+
+        .menu-info {
+          padding: 10px 12px;
+        }
+
+        .menu-name {
+          font-size: 15px;
+        }
+
+        .menu-price {
+          font-size: 15px;
+        }
+      }
     </style>
   `;
 }

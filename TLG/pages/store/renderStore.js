@@ -4,11 +4,28 @@
 function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
+    
+    // 메뉴 데이터 정규화
+    if (store.menu && typeof store.menu === 'string') {
+      try {
+        store.menu = JSON.parse(store.menu);
+        console.log('🔧 메뉴 JSON 파싱 완료');
+      } catch (error) {
+        console.error('❌ 메뉴 JSON 파싱 실패:', error);
+        store.menu = [];
+      }
+    }
+    
+    // 메뉴가 없거나 배열이 아닌 경우 빈 배열로 초기화
+    if (!store.menu || !Array.isArray(store.menu)) {
+      store.menu = [];
+    }
+    
     console.log('📋 매장 메뉴 데이터 상세:', {
       hasMenu: !!store.menu,
       menuType: typeof store.menu,
       menuLength: Array.isArray(store.menu) ? store.menu.length : 'Not array',
-      menuSample: store.menu
+      menuSample: store.menu.slice(0, 2) // 처음 2개만 샘플로 표시
     });
 
     // 필수 데이터 검증
