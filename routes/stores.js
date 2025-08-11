@@ -216,7 +216,7 @@ router.get('/get-location-info', async (req, res) => {
       const location = data.documents[0];
       const address = location.road_address ? location.road_address.address_name : location.address_name;
       const addressParts = address.split(' ');
-      
+
       let eupmyeondong = '';
       if (addressParts.length >= 3) {
         eupmyeondong = addressParts[2]; // 읍면동만
@@ -402,7 +402,7 @@ router.get('/viewport', async (req, res) => {
     console.log(`📍 뷰포트 범위 내 매장 수: ${viewportCountResult.rows[0].viewport_count}개`);
 
     const storesResult = await pool.query(`
-      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, sa.latitude, sa.longitude,
+      SELECT s.id, s.name, s.category, sa.address_full as address, s.is_open, s.rating_average, s.review_count, s.menu, sa.latitude, sa.longitude,
              sa.sido, sa.sigungu, sa.eupmyeondong
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
@@ -417,21 +417,35 @@ router.get('/viewport', async (req, res) => {
       console.log(`📍 첫 번째 매장: ${storesResult.rows[0].name} (Lat: ${storesResult.rows[0].latitude}, Lng: ${storesResult.rows[0].longitude})`);
     }
 
-    const stores = storesResult.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : { lat: 37.5665, lng: 126.9780 },
-      isOpen: store.is_open !== false,
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      sido: store.sido,
-      sigungu: store.sigungu,
-      eupmyeondong: store.eupmyeondong
-    }));
+    const stores = storesResult.rows.map(store => {
+      // 메뉴 데이터 처리 (JSON 문자열인 경우 파싱)
+      let menuData = store.menu || [];
+      if (typeof menuData === 'string') {
+        try {
+          menuData = JSON.parse(menuData);
+        } catch (error) {
+          console.warn(`⚠️ 매장 ${store.id} 메뉴 JSON 파싱 실패:`, error);
+          menuData = [];
+        }
+      }
+
+      return {
+        id: store.id,
+        name: store.name,
+        category: store.category,
+        address: store.address || '주소 정보 없음',
+        coord: store.latitude && store.longitude 
+          ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+          : { lat: 37.5665, lng: 126.9780 },
+        isOpen: store.is_open !== false,
+        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+        reviewCount: store.review_count || 0,
+        menu: menuData,
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      };
+    });
 
     console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개 매장 (레벨 ${currentLevel})`);
 
@@ -514,16 +528,16 @@ router.get('/ratings/batch', async (req, res) => {
 router.get('/coord-to-address', async (req, res) => {
   try {
     const { lat, lng } = req.query;
-    
+
     if (!lat || !lng) {
       return res.status(400).json({
         success: false,
         error: '위도와 경도가 필요합니다'
       });
     }
-    
+
     console.log(`📍 좌표 → 주소 변환 요청: (${lat}, ${lng})`);
-    
+
     // 카카오 API를 통한 좌표 → 주소 변환
     const kakaoResponse = await fetch(
       `https://dapi.kakao.com/v2/local/geo/coord2address.json?x=${lng}&y=${lat}&input_coord=WGS84`,
@@ -533,7 +547,7 @@ router.get('/coord-to-address', async (req, res) => {
         }
       }
     );
-    
+
     if (!kakaoResponse.ok) {
       console.error('❌ 카카오 API 호출 실패:', kakaoResponse.status);
       return res.json({
@@ -541,17 +555,17 @@ router.get('/coord-to-address', async (req, res) => {
         error: '주소 변환 API 호출 실패'
       });
     }
-    
+
     const kakaoData = await kakaoResponse.json();
-    
+
     if (kakaoData.documents && kakaoData.documents.length > 0) {
       const document = kakaoData.documents[0];
       const roadAddress = document.road_address;
       const landAddress = document.address;
-      
+
       // 도로명 주소 우선, 없으면 지번 주소 사용
       const addressData = roadAddress || landAddress;
-      
+
       if (addressData) {
         const address = {
           sido: addressData.region_1depth_name || null,
@@ -559,9 +573,9 @@ router.get('/coord-to-address', async (req, res) => {
           eupmyeondong: addressData.region_3depth_name || null,
           fullAddress: roadAddress ? roadAddress.address_name : landAddress.address_name
         };
-        
+
         console.log(`✅ 주소 변환 성공:`, address);
-        
+
         res.json({
           success: true,
           address: address
@@ -579,7 +593,7 @@ router.get('/coord-to-address', async (req, res) => {
         error: '해당 좌표의 주소를 찾을 수 없습니다'
       });
     }
-    
+
   } catch (error) {
     console.error('❌ 좌표 → 주소 변환 실패:', error);
     res.status(500).json({
@@ -794,6 +808,17 @@ router.get('/:storeId', async (req, res) => {
     const availableTables = totalTables - occupiedTables;
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
 
+    // 메뉴 데이터 처리 (JSON 문자열인 경우 파싱)
+    let menuData = store.menu || [];
+    if (typeof menuData === 'string') {
+      try {
+        menuData = JSON.parse(menuData);
+      } catch (error) {
+        console.warn(`⚠️ 매장 ${store.id} 메뉴 JSON 파싱 실패:`, error);
+        menuData = [];
+      }
+    }
+
     res.json({
       success: true,
       store: {
@@ -809,6 +834,7 @@ router.get('/:storeId', async (req, res) => {
         operatingHours: store.operating_hours,
         latitude: store.latitude,
         longitude: store.longitude,
+        menu: menuData,
         tables: tables,
         tableInfo: {
           totalTables: totalTables,
