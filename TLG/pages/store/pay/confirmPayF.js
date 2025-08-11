@@ -1,4 +1,3 @@
-
 async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal, selectedCouponId, couponDiscount) {
   try {
     console.log('💳 결제 처리 시작:', {
@@ -17,8 +16,8 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
       },
       body: JSON.stringify({
         userId: userInfo.id,
-        storeId: store.id,
-        storeName: store.name,
+        storeId: store?.id || orderData.storeId,
+        storeName: store?.name || orderData.store,
         tableNumber: orderData.tableNum,
         orderData: orderData,
         usedPoint: usedPoint,
