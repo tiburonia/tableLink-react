@@ -548,7 +548,7 @@ async function renderMap() {
       searchResults.innerHTML = results.slice(0, 10).map(store => `
         <div class="search-result-item" data-store-id="${store.id}">
           <div class="result-name">${store.name}</div>
-          <div class="result-info">${store.category} • ${store.isOpen ? '운영중' : '운영중지'} • ★${store.ratingAverage || '0.0'}</div>
+          <div class="result-info">${store.category} • ${store.address || '주소 정보 없음'} • ${store.isOpen ? '운영중' : '운영중지'} • ★${store.ratingAverage || '0.0'}</div>
         </div>
       `).join('');
 
