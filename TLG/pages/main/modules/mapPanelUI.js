@@ -449,7 +449,7 @@ window.MapPanelUI = {
     const visibleCards = document.querySelectorAll('.storeCard[style*="flex"], .storeCard:not([style*="none"])');
     console.log('🔍 필터링 적용:', activeFilters);
     console.log('📊 필터링 결과 - 총', visibleCards.length, '개 매장 표시');
-    
+
     // 각 필터별 매칭 상태 디버깅
     if (Object.keys(activeFilters).length > 0) {
       console.log('🔍 필터별 상세 정보:');
@@ -458,7 +458,7 @@ window.MapPanelUI = {
         const cardStatus = card.dataset.status;
         const cardRating = card.dataset.rating;
         const storeName = card.querySelector('.storeName')?.textContent || 'Unknown';
-        
+
         console.log(`  - ${storeName}: 카테고리=${cardCategory}, 상태=${cardStatus}, 별점=${cardRating}`);
       });
     }
@@ -653,43 +653,42 @@ window.MapPanelUI = {
         return;
       }
 
-      // 각 매장의 별점 정보를 병렬로 로딩
-      const storePromises = stores.map(async (store) => {
+      // 일괄 별점 정보 조회
+      let storesWithRatings = [...stores];
+
+      if (stores.length > 0) {
         try {
-          // 별점 정보 조회
-          const ratingResponse = await fetch(`/api/stores/${store.id}/rating`);
-          if (ratingResponse.ok) {
-            const ratingData = await ratingResponse.json();
-            return {
-              store,
-              ratingData: {
-                ratingAverage: ratingData.ratingAverage || 0.0,
-                reviewCount: ratingData.reviewCount || 0
-              }
-            };
+          const storeIds = stores.map(store => store.id).join(',');
+          const response = await fetch(`/api/stores/ratings/batch?storeIds=${storeIds}`);
+
+          if (response.ok) {
+            const ratingData = await response.json();
+
+            if (ratingData.success && ratingData.ratings) {
+              storesWithRatings = stores.map(store => ({
+                ...store,
+                ratingAverage: ratingData.ratings[store.id]?.ratingAverage || store.ratingAverage || 0.0,
+                reviewCount: ratingData.ratings[store.id]?.reviewCount || store.reviewCount || 0
+              }));
+
+              console.log(`✅ 일괄 별점 정보 적용 완료: ${stores.length}개 매장`);
+            } else {
+              console.warn('⚠️ 일괄 별점 정보 응답 형식 오류:', ratingData);
+            }
           } else {
-            return {
-              store,
-              ratingData: { ratingAverage: 0.0, reviewCount: 0 }
-            };
+            console.warn(`⚠️ 일괄 별점 정보 조회 실패: ${response.status}`);
           }
         } catch (error) {
-          console.warn(`⚠️ 매장 ${store.id} 별점 정보 로딩 실패:`, error);
-          return {
-            store,
-            ratingData: { ratingAverage: 0.0, reviewCount: 0 }
-          };
+          console.warn('⚠️ 일괄 별점 정보 로딩 실패:', error);
         }
-      });
-
-      const storeResults = await Promise.all(storePromises);
+      }
 
       // 매장 카드 렌더링
-      storeResults.forEach(({ store, ratingData }) => {
-        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
+      storesWithRatings.forEach(({ store, ratingAverage, reviewCount }) => {
+        storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, { ratingAverage, reviewCount }));
       });
 
-      console.log(`✅ 패널 업데이트 완료: ${stores.length}개 매장`);
+      console.log(`✅ 패널 업데이트 완료: ${storesWithRatings.length}개 매장`);
 
       // 필터링 재적용
       this.applyFilters();
