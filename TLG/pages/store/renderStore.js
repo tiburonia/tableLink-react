@@ -4,6 +4,12 @@
 function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
+    console.log('📋 매장 메뉴 데이터 상세:', {
+      hasMenu: !!store.menu,
+      menuType: typeof store.menu,
+      menuLength: Array.isArray(store.menu) ? store.menu.length : 'Not array',
+      menuSample: store.menu
+    });
 
     // 필수 데이터 검증
     if (!store || !store.id || !store.name) {

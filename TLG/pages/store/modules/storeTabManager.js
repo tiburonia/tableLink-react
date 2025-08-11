@@ -19,11 +19,28 @@ window.StoreTabManager = {
 
   renderStoreTab(tab, store) {
     const storeContent = document.getElementById('storeContent');
-    if (!storeContent) return;
+    if (!storeContent) {
+      console.error('❌ storeContent 요소를 찾을 수 없습니다');
+      return;
+    }
+
+    console.log(`🔄 탭 전환: ${tab}`, store ? store.name : '매장 정보 없음');
 
     switch (tab) {
       case 'menu':
-        storeContent.innerHTML = renderMenuHTML(store);
+        try {
+          if (typeof renderMenuHTML === 'function') {
+            const menuHTML = renderMenuHTML(store);
+            storeContent.innerHTML = menuHTML;
+            console.log('✅ 메뉴 탭 렌더링 완료');
+          } else {
+            console.error('❌ renderMenuHTML 함수를 찾을 수 없습니다');
+            storeContent.innerHTML = '<div class="empty-menu">메뉴를 불러올 수 없습니다.</div>';
+          }
+        } catch (error) {
+          console.error('❌ 메뉴 렌더링 중 오류:', error);
+          storeContent.innerHTML = '<div class="empty-menu">메뉴 로딩 중 오류가 발생했습니다.</div>';
+        }
         break;
 
       case 'review':
