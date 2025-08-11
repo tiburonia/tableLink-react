@@ -161,8 +161,7 @@ router.post('/pay', async (req, res) => {
       new Date()            // $11 - order_date
     ]);
 
-    // orders 테이블에 저장되므로 별도 처리 불필요
-    console.log(`✅ 주문 ID ${orderResult.rows[0].id} 생성 완료`);
+    console.log(`✅ 주문 ID ${orderResult.rows[0].id} orders 테이블에 저장 완료`);
 
     await client.query('COMMIT');
 
@@ -276,7 +275,8 @@ router.get('/users/:userId', async (req, res) => {
         o.final_amount,
         o.order_status,
         o.order_date,
-        o.created_at
+        o.created_at,
+        o.table_number
       FROM orders o
       LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.user_id = $1
@@ -286,14 +286,15 @@ router.get('/users/:userId', async (req, res) => {
 
     const orders = ordersResult.rows.map(order => ({
       id: order.id,
-      storeId: order.store_id,
-      storeName: order.store_name,
-      orderData: order.order_data,
-      totalAmount: order.total_amount,
-      finalAmount: order.final_amount,
-      orderStatus: order.order_status,
-      orderDate: order.order_date,
-      createdAt: order.created_at
+      store_id: order.store_id,
+      store_name: order.store_name,
+      order_data: order.order_data,
+      total_amount: order.total_amount,
+      final_amount: order.final_amount,
+      order_status: order.order_status,
+      order_date: order.order_date,
+      created_at: order.created_at,
+      table_number: order.table_number
     }));
 
     console.log(`📦 사용자 ${userId}의 주문 수: ${orders.length}개`);
@@ -306,6 +307,61 @@ router.get('/users/:userId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 사용자 주문 내역 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 내역 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 마이페이지용 사용자별 주문 내역 조회 API (별도 엔드포인트)
+router.get('/mypage/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 10 } = req.query;
+
+    console.log(`📋 마이페이지 - 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
+
+    const ordersResult = await pool.query(`
+      SELECT
+        o.id,
+        o.store_id,
+        s.name as store_name,
+        o.order_data,
+        o.total_amount,
+        o.final_amount,
+        o.order_status,
+        o.order_date,
+        o.table_number
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.user_id = $1
+      ORDER BY o.order_date DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    const orders = ordersResult.rows.map(order => ({
+      id: order.id,
+      store_id: order.store_id,
+      store_name: order.store_name,
+      order_data: order.order_data,
+      total_amount: order.total_amount,
+      final_amount: order.final_amount,
+      order_status: order.order_status,
+      order_date: order.order_date,
+      table_number: order.table_number
+    }));
+
+    console.log(`📦 마이페이지 - 사용자 ${userId}의 주문 수: ${orders.length}개`);
+
+    res.json({
+      success: true,
+      orders: orders,
+      totalCount: orders.length
+    });
+
+  } catch (error) {
+    console.error('❌ 마이페이지 주문 내역 조회 실패:', error);
     res.status(500).json({
       success: false,
       error: '주문 내역 조회 실패: ' + error.message

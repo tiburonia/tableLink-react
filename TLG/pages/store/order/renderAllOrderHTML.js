@@ -4,7 +4,7 @@ async function renderAllOrderHTML(userInfo) {
     console.log('📋 전체 주문내역 모달 열기');
 
     // orders 테이블에서 전체 주문 내역 가져오기
-    const response = await fetch(`/api/orders/users/${userInfo.id}?limit=50`);
+    const response = await fetch(`/api/orders/mypage/${userInfo.id}?limit=50`);
 
     if (!response.ok) throw new Error('주문 내역 조회 실패');
     const data = await response.json();

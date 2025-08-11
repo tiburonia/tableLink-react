@@ -406,7 +406,7 @@ async function loadUserData() {
     const currentUserInfo = userData.user;
 
     // orders 테이블에서 주문 내역 가져오기
-    const ordersResponse = await fetch(`/api/users/${userInfo.id}/orders?limit=2`);
+    const ordersResponse = await fetch(`/api/orders/mypage/${userInfo.id}?limit=2`);
     let ordersData = [];
     if (ordersResponse.ok) {
       const ordersResult = await ordersResponse.json();
