@@ -629,104 +629,153 @@ window.MapPanelUI = {
     }
   },
 
-  // 패널 매장 리스트 업데이트
-  async updateStoreList(map) {
+  // 뷰포트 기반 패널 완전 재구성 (기존 updateStoreList 대체)
+  async rebuildStorePanel(map) {
     const storeListContainer = document.getElementById('storeListContainer');
     if (!storeListContainer) return;
+
+    // 현재 뷰포트 정보 로깅
+    const bounds = map.getBounds();
+    const level = map.getLevel();
+    console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${bounds.getSouthWest().getLat()},${bounds.getSouthWest().getLng()}) ~ (${bounds.getNorthEast().getLat()},${bounds.getNorthEast().getLng()})`);
+
+    // 기존 컨텐츠 완전 제거
+    storeListContainer.innerHTML = '';
 
     // 로딩 상태 표시
     storeListContainer.innerHTML = `
       <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
         <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        매장 정보를 불러오는 중...
+        뷰포트 매장을 불러오는 중...
       </div>
     `;
 
     try {
-      // 뷰포트 매장 데이터 로딩
+      // 뷰포트 매장 데이터 새로 로딩
       const stores = await this.loadViewportStores(map);
 
-      // 로딩 메시지 제거
+      // 로딩 메시지 완전 제거
       storeListContainer.innerHTML = '';
 
       if (stores.length === 0) {
         storeListContainer.innerHTML = `
-          <div style="text-align: center; padding: 40px 20px; color: #666;">
+          <div class="empty-viewport-message" style="text-align: center; padding: 40px 20px; color: #666;">
             <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">매장이 없습니다</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">현재 영역에 매장이 없습니다</div>
             <div style="font-size: 14px;">지도를 이동하거나 확대해보세요</div>
+            <div style="font-size: 12px; color: #999; margin-top: 8px;">레벨: ${level}</div>
           </div>
         `;
         return;
       }
 
-      // 뷰포트 매장 데이터는 이미 별점 정보가 포함되어 있으므로 추가 API 호출 불필요
+      // 뷰포트 매장 데이터 전처리
       const storesWithRatings = stores.map(store => ({
         ...store,
         ratingAverage: store.ratingAverage || 0.0,
         reviewCount: store.reviewCount || 0
       }));
 
-      console.log(`✅ 뷰포트 매장 데이터 처리 완료: ${storesWithRatings.length}개 매장`);
+      console.log(`📊 뷰포트 재구성 데이터: ${storesWithRatings.length}개 매장`);
 
-      // 매장 카드 렌더링 (데이터 검증 포함)
-      storesWithRatings.forEach((store, index) => {
-        if (!store) {
-          console.warn(`⚠️ 매장 데이터가 null입니다 (인덱스: ${index})`);
-          return;
-        }
+      // 매장 카드 배치 렌더링 (성능 최적화)
+      const cardFragments = storesWithRatings
+        .filter(store => store) // null 체크
+        .map(store => {
+          const ratingData = {
+            ratingAverage: store.ratingAverage || 0.0,
+            reviewCount: store.reviewCount || 0
+          };
+          
+          try {
+            return this.renderStoreCard(store, ratingData);
+          } catch (error) {
+            console.error(`❌ 매장 카드 렌더링 실패 (${store?.name || 'Unknown'}):`, error);
+            return '';
+          }
+        })
+        .filter(card => card); // 빈 카드 제거
 
-        const ratingData = {
-          ratingAverage: store.ratingAverage || 0.0,
-          reviewCount: store.reviewCount || 0
-        };
-        
-        try {
-          storeListContainer.insertAdjacentHTML('beforeend', this.renderStoreCard(store, ratingData));
-        } catch (error) {
-          console.error(`❌ 매장 카드 렌더링 실패 (${store?.name || 'Unknown'}):`, error);
-        }
-      });
+      // 모든 카드를 한번에 DOM에 추가 (성능 최적화)
+      storeListContainer.innerHTML = cardFragments.join('');
 
-      console.log(`✅ 뷰포트 기반 패널 업데이트 완료: ${storesWithRatings.length}개 매장`);
+      console.log(`✅ 뷰포트 기반 패널 완전 재구성 완료: ${cardFragments.length}개 매장 카드`);
 
-      // 필터링 재적용
+      // 필터 상태 초기화 후 재적용
+      this.resetFilters();
       this.applyFilters();
 
+      // 재구성 완료 이벤트 발생 (필요시 다른 모듈에서 활용)
+      const rebuildEvent = new CustomEvent('mapPanelRebuilt', {
+        detail: { storeCount: cardFragments.length, level: level }
+      });
+      document.dispatchEvent(rebuildEvent);
+
     } catch (error) {
-      console.error('❌ 매장 리스트 업데이트 실패:', error);
+      console.error('❌ 뷰포트 기반 패널 재구성 실패:', error);
       storeListContainer.innerHTML = `
-        <div style="text-align: center; padding: 40px 20px; color: #dc2626;">
+        <div class="error-message" style="text-align: center; padding: 40px 20px; color: #dc2626;">
           <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
-          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">로딩 실패</div>
-          <div style="font-size: 14px;">잠시 후 다시 시도해주세요</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">패널 재구성 실패</div>
+          <div style="font-size: 14px;">네트워크를 확인하고 다시 시도해주세요</div>
+          <div style="font-size: 12px; color: #999; margin-top: 8px;">레벨: ${level}</div>
         </div>
       `;
     }
   },
 
-  // 지도 이벤트와 연동하여 패널 업데이트
+  // 기존 updateStoreList 메서드 유지 (호환성)
+  async updateStoreList(map) {
+    console.log('⚠️ updateStoreList 호출됨 - rebuildStorePanel로 리다이렉트');
+    return await this.rebuildStorePanel(map);
+  },
+
+  // 지도 이벤트와 연동하여 패널 업데이트 (뷰포트 기반 완전 재구성)
   connectToMap(map) {
     if (!map) {
       console.warn('⚠️ 지도 인스턴스가 없어 패널 연동을 건너뜁니다');
       return;
     }
 
-    console.log('🔗 지도와 패널 연동 시작');
+    console.log('🔗 지도와 패널 연동 시작 (뷰포트 기반 재구성)');
 
-    // 초기 로딩
-    this.updateStoreList(map);
+    // 디바운스용 타이머
+    let updateTimer = null;
 
-    // 지도 이동 완료 시 패널 업데이트
-    kakao.maps.event.addListener(map, 'dragend', () => {
-      console.log('🗺️ 지도 이동 - 패널 업데이트');
-      this.updateStoreList(map);
-    });
+    // 뷰포트 기반 패널 완전 재구성 함수
+    const rebuildPanelForViewport = () => {
+      console.log('🔄 뷰포트 변경 - 패널 완전 재구성 시작');
+      
+      // 기존 타이머 정리
+      if (updateTimer) {
+        clearTimeout(updateTimer);
+      }
 
-    // 지도 줌 변경 시 패널 업데이트
-    kakao.maps.event.addListener(map, 'zoom_changed', () => {
-      console.log('🔍 지도 줌 변경 - 패널 업데이트');
-      this.updateStoreList(map);
+      // 300ms 디바운스로 성능 최적화
+      updateTimer = setTimeout(async () => {
+        try {
+          // 패널 완전 재구성
+          await this.rebuildStorePanel(map);
+          console.log('✅ 뷰포트 기반 패널 재구성 완료');
+        } catch (error) {
+          console.error('❌ 패널 재구성 실패:', error);
+        }
+      }, 300);
+    };
+
+    // 초기 패널 구성
+    this.rebuildStorePanel(map);
+
+    // 지도 이동 완료 시 패널 재구성
+    kakao.maps.event.addListener(map, 'dragend', rebuildPanelForViewport);
+
+    // 지도 줌 변경 시 패널 재구성  
+    kakao.maps.event.addListener(map, 'zoom_changed', rebuildPanelForViewport);
+
+    // 지도 idle 이벤트 (모든 변경 완료 후)
+    kakao.maps.event.addListener(map, 'idle', () => {
+      console.log('🗺️ 지도 idle - 최종 패널 재구성');
+      rebuildPanelForViewport();
     });
   },
 
@@ -754,11 +803,26 @@ window.MapPanelUI = {
     });
   },
 
-  // 수동 새로고침 메서드 (새로고침 버튼 등에서 호출)
+  // 필터 상태 초기화
+  resetFilters() {
+    // 모든 필터 탭을 '전체'로 초기화
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+
+    // 각 필터 타입의 '전체' 탭을 활성화
+    document.querySelectorAll('.filter-tab[data-filter="all"]').forEach(tab => {
+      tab.classList.add('active');
+    });
+
+    console.log('🔄 필터 상태 초기화 완료');
+  },
+
+  // 수동 새로고침 메서드 (뷰포트 기반 완전 재구성)
   async refresh() {
     if (window.currentMap) {
-      console.log('🔄 패널 수동 새로고침');
-      await this.updateStoreList(window.currentMap);
+      console.log('🔄 패널 수동 새로고침 - 뷰포트 기반 재구성');
+      await this.rebuildStorePanel(window.currentMap);
     } else {
       console.warn('⚠️ 지도가 준비되지 않아 패널 새로고침을 건너뜁니다');
     }
