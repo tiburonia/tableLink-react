@@ -895,6 +895,70 @@ router.get('/:storeId/stats', async (req, res) => {
   }
 });
 
+// 매장별 리뷰 조회 API 
+router.get('/:storeId/reviews', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const limit = req.query.limit || 100;
+
+    console.log(`📖 매장 ${storeId} 리뷰 조회 API 시작 (stores.js에서 처리)`);
+
+    const query = `
+      SELECT 
+        r.id,
+        r.rating as score,
+        r.review_text as content,
+        r.order_date,
+        r.created_at,
+        u.name as user_name,
+        u.id as user_id
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT $2
+    `;
+
+    console.log('🔍 실행할 SQL 쿼리:', query);
+    console.log('🔍 쿼리 파라미터 - storeId:', storeId, ', limit:', limit);
+
+    const result = await pool.query(query, [parseInt(storeId), parseInt(limit)]);
+
+    console.log('🔍 데이터베이스 쿼리 결과:', result.rows.length + '개 리뷰 발견');
+
+    const reviews = result.rows.map(row => ({
+      id: row.id,
+      score: row.score,
+      content: row.content,
+      date: new Date(row.created_at).toLocaleDateString('ko-KR'),
+      orderDate: row.order_date,
+      user: row.user_name,
+      userId: row.user_id
+    }));
+
+    console.log(`✅ 매장 ${storeId} 리뷰 ${reviews.length}개 처리 완료`);
+
+    const responseData = {
+      success: true,
+      storeId: parseInt(storeId),
+      total: reviews.length,
+      reviews: reviews
+    };
+
+    console.log('📤 클라이언트로 전송할 최종 데이터:', JSON.stringify(responseData, null, 2));
+
+    res.json(responseData);
+
+  } catch (error) {
+    console.error('❌ 매장 리뷰 조회 실패:', error);
+    console.error('❌ 오류 스택:', error.stack);
+    res.status(500).json({ 
+      success: false, 
+      error: '리뷰 조회 실패: ' + error.message
+    });
+  }
+});
+
 // 매장별 별점 정보 조회 API (개별 조회용, 기존 호환성 유지)
 router.get('/:storeId/rating', async (req, res) => {
   try {
