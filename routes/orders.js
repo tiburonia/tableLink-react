@@ -6,16 +6,16 @@ const pool = require('../shared/config/database');
 router.post('/pay', async (req, res) => {
   const client = await pool.connect();
   try {
-    const { 
-      userId, 
-      storeId, 
-      storeName, 
+    const {
+      userId,
+      storeId,
+      storeName,
       tableNumber,
-      orderData, 
-      usedPoint, 
-      finalTotal, 
-      selectedCouponId, 
-      couponDiscount 
+      orderData,
+      usedPoint,
+      finalTotal,
+      selectedCouponId,
+      couponDiscount
     } = req.body;
 
     console.log('💳 결제 처리 요청:', {
@@ -113,8 +113,8 @@ router.post('/pay', async (req, res) => {
 
         if (tableNum) {
           const tableResult = await client.query(`
-            SELECT unique_id, table_number, table_name 
-            FROM store_tables 
+            SELECT unique_id, table_number, table_name
+            FROM store_tables
             WHERE store_id = $1 AND table_number = $2
           `, [storeId, tableNum]);
 
@@ -137,8 +137,8 @@ router.post('/pay', async (req, res) => {
     // 주문 데이터 저장
     const orderResult = await client.query(`
       INSERT INTO orders (
-        user_id, store_id, table_number, order_data, 
-        total_amount, original_amount, used_point, coupon_discount, final_amount, 
+        user_id, store_id, table_number, order_data,
+        total_amount, original_amount, used_point, coupon_discount, final_amount,
         order_status, order_date
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
@@ -153,13 +153,16 @@ router.post('/pay', async (req, res) => {
         tableNumber: tableNumber
       }),
       orderData.total,       // $5 - total_amount
-      orderData.total,       // $6 - original_amount  
+      orderData.total,       // $6 - original_amount
       appliedPoint,          // $7 - used_point
       couponDiscount || 0,   // $8 - coupon_discount
       finalAmount,           // $9 - final_amount
       'completed',           // $10 - order_status
       new Date()            // $11 - order_date
     ]);
+
+    // orders 테이블에 저장되므로 별도 처리 불필요
+    console.log(`✅ 주문 ID ${orderResult.rows[0].id} 생성 완료`);
 
     await client.query('COMMIT');
 
@@ -191,71 +194,12 @@ router.get('/stores/:storeId', async (req, res) => {
     const { storeId } = req.params;
     const { status, limit = 100 } = req.query;
 
-    console.log(`📋 매장 ${storeId} 주문 내역 조회 요청 (제한: ${limit}개, 상태: ${status || '전체'})`);
+    console.log(`📋 매장 ${storeId} 주문 내역 조회 (제한: ${limit}개, 상태: ${status || '전체'})`);
 
     let query = `
-      SELECT 
-        o.id, o.store_id, o.user_id, o.table_number, o.order_data, 
-        o.original_amount, o.used_point, o.coupon_discount, o.final_amount, 
-
-
-// 사용자별 주문 내역 조회 API
-router.get('/users/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { limit = 10 } = req.query;
-
-    console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
-
-    const result = await pool.query(`
-      SELECT 
-        o.id, o.store_id, o.table_number, o.order_data, 
-        o.total_amount, o.original_amount, o.used_point, 
-        o.coupon_discount, o.final_amount, o.order_status, 
-        o.order_date, o.created_at,
-        s.name as store_name, s.category as store_category
-      FROM orders o
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.user_id = $1
-      ORDER BY o.order_date DESC
-      LIMIT $2
-    `, [userId, parseInt(limit)]);
-
-    const orders = result.rows.map(row => ({
-      id: row.id,
-      store_id: row.store_id,
-      store_name: row.store_name,
-      store_category: row.store_category,
-      table_number: row.table_number,
-      order_data: row.order_data,
-      total_amount: row.total_amount,
-      original_amount: row.original_amount,
-      used_point: row.used_point || 0,
-      coupon_discount: row.coupon_discount || 0,
-      final_amount: row.final_amount,
-      order_status: row.order_status,
-      order_date: row.order_date,
-      created_at: row.created_at
-    }));
-
-    console.log(`✅ 사용자 ${userId} 주문 내역 ${orders.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      userId: userId,
-      total: orders.length,
-      orders: orders
-    });
-
-  } catch (error) {
-    console.error('❌ 사용자 주문 내역 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '주문 내역 조회 실패: ' + error.message 
-    });
-  }
-});
-
+      SELECT
+        o.id, o.store_id, o.user_id, o.table_number, o.order_data,
+        o.original_amount, o.used_point, o.coupon_discount, o.final_amount,
         o.order_status, o.order_date, o.created_at,
         u.name as customer_name, u.phone as customer_phone,
         s.name as store_name
@@ -306,8 +250,64 @@ router.get('/users/:userId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 매장 주문 내역 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
+      error: '주문 내역 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 사용자별 주문 내역 조회 API
+router.get('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 10 } = req.query;
+
+    console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
+
+    // orders 테이블에서 주문 내역 조회
+    const ordersResult = await pool.query(`
+      SELECT
+        o.id,
+        o.store_id,
+        s.name as store_name,
+        o.order_data,
+        o.total_amount,
+        o.final_amount,
+        o.order_status,
+        o.order_date,
+        o.created_at
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.user_id = $1
+      ORDER BY o.order_date DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    const orders = ordersResult.rows.map(order => ({
+      id: order.id,
+      storeId: order.store_id,
+      storeName: order.store_name,
+      orderData: order.order_data,
+      totalAmount: order.total_amount,
+      finalAmount: order.final_amount,
+      orderStatus: order.order_status,
+      orderDate: order.order_date,
+      createdAt: order.created_at
+    }));
+
+    console.log(`📦 사용자 ${userId}의 주문 수: ${orders.length}개`);
+
+    res.json({
+      success: true,
+      orders: orders,
+      totalCount: orders.length
+    });
+
+  } catch (error) {
+    console.error('❌ 사용자 주문 내역 조회 실패:', error);
+    res.status(500).json({
+      success: false,
       error: '주문 내역 조회 실패: ' + error.message
     });
   }
@@ -322,7 +322,7 @@ router.get('/recent/:storeId', async (req, res) => {
     console.log(`📋 매장 ${storeId} 최근 주문 조회 (최대 ${limit}개)`);
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
         o.order_data, u.name as customer_name, s.name as store_name
       FROM orders o
@@ -353,9 +353,9 @@ router.get('/recent/:storeId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 최근 주문 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '최근 주문 조회 실패' 
+    res.status(500).json({
+      success: false,
+      error: '최근 주문 조회 실패'
     });
   }
 });
@@ -369,7 +369,7 @@ router.get('/store/:storeId', async (req, res) => {
     console.log(`📋 매장 ${storeId} 전체 주문 조회 (최대 ${limit}개)`);
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
         o.order_data, u.name as customer_name, s.name as store_name
       FROM orders o
@@ -402,9 +402,9 @@ router.get('/store/:storeId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 전체 주문 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '전체 주문 조회 실패: ' + error.message 
+    res.status(500).json({
+      success: false,
+      error: '전체 주문 조회 실패: ' + error.message
     });
   }
 });
@@ -418,7 +418,7 @@ router.put('/:orderId/status', async (req, res) => {
     console.log(`📝 주문 ${orderId} 상태 업데이트: ${status}`);
 
     const result = await pool.query(`
-      UPDATE orders 
+      UPDATE orders
       SET order_status = $1, updated_at = NOW()
       WHERE id = $2
       RETURNING *
@@ -441,9 +441,9 @@ router.put('/:orderId/status', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 주문 상태 업데이트 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '주문 상태 업데이트 실패' 
+    res.status(500).json({
+      success: false,
+      error: '주문 상태 업데이트 실패'
     });
   }
 });

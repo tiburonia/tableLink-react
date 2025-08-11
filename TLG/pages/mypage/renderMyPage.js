@@ -1,11 +1,10 @@
-
 async function renderMyPage() {
   const main = document.getElementById('main');
 
   // UI 먼저 렌더링 (로딩 상태로)
   main.innerHTML = `
     <button id="settingsBtn" class="settings-button">⚙️</button>
-    
+
     <main id="content">
       <section class="section-card">
         <h2>📦 주문내역</h2>
@@ -35,7 +34,7 @@ async function renderMyPage() {
         </div>
       </section>
 
-      
+
     </main>
 
     <nav id="bottomBar">
@@ -111,7 +110,7 @@ async function renderMyPage() {
         font-size: 18px;
         font-weight: 600;
       }
-      
+
       #bottomBar {
         position: fixed;
         bottom: 0;
@@ -416,25 +415,25 @@ async function loadUserData() {
 
     // 주문내역 업데이트
     updateOrderList(currentUserInfo, ordersData);
-    
+
     // 예약내역 업데이트
     updateReservationList(currentUserInfo);
-    
+
     // 쿠폰내역 업데이트
     updateCouponList(currentUserInfo);
-    
+
     // 리뷰내역 업데이트
     updateReviewList(currentUserInfo);
 
   } catch (error) {
     console.error('사용자 데이터 로딩 실패:', error);
-    
+
     // 에러 발생 시 각 섹션에 에러 메시지 표시
     const orderList = document.querySelector('#orderList');
     const reservationList = document.querySelector('#reservationList');
     const couponList = document.querySelector('#couponList');
     const reviewList = document.querySelector('#reviewList');
-    
+
     if (orderList) orderList.innerHTML = `<p>❌ 주문내역을 불러올 수 없습니다.</p>`;
     if (reservationList) reservationList.innerHTML = `<p>❌ 예약내역을 불러올 수 없습니다.</p>`;
     if (couponList) couponList.innerHTML = `<p>❌ 쿠폰 정보를 불러올 수 없습니다.</p>`;
@@ -453,7 +452,7 @@ function updateOrderList(currentUserInfo, ordersData) {
     ordersData.forEach((order, index) => {
       const orderDiv = document.createElement('div');
       orderDiv.className = 'order-item';
-      
+
       // order_data에서 메뉴 정보 추출
       const orderData = order.order_data || {};
       const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
@@ -871,9 +870,9 @@ async function updateReviewList(currentUserInfo) {
 
   try {
     console.log('📖 사용자 리뷰 내역 조회 시작, userId:', currentUserInfo.id);
-    
+
     const response = await fetch(`/api/users/${currentUserInfo.id}/reviews?limit=3`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
@@ -896,7 +895,7 @@ async function updateReviewList(currentUserInfo) {
           <div class="review-content">${review.content}</div>
           <div class="review-date">${review.date}</div>
         `;
-        
+
         // 리뷰 클릭 시 해당 매장으로 이동
         reviewDiv.addEventListener('click', () => {
           if (typeof renderStore === 'function') {
@@ -913,7 +912,7 @@ async function updateReviewList(currentUserInfo) {
               });
           }
         });
-        
+
         reviewList.appendChild(reviewDiv);
       });
 

@@ -1,4 +1,3 @@
-
 // 전체 주문내역을 모달로 표시하는 함수
 async function renderAllOrderHTML(userInfo) {
   try {
