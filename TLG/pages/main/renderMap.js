@@ -373,38 +373,39 @@ async function renderMap() {
 /* 위치 정보 표시 */
 #locationInfo {
   position: absolute;
-  top: 90px;
+  top: 16px;
   left: 16px;
-  right: 16px;
   z-index: 1001;
   pointer-events: none;
 }
 
 .location-container {
-  background: linear-gradient(135deg, rgba(41, 126, 252, 0.95), rgba(79, 70, 229, 0.90));
+  background: linear-gradient(135deg, rgba(41, 126, 252, 0.9), rgba(79, 70, 229, 0.85));
   color: white;
-  border-radius: 20px;
-  padding: 8px 16px;
-  text-align: center;
-  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.15);
-  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 4px 8px;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(41, 126, 252, 0.2);
+  backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s ease;
-  font-size: 13px;
+  transition: all 0.2s ease;
+  font-size: 11px;
   font-weight: 600;
+  min-width: 80px;
+  max-width: 120px;
 }
 
 .location-container:hover {
   background: linear-gradient(135deg, rgba(41, 126, 252, 1), rgba(79, 70, 229, 0.95));
-  box-shadow: 0 6px 20px rgba(41, 126, 252, 0.25);
+  box-shadow: 0 3px 12px rgba(41, 126, 252, 0.3);
   transform: translateY(-1px);
 }
 
 #locationText {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  gap: 2px;
+  line-height: 1.2;
 }
 
 /* 버튼별 고유 색상 */
@@ -687,30 +688,27 @@ async function renderMap() {
 
       if (data.documents && data.documents.length > 0) {
         const location = data.documents[0];
-        // 가장 상세한 지역 정보 (예: '서울특별시 종로구 삼청동')
+        // 읍면동만 추출
         const address = location.road_address ? location.road_address.address_name : location.address_name;
-
-        // 읍면동 정보 추출 (한국어 주소 기준)
         const addressParts = address.split(' ');
-        let district = '';
+        
+        let eupmyeondong = '';
         if (addressParts.length >= 3) {
-          district = `${addressParts[0]} ${addressParts[1]} ${addressParts[2]}`;
+          eupmyeondong = addressParts[2]; // 읍면동만
         } else {
-          district = address;
+          eupmyeondong = addressParts[addressParts.length - 1] || '위치 정보 없음';
         }
 
         const locationTextElement = document.getElementById('locationText');
         if (locationTextElement) {
-          locationTextElement.innerHTML = `
-            <span style="font-size: 16px;">📍</span> ${district}
-          `;
+          locationTextElement.innerHTML = `📍 ${eupmyeondong}`;
         }
       }
     } catch (error) {
       console.error('현재 위치 정보 로딩 실패:', error);
       const locationTextElement = document.getElementById('locationText');
       if (locationTextElement) {
-        locationTextElement.innerHTML = '<span style="font-size: 16px;">📍</span> 위치 정보 없음';
+        locationTextElement.innerHTML = '📍 위치 정보 없음';
       }
     }
   };
@@ -720,9 +718,7 @@ async function renderMap() {
   locationInfoDiv.id = 'locationInfo';
   locationInfoDiv.innerHTML = `
     <div class="location-container">
-      <div id="locationText">
-        <span style="font-size: 16px;">⏳</span> 위치 정보 로딩 중...
-      </div>
+      <div id="locationText">⏳ 로딩 중...</div>
     </div>
   `;
   main.appendChild(locationInfoDiv);
