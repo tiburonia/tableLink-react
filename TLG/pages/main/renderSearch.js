@@ -366,18 +366,46 @@ function setupSearchFunctionality() {
     `;
 
     try {
+      console.log(`🔍 검색 요청: "${keyword}"`);
+      
       const response = await fetch('/api/stores/search?query=' + encodeURIComponent(keyword));
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log(`✅ 검색 응답:`, data);
+
+      if (!data.success) {
+        throw new Error(data.error || '검색 요청이 실패했습니다');
+      }
+
       const stores = data.stores || [];
+      console.log(`📋 검색된 매장 수: ${stores.length}개`);
 
       displaySearchResults(stores, keyword);
     } catch (error) {
-      console.error('검색 실패:', error);
+      console.error('❌ 검색 실패:', error);
+      
+      let errorMessage = '검색 중 오류가 발생했습니다';
+      if (error.message.includes('HTTP 404')) {
+        errorMessage = '검색 서비스를 찾을 수 없습니다';
+      } else if (error.message.includes('HTTP 500')) {
+        errorMessage = '서버에 문제가 발생했습니다';
+      } else if (error.message.includes('Failed to fetch')) {
+        errorMessage = '네트워크 연결을 확인해주세요';
+      }
+      
       searchResults.innerHTML = `
         <div class="no-results">
           <div class="no-results-icon">❌</div>
-          <div class="no-results-title">검색 중 오류가 발생했습니다</div>
+          <div class="no-results-title">${errorMessage}</div>
           <div class="no-results-subtitle">잠시 후 다시 시도해주세요</div>
+          <button onclick="performSearch('${keyword.replace(/'/g, "\\'")}')" 
+                  style="margin-top: 16px; padding: 8px 16px; background: #297efc; color: white; border: none; border-radius: 8px; cursor: pointer;">
+            다시 시도
+          </button>
         </div>
       `;
     }
@@ -385,109 +413,200 @@ function setupSearchFunctionality() {
 
   // 검색 결과 표시
   function displaySearchResults(results, keyword) {
+    console.log(`📊 검색 결과 표시 시작: ${results.length}개`);
+    
     if (results.length === 0) {
       searchResults.innerHTML = `
         <div class="no-results">
           <div class="no-results-icon">😔</div>
           <div class="no-results-title">"${keyword}"에 대한 검색 결과가 없습니다</div>
           <div class="no-results-subtitle">다른 키워드로 검색해보세요</div>
+          <div style="margin-top: 16px; font-size: 12px; color: #9ca3af;">
+            팁: 매장명, 카테고리, 지역명으로 검색해보세요
+          </div>
         </div>
       `;
       return;
     }
 
     // 검색 결과 HTML 생성
-    const resultsHTML = results.map(store => {
-      const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
-      const reviewCount = store.reviewCount || 0;
-      const address = store.address || '주소 정보 없음';
+    const resultsHTML = results.map((store, index) => {
+      try {
+        const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+        const reviewCount = store.reviewCount || 0;
+        const address = store.address || '주소 정보 없음';
+        const category = store.category || '기타';
+        const storeStatus = store.isOpen !== false; // null이나 undefined는 true로 처리
+        
+        // JSON 문자열을 안전하게 처리
+        const safeStoreData = JSON.stringify(store).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-      return `
-        <div class="search-result-card" data-store='${JSON.stringify(store).replace(/'/g, "&#39;")}'>
-          <div class="result-header">
-            <div>
-              <div class="result-name">${store.name}</div>
-              <div class="result-rating">
-                <span class="rating-star">★</span>
-                <span class="rating-value">${rating}</span>
-                <span class="rating-count">(${reviewCount})</span>
+        console.log(`   📍 매장 ${index + 1}: ${store.name} - ${storeStatus ? '운영중' : '운영중지'}`);
+
+        return `
+          <div class="search-result-card" data-store='${safeStoreData}' data-store-id="${store.id || index}">
+            <div class="result-header">
+              <div>
+                <div class="result-name">${store.name || '이름 없음'}</div>
+                <div class="result-rating">
+                  <span class="rating-star">★</span>
+                  <span class="rating-value">${rating}</span>
+                  <span class="rating-count">(${reviewCount})</span>
+                </div>
               </div>
             </div>
+            <div class="result-info">
+              <span class="result-category">${category}</span>
+              <span class="result-status ${storeStatus ? 'open' : 'closed'}">
+                ${storeStatus ? '운영중' : '운영중지'}
+              </span>
+            </div>
+            <div class="result-address">${address}</div>
           </div>
-          <div class="result-info">
-            <span class="result-category">${store.category}</span>
-            <span class="result-status ${store.isOpen ? 'open' : 'closed'}">
-              ${store.isOpen ? '운영중' : '운영중지'}
-            </span>
+        `;
+      } catch (error) {
+        console.error(`❌ 매장 카드 생성 실패 (${index}):`, error, store);
+        return `
+          <div class="search-result-card error">
+            <div class="result-name">매장 정보 오류</div>
+            <div style="color: #dc2626; font-size: 12px;">데이터를 불러올 수 없습니다</div>
           </div>
-          <div class="result-address">${address}</div>
-        </div>
-      `;
+        `;
+      }
     }).join('');
 
     searchResults.innerHTML = `
-      <div style="margin-bottom: 16px; color: #6b7280; font-size: 14px;">
-        "${keyword}" 검색 결과 ${results.length}개
+      <div style="margin-bottom: 16px; color: #6b7280; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <span>"${keyword}" 검색 결과 ${results.length}개</span>
+        <button onclick="searchInput.value=''; searchInput.focus();" 
+                style="background: none; border: none; color: #297efc; font-size: 12px; cursor: pointer;">
+          새 검색
+        </button>
       </div>
       ${resultsHTML}
     `;
 
     // 검색 결과 클릭 이벤트
-    searchResults.querySelectorAll('.search-result-card').forEach(card => {
+    searchResults.querySelectorAll('.search-result-card').forEach((card, index) => {
+      if (card.classList.contains('error')) return; // 오류 카드는 클릭 불가
+      
       card.addEventListener('click', () => {
-        const storeData = card.getAttribute('data-store');
-        const store = JSON.parse(storeData);
-        
-        // 지도로 이동하면서 해당 매장 위치로 뷰포트 이동
-        moveToStoreOnMap(store);
+        try {
+          const storeData = card.getAttribute('data-store');
+          const store = JSON.parse(storeData.replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+          
+          console.log(`🔗 매장 선택됨:`, store.name);
+          
+          // 지도로 이동하면서 해당 매장 위치로 뷰포트 이동
+          moveToStoreOnMap(store);
+        } catch (error) {
+          console.error(`❌ 매장 선택 처리 실패 (${index}):`, error);
+          alert('매장 정보를 불러올 수 없습니다.');
+        }
       });
     });
+
+    console.log(`✅ 검색 결과 표시 완료: ${results.length}개 카드 생성`);
   }
 
   // 매장 위치로 지도 이동
   async function moveToStoreOnMap(store) {
     console.log('🗺️ 지도로 이동:', store.name);
     
-    // 지도 화면으로 이동
-    await renderMap();
-    
-    // 지도가 로드된 후 해당 매장 위치로 이동
-    setTimeout(() => {
-      if (window.currentMap && store.coord && store.coord.lat && store.coord.lng) {
-        const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
-        window.currentMap.setCenter(position);
-        window.currentMap.setLevel(2); // 상세 레벨로 확대
-        
-        console.log(`📍 ${store.name} 위치로 지도 이동 완료`);
-        
-        // 잠시 후 매장 상세로 이동할지 선택 (옵션)
-        // setTimeout(() => {
-        //   if (typeof renderStore === 'function') {
-        //     renderStore(store);
-        //   }
-        // }, 1000);
-      } else {
-        console.warn('⚠️ 지도 인스턴스 또는 매장 좌표를 찾을 수 없음');
+    try {
+      // 좌표 유효성 확인
+      if (!store.coord || !store.coord.lat || !store.coord.lng) {
+        console.warn('⚠️ 매장 좌표 정보가 없음:', store);
+        alert(`${store.name}의 위치 정보가 없어 지도에서 찾을 수 없습니다.`);
+        return;
       }
-    }, 200);
+      
+      // 지도 화면으로 이동
+      await renderMap();
+      
+      // 지도가 로드된 후 해당 매장 위치로 이동
+      let retryCount = 0;
+      const maxRetries = 10;
+      
+      const moveToStore = () => {
+        if (window.currentMap && typeof window.currentMap.setCenter === 'function') {
+          try {
+            const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
+            window.currentMap.setCenter(position);
+            window.currentMap.setLevel(2); // 상세 레벨로 확대
+            
+            console.log(`📍 ${store.name} 위치로 지도 이동 완료 (${store.coord.lat}, ${store.coord.lng})`);
+            
+            // 지도 마커도 새로고침하여 해당 매장이 보이도록 함
+            if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+              setTimeout(() => {
+                window.MapMarkerManager.handleMapLevelChange(2, window.currentMap);
+              }, 300);
+            }
+            
+          } catch (mapError) {
+            console.error('❌ 지도 이동 중 오류:', mapError);
+            alert('지도 이동 중 오류가 발생했습니다.');
+          }
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`⏳ 지도 로딩 대기 중... (${retryCount}/${maxRetries})`);
+          setTimeout(moveToStore, 200);
+        } else {
+          console.error('❌ 지도 인스턴스 로딩 실패');
+          alert('지도를 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+        }
+      };
+      
+      setTimeout(moveToStore, 200);
+      
+    } catch (error) {
+      console.error('❌ 지도 이동 처리 실패:', error);
+      alert('지도 이동 중 오류가 발생했습니다.');
+    }
   }
 
   // 입력 이벤트 (실시간 검색 제거, 엔터키만)
   searchInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       performSearch(searchInput.value.trim());
     }
   });
 
   // 검색 버튼 클릭
-  searchBtn.addEventListener('click', () => {
+  searchBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     performSearch(searchInput.value.trim());
   });
+
+  // 입력창 초기화 및 실시간 상태 업데이트
+  searchInput.addEventListener('input', (e) => {
+    const value = e.target.value.trim();
+    
+    // 검색어가 비어있으면 결과 초기화
+    if (!value) {
+      searchResults.innerHTML = `
+        <div class="no-results">
+          <div class="no-results-icon">🔍</div>
+          <div class="no-results-title">검색어를 입력해주세요</div>
+          <div class="no-results-subtitle">매장명이나 카테고리로 검색해보세요</div>
+        </div>
+      `;
+    }
+  });
+
+  // 전역 함수로 노출 (다른 곳에서 호출 가능)
+  window.performSearch = performSearch;
+  window.displaySearchResults = displaySearchResults;
+  window.moveToStoreOnMap = moveToStoreOnMap;
 
   // 입력창 포커스
   setTimeout(() => {
     searchInput.focus();
   }, 100);
+
+  console.log('✅ 검색 기능 초기화 완료');
 }
 
 // 전역 함수로 설정
