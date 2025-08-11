@@ -376,7 +376,7 @@ async function renderMap() {
   position: absolute;
   top: 90px;
   left: 20px;
-  z-index: 1000;
+  z-index: 999;
   pointer-events: none;
 }
 
