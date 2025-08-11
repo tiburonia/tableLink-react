@@ -210,17 +210,13 @@ function loadInitialData(store) {
       console.warn('⚠️ ReviewManager를 찾을 수 없음');
     }
 
-    // 테이블 정보 로드 (항상 최신 정보로 갱신)
+    // 테이블 정보 로드 (초기 로드만, 자동 갱신 없음)
     if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-      console.log('🔄 테이블 정보 새로고침 시작...');
+      console.log('🔄 테이블 정보 초기 로드 시작...');
       setTimeout(() => {
         try {
           window.TableInfoManager.loadTableInfo(store);
-          // 30초마다 자동 갱신 시작
-          if (typeof window.TableInfoManager.startAutoRefresh === 'function') {
-            window.TableInfoManager.startAutoRefresh(store, 30000);
-          }
-          console.log('✅ 테이블 정보 로드 완료');
+          console.log('✅ 테이블 정보 초기 로드 완료');
         } catch (tableError) {
           console.error('❌ 테이블 정보 로드 중 오류:', tableError);
         }

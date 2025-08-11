@@ -501,22 +501,17 @@ window.TableInfoManager = {
     `;
   },
 
-  // 주기적으로 테이블 정보 갱신
+  // 주기적으로 테이블 정보 갱신 (사용하지 않음 - 폴링 제거됨)
   startAutoRefresh(store, intervalMs = 30000) {
-    if (this.refreshInterval) {
-      clearInterval(this.refreshInterval);
-    }
-
-    this.refreshInterval = setInterval(() => {
-      console.log('🔄 테이블 정보 자동 갱신...');
-      this.loadTableInfo(store);
-    }, intervalMs);
+    console.log('⚠️ 자동 갱신 기능이 비활성화되었습니다');
+    // 폴링 제거로 인해 자동 갱신하지 않음
   },
 
   stopAutoRefresh() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
       this.refreshInterval = null;
+      console.log('🛑 테이블 정보 자동 갱신 중지됨');
     }
   },
 };
