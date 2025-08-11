@@ -525,16 +525,11 @@ async function renderMap() {
               map.setLevel(2);
             }
 
-            // 검색 결과 숨기기 및 입력창 초기화
+            // 검색 결과 숨기기 및 입력창 업데이트
             searchResults.classList.add('hidden');
             searchInput.value = store.name;
 
-            // 매장 상세 페이지로 이동
-            setTimeout(() => {
-              if (typeof renderStore === 'function') {
-                renderStore(store);
-              }
-            }, 500);
+            console.log(`📍 ${store.name} 위치로 지도 이동 완료`);
           }
         });
       });
@@ -557,9 +552,14 @@ async function renderMap() {
     }
   });
 
-  // 검색 버튼 클릭
+  // 검색 버튼 클릭 - renderSearch로 이동
   searchBtn.addEventListener('click', () => {
-    performSearch(searchInput.value.trim());
+    const query = searchInput.value.trim();
+    if (typeof renderSearch === 'function') {
+      renderSearch(query);
+    } else {
+      console.warn('⚠️ renderSearch 함수를 찾을 수 없습니다');
+    }
   });
 
   // 새로고침 버튼 클릭
