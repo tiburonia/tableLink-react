@@ -680,29 +680,14 @@ async function renderMap() {
     const lng = center.getLng();
 
     try {
-      const response = await fetch(`https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?input_coord=WGS84&output=json&x=${lng}&y=${lat}`, {
-        headers: {
-          'Authorization': 'KakaoAK b293f061d64835827c5792302598d7c9' // 실제 API 키로 교체해야 합니다.
-        }
-      });
+      // 서버를 통해 카카오 API 호출 (API 키 보안)
+      const response = await fetch(`/api/stores/get-location-info?lat=${lat}&lng=${lng}`);
       const data = await response.json();
 
-      if (data.documents && data.documents.length > 0) {
-        const location = data.documents[0];
-        // 읍면동만 추출
-        const address = location.road_address ? location.road_address.address_name : location.address_name;
-        const addressParts = address.split(' ');
-        
-        let eupmyeondong = '';
-        if (addressParts.length >= 3) {
-          eupmyeondong = addressParts[2]; // 읍면동만
-        } else {
-          eupmyeondong = addressParts[addressParts.length - 1] || '위치 정보 없음';
-        }
-
+      if (data.success && data.eupmyeondong) {
         const locationTextElement = document.getElementById('locationText');
         if (locationTextElement) {
-          locationTextElement.innerHTML = `📍 ${eupmyeondong}`;
+          locationTextElement.innerHTML = `📍 ${data.eupmyeondong}`;
         }
       }
     } catch (error) {

@@ -174,6 +174,77 @@ router.get('/eupmyeondong-center', async (req, res) => {
   }
 });
 
+// 위치 정보 조회 API
+router.get('/get-location-info', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        error: '위도와 경도가 필요합니다'
+      });
+    }
+
+    const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+    if (!KAKAO_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: 'KAKAO_API_KEY가 설정되지 않았습니다'
+      });
+    }
+
+    const response = await fetch(
+      `https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?input_coord=WGS84&output=json&x=${lng}&y=${lat}`,
+      {
+        headers: {
+          'Authorization': `KakaoAK ${KAKAO_API_KEY}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        success: false,
+        error: '카카오 API 호출 실패'
+      });
+    }
+
+    const data = await response.json();
+
+    if (data.documents && data.documents.length > 0) {
+      const location = data.documents[0];
+      const address = location.road_address ? location.road_address.address_name : location.address_name;
+      const addressParts = address.split(' ');
+      
+      let eupmyeondong = '';
+      if (addressParts.length >= 3) {
+        eupmyeondong = addressParts[2]; // 읍면동만
+      } else {
+        eupmyeondong = addressParts[addressParts.length - 1] || '위치 정보 없음';
+      }
+
+      res.json({
+        success: true,
+        eupmyeondong: eupmyeondong,
+        fullAddress: address
+      });
+    } else {
+      res.json({
+        success: false,
+        error: '위치 정보를 찾을 수 없습니다'
+      });
+    }
+
+  } catch (error) {
+    console.error('위치 정보 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '위치 정보 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
 // 카카오 장소 검색 프록시 API (맨 앞에 배치하여 충돌 방지)
 router.get('/search-place', async (req, res) => {
   try {
