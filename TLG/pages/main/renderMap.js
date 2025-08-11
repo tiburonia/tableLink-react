@@ -166,6 +166,7 @@ async function renderMap() {
   margin-top: 6px;
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top: none;
+  z-index: 1003;
 }
 
 .search-results.hidden {
@@ -373,9 +374,9 @@ async function renderMap() {
 /* 위치 정보 표시 */
 #locationInfo {
   position: absolute;
-  top: 16px;
+  top: 80px;
   left: 16px;
-  z-index: 1001;
+  z-index: 1000;
   pointer-events: none;
 }
 
