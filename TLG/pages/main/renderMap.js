@@ -166,7 +166,7 @@ async function renderMap() {
   margin-top: 6px;
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-top: none;
-  z-index: 1003;
+  z-index: 3000;
 }
 
 .search-results.hidden {
