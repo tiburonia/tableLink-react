@@ -27,18 +27,17 @@ async function reorderStoreIds() {
     const maxId = rangeResult.rows[0].max_id;
     console.log(`📊 현재 ID 범위: ${minId} ~ ${maxId}`);
     
-    // 기존 매장들을 생성 순서대로 조회 (일반적으로 ID 순서)
+    // 기존 매장들을 생성 순서대로 조회 (현재 테이블 구조에 맞춰)
     const existingStores = await client.query(`
-      SELECT id, name, category, address, coord, is_open, rating_average, review_count,
-             phone, description, operating_hours, latitude, longitude, 
-             sido, sigungu, dong, region_code, address_status
+      SELECT id, name, category, is_open, rating_average, review_count,
+             phone, description, operating_hours, menu
       FROM stores 
       ORDER BY id
     `);
     
     console.log(`📋 기존 매장 목록 확인: ${existingStores.rows.length}개`);
     
-    // 임시 테이블 생성
+    // 임시 테이블 생성 (현재 구조에 맞춰)
     console.log('🏗️ 임시 테이블 생성 중...');
     await client.query(`
       CREATE TEMP TABLE temp_stores (
@@ -46,21 +45,13 @@ async function reorderStoreIds() {
         new_id INTEGER,
         name VARCHAR(255),
         category VARCHAR(100),
-        address TEXT,
-        coord JSONB,
         is_open BOOLEAN,
         rating_average DECIMAL(3,2),
         review_count INTEGER,
         phone VARCHAR(20),
         description TEXT,
         operating_hours JSONB,
-        latitude DECIMAL(10,8),
-        longitude DECIMAL(11,8),
-        sido VARCHAR(50),
-        sigungu VARCHAR(50),
-        dong VARCHAR(50),
-        region_code VARCHAR(20),
-        address_status VARCHAR(20)
+        menu JSONB
       )
     `);
     
@@ -72,14 +63,13 @@ async function reorderStoreIds() {
       
       await client.query(`
         INSERT INTO temp_stores (
-          old_id, new_id, name, category, address, coord, is_open, 
-          rating_average, review_count, phone, description, operating_hours,
-          latitude, longitude, sido, sigungu, dong, region_code, address_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+          old_id, new_id, name, category, is_open, 
+          rating_average, review_count, phone, description, operating_hours, menu
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `, [
-        store.id, newId, store.name, store.category, store.address, store.coord, store.is_open,
-        store.rating_average, store.review_count, store.phone, store.description, store.operating_hours,
-        store.latitude, store.longitude, store.sido, store.sigungu, store.dong, store.region_code, store.address_status
+        store.id, newId, store.name, store.category, store.is_open,
+        store.rating_average, store.review_count, store.phone, 
+        store.description, store.operating_hours, store.menu
       ]);
       
       if ((i + 1) % 100 === 0 || i === existingStores.rows.length - 1) {
@@ -130,12 +120,23 @@ async function reorderStoreIds() {
     `);
     console.log(`✅ store_tables 테이블 업데이트 완료: ${tablesUpdated.rowCount}개 행`);
     
-    // 4. users 테이블의 favorite_stores 업데이트 (JSONB 배열)
+    // 4. store_address 테이블 업데이트 (새로 추가된 테이블)
+    console.log('🔄 store_address 테이블 store_id 업데이트 중...');
+    const addressUpdated = await client.query(`
+      UPDATE store_address 
+      SET store_id = temp_stores.new_id 
+      FROM temp_stores 
+      WHERE store_address.store_id = temp_stores.old_id
+    `);
+    console.log(`✅ store_address 테이블 업데이트 완료: ${addressUpdated.rowCount}개 행`);
+    
+    // 5. users 테이블의 favorite_stores 업데이트 (JSONB 배열)
     console.log('🔄 users 테이블 favorite_stores 업데이트 중...');
     const usersResult = await client.query(`
       SELECT id, favorite_stores FROM users WHERE favorite_stores IS NOT NULL
     `);
     
+    let usersFavoriteUpdated = 0;
     for (const user of usersResult.rows) {
       try {
         const favoriteStores = user.favorite_stores;
@@ -156,31 +157,30 @@ async function reorderStoreIds() {
             await client.query(`
               UPDATE users SET favorite_stores = $1 WHERE id = $2
             `, [JSON.stringify(updatedFavorites), user.id]);
+            usersFavoriteUpdated++;
           }
         }
       } catch (error) {
         console.warn(`⚠️ 사용자 ${user.id}의 favorite_stores 업데이트 실패:`, error.message);
       }
     }
-    console.log(`✅ users 테이블 favorite_stores 업데이트 완료`);
+    console.log(`✅ users 테이블 favorite_stores 업데이트 완료: ${usersFavoriteUpdated}명`);
     
-    // 5. stores 테이블 완전 재생성
+    // 6. stores 테이블 완전 재생성
     console.log('🔄 stores 테이블 데이터 교체 중...');
     
     // 기존 stores 테이블 데이터 삭제
     await client.query('DELETE FROM stores');
     
-    // 새로운 데이터 삽입
+    // 새로운 데이터 삽입 (현재 테이블 구조에 맞춰)
     await client.query(`
       INSERT INTO stores (
-        id, name, category, address, coord, is_open, rating_average, review_count,
-        phone, description, operating_hours, latitude, longitude,
-        sido, sigungu, dong, region_code, address_status
+        id, name, category, is_open, rating_average, review_count,
+        phone, description, operating_hours, menu
       )
       SELECT 
-        new_id, name, category, address, coord, is_open, rating_average, review_count,
-        phone, description, operating_hours, latitude, longitude,
-        sido, sigungu, dong, region_code, address_status
+        new_id, name, category, is_open, rating_average, review_count,
+        phone, description, operating_hours, menu
       FROM temp_stores 
       ORDER BY new_id
     `);
@@ -219,11 +219,27 @@ async function reorderStoreIds() {
     const reviewsCount = await client.query('SELECT COUNT(*) as count FROM reviews');
     const ordersCount = await client.query('SELECT COUNT(*) as count FROM orders');
     const tablesCount = await client.query('SELECT COUNT(*) as count FROM store_tables');
+    const addressCount = await client.query('SELECT COUNT(*) as count FROM store_address');
     
     console.log(`📊 관련 테이블 데이터 수:`);
     console.log(`  - 리뷰: ${reviewsCount.rows[0].count}개`);
     console.log(`  - 주문: ${ordersCount.rows[0].count}개`);
     console.log(`  - 테이블: ${tablesCount.rows[0].count}개`);
+    console.log(`  - 주소: ${addressCount.rows[0].count}개`);
+    
+    // 조인 쿼리 테스트
+    console.log('🔍 조인 쿼리 테스트...');
+    const joinTest = await client.query(`
+      SELECT s.id, s.name, sa.address_full
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      LIMIT 5
+    `);
+    
+    console.log('✅ 조인 쿼리 테스트 결과:');
+    joinTest.rows.forEach(row => {
+      console.log(`  - ID ${row.id}: ${row.name} (${row.address_full || 'NO ADDRESS'})`);
+    });
     
     // 트랜잭션 커밋
     await client.query('COMMIT');
