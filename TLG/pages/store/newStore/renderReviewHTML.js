@@ -190,7 +190,11 @@ async function loadReviewData(store, loadingHTML) {
       `;
     }
   }
+}
 
+// 실제 리뷰 렌더링 함수 (완전한 try-catch 블록)
+async function renderCompleteReviews(store, reviews) {
+  try {
     // 총 리뷰 수와 평균 평점 계산
     const total = reviews.length;
     const avgScore = total > 0
