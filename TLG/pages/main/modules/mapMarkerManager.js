@@ -218,7 +218,10 @@ window.MapMarkerManager = {
   createStoreMarker(store, map) {
     const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
     const isOpen = store.isOpen !== false;
-    const rating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+    
+    // 리뷰가 없으면 별점 표시 안함, 리뷰가 있으면 별점 표시
+    const hasReviews = store.reviewCount > 0;
+    const ratingDisplay = hasReviews ? ` ⭐${parseFloat(store.ratingAverage).toFixed(1)}` : '';
 
     // 고유 ID 생성
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
@@ -228,7 +231,7 @@ window.MapMarkerManager = {
         <div class="marker-info">
           <div class="store-name">${store.name}</div>
           <div class="store-status ${isOpen ? 'open' : 'closed'}">
-            ${isOpen ? '운영중' : '운영준비중'} ⭐${rating}
+            ${isOpen ? '운영중' : '운영준비중'}${ratingDisplay}
           </div>
         </div>
       </div>
