@@ -216,9 +216,13 @@ router.get('/preview/:storeId', async (req, res) => {
     const reviews = result.rows.map(row => ({
       id: row.id,
       rating: row.rating,
+      score: row.rating, // 호환성을 위해 둘 다 제공
       content: row.review_text,
+      review_text: row.review_text, // 호환성을 위해 둘 다 제공
       date: new Date(row.created_at).toLocaleDateString('ko-KR'),
-      user: row.user_name
+      user: row.user_name,
+      user_name: row.user_name, // 호환성을 위해 둘 다 제공
+      created_at: row.created_at
     }));
 
     console.log(`✅ 매장 ${storeId} 리뷰 미리보기 ${reviews.length}개 조회 완료`);
@@ -429,15 +433,16 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-// 주문별 리뷰 작성 여부 확인 API
+// 주문별 리뷰 작성 여부 확인 API (현재 테이블 구조에 맞게 수정)
 router.get('/check-order-review/:orderId', async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    console.log(`🔍 주문 ${orderId} 리뷰 작성 여부 확인`);
+    console.log(`🔍 주문 ${orderId} 리뷰 작성 여부 확인 (order_index 기준)`);
 
+    // 현재 테이블 구조에서는 order_index를 사용
     const result = await pool.query(`
-      SELECT id FROM reviews WHERE order_id = $1
+      SELECT id FROM reviews WHERE order_index = $1
     `, [parseInt(orderId)]);
 
     const hasReview = result.rows.length > 0;

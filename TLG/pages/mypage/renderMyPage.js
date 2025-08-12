@@ -511,7 +511,7 @@ async function checkOrderHasReview(orderId) {
   try {
     const response = await fetch(`/api/orders/${orderId}/review-status`);
     const data = await response.json();
-    
+
     if (data.success) {
       return data.hasReview;
     } else {
@@ -618,7 +618,7 @@ function showReviewModalFromOrders(order, orderIndex) {
   });
 }
 
-// 리뷰 작성 모달 표시 (레거시 호환용)
+// 리뷰 모달 표시 (레거시 호환용)
 function showReviewModal(order, orderIndex) {
   const modal = document.createElement('div');
   modal.className = 'review-modal';

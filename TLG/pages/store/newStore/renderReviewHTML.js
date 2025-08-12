@@ -26,7 +26,7 @@ async function renderReviewHTML(store) {
     // 총 리뷰 수와 평균 평점 계산
     const total = reviews.length;
     const avgScore = total > 0 
-      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / total).toFixed(1)
+      ? (reviews.reduce((sum, r) => sum + (r.score || r.rating || 0), 0) / total).toFixed(1)
       : "0.0";
 
     // 리뷰 없을 때 안내
@@ -66,25 +66,30 @@ async function renderReviewHTML(store) {
         </div>
         
         <div class="review-preview-list">
-          ${reviews.slice(0, 3).map(review => `
+          ${reviews.slice(0, 3).map(review => {
+            const rating = review.score || review.rating || 5;
+            const content = review.content || review.review_text || '좋은 매장입니다!';
+            const userName = review.user || review.user_name || '익명 사용자';
+            const reviewDate = review.date || (review.created_at ? new Date(review.created_at).toLocaleDateString('ko-KR') : formatDate(new Date()));
+            
+            return `
             <div class="review-card">
               <div class="review-card-header">
                 <div class="reviewer-info">
-                  <span class="reviewer-name">${review.user || '익명 사용자'}</span>
-                  <span class="review-date">${review.date || formatDate(new Date())}</span>
+                  <span class="reviewer-name">${userName}</span>
+                  <span class="review-date">${reviewDate}</span>
                 </div>
                 <div class="review-rating-badge">
-                  <span class="rating-stars">${'★'.repeat(Math.max(1, Math.min(5, review.rating || 5)))}</span>
-                  <span class="rating-number">${review.rating || 5}</span>
+                  <span class="rating-stars">${'★'.repeat(Math.max(1, Math.min(5, rating)))}</span>
+                  <span class="rating-number">${rating}</span>
                 </div>
               </div>
               <div class="review-content">
-                ${(review.content || '좋은 매장입니다!').length > 100 ? 
-                  (review.content || '좋은 매장입니다!').substring(0, 100) + '...' : 
-                  (review.content || '좋은 매장입니다!')}
+                ${content.length > 100 ? content.substring(0, 100) + '...' : content}
               </div>
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
 
         ${total > 3 ? `
