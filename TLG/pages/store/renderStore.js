@@ -40,21 +40,25 @@ function renderStore(store) {
       throw new Error('필수 UI 모듈을 찾을 수 없습니다');
     }
 
-    // 초기 별점 값 설정 (캐시된 매장 정보에서 가져오기)
+    // 실제 리뷰 데이터 기반 별점 계산
     let displayRating = '0.0';
 
-    // 캐시된 매장 정보에서 별점 확인
     try {
-      if (store.ratingAverage !== undefined && store.ratingAverage !== null) {
+      // 서버에서 실시간 별점 정보 가져오기 (레거시 더미데이터 무시)
+      console.log('🔄 실시간 별점 정보 조회 중...');
+      await updateStoreRatingAsync(store);
+      
+      // 업데이트된 정보가 있으면 사용, 없으면 0.0 유지
+      if (store.ratingAverage !== undefined && store.ratingAverage !== null && store.ratingAverage > 0) {
         displayRating = parseFloat(store.ratingAverage).toFixed(1);
-        console.log('⭐ 캐시된 별점 사용:', displayRating);
+        console.log('⭐ 실제 리뷰 기반 별점 사용:', displayRating);
       } else {
-        console.log('⚠️ 별점 정보 없음, 서버에서 가져오는 중...');
-        updateStoreRatingAsync(store);
+        console.log('⚠️ 리뷰가 없어서 0.0점으로 표시');
+        displayRating = '0.0';
       }
     } catch (error) {
-      console.warn('⚠️ 별점 정보 처리 중 오류:', error);
-      updateStoreRatingAsync(store);
+      console.warn('⚠️ 별점 정보 처리 중 오류, 기본값 사용:', error);
+      displayRating = '0.0';
     }
 
     // UI 렌더링
@@ -284,12 +288,12 @@ function loadInitialData(store) {
   }
 }
 
-// 비동기로 별점 정보 업데이트
+// 실제 리뷰 데이터 기반 별점 정보 업데이트
 async function updateStoreRatingAsync(store) {
   try {
-    console.log(`🔄 매장 ${store.id} 별점 정보 비동기 업데이트 중...`);
+    console.log(`🔄 매장 ${store.id} 실제 리뷰 기반 별점 정보 업데이트 중...`);
 
-    // 서버에서 직접 별점 정보 가져오기
+    // 서버에서 실시간 별점 정보 가져오기 (레거시 더미데이터 무시)
     const response = await fetch(`/api/stores/${store.id}/rating`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -297,35 +301,46 @@ async function updateStoreRatingAsync(store) {
 
     const ratingData = await response.json();
 
-    if (ratingData && ratingData.ratingAverage !== null && ratingData.ratingAverage !== undefined) {
-      console.log(`✅ 매장 ${store.id} 별점 정보 업데이트 완료:`, ratingData.ratingAverage);
+    if (ratingData && ratingData.success) {
+      const actualRating = ratingData.ratingAverage || 0;
+      const reviewCount = ratingData.reviewCount || 0;
+      
+      console.log(`📊 매장 ${store.id} 실제 리뷰 통계: ${actualRating}점 (${reviewCount}개 리뷰)`);
 
-      // DOM에서 별점 표시 업데이트 (null 체크 강화)
+      // store 객체에 실제 데이터 반영
+      store.ratingAverage = actualRating;
+      store.reviewCount = reviewCount;
+
+      // DOM에서 별점 표시 업데이트
       const reviewScoreElement = document.getElementById('reviewScore');
       if (reviewScoreElement) {
-        const updatedRating = parseFloat(ratingData.ratingAverage).toFixed(1);
-        reviewScoreElement.innerHTML = `${updatedRating}&nbsp<span id="reviewLink">></span>`;
-        console.log('🎯 별점 UI 업데이트 완료:', updatedRating);
+        const displayRating = parseFloat(actualRating).toFixed(1);
+        reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink">></span>`;
+        console.log('✅ 실제 리뷰 기반 별점 UI 업데이트 완료:', displayRating);
 
-        // 새로 생성된 reviewLink에 이벤트 리스너 추가
+        // reviewLink 이벤트 리스너 추가
         const newReviewLink = document.getElementById('reviewLink');
         if (newReviewLink) {
           newReviewLink.addEventListener('click', () => {
             renderAllReview(store);
           });
         }
-      } else {
-        console.warn('⚠️ reviewScore 요소를 찾을 수 없어서 별점 업데이트를 건너뜁니다');
       }
 
       // 전역 store 객체도 업데이트
       if (window.currentStore && window.currentStore.id === store.id) {
-        window.currentStore.ratingAverage = ratingData.ratingAverage;
-        window.currentStore.reviewCount = ratingData.reviewCount;
+        window.currentStore.ratingAverage = actualRating;
+        window.currentStore.reviewCount = reviewCount;
       }
+
+      return { ratingAverage: actualRating, reviewCount: reviewCount };
+    } else {
+      console.warn('⚠️ 서버에서 유효하지 않은 별점 데이터 응답');
+      return { ratingAverage: 0, reviewCount: 0 };
     }
   } catch (error) {
-    console.error(`❌ 매장 ${store.id} 별점 정보 비동기 업데이트 실패:`, error);
+    console.error(`❌ 매장 ${store.id} 실제 리뷰 기반 별점 정보 업데이트 실패:`, error);
+    return { ratingAverage: 0, reviewCount: 0 };
   }
 }
 

@@ -983,36 +983,53 @@ router.get('/:storeId/reviews', async (req, res) => {
   }
 });
 
-// 매장별 별점 정보 조회 API (개별 조회용, 기존 호환성 유지)
+// 매장별 별점 정보 조회 API (실제 리뷰 데이터 기반)
 router.get('/:storeId/rating', async (req, res) => {
   try {
     const { storeId } = req.params;
-    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 요청`);
+    console.log(`⭐ 매장 ${storeId} 실제 리뷰 기반 별점 정보 조회 요청`);
 
-    const result = await pool.query(`
-      SELECT rating_average, review_count 
-      FROM stores 
-      WHERE id = $1
+    // 실시간으로 reviews 테이블에서 계산
+    const reviewResult = await pool.query(`
+      SELECT 
+        AVG(rating) as avg_rating, 
+        COUNT(*) as review_count 
+      FROM reviews 
+      WHERE store_id = $1
     `, [parseInt(storeId)]);
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
+    const avgRating = reviewResult.rows[0].avg_rating;
+    const reviewCount = parseInt(reviewResult.rows[0].review_count) || 0;
+    const actualRating = avgRating ? parseFloat(avgRating).toFixed(1) : 0.0;
+
+    console.log(`📊 매장 ${storeId} 실시간 리뷰 통계: ${actualRating}점 (${reviewCount}개 리뷰)`);
+
+    // stores 테이블도 동시에 업데이트
+    if (reviewCount > 0) {
+      await pool.query(`
+        UPDATE stores 
+        SET rating_average = $1, review_count = $2 
+        WHERE id = $3
+      `, [actualRating, reviewCount, parseInt(storeId)]);
+      console.log(`✅ 매장 ${storeId} stores 테이블 별점 동기화 완료`);
     }
 
-    const store = result.rows[0];
     const ratingData = {
       success: true,
       storeId: parseInt(storeId),
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0
+      ratingAverage: parseFloat(actualRating),
+      reviewCount: reviewCount
     };
 
-    console.log(`⭐ 매장 ${storeId} 별점 정보 조회 완료: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)`);
+    console.log(`⭐ 매장 ${storeId} 실제 리뷰 기반 별점 정보 조회 완료: ${ratingData.ratingAverage}점 (${ratingData.reviewCount}개 리뷰)`);
     res.json(ratingData);
 
   } catch (error) {
     console.error('❌ 매장 별점 정보 조회 실패:', error);
-    res.status(500).json({ error: '매장 별점 정보 조회 실패' });
+    res.status(500).json({ 
+      success: false, 
+      error: '매장 별점 정보 조회 실패: ' + error.message 
+    });
   }
 });
 
