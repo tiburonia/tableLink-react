@@ -1,36 +1,27 @@
-
 async function renderReviewHTML(store) {
   console.log(`🔍 매장 ${store.id} 리뷰 미리보기 렌더링 시작`);
 
   try {
     // 서버에서 리뷰 데이터 가져오기
     const response = await fetch(`/api/reviews/preview/${store.id}`);
-    
+
     console.log('📡 API 응답 상태:', response.status);
-    
+
     if (!response.ok) {
       throw new Error(`리뷰 데이터 조회 실패: ${response.status}`);
     }
 
     const reviewData = await response.json();
-    console.log('📦 받은 리뷰 데이터:', reviewData);
-    
-    // API 응답 구조 확인 및 처리
-    let reviews = [];
-    if (reviewData.success && reviewData.reviews) {
-      reviews = reviewData.reviews;
-    } else if (Array.isArray(reviewData)) {
-      reviews = reviewData;
-    } else {
-      console.warn('⚠️ 예상하지 못한 API 응답 구조:', reviewData);
-      reviews = [];
+    console.log('📦 받은 리뷰 데이터 전체:', reviewData);
+
+    // 응답 구조 확인
+    if (!reviewData.success) {
+      console.error('❌ 서버에서 오류 응답:', reviewData.error);
+      throw new Error(reviewData.error || '리뷰 조회 실패');
     }
-    
-    console.log(`📖 가져온 리뷰 데이터:`, {
-      success: reviewData.success,
-      reviewCount: reviews.length,
-      reviews: reviews
-    });
+
+    const reviews = reviewData.reviews || [];
+    console.log('📋 처리할 리뷰 배열:', reviews);
 
     // 각 리뷰 데이터 구조 확인
     if (reviews.length > 0) {
@@ -40,7 +31,7 @@ async function renderReviewHTML(store) {
 
     // 총 리뷰 수와 평균 평점 계산
     const total = reviews.length;
-    const avgScore = total > 0 
+    const avgScore = total > 0
       ? (reviews.reduce((sum, r) => sum + (r.score || r.rating || 0), 0) / total).toFixed(1)
       : "0.0";
 
@@ -79,23 +70,23 @@ async function renderReviewHTML(store) {
             전체보기 →
           </button>
         </div>
-        
+
         <div class="review-preview-list">
           ${reviews.slice(0, 3).map((review, index) => {
             console.log(`🔍 리뷰 ${index + 1} 처리 중:`, review);
-            
+
             const rating = review.score || review.rating || 5;
             const content = review.content || review.review_text || '좋은 매장입니다!';
             const userName = review.user || review.user_name || '익명 사용자';
             const reviewDate = review.date || (review.created_at ? new Date(review.created_at).toLocaleDateString('ko-KR') : formatDate(new Date()));
-            
+
             console.log(`📝 리뷰 ${index + 1} 처리된 데이터:`, {
               rating,
               content,
               userName,
               reviewDate
             });
-            
+
             return `
             <div class="review-card">
               <div class="review-card-header">
@@ -129,7 +120,7 @@ async function renderReviewHTML(store) {
     console.error('❌ 리뷰 미리보기 렌더링 실패:', error);
     console.error('❌ 에러 상세:', error.message);
     console.error('❌ 에러 스택:', error.stack);
-    
+
     // 에러 발생 시 기본 UI 반환
     return `
       <div class="review-preview">
