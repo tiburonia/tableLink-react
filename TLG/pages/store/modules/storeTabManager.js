@@ -108,35 +108,41 @@ window.StoreTabManager = {
       case 'review':
           console.log('📖 리뷰 탭 렌더링 시작');
           try {
-            let reviewHTML = '';
-            if (typeof renderReviewHTML === 'function') {
-              reviewHTML = await renderReviewHTML(store);
-              console.log('✅ 리뷰 HTML 렌더링 완료');
-            } else if (typeof window.renderReviewHTML === 'function') {
-              reviewHTML = await window.renderReviewHTML(store);
-              console.log('✅ 리뷰 HTML 렌더링 완료 (window)');
-            } else {
-              console.error('❌ renderReviewHTML 함수를 찾을 수 없습니다');
-              reviewHTML = '<div class="empty-review">리뷰 렌더링 함수를 찾을 수 없습니다.</div>';
-            }
+            await (async () => {
+              let reviewHTML = '';
+              if (typeof renderReviewHTML === 'function') {
+                reviewHTML = await renderReviewHTML(store);
+                console.log('✅ 리뷰 HTML 렌더링 완료');
+              } else if (typeof window.renderReviewHTML === 'function') {
+                reviewHTML = await window.renderReviewHTML(store);
+                console.log('✅ 리뷰 HTML 렌더링 완료 (window)');
+              } else {
+                console.error('❌ renderReviewHTML 함수를 찾을 수 없습니다');
+                reviewHTML = '<div class="empty-review">리뷰 렌더링 함수를 찾을 수 없습니다.</div>';
+              }
 
-            if (reviewHTML && reviewHTML.trim() !== '') {
               storeContent.innerHTML = reviewHTML;
-            } else {
-              console.warn('⚠️ 리뷰 HTML이 비어있습니다');
-              storeContent.innerHTML = '<div class="empty-review">리뷰 데이터를 처리할 수 없습니다.</div>';
-            }
-          } catch (reviewError) {
-            console.error('❌ 리뷰 탭 렌더링 중 오류:', reviewError);
-            storeContent.innerHTML = `
-              <div class="review-error">
-                <p>리뷰를 불러오는 중 오류가 발생했습니다.</p>
-                <p>오류: ${reviewError.message}</p>
-                <button onclick="location.reload()">다시 시도</button>
-              </div>
-            `;
+// 더보기 버튼 이벤트 재설정
+              const seeMoreBtn = storeContent.querySelector('.see-more-btn');
+              if (seeMoreBtn) {
+                seeMoreBtn.addEventListener('click', () => {
+                  console.log('📖 리뷰 더보기 버튼 클릭됨');
+                  if (typeof renderAllReview === 'function') {
+                    renderAllReview(store);
+                  } else if (typeof window.renderAllReview === 'function') {
+                    window.renderAllReview(store);
+                  } else {
+                    console.error('❌ renderAllReview 함수를 찾을 수 없습니다');
+                  }
+                });
+                console.log('✅ 리뷰 더보기 버튼 이벤트 설정 완료');
+              }
+            })();
+          } catch (error) {
+            console.error('❌ 리뷰 렌더링 중 오류:', error);
+            storeContent.innerHTML = '<div class="empty-review">리뷰 로딩 중 오류가 발생했습니다.</div>';
           }
-          break;
+        break;
 
       case 'photo':
         storeContent.innerHTML = '등록된 사진이 없습니다...';

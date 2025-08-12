@@ -533,9 +533,17 @@ function showAllPromotions(store) {
 // 전역 함수로도 등록
 window.showAllPromotions = showAllPromotions;
 
-// 전역 함수 등록
-window.renderStore = renderStore;
-window.renderTableLayout = renderTableLayout;
-window.loadAndRenderStore = loadAndRenderStore;
-window.loadPromotionData = loadPromotionData;
-window.loadLoyaltyData = loadLoyaltyData;
+// 전역 함수 등록 (즉시 실행)
+(function() {
+  console.log('🔧 renderStore 전역 함수 등록 중...');
+  
+  window.renderStore = renderStore;
+  window.renderTableLayout = renderTableLayout;
+  window.loadAndRenderStore = loadAndRenderStore;
+  window.loadPromotionData = loadPromotionData;
+  window.loadLoyaltyData = loadLoyaltyData;
+  
+  // 함수 등록 확인
+  console.log('✅ renderStore 전역 함수 등록 완료:', typeof window.renderStore);
+  console.log('🔍 전역 renderStore 존재 여부:', !!window.renderStore);
+})();

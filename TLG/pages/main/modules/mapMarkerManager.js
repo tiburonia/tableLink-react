@@ -224,7 +224,7 @@ window.MapMarkerManager = {
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="store-marker store-marker-hoverable" onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+      <div id="${markerId}" class="store-marker store-marker-hoverable" onclick="(function(){ try { if(window.renderStore) window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
         <div class="marker-info">
           <div class="store-name">${store.name}</div>
           <div class="store-status ${isOpen ? 'open' : 'closed'}">
