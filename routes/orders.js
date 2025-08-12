@@ -504,4 +504,36 @@ router.put('/:orderId/status', async (req, res) => {
   }
 });
 
+// 주문별 리뷰 존재 여부 확인
+router.get('/:orderId/review-status', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🔍 주문 ${orderId}의 리뷰 존재 여부 확인`);
+
+    const result = await pool.query(
+      'SELECT COUNT(*) as review_count FROM reviews WHERE order_id = $1',
+      [orderId]
+    );
+
+    const hasReview = parseInt(result.rows[0].review_count) > 0;
+
+    console.log(`✅ 주문 ${orderId} 리뷰 존재 여부: ${hasReview ? '있음' : '없음'}`);
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      hasReview: hasReview,
+      reviewCount: parseInt(result.rows[0].review_count)
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 리뷰 상태 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '리뷰 상태 확인에 실패했습니다'
+    });
+  }
+});
+
 module.exports = router;

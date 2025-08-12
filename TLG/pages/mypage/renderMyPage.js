@@ -413,8 +413,8 @@ async function loadUserData() {
       ordersData = ordersResult.orders || [];
     }
 
-    // 주문내역 업데이트
-    updateOrderList(currentUserInfo, ordersData);
+    // 주문내역 업데이트 (비동기)
+    await updateOrderList(currentUserInfo, ordersData);
 
     // 예약내역 업데이트
     updateReservationList(currentUserInfo);
@@ -442,13 +442,17 @@ async function loadUserData() {
 }
 
 // 주문내역 업데이트 함수 (최근 2개만 표시)
-function updateOrderList(currentUserInfo, ordersData) {
+async function updateOrderList(currentUserInfo, ordersData) {
   const orderList = document.querySelector('#orderList');
   if (!orderList) return;
 
   orderList.innerHTML = ''; // 기존 내용 초기화
 
   if (ordersData && ordersData.length > 0) {
+    // 각 주문에 대한 리뷰 존재 여부를 병렬로 확인
+    const reviewCheckPromises = ordersData.map(order => checkOrderHasReview(order.id));
+    const reviewStatuses = await Promise.all(reviewCheckPromises);
+
     ordersData.forEach((order, index) => {
       const orderDiv = document.createElement('div');
       orderDiv.className = 'order-item';
@@ -458,8 +462,8 @@ function updateOrderList(currentUserInfo, ordersData) {
       const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
       const storeName = orderData.store || order.store_name || '매장 정보 없음';
 
-      // 리뷰 작성 여부 확인 (reviews 테이블에서)
-      const hasReview = false; // 실제로는 API 호출로 확인해야 함
+      // 리뷰 작성 여부 확인 결과 사용
+      const hasReview = reviewStatuses[index];
 
       orderDiv.innerHTML = `
         <div class="order-info">
@@ -469,7 +473,7 @@ function updateOrderList(currentUserInfo, ordersData) {
         </div>
         <div class="review-section">
           ${hasReview ?
-            `<p style="color: #297efc; font-size: 14px;">✅ 리뷰 작성 완료</p>` :
+            `<p style="color: #28a745; font-size: 14px; font-weight: 600;">✅ 리뷰 작성 완료</p>` :
             `<button class="review-btn" data-order-id="${order.id}" data-order-index="${index}">📝 리뷰 작성하기</button>`
           }
         </div>
@@ -499,6 +503,24 @@ function updateOrderList(currentUserInfo, ordersData) {
     });
   } else {
     orderList.innerHTML = `<p>주문 내역이 없습니다.</p>`;
+  }
+}
+
+// 주문에 대한 리뷰 존재 여부 확인 함수
+async function checkOrderHasReview(orderId) {
+  try {
+    const response = await fetch(`/api/orders/${orderId}/review-status`);
+    const data = await response.json();
+    
+    if (data.success) {
+      return data.hasReview;
+    } else {
+      console.warn(`⚠️ 주문 ${orderId} 리뷰 상태 확인 실패:`, data.error);
+      return false;
+    }
+  } catch (error) {
+    console.error(`❌ 주문 ${orderId} 리뷰 상태 확인 오류:`, error);
+    return false;
   }
 }
 
