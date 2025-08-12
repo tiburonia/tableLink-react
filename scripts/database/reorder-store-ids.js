@@ -41,16 +41,12 @@ async function reorderStoreIds() {
     const maxId = rangeResult.rows[0].max_id;
     console.log(`📊 현재 ID 범위: ${minId} ~ ${maxId}`);
     
-    // 기존 매장들을 현재 ID 순서대로 조회 (현재 테이블 구조에 맞춰)
+    // 기존 매장들을 현재 ID 순서대로 조회
     const existingStores = await client.query(`
       SELECT * FROM stores ORDER BY id
     `);
     
     console.log(`📋 기존 매장 목록 확인: ${existingStores.rows.length}개`);
-    
-    // 외래키 제약조건 임시 비활성화
-    console.log('🔒 외래키 제약조건 임시 비활성화...');
-    await client.query('SET session_replication_role = replica');
     
     // 임시 테이블 생성 (ID 매핑용)
     console.log('🏗️ 임시 ID 매핑 테이블 생성 중...');
@@ -75,42 +71,42 @@ async function reorderStoreIds() {
     
     console.log(`✅ ID 매핑 생성 완료: ${existingStores.rows.length}개`);
     
-    // stores 테이블 백업 (임시 테이블로)
-    console.log('💾 stores 테이블 백업 중...');
-    await client.query('CREATE TEMP TABLE stores_backup AS SELECT * FROM stores');
+    // 임시 stores 테이블 생성 (새로운 ID로)
+    console.log('🏗️ 임시 stores 테이블 생성 중...');
+    await client.query(`
+      CREATE TEMP TABLE stores_new AS 
+      SELECT 
+        ROW_NUMBER() OVER (ORDER BY id) as id,
+        name,
+        category,
+        menu,
+        review_count,
+        is_open,
+        created_at,
+        rating_average,
+        address_update_status
+      FROM stores 
+      ORDER BY id
+    `);
     
-    // stores 테이블 데이터 삭제
-    console.log('🗑️ stores 테이블 데이터 초기화...');
-    await client.query('DELETE FROM stores');
+    // stores 테이블의 기본키 제약조건 임시 제거를 위해 이름 변경
+    console.log('🔄 기존 stores 테이블 백업...');
+    await client.query('ALTER TABLE stores RENAME TO stores_old');
+    await client.query('ALTER TABLE stores_new RENAME TO stores');
     
-    // stores 테이블 시퀀스 리셋
-    console.log('🔄 stores 테이블 시퀀스 리셋...');
-    await client.query('ALTER SEQUENCE stores_id_seq RESTART WITH 1');
+    // stores 테이블에 기본키 제약조건 다시 추가
+    console.log('🔧 stores 테이블 기본키 제약조건 재설정...');
+    await client.query('ALTER TABLE stores ADD PRIMARY KEY (id)');
     
-    // 새로운 ID로 stores 데이터 재삽입
-    console.log('📥 새로운 ID로 stores 데이터 재삽입 중...');
-    for (let i = 0; i < existingStores.rows.length; i++) {
-      const store = existingStores.rows[i];
-      const newId = i + 1;
-      
-      // 동적으로 INSERT 쿼리 생성 (id 제외한 모든 컬럼)
-      const columns = Object.keys(store).filter(key => key !== 'id');
-      const values = columns.map(key => store[key]);
-      const placeholders = values.map((_, index) => `$${index + 2}`);
-      
-      const insertQuery = `
-        INSERT INTO stores (id, ${columns.join(', ')}) 
-        VALUES ($1, ${placeholders.join(', ')})
-      `;
-      
-      await client.query(insertQuery, [newId, ...values]);
-      
-      if ((i + 1) % 100 === 0) {
-        console.log(`  📦 ${i + 1}/${existingStores.rows.length} 매장 재삽입 완료`);
-      }
-    }
+    // 시퀀스 생성 및 연결
+    console.log('🔄 stores 테이블 시퀀스 재설정...');
+    await client.query('DROP SEQUENCE IF EXISTS stores_id_seq CASCADE');
+    await client.query('CREATE SEQUENCE stores_id_seq');
+    await client.query(`ALTER SEQUENCE stores_id_seq RESTART WITH ${totalStores + 1}`);
+    await client.query('ALTER TABLE stores ALTER COLUMN id SET DEFAULT nextval(\'stores_id_seq\')');
+    await client.query('ALTER SEQUENCE stores_id_seq OWNED BY stores.id');
     
-    console.log(`✅ stores 테이블 재삽입 완료: ${existingStores.rows.length}개`);
+    console.log(`✅ stores 테이블 재생성 완료: ${existingStores.rows.length}개`);
     
     // 관련 테이블들 업데이트
     console.log('🔄 관련 테이블 store_id 업데이트 시작...');
@@ -120,8 +116,9 @@ async function reorderStoreIds() {
     const reviewsUpdated = await client.query(`
       UPDATE reviews 
       SET store_id = temp_id_mapping.new_id 
-      FROM temp_id_mapping 
-      WHERE reviews.store_id = temp_id_mapping.old_id
+      FROM temp_id_mapping, stores_old
+      WHERE reviews.store_id = stores_old.id 
+      AND stores_old.id = temp_id_mapping.old_id
     `);
     console.log(`✅ reviews 테이블 업데이트 완료: ${reviewsUpdated.rowCount}개 행`);
     
@@ -130,8 +127,9 @@ async function reorderStoreIds() {
     const ordersUpdated = await client.query(`
       UPDATE orders 
       SET store_id = temp_id_mapping.new_id 
-      FROM temp_id_mapping 
-      WHERE orders.store_id = temp_id_mapping.old_id
+      FROM temp_id_mapping, stores_old
+      WHERE orders.store_id = stores_old.id 
+      AND stores_old.id = temp_id_mapping.old_id
     `);
     console.log(`✅ orders 테이블 업데이트 완료: ${ordersUpdated.rowCount}개 행`);
     
@@ -140,12 +138,24 @@ async function reorderStoreIds() {
     const tablesUpdated = await client.query(`
       UPDATE store_tables 
       SET store_id = temp_id_mapping.new_id 
-      FROM temp_id_mapping 
-      WHERE store_tables.store_id = temp_id_mapping.old_id
+      FROM temp_id_mapping, stores_old
+      WHERE store_tables.store_id = stores_old.id 
+      AND stores_old.id = temp_id_mapping.old_id
     `);
     console.log(`✅ store_tables 테이블 업데이트 완료: ${tablesUpdated.rowCount}개 행`);
     
-    // 4. store_address 테이블 업데이트 (존재하는 경우)
+    // 4. carts 테이블 업데이트
+    console.log('🔄 carts 테이블 store_id 업데이트 중...');
+    const cartsUpdated = await client.query(`
+      UPDATE carts 
+      SET store_id = temp_id_mapping.new_id 
+      FROM temp_id_mapping, stores_old
+      WHERE carts.store_id = stores_old.id 
+      AND stores_old.id = temp_id_mapping.old_id
+    `);
+    console.log(`✅ carts 테이블 업데이트 완료: ${cartsUpdated.rowCount}개 행`);
+    
+    // 5. store_address 테이블 업데이트 (존재하는 경우)
     const addressTableExists = await client.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -158,13 +168,14 @@ async function reorderStoreIds() {
       const addressUpdated = await client.query(`
         UPDATE store_address 
         SET store_id = temp_id_mapping.new_id 
-        FROM temp_id_mapping 
-        WHERE store_address.store_id = temp_id_mapping.old_id
+        FROM temp_id_mapping, stores_old
+        WHERE store_address.store_id = stores_old.id 
+        AND stores_old.id = temp_id_mapping.old_id
       `);
       console.log(`✅ store_address 테이블 업데이트 완료: ${addressUpdated.rowCount}개 행`);
     }
     
-    // 5. users 테이블의 favorite_stores 업데이트 (JSONB 배열)
+    // 6. users 테이블의 favorite_stores 업데이트 (JSONB 배열)
     console.log('🔄 users 테이블 favorite_stores 업데이트 중...');
     const usersResult = await client.query(`
       SELECT id, favorite_stores FROM users WHERE favorite_stores IS NOT NULL
@@ -200,13 +211,9 @@ async function reorderStoreIds() {
     }
     console.log(`✅ users 테이블 favorite_stores 업데이트 완료: ${usersFavoriteUpdated}개 사용자`);
     
-    // stores 테이블 시퀀스 최종 조정
-    console.log('🔄 stores 테이블 시퀀스 최종 조정...');
-    await client.query(`ALTER SEQUENCE stores_id_seq RESTART WITH ${totalStores + 1}`);
-    
-    // 외래키 제약조건 재활성화
-    console.log('🔓 외래키 제약조건 재활성화...');
-    await client.query('SET session_replication_role = DEFAULT');
+    // 백업된 stores_old 테이블 삭제
+    console.log('🗑️ 백업 테이블 정리...');
+    await client.query('DROP TABLE stores_old');
     
     // 트랜잭션 커밋
     await client.query('COMMIT');
@@ -230,11 +237,13 @@ async function reorderStoreIds() {
     const reviewsCount = await client.query('SELECT COUNT(*) as count FROM reviews');
     const ordersCount = await client.query('SELECT COUNT(*) as count FROM orders');
     const tablesCount = await client.query('SELECT COUNT(*) as count FROM store_tables');
+    const cartsCount = await client.query('SELECT COUNT(*) as count FROM carts');
     
     console.log(`\n📋 관련 테이블 데이터 수:`);
     console.log(`  - reviews: ${reviewsCount.rows[0].count}개`);
     console.log(`  - orders: ${ordersCount.rows[0].count}개`);
     console.log(`  - store_tables: ${tablesCount.rows[0].count}개`);
+    console.log(`  - carts: ${cartsCount.rows[0].count}개`);
     
     if (addressTableExists.rows[0].exists) {
       const addressCount = await client.query('SELECT COUNT(*) as count FROM store_address');
