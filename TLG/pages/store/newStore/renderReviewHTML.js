@@ -4,13 +4,17 @@ async function renderReviewHTML(store) {
 
   try {
     // 서버에서 리뷰 데이터 가져오기
-    const response = await fetch(`/api/reviews/reviews/preview/${store.id}`);
+    const response = await fetch(`/api/reviews/preview/${store.id}`);
+    
+    console.log('📡 API 응답 상태:', response.status);
     
     if (!response.ok) {
       throw new Error(`리뷰 데이터 조회 실패: ${response.status}`);
     }
 
     const reviewData = await response.json();
+    console.log('📦 받은 리뷰 데이터:', reviewData);
+    
     const reviews = reviewData.reviews || [];
     
     console.log(`📖 가져온 리뷰 데이터:`, {
@@ -94,6 +98,8 @@ async function renderReviewHTML(store) {
 
   } catch (error) {
     console.error('❌ 리뷰 미리보기 렌더링 실패:', error);
+    console.error('❌ 에러 상세:', error.message);
+    console.error('❌ 에러 스택:', error.stack);
     
     // 에러 발생 시 기본 UI 반환
     return `
