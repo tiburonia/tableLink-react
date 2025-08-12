@@ -189,8 +189,7 @@ async function loadReviewData(store, loadingHTML) {
         </style>
       `;
     }
-  }t.keys(reviews[0]));
-    }
+  }
 
     // 총 리뷰 수와 평균 평점 계산
     const total = reviews.length;
