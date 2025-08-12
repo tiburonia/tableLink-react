@@ -290,10 +290,10 @@ function getModernReviewStyles() {
     <style>
       .modern-review-container {
         background: #ffffff;
-        border-radius: 24px;
-        padding: 28px;
-        margin: 16px 0;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        border-radius: 20px;
+        padding: 24px;
+        margin: 12px 0;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.08);
         border: 1px solid #f1f5f9;
         position: relative;
         overflow: hidden;
@@ -312,9 +312,9 @@ function getModernReviewStyles() {
       .review-header-section {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 24px;
-        padding-bottom: 20px;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
         border-bottom: 2px solid #f8fafc;
       }
 
@@ -325,17 +325,17 @@ function getModernReviewStyles() {
       }
 
       .review-title {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: 700;
         color: #1e293b;
         margin: 0;
-        line-height: 1.2;
+        line-height: 1.3;
       }
 
       .review-summary {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 14px;
       }
 
       .rating-display {
@@ -390,13 +390,13 @@ function getModernReviewStyles() {
       .reviews-grid {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 14px;
       }
 
       .modern-review-card {
         background: linear-gradient(145deg, #ffffff, #f8fafc);
-        border-radius: 20px;
-        padding: 24px;
+        border-radius: 16px;
+        padding: 20px;
         border: 1px solid #e2e8f0;
         transition: all 0.3s ease;
         position: relative;
@@ -638,54 +638,56 @@ function getModernReviewStyles() {
         box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
       }
 
-      /* 반응형 디자인 */
-      @media (max-width: 768px) {
-        .modern-review-container {
-          padding: 20px;
-          border-radius: 16px;
-          margin: 12px 0;
-        }
+      /* 현재 비율 최적화 */
+      .modern-review-container {
+        max-width: 100%;
+        width: 100%;
+      }
 
-        .review-header-section {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 16px;
-        }
+      .review-header-section {
+        align-items: center;
+        justify-content: space-between;
+      }
 
-        .review-summary {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 8px;
-        }
+      .review-summary {
+        align-items: center;
+        gap: 12px;
+      }
 
-        .view-all-button {
-          align-self: flex-end;
-        }
+      .reviews-grid {
+        gap: 14px;
+      }
 
-        .review-card-header {
-          gap: 12px;
-        }
+      .modern-review-card {
+        padding: 22px;
+        margin: 0;
+      }
 
-        .user-avatar {
-          width: 36px;
-          height: 36px;
-          font-size: 14px;
-        }
+      .review-card-header {
+        gap: 14px;
+        align-items: center;
+      }
 
-        .indicator-content {
-          flex-direction: column;
-          gap: 12px;
-          text-align: center;
-        }
+      .user-avatar {
+        width: 42px;
+        height: 42px;
+        font-size: 15px;
+      }
 
-        .review-title {
-          font-size: 20px;
-        }
+      .user-name {
+        font-size: 15px;
+      }
 
-        .modern-review-card {
-          padding: 20px;
-          border-radius: 16px;
-        }
+      .review-text {
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .indicator-content {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 18px;
       }
     </style>
   `;
