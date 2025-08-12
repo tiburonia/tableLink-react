@@ -219,8 +219,8 @@ window.MapMarkerManager = {
     const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
     const isOpen = store.isOpen !== false;
     
-    // 리뷰가 없으면 별점 표시 안함 (reviewCount > 0이고 ratingAverage > 0일 때만 표시)
-    const hasReviews = store.reviewCount > 0 && store.ratingAverage > 0;
+    // 리뷰가 없으면 별점 표시 안함, 리뷰가 있으면 별점 표시
+    const hasReviews = store.reviewCount > 0;
     const ratingDisplay = hasReviews ? ` ⭐${parseFloat(store.ratingAverage).toFixed(1)}` : '';
 
     // 고유 ID 생성
