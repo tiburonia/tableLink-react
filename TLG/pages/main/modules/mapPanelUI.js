@@ -97,7 +97,7 @@ window.MapPanelUI = {
         /* 패널 */
         #storePanel {
           position: fixed;
-          bottom: 66px;
+          bottom: 46px;
           left: 50%;
           transform: translateX(-50%);
           width: 100%;
