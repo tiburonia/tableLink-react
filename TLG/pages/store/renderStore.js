@@ -1,7 +1,7 @@
 // 모듈 import (전역으로 로드될 것들)
 // renderStoreUI.js, storeTabManager.js, tablePanelManager.js, reviewManager.js가 먼저 로드되어야 함
 
-function renderStore(store) {
+async function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
     
@@ -16,7 +16,7 @@ function renderStore(store) {
       }
     }
     
-    // 메뉴가 없거나 배열이 아닌 경우 빈 배열로 초기화
+    // 메뉴가 없거나 배열이 아닌 곳에서 빈 배열로 초기화
     if (!store.menu || !Array.isArray(store.menu)) {
       store.menu = [];
     }
