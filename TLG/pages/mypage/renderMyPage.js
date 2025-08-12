@@ -886,7 +886,7 @@ async function updateReviewList(currentUserInfo) {
   try {
     console.log('📖 사용자 리뷰 내역 조회 시작, userId:', currentUserInfo.id);
 
-    const response = await fetch(`/api/users/${currentUserInfo.id}/reviews?limit=3`);
+    const response = await fetch(`/api/reviews/users/${currentUserInfo.id}?limit=3`);
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -954,7 +954,7 @@ async function updateReviewList(currentUserInfo) {
 // 전체 리뷰 보기 모달
 async function showAllReviewsModal(currentUserInfo) {
   try {
-    const response = await fetch(`/api/users/${currentUserInfo.id}/reviews`);
+    const response = await fetch(`/api/reviews/users/${currentUserInfo.id}`);
     const data = await response.json();
 
     if (!data.success) {

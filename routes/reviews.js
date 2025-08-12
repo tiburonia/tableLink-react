@@ -369,7 +369,7 @@ router.put('/reviews/:reviewId', async (req, res) => {
 });
 
 // 사용자별 리뷰 내역 조회 API
-router.get('/users/:userId/reviews', async (req, res) => {
+router.get('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const limit = req.query.limit || 10;
