@@ -69,7 +69,7 @@ router.get('/stores/:storeId/reviews', async (req, res) => {
 });
 
 // 최근 리뷰 조회 API (TLM용)
-router.get('/reviews/recent/:storeId', async (req, res) => {
+router.get('/recent/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
     const limit = req.query.limit || 5;
@@ -195,7 +195,7 @@ router.post('/submit-from-orders', async (req, res) => {
 });
 
 // 리뷰 미리보기 API (매장 상세 페이지용)
-router.get('/reviews/preview/:storeId', async (req, res) => {
+router.get('/preview/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
     const limit = 3; // 미리보기는 3개만
@@ -238,7 +238,7 @@ router.get('/reviews/preview/:storeId', async (req, res) => {
 });
 
 // 리뷰 제출 API
-router.post('/reviews/submit', async (req, res) => {
+router.post('/submit', async (req, res) => {
   const { userId, storeId, storeName, orderIndex, rating, reviewText, orderDate } = req.body;
 
   console.log('📝 리뷰 등록 요청 받음:', { userId, storeId, orderIndex, rating, reviewText });
@@ -317,7 +317,7 @@ router.post('/reviews/submit', async (req, res) => {
 });
 
 // 리뷰 수정 API
-router.put('/reviews/:reviewId', async (req, res) => {
+router.put('/:reviewId', async (req, res) => {
   const { reviewId } = req.params;
   const { content, score, userId } = req.body;
 
@@ -460,7 +460,7 @@ router.get('/check-order-review/:orderId', async (req, res) => {
 });
 
 // 리뷰 삭제 API
-router.delete('/reviews/:reviewId', async (req, res) => {
+router.delete('/:reviewId', async (req, res) => {
   const { reviewId } = req.params;
   const { userId } = req.body;
 

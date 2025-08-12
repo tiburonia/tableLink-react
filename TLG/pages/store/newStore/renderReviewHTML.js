@@ -4,7 +4,7 @@ async function renderReviewHTML(store) {
 
   try {
     // 서버에서 리뷰 데이터 가져오기
-    const response = await fetch(`/api/reviews/preview/${store.id}`);
+    const response = await fetch(`/api/reviews/reviews/preview/${store.id}`);
     
     if (!response.ok) {
       throw new Error(`리뷰 데이터 조회 실패: ${response.status}`);
@@ -53,29 +53,31 @@ async function renderReviewHTML(store) {
             <span class="review-title">리뷰 미리보기</span>
             <div class="review-stats">
               <span class="review-rating">★ ${avgScore}</span>
-              <span class="review-count">(${total}개)</span>
+              <span class="review-count">(${total}개 리뷰)</span>
             </div>
           </div>
           <button class="see-more-btn" onclick="renderAllReview(window.currentStore)">
-            전체보기
+            전체보기 →
           </button>
         </div>
         
         <div class="review-preview-list">
-          ${reviews.map(review => `
+          ${reviews.slice(0, 3).map(review => `
             <div class="review-card">
               <div class="review-card-header">
                 <div class="reviewer-info">
-                  <span class="reviewer-name">${review.user || '익명'}</span>
+                  <span class="reviewer-name">${review.user || '익명 사용자'}</span>
                   <span class="review-date">${review.date || formatDate(new Date())}</span>
                 </div>
                 <div class="review-rating-badge">
-                  <span class="rating-stars">${'★'.repeat(review.rating || 5)}</span>
+                  <span class="rating-stars">${'★'.repeat(Math.max(1, Math.min(5, review.rating || 5)))}</span>
                   <span class="rating-number">${review.rating || 5}</span>
                 </div>
               </div>
               <div class="review-content">
-                ${review.content || '좋은 매장입니다!'}
+                ${(review.content || '좋은 매장입니다!').length > 100 ? 
+                  (review.content || '좋은 매장입니다!').substring(0, 100) + '...' : 
+                  (review.content || '좋은 매장입니다!')}
               </div>
             </div>
           `).join('')}
