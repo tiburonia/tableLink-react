@@ -40,29 +40,38 @@ async function renderStore(store) {
       throw new Error('필수 UI 모듈을 찾을 수 없습니다');
     }
 
-    // 실제 리뷰 데이터 기반 별점 계산
+    // 초기값으로 UI를 먼저 렌더링 (빠른 UI 표시)
     let displayRating = '0.0';
+    window.StoreUIManager.renderStoreHTML(store, displayRating);
 
-    try {
-      // 서버에서 실시간 별점 정보 가져오기 (레거시 더미데이터 무시)
-      console.log('🔄 실시간 별점 정보 조회 중...');
-      await updateStoreRatingAsync(store);
-      
-      // 업데이트된 정보가 있으면 사용, 없으면 0.0 유지
+    // UI 렌더링 후 실제 리뷰 데이터 비동기 로드
+    updateStoreRatingAsync(store).then(() => {
+      // 업데이트된 정보가 있으면 UI 재업데이트
       if (store.ratingAverage !== undefined && store.ratingAverage !== null && store.ratingAverage > 0) {
         displayRating = parseFloat(store.ratingAverage).toFixed(1);
-        console.log('⭐ 실제 리뷰 기반 별점 사용:', displayRating);
+        console.log('⭐ 실제 리뷰 기반 별점 업데이트:', displayRating);
+        
+        // DOM에서 별점 표시 업데이트
+        const reviewScoreElement = document.getElementById('reviewScore');
+        if (reviewScoreElement) {
+          reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
+          
+          // reviewLink 이벤트 리스너 재설정
+          const newReviewLink = document.getElementById('reviewLink');
+          if (newReviewLink) {
+            newReviewLink.addEventListener('click', () => {
+              if (typeof renderAllReview === 'function') {
+                renderAllReview(store);
+              }
+            });
+          }
+        }
       } else {
-        console.log('⚠️ 리뷰가 없어서 0.0점으로 표시');
-        displayRating = '0.0';
+        console.log('⚠️ 리뷰가 없어서 0.0점 유지');
       }
-    } catch (error) {
-      console.warn('⚠️ 별점 정보 처리 중 오류, 기본값 사용:', error);
-      displayRating = '0.0';
-    }
-
-    // UI 렌더링
-    window.StoreUIManager.renderStoreHTML(store, displayRating);
+    }).catch(error => {
+      console.warn('⚠️ 별점 정보 비동기 로드 실패, 기본값 유지:', error);
+    });
 
     // DOM 렌더링 완료 후 이벤트 설정
     setTimeout(() => {

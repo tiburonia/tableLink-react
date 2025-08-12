@@ -1,6 +1,73 @@
 async function renderReviewHTML(store) {
   console.log(`🔍 매장 ${store.id} 리뷰 미리보기 렌더링 시작`);
 
+  // 즉시 로딩 UI 표시
+  const loadingHTML = `
+    <div class="review-loading-container">
+      <div class="loading-skeleton">
+        <div class="skeleton-header">
+          <div class="skeleton-line" style="width: 150px; height: 16px;"></div>
+          <div class="skeleton-line" style="width: 80px; height: 14px;"></div>
+        </div>
+        <div class="skeleton-content">
+          <div class="skeleton-line" style="width: 100%; height: 12px;"></div>
+          <div class="skeleton-line" style="width: 90%; height: 12px;"></div>
+          <div class="skeleton-line" style="width: 80%; height: 12px;"></div>
+        </div>
+      </div>
+      <div class="loading-skeleton">
+        <div class="skeleton-header">
+          <div class="skeleton-line" style="width: 140px; height: 16px;"></div>
+          <div class="skeleton-line" style="width: 75px; height: 14px;"></div>
+        </div>
+        <div class="skeleton-content">
+          <div class="skeleton-line" style="width: 95%; height: 12px;"></div>
+          <div class="skeleton-line" style="width: 85%; height: 12px;"></div>
+        </div>
+      </div>
+      <style>
+        .review-loading-container {
+          padding: 16px;
+        }
+        .loading-skeleton {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 12px;
+          border: 1px solid #e2e8f0;
+        }
+        .skeleton-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+        }
+        .skeleton-content {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .skeleton-line {
+          background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 4px;
+        }
+        @keyframes skeleton-loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      </style>
+    </div>
+  `;
+
+  // 비동기 데이터 로드 및 UI 업데이트
+  loadReviewData(store, loadingHTML);
+  
+  return loadingHTML;
+}
+
+async function loadReviewData(store, loadingHTML) {
   try {
     // 서버에서 리뷰 데이터 가져오기
     const response = await fetch(`/api/reviews/preview/${store.id}`);
@@ -23,10 +90,106 @@ async function renderReviewHTML(store) {
     const reviews = reviewData.reviews || [];
     console.log('📋 처리할 리뷰 배열:', reviews);
 
-    // 각 리뷰 데이터 구조 확인
-    if (reviews.length > 0) {
-      console.log('🔍 첫 번째 리뷰 데이터 구조:', reviews[0]);
-      console.log('🔍 리뷰 데이터 키들:', Object.keys(reviews[0]));
+    // 실제 리뷰 데이터로 UI 업데이트
+    const storeContent = document.getElementById('storeContent');
+    if (storeContent) {
+      if (reviews.length > 0) {
+        console.log('🔍 첫 번째 리뷰 데이터 구조:', reviews[0]);
+        
+        let reviewHTML = '<div class="review-list-container">';
+        
+        reviews.forEach(review => {
+          const reviewDate = new Date(review.created_at).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+
+          reviewHTML += `
+            <div class="review-card modern-review">
+              <div class="review-header">
+                <span class="review-user">👤 ${review.user_name || '익명'}</span>
+                <div class="review-meta">
+                  <span class="review-score">★ ${review.score}</span>
+                  <span class="review-date">${reviewDate}</span>
+                </div>
+              </div>
+              <div class="review-text">${review.content || '내용 없음'}</div>
+            </div>
+          `;
+        });
+        
+        reviewHTML += '</div>';
+        storeContent.innerHTML = reviewHTML;
+        console.log('✅ 리뷰 HTML 업데이트 완료');
+      } else {
+        storeContent.innerHTML = `
+          <div class="no-review-message">
+            <div class="no-review-icon">💬</div>
+            <div class="no-review-text">아직 리뷰가 없습니다</div>
+            <div class="no-review-sub">첫 번째 리뷰를 남겨보세요!</div>
+          </div>
+          <style>
+            .no-review-message {
+              text-align: center;
+              padding: 40px 20px;
+              color: #6b7280;
+            }
+            .no-review-icon {
+              font-size: 48px;
+              margin-bottom: 16px;
+            }
+            .no-review-text {
+              font-size: 18px;
+              font-weight: 600;
+              margin-bottom: 8px;
+              color: #374151;
+            }
+            .no-review-sub {
+              font-size: 14px;
+              color: #9ca3af;
+            }
+          </style>
+        `;
+        console.log('📝 리뷰 없음 메시지 표시');
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ 리뷰 데이터 로드 실패:', error);
+    
+    // 오류 발생 시 오류 메시지 표시
+    const storeContent = document.getElementById('storeContent');
+    if (storeContent) {
+      storeContent.innerHTML = `
+        <div class="error-message">
+          <div class="error-icon">⚠️</div>
+          <div class="error-text">리뷰를 불러올 수 없습니다</div>
+          <div class="error-sub">${error.message}</div>
+        </div>
+        <style>
+          .error-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #ef4444;
+          }
+          .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+          }
+          .error-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+          }
+          .error-sub {
+            font-size: 14px;
+            color: #9ca3af;
+          }
+        </style>
+      `;
+    }
+  }t.keys(reviews[0]));
     }
 
     // 총 리뷰 수와 평균 평점 계산
