@@ -6,17 +6,17 @@ window.StoreTabManager = {
     if (!storeNavBar) return;
 
     // 탭 네비 이벤트
-    storeNavBar.addEventListener('click', (e) => {
+    storeNavBar.addEventListener('click', async (e) => {
       const btn = e.target.closest('.nav-btn');
       if (!btn) return;
 
       storeNavBar.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      this.renderStoreTab(btn.dataset.tab, store);
+      await this.renderStoreTab(btn.dataset.tab, store);
     });
   },
 
-  renderStoreTab(tab, store) {
+  async renderStoreTab(tab, store) {
     const storeContent = document.getElementById('storeContent');
     if (!storeContent) {
       console.error('❌ storeContent 요소를 찾을 수 없습니다');
