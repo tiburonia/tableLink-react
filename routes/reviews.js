@@ -323,7 +323,10 @@ router.post('/submit', async (req, res) => {
 // 리뷰 수정 API
 router.put('/:reviewId', async (req, res) => {
   const { reviewId } = req.params;
-  const { content, score, userId } = req.body;
+  const { content, rating, score, userId } = req.body;
+  
+  // rating과 score 둘 다 지원 (호환성)
+  const finalRating = rating || score;
 
   const client = await pool.connect();
 
@@ -345,7 +348,7 @@ router.put('/:reviewId', async (req, res) => {
       SET review_text = $1, rating = $2, created_at = NOW()
       WHERE id = $3 AND user_id = $4
       RETURNING store_id
-    `, [content, score, reviewId, userId]);
+    `, [content, finalRating, reviewId, userId]);
 
     if (updateResult.rows.length === 0) {
       await client.query('ROLLBACK');

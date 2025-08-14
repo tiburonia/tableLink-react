@@ -1307,7 +1307,7 @@ async function editReview(reviewId, rating, reviewText) {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ 
-      rating, 
+      rating: rating,
       content: reviewText,
       userId: userInfo.id
     })
