@@ -440,49 +440,31 @@ async function renderMyPage() {
         align-items: center;
       }
       .favorite-heart-btn {
-        padding: 10px;
-        border: none;
-        border-radius: 50%;
-        font-size: 20px;
+        padding: 8px 16px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        background: white;
+        color: #666;
+        font-size: 14px;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 44px;
-        height: 44px;
-        position: relative;
+        min-width: 80px;
       }
       .favorite-heart-btn.favorited {
-        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        background: #ff6b6b;
         color: white;
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-      }
-      .favorite-heart-btn.not-favorited {
-        background: #f8f9fa;
-        color: #6c757d;
-        border: 2px solid #dee2e6;
+        border-color: #ff6b6b;
       }
       .favorite-heart-btn:hover {
-        transform: scale(1.15);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-      }
-      .favorite-heart-btn:active {
-        transform: scale(1.05);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
       .favorite-heart-btn.favorited:hover {
-        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-      }
-      .favorite-status-text {
-        font-size: 11px;
-        color: #6c757d;
-        margin-top: 4px;
-        text-align: center;
-      }
-      .favorite-status-text.favorited {
-        color: #ff6b6b;
-        font-weight: 600;
+        background: #ff5252;
+        border-color: #ff5252;
       }
     </style>
   `;
@@ -1169,12 +1151,9 @@ function updateFavoriteStoresUI(favoriteStoresData) {
           <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
         </div>
         <div class="favorite-store-actions">
-          <div class="favorite-heart-container">
-            <button class="favorite-heart-btn favorited" data-store-id="${store.id}" data-favorited="true">
-              ❤️
-            </button>
-            <div class="favorite-status-text favorited">즐겨찾기</div>
-          </div>
+          <button class="favorite-heart-btn favorited" data-store-id="${store.id}" data-favorited="true">
+            즐겨찾기
+          </button>
         </div>
       `;
       favoriteStoresListDiv.appendChild(favoriteDiv);
@@ -1449,24 +1428,14 @@ async function deleteReview(reviewId) {
 
 // 즐겨찾기 하트 UI 업데이트 헬퍼 함수
 function updateFavoriteHeartUI(btn, isFavorited) {
-  const statusText = btn.parentElement.querySelector('.favorite-status-text');
-  
   if (isFavorited) {
-    btn.textContent = '❤️';
+    btn.textContent = '즐겨찾기';
     btn.className = 'favorite-heart-btn favorited';
     btn.setAttribute('data-favorited', 'true');
-    if (statusText) {
-      statusText.textContent = '즐겨찾기';
-      statusText.className = 'favorite-status-text favorited';
-    }
   } else {
-    btn.textContent = '🤍';
+    btn.textContent = '즐겨찾기 추가';
     btn.className = 'favorite-heart-btn not-favorited';
     btn.setAttribute('data-favorited', 'false');
-    if (statusText) {
-      statusText.textContent = '즐겨찾기 취소됨';
-      statusText.className = 'favorite-status-text';
-    }
   }
 }
 
