@@ -363,7 +363,7 @@ router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
       error: '즐겨찾기 상태 확인 실패: ' + error.message 
     });
   }
-
+});
 
 // 예약 추가 API
 router.post('/reservations/add', async (req, res) => {
