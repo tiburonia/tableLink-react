@@ -213,36 +213,67 @@ router.get('/users/favorites/:userId', async (req, res) => {
 router.post('/users/favorite/toggle', async (req, res) => {
   const { userId, storeId, action } = req.body;
 
+  console.log(`🔄 즐겨찾기 토글 요청: userId=${userId}, storeId=${storeId}, action=${action}`);
+
   try {
+    // 입력 검증
+    if (!userId || !storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'userId와 storeId가 필요합니다' 
+      });
+    }
+
     // 사용자 및 매장 존재 확인
     const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
     if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+      return res.status(404).json({ 
+        success: false,
+        error: '사용자를 찾을 수 없습니다' 
+      });
     }
 
-    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [storeId]);
+    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [parseInt(storeId)]);
     if (storeCheck.rows.length === 0) {
-      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
+      return res.status(404).json({ 
+        success: false,
+        error: '매장을 찾을 수 없습니다' 
+      });
     }
 
     const storeName = storeCheck.rows[0].name;
 
-    if (action === 'add') {
-      // 즐겨찾기 추가 (중복 방지)
+    // 현재 즐겨찾기 상태 확인
+    const currentFavorite = await pool.query(
+      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
+      [userId, parseInt(storeId)]
+    );
+    
+    const isFavorited = currentFavorite.rows.length > 0;
+    console.log(`📋 현재 즐겨찾기 상태: ${isFavorited ? '등록됨' : '등록안됨'}`);
+
+    // action이 없으면 현재 상태를 토글
+    let finalAction = action;
+    if (!action) {
+      finalAction = isFavorited ? 'remove' : 'add';
+    }
+
+    if (finalAction === 'add') {
+      if (isFavorited) {
+        console.log(`ℹ️ 이미 즐겨찾기 등록된 매장: ${storeName}`);
+        return res.json({
+          success: true,
+          message: '이미 즐겨찾기에 등록된 매장입니다',
+          storeName: storeName,
+          action: 'already_added'
+        });
+      }
+
+      // 즐겨찾기 추가
       await pool.query(`
         INSERT INTO favorites (user_id, store_id)
         VALUES ($1, $2)
-        ON CONFLICT (user_id, store_id) DO NOTHING
-      `, [userId, storeId]);
-
-      // stores 테이블의 favorite_count 업데이트
-      await pool.query(`
-        UPDATE stores 
-        SET favorite_count = (
-          SELECT COUNT(*) FROM favorites WHERE store_id = $1
-        )
-        WHERE id = $1
-      `, [storeId]);
+      `, [userId, parseInt(storeId)]);
 
       console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 추가`);
 
@@ -253,51 +284,86 @@ router.post('/users/favorite/toggle', async (req, res) => {
         action: 'added'
       });
 
-    } else if (action === 'remove') {
-      // 즐겨찾기 제거
-      const deleteResult = await pool.query(
-        'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
-        [userId, storeId]
-      );
-
-      if (deleteResult.rowCount > 0) {
-        // stores 테이블의 favorite_count 업데이트
-        await pool.query(`
-          UPDATE stores 
-          SET favorite_count = (
-            SELECT COUNT(*) FROM favorites WHERE store_id = $1
-          )
-          WHERE id = $1
-        `, [storeId]);
-
-        console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 제거`);
-
-        res.json({
+    } else if (finalAction === 'remove') {
+      if (!isFavorited) {
+        console.log(`ℹ️ 즐겨찾기에 없는 매장: ${storeName}`);
+        return res.json({
           success: true,
-          message: '즐겨찾기에서 제거되었습니다',
-          storeName: storeName,
-          action: 'removed'
-        });
-      } else {
-        res.json({
-          success: false,
           message: '즐겨찾기에 없는 매장입니다',
-          action: 'none'
+          storeName: storeName,
+          action: 'not_found'
         });
       }
 
+      // 즐겨찾기 제거
+      const deleteResult = await pool.query(
+        'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
+        [userId, parseInt(storeId)]
+      );
+
+      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 제거 (삭제된 행: ${deleteResult.rowCount})`);
+
+      res.json({
+        success: true,
+        message: '즐겨찾기에서 제거되었습니다',
+        storeName: storeName,
+        action: 'removed'
+      });
+
     } else {
-      res.status(400).json({ error: '잘못된 액션입니다' });
+      res.status(400).json({ 
+        success: false,
+        error: '잘못된 액션입니다. add 또는 remove만 허용됩니다.' 
+      });
     }
 
   } catch (error) {
-    console.error('즐겨찾기 토글 실패:', error);
-    res.status(500).json({ error: '즐겨찾기 설정 실패' });
+    console.error('❌ 즐겨찾기 토글 실패:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '즐겨찾기 설정 실패: ' + error.message 
+    });
   }
 });
 
 // 즐겨찾기 상태 확인 API
 router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+
+    console.log(`🔍 즐겨찾기 상태 확인: userId=${userId}, storeId=${storeId}`);
+
+    if (!userId || !storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'userId와 storeId가 필요합니다' 
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
+      [userId, parseInt(storeId)]
+    );
+
+    const isFavorited = result.rows.length > 0;
+
+    console.log(`✅ 즐겨찾기 상태 확인 완료: ${isFavorited ? '등록됨' : '등록안됨'}`);
+
+    res.json({
+      success: true,
+      userId: userId,
+      storeId: parseInt(storeId),
+      isFavorited: isFavorited
+    });
+
+  } catch (error) {
+    console.error('❌ 즐겨찾기 상태 확인 실패:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '즐겨찾기 상태 확인 실패: ' + error.message 
+    });
+  }
+});eId', async (req, res) => {
   const { userId, storeId } = req.params;
 
   try {

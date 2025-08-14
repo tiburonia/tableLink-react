@@ -401,7 +401,7 @@ async function renderMyPage() {
       .favorite-store-icon.active {
         color: #ffc107; /* 활성화 시 노란색 */
       }
-      
+
       /* 즐겨찾기 매장 카드 스타일 */
       .favorite-store-item {
         background: #f8f9fa;
@@ -756,7 +756,7 @@ function showReviewModalFromOrders(order, orderIndex) {
   });
 }
 
-// 리뷰 모달 표시 (레거시 호환용)
+// 모달 표시 (레거시 호환용)
 function showReviewModal(order, orderIndex) {
   const modal = document.createElement('div');
   modal.className = 'review-modal';
@@ -1158,44 +1158,53 @@ function updateFavoriteStoresUI(favoriteStoresData) {
       favoriteStoresListDiv.appendChild(favoriteDiv);
     });
 
-    // 즐겨찾기 삭제 버튼 이벤트 리스너
+    // 즐겨찾기 하트 토글 버튼 이벤트 리스너
     favoriteStoresListDiv.querySelectorAll('.favorite-toggle-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const storeId = btn.getAttribute('data-store-id');
-        const action = btn.getAttribute('data-action');
+        const storeId = parseInt(btn.getAttribute('data-store-id'));
 
-        if (action === 'remove') {
-          // 삭제 확인
-          if (!confirm('이 매장을 즐겨찾기에서 제거하시겠습니까?')) {
-            return;
+        console.log(`🔄 마이페이지 즐겨찾기 토글 시작: storeId=${storeId}`);
+
+        try {
+          const response = await fetch('/api/users/favorite/toggle', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: userInfo.id,
+              storeId: storeId,
+              action: 'remove' // 마이페이지에서는 항상 제거
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            if (data.action === 'removed' || data.action === 'not_found') {
+              // 즐겨찾기에서 제거됨 - UI에서 해당 매장 제거
+              const itemToRemove = btn.closest('.favorite-store-item');
+              if (itemToRemove) {
+                itemToRemove.remove();
+              }
+
+              // 즐겨찾기 목록이 비었는지 확인
+              if (favoriteStoresListDiv.children.length === 0) {
+                favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+              }
+
+              console.log('✅ 즐겨찾기 매장 제거 완료:', data.message);
+            } else {
+              console.log('ℹ️ 즐겨찾기 상태:', data.message);
+            }
+          } else {
+            console.error('❌ 즐겨찾기 토글 실패:', data.error);
+            alert('즐겨찾기 설정에 실패했습니다: ' + data.error);
           }
-
-          try {
-            const response = await fetch(`/api/users/favorites/${userInfo.id}/${storeId}`, {
-              method: 'DELETE'
-            });
-
-            if (!response.ok) {
-              throw new Error('즐겨찾기 삭제 실패');
-            }
-
-            // UI에서 해당 매장 제거
-            const itemToRemove = btn.closest('.favorite-store-item');
-            if (itemToRemove) {
-              itemToRemove.remove();
-            }
-
-            // 즐겨찾기 목록이 비었는지 확인
-            if (favoriteStoresListDiv.children.length === 0) {
-              favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
-            }
-
-            console.log('✅ 즐겨찾기 매장 삭제 완료');
-          } catch (error) {
-            console.error('❌ 즐겨찾기 삭제 중 오류:', error);
-            alert('즐겨찾기 삭제에 실패했습니다.');
-          }
+        } catch (error) {
+          console.error('❌ 즐겨찾기 토글 중 오류:', error);
+          alert('서버 연결에 실패했습니다.');
         }
       });
     });
