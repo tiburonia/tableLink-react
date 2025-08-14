@@ -5,36 +5,67 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   // 주문 데이터 변환
   const convertedOrders = await Promise.all(ordersData.map(async (order) => {
     try {
-      // 매장 정보 가져오기
-      const storeResponse = await fetch(`/api/stores/${order.store_id}`);
-      const storeData = storeResponse.ok ? await storeResponse.json() : null;
-      const storeName = storeData?.store?.name || `매장 ${order.store_id}`;
+      console.log('🔄 주문 데이터 변환 중:', order);
+      
+      // 매장 이름 우선순위: order_data.storeName > store_name > API 조회
+      let storeName = order.store_name || '알 수 없는 매장';
+      
+      if (order.order_data && order.order_data.storeName) {
+        storeName = order.order_data.storeName;
+      } else if (!order.store_name && order.store_id) {
+        try {
+          const storeResponse = await fetch(`/api/stores/${order.store_id}`);
+          if (storeResponse.ok) {
+            const storeData = await storeResponse.json();
+            storeName = storeData?.store?.name || `매장 ${order.store_id}`;
+          }
+        } catch (storeError) {
+          console.warn('매장 정보 조회 실패:', order.store_id, storeError);
+          storeName = `매장 ${order.store_id}`;
+        }
+      }
 
-      // 주문 항목 파싱
+      // 주문 항목 파싱 - order_data.items 우선 사용
       let items = [];
       try {
-        items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+        if (order.order_data && order.order_data.items) {
+          items = order.order_data.items;
+        } else if (order.items) {
+          items = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+        }
       } catch (e) {
-        console.warn('주문 항목 파싱 실패:', order.id);
+        console.warn('주문 항목 파싱 실패:', order.id, e);
         items = [];
       }
 
-      return {
+      const convertedOrder = {
         id: order.id,
         store: storeName,
         items: items.map(item => ({
           name: item.name || item.menu_name || '메뉴',
-          qty: item.quantity || 1,
+          qty: item.qty || item.quantity || 1,
           price: item.price || 0
         })),
-        total: order.total_amount || 0,
+        total: order.total_amount || order.final_amount || 0,
         date: new Date(order.order_date || order.created_at).toLocaleDateString('ko-KR'),
         status: order.order_status || '완료',
         reviewId: order.has_review ? order.id : null
       };
+
+      console.log('✅ 주문 변환 완료:', convertedOrder);
+      return convertedOrder;
+      
     } catch (error) {
-      console.error('주문 데이터 변환 실패:', order.id, error);
-      return null;
+      console.error('❌ 주문 데이터 변환 실패:', order.id, error);
+      return {
+        id: order.id || 'unknown',
+        store: order.store_name || '알 수 없는 매장',
+        items: [],
+        total: order.total_amount || 0,
+        date: new Date().toLocaleDateString('ko-KR'),
+        status: '완료',
+        reviewId: null
+      };
     }
   }));
 
@@ -1155,9 +1186,39 @@ async function loadAccountData() {
 
   } catch (error) {
     console.error('❌ 계정 데이터 로드 실패:', error);
+    console.error('❌ 에러 상세:', error.stack);
     
-    // 에러 발생 시 더미 데이터로 폴백
-    console.log('🔄 더미 데이터로 폴백');
+    // 부분적으로 데이터가 있는 경우 처리
+    try {
+      console.log('🔄 부분 데이터 복구 시도');
+      
+      // 사용자 기본 정보만이라도 가져오기
+      const userResponse = await fetch('/api/users/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: window.userInfo?.id || 'user1' })
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        const basicData = await convertToDisplayFormat(userData.user, [], []);
+        updateProfileHeader(basicData);
+        updateMonthlySummary(basicData);
+        updatePersonalInfo(basicData);
+        
+        // 주문/리뷰는 빈 데이터로
+        document.getElementById('recentOrdersList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">주문 내역을 불러올 수 없습니다.</p>';
+        document.getElementById('reservationsList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">예약 정보를 불러올 수 없습니다.</p>';
+        
+        console.log('✅ 부분 데이터 복구 성공');
+        return;
+      }
+    } catch (recoveryError) {
+      console.error('❌ 부분 데이터 복구도 실패:', recoveryError);
+    }
+    
+    // 완전 실패 시 더미 데이터로 폴백
+    console.log('🔄 더미 데이터로 완전 폴백');
     const fallbackData = generateDummyData(window.userInfo?.id || 'user1');
     updateProfileHeader(fallbackData);
     updateMonthlySummary(fallbackData);
