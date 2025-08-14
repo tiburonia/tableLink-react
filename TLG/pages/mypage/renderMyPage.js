@@ -350,6 +350,50 @@ async function renderMyPage() {
       .view-all-reviews-btn:hover {
         background: #138496;
       }
+      .review-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 10px;
+        justify-content: flex-end;
+      }
+      .edit-review-btn, .delete-review-btn, .go-to-store-btn {
+        padding: 6px 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: background 0.2s, opacity 0.2s;
+      }
+      .edit-review-btn {
+        background: #ffc107;
+        color: white;
+      }
+      .edit-review-btn:hover {
+        background: #e0a800;
+      }
+      .delete-review-btn {
+        background: #dc3545;
+        color: white;
+      }
+      .delete-review-btn:hover {
+        background: #c82333;
+      }
+      .go-to-store-btn {
+        background: #28a745;
+        color: white;
+      }
+      .go-to-store-btn:hover {
+        background: #218838;
+      }
+      .favorite-store-icon {
+        cursor: pointer;
+        font-size: 20px;
+        margin-left: 10px;
+        color: #ccc; /* 기본 회색 */
+      }
+      .favorite-store-icon.active {
+        color: #ffc107; /* 활성화 시 노란색 */
+      }
     </style>
   `;
 
@@ -413,6 +457,14 @@ async function loadUserData() {
       ordersData = ordersResult.orders || [];
     }
 
+    // 즐겨찾기 매장 정보 가져오기
+    const favoriteStoresResponse = await fetch(`/api/users/favorites/${userInfo.id}`);
+    let favoriteStoresData = [];
+    if (favoriteStoresResponse.ok) {
+      const favoriteStoresResult = await favoriteStoresResponse.json();
+      favoriteStoresData = favoriteStoresResult.stores || [];
+    }
+
     // 주문내역 업데이트 (비동기)
     await updateOrderList(currentUserInfo, ordersData);
 
@@ -425,6 +477,9 @@ async function loadUserData() {
     // 리뷰내역 업데이트
     updateReviewList(currentUserInfo);
 
+    // 즐겨찾기 매장 UI 업데이트
+    updateFavoriteStoresUI(favoriteStoresData);
+
   } catch (error) {
     console.error('사용자 데이터 로딩 실패:', error);
 
@@ -433,11 +488,13 @@ async function loadUserData() {
     const reservationList = document.querySelector('#reservationList');
     const couponList = document.querySelector('#couponList');
     const reviewList = document.querySelector('#reviewList');
+    const favoriteStoresSection = document.getElementById('favoriteStoresSection');
 
     if (orderList) orderList.innerHTML = `<p>❌ 주문내역을 불러올 수 없습니다.</p>`;
     if (reservationList) reservationList.innerHTML = `<p>❌ 예약내역을 불러올 수 없습니다.</p>`;
     if (couponList) couponList.innerHTML = `<p>❌ 쿠폰 정보를 불러올 수 없습니다.</p>`;
     if (reviewList) reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
+    if (favoriteStoresSection) favoriteStoresSection.innerHTML = `<p>❌ 즐겨찾기 매장 정보를 불러올 수 없습니다.</p>`;
   }
 }
 
@@ -931,26 +988,48 @@ async function updateReviewList(currentUserInfo) {
           </div>
           <div class="review-content">${review.content}</div>
           <div class="review-date">${review.date}</div>
+          <div class="review-actions">
+            <button class="edit-review-btn" data-review-id="${review.id}" data-store-id="${review.storeId}" data-current-score="${review.score}" data-current-content="${review.content.replace(/"/g, '&quot;')}">
+              ✏️ 수정
+            </button>
+            <button class="delete-review-btn" data-review-id="${review.id}">
+              🗑️ 삭제
+            </button>
+            <button class="go-to-store-btn" data-store-id="${review.storeId}">
+              🏪 매장보기
+            </button>
+          </div>
         `;
 
-        // 리뷰 클릭 시 해당 매장으로 이동
-        reviewDiv.addEventListener('click', () => {
-          if (typeof renderStore === 'function') {
-            // 매장 정보를 가져와서 렌더링
-            fetch(`/api/stores/${review.storeId}`)
-              .then(response => response.json())
-              .then(storeData => {
-                if (storeData.success && storeData.store) {
-                  renderStore(storeData.store);
-                }
-              })
-              .catch(error => {
-                console.error('매장 정보 가져오기 실패:', error);
-              });
-          }
-        });
-
         reviewList.appendChild(reviewDiv);
+      });
+
+      // 리뷰 수정/삭제 버튼 이벤트 리스너
+      reviewList.querySelectorAll('.edit-review-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const reviewId = btn.getAttribute('data-review-id');
+          const storeId = btn.getAttribute('data-store-id');
+          const currentScore = parseInt(btn.getAttribute('data-current-score'));
+          const currentContent = btn.getAttribute('data-current-content');
+          showEditReviewModal(reviewId, storeId, currentScore, currentContent);
+        });
+      });
+
+      reviewList.querySelectorAll('.delete-review-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const reviewId = btn.getAttribute('data-review-id');
+          deleteReview(reviewId);
+        });
+      });
+
+      reviewList.querySelectorAll('.go-to-store-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const storeId = btn.getAttribute('data-store-id');
+          goToStore(storeId);
+        });
       });
 
       // 전체 리뷰 보기 버튼 (3개보다 많은 리뷰가 있을 경우)
@@ -971,6 +1050,92 @@ async function updateReviewList(currentUserInfo) {
     console.error('❌ 리뷰 내역 조회 실패:', error);
     reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
   }
+}
+
+// 즐겨찾기 매장 UI 업데이트 함수
+function updateFavoriteStoresUI(favoriteStoresData) {
+  const mainContent = document.getElementById('content');
+  let favoriteStoresSection = document.getElementById('favoriteStoresSection');
+
+  // 기존 섹션이 있으면 제거 (새로 렌더링하기 위함)
+  if (favoriteStoresSection) {
+    favoriteStoresSection.remove();
+  }
+
+  favoriteStoresSection = document.createElement('section');
+  favoriteStoresSection.id = 'favoriteStoresSection';
+  favoriteStoresSection.className = 'section-card';
+  favoriteStoresSection.innerHTML = `
+    <h2>💖 즐겨찾기 매장</h2>
+    <div id="favoriteStoresList">
+      ${favoriteStoresData.length > 0 ?
+        favoriteStoresData.map(store => `
+          <div class="favorite-store-item">
+            <span class="favorite-store-name">${store.name}</span>
+            <span class="favorite-store-info">${store.category} | ${store.address}</span>
+            <span class="favorite-store-icon active" data-store-id="${store.id}">⭐</span>
+          </div>
+        `).join('') :
+        `<p>즐겨찾는 매장이 없습니다.</p>`
+      }
+    </div>
+  `;
+
+  // 즐겨찾기 섹션을 주문내역 바로 아래에 삽입
+  const orderListSection = document.querySelector('#orderList').closest('.section-card');
+  if (orderListSection) {
+    orderListSection.parentNode.insertBefore(favoriteStoresSection, orderListSection.nextSibling);
+  } else {
+    // 주문 내역이 없을 경우, 다른 섹션 앞에 삽입하거나 맨 앞에 삽입
+    mainContent.prepend(favoriteStoresSection);
+  }
+
+  // 즐겨찾기 아이콘 이벤트 리스너 추가
+  favoriteStoresSection.querySelectorAll('.favorite-store-icon').forEach(icon => {
+    icon.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const storeId = icon.getAttribute('data-store-id');
+      const isFavorite = icon.classList.contains('active');
+
+      try {
+        const url = `/api/users/favorites/${userInfo.id}/${storeId}`;
+        const method = isFavorite ? 'DELETE' : 'POST';
+
+        const response = await fetch(url, { method });
+        if (!response.ok) {
+          throw new Error('즐겨찾기 상태 변경 실패');
+        }
+
+        // UI 업데이트
+        if (isFavorite) {
+          icon.classList.remove('active');
+          // 즐겨찾기 목록에서 해당 매장 제거
+          const itemToRemove = icon.closest('.favorite-store-item');
+          if (itemToRemove) itemToRemove.remove();
+          // 즐겨찾기 목록이 비었는지 확인
+          const favoriteStoresListDiv = document.getElementById('favoriteStoresList');
+          if (favoriteStoresListDiv && favoriteStoresListDiv.children.length === 0) {
+            favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+          }
+        } else {
+          icon.classList.add('active');
+          // 즐겨찾기 목록에 추가 (실제로는 새로고침 또는 추가 로직 필요)
+          renderMyPage(); // 간단하게 전체 페이지 새로고침
+        }
+      } catch (error) {
+        console.error('즐겨찾기 처리 중 오류:', error);
+        alert('즐겨찾기 상태를 변경하지 못했습니다.');
+      }
+    });
+  });
+
+  // 즐겨찾기 매장 클릭 시 해당 매장 상세 페이지로 이동
+  favoriteStoresSection.querySelectorAll('.favorite-store-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      const storeId = item.querySelector('.favorite-store-icon').getAttribute('data-store-id');
+      goToStore(storeId);
+    });
+  });
 }
 
 // 전체 리뷰 보기 모달
@@ -1043,5 +1208,142 @@ window.closeModalAndGoToStore = function(storeId) {
       });
   }
 };
+
+// 리뷰 수정 모달 표시
+function showEditReviewModal(reviewId, storeId, currentScore, currentContent) {
+  const modal = document.createElement('div');
+  modal.className = 'review-modal';
+  modal.innerHTML = `
+    <div class="review-modal-content">
+      <h3>리뷰 수정</h3>
+      <p><strong>매장 ID:</strong> ${storeId}</p>
+
+      <div>
+        <label>평점:</label>
+        <div class="star-rating">
+          <span class="star" data-rating="1">★</span>
+          <span class="star" data-rating="2">★</span>
+          <span class="star" data-rating="3">★</span>
+          <span class="star" data-rating="4">★</span>
+          <span class="star" data-rating="5">★</span>
+        </div>
+      </div>
+
+      <div>
+        <label>리뷰 내용:</label>
+        <textarea class="review-textarea">${currentContent}</textarea>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="modal-btn cancel-btn">취소</button>
+        <button class="modal-btn submit-btn">수정 완료</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  let selectedRating = currentScore;
+  updateStarDisplay(modal, selectedRating); // 초기 별점 설정
+
+  // 별점 선택 이벤트
+  modal.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', (e) => {
+      selectedRating = parseInt(e.target.getAttribute('data-rating'));
+      updateStarDisplay(modal, selectedRating);
+    });
+  });
+
+  // 취소 버튼
+  modal.querySelector('.cancel-btn').addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+
+  // 수정 완료 버튼
+  modal.querySelector('.submit-btn').addEventListener('click', async () => {
+    const reviewText = modal.querySelector('.review-textarea').value.trim();
+
+    if (selectedRating === 0) {
+      alert('평점을 선택해주세요.');
+      return;
+    }
+
+    if (reviewText === '') {
+      alert('리뷰 내용을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await editReview(reviewId, selectedRating, reviewText);
+      document.body.removeChild(modal);
+      renderMyPage(); // 페이지 새로고침
+    } catch (error) {
+      console.error('리뷰 수정 오류:', error);
+      alert('리뷰 수정에 실패했습니다: ' + error.message);
+    }
+  });
+
+  // 모달 배경 클릭 시 닫기
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+}
+
+// 리뷰 수정 API 호출
+async function editReview(reviewId, rating, reviewText) {
+  const response = await fetch(`/api/reviews/${reviewId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rating, content: reviewText })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '리뷰 수정 실패');
+  }
+  return response.json();
+}
+
+// 리뷰 삭제 API 호출
+async function deleteReview(reviewId) {
+  if (!confirm('정말 리뷰를 삭제하시겠습니까?')) {
+    return;
+  }
+
+  const response = await fetch(`/api/reviews/${reviewId}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || '리뷰 삭제 실패');
+  }
+
+  alert('리뷰가 삭제되었습니다.');
+  renderMyPage(); // 페이지 새로고침
+}
+
+// 매장 상세 페이지로 이동
+function goToStore(storeId) {
+  if (typeof renderStore === 'function') {
+    fetch(`/api/stores/${storeId}`)
+      .then(response => response.json())
+      .then(storeData => {
+        if (storeData.success && storeData.store) {
+          renderStore(storeData.store);
+        } else {
+          alert('매장 정보를 가져올 수 없습니다.');
+        }
+      })
+      .catch(error => {
+        console.error('매장 정보 가져오기 실패:', error);
+        alert('매장 정보를 가져오는 중 오류가 발생했습니다.');
+      });
+  } else {
+    console.warn('renderStore 함수를 찾을 수 없습니다.');
+  }
+}
 
 window.renderMyPage = renderMyPage;
