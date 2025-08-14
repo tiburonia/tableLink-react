@@ -3,22 +3,79 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
+// 아이디 중복 체크 API
+router.post('/users/check-id', async (req, res) => {
+  const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ error: '아이디를 입력해주세요' });
+  }
+
+  // 아이디 형식 검증
+  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+  }
+
+  try {
+    const result = await pool.query('SELECT id FROM users WHERE id = $1', [id.trim()]);
+    
+    if (result.rows.length > 0) {
+      res.json({ available: false, message: '이미 사용 중인 아이디입니다' });
+    } else {
+      res.json({ available: true, message: '사용 가능한 아이디입니다' });
+    }
+  } catch (error) {
+    console.error('아이디 중복 체크 실패:', error);
+    res.status(500).json({ error: '아이디 중복 체크 중 오류가 발생했습니다' });
+  }
+});
+
 // 사용자 회원가입 API
 router.post('/users/signup', async (req, res) => {
   const { id, pw, name, phone } = req.body;
 
+  // 서버 측 유효성 검증
+  if (!id || !pw) {
+    return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다' });
+  }
+
+  // 아이디 형식 검증
+  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+  }
+
+  // 비밀번호 길이 검증
+  if (pw.length < 4) {
+    return res.status(400).json({ error: '비밀번호는 최소 4자 이상이어야 합니다' });
+  }
+
+  // 전화번호 형식 검증 (입력된 경우에만)
+  if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
+    return res.status(400).json({ error: '전화번호 형식이 올바르지 않습니다' });
+  }
+
   try {
+    // 데이터 정제
+    const cleanedData = {
+      id: id.trim(),
+      pw: pw.trim(),
+      name: name ? name.trim() : null,
+      phone: phone ? phone.trim() : null
+    };
+
     await pool.query(
       'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
-      [id, pw, name, phone]
+      [cleanedData.id, cleanedData.pw, cleanedData.name, cleanedData.phone]
     );
+    
+    console.log(`✅ 새 사용자 가입: ${cleanedData.id} (${cleanedData.name || '익명'})`);
     res.json({ success: true, message: '회원가입 성공' });
   } catch (error) {
     if (error.code === '23505') {
       res.status(409).json({ error: '이미 존재하는 아이디입니다' });
     } else {
       console.error('회원가입 실패:', error);
-      res.status(500).json({ error: '회원가입 실패' });
+      res.status(500).json({ error: '회원가입 처리 중 오류가 발생했습니다' });
     }
   }
 });
