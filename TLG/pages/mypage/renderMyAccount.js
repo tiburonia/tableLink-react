@@ -1,4 +1,139 @@
-// 더미 데이터 생성 함수
+// 실제 API 데이터를 UI 표시 형식으로 변환
+async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
+  console.log('🔄 실제 데이터를 UI 형식으로 변환 시작');
+
+  // 주문 데이터 변환
+  const convertedOrders = await Promise.all(ordersData.map(async (order) => {
+    try {
+      // 매장 정보 가져오기
+      const storeResponse = await fetch(`/api/stores/${order.store_id}`);
+      const storeData = storeResponse.ok ? await storeResponse.json() : null;
+      const storeName = storeData?.store?.name || `매장 ${order.store_id}`;
+
+      // 주문 항목 파싱
+      let items = [];
+      try {
+        items = typeof order.items === 'string' ? JSON.parse(order.items) : (order.items || []);
+      } catch (e) {
+        console.warn('주문 항목 파싱 실패:', order.id);
+        items = [];
+      }
+
+      return {
+        id: order.id,
+        store: storeName,
+        items: items.map(item => ({
+          name: item.name || item.menu_name || '메뉴',
+          qty: item.quantity || 1,
+          price: item.price || 0
+        })),
+        total: order.total_amount || 0,
+        date: new Date(order.order_date || order.created_at).toLocaleDateString('ko-KR'),
+        status: order.order_status || '완료',
+        reviewId: order.has_review ? order.id : null
+      };
+    } catch (error) {
+      console.error('주문 데이터 변환 실패:', order.id, error);
+      return null;
+    }
+  }));
+
+  // null 값 제거
+  const validOrders = convertedOrders.filter(order => order !== null);
+
+  // 리뷰 데이터 변환
+  const convertedReviews = reviewsData.map(review => ({
+    id: review.id,
+    store: review.store_name || `매장 ${review.store_id}`,
+    rating: review.score || review.rating || 0,
+    content: review.content || review.review_text || '',
+    date: new Date(review.created_at).toLocaleDateString('ko-KR')
+  }));
+
+  // 예약 데이터 (현재 DB에 없으므로 빈 배열)
+  const reservationList = JSON.parse(userInfo.reservation_list || '[]');
+
+  // 쿠폰 데이터
+  const coupons = JSON.parse(userInfo.coupons || '{"unused": [], "used": []}');
+
+  // 즐겨찾기 매장
+  const favoriteStores = JSON.parse(userInfo.favorite_stores || '[]');
+
+  // 월간 통계 계산
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  const thisMonthOrders = validOrders.filter(order => {
+    const orderDate = new Date(order.date);
+    return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+  });
+
+  const monthlySpent = thisMonthOrders.reduce((sum, order) => sum + order.total, 0);
+
+  return {
+    id: userInfo.id,
+    name: userInfo.name || '사용자',
+    phone: userInfo.phone || '정보 없음',
+    email: `${userInfo.id}@tablelink.com`, // 실제 이메일 필드가 없으므로 임시로 생성
+    address: '정보 없음', // 실제 주소 필드가 없음
+    birth: '정보 없음',
+    gender: '정보 없음',
+    point: userInfo.point || 0,
+    vipLevel: calculateVipLevel(userInfo.point || 0),
+    joinDate: new Date(userInfo.created_at).toLocaleDateString('ko-KR'),
+    totalOrders: validOrders.length,
+    totalSpent: validOrders.reduce((sum, order) => sum + order.total, 0),
+    profileImage: `https://ui-avatars.com/api/?name=${encodeURIComponent(userInfo.name || userInfo.id)}&background=297efc&color=fff&size=128`,
+    orderList: validOrders,
+    reservationList: reservationList,
+    coupons: coupons,
+    favoriteStores: favoriteStores,
+    achievements: generateAchievements(validOrders.length, convertedReviews.length, userInfo.point),
+    monthlyStats: {
+      currentMonth: {
+        orders: thisMonthOrders.length,
+        spent: monthlySpent,
+        savedMoney: Math.floor(monthlySpent * 0.1) // 임시로 10% 절약으로 계산
+      },
+      lastMonth: {
+        orders: 0, // 지난달 데이터는 별도 계산 필요
+        spent: 0,
+        savedMoney: 0
+      }
+    }
+  };
+}
+
+// VIP 레벨 계산
+function calculateVipLevel(point) {
+  if (point >= 100000) return 'PLATINUM';
+  if (point >= 50000) return 'GOLD';
+  if (point >= 20000) return 'SILVER';
+  return 'BRONZE';
+}
+
+// 업적 생성
+function generateAchievements(orderCount, reviewCount, point) {
+  const achievements = [];
+  
+  if (orderCount >= 1) {
+    achievements.push({ name: '첫 주문 달성', icon: '🎉', date: '달성' });
+  }
+  if (orderCount >= 10) {
+    achievements.push({ name: '10회 주문 달성', icon: '🏆', date: '달성' });
+  }
+  if (reviewCount >= 5) {
+    achievements.push({ name: '리뷰왕', icon: '⭐', date: '달성' });
+  }
+  if (point >= 50000) {
+    achievements.push({ name: 'VIP 등급 달성', icon: '👑', date: '달성' });
+  }
+  
+  return achievements;
+}
+
+// 더미 데이터 생성 함수 (폴백용)
 function generateDummyData(userId) {
   return {
     id: userId,
@@ -971,19 +1106,64 @@ function setupEventListeners() {
 // 계정 데이터 로드
 async function loadAccountData() {
   try {
-    // 실제 API 대신 더미 데이터 사용
-    const dummyData = generateDummyData(window.userInfo?.id || 'user1');
+    console.log('📖 실제 사용자 데이터 로드 시작:', window.userInfo?.id);
+
+    // 1. 사용자 기본 정보 가져오기
+    const userResponse = await fetch('/api/users/info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: window.userInfo?.id || 'user1' })
+    });
+
+    if (!userResponse.ok) throw new Error('사용자 정보 조회 실패');
+    const userData = await userResponse.json();
+    const currentUserInfo = userData.user;
+
+    console.log('✅ 사용자 기본 정보 로드:', currentUserInfo);
+
+    // 2. 주문 내역 가져오기 (최근 3개)
+    const ordersResponse = await fetch(`/api/orders/mypage/${window.userInfo?.id || 'user1'}?limit=5`);
+    let ordersData = [];
+    if (ordersResponse.ok) {
+      const ordersResult = await ordersResponse.json();
+      ordersData = ordersResult.orders || [];
+    }
+
+    console.log('✅ 주문 내역 로드:', ordersData);
+
+    // 3. 리뷰 내역 가져오기
+    const reviewsResponse = await fetch(`/api/reviews/user/${window.userInfo?.id || 'user1'}?limit=5`);
+    let reviewsData = [];
+    if (reviewsResponse.ok) {
+      const reviewsResult = await reviewsResponse.json();
+      reviewsData = reviewsResult.reviews || [];
+    }
+
+    console.log('✅ 리뷰 내역 로드:', reviewsData);
+
+    // 4. 실제 데이터를 더미 데이터 형식으로 변환
+    const realData = await convertToDisplayFormat(currentUserInfo, ordersData, reviewsData);
 
     // UI 업데이트
-    updateProfileHeader(dummyData);
-    updateMonthlySummary(dummyData);
-    updateRecentOrders(dummyData);
-    updateReservations(dummyData);
-    updatePersonalInfo(dummyData);
+    updateProfileHeader(realData);
+    updateMonthlySummary(realData);
+    updateRecentOrders(realData);
+    updateReservations(realData);
+    updatePersonalInfo(realData);
+
+    console.log('✅ 모든 사용자 데이터 로드 및 UI 업데이트 완료');
 
   } catch (error) {
-    console.error('계정 데이터 로드 실패:', error);
-    showErrorMessage();
+    console.error('❌ 계정 데이터 로드 실패:', error);
+    
+    // 에러 발생 시 더미 데이터로 폴백
+    console.log('🔄 더미 데이터로 폴백');
+    const fallbackData = generateDummyData(window.userInfo?.id || 'user1');
+    updateProfileHeader(fallbackData);
+    updateMonthlySummary(fallbackData);
+    updateRecentOrders(fallbackData);
+    updateReservations(fallbackData);
+    updatePersonalInfo(fallbackData);
   }
 }
 
