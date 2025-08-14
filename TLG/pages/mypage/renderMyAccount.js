@@ -82,13 +82,43 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   }));
 
   // 예약 데이터 (현재 DB에 없으므로 빈 배열)
-  const reservationList = JSON.parse(userInfo.reservation_list || '[]');
+  let reservationList = [];
+  try {
+    if (userInfo.reservation_list) {
+      reservationList = typeof userInfo.reservation_list === 'string' 
+        ? JSON.parse(userInfo.reservation_list) 
+        : userInfo.reservation_list;
+    }
+  } catch (e) {
+    console.warn('예약 데이터 파싱 실패:', e);
+    reservationList = [];
+  }
 
   // 쿠폰 데이터
-  const coupons = JSON.parse(userInfo.coupons || '{"unused": [], "used": []}');
+  let coupons = { unused: [], used: [] };
+  try {
+    if (userInfo.coupons) {
+      coupons = typeof userInfo.coupons === 'string' 
+        ? JSON.parse(userInfo.coupons) 
+        : userInfo.coupons;
+    }
+  } catch (e) {
+    console.warn('쿠폰 데이터 파싱 실패:', e);
+    coupons = { unused: [], used: [] };
+  }
 
   // 즐겨찾기 매장
-  const favoriteStores = JSON.parse(userInfo.favorite_stores || '[]');
+  let favoriteStores = [];
+  try {
+    if (userInfo.favorite_stores) {
+      favoriteStores = typeof userInfo.favorite_stores === 'string' 
+        ? JSON.parse(userInfo.favorite_stores) 
+        : userInfo.favorite_stores;
+    }
+  } catch (e) {
+    console.warn('즐겨찾기 데이터 파싱 실패:', e);
+    favoriteStores = [];
+  }
 
   // 월간 통계 계산
   const today = new Date();
