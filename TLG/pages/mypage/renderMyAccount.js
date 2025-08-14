@@ -1,4 +1,3 @@
-
 // 더미 데이터 생성 함수
 function generateDummyData(userId) {
   return {
@@ -133,13 +132,13 @@ function generateDummyData(userId) {
 
 async function renderMyAccount() {
   console.log('🔧 renderMyAccount 시작');
-  
+
   const main = document.getElementById('main');
-  
+
   // 전역 스타일 완전 리셋
   document.body.style.cssText = '';
   document.documentElement.style.cssText = '';
-  
+
   // main 컨테이너도 리셋
   if (main) {
     main.style.cssText = '';
@@ -149,7 +148,7 @@ async function renderMyAccount() {
     <div class="account-container">
       <button class="back-button" id="backBtn"
       onclick="renderMyPage()">←</button>
-      
+
       <div class="account-content">
         <!-- 프로필 헤더 -->
         <div class="profile-header">
@@ -777,7 +776,7 @@ async function renderMyAccount() {
         align-items: center;
         z-index: 10000;
       }
-      
+
       .modal-content {
         background: white;
         border-radius: 20px;
@@ -788,7 +787,7 @@ async function renderMyAccount() {
         display: flex;
         flex-direction: column;
       }
-      
+
       .modal-header {
         display: flex;
         justify-content: space-between;
@@ -796,12 +795,12 @@ async function renderMyAccount() {
         padding: 20px;
         border-bottom: 1px solid #eee;
       }
-      
+
       .modal-header h2 {
         margin: 0;
         font-size: 18px;
       }
-      
+
       .modal-close {
         background: none;
         border: none;
@@ -809,7 +808,7 @@ async function renderMyAccount() {
         cursor: pointer;
         color: #999;
       }
-      
+
       .modal-body {
         padding: 20px;
         overflow-y: auto;
@@ -820,42 +819,42 @@ async function renderMyAccount() {
         .account-content {
           padding: 80px 16px 40px 16px;
         }
-        
+
         .profile-header {
           padding: 24px 20px;
           gap: 16px;
         }
-        
+
         .profile-image {
           width: 70px;
           height: 70px;
         }
-        
+
         .user-name {
           font-size: 20px;
         }
-        
+
         .user-stats {
           gap: 12px;
         }
-        
+
         .stat-number {
           font-size: 14px;
         }
-        
+
         .quick-actions {
           grid-template-columns: 1fr 1fr;
           gap: 10px;
         }
-        
+
         .quick-action-btn {
           padding: 16px 12px;
         }
-        
+
         .action-icon {
           font-size: 20px;
         }
-        
+
         .action-text {
           font-size: 12px;
         }
@@ -873,7 +872,7 @@ async function renderMyAccount() {
 // 이벤트 리스너 설정
 function setupEventListeners() {
   console.log('🔧 이벤트 리스너 등록 중...');
-  
+
   const backBtn = document.getElementById('backBtn');
   const backToMyPageBtn = document.getElementById('backToMyPageBtn');
   const logoutBtn = document.getElementById('logoutBtn');
@@ -965,7 +964,7 @@ function setupEventListeners() {
       showEditPersonalInfoModal();
     });
   }
-  
+
   console.log('✅ 모든 이벤트 리스너 설정 완료');
 }
 
@@ -974,14 +973,14 @@ async function loadAccountData() {
   try {
     // 실제 API 대신 더미 데이터 사용
     const dummyData = generateDummyData(window.userInfo?.id || 'user1');
-    
+
     // UI 업데이트
     updateProfileHeader(dummyData);
     updateMonthlySummary(dummyData);
     updateRecentOrders(dummyData);
     updateReservations(dummyData);
     updatePersonalInfo(dummyData);
-    
+
   } catch (error) {
     console.error('계정 데이터 로드 실패:', error);
     showErrorMessage();
@@ -1005,7 +1004,7 @@ function updateProfileHeader(data) {
   if (currentPoints) currentPoints.textContent = `${data.point.toLocaleString()}P`;
   if (vipLevelElement) vipLevelElement.textContent = data.vipLevel;
   if (vipBadge) vipBadge.innerHTML = `<span class="vip-text">${data.vipLevel}</span>`;
-  
+
   // VIP 레벨에 따른 배지 색상 변경
   if (vipBadge) {
     switch(data.vipLevel) {
@@ -1042,7 +1041,7 @@ function updateRecentOrders(data) {
   if (!ordersList) return;
 
   const recentOrders = data.orderList.slice(0, 3); // 최근 3개만
-  
+
   ordersList.innerHTML = recentOrders.map(order => `
     <div class="order-item">
       <div class="order-store">${order.store}</div>
@@ -1062,7 +1061,7 @@ function updateReservations(data) {
   if (!reservationsList) return;
 
   const recentReservations = data.reservationList.slice(0, 2); // 최근 2개만
-  
+
   reservationsList.innerHTML = recentReservations.map(reservation => `
     <div class="reservation-item">
       <div class="order-store">${reservation.store}</div>
@@ -1125,7 +1124,7 @@ function showCouponModal() {
       </div>
       <div class="modal-body">
         <h3 style="margin-bottom: 16px;">💝 사용 가능한 쿠폰</h3>
-        ${dummyData.coupons.unused.map(coupon => `
+        ${dummyData.coupons.unused.length > 0 ? dummyData.coupons.unused.map(coupon => `
           <div class="coupon-item">
             <div class="coupon-name">${coupon.name}</div>
             <div class="coupon-discount">
@@ -1135,10 +1134,10 @@ function showCouponModal() {
               유효기간: ${coupon.validUntil} | 최소주문: ${coupon.minOrder.toLocaleString()}원
             </div>
           </div>
-        `).join('')}
-        
+        `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">사용 가능한 쿠폰이 없습니다.</p>'}
+
         <h3 style="margin: 24px 0 16px 0;">📝 사용완료 쿠폰</h3>
-        ${dummyData.coupons.used.map(coupon => `
+        ${dummyData.coupons.used.length > 0 ? dummyData.coupons.used.map(coupon => `
           <div class="coupon-item" style="opacity: 0.6; background: linear-gradient(135deg, #f7f7f7, #e0e0e0);">
             <div class="coupon-name">${coupon.name}</div>
             <div class="coupon-discount">
@@ -1148,7 +1147,7 @@ function showCouponModal() {
               사용일: ${coupon.usedDate} | 사용처: ${coupon.store}
             </div>
           </div>
-        `).join('')}
+        `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">사용한 쿠폰이 없습니다.</p>'}
       </div>
     </div>
   `;
