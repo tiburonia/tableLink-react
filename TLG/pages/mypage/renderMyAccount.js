@@ -6,10 +6,10 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   const convertedOrders = await Promise.all(ordersData.map(async (order) => {
     try {
       console.log('🔄 주문 데이터 변환 중:', order);
-      
+
       // 매장 이름 우선순위: order_data.storeName > store_name > API 조회
       let storeName = order.store_name || '알 수 없는 매장';
-      
+
       if (order.order_data && order.order_data.storeName) {
         storeName = order.order_data.storeName;
       } else if (!order.store_name && order.store_id) {
@@ -54,7 +54,7 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
 
       console.log('✅ 주문 변환 완료:', convertedOrder);
       return convertedOrder;
-      
+
     } catch (error) {
       console.error('❌ 주문 데이터 변환 실패:', order.id, error);
       return {
@@ -147,7 +147,7 @@ function calculateVipLevel(point) {
 // 업적 생성
 function generateAchievements(orderCount, reviewCount, point) {
   const achievements = [];
-  
+
   if (orderCount >= 1) {
     achievements.push({ name: '첫 주문 달성', icon: '🎉', date: '달성' });
   }
@@ -160,7 +160,7 @@ function generateAchievements(orderCount, reviewCount, point) {
   if (point >= 50000) {
     achievements.push({ name: 'VIP 등급 달성', icon: '👑', date: '달성' });
   }
-  
+
   return achievements;
 }
 
@@ -1163,60 +1163,67 @@ async function loadAccountData() {
     console.log('✅ 주문 내역 로드:', ordersData);
 
     // 3. 리뷰 내역 가져오기
-    const reviewsResponse = await fetch(`/api/reviews/user/${window.userInfo?.id || 'user1'}?limit=5`);
+    const reviewsResponse = await fetch(`/api/reviews/users/${window.userInfo?.id || 'user1'}`);
     let reviewsData = [];
     if (reviewsResponse.ok) {
       const reviewsResult = await reviewsResponse.json();
       reviewsData = reviewsResult.reviews || [];
+    } else {
+      console.warn('⚠️ 리뷰 데이터 로드 실패');
     }
-
     console.log('✅ 리뷰 내역 로드:', reviewsData);
 
-    // 4. 실제 데이터를 더미 데이터 형식으로 변환
-    const realData = await convertToDisplayFormat(currentUserInfo, ordersData, reviewsData);
+    // 실제 데이터를 UI 형식으로 변환
+    console.log('🔄 convertToDisplayFormat 호출 전 데이터 확인:', {
+      userInfo: userData.user,
+      ordersCount: ordersData.length,
+      reviewsCount: reviewsData.length
+    });
+
+    const displayData = await convertToDisplayFormat(userData.user, ordersData, reviewsData);
 
     // UI 업데이트
-    updateProfileHeader(realData);
-    updateMonthlySummary(realData);
-    updateRecentOrders(realData);
-    updateReservations(realData);
-    updatePersonalInfo(realData);
+    updateProfileHeader(displayData);
+    updateMonthlySummary(displayData);
+    updateRecentOrders(displayData);
+    updateReservations(displayData);
+    updatePersonalInfo(displayData);
 
     console.log('✅ 모든 사용자 데이터 로드 및 UI 업데이트 완료');
 
   } catch (error) {
     console.error('❌ 계정 데이터 로드 실패:', error);
     console.error('❌ 에러 상세:', error.stack);
-    
+
     // 부분적으로 데이터가 있는 경우 처리
     try {
       console.log('🔄 부분 데이터 복구 시도');
-      
+
       // 사용자 기본 정보만이라도 가져오기
       const userResponse = await fetch('/api/users/info', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: window.userInfo?.id || 'user1' })
       });
-      
+
       if (userResponse.ok) {
         const userData = await userResponse.json();
         const basicData = await convertToDisplayFormat(userData.user, [], []);
         updateProfileHeader(basicData);
         updateMonthlySummary(basicData);
         updatePersonalInfo(basicData);
-        
+
         // 주문/리뷰는 빈 데이터로
         document.getElementById('recentOrdersList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">주문 내역을 불러올 수 없습니다.</p>';
         document.getElementById('reservationsList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">예약 정보를 불러올 수 없습니다.</p>';
-        
+
         console.log('✅ 부분 데이터 복구 성공');
         return;
       }
     } catch (recoveryError) {
       console.error('❌ 부분 데이터 복구도 실패:', recoveryError);
     }
-    
+
     // 완전 실패 시 더미 데이터로 폴백
     console.log('🔄 더미 데이터로 완전 폴백');
     const fallbackData = generateDummyData(window.userInfo?.id || 'user1');
