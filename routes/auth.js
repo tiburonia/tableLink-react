@@ -161,41 +161,36 @@ router.get('/users/favorites/:userId', async (req, res) => {
   const { userId } = req.params;
 
   try {
-    const userResult = await pool.query('SELECT favorite_stores FROM users WHERE id = $1', [userId]);
-    
-    if (userResult.rows.length === 0) {
+    // 사용자 존재 확인
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
-    const user = userResult.rows[0];
-    const favoriteStoreNames = user.favorite_stores || [];
-
-    // 즐겨찾기 매장 이름들로 매장 정보 조회
-    if (favoriteStoreNames.length === 0) {
-      return res.json({
-        success: true,
-        favoriteStores: []
-      });
-    }
-
-    const placeholders = favoriteStoreNames.map((_, index) => `$${index + 1}`).join(',');
-    const storesResult = await pool.query(`
-      SELECT s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
-             sa.address_full as address, sa.latitude, sa.longitude
-      FROM stores s
+    // favorites 테이블에서 즐겨찾기 매장 조회
+    const favoritesResult = await pool.query(`
+      SELECT 
+        f.id as favorite_id,
+        f.created_at,
+        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
+        sa.address_full as address, sa.latitude, sa.longitude
+      FROM favorites f
+      JOIN stores s ON f.store_id = s.id
       LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE s.name IN (${placeholders})
-      ORDER BY s.name
-    `, favoriteStoreNames);
+      WHERE f.user_id = $1
+      ORDER BY f.created_at DESC
+    `, [userId]);
 
-    const favoriteStores = storesResult.rows.map(store => ({
+    const favoriteStores = favoritesResult.rows.map(store => ({
       id: store.id,
+      favoriteId: store.favorite_id,
       name: store.name,
       category: store.category,
       address: store.address || '주소 정보 없음',
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0,
       isOpen: store.is_open !== false,
+      favoriteDate: store.created_at,
       coord: store.latitude && store.longitude 
         ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
         : null
@@ -214,41 +209,111 @@ router.get('/users/favorites/:userId', async (req, res) => {
   }
 });
 
-// 즐겨찾기 토글 API
+// 즐겨찾기 토글 API (store_id 기반)
 router.post('/users/favorite/toggle', async (req, res) => {
-  const { userId, storeName, action } = req.body;
+  const { userId, storeId, action } = req.body;
 
   try {
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
+    // 사용자 및 매장 존재 확인
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }
 
-    const user = userResult.rows[0];
-    let favoriteStores = user.favorite_stores || [];
-
-    if (action === 'add') {
-      if (!favoriteStores.includes(storeName)) {
-        favoriteStores.push(storeName);
-      }
-    } else if (action === 'remove') {
-      favoriteStores = favoriteStores.filter(store => store !== storeName);
+    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [storeId]);
+    if (storeCheck.rows.length === 0) {
+      return res.status(404).json({ error: '매장을 찾을 수 없습니다' });
     }
 
-    await pool.query(
-      'UPDATE users SET favorite_stores = $1 WHERE id = $2',
-      [JSON.stringify(favoriteStores), userId]
-    );
+    const storeName = storeCheck.rows[0].name;
 
-    res.json({
-      success: true,
-      message: action === 'add' ? '즐겨찾기에 추가되었습니다' : '즐겨찾기에서 제거되었습니다',
-      favoriteStores: favoriteStores
-    });
+    if (action === 'add') {
+      // 즐겨찾기 추가 (중복 방지)
+      await pool.query(`
+        INSERT INTO favorites (user_id, store_id)
+        VALUES ($1, $2)
+        ON CONFLICT (user_id, store_id) DO NOTHING
+      `, [userId, storeId]);
+
+      // stores 테이블의 favorite_count 업데이트
+      await pool.query(`
+        UPDATE stores 
+        SET favorite_count = (
+          SELECT COUNT(*) FROM favorites WHERE store_id = $1
+        )
+        WHERE id = $1
+      `, [storeId]);
+
+      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 추가`);
+
+      res.json({
+        success: true,
+        message: '즐겨찾기에 추가되었습니다',
+        storeName: storeName,
+        action: 'added'
+      });
+
+    } else if (action === 'remove') {
+      // 즐겨찾기 제거
+      const deleteResult = await pool.query(
+        'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
+        [userId, storeId]
+      );
+
+      if (deleteResult.rowCount > 0) {
+        // stores 테이블의 favorite_count 업데이트
+        await pool.query(`
+          UPDATE stores 
+          SET favorite_count = (
+            SELECT COUNT(*) FROM favorites WHERE store_id = $1
+          )
+          WHERE id = $1
+        `, [storeId]);
+
+        console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 제거`);
+
+        res.json({
+          success: true,
+          message: '즐겨찾기에서 제거되었습니다',
+          storeName: storeName,
+          action: 'removed'
+        });
+      } else {
+        res.json({
+          success: false,
+          message: '즐겨찾기에 없는 매장입니다',
+          action: 'none'
+        });
+      }
+
+    } else {
+      res.status(400).json({ error: '잘못된 액션입니다' });
+    }
 
   } catch (error) {
     console.error('즐겨찾기 토글 실패:', error);
     res.status(500).json({ error: '즐겨찾기 설정 실패' });
+  }
+});
+
+// 즐겨찾기 상태 확인 API
+router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
+  const { userId, storeId } = req.params;
+
+  try {
+    const result = await pool.query(
+      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
+      [userId, storeId]
+    );
+
+    res.json({
+      success: true,
+      isFavorite: result.rows.length > 0
+    });
+
+  } catch (error) {
+    console.error('즐겨찾기 상태 확인 실패:', error);
+    res.status(500).json({ error: '즐겨찾기 상태 확인 실패' });
   }
 });
 
