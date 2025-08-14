@@ -1193,26 +1193,8 @@ function updateFavoriteStoresUI(favoriteStoresData) {
             // 서버 응답에 맞게 UI 최종 업데이트
             updateFavoriteHeartUI(btn, isNowFavorited);
 
-            // 즐겨찾기에서 완전히 제거된 경우에만 목록에서 제거
-            if (!isNowFavorited) {
-              setTimeout(() => {
-                const itemToRemove = btn.closest('.favorite-store-item');
-                if (itemToRemove) {
-                  itemToRemove.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                  itemToRemove.style.opacity = '0';
-                  itemToRemove.style.transform = 'translateX(-100%)';
-                  
-                  setTimeout(() => {
-                    itemToRemove.remove();
-                    
-                    // 즐겨찾기 목록이 비었는지 확인
-                    if (favoriteStoresListDiv.children.length === 0) {
-                      favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
-                    }
-                  }, 300);
-                }
-              }, 1000); // 1초 후에 목록에서 제거
-            }
+            // 즐겨찾기 해제 시에도 카드는 유지 (페이지 재렌더링까지)
+            // 사용자가 실수로 해제해도 바로 사라지지 않음
 
           } else {
             console.error('❌ 즐겨찾기 토글 실패:', data.error);
