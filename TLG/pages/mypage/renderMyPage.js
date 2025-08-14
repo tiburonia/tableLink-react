@@ -439,31 +439,50 @@ async function renderMyPage() {
         gap: 8px;
         align-items: center;
       }
-      .favorite-toggle-btn {
-        padding: 8px 12px;
+      .favorite-heart-btn {
+        padding: 10px;
         border: none;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
+        border-radius: 50%;
+        font-size: 20px;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         display: flex;
         align-items: center;
-        gap: 4px;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        position: relative;
       }
-      .favorite-toggle-btn.remove {
-        background: #fee2e2;
-        color: #dc2626;
+      .favorite-heart-btn.favorited {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
       }
-      .favorite-toggle-btn.remove:hover {
-        background: #fecaca;
+      .favorite-heart-btn.not-favorited {
+        background: #f8f9fa;
+        color: #6c757d;
+        border: 2px solid #dee2e6;
       }
-      .favorite-toggle-btn.add {
-        background: #ecfdf5;
-        color: #059669;
+      .favorite-heart-btn:hover {
+        transform: scale(1.15);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
       }
-      .favorite-toggle-btn.add:hover {
-        background: #d1fae5;
+      .favorite-heart-btn:active {
+        transform: scale(1.05);
+      }
+      .favorite-heart-btn.favorited:hover {
+        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+      }
+      .favorite-status-text {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 4px;
+        text-align: center;
+      }
+      .favorite-status-text.favorited {
+        color: #ff6b6b;
+        font-weight: 600;
       }
     </style>
   `;
@@ -1150,21 +1169,28 @@ function updateFavoriteStoresUI(favoriteStoresData) {
           <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
         </div>
         <div class="favorite-store-actions">
-          <button class="favorite-toggle-btn remove" data-store-id="${store.id}" data-action="remove">
-            ❌ 삭제
-          </button>
+          <div class="favorite-heart-container">
+            <button class="favorite-heart-btn favorited" data-store-id="${store.id}" data-favorited="true">
+              ❤️
+            </button>
+            <div class="favorite-status-text favorited">즐겨찾기</div>
+          </div>
         </div>
       `;
       favoriteStoresListDiv.appendChild(favoriteDiv);
     });
 
     // 즐겨찾기 하트 토글 버튼 이벤트 리스너
-    favoriteStoresListDiv.querySelectorAll('.favorite-toggle-btn').forEach(btn => {
+    favoriteStoresListDiv.querySelectorAll('.favorite-heart-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const storeId = parseInt(btn.getAttribute('data-store-id'));
+        const currentlyFavorited = btn.getAttribute('data-favorited') === 'true';
 
-        console.log(`🔄 마이페이지 즐겨찾기 토글 시작: storeId=${storeId}`);
+        console.log(`🔄 마이페이지 즐겨찾기 토글 시작: storeId=${storeId}, 현재상태=${currentlyFavorited ? '좋아요' : '좋아요취소'}`);
+
+        // 즉시 UI 업데이트 (낙관적 업데이트)
+        updateFavoriteHeartUI(btn, !currentlyFavorited);
 
         try {
           const response = await fetch('/api/users/favorite/toggle', {
@@ -1175,35 +1201,50 @@ function updateFavoriteStoresUI(favoriteStoresData) {
             body: JSON.stringify({
               userId: userInfo.id,
               storeId: storeId,
-              action: 'remove' // 마이페이지에서는 항상 제거
+              action: currentlyFavorited ? 'remove' : 'add'
             })
           });
 
           const data = await response.json();
 
           if (data.success) {
-            if (data.action === 'removed' || data.action === 'not_found') {
-              // 즐겨찾기에서 제거됨 - UI에서 해당 매장 제거
-              const itemToRemove = btn.closest('.favorite-store-item');
-              if (itemToRemove) {
-                itemToRemove.remove();
-              }
+            const isNowFavorited = data.action === 'added' || data.action === 'already_added';
+            console.log(`✅ 즐겨찾기 토글 성공: ${isNowFavorited ? '추가' : '제거'} - ${data.message}`);
 
-              // 즐겨찾기 목록이 비었는지 확인
-              if (favoriteStoresListDiv.children.length === 0) {
-                favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
-              }
+            // 서버 응답에 맞게 UI 최종 업데이트
+            updateFavoriteHeartUI(btn, isNowFavorited);
 
-              console.log('✅ 즐겨찾기 매장 제거 완료:', data.message);
-            } else {
-              console.log('ℹ️ 즐겨찾기 상태:', data.message);
+            // 즐겨찾기에서 완전히 제거된 경우에만 목록에서 제거
+            if (!isNowFavorited) {
+              setTimeout(() => {
+                const itemToRemove = btn.closest('.favorite-store-item');
+                if (itemToRemove) {
+                  itemToRemove.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                  itemToRemove.style.opacity = '0';
+                  itemToRemove.style.transform = 'translateX(-100%)';
+                  
+                  setTimeout(() => {
+                    itemToRemove.remove();
+                    
+                    // 즐겨찾기 목록이 비었는지 확인
+                    if (favoriteStoresListDiv.children.length === 0) {
+                      favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+                    }
+                  }, 300);
+                }
+              }, 1000); // 1초 후에 목록에서 제거
             }
+
           } else {
             console.error('❌ 즐겨찾기 토글 실패:', data.error);
+            // 실패 시 원래 상태로 되돌리기
+            updateFavoriteHeartUI(btn, currentlyFavorited);
             alert('즐겨찾기 설정에 실패했습니다: ' + data.error);
           }
         } catch (error) {
           console.error('❌ 즐겨찾기 토글 중 오류:', error);
+          // 에러 시 원래 상태로 되돌리기
+          updateFavoriteHeartUI(btn, currentlyFavorited);
           alert('서버 연결에 실패했습니다.');
         }
       });
@@ -1404,6 +1445,29 @@ async function deleteReview(reviewId) {
 
   alert('리뷰가 삭제되었습니다.');
   renderMyPage(); // 페이지 새로고침
+}
+
+// 즐겨찾기 하트 UI 업데이트 헬퍼 함수
+function updateFavoriteHeartUI(btn, isFavorited) {
+  const statusText = btn.parentElement.querySelector('.favorite-status-text');
+  
+  if (isFavorited) {
+    btn.textContent = '❤️';
+    btn.className = 'favorite-heart-btn favorited';
+    btn.setAttribute('data-favorited', 'true');
+    if (statusText) {
+      statusText.textContent = '즐겨찾기';
+      statusText.className = 'favorite-status-text favorited';
+    }
+  } else {
+    btn.textContent = '🤍';
+    btn.className = 'favorite-heart-btn not-favorited';
+    btn.setAttribute('data-favorited', 'false');
+    if (statusText) {
+      statusText.textContent = '즐겨찾기 취소됨';
+      statusText.className = 'favorite-status-text';
+    }
+  }
 }
 
 // 매장 상세 페이지로 이동
