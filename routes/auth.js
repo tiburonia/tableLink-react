@@ -363,25 +363,7 @@ router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
       error: '즐겨찾기 상태 확인 실패: ' + error.message 
     });
   }
-});eId', async (req, res) => {
-  const { userId, storeId } = req.params;
 
-  try {
-    const result = await pool.query(
-      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
-      [userId, storeId]
-    );
-
-    res.json({
-      success: true,
-      isFavorite: result.rows.length > 0
-    });
-
-  } catch (error) {
-    console.error('즐겨찾기 상태 확인 실패:', error);
-    res.status(500).json({ error: '즐겨찾기 상태 확인 실패' });
-  }
-});
 
 // 예약 추가 API
 router.post('/reservations/add', async (req, res) => {
