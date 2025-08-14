@@ -39,11 +39,36 @@ async function renderLogin() {
   const goPOS = document.querySelector('#goPOS');
   const goTLM = document.querySelector('#goTLM');
 
-  join.addEventListener('click', () => {
-    if (typeof renderSignUp === 'function') {
-      renderSignUp();
-    } else {
-      alert('회원가입 기능이 로드되지 않았습니다.');
+  join.addEventListener('click', async () => {
+    try {
+      // renderSignUp 함수가 로드되지 않은 경우 동적으로 로드
+      if (typeof renderSignUp !== 'function' && typeof window.renderSignUp !== 'function') {
+        console.log('🔄 renderSignUp 함수 동적 로드 시도');
+        
+        // 스크립트 동적 로드
+        const script = document.createElement('script');
+        script.src = '/TLG/pages/main/renderSignUp.js';
+        script.onload = () => {
+          console.log('✅ renderSignUp 스크립트 로드 완료');
+          if (typeof window.renderSignUp === 'function') {
+            window.renderSignUp();
+          } else {
+            alert('회원가입 기능 로드에 실패했습니다.');
+          }
+        };
+        script.onerror = () => {
+          console.error('❌ renderSignUp 스크립트 로드 실패');
+          alert('회원가입 기능 로드에 실패했습니다.');
+        };
+        document.head.appendChild(script);
+      } else {
+        // 함수가 이미 로드된 경우 바로 실행
+        const signUpFunc = window.renderSignUp || renderSignUp;
+        signUpFunc();
+      }
+    } catch (error) {
+      console.error('❌ renderSignUp 실행 오류:', error);
+      alert('회원가입 화면으로 이동할 수 없습니다.');
     }
   });
 

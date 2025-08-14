@@ -284,4 +284,10 @@ function renderSignUp() {
   });
 }
 
+// 전역으로 등록
 window.renderSignUp = renderSignUp;
+
+// 즉시 실행하여 전역에서 접근 가능하도록 설정
+if (typeof window !== 'undefined') {
+  window.renderSignUp = renderSignUp;
+}
