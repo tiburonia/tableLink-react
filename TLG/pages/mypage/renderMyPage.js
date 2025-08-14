@@ -1306,7 +1306,11 @@ async function editReview(reviewId, rating, reviewText) {
   const response = await fetch(`/api/reviews/${reviewId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ rating, content: reviewText })
+    body: JSON.stringify({ 
+      rating, 
+      content: reviewText,
+      userId: userInfo.id
+    })
   });
 
   if (!response.ok) {
@@ -1323,7 +1327,9 @@ async function deleteReview(reviewId) {
   }
 
   const response = await fetch(`/api/reviews/${reviewId}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: userInfo.id })
   });
 
   if (!response.ok) {
