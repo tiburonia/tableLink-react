@@ -28,6 +28,13 @@ async function renderMyPage() {
       </section>
 
       <section class="section-card">
+        <h2>💖 즐겨찾기 매장</h2>
+        <div id="favoriteStoresList">
+          <p>💖 즐겨찾기 매장을 불러오는 중...</p>
+        </div>
+      </section>
+
+      <section class="section-card">
         <h2>⭐ 내 리뷰 내역</h2>
         <div id="reviewList">
           <p>📝 리뷰 내역을 불러오는 중...</p>
@@ -393,6 +400,70 @@ async function renderMyPage() {
       }
       .favorite-store-icon.active {
         color: #ffc107; /* 활성화 시 노란색 */
+      }
+      
+      /* 즐겨찾기 매장 카드 스타일 */
+      .favorite-store-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .favorite-store-item:hover {
+        background: #e9ecef;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .favorite-store-content {
+        flex: 1;
+      }
+      .favorite-store-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      .favorite-store-info {
+        color: #666;
+        font-size: 13px;
+        line-height: 1.3;
+      }
+      .favorite-store-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .favorite-toggle-btn {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .favorite-toggle-btn.remove {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .favorite-toggle-btn.remove:hover {
+        background: #fecaca;
+      }
+      .favorite-toggle-btn.add {
+        background: #ecfdf5;
+        color: #059669;
+      }
+      .favorite-toggle-btn.add:hover {
+        background: #d1fae5;
       }
     </style>
   `;
@@ -1064,88 +1135,73 @@ async function updateReviewList(currentUserInfo) {
 
 // 즐겨찾기 매장 UI 업데이트 함수
 function updateFavoriteStoresUI(favoriteStoresData) {
-  const mainContent = document.getElementById('content');
-  let favoriteStoresSection = document.getElementById('favoriteStoresSection');
+  const favoriteStoresListDiv = document.getElementById('favoriteStoresList');
+  if (!favoriteStoresListDiv) return;
 
-  // 기존 섹션이 있으면 제거 (새로 렌더링하기 위함)
-  if (favoriteStoresSection) {
-    favoriteStoresSection.remove();
-  }
+  favoriteStoresListDiv.innerHTML = ''; // 기존 내용 초기화
 
-  favoriteStoresSection = document.createElement('section');
-  favoriteStoresSection.id = 'favoriteStoresSection';
-  favoriteStoresSection.className = 'section-card';
-  favoriteStoresSection.innerHTML = `
-    <h2>💖 즐겨찾기 매장</h2>
-    <div id="favoriteStoresList">
-      ${favoriteStoresData.length > 0 ?
-        favoriteStoresData.map(store => `
-          <div class="favorite-store-item">
-            <span class="favorite-store-name">${store.name}</span>
-            <span class="favorite-store-info">${store.category} | ${store.address}</span>
-            <span class="favorite-store-icon active" data-store-id="${store.id}">⭐</span>
-          </div>
-        `).join('') :
-        `<p>즐겨찾는 매장이 없습니다.</p>`
-      }
-    </div>
-  `;
+  if (favoriteStoresData && favoriteStoresData.length > 0) {
+    favoriteStoresData.forEach(store => {
+      const favoriteDiv = document.createElement('div');
+      favoriteDiv.className = 'favorite-store-item';
+      favoriteDiv.innerHTML = `
+        <div class="favorite-store-content" onclick="goToStore(${store.id})">
+          <div class="favorite-store-name">${store.name}</div>
+          <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
+        </div>
+        <div class="favorite-store-actions">
+          <button class="favorite-toggle-btn remove" data-store-id="${store.id}" data-action="remove">
+            ❌ 삭제
+          </button>
+        </div>
+      `;
+      favoriteStoresListDiv.appendChild(favoriteDiv);
+    });
 
-  // 즐겨찾기 섹션을 주문내역 바로 아래에 삽입
-  const orderListSection = document.querySelector('#orderList').closest('.section-card');
-  if (orderListSection) {
-    orderListSection.parentNode.insertBefore(favoriteStoresSection, orderListSection.nextSibling);
-  } else {
-    // 주문 내역이 없을 경우, 다른 섹션 앞에 삽입하거나 맨 앞에 삽입
-    mainContent.prepend(favoriteStoresSection);
-  }
+    // 즐겨찾기 삭제 버튼 이벤트 리스너
+    favoriteStoresListDiv.querySelectorAll('.favorite-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const storeId = btn.getAttribute('data-store-id');
+        const action = btn.getAttribute('data-action');
 
-  // 즐겨찾기 아이콘 이벤트 리스너 추가
-  favoriteStoresSection.querySelectorAll('.favorite-store-icon').forEach(icon => {
-    icon.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const storeId = icon.getAttribute('data-store-id');
-      const isFavorite = icon.classList.contains('active');
-
-      try {
-        const url = `/api/users/favorites/${userInfo.id}/${storeId}`;
-        const method = isFavorite ? 'DELETE' : 'POST';
-
-        const response = await fetch(url, { method });
-        if (!response.ok) {
-          throw new Error('즐겨찾기 상태 변경 실패');
-        }
-
-        // UI 업데이트
-        if (isFavorite) {
-          icon.classList.remove('active');
-          // 즐겨찾기 목록에서 해당 매장 제거
-          const itemToRemove = icon.closest('.favorite-store-item');
-          if (itemToRemove) itemToRemove.remove();
-          // 즐겨찾기 목록이 비었는지 확인
-          const favoriteStoresListDiv = document.getElementById('favoriteStoresList');
-          if (favoriteStoresListDiv && favoriteStoresListDiv.children.length === 0) {
-            favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+        if (action === 'remove') {
+          // 삭제 확인
+          if (!confirm('이 매장을 즐겨찾기에서 제거하시겠습니까?')) {
+            return;
           }
-        } else {
-          icon.classList.add('active');
-          // 즐겨찾기 목록에 추가 (실제로는 새로고침 또는 추가 로직 필요)
-          renderMyPage(); // 간단하게 전체 페이지 새로고침
-        }
-      } catch (error) {
-        console.error('즐겨찾기 처리 중 오류:', error);
-        alert('즐겨찾기 상태를 변경하지 못했습니다.');
-      }
-    });
-  });
 
-  // 즐겨찾기 매장 클릭 시 해당 매장 상세 페이지로 이동
-  favoriteStoresSection.querySelectorAll('.favorite-store-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      const storeId = item.querySelector('.favorite-store-icon').getAttribute('data-store-id');
-      goToStore(storeId);
+          try {
+            const response = await fetch(`/api/users/favorites/${userInfo.id}/${storeId}`, {
+              method: 'DELETE'
+            });
+
+            if (!response.ok) {
+              throw new Error('즐겨찾기 삭제 실패');
+            }
+
+            // UI에서 해당 매장 제거
+            const itemToRemove = btn.closest('.favorite-store-item');
+            if (itemToRemove) {
+              itemToRemove.remove();
+            }
+
+            // 즐겨찾기 목록이 비었는지 확인
+            if (favoriteStoresListDiv.children.length === 0) {
+              favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+            }
+
+            console.log('✅ 즐겨찾기 매장 삭제 완료');
+          } catch (error) {
+            console.error('❌ 즐겨찾기 삭제 중 오류:', error);
+            alert('즐겨찾기 삭제에 실패했습니다.');
+          }
+        }
+      });
     });
-  });
+  } else {
+    favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+  }
 }
 
 // 전체 리뷰 보기 모달
