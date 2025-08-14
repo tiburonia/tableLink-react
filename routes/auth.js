@@ -200,7 +200,7 @@ router.get('/users/favorites/:userId', async (req, res) => {
 
     res.json({
       success: true,
-      favoriteStores: favoriteStores
+      stores: favoriteStores
     });
 
   } catch (error) {
