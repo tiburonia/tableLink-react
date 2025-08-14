@@ -435,6 +435,21 @@ async function renderMyPage() {
   loadUserData();
 }
 
+// 즐겨찾기 매장을 불러오는 함수
+async function loadFavoriteStores(userId) {
+  try {
+    const response = await fetch(`/api/users/favorites/${userId}`);
+    if (!response.ok) {
+      throw new Error('즐겨찾기 매장 정보 조회 실패');
+    }
+    const data = await response.json();
+    return data.stores || [];
+  } catch (error) {
+    console.error('즐겨찾기 매장 로딩 실패:', error);
+    return [];
+  }
+}
+
 // 사용자 데이터를 비동기로 로드하는 함수
 async function loadUserData() {
   try {
@@ -458,12 +473,7 @@ async function loadUserData() {
     }
 
     // 즐겨찾기 매장 정보 가져오기
-    const favoriteStoresResponse = await fetch(`/api/users/favorites/${userInfo.id}`);
-    let favoriteStoresData = [];
-    if (favoriteStoresResponse.ok) {
-      const favoriteStoresResult = await favoriteStoresResponse.json();
-      favoriteStoresData = favoriteStoresResult.stores || [];
-    }
+    const favoriteStoresData = await loadFavoriteStores(userInfo.id);
 
     // 주문내역 업데이트 (비동기)
     await updateOrderList(currentUserInfo, ordersData);
