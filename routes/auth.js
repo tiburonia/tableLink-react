@@ -156,6 +156,64 @@ router.post('/users/info', async (req, res) => {
   }
 });
 
+// 즐겨찾기 조회 API
+router.get('/users/favorites/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const userResult = await pool.query('SELECT favorite_stores FROM users WHERE id = $1', [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const favoriteStoreNames = user.favorite_stores || [];
+
+    // 즐겨찾기 매장 이름들로 매장 정보 조회
+    if (favoriteStoreNames.length === 0) {
+      return res.json({
+        success: true,
+        favoriteStores: []
+      });
+    }
+
+    const placeholders = favoriteStoreNames.map((_, index) => `$${index + 1}`).join(',');
+    const storesResult = await pool.query(`
+      SELECT s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
+             sa.address_full as address, sa.latitude, sa.longitude
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE s.name IN (${placeholders})
+      ORDER BY s.name
+    `, favoriteStoreNames);
+
+    const favoriteStores = storesResult.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0,
+      isOpen: store.is_open !== false,
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : null
+    }));
+
+    console.log(`✅ 사용자 ${userId} 즐겨찾기 조회: ${favoriteStores.length}개 매장`);
+
+    res.json({
+      success: true,
+      favoriteStores: favoriteStores
+    });
+
+  } catch (error) {
+    console.error('즐겨찾기 조회 실패:', error);
+    res.status(500).json({ error: '즐겨찾기 조회 실패' });
+  }
+});
+
 // 즐겨찾기 토글 API
 router.post('/users/favorite/toggle', async (req, res) => {
   const { userId, storeName, action } = req.body;
