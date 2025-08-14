@@ -4,7 +4,7 @@
 async function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
-    
+
     // 메뉴 데이터 정규화
     if (store.menu && typeof store.menu === 'string') {
       try {
@@ -15,12 +15,12 @@ async function renderStore(store) {
         store.menu = [];
       }
     }
-    
+
     // 메뉴가 없거나 배열이 아닌 곳에서 빈 배열로 초기화
     if (!store.menu || !Array.isArray(store.menu)) {
       store.menu = [];
     }
-    
+
     console.log('📋 매장 메뉴 데이터 상세:', {
       hasMenu: !!store.menu,
       menuType: typeof store.menu,
@@ -50,12 +50,12 @@ async function renderStore(store) {
       if (store.ratingAverage !== undefined && store.ratingAverage !== null && store.ratingAverage > 0) {
         displayRating = parseFloat(store.ratingAverage).toFixed(1);
         console.log('⭐ 실제 리뷰 기반 별점 업데이트:', displayRating);
-        
+
         // DOM에서 별점 표시 업데이트
         const reviewScoreElement = document.getElementById('reviewScore');
         if (reviewScoreElement) {
           reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
-          
+
           // reviewLink 이벤트 리스너 재설정
           const newReviewLink = document.getElementById('reviewLink');
           if (newReviewLink) {
@@ -89,7 +89,7 @@ async function renderStore(store) {
 
   } catch (error) {
     console.error('❌ renderStore 실행 중 오류:', error);
-    
+
     // 오류 발생 시 기본 오류 화면 표시
     const main = document.getElementById('main');
     if (main) {
@@ -138,9 +138,8 @@ function setupEventListeners(store) {
     if (favoriteBtn) {
       favoriteBtn.addEventListener('click', () => {
         try {
-          if (typeof toggleFavorite === 'function' && typeof updateFavoriteBtn === 'function') {
-            toggleFavorite(store.name);
-            updateFavoriteBtn(store.name);
+          if (typeof toggleFavorite === 'function') {
+            toggleFavorite(store); // 매장 객체 전체를 전달
           } else {
             console.warn('⚠️ 즐겨찾기 함수를 찾을 수 없음');
           }
@@ -148,10 +147,10 @@ function setupEventListeners(store) {
           console.error('❌ 즐겨찾기 처리 중 오류:', favoriteError);
         }
       });
-      
+
       // 초기 즐겨찾기 상태 설정
-      if (typeof updateFavoriteBtn === 'function') {
-        updateFavoriteBtn(store.name);
+      if (typeof initializeFavoriteButton === 'function') {
+        initializeFavoriteButton(store); // 매장 객체 전체를 전달
       }
       console.log('✅ 즐겨찾기 버튼 이벤트 설정 완료');
     } else {
@@ -275,7 +274,7 @@ function loadInitialData(store) {
       try {
         if (window.StoreTabManager && typeof window.StoreTabManager.renderStoreTab === 'function') {
           window.StoreTabManager.renderStoreTab('menu', store);
-          
+
           const menuBtn = document.querySelector('[data-tab="menu"]');
           if (menuBtn) {
             menuBtn.classList.add('active');
@@ -313,7 +312,7 @@ async function updateStoreRatingAsync(store) {
     if (ratingData && ratingData.success) {
       const actualRating = ratingData.ratingAverage || 0;
       const reviewCount = ratingData.reviewCount || 0;
-      
+
       console.log(`📊 매장 ${store.id} 실제 리뷰 통계: ${actualRating}점 (${reviewCount}개 리뷰)`);
 
       // store 객체에 실제 데이터 반영
@@ -419,7 +418,7 @@ async function loadAndRenderStore(storeId) {
 function loadPromotionData(store) {
   // 실제로는 API에서 가져올 데이터, 현재는 목업 데이터 사용
   console.log(`🎉 매장 ${store.id} 프로모션 정보 로드`);
-  
+
   // 프로모션 더보기 버튼 이벤트 추가 (여러 클래스 확인)
   setTimeout(() => {
     const promotionBtns = [
@@ -427,7 +426,7 @@ function loadPromotionData(store) {
       document.querySelector('.promotion-detail-btn'),
       document.querySelector('[onclick="showAllPromotions()"]')
     ];
-    
+
     promotionBtns.forEach(btn => {
       if (btn) {
         console.log('🎯 프로모션 버튼 이벤트 설정:', btn.className);
@@ -456,10 +455,10 @@ function loadPromotionData(store) {
 async function loadLoyaltyData(store) {
   try {
     console.log(`⭐ 매장 ${store.id} 단골 레벨 정보 로드`);
-    
+
     // 현재 로그인한 사용자 정보 가져오기
     const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
-    
+
     if (!userInfo) {
       console.log('👤 로그인하지 않은 사용자 - 기본 단골 레벨 표시');
       updateLoyaltyUI({
@@ -474,7 +473,7 @@ async function loadLoyaltyData(store) {
 
     // 실제 API 호출 (현재는 목업 데이터)
     // const response = await fetch(`/api/stores/${store.id}/loyalty/${userInfo.id}`);
-    
+
     // 목업 데이터
     const loyaltyData = {
       level: '골드 단골',
@@ -485,7 +484,7 @@ async function loadLoyaltyData(store) {
     };
 
     updateLoyaltyUI(loyaltyData);
-    
+
   } catch (error) {
     console.error('❌ 단골 레벨 정보 로드 실패:', error);
   }
@@ -496,15 +495,15 @@ function updateLoyaltyUI(data) {
   const levelElement = document.querySelector('.loyalty-level');
   const progressFill = document.querySelector('.loyalty-progress-fill');
   const progressText = document.querySelector('.loyalty-progress-text');
-  
+
   if (levelElement) {
     levelElement.textContent = data.level;
   }
-  
+
   if (progressFill) {
     progressFill.style.width = `${data.progressPercent}%`;
   }
-  
+
   if (progressText) {
     progressText.innerHTML = `
       <span>현재 ${data.progressPercent}% (${data.visitCount}회 방문)</span>
@@ -516,14 +515,14 @@ function updateLoyaltyUI(data) {
 // 모든 프로모션 보기
 function showAllPromotions(store) {
   console.log('🎯 showAllPromotions 호출됨:', store.name);
-  
+
   try {
     if (typeof renderPromotionDetail === 'function') {
       console.log('✅ renderPromotionDetail 함수 발견, 실행 중...');
       renderPromotionDetail(store);
     } else {
       console.error('❌ renderPromotionDetail 함수를 찾을 수 없습니다.');
-      
+
       // 전역에서 함수 찾기 시도
       if (window.renderPromotionDetail && typeof window.renderPromotionDetail === 'function') {
         console.log('✅ window.renderPromotionDetail 발견, 실행 중...');
@@ -545,13 +544,13 @@ window.showAllPromotions = showAllPromotions;
 // 전역 함수 등록 (즉시 실행)
 (function() {
   console.log('🔧 renderStore 전역 함수 등록 중...');
-  
+
   window.renderStore = renderStore;
   window.renderTableLayout = renderTableLayout;
   window.loadAndRenderStore = loadAndRenderStore;
   window.loadPromotionData = loadPromotionData;
   window.loadLoyaltyData = loadLoyaltyData;
-  
+
   // 함수 등록 확인
   console.log('✅ renderStore 전역 함수 등록 완료:', typeof window.renderStore);
   console.log('🔍 전역 renderStore 존재 여부:', !!window.renderStore);
