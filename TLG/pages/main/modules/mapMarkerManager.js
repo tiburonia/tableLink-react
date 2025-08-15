@@ -231,43 +231,151 @@ window.MapMarkerManager = {
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="modern-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
-        <div class="compact-marker-pin">
+      <div id="${markerId}" class="store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
+        <div class="marker-pin">
           <div class="pin-icon">${categoryIcon}</div>
+        </div>
+        <div class="marker-tooltip">
+          <div class="tooltip-content">
+            <div class="store-name">${store.name}</div>
+            <div class="store-info">
+              ${hasReviews ? `
+                <span class="rating">★ ${rating}</span>
+                <span class="review-count">(${store.reviewCount})</span>
+              ` : '<span class="no-rating">평가 없음</span>'}
+            </div>
+            <div class="store-status ${isOpen ? 'status-open' : 'status-closed'}">
+              ${isOpen ? '🟢 운영중' : '🔴 운영준비중'}
+            </div>
+          </div>
         </div>
       </div>
       <style>
-        .modern-store-marker {
+        .store-marker {
           position: relative;
           cursor: pointer;
           z-index: 200;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
         }
 
-        .modern-store-marker:hover {
-          transform: scale(1.2);
+        .store-marker:hover {
           z-index: 9999 !important;
         }
 
-        .compact-marker-pin {
+        .marker-pin {
           position: relative;
-          width: 24px;
-          height: 24px;
+          width: 32px;
+          height: 32px;
           background: ${isOpen 
             ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' 
             : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)'
           };
           border-radius: 50%;
-          border: 2px solid #fff;
+          border: 3px solid #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+          transition: all 0.3s ease;
+        }
+
+        .store-marker:hover .marker-pin {
+          transform: scale(1.1);
+          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
         }
 
         .pin-icon {
+          font-size: 16px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+        }
+
+        .marker-tooltip {
+          position: absolute;
+          bottom: 40px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 12px;
+          padding: 12px 16px;
+          min-width: 160px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          opacity: 0;
+          visibility: hidden;
+          transition: all 0.3s ease;
+          pointer-events: none;
+        }
+
+        .store-marker:hover .marker-tooltip {
+          opacity: 1;
+          visibility: visible;
+          transform: translateX(-50%) translateY(-5px);
+        }
+
+        .marker-tooltip::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border: 8px solid transparent;
+          border-top-color: rgba(255, 255, 255, 0.95);
+        }
+
+        .tooltip-content {
+          text-align: center;
+        }
+
+        .store-name {
+          font-weight: 700;
+          font-size: 14px;
+          color: #1f2937;
+          margin-bottom: 6px;
+          line-height: 1.2;
+        }
+
+        .store-info {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          margin-bottom: 6px;
+        }
+
+        .rating {
+          color: #fbbf24;
           font-size: 12px;
-          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+          font-weight: 600;
+        }
+
+        .review-count {
+          color: #6b7280;
+          font-size: 11px;
+        }
+
+        .no-rating {
+          color: #9ca3af;
+          font-size: 11px;
+          font-style: italic;
+        }
+
+        .store-status {
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 10px;
+          text-align: center;
+        }
+
+        .status-open {
+          background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+          color: #065f46;
+        }
+
+        .status-closed {
+          background: linear-gradient(135deg, #fee2e2, #fecaca);
+          color: #991b1b;
         }
       </style>
     `;
