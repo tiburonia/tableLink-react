@@ -5,37 +5,56 @@ async function renderMyPage() {
   main.innerHTML = `
     <button id="settingsBtn" class="settings-button">⚙️</button>
 
-    <!-- 프로필 정보 영역 -->
-    <div class="profile-section">
-      <div class="profile-header">
-        <div class="profile-image-container">
-          <div class="profile-image" id="profileImage">
-            <span class="profile-icon">👤</span>
+    <main id="content">
+      <!-- 프로필 정보 영역 -->
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="profile-image-container">
+            <div class="profile-image" id="profileImage">
+              <span class="profile-icon">👤</span>
+            </div>
+            <div class="profile-status-indicator"></div>
           </div>
-          <div class="profile-status-indicator"></div>
+          <div class="profile-basic-info">
+            <div class="profile-name" id="profileName">사용자 정보 로딩중...</div>
+            <div class="profile-level" id="profileLevel">등급 확인중...</div>
+          </div>
         </div>
-        <div class="profile-info">
-          <div class="profile-name" id="profileName">사용자 정보 로딩중...</div>
-          <div class="profile-level" id="profileLevel">등급 확인중...</div>
-          <div class="profile-stats">
-            <div class="stat-item">
-              <span class="stat-value" id="totalOrders">-</span>
-              <span class="stat-label">총 주문</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="totalReviews">-</span>
-              <span class="stat-label">리뷰수</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-value" id="favoriteCount">-</span>
-              <span class="stat-label">즐겨찾기</span>
-            </div>
+        
+        <div class="profile-details">
+          <div class="detail-row">
+            <span class="detail-label">👤 아이디</span>
+            <span class="detail-value" id="profileUserId">로딩중...</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📧 이메일</span>
+            <span class="detail-value" id="profileEmail">test@tablelink.co.kr</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🎂 나이</span>
+            <span class="detail-value" id="profileAge">25세</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">📱 전화번호</span>
+            <span class="detail-value" id="profilePhone">010-1234-5678</span>
+          </div>
+        </div>
+
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="totalOrders">-</span>
+            <span class="stat-label">총 주문</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="totalReviews">-</span>
+            <span class="stat-label">리뷰수</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="favoriteCount">-</span>
+            <span class="stat-label">즐겨찾기</span>
           </div>
         </div>
       </div>
-    </div>
-
-    <main id="content">
       <section class="section-card">
         <h2>📦 주문내역</h2>
         <div id="orderList">
@@ -121,25 +140,22 @@ async function renderMyPage() {
         transform: scale(0.95) rotate(90deg);
       }
 
-      /* 프로필 영역 스타일 */
-      .profile-section {
-        position: fixed;
-        top: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100%;
-        max-width: 430px;
+      /* 프로필 카드 스타일 */
+      .profile-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        z-index: 999;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
       }
 
       .profile-header {
         display: flex;
         align-items: center;
-        padding: 20px 20px 16px 20px;
         gap: 16px;
-        color: white;
+        margin-bottom: 20px;
       }
 
       .profile-image-container {
@@ -173,7 +189,7 @@ async function renderMyPage() {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
 
-      .profile-info {
+      .profile-basic-info {
         flex: 1;
         min-width: 0;
       }
@@ -181,14 +197,13 @@ async function renderMyPage() {
       .profile-name {
         font-size: 22px;
         font-weight: 700;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
 
       .profile-level {
         font-size: 14px;
         opacity: 0.9;
-        margin-bottom: 12px;
         padding: 4px 12px;
         background: rgba(255, 255, 255, 0.2);
         border-radius: 20px;
@@ -197,20 +212,58 @@ async function renderMyPage() {
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
+      .profile-details {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+
+      .detail-label {
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+
+      .detail-value {
+        font-size: 14px;
+        font-weight: 500;
+        text-align: right;
+      }
+
       .profile-stats {
         display: flex;
-        gap: 16px;
+        justify-content: space-around;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
       .stat-item {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 4px;
       }
 
       .stat-value {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
@@ -224,13 +277,13 @@ async function renderMyPage() {
 
       #content {
         position: absolute;
-        top: 118px;      /* 프로필 영역 높이만큼 */
-        bottom: 78px;    /* 바텀 바 높이만큼 */
+        top: 0;           /* 상단부터 시작 */
+        bottom: 78px;     /* 바텀 바 높이만큼 */
         left: 0;
         width: 100%;
         max-width: 430px;
         overflow-y: auto;  /* 여기만 스크롤 */
-        padding: 18px 18px 0 18px;
+        padding: 18px;
         box-sizing: border-box;
         background: #f8f9fb;
         z-index: 1;
@@ -667,6 +720,12 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
   // 사용자명 업데이트
   const displayName = currentUserInfo.name || currentUserInfo.username || userInfo.id;
   profileName.textContent = displayName;
+
+  // 아이디 정보 업데이트
+  const profileUserId = document.getElementById('profileUserId');
+  if (profileUserId) {
+    profileUserId.textContent = userInfo.id;
+  }
 
   // 등급 계산 (주문 수 기반)
   const orderCount = ordersData ? ordersData.length : 0;
