@@ -5,6 +5,36 @@ async function renderMyPage() {
   main.innerHTML = `
     <button id="settingsBtn" class="settings-button">⚙️</button>
 
+    <!-- 프로필 정보 영역 -->
+    <div class="profile-section">
+      <div class="profile-header">
+        <div class="profile-image-container">
+          <div class="profile-image" id="profileImage">
+            <span class="profile-icon">👤</span>
+          </div>
+          <div class="profile-status-indicator"></div>
+        </div>
+        <div class="profile-info">
+          <div class="profile-name" id="profileName">사용자 정보 로딩중...</div>
+          <div class="profile-level" id="profileLevel">등급 확인중...</div>
+          <div class="profile-stats">
+            <div class="stat-item">
+              <span class="stat-value" id="totalOrders">-</span>
+              <span class="stat-label">총 주문</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="totalReviews">-</span>
+              <span class="stat-label">리뷰수</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value" id="favoriteCount">-</span>
+              <span class="stat-label">즐겨찾기</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <main id="content">
       <section class="section-card">
         <h2>📦 주문내역</h2>
@@ -91,15 +121,116 @@ async function renderMyPage() {
         transform: scale(0.95) rotate(90deg);
       }
 
+      /* 프로필 영역 스타일 */
+      .profile-section {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        z-index: 999;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .profile-header {
+        display: flex;
+        align-items: center;
+        padding: 20px 20px 16px 20px;
+        gap: 16px;
+        color: white;
+      }
+
+      .profile-image-container {
+        position: relative;
+        flex-shrink: 0;
+      }
+
+      .profile-image {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        transition: all 0.3s ease;
+      }
+
+      .profile-status-indicator {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 18px;
+        height: 18px;
+        background: #4CAF50;
+        border-radius: 50%;
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .profile-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .profile-name {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .profile-level {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 12px;
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 20px;
+        display: inline-block;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .profile-stats {
+        display: flex;
+        gap: 16px;
+      }
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .stat-value {
+        font-size: 18px;
+        font-weight: 700;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .stat-label {
+        font-size: 11px;
+        opacity: 0.8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
       #content {
         position: absolute;
-        top: 0;          /* 헤더 삭제로 0부터 시작 */
+        top: 118px;      /* 프로필 영역 높이만큼 */
         bottom: 78px;    /* 바텀 바 높이만큼 */
         left: 0;
         width: 100%;
         max-width: 430px;
         overflow-y: auto;  /* 여기만 스크롤 */
-        padding: 18px 18px 0 18px;  /* 상단 패딩 추가 */
+        padding: 18px 18px 0 18px;
         box-sizing: border-box;
         background: #f8f9fb;
         z-index: 1;
@@ -522,6 +653,94 @@ async function loadFavoriteStores(userId) {
   }
 }
 
+// 프로필 섹션 업데이트 함수
+async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresData) {
+  const profileName = document.getElementById('profileName');
+  const profileLevel = document.getElementById('profileLevel');
+  const totalOrders = document.getElementById('totalOrders');
+  const totalReviews = document.getElementById('totalReviews');
+  const favoriteCount = document.getElementById('favoriteCount');
+  const profileImage = document.getElementById('profileImage');
+
+  if (!profileName || !profileLevel) return;
+
+  // 사용자명 업데이트
+  const displayName = currentUserInfo.name || currentUserInfo.username || userInfo.id;
+  profileName.textContent = displayName;
+
+  // 등급 계산 (주문 수 기반)
+  const orderCount = ordersData ? ordersData.length : 0;
+  let userLevel = '브론즈';
+  let levelColor = '#cd7f32';
+  
+  if (orderCount >= 50) {
+    userLevel = '다이아몬드';
+    levelColor = '#b9f2ff';
+  } else if (orderCount >= 30) {
+    userLevel = '플래티넘';
+    levelColor = '#e5e4e2';
+  } else if (orderCount >= 15) {
+    userLevel = '골드';
+    levelColor = '#ffd700';
+  } else if (orderCount >= 5) {
+    userLevel = '실버';
+    levelColor = '#c0c0c0';
+  }
+
+  profileLevel.textContent = `${userLevel} 등급`;
+  profileLevel.style.background = `linear-gradient(135deg, ${levelColor}40, ${levelColor}20)`;
+  profileLevel.style.borderColor = `${levelColor}60`;
+
+  // 통계 정보 업데이트
+  if (totalOrders) {
+    // 전체 주문 수 가져오기
+    try {
+      const allOrdersResponse = await fetch(`/api/orders/mypage/${userInfo.id}?limit=1000`);
+      if (allOrdersResponse.ok) {
+        const allOrdersData = await allOrdersResponse.json();
+        totalOrders.textContent = allOrdersData.orders?.length || 0;
+      } else {
+        totalOrders.textContent = orderCount;
+      }
+    } catch (error) {
+      totalOrders.textContent = orderCount;
+    }
+  }
+
+  if (totalReviews) {
+    // 전체 리뷰 수 가져오기
+    try {
+      const reviewsResponse = await fetch(`/api/reviews/users/${userInfo.id}`);
+      if (reviewsResponse.ok) {
+        const reviewsData = await reviewsResponse.json();
+        totalReviews.textContent = reviewsData.total || 0;
+      } else {
+        totalReviews.textContent = '0';
+      }
+    } catch (error) {
+      totalReviews.textContent = '0';
+    }
+  }
+
+  if (favoriteCount) {
+    favoriteCount.textContent = favoriteStoresData?.length || 0;
+  }
+
+  // 프로필 이미지 업데이트 (사용자명 첫 글자 또는 이모지)
+  if (profileImage) {
+    const firstChar = displayName.charAt(0).toUpperCase();
+    profileImage.innerHTML = `<span class="profile-icon">${isNaN(firstChar) ? firstChar : '👤'}</span>`;
+  }
+
+  console.log('✅ 프로필 섹션 업데이트 완료:', {
+    name: displayName,
+    level: userLevel,
+    orders: totalOrders?.textContent,
+    reviews: totalReviews?.textContent,
+    favorites: favoriteCount?.textContent
+  });
+}
+
 // 사용자 데이터를 비동기로 로드하는 함수
 async function loadUserData() {
   try {
@@ -546,6 +765,9 @@ async function loadUserData() {
 
     // 즐겨찾기 매장 정보 가져오기
     const favoriteStoresData = await loadFavoriteStores(userInfo.id);
+
+    // 프로필 정보 업데이트 (우선순위 높음)
+    updateProfileSection(currentUserInfo, ordersData, favoriteStoresData);
 
     // 주문내역 업데이트 (비동기)
     await updateOrderList(currentUserInfo, ordersData);
