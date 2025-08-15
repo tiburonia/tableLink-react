@@ -51,19 +51,30 @@ async function renderStore(store) {
         displayRating = parseFloat(store.ratingAverage).toFixed(1);
         console.log('⭐ 실제 리뷰 기반 별점 업데이트:', displayRating);
 
-        // DOM에서 별점 표시 업데이트
+        // DOM에서 별점 표시 업데이트 (리뷰 링크는 유지)
         const reviewScoreElement = document.getElementById('reviewScore');
         if (reviewScoreElement) {
-          reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
-
-          // reviewLink 이벤트 리스너 재설정
-          const newReviewLink = document.getElementById('reviewLink');
-          if (newReviewLink) {
-            newReviewLink.addEventListener('click', () => {
-              if (typeof renderAllReview === 'function') {
-                renderAllReview(store);
-              }
-            });
+          // 기존 리뷰 링크가 있는지 확인
+          const existingReviewLink = document.getElementById('reviewLink');
+          if (existingReviewLink) {
+            // 기존 링크가 있으면 별점만 업데이트
+            const textNode = reviewScoreElement.firstChild;
+            if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+              textNode.textContent = displayRating + '\u00A0'; // &nbsp;
+            }
+          } else {
+            // 기존 링크가 없으면 전체 내용 업데이트
+            reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
+            
+            // 새로 생성된 리뷰 링크에 이벤트 리스너 설정
+            const newReviewLink = document.getElementById('reviewLink');
+            if (newReviewLink) {
+              newReviewLink.addEventListener('click', () => {
+                if (typeof renderAllReview === 'function') {
+                  renderAllReview(store);
+                }
+              });
+            }
           }
         }
       } else {
