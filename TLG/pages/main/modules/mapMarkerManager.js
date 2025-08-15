@@ -221,53 +221,224 @@ window.MapMarkerManager = {
     
     // 리뷰가 없으면 별점 표시 안함, 리뷰가 있으면 별점 표시
     const hasReviews = store.reviewCount > 0;
-    const ratingDisplay = hasReviews ? ` ⭐${parseFloat(store.ratingAverage).toFixed(1)}` : '';
+    const rating = hasReviews ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+    const ratingStars = hasReviews ? '★'.repeat(Math.round(parseFloat(rating))) : '';
 
+    // 카테고리별 아이콘 설정
+    const categoryIcon = this.getCategoryIcon(store.category);
+    
     // 고유 ID 생성
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="store-marker store-marker-hoverable" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
-        <div class="marker-info">
-          <div class="store-name">${store.name}</div>
-          <div class="store-status ${isOpen ? 'open' : 'closed'}">
-            ${isOpen ? '운영중' : '운영준비중'}${ratingDisplay}
+      <div id="${markerId}" class="modern-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
+        <div class="marker-pin">
+          <div class="pin-icon">${categoryIcon}</div>
+          <div class="pin-status ${isOpen ? 'status-open' : 'status-closed'}"></div>
+        </div>
+        <div class="marker-bubble">
+          <div class="bubble-content">
+            <div class="store-title">${store.name}</div>
+            <div class="store-details">
+              <div class="rating-section">
+                ${hasReviews ? `
+                  <span class="rating-stars">${ratingStars}</span>
+                  <span class="rating-score">${rating}</span>
+                  <span class="rating-count">(${store.reviewCount})</span>
+                ` : '<span class="no-rating">평가 없음</span>'}
+              </div>
+              <div class="status-badge ${isOpen ? 'badge-open' : 'badge-closed'}">
+                ${isOpen ? '🟢 운영중' : '🔴 운영준비중'}
+              </div>
+            </div>
           </div>
+          <div class="bubble-arrow"></div>
         </div>
       </div>
       <style>
-        .store-marker {
-          background: white;
-          border: 2px solid ${isOpen ? '#4caf50' : '#ff9800'};
-          border-radius: 8px;
-          padding: 6px 8px;
-          cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-          min-width: 100px;
+        .modern-store-marker {
           position: relative;
+          cursor: pointer;
           z-index: 200;
-          transition: all 0.2s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
         }
-        .store-marker-hoverable:hover {
-          transform: scale(1.1) !important;
+
+        .modern-store-marker:hover {
+          transform: translateY(-3px) scale(1.05);
           z-index: 9999 !important;
-          box-shadow: 0 8px 25px rgba(0,0,0,0.3) !important;
-          border-width: 3px !important;
+          filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.25));
         }
-        .store-name {
-          font-weight: bold;
-          color: #333;
+
+        .marker-pin {
+          position: relative;
+          width: 48px;
+          height: 48px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 50% 50% 50% 0;
+          transform: rotate(-45deg);
+          border: 3px solid #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 8px;
+          margin-left: auto;
+          margin-right: auto;
+          box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .modern-store-marker.open .marker-pin {
+          background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+          box-shadow: 0 3px 10px rgba(17, 153, 142, 0.3);
+        }
+
+        .modern-store-marker.closed .marker-pin {
+          background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+          box-shadow: 0 3px 10px rgba(252, 70, 107, 0.3);
+        }
+
+        .pin-icon {
+          transform: rotate(45deg);
+          font-size: 20px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .pin-status {
+          position: absolute;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          top: -2px;
+          right: -2px;
+          border: 2px solid #fff;
+          transform: rotate(45deg);
+        }
+
+        .status-open {
+          background: #4ade80;
+          animation: pulse-green 2s infinite;
+        }
+
+        .status-closed {
+          background: #f87171;
+          animation: pulse-red 2s infinite;
+        }
+
+        .marker-bubble {
+          position: relative;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+          backdrop-filter: blur(10px);
+          border-radius: 16px;
+          padding: 12px 16px;
+          min-width: 180px;
+          max-width: 240px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .bubble-content {
+          text-align: center;
+        }
+
+        .store-title {
+          font-weight: 700;
+          font-size: 14px;
+          color: #1f2937;
+          margin-bottom: 8px;
+          line-height: 1.3;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .store-details {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .rating-section {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+        }
+
+        .rating-stars {
+          color: #fbbf24;
           font-size: 12px;
-          margin-bottom: 2px;
-          line-height: 1.2;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
         }
-        .store-status {
-          font-size: 10px;
-          font-weight: 500;
-          line-height: 1.2;
+
+        .rating-score {
+          font-weight: 600;
+          font-size: 13px;
+          color: #374151;
         }
-        .store-status.open { color: #4caf50; }
-        .store-status.closed { color: #ff9800; }
+
+        .rating-count {
+          font-size: 11px;
+          color: #6b7280;
+        }
+
+        .no-rating {
+          font-size: 11px;
+          color: #9ca3af;
+          font-style: italic;
+        }
+
+        .status-badge {
+          font-size: 11px;
+          font-weight: 600;
+          padding: 3px 8px;
+          border-radius: 12px;
+          text-align: center;
+        }
+
+        .badge-open {
+          background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+          color: #065f46;
+          border: 1px solid #86efac;
+        }
+
+        .badge-closed {
+          background: linear-gradient(135deg, #fee2e2, #fecaca);
+          color: #991b1b;
+          border: 1px solid #fca5a5;
+        }
+
+        .bubble-arrow {
+          position: absolute;
+          bottom: -6px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 12px;
+          height: 12px;
+          background: inherit;
+          border-right: 1px solid rgba(255, 255, 255, 0.3);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+          transform: translateX(-50%) rotate(45deg);
+        }
+
+        @keyframes pulse-green {
+          0%, 100% {
+            opacity: 1;
+            transform: rotate(45deg) scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: rotate(45deg) scale(1.1);
+          }
+        }
+
+        @keyframes pulse-red {
+          0%, 100% {
+            opacity: 1;
+            transform: rotate(45deg) scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: rotate(45deg) scale(1.1);
+          }
+        }
       </style>
     `;
 
@@ -661,6 +832,39 @@ window.MapMarkerManager = {
     const avgLng = stores.reduce((sum, s) => sum + s.coord.lng, 0) / stores.length;
 
     return { lat: avgLat, lng: avgLng };
+  },
+
+  // 카테고리별 아이콘 반환
+  getCategoryIcon(category) {
+    const iconMap = {
+      '한식': '🍚',
+      '중식': '🥢', 
+      '일식': '🍣',
+      '양식': '🍝',
+      '치킨': '🍗',
+      '피자': '🍕',
+      '버거': '🍔',
+      '카페': '☕',
+      '디저트': '🍰',
+      '분식': '🍜',
+      '족발': '🦶',
+      '바베큐': '🥩',
+      '해산물': '🦐',
+      '아시안': '🍛',
+      '패스트푸드': '🍟',
+      '술집': '🍺',
+      '기타': '🍽️'
+    };
+
+    // 카테고리 이름에서 키워드 매칭
+    for (const [key, icon] of Object.entries(iconMap)) {
+      if (category && category.includes(key)) {
+        return icon;
+      }
+    }
+
+    // 기본 아이콘
+    return '🍽️';
   },
 
   // 중심 좌표 계산 (기존 함수 유지 - 호환성)
