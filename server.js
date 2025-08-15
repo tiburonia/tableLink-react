@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -33,6 +32,8 @@ app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/regular-levels', require('./routes/regular-levels'));
+
 
 // 정적 페이지 라우트
 app.get('/', (req, res) => {
@@ -64,8 +65,8 @@ app.get('/tlm/:storeId', (req, res) => {
 async function checkAndReleaseExpiredTables() {
   try {
     const result = await pool.query(`
-      SELECT store_id, table_number, occupied_since, auto_release_source 
-      FROM store_tables 
+      SELECT store_id, table_number, occupied_since, auto_release_source
+      FROM store_tables
       WHERE is_occupied = true AND occupied_since IS NOT NULL AND auto_release_source = 'TLL'
     `);
 
@@ -77,8 +78,8 @@ async function checkAndReleaseExpiredTables() {
 
       if (diffMinutes >= 2) {
         await pool.query(`
-          UPDATE store_tables 
-          SET is_occupied = false, occupied_since = null, auto_release_source = null 
+          UPDATE store_tables
+          SET is_occupied = false, occupied_since = null, auto_release_source = null
           WHERE store_id = $1 AND table_number = $2
         `, [table.store_id, table.table_number]);
 
@@ -88,8 +89,8 @@ async function checkAndReleaseExpiredTables() {
 
     // TLM 수동 점유 테이블은 그대로 유지
     const tlmTables = await pool.query(`
-      SELECT COUNT(*) as count 
-      FROM store_tables 
+      SELECT COUNT(*) as count
+      FROM store_tables
       WHERE is_occupied = true AND auto_release_source = 'TLM'
     `);
 
