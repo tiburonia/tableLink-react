@@ -269,7 +269,7 @@ router.post('/users/favorite/toggle', async (req, res) => {
         });
       }
 
-      // 즐겨찾기 추가
+      // 즐겨찾기 추가 (트리거가 favorite_count 자동 업데이트)
       await pool.query(`
         INSERT INTO favorites (user_id, store_id)
         VALUES ($1, $2)
@@ -295,7 +295,7 @@ router.post('/users/favorite/toggle', async (req, res) => {
         });
       }
 
-      // 즐겨찾기 제거
+      // 즐겨찾기 제거 (트리거가 favorite_count 자동 업데이트)
       const deleteResult = await pool.query(
         'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
         [userId, parseInt(storeId)]
