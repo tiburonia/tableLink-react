@@ -1,3 +1,4 @@
+
 // 새로운 간단한 지도 마커 관리자
 window.MapMarkerManager = {
   // 현재 표시된 마커들
@@ -214,15 +215,14 @@ window.MapMarkerManager = {
     return markers;
   },
 
-  // 개별 매장 마커 생성
+  // 개별 매장 마커 생성 (완전 리팩토링된 UI)
   createStoreMarker(store, map) {
     const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
     const isOpen = store.isOpen !== false;
     
-    // 리뷰가 없으면 별점 표시 안함, 리뷰가 있으면 별점 표시
+    // 리뷰 정보
     const hasReviews = store.reviewCount > 0;
     const rating = hasReviews ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
-    const ratingStars = hasReviews ? '★'.repeat(Math.round(parseFloat(rating))) : '';
 
     // 카테고리별 아이콘 설정
     const categoryIcon = this.getCategoryIcon(store.category);
@@ -231,150 +231,113 @@ window.MapMarkerManager = {
     const markerId = `store-${store.id || Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
-        <div class="marker-pin">
-          <div class="pin-icon">${categoryIcon}</div>
-        </div>
-        <div class="marker-tooltip">
-          <div class="tooltip-content">
-            <div class="store-name">${store.name}</div>
-            <div class="store-info">
-              ${hasReviews ? `
-                <span class="rating">★ ${rating}</span>
-                <span class="review-count">(${store.reviewCount})</span>
-              ` : '<span class="no-rating">평가 없음</span>'}
-            </div>
-            <div class="store-status ${isOpen ? 'status-open' : 'status-closed'}">
-              ${isOpen ? '🟢 운영중' : '🔴 운영준비중'}
+      <div id="${markerId}" class="clean-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
+        <div class="marker-card">
+          <div class="marker-icon">
+            <span class="icon-emoji">${categoryIcon}</span>
+          </div>
+          <div class="marker-info">
+            <div class="store-name">${store.name.length > 8 ? store.name.substring(0, 8) + '...' : store.name}</div>
+            <div class="store-details">
+              <span class="rating">★ ${rating}</span>
+              <span class="status ${isOpen ? 'open' : 'closed'}">${isOpen ? '운영중' : '준비중'}</span>
             </div>
           </div>
         </div>
       </div>
       <style>
-        .store-marker {
+        .clean-store-marker {
           position: relative;
           cursor: pointer;
           z-index: 200;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .store-marker:hover {
+        .clean-store-marker:hover {
           z-index: 9999 !important;
+          transform: scale(1.05);
         }
 
-        .marker-pin {
-          position: relative;
+        .marker-card {
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 12px;
+          padding: 8px 10px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 140px;
+          max-width: 180px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+        }
+
+        .clean-store-marker:hover .marker-card {
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+          border-color: rgba(41, 126, 252, 0.3);
+        }
+
+        .marker-icon {
           width: 32px;
           height: 32px;
+          border-radius: 8px;
           background: ${isOpen 
             ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' 
             : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)'
           };
-          border-radius: 50%;
-          border: 3px solid #fff;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
-          transition: all 0.3s ease;
+          flex-shrink: 0;
         }
 
-        .store-marker:hover .marker-pin {
-          transform: scale(1.1);
-          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .pin-icon {
+        .icon-emoji {
           font-size: 16px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
 
-        .marker-tooltip {
-          position: absolute;
-          bottom: 40px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(10px);
-          border-radius: 12px;
-          padding: 12px 16px;
-          min-width: 160px;
-          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          opacity: 0;
-          visibility: hidden;
-          transition: all 0.3s ease;
-          pointer-events: none;
-        }
-
-        .store-marker:hover .marker-tooltip {
-          opacity: 1;
-          visibility: visible;
-          transform: translateX(-50%) translateY(-5px);
-        }
-
-        .marker-tooltip::after {
-          content: '';
-          position: absolute;
-          top: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          border: 8px solid transparent;
-          border-top-color: rgba(255, 255, 255, 0.95);
-        }
-
-        .tooltip-content {
-          text-align: center;
+        .marker-info {
+          flex: 1;
+          min-width: 0;
         }
 
         .store-name {
           font-weight: 700;
-          font-size: 14px;
+          font-size: 13px;
           color: #1f2937;
-          margin-bottom: 6px;
           line-height: 1.2;
+          margin-bottom: 2px;
+          overflow: hidden;
+          white-space: nowrap;
+          text-overflow: ellipsis;
         }
 
-        .store-info {
+        .store-details {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 4px;
-          margin-bottom: 6px;
+          gap: 6px;
+          font-size: 11px;
         }
 
         .rating {
           color: #fbbf24;
-          font-size: 12px;
           font-weight: 600;
         }
 
-        .review-count {
-          color: #6b7280;
-          font-size: 11px;
-        }
-
-        .no-rating {
-          color: #9ca3af;
-          font-size: 11px;
-          font-style: italic;
-        }
-
-        .store-status {
-          font-size: 11px;
+        .status {
+          padding: 2px 6px;
+          border-radius: 4px;
           font-weight: 600;
-          padding: 3px 8px;
-          border-radius: 10px;
-          text-align: center;
+          font-size: 10px;
         }
 
-        .status-open {
-          background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        .status.open {
+          background: rgba(16, 185, 129, 0.1);
           color: #065f46;
         }
 
-        .status-closed {
-          background: linear-gradient(135deg, #fee2e2, #fecaca);
+        .status.closed {
+          background: rgba(239, 68, 68, 0.1);
           color: #991b1b;
         }
       </style>
@@ -449,9 +412,8 @@ window.MapMarkerManager = {
     return this.createClusterMarkerElement(regionName, stores, map, anchorCoord);
   },
 
-  // 마커 엘리먼트 생성 (공통 로직)
+  // 마커 엘리먼트 생성 (완전 리팩토링된 집계 마커)
   createClusterMarkerElement(regionName, stores, map, anchorCoord) {
-
     const position = new kakao.maps.LatLng(anchorCoord.lat, anchorCoord.lng);
     const storeCount = stores.length;
     const openCount = stores.filter(s => s.isOpen !== false).length;
@@ -465,42 +427,86 @@ window.MapMarkerManager = {
     const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="cluster-marker cluster-marker-hoverable" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
-        <div class="cluster-info">
-          <div class="region-name">${displayName}</div>
-          <div class="cluster-count">${storeCount}</div>
+      <div id="${markerId}" class="clean-cluster-marker" onclick="window.MapMarkerManager.zoomToRegion('${regionName}', ${anchorCoord.lat}, ${anchorCoord.lng})">
+        <div class="cluster-card">
+          <div class="cluster-header">
+            <span class="region-name">${displayName.length > 6 ? displayName.substring(0, 6) + '...' : displayName}</span>
+          </div>
+          <div class="cluster-stats">
+            <div class="stat-item">
+              <span class="stat-number">${storeCount}</span>
+              <span class="stat-label">매장</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">${openCount}</span>
+              <span class="stat-label">운영</span>
+            </div>
+          </div>
         </div>
       </div>
       <style>
-        .cluster-marker {
-          background: linear-gradient(135deg, #297efc, #4f46e5);
-          color: white;
-          border-radius: 6px;
-          padding: 2px 5px;
+        .clean-cluster-marker {
           cursor: pointer;
-          box-shadow: 0 1px 3px rgba(41,126,252,0.3);
-          min-width: 32px;
-          text-align: center;
           position: relative;
-          z-index: 100;
-          transition: all 0.2s ease;
+          z-index: 150;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .cluster-marker-hoverable:hover {
-          transform: scale(1.2) !important;
+
+        .clean-cluster-marker:hover {
+          transform: scale(1.1);
           z-index: 9998 !important;
-          box-shadow: 0 4px 15px rgba(41,126,252,0.6) !important;
-          border-color: rgba(255,255,255,0.4) !important;
         }
+
+        .cluster-card {
+          background: linear-gradient(145deg, #4f46e5 0%, #6366f1 100%);
+          border-radius: 12px;
+          padding: 8px 12px;
+          min-width: 80px;
+          box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .clean-cluster-marker:hover .cluster-card {
+          box-shadow: 0 8px 30px rgba(79, 70, 229, 0.5);
+          border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .cluster-header {
+          text-align: center;
+          margin-bottom: 4px;
+        }
+
         .region-name {
-          font-weight: bold;
-          font-size: 8px;
-          line-height: 1.1;
-          margin-bottom: 1px;
+          color: white;
+          font-weight: 700;
+          font-size: 12px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
-        .cluster-count {
-          font-size: 7px;
-          opacity: 0.9;
-          line-height: 1;
+
+        .cluster-stats {
+          display: flex;
+          justify-content: space-around;
+          gap: 4px;
+        }
+
+        .stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
+        }
+
+        .stat-number {
+          color: white;
+          font-weight: 700;
+          font-size: 11px;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-label {
+          color: rgba(255, 255, 255, 0.8);
+          font-size: 9px;
+          font-weight: 500;
         }
       </style>
     `;
@@ -761,8 +767,6 @@ window.MapMarkerManager = {
       return null;
     }
   },
-
-  
 
   // 센트로이드 계산 (기존 중심 좌표 계산)
   calculateCentroid(stores) {
