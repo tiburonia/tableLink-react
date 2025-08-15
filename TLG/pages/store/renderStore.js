@@ -468,7 +468,7 @@ async function loadLoyaltyData(store) {
     console.log(`⭐ 매장 ${store.id} 단골 레벨 정보 로드`);
 
     // 현재 로그인한 사용자 정보 가져오기
-    const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
+    const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
 
     if (!userInfo) {
       console.log('👤 로그인하지 않은 사용자 - 기본 단골 레벨 표시');
@@ -482,22 +482,40 @@ async function loadLoyaltyData(store) {
       return;
     }
 
-    // 실제 API 호출 (현재는 목업 데이터)
-    // const response = await fetch(`/api/stores/${store.id}/loyalty/${userInfo.id}`);
+    // 실제 단골 레벨 정보 가져오기
+    if (window.RegularLevelManager) {
+      const regularLevelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, store.id);
+      
+      if (regularLevelData) {
+        console.log('✅ 실제 단골 레벨 데이터 로드:', regularLevelData);
+        
+        // 단골 레벨 UI 업데이트
+        const loyaltyContainer = document.querySelector('.loyalty-info');
+        if (loyaltyContainer) {
+          window.RegularLevelManager.renderLevelUI(regularLevelData, '.loyalty-info');
+        }
+        return;
+      }
+    }
 
-    // 목업 데이터
-    const loyaltyData = {
-      level: '골드 단골',
-      visitCount: 13,
-      progressPercent: 65,
-      nextLevelVisits: 7,
-      benefits: ['5% 적립', '우선 주문', '특별 할인']
-    };
-
-    updateLoyaltyUI(loyaltyData);
+    // 폴백: 기본 데이터
+    updateLoyaltyUI({
+      level: '신규 고객',
+      visitCount: 0,
+      progressPercent: 0,
+      nextLevelVisits: 5,
+      benefits: ['첫방문 할인', '웰컴 쿠폰', '신규 혜택']
+    });
 
   } catch (error) {
     console.error('❌ 단골 레벨 정보 로드 실패:', error);
+    updateLoyaltyUI({
+      level: '신규 고객',
+      visitCount: 0,
+      progressPercent: 0,
+      nextLevelVisits: 5,
+      benefits: ['첫방문 할인', '웰컴 쿠폰', '신규 혜택']
+    });
   }
 }
 

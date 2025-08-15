@@ -20,7 +20,7 @@ async function renderMyPage() {
             <div class="profile-level" id="profileLevel">등급 확인중...</div>
           </div>
         </div>
-        
+
         <div class="profile-details">
           <div class="detail-row">
             <span class="detail-label">👤 아이디</span>
@@ -90,6 +90,13 @@ async function renderMyPage() {
         </div>
       </section>
 
+      <!-- 단골 레벨 정보 영역 -->
+      <section class="section-card">
+        <h2>🏆 나의 단골 레벨</h2>
+        <div id="regularLevelsList">
+          <p>🏆 단골 레벨 정보를 불러오는 중...</p>
+        </div>
+      </section>
 
     </main>
 
@@ -311,7 +318,7 @@ async function renderMyPage() {
         max-width: 430px;
         height: 78px;
         background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
-        border-top: 1px solid rgba(255,255,255,0.3);
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
         box-shadow: 
           0 -8px 32px rgba(41, 126, 252, 0.08),
           0 -4px 16px rgba(0, 0, 0, 0.04),
@@ -665,6 +672,68 @@ async function renderMyPage() {
         background: #ff5252;
         border-color: #ff5252;
       }
+
+      /* 단골 레벨 관련 스타일 */
+      .regular-level-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+      }
+      .regular-level-item:hover {
+        background: #e9ecef;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .level-store-info {
+        flex: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .level-store-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 16px;
+      }
+      .level-badge {
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+      .level-stats {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-size: 13px;
+        color: #666;
+      }
+      .level-visits, .level-points {
+        margin-bottom: 4px;
+      }
+      .view-all-regular-levels-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #6f42c1;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .view-all-regular-levels-btn:hover {
+        background: #5a32a3;
+      }
     </style>
   `;
 
@@ -746,7 +815,7 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
   const orderCount = ordersData ? ordersData.length : 0;
   let userLevel = '브론즈';
   let levelColor = '#cd7f32';
-  
+
   if (orderCount >= 50) {
     userLevel = '다이아몬드';
     levelColor = '#b9f2ff';
@@ -858,6 +927,9 @@ async function loadUserData() {
     // 즐겨찾기 매장 UI 업데이트
     updateFavoriteStoresUI(favoriteStoresData);
 
+    // 단골 레벨 UI 업데이트
+    await updateRegularLevelsList(currentUserInfo);
+
   } catch (error) {
     console.error('사용자 데이터 로딩 실패:', error);
 
@@ -866,13 +938,15 @@ async function loadUserData() {
     const reservationList = document.querySelector('#reservationList');
     const couponList = document.querySelector('#couponList');
     const reviewList = document.querySelector('#reviewList');
-    const favoriteStoresSection = document.getElementById('favoriteStoresSection');
+    const favoriteStoresSection = document.getElementById('favoriteStoresList');
+    const regularLevelsListDiv = document.getElementById('regularLevelsList');
 
     if (orderList) orderList.innerHTML = `<p>❌ 주문내역을 불러올 수 없습니다.</p>`;
     if (reservationList) reservationList.innerHTML = `<p>❌ 예약내역을 불러올 수 없습니다.</p>`;
     if (couponList) couponList.innerHTML = `<p>❌ 쿠폰 정보를 불러올 수 없습니다.</p>`;
     if (reviewList) reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
     if (favoriteStoresSection) favoriteStoresSection.innerHTML = `<p>❌ 즐겨찾기 매장 정보를 불러올 수 없습니다.</p>`;
+    if (regularLevelsListDiv) regularLevelsListDiv.innerHTML = `<p>❌ 단골 레벨 정보를 불러올 수 없습니다.</p>`;
   }
 }
 
@@ -1440,7 +1514,7 @@ function updateFavoriteStoresUI(favoriteStoresData) {
   if (favoriteStoresData && favoriteStoresData.length > 0) {
     // 최신 4개만 표시
     const displayStores = favoriteStoresData.slice(0, 4);
-    
+
     displayStores.forEach(store => {
       const favoriteDiv = document.createElement('div');
       favoriteDiv.className = 'favorite-store-item';
@@ -1525,6 +1599,180 @@ function updateFavoriteStoresUI(favoriteStoresData) {
   }
 }
 
+// 단골 레벨 업데이트 함수
+async function updateRegularLevelsList(currentUserInfo) {
+  const regularLevelsListDiv = document.getElementById('regularLevelsList');
+  if (!regularLevelsListDiv) return;
+
+  regularLevelsListDiv.innerHTML = '<p>🏆 단골 레벨 정보를 불러오는 중...</p>';
+
+  try {
+    // RegularLevelManager가 로드되지 않은 경우 로드
+    if (!window.RegularLevelManager) {
+      console.log('📥 RegularLevelManager 로드 중...');
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '/TLG/utils/regularLevelManager.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    const regularLevels = await window.RegularLevelManager.getUserAllRegularLevels(currentUserInfo.id);
+
+    regularLevelsListDiv.innerHTML = '';
+
+    if (regularLevels && regularLevels.length > 0) {
+      // 최대 3개까지만 표시
+      const displayLevels = regularLevels.slice(0, 3);
+
+      displayLevels.forEach(levelData => {
+        const levelDiv = document.createElement('div');
+        levelDiv.className = 'regular-level-item';
+        levelDiv.innerHTML = `
+          <div class="level-store-info" onclick="goToStore(${levelData.store_id})">
+            <div class="level-store-name">${levelData.store_name}</div>
+            <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}">
+              ${levelData.level?.level_name || '신규 고객'}
+            </div>
+          </div>
+          <div class="level-stats">
+            <span class="level-visits">${levelData.stats?.visit_count || 0}회 방문</span>
+            <span class="level-points">${levelData.stats?.points || 0}P</span>
+          </div>
+        `;
+        regularLevelsListDiv.appendChild(levelDiv);
+      });
+
+      // 전체보기 버튼 추가 (3개보다 많은 경우)
+      if (regularLevels.length > 3) {
+        const viewAllBtn = document.createElement('button');
+        viewAllBtn.className = 'view-all-regular-levels-btn';
+        viewAllBtn.innerHTML = `🏆 전체 단골 레벨 보기 (${regularLevels.length}개)`;
+        viewAllBtn.addEventListener('click', () => {
+          showAllRegularLevelsModal(regularLevels);
+        });
+        regularLevelsListDiv.appendChild(viewAllBtn);
+      }
+
+    } else {
+      regularLevelsListDiv.innerHTML = '<p>아직 단골로 등록된 매장이 없습니다.</p>';
+    }
+
+  } catch (error) {
+    console.error('❌ 단골 레벨 정보 조회 실패:', error);
+    regularLevelsListDiv.innerHTML = '<p>❌ 단골 레벨 정보를 불러올 수 없습니다.</p>';
+  }
+}
+
+// 전체 단골 레벨 보기 모달
+async function showAllRegularLevelsModal(regularLevels) {
+  try {
+    const modal = document.createElement('div');
+    modal.className = 'review-modal';
+    modal.innerHTML = `
+      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+          <h3>🏆 전체 단골 레벨 현황 (${regularLevels.length}개)</h3>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
+        </div>
+        <div class="all-regular-levels-list">
+          ${regularLevels.map(levelData => `
+            <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${levelData.store_id})">
+              <div class="level-store-header">
+                <div class="level-store-name">${levelData.store_name}</div>
+                <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+                  ${levelData.level?.level_name || '신규 고객'}
+                </div>
+              </div>
+              <div class="level-modal-stats">
+                <span>${levelData.stats?.visit_count || 0}회 방문</span> • 
+                <span>${levelData.stats?.points || 0}P</span> • 
+                <span>${(levelData.stats?.total_spent || 0).toLocaleString()}원 누적</span>
+              </div>
+              ${levelData.level?.benefits && levelData.level.benefits.length > 0 ? `
+                <div class="level-modal-benefits">
+                  💝 ${levelData.level.benefits.map(b => window.RegularLevelManager.formatBenefitType(b.type)).join(', ')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <style>
+        .regular-level-modal-item {
+          background: #f8f9fa;
+          border-radius: 12px;
+          padding: 16px;
+          border: 1px solid #e9ecef;
+          transition: background 0.2s;
+        }
+        .regular-level-modal-item:hover {
+          background: #e9ecef;
+        }
+        .level-store-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .level-store-name {
+          font-weight: 600;
+          color: #333;
+          font-size: 16px;
+        }
+        .level-modal-stats {
+          color: #666;
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+        .level-modal-benefits {
+          color: #667eea;
+          font-size: 12px;
+          font-weight: 500;
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 모달 배경 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 단골 레벨 조회 실패:', error);
+    alert('단골 레벨 목록을 불러올 수 없습니다.');
+  }
+}
+
+// 모달 닫고 매장으로 이동하는 전역 함수
+window.closeModalAndGoToStore = function(storeId) {
+  // 모달 닫기
+  const modal = document.querySelector('.review-modal');
+  if (modal) {
+    document.body.removeChild(modal);
+  }
+
+  // 매장으로 이동
+  if (typeof renderStore === 'function') {
+    fetch(`/api/stores/${storeId}`)
+      .then(response => response.json())
+      .then(storeData => {
+        if (storeData.success && storeData.store) {
+          renderStore(storeData.store);
+        }
+      })
+      .catch(error => {
+        console.error('매장 정보 가져오기 실패:', error);
+      });
+  }
+};
+
 // 전체 리뷰 보기 모달
 async function showAllReviewsModal(currentUserInfo) {
   try {
@@ -1551,7 +1799,7 @@ async function showAllReviewsModal(currentUserInfo) {
                 <span class="review-rating">★ ${review.score}</span>
               </div>
               <div class="review-content">${review.content}</div>
-              <div class="review-date">${review.date} • ${review.storeCategory}</div>
+              <div class="review-date">${review.date}</div>
             </div>
           `).join('')}
         </div>
@@ -1572,29 +1820,6 @@ async function showAllReviewsModal(currentUserInfo) {
     alert('리뷰 목록을 불러올 수 없습니다.');
   }
 }
-
-// 모달 닫고 매장으로 이동하는 전역 함수
-window.closeModalAndGoToStore = function(storeId) {
-  // 모달 닫기
-  const modal = document.querySelector('.review-modal');
-  if (modal) {
-    document.body.removeChild(modal);
-  }
-
-  // 매장으로 이동
-  if (typeof renderStore === 'function') {
-    fetch(`/api/stores/${storeId}`)
-      .then(response => response.json())
-      .then(storeData => {
-        if (storeData.success && storeData.store) {
-          renderStore(storeData.store);
-        }
-      })
-      .catch(error => {
-        console.error('매장 정보 가져오기 실패:', error);
-      });
-  }
-};
 
 // 전체 즐겨찾기 매장 보기 모달
 async function showAllFavoritesModal(favoriteStoresData) {
@@ -1862,4 +2087,5 @@ function goToStore(storeId) {
   }
 }
 
+// 전역 함수로도 등록
 window.renderMyPage = renderMyPage;

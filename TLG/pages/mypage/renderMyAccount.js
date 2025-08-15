@@ -162,7 +162,9 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
         spent: 0,
         savedMoney: 0
       }
-    }
+    },
+    // 단골 레벨 데이터 추가
+    regularLevels: userInfo.regularLevels || []
   };
 }
 
@@ -322,7 +324,13 @@ function generateDummyData(userId) {
         spent: 189300,
         savedMoney: 22100
       }
-    }
+    },
+    // 단골 레벨 더미 데이터
+    regularLevels: [
+      { store: '스타벅스 강남점', level: 'VVIP', points: 1200, nextLevelPoints: 2000, benefits: ['음료 사이즈 업'] },
+      { store: '맥도날드 역삼점', level: 'VIP', points: 800, nextLevelPoints: 1500, benefits: ['감자튀김 무료'] },
+      { store: '투썸플레이스 선릉점', level: 'REGULAR', points: 300, nextLevelPoints: 700, benefits: ['아메리카노 10% 할인'] }
+    ]
   };
 }
 
@@ -399,6 +407,14 @@ async function renderMyAccount() {
                 <div class="summary-label">절약금액</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 단골 레벨 섹션 -->
+        <div class="regular-levels-section">
+          <h3>💖 나의 단골 레벨</h3>
+          <div class="regular-levels-list" id="regularLevelsListAccount">
+            <div class="loading-placeholder">단골 레벨 정보를 불러오는 중...</div>
           </div>
         </div>
 
@@ -678,6 +694,29 @@ async function renderMyAccount() {
         font-size: 12px;
         color: #666;
         margin-top: 4px;
+      }
+
+      .regular-levels-section {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
+      .regular-levels-section h3 {
+        color: #333;
+        font-size: 18px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        margin-top: 0;
+      }
+
+      .regular-levels-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
       .quick-actions {
@@ -1011,6 +1050,77 @@ async function renderMyAccount() {
         flex: 1;
       }
 
+      .regular-level-account-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s ease;
+      }
+
+      .regular-level-account-item:hover {
+        transform: translateX(4px);
+      }
+
+      .level-account-store {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .level-account-badge {
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .level-account-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .regular-level-modal-account-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+      }
+
+      .level-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .level-modal-store {
+        font-weight: 600;
+        color: #333;
+      }
+
+      .level-modal-stats {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+
+      .level-modal-benefits {
+        color: #667eea;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
       @media (max-width: 430px) {
         .account-content {
           padding: 80px 16px 40px 16px;
@@ -1036,6 +1146,10 @@ async function renderMyAccount() {
 
         .stat-number {
           font-size: 14px;
+        }
+
+        .regular-levels-section {
+          padding: 16px;
         }
 
         .quick-actions {
@@ -1219,6 +1333,9 @@ async function loadAccountData() {
     updateReservations(displayData);
     updatePersonalInfo(displayData);
 
+    // 단골 레벨 정보 업데이트
+    updateRegularLevelsAccount(displayData);
+
     console.log('✅ 모든 사용자 데이터 로드 및 UI 업데이트 완료');
 
   } catch (error) {
@@ -1243,6 +1360,9 @@ async function loadAccountData() {
         updateMonthlySummary(basicData);
         updatePersonalInfo(basicData);
 
+        // 단골 레벨 정보 업데이트 (부분 복구 시에도 적용)
+        updateRegularLevelsAccount(basicData);
+
         // 주문/리뷰는 빈 데이터로
         document.getElementById('recentOrdersList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">주문 내역을 불러올 수 없습니다.</p>';
         document.getElementById('reservationsList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">예약 정보를 불러올 수 없습니다.</p>';
@@ -1262,6 +1382,7 @@ async function loadAccountData() {
     updateRecentOrders(fallbackData);
     updateReservations(fallbackData);
     updatePersonalInfo(fallbackData);
+    updateRegularLevelsAccount(fallbackData); // 더미 데이터로 단골 레벨 업데이트
   }
 }
 
@@ -1312,6 +1433,42 @@ function updateMonthlySummary(data) {
   if (monthlySpent) monthlySpent.textContent = `${monthlyStats.spent.toLocaleString()}원`;
   if (monthlySaved) monthlySaved.textContent = `${monthlyStats.savedMoney.toLocaleString()}원`;
 }
+
+// 단골 레벨 목록 업데이트 (계정 페이지)
+function updateRegularLevelsAccount(data) {
+  const regularLevelsList = document.getElementById('regularLevelsListAccount');
+  if (!regularLevelsList) return;
+
+  if (data.regularLevels && data.regularLevels.length > 0) {
+    regularLevelsList.innerHTML = data.regularLevels.map((levelInfo, index) => `
+      <div class="regular-level-account-item">
+        <div class="level-account-store">
+          <span>${levelInfo.store}</span>
+          <span class="level-account-badge" style="background: ${getLevelBadgeBackground(levelInfo.level)};">
+            ${levelInfo.level}
+          </span>
+        </div>
+        <div class="level-account-meta">
+          <span>${levelInfo.points} / ${levelInfo.nextLevelPoints} P</span>
+          <span>${levelInfo.benefits.join(', ')}</span>
+        </div>
+      </div>
+    `).join('');
+  } else {
+    regularLevelsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">등록된 단골 레벨이 없습니다.</p>';
+  }
+}
+
+// 단골 레벨 배지 배경색 결정 함수
+function getLevelBadgeBackground(level) {
+  switch (level) {
+    case 'VVIP': return 'linear-gradient(45deg, #f857a6, #ff5858)';
+    case 'VIP': return 'linear-gradient(45deg, #43e97b, #36d1dc)';
+    case 'REGULAR': return 'linear-gradient(45deg, #24c6dc, #514a9d)';
+    default: return 'linear-gradient(45deg, #bdc3c7, #2c3e50)';
+  }
+}
+
 
 // 최근 주문 업데이트
 function updateRecentOrders(data) {
