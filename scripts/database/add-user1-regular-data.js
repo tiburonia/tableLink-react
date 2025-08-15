@@ -27,13 +27,36 @@ async function addUser1RegularData() {
       return;
     }
     
+    // 3. 기존 user1 데이터 완전 삭제
+    console.log('🧹 기존 user1 단골 데이터 정리 중...');
+    
+    // 기존 혜택 발급 기록 삭제
+    const deletedBenefits = await client.query(`
+      DELETE FROM regular_level_benefit_issues WHERE user_id = 'user1'
+    `);
+    console.log(`   - 기존 혜택 발급 기록: ${deletedBenefits.rowCount}개 삭제`);
+    
+    // 기존 레벨 변경 이력 삭제
+    const deletedHistory = await client.query(`
+      DELETE FROM regular_level_history WHERE user_id = 'user1'
+    `);
+    console.log(`   - 기존 레벨 변경 이력: ${deletedHistory.rowCount}개 삭제`);
+    
+    // 기존 단골 통계 삭제
+    const deletedStats = await client.query(`
+      DELETE FROM user_store_stats WHERE user_id = 'user1'
+    `);
+    console.log(`   - 기존 단골 통계: ${deletedStats.rowCount}개 삭제`);
+    
     let statsCreated = 0;
     let historyCreated = 0;
     let benefitsIssued = 0;
     
     console.log(`👤 user1의 ${stores.length}개 매장 단골 데이터 생성 시작`);
     
-    for (const store of stores) {
+    for (let i = 0; i < stores.length; i++) {
+      const store = stores[i];
+      
       // 랜덤한 단골 통계 생성 (더 현실적인 분포)
       const visitProbability = Math.random();
       
@@ -69,128 +92,114 @@ async function addUser1RegularData() {
       const lastVisitAt = new Date();
       lastVisitAt.setDate(lastVisitAt.getDate() - daysAgo);
       
-      // 현재 레벨 계산
-      const levelResult = await client.query(`
-        SELECT calculate_regular_level($1, $2, $3, $4, $5) as level_id
-      `, ['user1', store.id, points, totalSpent, visitCount]);
-      
-      const currentLevelId = levelResult.rows[0].level_id;
-      const currentLevelAt = currentLevelId ? lastVisitAt : null;
-      
-      // user_store_stats 삽입
-      await client.query(`
-        INSERT INTO user_store_stats (
-          user_id, store_id, points, total_spent, visit_count,
-          last_visit_at, current_level_id, current_level_at,
-          created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (user_id, store_id) DO UPDATE SET
-          points = $3,
-          total_spent = $4,
-          visit_count = $5,
-          last_visit_at = $6,
-          current_level_id = $7,
-          current_level_at = $8,
-          updated_at = $10
-      `, [
-        'user1', store.id, points, totalSpent, visitCount,
-        lastVisitAt, currentLevelId, currentLevelAt,
-        lastVisitAt, lastVisitAt
-      ]);
-      
-      statsCreated++;
-      
-      // 3. 레벨 변경 이력 생성 (현재 레벨이 있는 경우)
-      if (currentLevelId) {
-        // 기존 이력 삭제 후 새로 생성
+      try {
+        // 현재 레벨 계산
+        const levelResult = await client.query(`
+          SELECT calculate_regular_level($1, $2, $3, $4, $5) as level_id
+        `, ['user1', store.id, points, totalSpent, visitCount]);
+        
+        const currentLevelId = levelResult.rows[0].level_id;
+        const currentLevelAt = currentLevelId ? lastVisitAt : null;
+        
+        // user_store_stats 삽입
         await client.query(`
-          DELETE FROM regular_level_history 
-          WHERE user_id = $1 AND store_id = $2
-        `, ['user1', store.id]);
+          INSERT INTO user_store_stats (
+            user_id, store_id, points, total_spent, visit_count,
+            last_visit_at, current_level_id, current_level_at,
+            created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `, [
+          'user1', store.id, points, totalSpent, visitCount,
+          lastVisitAt, currentLevelId, currentLevelAt,
+          lastVisitAt, lastVisitAt
+        ]);
         
-        // 브론즈 → 현재 레벨까지의 이력 생성
-        const levelHistoryResult = await client.query(`
-          SELECT id, level_rank FROM regular_levels 
-          WHERE store_id = $1 AND level_rank <= (
-            SELECT level_rank FROM regular_levels WHERE id = $2
-          )
-          ORDER BY level_rank
-        `, [store.id, currentLevelId]);
+        statsCreated++;
         
-        const levelHistory = levelHistoryResult.rows;
-        
-        for (let i = 0; i < levelHistory.length; i++) {
-          const fromLevelId = i === 0 ? null : levelHistory[i - 1].id;
-          const toLevelId = levelHistory[i].id;
+        // 레벨 변경 이력 생성 (현재 레벨이 있는 경우)
+        if (currentLevelId) {
+          // 브론즈 → 현재 레벨까지의 이력 생성
+          const levelHistoryResult = await client.query(`
+            SELECT id, level_rank FROM regular_levels 
+            WHERE store_id = $1 AND level_rank <= (
+              SELECT level_rank FROM regular_levels WHERE id = $2
+            )
+            ORDER BY level_rank
+          `, [store.id, currentLevelId]);
           
-          // 레벨업 날짜 (시간 간격을 두고)
-          const levelUpDate = new Date(lastVisitAt);
-          levelUpDate.setDate(levelUpDate.getDate() - (levelHistory.length - i) * 15);
+          const levelHistory = levelHistoryResult.rows;
           
-          await client.query(`
-            INSERT INTO regular_level_history (
-              user_id, store_id, from_level_id, to_level_id, reason, changed_at
-            ) VALUES ($1, $2, $3, $4, $5, $6)
-          `, ['user1', store.id, fromLevelId, toLevelId, 'system', levelUpDate]);
-          
-          historyCreated++;
-          
-          // 4. 레벨별 혜택 발급 (60% 확률로)
-          if (Math.random() > 0.4) {
-            const levelResult = await client.query(`
-              SELECT benefits FROM regular_levels WHERE id = $1
-            `, [toLevelId]);
+          for (let j = 0; j < levelHistory.length; j++) {
+            const fromLevelId = j === 0 ? null : levelHistory[j - 1].id;
+            const toLevelId = levelHistory[j].id;
             
-            const benefits = levelResult.rows[0]?.benefits;
-            if (benefits && Array.isArray(benefits)) {
-              for (const benefit of benefits) {
-                const expiresAt = benefit.expires_days ? 
-                  new Date(levelUpDate.getTime() + benefit.expires_days * 24 * 60 * 60 * 1000) : 
-                  null;
-                
-                const isUsed = Math.random() > 0.6; // 40% 확률로 사용됨
-                const usedAt = isUsed ? 
-                  new Date(levelUpDate.getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000) : 
-                  null;
-                
-                // 기존 혜택 삭제 후 새로 생성
-                await client.query(`
-                  DELETE FROM regular_level_benefit_issues 
-                  WHERE user_id = $1 AND store_id = $2 AND level_id = $3 AND benefit_type = $4
-                `, ['user1', store.id, toLevelId, benefit.type]);
-                
-                await client.query(`
-                  INSERT INTO regular_level_benefit_issues (
-                    user_id, store_id, level_id, benefit_type, benefit_data,
-                    issued_at, used_at, expires_at, is_used
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                `, [
-                  'user1', store.id, toLevelId, benefit.type, benefit,
-                  levelUpDate, usedAt, expiresAt, isUsed
-                ]);
-                
-                benefitsIssued++;
+            // 레벨업 날짜 (시간 간격을 두고)
+            const levelUpDate = new Date(lastVisitAt);
+            levelUpDate.setDate(levelUpDate.getDate() - (levelHistory.length - j) * 15);
+            
+            await client.query(`
+              INSERT INTO regular_level_history (
+                user_id, store_id, from_level_id, to_level_id, reason, changed_at
+              ) VALUES ($1, $2, $3, $4, $5, $6)
+            `, ['user1', store.id, fromLevelId, toLevelId, 'system', levelUpDate]);
+            
+            historyCreated++;
+            
+            // 레벨별 혜택 발급 (60% 확률로)
+            if (Math.random() > 0.4) {
+              const levelResult = await client.query(`
+                SELECT benefits FROM regular_levels WHERE id = $1
+              `, [toLevelId]);
+              
+              const benefits = levelResult.rows[0]?.benefits;
+              if (benefits && Array.isArray(benefits)) {
+                for (const benefit of benefits) {
+                  const expiresAt = benefit.expires_days ? 
+                    new Date(levelUpDate.getTime() + benefit.expires_days * 24 * 60 * 60 * 1000) : 
+                    null;
+                  
+                  const isUsed = Math.random() > 0.6; // 40% 확률로 사용됨
+                  const usedAt = isUsed ? 
+                    new Date(levelUpDate.getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000) : 
+                    null;
+                  
+                  await client.query(`
+                    INSERT INTO regular_level_benefit_issues (
+                      user_id, store_id, level_id, benefit_type, benefit_data,
+                      issued_at, used_at, expires_at, is_used
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                  `, [
+                    'user1', store.id, toLevelId, benefit.type, benefit,
+                    levelUpDate, usedAt, expiresAt, isUsed
+                  ]);
+                  
+                  benefitsIssued++;
+                }
               }
             }
           }
         }
+      } catch (error) {
+        console.error(`❌ 매장 ${store.id} (${store.name}) 처리 실패:`, error.message);
+        continue;
       }
       
-      // 진행률 출력 (매 100개마다)
-      if (statsCreated % 100 === 0) {
-        console.log(`  ⏳ 진행률: ${statsCreated}/${stores.length} (${Math.round(statsCreated/stores.length*100)}%)`);
+      // 10개 배치마다 로그 출력
+      if ((i + 1) % 10 === 0) {
+        const progress = ((i + 1) / stores.length * 100).toFixed(1);
+        console.log(`📦 배치 ${Math.ceil((i + 1) / 10)}: ${i + 1}/${stores.length} 완료 (${progress}%) - 통계: ${statsCreated}개, 이력: ${historyCreated}개, 혜택: ${benefitsIssued}개`);
       }
     }
     
     await client.query('COMMIT');
     
-    console.log('🎉 user1 단골 레벨 더미 데이터 생성 완료!');
-    console.log(`📊 생성된 데이터:`);
+    console.log('\n🎉 user1 단골 레벨 더미 데이터 생성 완료!');
+    console.log(`📊 최종 생성된 데이터:`);
     console.log(`   - 단골 통계: ${statsCreated}개`);
     console.log(`   - 레벨 이력: ${historyCreated}개`);
     console.log(`   - 혜택 발급: ${benefitsIssued}개`);
     
-    // 5. 결과 요약 출력
+    // 결과 요약 출력
     const summaryResult = await client.query(`
       SELECT 
         COUNT(*) as total_stats,
@@ -206,14 +215,14 @@ async function addUser1RegularData() {
     `);
     
     const summary = summaryResult.rows[0];
-    console.log(`📈 user1 단골 통계 요약:`);
+    console.log(`\n📈 user1 단골 통계 요약:`);
     console.log(`   - 총 단골 매장: ${summary.total_stats}개`);
     console.log(`   - 레벨 보유 매장: ${summary.users_with_level}개`);
     console.log(`   - 평균 포인트: ${Math.round(summary.avg_points)}점 (최대: ${summary.max_points}점)`);
     console.log(`   - 평균 누적 결제: ${Math.round(summary.avg_spent).toLocaleString()}원 (최대: ${Math.round(summary.max_spent).toLocaleString()}원)`);
     console.log(`   - 평균 방문 횟수: ${Math.round(summary.avg_visits)}회 (최대: ${summary.max_visits}회)`);
     
-    // 6. 레벨별 분포 확인
+    // 레벨별 분포 확인
     const levelDistribution = await client.query(`
       SELECT 
         rl.name as level_name,
@@ -226,7 +235,7 @@ async function addUser1RegularData() {
       ORDER BY rl.level_rank
     `);
     
-    console.log(`🏆 user1 레벨 분포:`);
+    console.log(`\n🏆 user1 레벨 분포:`);
     for (const level of levelDistribution.rows) {
       console.log(`   - ${level.level_name}: ${level.count}개 매장`);
     }
