@@ -47,46 +47,84 @@ async function renderMap() {
 
     ${window.MapPanelUI.getPanelStyles()}
    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
     html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  font-family: 'Noto Sans KR', sans-serif;
-  background: #f8f8f8;
+  font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   overflow: hidden;
+  font-feature-settings: 'liga' 1, 'kern' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* 검색바 - 지도 위 오버레이 */
 #searchBar {
   position: absolute;
-  top: 20px;
-  left: 16px;
-  right: 16px;
+  top: 24px;
+  left: 20px;
+  right: 20px;
   z-index: 1002;
   pointer-events: auto;
+  animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .search-container {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
-  border-radius: 28px;
-  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.85));
+  border-radius: 32px;
+  padding: 12px 20px;
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.08),
-    0 4px 16px rgba(41, 126, 252, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  transition: all 0.3s ease;
+    0 20px 60px rgba(0, 0, 0, 0.1),
+    0 8px 24px rgba(41, 126, 252, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.search-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.6s ease;
+}
+
+.search-container:hover::before {
+  left: 100%;
 }
 
 .search-container:hover {
+  transform: translateY(-2px);
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.12),
-    0 6px 20px rgba(41, 126, 252, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  border-color: rgba(41, 126, 252, 0.2);
+    0 32px 80px rgba(0, 0, 0, 0.15),
+    0 12px 32px rgba(41, 126, 252, 0.12),
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: rgba(41, 126, 252, 0.3);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
 }
 
 #searchInput {
@@ -96,53 +134,97 @@ async function renderMap() {
   background: transparent;
   font-size: 16px;
   color: #1f2937;
-  padding: 10px 12px;
+  padding: 12px 16px;
   font-weight: 500;
+  font-family: inherit;
+  letter-spacing: -0.01em;
 }
 
 #searchInput::placeholder {
   color: #9ca3af;
   font-weight: 400;
+  opacity: 0.8;
+}
+
+#searchInput:focus::placeholder {
+  opacity: 0.6;
+  transform: translateX(4px);
+  transition: all 0.3s ease;
 }
 
 #searchBtn, #refreshBtn, #clearBtn {
-  background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
-  border: 1px solid rgba(41, 126, 252, 0.1);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   font-size: 18px;
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #6b7280;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+#searchBtn::before, #refreshBtn::before, #clearBtn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transition: all 0.4s ease;
+  transform: translate(-50%, -50%);
 }
 
 #searchBtn:hover {
-  background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
-  color: white;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
-  border-color: transparent;
+  background: linear-gradient(135deg, #5b73e8 0%, #6b46c1 100%);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 12px 32px rgba(91, 115, 232, 0.4);
+}
+
+#searchBtn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+#refreshBtn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
 }
 
 #refreshBtn:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  transform: scale(1.05) rotate(180deg);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-  border-color: transparent;
+  background: linear-gradient(135deg, #0d9488 0%, #047857 100%);
+  transform: scale(1.1) translateY(-2px) rotate(180deg);
+  box-shadow: 0 12px 32px rgba(13, 148, 136, 0.4);
+}
+
+#refreshBtn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+#clearBtn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.3);
 }
 
 #clearBtn:hover {
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-  color: #dc2626;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-  border-color: rgba(220, 38, 38, 0.2);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 12px 32px rgba(220, 38, 38, 0.4);
+}
+
+#clearBtn:hover::before {
+  width: 100%;
+  height: 100%;
 }
 
 #clearBtn {
@@ -155,18 +237,51 @@ async function renderMap() {
   top: 100%;
   left: 0;
   width: 100%;
-  max-height: 350px;
+  max-height: 400px;
   overflow-y: auto;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
-  border-radius: 0 0 20px 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border-radius: 0 0 24px 24px;
   box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.12),
-    0 6px 20px rgba(41, 126, 252, 0.08);
-  backdrop-filter: blur(20px);
-  margin-top: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 12px 32px rgba(102, 126, 234, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(24px) saturate(180%);
+  margin-top: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
   border-top: none;
   z-index: 3000;
+  animation: slideDownResult 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideDownResult {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.search-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-results::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 3px;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.5), rgba(118, 75, 162, 0.5));
 }
 
 .search-results.hidden {
@@ -224,14 +339,18 @@ async function renderMap() {
 #content {
   position: fixed;
   top: 0;
-  bottom: 84px;   /* 바텀바 높이 + 둥근 모서리 여백 */
+  bottom: 84px;
   left: 0;
   width: 100%;
   max-width: 430px;
   height: calc(100vh - 84px);
   overflow: hidden;
-  background: #fdfdfd;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   z-index: 1;
+  border-radius: 0 0 24px 24px;
+  box-shadow: 
+    0 10px 40px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* 지도 */
@@ -241,7 +360,8 @@ async function renderMap() {
   position: relative;
   z-index: 0;
   overflow: hidden;
-  border-radius: 0 0 18px 18px;
+  border-radius: 0 0 24px 24px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* 바텀바 */
@@ -252,95 +372,118 @@ async function renderMap() {
   transform: translateX(-50%);
   width: 100%;
   max-width: 430px;
-  height: 78px;
-  background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
-  border-top: 1px solid rgba(255,255,255,0.3);
+  height: 88px;
+  background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,250,252,0.9));
+  border-top: 2px solid rgba(255,255,255,0.6);
   box-shadow:
-    0 -8px 32px rgba(41, 126, 252, 0.08),
+    0 -20px 60px rgba(0, 0, 0, 0.1),
+    0 -8px 32px rgba(41, 126, 252, 0.06),
     0 -4px 16px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 2px 0 rgba(255, 255, 255, 0.8);
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1001;
-  padding: 8px 16px 12px 16px;
+  padding: 12px 20px 16px 20px;
   box-sizing: border-box;
-  border-radius: 24px 24px 0 0;
-  backdrop-filter: blur(20px);
-  gap: 8px;
+  border-radius: 32px 32px 0 0;
+  backdrop-filter: blur(24px) saturate(180%);
+  gap: 12px;
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 #bottomBar button {
   position: relative;
   flex: 1;
-  height: 52px;
+  height: 56px;
   min-width: 0;
   border: none;
   outline: none;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-  color: #6B7280;
-  font-size: 20px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.6) 100%);
+  color: #64748b;
+  font-size: 22px;
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 #bottomBar button::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(41, 126, 252, 0.1), rgba(99, 102, 241, 0.05));
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  border-radius: inherit;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(102, 126, 234, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translate(-50%, -50%);
 }
 
 #bottomBar button:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
-  color: #297efc;
+  transform: translateY(-4px) scale(1.05);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.8) 100%);
+  color: #667eea;
   box-shadow:
-    0 8px 25px rgba(41, 126, 252, 0.15),
-    0 3px 10px rgba(0, 0, 0, 0.1);
-  border-color: rgba(41, 126, 252, 0.2);
+    0 12px 40px rgba(102, 126, 234, 0.2),
+    0 6px 20px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+  border-color: rgba(102, 126, 234, 0.3);
 }
 
 #bottomBar button:hover::before {
+  width: 100%;
+  height: 100%;
   opacity: 1;
 }
 
 #bottomBar button:active {
-  transform: translateY(0);
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-  color: #1e40af;
+  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.05) 100%);
+  color: #5b73e8;
   box-shadow:
-    0 4px 15px rgba(41, 126, 252, 0.2),
-    inset 0 2px 4px rgba(41, 126, 252, 0.1);
+    0 8px 24px rgba(102, 126, 234, 0.15),
+    inset 0 2px 8px rgba(102, 126, 234, 0.1);
 }
 
 /* 현재 활성 페이지 표시 */
 #bottomBar button.active {
-  background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  transform: translateY(-1px);
+  transform: translateY(-3px) scale(1.03);
   box-shadow:
-    0 6px 20px rgba(41, 126, 252, 0.25),
-    0 2px 8px rgba(0, 0, 0, 0.1);
+    0 12px 40px rgba(102, 126, 234, 0.4),
+    0 6px 20px rgba(118, 75, 162, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 #bottomBar button.active::before {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
   opacity: 1;
 }
 
@@ -374,26 +517,42 @@ async function renderMap() {
 /* 위치 정보 표시 */
 #locationInfo {
   position: absolute;
-  top: 90px;
-  left: 20px;
+  top: 100px;
+  left: 24px;
   z-index: 1000;
   pointer-events: none;
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .location-container {
-  background: linear-gradient(135deg, rgba(41, 126, 252, 0.9), rgba(79, 70, 229, 0.85));
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.85));
   color: white;
-  border-radius: 12px;
-  padding: 4px 8px;
+  border-radius: 16px;
+  padding: 8px 12px;
   text-align: left;
-  box-shadow: 0 2px 8px rgba(41, 126, 252, 0.2);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s ease;
-  font-size: 11px;
+  box-shadow: 
+    0 8px 32px rgba(102, 126, 234, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 12px;
   font-weight: 600;
-  min-width: 80px;
-  max-width: 120px;
+  min-width: 100px;
+  max-width: 140px;
+  letter-spacing: -0.01em;
 }
 
 .location-container:hover {
