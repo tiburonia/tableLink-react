@@ -541,6 +541,21 @@ async function renderMyPage() {
       .view-all-reviews-btn:hover {
         background: #138496;
       }
+      .view-all-favorites-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #e91e63;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .view-all-favorites-btn:hover {
+        background: #c2185b;
+      }
       .review-actions {
         display: flex;
         gap: 8px;
@@ -1415,7 +1430,7 @@ async function updateReviewList(currentUserInfo) {
   }
 }
 
-// 즐겨찾기 매장 UI 업데이트 함수
+// 즐겨찾기 매장 UI 업데이트 함수 (최신 4개만 표시)
 function updateFavoriteStoresUI(favoriteStoresData) {
   const favoriteStoresListDiv = document.getElementById('favoriteStoresList');
   if (!favoriteStoresListDiv) return;
@@ -1423,7 +1438,10 @@ function updateFavoriteStoresUI(favoriteStoresData) {
   favoriteStoresListDiv.innerHTML = ''; // 기존 내용 초기화
 
   if (favoriteStoresData && favoriteStoresData.length > 0) {
-    favoriteStoresData.forEach(store => {
+    // 최신 4개만 표시
+    const displayStores = favoriteStoresData.slice(0, 4);
+    
+    displayStores.forEach(store => {
       const favoriteDiv = document.createElement('div');
       favoriteDiv.className = 'favorite-store-item';
       favoriteDiv.innerHTML = `
@@ -1439,6 +1457,17 @@ function updateFavoriteStoresUI(favoriteStoresData) {
       `;
       favoriteStoresListDiv.appendChild(favoriteDiv);
     });
+
+    // 전체보기 버튼 추가 (4개보다 많은 즐겨찾기가 있을 경우)
+    if (favoriteStoresData.length > 4) {
+      const viewAllBtn = document.createElement('button');
+      viewAllBtn.className = 'view-all-favorites-btn';
+      viewAllBtn.innerHTML = `💖 전체 즐겨찾기 보기 (${favoriteStoresData.length}개)`;
+      viewAllBtn.addEventListener('click', () => {
+        showAllFavoritesModal(favoriteStoresData);
+      });
+      favoriteStoresListDiv.appendChild(viewAllBtn);
+    }
 
     // 즐겨찾기 하트 토글 버튼 이벤트 리스너
     favoriteStoresListDiv.querySelectorAll('.favorite-heart-btn').forEach(btn => {
@@ -1564,6 +1593,116 @@ window.closeModalAndGoToStore = function(storeId) {
       .catch(error => {
         console.error('매장 정보 가져오기 실패:', error);
       });
+  }
+};
+
+// 전체 즐겨찾기 매장 보기 모달
+async function showAllFavoritesModal(favoriteStoresData) {
+  try {
+    const modal = document.createElement('div');
+    modal.className = 'review-modal';
+    modal.innerHTML = `
+      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+          <h3>💖 전체 즐겨찾기 매장 (${favoriteStoresData.length}개)</h3>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
+        </div>
+        <div class="all-favorites-list">
+          ${favoriteStoresData.map(store => `
+            <div class="favorite-store-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToFavoriteStore(${store.id})">
+              <div class="favorite-store-content">
+                <div class="favorite-store-name">${store.name}</div>
+                <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
+              </div>
+              <div class="favorite-store-actions">
+                <button class="favorite-heart-btn favorited" data-store-id="${store.id}" data-favorited="true" onclick="event.stopPropagation(); toggleFavoriteInModal(this, ${store.id})">
+                  즐겨찾기
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 모달 배경 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 즐겨찾기 조회 실패:', error);
+    alert('즐겨찾기 목록을 불러올 수 없습니다.');
+  }
+}
+
+// 모달 닫고 즐겨찾기 매장으로 이동하는 전역 함수
+window.closeModalAndGoToFavoriteStore = function(storeId) {
+  // 모달 닫기
+  const modal = document.querySelector('.review-modal');
+  if (modal) {
+    document.body.removeChild(modal);
+  }
+
+  // 매장으로 이동
+  goToStore(storeId);
+};
+
+// 모달 내 즐겨찾기 토글 함수
+window.toggleFavoriteInModal = async function(btn, storeId) {
+  const currentlyFavorited = btn.getAttribute('data-favorited') === 'true';
+
+  console.log(`🔄 모달 즐겨찾기 토글 시작: storeId=${storeId}, 현재상태=${currentlyFavorited ? '좋아요' : '좋아요취소'}`);
+
+  // 즉시 UI 업데이트 (낙관적 업데이트)
+  updateFavoriteHeartUI(btn, !currentlyFavorited);
+
+  try {
+    const response = await fetch('/api/users/favorite/toggle', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: userInfo.id,
+        storeId: storeId,
+        action: currentlyFavorited ? 'remove' : 'add'
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      const isNowFavorited = data.action === 'added' || data.action === 'already_added';
+      console.log(`✅ 모달 즐겨찾기 토글 성공: ${isNowFavorited ? '추가' : '제거'} - ${data.message}`);
+
+      // 서버 응답에 맞게 UI 최종 업데이트
+      updateFavoriteHeartUI(btn, isNowFavorited);
+
+      // 즐겨찾기 해제된 경우 카드 페이드아웃 효과
+      if (!isNowFavorited) {
+        const favoriteItem = btn.closest('.favorite-store-item');
+        if (favoriteItem) {
+          favoriteItem.style.opacity = '0.5';
+          favoriteItem.style.pointerEvents = 'none';
+        }
+      }
+
+    } else {
+      console.error('❌ 모달 즐겨찾기 토글 실패:', data.error);
+      // 실패 시 원래 상태로 되돌리기
+      updateFavoriteHeartUI(btn, currentlyFavorited);
+      alert('즐겨찾기 설정에 실패했습니다: ' + data.error);
+    }
+  } catch (error) {
+    console.error('❌ 모달 즐겨찾기 토글 중 오류:', error);
+    // 에러 시 원래 상태로 되돌리기
+    updateFavoriteHeartUI(btn, currentlyFavorited);
+    alert('서버 연결에 실패했습니다.');
   }
 };
 
