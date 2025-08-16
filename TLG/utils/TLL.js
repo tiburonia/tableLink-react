@@ -1,5 +1,5 @@
 
-window.TLL = async function TLL() {
+window.TLL = async function TLL(preselectedStore = null) {
   // 1. UI 프레임 먼저 렌더링 (검색 기능 포함)
   main.innerHTML = `
   <button id="backBtn" onclick="renderMap()"></button>
@@ -42,6 +42,18 @@ window.TLL = async function TLL() {
   // 2. 검색 기능 설정
   let selectedStore = null;
   let searchTimeout = null;
+
+  // 미리 선택된 매장이 있다면 초기화
+  if (preselectedStore) {
+    console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
+    
+    // UI 요소들이 생성된 후 매장 선택 처리
+    setTimeout(() => {
+      if (typeof window.selectStore === 'function') {
+        window.selectStore(preselectedStore.id, preselectedStore.name);
+      }
+    }, 100);
+  }
 
   const storeSearchInput = document.getElementById('storeSearchInput');
   const storeSearchResults = document.getElementById('storeSearchResults');

@@ -219,6 +219,27 @@ function setupEventListeners(store) {
       console.log('✅ TLR 영역 이벤트 설정 완료');
     }
 
+    // TLL 버튼 이벤트 설정 (매장 미리 선택)
+    const tllButton = document.getElementById('TLL');
+    if (tllButton) {
+      // 기존 onclick 속성 제거
+      tllButton.removeAttribute('onclick');
+      
+      tllButton.addEventListener('click', () => {
+        try {
+          console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 미리 선택하여 실행`);
+          if (typeof TLL === 'function') {
+            TLL(store); // 현재 매장 정보를 전달
+          } else {
+            console.warn('⚠️ TLL 함수를 찾을 수 없음');
+          }
+        } catch (tllError) {
+          console.error('❌ TLL 실행 중 오류:', tllError);
+        }
+      });
+      console.log('✅ TLL 버튼 이벤트 설정 완료 (매장 미리 선택)');
+    }
+
     // 프로모션 관련 버튼들 이벤트 설정 (추가 안전장치)
     setTimeout(() => {
       const allPromotionBtns = document.querySelectorAll('.promotion-detail-btn, .promotion-more-btn, [onclick*="showAllPromotions"]');
