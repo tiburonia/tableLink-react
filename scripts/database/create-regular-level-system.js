@@ -1,14 +1,13 @@
-
 const pool = require('../../shared/config/database');
 
 async function createRegularLevelSystem() {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     console.log('🏆 단골 레벨 시스템 테이블 생성 시작...');
-    
+
     // 1. regular_levels 테이블 생성 (매장별 단골 레벨 규칙)
     await client.query(`
       CREATE TABLE IF NOT EXISTS regular_levels (
@@ -29,9 +28,9 @@ async function createRegularLevelSystem() {
         UNIQUE(store_id, level_rank)
       )
     `);
-    
+
     console.log('✅ regular_levels 테이블 생성 완료');
-    
+
     // 2. user_store_stats 테이블 생성 (유저×매장 단골 누적 지표)
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_store_stats (
@@ -52,9 +51,9 @@ async function createRegularLevelSystem() {
         UNIQUE(user_id, store_id)
       )
     `);
-    
+
     console.log('✅ user_store_stats 테이블 생성 완료');
-    
+
     // 3. regular_level_history 테이블 생성 (레벨 변경 이력)
     await client.query(`
       CREATE TABLE IF NOT EXISTS regular_level_history (
@@ -71,9 +70,9 @@ async function createRegularLevelSystem() {
         FOREIGN KEY (to_level_id) REFERENCES regular_levels(id) ON DELETE SET NULL
       )
     `);
-    
+
     console.log('✅ regular_level_history 테이블 생성 완료');
-    
+
     // 4. regular_level_benefit_issues 테이블 생성 (혜택 발급 로그)
     await client.query(`
       CREATE TABLE IF NOT EXISTS regular_level_benefit_issues (
@@ -92,24 +91,24 @@ async function createRegularLevelSystem() {
         FOREIGN KEY (level_id) REFERENCES regular_levels(id) ON DELETE CASCADE
       )
     `);
-    
+
     console.log('✅ regular_level_benefit_issues 테이블 생성 완료');
-    
+
     // 5. 인덱스 생성
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_regular_levels_store_rank ON regular_levels(store_id, level_rank);
     `);
-    
+
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_user_store_stats_user_store ON user_store_stats(user_id, store_id);
     `);
-    
+
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_regular_level_history_user_store ON regular_level_history(user_id, store_id);
     `);
-    
+
     console.log('✅ 인덱스 생성 완료');
-    
+
     // 6. 레벨 산정 함수 생성
     await client.query(`
       CREATE OR REPLACE FUNCTION calculate_regular_level(
@@ -124,7 +123,7 @@ async function createRegularLevelSystem() {
         v_level RECORD;
       BEGIN
         v_level_id := NULL;
-        
+
         -- 해당 매장의 활성화된 레벨들을 높은 rank 순으로 조회
         FOR v_level IN 
           SELECT id, level_rank, required_points, required_total_spent, required_visit_count, eval_policy
@@ -151,99 +150,51 @@ async function createRegularLevelSystem() {
             END IF;
           END IF;
         END LOOP;
-        
+
         RETURN v_level_id;
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     console.log('✅ calculate_regular_level 함수 생성 완료');
-    
+
     // 7. 단골 지표 업데이트 함수 생성
     await client.query(`
       CREATE OR REPLACE FUNCTION update_user_store_stats(
-        p_user_id VARCHAR(50),
+        p_user_id TEXT,
         p_store_id INTEGER,
         p_order_total NUMERIC,
-        p_order_date TIMESTAMP
+        p_order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) RETURNS VOID AS $$
-      DECLARE
-        v_current_stats RECORD;
-        v_new_points INTEGER;
-        v_new_total_spent NUMERIC;
-        v_new_visit_count INTEGER;
-        v_new_level_id INTEGER;
-        v_old_level_id INTEGER;
       BEGIN
-        -- 기존 통계 조회
-        SELECT points, total_spent, visit_count, current_level_id
-        INTO v_current_stats
-        FROM user_store_stats
-        WHERE user_id = p_user_id AND store_id = p_store_id;
-        
-        IF FOUND THEN
-          -- 기존 레코드 업데이트
-          v_new_points := COALESCE(v_current_stats.points, 0) + FLOOR(p_order_total * 0.1)::INTEGER;
-          v_new_total_spent := COALESCE(v_current_stats.total_spent, 0) + p_order_total;
-          v_new_visit_count := COALESCE(v_current_stats.visit_count, 0) + 1;
-          v_old_level_id := v_current_stats.current_level_id;
-        ELSE
-          -- 새 레코드 생성
-          v_new_points := FLOOR(p_order_total * 0.1)::INTEGER;
-          v_new_total_spent := p_order_total;
-          v_new_visit_count := 1;
-          v_old_level_id := NULL;
-        END IF;
-        
-        -- 새로운 레벨 계산
-        v_new_level_id := calculate_regular_level(
-          p_user_id, p_store_id, v_new_points, v_new_total_spent, v_new_visit_count
-        );
-        
-        -- user_store_stats 업데이트 또는 삽입
+        -- 기본 포인트는 주문 금액의 1% (100원당 1포인트)
         INSERT INTO user_store_stats (
           user_id, store_id, points, total_spent, visit_count, 
-          last_visit_at, current_level_id, current_level_at, updated_at
+          last_visit_at, first_visit_at, current_level_id, current_level_at
         ) VALUES (
-          p_user_id, p_store_id, v_new_points, v_new_total_spent, v_new_visit_count,
-          p_order_date, v_new_level_id, 
-          CASE WHEN v_new_level_id IS NOT NULL AND v_new_level_id != v_old_level_id THEN p_order_date ELSE NULL END,
-          CURRENT_TIMESTAMP
+          p_user_id, p_store_id, 
+          FLOOR(p_order_total * 0.01), -- 1% 포인트 적립
+          p_order_total, 
+          1, 
+          p_order_date, 
+          p_order_date,
+          NULL, 
+          NULL
         )
-        ON CONFLICT (user_id, store_id) 
-        DO UPDATE SET
-          points = v_new_points,
-          total_spent = v_new_total_spent,
-          visit_count = v_new_visit_count,
-          last_visit_at = p_order_date,
-          current_level_id = v_new_level_id,
-          current_level_at = CASE 
-            WHEN v_new_level_id IS NOT NULL AND v_new_level_id != v_old_level_id 
-            THEN p_order_date 
-            ELSE user_store_stats.current_level_at 
-          END,
-          updated_at = CURRENT_TIMESTAMP;
-        
-        -- 레벨 변경이 있으면 이력 기록
-        IF v_new_level_id IS DISTINCT FROM v_old_level_id THEN
-          INSERT INTO regular_level_history (
-            user_id, store_id, from_level_id, to_level_id, reason, changed_at
-          ) VALUES (
-            p_user_id, p_store_id, v_old_level_id, v_new_level_id, 'system', p_order_date
-          );
-          
-          -- 새 레벨의 혜택 발급 (레벨업인 경우만)
-          IF v_new_level_id IS NOT NULL AND (v_old_level_id IS NULL OR v_new_level_id > v_old_level_id) THEN
-            PERFORM issue_level_benefits(p_user_id, p_store_id, v_new_level_id);
-          END IF;
-        END IF;
-        
+        ON CONFLICT (user_id, store_id) DO UPDATE SET
+          points = user_store_stats.points + FLOOR(p_order_total * 0.01),
+          total_spent = user_store_stats.total_spent + p_order_total,
+          visit_count = user_store_stats.visit_count + 1,
+          last_visit_at = p_order_date;
+
+        -- 트리거가 자동으로 레벨을 업데이트하므로 별도 호출 불필요
+        -- check_and_update_user_level 함수는 트리거가 대신 처리
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     console.log('✅ update_user_store_stats 함수 생성 완료');
-    
+
     // 8. 레벨 혜택 발급 함수 생성
     await client.query(`
       CREATE OR REPLACE FUNCTION issue_level_benefits(
@@ -259,11 +210,11 @@ async function createRegularLevelSystem() {
         SELECT benefits INTO v_level
         FROM regular_levels
         WHERE id = p_level_id;
-        
+
         IF NOT FOUND OR v_level.benefits IS NULL THEN
           RETURN;
         END IF;
-        
+
         -- benefits JSONB 배열을 순회하며 각 혜택 발급
         FOR v_benefit IN SELECT * FROM jsonb_array_elements(v_level.benefits)
         LOOP
@@ -282,19 +233,28 @@ async function createRegularLevelSystem() {
             CURRENT_TIMESTAMP
           );
         END LOOP;
-        
+
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
+
     console.log('✅ issue_level_benefits 함수 생성 완료');
-    
-    // 9. orders 테이블 업데이트 트리거 함수 생성
+
+    // 9. orders 테이블 업데이트 트리거 함수 생성 (레벨 자동 업데이트 로직 포함)
     await client.query(`
-      CREATE OR REPLACE FUNCTION trigger_update_regular_stats()
+      CREATE OR REPLACE FUNCTION trigger_update_regular_stats_and_level()
       RETURNS TRIGGER AS $$
+      DECLARE
+        v_old_level_id INTEGER;
+        v_new_level_id INTEGER;
+        v_user_id TEXT;
+        v_store_id INTEGER;
+        v_order_date TIMESTAMP;
       BEGIN
-        -- 주문 상태가 'completed'로 변경될 때만 처리
+        -- 트리거 호출 시점의 이전 레벨 ID 가져오기 (user_store_stats 테이블에서)
+        SELECT current_level_id INTO v_old_level_id FROM user_store_stats WHERE user_id = NEW.user_id AND store_id = NEW.store_id;
+
+        -- 주문 상태가 'completed'로 변경되거나, 주문이 처음으로 완료되는 경우에만 처리
         IF NEW.order_status = 'completed' AND (OLD.order_status IS NULL OR OLD.order_status != 'completed') THEN
           -- 단골 지표 업데이트
           PERFORM update_user_store_stats(
@@ -303,33 +263,64 @@ async function createRegularLevelSystem() {
             NEW.total_amount,
             COALESCE(NEW.order_date, CURRENT_TIMESTAMP)
           );
+
+          -- 업데이트된 지표로 새로운 레벨 계산
+          SELECT current_level_id INTO v_new_level_id 
+          FROM user_store_stats 
+          WHERE user_id = NEW.user_id AND store_id = NEW.store_id;
+
+          -- 레벨 변경이 감지되면 이력 기록 및 혜택 발급
+          IF v_new_level_id IS DISTINCT FROM v_old_level_id THEN
+            -- user_store_stats에 current_level_at 업데이트
+            UPDATE user_store_stats
+            SET current_level_at = COALESCE(NEW.order_date, CURRENT_TIMESTAMP)
+            WHERE user_id = NEW.user_id AND store_id = NEW.store_id;
+
+            -- 레벨 변경 이력 기록
+            INSERT INTO regular_level_history (
+              user_id, store_id, from_level_id, to_level_id, reason, changed_at
+            ) VALUES (
+              NEW.user_id,
+              NEW.store_id,
+              v_old_level_id,
+              v_new_level_id,
+              'system', -- 또는 'purchase' 등 더 구체적인 이유
+              COALESCE(NEW.order_date, CURRENT_TIMESTAMP)
+            );
+
+            -- 새로운 레벨의 혜택 발급 (레벨업인 경우)
+            IF v_new_level_id IS NOT NULL AND (v_old_level_id IS NULL OR v_new_level_id > v_old_level_id) THEN
+              PERFORM issue_level_benefits(NEW.user_id, NEW.store_id, v_new_level_id);
+            END IF;
+          END IF;
         END IF;
-        
+
         RETURN NEW;
       END;
       $$ LANGUAGE plpgsql;
     `);
-    
-    console.log('✅ trigger_update_regular_stats 함수 생성 완료');
-    
+
+    console.log('✅ trigger_update_regular_stats_and_level 함수 생성 완료');
+
     // 10. 트리거 생성
     await client.query(`
-      DROP TRIGGER IF EXISTS orders_regular_stats_trigger ON orders;
-      
-      CREATE TRIGGER orders_regular_stats_trigger
+      DROP TRIGGER IF EXISTS orders_regular_stats_level_trigger ON orders;
+
+      CREATE TRIGGER orders_regular_stats_level_trigger
         AFTER UPDATE ON orders
         FOR EACH ROW
-        EXECUTE FUNCTION trigger_update_regular_stats();
+        WHEN (OLD.order_status IS DISTINCT FROM NEW.order_status) -- 상태 변경 시에만 실행
+        EXECUTE FUNCTION trigger_update_regular_stats_and_level();
     `);
-    
-    console.log('✅ orders_regular_stats_trigger 트리거 생성 완료');
-    
+
+    console.log('✅ orders_regular_stats_level_trigger 트리거 생성 완료');
+
     // 11. 샘플 레벨 데이터 삽입
     const existingLevels = await client.query('SELECT COUNT(*) FROM regular_levels');
-    
+
     if (parseInt(existingLevels.rows[0].count) === 0) {
       console.log('📝 샘플 단골 레벨 데이터 생성 중...');
-      
+
       // 매장 1-10에 대한 샘플 레벨 생성
       for (let storeId = 1; storeId <= 10; storeId++) {
         await client.query(`
@@ -351,20 +342,20 @@ async function createRegularLevelSystem() {
              {"type":"birthday_special","name":"생일 특별 혜택"}]')
         `, [storeId]);
       }
-      
+
       console.log('✅ 샘플 단골 레벨 데이터 삽입 완료');
     }
-    
+
     await client.query('COMMIT');
     console.log('🎉 단골 레벨 시스템 설정 완료!');
-    
+
     // 12. 시스템 상태 출력
     const levelCount = await client.query('SELECT COUNT(*) as total FROM regular_levels');
     const storeCount = await client.query('SELECT COUNT(DISTINCT store_id) as total FROM regular_levels');
-    
+
     console.log(`📊 생성된 레벨 수: ${levelCount.rows[0].total}개`);
     console.log(`🏪 레벨이 설정된 매장 수: ${storeCount.rows[0].total}개`);
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ 단골 레벨 시스템 생성 실패:', error);
