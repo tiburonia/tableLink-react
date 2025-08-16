@@ -112,13 +112,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         }
 
         .payment-success-container {
-          min-height: 100vh;
+          height: 100vh;
           background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 20px;
           overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .success-content {
@@ -128,6 +129,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           padding: 20px;
           overflow-y: auto;
           max-height: 90vh;
+          -webkit-overflow-scrolling: touch;
         }
 
         .success-icon {
@@ -403,12 +405,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
       <style>
         .payment-error-container {
-          min-height: 100vh;
+          height: 100vh;
           background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 20px;
+          overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .error-content {

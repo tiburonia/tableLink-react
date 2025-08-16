@@ -64,8 +64,10 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
 
       .order-container {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        min-height: 100vh;
+        height: 100vh;
         overflow-y: auto;
+        display: flex;
+        flex-direction: column;
       }
 
       .order-header {
@@ -139,6 +141,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       }
 
       .order-content {
+        flex: 1;
         padding: 20px 16px 120px 16px; /* 하단 버튼 공간 확보 */
         max-width: 600px;
         margin: 0 auto;
@@ -146,6 +149,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         flex-direction: column;
         gap: 24px;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .menu-section,
