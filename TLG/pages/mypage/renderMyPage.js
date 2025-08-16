@@ -1866,15 +1866,15 @@ async function updateRegularLevelsList(currentUserInfo) {
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
         levelDiv.innerHTML = `
-          <div class="level-store-info" onclick="goToStore(${levelData.store_id})">
-            <div class="level-store-name">${levelData.storeName || levelData.store_name || '매장 정보 없음'}</div>
-            <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}">
-              ${levelData.level?.level_name || '신규 고객'}
+          <div class="level-store-info" onclick="goToStore(${levelData.storeId})">
+            <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
+            <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}">
+              ${levelData.currentLevel?.name || '신규 고객'}
             </div>
           </div>
           <div class="level-stats">
-            <span class="level-visits">${levelData.stats?.visit_count || 0}회 방문</span>
-            <span class="level-points">${levelData.stats?.points || 0}P</span>
+            <span class="level-visits">${levelData.visitCount || 0}회 방문</span>
+            <span class="level-points">${levelData.points || 0}P</span>
           </div>
         `;
         regularLevelsListDiv.appendChild(levelDiv);
@@ -1914,21 +1914,21 @@ async function showAllRegularLevelsModal(regularLevels) {
         </div>
         <div class="all-regular-levels-list">
           ${regularLevels.map(levelData => `
-            <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${levelData.store_id})">
+            <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${levelData.storeId})">
               <div class="level-store-header">
-                <div class="level-store-name">${levelData.storeName || levelData.store_name || '매장 정보 없음'}</div>
-                <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
-                  ${levelData.level?.level_name || '신규 고객'}
+                <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
+                <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+                  ${levelData.currentLevel?.name || '신규 고객'}
                 </div>
               </div>
               <div class="level-modal-stats">
-                <span>${levelData.stats?.visit_count || 0}회 방문</span> • 
-                <span>${levelData.stats?.points || 0}P</span> • 
-                <span>${(levelData.stats?.total_spent || 0).toLocaleString()}원 누적</span>
+                <span>${levelData.visitCount || 0}회 방문</span> • 
+                <span>${levelData.points || 0}P</span> • 
+                <span>${(levelData.totalSpent || 0).toLocaleString()}원 누적</span>
               </div>
-              ${levelData.level?.benefits && levelData.level.benefits.length > 0 ? `
+              ${levelData.currentLevel?.benefits && levelData.currentLevel.benefits.length > 0 ? `
                 <div class="level-modal-benefits">
-                  💝 ${levelData.level.benefits.map(b => window.RegularLevelManager.formatBenefitType(b.type)).join(', ')}
+                  💝 ${levelData.currentLevel.benefits.map(b => window.RegularLevelManager.formatBenefitType(b.type)).join(', ')}
                 </div>
               ` : ''}
             </div>
