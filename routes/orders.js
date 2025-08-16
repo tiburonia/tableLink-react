@@ -184,14 +184,26 @@ router.post('/pay', async (req, res) => {
 
     console.log(`✅ 주문 ID ${orderResult.rows[0].id} orders 테이블에 저장 완료`);
 
-    // 매장별 포인트는 단골 시스템의 update_user_store_stats 함수에서 자동 처리됨
-    // 포인트 사용분만 별도 차감 처리
+    // 매장별 포인트 사용분 차감 처리
     if (usedPoint > 0) {
-      await pool.query(`
+      await client.query(`
         UPDATE user_store_stats
         SET points = points - $1, updated_at = CURRENT_TIMESTAMP
         WHERE user_id = $2 AND store_id = $3
       `, [usedPoint, userId, storeId]);
+      console.log(`💰 매장 ${storeId}에서 포인트 ${usedPoint}원 차감 완료`);
+    }
+
+    // 포인트 적립 처리 (단골 지표 업데이트)
+    try {
+      await client.query(
+        'SELECT update_user_store_stats($1, $2, $3, $4)',
+        [userId, storeId, orderData.total, new Date()]
+      );
+      console.log(`🎉 매장 ${storeId}에서 ${earnedPoint}원 포인트 적립 완료`);
+    } catch (pointError) {
+      console.error('⚠️ 포인트 적립 실패:', pointError);
+      // 포인트 적립 실패해도 주문은 완료되도록 처리
     }
 
     await client.query('COMMIT');
@@ -205,7 +217,9 @@ router.post('/pay', async (req, res) => {
         earnedPoint: earnedPoint,
         finalTotal: finalTotal,
         totalDiscount: appliedPoint + (couponDiscount || 0),
-        welcomeCoupon: welcomeCoupon
+        welcomeCoupon: welcomeCoupon,
+        storeId: storeId,
+        storeName: storeName
       }
     });
 
