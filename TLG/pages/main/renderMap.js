@@ -499,25 +499,7 @@ async function renderMap() {
     }
   }, 200);
 
-  // 홈 버튼 클릭 로직
-  const homeBtn = document.querySelector('#homeBtn');
-  homeBtn.addEventListener('click', () => {
-    if (typeof renderSubMain === 'function') {
-      renderSubMain();
-    } else {
-      console.warn('⚠️ renderSubMain 함수를 찾을 수 없습니다');
-    }
-  });
-
-  // 검색 버튼 클릭 로직
-  const searchBtnNav = document.querySelector('#searchBtn');
-  searchBtnNav.addEventListener('click', () => {
-    if (typeof renderSearch === 'function') {
-      renderSearch('');
-    } else {
-      console.warn('⚠️ renderSearch 함수를 찾을 수 없습니다');
-    }
-  });
+  // 바텀바 버튼들은 onclick 속성으로 이미 처리되므로 별도 이벤트 리스너 불필요
 
 
 
