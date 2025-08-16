@@ -2822,8 +2822,6 @@ function goToStore(storeId) {
       .then(storeData => {
         if (storeData.success && storeData.store) {
           renderStore(storeData.store);
-        } else {
-          alert('매장 정보를 가져올 수 없습니다.');
         }
       })
       .catch(error => {
@@ -2910,3 +2908,4 @@ function handleStartLoyaltyClick(storeId, nextLevelId, nextLevelName, currentLev
 window.renderMyPage = renderMyPage;
 window.handleLevelProgressClick = handleLevelProgressClick;
 window.handleStartLoyaltyClick = handleStartLoyaltyClick;
+window.showReviewModalFromOrders = showReviewModalFromOrders; // showReviewModalFromOrders 함수를 전역으로 등록
