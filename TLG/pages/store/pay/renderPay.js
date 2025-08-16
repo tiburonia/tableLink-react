@@ -155,6 +155,7 @@ function renderPay(currentOrder, store, tableNum) {
       /* 상단 헤더 */
       .pay-header {
         flex-shrink: 0;
+        height: 80px;
         background: white;
         padding: 16px 20px;
         display: flex;
@@ -201,7 +202,7 @@ function renderPay(currentOrder, store, tableNum) {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        height: calc(100vh - 160px); /* 헤더(80px) + 푸터(80px) 공간 확보 */
+        min-height: 0;
       }
 
       .content-wrapper {
@@ -454,6 +455,7 @@ function renderPay(currentOrder, store, tableNum) {
       /* 하단 고정 결제 버튼 */
       .pay-footer {
         flex-shrink: 0;
+        height: 120px;
         background: white;
         padding: 16px 20px;
         border-top: 1px solid #e2e8f0;
