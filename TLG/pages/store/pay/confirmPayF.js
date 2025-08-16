@@ -114,12 +114,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         .payment-success-container {
           height: 100vh;
           background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
+          padding: 20px;
+          box-sizing: border-box;
         }
 
         .success-content {
@@ -127,9 +125,11 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           width: 100%;
           text-align: center;
           padding: 20px;
-          overflow-y: auto;
-          max-height: 90vh;
-          -webkit-overflow-scrolling: touch;
+          margin: 0 auto;
+          min-height: calc(100vh - 40px);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
 
         .success-icon {
@@ -407,12 +407,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         .payment-error-container {
           height: 100vh;
           background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 20px;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
+          padding: 20px;
+          box-sizing: border-box;
         }
 
         .error-content {
@@ -423,6 +421,11 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           border-radius: 16px;
           padding: 40px 30px;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+          margin: 0 auto;
+          min-height: calc(100vh - 40px);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
         }
 
         .error-icon {

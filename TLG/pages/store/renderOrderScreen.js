@@ -22,25 +22,27 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       </div>
 
       <div class="order-content">
-        <!-- 메뉴 섹션 -->
-        <div class="menu-section">
-          <div class="section-header">
-            <h2>🍽️ 메뉴</h2>
-            <span class="menu-count">${store.menu ? store.menu.length : 0}개</span>
+        <div class="order-content-inner">
+          <!-- 메뉴 섹션 -->
+          <div class="menu-section">
+            <div class="section-header">
+              <h2>🍽️ 메뉴</h2>
+              <span class="menu-count">${store.menu ? store.menu.length : 0}개</span>
+            </div>
+            <div id="menuList" class="menu-grid"></div>
           </div>
-          <div id="menuList" class="menu-grid"></div>
-        </div>
 
-        <!-- 주문 요약 -->
-        <div id="orderSummary" class="order-summary" style="display: none;">
-          <div class="section-header">
-            <h2>📋 주문 내역</h2>
-            <span id="orderItemCount" class="order-count">0개</span>
-          </div>
-          <div id="orderList" class="order-content"></div>
-          <div class="order-total">
-            <div class="total-label">총 주문금액</div>
-            <div id="totalAmount" class="total-amount">0원</div>
+          <!-- 주문 요약 -->
+          <div id="orderSummary" class="order-summary" style="display: none;">
+            <div class="section-header">
+              <h2>📋 주문 내역</h2>
+              <span id="orderItemCount" class="order-count">0개</span>
+            </div>
+            <div id="orderList" class="order-list-content"></div>
+            <div class="order-total">
+              <div class="total-label">총 주문금액</div>
+              <div id="totalAmount" class="total-amount">0원</div>
+            </div>
           </div>
         </div>
       </div>
@@ -65,9 +67,9 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       .order-container {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         height: 100vh;
-        overflow-y: auto;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
       }
 
       .order-header {
@@ -77,8 +79,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         align-items: center;
         gap: 16px;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-        position: sticky;
-        top: 0;
+        flex-shrink: 0;
         z-index: 100;
       }
 
@@ -142,14 +143,19 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
 
       .order-content {
         flex: 1;
-        padding: 20px 16px 120px 16px; /* 하단 버튼 공간 확보 */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 20px 16px 120px 16px;
+        position: relative;
+      }
+
+      .order-content-inner {
         max-width: 600px;
         margin: 0 auto;
         display: flex;
         flex-direction: column;
         gap: 24px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        min-height: calc(100vh - 240px);
       }
 
       .menu-section,
@@ -310,7 +316,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         transform: translateY(0);
       }
 
-      .order-content {
+      .order-list-content {
         display: flex;
         flex-direction: column;
         gap: 12px;
