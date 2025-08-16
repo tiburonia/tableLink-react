@@ -665,21 +665,45 @@ function renderPay(currentOrder, store, tableNum) {
   document.getElementById('selectedCoupon')?.addEventListener('change', updateFinalAmount);
 
   document.getElementById('confirmPay').addEventListener('click', async () => {
-    const enteredPoint = Number(usePointInput.value) || 0;
-    const selectedCouponId = document.getElementById('selectedCoupon')?.value;
-    const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
+    const confirmPayBtn = document.getElementById('confirmPay');
+    
+    try {
+      // 버튼 비활성화 및 로딩 상태 표시
+      confirmPayBtn.disabled = true;
+      confirmPayBtn.innerHTML = `
+        <div class="btn-content">
+          <span class="btn-text">결제 처리 중...</span>
+          <span class="btn-icon">⏳</span>
+        </div>
+      `;
 
-    const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
+      const enteredPoint = Number(usePointInput.value) || 0;
+      const selectedCouponId = document.getElementById('selectedCoupon')?.value;
+      const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
 
-    await confirmPay(
-      orderData,
-      result.appliedPoint,
-      store,
-      currentOrder,
-      result.final,
-      selectedCoupon?.id || null,
-      result.couponDiscount
-    );
+      const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
+
+      await confirmPay(
+        orderData,
+        result.appliedPoint,
+        store,
+        currentOrder,
+        result.final,
+        selectedCoupon?.id || null,
+        result.couponDiscount
+      );
+    } catch (error) {
+      console.error('결제 처리 중 오류:', error);
+      // 버튼 원복
+      confirmPayBtn.disabled = false;
+      confirmPayBtn.innerHTML = `
+        <div class="btn-content">
+          <span class="btn-text">결제하기</span>
+          <span class="btn-amount" id="payBtnAmount">${orderData.total.toLocaleString()}원</span>
+        </div>
+      `;
+      alert('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   });
 
   document.getElementById('cancelPay').addEventListener('click', () => {

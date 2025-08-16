@@ -9,7 +9,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
   try {
     // 결제 처리 API 호출
-    const response = await fetch('/api/orders/create', {
+    const response = await fetch('/api/orders/pay', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -17,18 +17,21 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       body: JSON.stringify({
         userId: userInfo.id,
         storeId: orderData.storeId,
+        storeName: orderData.store,
         tableNumber: orderData.tableNum,
-        items: orderData.items.map(item => ({
-          name: item.name,
-          quantity: item.qty,
-          price: item.price,
-          totalPrice: item.totalPrice
-        })),
-        totalAmount: orderData.total,
-        pointsUsed: pointsUsed || 0,
-        couponId: couponId,
-        couponDiscount: couponDiscount || 0,
-        finalAmount: finalAmount
+        orderData: {
+          store: orderData.store,
+          storeId: orderData.storeId,
+          date: orderData.date,
+          table: orderData.table,
+          tableNum: orderData.tableNum,
+          items: orderData.items,
+          total: orderData.total
+        },
+        usedPoint: pointsUsed || 0,
+        finalTotal: finalAmount,
+        selectedCouponId: couponId,
+        couponDiscount: couponDiscount || 0
       })
     });
 
@@ -51,7 +54,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           <div class="order-summary-card">
             <div class="summary-header">
               <h3>주문 내역</h3>
-              <span class="order-number">주문번호: ${result.orderId || 'N/A'}</span>
+              <span class="order-number">주문번호: ${result.result?.orderId || 'N/A'}</span>
             </div>
             <div class="summary-details">
               <div class="store-info">
@@ -95,7 +98,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
             <div class="points-icon">🎉</div>
             <div class="points-info">
               <h4>포인트 적립</h4>
-              <p>${Math.floor(finalAmount * 0.1).toLocaleString()}P가 적립되었습니다!</p>
+              <p>${(result.result?.earnedPoint || Math.floor(finalAmount * 0.1)).toLocaleString()}P가 적립되었습니다!</p>
             </div>
           </div>
 

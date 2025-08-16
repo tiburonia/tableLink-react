@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// 결제 처리 API
+// 결제 처리 API (기존 /pay 엔드포인트 유지)
 router.post('/pay', async (req, res) => {
   const client = await pool.connect();
   try {
