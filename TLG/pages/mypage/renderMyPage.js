@@ -683,49 +683,149 @@ async function renderMyPage() {
 
       /* 단골 레벨 관련 스타일 */
       .regular-level-item {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
         border: 1px solid #e9ecef;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+      .regular-level-item:hover {
+        background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      .level-store-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        transition: all 0.2s ease;
-      }
-      .regular-level-item:hover {
-        background: #e9ecef;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+        cursor: pointer;
       }
       .level-store-info {
-        flex: 1;
-        cursor: pointer;
         display: flex;
         align-items: center;
         gap: 12px;
       }
       .level-store-name {
-        font-weight: 600;
+        font-weight: 700;
         color: #333;
-        font-size: 16px;
+        font-size: 18px;
       }
       .level-badge {
         color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
+        padding: 6px 12px;
+        border-radius: 16px;
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       }
-      .level-stats {
+      .level-current-stats {
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        font-size: 13px;
+        gap: 16px;
+        margin-bottom: 16px;
+        font-size: 14px;
         color: #666;
       }
-      .level-visits, .level-points {
+      .current-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .stat-icon {
+        font-size: 16px;
+      }
+      .stat-value {
+        font-weight: 600;
+        color: #333;
+      }
+      .level-progress-section {
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+      }
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .next-level-info {
+        font-size: 14px;
+        font-weight: 600;
+        color: #667eea;
+      }
+      .progress-percentage {
+        font-size: 16px;
+        font-weight: 700;
+        color: #28a745;
+      }
+      .progress-requirements {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+      .requirement-item {
+        text-align: center;
+      }
+      .requirement-label {
+        font-size: 11px;
+        color: #666;
         margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .requirement-gauge {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+      .requirement-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.6s ease;
+      }
+      .requirement-fill.visits {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      }
+      .requirement-fill.spending {
+        background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+      }
+      .requirement-fill.points {
+        background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+      }
+      .requirement-text {
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+      }
+      .requirement-needed {
+        font-size: 11px;
+        color: #999;
+        margin-top: 2px;
+      }
+      .overall-progress-bar {
+        height: 12px;
+        background: #e9ecef;
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+      .overall-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 6px;
+        transition: width 0.8s ease;
+      }
+      .progress-description {
+        font-size: 12px;
+        color: #666;
+        text-align: center;
       }
       .view-all-regular-levels-btn {
         width: 100%;
@@ -1865,17 +1965,88 @@ async function updateRegularLevelsList(currentUserInfo) {
       displayLevels.forEach(levelData => {
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
+        
+        // 진행률 계산
+        const progress = calculateLevelProgress(levelData);
+        
         levelDiv.innerHTML = `
-          <div class="level-store-info" onclick="goToStore(${levelData.storeId})">
-            <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
-            <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}">
-              ${levelData.currentLevel?.name || '신규 고객'}
+          <div class="level-store-header" onclick="goToStore(${levelData.storeId})">
+            <div class="level-store-info">
+              <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
+              <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}">
+                ${levelData.currentLevel?.name || '신규 고객'}
+              </div>
             </div>
           </div>
-          <div class="level-stats">
-            <span class="level-visits">${levelData.visitCount || 0}회 방문</span>
-            <span class="level-points">${levelData.points || 0}P</span>
+          
+          <div class="level-current-stats">
+            <div class="current-stat-item">
+              <span class="stat-icon">👥</span>
+              <span class="stat-value">${levelData.visitCount || 0}</span>
+              <span>회 방문</span>
+            </div>
+            <div class="current-stat-item">
+              <span class="stat-icon">⭐</span>
+              <span class="stat-value">${(levelData.points || 0).toLocaleString()}</span>
+              <span>포인트</span>
+            </div>
+            <div class="current-stat-item">
+              <span class="stat-icon">💰</span>
+              <span class="stat-value">${(levelData.totalSpent || 0).toLocaleString()}</span>
+              <span>원 누적</span>
+            </div>
           </div>
+          
+          ${levelData.nextLevel ? `
+            <div class="level-progress-section">
+              <div class="progress-header">
+                <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
+                <span class="progress-percentage">${progress.overallPercent}%</span>
+              </div>
+              
+              <div class="progress-requirements">
+                <div class="requirement-item">
+                  <div class="requirement-label">방문 횟수</div>
+                  <div class="requirement-gauge">
+                    <div class="requirement-fill visits" style="width: ${progress.visitsPercent}%"></div>
+                  </div>
+                  <div class="requirement-text">${levelData.visitCount || 0} / ${levelData.nextLevel.requiredVisitCount || 0}</div>
+                  ${progress.visitsNeeded > 0 ? `<div class="requirement-needed">${progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                </div>
+                
+                <div class="requirement-item">
+                  <div class="requirement-label">누적 결제</div>
+                  <div class="requirement-gauge">
+                    <div class="requirement-fill spending" style="width: ${progress.spendingPercent}%"></div>
+                  </div>
+                  <div class="requirement-text">${((levelData.totalSpent || 0) / 1000).toFixed(0)}K / ${((levelData.nextLevel.requiredTotalSpent || 0) / 1000).toFixed(0)}K</div>
+                  ${progress.spendingNeeded > 0 ? `<div class="requirement-needed">${progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                </div>
+                
+                <div class="requirement-item">
+                  <div class="requirement-label">포인트</div>
+                  <div class="requirement-gauge">
+                    <div class="requirement-fill points" style="width: ${progress.pointsPercent}%"></div>
+                  </div>
+                  <div class="requirement-text">${levelData.points || 0} / ${levelData.nextLevel.requiredPoints || 0}</div>
+                  ${progress.pointsNeeded > 0 ? `<div class="requirement-needed">${progress.pointsNeeded}P 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                </div>
+              </div>
+              
+              <div class="overall-progress-bar">
+                <div class="overall-progress-fill" style="width: ${progress.overallPercent}%"></div>
+              </div>
+              <div class="progress-description">
+                ${levelData.nextLevel.evalPolicy === 'OR' ? '조건 중 하나만 달성하면 승급됩니다' : '모든 조건을 달성해야 승급됩니다'}
+              </div>
+            </div>
+          ` : `
+            <div class="level-progress-section">
+              <div class="progress-description" style="text-align: center; color: #28a745; font-weight: 600;">
+                🎉 최고 등급에 도달했습니다!
+              </div>
+            </div>
+          `}
         `;
         regularLevelsListDiv.appendChild(levelDiv);
       });
@@ -1901,6 +2072,65 @@ async function updateRegularLevelsList(currentUserInfo) {
   }
 }
 
+// 레벨 진행률 계산 함수
+function calculateLevelProgress(levelData) {
+  if (!levelData.nextLevel) {
+    return {
+      overallPercent: 100,
+      visitsPercent: 100,
+      spendingPercent: 100,
+      pointsPercent: 100,
+      visitsNeeded: 0,
+      spendingNeeded: 0,
+      pointsNeeded: 0
+    };
+  }
+
+  const currentVisits = levelData.visitCount || 0;
+  const currentSpending = levelData.totalSpent || 0;
+  const currentPoints = levelData.points || 0;
+
+  const requiredVisits = levelData.nextLevel.requiredVisitCount || 0;
+  const requiredSpending = levelData.nextLevel.requiredTotalSpent || 0;
+  const requiredPoints = levelData.nextLevel.requiredPoints || 0;
+
+  // 각 조건별 진행률 계산 (100% 최대)
+  const visitsPercent = requiredVisits > 0 ? Math.min(100, (currentVisits / requiredVisits) * 100) : 100;
+  const spendingPercent = requiredSpending > 0 ? Math.min(100, (currentSpending / requiredSpending) * 100) : 100;
+  const pointsPercent = requiredPoints > 0 ? Math.min(100, (currentPoints / requiredPoints) * 100) : 100;
+
+  // 필요한 추가 수량 계산
+  const visitsNeeded = Math.max(0, requiredVisits - currentVisits);
+  const spendingNeeded = Math.max(0, requiredSpending - currentSpending);
+  const pointsNeeded = Math.max(0, requiredPoints - currentPoints);
+
+  // 전체 진행률 계산 (OR/AND 정책에 따라)
+  let overallPercent;
+  if (levelData.nextLevel.evalPolicy === 'OR') {
+    // OR 정책: 가장 높은 진행률 사용
+    overallPercent = Math.max(visitsPercent, spendingPercent, pointsPercent);
+  } else {
+    // AND 정책: 평균 진행률 사용
+    const validPercents = [];
+    if (requiredVisits > 0) validPercents.push(visitsPercent);
+    if (requiredSpending > 0) validPercents.push(spendingPercent);
+    if (requiredPoints > 0) validPercents.push(pointsPercent);
+    
+    overallPercent = validPercents.length > 0 ? 
+      validPercents.reduce((sum, percent) => sum + percent, 0) / validPercents.length : 100;
+  }
+
+  return {
+    overallPercent: Math.round(overallPercent),
+    visitsPercent: Math.round(visitsPercent),
+    spendingPercent: Math.round(spendingPercent),
+    pointsPercent: Math.round(pointsPercent),
+    visitsNeeded,
+    spendingNeeded,
+    pointsNeeded
+  };
+}
+
 // 전체 단골 레벨 보기 모달
 async function showAllRegularLevelsModal(regularLevels) {
   try {
@@ -1913,26 +2143,50 @@ async function showAllRegularLevelsModal(regularLevels) {
           <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
         </div>
         <div class="all-regular-levels-list">
-          ${regularLevels.map(levelData => `
-            <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${levelData.storeId})">
-              <div class="level-store-header">
-                <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
-                <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
+          ${regularLevels.map(levelData => {
+            const progress = calculateLevelProgress(levelData);
+            return `
+            <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px;" onclick="closeModalAndGoToStore(${levelData.storeId})">
+              <div class="level-store-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div class="level-store-name" style="font-weight: 600; font-size: 16px;">${levelData.storeName || '매장 정보 없음'}</div>
+                <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}; color: white; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
                   ${levelData.currentLevel?.name || '신규 고객'}
                 </div>
               </div>
-              <div class="level-modal-stats">
-                <span>${levelData.visitCount || 0}회 방문</span> • 
-                <span>${levelData.points || 0}P</span> • 
-                <span>${(levelData.totalSpent || 0).toLocaleString()}원 누적</span>
+              
+              <div class="level-modal-stats" style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 13px; color: #666;">
+                <span>👥 ${levelData.visitCount || 0}회 방문</span>
+                <span>⭐ ${(levelData.points || 0).toLocaleString()}P</span>
+                <span>💰 ${(levelData.totalSpent || 0).toLocaleString()}원</span>
               </div>
+              
+              ${levelData.nextLevel ? `
+                <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 12px; font-weight: 600; color: #667eea;">다음: ${levelData.nextLevel.name}</span>
+                    <span style="font-size: 14px; font-weight: 700; color: #28a745;">${progress.overallPercent}%</span>
+                  </div>
+                  <div style="height: 6px; background: #e9ecef; border-radius: 3px; overflow: hidden;">
+                    <div style="height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: ${progress.overallPercent}%; transition: width 0.6s ease;"></div>
+                  </div>
+                  <div style="font-size: 11px; color: #666; margin-top: 4px; text-align: center;">
+                    ${levelData.nextLevel.evalPolicy === 'OR' ? '조건 중 하나만 달성' : '모든 조건 달성 필요'}
+                  </div>
+                </div>
+              ` : `
+                <div style="background: rgba(40, 167, 69, 0.1); padding: 12px; border-radius: 8px; text-align: center; color: #28a745; font-weight: 600; font-size: 12px;">
+                  🎉 최고 등급 달성!
+                </div>
+              `}
+              
               ${levelData.currentLevel?.benefits && levelData.currentLevel.benefits.length > 0 ? `
-                <div class="level-modal-benefits">
+                <div class="level-modal-benefits" style="color: #667eea; font-size: 12px; font-weight: 500;">
                   💝 ${levelData.currentLevel.benefits.map(b => window.RegularLevelManager.formatBenefitType(b.type)).join(', ')}
                 </div>
               ` : ''}
             </div>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
       </div>
       <style>
