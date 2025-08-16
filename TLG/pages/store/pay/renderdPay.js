@@ -1,4 +1,3 @@
-
 function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
@@ -61,9 +60,9 @@ function renderPay(currentOrder, store, tableNum) {
         `).join('')}
       </div>
       <p><strong>결제금액:</strong> ${orderData.total.toLocaleString()}원</p>
-      <p><strong>현재 포인트:</strong> ${userInfo.point.toLocaleString()}원</p>
+      <p id="storePointDisplay"></p>
       <label>포인트 사용:
-        <input type="number" id="usePoint" min="0" max="${userInfo.point}" value="0">
+        <input type="number" id="usePoint" min="0" max="0" value="0">
       </label>
       <div id="couponList" style="margin:10px 0 0 0;"></div>
       <div class="pay-summary">
@@ -96,10 +95,29 @@ function renderPay(currentOrder, store, tableNum) {
 
   // 요소 선택
   const usePointInput = document.getElementById('usePoint');
+  const storePointDisplay = document.getElementById('storePointDisplay');
   const finalAmount = document.getElementById('finalAmount');
   const pointEarned = document.getElementById('pointEarned');
   const couponList = document.getElementById('couponList');
   const discountAmount = document.getElementById('discountAmount');
+
+  // 매장별 포인트 조회 및 표시
+  let storePoints = 0;
+  try {
+    const storePointsResponse = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${store.id}/points`);
+    if (storePointsResponse.ok) {
+      const storePointsData = await storePointsResponse.json();
+      storePoints = storePointsData.success ? (storePointsData.points || 0) : 0;
+    }
+  } catch (error) {
+    console.error('매장별 포인트 조회 실패:', error);
+  }
+
+  // 포인트 사용 섹션
+  storePointDisplay.innerHTML = `<p><strong>${store.name} 보유 포인트:</strong> ${storePoints.toLocaleString()}원</p>`;
+  usePointInput.max = storePoints;
+  usePointInput.placeholder = `사용할 포인트 (최대 ${storePoints})`;
+
 
   // 쿠폰 리스트 렌더링
   let select = null;
@@ -124,8 +142,8 @@ function renderPay(currentOrder, store, tableNum) {
   }
 
   // 할인 계산 함수
-  function calculateBestPayment(orderTotal, coupon, userPoint, enteredPoint) {
-    enteredPoint = Math.min(enteredPoint, userPoint, orderTotal);
+  function calculateBestPayment(orderTotal, coupon, userStorePoints, enteredPoint) {
+    enteredPoint = Math.min(enteredPoint, userStorePoints, orderTotal);
     let discount1 = 0;
     if (coupon?.discountType === 'percent') {
       discount1 = Math.floor(orderTotal * (coupon.discountValue / 100));
@@ -168,7 +186,7 @@ function renderPay(currentOrder, store, tableNum) {
     const selectedCouponId = document.getElementById('selectedCoupon')?.value;
     const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
 
-    const result = calculateBestPayment(orderData.total, selectedCoupon, userInfo.point, enteredPoint);
+    const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
 
     finalAmount.textContent = `최종 결제금액: ${result.final.toLocaleString()}원`;
     pointEarned.textContent = `적립 예정 포인트: ${Math.floor(orderData.total * 0.1).toLocaleString()}원`;
@@ -186,7 +204,7 @@ function renderPay(currentOrder, store, tableNum) {
     const selectedCouponId = document.getElementById('selectedCoupon')?.value;
     const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
 
-    const result = calculateBestPayment(orderData.total, selectedCoupon, userInfo.point, enteredPoint);
+    const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
 
     await confirmPay(
       orderData,

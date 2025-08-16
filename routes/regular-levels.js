@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -7,9 +6,9 @@ const pool = require('../shared/config/database');
 router.get('/store/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
-    
+
     console.log(`🏆 매장 ${storeId} 단골 레벨 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         id, level_rank, name, description,
@@ -19,15 +18,15 @@ router.get('/store/:storeId', async (req, res) => {
       WHERE store_id = $1 AND is_active = true
       ORDER BY level_rank ASC
     `, [storeId]);
-    
+
     console.log(`✅ 매장 ${storeId} 단골 레벨 ${result.rows.length}개 조회 완료`);
-    
+
     res.json({
       success: true,
       storeId: parseInt(storeId),
       levels: result.rows
     });
-    
+
   } catch (error) {
     console.error('❌ 매장 단골 레벨 조회 실패:', error);
     res.status(500).json({
@@ -37,13 +36,59 @@ router.get('/store/:storeId', async (req, res) => {
   }
 });
 
+// 특정 매장의 사용자 포인트 조회
+router.get('/user/:userId/store/:storeId/points', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        uss.points,
+        uss.total_spent,
+        uss.visit_count,
+        uss.last_visit_at,
+        s.name as store_name
+      FROM user_store_stats uss
+      JOIN stores s ON uss.store_id = s.id
+      WHERE uss.user_id = $1 AND uss.store_id = $2
+    `, [userId, storeId]);
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        points: 0,
+        totalSpent: 0,
+        visitCount: 0,
+        storeName: null
+      });
+    }
+
+    const data = result.rows[0];
+    res.json({
+      success: true,
+      points: data.points || 0,
+      totalSpent: data.total_spent || 0,
+      visitCount: data.visit_count || 0,
+      lastVisitAt: data.last_visit_at,
+      storeName: data.store_name
+    });
+
+  } catch (error) {
+    console.error('❌ 매장별 포인트 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장별 포인트 조회에 실패했습니다'
+    });
+  }
+});
+
 // 사용자의 모든 매장별 포인트 정보 조회
 router.get('/user/:userId/all-points', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     console.log(`💰 사용자 ${userId} 전체 매장별 포인트 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         uss.store_id,
@@ -58,7 +103,7 @@ router.get('/user/:userId/all-points', async (req, res) => {
       WHERE uss.user_id = $1 AND uss.points > 0
       ORDER BY uss.points DESC
     `, [userId]);
-    
+
     const storePoints = result.rows.map(row => ({
       storeId: row.store_id,
       storeName: row.store_name,
@@ -68,16 +113,16 @@ router.get('/user/:userId/all-points', async (req, res) => {
       visitCount: row.visit_count || 0,
       lastVisitAt: row.last_visit_at
     }));
-    
+
     console.log(`✅ 사용자 ${userId} 매장별 포인트 조회 완료: ${storePoints.length}개 매장`);
-    
+
     res.json({
       success: true,
       userId: userId,
       storePoints: storePoints,
       totalStores: storePoints.length
     });
-    
+
   } catch (error) {
     console.error('❌ 매장별 포인트 조회 실패:', error);
     res.status(500).json({
@@ -91,9 +136,9 @@ router.get('/user/:userId/all-points', async (req, res) => {
 router.get('/user/:userId/store/:storeId', async (req, res) => {
   try {
     const { userId, storeId } = req.params;
-    
+
     console.log(`👤 사용자 ${userId} 매장 ${storeId} 단골 정보 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         uss.points, uss.total_spent, uss.visit_count, 
@@ -104,7 +149,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       LEFT JOIN regular_levels rl ON uss.current_level_id = rl.id
       WHERE uss.user_id = $1 AND uss.store_id = $2
     `, [userId, storeId]);
-    
+
     let userStats = null;
     if (result.rows.length > 0) {
       const row = result.rows[0];
@@ -123,7 +168,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         } : null
       };
     }
-    
+
     // 다음 레벨 정보도 함께 조회
     const nextLevelResult = await pool.query(`
       SELECT id, level_rank, name, required_points, required_total_spent, required_visit_count, eval_policy
@@ -138,7 +183,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       ORDER BY level_rank ASC
       LIMIT 1
     `, [storeId, userId]);
-    
+
     let nextLevel = null;
     if (nextLevelResult.rows.length > 0) {
       const next = nextLevelResult.rows[0];
@@ -152,9 +197,9 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         evalPolicy: next.eval_policy
       };
     }
-    
+
     console.log(`✅ 사용자 ${userId} 매장 ${storeId} 단골 정보 조회 완료`);
-    
+
     res.json({
       success: true,
       userId: userId,
@@ -162,7 +207,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       userStats: userStats,
       nextLevel: nextLevel
     });
-    
+
   } catch (error) {
     console.error('❌ 사용자 단골 정보 조회 실패:', error);
     res.status(500).json({
@@ -177,9 +222,9 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 10 } = req.query;
-    
+
     console.log(`👤 사용자 ${userId} 전체 단골 정보 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         uss.store_id, s.name as store_name, s.category,
@@ -193,7 +238,7 @@ router.get('/user/:userId', async (req, res) => {
       ORDER BY uss.total_spent DESC, uss.visit_count DESC
       LIMIT $2
     `, [userId, limit]);
-    
+
     const userRegularStores = result.rows.map(row => ({
       storeId: row.store_id,
       storeName: row.store_name,
@@ -209,16 +254,16 @@ router.get('/user/:userId', async (req, res) => {
         achievedAt: row.current_level_at
       } : null
     }));
-    
+
     console.log(`✅ 사용자 ${userId} 단골 매장 ${userRegularStores.length}개 조회 완료`);
-    
+
     res.json({
       success: true,
       userId: userId,
       regularStores: userRegularStores,
       totalCount: userRegularStores.length
     });
-    
+
   } catch (error) {
     console.error('❌ 사용자 전체 단골 정보 조회 실패:', error);
     res.status(500).json({
@@ -233,9 +278,9 @@ router.get('/user/:userId/history', async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 20 } = req.query;
-    
+
     console.log(`📋 사용자 ${userId} 단골 레벨 변경 이력 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         rlh.store_id, s.name as store_name,
@@ -250,7 +295,7 @@ router.get('/user/:userId/history', async (req, res) => {
       ORDER BY rlh.changed_at DESC
       LIMIT $2
     `, [userId, limit]);
-    
+
     const levelHistory = result.rows.map(row => ({
       storeId: row.store_id,
       storeName: row.store_name,
@@ -265,16 +310,16 @@ router.get('/user/:userId/history', async (req, res) => {
       reason: row.reason,
       changedAt: row.changed_at
     }));
-    
+
     console.log(`✅ 사용자 ${userId} 레벨 변경 이력 ${levelHistory.length}개 조회 완료`);
-    
+
     res.json({
       success: true,
       userId: userId,
       history: levelHistory,
       totalCount: levelHistory.length
     });
-    
+
   } catch (error) {
     console.error('❌ 사용자 레벨 변경 이력 조회 실패:', error);
     res.status(500).json({
@@ -288,9 +333,9 @@ router.get('/user/:userId/history', async (req, res) => {
 router.get('/user/:userId/benefits', async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     console.log(`🎁 사용자 ${userId} 단골 혜택 조회`);
-    
+
     const result = await pool.query(`
       SELECT 
         rlbi.id, rlbi.store_id, s.name as store_name,
@@ -304,7 +349,7 @@ router.get('/user/:userId/benefits', async (req, res) => {
       AND (rlbi.expires_at IS NULL OR rlbi.expires_at > CURRENT_TIMESTAMP)
       ORDER BY rlbi.issued_at DESC
     `, [userId]);
-    
+
     const availableBenefits = result.rows.map(row => ({
       id: row.id,
       storeId: row.store_id,
@@ -316,16 +361,16 @@ router.get('/user/:userId/benefits', async (req, res) => {
       levelName: row.level_name,
       levelRank: row.level_rank
     }));
-    
+
     console.log(`✅ 사용자 ${userId} 미사용 혜택 ${availableBenefits.length}개 조회 완료`);
-    
+
     res.json({
       success: true,
       userId: userId,
       benefits: availableBenefits,
       totalCount: availableBenefits.length
     });
-    
+
   } catch (error) {
     console.error('❌ 사용자 혜택 조회 실패:', error);
     res.status(500).json({
@@ -340,9 +385,9 @@ router.put('/benefits/:benefitId/use', async (req, res) => {
   try {
     const { benefitId } = req.params;
     const { userId } = req.body;
-    
+
     console.log(`🎁 혜택 ${benefitId} 사용 처리 (사용자: ${userId})`);
-    
+
     const result = await pool.query(`
       UPDATE regular_level_benefit_issues
       SET is_used = true, used_at = CURRENT_TIMESTAMP
@@ -350,22 +395,22 @@ router.put('/benefits/:benefitId/use', async (req, res) => {
       AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
       RETURNING *
     `, [benefitId, userId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: '사용 가능한 혜택을 찾을 수 없습니다'
       });
     }
-    
+
     console.log(`✅ 혜택 ${benefitId} 사용 처리 완료`);
-    
+
     res.json({
       success: true,
       message: '혜택이 사용 처리되었습니다',
       benefit: result.rows[0]
     });
-    
+
   } catch (error) {
     console.error('❌ 혜택 사용 처리 실패:', error);
     res.status(500).json({
@@ -380,21 +425,21 @@ router.post('/user/:userId/store/:storeId/update', async (req, res) => {
   try {
     const { userId, storeId } = req.params;
     const { orderTotal, orderDate } = req.body;
-    
+
     console.log(`🔧 단골 지표 수동 업데이트: 사용자 ${userId}, 매장 ${storeId}`);
-    
+
     await pool.query(
       'SELECT update_user_store_stats($1, $2, $3, $4)',
       [userId, parseInt(storeId), orderTotal, orderDate || new Date()]
     );
-    
+
     console.log(`✅ 단골 지표 수동 업데이트 완료`);
-    
+
     res.json({
       success: true,
       message: '단골 지표가 업데이트되었습니다'
     });
-    
+
   } catch (error) {
     console.error('❌ 단골 지표 수동 업데이트 실패:', error);
     res.status(500).json({

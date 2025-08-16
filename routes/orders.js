@@ -39,9 +39,28 @@ router.post('/pay', async (req, res) => {
     const user = userResult.rows[0];
     const currentCoupons = user.coupons || { unused: [], used: [] };
 
-    if (usedPoint > user.point) {
-      await client.query('ROLLBACK');
-      return res.status(400).json({ error: '포인트가 부족합니다' });
+    // 매장별 포인트 사용 검증
+    let userStorePoints = 0;
+    if (usedPoint > 0) {
+      try {
+        const storePointsResult = await client.query(`
+          SELECT points FROM user_store_stats 
+          WHERE user_id = $1 AND store_id = $2
+        `, [userId, storeId]);
+
+        userStorePoints = storePointsResult.rows[0]?.points || 0;
+
+        if (usedPoint > userStorePoints) {
+          return res.status(400).json({
+            error: '해당 매장의 보유 포인트가 부족합니다',
+            storePoints: userStorePoints,
+            requestedPoint: usedPoint
+          });
+        }
+      } catch (error) {
+        console.error('매장별 포인트 조회 실패:', error);
+        return res.status(500).json({ error: '포인트 검증 중 오류가 발생했습니다' });
+      }
     }
 
     let usedCoupon = null;
@@ -53,11 +72,12 @@ router.post('/pay', async (req, res) => {
       }
     }
 
-    const appliedPoint = Math.min(usedPoint, user.point, orderData.total);
+    const appliedPoint = Math.min(usedPoint, userStorePoints, orderData.total); // userStorePoints 사용
     const finalAmount = orderData.total - (couponDiscount || 0) - appliedPoint;
     const earnedPoint = Math.floor(orderData.total * 0.1);
 
-    const newPoint = user.point - appliedPoint + earnedPoint;
+    // users 테이블의 포인트는 전체 통합 포인트로 유지, 매장별 포인트는 user_store_stats 에서 관리
+    // const newPoint = user.point - appliedPoint + earnedPoint;
 
     let newCoupons = { ...currentCoupons };
     if (usedCoupon) {
@@ -96,9 +116,10 @@ router.post('/pay', async (req, res) => {
     }
 
     // users 테이블에서 포인트와 쿠폰만 업데이트
+    // user.point 업데이트 로직 제거, coupons만 업데이트
     await client.query(
-      'UPDATE users SET point = $1, coupons = $2 WHERE id = $3',
-      [newPoint, JSON.stringify(newCoupons), userId]
+      'UPDATE users SET coupons = $1 WHERE id = $2',
+      [JSON.stringify(newCoupons), userId]
     );
 
     // 테이블 정보 처리
@@ -162,6 +183,16 @@ router.post('/pay', async (req, res) => {
     ]);
 
     console.log(`✅ 주문 ID ${orderResult.rows[0].id} orders 테이블에 저장 완료`);
+
+    // 매장별 포인트는 단골 시스템의 update_user_store_stats 함수에서 자동 처리됨
+    // 포인트 사용분만 별도 차감 처리
+    if (usedPoint > 0) {
+      await pool.query(`
+        UPDATE user_store_stats
+        SET points = points - $1, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = $2 AND store_id = $3
+      `, [usedPoint, userId, storeId]);
+    }
 
     await client.query('COMMIT');
 

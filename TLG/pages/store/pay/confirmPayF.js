@@ -36,8 +36,8 @@ async function confirmPay(orderData, usedPoint, store, currentOrder, finalTotal,
 
     console.log('✅ 서버 결제 처리 완료:', data);
 
-    // 클라이언트 userInfo 업데이트
-    userInfo.point = userInfo.point - data.result.appliedPoint + data.result.earnedPoint;
+    // 클라이언트 userInfo 업데이트 - 매장별 포인트 시스템으로 변경
+    // 기존 전체 포인트 방식은 더 이상 사용하지 않음
 
     // 쿠폰 처리
     if (selectedCouponId) {
