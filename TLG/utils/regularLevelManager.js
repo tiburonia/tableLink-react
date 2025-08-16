@@ -4,15 +4,15 @@ window.RegularLevelManager = {
   // 사용자의 매장별 단골 레벨 정보 가져오기
   async getUserRegularLevel(userId, storeId) {
     try {
-      const response = await fetch(`/api/regular-levels/user-level/${userId}/${storeId}`);
+      const response = await fetch(`/api/regular-levels/user/${userId}/store/${storeId}`);
       const data = await response.json();
       
       if (data.success) {
         return {
-          level: data.level,
-          stats: data.stats,
+          level: data.userStats?.currentLevel,
+          stats: data.userStats,
           nextLevel: data.nextLevel,
-          progress: data.progress
+          progress: this.calculateProgress(data.userStats, data.nextLevel)
         };
       }
       
@@ -26,11 +26,11 @@ window.RegularLevelManager = {
   // 사용자의 모든 단골 레벨 목록 가져오기
   async getUserAllRegularLevels(userId) {
     try {
-      const response = await fetch(`/api/regular-levels/user-levels/${userId}`);
+      const response = await fetch(`/api/regular-levels/user/${userId}`);
       const data = await response.json();
       
       if (data.success) {
-        return data.levels || [];
+        return data.regularStores || [];
       }
       
       return [];
@@ -54,6 +54,49 @@ window.RegularLevelManager = {
     } catch (error) {
       console.error('❌ 매장 단골 레벨 시스템 조회 실패:', error);
       return [];
+    }
+  },
+
+  // 진행률 계산
+  calculateProgress(userStats, nextLevel) {
+    if (!userStats || !nextLevel) return null;
+    
+    const points = userStats.points || 0;
+    const totalSpent = userStats.totalSpent || 0;
+    const visitCount = userStats.visitCount || 0;
+    
+    const requiredPoints = nextLevel.requiredPoints || 0;
+    const requiredSpent = nextLevel.requiredTotalSpent || 0;
+    const requiredVisits = nextLevel.requiredVisitCount || 0;
+    
+    // OR 정책인 경우 가장 높은 진행률 사용
+    if (nextLevel.evalPolicy === 'OR') {
+      const pointsPercent = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+      const spentPercent = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+      const visitsPercent = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+      
+      const maxPercent = Math.max(pointsPercent, spentPercent, visitsPercent);
+      
+      return {
+        percentage: Math.round(maxPercent),
+        points_needed: Math.max(0, requiredPoints - points),
+        spending_needed: Math.max(0, requiredSpent - totalSpent),
+        visits_needed: Math.max(0, requiredVisits - visitCount)
+      };
+    } else {
+      // AND 정책인 경우 모든 조건의 평균 진행률
+      const pointsPercent = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+      const spentPercent = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+      const visitsPercent = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+      
+      const avgPercent = (pointsPercent + spentPercent + visitsPercent) / 3;
+      
+      return {
+        percentage: Math.round(avgPercent),
+        points_needed: Math.max(0, requiredPoints - points),
+        spending_needed: Math.max(0, requiredSpent - totalSpent),
+        visits_needed: Math.max(0, requiredVisits - visitCount)
+      };
     }
   },
 
