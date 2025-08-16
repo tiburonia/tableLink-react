@@ -327,7 +327,7 @@ async function renderMyPage() {
         height: 78px;
         background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
         border-top: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 
+        box-shadow:
           0 -8px 32px rgba(41, 126, 252, 0.08),
           0 -4px 16px rgba(0, 0, 0, 0.04),
           inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -382,7 +382,7 @@ async function renderMyPage() {
         background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
         color: #297efc;
         transform: translateY(-2px);
-        box-shadow: 
+        box-shadow:
           0 8px 24px rgba(41, 126, 252, 0.12),
           0 4px 12px rgba(0, 0, 0, 0.05);
         border-color: rgba(41, 126, 252, 0.2);
@@ -394,7 +394,7 @@ async function renderMyPage() {
 
       #bottomBar button:active {
         transform: translateY(0px);
-        box-shadow: 
+        box-shadow:
           0 4px 16px rgba(41, 126, 252, 0.15),
           0 2px 8px rgba(0, 0, 0, 0.05);
       }
@@ -1973,8 +1973,8 @@ async function showAllStorePointsModal(storePoints) {
                 <div class="points-store-category">${store.storeCategory || '기타'}</div>
               </div>
               <div class="points-modal-stats">
-                <span class="points-value">${store.points.toLocaleString()}P</span> • 
-                <span>${store.visitCount}회 방문</span> • 
+                <span class="points-value">${store.points.toLocaleString()}P</span> •
+                <span>${store.visitCount}회 방문</span> •
                 <span>${store.totalSpent.toLocaleString()}원 누적</span>
               </div>
               ${store.lastVisitAt ? `
