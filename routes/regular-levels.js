@@ -142,17 +142,51 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         uss.points, uss.total_spent, uss.visit_count, 
-        uss.last_visit_at, uss.current_level_at,
+        uss.last_visit_at, uss.current_level_at, uss.current_level_id,
         rl.id as level_id, rl.level_rank, rl.name as level_name, 
-        rl.description as level_description, rl.benefits
+        rl.description as level_description, rl.benefits,
+        rl.required_points, rl.required_total_spent, rl.required_visit_count, rl.eval_policy
       FROM user_store_stats uss
       LEFT JOIN regular_levels rl ON uss.current_level_id = rl.id
       WHERE uss.user_id = $1 AND uss.store_id = $2
     `, [userId, storeId]);
 
+    console.log(`🔍 조회된 통계 데이터:`, result.rows[0]);
+
     let userStats = null;
     if (result.rows.length > 0) {
       const row = result.rows[0];
+      
+      // 현재 레벨이 정말 조건에 맞는지 검증
+      if (row.level_id) {
+        const points = row.points || 0;
+        const totalSpent = parseFloat(row.total_spent) || 0;
+        const visitCount = row.visit_count || 0;
+        const requiredPoints = row.required_points || 0;
+        const requiredSpent = parseFloat(row.required_total_spent) || 0;
+        const requiredVisits = row.required_visit_count || 0;
+        const evalPolicy = row.eval_policy || 'OR';
+        
+        console.log(`🔍 레벨 조건 검증:`);
+        console.log(`   현재 레벨: ${row.level_name} (랭크 ${row.level_rank})`);
+        console.log(`   사용자 현황: 포인트 ${points}, 결제 ${totalSpent}, 방문 ${visitCount}`);
+        console.log(`   필요 조건: 포인트 ${requiredPoints}, 결제 ${requiredSpent}, 방문 ${requiredVisits}`);
+        console.log(`   평가 정책: ${evalPolicy}`);
+        
+        let meetsCondition = false;
+        if (evalPolicy === 'OR') {
+          meetsCondition = points >= requiredPoints || totalSpent >= requiredSpent || visitCount >= requiredVisits;
+        } else {
+          meetsCondition = points >= requiredPoints && totalSpent >= requiredSpent && visitCount >= requiredVisits;
+        }
+        
+        console.log(`   조건 만족 여부: ${meetsCondition ? '✅ 만족' : '❌ 불만족'}`);
+        
+        if (!meetsCondition) {
+          console.log(`⚠️ 경고: 현재 레벨 ${row.level_name}의 조건을 만족하지 않습니다!`);
+        }
+      }
+      
       userStats = {
         points: row.points || 0,
         totalSpent: parseFloat(row.total_spent) || 0,
