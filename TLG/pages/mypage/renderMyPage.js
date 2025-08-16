@@ -109,16 +109,19 @@ async function renderMyPage() {
     </main>
 
     <nav id="bottomBar">
-      <button id="homeBtn" title="홈" onclick="renderSubMain()">
+      <button onclick="renderSubMain()" title="홈">
         <span style="font-size: 22px;">🏠</span>
       </button>
-      <button id="searchBtn" title="검색" onclick="renderSearch('')">
+      <button onclick="TLL().catch(console.error)" title="QR주문">
+        <span style="font-size: 22px;">📱</span>
+      </button>
+      <button onclick="renderSearch('')" title="검색">
         <span style="font-size: 22px;">🔍</span>
       </button>
       <button onclick="renderMap().catch(console.error)" title="지도">
         <span style="font-size: 22px;">📍</span>
       </button>
-      <button class="active" onclick="renderMyPage()" title="마이페이지">
+      <button id="mypageBtn" class="active" title="마이페이지">
         <span style="font-size: 22px;">👤</span>
       </button>
     </nav>
@@ -1039,6 +1042,17 @@ async function renderMyPage() {
         renderSubMain();
       } else {
         console.warn('⚠️ renderSubMain 함수를 찾을 수 없습니다');
+      }
+    });
+  }
+
+  const tllBtn = document.querySelector('#tllBtn'); // TLL 버튼 (QR 주문)
+  if (tllBtn) {
+    tllBtn.addEventListener('click', () => {
+      if (typeof TLL === 'function') {
+        TLL().catch(console.error);
+      } else {
+        console.warn('⚠️ TLL 함수를 찾을 수 없습니다');
       }
     });
   }

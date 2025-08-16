@@ -29,6 +29,9 @@ window.renderNotification = async function renderNotification() {
       <button onclick="renderSubMain()" title="홈">
         <span style="font-size: 22px;">🏠</span>
       </button>
+      <button onclick="TLL().catch(console.error)" title="QR주문">
+        <span style="font-size: 22px;">📱</span>
+      </button>
       <button onclick="renderSearch('')" title="검색">
         <span style="font-size: 22px;">🔍</span>
       </button>

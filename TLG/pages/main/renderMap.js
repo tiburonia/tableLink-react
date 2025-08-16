@@ -31,10 +31,13 @@ async function renderMap() {
     </main>
 
     <nav id="bottomBar">
-      <button id="homeBtn" title="홈" onclick="renderSubMain()">
+      <button onclick="renderSubMain()" title="홈">
         <span style="font-size: 22px;">🏠</span>
       </button>
-      <button id="searchBtn" title="검색" onclick="renderSearch('')">
+      <button onclick="TLL().catch(console.error)" title="QR주문">
+        <span style="font-size: 22px;">📱</span>
+      </button>
+      <button onclick="renderSearch('')" title="검색">
         <span style="font-size: 22px;">🔍</span>
       </button>
       <button id="renderMapBtn" class="active" title="지도">
@@ -516,7 +519,7 @@ async function renderMap() {
     }
   });
 
-  
+
 
   // 검색 기능 구현
   const searchInput = document.getElementById('searchInput');
@@ -593,7 +596,7 @@ async function renderMap() {
   // 검색 결과 숨기기 함수
   function hideSearchResults() {
     searchResults.classList.add('hidden');
-    
+
     // 현재 위치 UI 다시 보이기
     const locationInfo = document.getElementById('locationInfo');
     if (locationInfo) {

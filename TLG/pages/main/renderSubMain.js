@@ -58,6 +58,9 @@ async function renderSubMain() {
       <button id="homeBtn" class="active" title="홈" onclick="renderSubMain()">
         <span style="font-size: 22px;">🏠</span>
       </button>
+      <button id="tllBtn" title="QR주문" onclick="TLL().catch(console.error)">
+        <span style="font-size: 22px;">📱</span>
+      </button>
       <button id="searchBtn" title="검색" onclick="renderSearch('')">
         <span style="font-size: 22px;">🔍</span>
       </button>
