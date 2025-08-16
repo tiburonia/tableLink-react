@@ -1,5 +1,4 @@
-
-<old_str>function renderPay(currentOrder, store, tableNum) {
+function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
   // 매장 메뉴 데이터 안전하게 처리
@@ -1148,4 +1147,4 @@
         }
       }
     </style>
-  `;</new_str>
+  `;
