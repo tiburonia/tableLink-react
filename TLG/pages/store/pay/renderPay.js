@@ -135,8 +135,11 @@ function renderPay(currentOrder, store, tableNum) {
     <style>
       .pay-container {
         min-height: 100vh;
+        height: auto;
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        padding-bottom: 100px;
+        padding-bottom: 120px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .pay-header {
@@ -149,6 +152,8 @@ function renderPay(currentOrder, store, tableNum) {
         position: sticky;
         top: 0;
         z-index: 100;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .header-back-btn {
@@ -196,6 +201,9 @@ function renderPay(currentOrder, store, tableNum) {
         display: flex;
         flex-direction: column;
         gap: 16px;
+        min-height: calc(100vh - 120px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .order-summary-card,
@@ -504,12 +512,17 @@ function renderPay(currentOrder, store, tableNum) {
       }
 
       @media (max-width: 480px) {
+        .pay-container {
+          padding-bottom: 140px;
+        }
+        
         .pay-header {
           padding: 16px 12px;
         }
         
         .pay-content {
           padding: 16px 12px;
+          min-height: calc(100vh - 140px);
         }
         
         .order-summary-card,
