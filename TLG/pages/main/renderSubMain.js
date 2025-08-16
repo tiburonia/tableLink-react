@@ -450,25 +450,67 @@ function renderBenefits() {
   alert('혜택 화면은 준비 중입니다.');
 }
 
-function renderStoreById(storeId) {
+async function renderStoreById(storeId) {
   console.log('🏪 매장 상세 화면으로 이동:', storeId);
-  // 기존 renderStore 함수가 있다면 호출
-  if (typeof renderStore === 'function') {
-    // storeId로 매장 정보를 가져와서 renderStore 호출
-    // 임시로 기본 매장 객체 생성
-    const store = { id: storeId, name: `매장 ${storeId}` };
-    renderStore(store);
-  } else {
-    alert(`매장 ${storeId} 상세 정보 (준비 중)`);
+  
+  try {
+    // 실제 매장 데이터 조회
+    const response = await fetch(`/api/stores/${storeId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.success && data.store) {
+      console.log('✅ 매장 데이터 로드 완료:', data.store.name);
+      
+      // renderStore 함수 호출
+      if (typeof renderStore === 'function') {
+        renderStore(data.store);
+      } else if (typeof window.renderStore === 'function') {
+        window.renderStore(data.store);
+      } else {
+        console.error('❌ renderStore 함수를 찾을 수 없습니다');
+        alert('매장 상세 화면을 불러올 수 없습니다.');
+      }
+    } else {
+      throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+    }
+  } catch (error) {
+    console.error('❌ 매장 데이터 로드 실패:', error);
+    alert(`매장 ${storeId} 정보를 불러오는 중 오류가 발생했습니다: ${error.message}`);
   }
 }
 
-function TLLForStore(storeId) {
+async function TLLForStore(storeId) {
   console.log('📱 매장별 QR 주문:', storeId);
-  if (typeof TLL === 'function') {
-    TLL({ storeId: storeId });
-  } else {
-    alert(`매장 ${storeId} QR 주문 (준비 중)`);
+  
+  try {
+    // 실제 매장 데이터 조회
+    const response = await fetch(`/api/stores/${storeId}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.success && data.store) {
+      console.log('✅ QR 주문용 매장 데이터 로드:', data.store.name);
+      
+      // TLL 함수 호출
+      if (typeof TLL === 'function') {
+        TLL(data.store);
+      } else if (typeof window.TLL === 'function') {
+        window.TLL(data.store);
+      } else {
+        console.error('❌ TLL 함수를 찾을 수 없습니다');
+        alert('QR 주문 기능을 사용할 수 없습니다.');
+      }
+    } else {
+      throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+    }
+  } catch (error) {
+    console.error('❌ QR 주문용 매장 데이터 로드 실패:', error);
+    alert(`매장 ${storeId} QR 주문 중 오류가 발생했습니다: ${error.message}`);
   }
 }
 
