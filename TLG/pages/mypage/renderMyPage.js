@@ -2113,7 +2113,7 @@ async function updateRegularLevelsList(currentUserInfo) {
               </div>
 
               <div class="progress-requirements">
-                ${levelData.nextLevel.requiredVisitCount > 0 ? `
+                ${(levelData.nextLevel.requiredVisitCount || 0) > 0 ? `
                 <div class="requirement-item">
                   <div class="requirement-label">방문 횟수 ${progress.visitsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.visitsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
@@ -2124,7 +2124,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                 </div>
                 ` : ''}
 
-                ${levelData.nextLevel.requiredTotalSpent > 0 ? `
+                ${(levelData.nextLevel.requiredTotalSpent || 0) > 0 ? `
                 <div class="requirement-item">
                   <div class="requirement-label">누적 결제 ${progress.spendingDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.spendingDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
@@ -2135,7 +2135,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                 </div>
                 ` : ''}
 
-                ${levelData.nextLevel.requiredPoints > 0 ? `
+                ${(levelData.nextLevel.requiredPoints || 0) > 0 ? `
                 <div class="requirement-item">
                   <div class="requirement-label">포인트 ${progress.pointsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.pointsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
