@@ -147,21 +147,14 @@ function renderPay(currentOrder, store, tableNum) {
 
       .pay-container {
         height: 100vh;
-        display: grid;
-        grid-template-rows: auto 1fr auto;
-        grid-template-areas:
-          "header"
-          "main"
-          "footer";
+        display: flex;
+        flex-direction: column;
         background: #f8fafc;
       }
 
       /* 상단 헤더 */
       .pay-header {
-        grid-area: header;
-        position: sticky;
-        top: 0;
-        z-index: 100;
+        flex-shrink: 0;
         background: white;
         padding: 16px 20px;
         display: flex;
@@ -169,6 +162,7 @@ function renderPay(currentOrder, store, tableNum) {
         gap: 16px;
         border-bottom: 1px solid #e2e8f0;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        z-index: 100;
       }
 
       .back-btn {
@@ -203,11 +197,10 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 메인 스크롤 영역 */
       .pay-main {
-        grid-area: main;
+        flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        min-height: 0; /* Grid 아이템이 제대로 축소되도록 */
       }
 
       .content-wrapper {
@@ -217,7 +210,6 @@ function renderPay(currentOrder, store, tableNum) {
         display: flex;
         flex-direction: column;
         gap: 20px;
-        min-height: calc(100vh - 200px); /* 헤더와 푸터 공간 제외 */
       }
 
       /* 섹션 공통 스타일 */
@@ -460,7 +452,7 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 하단 고정 결제 버튼 */
       .pay-footer {
-        grid-area: footer;
+        flex-shrink: 0;
         background: white;
         padding: 16px 20px;
         border-top: 1px solid #e2e8f0;
@@ -537,14 +529,9 @@ function renderPay(currentOrder, store, tableNum) {
           padding: 12px 16px;
         }
 
-        .pay-main {
-          padding-bottom: 160px; /* 모바일에서 더 많은 여백 */
-        }
-
         .content-wrapper {
           padding: 16px;
           gap: 16px;
-          min-height: calc(100vh - 240px);
         }
 
         .section {
