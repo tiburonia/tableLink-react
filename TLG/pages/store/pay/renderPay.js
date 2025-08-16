@@ -155,7 +155,7 @@ function renderPay(currentOrder, store, tableNum) {
       /* 상단 헤더 */
       .pay-header {
         flex-shrink: 0;
-        height: 80px;
+        height: 70px;
         background: white;
         padding: 16px 20px;
         display: flex;
@@ -202,13 +202,13 @@ function renderPay(currentOrder, store, tableNum) {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        min-height: 0;
+        height: calc(100vh - 70px - 100px); /* 헤더(70px) + 푸터(100px) */
       }
 
       .content-wrapper {
         max-width: 500px;
         margin: 0 auto;
-        padding: 20px 20px 20px 20px;
+        padding: 20px 20px 120px 20px; /* 하단에 푸터 높이만큼 패딩 추가 */
         display: flex;
         flex-direction: column;
         gap: 20px;
@@ -454,10 +454,13 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 하단 고정 결제 버튼 */
       .pay-footer {
-        flex-shrink: 0;
-        height: 120px;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 100px;
         background: white;
-        padding: 16px 20px;
+        padding: 12px 20px;
         border-top: 1px solid #e2e8f0;
         box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
         display: flex;
@@ -466,6 +469,7 @@ function renderPay(currentOrder, store, tableNum) {
         max-width: 500px;
         margin: 0 auto;
         width: 100%;
+        z-index: 1000;
       }
 
       .pay-btn {
