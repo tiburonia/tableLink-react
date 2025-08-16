@@ -156,7 +156,7 @@ async function createAutoLevelUpdateTrigger() {
           uss.current_level_id,
           calculate_regular_level(uss.user_id, uss.store_id, uss.points, uss.total_spent, uss.visit_count) as new_level_id
         FROM user_store_stats uss
-        WHERE uss.points > 0 OR uss.total_spent > 0 OR uss.visit_count > 0
+        WHERE (uss.points > 0 OR uss.total_spent > 0 OR uss.visit_count > 0) AND uss.current_level_id IS NULL
       )
       UPDATE user_store_stats uss
       SET 
