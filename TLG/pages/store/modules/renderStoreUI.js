@@ -1,4 +1,3 @@
-
 // 매장 UI 렌더링 관리자
 window.StoreUIManager = {
   renderStoreHTML(store, displayRating) {
@@ -244,7 +243,7 @@ window.StoreUIManager = {
         * {
           box-sizing: border-box;
         }
-        
+
         html, body {
           margin: 0;
           padding: 0;
@@ -275,7 +274,7 @@ window.StoreUIManager = {
           overflow: hidden;
           position: relative;
         }
-        
+
         .imgWrapper img {
           position: absolute;
           top: 50%;
@@ -312,10 +311,10 @@ window.StoreUIManager = {
           box-shadow: 0 2px 12px rgba(0,0,0,0.1);
           transition: all 0.2s ease;
         }
-        
+
         #backBtn { left: 15px; }
         #TLL { right: 15px; }
-        
+
         #backBtn:hover, #TLL:hover {
           background: white;
           transform: scale(1.05);
@@ -332,14 +331,14 @@ window.StoreUIManager = {
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 10;
         }
-        
+
         #storePanel.collapsed {
           top: 200px;
           bottom: 70px;
           height: calc(100vh - 270px);
           border-radius: 20px 20px 0 0;
         }
-        
+
         #storePanel.expanded {
           top: 0;
           bottom: 70px;
@@ -358,7 +357,7 @@ window.StoreUIManager = {
           touch-action: none;
           transition: background 0.2s ease;
         }
-        
+
         #panelHandle:hover {
           background: #9ca3af;
         }
@@ -375,11 +374,11 @@ window.StoreUIManager = {
           scroll-behavior: smooth;
           will-change: scroll-position;
         }
-        
+
         #storePanelContainer::-webkit-scrollbar {
           width: 3px;
         }
-        
+
         #storePanelContainer::-webkit-scrollbar-thumb {
           background: #d1d5db;
           border-radius: 2px;
@@ -436,7 +435,7 @@ window.StoreUIManager = {
           border-radius: 6px;
           transition: background 0.2s ease;
         }
-        
+
         .review-link:hover {
           background: #eff6ff;
         }
@@ -451,7 +450,7 @@ window.StoreUIManager = {
           border-radius: 12px;
           transition: all 0.2s ease;
         }
-        
+
         .favorite-btn:hover {
           background: #fef2f2;
           transform: scale(1.1);
@@ -1028,114 +1027,150 @@ window.StoreUIManager = {
           text-align: center;
         }
 
-        #storeContent {
-          margin: 0;
-          padding: 20px;
-          font-size: 15px;
-          min-height: 80px;
-          color: #374151;
-          background: white;
-          border-radius: 16px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        /* 진행률 표시 */
+      .level-progress {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .progress-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        margin-bottom: 6px;
+        opacity: 0.9;
+      }
+
+      .progress-bar {
+        height: 6px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 6px;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #4CAF50, #66BB6A);
+        transition: width 0.3s ease;
+        border-radius: 3px;
+      }
+
+      .progress-text {
+        font-size: 11px;
+        opacity: 0.8;
+        text-align: center;
+      }
+
+      /* 프로모션 관련 스타일 */
+      .no-promotion {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        opacity: 0.7;
+      }
+
+      .no-promotion-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+
+      .no-promotion-text {
+        font-size: 14px;
+        color: #666;
+      }
+
+      .promotion-more {
+        margin-top: 8px;
+        text-align: center;
+      }
+
+      .promotion-detail-btn {
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        padding: 6px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .promotion-detail-btn:hover {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.5);
+      }
+
+      /* 반응형 조정 */
+      @media (max-width: 380px) {
+        .loyalty-levels-grid {
+          padding: 0 10px;
         }
 
-        /* 하단 바 */
-        #storeBottomBar {
-          position: fixed;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
+        .loyalty-level-card {
           width: 100%;
-          max-width: 430px;
-          height: 70px;
-          background: white;
-          border-top: 1px solid #f3f4f6;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          z-index: 1000;
-          padding: 0 20px;
-          box-sizing: border-box;
-          gap: 16px;
+          padding: 14px 16px;
+          min-height: 65px;
         }
 
-        .btm-btn {
-          border: none;
-          outline: none;
-          font-family: inherit;
-          transition: all 0.2s ease;
-          cursor: pointer;
-          height: 50px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          font-weight: 600;
-        }
-
-        .phone-btn {
-          width: 50px;
-          min-width: 50px;
-          max-width: 50px;
-          border-radius: 50%;
-          background: #f0f9ff;
-          color: #3b82f6;
-          font-size: 20px;
-          border: 2px solid #dbeafe;
-          transition: all 0.2s ease;
-        }
-
-        .phone-btn:hover {
-          background: #dbeafe;
-          transform: scale(1.05);
-        }
-
-        .order-btn {
-          flex: 1;
-          height: 50px;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          color: white;
-          font-size: 16px;
-          letter-spacing: 0.2px;
-          box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
-          display: flex;
-          justify-content: center;
-          align-items: center;
+        .level-header {
+          min-width: 110px;
           gap: 8px;
         }
 
-        .order-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        .level-icon {
+          font-size: 20px;
         }
 
-        .order-text {
-          font-weight: 600;
+        .level-name {
+          font-size: 13px;
         }
 
-        .order-arrow {
-          font-size: 18px;
-          transition: transform 0.2s ease;
+        .level-requirement {
+          font-size: 10px;
         }
 
-        .order-btn:hover .order-arrow {
-          transform: translateX(2px);
+        .level-benefits {
+          justify-content: center;
+          gap: 4px;
         }
+
+        .benefit-item {
+          font-size: 10px;
+          padding: 3px 6px;
+        }
+
+        .level-progress {
+          margin-top: 8px;
+          padding-top: 8px;
+        }
+
+        .progress-info {
+          font-size: 11px;
+        }
+
+        .progress-text {
+          font-size: 10px;
+        }
+      }
 
         @media (max-width: 480px) {
           .tlr-stats-grid {
             grid-template-columns: repeat(2, 1fr);
           }
-          
+
           .loyalty-benefits-grid {
             gap: 6px;
           }
-          
+
           .benefit-item {
             padding: 10px 6px;
           }
-          
+
           .benefit-text {
             font-size: 10px;
           }

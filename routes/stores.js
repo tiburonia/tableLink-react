@@ -1261,4 +1261,63 @@ router.post('/:storeId/toggle-status', async (req, res) => {
   }
 });
 
+// 매장 프로모션 조회
+router.get('/:storeId/promotions', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`🎉 매장 ${storeId} 프로모션 조회`);
+
+    // 현재 진행중인 프로모션만 조회
+    const result = await pool.query(`
+      SELECT 
+        id, name, description, type,
+        discount_percent, discount_amount, point_rate,
+        min_order_amount, max_discount_amount,
+        start_date, end_date, is_active
+      FROM store_promotions
+      WHERE store_id = $1 AND is_active = true
+      AND (start_date IS NULL OR start_date <= CURRENT_DATE)
+      AND (end_date IS NULL OR end_date >= CURRENT_DATE)
+      ORDER BY priority DESC, created_at DESC
+    `, [storeId]);
+
+    const promotions = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      type: row.type,
+      discount_percent: row.discount_percent,
+      discount_amount: parseFloat(row.discount_amount),
+      point_rate: row.point_rate,
+      min_order_amount: parseFloat(row.min_order_amount),
+      max_discount_amount: parseFloat(row.max_discount_amount),
+      start_date: row.start_date,
+      end_date: row.end_date,
+      is_active: row.is_active
+    }));
+
+    console.log(`✅ 매장 ${storeId} 프로모션 ${promotions.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      promotions: promotions,
+      totalCount: promotions.length
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 프로모션 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장 프로모션 조회 실패: ' + error.message,
+      promotions: []
+    });
+  }
+});
+
+// 매장 즐겨찾기 토글
+router.post('/:storeId/favorite', async (req, res) => {
+});
+
 module.exports = { router, updateStoreRating };

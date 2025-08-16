@@ -426,9 +426,33 @@ async function loadAndRenderStore(storeId) {
 }
 
 // 프로모션 데이터 로드
-function loadPromotionData(store) {
-  // 실제로는 API에서 가져올 데이터, 현재는 목업 데이터 사용
-  console.log(`🎉 매장 ${store.id} 프로모션 정보 로드`);
+async function loadPromotionData(store) {
+  try {
+    console.log(`🎉 매장 ${store.id} 프로모션 정보 로드`);
+
+    // 실제 프로모션 데이터 조회
+    const response = await fetch(`/api/stores/${store.id}/promotions`);
+    if (response.ok) {
+      const promotionData = await response.json();
+      
+      if (promotionData.success && promotionData.promotions) {
+        console.log(`✅ 매장 ${store.id} 프로모션 ${promotionData.promotions.length}개 로드 완료`);
+        
+        // 프로모션 카드 UI 업데이트
+        updatePromotionUI(promotionData.promotions);
+      } else {
+        console.log(`⚠️ 매장 ${store.id} 진행중인 프로모션 없음`);
+        updatePromotionUI([]);
+      }
+    } else {
+      console.error('❌ 프로모션 데이터 조회 실패');
+      updatePromotionUI([]);
+    }
+
+  } catch (error) {
+    console.error('❌ 프로모션 데이터 로드 중 오류:', error);
+    updatePromotionUI([]);
+  }
 
   // 프로모션 더보기 버튼 이벤트 추가 (여러 클래스 확인)
   setTimeout(() => {
@@ -462,6 +486,66 @@ function loadPromotionData(store) {
   }, 200);
 }
 
+// 프로모션 UI 업데이트
+function updatePromotionUI(promotions) {
+  const promotionContainer = document.querySelector('.promotion-content');
+  if (!promotionContainer) return;
+
+  if (!promotions || promotions.length === 0) {
+    promotionContainer.innerHTML = `
+      <div class="no-promotion">
+        <span class="no-promotion-icon">📭</span>
+        <div class="no-promotion-text">현재 진행중인 혜택이 없습니다</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 최대 2개의 프로모션만 표시
+  const displayPromotions = promotions.slice(0, 2);
+  
+  promotionContainer.innerHTML = displayPromotions.map((promotion, index) => `
+    <div class="promotion-item ${index === 0 ? 'featured' : ''}">
+      <div class="promotion-left">
+        <span class="promotion-icon">${getPromotionIcon(promotion.type)}</span>
+        <div class="promotion-info">
+          <div class="promotion-name">${promotion.name}</div>
+          <div class="promotion-desc">${promotion.description}</div>
+        </div>
+      </div>
+      <div class="promotion-discount">${formatDiscountValue(promotion)}</div>
+    </div>
+  `).join('') + (promotions.length > 2 ? `
+    <div class="promotion-more">
+      <button class="promotion-detail-btn">더 보기 (+${promotions.length - 2})</button>
+    </div>
+  ` : '');
+}
+
+// 프로모션 타입에 따른 아이콘 반환
+function getPromotionIcon(type) {
+  const iconMap = {
+    'discount': '🏷️',
+    'point': '⭐',
+    'free_delivery': '🚚',
+    'new_customer': '🎁',
+    'loyalty': '👑'
+  };
+  return iconMap[type] || '🎉';
+}
+
+// 할인 값 포맷팅
+function formatDiscountValue(promotion) {
+  if (promotion.discount_percent) {
+    return `${promotion.discount_percent}%`;
+  } else if (promotion.discount_amount) {
+    return `${promotion.discount_amount.toLocaleString()}원`;
+  } else if (promotion.type === 'point') {
+    return `${promotion.point_rate}% 적립`;
+  }
+  return '혜택';
+}
+
 // 단골 레벨 데이터 로드
 async function loadLoyaltyData(store) {
   try {
@@ -489,34 +573,102 @@ async function loadLoyaltyData(store) {
       if (regularLevelData) {
         console.log('✅ 실제 단골 레벨 데이터 로드:', regularLevelData);
         
-        // 단골 레벨 UI 업데이트
-        const loyaltyContainer = document.querySelector('.loyalty-info');
-        if (loyaltyContainer) {
-          window.RegularLevelManager.renderLevelUI(regularLevelData, '.loyalty-info');
-        }
+        // 기존 loyalty-info 컨테이너 대신 실제 단골 레벨 카드 영역 업데이트
+        updateLoyaltyCardUI(regularLevelData, store);
         return;
       }
     }
 
-    // 폴백: 기본 데이터
-    updateLoyaltyUI({
-      level: '신규 고객',
-      visitCount: 0,
-      progressPercent: 0,
-      nextLevelVisits: 5,
-      benefits: ['첫방문 할인', '웰컴 쿠폰', '신규 혜택']
-    });
+    // 폴백: 기본 데이터 (신규 고객)
+    updateLoyaltyCardUI({
+      level: null,
+      stats: { points: 0, visitCount: 0, totalSpent: 0 },
+      nextLevel: { name: '단골 고객', requiredVisitCount: 5 },
+      progress: { percentage: 0, visits_needed: 5 }
+    }, store);
 
   } catch (error) {
     console.error('❌ 단골 레벨 정보 로드 실패:', error);
-    updateLoyaltyUI({
-      level: '신규 고객',
-      visitCount: 0,
-      progressPercent: 0,
-      nextLevelVisits: 5,
-      benefits: ['첫방문 할인', '웰컴 쿠폰', '신규 혜택']
-    });
+    updateLoyaltyCardUI({
+      level: null,
+      stats: { points: 0, visitCount: 0, totalSpent: 0 },
+      nextLevel: { name: '단골 고객', requiredVisitCount: 5 },
+      progress: { percentage: 0, visits_needed: 5 }
+    }, store);
   }
+}
+
+// 단골 레벨 카드 UI 업데이트 (실제 매장 화면의 카드 형태로)
+function updateLoyaltyCardUI(levelData, store) {
+  const loyaltyContainer = document.querySelector('.loyalty-levels-grid');
+  if (!loyaltyContainer) return;
+
+  const level = levelData.level;
+  const stats = levelData.stats || {};
+  const nextLevel = levelData.nextLevel;
+  const progress = levelData.progress || {};
+
+  // 현재 레벨 정보
+  const currentLevelName = level?.name || '신규 고객';
+  const currentLevelRank = level?.rank || 0;
+  const visitCount = stats.visitCount || 0;
+  const points = stats.points || 0;
+  
+  // 다음 레벨 정보
+  const nextLevelName = nextLevel?.name || '단골 고객';
+  const progressPercent = progress.percentage || 0;
+  const visitsNeeded = progress.visits_needed || (nextLevel?.requiredVisitCount || 5);
+
+  loyaltyContainer.innerHTML = `
+    <div class="loyalty-level-card ${currentLevelRank > 0 ? 'active' : 'inactive'}">
+      <div class="level-header">
+        <div class="level-icon">${getLevelIcon(currentLevelRank)}</div>
+        <div class="level-info">
+          <div class="level-name">${currentLevelName}</div>
+          <div class="level-requirement">${visitCount}회 방문 · ${points.toLocaleString()}P</div>
+        </div>
+      </div>
+      
+      ${nextLevel ? `
+        <div class="level-progress">
+          <div class="progress-info">
+            <span>다음: ${nextLevelName}</span>
+            <span>${progressPercent}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${progressPercent}%"></div>
+          </div>
+          <div class="progress-text">${visitsNeeded}회 더 방문하면 레벨업!</div>
+        </div>
+      ` : ''}
+      
+      ${level?.benefits && level.benefits.length > 0 ? `
+        <div class="level-benefits">
+          ${level.benefits.slice(0, 3).map(benefit => `
+            <div class="benefit-item">${window.RegularLevelManager.formatBenefitType(benefit.type)}</div>
+          `).join('')}
+        </div>
+      ` : `
+        <div class="level-benefits">
+          <div class="benefit-item">첫방문 혜택</div>
+          <div class="benefit-item">신규 할인</div>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// 레벨에 따른 아이콘 반환
+function getLevelIcon(levelRank) {
+  const icons = {
+    0: '🆕', // 신규
+    1: '🥉', // 브론즈
+    2: '🥈', // 실버  
+    3: '🥇', // 골드
+    4: '💎', // 플래티넘
+    5: '👑'  // 다이아몬드
+  };
+  return icons[levelRank] || '🆕';
 }
 
 // 단골 레벨 UI 업데이트
