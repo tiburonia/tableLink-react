@@ -2165,7 +2165,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                       <p>첫 번째 등급 "${levelData.nextLevel.name}"으로 승급하고<br>특별한 혜택을 받아보세요</p>
                     </div>
                   </div>
-                  <button class="start-loyalty-btn" data-store-id="${levelData.storeId}" data-next-level-id="${levelData.nextLevel.id}">
+                  <button class="start-loyalty-btn" data-store-id="${levelData.storeId}" data-next-level-id="${levelData.nextLevel.id}" onclick="console.log('🎯 단골 레벨 시작 버튼 직접 클릭됨', ${levelData.storeId}, ${levelData.nextLevel.id})">
                     🎯 ${levelData.nextLevel.name} 등급 시작하기
                   </button>
                 </div>
@@ -2180,36 +2180,46 @@ async function updateRegularLevelsList(currentUserInfo) {
         regularLevelsListDiv.appendChild(levelDiv);
       });
 
-      // 단골 레벨 시작 버튼 이벤트 리스너 추가
-      regularLevelsListDiv.querySelectorAll('.start-loyalty-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-          e.stopPropagation();
-          const storeId = parseInt(btn.getAttribute('data-store-id'));
-          const nextLevelId = parseInt(btn.getAttribute('data-next-level-id'));
+      // 단골 레벨 시작 버튼 이벤트 리스너 추가 (이벤트 위임 방식 사용)
+      regularLevelsListDiv.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.start-loyalty-btn');
+        if (!btn) return;
+
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const storeId = parseInt(btn.getAttribute('data-store-id'));
+        const nextLevelId = parseInt(btn.getAttribute('data-next-level-id'));
+        
+        console.log(`🚀 단골 레벨 시작 버튼 클릭: 매장 ${storeId}, 레벨 ${nextLevelId}`);
+        
+        if (!storeId || !nextLevelId) {
+          console.error('❌ 필수 데이터가 누락됨:', { storeId, nextLevelId });
+          alert('단골 레벨 정보가 올바르지 않습니다.');
+          return;
+        }
+        
+        // 버튼 비활성화 (중복 클릭 방지)
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = '승급 처리중...';
+        
+        try {
+          await startLoyaltyLevel(currentUserInfo.id, storeId, nextLevelId);
           
-          console.log(`🚀 단골 레벨 시작 버튼 클릭: 매장 ${storeId}, 레벨 ${nextLevelId}`);
+          // 성공 시 페이지 새로고침
+          setTimeout(() => {
+            renderMyPage();
+          }, 1000);
           
-          // 버튼 비활성화 (중복 클릭 방지)
-          btn.disabled = true;
-          btn.textContent = '승급 처리중...';
+        } catch (error) {
+          console.error('❌ 단골 레벨 시작 실패:', error);
+          alert('단골 레벨 시작에 실패했습니다: ' + error.message);
           
-          try {
-            await startLoyaltyLevel(currentUserInfo.id, storeId, nextLevelId);
-            
-            // 성공 시 페이지 새로고침
-            setTimeout(() => {
-              renderMyPage();
-            }, 1000);
-            
-          } catch (error) {
-            console.error('❌ 단골 레벨 시작 실패:', error);
-            alert('단골 레벨 시작에 실패했습니다: ' + error.message);
-            
-            // 실패 시 버튼 복구
-            btn.disabled = false;
-            btn.textContent = `🎯 ${btn.getAttribute('data-next-level-name') || '단골손님'} 등급 시작하기`;
-          }
-        });
+          // 실패 시 버튼 복구
+          btn.disabled = false;
+          btn.textContent = originalText;
+        }
       });
 
       // 전체보기 버튼 추가 (3개보다 많은 경우)
