@@ -90,6 +90,14 @@ async function renderMyPage() {
         </div>
       </section>
 
+      <!-- 매장별 보유 포인트 정보 영역 -->
+      <section class="section-card">
+        <h2>💰 매장별 보유 포인트</h2>
+        <div id="storePointsList">
+          <p>💰 매장별 포인트 정보를 불러오는 중...</p>
+        </div>
+      </section>
+
       <!-- 단골 레벨 정보 영역 -->
       <section class="section-card">
         <h2>🏆 나의 단골 레벨</h2>
@@ -734,6 +742,74 @@ async function renderMyPage() {
       .view-all-regular-levels-btn:hover {
         background: #5a32a3;
       }
+
+      /* 매장별 포인트 관련 스타일 */
+      .store-points-item {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.2s ease;
+      }
+      .store-points-item:hover {
+        background: #e9ecef;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .points-store-info {
+        flex: 1;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .points-store-name {
+        font-weight: 600;
+        color: #333;
+        font-size: 16px;
+      }
+      .points-store-category {
+        font-size: 12px;
+        color: #666;
+        background: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 8px;
+      }
+      .points-amount {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        font-size: 14px;
+      }
+      .points-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #28a745;
+        margin-bottom: 2px;
+      }
+      .points-label {
+        font-size: 11px;
+        color: #666;
+      }
+      .view-all-points-btn {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+      .view-all-points-btn:hover {
+        background: #218838;
+      }
     </style>
   `;
 
@@ -927,6 +1003,9 @@ async function loadUserData() {
     // 즐겨찾기 매장 UI 업데이트
     updateFavoriteStoresUI(favoriteStoresData);
 
+    // 매장별 포인트 UI 업데이트
+    await updateStorePointsList(currentUserInfo);
+
     // 단골 레벨 UI 업데이트
     await updateRegularLevelsList(currentUserInfo);
 
@@ -939,6 +1018,7 @@ async function loadUserData() {
     const couponList = document.querySelector('#couponList');
     const reviewList = document.querySelector('#reviewList');
     const favoriteStoresSection = document.getElementById('favoriteStoresList');
+    const storePointsListDiv = document.getElementById('storePointsList');
     const regularLevelsListDiv = document.getElementById('regularLevelsList');
 
     if (orderList) orderList.innerHTML = `<p>❌ 주문내역을 불러올 수 없습니다.</p>`;
@@ -946,6 +1026,7 @@ async function loadUserData() {
     if (couponList) couponList.innerHTML = `<p>❌ 쿠폰 정보를 불러올 수 없습니다.</p>`;
     if (reviewList) reviewList.innerHTML = `<p>❌ 리뷰 내역을 불러올 수 없습니다.</p>`;
     if (favoriteStoresSection) favoriteStoresSection.innerHTML = `<p>❌ 즐겨찾기 매장 정보를 불러올 수 없습니다.</p>`;
+    if (storePointsListDiv) storePointsListDiv.innerHTML = `<p>❌ 매장별 포인트 정보를 불러올 수 없습니다.</p>`;
     if (regularLevelsListDiv) regularLevelsListDiv.innerHTML = `<p>❌ 단골 레벨 정보를 불러올 수 없습니다.</p>`;
   }
 }
@@ -1596,6 +1677,160 @@ function updateFavoriteStoresUI(favoriteStoresData) {
     });
   } else {
     favoriteStoresListDiv.innerHTML = `<p>즐겨찾는 매장이 없습니다.</p>`;
+  }
+}
+
+// 매장별 포인트 업데이트 함수
+async function updateStorePointsList(currentUserInfo) {
+  const storePointsListDiv = document.getElementById('storePointsList');
+  if (!storePointsListDiv) return;
+
+  storePointsListDiv.innerHTML = '<p>💰 매장별 포인트 정보를 불러오는 중...</p>';
+
+  try {
+    console.log('💰 매장별 포인트 정보 조회 시작, userId:', currentUserInfo.id);
+
+    // 사용자의 모든 매장별 포인트 정보 조회
+    const response = await fetch(`/api/regular-levels/user/${currentUserInfo.id}/all-points`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('💰 받은 포인트 데이터:', data);
+
+    storePointsListDiv.innerHTML = '';
+
+    if (data.success && data.storePoints && data.storePoints.length > 0) {
+      // 포인트가 0보다 큰 매장만 필터링하고 포인트 높은 순으로 정렬
+      const storesWithPoints = data.storePoints
+        .filter(store => store.points > 0)
+        .sort((a, b) => b.points - a.points);
+
+      if (storesWithPoints.length > 0) {
+        // 최대 4개까지만 표시
+        const displayStores = storesWithPoints.slice(0, 4);
+
+        displayStores.forEach(store => {
+          const pointsDiv = document.createElement('div');
+          pointsDiv.className = 'store-points-item';
+          pointsDiv.innerHTML = `
+            <div class="points-store-info" onclick="goToStore(${store.storeId})">
+              <div>
+                <div class="points-store-name">${store.storeName}</div>
+                <div class="points-store-category">${store.storeCategory || '기타'}</div>
+              </div>
+            </div>
+            <div class="points-amount">
+              <span class="points-value">${store.points.toLocaleString()}P</span>
+              <span class="points-label">보유 포인트</span>
+            </div>
+          `;
+          storePointsListDiv.appendChild(pointsDiv);
+        });
+
+        // 전체보기 버튼 추가 (4개보다 많은 경우)
+        if (storesWithPoints.length > 4) {
+          const viewAllBtn = document.createElement('button');
+          viewAllBtn.className = 'view-all-points-btn';
+          viewAllBtn.innerHTML = `💰 전체 포인트 보기 (${storesWithPoints.length}개 매장)`;
+          viewAllBtn.addEventListener('click', () => {
+            showAllStorePointsModal(storesWithPoints);
+          });
+          storePointsListDiv.appendChild(viewAllBtn);
+        }
+      } else {
+        storePointsListDiv.innerHTML = '<p>보유한 포인트가 있는 매장이 없습니다.</p>';
+      }
+
+    } else {
+      storePointsListDiv.innerHTML = '<p>아직 포인트를 적립한 매장이 없습니다.</p>';
+    }
+
+  } catch (error) {
+    console.error('❌ 매장별 포인트 정보 조회 실패:', error);
+    storePointsListDiv.innerHTML = '<p>❌ 매장별 포인트 정보를 불러올 수 없습니다.</p>';
+  }
+}
+
+// 전체 매장별 포인트 보기 모달
+async function showAllStorePointsModal(storePoints) {
+  try {
+    const modal = document.createElement('div');
+    modal.className = 'review-modal';
+    modal.innerHTML = `
+      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+          <h3>💰 전체 매장별 포인트 현황 (${storePoints.length}개)</h3>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
+        </div>
+        <div class="all-store-points-list">
+          ${storePoints.map(store => `
+            <div class="store-points-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${store.storeId})">
+              <div class="points-store-header">
+                <div class="points-store-name">${store.storeName}</div>
+                <div class="points-store-category">${store.storeCategory || '기타'}</div>
+              </div>
+              <div class="points-modal-stats">
+                <span class="points-value">${store.points.toLocaleString()}P</span> • 
+                <span>${store.visitCount}회 방문</span> • 
+                <span>${store.totalSpent.toLocaleString()}원 누적</span>
+              </div>
+              ${store.lastVisitAt ? `
+                <div class="points-modal-last-visit">
+                  📅 마지막 방문: ${new Date(store.lastVisitAt).toLocaleDateString()}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <style>
+        .store-points-modal-item {
+          background: #f8f9fa;
+          border-radius: 12px;
+          padding: 16px;
+          border: 1px solid #e9ecef;
+          transition: background 0.2s;
+        }
+        .store-points-modal-item:hover {
+          background: #e9ecef;
+        }
+        .points-store-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+        .points-modal-stats {
+          color: #666;
+          font-size: 14px;
+          margin-bottom: 4px;
+        }
+        .points-modal-stats .points-value {
+          color: #28a745;
+          font-weight: 600;
+        }
+        .points-modal-last-visit {
+          color: #999;
+          font-size: 12px;
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 모달 배경 클릭 시 닫기
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전체 매장별 포인트 조회 실패:', error);
+    alert('포인트 목록을 불러올 수 없습니다.');
   }
 }
 

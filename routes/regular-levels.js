@@ -37,6 +37,56 @@ router.get('/store/:storeId', async (req, res) => {
   }
 });
 
+// 사용자의 모든 매장별 포인트 정보 조회
+router.get('/user/:userId/all-points', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log(`💰 사용자 ${userId} 전체 매장별 포인트 조회`);
+    
+    const result = await pool.query(`
+      SELECT 
+        uss.store_id,
+        uss.points,
+        uss.total_spent,
+        uss.visit_count,
+        uss.last_visit_at,
+        s.name as store_name,
+        s.category as store_category
+      FROM user_store_stats uss
+      JOIN stores s ON uss.store_id = s.id
+      WHERE uss.user_id = $1 AND uss.points > 0
+      ORDER BY uss.points DESC
+    `, [userId]);
+    
+    const storePoints = result.rows.map(row => ({
+      storeId: row.store_id,
+      storeName: row.store_name,
+      storeCategory: row.store_category,
+      points: row.points || 0,
+      totalSpent: parseFloat(row.total_spent) || 0,
+      visitCount: row.visit_count || 0,
+      lastVisitAt: row.last_visit_at
+    }));
+    
+    console.log(`✅ 사용자 ${userId} 매장별 포인트 조회 완료: ${storePoints.length}개 매장`);
+    
+    res.json({
+      success: true,
+      userId: userId,
+      storePoints: storePoints,
+      totalStores: storePoints.length
+    });
+    
+  } catch (error) {
+    console.error('❌ 매장별 포인트 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장별 포인트 조회 실패: ' + error.message
+    });
+  }
+});
+
 // 사용자의 특정 매장 단골 정보 조회
 router.get('/user/:userId/store/:storeId', async (req, res) => {
   try {
