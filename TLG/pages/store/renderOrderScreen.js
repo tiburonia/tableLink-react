@@ -1,4 +1,3 @@
-
 async function renderOrderScreen(store, tableNum, opts = {}) {
   // 주문 상태
   let currentOrder = {};
@@ -32,43 +31,41 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
           <div id="menuList" class="menu-grid"></div>
         </div>
 
-        <!-- 장바구니 섹션 -->
-        <div class="cart-section" id="cartSection" style="display: none;">
+        <!-- 주문 요약 -->
+        <div id="orderSummary" class="order-summary" style="display: none;">
           <div class="section-header">
-            <h2>🛒 장바구니</h2>
-            <span id="cartItemCount" class="cart-count">0개</span>
+            <h2>📋 주문 내역</h2>
+            <span id="orderItemCount" class="order-count">0개</span>
           </div>
-          <div id="cartList" class="cart-content"></div>
+          <div id="orderList" class="order-content"></div>
+          <div class="order-total">
+            <div class="total-label">총 주문금액</div>
+            <div id="totalAmount" class="total-amount">0원</div>
+          </div>
         </div>
+      </div>
 
-        <!-- 액션 버튼 -->
-        <div class="action-buttons">
-          <button id="orderPayBtn" class="action-btn primary" disabled>
+      <!-- 하단 고정 버튼 -->
+      <div class="bottom-actions">
+        <button id="orderPayBtn" class="pay-btn" disabled>
+          <span class="btn-content">
             <span class="btn-icon">💳</span>
-            <div class="btn-content">
-              <span class="btn-label">결제하기</span>
-              <span id="totalAmountBtn" class="btn-amount">0원</span>
-            </div>
-          </button>
-          <div class="secondary-actions">
-            <button id="orderCartSaveBtn" class="action-btn secondary" disabled>
-              <span class="btn-icon">💾</span>
-              <span>장바구니 저장</span>
-            </button>
-            <button id="orderCancelBtn" class="action-btn secondary">
-              <span class="btn-icon">↩️</span>
-              <span>뒤로가기</span>
-            </button>
-          </div>
-        </div>
+            <span class="btn-text">결제하기</span>
+            <span id="totalAmountBtn" class="btn-amount">0원</span>
+          </span>
+        </button>
       </div>
     </div>
 
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       .order-container {
-        min-height: 100vh;
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        padding-bottom: 120px;
+        min-height: 100vh;
+        overflow-y: auto;
       }
 
       .order-header {
@@ -142,16 +139,17 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       }
 
       .order-content {
-        padding: 20px 16px;
+        padding: 20px 16px 120px 16px; /* 하단 버튼 공간 확보 */
         max-width: 600px;
         margin: 0 auto;
         display: flex;
         flex-direction: column;
         gap: 24px;
+        overflow-y: auto;
       }
 
       .menu-section,
-      .cart-section {
+      .order-summary {
         background: white;
         border-radius: 16px;
         padding: 20px;
@@ -176,7 +174,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       }
 
       .menu-count,
-      .cart-count {
+      .order-count {
         background: #f1f5f9;
         color: #475569;
         padding: 4px 12px;
@@ -280,7 +278,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         font-size: 15px;
       }
 
-      .add-to-cart-btn {
+      .add-btn {
         padding: 8px 16px;
         border: none;
         border-radius: 8px;
@@ -294,27 +292,27 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         transform: scale(0.9);
       }
 
-      .add-to-cart-btn.active {
+      .add-btn.active {
         opacity: 1;
         transform: scale(1);
       }
 
-      .add-to-cart-btn.active:hover {
+      .add-btn.active:hover {
         transform: translateY(-1px);
         box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3);
       }
 
-      .add-to-cart-btn.active:active {
+      .add-btn.active:active {
         transform: translateY(0);
       }
 
-      .cart-content {
+      .order-content {
         display: flex;
         flex-direction: column;
         gap: 12px;
       }
 
-      .cart-item {
+      .order-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -324,35 +322,35 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         border: 1px solid #e2e8f0;
       }
 
-      .cart-item-info {
+      .order-item-info {
         flex: 1;
       }
 
-      .cart-item-name {
+      .order-item-name {
         font-size: 15px;
         font-weight: 600;
         color: #1e293b;
         margin-bottom: 2px;
       }
 
-      .cart-item-qty {
+      .order-item-qty {
         font-size: 13px;
         color: #64748b;
       }
 
-      .cart-item-controls {
+      .order-item-controls {
         display: flex;
         align-items: center;
         gap: 12px;
       }
 
-      .cart-qty-controls {
+      .order-qty-controls {
         display: flex;
         align-items: center;
         gap: 6px;
       }
 
-      .cart-qty-btn {
+      .order-qty-btn {
         width: 28px;
         height: 28px;
         border: none;
@@ -365,11 +363,11 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         transition: all 0.15s ease;
       }
 
-      .cart-qty-btn:hover {
+      .order-qty-btn:hover {
         background: #cbd5e1;
       }
 
-      .cart-item-price {
+      .order-item-price {
         font-weight: 700;
         color: #3b82f6;
         font-size: 15px;
@@ -377,7 +375,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         text-align: right;
       }
 
-      .cart-total {
+      .order-total {
         margin-top: 16px;
         padding: 16px;
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
@@ -386,13 +384,13 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         text-align: center;
       }
 
-      .cart-total-label {
+      .total-label {
         font-size: 14px;
         color: #64748b;
         margin-bottom: 4px;
       }
 
-      .cart-total-amount {
+      .total-amount {
         font-size: 22px;
         font-weight: 800;
         color: #1e293b;
@@ -402,39 +400,32 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         background-clip: text;
       }
 
-      .action-buttons {
-        position: sticky;
+      .bottom-actions {
+        position: fixed;
         bottom: 0;
+        left: 0;
+        right: 0;
         background: white;
         padding: 16px;
-        border-radius: 16px 16px 0 0;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-        margin: 0 -16px -120px -16px;
+        z-index: 1000;
       }
 
-      .action-btn {
+      .pay-btn {
         width: 100%;
+        padding: 16px 24px;
         border: none;
         border-radius: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-      }
-
-      .action-btn.primary {
-        padding: 16px 24px;
         background: linear-gradient(135deg, #059669 0%, #047857 100%);
         color: white;
         font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
         box-shadow: 0 4px 16px rgba(5, 150, 105, 0.25);
-        margin-bottom: 12px;
       }
 
-      .action-btn.primary:disabled {
+      .pay-btn:disabled {
         background: #e2e8f0;
         color: #94a3b8;
         box-shadow: none;
@@ -442,81 +433,56 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         transform: none;
       }
 
-      .action-btn.primary:not(:disabled):hover {
+      .pay-btn:not(:disabled):hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
       }
 
-      .action-btn.primary:not(:disabled):active {
+      .pay-btn:not(:disabled):active {
         transform: translateY(0);
       }
 
       .btn-content {
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 2px;
+        justify-content: space-between;
+        gap: 12px;
       }
 
-      .btn-label {
-        font-size: 14px;
-        opacity: 0.9;
+      .btn-text {
+        flex: 1;
+        text-align: center;
       }
 
       .btn-amount {
-        font-size: 18px;
         font-weight: 800;
+        font-size: 18px;
       }
 
       .btn-icon {
         font-size: 20px;
       }
 
-      .secondary-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-
-      .action-btn.secondary {
-        padding: 12px 16px;
-        background: white;
-        color: #475569;
-        border: 2px solid #e2e8f0;
-        font-size: 14px;
-      }
-
-      .action-btn.secondary:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .action-btn.secondary:not(:disabled):hover {
-        background: #f8fafc;
-        border-color: #cbd5e1;
-        color: #334155;
-      }
-
       @media (max-width: 480px) {
         .order-header {
           padding: 16px 12px;
         }
-        
+
         .order-content {
-          padding: 16px 12px;
+          padding: 16px 12px 120px 12px;
         }
-        
+
         .menu-section,
-        .cart-section {
+        .order-summary {
           padding: 16px;
         }
-        
+
         .header-info h1 {
           font-size: 20px;
         }
-        
-        .action-buttons {
-          margin: 0 -12px -120px -12px;
+
+        .bottom-actions {
+          padding: 12px;
         }
       }
     </style>
@@ -545,8 +511,8 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
             <span class="qty-display" id="qty-${menuId}">0</span>
             <button class="qty-btn plus-btn" data-menu="${menuId}">+</button>
           </div>
-          <button class="add-to-cart-btn" id="add-${menuId}" data-menu="${menuId}">
-            장바구니에 추가
+          <button class="add-btn" id="add-${menuId}" data-menu="${menuId}">
+            추가
           </button>
         </div>
       `;
@@ -555,7 +521,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       const minusBtn = card.querySelector('.minus-btn');
       const plusBtn = card.querySelector('.plus-btn');
       const qtyDisplay = card.querySelector('.qty-display');
-      const addBtn = card.querySelector('.add-to-cart-btn');
+      const addBtn = card.querySelector('.add-btn');
 
       const updateQtyDisplay = () => {
         qtyDisplay.textContent = qty;
@@ -580,24 +546,24 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         }
       });
 
-      // 장바구니 추가 이벤트
+      // 주문에 추가 이벤트
       addBtn.addEventListener('click', () => {
         if (qty === 0) return;
-        
+
         if (currentOrder[menu.name]) {
           currentOrder[menu.name] += qty;
         } else {
           currentOrder[menu.name] = qty;
         }
-        
+
         qty = 0;
         updateQtyDisplay();
-        renderCart();
-        
+        renderOrder();
+
         // 성공 피드백
         addBtn.textContent = '추가됨! ✓';
         setTimeout(() => {
-          addBtn.textContent = '장바구니에 추가';
+          addBtn.textContent = '추가';
         }, 1000);
       });
 
@@ -605,16 +571,16 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
     });
   }
 
-  // 장바구니 렌더링
-  function renderCart() {
-    const cartList = document.getElementById('cartList');
-    const cartSection = document.getElementById('cartSection');
-    const cartItemCount = document.getElementById('cartItemCount');
+  // 주문 내역 렌더링
+  function renderOrder() {
+    const orderList = document.getElementById('orderList');
+    const orderSummary = document.getElementById('orderSummary');
+    const orderItemCount = document.getElementById('orderItemCount');
     const orderPayBtn = document.getElementById('orderPayBtn');
-    const orderCartSaveBtn = document.getElementById('orderCartSaveBtn');
     const totalAmountBtn = document.getElementById('totalAmountBtn');
+    const totalAmount = document.getElementById('totalAmount');
 
-    cartList.innerHTML = '';
+    orderList.innerHTML = '';
     let total = 0;
     let itemCount = 0;
     let hasOrder = false;
@@ -622,28 +588,28 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
     Object.keys(currentOrder).forEach(itemName => {
       const menu = store.menu.find(m => m.name === itemName);
       if (!menu) return;
-      
+
       const qty = currentOrder[itemName];
       const price = menu.price * qty;
       total += price;
       itemCount += qty;
       hasOrder = true;
 
-      // 장바구니 아이템
+      // 주문 아이템
       const itemDiv = document.createElement('div');
-      itemDiv.className = 'cart-item';
+      itemDiv.className = 'order-item';
 
       itemDiv.innerHTML = `
-        <div class="cart-item-info">
-          <div class="cart-item-name">${itemName}</div>
-          <div class="cart-item-qty">수량: ${qty}개</div>
+        <div class="order-item-info">
+          <div class="order-item-name">${itemName}</div>
+          <div class="order-item-qty">수량: ${qty}개</div>
         </div>
-        <div class="cart-item-controls">
-          <div class="cart-qty-controls">
-            <button class="cart-qty-btn minus" data-item="${itemName}">−</button>
-            <button class="cart-qty-btn plus" data-item="${itemName}">+</button>
+        <div class="order-item-controls">
+          <div class="order-qty-controls">
+            <button class="order-qty-btn minus" data-item="${itemName}">−</button>
+            <button class="order-qty-btn plus" data-item="${itemName}">+</button>
           </div>
-          <div class="cart-item-price">${price.toLocaleString()}원</div>
+          <div class="order-item-price">${price.toLocaleString()}원</div>
         </div>
       `;
 
@@ -654,100 +620,42 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         } else {
           delete currentOrder[itemName];
         }
-        renderCart();
+        renderOrder();
       });
 
       itemDiv.querySelector('.plus').addEventListener('click', () => {
         currentOrder[itemName]++;
-        renderCart();
+        renderOrder();
       });
 
-      cartList.appendChild(itemDiv);
+      orderList.appendChild(itemDiv);
     });
 
-    // 장바구니 표시/숨김
+    // 주문 내역 표시/숨김
     if (hasOrder) {
-      cartSection.style.display = 'block';
-      cartItemCount.textContent = `${itemCount}개`;
-      
-      // 총액 표시
-      const totalDiv = document.createElement('div');
-      totalDiv.className = 'cart-total';
-      totalDiv.innerHTML = `
-        <div class="cart-total-label">총 결제금액</div>
-        <div class="cart-total-amount">${total.toLocaleString()}원</div>
-      `;
-      cartList.appendChild(totalDiv);
-      
+      orderSummary.style.display = 'block';
+      orderItemCount.textContent = `${itemCount}개`;
+      totalAmount.textContent = `${total.toLocaleString()}원`;
+
       orderPayBtn.disabled = false;
-      orderCartSaveBtn.disabled = false;
       totalAmountBtn.textContent = `${total.toLocaleString()}원`;
     } else {
-      cartSection.style.display = 'none';
+      orderSummary.style.display = 'none';
       orderPayBtn.disabled = true;
-      orderCartSaveBtn.disabled = true;
       totalAmountBtn.textContent = '0원';
     }
   }
 
   // 초기 렌더링
-  renderCart();
+  renderOrder();
 
   // 이벤트 리스너
   document.getElementById('orderPayBtn').addEventListener('click', () => {
     if (Object.keys(currentOrder).length === 0) {
-      alert('장바구니가 비어있습니다!');
+      alert('주문할 메뉴를 선택해주세요!');
       return;
     }
     renderPay(currentOrder, store, tableNum);
-  });
-
-  document.getElementById('orderCartSaveBtn').addEventListener('click', async () => {
-    if (Object.keys(currentOrder).length === 0) {
-      alert('장바구니가 비어있습니다!');
-      return;
-    }
-
-    try {
-      const cartData = {
-        userId: userInfo?.id,
-        storeId: store.id,
-        storeName: store.name,
-        tableNum: tableNum,
-        order: currentOrder,
-        savedAt: new Date().toISOString()
-      };
-
-      const response = await fetch('/api/cart/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cartData)
-      });
-
-      if (response.ok) {
-        if (typeof saveCartBtn === 'function') {
-          saveCartBtn(currentOrder, store, tableNum);
-        }
-        alert('장바구니가 저장되었습니다!');
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || '장바구니 저장에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('장바구니 저장 오류:', error);
-      if (typeof saveCartBtn === 'function') {
-        saveCartBtn(currentOrder, store, tableNum);
-        alert('장바구니가 로컬에 저장되었습니다!');
-      } else {
-        alert('장바구니 저장에 실패했습니다.');
-      }
-    }
-  });
-
-  document.getElementById('orderCancelBtn').addEventListener('click', () => {
-    renderStore(store);
   });
 
   document.getElementById('orderBackBtn').addEventListener('click', () => {
