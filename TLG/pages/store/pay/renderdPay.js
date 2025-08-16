@@ -60,9 +60,9 @@ function renderPay(currentOrder, store, tableNum) {
         `).join('')}
       </div>
       <p><strong>결제금액:</strong> ${orderData.total.toLocaleString()}원</p>
-      <p id="storePointDisplay"></p>
+      <p id="storePointDisplay">포인트 조회 중...</p>
       <label>포인트 사용:
-        <input type="number" id="usePoint" min="0" max="0" value="0">
+        <input type="number" id="usePoint" min="0" max="0" value="0" disabled>
       </label>
       <div id="couponList" style="margin:10px 0 0 0;"></div>
       <div class="pay-summary">
@@ -101,23 +101,33 @@ function renderPay(currentOrder, store, tableNum) {
   const couponList = document.getElementById('couponList');
   const discountAmount = document.getElementById('discountAmount');
 
-  // 매장별 포인트 조회 및 표시
+  // 매장별 포인트 조회 및 표시 (비동기 처리)
   let storePoints = 0;
-  try {
-    const storePointsResponse = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${store.id}/points`);
-    if (storePointsResponse.ok) {
-      const storePointsData = await storePointsResponse.json();
-      storePoints = storePointsData.success ? (storePointsData.points || 0) : 0;
+  
+  // 매장별 포인트 조회
+  async function loadStorePoints() {
+    try {
+      const storePointsResponse = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${store.id}/points`);
+      if (storePointsResponse.ok) {
+        const storePointsData = await storePointsResponse.json();
+        storePoints = storePointsData.success ? (storePointsData.points || 0) : 0;
+      }
+    } catch (error) {
+      console.error('매장별 포인트 조회 실패:', error);
     }
-  } catch (error) {
-    console.error('매장별 포인트 조회 실패:', error);
+
+    // 포인트 사용 섹션 업데이트
+    storePointDisplay.innerHTML = `<p><strong>${store.name} 보유 포인트:</strong> ${storePoints.toLocaleString()}원</p>`;
+    usePointInput.max = storePoints;
+    usePointInput.placeholder = `사용할 포인트 (최대 ${storePoints})`;
+    usePointInput.disabled = false;
+    
+    // 최초 1회 초기 계산
+    updateFinalAmount();
   }
 
-  // 포인트 사용 섹션
-  storePointDisplay.innerHTML = `<p><strong>${store.name} 보유 포인트:</strong> ${storePoints.toLocaleString()}원</p>`;
-  usePointInput.max = storePoints;
-  usePointInput.placeholder = `사용할 포인트 (최대 ${storePoints})`;
-
+  // 포인트 조회 시작
+  loadStorePoints();
 
   // 쿠폰 리스트 렌더링
   let select = null;
@@ -224,9 +234,6 @@ function renderPay(currentOrder, store, tableNum) {
   document.getElementById('payBackBtn').addEventListener('click', () => {
     renderOrderScreen(store, tableNum);
   });
-
-  // 최초 1회 초기 계산
-  updateFinalAmount();
 }
 
 window.renderPay = renderPay;
