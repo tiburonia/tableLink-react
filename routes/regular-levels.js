@@ -174,17 +174,29 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
     console.log(`📊 현재 사용자 레벨 랭크: ${currentLevelRank} (${currentLevelRank === 0 ? '신규 고객' : '기존 레벨'})`);
 
     // 다음 레벨 정보 조회 
-    // 신규 고객(랭크 0)인 경우 랭크 1부터, 기존 레벨이 있는 경우 현재 랭크보다 높은 레벨
-    const targetRank = currentLevelRank === 0 ? 1 : currentLevelRank + 1;
-    const nextLevelResult = await pool.query(`
-      SELECT id, level_rank, name, description, required_points, required_total_spent, required_visit_count, eval_policy, benefits
-      FROM regular_levels
-      WHERE store_id = $1 AND is_active = true AND level_rank >= $2
-      ORDER BY level_rank ASC
-      LIMIT 1
-    `, [storeId, targetRank]);
+    // 신규 고객(랭크 0)인 경우 가장 낮은 랭크(1)부터, 기존 레벨이 있는 경우 현재 랭크보다 높은 레벨
+    let nextLevelResult;
+    if (currentLevelRank === 0) {
+      // 신규 고객: 가장 낮은 랭크의 레벨 조회
+      nextLevelResult = await pool.query(`
+        SELECT id, level_rank, name, description, required_points, required_total_spent, required_visit_count, eval_policy, benefits
+        FROM regular_levels
+        WHERE store_id = $1 AND is_active = true
+        ORDER BY level_rank ASC
+        LIMIT 1
+      `, [storeId]);
+    } else {
+      // 기존 레벨 고객: 현재 랭크보다 높은 다음 레벨 조회
+      nextLevelResult = await pool.query(`
+        SELECT id, level_rank, name, description, required_points, required_total_spent, required_visit_count, eval_policy, benefits
+        FROM regular_levels
+        WHERE store_id = $1 AND is_active = true AND level_rank > $2
+        ORDER BY level_rank ASC
+        LIMIT 1
+      `, [storeId, currentLevelRank]);
+    }
 
-    console.log(`🔍 다음 레벨 조회 결과: ${nextLevelResult.rows.length}개 발견 (타겟 랭크 ${targetRank} 이상)`);
+    console.log(`🔍 다음 레벨 조회 결과: ${nextLevelResult.rows.length}개 발견 (${currentLevelRank === 0 ? '신규 고객용 첫 레벨' : `현재 랭크 ${currentLevelRank} 이후`})`);
 
     let nextLevel = null;
     if (nextLevelResult.rows.length > 0) {

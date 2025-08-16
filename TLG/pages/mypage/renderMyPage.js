@@ -2120,12 +2120,16 @@ function calculateLevelProgress(levelData) {
     }
   });
 
-  // 다음 레벨 정보가 없거나 유효하지 않은 경우
-  if (!levelData.nextLevel || 
-      !levelData.nextLevel.name || 
-      !levelData.nextLevel.id ||
-      typeof levelData.nextLevel.id !== 'number') {
-    console.log('🏆 최고 등급 도달 또는 다음 레벨 정보 없음:', levelData.nextLevel);
+  // 현재 레벨이 없고(신규 고객) 다음 레벨도 없는 경우만 최고 등급으로 처리
+  const isNewCustomer = !levelData.currentLevel || !levelData.currentLevel.name;
+  const hasValidNextLevel = levelData.nextLevel && 
+                           levelData.nextLevel.name && 
+                           levelData.nextLevel.id && 
+                           typeof levelData.nextLevel.id === 'number';
+
+  // 신규 고객이 아니면서 다음 레벨이 없는 경우에만 최고 등급으로 처리
+  if (!isNewCustomer && !hasValidNextLevel) {
+    console.log('🏆 최고 등급 도달:', levelData.currentLevel?.name);
     return {
       overallPercent: 100,
       visitsPercent: 100,
@@ -2138,6 +2142,24 @@ function calculateLevelProgress(levelData) {
       spendingDisplay: 100,
       pointsDisplay: 100,
       isMaxLevel: true
+    };
+  }
+
+  // 신규 고객이면서 다음 레벨이 없는 경우 (레벨 시스템이 없는 매장)
+  if (isNewCustomer && !hasValidNextLevel) {
+    console.log('ℹ️ 레벨 시스템이 없는 매장');
+    return {
+      overallPercent: 0,
+      visitsPercent: 0,
+      spendingPercent: 0,
+      pointsPercent: 0,
+      visitsNeeded: 0,
+      spendingNeeded: 0,
+      pointsNeeded: 0,
+      visitsDisplay: 0,
+      spendingDisplay: 0,
+      pointsDisplay: 0,
+      isMaxLevel: false
     };
   }
 
