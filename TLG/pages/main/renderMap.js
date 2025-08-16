@@ -22,7 +22,6 @@ async function renderMap() {
         <div class="search-container">
           <input id="searchInput" type="text" placeholder="매장명 또는 카테고리 검색...">
           <button id="searchBtn">🔍</button>
-          <button id="refreshBtn" title="매장 정보 새로고침">🔄</button>
           <button id="clearBtn">✕</button>
         </div>
         <div id="searchResults" class="search-results hidden"></div>
@@ -108,7 +107,7 @@ async function renderMap() {
   font-weight: 400;
 }
 
-#searchBtn, #refreshBtn, #clearBtn {
+#searchBtn, #clearBtn {
   background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
   border: 1px solid rgba(41, 126, 252, 0.1);
   font-size: 18px;
@@ -129,14 +128,6 @@ async function renderMap() {
   color: white;
   transform: scale(1.05);
   box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
-  border-color: transparent;
-}
-
-#refreshBtn:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  transform: scale(1.05) rotate(180deg);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
   border-color: transparent;
 }
 
@@ -607,42 +598,6 @@ async function renderMap() {
       renderSearch(query);
     } else {
       console.warn('⚠️ renderSearch 함수를 찾을 수 없습니다');
-    }
-  });
-
-  // 새로고침 버튼 클릭
-  const refreshBtn = document.getElementById('refreshBtn');
-  refreshBtn.addEventListener('click', async () => {
-    console.log('🔄 수동 새로고침 버튼 클릭됨 - 뷰포트 기반 새로 로딩');
-
-    refreshBtn.style.transform = 'scale(1.05) rotate(360deg)';
-    refreshBtn.style.pointerEvents = 'none';
-
-    try {
-      // 기존 마커 모두 제거
-      if (window.MapMarkerManager) {
-        window.MapMarkerManager.clearAllMarkers();
-      }
-
-      // 현재 레벨에서 뷰포트 기반 새로고침
-      const level = map.getLevel();
-      if (window.MapMarkerManager) {
-        await window.MapMarkerManager.handleMapLevelChange(level, map);
-      }
-
-      // 패널도 함께 새로고침
-      if (window.MapPanelUI && typeof window.MapPanelUI.refresh === 'function') {
-        await window.MapPanelUI.refresh();
-      }
-
-      console.log('✅ 수동 새로고침 완료');
-    } catch (error) {
-      console.error('❌ 수동 새로고침 실패:', error);
-    } finally {
-      setTimeout(() => {
-        refreshBtn.style.transform = '';
-        refreshBtn.style.pointerEvents = '';
-      }, 500);
     }
   });
 
