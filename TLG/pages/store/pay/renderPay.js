@@ -1,4 +1,3 @@
-
 function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
@@ -91,7 +90,7 @@ function renderPay(currentOrder, store, tableNum) {
               <div id="storePointDisplay" class="points-display">조회 중...</div>
             </div>
             <div class="points-input-wrapper">
-              <input type="number" id="usePoint" min="0" max="0" value="0" 
+              <input type="number" id="usePoint" min="0" max="0" value="0"
                      placeholder="사용할 포인트" disabled class="points-input">
               <button id="maxPointBtn" class="max-btn" disabled>전액</button>
             </div>
@@ -148,13 +147,18 @@ function renderPay(currentOrder, store, tableNum) {
 
       .pay-container {
         height: 100vh;
-        display: flex;
-        flex-direction: column;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        grid-template-areas:
+          "header"
+          "main"
+          "footer";
         background: #f8fafc;
       }
 
       /* 상단 헤더 */
       .pay-header {
+        grid-area: header;
         position: sticky;
         top: 0;
         z-index: 100;
@@ -199,10 +203,11 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 메인 스크롤 영역 */
       .pay-main {
-        flex: 1;
+        grid-area: main;
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: 140px; /* footer 높이만큼 여백 확보 */
+        min-height: 0; /* Grid 아이템이 제대로 축소되도록 */
       }
 
       .content-wrapper {
@@ -455,10 +460,7 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 하단 고정 결제 버튼 */
       .pay-footer {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        grid-area: footer;
         background: white;
         padding: 16px 20px;
         border-top: 1px solid #e2e8f0;
@@ -469,7 +471,6 @@ function renderPay(currentOrder, store, tableNum) {
         max-width: 500px;
         margin: 0 auto;
         width: 100%;
-        z-index: 1000;
       }
 
       .pay-btn {
@@ -578,7 +579,7 @@ function renderPay(currentOrder, store, tableNum) {
 
   // 매장별 포인트 조회
   let storePoints = 0;
-  
+
   async function loadStorePoints() {
     try {
       const storePointsResponse = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${store.id}/points`);
@@ -594,7 +595,7 @@ function renderPay(currentOrder, store, tableNum) {
     usePointInput.max = storePoints;
     usePointInput.placeholder = `최대 ${storePoints.toLocaleString()}P`;
     usePointInput.disabled = false;
-    
+
     if (storePoints > 0) {
       maxPointBtn.disabled = false;
       maxPointBtn.onclick = () => {
@@ -603,7 +604,7 @@ function renderPay(currentOrder, store, tableNum) {
         updateFinalAmount();
       };
     }
-    
+
     updateFinalAmount();
   }
 
@@ -696,7 +697,7 @@ function renderPay(currentOrder, store, tableNum) {
 
   document.getElementById('confirmPay').addEventListener('click', async () => {
     const confirmPayBtn = document.getElementById('confirmPay');
-    
+
     try {
       confirmPayBtn.disabled = true;
       confirmPayBtn.innerHTML = `
