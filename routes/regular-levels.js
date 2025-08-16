@@ -169,22 +169,20 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       };
     }
 
-    // 다음 레벨 정보도 함께 조회
+    // 현재 사용자의 레벨 랭크 조회
+    const currentLevelRank = userStats && userStats.currentLevel ? userStats.currentLevel.rank : 0;
+    console.log(`📊 현재 사용자 레벨 랭크: ${currentLevelRank}`);
+
+    // 다음 레벨 정보 조회 (현재 랭크보다 높은 가장 낮은 랭크)
     const nextLevelResult = await pool.query(`
       SELECT id, level_rank, name, required_points, required_total_spent, required_visit_count, eval_policy
       FROM regular_levels
-      WHERE store_id = $1 AND is_active = true
-      AND level_rank > COALESCE((
-        SELECT rl.level_rank 
-        FROM user_store_stats uss
-        LEFT JOIN regular_levels rl ON uss.current_level_id = rl.id
-        WHERE uss.user_id = $2 AND uss.store_id = $1
-      ), 0)
+      WHERE store_id = $1 AND is_active = true AND level_rank > $2
       ORDER BY level_rank ASC
       LIMIT 1
-    `, [storeId, userId]);
+    `, [storeId, currentLevelRank]);
 
-    console.log(`🔍 다음 레벨 조회 결과: ${nextLevelResult.rows.length}개 발견`);
+    console.log(`🔍 다음 레벨 조회 결과: ${nextLevelResult.rows.length}개 발견 (현재 랭크 ${currentLevelRank} 이후)`);
 
     let nextLevel = null;
     if (nextLevelResult.rows.length > 0) {
@@ -193,12 +191,13 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         id: next.id,
         rank: next.level_rank,
         name: next.name,
-        requiredPoints: next.required_points,
-        requiredTotalSpent: parseFloat(next.required_total_spent),
-        requiredVisitCount: next.required_visit_count,
-        evalPolicy: next.eval_policy
+        requiredPoints: next.required_points || 0,
+        requiredTotalSpent: parseFloat(next.required_total_spent) || 0,
+        requiredVisitCount: next.required_visit_count || 0,
+        evalPolicy: next.eval_policy || 'OR'
       };
       console.log(`✅ 다음 레벨 발견: ${next.name} (랭크 ${next.level_rank})`);
+      console.log(`📋 다음 레벨 조건: 포인트 ${nextLevel.requiredPoints}, 결제 ${nextLevel.requiredTotalSpent}, 방문 ${nextLevel.requiredVisitCount}, 정책 ${nextLevel.evalPolicy}`);
     } else {
       console.log(`ℹ️ 다음 레벨 없음 - 최고 등급 도달`);
     }

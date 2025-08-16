@@ -2019,7 +2019,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
           
-          ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id ? `
+          ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id ? `
             <div class="level-progress-section">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
@@ -2071,7 +2071,7 @@ async function updateRegularLevelsList(currentUserInfo) {
           ` : `
             <div class="level-progress-section">
               <div class="progress-description" style="text-align: center; color: #28a745; font-weight: 600;">
-                🎉 최고 등급에 도달했습니다!
+                ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : '🚀 단골 레벨을 시작해보세요!'}
               </div>
             </div>
           `}
@@ -2102,6 +2102,17 @@ async function updateRegularLevelsList(currentUserInfo) {
 
 // 레벨 진행률 계산 함수
 function calculateLevelProgress(levelData) {
+  console.log('🔍 레벨 진행률 계산 시작:', {
+    nextLevel: levelData.nextLevel,
+    currentLevel: levelData.currentLevel,
+    stats: {
+      points: levelData.points,
+      totalSpent: levelData.totalSpent,
+      visitCount: levelData.visitCount
+    }
+  });
+
+  // 다음 레벨 정보가 없거나 유효하지 않은 경우
   if (!levelData.nextLevel || !levelData.nextLevel.name || !levelData.nextLevel.id) {
     console.log('🏆 최고 등급 도달 또는 다음 레벨 정보 없음:', levelData.nextLevel);
     return {
@@ -2114,7 +2125,8 @@ function calculateLevelProgress(levelData) {
       pointsNeeded: 0,
       visitsDisplay: 100,
       spendingDisplay: 100,
-      pointsDisplay: 100
+      pointsDisplay: 100,
+      isMaxLevel: true
     };
   }
 
@@ -2157,7 +2169,7 @@ function calculateLevelProgress(levelData) {
       validPercents.reduce((sum, percent) => sum + percent, 0) / validPercents.length : 100;
   }
 
-  return {
+  const result = {
     overallPercent: Math.round(overallPercent),
     visitsPercent: Math.round(visitsGaugePercent),
     spendingPercent: Math.round(spendingGaugePercent),
@@ -2168,8 +2180,12 @@ function calculateLevelProgress(levelData) {
     // 실제 표시용 퍼센트 (100% 초과 가능)
     visitsDisplay: Math.round(visitsPercent),
     spendingDisplay: Math.round(spendingPercent),
-    pointsDisplay: Math.round(pointsPercent)
+    pointsDisplay: Math.round(pointsPercent),
+    isMaxLevel: false
   };
+
+  console.log('✅ 레벨 진행률 계산 완료:', result);
+  return result;
 }
 
 // 전체 단골 레벨 보기 모달
@@ -2201,7 +2217,7 @@ async function showAllRegularLevelsModal(regularLevels) {
                 <span>💰 ${(levelData.totalSpent || 0).toLocaleString()}원</span>
               </div>
               
-              ${levelData.nextLevel && levelData.nextLevel.name ? `
+              ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name ? `
                 <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 12px; font-weight: 600; color: #667eea;">다음: ${levelData.nextLevel.name}</span>
@@ -2216,7 +2232,7 @@ async function showAllRegularLevelsModal(regularLevels) {
                 </div>
               ` : `
                 <div style="background: rgba(40, 167, 69, 0.1); padding: 12px; border-radius: 8px; text-align: center; color: #28a745; font-weight: 600; font-size: 12px;">
-                  🎉 최고 등급 달성!
+                  ${progress.isMaxLevel ? '🎉 최고 등급 달성!' : '🚀 단골 레벨 시작!'}
                 </div>
               `}
               
