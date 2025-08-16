@@ -727,11 +727,16 @@ async function renderMyPage() {
         margin-bottom: 16px;
         font-size: 14px;
         color: #666;
+        flex-wrap: wrap;
+        justify-content: space-between;
       }
       .current-stat-item {
         display: flex;
         align-items: center;
         gap: 4px;
+        flex: 1;
+        min-width: 80px;
+        justify-content: center;
       }
       .stat-icon {
         font-size: 16px;
@@ -764,7 +769,7 @@ async function renderMyPage() {
       }
       .progress-requirements {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
         gap: 12px;
         margin-bottom: 16px;
       }
@@ -1997,7 +2002,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
           
-          ${levelData.nextLevel ? `
+          ${levelData.nextLevel && levelData.nextLevel.name ? `
             <div class="level-progress-section">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
@@ -2074,7 +2079,7 @@ async function updateRegularLevelsList(currentUserInfo) {
 
 // 레벨 진행률 계산 함수
 function calculateLevelProgress(levelData) {
-  if (!levelData.nextLevel) {
+  if (!levelData.nextLevel || !levelData.nextLevel.name) {
     return {
       overallPercent: 100,
       visitsPercent: 100,
@@ -2160,7 +2165,7 @@ async function showAllRegularLevelsModal(regularLevels) {
                 <span>💰 ${(levelData.totalSpent || 0).toLocaleString()}원</span>
               </div>
               
-              ${levelData.nextLevel ? `
+              ${levelData.nextLevel && levelData.nextLevel.name ? `
                 <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-size: 12px; font-weight: 600; color: #667eea;">다음: ${levelData.nextLevel.name}</span>
