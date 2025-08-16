@@ -2027,7 +2027,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
           
-          ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' ? `
+          ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' && !progress.isMaxLevel ? `
             <div class="level-progress-section">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
@@ -2120,7 +2120,7 @@ function calculateLevelProgress(levelData) {
     }
   });
 
-  // 다음 레벨 정보가 없거나 유효하지 않은 경우 (더 엄격한 검증)
+  // 다음 레벨 정보가 없거나 유효하지 않은 경우
   if (!levelData.nextLevel || 
       !levelData.nextLevel.name || 
       !levelData.nextLevel.id ||
