@@ -34,9 +34,8 @@ window.TLL = async function TLL(preselectedStore = null) {
               class="search-input"
             />
             <div class="search-icon">🔍</div>
-          </div>
-
-          <div id="storeSearchResults" class="search-results">
+            <div id="storeSearchResults" class="search-results">
+            </div>
           </div>
 
           <div id="selectedStore" class="selected-store">
@@ -229,7 +228,7 @@ window.TLL = async function TLL(preselectedStore = null) {
         z-index: 1000;
         display: none;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        margin-top: 0;
+        margin-top: -2px;
       }
 
       .store-search-item {
