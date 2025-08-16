@@ -2170,8 +2170,11 @@ async function updateRegularLevelsList(currentUserInfo) {
                   </button>
                 </div>
               ` : `
-                <div class="progress-description" style="text-align: center; color: #28a745; font-weight: 600;">
-                  ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : '🚀 단골 레벨을 시작해보세요!'}
+                <div class="progress-description" style="text-align: center; padding: 20px; color: #666; font-weight: 500; background: rgba(255, 255, 255, 0.7); border-radius: 12px;">
+                  ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : 
+                    (!levelData.nextLevel || !levelData.nextLevel.name) ? 
+                    '🔧 단골 레벨 시스템을 준비중입니다...' : 
+                    '🚀 단골 레벨을 시작해보세요!'}
                 </div>
               `}
             </div>
