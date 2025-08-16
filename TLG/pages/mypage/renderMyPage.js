@@ -804,6 +804,10 @@ async function renderMyPage() {
       .requirement-fill.points {
         background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
       }
+      .requirement-fill.completed {
+        background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
+      }
       .requirement-text {
         font-size: 12px;
         font-weight: 600;
@@ -813,6 +817,19 @@ async function renderMyPage() {
         font-size: 11px;
         color: #999;
         margin-top: 2px;
+      }
+      .requirement-needed.completed-text {
+        color: #28a745;
+        font-weight: 600;
+      }
+      .achievement-rate {
+        color: #28a745;
+        font-weight: 700;
+        font-size: 10px;
+        margin-left: 4px;
+        background: rgba(40, 167, 69, 0.1);
+        padding: 2px 6px;
+        border-radius: 8px;
       }
       .overall-progress-bar {
         height: 12px;
@@ -2010,32 +2027,38 @@ async function updateRegularLevelsList(currentUserInfo) {
               </div>
               
               <div class="progress-requirements">
+                ${levelData.nextLevel.requiredVisitCount > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">방문 횟수</div>
+                  <div class="requirement-label">방문 횟수 ${progress.visitsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.visitsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill visits" style="width: ${progress.visitsPercent}%"></div>
+                    <div class="requirement-fill visits ${progress.visitsDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.visitsPercent}%"></div>
                   </div>
                   <div class="requirement-text">${levelData.visitCount || 0} / ${levelData.nextLevel.requiredVisitCount || 0}</div>
-                  ${progress.visitsNeeded > 0 ? `<div class="requirement-needed">${progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                  ${progress.visitsNeeded > 0 ? `<div class="requirement-needed">${progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
+                ` : ''}
                 
+                ${levelData.nextLevel.requiredTotalSpent > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">누적 결제</div>
+                  <div class="requirement-label">누적 결제 ${progress.spendingDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.spendingDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill spending" style="width: ${progress.spendingPercent}%"></div>
+                    <div class="requirement-fill spending ${progress.spendingDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.spendingPercent}%"></div>
                   </div>
                   <div class="requirement-text">${((levelData.totalSpent || 0) / 1000).toFixed(0)}K / ${((levelData.nextLevel.requiredTotalSpent || 0) / 1000).toFixed(0)}K</div>
-                  ${progress.spendingNeeded > 0 ? `<div class="requirement-needed">${progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                  ${progress.spendingNeeded > 0 ? `<div class="requirement-needed">${progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
+                ` : ''}
                 
+                ${levelData.nextLevel.requiredPoints > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">포인트</div>
+                  <div class="requirement-label">포인트 ${progress.pointsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.pointsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill points" style="width: ${progress.pointsPercent}%"></div>
+                    <div class="requirement-fill points ${progress.pointsDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.pointsPercent}%"></div>
                   </div>
                   <div class="requirement-text">${levelData.points || 0} / ${levelData.nextLevel.requiredPoints || 0}</div>
-                  ${progress.pointsNeeded > 0 ? `<div class="requirement-needed">${progress.pointsNeeded}P 더 필요</div>` : '<div class="requirement-needed">달성 완료!</div>'}
+                  ${progress.pointsNeeded > 0 ? `<div class="requirement-needed">${progress.pointsNeeded}P 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
+                ` : ''}
               </div>
               
               <div class="overall-progress-bar">
@@ -2088,7 +2111,10 @@ function calculateLevelProgress(levelData) {
       pointsPercent: 100,
       visitsNeeded: 0,
       spendingNeeded: 0,
-      pointsNeeded: 0
+      pointsNeeded: 0,
+      visitsDisplay: 100,
+      spendingDisplay: 100,
+      pointsDisplay: 100
     };
   }
 
@@ -2100,10 +2126,15 @@ function calculateLevelProgress(levelData) {
   const requiredSpending = levelData.nextLevel.requiredTotalSpent || 0;
   const requiredPoints = levelData.nextLevel.requiredPoints || 0;
 
-  // 각 조건별 진행률 계산 (100% 최대)
-  const visitsPercent = requiredVisits > 0 ? Math.min(100, (currentVisits / requiredVisits) * 100) : 100;
-  const spendingPercent = requiredSpending > 0 ? Math.min(100, (currentSpending / requiredSpending) * 100) : 100;
-  const pointsPercent = requiredPoints > 0 ? Math.min(100, (currentPoints / requiredPoints) * 100) : 100;
+  // 각 조건별 실제 진행률 계산 (100% 초과 허용)
+  const visitsPercent = requiredVisits > 0 ? (currentVisits / requiredVisits) * 100 : 100;
+  const spendingPercent = requiredSpending > 0 ? (currentSpending / requiredSpending) * 100 : 100;
+  const pointsPercent = requiredPoints > 0 ? (currentPoints / requiredPoints) * 100 : 100;
+
+  // 게이지 표시용 진행률 (100% 최대)
+  const visitsGaugePercent = Math.min(100, visitsPercent);
+  const spendingGaugePercent = Math.min(100, spendingPercent);
+  const pointsGaugePercent = Math.min(100, pointsPercent);
 
   // 필요한 추가 수량 계산
   const visitsNeeded = Math.max(0, requiredVisits - currentVisits);
@@ -2114,13 +2145,13 @@ function calculateLevelProgress(levelData) {
   let overallPercent;
   if (levelData.nextLevel.evalPolicy === 'OR') {
     // OR 정책: 가장 높은 진행률 사용
-    overallPercent = Math.max(visitsPercent, spendingPercent, pointsPercent);
+    overallPercent = Math.max(visitsGaugePercent, spendingGaugePercent, pointsGaugePercent);
   } else {
     // AND 정책: 평균 진행률 사용
     const validPercents = [];
-    if (requiredVisits > 0) validPercents.push(visitsPercent);
-    if (requiredSpending > 0) validPercents.push(spendingPercent);
-    if (requiredPoints > 0) validPercents.push(pointsPercent);
+    if (requiredVisits > 0) validPercents.push(visitsGaugePercent);
+    if (requiredSpending > 0) validPercents.push(spendingGaugePercent);
+    if (requiredPoints > 0) validPercents.push(pointsGaugePercent);
     
     overallPercent = validPercents.length > 0 ? 
       validPercents.reduce((sum, percent) => sum + percent, 0) / validPercents.length : 100;
@@ -2128,12 +2159,16 @@ function calculateLevelProgress(levelData) {
 
   return {
     overallPercent: Math.round(overallPercent),
-    visitsPercent: Math.round(visitsPercent),
-    spendingPercent: Math.round(spendingPercent),
-    pointsPercent: Math.round(pointsPercent),
+    visitsPercent: Math.round(visitsGaugePercent),
+    spendingPercent: Math.round(spendingGaugePercent),
+    pointsPercent: Math.round(pointsGaugePercent),
     visitsNeeded,
     spendingNeeded,
-    pointsNeeded
+    pointsNeeded,
+    // 실제 표시용 퍼센트 (100% 초과 가능)
+    visitsDisplay: Math.round(visitsPercent),
+    spendingDisplay: Math.round(spendingPercent),
+    pointsDisplay: Math.round(pointsPercent)
   };
 }
 
