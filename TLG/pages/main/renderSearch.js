@@ -24,14 +24,14 @@ async function renderSearch(initialQuery = '') {
     </main>
 
     <nav id="bottomBar">
-      <button id="TLL" title="QR 주문" onclick="TLL().catch(console.error)">
-        <span style="font-size: 22px;">📱</span>
+      <button id="homeBtn" title="홈" onclick="renderSubMain()">
+        <span style="font-size: 22px;">🏠</span>
+      </button>
+      <button id="searchBtn" class="active" title="검색">
+        <span style="font-size: 22px;">🔍</span>
       </button>
       <button id="renderMapBtn" title="지도" onclick="renderMap().catch(console.error)">
-        <span style="font-size: 22px;">🗺️</span>
-      </button>
-      <button id="notificationBtn" title="알림">
-        <span style="font-size: 22px;">🔔</span>
+        <span style="font-size: 22px;">📍</span>
       </button>
       <button onclick="renderMyPage()" title="마이페이지">
         <span style="font-size: 22px;">👤</span>

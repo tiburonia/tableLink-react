@@ -109,10 +109,18 @@ async function renderMyPage() {
     </main>
 
     <nav id="bottomBar">
-      <button id="TLL">📱</button>
-      <button id="renderMapBtn">🗺️</button>
-      <button id="notificationBtn">🔔</button>
-      <button onclick="renderMyPage()">👤</button>
+      <button id="homeBtn" title="홈" onclick="renderSubMain()">
+        <span style="font-size: 22px;">🏠</span>
+      </button>
+      <button id="searchBtn" title="검색" onclick="renderSearch('')">
+        <span style="font-size: 22px;">🔍</span>
+      </button>
+      <button onclick="renderMap().catch(console.error)" title="지도">
+        <span style="font-size: 22px;">📍</span>
+      </button>
+      <button class="active" onclick="renderMyPage()" title="마이페이지">
+        <span style="font-size: 22px;">👤</span>
+      </button>
     </nav>
 
     <style>
@@ -1024,28 +1032,49 @@ async function renderMyPage() {
   });
 
   // 바텀 네비게이션 이벤트 리스너 추가
-  const renderTLL = document.querySelector('#TLL');
-  renderTLL.addEventListener('click', async () => {
-    await TLL();
-  });
+  const homeBtn = document.querySelector('#homeBtn');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', () => {
+      if (typeof renderSubMain === 'function') {
+        renderSubMain();
+      } else {
+        console.warn('⚠️ renderSubMain 함수를 찾을 수 없습니다');
+      }
+    });
+  }
+
+  const searchBtn = document.querySelector('#searchBtn');
+  if (searchBtn) {
+    searchBtn.addEventListener('click', () => {
+      if (typeof renderSearch === 'function') {
+        renderSearch(''); // 검색어 없이 호출
+      } else {
+        console.warn('⚠️ renderSearch 함수를 찾을 수 없습니다');
+      }
+    });
+  }
 
   const renderMapBtn = document.querySelector('#renderMapBtn');
-  renderMapBtn.addEventListener('click', () => {
-    if (typeof renderMap === 'function') {
-      renderMap();
-    } else {
-      location.reload();
-    }
-  });
+  if (renderMapBtn) {
+    renderMapBtn.addEventListener('click', () => {
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        location.reload();
+      }
+    });
+  }
 
   const notificationBtn = document.querySelector('#notificationBtn');
-  notificationBtn.addEventListener('click', () => {
-    if (typeof renderNotification === 'function') {
-      renderNotification();
-    } else {
-      console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
-    }
-  });
+  if (notificationBtn) {
+    notificationBtn.addEventListener('click', () => {
+      if (typeof renderNotification === 'function') {
+        renderNotification();
+      } else {
+        console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
+      }
+    });
+  }
 
   // 비동기로 사용자 정보 로드 및 업데이트
   loadUserData();
@@ -1729,7 +1758,7 @@ async function updateReviewList(currentUserInfo) {
               🗑️ 삭제
             </button>
             <button class="go-to-store-btn" data-store-id="${review.storeId}">
-              🏪 매장보기
+              >());
             </button>
           </div>
         `;

@@ -31,14 +31,14 @@ async function renderMap() {
     </main>
 
     <nav id="bottomBar">
-      <button id="TLL" title="QR 주문">
-        <span style="font-size: 22px;">📱</span>
+      <button id="homeBtn" title="홈" onclick="renderSubMain()">
+        <span style="font-size: 22px;">🏠</span>
+      </button>
+      <button id="searchBtn" title="검색" onclick="renderSearch('')">
+        <span style="font-size: 22px;">🔍</span>
       </button>
       <button id="renderMapBtn" class="active" title="지도">
-        <span style="font-size: 22px;">🗺️</span>
-      </button>
-      <button id="notificationBtn" title="알림">
-        <span style="font-size: 22px;">🔔</span>
+        <span style="font-size: 22px;">📍</span>
       </button>
       <button onclick="renderMyPage()" title="마이페이지">
         <span style="font-size: 22px;">👤</span>
@@ -496,21 +496,27 @@ async function renderMap() {
     }
   }, 200);
 
-  // TLL 버튼 클릭 로직
-  const renderTLL = document.querySelector('#TLL')
-  renderTLL.addEventListener('click', async () => {
-    await TLL();
-  })
-
-  // 알림 버튼 클릭 로직
-  const notificationBtn = document.querySelector('#notificationBtn');
-  notificationBtn.addEventListener('click', () => {
-    if (typeof renderNotification === 'function') {
-      renderNotification();
+  // 홈 버튼 클릭 로직
+  const homeBtn = document.querySelector('#homeBtn');
+  homeBtn.addEventListener('click', () => {
+    if (typeof renderSubMain === 'function') {
+      renderSubMain();
     } else {
-      console.warn('⚠️ renderNotification 함수를 찾을 수 없습니다');
+      console.warn('⚠️ renderSubMain 함수를 찾을 수 없습니다');
     }
   });
+
+  // 검색 버튼 클릭 로직
+  const searchBtnNav = document.querySelector('#searchBtn');
+  searchBtnNav.addEventListener('click', () => {
+    if (typeof renderSearch === 'function') {
+      renderSearch('');
+    } else {
+      console.warn('⚠️ renderSearch 함수를 찾을 수 없습니다');
+    }
+  });
+
+  
 
   // 검색 기능 구현
   const searchInput = document.getElementById('searchInput');

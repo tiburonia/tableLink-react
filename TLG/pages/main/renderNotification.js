@@ -1,4 +1,3 @@
-
 window.renderNotification = async function renderNotification() {
   const main = document.getElementById('main');
 
@@ -27,10 +26,18 @@ window.renderNotification = async function renderNotification() {
     </main>
 
     <nav id="bottomBar">
-      <button onclick="TLL()">📱</button>
-      <button id="renderMapBtn" onclick="renderMap()">🗺️</button>
-      <button id="notificationBtn" class="active">🔔</button>
-      <button onclick="renderMyPage()">👤</button>
+      <button onclick="renderSubMain()" title="홈">
+        <span style="font-size: 22px;">🏠</span>
+      </button>
+      <button onclick="renderSearch('')" title="검색">
+        <span style="font-size: 22px;">🔍</span>
+      </button>
+      <button onclick="renderMap().catch(console.error)" title="지도">
+        <span style="font-size: 22px;">📍</span>
+      </button>
+      <button onclick="renderMyPage()" title="마이페이지">
+        <span style="font-size: 22px;">👤</span>
+      </button>
     </nav>
 
     <style>
@@ -385,7 +392,7 @@ window.renderNotification = async function renderNotification() {
       document.querySelectorAll('.tab-button').forEach(tab => tab.classList.remove('active'));
       // 클릭한 탭에 active 클래스 추가
       e.target.classList.add('active');
-      
+
       // 알림 목록 필터링
       const tabType = e.target.id.replace('Tab', '');
       loadNotifications(tabType);
@@ -404,7 +411,7 @@ window.renderNotification = async function renderNotification() {
 // 알림 목록 로드 함수
 async function loadNotifications(type = 'all') {
   const notificationList = document.getElementById('notificationList');
-  
+
   try {
     // 로딩 상태 표시
     notificationList.innerHTML = `
@@ -416,7 +423,7 @@ async function loadNotifications(type = 'all') {
 
     // 서버에서 알림 데이터 가져오기 (임시로 목업 데이터 사용)
     const notifications = await fetchNotifications(type);
-    
+
     if (notifications.length === 0) {
       notificationList.innerHTML = `
         <div class="empty-state">
@@ -468,10 +475,10 @@ async function loadNotifications(type = 'all') {
 async function fetchNotifications(type) {
   // 실제로는 서버 API를 호출해야 함
   // return await fetch(`/api/notifications?type=${type}`).then(r => r.json());
-  
+
   // 임시 목업 데이터
   await new Promise(resolve => setTimeout(resolve, 800)); // 로딩 시뮬레이션
-  
+
   const mockNotifications = [
     {
       id: 1,
@@ -511,7 +518,7 @@ async function fetchNotifications(type) {
   if (type !== 'all') {
     return mockNotifications.filter(n => n.type === type);
   }
-  
+
   return mockNotifications;
 }
 
@@ -545,7 +552,7 @@ function formatTimeAgo(date) {
 // 알림 클릭 처리
 function handleNotificationClick(notificationId) {
   console.log(`알림 클릭: ${notificationId}`);
-  
+
   // 읽음 상태로 변경
   const item = document.querySelector(`[data-id="${notificationId}"]`);
   if (item && item.classList.contains('unread')) {
@@ -553,7 +560,7 @@ function handleNotificationClick(notificationId) {
     // 서버에 읽음 상태 전송
     // markNotificationAsRead(notificationId);
   }
-  
+
   // 알림 타입에 따른 적절한 액션 수행
   // 예: 주문 알림이면 주문 상세 페이지로, 프로모션이면 해당 매장으로
 }
@@ -564,7 +571,7 @@ function markAllNotificationsAsRead() {
   unreadItems.forEach(item => {
     item.classList.remove('unread');
   });
-  
+
   console.log('모든 알림을 읽음으로 처리했습니다.');
   // 서버에 모든 알림 읽음 상태 전송
   // markAllNotificationsAsReadOnServer();
