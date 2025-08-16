@@ -134,11 +134,9 @@ function renderPay(currentOrder, store, tableNum) {
 
     <style>
       .pay-container {
-        height: 100vh;
+        min-height: 100vh;
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+        padding-bottom: 0;
       }
 
       .pay-header {
@@ -148,7 +146,8 @@ function renderPay(currentOrder, store, tableNum) {
         align-items: center;
         gap: 16px;
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-        flex-shrink: 0;
+        position: sticky;
+        top: 0;
         z-index: 100;
         width: 100%;
         box-sizing: border-box;
@@ -193,16 +192,12 @@ function renderPay(currentOrder, store, tableNum) {
       }
 
       .pay-content {
-        flex: 1;
-        padding: 20px 16px 140px 16px;
+        padding: 20px 16px 160px 16px;
         max-width: 480px;
         margin: 0 auto;
         display: flex;
         flex-direction: column;
         gap: 16px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        scroll-behavior: smooth;
         width: 100%;
         box-sizing: border-box;
       }
@@ -462,8 +457,10 @@ function renderPay(currentOrder, store, tableNum) {
       .payment-actions {
         position: fixed;
         bottom: 0;
-        left: 0;
-        right: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 480px;
         background: white;
         padding: 16px;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
@@ -471,9 +468,8 @@ function renderPay(currentOrder, store, tableNum) {
         display: flex;
         flex-direction: column;
         gap: 12px;
-        max-width: 480px;
-        margin: 0 auto;
         border-top: 1px solid #e2e8f0;
+        box-sizing: border-box;
       }
 
       .pay-btn {
@@ -546,7 +542,7 @@ function renderPay(currentOrder, store, tableNum) {
         }
         
         .pay-content {
-          padding: 16px 12px 160px 12px;
+          padding: 16px 12px 180px 12px;
         }
         
         .order-summary-card,
@@ -566,6 +562,8 @@ function renderPay(currentOrder, store, tableNum) {
         
         .payment-actions {
           padding: 12px;
+          left: 0;
+          transform: none;
         }
       }
     </style>
