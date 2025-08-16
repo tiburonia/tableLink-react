@@ -2002,7 +2002,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
           
-          ${levelData.nextLevel && levelData.nextLevel.name ? `
+          ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id ? `
             <div class="level-progress-section">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
@@ -2079,7 +2079,8 @@ async function updateRegularLevelsList(currentUserInfo) {
 
 // 레벨 진행률 계산 함수
 function calculateLevelProgress(levelData) {
-  if (!levelData.nextLevel || !levelData.nextLevel.name) {
+  if (!levelData.nextLevel || !levelData.nextLevel.name || !levelData.nextLevel.id) {
+    console.log('🏆 최고 등급 도달 또는 다음 레벨 정보 없음:', levelData.nextLevel);
     return {
       overallPercent: 100,
       visitsPercent: 100,

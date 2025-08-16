@@ -184,6 +184,8 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       LIMIT 1
     `, [storeId, userId]);
 
+    console.log(`🔍 다음 레벨 조회 결과: ${nextLevelResult.rows.length}개 발견`);
+
     let nextLevel = null;
     if (nextLevelResult.rows.length > 0) {
       const next = nextLevelResult.rows[0];
@@ -196,6 +198,9 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         requiredVisitCount: next.required_visit_count,
         evalPolicy: next.eval_policy
       };
+      console.log(`✅ 다음 레벨 발견: ${next.name} (랭크 ${next.level_rank})`);
+    } else {
+      console.log(`ℹ️ 다음 레벨 없음 - 최고 등급 도달`);
     }
 
     console.log(`✅ 사용자 ${userId} 매장 ${storeId} 단골 정보 조회 완료`);
