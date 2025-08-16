@@ -1722,10 +1722,10 @@ async function updateReviewList(currentUserInfo) {
           <div class="review-content">${review.content}</div>
           <div class="review-date">${review.date}</div>
           <div class="review-actions">
-            <button class="edit-review-btn" data-review-id="${review.id}" data-store-id="${review.storeId}" data-current-score="${review.score}" data-current-content="${review.content.replace(/"/g, '&quot;')}">
+            <button class="edit-review-btn" data-review-id="${review.id}" data-store-id="${review.storeId}" data-current-score="${review.score}" data-current-content="${review.content.replace(/"/g, '&quot;')}" style="display: ${userInfo.id === review.userId ? '' : 'none'};">
               ✏️ 수정
             </button>
-            <button class="delete-review-btn" data-review-id="${review.id}">
+            <button class="delete-review-btn" data-review-id="${review.id}" style="display: ${userInfo.id === review.userId ? '' : 'none'};">
               🗑️ 삭제
             </button>
             <button class="go-to-store-btn" data-store-id="${review.storeId}">
@@ -2070,13 +2070,13 @@ async function updateRegularLevelsList(currentUserInfo) {
           nextLevelId: levelData.nextLevel?.id,
           nextLevelIdType: typeof levelData.nextLevel?.id
         });
-        
+
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
-        
+
         // 진행률 계산
         const progress = calculateLevelProgress(levelData);
-        
+
         levelDiv.innerHTML = `
           <div class="level-store-header" onclick="goToStore(${levelData.storeId})">
             <div class="level-store-info">
@@ -2086,7 +2086,7 @@ async function updateRegularLevelsList(currentUserInfo) {
               </div>
             </div>
           </div>
-          
+
           <div class="level-current-stats">
             <div class="current-stat-item">
               <span class="stat-icon">👥</span>
@@ -2104,14 +2104,14 @@ async function updateRegularLevelsList(currentUserInfo) {
               <span class="stat-label">원 누적</span>
             </div>
           </div>
-          
+
           ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' && !progress.isMaxLevel ? `
-            <div class="level-progress-section">
+            <div class="level-progress-section" onclick="handleLevelProgressClick(${levelData.storeId}, ${progress.overallPercent}, ${JSON.stringify(levelData.nextLevel).replace(/"/g, '&quot;')}, '${levelData.currentLevel?.name || '신규 고객'}')" style="cursor: pointer;">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
                 <span class="progress-percentage">${progress.overallPercent}%</span>
               </div>
-              
+
               <div class="progress-requirements">
                 ${levelData.nextLevel.requiredVisitCount > 0 ? `
                 <div class="requirement-item">
@@ -2123,7 +2123,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                   ${progress.visitsNeeded > 0 ? `<div class="requirement-needed">${progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
                 ` : ''}
-                
+
                 ${levelData.nextLevel.requiredTotalSpent > 0 ? `
                 <div class="requirement-item">
                   <div class="requirement-label">누적 결제 ${progress.spendingDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.spendingDisplay}%)</span>` : ''}</div>
@@ -2134,7 +2134,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                   ${progress.spendingNeeded > 0 ? `<div class="requirement-needed">${progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
                 ` : ''}
-                
+
                 ${levelData.nextLevel.requiredPoints > 0 ? `
                 <div class="requirement-item">
                   <div class="requirement-label">포인트 ${progress.pointsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.pointsDisplay}%)</span>` : ''}</div>
@@ -2146,7 +2146,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                 </div>
                 ` : ''}
               </div>
-              
+
               <div class="overall-progress-bar">
                 <div class="overall-progress-fill" style="width: ${progress.overallPercent}%"></div>
               </div>
@@ -2155,7 +2155,7 @@ async function updateRegularLevelsList(currentUserInfo) {
               </div>
             </div>
           ` : `
-            <div class="level-progress-section">
+            <div class="level-progress-section" onclick="handleStartLoyaltyClick(${levelData.storeId}, ${levelData.nextLevel?.id || 'null'}, '${levelData.nextLevel?.name || ''}', '${levelData.currentLevel?.name || '신규 고객'}')" style="cursor: pointer;">
               ${(!levelData.currentLevel || !levelData.currentLevel.name) && levelData.nextLevel && levelData.nextLevel.name ? `
                 <div class="start-loyalty-section">
                   <div class="start-loyalty-message">
@@ -2165,7 +2165,7 @@ async function updateRegularLevelsList(currentUserInfo) {
                       <p>첫 번째 등급 "${levelData.nextLevel.name}"으로 승급하고<br>특별한 혜택을 받아보세요</p>
                     </div>
                   </div>
-                  <button class="start-loyalty-btn" data-store-id="${levelData.storeId}" data-next-level-id="${levelData.nextLevel.id}" onclick="console.log('🎯 단골 레벨 시작 버튼 직접 클릭됨', ${levelData.storeId}, ${levelData.nextLevel.id})">
+                  <button class="start-loyalty-btn" data-store-id="${levelData.storeId}" data-next-level-id="${levelData.nextLevel.id}" onclick="event.stopPropagation(); console.log('🎯 단골 레벨 시작 버튼 직접 클릭됨', ${levelData.storeId}, ${levelData.nextLevel.id})">
                     🎯 ${levelData.nextLevel.name} 등급 시작하기
                   </button>
                 </div>
@@ -2187,35 +2187,35 @@ async function updateRegularLevelsList(currentUserInfo) {
 
         e.stopPropagation();
         e.preventDefault();
-        
+
         const storeId = parseInt(btn.getAttribute('data-store-id'));
         const nextLevelId = parseInt(btn.getAttribute('data-next-level-id'));
-        
+
         console.log(`🚀 단골 레벨 시작 버튼 클릭: 매장 ${storeId}, 레벨 ${nextLevelId}`);
-        
+
         if (!storeId || !nextLevelId) {
           console.error('❌ 필수 데이터가 누락됨:', { storeId, nextLevelId });
           alert('단골 레벨 정보가 올바르지 않습니다.');
           return;
         }
-        
+
         // 버튼 비활성화 (중복 클릭 방지)
         btn.disabled = true;
         const originalText = btn.textContent;
         btn.textContent = '승급 처리중...';
-        
+
         try {
           await startLoyaltyLevel(currentUserInfo.id, storeId, nextLevelId);
-          
+
           // 성공 시 페이지 새로고침
           setTimeout(() => {
             renderMyPage();
           }, 1000);
-          
+
         } catch (error) {
           console.error('❌ 단골 레벨 시작 실패:', error);
           alert('단골 레벨 시작에 실패했습니다: ' + error.message);
-          
+
           // 실패 시 버튼 복구
           btn.disabled = false;
           btn.textContent = originalText;
@@ -2332,7 +2332,7 @@ function calculateLevelProgress(levelData) {
     if (requiredVisits > 0) validPercents.push(visitsGaugePercent);
     if (requiredSpending > 0) validPercents.push(spendingGaugePercent);
     if (requiredPoints > 0) validPercents.push(pointsGaugePercent);
-    
+
     overallPercent = validPercents.length > 0 ? 
       validPercents.reduce((sum, percent) => sum + percent, 0) / validPercents.length : 100;
   }
@@ -2378,13 +2378,13 @@ async function showAllRegularLevelsModal(regularLevels) {
                   ${levelData.currentLevel?.name || '신규 고객'}
                 </div>
               </div>
-              
+
               <div class="level-modal-stats" style="display: flex; gap: 16px; margin-bottom: 12px; font-size: 13px; color: #666;">
                 <span>👥 ${levelData.visitCount || 0}회 방문</span>
                 <span>⭐ ${(levelData.points || 0).toLocaleString()}P</span>
                 <span>💰 ${(levelData.totalSpent || 0).toLocaleString()}원</span>
               </div>
-              
+
               ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name ? `
                 <div style="background: rgba(255,255,255,0.7); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -2403,7 +2403,7 @@ async function showAllRegularLevelsModal(regularLevels) {
                   ${progress.isMaxLevel ? '🎉 최고 등급 달성!' : '🚀 단골 레벨 시작!'}
                 </div>
               `}
-              
+
               ${levelData.currentLevel?.benefits && levelData.currentLevel.benefits.length > 0 ? `
                 <div class="level-modal-benefits" style="color: #667eea; font-size: 12px; font-weight: 500;">
                   💝 ${levelData.currentLevel.benefits.map(b => window.RegularLevelManager.formatBenefitType(b.type)).join(', ')}
@@ -2805,7 +2805,7 @@ function goToStore(storeId) {
 async function startLoyaltyLevel(userId, storeId, levelId) {
   try {
     console.log(`🚀 단골 레벨 시작 요청: 사용자 ${userId}, 매장 ${storeId}, 레벨 ${levelId}`);
-    
+
     const response = await fetch('/api/regular-levels/start-loyalty', {
       method: 'POST',
       headers: {
@@ -2825,10 +2825,10 @@ async function startLoyaltyLevel(userId, storeId, levelId) {
 
     const result = await response.json();
     console.log('✅ 단골 레벨 시작 성공:', result);
-    
+
     // 성공 메시지 표시
     alert(`🎉 축하합니다! "${result.levelName}" 등급으로 승급되었습니다!`);
-    
+
     return result;
 
   } catch (error) {
@@ -2837,5 +2837,42 @@ async function startLoyaltyLevel(userId, storeId, levelId) {
   }
 }
 
+// 단골 레벨 진행률 섹션 클릭 핸들러
+function handleLevelProgressClick(storeId, overallPercent, nextLevel, currentLevelName) {
+  console.log(`📊 레벨 진행률 섹션 클릭됨: storeId=${storeId}, overallPercent=${overallPercent}, nextLevel=${JSON.stringify(nextLevel)}, currentLevelName=${currentLevelName}`);
+  // 현재 로직에서는 단순히 goToStore로 이동하지만, 향후 상세 정보 표시 등의 기능 추가 가능
+  // if (overallPercent < 100) {
+  //   // 아직 승급 전이면 상세 정보 표시하거나 알림
+  //   alert(`"${nextLevel.name}" 등급까지 ${overallPercent}% 진행되었습니다.\n${currentLevelName} 등급에서 시작해보세요!`);
+  // } else {
+  //   alert('🎉 이미 최고 등급입니다!');
+  // }
+  goToStore(storeId);
+}
+
+// 단골 레벨 시작 섹션 클릭 핸들러
+function handleStartLoyaltyClick(storeId, nextLevelId, nextLevelName, currentLevelName) {
+  console.log(`🚀 단골 레벨 시작 클릭됨: storeId=${storeId}, nextLevelId=${nextLevelId}, nextLevelName=${nextLevelName}, currentLevelName=${currentLevelName}`);
+  
+  // "단골 레벨을 시작해보세요!" 텍스트가 있는 경우에만 버튼 클릭 시 동작
+  if (currentLevelName === '신규 고객' && nextLevelId !== null && nextLevelName) {
+    // 버튼 클릭과 동일한 로직 수행
+    const startButton = document.querySelector(`.regular-level-item[data-store-id='${storeId}'] .start-loyalty-btn`);
+    if (startButton) {
+      startButton.click();
+    } else {
+      console.error('🎯 시작 버튼을 찾을 수 없습니다:', storeId);
+      alert('단골 레벨 시작에 문제가 발생했습니다.');
+    }
+  } else {
+    // 이미 레벨이 있거나, 다음 레벨 정보가 없는 경우
+    console.log(`ℹ️ 단골 레벨 시작 조건 미충족: currentLevelName=${currentLevelName}, nextLevelId=${nextLevelId}`);
+    //alert('단골 레벨을 시작할 수 없습니다.'); // 불필요한 알림 제거
+  }
+}
+
+
 // 전역 함수로도 등록
 window.renderMyPage = renderMyPage;
+window.handleLevelProgressClick = handleLevelProgressClick;
+window.handleStartLoyaltyClick = handleStartLoyaltyClick;
