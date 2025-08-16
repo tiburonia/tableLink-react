@@ -722,28 +722,43 @@ async function renderMyPage() {
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       }
       .level-current-stats {
-        display: flex;
-        gap: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 12px;
         margin-bottom: 16px;
         font-size: 14px;
         color: #666;
-        flex-wrap: wrap;
-        justify-content: space-between;
       }
       .current-stat-item {
         display: flex;
+        flex-direction: column;
         align-items: center;
         gap: 4px;
-        flex: 1;
-        min-width: 80px;
+        text-align: center;
+        padding: 8px 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        min-height: 60px;
         justify-content: center;
       }
       .stat-icon {
-        font-size: 16px;
+        font-size: 18px;
+        margin-bottom: 4px;
       }
       .stat-value {
-        font-weight: 600;
+        font-weight: 700;
         color: #333;
+        font-size: 16px;
+        line-height: 1.2;
+        word-break: break-all;
+        text-align: center;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: #666;
+        font-weight: 500;
+        margin-top: 2px;
+        white-space: nowrap;
       }
       .level-progress-section {
         background: rgba(255, 255, 255, 0.6);
@@ -769,8 +784,8 @@ async function renderMyPage() {
       }
       .progress-requirements {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-        gap: 12px;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
         margin-bottom: 16px;
       }
       .requirement-item {
@@ -809,14 +824,20 @@ async function renderMyPage() {
         box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
       }
       .requirement-text {
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         color: #333;
+        word-break: break-all;
+        text-align: center;
+        line-height: 1.2;
       }
       .requirement-needed {
-        font-size: 11px;
+        font-size: 10px;
         color: #999;
         margin-top: 2px;
+        word-break: break-all;
+        text-align: center;
+        line-height: 1.2;
       }
       .requirement-needed.completed-text {
         color: #28a745;
@@ -2013,17 +2034,17 @@ async function updateRegularLevelsList(currentUserInfo) {
             <div class="current-stat-item">
               <span class="stat-icon">👥</span>
               <span class="stat-value">${levelData.visitCount || 0}</span>
-              <span>회 방문</span>
+              <span class="stat-label">회 방문</span>
             </div>
             <div class="current-stat-item">
               <span class="stat-icon">⭐</span>
               <span class="stat-value">${(levelData.points || 0).toLocaleString()}</span>
-              <span>포인트</span>
+              <span class="stat-label">포인트</span>
             </div>
             <div class="current-stat-item">
               <span class="stat-icon">💰</span>
               <span class="stat-value">${(levelData.totalSpent || 0).toLocaleString()}</span>
-              <span>원 누적</span>
+              <span class="stat-label">원 누적</span>
             </div>
           </div>
           
