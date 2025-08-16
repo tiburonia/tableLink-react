@@ -1,4 +1,5 @@
-function renderPay(currentOrder, store, tableNum) {
+
+<old_str>function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
   // 매장 메뉴 데이터 안전하게 처리
@@ -558,180 +559,593 @@ function renderPay(currentOrder, store, tableNum) {
         }
       }
     </style>
-  `;
+  `;</old_str>
+<new_str>function renderPay(currentOrder, store, tableNum) {
+  console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
-  // 요소 선택
-  const usePointInput = document.getElementById('usePoint');
-  const storePointDisplay = document.getElementById('storePointDisplay');
-  const finalAmount = document.getElementById('finalAmount');
-  const pointEarned = document.getElementById('pointEarned');
-  const couponList = document.getElementById('couponList');
-  const discountAmount = document.getElementById('discountAmount');
-  const discountRow = document.getElementById('discountRow');
-  const payBtnAmount = document.getElementById('payBtnAmount');
-  const maxPointBtn = document.getElementById('maxPointBtn');
-
-  // 매장별 포인트 조회
-  let storePoints = 0;
-
-  async function loadStorePoints() {
+  // 매장 메뉴 데이터 안전하게 처리
+  let menuData = [];
+  if (store.menu && Array.isArray(store.menu)) {
+    menuData = store.menu;
+  } else if (typeof store.menu === 'string') {
     try {
-      const storePointsResponse = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${store.id}/points`);
-      if (storePointsResponse.ok) {
-        const storePointsData = await storePointsResponse.json();
-        storePoints = storePointsData.success ? (storePointsData.points || 0) : 0;
+      menuData = JSON.parse(store.menu);
+    } catch (error) {
+      console.warn('⚠️ 매장 메뉴 JSON 파싱 실패:', error);
+      menuData = [];
+    }
+  }
+
+  // 주문 데이터 준비
+  let total = 0;
+  const items = [];
+  for (const name in currentOrder) {
+    const qty = currentOrder[name];
+    const menu = menuData.find(m => m.name === name);
+    if (!menu) {
+      console.warn(`⚠️ 메뉴 "${name}"를 찾을 수 없습니다`);
+      continue;
+    }
+    const price = menu.price * qty;
+    total += price;
+    items.push({ name, qty, price: menu.price, totalPrice: price });
+  }
+
+  const orderData = {
+    store: store.name,
+    storeId: store.id,
+    date: new Date().toLocaleString(),
+    table: tableNum,
+    tableNum: tableNum,
+    items,
+    total
+  };
+
+  console.log('💳 주문 데이터 준비 완료:', orderData);
+
+  // HTML 렌더링
+  main.innerHTML = `
+    <div class="pay-layout">
+      <!-- 상단 헤더 -->
+      <div class="pay-header">
+        <button id="payBackBtn" class="back-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 12H5m7-7l-7 7 7 7"/>
+          </svg>
+        </button>
+        <div class="header-info">
+          <h1>결제 확인</h1>
+          <p>${orderData.store} • 테이블 ${orderData.table}</p>
+        </div>
+      </div>
+
+      <!-- 스크롤 가능한 메인 컨텐츠 -->
+      <div class="pay-body">
+        <div class="content-container">
+          <!-- 주문 내역 -->
+          <div class="order-section">
+            <div class="section-title">
+              <h2>주문 내역</h2>
+              <span class="item-count">${items.length}개</span>
+            </div>
+            <div class="order-list">
+              ${items.map(item => `
+                <div class="order-item">
+                  <div class="item-info">
+                    <span class="item-name">${item.name}</span>
+                    <span class="item-qty">×${item.qty}</span>
+                  </div>
+                  <span class="item-price">${item.totalPrice.toLocaleString()}원</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="subtotal-row">
+              <span>주문 금액</span>
+              <span class="subtotal-amount">${orderData.total.toLocaleString()}원</span>
+            </div>
+          </div>
+
+          <!-- 포인트 사용 -->
+          <div class="points-section">
+            <div class="section-title">
+              <h2>포인트 사용</h2>
+              <div id="storePointDisplay" class="point-balance">조회 중...</div>
+            </div>
+            <div class="point-input-group">
+              <input type="number" id="usePoint" min="0" max="0" value="0"
+                     placeholder="사용할 포인트" disabled class="point-input">
+              <button id="maxPointBtn" class="max-point-btn" disabled>전액</button>
+            </div>
+          </div>
+
+          <!-- 쿠폰 사용 -->
+          <div class="coupon-section">
+            <div class="section-title">
+              <h2>쿠폰 사용</h2>
+            </div>
+            <div id="couponList" class="coupon-select"></div>
+          </div>
+
+          <!-- 결제 요약 -->
+          <div class="summary-section">
+            <div class="summary-details">
+              <div class="summary-item">
+                <span>주문 금액</span>
+                <span>${orderData.total.toLocaleString()}원</span>
+              </div>
+              <div class="summary-item discount-item" id="discountRow" style="display: none;">
+                <span id="discountLabel">할인 금액</span>
+                <span id="discountAmount" class="discount-text">-0원</span>
+              </div>
+            </div>
+            <div class="final-total-row">
+              <span>최종 결제</span>
+              <span id="finalAmount" class="final-amount">${orderData.total.toLocaleString()}원</span>
+            </div>
+            <div class="earn-point-info">
+              <span>💰 적립 예정</span>
+              <span id="pointEarned" class="earn-amount">+${Math.floor(orderData.total * 0.1).toLocaleString()}P</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 고정 결제 버튼 -->
+      <div class="pay-footer">
+        <div class="footer-buttons">
+          <button id="confirmPay" class="confirm-btn">
+            <span>결제하기</span>
+            <span id="payBtnAmount" class="btn-price">${orderData.total.toLocaleString()}원</span>
+          </button>
+          <button id="cancelPay" class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    } catch (error) {
-      console.error('매장별 포인트 조회 실패:', error);
-    }
 
-    storePointDisplay.textContent = `${storePoints.toLocaleString()}P 보유`;
-    usePointInput.max = storePoints;
-    usePointInput.placeholder = `최대 ${storePoints.toLocaleString()}P`;
-    usePointInput.disabled = false;
+      body {
+        overflow: hidden;
+      }
 
-    if (storePoints > 0) {
-      maxPointBtn.disabled = false;
-      maxPointBtn.onclick = () => {
-        const maxUsable = Math.min(storePoints, orderData.total);
-        usePointInput.value = maxUsable;
-        updateFinalAmount();
-      };
-    }
+      .pay-layout {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
 
-    updateFinalAmount();
-  }
+      /* 헤더 */
+      .pay-header {
+        flex: none;
+        height: 60px;
+        background: white;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      }
 
-  loadStorePoints();
+      .back-btn {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 8px;
+        background: #f8fafc;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
 
-  // 쿠폰 리스트 렌더링
-  let select = null;
-  if (!userInfo.coupons?.unused || userInfo.coupons.unused.length === 0) {
-    couponList.innerHTML = `<p>보유한 쿠폰이 없습니다</p>`;
-  } else {
-    select = document.createElement('select');
-    select.id = 'selectedCoupon';
-    select.innerHTML = `<option value="">쿠폰을 선택하세요</option>`;
-    userInfo.coupons.unused
-      .filter(c => new Date(c.validUntil) >= new Date())
-      .forEach(coupon => {
-        const option = document.createElement('option');
-        option.value = coupon.id;
-        option.textContent = `${coupon.name} (${coupon.discountValue}${coupon.discountType === 'percent' ? '%' : '원'} 할인)`;
-        select.appendChild(option);
-      });
-    couponList.appendChild(select);
-  }
+      .back-btn:hover {
+        background: #e2e8f0;
+        color: #475569;
+      }
 
-  // 할인 계산 함수
-  function calculateBestPayment(orderTotal, coupon, userStorePoints, enteredPoint) {
-    enteredPoint = Math.min(enteredPoint, userStorePoints, orderTotal);
-    let discount1 = 0;
-    if (coupon?.discountType === 'percent') {
-      discount1 = Math.floor(orderTotal * (coupon.discountValue / 100));
-    } else if (coupon?.discountType === 'fixed') {
-      discount1 = coupon.discountValue;
-    }
-    const afterCoupon = Math.max(orderTotal - discount1, 0);
-    const appliedPoint1 = Math.min(enteredPoint, afterCoupon);
-    const final1 = Math.max(afterCoupon - appliedPoint1, 0);
+      .header-info h1 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 2px;
+      }
 
-    const afterPoint = Math.max(orderTotal - enteredPoint, 0);
-    let discount2 = 0;
-    if (coupon?.discountType === 'percent') {
-      discount2 = Math.floor(afterPoint * (coupon.discountValue / 100));
-    } else if (coupon?.discountType === 'fixed') {
-      discount2 = coupon.discountValue;
-    }
-    const final2 = Math.max(afterPoint - discount2, 0);
+      .header-info p {
+        font-size: 13px;
+        color: #64748b;
+      }
 
-    if (final1 < final2) {
-      return {
-        final: final1,
-        appliedPoint: appliedPoint1,
-        couponDiscount: discount1,
-        strategy: 'couponFirst'
-      };
-    } else {
-      return {
-        final: final2,
-        appliedPoint: enteredPoint,
-        couponDiscount: discount2,
-        strategy: 'pointFirst'
-      };
-    }
-  }
+      /* 메인 바디 */
+      .pay-body {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 90px; /* 푸터 높이만큼 여백 */
+      }
 
-  // 실시간 반영 함수
-  function updateFinalAmount() {
-    const enteredPoint = Number(usePointInput.value) || 0;
-    const selectedCouponId = document.getElementById('selectedCoupon')?.value;
-    const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
+      .content-container {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
 
-    const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
+      /* 섹션 공통 스타일 */
+      .order-section, .points-section, .coupon-section, .summary-section {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
 
-    finalAmount.textContent = `${result.final.toLocaleString()}원`;
-    payBtnAmount.textContent = `${result.final.toLocaleString()}원`;
+      .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
 
-    const totalDiscount = result.couponDiscount + result.appliedPoint;
-    if (totalDiscount > 0) {
-      discountAmount.textContent = `-${totalDiscount.toLocaleString()}원`;
-      discountRow.style.display = 'flex';
-    } else {
-      discountRow.style.display = 'none';
-    }
+      .section-title h2 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+      }
 
-    const earnedPoints = Math.floor(result.final * 0.1);
-    pointEarned.textContent = `+${earnedPoints.toLocaleString()}P`;
-  }
+      .item-count {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 3px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+      }
 
-  // 이벤트 등록
-  usePointInput.addEventListener('input', updateFinalAmount);
-  document.getElementById('selectedCoupon')?.addEventListener('change', updateFinalAmount);
+      /* 주문 내역 */
+      .order-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
 
-  document.getElementById('confirmPay').addEventListener('click', async () => {
-    const confirmPayBtn = document.getElementById('confirmPay');
+      .order-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
 
-    try {
-      confirmPayBtn.disabled = true;
-      confirmPayBtn.innerHTML = `
-        <span>결제 처리 중...</span>
-        <span>⏳</span>
-      `;
+      .order-item:last-child {
+        border-bottom: none;
+      }
 
-      const enteredPoint = Number(usePointInput.value) || 0;
-      const selectedCouponId = document.getElementById('selectedCoupon')?.value;
-      const selectedCoupon = userInfo.coupons?.unused?.find(c => c.id == selectedCouponId);
+      .item-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
 
-      const result = calculateBestPayment(orderData.total, selectedCoupon, storePoints, enteredPoint);
+      .item-name {
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 14px;
+      }
 
-      await confirmPay(
-        orderData,
-        result.appliedPoint,
-        store,
-        currentOrder,
-        result.final,
-        selectedCoupon?.id || null,
-        result.couponDiscount
-      );
-    } catch (error) {
-      console.error('결제 처리 중 오류:', error);
-      confirmPayBtn.disabled = false;
-      confirmPayBtn.innerHTML = `
-        <span>결제하기</span>
-        <span class="btn-amount">${orderData.total.toLocaleString()}원</span>
-      `;
-      alert('결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
-    }
-  });
+      .item-qty {
+        background: #e2e8f0;
+        color: #475569;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
 
-  document.getElementById('cancelPay').addEventListener('click', () => {
-    renderOrderScreen(store, tableNum);
-  });
+      .item-price {
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 14px;
+      }
 
-  document.getElementById('payBackBtn').addEventListener('click', () => {
-    renderOrderScreen(store, tableNum);
-  });
-}
+      .subtotal-row {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 12px;
+        border-top: 2px solid #f1f5f9;
+        font-weight: 600;
+        color: #475569;
+      }
 
-window.renderPay = renderPay;
+      .subtotal-amount {
+        color: #1e293b;
+        font-weight: 700;
+      }
+
+      /* 포인트 섹션 */
+      .point-balance {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .point-input-group {
+        display: flex;
+        gap: 8px;
+      }
+
+      .point-input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #f8fafc;
+        transition: all 0.2s;
+      }
+
+      .point-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+
+      .point-input:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .max-point-btn {
+        padding: 10px 12px;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        background: white;
+        color: #3b82f6;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .max-point-btn:hover:not(:disabled) {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .max-point-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* 쿠폰 섹션 */
+      .coupon-select select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .coupon-select select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+
+      .coupon-select p {
+        color: #64748b;
+        text-align: center;
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      /* 결제 요약 */
+      .summary-section {
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border: 2px solid #e2e8f0;
+      }
+
+      .summary-details {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        color: #475569;
+        font-size: 14px;
+      }
+
+      .discount-item {
+        color: #059669;
+        font-weight: 600;
+      }
+
+      .discount-text {
+        color: #059669;
+        font-weight: 700;
+      }
+
+      .final-total-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0 8px 0;
+        border-top: 2px solid #e2e8f0;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .final-amount {
+        font-size: 18px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .earn-point-info {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 12px;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 6px;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+
+      .earn-amount {
+        font-weight: 700;
+        color: #1d4ed8;
+      }
+
+      /* 하단 푸터 */
+      .pay-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+      }
+
+      .footer-buttons {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .confirm-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 20px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+      }
+
+      .confirm-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+      }
+
+      .confirm-btn:active {
+        transform: translateY(0);
+      }
+
+      .btn-price {
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .cancel-btn {
+        padding: 12px 20px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        background: white;
+        color: #475569;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .cancel-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+      }
+
+      /* 스크롤바 스타일 */
+      .pay-body::-webkit-scrollbar {
+        width: 3px;
+      }
+
+      .pay-body::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .pay-body::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 1px;
+      }
+
+      .pay-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      /* 모바일 최적화 */
+      @media (max-width: 480px) {
+        .pay-header {
+          padding: 0 12px;
+        }
+
+        .content-container {
+          padding: 12px;
+          gap: 12px;
+        }
+
+        .order-section, .points-section, .coupon-section, .summary-section {
+          padding: 12px;
+        }
+
+        .header-info h1 {
+          font-size: 16px;
+        }
+
+        .final-amount {
+          font-size: 16px;
+        }
+
+        .footer-buttons {
+          padding: 10px 12px;
+        }
+
+        .confirm-btn {
+          padding: 12px 16px;
+          font-size: 15px;
+        }
+
+        .cancel-btn {
+          padding: 10px 16px;
+          font-size: 14px;
+        }
+      }
+    </style>
+  `;</new_str>
