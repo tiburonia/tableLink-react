@@ -50,7 +50,7 @@ async function createAutoLevelUpdateTrigger() {
         IF (OLD IS NULL OR OLD.current_level_id IS NULL) AND v_new_level_id IS NOT NULL THEN
           -- 신규 레벨 할당
           NEW.current_level_id := v_new_level_id;
-          NEW.current_level_at := COALESCE(NEW.order_date, CURRENT_TIMESTAMP);
+          NEW.current_level_at := CURRENT_TIMESTAMP;
 
           -- 레벨 변경 이력 기록
           INSERT INTO regular_level_history (
@@ -61,13 +61,13 @@ async function createAutoLevelUpdateTrigger() {
             NULL, 
             v_new_level_id, 
             'auto_promotion', 
-            COALESCE(NEW.order_date, CURRENT_TIMESTAMP)
+            CURRENT_TIMESTAMP
           );
 
         ELSIF OLD IS NOT NULL AND v_new_level_id IS NOT NULL AND OLD.current_level_id != v_new_level_id THEN
           -- 기존 레벨에서 다른 레벨로 변경
           NEW.current_level_id := v_new_level_id;
-          NEW.current_level_at := COALESCE(NEW.order_date, CURRENT_TIMESTAMP);
+          NEW.current_level_at := CURRENT_TIMESTAMP;
 
           -- 레벨 변경 이력 기록
           INSERT INTO regular_level_history (
@@ -78,7 +78,7 @@ async function createAutoLevelUpdateTrigger() {
             OLD.current_level_id, 
             v_new_level_id, 
             'auto_promotion', 
-            COALESCE(NEW.order_date, CURRENT_TIMESTAMP)
+            CURRENT_TIMESTAMP
           );
         END IF;
 
@@ -96,7 +96,7 @@ async function createAutoLevelUpdateTrigger() {
               -- 만료일 계산
               expires_date := NULL;
               IF (benefit_item->>'expires_days')::INTEGER IS NOT NULL THEN
-                expires_date := COALESCE(NEW.order_date, CURRENT_TIMESTAMP) + INTERVAL '1 day' * (benefit_item->>'expires_days')::INTEGER;
+                expires_date := CURRENT_TIMESTAMP + INTERVAL '1 day' * (benefit_item->>'expires_days')::INTEGER;
               END IF;
 
               -- 혜택 발급
@@ -110,7 +110,7 @@ async function createAutoLevelUpdateTrigger() {
                 COALESCE(benefit_item->>'type', 'loyalty_coupon'),
                 benefit_item,
                 expires_date,
-                COALESCE(NEW.order_date, CURRENT_TIMESTAMP),
+                CURRENT_TIMESTAMP,
                 false
               );
             END LOOP;
