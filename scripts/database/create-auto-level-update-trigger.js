@@ -17,6 +17,8 @@ async function createAutoLevelUpdateTrigger() {
         v_new_level_rank INTEGER DEFAULT 0;
         v_level_record RECORD;
         v_level_name VARCHAR(100);
+        benefit_item JSONB;
+        expires_date TIMESTAMP;
       BEGIN
         -- 현재 레벨 랭크 확인
         IF OLD IS NOT NULL AND OLD.current_level_id IS NOT NULL THEN
@@ -37,11 +39,6 @@ async function createAutoLevelUpdateTrigger() {
         -- 새로운 레벨이 있는 경우 랭크 확인
         IF v_new_level_id IS NOT NULL THEN
           SELECT level_rank, name INTO v_new_level_rank, v_level_name
-          FROM regular_levels 
-          WHERE id = v_new_level_id;
-          
-          -- v_level_record 채우기
-          SELECT * INTO v_level_record
           FROM regular_levels 
           WHERE id = v_new_level_id;
         END IF;
@@ -81,52 +78,46 @@ async function createAutoLevelUpdateTrigger() {
             CURRENT_TIMESTAMP
           );
         END IF;
+        
+        -- 새 레벨 혜택 발급 (레벨업인 경우만)
+        IF v_new_level_id IS NOT NULL AND v_new_level_rank > v_old_level_rank THEN
+          -- 새 레벨 정보 조회
+          SELECT * INTO v_level_record
+          FROM regular_levels 
+          WHERE id = v_new_level_id;
           
-          -- 새 레벨 혜택 발급 (레벨업인 경우만)
-          IF v_new_level_id IS NOT NULL AND v_new_level_rank > v_old_level_rank THEN
-            -- 새 레벨 정보 조회
-            SELECT * INTO v_level_record
-            FROM regular_levels 
-            WHERE id = v_new_level_id;
-            
-            -- 혜택이 있는 경우 발급
-            IF v_level_record.benefits IS NOT NULL AND jsonb_array_length(v_level_record.benefits) > 0 THEN
-              DECLARE
-                benefit_item JSONB;
-                expires_date TIMESTAMP;
-              BEGIN
-                -- 각 혜택에 대해 발급
-                FOR benefit_item IN SELECT * FROM jsonb_array_elements(v_level_record.benefits) LOOP
-                  -- 만료일 계산
-                  expires_date := NULL;
-                  IF (benefit_item->>'expires_days')::INTEGER IS NOT NULL THEN
-                    expires_date := CURRENT_TIMESTAMP + INTERVAL '1 day' * (benefit_item->>'expires_days')::INTEGER;
-                  END IF;
-                  
-                  -- 혜택 발급
-                  INSERT INTO regular_level_benefit_issues (
-                    user_id, store_id, level_id, benefit_type, benefit_data, 
-                    expires_at, issued_at, is_used
-                  ) VALUES (
-                    NEW.user_id,
-                    NEW.store_id,
-                    v_new_level_id,
-                    COALESCE(benefit_item->>'type', 'loyalty_coupon'),
-                    benefit_item,
-                    expires_date,
-                    CURRENT_TIMESTAMP,
-                    false
-                  );
-                END LOOP;
-              END;
-            END IF;
-            
-            -- 로그 출력 (개발용)
-            RAISE NOTICE '✅ 사용자 % 매장 % 레벨 승급: % (랭크 %) → % (랭크 %)', 
-              NEW.user_id, NEW.store_id, 
-              COALESCE((SELECT name FROM regular_levels WHERE id = COALESCE(OLD.current_level_id, 0)), '신규고객'), v_old_level_rank,
-              COALESCE(v_level_name, '없음'), v_new_level_rank;
+          -- 혜택이 있는 경우 발급
+          IF v_level_record.benefits IS NOT NULL AND jsonb_array_length(v_level_record.benefits) > 0 THEN
+            -- 각 혜택에 대해 발급
+            FOR benefit_item IN SELECT * FROM jsonb_array_elements(v_level_record.benefits) LOOP
+              -- 만료일 계산
+              expires_date := NULL;
+              IF (benefit_item->>'expires_days')::INTEGER IS NOT NULL THEN
+                expires_date := CURRENT_TIMESTAMP + INTERVAL '1 day' * (benefit_item->>'expires_days')::INTEGER;
+              END IF;
+              
+              -- 혜택 발급
+              INSERT INTO regular_level_benefit_issues (
+                user_id, store_id, level_id, benefit_type, benefit_data, 
+                expires_at, issued_at, is_used
+              ) VALUES (
+                NEW.user_id,
+                NEW.store_id,
+                v_new_level_id,
+                COALESCE(benefit_item->>'type', 'loyalty_coupon'),
+                benefit_item,
+                expires_date,
+                CURRENT_TIMESTAMP,
+                false
+              );
+            END LOOP;
           END IF;
+          
+          -- 로그 출력 (개발용)
+          RAISE NOTICE '✅ 사용자 % 매장 % 레벨 승급: % (랭크 %) → % (랭크 %)', 
+            NEW.user_id, NEW.store_id, 
+            COALESCE((SELECT name FROM regular_levels WHERE id = COALESCE(OLD.current_level_id, 0)), '신규고객'), v_old_level_rank,
+            COALESCE(v_level_name, '없음'), v_new_level_rank;
         END IF;
         
         RETURN NEW;
