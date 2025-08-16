@@ -1985,6 +1985,14 @@ async function updateRegularLevelsList(currentUserInfo) {
       const displayLevels = regularLevels.slice(0, 3);
 
       displayLevels.forEach(levelData => {
+        console.log('🔍 레벨 데이터 검증:', {
+          storeName: levelData.storeName,
+          currentLevel: levelData.currentLevel,
+          nextLevel: levelData.nextLevel,
+          nextLevelId: levelData.nextLevel?.id,
+          nextLevelIdType: typeof levelData.nextLevel?.id
+        });
+        
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
         
@@ -2019,7 +2027,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
           
-          ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id ? `
+          ${!progress.isMaxLevel && levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' ? `
             <div class="level-progress-section">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
@@ -2112,8 +2120,11 @@ function calculateLevelProgress(levelData) {
     }
   });
 
-  // 다음 레벨 정보가 없거나 유효하지 않은 경우
-  if (!levelData.nextLevel || !levelData.nextLevel.name || !levelData.nextLevel.id) {
+  // 다음 레벨 정보가 없거나 유효하지 않은 경우 (더 엄격한 검증)
+  if (!levelData.nextLevel || 
+      !levelData.nextLevel.name || 
+      !levelData.nextLevel.id ||
+      typeof levelData.nextLevel.id !== 'number') {
     console.log('🏆 최고 등급 도달 또는 다음 레벨 정보 없음:', levelData.nextLevel);
     return {
       overallPercent: 100,

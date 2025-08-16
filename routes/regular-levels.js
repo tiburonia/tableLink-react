@@ -175,7 +175,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
 
     // 다음 레벨 정보 조회 (현재 랭크보다 높은 가장 낮은 랭크)
     const nextLevelResult = await pool.query(`
-      SELECT id, level_rank, name, required_points, required_total_spent, required_visit_count, eval_policy
+      SELECT id, level_rank, name, description, required_points, required_total_spent, required_visit_count, eval_policy, benefits
       FROM regular_levels
       WHERE store_id = $1 AND is_active = true AND level_rank > $2
       ORDER BY level_rank ASC
@@ -191,10 +191,12 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         id: next.id,
         rank: next.level_rank,
         name: next.name,
+        description: next.description,
         requiredPoints: next.required_points || 0,
         requiredTotalSpent: parseFloat(next.required_total_spent) || 0,
         requiredVisitCount: next.required_visit_count || 0,
-        evalPolicy: next.eval_policy || 'OR'
+        evalPolicy: next.eval_policy || 'OR',
+        benefits: next.benefits || []
       };
       console.log(`✅ 다음 레벨 발견: ${next.name} (랭크 ${next.level_rank})`);
       console.log(`📋 다음 레벨 조건: 포인트 ${nextLevel.requiredPoints}, 결제 ${nextLevel.requiredTotalSpent}, 방문 ${nextLevel.requiredVisitCount}, 정책 ${nextLevel.evalPolicy}`);
@@ -233,8 +235,8 @@ router.get('/user/:userId', async (req, res) => {
       SELECT 
         uss.store_id, s.name as store_name, s.category,
         uss.points, uss.total_spent, uss.visit_count, 
-        uss.last_visit_at, uss.current_level_at,
-        rl.level_rank, rl.name as level_name, rl.benefits
+        uss.last_visit_at, uss.current_level_at, uss.current_level_id,
+        rl.level_rank, rl.name as level_name, rl.benefits, rl.description
       FROM user_store_stats uss
       LEFT JOIN stores s ON uss.store_id = s.id
       LEFT JOIN regular_levels rl ON uss.current_level_id = rl.id
@@ -243,20 +245,51 @@ router.get('/user/:userId', async (req, res) => {
       LIMIT $2
     `, [userId, limit]);
 
-    const userRegularStores = result.rows.map(row => ({
-      storeId: row.store_id,
-      storeName: row.store_name,
-      category: row.category,
-      points: row.points || 0,
-      totalSpent: parseFloat(row.total_spent) || 0,
-      visitCount: row.visit_count || 0,
-      lastVisitAt: row.last_visit_at,
-      currentLevel: row.level_rank ? {
-        rank: row.level_rank,
-        name: row.level_name,
-        benefits: row.benefits,
-        achievedAt: row.current_level_at
-      } : null
+    // 각 매장별로 다음 레벨 정보 조회
+    const userRegularStores = await Promise.all(result.rows.map(async (row) => {
+      const currentLevelRank = row.level_rank || 0;
+      
+      // 다음 레벨 정보 조회
+      const nextLevelResult = await pool.query(`
+        SELECT id, level_rank, name, required_points, required_total_spent, required_visit_count, eval_policy
+        FROM regular_levels
+        WHERE store_id = $1 AND is_active = true AND level_rank > $2
+        ORDER BY level_rank ASC
+        LIMIT 1
+      `, [row.store_id, currentLevelRank]);
+
+      let nextLevel = null;
+      if (nextLevelResult.rows.length > 0) {
+        const next = nextLevelResult.rows[0];
+        nextLevel = {
+          id: next.id,
+          rank: next.level_rank,
+          name: next.name,
+          requiredPoints: next.required_points || 0,
+          requiredTotalSpent: parseFloat(next.required_total_spent) || 0,
+          requiredVisitCount: next.required_visit_count || 0,
+          evalPolicy: next.eval_policy || 'OR'
+        };
+      }
+
+      return {
+        storeId: row.store_id,
+        storeName: row.store_name,
+        category: row.category,
+        points: row.points || 0,
+        totalSpent: parseFloat(row.total_spent) || 0,
+        visitCount: row.visit_count || 0,
+        lastVisitAt: row.last_visit_at,
+        currentLevel: row.level_rank ? {
+          id: row.current_level_id,
+          rank: row.level_rank,
+          name: row.level_name,
+          description: row.description,
+          benefits: row.benefits,
+          achievedAt: row.current_level_at
+        } : null,
+        nextLevel: nextLevel
+      };
     }));
 
     console.log(`✅ 사용자 ${userId} 단골 매장 ${userRegularStores.length}개 조회 완료`);
