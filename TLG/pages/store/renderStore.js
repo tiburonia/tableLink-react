@@ -634,19 +634,35 @@ function updateLoyaltyCardUI(levelData, store) {
   const currentLevelRank = level?.rank || 0;
   const visitCount = stats.visitCount || 0;
   const points = stats.points || 0;
+  const totalSpent = stats.totalSpent || 0;
   
   // 다음 레벨 정보
   const nextLevelName = nextLevel?.name || '단골 고객';
   const progressPercent = progress.percentage || 0;
   const visitsNeeded = progress.visits_needed || (nextLevel?.requiredVisitCount || 5);
+  const spendingNeeded = progress.spending_needed || 0;
+
+  // 레벨별 색상 설정
+  const levelColors = {
+    0: 'linear-gradient(135deg, #95a5a6, #7f8c8d)', // 신규 - 그레이
+    1: 'linear-gradient(135deg, #cd7f32, #8b4513)', // 브론즈
+    2: 'linear-gradient(135deg, #c0c0c0, #a8a8a8)', // 실버
+    3: 'linear-gradient(135deg, #ffd700, #daa520)', // 골드
+    4: 'linear-gradient(135deg, #e5e4e2, #b8860b)', // 플래티넘
+  };
 
   loyaltyContainer.innerHTML = `
-    <div class="loyalty-level-card ${currentLevelRank > 0 ? 'active' : 'inactive'}">
+    <div class="loyalty-level-card ${currentLevelRank > 0 ? 'active' : 'inactive'}" 
+         style="background: ${levelColors[currentLevelRank] || levelColors[0]}">
       <div class="level-header">
         <div class="level-icon">${getLevelIcon(currentLevelRank)}</div>
         <div class="level-info">
           <div class="level-name">${currentLevelName}</div>
-          <div class="level-requirement">${visitCount}회 방문 · ${points.toLocaleString()}P</div>
+          <div class="level-stats">
+            <span>${visitCount}회 방문</span>
+            <span>⭐ ${points.toLocaleString()}P</span>
+            <span>💰 ${totalSpent.toLocaleString()}원</span>
+          </div>
         </div>
       </div>
       
@@ -659,24 +675,260 @@ function updateLoyaltyCardUI(levelData, store) {
           <div class="progress-bar">
             <div class="progress-fill" style="width: ${progressPercent}%"></div>
           </div>
-          <div class="progress-text">${visitsNeeded}회 더 방문하면 레벨업!</div>
+          <div class="progress-requirements">
+            ${visitsNeeded > 0 ? `<span>방문 ${visitsNeeded}회 더</span>` : ''}
+            ${spendingNeeded > 0 ? `<span>결제 ${spendingNeeded.toLocaleString()}원 더</span>` : ''}
+          </div>
         </div>
-      ` : ''}
+      ` : `
+        <div class="level-complete">
+          <span class="complete-badge">🏆 최고 등급 달성!</span>
+        </div>
+      `}
       
       ${level?.benefits && level.benefits.length > 0 ? `
         <div class="level-benefits">
-          ${level.benefits.slice(0, 3).map(benefit => `
-            <div class="benefit-item">${window.RegularLevelManager.formatBenefitType(benefit.type)}</div>
-          `).join('')}
+          <div class="benefits-title">🎁 현재 혜택</div>
+          <div class="benefits-grid">
+            ${level.benefits.map(benefit => `
+              <div class="benefit-item">
+                <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
+                <div class="benefit-content">
+                  <div class="benefit-name">${benefit.name}</div>
+                  ${benefit.discount ? `<div class="benefit-value">${benefit.discount}% 할인</div>` : ''}
+                  ${benefit.expires_days ? `<div class="benefit-expire">${benefit.expires_days}일간 유효</div>` : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
         </div>
       ` : `
         <div class="level-benefits">
-          <div class="benefit-item">첫방문 혜택</div>
-          <div class="benefit-item">신규 할인</div>
+          <div class="benefits-title">🎁 신규 고객 혜택</div>
+          <div class="benefits-grid">
+            <div class="benefit-item">
+              <span class="benefit-icon">🎉</span>
+              <div class="benefit-content">
+                <div class="benefit-name">첫방문 환영 혜택</div>
+                <div class="benefit-value">특별 서비스</div>
+              </div>
+            </div>
+            <div class="benefit-item">
+              <span class="benefit-icon">💝</span>
+              <div class="benefit-content">
+                <div class="benefit-name">신규 고객 할인</div>
+                <div class="benefit-value">첫 주문 혜택</div>
+              </div>
+            </div>
+          </div>
         </div>
       `}
     </div>
+    
+    <style>
+      .loyalty-level-card {
+        border-radius: 20px;
+        padding: 24px;
+        margin: 20px 0;
+        color: white;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .loyalty-level-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        z-index: -1;
+      }
+      
+      .level-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      
+      .level-icon {
+        font-size: 32px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      }
+      
+      .level-info {
+        flex: 1;
+      }
+      
+      .level-name {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 8px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      
+      .level-stats {
+        display: flex;
+        gap: 12px;
+        font-size: 13px;
+        opacity: 0.9;
+        flex-wrap: wrap;
+      }
+      
+      .level-stats span {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 8px;
+        border-radius: 12px;
+        backdrop-filter: blur(5px);
+      }
+      
+      .level-progress {
+        margin-bottom: 20px;
+      }
+      
+      .progress-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-weight: 600;
+      }
+      
+      .progress-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+      }
+      
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #fff, #f0f8ff);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+      }
+      
+      .progress-requirements {
+        display: flex;
+        gap: 12px;
+        font-size: 12px;
+        opacity: 0.9;
+        flex-wrap: wrap;
+      }
+      
+      .progress-requirements span {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 8px;
+        border-radius: 10px;
+      }
+      
+      .level-complete {
+        text-align: center;
+        margin: 20px 0;
+      }
+      
+      .complete-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+      }
+      
+      .benefits-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+      
+      .benefits-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .benefit-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 12px;
+        border-radius: 12px;
+        backdrop-filter: blur(5px);
+      }
+      
+      .benefit-icon {
+        font-size: 20px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+      
+      .benefit-content {
+        flex: 1;
+      }
+      
+      .benefit-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 2px;
+      }
+      
+      .benefit-value {
+        font-size: 12px;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+      
+      .benefit-expire {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+      
+      @media (max-width: 400px) {
+        .loyalty-level-card {
+          padding: 18px;
+          margin: 16px 0;
+        }
+        
+        .level-name {
+          font-size: 18px;
+        }
+        
+        .level-stats {
+          font-size: 12px;
+          gap: 8px;
+        }
+        
+        .benefit-item {
+          padding: 10px;
+        }
+      }
+    </style>
   `;
+}
+
+// 혜택 타입별 아이콘 반환
+function getBenefitIcon(type) {
+  const iconMap = {
+    'discount_coupon': '🏷️',
+    'loyalty_coupon': '💳',
+    'vip_coupon': '👑',
+    'premium_coupon': '💎',
+    'free_drink': '🥤',
+    'free_side': '🍟',
+    'free_upgrade': '⬆️',
+    'birthday_gift': '🎂',
+    'monthly_free': '📅',
+    'priority_service': '⚡',
+    'early_access': '🔓'
+  };
+  return iconMap[type] || '🎁';
 }
 
 // 레벨에 따른 아이콘 반환

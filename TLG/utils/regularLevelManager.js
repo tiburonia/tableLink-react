@@ -271,8 +271,18 @@ window.RegularLevelManager = {
     const typeMap = {
       'point_multiplier': '포인트 적립',
       'discount_percent': '할인',
+      'discount_coupon': '할인 쿠폰',
+      'loyalty_coupon': '단골 할인',
+      'vip_coupon': 'VIP 할인',
+      'premium_coupon': '프리미엄 할인',
       'free_delivery': '무료배송',
+      'free_drink': '음료 무료',
+      'free_side': '사이드 무료',
+      'free_upgrade': '업그레이드',
+      'birthday_gift': '생일 선물',
+      'monthly_free': '월간 무료',
       'priority_service': '우선 서비스',
+      'early_access': '신메뉴 체험',
       'exclusive_menu': '전용 메뉴',
       'birthday_coupon': '생일 쿠폰'
     };
