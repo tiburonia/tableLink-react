@@ -25,7 +25,7 @@ window.TLL = async function TLL(preselectedStore = null) {
               매장 검색
             </h3>
           </div>
-          
+
           <div class="search-input-wrapper">
             <input 
               id="storeSearchInput" 
@@ -35,7 +35,7 @@ window.TLL = async function TLL(preselectedStore = null) {
             />
             <div class="search-icon">🔍</div>
           </div>
-          
+
           <div id="storeSearchResults" class="search-results">
           </div>
 
@@ -57,7 +57,7 @@ window.TLL = async function TLL(preselectedStore = null) {
               테이블 선택
             </h3>
           </div>
-          
+
           <div class="table-select-wrapper">
             <select id="tableSelect" class="table-select" disabled>
               <option value="">매장을 먼저 선택하세요</option>
@@ -155,7 +155,10 @@ window.TLL = async function TLL(preselectedStore = null) {
         border: 1px solid rgba(255, 255, 255, 0.8);
       }
 
-      .search-section,
+      .search-section {
+        margin-bottom: 16px;
+      }
+
       .table-section {
         margin-bottom: 32px;
       }
@@ -226,6 +229,7 @@ window.TLL = async function TLL(preselectedStore = null) {
         z-index: 1000;
         display: none;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        margin-top: 0;
       }
 
       .store-search-item {
@@ -441,7 +445,7 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 초기화
   if (preselectedStore) {
     console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
-    
+
     // UI 요소들이 생성된 후 매장 선택 처리
     setTimeout(() => {
       if (typeof window.selectStore === 'function') {
@@ -456,7 +460,7 @@ window.TLL = async function TLL(preselectedStore = null) {
   const selectedStoreName = document.getElementById('selectedStoreName');
   const tableSelect = document.getElementById('tableSelect');
   const startOrderBtn = document.getElementById('startOrderBtn');
-  
+
   // DOM 요소 존재 확인
   if (!storeSearchInput || !tableSelect) {
     console.error('❌ 필수 요소를 찾을 수 없습니다');
@@ -466,7 +470,7 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 매장 검색 이벤트
   storeSearchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim();
-    
+
     // 이전 타이머 취소
     if (searchTimeout) {
       clearTimeout(searchTimeout);
@@ -487,7 +491,7 @@ window.TLL = async function TLL(preselectedStore = null) {
   async function searchStores(query) {
     try {
       console.log(`🔍 TLL - 매장 검색: "${query}"`);
-      
+
       const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -500,7 +504,7 @@ window.TLL = async function TLL(preselectedStore = null) {
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.stores) {
         const openStores = data.stores.filter(store => store.isOpen === true);
         displaySearchResults(openStores);
@@ -544,14 +548,14 @@ window.TLL = async function TLL(preselectedStore = null) {
           'Pragma': 'no-cache'
         }
       });
-      
+
       if (!storeResponse.ok) throw new Error('매장 정보 조회 실패');
-      
+
       const storeData = await storeResponse.json();
       if (!storeData.success) throw new Error('매장 정보 조회 실패');
-      
+
       selectedStore = storeData.store; // 전체 매장 정보 저장
-      
+
       // UI 업데이트
       storeSearchInput.value = storeName;
       storeSearchResults.style.display = 'none';
@@ -623,7 +627,7 @@ window.TLL = async function TLL(preselectedStore = null) {
       }
 
       const selectedTableNumber = tableSelect.value;
-      
+
       // 선택한 테이블의 실제 이름 가져오기
       const selectedOption = tableSelect.options[tableSelect.selectedIndex];
       const tableName = selectedOption.textContent.replace(' (사용중)', ''); // "(사용중)" 텍스트 제거
