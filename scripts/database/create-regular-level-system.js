@@ -166,29 +166,37 @@ async function createRegularLevelSystem() {
         p_order_total NUMERIC,
         p_order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) RETURNS VOID AS $$
+      DECLARE
+        v_new_points INTEGER;
       BEGIN
         -- 기본 포인트는 주문 금액의 1% (100원당 1포인트)
+        v_new_points := FLOOR(p_order_total * 0.01);
+        
         INSERT INTO user_store_stats (
           user_id, store_id, points, total_spent, visit_count, 
-          last_visit_at, first_visit_at, current_level_id, current_level_at
+          last_visit_at, current_level_id, current_level_at,
+          created_at, updated_at
         ) VALUES (
           p_user_id, p_store_id, 
-          FLOOR(p_order_total * 0.01), -- 1% 포인트 적립
+          v_new_points, -- 1% 포인트 적립
           p_order_total, 
           1, 
           p_order_date, 
-          p_order_date,
           NULL, 
-          NULL
+          NULL,
+          p_order_date,
+          p_order_date
         )
         ON CONFLICT (user_id, store_id) DO UPDATE SET
-          points = user_store_stats.points + FLOOR(p_order_total * 0.01),
+          points = user_store_stats.points + v_new_points,
           total_spent = user_store_stats.total_spent + p_order_total,
           visit_count = user_store_stats.visit_count + 1,
-          last_visit_at = p_order_date;
+          last_visit_at = p_order_date,
+          updated_at = p_order_date;
 
-        -- 트리거가 자동으로 레벨을 업데이트하므로 별도 호출 불필요
-        -- check_and_update_user_level 함수는 트리거가 대신 처리
+        RAISE NOTICE '✅ 단골 지표 업데이트 완료: 사용자 %, 매장 %, 포인트 +%, 결제액 +%, 방문 +1', 
+          p_user_id, p_store_id, v_new_points, p_order_total;
+          
       END;
       $$ LANGUAGE plpgsql;
     `);

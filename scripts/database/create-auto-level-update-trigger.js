@@ -16,9 +16,10 @@ async function createAutoLevelUpdateTrigger() {
         v_old_level_rank INTEGER DEFAULT 0;
         v_new_level_rank INTEGER DEFAULT 0;
         v_level_record RECORD;
+        v_level_name VARCHAR(100);
       BEGIN
         -- 현재 레벨 랭크 확인
-        IF OLD.current_level_id IS NOT NULL THEN
+        IF OLD IS NOT NULL AND OLD.current_level_id IS NOT NULL THEN
           SELECT level_rank INTO v_old_level_rank 
           FROM regular_levels 
           WHERE id = OLD.current_level_id;
@@ -35,17 +36,36 @@ async function createAutoLevelUpdateTrigger() {
         
         -- 새로운 레벨이 있는 경우 랭크 확인
         IF v_new_level_id IS NOT NULL THEN
-          SELECT level_rank, name INTO v_new_level_rank, v_level_record.name
+          SELECT level_rank, name INTO v_new_level_rank, v_level_name
+          FROM regular_levels 
+          WHERE id = v_new_level_id;
+          
+          -- v_level_record 채우기
+          SELECT * INTO v_level_record
           FROM regular_levels 
           WHERE id = v_new_level_id;
         END IF;
         
-        -- 레벨이 변경되었는지 확인
-        IF (OLD.current_level_id IS NULL AND v_new_level_id IS NOT NULL) OR 
-           (OLD.current_level_id IS NOT NULL AND v_new_level_id IS NOT NULL AND OLD.current_level_id != v_new_level_id) OR
-           (OLD.current_level_id IS NOT NULL AND v_new_level_id IS NULL) THEN
+        -- 레벨이 변경되었는지 확인 (NULL 처리 개선)
+        IF (OLD IS NULL OR OLD.current_level_id IS NULL) AND v_new_level_id IS NOT NULL THEN
+          -- 신규 레벨 할당
+          NEW.current_level_id := v_new_level_id;
+          NEW.current_level_at := CURRENT_TIMESTAMP;
           
-          -- 레벨 업데이트
+          -- 레벨 변경 이력 기록
+          INSERT INTO regular_level_history (
+            user_id, store_id, from_level_id, to_level_id, reason, changed_at
+          ) VALUES (
+            NEW.user_id, 
+            NEW.store_id, 
+            NULL, 
+            v_new_level_id, 
+            'auto_promotion', 
+            CURRENT_TIMESTAMP
+          );
+          
+        ELSIF OLD IS NOT NULL AND OLD.current_level_id IS NOT NULL AND v_new_level_id IS NOT NULL AND OLD.current_level_id != v_new_level_id THEN
+          -- 기존 레벨에서 다른 레벨로 변경
           NEW.current_level_id := v_new_level_id;
           NEW.current_level_at := CURRENT_TIMESTAMP;
           
@@ -60,6 +80,7 @@ async function createAutoLevelUpdateTrigger() {
             'auto_promotion', 
             CURRENT_TIMESTAMP
           );
+        END IF;
           
           -- 새 레벨 혜택 발급 (레벨업인 경우만)
           IF v_new_level_id IS NOT NULL AND v_new_level_rank > v_old_level_rank THEN
@@ -103,8 +124,8 @@ async function createAutoLevelUpdateTrigger() {
             -- 로그 출력 (개발용)
             RAISE NOTICE '✅ 사용자 % 매장 % 레벨 승급: % (랭크 %) → % (랭크 %)', 
               NEW.user_id, NEW.store_id, 
-              COALESCE((SELECT name FROM regular_levels WHERE id = OLD.current_level_id), '신규고객'), v_old_level_rank,
-              v_level_record.name, v_new_level_rank;
+              COALESCE((SELECT name FROM regular_levels WHERE id = COALESCE(OLD.current_level_id, 0)), '신규고객'), v_old_level_rank,
+              COALESCE(v_level_name, '없음'), v_new_level_rank;
           END IF;
         END IF;
         
