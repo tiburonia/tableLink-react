@@ -1867,7 +1867,7 @@ async function updateRegularLevelsList(currentUserInfo) {
         levelDiv.className = 'regular-level-item';
         levelDiv.innerHTML = `
           <div class="level-store-info" onclick="goToStore(${levelData.store_id})">
-            <div class="level-store-name">${levelData.store_name}</div>
+            <div class="level-store-name">${levelData.storeName || levelData.store_name || '매장 정보 없음'}</div>
             <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}">
               ${levelData.level?.level_name || '신규 고객'}
             </div>
@@ -1916,7 +1916,7 @@ async function showAllRegularLevelsModal(regularLevels) {
           ${regularLevels.map(levelData => `
             <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${levelData.store_id})">
               <div class="level-store-header">
-                <div class="level-store-name">${levelData.store_name}</div>
+                <div class="level-store-name">${levelData.storeName || levelData.store_name || '매장 정보 없음'}</div>
                 <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.level?.level_rank)}; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">
                   ${levelData.level?.level_name || '신규 고객'}
                 </div>
