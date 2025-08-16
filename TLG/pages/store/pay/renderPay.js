@@ -201,12 +201,13 @@ function renderPay(currentOrder, store, tableNum) {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        height: calc(100vh - 160px); /* 헤더(80px) + 푸터(80px) 공간 확보 */
       }
 
       .content-wrapper {
         max-width: 500px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 20px 20px 20px 20px;
         display: flex;
         flex-direction: column;
         gap: 20px;
