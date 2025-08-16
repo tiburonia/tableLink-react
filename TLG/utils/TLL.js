@@ -1,41 +1,436 @@
 
 window.TLL = async function TLL(preselectedStore = null) {
-  // 1. UI 프레임 먼저 렌더링 (검색 기능 포함)
+  // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
-  <button id="backBtn" onclick="renderMap()"></button>
-    <div class="tll-container">
-      <h2 style="margin:20px 0 16px 0;font-weight:700;">QR 주문 시뮬레이터 (데스크탑)</h2>
-      <label style="display:block;margin-bottom:6px;font-size:15px;">매장 검색</label>
-      <div style="position:relative;">
-        <input 
-          id="storeSearchInput" 
-          type="text" 
-          placeholder="매장 이름을 입력하세요" 
-          style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;border:1px solid #ddd;"
-        />
-        <div id="storeSearchResults" style="position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #ddd;border-top:none;border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:1000;display:none;">
+    <div class="tll-layout">
+      <div class="tll-header">
+        <button id="backBtn" class="back-button" onclick="renderMap()">
+          <span class="back-icon">←</span>
+          <span class="back-text">지도로 돌아가기</span>
+        </button>
+        <div class="header-title">
+          <h1 class="tll-title">
+            <span class="title-icon">📱</span>
+            QR 주문
+          </h1>
+          <p class="tll-subtitle">매장을 선택하고 테이블에서 주문하세요</p>
         </div>
       </div>
-      <div id="selectedStore" style="margin-top:10px;padding:8px;background:#f0f8ff;border-radius:8px;display:none;">
-        <span style="font-size:14px;color:#666;">선택된 매장:</span>
-        <span id="selectedStoreName" style="font-weight:bold;margin-left:5px;"></span>
+
+      <div class="tll-container">
+        <div class="search-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-icon">🔍</span>
+              매장 검색
+            </h3>
+          </div>
+          
+          <div class="search-input-wrapper">
+            <input 
+              id="storeSearchInput" 
+              type="text" 
+              placeholder="매장 이름을 입력해보세요..." 
+              class="search-input"
+            />
+            <div class="search-icon">🔍</div>
+          </div>
+          
+          <div id="storeSearchResults" class="search-results">
+          </div>
+
+          <div id="selectedStore" class="selected-store">
+            <div class="selected-store-header">
+              <span class="selected-icon">✅</span>
+              <span class="selected-text">선택된 매장</span>
+            </div>
+            <div class="selected-store-name">
+              <span id="selectedStoreName"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-icon">🪑</span>
+              테이블 선택
+            </h3>
+          </div>
+          
+          <div class="table-select-wrapper">
+            <select id="tableSelect" class="table-select" disabled>
+              <option value="">매장을 먼저 선택하세요</option>
+            </select>
+            <div class="select-arrow">▼</div>
+          </div>
+        </div>
+
+        <div class="action-section">
+          <button id="startOrderBtn" class="start-order-btn" disabled>
+            <span class="btn-icon">🚀</span>
+            <span class="btn-text">주문 시작하기</span>
+            <div class="btn-shine"></div>
+          </button>
+        </div>
       </div>
-      <label style="display:block;margin:18px 0 6px 0;font-size:15px;">테이블 번호</label>
-      <select id="tableSelect" style="width:100%;padding:8px 6px;font-size:15px;border-radius:8px;" disabled>
-        <option value="">매장을 먼저 선택하세요</option>
-      </select>
-      <button id="startOrderBtn" style="width:100%;margin-top:24px;padding:10px 0;font-size:17px;border-radius:10px;background:#ccc;color:#666;border:none;cursor:not-allowed;" disabled>
-        주문 시작
-      </button>
     </div>
+
     <style>
-      .tll-container { max-width:400px;margin:30px auto 0;background:#fff;border-radius:16px;box-shadow:0 2px 18px rgba(30,110,255,0.06);padding:28px 18px 38px 18px;}
-      @media (max-width: 480px) { .tll-container { margin-top:10px; padding:12px 4px 20px 4px; } }
-      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-      .loading-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #e0e0e0; border-top: 2px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; }
-      .store-search-item { padding:10px; cursor:pointer; border-bottom:1px solid #f0f0f0; }
-      .store-search-item:hover { background:#f8f9fa; }
-      .store-search-item:last-child { border-bottom:none; }
+      .tll-layout {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .tll-header {
+        max-width: 500px;
+        margin: 0 auto 30px;
+      }
+
+      .back-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        padding: 12px 20px;
+        border-radius: 50px;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
+      }
+
+      .back-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      }
+
+      .back-icon {
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .header-title {
+        text-align: center;
+        color: white;
+      }
+
+      .tll-title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0 0 8px 0;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .title-icon {
+        font-size: 36px;
+        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
+      }
+
+      .tll-subtitle {
+        font-size: 16px;
+        margin: 0;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
+      .tll-container {
+        max-width: 500px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+      }
+
+      .search-section,
+      .table-section {
+        margin-bottom: 32px;
+      }
+
+      .section-header {
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+      }
+
+      .section-icon {
+        font-size: 20px;
+      }
+
+      .search-input-wrapper {
+        position: relative;
+        margin-bottom: 16px;
+      }
+
+      .search-input {
+        width: 100%;
+        padding: 16px 20px;
+        padding-right: 50px;
+        font-size: 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        background: #f9fafb;
+        transition: all 0.3s ease;
+        box-sizing: border-box;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      .search-icon {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 18px;
+        pointer-events: none;
+      }
+
+      .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-top: none;
+        border-radius: 0 0 16px 16px;
+        max-height: 280px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .store-search-item {
+        padding: 16px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+      }
+
+      .store-search-item:hover {
+        background: #f8fafc;
+      }
+
+      .store-search-item:last-child {
+        border-bottom: none;
+        border-radius: 0 0 16px 16px;
+      }
+
+      .store-search-item > div:first-child {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      .store-search-item > div:last-child {
+        font-size: 14px;
+        color: #6b7280;
+      }
+
+      .selected-store {
+        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        border-radius: 16px;
+        padding: 16px 20px;
+        color: white;
+        display: none;
+      }
+
+      .selected-store-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        margin-bottom: 8px;
+        opacity: 0.9;
+      }
+
+      .selected-store-name {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .table-select-wrapper {
+        position: relative;
+      }
+
+      .table-select {
+        width: 100%;
+        padding: 16px 20px;
+        padding-right: 50px;
+        font-size: 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        background: #f9fafb;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        appearance: none;
+        box-sizing: border-box;
+      }
+
+      .table-select:enabled {
+        background: white;
+        border-color: #d1d5db;
+      }
+
+      .table-select:enabled:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      .table-select:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .select-arrow {
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 14px;
+        pointer-events: none;
+      }
+
+      .action-section {
+        text-align: center;
+      }
+
+      .start-order-btn {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: 100%;
+        padding: 18px 24px;
+        font-size: 18px;
+        font-weight: 700;
+        border: none;
+        border-radius: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .start-order-btn:disabled {
+        background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+        color: #6b7280;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .start-order-btn:enabled {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+      }
+
+      .start-order-btn:enabled:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 35px rgba(245, 158, 11, 0.4);
+      }
+
+      .start-order-btn:enabled:active {
+        transform: translateY(-1px);
+      }
+
+      .btn-icon {
+        font-size: 20px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+
+      .btn-shine {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s ease;
+      }
+
+      .start-order-btn:enabled:hover .btn-shine {
+        left: 100%;
+      }
+
+      @media (max-width: 480px) {
+        .tll-layout {
+          padding: 12px;
+        }
+
+        .tll-container {
+          padding: 24px 16px;
+          border-radius: 20px;
+        }
+
+        .tll-title {
+          font-size: 28px;
+        }
+
+        .title-icon {
+          font-size: 32px;
+        }
+
+        .search-input,
+        .table-select {
+          padding: 14px 16px;
+          font-size: 15px;
+        }
+
+        .start-order-btn {
+          padding: 16px 20px;
+          font-size: 16px;
+        }
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #e0e0e0;
+        border-top: 2px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 8px;
+      }
     </style>
   `;
 
