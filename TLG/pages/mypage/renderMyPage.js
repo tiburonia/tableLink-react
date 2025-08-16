@@ -832,7 +832,7 @@ async function renderMyPage() {
         line-height: 1.2;
       }
       .requirement-needed {
-        font-size: 10px;
+        font-size: 11px;
         color: #999;
         margin-top: 2px;
         word-break: break-all;
@@ -2074,15 +2074,46 @@ async function updateRegularLevelsList(currentUserInfo) {
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
 
-        // 진행률 계산
-        const progress = calculateLevelProgress(levelData);
+        // 레벨 조건 만족 여부 확인 로직 추가
+        if (!levelData.currentLevel && levelData.nextLevel) {
+          // 현재 레벨이 없지만 첫 번째 레벨 조건을 만족하는지 확인
+          const firstLevel = levelData.nextLevel;
+          const points = levelData.points || 0;
+          const totalSpent = levelData.totalSpent || 0;
+          const visitCount = levelData.visitCount || 0;
+
+          let meetsCondition = false;
+          if (firstLevel.evalPolicy === 'OR') {
+            meetsCondition = points >= firstLevel.requiredPoints ||
+                            totalSpent >= firstLevel.requiredTotalSpent ||
+                            visitCount >= firstLevel.requiredVisitCount;
+          } else {
+            meetsCondition = points >= firstLevel.requiredPoints &&
+                            totalSpent >= firstLevel.requiredTotalSpent &&
+                            visitCount >= firstLevel.requiredVisitCount;
+          }
+
+          levelData.shouldHaveLevel = meetsCondition;
+          console.log(`🔍 레벨 조건 검증 (${levelData.storeName}):`, {
+            points, totalSpent, visitCount,
+            required: firstLevel,
+            meetsCondition,
+            evalPolicy: firstLevel.evalPolicy
+          });
+        }
+
+        // 다음 레벨 정보가 있으면 진행률 계산
+        if (levelData.nextLevel) {
+          const progress = calculateLevelProgress(levelData, levelData.nextLevel);
+          levelData.progress = progress;
+        }
 
         levelDiv.innerHTML = `
           <div class="level-store-header" onclick="goToStore(${levelData.storeId})">
             <div class="level-store-info">
               <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
               <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}">
-                ${levelData.currentLevel?.name || '신규 고객'}
+                ${levelData.currentLevel ? levelData.currentLevel.name : (levelData.shouldHaveLevel ? '⚠️ 레벨 미할당' : '신규 고객')}
               </div>
             </div>
           </div>
@@ -2105,50 +2136,50 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           </div>
 
-          ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' && !progress.isMaxLevel ? `
-            <div class="level-progress-section" onclick="handleLevelProgressClick(${levelData.storeId}, ${progress.overallPercent}, ${JSON.stringify(levelData.nextLevel).replace(/"/g, '&quot;')}, '${levelData.currentLevel?.name || '신규 고객'}')" style="cursor: pointer;">
+          ${levelData.nextLevel && levelData.nextLevel.name && levelData.nextLevel.id && typeof levelData.nextLevel.id === 'number' && !levelData.progress?.isMaxLevel ? `
+            <div class="level-progress-section" onclick="handleLevelProgressClick(${levelData.storeId}, ${levelData.progress.overallPercent}, ${JSON.stringify(levelData.nextLevel).replace(/"/g, '&quot;')}, '${levelData.currentLevel?.name || '신규 고객'}')" style="cursor: pointer;">
               <div class="progress-header">
                 <span class="next-level-info">다음 등급: ${levelData.nextLevel.name}</span>
-                <span class="progress-percentage">${progress.overallPercent}%</span>
+                <span class="progress-percentage">${levelData.progress.overallPercent}%</span>
               </div>
 
               <div class="progress-requirements">
                 ${(levelData.nextLevel.requiredVisitCount || 0) > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">방문 횟수 ${progress.visitsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.visitsDisplay}%)</span>` : ''}</div>
+                  <div class="requirement-label">방문 횟수 ${levelData.progress.visitsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${levelData.progress.visitsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill visits ${progress.visitsDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.visitsPercent}%"></div>
+                    <div class="requirement-fill visits ${levelData.progress.visitsDisplay >= 100 ? 'completed' : ''}" style="width: ${levelData.progress.visitsPercent}%"></div>
                   </div>
                   <div class="requirement-text">${levelData.visitCount || 0} / ${levelData.nextLevel.requiredVisitCount || 0}</div>
-                  ${progress.visitsNeeded > 0 ? `<div class="requirement-needed">${progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
+                  ${levelData.progress.visitsNeeded > 0 ? `<div class="requirement-needed">${levelData.progress.visitsNeeded}회 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
                 ` : ''}
 
                 ${(levelData.nextLevel.requiredTotalSpent || 0) > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">누적 결제 ${progress.spendingDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.spendingDisplay}%)</span>` : ''}</div>
+                  <div class="requirement-label">누적 결제 ${levelData.progress.spendingDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${levelData.progress.spendingDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill spending ${progress.spendingDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.spendingPercent}%"></div>
+                    <div class="requirement-fill spending ${levelData.progress.spendingDisplay >= 100 ? 'completed' : ''}" style="width: ${levelData.progress.spendingPercent}%"></div>
                   </div>
                   <div class="requirement-text">${((levelData.totalSpent || 0) / 1000).toFixed(0)}K / ${((levelData.nextLevel.requiredTotalSpent || 0) / 1000).toFixed(0)}K</div>
-                  ${progress.spendingNeeded > 0 ? `<div class="requirement-needed">${progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
+                  ${levelData.progress.spendingNeeded > 0 ? `<div class="requirement-needed">${levelData.progress.spendingNeeded.toLocaleString()}원 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
                 ` : ''}
 
                 ${(levelData.nextLevel.requiredPoints || 0) > 0 ? `
                 <div class="requirement-item">
-                  <div class="requirement-label">포인트 ${progress.pointsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${progress.pointsDisplay}%)</span>` : ''}</div>
+                  <div class="requirement-label">포인트 ${levelData.progress.pointsDisplay > 100 && levelData.nextLevel.evalPolicy === 'OR' ? `<span class="achievement-rate">(${levelData.progress.pointsDisplay}%)</span>` : ''}</div>
                   <div class="requirement-gauge">
-                    <div class="requirement-fill points ${progress.pointsDisplay >= 100 ? 'completed' : ''}" style="width: ${progress.pointsPercent}%"></div>
+                    <div class="requirement-fill points ${levelData.progress.pointsDisplay >= 100 ? 'completed' : ''}" style="width: ${levelData.progress.pointsPercent}%"></div>
                   </div>
                   <div class="requirement-text">${levelData.points || 0} / ${levelData.nextLevel.requiredPoints || 0}</div>
-                  ${progress.pointsNeeded > 0 ? `<div class="requirement-needed">${progress.pointsNeeded}P 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
+                  ${levelData.progress.pointsNeeded > 0 ? `<div class="requirement-needed">${levelData.progress.pointsNeeded}P 더 필요</div>` : '<div class="requirement-needed completed-text">✅ 달성 완료!</div>'}
                 </div>
                 ` : ''}
               </div>
 
               <div class="overall-progress-bar">
-                <div class="overall-progress-fill" style="width: ${progress.overallPercent}%"></div>
+                <div class="overall-progress-fill" style="width: ${levelData.progress.overallPercent}%"></div>
               </div>
               <div class="progress-description">
                 ${levelData.nextLevel.evalPolicy === 'OR' ? '조건 중 하나만 달성하면 승급됩니다' : '모든 조건을 달성해야 승급됩니다'}
@@ -2156,7 +2187,7 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           ` : `
             <div class="level-progress-section" onclick="handleStartLoyaltyClick(${levelData.storeId}, ${levelData.nextLevel?.id || 'null'}, '${levelData.nextLevel?.name || ''}', '${levelData.currentLevel?.name || '신규 고객'}')" style="cursor: pointer;">
-              ${(!levelData.currentLevel || !levelData.currentLevel.name) && levelData.nextLevel && levelData.nextLevel.name ? `
+              ${(!levelData.currentLevel || !levelData.currentLevel.name) && levelData.nextLevel && levelData.nextLevel.name && levelData.shouldHaveLevel ? `
                 <div class="start-loyalty-section">
                   <div class="start-loyalty-message">
                     <span class="start-loyalty-icon">🚀</span>
@@ -2171,9 +2202,9 @@ async function updateRegularLevelsList(currentUserInfo) {
                 </div>
               ` : `
                 <div class="progress-description" style="text-align: center; padding: 20px; color: #666; font-weight: 500; background: rgba(255, 255, 255, 0.7); border-radius: 12px;">
-                  ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : 
-                    (!levelData.nextLevel || !levelData.nextLevel.name) ? 
-                    '🔧 단골 레벨 시스템을 준비중입니다...' : 
+                  ${levelData.progress?.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' :
+                    (!levelData.nextLevel || !levelData.nextLevel.name) ?
+                    '🔧 단골 레벨 시스템을 준비중입니다...' :
                     '🚀 단골 레벨을 시작해보세요!'}
                 </div>
               `}
@@ -2247,9 +2278,9 @@ async function updateRegularLevelsList(currentUserInfo) {
 }
 
 // 레벨 진행률 계산 함수
-function calculateLevelProgress(levelData) {
+function calculateLevelProgress(levelData, nextLevel) {
   console.log('🔍 레벨 진행률 계산 시작:', {
-    nextLevel: levelData.nextLevel,
+    nextLevel: nextLevel,
     currentLevel: levelData.currentLevel,
     stats: {
       points: levelData.points,
@@ -2260,10 +2291,10 @@ function calculateLevelProgress(levelData) {
 
   // 현재 레벨이 없고(신규 고객) 다음 레벨도 없는 경우만 최고 등급으로 처리
   const isNewCustomer = !levelData.currentLevel || !levelData.currentLevel.name;
-  const hasValidNextLevel = levelData.nextLevel && 
-                           levelData.nextLevel.name && 
-                           levelData.nextLevel.id && 
-                           typeof levelData.nextLevel.id === 'number';
+  const hasValidNextLevel = nextLevel &&
+                           nextLevel.name &&
+                           nextLevel.id &&
+                           typeof nextLevel.id === 'number';
 
   // 신규 고객이 아니면서 다음 레벨이 없는 경우에만 최고 등급으로 처리
   if (!isNewCustomer && !hasValidNextLevel) {
@@ -2305,9 +2336,9 @@ function calculateLevelProgress(levelData) {
   const currentSpending = levelData.totalSpent || 0;
   const currentPoints = levelData.points || 0;
 
-  const requiredVisits = levelData.nextLevel.requiredVisitCount || 0;
-  const requiredSpending = levelData.nextLevel.requiredTotalSpent || 0;
-  const requiredPoints = levelData.nextLevel.requiredPoints || 0;
+  const requiredVisits = nextLevel.requiredVisitCount || 0;
+  const requiredSpending = nextLevel.requiredTotalSpent || 0;
+  const requiredPoints = nextLevel.requiredPoints || 0;
 
   // 각 조건별 실제 진행률 계산 (100% 초과 허용)
   const visitsPercent = requiredVisits > 0 ? (currentVisits / requiredVisits) * 100 : 100;
@@ -2326,7 +2357,7 @@ function calculateLevelProgress(levelData) {
 
   // 전체 진행률 계산 (OR/AND 정책에 따라)
   let overallPercent;
-  if (levelData.nextLevel.evalPolicy === 'OR') {
+  if (nextLevel.evalPolicy === 'OR') {
     // OR 정책: 가장 높은 진행률 사용
     overallPercent = Math.max(visitsGaugePercent, spendingGaugePercent, pointsGaugePercent);
   } else {
@@ -2336,7 +2367,7 @@ function calculateLevelProgress(levelData) {
     if (requiredSpending > 0) validPercents.push(spendingGaugePercent);
     if (requiredPoints > 0) validPercents.push(pointsGaugePercent);
 
-    overallPercent = validPercents.length > 0 ? 
+    overallPercent = validPercents.length > 0 ?
       validPercents.reduce((sum, percent) => sum + percent, 0) / validPercents.length : 100;
   }
 
@@ -2372,13 +2403,13 @@ async function showAllRegularLevelsModal(regularLevels) {
         </div>
         <div class="all-regular-levels-list">
           ${regularLevels.map(levelData => {
-            const progress = calculateLevelProgress(levelData);
+            const progress = calculateLevelProgress(levelData, levelData.nextLevel);
             return `
             <div class="regular-level-modal-item" style="cursor: pointer; margin-bottom: 16px; padding: 16px; background: #f8f9fa; border-radius: 12px;" onclick="closeModalAndGoToStore(${levelData.storeId})">
               <div class="level-store-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div class="level-store-name" style="font-weight: 600; font-size: 16px;">${levelData.storeName || '매장 정보 없음'}</div>
                 <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}; color: white; padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">
-                  ${levelData.currentLevel?.name || '신규 고객'}
+                  ${levelData.currentLevel?.name || (levelData.shouldHaveLevel ? '⚠️ 레벨 미할당' : '신규 고객')}
                 </div>
               </div>
 
@@ -2735,7 +2766,7 @@ async function editReview(reviewId, rating, reviewText) {
   const response = await fetch(`/api/reviews/${reviewId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
+    body: JSON.stringify({
       rating: rating,
       content: reviewText,
       userId: userInfo.id
@@ -2856,7 +2887,7 @@ function handleLevelProgressClick(storeId, overallPercent, nextLevel, currentLev
 // 단골 레벨 시작 섹션 클릭 핸들러
 function handleStartLoyaltyClick(storeId, nextLevelId, nextLevelName, currentLevelName) {
   console.log(`🚀 단골 레벨 시작 클릭됨: storeId=${storeId}, nextLevelId=${nextLevelId}, nextLevelName=${nextLevelName}, currentLevelName=${currentLevelName}`);
-  
+
   // "단골 레벨을 시작해보세요!" 텍스트가 있는 경우에만 버튼 클릭 시 동작
   if (currentLevelName === '신규 고객' && nextLevelId !== null && nextLevelName) {
     // 버튼 클릭과 동일한 로직 수행
