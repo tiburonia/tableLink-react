@@ -886,6 +886,63 @@ async function renderMyPage() {
         background: #5a32a3;
       }
 
+      /* 단골 레벨 시작 섹션 스타일 */
+      .start-loyalty-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        color: white;
+        margin-bottom: 16px;
+      }
+      .start-loyalty-message {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+        text-align: left;
+      }
+      .start-loyalty-icon {
+        font-size: 32px;
+        flex-shrink: 0;
+      }
+      .start-loyalty-text h4 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        font-weight: 700;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+      .start-loyalty-text p {
+        margin: 0;
+        font-size: 14px;
+        opacity: 0.9;
+        line-height: 1.4;
+      }
+      .start-loyalty-btn {
+        width: 100%;
+        padding: 14px 20px;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+      .start-loyalty-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      }
+      .start-loyalty-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
       /* 매장별 포인트 관련 스타일 */
       .store-points-item {
         background: #f8f9fa;
@@ -2099,13 +2156,60 @@ async function updateRegularLevelsList(currentUserInfo) {
             </div>
           ` : `
             <div class="level-progress-section">
-              <div class="progress-description" style="text-align: center; color: #28a745; font-weight: 600;">
-                ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : '🚀 단골 레벨을 시작해보세요!'}
-              </div>
+              ${(!levelData.currentLevel || !levelData.currentLevel.name) && levelData.nextLevel && levelData.nextLevel.name ? `
+                <div class="start-loyalty-section">
+                  <div class="start-loyalty-message">
+                    <span class="start-loyalty-icon">🚀</span>
+                    <div class="start-loyalty-text">
+                      <h4>단골 레벨을 시작해보세요!</h4>
+                      <p>첫 번째 등급 "${levelData.nextLevel.name}"으로 승급하고<br>특별한 혜택을 받아보세요</p>
+                    </div>
+                  </div>
+                  <button class="start-loyalty-btn" data-store-id="${levelData.storeId}" data-next-level-id="${levelData.nextLevel.id}">
+                    🎯 ${levelData.nextLevel.name} 등급 시작하기
+                  </button>
+                </div>
+              ` : `
+                <div class="progress-description" style="text-align: center; color: #28a745; font-weight: 600;">
+                  ${progress.isMaxLevel ? '🎉 최고 등급에 도달했습니다!' : '🚀 단골 레벨을 시작해보세요!'}
+                </div>
+              `}
             </div>
           `}
         `;
         regularLevelsListDiv.appendChild(levelDiv);
+      });
+
+      // 단골 레벨 시작 버튼 이벤트 리스너 추가
+      regularLevelsListDiv.querySelectorAll('.start-loyalty-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const storeId = parseInt(btn.getAttribute('data-store-id'));
+          const nextLevelId = parseInt(btn.getAttribute('data-next-level-id'));
+          
+          console.log(`🚀 단골 레벨 시작 버튼 클릭: 매장 ${storeId}, 레벨 ${nextLevelId}`);
+          
+          // 버튼 비활성화 (중복 클릭 방지)
+          btn.disabled = true;
+          btn.textContent = '승급 처리중...';
+          
+          try {
+            await startLoyaltyLevel(currentUserInfo.id, storeId, nextLevelId);
+            
+            // 성공 시 페이지 새로고침
+            setTimeout(() => {
+              renderMyPage();
+            }, 1000);
+            
+          } catch (error) {
+            console.error('❌ 단골 레벨 시작 실패:', error);
+            alert('단골 레벨 시작에 실패했습니다: ' + error.message);
+            
+            // 실패 시 버튼 복구
+            btn.disabled = false;
+            btn.textContent = `🎯 ${btn.getAttribute('data-next-level-name') || '단골손님'} 등급 시작하기`;
+          }
+        });
       });
 
       // 전체보기 버튼 추가 (3개보다 많은 경우)
@@ -2684,6 +2788,42 @@ function goToStore(storeId) {
       });
   } else {
     console.warn('renderStore 함수를 찾을 수 없습니다.');
+  }
+}
+
+// 단골 레벨 시작 함수
+async function startLoyaltyLevel(userId, storeId, levelId) {
+  try {
+    console.log(`🚀 단골 레벨 시작 요청: 사용자 ${userId}, 매장 ${storeId}, 레벨 ${levelId}`);
+    
+    const response = await fetch('/api/regular-levels/start-loyalty', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        userId: userId,
+        storeId: storeId,
+        levelId: levelId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '단골 레벨 시작 실패');
+    }
+
+    const result = await response.json();
+    console.log('✅ 단골 레벨 시작 성공:', result);
+    
+    // 성공 메시지 표시
+    alert(`🎉 축하합니다! "${result.levelName}" 등급으로 승급되었습니다!`);
+    
+    return result;
+
+  } catch (error) {
+    console.error('❌ 단골 레벨 시작 중 오류:', error);
+    throw error;
   }
 }
 

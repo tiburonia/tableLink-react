@@ -500,4 +500,138 @@ router.post('/user/:userId/store/:storeId/update', async (req, res) => {
   }
 });
 
+// 단골 레벨 시작 (신규 고객을 첫 번째 레벨로 승급)
+router.post('/start-loyalty', async (req, res) => {
+  try {
+    const { userId, storeId, levelId } = req.body;
+
+    console.log(`🚀 단골 레벨 시작 요청: 사용자 ${userId}, 매장 ${storeId}, 레벨 ${levelId}`);
+
+    // 입력 값 검증
+    if (!userId || !storeId || !levelId) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    // 해당 레벨이 존재하고 활성화되어 있는지 확인
+    const levelResult = await pool.query(`
+      SELECT id, level_rank, name, description, benefits
+      FROM regular_levels
+      WHERE id = $1 AND store_id = $2 AND is_active = true
+    `, [levelId, storeId]);
+
+    if (levelResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '유효하지 않은 레벨입니다'
+      });
+    }
+
+    const level = levelResult.rows[0];
+
+    // 사용자의 현재 매장별 통계 확인
+    const statsResult = await pool.query(`
+      SELECT current_level_id, points, total_spent, visit_count
+      FROM user_store_stats
+      WHERE user_id = $1 AND store_id = $2
+    `, [userId, storeId]);
+
+    if (statsResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '해당 매장에 방문 기록이 없습니다'
+      });
+    }
+
+    const userStats = statsResult.rows[0];
+
+    // 이미 레벨이 있는지 확인
+    if (userStats.current_level_id) {
+      return res.status(400).json({
+        success: false,
+        error: '이미 단골 레벨이 설정되어 있습니다'
+      });
+    }
+
+    // 첫 번째 레벨(rank 1)인지 확인
+    if (level.level_rank !== 1) {
+      return res.status(400).json({
+        success: false,
+        error: '첫 번째 레벨만 시작할 수 있습니다'
+      });
+    }
+
+    // 트랜잭션 시작
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 사용자 통계 업데이트 (레벨 설정)
+      await client.query(`
+        UPDATE user_store_stats
+        SET current_level_id = $1, current_level_at = CURRENT_TIMESTAMP
+        WHERE user_id = $2 AND store_id = $3
+      `, [levelId, userId, storeId]);
+
+      // 레벨 변경 이력 기록
+      await client.query(`
+        INSERT INTO regular_level_history (user_id, store_id, from_level_id, to_level_id, reason, changed_at)
+        VALUES ($1, $2, NULL, $3, 'manual_start', CURRENT_TIMESTAMP)
+      `, [userId, storeId, levelId]);
+
+      // 레벨 혜택 발급 (있는 경우)
+      if (level.benefits && level.benefits.length > 0) {
+        for (const benefit of level.benefits) {
+          let expiresAt = null;
+          if (benefit.expires_days) {
+            expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + benefit.expires_days);
+          }
+
+          await client.query(`
+            INSERT INTO regular_level_benefit_issues (
+              user_id, store_id, level_id, benefit_type, benefit_data, 
+              expires_at, issued_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+          `, [
+            userId, 
+            storeId, 
+            levelId,
+            benefit.type || 'loyalty_coupon',
+            JSON.stringify(benefit),
+            expiresAt
+          ]);
+        }
+      }
+
+      await client.query('COMMIT');
+      console.log(`✅ 단골 레벨 시작 완료: 사용자 ${userId} → ${level.name} 등급`);
+
+      res.json({
+        success: true,
+        message: '단골 레벨이 시작되었습니다',
+        levelId: levelId,
+        levelName: level.name,
+        levelRank: level.level_rank,
+        benefits: level.benefits
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('❌ 단골 레벨 시작 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '단골 레벨 시작 실패: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
