@@ -162,19 +162,64 @@ window.StoreUIManager = {
           </div>
         </div>
 
-        <div class="quick-actions-row">
-          <button class="action-btn layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-            <span class="action-icon">🗺️</span>
-            <span class="action-text">배치도</span>
+        <div class="table-detail-toggle-section">
+          <button class="table-detail-toggle-btn" id="tableDetailToggleBtn">
+            <span class="toggle-text">테이블 현황 자세히 보기</span>
+            <span class="toggle-arrow">▼</span>
           </button>
-          <button class="action-btn refresh-btn" id="manualRefreshBtn">
-            <span class="action-icon">🔄</span>
-            <span class="action-text">새로고침</span>
-          </button>
-          <button class="action-btn reserve-btn" onclick="renderReservationScreen(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-            <span class="action-icon">📅</span>
-            <span class="action-text">예약</span>
-          </button>
+        </div>
+
+        <div class="table-detail-content" id="tableDetailContent" style="display: none;">
+          <div class="occupancy-visualization">
+            <div class="occupancy-header">
+              <span class="occupancy-title">좌석 사용률</span>
+              <div class="occupancy-percentage-wrapper">
+                <span class="occupancy-percentage" id="occupancyRateNew">-%</span>
+                <div class="percentage-trend" id="occupancyTrend">
+                  <span class="trend-icon">📈</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="occupancy-progress-container">
+              <div class="occupancy-track">
+                <div class="occupancy-fill" id="occupancyFillNew"></div>
+                <div class="occupancy-glow" id="occupancyGlow"></div>
+              </div>
+              <div class="occupancy-markers">
+                <span class="marker low">25%</span>
+                <span class="marker mid">50%</span>
+                <span class="marker high">75%</span>
+              </div>
+            </div>
+            
+            <div class="seats-breakdown">
+              <div class="seats-info">
+                <span class="seats-used" id="usedSeatsCount">-</span>
+                <span class="seats-separator">/</span>
+                <span class="seats-total" id="totalSeatsCount">-</span>
+                <span class="seats-label">좌석</span>
+              </div>
+              <div class="seats-visual" id="seatsVisual">
+                <!-- 좌석 아이콘들이 동적으로 생성됩니다 -->
+              </div>
+            </div>
+          </div>
+
+          <div class="quick-actions-row">
+            <button class="action-btn layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+              <span class="action-icon">🗺️</span>
+              <span class="action-text">배치도</span>
+            </button>
+            <button class="action-btn refresh-btn" id="manualRefreshBtn">
+              <span class="action-icon">🔄</span>
+              <span class="action-text">새로고침</span>
+            </button>
+            <button class="action-btn reserve-btn" onclick="renderReservationScreen(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+              <span class="action-icon">📅</span>
+              <span class="action-text">예약</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -803,8 +848,99 @@ window.StoreUIManager = {
           letter-spacing: 0.5px;
         }
 
-        /* 사용률 시각화 */
-        .occupancy-visualization {
+        /* 테이블 상세 토글 버튼 */
+        .table-detail-toggle-section {
+          margin-top: 16px;
+          margin-bottom: 16px;
+        }
+
+        .table-detail-toggle-btn {
+          width: 100%;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 14px 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-family: inherit;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .table-detail-toggle-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(59, 130, 246, 0.1) 50%,
+            transparent 100%
+          );
+          transition: left 0.5s ease;
+        }
+
+        .table-detail-toggle-btn:hover::before {
+          left: 100%;
+        }
+
+        .table-detail-toggle-btn:hover {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-color: #3b82f6;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .toggle-text {
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+          position: relative;
+          z-index: 1;
+        }
+
+        .table-detail-toggle-btn:hover .toggle-text {
+          color: #3b82f6;
+        }
+
+        .toggle-arrow {
+          font-size: 12px;
+          color: #6b7280;
+          transition: all 0.3s ease;
+          position: relative;
+          z-index: 1;
+        }
+
+        .table-detail-toggle-btn.expanded .toggle-arrow {
+          transform: rotate(180deg);
+          color: #3b82f6;
+        }
+
+        .table-detail-toggle-btn.expanded .toggle-text {
+          color: #3b82f6;
+        }
+
+        /* 테이블 상세 컨텐츠 */
+        .table-detail-content {
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+
+        .table-detail-content.show {
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        /* 사용률 시각화 (상세 영역 내부) */
+        .table-detail-content .occupancy-visualization {
           background: white;
           border-radius: 16px;
           padding: 18px;
@@ -973,8 +1109,8 @@ window.StoreUIManager = {
           box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
         }
 
-        /* 액션 버튼들 */
-        .quick-actions-row {
+        /* 액션 버튼들 (상세 영역 내부) */
+        .table-detail-content .quick-actions-row {
           display: flex;
           gap: 8px;
           margin-top: 16px;

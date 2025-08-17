@@ -258,6 +258,46 @@ function setupEventListeners(store) {
       });
     }, 300);
 
+    // 수동 새로고침 버튼 이벤트 설정
+    const manualRefreshBtn = document.getElementById('manualRefreshBtn');
+    if (manualRefreshBtn && !manualRefreshBtn.hasAttribute('data-event-set')) {
+      manualRefreshBtn.setAttribute('data-event-set', 'true');
+      manualRefreshBtn.addEventListener('click', () => {
+        if (window.currentStore) {
+          this.loadTableInfo(window.currentStore);
+        }
+      });
+    }
+
+    // 테이블 상세 토글 버튼 이벤트 설정
+    const tableDetailToggleBtn = document.getElementById('tableDetailToggleBtn');
+    const tableDetailContent = document.getElementById('tableDetailContent');
+
+    if (tableDetailToggleBtn && tableDetailContent && !tableDetailToggleBtn.hasAttribute('data-event-set')) {
+      tableDetailToggleBtn.setAttribute('data-event-set', 'true');
+      tableDetailToggleBtn.addEventListener('click', () => {
+        const isExpanded = tableDetailContent.style.display !== 'none';
+
+        if (isExpanded) {
+          // 접기
+          tableDetailContent.classList.remove('show');
+          setTimeout(() => {
+            tableDetailContent.style.display = 'none';
+          }, 300);
+          tableDetailToggleBtn.classList.remove('expanded');
+          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 자세히 보기';
+        } else {
+          // 펼치기
+          tableDetailContent.style.display = 'block';
+          setTimeout(() => {
+            tableDetailContent.classList.add('show');
+          }, 10);
+          tableDetailToggleBtn.classList.add('expanded');
+          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 간단히 보기';
+        }
+      });
+    }
+
     console.log('✅ 모든 이벤트 리스너 설정 완료');
   } catch (error) {
     console.error('❌ 이벤트 리스너 설정 중 오류:', error);
@@ -484,7 +524,7 @@ async function loadPromotionData(store) {
     }
   }
 
-  // 프로모션 더보기 버튼 이벤트 추가 (여러 클래스 확인)
+  // 프로모션 더보기 버튼에 이벤트 리스너 추가 (여러 클래스 확인)
   setTimeout(() => {
     const promotionBtns = [
       document.querySelector('.promotion-more-btn'),
@@ -1747,7 +1787,7 @@ function formatBenefitName(type) {
     'priority_service': '우선 서비스',
     'birthday_gift': '생일 특별 선물',
     'monthly_free': '매월 무료 혜택',
-    'early_access': '신메뉴 체험',
+    'early_access': '신메뉴 우선 체험',
     'point_multiplier': '포인트 적립',
     'discount_percent': '할인 혜택',
     'free_delivery': '무료 배송'
