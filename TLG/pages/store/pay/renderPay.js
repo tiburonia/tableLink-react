@@ -535,11 +535,11 @@ function renderPay(currentOrder, store, tableNum) {
         return;
       }
 
-      const response = await fetch(`/api/regular-levels/user-store-points/${userId}/${orderData.storeId}`);
+      const response = await fetch(`/api/regular-levels/user/${userId}/store/${orderData.storeId}/points`);
       const data = await response.json();
 
-      if (data.success && data.storePoint) {
-        const points = data.storePoint.points || 0;
+      if (data.success && data.points !== undefined) {
+        const points = data.points || 0;
         document.getElementById('storePointDisplay').textContent = `${points.toLocaleString()}P`;
 
         const usePointInput = document.getElementById('usePoint');
@@ -569,18 +569,19 @@ function renderPay(currentOrder, store, tableNum) {
         return;
       }
 
-      const response = await fetch(`/api/orders/user-coupons/${userId}`);
+      // 사용자 정보에서 쿠폰 데이터 가져오기
+      const response = await fetch(`/api/auth/user/${userId}`);
       const data = await response.json();
 
-      if (data.success && data.coupons && data.coupons.length > 0) {
+      if (data.success && data.user && data.user.coupons && data.user.coupons.unused && data.user.coupons.unused.length > 0) {
         const couponSelect = document.createElement('select');
         couponSelect.id = 'couponSelect';
 
         couponSelect.innerHTML = `
           <option value="">쿠폰을 선택하세요</option>
-          ${data.coupons.map(coupon => `
-            <option value="${coupon.id}" data-discount="${coupon.discount_amount}">
-              ${coupon.coupon_name} - ${coupon.discount_amount.toLocaleString()}원 할인
+          ${data.user.coupons.unused.map(coupon => `
+            <option value="${coupon.id}" data-discount="${coupon.discountValue || coupon.discount_amount || 0}">
+              ${coupon.name} - ${(coupon.discountValue || coupon.discount_amount || 0).toLocaleString()}원 할인
             </option>
           `).join('')}
         `;
