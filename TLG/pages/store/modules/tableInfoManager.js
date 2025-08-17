@@ -1,5 +1,283 @@
 // 테이블 정보 관리자
 window.TableInfoManager = {
+  // WebSocket 연결 초기화
+  initializeWebSocket(storeId) {
+    console.log(`🔌 WebSocket 연결 초기화: 매장 ${storeId}`);
+
+    // 기존 연결 정리
+    this.disconnectWebSocket();
+
+    this.currentStoreId = storeId;
+
+    try {
+      // WebSocket 서버 URL (현재 서버와 동일한 호스트 사용)
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/tables/${storeId}`;
+
+      this.websocket = new WebSocket(wsUrl);
+
+      this.websocket.onopen = () => {
+        console.log(`✅ WebSocket 연결 성공: 매장 ${storeId}`);
+        this.reconnectAttempts = 0;
+
+        // 연결 상태 UI 업데이트
+        this.updateConnectionStatus('connected');
+      };
+
+      this.websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📨 WebSocket 메시지 수신:', data);
+
+          switch(data.type) {
+            case 'table_update':
+              this.handleTableUpdate(data.payload);
+              break;
+            case 'table_status_change':
+              this.handleTableStatusChange(data.payload);
+              break;
+            case 'store_status_update':
+              this.handleStoreStatusUpdate(data.payload);
+              break;
+            default:
+              console.log('🔍 알 수 없는 메시지 타입:', data.type);
+          }
+        } catch (error) {
+          console.error('❌ WebSocket 메시지 파싱 오류:', error);
+        }
+      };
+
+      this.websocket.onclose = (event) => {
+        console.log(`🔌 WebSocket 연결 종료: 매장 ${storeId}, 코드: ${event.code}`);
+        this.updateConnectionStatus('disconnected');
+
+        // 비정상 종료인 경우 재연결 시도
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          setTimeout(() => {
+            this.reconnectAttempts++;
+            console.log(`🔄 WebSocket 재연결 시도 ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            this.initializeWebSocket(storeId);
+          }, this.reconnectInterval);
+        }
+      };
+
+      this.websocket.onerror = (error) => {
+        console.error('❌ WebSocket 오류:', error);
+        this.updateConnectionStatus('error');
+      };
+
+    } catch (error) {
+      console.error('❌ WebSocket 초기화 실패:', error);
+      this.updateConnectionStatus('error');
+    }
+  },
+
+  // WebSocket 연결 해제
+  disconnectWebSocket() {
+    if (this.websocket) {
+      console.log('🔌 WebSocket 연결 해제');
+      this.websocket.close(1000, 'Manual disconnect');
+      this.websocket = null;
+    }
+    this.currentStoreId = null;
+    this.reconnectAttempts = 0;
+  },
+
+  // 테이블 업데이트 처리
+  handleTableUpdate(payload) {
+    console.log('🔄 테이블 업데이트 처리:', payload);
+
+    if (payload.storeId === this.currentStoreId) {
+      // UI 업데이트
+      this.updateTableInfoUI(payload);
+
+      // 테이블 배치도가 있다면 업데이트
+      if (document.getElementById('tableLayoutContainer')) {
+        this.updateTableLayout(payload);
+      }
+    }
+  },
+
+  // 테이블 상태 변경 처리
+  handleTableStatusChange(payload) {
+    console.log('📊 테이블 상태 변경:', payload);
+
+    const { tableId, tableNumber, isOccupied, occupiedSince, customerName } = payload;
+
+    // 개별 테이블 카드 업데이트
+    const tableCard = document.querySelector(`[data-table-id="${tableId}"]`);
+    if (tableCard) {
+      this.updateSingleTableCard(tableCard, {
+        tableNumber,
+        isOccupied,
+        occupiedSince,
+        customerName
+      });
+    }
+
+    // 전체 통계 업데이트 요청
+    this.refreshTableStatistics();
+  },
+
+  // 매장 상태 업데이트 처리
+  handleStoreStatusUpdate(payload) {
+    console.log('🏪 매장 상태 업데이트:', payload);
+
+    const { storeId, isOpen, totalTables, occupiedTables } = payload;
+
+    if (storeId === this.currentStoreId) {
+      // 매장 운영 상태 UI 업데이트
+      this.updateStoreStatusUI({ isOpen, totalTables, occupiedTables });
+    }
+  },
+
+  // 연결 상태 UI 업데이트
+  updateConnectionStatus(status) {
+    const statusIndicator = document.querySelector('.table-status-indicator');
+    if (statusIndicator) {
+      statusIndicator.className = `table-status-indicator ${status}`;
+
+      const statusText = {
+        'connected': '🟢 실시간',
+        'disconnected': '🟡 연결 해제',
+        'error': '🔴 오류'
+      };
+
+      statusIndicator.textContent = statusText[status] || '🟡 연결 중';
+    }
+  },
+
+  // 실시간 테이블 정보 UI 업데이트
+  updateTableInfoUI(data) {
+    const { totalTables, availableTables, occupiedTables, tables } = data;
+
+    // 통계 업데이트
+    const statsElements = {
+      totalTables: document.querySelector('.stat-total-tables .stat-value'),
+      availableTables: document.querySelector('.stat-available-tables .stat-value'),
+      occupiedTables: document.querySelector('.stat-occupied-tables .stat-value')
+    };
+
+    if (statsElements.totalTables) statsElements.totalTables.textContent = totalTables;
+    if (statsElements.availableTables) statsElements.availableTables.textContent = availableTables;
+    if (statsElements.occupiedTables) statsElements.occupiedTables.textContent = occupiedTables;
+
+    // 사용률 업데이트
+    const usageRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0;
+    const usageElement = document.querySelector('.usage-rate');
+    if (usageElement) {
+      usageElement.textContent = `${usageRate}%`;
+
+      // 사용률에 따른 색상 변경
+      const usageBar = document.querySelector('.usage-progress-fill');
+      if (usageBar) {
+        usageBar.style.width = `${usageRate}%`;
+
+        if (usageRate >= 80) {
+          usageBar.className = 'usage-progress-fill high';
+        } else if (usageRate >= 50) {
+          usageBar.className = 'usage-progress-fill medium';
+        } else {
+          usageBar.className = 'usage-progress-fill low';
+        }
+      }
+    }
+
+    // 상태 표시 업데이트
+    const statusElement = document.querySelector('.table-overall-status');
+    if (statusElement) {
+      let statusText, statusClass;
+
+      if (usageRate >= 90) {
+        statusText = 'FULL';
+        statusClass = 'full';
+      } else if (usageRate >= 70) {
+        statusText = 'BUSY';
+        statusClass = 'busy';
+      } else {
+        statusText = 'OPEN';
+        statusClass = 'open';
+      }
+
+      statusElement.textContent = statusText;
+      statusElement.className = `table-overall-status ${statusClass}`;
+    }
+
+    console.log(`📊 실시간 업데이트: ${occupiedTables}/${totalTables} (${usageRate}%)`);
+  },
+
+  // 개별 테이블 카드 업데이트
+  updateSingleTableCard(tableCard, data) {
+    const { tableNumber, isOccupied, occupiedSince, customerName } = data;
+
+    // 테이블 상태 클래스 업데이트
+    tableCard.className = `table-item ${isOccupied ? 'occupied' : 'available'}`;
+
+    // 상태 표시 업데이트
+    const statusElement = tableCard.querySelector('.table-status');
+    if (statusElement) {
+      statusElement.textContent = isOccupied ? '사용중' : '빈 테이블';
+      statusElement.className = `table-status ${isOccupied ? 'occupied' : 'available'}`;
+    }
+
+    // 고객 정보 업데이트
+    const customerElement = tableCard.querySelector('.table-customer');
+    if (customerElement) {
+      if (isOccupied && customerName) {
+        customerElement.textContent = customerName;
+        customerElement.style.display = 'block';
+      } else {
+        customerElement.style.display = 'none';
+      }
+    }
+
+    // 사용 시간 업데이트
+    const timeElement = tableCard.querySelector('.table-occupied-time');
+    if (timeElement) {
+      if (isOccupied && occupiedSince) {
+        const duration = this.calculateOccupiedDuration(occupiedSince);
+        timeElement.textContent = duration;
+        timeElement.style.display = 'block';
+      } else {
+        timeElement.style.display = 'none';
+      }
+    }
+  },
+
+  // 테이블 사용 시간 계산
+  calculateOccupiedDuration(occupiedSince) {
+    const now = new Date();
+    const startTime = new Date(occupiedSince);
+    const diffMs = now - startTime;
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) {
+      return `${hours}시간 ${minutes}분`;
+    } else {
+      return `${minutes}분`;
+    }
+  },
+
+  // 테이블 통계 새로고침
+  async refreshTableStatistics() {
+    if (!this.currentStoreId) return;
+
+    try {
+      const response = await fetch(`/api/tables/stores/${this.currentStoreId}/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          this.updateTableInfoUI(data);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 테이블 통계 새로고침 실패:', error);
+    }
+  },
+
+  // 테이블 정보 로드
   async loadTableInfo(store) {
     try {
       console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
@@ -28,16 +306,16 @@ window.TableInfoManager = {
       const tables = data.tables || [];
       const totalTables = tables.length;
       const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
-      const occupiedTables = tables.filter(t => t.isOccupied);
-      const availableTables = tables.filter(t => !t.isOccupied);
-      const availableSeats = availableTables.reduce((sum, table) => sum + table.seats, 0);
+      const occupiedTablesCount = tables.filter(t => t.isOccupied).length;
+      const availableTablesCount = tables.filter(t => !t.isOccupied).length;
+      const availableSeats = tables.reduce((sum, table) => sum + (t => !t.isOccupied ? t.seats : 0)(), 0);
       const occupancyRate = totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0;
 
       console.log(`🏪 ${store.name} 통계:
       - 총 테이블: ${totalTables}개
       - 총 좌석: ${totalSeats}석
-      - 사용중 테이블: ${occupiedTables.length}개
-      - 빈 테이블: ${availableTables.length}개
+      - 사용중 테이블: ${occupiedTablesCount}개
+      - 빈 테이블: ${availableTablesCount}개
       - 잔여 좌석: ${availableSeats}석
       - 사용률: ${occupancyRate}%`);
 
@@ -55,7 +333,7 @@ window.TableInfoManager = {
       // UI 업데이트
       this.updateTableInfoUI({
         totalTables: `${totalTables}개`,
-        availableTables: `${availableTables.length}개`,
+        availableTables: `${availableTablesCount}개`,
         totalSeats: `${totalSeats}석`,
         availableSeats: `${availableSeats}석`,
         occupancyRate: `${occupancyRate}`,
@@ -63,18 +341,27 @@ window.TableInfoManager = {
         statusClass: statusClass
       });
 
+      console.log(`✅ 새로운 테이블 정보 UI 업데이트 완료: ${statusText} (사용률: ${occupancyRate}%)`);
+
+      // WebSocket 연결 초기화 (실시간 업데이트를 위해)
+      this.initializeWebSocket(store.id);
+
     } catch (error) {
-      console.error('테이블 정보 로딩 실패:', error);
-      this.updateTableInfoUI({
-        totalTables: '오류',
-        availableTables: '오류',
-        totalSeats: '오류',
-        availableSeats: '오류',
-        occupancyRate: '오류',
-        statusText: 'ERROR',
-        statusClass: 'error'
-      });
+      console.error('❌ 테이블 정보 로드 실패:', error);
+      this.displayTableInfoError();
     }
+  },
+
+  displayTableInfoError() {
+    this.updateTableInfoUI({
+      totalTables: '오류',
+      availableTables: '오류',
+      totalSeats: '오류',
+      availableSeats: '오류',
+      occupancyRate: '오류',
+      statusText: 'ERROR',
+      statusClass: 'error'
+    });
   },
 
   updateTableInfoUI(info) {
@@ -124,7 +411,7 @@ window.TableInfoManager = {
     if (usageRateFillEl && info.occupancyRate !== '-') {
       const percentage = parseInt(info.occupancyRate) || 0;
       usageRateFillEl.style.width = percentage + '%';
-      
+
       if (percentage >= 90) {
         usageRateFillEl.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
       } else if (percentage >= 70) {
@@ -140,7 +427,7 @@ window.TableInfoManager = {
     if (occupancyFillNew && info.occupancyRate !== '-') {
       const percentage = parseInt(info.occupancyRate) || 0;
       occupancyFillNew.style.width = percentage + '%';
-      
+
       if (occupancyGlow) {
         occupancyGlow.style.width = percentage + '%';
       }
@@ -155,17 +442,17 @@ window.TableInfoManager = {
       const seatsToShow = Math.min(totalSeats, maxSeatsToShow);
       const seatRatio = usedSeats / totalSeats;
       const visualUsedSeats = Math.round(seatsToShow * seatRatio);
-      
+
       let seatsHTML = '';
       for (let i = 0; i < seatsToShow; i++) {
         const seatClass = i < visualUsedSeats ? 'occupied' : 'available';
         seatsHTML += `<div class="seat-icon ${seatClass}"></div>`;
       }
-      
+
       if (totalSeats > maxSeatsToShow) {
         seatsHTML += '<span style="font-size: 10px; color: #9ca3af; margin-left: 4px;">...</span>';
       }
-      
+
       seatsVisual.innerHTML = seatsHTML;
     }
 
@@ -284,8 +571,8 @@ window.TableInfoManager = {
         <div class="table-grid ${gridClass}">
           ${tables.map(table => {
             const statusClass = table.isOccupied ? 'occupied' : 'available';
-            const specialClass = gridClass === 'vip' ? 'vip-room' : 
-                               gridClass === 'couple' ? 'couple-seat' : 
+            const specialClass = gridClass === 'vip' ? 'vip-room' :
+                               gridClass === 'couple' ? 'couple-seat' :
                                gridClass === 'group' ? 'group-seat' : '';
             return `
               <div class="table-slot ${statusClass} ${specialClass}" data-table-id="${table.id}">
@@ -319,7 +606,7 @@ window.TableInfoManager = {
 
     if (table) {
       const selectedTableInfo = document.getElementById('selectedTableInfo');
-      const occupiedText = table.isOccupied 
+      const occupiedText = table.isOccupied
         ? `<span style="color: #F44336;">사용중</span> (${new Date(table.occupiedSince).toLocaleString()}부터)`
         : `<span style="color: #4CAF50;">빈 테이블</span>`;
 
@@ -568,6 +855,61 @@ window.TableInfoManager = {
           font-size: 14px;
           color: #666;
           line-height: 1.5;
+        }
+
+        .table-info-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #e5e7eb;
+        }
+
+        .table-header-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .table-status-indicator {
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 6px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.3s ease;
+        }
+
+        .table-status-indicator.connected {
+          background: rgba(16, 185, 129, 0.1);
+          border-color: rgba(16, 185, 129, 0.3);
+          color: #10b981;
+        }
+
+        .table-status-indicator.disconnected {
+          background: rgba(245, 158, 11, 0.1);
+          border-color: rgba(245, 158, 11, 0.3);
+          color: #f59e0b;
+        }
+
+        .table-status-indicator.error {
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #ef4444;
+        }
+
+        .table-status-indicator.connecting {
+          background: rgba(59, 130, 246, 0.1);
+          border-color: rgba(59, 130, 246, 0.3);
+          color: #3b82f6;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
       </style>
     `;

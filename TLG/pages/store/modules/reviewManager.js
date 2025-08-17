@@ -21,22 +21,65 @@ window.ReviewManager = {
       if (reviewPreviewContent) {
         if (reviews.length === 0) {
           reviewPreviewContent.innerHTML = `
-            <div class="review-card" style="text-align: center; color: #888;">
-              <div>아직 등록된 리뷰가 없습니다.</div>
-              <div style="font-size: 13px; margin-top: 4px;">첫 리뷰를 남겨주세요!</div>
+            <div class="empty-reviews">
+              <div class="empty-reviews-icon">💬</div>
+              <h4>아직 리뷰가 없어요</h4>
+              <p>이 매장의 첫 번째 리뷰를 남겨보세요!</p>
+              <button class="write-first-review-btn" onclick="alert('리뷰 작성 기능은 주문 후 이용 가능합니다')">
+                첫 리뷰 남기기
+              </button>
             </div>
           `;
         } else {
-          reviewPreviewContent.innerHTML = reviews.slice(0, 2).map(review => `
-            <div class="review-card">
-              <div class="review-header">
-                <span class="review-user">${review.user || '익명'}</span>
-                <span class="review-score">★ ${review.score}</span>
-                <span class="review-date">${review.date || '날짜 정보 없음'}</span>
+          const reviewsHTML = reviews.slice(0, 2).map(review => {
+            // 날짜 포맷팅
+            const reviewDate = review.created_at ? 
+              new Date(review.created_at).toLocaleDateString('ko-KR', {
+                month: 'short',
+                day: 'numeric'
+              }) : '날짜 정보 없음';
+
+            // 사용자 이름 첫 글자로 아바타 생성
+            const userInitial = (review.user_name || '익명').charAt(0);
+            const avatarColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+            const avatarColor = avatarColors[Math.abs((review.user_name || '익명').length) % avatarColors.length];
+
+            return `
+              <div class="review-card modern-review">
+                <div class="review-header">
+                  <div class="review-user">
+                    <div class="user-avatar" style="
+                      width: 32px; 
+                      height: 32px; 
+                      border-radius: 50%; 
+                      background: ${avatarColor}; 
+                      color: white; 
+                      display: flex; 
+                      align-items: center; 
+                      justify-content: center; 
+                      font-weight: 600; 
+                      font-size: 14px;
+                      margin-right: 8px;
+                    ">${userInitial}</div>
+                    <div>
+                      <div style="font-weight: 600; font-size: 14px; color: #374151;">
+                        ${review.user_name || '익명'}
+                      </div>
+                      <div style="font-size: 12px; color: #9ca3af;">
+                        ${reviewDate}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="review-meta">
+                    <span class="review-score">★ ${review.score}</span>
+                  </div>
+                </div>
+                <div class="review-text">${review.content || '내용 없음'}</div>
               </div>
-              <div class="review-text">${review.content}</div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
+
+          reviewPreviewContent.innerHTML = reviewsHTML;
         }
         console.log('✅ 리뷰 미리보기 렌더링 완료');
       } else {
@@ -47,9 +90,13 @@ window.ReviewManager = {
       const reviewPreviewContent = document.getElementById('reviewPreviewContent');
       if (reviewPreviewContent) {
         reviewPreviewContent.innerHTML = `
-          <div class="review-card" style="text-align: center; color: #dc2626;">
-            <div>리뷰를 불러오는 중 오류가 발생했습니다.</div>
-            <div style="font-size: 13px; margin-top: 4px;">잠시 후 다시 시도해주세요.</div>
+          <div class="empty-reviews">
+            <div class="empty-reviews-icon">⚠️</div>
+            <h4>리뷰를 불러올 수 없습니다</h4>
+            <p>네트워크 연결을 확인하고 다시 시도해주세요</p>
+            <button class="write-first-review-btn" onclick="window.ReviewManager.renderTopReviews(window.currentStore)">
+              다시 시도
+            </button>
           </div>
         `;
       }
