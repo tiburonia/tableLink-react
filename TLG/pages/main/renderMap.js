@@ -46,8 +46,6 @@ async function renderMap() {
         <span style="font-size: 22px;">👤</span>
       </button>
     </nav>
-
-    ${window.MapPanelUI.getPanelStyles()}
    <style>
     html, body {
   margin: 0;
@@ -478,6 +476,10 @@ async function renderMap() {
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
+    // CSS 스타일 로드
+    if (window.MapPanelUI && typeof window.MapPanelUI.loadPanelStyles === 'function') {
+      window.MapPanelUI.loadPanelStyles();
+    }
     if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
       window.MapPanelUI.initializeFiltering();
     }
