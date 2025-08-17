@@ -82,96 +82,179 @@ async function renderMyPage() {
           <!-- 섹션들 -->
           <div class="sections-container">
             <!-- 최근 주문 -->
-            <section class="section-card">
+            <section class="section-card orders-card">
               <div class="section-header">
-                <h3>📦 최근 주문</h3>
-                <button class="see-more-btn" onclick="renderAllOrderHTML(userInfo)">
-                  <span>전체보기</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <div class="section-title">
+                  <div class="section-icon">📦</div>
+                  <div class="section-text">
+                    <h3>최근 주문</h3>
+                    <p class="section-subtitle">나의 주문 내역을 확인하세요</p>
+                  </div>
+                </div>
+                <button class="modern-see-more-btn" onclick="renderAllOrderHTML(userInfo)">
+                  <span class="btn-text">전체보기</span>
+                  <div class="btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                 </button>
               </div>
-              <div id="orderList" class="content-list">
-                <div class="loading-skeleton">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line short"></div>
+              <div id="orderList" class="modern-content-list">
+                <div class="modern-loading-skeleton">
+                  <div class="skeleton-card">
+                    <div class="skeleton-header">
+                      <div class="skeleton-title"></div>
+                      <div class="skeleton-status"></div>
+                    </div>
+                    <div class="skeleton-content"></div>
+                    <div class="skeleton-footer">
+                      <div class="skeleton-price"></div>
+                      <div class="skeleton-button"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
 
             <!-- 리뷰 내역 -->
-            <section class="section-card">
+            <section class="section-card reviews-card">
               <div class="section-header">
-                <h3>⭐ 내 리뷰</h3>
-                <button class="see-more-btn" id="viewAllReviewsBtn">
-                  <span>전체보기</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <div class="section-title">
+                  <div class="section-icon">⭐</div>
+                  <div class="section-text">
+                    <h3>내 리뷰</h3>
+                    <p class="section-subtitle">작성한 리뷰를 관리하세요</p>
+                  </div>
+                </div>
+                <button class="modern-see-more-btn" id="viewAllReviewsBtn">
+                  <span class="btn-text">전체보기</span>
+                  <div class="btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                 </button>
               </div>
-              <div id="reviewList" class="content-list">
-                <div class="loading-skeleton">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line short"></div>
+              <div id="reviewList" class="modern-content-list">
+                <div class="modern-loading-skeleton">
+                  <div class="skeleton-card">
+                    <div class="skeleton-header">
+                      <div class="skeleton-title"></div>
+                      <div class="skeleton-rating"></div>
+                    </div>
+                    <div class="skeleton-content"></div>
+                    <div class="skeleton-footer">
+                      <div class="skeleton-date"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
 
             <!-- 즐겨찾기 매장 -->
-            <section class="section-card">
+            <section class="section-card favorites-card">
               <div class="section-header">
-                <h3>💖 즐겨찾기 매장</h3>
-                <button class="see-more-btn" id="viewAllFavoritesBtn">
-                  <span>전체보기</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <div class="section-title">
+                  <div class="section-icon">💖</div>
+                  <div class="section-text">
+                    <h3>즐겨찾기 매장</h3>
+                    <p class="section-subtitle">자주 가는 매장들을 확인하세요</p>
+                  </div>
+                </div>
+                <button class="modern-see-more-btn" id="viewAllFavoritesBtn">
+                  <span class="btn-text">전체보기</span>
+                  <div class="btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                 </button>
               </div>
-              <div id="favoriteStoresList" class="content-list">
-                <div class="loading-skeleton">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line short"></div>
+              <div id="favoriteStoresList" class="modern-content-list">
+                <div class="modern-loading-skeleton">
+                  <div class="skeleton-card">
+                    <div class="skeleton-header">
+                      <div class="skeleton-title"></div>
+                      <div class="skeleton-category"></div>
+                    </div>
+                    <div class="skeleton-content"></div>
+                    <div class="skeleton-footer">
+                      <div class="skeleton-rating"></div>
+                      <div class="skeleton-distance"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
 
             <!-- 단골 레벨 -->
-            <section class="section-card">
+            <section class="section-card levels-card">
               <div class="section-header">
-                <h3>🏆 단골 레벨</h3>
-                <button class="see-more-btn" id="viewAllLevelsBtn">
-                  <span>전체보기</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  </button>
+                <div class="section-title">
+                  <div class="section-icon">🏆</div>
+                  <div class="section-text">
+                    <h3>단골 레벨</h3>
+                    <p class="section-subtitle">나의 단골 등급을 확인하세요</p>
+                  </div>
+                </div>
+                <button class="modern-see-more-btn" id="viewAllLevelsBtn">
+                  <span class="btn-text">전체보기</span>
+                  <div class="btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
+                </button>
               </div>
-              <div id="regularLevelsList" class="content-list">
-                <div class="loading-skeleton">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line short"></div>
+              <div id="regularLevelsList" class="modern-content-list">
+                <div class="modern-loading-skeleton">
+                  <div class="skeleton-card">
+                    <div class="skeleton-header">
+                      <div class="skeleton-title"></div>
+                      <div class="skeleton-level"></div>
+                    </div>
+                    <div class="skeleton-content"></div>
+                    <div class="skeleton-footer">
+                      <div class="skeleton-points"></div>
+                      <div class="skeleton-visits"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
 
             <!-- 매장별 포인트 -->
-            <section class="section-card">
+            <section class="section-card points-card">
               <div class="section-header">
-                <h3>💰 보유 포인트</h3>
-                <button class="see-more-btn" id="viewAllPointsBtn">
-                  <span>전체보기</span>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
+                <div class="section-title">
+                  <div class="section-icon">💰</div>
+                  <div class="section-text">
+                    <h3>보유 포인트</h3>
+                    <p class="section-subtitle">적립된 포인트를 확인하세요</p>
+                  </div>
+                </div>
+                <button class="modern-see-more-btn" id="viewAllPointsBtn">
+                  <span class="btn-text">전체보기</span>
+                  <div class="btn-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
                 </button>
               </div>
-              <div id="storePointsList" class="content-list">
-                <div class="loading-skeleton">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line short"></div>
+              <div id="storePointsList" class="modern-content-list">
+                <div class="modern-loading-skeleton">
+                  <div class="skeleton-card">
+                    <div class="skeleton-header">
+                      <div class="skeleton-title"></div>
+                      <div class="skeleton-points-value"></div>
+                    </div>
+                    <div class="skeleton-content"></div>
+                    <div class="skeleton-footer">
+                      <div class="skeleton-store-info"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -505,74 +588,224 @@ async function renderMyPage() {
       .sections-container {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 24px;
       }
 
       /* 섹션 카드 */
       .section-card {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-        border: 1px solid #f1f5f9;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(226, 232, 240, 0.6);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .section-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--card-accent-color, #6366f1), transparent);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .section-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        border-color: rgba(226, 232, 240, 0.8);
+      }
+
+      .section-card:hover::before {
+        opacity: 1;
+      }
+
+      /* 카드별 색상 테마 */
+      .orders-card {
+        --card-accent-color: #3b82f6;
+      }
+
+      .reviews-card {
+        --card-accent-color: #f59e0b;
+      }
+
+      .favorites-card {
+        --card-accent-color: #ef4444;
+      }
+
+      .levels-card {
+        --card-accent-color: #8b5cf6;
+      }
+
+      .points-card {
+        --card-accent-color: #059669;
       }
 
       .section-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
+        align-items: flex-start;
+        margin-bottom: 20px;
+        gap: 16px;
       }
 
-      .section-header h3 {
-        margin: 0;
-        font-size: 18px;
+      .section-title {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        flex: 1;
+      }
+
+      .section-icon {
+        font-size: 24px;
+        line-height: 1;
+        margin-top: 2px;
+      }
+
+      .section-text h3 {
+        margin: 0 0 4px 0;
+        font-size: 20px;
         font-weight: 700;
-        color: #1f2937;
+        color: #1e293b;
+        line-height: 1.2;
       }
 
-      .see-more-btn {
+      .section-subtitle {
+        margin: 0;
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+        line-height: 1.3;
+      }
+
+      .modern-see-more-btn {
         display: flex;
         align-items: center;
-        gap: 4px;
-        background: none;
-        border: none;
-        color: #6366f1;
-        font-size: 14px;
+        gap: 6px;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
+        color: #475569;
+        font-size: 13px;
         font-weight: 600;
         cursor: pointer;
-        padding: 8px 12px;
-        border-radius: 8px;
+        padding: 10px 14px;
+        border-radius: 12px;
         transition: all 0.2s ease;
+        white-space: nowrap;
       }
 
-      .see-more-btn:hover {
-        background: #f0f4ff;
-        color: #4f46e5;
+      .modern-see-more-btn:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        color: #334155;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       }
 
-      /* 콘텐츠 리스트 */
-      .content-list {
-        min-height: 60px;
+      .modern-see-more-btn .btn-text {
+        font-size: 13px;
+        font-weight: 600;
       }
 
-      /* 로딩 스켈레톤 */
-      .loading-skeleton {
+      .modern-see-more-btn .btn-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.2s ease;
+      }
+
+      .modern-see-more-btn:hover .btn-icon {
+        transform: translateX(2px);
+      }
+
+      /* 현대적 콘텐츠 리스트 */
+      .modern-content-list {
+        min-height: 80px;
+      }
+
+      /* 현대적 로딩 스켈레톤 */
+      .modern-loading-skeleton {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
       }
 
-      .skeleton-line {
-        height: 16px;
+      .skeleton-card {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #f1f5f9;
+      }
+
+      .skeleton-header,
+      .skeleton-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .skeleton-footer {
+        margin-bottom: 0;
+        margin-top: 12px;
+      }
+
+      .skeleton-content {
+        height: 14px;
         background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
         background-size: 200% 100%;
-        border-radius: 8px;
-        animation: skeleton-loading 1.5s infinite;
+        border-radius: 6px;
+        animation: skeleton-loading 2s infinite;
+        margin-bottom: 8px;
       }
 
-      .skeleton-line.short {
-        width: 60%;
+      .skeleton-title {
+        height: 16px;
+        width: 120px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: skeleton-loading 2s infinite;
+      }
+
+      .skeleton-status,
+      .skeleton-rating,
+      .skeleton-category,
+      .skeleton-level,
+      .skeleton-points-value {
+        height: 12px;
+        width: 60px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: skeleton-loading 2s infinite;
+      }
+
+      .skeleton-price,
+      .skeleton-date,
+      .skeleton-distance,
+      .skeleton-points,
+      .skeleton-visits,
+      .skeleton-store-info {
+        height: 12px;
+        width: 80px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: skeleton-loading 2s infinite;
+      }
+
+      .skeleton-button {
+        height: 28px;
+        width: 60px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        border-radius: 6px;
+        animation: skeleton-loading 2s infinite;
       }
 
       @keyframes skeleton-loading {
@@ -582,116 +815,230 @@ async function renderMyPage() {
 
       /* 주문 아이템 */
       .order-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid #e2e8f0;
-        transition: all 0.2s ease;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(226, 232, 240, 0.6);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .order-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .order-item:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
+      }
+
+      .order-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .order-store-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .order-meta {
+        font-size: 12px;
+        color: #64748b;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .order-status {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #166534;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid #86efac;
       }
 
       .order-info {
-        margin-bottom: 12px;
-        line-height: 1.5;
-        color: #374151;
+        margin-bottom: 16px;
+        line-height: 1.6;
+        color: #475569;
       }
 
       .order-info strong {
-        color: #1f2937;
+        color: #1e293b;
         font-weight: 600;
       }
 
-      .review-section {
+      .order-footer {
         display: flex;
-        justify-content: flex-end;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid #f1f5f9;
+      }
+
+      .order-amount {
+        font-size: 16px;
+        font-weight: 700;
+        color: #3b82f6;
       }
 
       .review-btn {
-        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
         border: none;
         padding: 8px 16px;
-        border-radius: 8px;
-        font-size: 13px;
+        border-radius: 10px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
 
       .review-btn:hover {
-        background: linear-gradient(135deg, #4f46e5, #4338ca);
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+      }
+
+      .review-completed {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #166534;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #86efac;
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
 
       /* 리뷰 아이템 */
       .review-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid #e2e8f0;
-        transition: all 0.2s ease;
+        background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .review-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .review-item:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+        background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+        border-color: rgba(245, 158, 11, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(245, 158, 11, 0.15);
       }
 
       .review-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .review-store {
-        font-weight: 600;
-        color: #1f2937;
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 16px;
       }
 
       .review-rating {
-        color: #f59e0b;
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 12px;
         font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 2px;
       }
 
       .review-content {
-        color: #4b5563;
+        color: #475569;
         font-size: 14px;
-        line-height: 1.5;
-        margin-bottom: 8px;
+        line-height: 1.6;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.6);
+        border-radius: 8px;
+        border: 1px solid rgba(245, 158, 11, 0.1);
       }
 
       .review-date {
-        color: #9ca3af;
+        color: #64748b;
         font-size: 12px;
+        font-weight: 500;
       }
 
       /* 즐겨찾기 아이템 */
       .favorite-store-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(239, 68, 68, 0.2);
         display: flex;
         justify-content: space-between;
         align-items: center;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .favorite-store-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .favorite-store-item:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
-        transform: translateY(-1px);
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border-color: rgba(239, 68, 68, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(239, 68, 68, 0.15);
       }
 
       .favorite-store-content {
@@ -699,31 +1046,64 @@ async function renderMyPage() {
       }
 
       .favorite-store-name {
-        font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 4px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+        font-size: 16px;
       }
 
       .favorite-store-info {
-        color: #6b7280;
+        color: #64748b;
         font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .favorite-category {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .favorite-heart {
+        font-size: 20px;
+        color: #ef4444;
+        animation: heartbeat 2s infinite;
       }
 
       /* 단골 레벨 아이템 */
       .regular-level-item {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 16px;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(139, 92, 246, 0.2);
         transition: all 0.3s ease;
         cursor: pointer;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .regular-level-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .regular-level-item:hover {
-        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-color: rgba(139, 92, 246, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(139, 92, 246, 0.2);
       }
 
       .level-store-header {
@@ -735,37 +1115,69 @@ async function renderMyPage() {
 
       .level-store-name {
         font-weight: 700;
-        color: #1f2937;
-        font-size: 16px;
+        color: #1e293b;
+        font-size: 18px;
       }
 
       .level-badge {
-        padding: 6px 12px;
-        border-radius: 12px;
+        padding: 8px 16px;
+        border-radius: 16px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
         color: white;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      }
+
+      .level-progress {
+        margin-top: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        border: 1px solid rgba(139, 92, 246, 0.1);
+      }
+
+      .level-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 12px;
+        color: #64748b;
       }
 
       /* 포인트 아이템 */
       .store-points-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid #e2e8f0;
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid rgba(5, 150, 105, 0.2);
         display: flex;
         justify-content: space-between;
         align-items: center;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .store-points-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        border-radius: 0 2px 2px 0;
       }
 
       .store-points-item:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
-        transform: translateY(-1px);
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-color: rgba(5, 150, 105, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(5, 150, 105, 0.15);
       }
 
       .points-store-info {
@@ -773,18 +1185,20 @@ async function renderMyPage() {
       }
 
       .points-store-name {
-        font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 4px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 6px;
+        font-size: 16px;
       }
 
       .points-store-category {
-        font-size: 12px;
-        color: #6b7280;
-        background: #e5e7eb;
-        padding: 2px 8px;
-        border-radius: 8px;
+        font-size: 11px;
+        color: white;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        padding: 3px 8px;
+        border-radius: 10px;
         display: inline-block;
+        font-weight: 600;
       }
 
       .points-amount {
@@ -792,15 +1206,18 @@ async function renderMyPage() {
       }
 
       .points-value {
-        font-size: 18px;
-        font-weight: 700;
+        font-size: 20px;
+        font-weight: 800;
         color: #059669;
         display: block;
+        line-height: 1;
       }
 
       .points-label {
         font-size: 11px;
-        color: #6b7280;
+        color: #64748b;
+        margin-top: 2px;
+        font-weight: 500;
       }
 
       /* 바텀 네비게이션 */
@@ -1323,20 +1740,35 @@ async function updateOrderList(currentUserInfo, ordersData) {
       const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
       const storeName = orderData.store || order.store_name || '매장 정보 없음';
       const hasReview = reviewStatuses[index];
+      const orderDate = new Date(order.order_date).toLocaleDateString();
+      const orderAmount = order.final_amount?.toLocaleString() || order.total_amount?.toLocaleString() || '0';
 
       orderDiv.innerHTML = `
-        <div class="order-info">
-          <strong>${storeName}</strong><br>
-          ${items}<br>
-          <span style="color: #6b7280; font-size: 13px;">
-            ${order.final_amount?.toLocaleString() || order.total_amount?.toLocaleString() || '0'}원 •
-            ${new Date(order.order_date).toLocaleDateString()}
-          </span>
+        <div class="order-item-header">
+          <div class="order-item-title">
+            <div class="order-store-name">${storeName}</div>
+            <div class="order-meta">
+              <span>${orderDate}</span>
+              <span>•</span>
+              <span>${order.table_number ? `테이블 ${order.table_number}` : '포장'}</span>
+            </div>
+          </div>
+          <div class="order-status">완료</div>
         </div>
-        <div class="review-section">
+        <div class="order-info">
+          <strong>주문 메뉴:</strong> ${items}
+        </div>
+        <div class="order-footer">
+          <div class="order-amount">${orderAmount}원</div>
           ${hasReview ?
-            `<span style="color: #059669; font-size: 13px; font-weight: 600;">✅ 리뷰 완료</span>` :
-            `<button class="review-btn" data-order-id="${order.id}" data-order-index="${index}">리뷰 작성</button>`
+            `<div class="review-completed">
+              <span>✅</span>
+              <span>리뷰 완료</span>
+            </div>` :
+            `<button class="review-btn" data-order-id="${order.id}" data-order-index="${index}">
+              <span>📝</span>
+              <span>리뷰 작성</span>
+            </button>`
           }
         </div>
       `;
@@ -1345,7 +1777,7 @@ async function updateOrderList(currentUserInfo, ordersData) {
 
     document.querySelectorAll('.review-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
-        const orderIndex = parseInt(e.target.getAttribute('data-order-index'));
+        const orderIndex = parseInt(e.target.closest('.review-btn').getAttribute('data-order-index'));
         const order = ordersData[orderIndex];
         
         // 리뷰 작성 스크립트 로드
@@ -1363,7 +1795,13 @@ async function updateOrderList(currentUserInfo, ordersData) {
       });
     });
   } else {
-    orderList.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">주문 내역이 없습니다.</p>`;
+    orderList.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+        <div style="font-size: 48px; margin-bottom: 16px;">📦</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">아직 주문 내역이 없어요</div>
+        <div style="font-size: 14px;">첫 주문을 해보세요!</div>
+      </div>
+    `;
   }
 }
 
@@ -1380,13 +1818,17 @@ async function updateReviewList(currentUserInfo) {
 
     const data = await response.json();
     if (data.success && data.reviews && data.reviews.length > 0) {
-      data.reviews.forEach(review => {
+      data.reviews.slice(0, 3).forEach(review => {
         const reviewDiv = document.createElement('div');
         reviewDiv.className = 'review-item';
+        const stars = '★'.repeat(review.score) + '☆'.repeat(5 - review.score);
         reviewDiv.innerHTML = `
           <div class="review-header">
             <span class="review-store">${review.storeName}</span>
-            <span class="review-rating">★ ${review.score}</span>
+            <div class="review-rating">
+              <span>${stars}</span>
+              <span>${review.score}.0</span>
+            </div>
           </div>
           <div class="review-content">${review.content}</div>
           <div class="review-date">${review.date}</div>
@@ -1394,11 +1836,23 @@ async function updateReviewList(currentUserInfo) {
         reviewList.appendChild(reviewDiv);
       });
     } else {
-      reviewList.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">작성한 리뷰가 없습니다.</p>`;
+      reviewList.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+          <div style="font-size: 48px; margin-bottom: 16px;">⭐</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">아직 작성한 리뷰가 없어요</div>
+          <div style="font-size: 14px;">방문한 매장에 리뷰를 남겨보세요!</div>
+        </div>
+      `;
     }
   } catch (error) {
     console.error('리뷰 조회 실패:', error);
-    reviewList.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">리뷰를 불러올 수 없습니다.</p>`;
+    reviewList.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">리뷰를 불러올 수 없어요</div>
+        <div style="font-size: 14px;">잠시 후 다시 시도해주세요</div>
+      </div>
+    `;
   }
 }
 
@@ -1415,16 +1869,27 @@ function updateFavoriteStoresUI(favoriteStoresData) {
     displayStores.forEach(store => {
       const favoriteDiv = document.createElement('div');
       favoriteDiv.className = 'favorite-store-item';
+      favoriteDiv.onclick = () => goToStore(store.id);
       favoriteDiv.innerHTML = `
-        <div class="favorite-store-content" onclick="goToStore(${store.id})">
+        <div class="favorite-store-content">
           <div class="favorite-store-name">${store.name}</div>
-          <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
+          <div class="favorite-store-info">
+            <span class="favorite-category">${store.category || '기타'}</span>
+            <span>${store.address ? store.address.split(' ').slice(0, 2).join(' ') : '주소 정보 없음'}</span>
+          </div>
         </div>
+        <div class="favorite-heart">💖</div>
       `;
       favoriteStoresListDiv.appendChild(favoriteDiv);
     });
   } else {
-    favoriteStoresListDiv.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">즐겨찾는 매장이 없습니다.</p>`;
+    favoriteStoresListDiv.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+        <div style="font-size: 48px; margin-bottom: 16px;">💖</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">즐겨찾는 매장이 없어요</div>
+        <div style="font-size: 14px;">마음에 드는 매장을 즐겨찾기에 추가해보세요!</div>
+      </div>
+    `;
   }
 }
 
@@ -1454,25 +1919,45 @@ async function updateRegularLevelsList(currentUserInfo) {
       displayLevels.forEach(levelData => {
         const levelDiv = document.createElement('div');
         levelDiv.className = 'regular-level-item';
+        levelDiv.onclick = () => goToStore(levelData.storeId);
+        const currentLevel = levelData.currentLevel || { name: '신규 고객', rank: 0 };
+        const levelColor = window.RegularLevelManager.getLevelColor(currentLevel.rank);
+        
         levelDiv.innerHTML = `
-          <div class="level-store-header" onclick="goToStore(${levelData.storeId})">
+          <div class="level-store-header">
             <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
-            <div class="level-badge" style="background: ${window.RegularLevelManager.getLevelColor(levelData.currentLevel?.rank)}">
-              ${levelData.currentLevel ? levelData.currentLevel.name : '신규 고객'}
+            <div class="level-badge" style="background: ${levelColor}">
+              Lv.${currentLevel.rank} ${currentLevel.name}
             </div>
           </div>
-          <div style="color: #6b7280; font-size: 13px;">
-            ${levelData.visitCount || 0}회 방문 • ${(levelData.points || 0).toLocaleString()}P • ${(levelData.totalSpent || 0).toLocaleString()}원
+          <div class="level-progress">
+            <div class="level-stats">
+              <span>${levelData.visitCount || 0}회 방문</span>
+              <span>${(levelData.points || 0).toLocaleString()}P</span>
+              <span>${(levelData.totalSpent || 0).toLocaleString()}원</span>
+            </div>
           </div>
         `;
         regularLevelsListDiv.appendChild(levelDiv);
       });
     } else {
-      regularLevelsListDiv.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">단골 매장이 없습니다.</p>`;
+      regularLevelsListDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🏆</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">단골 매장이 없어요</div>
+          <div style="font-size: 14px;">자주 방문하여 단골 등급을 올려보세요!</div>
+        </div>
+      `;
     }
   } catch (error) {
     console.error('단골 레벨 조회 실패:', error);
-    regularLevelsListDiv.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">단골 정보를 불러올 수 없습니다.</p>`;
+    regularLevelsListDiv.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">단골 정보를 불러올 수 없어요</div>
+        <div style="font-size: 14px;">잠시 후 다시 시도해주세요</div>
+      </div>
+    `;
   }
 }
 
@@ -1498,27 +1983,46 @@ async function updateStorePointsList(currentUserInfo) {
         storesWithPoints.forEach(store => {
           const pointsDiv = document.createElement('div');
           pointsDiv.className = 'store-points-item';
+          pointsDiv.onclick = () => goToStore(store.storeId);
           pointsDiv.innerHTML = `
-            <div class="points-store-info" onclick="goToStore(${store.storeId})">
+            <div class="points-store-info">
               <div class="points-store-name">${store.storeName}</div>
               <div class="points-store-category">${store.storeCategory || '기타'}</div>
             </div>
             <div class="points-amount">
-              <span class="points-value">${store.points.toLocaleString()}P</span>
-              <span class="points-label">보유 포인트</span>
+              <span class="points-value">${store.points.toLocaleString()}</span>
+              <span class="points-label">포인트</span>
             </div>
           `;
           storePointsListDiv.appendChild(pointsDiv);
         });
       } else {
-        storePointsListDiv.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">보유 포인트가 없습니다.</p>`;
+        storePointsListDiv.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+            <div style="font-size: 48px; margin-bottom: 16px;">💰</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">보유 포인트가 없어요</div>
+            <div style="font-size: 14px;">매장에서 주문하여 포인트를 적립해보세요!</div>
+          </div>
+        `;
       }
     } else {
-      storePointsListDiv.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 20px;">포인트 정보가 없습니다.</p>`;
+      storePointsListDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px; color: #64748b;">
+          <div style="font-size: 48px; margin-bottom: 16px;">💰</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: #1e293b;">포인트 정보가 없어요</div>
+          <div style="font-size: 14px;">첫 주문을 통해 포인트를 적립해보세요!</div>
+        </div>
+      `;
     }
   } catch (error) {
     console.error('포인트 조회 실패:', error);
-    storePointsListDiv.innerHTML = `<p style="color: #ef4444; text-align: center; padding: 20px;">포인트 정보를 불러올 수 없습니다.</p>`;
+    storePointsListDiv.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
+        <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">포인트 정보를 불러올 수 없어요</div>
+        <div style="font-size: 14px;">잠시 후 다시 시도해주세요</div>
+      </div>
+    `;
   }
 }
 
