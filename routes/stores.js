@@ -1202,7 +1202,7 @@ router.post('/:storeId/toggle-status', async (req, res) => {
         });
       }
 
-      // 운영 상태 업데이트
+      // 상태 업데이트
       const updateResult = await client.query(
         'UPDATE stores SET is_open = $1 WHERE id = $2 RETURNING id, name, is_open',
         [newStatus, storeIdInt]
@@ -1273,13 +1273,13 @@ router.get('/:storeId/promotions', async (req, res) => {
       SELECT 
         id, name, description, type,
         discount_percent, discount_amount, point_rate,
-        min_order_amount, max_discount_amount,
-        start_date, end_date, is_active
-      FROM store_promotions
+        min_order_amount, max_discount_amount, target_customers,
+        start_date, end_date, conditions, is_active
+      FROM store_promotions 
       WHERE store_id = $1 AND is_active = true
       AND (start_date IS NULL OR start_date <= CURRENT_DATE)
       AND (end_date IS NULL OR end_date >= CURRENT_DATE)
-      ORDER BY priority DESC, created_at DESC
+      ORDER BY created_at DESC
     `, [storeId]);
 
     const promotions = result.rows.map(row => ({

@@ -472,7 +472,16 @@ async function loadPromotionData(store) {
 
   } catch (error) {
     console.error('❌ 프로모션 데이터 로드 중 오류:', error);
-    updatePromotionUI([]);
+    // 프로모션 로드 실패시 기본 안내 메시지 표시
+    const promotionContainer = document.querySelector('.promotion-content');
+    if (promotionContainer) {
+      promotionContainer.innerHTML = `
+        <div class="no-promotion">
+          <span class="no-promotion-icon">🎁</span>
+          <div class="no-promotion-text">혜택 정보를 불러올 수 없습니다</div>
+        </div>
+      `;
+    }
   }
 
   // 프로모션 더보기 버튼 이벤트 추가 (여러 클래스 확인)
