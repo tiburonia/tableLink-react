@@ -162,7 +162,7 @@ window.StoreUIManager = {
 
   renderPromotionCardHTML(store) {
     return `
-      <div class="promotion-card modern-gradient-card">
+      <div class="promotion-card modern-gradient-card promotion-theme">
         <div class="promotion-header">
           <div class="promotion-title">
             <span class="promotion-emoji">🎉</span>
@@ -204,7 +204,7 @@ window.StoreUIManager = {
     return `
       <div class="loyalty-levels-grid">
         <!-- 실제 데이터가 loadLoyaltyData 함수에서 여기에 동적으로 삽입됩니다 -->
-        <div class="loyalty-loading-placeholder">
+        <div class="loyalty-loading-placeholder loyalty-theme">
           <div class="loading-spinner">⏳</div>
           <div class="loading-text">단골 등급 정보 로딩 중...</div>
         </div>
@@ -1008,9 +1008,10 @@ window.StoreUIManager = {
           align-items: center;
           justify-content: center;
           padding: 40px 20px;
-          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-          border-radius: 16px;
-          color: white;
+          margin: 24px 0;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          border-radius: 12px;
+          color: #64748b;
           text-align: center;
         }
 
@@ -1028,6 +1029,19 @@ window.StoreUIManager = {
         @keyframes spin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+
+        .promotion-loading-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 30px 20px;
+          margin: 24px 0;
+          background: linear-gradient(135deg, #fef3f2 0%, #fee2e2 100%);
+          border-radius: 12px;
+          color: #64748b;
+          text-align: center;
         }
 
         /* 진행률 표시 */
