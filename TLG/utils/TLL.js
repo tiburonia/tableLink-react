@@ -540,7 +540,20 @@ window.TLL = async function TLL(preselectedStore = null) {
     console.log(`🏪 TLL - 매장 선택: ${storeName} (ID: ${storeId})`);
 
     try {
-      // 새로운 DB 구조로 매장 정보 조회
+      // 서버에서 최신 테이블 점유 상태 확인
+      const tablesResponse = await fetch(`/api/tables/stores/${storeId}?_t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!tablesResponse.ok) throw new Error('테이블 정보 조회 실패');
+
+      const tablesData = await tablesResponse.json();
+      if (!tablesData.success) throw new Error('테이블 정보 조회 실패');
+
+      // 매장 정보도 함께 조회
       const storeResponse = await fetch(`/api/stores/${storeId}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -548,12 +561,16 @@ window.TLL = async function TLL(preselectedStore = null) {
         }
       });
 
-      if (!storeResponse.ok) throw new Error('매장 정보 조회 실패');
+      if (storeResponse.ok) {
+        const storeData = await storeResponse.json();
+        if (storeData.success) {
+          selectedStore = storeData.store;
+        }
+      }
 
-      const storeData = await storeResponse.json();
-      if (!storeData.success) throw new Error('매장 정보 조회 실패');
-
-      selectedStore = storeData.store; // 전체 매장 정보 저장
+      if (!selectedStore) {
+        selectedStore = { id: storeId, name: storeName, menu: [] };
+      }
 
       // UI 업데이트
       storeSearchInput.value = storeName;
@@ -563,8 +580,8 @@ window.TLL = async function TLL(preselectedStore = null) {
 
       console.log(`✅ TLL - 매장 정보 로드 완료:`, selectedStore);
 
-      // 테이블 정보 로드
-      const tables = selectedStore.tables || [];
+      // 서버에서 받은 최신 테이블 정보 사용
+      const tables = tablesData.tables || [];
       console.log(`🏪 ${storeName}: ${tables.length}개 테이블 정보 로드 완료`);
 
       if (tables.length > 0) {
@@ -630,24 +647,53 @@ window.TLL = async function TLL(preselectedStore = null) {
   });
 
   if (startOrderBtn) {
-    startOrderBtn.addEventListener('click', () => {
+    startOrderBtn.addEventListener('click', async () => {
       if (!selectedStore || !tableSelect.value) {
         alert('매장과 테이블을 모두 선택해주세요.');
         return;
       }
 
       const selectedTableNumber = tableSelect.value;
-
-      // 선택한 테이블의 실제 이름 가져오기
       const selectedOption = tableSelect.options[tableSelect.selectedIndex];
-      const tableName = selectedOption.textContent.replace(' (사용중)', ''); // "(사용중)" 텍스트 제거
+      
+      // 사용중인 테이블인지 확인 (disabled 옵션인지 체크)
+      if (selectedOption.disabled) {
+        alert('선택하신 테이블은 현재 사용중입니다. 다른 테이블을 선택해주세요.');
+        return;
+      }
 
-      console.log(`🏪 선택된 매장:`, selectedStore);
-      console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
+      const tableName = selectedOption.textContent.replace(' (사용중)', '');
 
-      // 주문 시작
-      alert(`[${selectedStore.name}] ${tableName} 주문 시작`);
-      renderOrderScreen(selectedStore, tableName);
+      try {
+        // 주문 시작 직전 최종 테이블 점유 상태 확인
+        console.log(`🔍 TLL - 테이블 ${tableName} 최종 점유 상태 확인 중...`);
+        
+        const tablesResponse = await fetch(`/api/tables/stores/${selectedStore.id}?_t=${Date.now()}`);
+        if (tablesResponse.ok) {
+          const tablesData = await tablesResponse.json();
+          if (tablesData.success) {
+            const currentTable = tablesData.tables.find(t => t.tableNumber == selectedTableNumber);
+            if (currentTable && currentTable.isOccupied) {
+              alert('선택하신 테이블이 다른 고객에 의해 사용중이 되었습니다. 다른 테이블을 선택해주세요.');
+              // 테이블 목록 새로고침
+              window.selectStore(selectedStore.id, selectedStore.name);
+              return;
+            }
+          }
+        }
+
+        console.log(`🏪 선택된 매장:`, selectedStore);
+        console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
+
+        // 점유 처리 없이 바로 주문 시작
+        console.log(`✅ TLL - 점유 확인 완료, 주문 화면으로 이동`);
+        renderOrderScreen(selectedStore, tableName);
+
+      } catch (error) {
+        console.error('❌ 테이블 점유 상태 확인 실패:', error);
+        // 에러가 발생해도 주문은 계속 진행 (기존 동작 유지)
+        renderOrderScreen(selectedStore, tableName);
+      }
     });
   } else {
     console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');

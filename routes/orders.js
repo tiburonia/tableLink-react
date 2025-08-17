@@ -211,18 +211,50 @@ router.post('/pay', async (req, res) => {
       try {
         const occupiedTime = new Date();
         
+        console.log(`🔍 [ORDER] 테이블 점유 처리 시작: unique_id=${tableUniqueId}, tableNumber=${actualTableNumber}, storeId=${storeId}`);
+        
+        // 현재 테이블 상태 확인
+        const currentTableResult = await client.query(`
+          SELECT * FROM store_tables WHERE unique_id = $1
+        `, [tableUniqueId]);
+        
+        if (currentTableResult.rows.length === 0) {
+          console.error(`❌ [ORDER] 테이블을 찾을 수 없음: unique_id=${tableUniqueId}`);
+        } else {
+          const currentTable = currentTableResult.rows[0];
+          console.log(`📊 [ORDER] 현재 테이블 상태:`, {
+            tableName: currentTable.table_name,
+            isOccupied: currentTable.is_occupied,
+            occupiedSince: currentTable.occupied_since,
+            autoReleaseSource: currentTable.auto_release_source
+          });
+        }
+        
         // 테이블을 점유 상태로 설정 (auto_release_source = 'ORDER')
-        await client.query(`
+        const updateResult = await client.query(`
           UPDATE store_tables 
           SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
           WHERE unique_id = $4
+          RETURNING *
         `, [true, occupiedTime, 'ORDER', tableUniqueId]);
 
-        console.log(`✅ 결제 완료 - 테이블 ${actualTableNumber} 자동 점유 처리 완료`);
+        if (updateResult.rows.length > 0) {
+          const updatedTable = updateResult.rows[0];
+          console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 점유 처리 완료:`, {
+            tableName: updatedTable.table_name,
+            isOccupied: updatedTable.is_occupied,
+            occupiedSince: updatedTable.occupied_since,
+            autoReleaseSource: updatedTable.auto_release_source
+          });
+        } else {
+          console.error(`❌ [ORDER] 테이블 점유 업데이트 실패: unique_id=${tableUniqueId}`);
+        }
 
         // 주문 완료 후 1시간 뒤 자동 해제 스케줄링
         setTimeout(async () => {
           try {
+            console.log(`🕐 [ORDER] 테이블 ${actualTableNumber} 1시간 자동 해제 체크 시작`);
+            
             const tableResult = await pool.query(`
               SELECT * FROM store_tables 
               WHERE unique_id = $1 AND is_occupied = true AND auto_release_source = 'ORDER'
@@ -234,6 +266,8 @@ router.post('/pay', async (req, res) => {
               const now = new Date();
               const diffHours = Math.floor((now - occupiedSince) / (1000 * 60 * 60));
 
+              console.log(`📊 [ORDER] 테이블 ${actualTableNumber} 점유 시간: ${diffHours}시간`);
+
               if (diffHours >= 1) {
                 await pool.query(`
                   UPDATE store_tables 
@@ -242,7 +276,11 @@ router.post('/pay', async (req, res) => {
                 `, [false, null, null, tableUniqueId]);
 
                 console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 1시간 후 자동 해제 완료`);
+              } else {
+                console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 아직 1시간 미만 (${diffHours}시간)`);
               }
+            } else {
+              console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 이미 해제됨 또는 다른 소스로 변경됨`);
             }
           } catch (error) {
             console.error('❌ [ORDER] 테이블 자동 해제 실패:', error);
@@ -250,9 +288,18 @@ router.post('/pay', async (req, res) => {
         }, 60 * 60 * 1000); // 1시간
 
       } catch (tableError) {
-        console.error('⚠️ 테이블 점유 처리 실패:', tableError);
+        console.error('❌ [ORDER] 테이블 점유 처리 실패:', tableError);
+        console.error('❌ [ORDER] 상세 에러 정보:', {
+          message: tableError.message,
+          stack: tableError.stack,
+          tableUniqueId: tableUniqueId,
+          actualTableNumber: actualTableNumber,
+          storeId: storeId
+        });
         // 테이블 점유 실패해도 주문은 완료되도록 처리
       }
+    } else {
+      console.log(`ℹ️ [ORDER] 테이블 정보 없음: tableUniqueId=${tableUniqueId}, actualTableNumber=${actualTableNumber}`);
     }
 
     await client.query('COMMIT');
