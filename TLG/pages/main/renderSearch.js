@@ -15,9 +15,37 @@ async function renderSearch(initialQuery = '') {
       </header>
 
       <div id="searchResults" class="search-results-container">
-        <div class="loading-message" style="text-align: center; padding: 40px 20px; color: #666;">
-          <div class="loading-spinner"></div>
-          검색 결과를 불러오는 중...
+        <div class="initial-search-content">
+          <div class="search-suggestions">
+            <h3 class="suggestions-title">추천 검색어</h3>
+            <div class="suggestion-tags">
+              <button class="suggestion-tag" data-query="카페">☕ 카페</button>
+              <button class="suggestion-tag" data-query="치킨">🍗 치킨</button>
+              <button class="suggestion-tag" data-query="피자">🍕 피자</button>
+              <button class="suggestion-tag" data-query="분식">🍜 분식</button>
+              <button class="suggestion-tag" data-query="한식">🍚 한식</button>
+              <button class="suggestion-tag" data-query="중식">🥢 중식</button>
+            </div>
+          </div>
+          
+          <div class="search-tips">
+            <h3 class="tips-title">🔍 검색 팁</h3>
+            <div class="tips-list">
+              <div class="tip-item">📍 매장명으로 검색</div>
+              <div class="tip-item">🏷️ 음식 카테고리로 검색</div>
+              <div class="tip-item">🗺️ 지역명으로 검색</div>
+            </div>
+          </div>
+          
+          <div class="popular-searches">
+            <h3 class="popular-title">🔥 인기 검색어</h3>
+            <div class="popular-list">
+              <button class="popular-item" data-query="맥도날드">맥도날드</button>
+              <button class="popular-item" data-query="스타벅스">스타벅스</button>
+              <button class="popular-item" data-query="버거킹">버거킹</button>
+              <button class="popular-item" data-query="롯데리아">롯데리아</button>
+            </div>
+          </div>
         </div>
       </div>
     </main>
@@ -283,6 +311,103 @@ async function renderSearch(initialQuery = '') {
         line-height: 1.5;
       }
 
+      /* 초기 검색 화면 스타일 */
+      .initial-search-content {
+        padding: 20px 0;
+      }
+
+      .search-suggestions {
+        margin-bottom: 32px;
+      }
+
+      .suggestions-title,
+      .tips-title,
+      .popular-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 16px;
+        padding: 0 4px;
+      }
+
+      .suggestion-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .suggestion-tag {
+        background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+        border: 2px solid #e2e8f0;
+        border-radius: 20px;
+        padding: 8px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #0369a1;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .suggestion-tag:hover {
+        background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+      }
+
+      .search-tips {
+        margin-bottom: 32px;
+      }
+
+      .tips-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .tip-item {
+        background: #f8fafc;
+        border-left: 4px solid #297efc;
+        padding: 12px 16px;
+        border-radius: 0 8px 8px 0;
+        font-size: 14px;
+        color: #475569;
+        font-weight: 500;
+      }
+
+      .popular-searches {
+        margin-bottom: 20px;
+      }
+
+      .popular-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .popular-item {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+      }
+
+      .popular-item:hover {
+        background: #f3f4f6;
+        border-color: #297efc;
+        color: #297efc;
+        transform: scale(1.02);
+      }
+
       /* 바텀바 */
       #bottomBar {
         position: fixed;
@@ -332,10 +457,40 @@ async function renderSearch(initialQuery = '') {
   // 검색 기능 초기화
   setupSearchFunctionality();
 
+  // 추천 검색어 클릭 이벤트 설정
+  setupSuggestionEvents();
+
   // 초기 검색어가 있으면 바로 검색
   if (initialQuery.trim()) {
     setTimeout(() => performSearch(initialQuery), 100);
   }
+}
+
+// 추천 검색어 이벤트 설정
+function setupSuggestionEvents() {
+  // 추천 검색어 태그 클릭 이벤트
+  document.querySelectorAll('.suggestion-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      const query = tag.getAttribute('data-query');
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.value = query;
+        performSearch(query);
+      }
+    });
+  });
+
+  // 인기 검색어 클릭 이벤트
+  document.querySelectorAll('.popular-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const query = item.getAttribute('data-query');
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.value = query;
+        performSearch(query);
+      }
+    });
+  });
 }
 
 // 검색 기능 설정
@@ -586,15 +741,45 @@ function setupSearchFunctionality() {
   searchInput.addEventListener('input', (e) => {
     const value = e.target.value.trim();
 
-    // 검색어가 비어있으면 결과 초기화
+    // 검색어가 비어있으면 초기 화면으로 복원
     if (!value) {
       searchResults.innerHTML = `
-        <div class="no-results">
-          <div class="no-results-icon">🔍</div>
-          <div class="no-results-title">검색어를 입력해주세요</div>
-          <div class="no-results-subtitle">매장명이나 카테고리로 검색해보세요</div>
+        <div class="initial-search-content">
+          <div class="search-suggestions">
+            <h3 class="suggestions-title">추천 검색어</h3>
+            <div class="suggestion-tags">
+              <button class="suggestion-tag" data-query="카페">☕ 카페</button>
+              <button class="suggestion-tag" data-query="치킨">🍗 치킨</button>
+              <button class="suggestion-tag" data-query="피자">🍕 피자</button>
+              <button class="suggestion-tag" data-query="분식">🍜 분식</button>
+              <button class="suggestion-tag" data-query="한식">🍚 한식</button>
+              <button class="suggestion-tag" data-query="중식">🥢 중식</button>
+            </div>
+          </div>
+          
+          <div class="search-tips">
+            <h3 class="tips-title">🔍 검색 팁</h3>
+            <div class="tips-list">
+              <div class="tip-item">📍 매장명으로 검색</div>
+              <div class="tip-item">🏷️ 음식 카테고리로 검색</div>
+              <div class="tip-item">🗺️ 지역명으로 검색</div>
+            </div>
+          </div>
+          
+          <div class="popular-searches">
+            <h3 class="popular-title">🔥 인기 검색어</h3>
+            <div class="popular-list">
+              <button class="popular-item" data-query="맥도날드">맥도날드</button>
+              <button class="popular-item" data-query="스타벅스">스타벅스</button>
+              <button class="popular-item" data-query="버거킹">버거킹</button>
+              <button class="popular-item" data-query="롯데리아">롯데리아</button>
+            </div>
+          </div>
         </div>
       `;
+      
+      // 추천 검색어 이벤트 재설정
+      setupSuggestionEvents();
     }
   });
 
