@@ -338,6 +338,29 @@ function generateDummyData(userId) {
 async function renderMyAccount() {
   console.log('🔧 renderMyAccount 시작');
 
+  // renderMyPage 스크립트 미리 로드
+  if (typeof window.renderMyPage !== 'function') {
+    try {
+      console.log('🔄 renderMyPage 스크립트 미리 로드 시작');
+      const script = document.createElement('script');
+      script.src = '/TLG/pages/mypage/renderMyPage.js';
+      
+      await new Promise((resolve, reject) => {
+        script.onload = () => {
+          console.log('✅ renderMyPage 스크립트 미리 로드 완료');
+          resolve();
+        };
+        script.onerror = () => {
+          console.error('❌ renderMyPage 스크립트 미리 로드 실패');
+          reject();
+        };
+        document.head.appendChild(script);
+      });
+    } catch (error) {
+      console.error('❌ renderMyPage 스크립트 로드 중 오류:', error);
+    }
+  }
+
   const main = document.getElementById('main');
 
   // 전역 스타일 완전 리셋
@@ -1130,29 +1153,13 @@ function setupEventListeners() {
       e.stopPropagation();
       console.log('🔙 뒤로가기 버튼 클릭됨');
       
-      // renderMyPage 스크립트 동적 로드 후 실행
+      // 직접 renderMyPage 호출 시도
       if (typeof window.renderMyPage === 'function') {
         console.log('✅ renderMyPage 함수 호출');
         window.renderMyPage();
       } else {
-        console.log('🔄 renderMyPage 스크립트 로드 시도');
-        const script = document.createElement('script');
-        script.src = '/TLG/pages/mypage/renderMyPage.js';
-        script.onload = () => {
-          console.log('✅ renderMyPage 스크립트 로드 완료');
-          if (typeof window.renderMyPage === 'function') {
-            window.renderMyPage();
-          } else {
-            console.error('❌ 스크립트 로드 후에도 renderMyPage 함수를 찾을 수 없음');
-            // 폴백: 새로고침으로 메인 페이지로
-            window.location.href = '/';
-          }
-        };
-        script.onerror = () => {
-          console.error('❌ renderMyPage 스크립트 로드 실패');
-          window.location.href = '/';
-        };
-        document.head.appendChild(script);
+        console.log('🔄 renderMyPage 함수가 없음 - 브라우저 뒤로가기 사용');
+        window.history.back();
       }
     });
     
