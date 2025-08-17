@@ -9,15 +9,12 @@
   <!--카카오맵 API키-->
   <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
 
-  <!--전역 CSS 파일-->
-  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
+  <!--핵심 전역 CSS만 먼저 로드 (나머지는 동적 로딩)-->
   <link rel="stylesheet" href="shared/css/globalBody.css" />
   <link rel="stylesheet" href="shared/css/renderLogin.css" />
-  <!--서브메인 CSS 추가-->
-  <link rel="stylesheet" href="TLG/styles/subMain.css" />
-  <link rel="stylesheet" href="/TLG/styles/mapPanelUI.css">
-  <link rel="stylesheet" href="/TLG/styles/renderStoreUI.css">
-  <link rel="stylesheet" href="/TLG/styles/renderMyPage.css">
+
+  <!--CSS 로딩 유틸리티를 가장 먼저 로드-->
+  <script src="TLG/utils/cssLoader.js"></script>
 </head>
 
 <body>

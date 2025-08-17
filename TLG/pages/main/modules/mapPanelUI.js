@@ -88,19 +88,21 @@ window.MapPanelUI = {
     `;
   },
 
-  loadPanelStyles() {
-    // 이미 로드된 CSS인지 확인
-    if (document.querySelector('link[href="/TLG/styles/mapPanelUI.css"]')) {
-      console.log('✅ MapPanelUI CSS 이미 로드됨');
-      return;
+  async loadPanelStyles() {
+    if (window.CSSLoader) {
+      await window.CSSLoader.loadCSS('/TLG/styles/mapPanelUI.css', 'mapPanelUI-styles');
+    } else {
+      // 폴백 방식
+      if (!document.querySelector('link[href="/TLG/styles/mapPanelUI.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = '/TLG/styles/mapPanelUI.css';
+        link.id = 'mapPanelUI-styles';
+        document.head.appendChild(link);
+        console.log('✅ MapPanelUI CSS 로드 완료 (폴백)');
+      }
     }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = '/TLG/styles/mapPanelUI.css';
-    document.head.appendChild(link);
-    console.log('✅ MapPanelUI CSS 로드 완료');
   },
 
   // 필터링 이벤트 설정 (패널 토글 없이 필터링만)
@@ -603,8 +605,15 @@ window.MapPanelUI = {
   }
 };
 
-// CSS 자동 로딩
-window.MapPanelUI.loadPanelStyles();
+// CSS 자동 로딩 및 인라인 스타일 정리
+(async function() {
+  await window.MapPanelUI.loadPanelStyles();
+  
+  // 기존 인라인 스타일 제거 (있다면)
+  if (window.CSSLoader) {
+    window.CSSLoader.removeInlineStyles('.clean-store-marker, .clean-cluster-marker');
+  }
+})();
 
 // 실제 사용 시 MapPanelUI.init(); 호출 필요
 // window.MapPanelUI.init();

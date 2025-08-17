@@ -22,7 +22,12 @@
   background: white;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
   border: 1px solid #ccc;
-  overflow: hidden; /* 전체 스크롤 비활성화, 각 페이지별로 내부 콘텐츠만 스크롤 */
+  overflow: hidden;
+  z-index: 1;
+  /* 폰트 및 기본 스타일 설정 */
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #1a1a1a;
+  line-height: 1.4;
 }
 
 html, body {

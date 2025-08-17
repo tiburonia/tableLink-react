@@ -236,22 +236,25 @@ window.StoreUIManager = {
     `;
   },
 
-  loadStoreStyles() {
-    // 이미 로드된 CSS인지 확인
-    if (document.querySelector('link[href="/TLG/styles/renderStoreUI.css"]')) {
-      console.log('✅ StoreUI CSS 이미 로드됨');
-      return;
+  async loadStoreStyles() {
+    if (window.CSSLoader) {
+      await window.CSSLoader.loadCSS('/TLG/styles/renderStoreUI.css', 'renderStoreUI-styles');
+    } else {
+      // 폴백 방식
+      if (!document.querySelector('link[href="/TLG/styles/renderStoreUI.css"]')) {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = '/TLG/styles/renderStoreUI.css';
+        link.id = 'renderStoreUI-styles';
+        document.head.appendChild(link);
+        console.log('✅ StoreUI CSS 로드 완료 (폴백)');
+      }
     }
-
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = '/TLG/styles/renderStoreUI.css';
-    document.head.appendChild(link);
-    console.log('✅ StoreUI CSS 로드 완료');
   },
 
   getStoreStyles() {
+    // 비동기 로딩이지만 대부분 이미 로드되어 있을 것
     this.loadStoreStyles();
     return ''; // Return empty string as styles are now in an external file
   }

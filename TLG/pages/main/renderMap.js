@@ -1,6 +1,12 @@
 async function renderMap() {
   const main = document.getElementById('main');
 
+  // CSS 먼저 로드
+  if (window.CSSLoader) {
+    await window.CSSLoader.loadModuleCSS('mapPanel');
+    console.log('✅ 지도 관련 CSS 로드 완료');
+  }
+
   // MapPanelUI 의존성 체크
   if (!window.MapPanelUI || typeof window.MapPanelUI.renderPanelHTML !== 'function') {
     console.error('❌ MapPanelUI가 로드되지 않았습니다. 필수 스크립트를 확인하세요.');

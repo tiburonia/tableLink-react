@@ -1,14 +1,10 @@
 async function renderMyPage() {
   const main = document.getElementById('main');
 
-  // CSS 로딩 확인
-  if (!document.querySelector('link[href="/TLG/styles/renderMyPage.css"]')) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.type = 'text/css';
-    link.href = '/TLG/styles/renderMyPage.css';
-    document.head.appendChild(link);
-    console.log('✅ MyPage CSS 로드 완료');
+  // CSS 먼저 로드
+  if (window.CSSLoader) {
+    await window.CSSLoader.loadModuleCSS('myPage');
+    console.log('✅ 마이페이지 관련 CSS 로드 완료');
   }
 
   main.innerHTML = `

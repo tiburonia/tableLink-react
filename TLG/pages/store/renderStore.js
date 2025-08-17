@@ -5,6 +5,12 @@ async function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
 
+    // CSS 먼저 로드
+    if (window.CSSLoader) {
+      await window.CSSLoader.loadModuleCSS('store');
+      console.log('✅ 매장 관련 CSS 로드 완료');
+    }
+
     // 메뉴 데이터 정규화
     if (store.menu && typeof store.menu === 'string') {
       try {
