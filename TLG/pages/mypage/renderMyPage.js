@@ -252,14 +252,14 @@ async function renderMyPage() {
       /* 설정 버튼 스타일 */
       .settings-btn {
         position: fixed; /* 절대 위치로 변경 */
-        top: 60px; /* 상단에서 60px 떨어진 위치 */
+        top: 40px; /* 상단에서 40px 떨어진 위치 */
         right: 20px; /* 오른쪽에서 20px 떨어진 위치 */
         width: 44px;
         height: 44px;
-        background: rgba(255, 255, 255, 0.95);
+        background: transparent; /* 투명 배경 */
         border: none;
         border-radius: 50%; /* 원형으로 변경 */
-        color: white;
+        color: #000000; /* 검은색 */
         cursor: pointer;
         display: flex;
         align-items: center;
