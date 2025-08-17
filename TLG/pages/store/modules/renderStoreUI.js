@@ -41,8 +41,8 @@ window.StoreUIManager = {
                 </div>
               </div>
             </div>
-            ${this.renderPromotionCardHTML(store)}
             ${this.renderLoyaltyLevelHTML()}
+            ${this.renderPromotionCardHTML(store)}
             ${this.renderTableStatusHTML(store)}
             ${this.renderReviewPreviewHTML()}
           </div>
