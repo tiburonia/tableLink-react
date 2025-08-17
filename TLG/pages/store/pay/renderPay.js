@@ -142,11 +142,15 @@ function renderPay(currentOrder, store, tableNum) {
         box-sizing: border-box;
       }
 
+      body {
+        overflow: hidden;
+      }
+
       .pay-container {
         height: 100vh;
         width: 100%;
-        display: grid;
-        grid-template-rows: auto 1fr auto;
+        display: flex;
+        flex-direction: column;
         background: #f8fafc;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         overflow: hidden;
@@ -162,6 +166,7 @@ function renderPay(currentOrder, store, tableNum) {
         gap: 16px;
         z-index: 10;
         box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        flex-shrink: 0;
       }
 
       .back-btn {
@@ -195,6 +200,7 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 메인 콘텐츠 */
       .pay-main {
+        flex: 1;
         overflow-y: auto;
         padding: 20px;
         display: flex;
@@ -203,6 +209,7 @@ function renderPay(currentOrder, store, tableNum) {
         max-width: 600px;
         margin: 0 auto;
         width: 100%;
+        min-height: 0;
       }
 
       /* 공통 섹션 스타일 */
@@ -215,6 +222,7 @@ function renderPay(currentOrder, store, tableNum) {
         padding: 24px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border: 1px solid #f1f5f9;
+        flex-shrink: 0;
       }
 
       .section-title {
@@ -455,6 +463,7 @@ function renderPay(currentOrder, store, tableNum) {
         max-width: 600px;
         margin: 0 auto;
         width: 100%;
+        flex-shrink: 0;
       }
 
       .confirm-btn {
@@ -527,7 +536,7 @@ function renderPay(currentOrder, store, tableNum) {
         const maxPointBtn = document.getElementById('maxPointBtn');
 
         if (points > 0) {
-          usePointInput.max = points;
+          usePointInput.max = Math.min(points, orderData.total);
           usePointInput.disabled = false;
           maxPointBtn.disabled = false;
         }
@@ -585,12 +594,26 @@ function renderPay(currentOrder, store, tableNum) {
     // 전액 사용
     document.getElementById('maxPointBtn').addEventListener('click', () => {
       const usePointInput = document.getElementById('usePoint');
-      usePointInput.value = usePointInput.max;
+      const maxUsable = Math.min(parseInt(usePointInput.max), orderData.total);
+      usePointInput.value = maxUsable;
       calculateFinalAmount();
     });
 
-    // 포인트 입력
-    document.getElementById('usePoint').addEventListener('input', calculateFinalAmount);
+    // 포인트 입력 - 실시간 검증
+    document.getElementById('usePoint').addEventListener('input', (e) => {
+      const value = parseInt(e.target.value) || 0;
+      const maxPoints = parseInt(e.target.max) || 0;
+      const maxUsable = Math.min(maxPoints, orderData.total);
+      
+      if (value > maxUsable) {
+        e.target.value = maxUsable;
+      }
+      if (value < 0) {
+        e.target.value = 0;
+      }
+      
+      calculateFinalAmount();
+    });
 
     // 쿠폰 선택
     document.addEventListener('change', (e) => {
@@ -601,17 +624,23 @@ function renderPay(currentOrder, store, tableNum) {
 
     // 결제 확인
     document.getElementById('confirmPayBtn').addEventListener('click', () => {
-      const usePoint = parseInt(document.getElementById('usePoint').value) || 0;
+      const usePointInput = document.getElementById('usePoint');
+      const usePoint = parseInt(usePointInput.value) || 0;
+      const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
+      
+      // 포인트 사용량 재검증
+      const validatedPoints = Math.min(usePoint, maxUsable);
+      
       const couponSelect = document.getElementById('couponSelect');
       const selectedCouponId = couponSelect ? couponSelect.value : null;
       const couponDiscount = couponSelect ? 
         parseInt(couponSelect.selectedOptions[0]?.dataset.discount) || 0 : 0;
 
-      const finalAmount = Math.max(0, orderData.total - usePoint - couponDiscount);
+      const finalAmount = Math.max(0, orderData.total - validatedPoints - couponDiscount);
 
       // confirmPay 함수 호출
       if (typeof confirmPay === 'function') {
-        confirmPay(orderData, usePoint, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
+        confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
       } else {
         console.error('❌ confirmPay 함수를 찾을 수 없습니다');
         alert('결제 처리 중 오류가 발생했습니다.');
@@ -626,12 +655,21 @@ function renderPay(currentOrder, store, tableNum) {
 
   // 최종 금액 계산
   function calculateFinalAmount() {
-    const usePoint = parseInt(document.getElementById('usePoint').value) || 0;
+    const usePointInput = document.getElementById('usePoint');
+    const usePoint = parseInt(usePointInput.value) || 0;
+    const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
+    
+    // 포인트 사용량 실시간 제한
+    const validatedPoints = Math.min(usePoint, maxUsable);
+    if (usePoint !== validatedPoints) {
+      usePointInput.value = validatedPoints;
+    }
+
     const couponSelect = document.getElementById('couponSelect');
     const couponDiscount = couponSelect ? 
       parseInt(couponSelect.selectedOptions[0]?.dataset.discount) || 0 : 0;
 
-    const totalDiscount = usePoint + couponDiscount;
+    const totalDiscount = validatedPoints + couponDiscount;
     const finalAmount = Math.max(0, orderData.total - totalDiscount);
 
     // 할인 행 표시/숨김
@@ -640,9 +678,9 @@ function renderPay(currentOrder, store, tableNum) {
       discountRow.style.display = 'flex';
       document.getElementById('discountAmount').textContent = `-${totalDiscount.toLocaleString()}원`;
 
-      if (usePoint > 0 && couponDiscount > 0) {
+      if (validatedPoints > 0 && couponDiscount > 0) {
         document.getElementById('discountLabel').textContent = '포인트 + 쿠폰 할인';
-      } else if (usePoint > 0) {
+      } else if (validatedPoints > 0) {
         document.getElementById('discountLabel').textContent = '포인트 할인';
       } else {
         document.getElementById('discountLabel').textContent = '쿠폰 할인';
