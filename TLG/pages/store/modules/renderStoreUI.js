@@ -1187,6 +1187,121 @@ window.StoreUIManager = {
           font-size: 10px;
         }
       }
+
+      /* 바텀바 스타일 */
+      #storeBottomBar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 70px;
+        background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow:
+          0 -8px 32px rgba(41, 126, 252, 0.08),
+          0 -4px 16px rgba(0, 0, 0, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        padding: 0 20px;
+        box-sizing: border-box;
+        backdrop-filter: blur(20px);
+      }
+
+      .btm-btn {
+        border: none;
+        outline: none;
+        font-family: inherit;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
+      }
+
+      .phone-btn {
+        width: 48px;
+        min-width: 48px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
+      }
+
+      .phone-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.35);
+      }
+
+      .phone-btn:active {
+        transform: translateY(0);
+      }
+
+      .btm-btn-ico {
+        font-size: 18px;
+      }
+
+      .order-btn {
+        flex: 1;
+        margin-left: 16px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        padding: 0 24px;
+        gap: 8px;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25);
+      }
+
+      .order-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.35);
+      }
+
+      .order-btn:active {
+        transform: translateY(0);
+      }
+
+      .order-text {
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .order-arrow {
+        font-size: 18px;
+        margin-left: 4px;
+      }
+
+      @media (max-width: 380px) {
+        #storeBottomBar {
+          padding: 0 16px;
+          height: 64px;
+        }
+
+        .order-btn {
+          margin-left: 12px;
+          padding: 0 20px;
+        }
+
+        .order-text {
+          font-size: 15px;
+        }
+
+        .phone-btn {
+          width: 44px;
+          min-width: 44px;
+          height: 44px;
+        }
+
+        .order-btn {
+          height: 44px;
+        }
+      }
       </style>`;
   }
 };
