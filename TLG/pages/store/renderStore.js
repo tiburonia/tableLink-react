@@ -5,12 +5,6 @@ async function renderStore(store) {
   try {
     console.log('🏪 매장 렌더링:', store.name, 'ID:', store.id);
 
-    // CSS 먼저 로드
-    if (window.CSSLoader) {
-      await window.CSSLoader.loadModuleCSS('store');
-      console.log('✅ 매장 관련 CSS 로드 완료');
-    }
-
     // 메뉴 데이터 정규화
     if (store.menu && typeof store.menu === 'string') {
       try {
@@ -49,11 +43,6 @@ async function renderStore(store) {
     // 초기값으로 UI를 먼저 렌더링 (빠른 UI 표시)
     let displayRating = '0.0';
     window.StoreUIManager.renderStoreHTML(store, displayRating);
-
-    // CSS 로딩 확인
-    if (window.StoreUIManager && typeof window.StoreUIManager.loadStoreStyles === 'function') {
-      window.StoreUIManager.loadStoreStyles();
-    }
 
     // UI 렌더링 후 실제 리뷰 데이터 비동기 로드
     updateStoreRatingAsync(store).then(() => {

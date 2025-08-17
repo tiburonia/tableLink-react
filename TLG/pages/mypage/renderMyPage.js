@@ -1,11 +1,6 @@
+
 async function renderMyPage() {
   const main = document.getElementById('main');
-
-  // CSS 먼저 로드
-  if (window.CSSLoader) {
-    await window.CSSLoader.loadModuleCSS('myPage');
-    console.log('✅ 마이페이지 관련 CSS 로드 완료');
-  }
 
   main.innerHTML = `
     <div class="mypage-container">
@@ -195,6 +190,691 @@ async function renderMyPage() {
         <span style="font-size: 22px;">👤</span>
       </button>
     </nav>
+
+    <style>
+      /* 전체 컨테이너 */
+      .mypage-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 78px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+        overflow: hidden;
+      }
+
+      /* 헤더 */
+      .mypage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 20px 0 20px;
+        color: white;
+        position: relative;
+        z-index: 10;
+      }
+
+      .header-title h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+
+      .header-title p {
+        margin: 4px 0 0 0;
+        font-size: 14px;
+        opacity: 0.9;
+        font-weight: 400;
+      }
+
+      .settings-btn {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .settings-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+      }
+
+      /* 스크롤 가능한 콘텐츠 영역 */
+      .content-wrapper {
+        position: absolute;
+        top: 90px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #f8fafc;
+        border-radius: 24px 24px 0 0;
+        overflow-y: auto;
+        padding: 24px 20px 40px 20px;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      /* 프로필 카드 */
+      .profile-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .profile-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+      }
+
+      .profile-avatar {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        position: relative;
+      }
+
+      .avatar-circle {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 32px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        position: relative;
+      }
+
+      .online-indicator {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        width: 20px;
+        height: 20px;
+        background: #10b981;
+        border: 3px solid white;
+        border-radius: 50%;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+
+      .profile-info {
+        text-align: center;
+      }
+
+      .profile-name {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+        letter-spacing: -0.5px;
+      }
+
+      .profile-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        color: #92400e;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        border: 1px solid #fbbf24;
+      }
+
+      .profile-stats {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+      }
+
+      .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+      }
+
+      .stat-number {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 2px;
+      }
+
+      .stat-label {
+        font-size: 12px;
+        color: #6b7280;
+        font-weight: 500;
+      }
+
+      .stat-divider {
+        width: 1px;
+        height: 32px;
+        background: #e5e7eb;
+        margin: 0 16px;
+      }
+
+      /* 퀵 액션 메뉴 */
+      .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .quick-action-item {
+        background: white;
+        border-radius: 16px;
+        padding: 20px 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f1f5f9;
+      }
+
+      .quick-action-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-color: #e2e8f0;
+      }
+
+      .action-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      .action-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #4b5563;
+      }
+
+      /* 섹션 컨테이너 */
+      .sections-container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* 섹션 카드 */
+      .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f1f5f9;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .section-header h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #1f2937;
+      }
+
+      .see-more-btn {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: none;
+        border: none;
+        color: #6366f1;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 8px 12px;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+      }
+
+      .see-more-btn:hover {
+        background: #f0f4ff;
+        color: #4f46e5;
+      }
+
+      /* 콘텐츠 리스트 */
+      .content-list {
+        min-height: 60px;
+      }
+
+      /* 로딩 스켈레톤 */
+      .loading-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .skeleton-line {
+        height: 16px;
+        background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+        background-size: 200% 100%;
+        border-radius: 8px;
+        animation: skeleton-loading 1.5s infinite;
+      }
+
+      .skeleton-line.short {
+        width: 60%;
+      }
+
+      @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      /* 주문 아이템 */
+      .order-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+      }
+
+      .order-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+      }
+
+      .order-info {
+        margin-bottom: 12px;
+        line-height: 1.5;
+        color: #374151;
+      }
+
+      .order-info strong {
+        color: #1f2937;
+        font-weight: 600;
+      }
+
+      .review-section {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .review-btn {
+        background: linear-gradient(135deg, #6366f1, #4f46e5);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+      }
+
+      .review-btn:hover {
+        background: linear-gradient(135deg, #4f46e5, #4338ca);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      }
+
+      /* 리뷰 아이템 */
+      .review-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.2s ease;
+      }
+
+      .review-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+      }
+
+      .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .review-store {
+        font-weight: 600;
+        color: #1f2937;
+      }
+
+      .review-rating {
+        color: #f59e0b;
+        font-weight: 600;
+      }
+
+      .review-content {
+        color: #4b5563;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 8px;
+      }
+
+      .review-date {
+        color: #9ca3af;
+        font-size: 12px;
+      }
+
+      /* 즐겨찾기 아이템 */
+      .favorite-store-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .favorite-store-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+      }
+
+      .favorite-store-content {
+        flex: 1;
+      }
+
+      .favorite-store-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      .favorite-store-info {
+        color: #6b7280;
+        font-size: 13px;
+      }
+
+      /* 단골 레벨 아이템 */
+      .regular-level-item {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .regular-level-item:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      .level-store-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .level-store-name {
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 16px;
+      }
+
+      .level-badge {
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      }
+
+      /* 포인트 아이템 */
+      .store-points-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .store-points-item:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+      }
+
+      .points-store-info {
+        flex: 1;
+      }
+
+      .points-store-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      .points-store-category {
+        font-size: 12px;
+        color: #6b7280;
+        background: #e5e7eb;
+        padding: 2px 8px;
+        border-radius: 8px;
+        display: inline-block;
+      }
+
+      .points-amount {
+        text-align: right;
+      }
+
+      .points-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #059669;
+        display: block;
+      }
+
+      .points-label {
+        font-size: 11px;
+        color: #6b7280;
+      }
+
+      /* 바텀 네비게이션 */
+      #bottomBar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 78px;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1001;
+        padding: 8px 16px 12px 16px;
+        box-sizing: border-box;
+        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      #bottomBar button {
+        flex: 1;
+        height: 52px;
+        border: none;
+        background: none;
+        color: #9ca3af;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #bottomBar button:hover {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+
+      #bottomBar button.active {
+        color: #6366f1;
+        background: #f0f4ff;
+      }
+
+      /* 반응형 */
+      @media (max-width: 380px) {
+        .mypage-header {
+          padding: 16px 16px 0 16px;
+        }
+
+        .header-title h1 {
+          font-size: 24px;
+        }
+
+        .content-wrapper {
+          padding: 20px 16px 40px 16px;
+        }
+
+        .profile-card {
+          padding: 20px;
+        }
+
+        .quick-actions {
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+
+        .quick-action-item {
+          padding: 16px 8px;
+        }
+
+        .action-icon {
+          font-size: 20px;
+        }
+
+        .action-label {
+          font-size: 11px;
+        }
+      }
+
+      /* 모달 스타일 */
+      .review-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
+
+      .review-modal-content {
+        background: white;
+        padding: 24px;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 400px;
+        max-height: 80%;
+        overflow-y: auto;
+      }
+
+      .modal-btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .modal-btn.cancel-btn {
+        background: #f3f4f6;
+        color: #374151;
+      }
+
+      .modal-btn.submit-btn {
+        background: #6366f1;
+        color: white;
+      }
+
+      .star-rating {
+        display: flex;
+        gap: 5px;
+        margin: 10px 0;
+      }
+
+      .star {
+        font-size: 24px;
+        cursor: pointer;
+        color: #d1d5db;
+        transition: color 0.2s;
+      }
+
+      .star.active {
+        color: #f59e0b;
+      }
+
+      .review-textarea {
+        width: 100%;
+        min-height: 100px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        resize: vertical;
+        font-family: inherit;
+      }
+
+      .modal-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+    </style>
   `;
 
   // 설정 버튼 이벤트 리스너 추가
@@ -648,8 +1328,8 @@ function showReviewModalFromOrders(order, orderIndex) {
       </div>
 
       <div class="modal-buttons">
-        <button class="modal-btn secondary">취소</button>
-        <button class="modal-btn primary">리뷰 등록</button>
+        <button class="modal-btn cancel-btn">취소</button>
+        <button class="modal-btn submit-btn">리뷰 등록</button>
       </div>
     </div>
   `;
@@ -665,11 +1345,11 @@ function showReviewModalFromOrders(order, orderIndex) {
     });
   });
 
-  modal.querySelector('.modal-btn.secondary').addEventListener('click', () => {
+  modal.querySelector('.cancel-btn').addEventListener('click', () => {
     document.body.removeChild(modal);
   });
 
-  modal.querySelector('.modal-btn.primary').addEventListener('click', async () => {
+  modal.querySelector('.submit-btn').addEventListener('click', async () => {
     const reviewText = modal.querySelector('.review-textarea').value.trim();
 
     if (selectedRating === 0) {
@@ -770,7 +1450,7 @@ async function showAllReviewsModal(currentUserInfo) {
       <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
           <h3>⭐ 내 리뷰 전체보기 (${data.total}개)</h3>
-          <button class="modal-btn secondary" onclick="this.closest('.review-modal').remove()">✕</button>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
         </div>
         <div class="all-reviews-list">
           ${data.reviews.map(review => `
@@ -809,7 +1489,7 @@ async function showAllFavoritesModal(favoriteStoresData) {
       <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
           <h3>💖 전체 즐겨찾기 매장 (${favoriteStoresData.length}개)</h3>
-          <button class="modal-btn secondary" onclick="this.closest('.review-modal').remove()">✕</button>
+          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
         </div>
         <div class="all-favorites-list">
           ${favoriteStoresData.map(store => `
@@ -846,7 +1526,7 @@ async function showAllRegularLevelsModal(regularLevels) {
     <div class="review-modal-content">
       <h3>🏆 전체 단골 레벨</h3>
       <p>단골 레벨 정보 로딩 중...</p>
-      <button class="modal-btn secondary" onclick="this.closest('.review-modal').remove()">닫기</button>
+      <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">닫기</button>
     </div>
   `;
   document.body.appendChild(modal);
@@ -865,7 +1545,7 @@ async function showAllStorePointsModal(storePoints) {
     <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
         <h3>💰 전체 매장별 포인트 현황 (${storePoints.length}개)</h3>
-        <button class="modal-btn secondary" onclick="this.closest('.review-modal').remove()">✕</button>
+        <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
       </div>
       <div class="all-store-points-list">
         ${storePoints.map(store => `

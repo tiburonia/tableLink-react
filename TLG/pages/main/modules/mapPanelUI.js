@@ -88,21 +88,338 @@ window.MapPanelUI = {
     `;
   },
 
-  async loadPanelStyles() {
-    if (window.CSSLoader) {
-      await window.CSSLoader.loadCSS('/TLG/styles/mapPanelUI.css', 'mapPanelUI-styles');
-    } else {
-      // 폴백 방식
-      if (!document.querySelector('link[href="/TLG/styles/mapPanelUI.css"]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.type = 'text/css';
-        link.href = '/TLG/styles/mapPanelUI.css';
-        link.id = 'mapPanelUI-styles';
-        document.head.appendChild(link);
-        console.log('✅ MapPanelUI CSS 로드 완료 (폴백)');
-      }
-    }
+  getPanelStyles() {
+    return `
+      <style>
+        /* 로딩 스피너 애니메이션 */
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        /* 패널 */
+        #storePanel {
+          position: fixed;
+          bottom: 46px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          background: #fff;
+          border-top-left-radius: 16px;
+          border-top-right-radius: 16px;
+          box-shadow: 0 -2px 14px rgba(30, 60, 120, 0.13);
+          overflow: hidden;
+          transition: height 0.3s cubic-bezier(.68,-0.55,.27,1.55);
+          z-index: 1002;
+          border: 1.1px solid #f1f2fb;
+        }
+        #storePanel.collapsed { height: 60px; }
+        #storePanel.expanded { height: 630px; }
+
+        /* 필터 컨테이너 */
+        #filterContainer {
+          padding: 8px 12px 0 12px;
+          background: #fff;
+          border-bottom: 1px solid #f1f2fb;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          transition: all 0.3s ease;
+        }
+
+        #filterContainer.collapsed {
+          max-height: 0;
+          padding: 0 12px;
+          overflow: hidden;
+          border-bottom: none;
+        }
+
+        .filter-toggle-btn {
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          background: rgba(102, 126, 234, 0.1);
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          z-index: 10;
+        }
+
+        .filter-toggle-btn:hover {
+          background: rgba(102, 126, 234, 0.2);
+          transform: scale(1.1);
+        }
+
+        .filter-toggle-btn .toggle-icon {
+          font-size: 14px;
+          transition: transform 0.3s ease;
+        }
+
+        .filter-toggle-btn.expanded .toggle-icon {
+          transform: rotate(180deg);
+        }
+
+        .filter-row {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .filter-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #333;
+          margin-bottom: 4px;
+        }
+
+        .filter-tabs {
+          display: flex;
+          gap: 6px;
+          overflow-x: auto;
+          padding-bottom: 8px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .filter-tabs::-webkit-scrollbar {
+          display: none;
+        }
+
+        .filter-tab {
+          flex-shrink: 0;
+          padding: 8px 16px;
+          border: none;
+          background: #f8f9fa;
+          color: #666;
+          border-radius: 20px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .filter-tab:hover {
+          background: #e9ecef;
+          color: #495057;
+        }
+
+        .filter-tab.active {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          font-weight: 600;
+        }
+
+        #panelHandle {
+          width: 44px;
+          height: 7px;
+          background: #e0e3f3;
+          border-radius: 4px;
+          margin: 10px auto 6px auto;
+          cursor: grab; /* 드래그 가능한 커서 */
+          opacity: 0.8;
+        }
+
+        /* 가게 목록 스크롤 영역 */
+        #storeListContainer {
+          height: calc(100% - 170px); /* 핸들 + 필터 공간 빼고 */
+          overflow-y: auto;
+          padding: 8px 4px 20px 4px;
+          box-sizing: border-box;
+          transition: height 0.3s ease;
+          /* 스크롤바 숨김 */
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        #storeListContainer.filter-collapsed {
+          height: calc(100% - 60px); /* 핸들만 빼고 (필터 접힘 상태) */
+        }
+        #storeListContainer::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
+
+        /* 개별 가게 카드 */
+        .storeCard {
+          border-radius: 20px;
+          padding: 0;
+          margin-bottom: 16px;
+          background: #fff;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+          border: none;
+          cursor: pointer;
+          overflow: hidden;
+        }
+
+        .storeCard:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .storeCard:active {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .storeImageBox {
+          position: relative;
+          height: 140px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .storeImageBox::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+          z-index: 1;
+        }
+
+        .storeImageBox img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          position: relative;
+          z-index: 0;
+        }
+
+        .storeStatus {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+          backdrop-filter: blur(10px);
+          z-index: 2;
+        }
+
+        .storeStatus.open {
+          background: rgba(76, 175, 80, 0.9);
+          color: white;
+        }
+
+        .storeStatus.closed {
+          background: rgba(244, 67, 54, 0.9);
+          color: white;
+        }
+
+        .storeInfoBox {
+          padding: 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .storeHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 12px;
+        }
+
+        .storeName {
+          font-weight: 700;
+          font-size: 18px;
+          color: #1a1a1a;
+          letter-spacing: -0.3px;
+          line-height: 1.3;
+          flex: 1;
+        }
+
+        .storeRating {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-shrink: 0;
+        }
+
+        .ratingStars {
+          font-size: 16px;
+          color: #FFB000;
+        }
+
+        .ratingValue {
+          font-weight: 700;
+          font-size: 16px;
+          color: #1a1a1a;
+        }
+
+        .reviewCount {
+          font-size: 14px;
+          color: #666;
+          font-weight: 500;
+        }
+
+        .storeCategory {
+          font-size: 14px;
+          color: #666;
+          font-weight: 500;
+          padding: 6px 12px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          display: inline-block;
+          width: fit-content;
+        }
+
+        .storeActions {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+        }
+
+        .actionButton {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 10px 16px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          transition: all 0.2s ease;
+          cursor: pointer;
+          border: none;
+          background: none;
+        }
+
+        .actionButton.primary {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+
+        .actionButton.primary:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .actionIcon {
+          font-size: 16px;
+        }
+
+        .actionText {
+          font-size: 13px;
+        }
+      </style>
+    `;
   },
 
   // 필터링 이벤트 설정 (패널 토글 없이 필터링만)
@@ -561,7 +878,7 @@ window.MapPanelUI = {
     document.addEventListener('DOMContentLoaded', () => {
       // 패널 HTML 렌더링
       document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
-      this.loadPanelStyles();
+      document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
 
       // 필터링 및 드래그 이벤트 설정
       this.initializeFiltering();
@@ -604,16 +921,6 @@ window.MapPanelUI = {
     }
   }
 };
-
-// CSS 자동 로딩 및 인라인 스타일 정리
-(async function() {
-  await window.MapPanelUI.loadPanelStyles();
-  
-  // 기존 인라인 스타일 제거 (있다면)
-  if (window.CSSLoader) {
-    window.CSSLoader.removeInlineStyles('.clean-store-marker, .clean-cluster-marker');
-  }
-})();
 
 // 실제 사용 시 MapPanelUI.init(); 호출 필요
 // window.MapPanelUI.init();

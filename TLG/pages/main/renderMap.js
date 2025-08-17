@@ -1,12 +1,6 @@
 async function renderMap() {
   const main = document.getElementById('main');
 
-  // CSS 먼저 로드
-  if (window.CSSLoader) {
-    await window.CSSLoader.loadModuleCSS('mapPanel');
-    console.log('✅ 지도 관련 CSS 로드 완료');
-  }
-
   // MapPanelUI 의존성 체크
   if (!window.MapPanelUI || typeof window.MapPanelUI.renderPanelHTML !== 'function') {
     console.error('❌ MapPanelUI가 로드되지 않았습니다. 필수 스크립트를 확인하세요.');
@@ -52,6 +46,8 @@ async function renderMap() {
         <span style="font-size: 22px;">👤</span>
       </button>
     </nav>
+
+    ${window.MapPanelUI.getPanelStyles()}
    <style>
     html, body {
   margin: 0;
@@ -482,10 +478,6 @@ async function renderMap() {
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
-    // CSS 스타일 로드
-    if (window.MapPanelUI && typeof window.MapPanelUI.loadPanelStyles === 'function') {
-      window.MapPanelUI.loadPanelStyles();
-    }
     if (window.MapPanelUI && typeof window.MapPanelUI.initializeFiltering === 'function') {
       window.MapPanelUI.initializeFiltering();
     }

@@ -1,13 +1,5 @@
 
 window.TLL = async function TLL(preselectedStore = null) {
-  const main = document.getElementById('main');
-  
-  // CSS 먼저 로드
-  if (window.CSSLoader) {
-    await window.CSSLoader.loadModuleCSS('subMain');
-    console.log('✅ TLL 관련 CSS 로드 완료');
-  }
-  
   // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
     <div class="tll-layout">
