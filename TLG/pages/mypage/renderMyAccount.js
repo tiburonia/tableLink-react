@@ -1204,9 +1204,15 @@ function setupAccountEventListeners() {
     showEditProfileModal();
   };
 
-  const handleCouponClick = function(e) {
+  const handleCouponClick = async function(e) {
     e.preventDefault();
-    showCouponModal();
+    await loadAllCouponsScript();
+    if (typeof renderAllCoupons === 'function') {
+      window.previousScreen = 'renderMyAccount';
+      renderAllCoupons(window.userInfo || { id: 'user1' });
+    } else {
+      showCouponModal();
+    }
   };
 
   const handleFavoritesClick = async function(e) {
@@ -1668,6 +1674,33 @@ async function loadAllRegularLevelsScript() {
     });
   } catch (error) {
     console.error('❌ renderAllRegularLevels 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
+
+async function loadAllCouponsScript() {
+  if (typeof window.renderAllCoupons === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllCoupons 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllCoupons.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllCoupons 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllCoupons 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllCoupons 스크립트 로드 중 오류:', error);
     throw error;
   }
 }

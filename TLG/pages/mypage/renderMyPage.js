@@ -1329,8 +1329,12 @@ async function renderMyPage() {
 
   const quickCouponsBtn = document.querySelector('#quickCouponsBtn');
   if (quickCouponsBtn) {
-    quickCouponsBtn.addEventListener('click', () => {
-      alert('쿠폰함 기능은 개발 중입니다.');
+    quickCouponsBtn.addEventListener('click', async () => {
+      await loadAllCouponsScript();
+      if (typeof renderAllCoupons === 'function') {
+        window.previousScreen = 'renderMyPage';
+        renderAllCoupons(userInfo);
+      }
     });
   }
 
@@ -2255,6 +2259,33 @@ async function loadAllPointsScript() {
     });
   } catch (error) {
     console.error('❌ renderAllPoints 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
+
+async function loadAllCouponsScript() {
+  if (typeof window.renderAllCoupons === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllCoupons 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllCoupons.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllCoupons 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllCoupons 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllCoupons 스크립트 로드 중 오류:', error);
     throw error;
   }
 }
