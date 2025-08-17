@@ -202,36 +202,11 @@ window.StoreUIManager = {
 
   renderLoyaltyLevelHTML() {
     return `
-      <div class="loyalty-card modern-gradient-card loyalty-theme">
-        <div class="loyalty-header">
-          <div class="loyalty-title">
-            <span class="loyalty-crown">👑</span>
-            <span>내 단골 등급</span>
-          </div>
-          <div class="loyalty-level-badge">골드</div>
-        </div>
-        <div class="loyalty-progress-section">
-          <div class="progress-info">
-            <span class="current-level">Lv.3 골드 단골</span>
-            <span class="next-level">다음 등급까지 3회</span>
-          </div>
-          <div class="loyalty-progress-bar modern-progress">
-            <div class="loyalty-progress-fill" style="width: 75%;"></div>
-          </div>
-        </div>
-        <div class="loyalty-benefits-grid">
-          <div class="benefit-item">
-            <span class="benefit-icon">🎁</span>
-            <span class="benefit-text">무료 음료</span>
-          </div>
-          <div class="benefit-item">
-            <span class="benefit-icon">⚡</span>
-            <span class="benefit-text">우선 주문</span>
-          </div>
-          <div class="benefit-item">
-            <span class="benefit-icon">🎂</span>
-            <span class="benefit-text">생일 쿠폰</span>
-          </div>
+      <div class="loyalty-levels-grid">
+        <!-- 실제 데이터가 loadLoyaltyData 함수에서 여기에 동적으로 삽입됩니다 -->
+        <div class="loyalty-loading-placeholder">
+          <div class="loading-spinner">⏳</div>
+          <div class="loading-text">단골 등급 정보 로딩 중...</div>
         </div>
       </div>
     `;
@@ -1007,24 +982,52 @@ window.StoreUIManager = {
 
         .benefit-item {
           background: rgba(255, 255, 255, 0.1);
-          padding: 10px 6px;
-          border-radius: 8px;
+          padding: 8px 6px;
+          border-radius: 6px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 2px;
+          font-size: 10px;
           flex: 1;
-          backdrop-filter: blur(10px);
         }
 
         .benefit-icon {
-          font-size: 16px;
+          font-size: 14px;
         }
 
         .benefit-text {
-          font-size: 10px;
-          font-weight: 500;
           text-align: center;
+          line-height: 1.2;
+        }
+
+        /* 로딩 플레이스홀더 스타일 */
+        .loyalty-loading-placeholder {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+          background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+          border-radius: 16px;
+          color: white;
+          text-align: center;
+        }
+
+        .loading-spinner {
+          font-size: 24px;
+          margin-bottom: 8px;
+          animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+          font-size: 14px;
+          opacity: 0.9;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
 
         /* 진행률 표시 */

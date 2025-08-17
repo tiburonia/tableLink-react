@@ -622,7 +622,38 @@ async function loadLoyaltyData(store) {
 // 단골 레벨 카드 UI 업데이트 (실제 데이터 연동 및 진행률 게이지 개선)
 function updateLoyaltyCardUI(levelData, store) {
   const loyaltyContainer = document.querySelector('.loyalty-levels-grid');
-  if (!loyaltyContainer) return;
+  if (!loyaltyContainer) {
+    console.warn('⚠️ .loyalty-levels-grid 요소를 찾을 수 없음. 다른 선택자 시도...');
+    
+    // 대안 선택자들 시도
+    const alternatives = [
+      '.loyalty-card',
+      '.modern-gradient-card.loyalty-theme',
+      '[class*="loyalty"]'
+    ];
+    
+    let foundContainer = null;
+    for (const selector of alternatives) {
+      foundContainer = document.querySelector(selector);
+      if (foundContainer) {
+        console.log(`✅ 대안 선택자로 요소 발견: ${selector}`);
+        break;
+      }
+    }
+    
+    if (!foundContainer) {
+      console.error('❌ 단골 레벨 컨테이너를 찾을 수 없습니다');
+      return;
+    }
+    
+    // 발견된 요소의 부모나 형제 요소에서 업데이트 가능한 컨테이너 찾기
+    const parentContainer = foundContainer.parentElement;
+    if (parentContainer) {
+      // 부모 요소에 직접 삽입
+      parentContainer.innerHTML = createLoyaltyCardHTML(levelData, store);
+      return;
+    }
+  }
 
   const level = levelData.level;
   const stats = levelData.stats || {};
@@ -724,7 +755,112 @@ function updateLoyaltyCardUI(levelData, store) {
 
   const theme = levelThemes[currentLevelRank] || levelThemes[0];
 
-  loyaltyContainer.innerHTML = `
+  loyaltyContainer.innerHTML = createLoyaltyCardHTML(levelData, store);
+}
+
+// 단골 레벨 카드 HTML 생성 함수
+function createLoyaltyCardHTML(levelData, store) {
+  const level = levelData.level;
+  const stats = levelData.stats || {};
+  const nextLevel = levelData.nextLevel;
+  const progress = levelData.progress || {};
+
+  // 현재 레벨 정보
+  const currentLevelName = level?.name || '신규 고객';
+  const currentLevelRank = level?.rank || 0;
+  const visitCount = stats.visitCount || 0;
+  const points = stats.points || 0;
+  const totalSpent = stats.totalSpent || 0;
+  
+  // 다음 레벨 정보 및 진행률 계산
+  let progressPercent = 0;
+  let requirementDetails = [];
+  let nextLevelName = '단골 고객';
+  
+  if (nextLevel) {
+    nextLevelName = nextLevel.name;
+    
+    // 실제 진행률 계산
+    const requiredPoints = nextLevel.requiredPoints || 0;
+    const requiredSpent = nextLevel.requiredTotalSpent || 0;
+    const requiredVisits = nextLevel.requiredVisitCount || 0;
+    
+    if (nextLevel.evalPolicy === 'OR') {
+      // OR 조건: 가장 높은 진행률 사용
+      const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+      const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+      const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+      
+      progressPercent = Math.max(pointsProgress, spentProgress, visitsProgress);
+      
+      // 필요한 조건들 표시
+      if (requiredPoints > 0 && points < requiredPoints) {
+        requirementDetails.push(`포인트 ${(requiredPoints - points).toLocaleString()}P`);
+      }
+      if (requiredSpent > 0 && totalSpent < requiredSpent) {
+        requirementDetails.push(`결제 ${(requiredSpent - totalSpent).toLocaleString()}원`);
+      }
+      if (requiredVisits > 0 && visitCount < requiredVisits) {
+        requirementDetails.push(`방문 ${requiredVisits - visitCount}회`);
+      }
+    } else {
+      // AND 조건: 모든 조건의 평균 진행률
+      const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+      const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+      const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+      
+      progressPercent = (pointsProgress + spentProgress + visitsProgress) / 3;
+      
+      // 모든 조건 표시
+      if (requiredPoints > 0) {
+        requirementDetails.push(`포인트 ${Math.max(0, requiredPoints - points).toLocaleString()}P`);
+      }
+      if (requiredSpent > 0) {
+        requirementDetails.push(`결제 ${Math.max(0, requiredSpent - totalSpent).toLocaleString()}원`);
+      }
+      if (requiredVisits > 0) {
+        requirementDetails.push(`방문 ${Math.max(0, requiredVisits - visitCount)}회`);
+      }
+    }
+  }
+
+  // 레벨별 색상 및 테마 설정
+  const levelThemes = {
+    0: {
+      gradient: 'linear-gradient(135deg, #6c757d, #495057)',
+      glow: 'rgba(108, 117, 125, 0.3)',
+      icon: '🆕',
+      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
+    },
+    1: {
+      gradient: 'linear-gradient(135deg, #d2691e, #8b4513)',
+      glow: 'rgba(210, 105, 30, 0.4)',
+      icon: '🥉',
+      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,215,0,0.1) 0%, transparent 50%)'
+    },
+    2: {
+      gradient: 'linear-gradient(135deg, #c0c0c0, #708090)',
+      glow: 'rgba(192, 192, 192, 0.4)',
+      icon: '🥈',
+      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%)'
+    },
+    3: {
+      gradient: 'linear-gradient(135deg, #ffd700, #b8860b)',
+      glow: 'rgba(255, 215, 0, 0.5)',
+      icon: '🥇',
+      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.2) 0%, transparent 50%)'
+    },
+    4: {
+      gradient: 'linear-gradient(135deg, #e5e4e2, #c0c0c0)',
+      glow: 'rgba(229, 228, 226, 0.5)',
+      icon: '💎',
+      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.25) 0%, transparent 50%)'
+    }
+  };
+
+  const theme = levelThemes[currentLevelRank] || levelThemes[0];
+
+  return `
     <div class="loyalty-level-card premium-card" 
          style="background: ${theme.gradient}; box-shadow: 0 12px 40px ${theme.glow};">
       <div class="card-background" style="background: ${theme.bgPattern}"></div>
@@ -1264,6 +1400,7 @@ function updateLoyaltyCardUI(levelData, store) {
       }
     </style>
   `;
+}
 }
 
 // 혜택 타입별 아이콘 반환
