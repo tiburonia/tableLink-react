@@ -126,42 +126,6 @@ window.StoreUIManager = {
           </div>
         </div>
 
-        <div class="occupancy-visualization">
-          <div class="occupancy-header">
-            <span class="occupancy-title">좌석 사용률</span>
-            <div class="occupancy-percentage-wrapper">
-              <span class="occupancy-percentage" id="occupancyRateNew">-%</span>
-              <div class="percentage-trend" id="occupancyTrend">
-                <span class="trend-icon">📈</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="occupancy-progress-container">
-            <div class="occupancy-track">
-              <div class="occupancy-fill" id="occupancyFillNew"></div>
-              <div class="occupancy-glow" id="occupancyGlow"></div>
-            </div>
-            <div class="occupancy-markers">
-              <span class="marker low">25%</span>
-              <span class="marker mid">50%</span>
-              <span class="marker high">75%</span>
-            </div>
-          </div>
-          
-          <div class="seats-breakdown">
-            <div class="seats-info">
-              <span class="seats-used" id="usedSeatsCount">-</span>
-              <span class="seats-separator">/</span>
-              <span class="seats-total" id="totalSeatsCount">-</span>
-              <span class="seats-label">좌석</span>
-            </div>
-            <div class="seats-visual" id="seatsVisual">
-              <!-- 좌석 아이콘들이 동적으로 생성됩니다 -->
-            </div>
-          </div>
-        </div>
-
         <div class="table-detail-toggle-section">
           <button class="table-detail-toggle-btn" id="tableDetailToggleBtn">
             <span class="toggle-text">테이블 현황 자세히 보기</span>
