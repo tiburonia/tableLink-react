@@ -1400,7 +1400,7 @@ function createLoyaltyCardHTML(levelData, store) {
       }
     </style>
   `;
-}
+
 }
 
 // 혜택 타입별 아이콘 반환
