@@ -115,7 +115,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         }
 
         .payment-success-container {
-          height: 100vh;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100%;
+          max-width: 430px;
+          margin: 0 auto;
           background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
@@ -129,10 +136,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           text-align: center;
           padding: 20px;
           margin: 0 auto;
-          min-height: calc(100vh - 40px);
           display: flex;
           flex-direction: column;
-          justify-content: center;
+          justify-content: flex-start;
+          padding-top: 60px;
         }
 
         .success-icon {
@@ -408,7 +415,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
       <style>
         .payment-error-container {
-          height: 100vh;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          width: 100%;
+          max-width: 430px;
+          margin: 0 auto;
           background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
@@ -424,11 +438,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           border-radius: 16px;
           padding: 40px 30px;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-          margin: 0 auto;
-          min-height: calc(100vh - 40px);
+          margin: 60px auto 0 auto;
           display: flex;
           flex-direction: column;
-          justify-content: center;
         }
 
         .error-icon {

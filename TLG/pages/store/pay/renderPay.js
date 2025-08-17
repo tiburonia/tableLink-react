@@ -528,7 +528,8 @@ function renderPay(currentOrder, store, tableNum) {
   // 매장별 포인트 로드
   async function loadStorePoint() {
     try {
-      const userId = localStorage.getItem('userId');
+      // 전역 userInfo 객체에서 사용자 ID 가져오기
+      const userId = window.userInfo?.id || localStorage.getItem('userId');
       if (!userId) {
         document.getElementById('storePointDisplay').textContent = '로그인 필요';
         return;
@@ -561,7 +562,8 @@ function renderPay(currentOrder, store, tableNum) {
   // 쿠폰 로드
   async function loadCoupons() {
     try {
-      const userId = localStorage.getItem('userId');
+      // 전역 userInfo 객체에서 사용자 ID 가져오기
+      const userId = window.userInfo?.id || localStorage.getItem('userId');
       if (!userId) {
         document.getElementById('couponList').innerHTML = '<p>로그인이 필요합니다</p>';
         return;
