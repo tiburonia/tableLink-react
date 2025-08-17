@@ -72,6 +72,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         overflow: hidden;
       }
 
+      /* 헤더 - 고정 */
       .order-header {
         background: white;
         padding: 20px 16px;
@@ -81,6 +82,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         flex-shrink: 0;
         z-index: 100;
+        height: 100px;
       }
 
       .header-back-btn {
@@ -141,12 +143,13 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         font-weight: 500;
       }
 
+      /* 메인 콘텐츠 - 스크롤 가능 */
       .order-content {
         flex: 1;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
-        padding: 20px 16px 120px 16px;
-        position: relative;
+        padding: 20px 16px;
+        height: calc(100vh - 100px - 90px); /* 헤더와 푸터 제외 */
       }
 
       .order-content-inner {
@@ -155,7 +158,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         display: flex;
         flex-direction: column;
         gap: 24px;
-        min-height: calc(100vh - 240px);
+        padding-bottom: 20px;
       }
 
       .menu-section,
@@ -410,6 +413,7 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         background-clip: text;
       }
 
+      /* 푸터 - 고정 위치 */
       .bottom-actions {
         position: fixed;
         bottom: 0;
@@ -419,6 +423,10 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         padding: 16px;
         box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
         z-index: 1000;
+        height: 90px;
+        display: flex;
+        align-items: center;
+        max-width: 430px;
       }
 
       .pay-btn {
