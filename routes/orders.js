@@ -206,6 +206,55 @@ router.post('/pay', async (req, res) => {
       // 포인트 적립 실패해도 주문은 완료되도록 처리
     }
 
+    // 🆕 결제 완료 후 테이블 자동 점유 처리
+    if (tableUniqueId && actualTableNumber) {
+      try {
+        const occupiedTime = new Date();
+        
+        // 테이블을 점유 상태로 설정 (auto_release_source = 'ORDER')
+        await client.query(`
+          UPDATE store_tables 
+          SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+          WHERE unique_id = $4
+        `, [true, occupiedTime, 'ORDER', tableUniqueId]);
+
+        console.log(`✅ 결제 완료 - 테이블 ${actualTableNumber} 자동 점유 처리 완료`);
+
+        // 주문 완료 후 1시간 뒤 자동 해제 스케줄링
+        setTimeout(async () => {
+          try {
+            const tableResult = await pool.query(`
+              SELECT * FROM store_tables 
+              WHERE unique_id = $1 AND is_occupied = true AND auto_release_source = 'ORDER'
+            `, [tableUniqueId]);
+
+            if (tableResult.rows.length > 0) {
+              const currentTable = tableResult.rows[0];
+              const occupiedSince = new Date(currentTable.occupied_since);
+              const now = new Date();
+              const diffHours = Math.floor((now - occupiedSince) / (1000 * 60 * 60));
+
+              if (diffHours >= 1) {
+                await pool.query(`
+                  UPDATE store_tables 
+                  SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
+                  WHERE unique_id = $4
+                `, [false, null, null, tableUniqueId]);
+
+                console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 1시간 후 자동 해제 완료`);
+              }
+            }
+          } catch (error) {
+            console.error('❌ [ORDER] 테이블 자동 해제 실패:', error);
+          }
+        }, 60 * 60 * 1000); // 1시간
+
+      } catch (tableError) {
+        console.error('⚠️ 테이블 점유 처리 실패:', tableError);
+        // 테이블 점유 실패해도 주문은 완료되도록 처리
+      }
+    }
+
     await client.query('COMMIT');
 
     res.json({
@@ -219,7 +268,8 @@ router.post('/pay', async (req, res) => {
         totalDiscount: appliedPoint + (couponDiscount || 0),
         welcomeCoupon: welcomeCoupon,
         storeId: storeId,
-        storeName: storeName
+        storeName: storeName,
+        tableOccupied: tableUniqueId ? true : false
       }
     });
 
