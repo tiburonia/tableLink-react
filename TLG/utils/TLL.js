@@ -664,36 +664,11 @@ window.TLL = async function TLL(preselectedStore = null) {
 
       const tableName = selectedOption.textContent.replace(' (사용중)', '');
 
-      try {
-        // 주문 시작 직전 최종 테이블 점유 상태 확인
-        console.log(`🔍 TLL - 테이블 ${tableName} 최종 점유 상태 확인 중...`);
-        
-        const tablesResponse = await fetch(`/api/tables/stores/${selectedStore.id}?_t=${Date.now()}`);
-        if (tablesResponse.ok) {
-          const tablesData = await tablesResponse.json();
-          if (tablesData.success) {
-            const currentTable = tablesData.tables.find(t => t.tableNumber == selectedTableNumber);
-            if (currentTable && currentTable.isOccupied) {
-              alert('선택하신 테이블이 다른 고객에 의해 사용중이 되었습니다. 다른 테이블을 선택해주세요.');
-              // 테이블 목록 새로고침
-              window.selectStore(selectedStore.id, selectedStore.name);
-              return;
-            }
-          }
-        }
-
-        console.log(`🏪 선택된 매장:`, selectedStore);
-        console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
-
-        // 점유 처리 없이 바로 주문 시작
-        console.log(`✅ TLL - 점유 확인 완료, 주문 화면으로 이동`);
-        renderOrderScreen(selectedStore, tableName);
-
-      } catch (error) {
-        console.error('❌ 테이블 점유 상태 확인 실패:', error);
-        // 에러가 발생해도 주문은 계속 진행 (기존 동작 유지)
-        renderOrderScreen(selectedStore, tableName);
-      }
+      // 점유 처리 없이 바로 주문 시작
+      console.log(`🏪 선택된 매장:`, selectedStore);
+      console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
+      console.log(`✅ TLL - 주문 화면으로 이동`);
+      renderOrderScreen(selectedStore, tableName);
     });
   } else {
     console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');

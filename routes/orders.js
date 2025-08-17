@@ -250,10 +250,10 @@ router.post('/pay', async (req, res) => {
           console.error(`❌ [ORDER] 테이블 점유 업데이트 실패: unique_id=${tableUniqueId}`);
         }
 
-        // 주문 완료 후 1시간 뒤 자동 해제 스케줄링
+        // 주문 완료 후 3분 뒤 자동 해제 스케줄링
         setTimeout(async () => {
           try {
-            console.log(`🕐 [ORDER] 테이블 ${actualTableNumber} 1시간 자동 해제 체크 시작`);
+            console.log(`🕐 [ORDER] 테이블 ${actualTableNumber} 3분 자동 해제 체크 시작`);
             
             const tableResult = await pool.query(`
               SELECT * FROM store_tables 
@@ -264,20 +264,20 @@ router.post('/pay', async (req, res) => {
               const currentTable = tableResult.rows[0];
               const occupiedSince = new Date(currentTable.occupied_since);
               const now = new Date();
-              const diffHours = Math.floor((now - occupiedSince) / (1000 * 60 * 60));
+              const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
 
-              console.log(`📊 [ORDER] 테이블 ${actualTableNumber} 점유 시간: ${diffHours}시간`);
+              console.log(`📊 [ORDER] 테이블 ${actualTableNumber} 점유 시간: ${diffMinutes}분`);
 
-              if (diffHours >= 1) {
+              if (diffMinutes >= 3) {
                 await pool.query(`
                   UPDATE store_tables 
                   SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
                   WHERE unique_id = $4
                 `, [false, null, null, tableUniqueId]);
 
-                console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 1시간 후 자동 해제 완료`);
+                console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 3분 후 자동 해제 완료`);
               } else {
-                console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 아직 1시간 미만 (${diffHours}시간)`);
+                console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 아직 3분 미만 (${diffMinutes}분)`);
               }
             } else {
               console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 이미 해제됨 또는 다른 소스로 변경됨`);
@@ -285,7 +285,7 @@ router.post('/pay', async (req, res) => {
           } catch (error) {
             console.error('❌ [ORDER] 테이블 자동 해제 실패:', error);
           }
-        }, 60 * 60 * 1000); // 1시간
+        }, 3 * 60 * 1000); // 3분
 
       } catch (tableError) {
         console.error('❌ [ORDER] 테이블 점유 처리 실패:', tableError);
