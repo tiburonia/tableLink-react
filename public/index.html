@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TableLink - 메인</title>
+
+  <!--카카오맵 API키-->
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2da5b80696f4403357706514d7c56b70&libraries=services"></script>
+
+  <!--전역 CSS 파일-->
+  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
+  <link rel="stylesheet" href="shared/css/globalBody.css" />
+  <link rel="stylesheet" href="shared/css/renderLogin.css" />
+  <!--서브메인 CSS 추가-->
+  <link rel="stylesheet" href="TLG/styles/subMain.css" />
+</head>
+
+<body>
+  <!-- 화면을 렌더링할 메인 영역 -->
+  <div id='main'></div>
+  <!-- 장바구니 위젯 -->
+  <div id='cartWidget'></div>
+
+  <!--회원가입 화면 렌더링 함수 (로그인보다 먼저 로드)-->
+  <script src="TLG/pages/main/renderSignUp.js"></script>
+  <!--마이페이지 화면 렌더링 함수 (먼저 로드)-->
+  <script src="TLG/pages/mypage/renderMyPage.js"></script>
+  <!--로그인 화면 렌더링 함수-->
+  <script src="TLG/pages/auth/renderLogin.js"></script>
+  <!--로그아웃로직 함수-->
+  <script src="TLG/utils/logOut.js"></script>
+  <!--QR 결제 화면 렌더링 함수-->
+  <script src="TLG/utils/TLL.js"></script>
+  <!--내 계정 화면 렌더링 함수-->
+  <script src="TLG/pages/mypage/renderMyAccount.js"></script>
+  <!--마이페이지 전체 리뷰 렌더링 함수-->
+  <script src="TLG/pages/store/order/renderAllOrderHTML.js"></script>
+  <!--지도 모듈들-->
+  <script src="TLG/pages/main/modules/mapPanelUI.js"></script>
+  <script src="TLG/pages/main/modules/mapMarkerManager.js"></script>
+  <!--지도 화면 렌더링 함수-->
+  <script src="TLG/pages/main/renderMap.js"></script>
+  <script src="TLG/pages/main/renderSearch.js"></script>
+  <!--알림 화면 렌더링 함수-->
+  <script src="TLG/pages/main/renderNotification.js"></script>
+  <!--매장 즐겨찾기 토글 함수-->
+  <script src="TLG/pages/store/favoriteStore/toggleFavoriteF.js"></script>
+  <!--메뉴탭 렌더링 함수-->
+  <script src="TLG/pages/store/newStore/renderMenuHTML.js"></script>
+  <!--리뷰탭 렌더링 함수-->
+  <script src="TLG/pages/store/newStore/renderReviewHTML.js"></script>
+  <!--전체 리뷰 렌더링 함수-->
+  <script src="TLG/pages/store/review/renderAllReview.js"></script>
+  <!--매장렌더링 모듈들-->
+  <script src="/TLG/pages/store/modules/renderStoreUI.js"></script>
+  <script src="/TLG/pages/store/modules/storePanelManager.js"></script>
+  <script src="/TLG/pages/store/modules/storeTabManager.js"></script>
+  <script src="/TLG/pages/store/modules/reviewManager.js"></script>
+  <script src="/TLG/pages/store/modules/tableInfoManager.js"></script>
+  <!--매장렌더링 함수 (우선 로딩)-->
+  <script src="TLG/pages/store/renderStore.js"></script>
+  <!--결제 화면 렌더링 함수-->
+  <script src="TLG/pages/store/pay/renderPay.js"></script>
+  <!--쿠폰 발급 함수-->
+  <script src="TLG/utils/creatCoupon.js"></script>
+  <!--결제 완료 화면 렌더링 함수-->
+  <script src="TLG/pages/store/pay/renderPay.js"></script>
+  <script src="TLG/pages/store/pay/confirmPayF.js"></script>
+  <!--장바구니 화면 렌더링 함수-->
+  <script src="TLG/pages/store/cart/saveCart.js"></script>
+  <!--장바구니 위젯 렌더링 함수-->
+  <script src="TLG/pages/store/cart/renderCartWidget.js"></script>
+  <!--장바구니 화면 렌더링 함수-->
+  <script src="TLG/pages/store/cart/renderCart.js"></script>
+  <!--주문 화면 렌더링 함수-->
+  <script src="TLG/pages/store/renderOrderScreen.js"></script>
+  <!--예약 화면 렌더링 함수-->
+  <script src="TLG/pages/store/renderReservationScreen.js"></script>
+  <!--매장 캐시 시스템-->
+  <script src="TLG/utils/storeCache.js"></script>
+  <script src="/TLG/utils/globalKeyboardEvents.js"></script>
+  <script src="/TLG/utils/regularLevelManager.js"></script>
+  <!-- 혜택 상세보기 스크립트 추가 -->
+  <script src="../TLG/pages/store/promotion/renderPromotionDetail.js"></script>
+  <!-- 서브 메인 화면 렌더링 함수 추가 -->
+  <script src="TLG/pages/main/renderSubMain.js"></script>
+
+  <script>
+    //초기 진입 렌더링 함수
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLogin()
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,28 @@
+{
+  "name": "tablelink",
+  "version": "1.0.0",
+  "description": "TableLink - 매장 주문 및 예약 웹 애플리케이션",
+  "main": "index.html",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "static": "live-server --port=5000 --host=0.0.0.0",
+    "build": "echo 'No build process needed for static HTML'",
+    "test": "echo 'No tests specified'"
+  },
+  "keywords": [
+    "tablelink",
+    "restaurant",
+    "ordering",
+    "reservation"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.16.3",
+    "xlsx": "^0.18.5"
+  }
+}

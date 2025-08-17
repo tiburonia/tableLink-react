@@ -1,0 +1,616 @@
+async function renderAllReview(store) {
+  console.log('🔍 리뷰 전체보기 로딩 중...', store.name);
+
+  try {
+    // localStorage에서 사용자 정보 가져오기
+    const currentUserInfo = window.cacheManager ? window.cacheManager.getUserInfo() : null;
+    const currentUserId = currentUserInfo ? currentUserInfo.id : null;
+
+    console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
+
+    // 매번 서버에서 리뷰 데이터 직접 요청
+    console.log('🌐 서버에서 리뷰 데이터 가져오는 중... (캐시 사용 안함)');
+    const response = await fetch(`/api/stores/${store.id}/reviews`);
+    if (!response.ok) {
+      throw new Error('리뷰 데이터 조회 실패');
+    }
+
+    const reviewData = await response.json();
+    const reviews = reviewData.reviews || [];
+
+    console.log('📖 가져온 리뷰 데이터:', reviews);
+
+    const total = reviews.length;
+    const avgScore = total
+      ? (reviews.reduce((sum, r) => sum + r.score, 0) / total).toFixed(1)
+      : "0.0";
+
+    const mainEl = document.getElementById('main');
+    if (!mainEl) return;
+
+    mainEl.innerHTML = `
+      <!-- 상단 헤더 (고정) -->
+      <div id="allReviewHeader" style="position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:60px;background:#fff;border-bottom:1px solid #e8eefe;z-index:1001;">
+        <button id="backBtn" class="header-btn" style="position:absolute;left:16px;top:10px;" aria-label="뒤로가기">
+          <span class="header-btn-ico" style="font-size:22px;">⬅️</span>
+        </button>
+        <button id="TLL" class="header-btn" style="position:absolute;right:16px;top:10px;" aria-label="QR결제">
+          <span class="header-btn-ico" style="font-size:22px;">📱</span>
+        </button>
+        <div style="height: 100%; display:flex; align-items: center; justify-content: center;">
+          <span style="font-size:18px;font-weight:700;">${store.name} 리뷰</span>
+        </div>
+      </div>
+
+      <!-- 스크롤 가능한 컨텐츠 영역 -->
+      <div id="allReviewScrollArea" style="position:fixed;top:60px;bottom:64px;left:50%;transform:translateX(-50%);width:100%;max-width:430px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:1;">
+        <div id="allReviewContent" style="padding:16px;background:#f8f9fb;min-height:100%;">
+          ${
+            total === 0
+            ? `
+              <div class="review-all-empty">
+                <div style="font-size:18px;font-weight:600;margin-bottom:10px;color:#333;">아직 등록된 리뷰가 없습니다.</div>
+                <div style="color:#888;font-size:15px;">첫 리뷰의 주인공이 되어보세요!</div>
+              </div>
+            `
+            : `
+              <div class="review-all-header">
+                <div class="review-all-score">
+                  <span style="font-size:24px;color:#297efc;font-weight:700;">★ ${avgScore}</span>
+                  <span style="margin-left:10px;color:#666;font-size:16px;">(${total}개 리뷰)</span>
+                </div>
+              </div>
+              <div class="review-all-list">
+                ${reviews.map(r => `
+                  <div class="review-card ${r.userId === currentUserId ? 'my-review' : ''}">
+                    <div class="review-meta">
+                      <span class="review-user ${r.userId === currentUserId ? 'my-user' : ''}">
+                        ${r.userId === currentUserId ? '👤 내 리뷰' : `👤 사용자${r.userId}`}
+                      </span>
+                      <span class="review-score">★ ${r.score}</span>
+                      <span class="review-date">${r.date || ''}</span>
+                    </div>
+                    <div class="review-text">${r.content}</div>
+                    ${r.userId === currentUserId ? `
+                      <div class="my-review-actions">
+                        <button class="edit-review-btn" data-review-id="${r.id}" onclick="editMyReview(${r.id}, '${r.content.replace(/'/g, "\\'")}', ${r.score})">
+                          ✏️ 수정
+                        </button>
+                        <button class="delete-review-btn" data-review-id="${r.id}" onclick="deleteMyReview(${r.id})">
+                          🗑️ 삭제
+                        </button>
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join("")}
+              </div>
+            `
+          }
+        </div>
+      </div>
+
+      <!-- 하단 바텀바 (고정) -->
+      <nav id="storeBottomBar">
+        <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
+          <span class="btm-btn-ico">📞</span>
+        </button>
+        <button id="order" class="btm-btn order-btn">
+          포장·예약하기
+        </button>
+      </nav>
+
+      <!-- 개선된 스타일 -->
+      <style>
+      body, #main {
+        overflow: hidden;
+      }
+
+      .header-btn {
+        border: none;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(40,110,255,0.08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+        color: #297efc;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        outline: none;
+        padding: 0;
+        border: 1px solid #f0f4ff;
+      }
+      .header-btn:active {
+        background: #f0f6ff;
+        transform: scale(0.95);
+        box-shadow: 0 1px 4px rgba(40,110,255,0.12);
+      }
+      .header-btn-ico {
+        font-size: 20px;
+        pointer-events: none;
+      }
+
+      #allReviewScrollArea::-webkit-scrollbar {
+        width: 4px;
+      }
+      #allReviewScrollArea::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #allReviewScrollArea::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 2px;
+      }
+      #allReviewScrollArea::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+      }
+
+      .review-all-header {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        text-align: center;
+      }
+      .review-all-score {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .review-all-list { 
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+      }
+
+      .review-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(40,110,255,0.06);
+        padding: 16px;
+        display: flex; 
+        flex-direction: column;
+        gap: 8px;
+        transition: all 0.2s ease;
+        border: 1px solid #f5f7fa;
+      }
+      .review-card:hover {
+        box-shadow: 0 4px 20px rgba(40,110,255,0.10);
+        transform: translateY(-1px);
+      }
+
+      .review-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .review-user { 
+        font-weight: 600; 
+        color: #2d5aa0; 
+        font-size: 14px; 
+      }
+      .review-score { 
+        color: #ffbf00; 
+        font-weight: 700; 
+        font-size: 15px; 
+      }
+      .review-date {
+        color: #999;
+        font-size: 13px;
+        margin-left: auto;
+      }
+
+      .review-text { 
+        font-size: 15px; 
+        color: #333; 
+        line-height: 1.6; 
+        word-break: break-word;
+      }
+
+      /* 내 리뷰 스타일 */
+      .my-review {
+        border: 2px solid #297efc;
+        background: linear-gradient(135deg, #f8fbff 0%, #f0f6ff 100%);
+      }
+      .my-user {
+        color: #297efc !important;
+        font-weight: 700;
+      }
+      .my-review-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #e0e6ff;
+      }
+      .edit-review-btn, .delete-review-btn {
+        padding: 4px 8px;
+        font-size: 12px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .edit-review-btn {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .edit-review-btn:hover {
+        background: #ffeaa7;
+      }
+      .delete-review-btn {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .delete-review-btn:hover {
+        background: #f5c6cb;
+      }
+
+      .review-all-empty {
+        text-align: center;
+        padding: 60px 20px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      }
+
+      /* 바텀바 스타일 */
+      #storeBottomBar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 64px;
+        background: #fff;
+        border-top: 1px solid #e8eefe;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        z-index: 1000;
+        padding: 0 16px;
+        box-sizing: border-box;
+      }
+
+      .btm-btn {
+        border: none;
+        outline: none;
+        font-family: inherit;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 17px;
+        font-weight: 600;
+      }
+
+      .phone-btn {
+        width: 48px; 
+        min-width: 48px; 
+        max-width: 48px;
+        border-radius: 50%;
+        background: #f6fafd;
+        color: #297efc;
+        margin-right: 12px;
+        font-size: 22px;
+        box-shadow: 0 2px 8px rgba(41,126,252,0.08);
+      }
+      .phone-btn:active {
+        background: #e4effd;
+        transform: scale(0.95);
+      }
+
+      .btm-btn-ico {
+        font-size: 22px;
+        pointer-events: none;
+        line-height: 1;
+      }
+
+      .order-btn {
+        flex: 1;
+        height: 44px;
+        min-width: 0;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #36a1ff 0%, #297efc 100%);
+        color: #fff;
+        font-size: 16px;
+        letter-spacing: 0.3px;
+        box-shadow: 0 3px 12px rgba(41,126,252,0.15);
+      }
+      .order-btn:active {
+        background: linear-gradient(135deg, #297efc 0%, #1e6bd8 100%);
+        transform: translateY(1px);
+        box-shadow: 0 2px 8px rgba(41,126,252,0.2);
+      }
+
+      @media (max-width: 480px) {
+        .review-all-header { padding: 12px; }
+        .review-card { padding: 14px; }
+        .review-all-list { gap: 10px; }
+        .review-meta { font-size: 13px; }
+        .review-text { font-size: 14px; }
+        #allReviewContent { padding: 12px; }
+      }
+      </style>
+    `;
+
+    // 버튼 이벤트 바인딩
+    document.getElementById('backBtn').addEventListener('click', () => {
+      renderStore(store);
+    });
+
+    document.getElementById('TLL').addEventListener('click', () => {
+      alert('QR 결제 기능은 아직 준비 중입니다');
+    });
+
+    document.getElementById('telephone').addEventListener('click', () => {
+      alert('전화 기능은 아직 준비 중입니다');
+    });
+
+    document.getElementById('order').addEventListener('click', () => {
+      alert('포장·예약하기 기능은 준비 중입니다');
+    });
+
+    
+
+    // 내 리뷰 수정/삭제 함수들을 전역으로 등록
+    window.editMyReview = async (reviewId, currentContent, currentScore) => {
+      // 수정 모달 생성
+      const modal = document.createElement('div');
+      modal.className = 'review-edit-modal';
+      modal.innerHTML = `
+        <div class="review-edit-modal-content">
+          <h3>리뷰 수정</h3>
+
+          <div>
+            <label>평점:</label>
+            <div class="star-rating">
+              <span class="star" data-rating="1">★</span>
+              <span class="star" data-rating="2">★</span>
+              <span class="star" data-rating="3">★</span>
+              <span class="star" data-rating="4">★</span>
+              <span class="star" data-rating="5">★</span>
+            </div>
+          </div>
+
+          <div>
+            <label>리뷰 내용:</label>
+            <textarea class="review-edit-textarea" placeholder="리뷰 내용을 입력하세요...">${currentContent}</textarea>
+          </div>
+
+          <div class="modal-buttons">
+            <button class="modal-btn cancel-btn">취소</button>
+            <button class="modal-btn submit-btn">수정 완료</button>
+          </div>
+        </div>
+
+        <style>
+          .review-edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+          }
+          .review-edit-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80%;
+            overflow-y: auto;
+          }
+          .star-rating {
+            display: flex;
+            gap: 5px;
+            margin: 10px 0;
+          }
+          .star {
+            font-size: 24px;
+            cursor: pointer;
+            color: #ddd;
+            transition: color 0.2s;
+          }
+          .star.active {
+            color: #ffbf00;
+          }
+          .review-edit-textarea {
+            width: 100%;
+            height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+          }
+          .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+          }
+          .modal-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .submit-btn {
+            background: #297efc;
+            color: white;
+          }
+          .submit-btn:hover {
+            background: #1e6bd8;
+          }
+          .cancel-btn {
+            background: #f5f5f5;
+            color: #333;
+          }
+          .cancel-btn:hover {
+            background: #e8e8e8;
+          }
+        </style>
+      `;
+
+      document.body.appendChild(modal);
+
+      let selectedRating = currentScore;
+
+      // 초기 별점 표시
+      const updateStarDisplay = (rating) => {
+        const stars = modal.querySelectorAll('.star');
+        stars.forEach((star, index) => {
+          if (index < rating) {
+            star.classList.add('active');
+          } else {
+            star.classList.remove('active');
+          }
+        });
+      };
+
+      updateStarDisplay(selectedRating);
+
+      // 별점 선택 이벤트
+      modal.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+          selectedRating = parseInt(e.target.getAttribute('data-rating'));
+          updateStarDisplay(selectedRating);
+        });
+      });
+
+      // 취소 버튼
+      modal.querySelector('.cancel-btn').addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+
+      // 수정 완료 버튼
+      modal.querySelector('.submit-btn').addEventListener('click', async () => {
+        const newContent = modal.querySelector('.review-edit-textarea').value.trim();
+
+        if (newContent === '') {
+          alert('리뷰 내용을 입력해주세요.');
+          return;
+        }
+
+        try {
+          console.log('✏️ 리뷰 수정 요청:', { reviewId, newContent, selectedRating });
+
+          const response = await fetch(`/api/reviews/${reviewId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: newContent,
+              score: selectedRating,
+              userId: currentUserId
+            })
+          });
+
+          if (response.ok) {
+            console.log('✅ 리뷰 수정 성공');
+            alert('리뷰가 수정되었습니다.');
+            document.body.removeChild(modal);
+
+            // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
+            if (window.cacheManager) {
+              localStorage.removeItem(`tablelink_store_rating_${store.id}`);
+              console.log(`⭐ 매장 ${store.id} 별점 캐시 초기화`);
+            }
+
+            // 리뷰 목록 새로고침
+            renderAllReview(store);
+          } else {
+            const errorData = await response.json();
+            console.error('❌ 리뷰 수정 실패:', errorData);
+            alert('리뷰 수정에 실패했습니다: ' + (errorData.error || '알 수 없는 오류'));
+          }
+        } catch (error) {
+          console.error('❌ 리뷰 수정 오류:', error);
+          alert('리뷰 수정 중 오류가 발생했습니다.');
+        }
+      });
+
+      // 모달 배경 클릭 시 닫기
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+    };
+
+    window.deleteMyReview = async (reviewId) => {
+      if (confirm('정말로 이 리뷰를 삭제하시겠습니까?\n삭제된 리뷰는 복구할 수 없습니다.')) {
+        try {
+          console.log('🗑️ 리뷰 삭제 요청:', { reviewId, userId: currentUserId });
+
+          const response = await fetch(`/api/reviews/${reviewId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: currentUserId })
+          });
+
+          if (response.ok) {
+            const responseData = await response.json();
+            console.log('✅ 리뷰 삭제 성공:', responseData);
+            alert('리뷰가 삭제되었습니다.');
+
+            // 해당 매장의 별점 캐시도 초기화하여 새로 가져오도록 함
+            if (window.cacheManager) {
+              localStorage.removeItem(`tablelink_store_rating_${store.id}`);
+              console.log(`⭐ 매장 ${store.id} 별점 캐시 초기화`);
+            }
+
+            // 리뷰 목록 새로고침
+            renderAllReview(store);
+          } else {
+            const errorData = await response.json();
+            console.error('❌ 리뷰 삭제 실패:', errorData);
+            alert('리뷰 삭제에 실패했습니다: ' + (errorData.error || '알 수 없는 오류'));
+          }
+        } catch (error) {
+          console.error('❌ 리뷰 삭제 오류:', error);
+          alert('리뷰 삭제 중 오류가 발생했습니다.');
+        }
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ 리뷰 데이터 로딩 실패:', error);
+
+    // 에러 발생 시 기본 UI 렌더링
+    const mainEl = document.getElementById('main');
+    if (!mainEl) return;
+
+    mainEl.innerHTML = `
+      <div style="padding: 20px; text-align: center;">
+        <h2>리뷰를 불러올 수 없습니다</h2>
+        <p>네트워크 오류가 발생했습니다.</p>
+        <button onclick="renderStore(${JSON.stringify(store).replace(/"/g, '&quot;')})" 
+                style="padding: 10px 20px; background: #297efc; color: white; border: none; border-radius: 6px;">
+          뒤로가기
+        </button>
+      </div>
+    `;
+  }
+}

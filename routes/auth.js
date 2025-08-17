@@ -1,0 +1,430 @@
+
+const express = require('express');
+const router = express.Router();
+const pool = require('../shared/config/database');
+
+// 아이디 중복 체크 API
+router.post('/users/check-id', async (req, res) => {
+  const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ error: '아이디를 입력해주세요' });
+  }
+
+  // 아이디 형식 검증
+  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+  }
+
+  try {
+    const result = await pool.query('SELECT id FROM users WHERE id = $1', [id.trim()]);
+    
+    if (result.rows.length > 0) {
+      res.json({ available: false, message: '이미 사용 중인 아이디입니다' });
+    } else {
+      res.json({ available: true, message: '사용 가능한 아이디입니다' });
+    }
+  } catch (error) {
+    console.error('아이디 중복 체크 실패:', error);
+    res.status(500).json({ error: '아이디 중복 체크 중 오류가 발생했습니다' });
+  }
+});
+
+// 사용자 회원가입 API
+router.post('/users/signup', async (req, res) => {
+  const { id, pw, name, phone } = req.body;
+
+  // 서버 측 유효성 검증
+  if (!id || !pw) {
+    return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다' });
+  }
+
+  // 아이디 형식 검증
+  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+  }
+
+  // 비밀번호 길이 검증
+  if (pw.length < 4) {
+    return res.status(400).json({ error: '비밀번호는 최소 4자 이상이어야 합니다' });
+  }
+
+  // 전화번호 형식 검증 (입력된 경우에만)
+  if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
+    return res.status(400).json({ error: '전화번호 형식이 올바르지 않습니다' });
+  }
+
+  try {
+    // 데이터 정제
+    const cleanedData = {
+      id: id.trim(),
+      pw: pw.trim(),
+      name: name ? name.trim() : null,
+      phone: phone ? phone.trim() : null
+    };
+
+    await pool.query(
+      'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
+      [cleanedData.id, cleanedData.pw, cleanedData.name, cleanedData.phone]
+    );
+    
+    console.log(`✅ 새 사용자 가입: ${cleanedData.id} (${cleanedData.name || '익명'})`);
+    res.json({ success: true, message: '회원가입 성공' });
+  } catch (error) {
+    if (error.code === '23505') {
+      res.status(409).json({ error: '이미 존재하는 아이디입니다' });
+    } else {
+      console.error('회원가입 실패:', error);
+      res.status(500).json({ error: '회원가입 처리 중 오류가 발생했습니다' });
+    }
+  }
+});
+
+// 사용자 로그인 API
+router.post('/users/login', async (req, res) => {
+  const { id, pw } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
+    }
+
+    const user = result.rows[0];
+    if (user.pw !== pw) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        point: user.point || 0,
+        orderList: user.order_list || [],
+        reservationList: user.reservation_list || [],
+        coupons: user.coupons || { unused: [], used: [] },
+        favoriteStores: user.favorite_stores || []
+      }
+    });
+  } catch (error) {
+    console.error('로그인 실패:', error);
+    res.status(500).json({ error: '로그인 실패' });
+  }
+});
+
+// 로그아웃 API
+router.post('/logout', (req, res) => {
+  console.log('🔓 로그아웃 요청');
+  res.json({ success: true, message: '로그아웃 완료' });
+});
+
+// 사용자 정보 조회 API
+router.post('/users/info', async (req, res) => {
+  const { userId } = req.body;
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = result.rows[0];
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email || '',
+        address: user.address || '',
+        birth: user.birth || '',
+        gender: user.gender || '',
+        point: user.point || 0,
+        orderList: user.order_list || [],
+        reservationList: user.reservation_list || [],
+        coupons: user.coupons || { unused: [], used: [] },
+        favoriteStores: user.favorite_stores || []
+      }
+    });
+  } catch (error) {
+    console.error('사용자 정보 조회 실패:', error);
+    res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+// 즐겨찾기 조회 API
+router.get('/users/favorites/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    // 사용자 존재 확인
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    // favorites 테이블에서 즐겨찾기 매장 조회
+    const favoritesResult = await pool.query(`
+      SELECT 
+        f.id as favorite_id,
+        f.created_at,
+        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
+        sa.address_full as address, sa.latitude, sa.longitude
+      FROM favorites f
+      JOIN stores s ON f.store_id = s.id
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE f.user_id = $1
+      ORDER BY f.created_at DESC
+    `, [userId]);
+
+    const favoriteStores = favoritesResult.rows.map(store => ({
+      id: store.id,
+      favoriteId: store.favorite_id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0,
+      isOpen: store.is_open !== false,
+      favoriteDate: store.created_at,
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : null
+    }));
+
+    console.log(`✅ 사용자 ${userId} 즐겨찾기 조회: ${favoriteStores.length}개 매장`);
+
+    res.json({
+      success: true,
+      stores: favoriteStores
+    });
+
+  } catch (error) {
+    console.error('즐겨찾기 조회 실패:', error);
+    res.status(500).json({ error: '즐겨찾기 조회 실패' });
+  }
+});
+
+// 즐겨찾기 토글 API (store_id 기반)
+router.post('/users/favorite/toggle', async (req, res) => {
+  const { userId, storeId, action } = req.body;
+
+  console.log(`🔄 즐겨찾기 토글 요청: userId=${userId}, storeId=${storeId}, action=${action}`);
+
+  try {
+    // 입력 검증
+    if (!userId || !storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'userId와 storeId가 필요합니다' 
+      });
+    }
+
+    // 사용자 및 매장 존재 확인
+    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        error: '사용자를 찾을 수 없습니다' 
+      });
+    }
+
+    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [parseInt(storeId)]);
+    if (storeCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        error: '매장을 찾을 수 없습니다' 
+      });
+    }
+
+    const storeName = storeCheck.rows[0].name;
+
+    // 현재 즐겨찾기 상태 확인
+    const currentFavorite = await pool.query(
+      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
+      [userId, parseInt(storeId)]
+    );
+    
+    const isFavorited = currentFavorite.rows.length > 0;
+    console.log(`📋 현재 즐겨찾기 상태: ${isFavorited ? '등록됨' : '등록안됨'}`);
+
+    // action이 없으면 현재 상태를 토글
+    let finalAction = action;
+    if (!action) {
+      finalAction = isFavorited ? 'remove' : 'add';
+    }
+
+    if (finalAction === 'add') {
+      if (isFavorited) {
+        console.log(`ℹ️ 이미 즐겨찾기 등록된 매장: ${storeName}`);
+        return res.json({
+          success: true,
+          message: '이미 즐겨찾기에 등록된 매장입니다',
+          storeName: storeName,
+          action: 'already_added'
+        });
+      }
+
+      // 즐겨찾기 추가 (트리거가 favorite_count 자동 업데이트)
+      await pool.query(`
+        INSERT INTO favorites (user_id, store_id)
+        VALUES ($1, $2)
+      `, [userId, parseInt(storeId)]);
+
+      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 추가`);
+
+      res.json({
+        success: true,
+        message: '즐겨찾기에 추가되었습니다',
+        storeName: storeName,
+        action: 'added'
+      });
+
+    } else if (finalAction === 'remove') {
+      if (!isFavorited) {
+        console.log(`ℹ️ 즐겨찾기에 없는 매장: ${storeName}`);
+        return res.json({
+          success: true,
+          message: '즐겨찾기에 없는 매장입니다',
+          storeName: storeName,
+          action: 'not_found'
+        });
+      }
+
+      // 즐겨찾기 제거 (트리거가 favorite_count 자동 업데이트)
+      const deleteResult = await pool.query(
+        'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
+        [userId, parseInt(storeId)]
+      );
+
+      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 제거 (삭제된 행: ${deleteResult.rowCount})`);
+
+      res.json({
+        success: true,
+        message: '즐겨찾기에서 제거되었습니다',
+        storeName: storeName,
+        action: 'removed'
+      });
+
+    } else {
+      res.status(400).json({ 
+        success: false,
+        error: '잘못된 액션입니다. add 또는 remove만 허용됩니다.' 
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 즐겨찾기 토글 실패:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '즐겨찾기 설정 실패: ' + error.message 
+    });
+  }
+});
+
+// 즐겨찾기 상태 확인 API
+router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+
+    console.log(`🔍 즐겨찾기 상태 확인: userId=${userId}, storeId=${storeId}`);
+
+    if (!userId || !storeId) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'userId와 storeId가 필요합니다' 
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
+      [userId, parseInt(storeId)]
+    );
+
+    const isFavorited = result.rows.length > 0;
+
+    console.log(`✅ 즐겨찾기 상태 확인 완료: ${isFavorited ? '등록됨' : '등록안됨'}`);
+
+    res.json({
+      success: true,
+      userId: userId,
+      storeId: parseInt(storeId),
+      isFavorited: isFavorited
+    });
+
+  } catch (error) {
+    console.error('❌ 즐겨찾기 상태 확인 실패:', error);
+    res.status(500).json({ 
+      success: false,
+      error: '즐겨찾기 상태 확인 실패: ' + error.message 
+    });
+  }
+});
+
+// 예약 추가 API
+router.post('/reservations/add', async (req, res) => {
+  const { userId, reservationData } = req.body;
+
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const currentReservations = user.reservation_list || [];
+    const newReservations = [...currentReservations, reservationData];
+
+    await pool.query(
+      'UPDATE users SET reservation_list = $1 WHERE id = $2',
+      [JSON.stringify(newReservations), userId]
+    );
+
+    res.json({
+      success: true,
+      message: '예약이 추가되었습니다',
+      reservations: newReservations
+    });
+
+  } catch (error) {
+    console.error('예약 추가 실패:', error);
+    res.status(500).json({ error: '예약 추가 실패' });
+  }
+});
+
+// 쿠폰 발급 API
+router.post('/coupons/issue', async (req, res) => {
+  const { userId, couponData } = req.body;
+
+  try {
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+    }
+
+    const user = userResult.rows[0];
+    const currentCoupons = user.coupons || { unused: [], used: [] };
+    currentCoupons.unused.push(couponData);
+
+    await pool.query(
+      'UPDATE users SET coupons = $1 WHERE id = $2',
+      [JSON.stringify(currentCoupons), userId]
+    );
+
+    res.json({
+      success: true,
+      message: '쿠폰이 발급되었습니다',
+      coupon: couponData
+    });
+
+  } catch (error) {
+    console.error('쿠폰 발급 실패:', error);
+    res.status(500).json({ error: '쿠폰 발급 실패' });
+  }
+});
+
+module.exports = router;
