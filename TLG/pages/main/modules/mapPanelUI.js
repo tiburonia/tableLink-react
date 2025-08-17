@@ -233,9 +233,14 @@ window.MapPanelUI = {
           overflow-y: auto;
           padding: 8px 4px 20px 4px;
           box-sizing: border-box;
+          transition: height 0.3s ease;
           /* 스크롤바 숨김 */
           scrollbar-width: none; /* Firefox */
           -ms-overflow-style: none; /* IE/Edge */
+        }
+
+        #storeListContainer.filter-collapsed {
+          height: calc(100% - 60px); /* 핸들만 빼고 (필터 접힘 상태) */
         }
         #storeListContainer::-webkit-scrollbar {
           display: none; /* Chrome, Safari, Opera */
@@ -450,8 +455,9 @@ window.MapPanelUI = {
   setupFilterToggle() {
     const filterToggleBtn = document.getElementById('filterToggleBtn');
     const filterContainer = document.getElementById('filterContainer');
+    const storeListContainer = document.getElementById('storeListContainer');
 
-    if (!filterToggleBtn || !filterContainer) {
+    if (!filterToggleBtn || !filterContainer || !storeListContainer) {
       console.warn('⚠️ 필터 토글 요소를 찾을 수 없습니다');
       return;
     }
@@ -466,11 +472,13 @@ window.MapPanelUI = {
         // 접기
         filterContainer.classList.add('collapsed');
         filterToggleBtn.classList.remove('expanded');
+        storeListContainer.classList.add('filter-collapsed');
         console.log('📁 필터 영역 접힘');
       } else {
         // 펼치기
         filterContainer.classList.remove('collapsed');
         filterToggleBtn.classList.add('expanded');
+        storeListContainer.classList.remove('filter-collapsed');
         console.log('📂 필터 영역 펼침');
       }
     });
