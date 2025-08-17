@@ -3,9 +3,10 @@ async function renderMyPage() {
   const main = document.getElementById('main');
 
   main.innerHTML = `
-    <div class="mypage-container">
-      <!-- 헤더 -->
-      <div class="mypage-header">
+    <!-- 헤더 -->
+    <header id="mypageHeader">
+      <div class="header-background"></div>
+      <div class="header-content">
         <div class="header-title">
           <h1>마이페이지</h1>
           <p>나의 활동과 정보를 한눈에</p>
@@ -17,157 +18,162 @@ async function renderMyPage() {
           </svg>
         </button>
       </div>
+    </header>
 
-      <!-- 스크롤 가능한 콘텐츠 영역 -->
-      <div class="content-wrapper">
-        <!-- 프로필 카드 -->
-        <div class="profile-card">
-          <div class="profile-avatar">
-            <div class="avatar-circle" id="profileImage">
-              <span class="avatar-text">👤</span>
+    <!-- 마이페이지 패널 -->
+    <div id="mypagePanel" class="collapsed">
+      <div id="mypagePanelHandle"></div>
+      <div id="mypagePanelContainer">
+        <div id="mypageInfoContainer">
+          <!-- 프로필 카드 -->
+          <div class="profile-card">
+            <div class="profile-avatar">
+              <div class="avatar-circle" id="profileImage">
+                <span class="avatar-text">👤</span>
+              </div>
+              <div class="online-indicator"></div>
             </div>
-            <div class="online-indicator"></div>
+
+            <div class="profile-info">
+              <h2 id="profileName" class="profile-name">사용자 정보 로딩중...</h2>
+              <div id="profileLevel" class="profile-badge">등급 확인중...</div>
+
+              <div class="profile-stats">
+                <div class="stat-item">
+                  <span class="stat-number" id="totalOrders">-</span>
+                  <span class="stat-label">총 주문</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-number" id="totalReviews">-</span>
+                  <span class="stat-label">리뷰</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-number" id="favoriteCount">-</span>
+                  <span class="stat-label">즐겨찾기</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="profile-info">
-            <h2 id="profileName" class="profile-name">사용자 정보 로딩중...</h2>
-            <div id="profileLevel" class="profile-badge">등급 확인중...</div>
-
-            <div class="profile-stats">
-              <div class="stat-item">
-                <span class="stat-number" id="totalOrders">-</span>
-                <span class="stat-label">총 주문</span>
-              </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item">
-                <span class="stat-number" id="totalReviews">-</span>
-                <span class="stat-label">리뷰</span>
-              </div>
-              <div class="stat-divider"></div>
-              <div class="stat-item">
-                <span class="stat-number" id="favoriteCount">-</span>
-                <span class="stat-label">즐겨찾기</span>
-              </div>
+          <!-- 퀵 액션 메뉴 -->
+          <div class="quick-actions">
+            <div class="quick-action-item" onclick="renderAllOrderHTML(userInfo)">
+              <div class="action-icon">📦</div>
+              <span class="action-label">주문내역</span>
+            </div>
+            <div class="quick-action-item">
+              <div class="action-icon">🎫</div>
+              <span class="action-label">쿠폰함</span>
+            </div>
+            <div class="quick-action-item">
+              <div class="action-icon">💖</div>
+              <span class="action-label">즐겨찾기</span>
+            </div>
+            <div class="quick-action-item">
+              <div class="action-icon">🏆</div>
+              <span class="action-label">업적</span>
             </div>
           </div>
-        </div>
 
-        <!-- 퀵 액션 메뉴 -->
-        <div class="quick-actions">
-          <div class="quick-action-item" onclick="renderAllOrderHTML(userInfo)">
-            <div class="action-icon">📦</div>
-            <span class="action-label">주문내역</span>
+          <!-- 섹션들 -->
+          <div class="sections-container">
+            <!-- 최근 주문 -->
+            <section class="section-card">
+              <div class="section-header">
+                <h3>📦 최근 주문</h3>
+                <button class="see-more-btn" onclick="renderAllOrderHTML(userInfo)">
+                  <span>전체보기</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="orderList" class="content-list">
+                <div class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 리뷰 내역 -->
+            <section class="section-card">
+              <div class="section-header">
+                <h3>⭐ 내 리뷰</h3>
+                <button class="see-more-btn" id="viewAllReviewsBtn">
+                  <span>전체보기</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="reviewList" class="content-list">
+                <div class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 즐겨찾기 매장 -->
+            <section class="section-card">
+              <div class="section-header">
+                <h3>💖 즐겨찾기 매장</h3>
+                <button class="see-more-btn" id="viewAllFavoritesBtn">
+                  <span>전체보기</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="favoriteStoresList" class="content-list">
+                <div class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 단골 레벨 -->
+            <section class="section-card">
+              <div class="section-header">
+                <h3>🏆 단골 레벨</h3>
+                <button class="see-more-btn" id="viewAllLevelsBtn">
+                  <span>전체보기</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  </button>
+              </div>
+              <div id="regularLevelsList" class="content-list">
+                <div class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 매장별 포인트 -->
+            <section class="section-card">
+              <div class="section-header">
+                <h3>💰 보유 포인트</h3>
+                <button class="see-more-btn" id="viewAllPointsBtn">
+                  <span>전체보기</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+              <div id="storePointsList" class="content-list">
+                <div class="loading-skeleton">
+                  <div class="skeleton-line"></div>
+                  <div class="skeleton-line short"></div>
+                </div>
+              </div>
+            </section>
           </div>
-          <div class="quick-action-item">
-            <div class="action-icon">🎫</div>
-            <span class="action-label">쿠폰함</span>
-          </div>
-          <div class="quick-action-item">
-            <div class="action-icon">💖</div>
-            <span class="action-label">즐겨찾기</span>
-          </div>
-          <div class="quick-action-item">
-            <div class="action-icon">🏆</div>
-            <span class="action-label">업적</span>
-          </div>
-        </div>
-
-        <!-- 섹션들 -->
-        <div class="sections-container">
-          <!-- 최근 주문 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>📦 최근 주문</h3>
-              <button class="see-more-btn" onclick="renderAllOrderHTML(userInfo)">
-                <span>전체보기</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <div id="orderList" class="content-list">
-              <div class="loading-skeleton">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 리뷰 내역 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>⭐ 내 리뷰</h3>
-              <button class="see-more-btn" id="viewAllReviewsBtn">
-                <span>전체보기</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <div id="reviewList" class="content-list">
-              <div class="loading-skeleton">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 즐겨찾기 매장 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>💖 즐겨찾기 매장</h3>
-              <button class="see-more-btn" id="viewAllFavoritesBtn">
-                <span>전체보기</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <div id="favoriteStoresList" class="content-list">
-              <div class="loading-skeleton">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 단골 레벨 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>🏆 단골 레벨</h3>
-              <button class="see-more-btn" id="viewAllLevelsBtn">
-                <span>전체보기</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <div id="regularLevelsList" class="content-list">
-              <div class="loading-skeleton">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          </section>
-
-          <!-- 매장별 포인트 -->
-          <section class="section-card">
-            <div class="section-header">
-              <h3>💰 보유 포인트</h3>
-              <button class="see-more-btn" id="viewAllPointsBtn">
-                <span>전체보기</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-            </div>
-            <div id="storePointsList" class="content-list">
-              <div class="loading-skeleton">
-                <div class="skeleton-line"></div>
-                <div class="skeleton-line short"></div>
-              </div>
-            </div>
-          </section>
         </div>
       </div>
     </div>
@@ -192,27 +198,38 @@ async function renderMyPage() {
     </nav>
 
     <style>
-      /* 전체 컨테이너 */
-      .mypage-container {
+      /* 헤더 영역 */
+      #mypageHeader {
         position: fixed;
         top: 0;
-        left: 0;
-        right: 0;
-        bottom: 78px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 160px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+        z-index: 11;
         overflow: hidden;
       }
 
-      /* 헤더 */
-      .mypage-header {
+      .header-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('TableLink.png') center/cover;
+        opacity: 0.1;
+      }
+
+      .header-content {
+        position: relative;
+        height: 100%;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px 20px 0 20px;
+        padding: 20px;
         color: white;
-        position: relative;
-        z-index: 10;
       }
 
       .header-title h1 {
@@ -220,6 +237,7 @@ async function renderMyPage() {
         font-size: 28px;
         font-weight: 700;
         letter-spacing: -0.5px;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       }
 
       .header-title p {
@@ -250,18 +268,77 @@ async function renderMyPage() {
         transform: scale(1.05);
       }
 
-      /* 스크롤 가능한 콘텐츠 영역 */
-      .content-wrapper {
-        position: absolute;
-        top: 90px;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: #f8fafc;
-        border-radius: 24px 24px 0 0;
-        overflow-y: auto;
-        padding: 24px 20px 40px 20px;
-        box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.1);
+      /* 마이페이지 패널 - renderStore 스타일 적용 */
+      #mypagePanel {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        background: white;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+      }
+
+      #mypagePanel.collapsed {
+        top: 160px;
+        bottom: 78px;
+        height: calc(100vh - 238px);
+        border-radius: 20px 20px 0 0;
+      }
+
+      #mypagePanel.expanded {
+        top: 0;
+        bottom: 78px;
+        height: calc(100vh - 78px);
+        border-radius: 0;
+        z-index: 99;
+      }
+
+      #mypagePanelHandle {
+        width: 40px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 12px auto 8px auto;
+        cursor: grab;
+        touch-action: none;
+        transition: background 0.2s ease;
+      }
+
+      #mypagePanelHandle:hover {
+        background: #9ca3af;
+      }
+
+      #mypagePanelContainer {
+        position: relative;
+        height: calc(100% - 24px);
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 20px 100px 20px;
+        scroll-behavior: smooth;
+        will-change: scroll-position;
+      }
+
+      #mypagePanelContainer::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      #mypagePanelContainer::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #mypagePanelContainer::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+      }
+
+      #mypagePanelContainer::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
       }
 
       /* 프로필 카드 */
@@ -939,8 +1016,184 @@ async function renderMyPage() {
     });
   }
 
+  // 패널 핸들링 설정
+  setupMypagePanelHandling();
+
   // 비동기로 사용자 정보 로드 및 업데이트
   loadUserData();
+}
+
+// 마이페이지 패널 핸들링 설정 (renderStore 스타일)
+function setupMypagePanelHandling() {
+  const panel = document.getElementById('mypagePanel');
+  const panelHandle = document.getElementById('mypagePanelHandle');
+  const panelContainer = document.getElementById('mypagePanelContainer');
+
+  if (!panel || !panelContainer) return;
+
+  // 레이아웃 조정
+  adjustMypagePanelLayout();
+
+  // 이벤트 리스너 설정
+  window.addEventListener('resize', () => adjustMypagePanelLayout());
+  panel.addEventListener('transitionend', () => adjustMypagePanelLayout());
+
+  // 휠/스크롤 이벤트 설정
+  setupMypageWheelEvents(panel, panelContainer);
+
+  // 터치 이벤트 설정
+  setupMypageTouchEvents(panel, panelContainer);
+
+  setTimeout(() => adjustMypagePanelLayout(), 0);
+}
+
+// 마이페이지 패널 레이아웃 조정
+function adjustMypagePanelLayout() {
+  const panel = document.getElementById('mypagePanel');
+  const panelContainer = document.getElementById('mypagePanelContainer');
+  const bottomBar = document.getElementById('bottomBar');
+  const panelHandle = document.getElementById('mypagePanelHandle');
+
+  if (!panel || !panelContainer) return;
+
+  const vh = window.innerHeight;
+  const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+  const bottomBarHeight = bottomBar ? bottomBar.offsetHeight : 78;
+  const handleHeight = panelHandle ? panelHandle.offsetHeight : 24;
+  const panelPadding = 0;
+
+  // 패널 컨테이너 높이 계산
+  const panelHeight = vh - top - bottomBarHeight - handleHeight - panelPadding;
+  panelContainer.style.height = `${panelHeight}px`;
+
+  // 스크롤 활성화 보장
+  panelContainer.style.overflowY = 'auto';
+  panelContainer.style.overflowX = 'hidden';
+  panelContainer.style.webkitOverflowScrolling = 'touch';
+
+  console.log(`📐 마이페이지 패널 레이아웃 조정: 높이 ${panelHeight}px, 상단 ${top}px`);
+}
+
+// 마이페이지 패널 휠 이벤트 설정
+function setupMypageWheelEvents(panel, panelContainer) {
+  panel.addEventListener('wheel', (e) => {
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+    const isExpanded = top === 0;
+    const isCollapsed = !isExpanded;
+
+    // 아래로(내림) - 패널 확장
+    if (e.deltaY > 0) {
+      if (isCollapsed) {
+        e.preventDefault();
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+        setTimeout(() => adjustMypagePanelLayout(), 30);
+        return;
+      }
+      // 확장된 상태에서는 스크롤 허용
+      return;
+    }
+
+    // 위로(올림) - 패널 축소 또는 스크롤
+    if (e.deltaY < 0) {
+      if (isExpanded) {
+        // 스크롤이 맨 위에 있을 때만 패널 축소
+        if (panelContainer.scrollTop <= 0) {
+          e.preventDefault();
+          panel.classList.remove('expanded');
+          panel.classList.add('collapsed');
+          panel.style.top = '160px';
+          setTimeout(() => adjustMypagePanelLayout(), 30);
+          return;
+        }
+        // 스크롤이 중간에 있으면 스크롤 허용
+        return;
+      }
+    }
+  });
+}
+
+// 마이페이지 패널 터치 이벤트 설정
+function setupMypageTouchEvents(panel, panelContainer) {
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  let initialScrollTop = 0;
+
+  // 터치 시작
+  panel.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    initialScrollTop = panelContainer.scrollTop;
+    isDragging = true;
+    panel.style.transition = 'none';
+  });
+
+  // 터치 이동
+  panel.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+
+    currentY = e.touches[0].clientY;
+    const deltaY = startY - currentY;
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+    const isExpanded = top === 0;
+    const isCollapsed = !isExpanded;
+
+    // 확장된 상태에서 스크롤이 맨 위에 있고 위로 드래그하면 패널 축소
+    if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
+      e.preventDefault();
+      const newTop = Math.max(0, Math.min(160, -deltaY));
+      panel.style.top = `${newTop}px`;
+      return;
+    }
+
+    // 축소된 상태에서 아래로 드래그하면 패널 확장
+    if (isCollapsed && deltaY > 0) {
+      e.preventDefault();
+      const newTop = Math.max(0, Math.min(160, 160 - deltaY));
+      panel.style.top = `${newTop}px`;
+      return;
+    }
+  });
+
+  // 터치 종료
+  panel.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+
+    isDragging = false;
+    const deltaY = startY - currentY;
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+
+    panel.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    // 드래그 거리에 따라 패널 상태 결정
+    if (Math.abs(deltaY) > 50) {
+      if (deltaY > 0) {
+        // 아래로 드래그 - 확장
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      } else {
+        // 위로 드래그 - 축소
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      }
+    } else {
+      // 드래그 거리가 짧으면 원래 위치로 복원
+      if (top < 80) {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      } else {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      }
+    }
+
+    setTimeout(() => adjustMypagePanelLayout(), 30);
+  });
 }
 
 // 즐겨찾기 매장을 불러오는 함수
