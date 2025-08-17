@@ -65,15 +65,23 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
       }
 
       .order-container {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 430px;
+        margin: 0 auto;
         display: flex;
         flex-direction: column;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         overflow: hidden;
       }
 
-      /* 헤더 - 고정 */
+      /* 헤더 - 고정 높이 */
       .order-header {
+        height: 80px;
         background: white;
         padding: 20px 16px;
         display: flex;
@@ -82,7 +90,6 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         flex-shrink: 0;
         z-index: 100;
-        height: 100px;
       }
 
       .header-back-btn {
@@ -143,18 +150,21 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         font-weight: 500;
       }
 
-      /* 메인 콘텐츠 - 스크롤 가능 */
+      /* 메인 콘텐츠 - 중간 유동 공간, 스크롤 가능 */
       .order-content {
         flex: 1;
         overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 20px 16px;
-        height: calc(100vh - 100px - 90px); /* 헤더와 푸터 제외 */
+        overflow-x: hidden;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 600px;
+        margin: 0 auto;
+        width: 100%;
       }
 
       .order-content-inner {
-        max-width: 600px;
-        margin: 0 auto;
         display: flex;
         flex-direction: column;
         gap: 24px;
@@ -413,20 +423,20 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
         background-clip: text;
       }
 
-      /* 푸터 - 고정 위치 */
+      /* 푸터 - 고정 높이 */
       .bottom-actions {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
+        height: 160px;
         background: white;
-        padding: 16px;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-        z-index: 1000;
-        height: 90px;
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
         display: flex;
-        align-items: center;
-        max-width: 430px;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 600px;
+        margin: 0 auto;
+        width: 100%;
+        flex-shrink: 0;
       }
 
       .pay-btn {
