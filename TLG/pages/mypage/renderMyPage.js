@@ -901,51 +901,40 @@ async function renderMyPage() {
   // 전체보기 버튼들 이벤트 리스너
   const viewAllReviewsBtn = document.querySelector('#viewAllReviewsBtn');
   if (viewAllReviewsBtn) {
-    viewAllReviewsBtn.addEventListener('click', () => {
-      const currentUserInfo = { id: userInfo.id };
-      showAllReviewsModal(currentUserInfo);
+    viewAllReviewsBtn.addEventListener('click', async () => {
+      await loadAllReviewScript();
+      if (typeof renderAllReview === 'function') {
+        renderAllReview(userInfo);
+      }
     });
   }
 
   const viewAllFavoritesBtn = document.querySelector('#viewAllFavoritesBtn');
   if (viewAllFavoritesBtn) {
     viewAllFavoritesBtn.addEventListener('click', async () => {
-      const favoriteStoresData = await loadFavoriteStores(userInfo.id);
-      showAllFavoritesModal(favoriteStoresData);
+      await loadAllFavoritesScript();
+      if (typeof renderAllFavorites === 'function') {
+        renderAllFavorites(userInfo);
+      }
     });
   }
 
   const viewAllLevelsBtn = document.querySelector('#viewAllLevelsBtn');
   if (viewAllLevelsBtn) {
     viewAllLevelsBtn.addEventListener('click', async () => {
-      if (!window.RegularLevelManager) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = '/TLG/utils/regularLevelManager.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
+      await loadAllRegularLevelsScript();
+      if (typeof renderAllRegularLevels === 'function') {
+        renderAllRegularLevels(userInfo);
       }
-      const regularLevels = await window.RegularLevelManager.getUserAllRegularLevels(userInfo.id);
-      showAllRegularLevelsModal(regularLevels);
     });
   }
 
   const viewAllPointsBtn = document.querySelector('#viewAllPointsBtn');
   if (viewAllPointsBtn) {
     viewAllPointsBtn.addEventListener('click', async () => {
-      try {
-        const response = await fetch(`/api/regular-levels/user/${userInfo.id}/all-points`);
-        const data = await response.json();
-        if (data.success && data.storePoints) {
-          const storesWithPoints = data.storePoints
-            .filter(store => store.points > 0)
-            .sort((a, b) => b.points - a.points);
-          showAllStorePointsModal(storesWithPoints);
-        }
-      } catch (error) {
-        console.error('포인트 정보 조회 실패:', error);
+      await loadAllPointsScript();
+      if (typeof renderAllPoints === 'function') {
+        renderAllPoints(userInfo);
       }
     });
   }
@@ -1581,188 +1570,114 @@ function goToStore(storeId) {
   }
 }
 
-// 모달 함수들
-async function showAllReviewsModal(currentUserInfo) {
+// 스크립트 로드 함수들
+async function loadAllReviewScript() {
+  if (typeof window.renderAllReview === 'function') {
+    return; // 이미 로드됨
+  }
+
   try {
-    const response = await fetch(`/api/reviews/users/${currentUserInfo.id}`);
-    const data = await response.json();
-
-    if (!data.success) throw new Error('리뷰 데이터 조회 실패');
-
-    const modal = document.createElement('div');
-    modal.className = 'review-modal';
-    modal.innerHTML = `
-      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-          <h3>⭐ 내 리뷰 전체보기 (${data.total}개)</h3>
-          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
-        </div>
-        <div class="all-reviews-list">
-          ${data.reviews.map(review => `
-            <div class="review-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${review.storeId})">
-              <div class="review-header">
-                <span class="review-store">${review.storeName}</span>
-                <span class="review-rating">★ ${review.score}</span>
-              </div>
-              <div class="review-content">${review.content}</div>
-              <div class="review-date">${review.date}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        document.body.removeChild(modal);
-      }
+    console.log('🔄 renderAllReview 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllReview.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllReview 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllReview 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
     });
-
   } catch (error) {
-    console.error('전체 리뷰 조회 실패:', error);
-    alert('리뷰 목록을 불러올 수 없습니다.');
+    console.error('❌ renderAllReview 스크립트 로드 중 오류:', error);
+    throw error;
   }
 }
 
-async function showAllFavoritesModal(favoriteStoresData) {
+async function loadAllFavoritesScript() {
+  if (typeof window.renderAllFavorites === 'function') {
+    return; // 이미 로드됨
+  }
+
   try {
-    const modal = document.createElement('div');
-    modal.className = 'review-modal';
-    modal.innerHTML = `
-      <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-          <h3>💖 전체 즐겨찾기 매장 (${favoriteStoresData.length}개)</h3>
-          <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
-        </div>
-        <div class="all-favorites-list">
-          ${favoriteStoresData.map(store => `
-            <div class="favorite-store-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${store.id})">
-              <div class="favorite-store-content">
-                <div class="favorite-store-name">${store.name}</div>
-                <div class="favorite-store-info">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        document.body.removeChild(modal);
-      }
+    console.log('🔄 renderAllFavorites 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllFavorites.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllFavorites 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllFavorites 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
     });
-
   } catch (error) {
-    console.error('전체 즐겨찾기 조회 실패:', error);
-    alert('즐겨찾기 목록을 불러올 수 없습니다.');
+    console.error('❌ renderAllFavorites 스크립트 로드 중 오류:', error);
+    throw error;
   }
 }
 
-async function showAllRegularLevelsModal(regularLevels) {
-  console.log('showAllRegularLevelsModal 호출됨');
-  const modal = document.createElement('div');
-  modal.className = 'review-modal';
-  modal.innerHTML = `
-    <div class="review-modal-content">
-      <h3>🏆 전체 단골 레벨</h3>
-      <p>단골 레벨 정보 로딩 중...</p>
-      <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">닫기</button>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
-}
-
-async function showAllStorePointsModal(storePoints) {
-  console.log('showAllStorePointsModal 호출됨');
-  const modal = document.createElement('div');
-  modal.className = 'review-modal';
-  modal.innerHTML = `
-    <div class="review-modal-content" style="max-height: 80vh; overflow-y: auto;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; position: sticky; top: 0; background: white; padding-bottom: 10px; border-bottom: 1px solid #eee;">
-        <h3>💰 전체 매장별 포인트 현황 (${storePoints.length}개)</h3>
-        <button class="modal-btn cancel-btn" onclick="this.closest('.review-modal').remove()">✕</button>
-      </div>
-      <div class="all-store-points-list">
-        ${storePoints.map(store => `
-          <div class="store-points-modal-item" style="cursor: pointer; margin-bottom: 12px;" onclick="closeModalAndGoToStore(${store.storeId})">
-            <div class="points-store-header">
-              <div class="points-store-name">${store.storeName}</div>
-              <div class="points-store-category">${store.storeCategory || '기타'}</div>
-            </div>
-            <div class="points-modal-stats">
-              <span class="points-value">${store.points.toLocaleString()}P</span> •
-              <span>${store.visitCount}회 방문</span> •
-              <span>${store.totalSpent.toLocaleString()}원 누적</span>
-            </div>
-            ${store.lastVisitAt ? `
-              <div class="points-modal-last-visit">
-                📅 마지막 방문: ${new Date(store.lastVisitAt).toLocaleDateString()}
-              </div>
-            ` : ''}
-          </div>
-        `).join('')}
-      </div>
-    </div>
-    <style>
-      .store-points-modal-item {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 16px;
-        border: 1px solid #e9ecef;
-        transition: background 0.2s;
-      }
-      .store-points-modal-item:hover {
-        background: #e9ecef;
-      }
-      .points-store-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-      .points-modal-stats {
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 4px;
-      }
-      .points-modal-stats .points-value {
-        color: #28a745;
-        font-weight: 600;
-      }
-      .points-modal-last-visit {
-        color: #999;
-        font-size: 12px;
-      }
-    </style>
-  `;
-
-  document.body.appendChild(modal);
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
-}
-
-// 모달 닫고 매장으로 이동하는 전역 함수
-window.closeModalAndGoToStore = function(storeId) {
-  const modal = document.querySelector('.review-modal');
-  if (modal) {
-    document.body.removeChild(modal);
+async function loadAllRegularLevelsScript() {
+  if (typeof window.renderAllRegularLevels === 'function') {
+    return; // 이미 로드됨
   }
-  goToStore(storeId);
-};
+
+  try {
+    console.log('🔄 renderAllRegularLevels 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllRegularLevels.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllRegularLevels 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllRegularLevels 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllRegularLevels 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
+
+async function loadAllPointsScript() {
+  if (typeof window.renderAllPoints === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllPoints 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllPoints.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllPoints 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllPoints 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllPoints 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
 
 // 전역 함수로 등록
 window.renderMyPage = renderMyPage;
