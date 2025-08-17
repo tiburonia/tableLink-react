@@ -1124,7 +1124,7 @@ async function renderMyAccount() {
   // DOM이 완전히 렌더링된 후 이벤트 리스너 설정
   setTimeout(() => {
     console.log('🔧 renderMyAccount DOM 렌더링 완료, 이벤트 리스너 설정 시작');
-    setupEventListeners();
+    setupAccountEventListeners();
     loadAccountData();
   }, 100);
 
@@ -1132,17 +1132,17 @@ async function renderMyAccount() {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🔧 DOMContentLoaded 이벤트로 추가 설정');
-      setupEventListeners();
+      setupAccountEventListeners();
     });
   } else {
     // DOM이 이미 로드된 경우 즉시 실행
     console.log('🔧 DOM이 이미 로드됨, 즉시 이벤트 리스너 설정');
-    setTimeout(() => setupEventListeners(), 10);
+    setTimeout(() => setupAccountEventListeners(), 10);
   }
 }
 
-// 이벤트 리스너 설정
-function setupEventListeners() {
+// 계정 페이지 전용 이벤트 리스너 설정
+function setupAccountEventListeners() {
   console.log('🔧 이벤트 리스너 등록 중...');
 
   // DOM 요소들을 다시 한번 체크
@@ -1191,7 +1191,7 @@ function setupEventListeners() {
       const retryBackBtn = document.getElementById('backBtn');
       if (retryBackBtn) {
         console.log('✅ 재시도로 뒤로가기 버튼 발견');
-        setupEventListeners();
+        setupAccountEventListeners();
       }
     }, 3000);
   }
