@@ -568,11 +568,22 @@ window.TLL = async function TLL(preselectedStore = null) {
       console.log(`🏪 ${storeName}: ${tables.length}개 테이블 정보 로드 완료`);
 
       if (tables.length > 0) {
-        const tableOptions = tables.map(table => 
-          `<option value="${table.tableNumber}" ${table.isOccupied ? 'disabled' : ''}>${table.tableName}${table.isOccupied ? ' (사용중)' : ''}</option>`
-        ).join('');
+        // 점유중이지 않은 테이블만 선택 가능하도록 필터링
+        const availableTables = tables.filter(table => !table.isOccupied);
+        const occupiedTables = tables.filter(table => table.isOccupied);
+        
+        const tableOptions = [
+          ...availableTables.map(table => 
+            `<option value="${table.tableNumber}">${table.tableName}</option>`
+          ),
+          ...occupiedTables.map(table => 
+            `<option value="${table.tableNumber}" disabled>${table.tableName} (사용중)</option>`
+          )
+        ].join('');
 
         tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
+        
+        console.log(`🏪 ${storeName}: 전체 ${tables.length}개 (사용가능: ${availableTables.length}개, 사용중: ${occupiedTables.length}개)`);
       } else {
         // 테이블이 없는 경우 기본값 사용
         console.warn(`⚠️ ${storeName}에 테이블 정보가 없어 기본값 사용`);

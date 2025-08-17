@@ -425,14 +425,14 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
 
       /* 푸터 - 고정 높이 */
       .bottom-actions {
-        height: 160px;
+        height: 120px;
         background: white;
         padding: 20px;
         border-top: 1px solid #e2e8f0;
-        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        justify-content: center;
         max-width: 600px;
         margin: 0 auto;
         width: 100%;
@@ -441,16 +441,19 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
 
       .pay-btn {
         width: 100%;
-        padding: 16px 24px;
+        height: 60px;
         border: none;
-        border-radius: 12px;
+        border-radius: 16px;
         background: linear-gradient(135deg, #059669 0%, #047857 100%);
         color: white;
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 18px;
+        font-weight: 800;
         cursor: pointer;
         transition: all 0.2s ease;
         box-shadow: 0 4px 16px rgba(5, 150, 105, 0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .pay-btn:disabled {
