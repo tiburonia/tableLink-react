@@ -1126,7 +1126,19 @@ async function renderMyAccount() {
     console.log('🔧 renderMyAccount DOM 렌더링 완료, 이벤트 리스너 설정 시작');
     setupEventListeners();
     loadAccountData();
-  }, 50);
+  }, 100);
+
+  // 추가 안전장치 - DOMContentLoaded와 동시에 실행
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🔧 DOMContentLoaded 이벤트로 추가 설정');
+      setupEventListeners();
+    });
+  } else {
+    // DOM이 이미 로드된 경우 즉시 실행
+    console.log('🔧 DOM이 이미 로드됨, 즉시 이벤트 리스너 설정');
+    setTimeout(() => setupEventListeners(), 10);
+  }
 }
 
 // 이벤트 리스너 설정
@@ -1148,24 +1160,40 @@ function setupEventListeners() {
   if (backBtn) {
     console.log('✅ 뒤로가기 버튼 발견, 이벤트 리스너 등록 중...');
     
-    backBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('🔙 뒤로가기 버튼 클릭됨');
-      
-      // 직접 renderMyPage 호출 시도
-      if (typeof window.renderMyPage === 'function') {
-        console.log('✅ renderMyPage 함수 호출');
-        window.renderMyPage();
-      } else {
-        console.log('🔄 renderMyPage 함수가 없음 - 브라우저 뒤로가기 사용');
-        window.history.back();
-      }
-    });
+    // 기존 이벤트 리스너 제거 후 새로 등록
+    backBtn.replaceWith(backBtn.cloneNode(true));
+    const newBackBtn = document.getElementById('backBtn');
     
-    console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록 완료');
+    if (newBackBtn) {
+      newBackBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('🔙 뒤로가기 버튼 클릭됨');
+        
+        // 직접 renderMyPage 호출 시도
+        if (typeof window.renderMyPage === 'function') {
+          console.log('✅ renderMyPage 함수 호출');
+          window.renderMyPage();
+        } else {
+          console.log('🔄 renderMyPage 함수가 없음 - 브라우저 뒤로가기 사용');
+          window.history.back();
+        }
+      });
+      
+      console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록 완료');
+    }
   } else {
     console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
+    
+    // 3초 후 다시 시도
+    setTimeout(() => {
+      console.log('🔄 3초 후 뒤로가기 버튼 재검색 시도');
+      const retryBackBtn = document.getElementById('backBtn');
+      if (retryBackBtn) {
+        console.log('✅ 재시도로 뒤로가기 버튼 발견');
+        setupEventListeners();
+      }
+    }, 3000);
   }
 
   if (logoutBtn) {
