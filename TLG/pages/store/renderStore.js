@@ -44,6 +44,11 @@ async function renderStore(store) {
     let displayRating = '0.0';
     window.StoreUIManager.renderStoreHTML(store, displayRating);
 
+    // CSS 로딩 확인
+    if (window.StoreUIManager && typeof window.StoreUIManager.loadStoreStyles === 'function') {
+      window.StoreUIManager.loadStoreStyles();
+    }
+
     // UI 렌더링 후 실제 리뷰 데이터 비동기 로드
     updateStoreRatingAsync(store).then(() => {
       // 업데이트된 정보가 있으면 UI 재업데이트

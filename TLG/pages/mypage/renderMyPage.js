@@ -1,6 +1,16 @@
 async function renderMyPage() {
   const main = document.getElementById('main');
 
+  // CSS 로딩 확인
+  if (!document.querySelector('link[href="/TLG/styles/renderMyPage.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = '/TLG/styles/renderMyPage.css';
+    document.head.appendChild(link);
+    console.log('✅ MyPage CSS 로드 완료');
+  }
+
   main.innerHTML = `
     <div class="mypage-container">
       <!-- 헤더 -->

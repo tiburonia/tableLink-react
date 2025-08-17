@@ -1,5 +1,7 @@
 
 window.TLL = async function TLL(preselectedStore = null) {
+  const main = document.getElementById('main');
+  
   // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
     <div class="tll-layout">

@@ -89,11 +89,18 @@ window.MapPanelUI = {
   },
 
   loadPanelStyles() {
+    // 이미 로드된 CSS인지 확인
+    if (document.querySelector('link[href="/TLG/styles/mapPanelUI.css"]')) {
+      console.log('✅ MapPanelUI CSS 이미 로드됨');
+      return;
+    }
+
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.type = 'text/css';
     link.href = '/TLG/styles/mapPanelUI.css';
     document.head.appendChild(link);
+    console.log('✅ MapPanelUI CSS 로드 완료');
   },
 
   // 필터링 이벤트 설정 (패널 토글 없이 필터링만)
@@ -595,6 +602,9 @@ window.MapPanelUI = {
     }
   }
 };
+
+// CSS 자동 로딩
+window.MapPanelUI.loadPanelStyles();
 
 // 실제 사용 시 MapPanelUI.init(); 호출 필요
 // window.MapPanelUI.init();

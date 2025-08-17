@@ -236,12 +236,26 @@ window.StoreUIManager = {
     `;
   },
 
-  getStoreStyles() {
+  loadStoreStyles() {
+    // 이미 로드된 CSS인지 확인
+    if (document.querySelector('link[href="/TLG/styles/renderStoreUI.css"]')) {
+      console.log('✅ StoreUI CSS 이미 로드됨');
+      return;
+    }
+
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.type = 'text/css';
     link.href = '/TLG/styles/renderStoreUI.css';
     document.head.appendChild(link);
+    console.log('✅ StoreUI CSS 로드 완료');
+  },
+
+  getStoreStyles() {
+    this.loadStoreStyles();
     return ''; // Return empty string as styles are now in an external file
   }
 };
+
+// CSS 자동 로딩
+window.StoreUIManager.loadStoreStyles();
