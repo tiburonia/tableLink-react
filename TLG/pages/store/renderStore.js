@@ -355,7 +355,7 @@ async function updateStoreRatingAsync(store) {
       const reviewScoreElement = document.getElementById('reviewScore');
       if (reviewScoreElement) {
         const displayRating = parseFloat(actualRating).toFixed(1);
-        reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink">></span>`;
+        reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
         console.log('✅ 실제 리뷰 기반 별점 UI 업데이트 완료:', displayRating);
 
         // reviewLink 이벤트 리스너 추가
