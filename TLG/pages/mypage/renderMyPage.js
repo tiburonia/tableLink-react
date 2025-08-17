@@ -265,7 +265,8 @@ async function renderMyPage() {
         transition: all 0.2s ease;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        z-index: 1002;
+        z-index: 9999;
+        pointer-events: auto;
       }
 
       .settings-btn:hover {
@@ -327,6 +328,7 @@ async function renderMyPage() {
         padding: 0 20px 100px 20px;
         scroll-behavior: smooth;
         will-change: scroll-position;
+        max-height: calc(100vh - 178px);
       }
 
       #mypagePanelContainer::-webkit-scrollbar {
@@ -1108,7 +1110,7 @@ function setupMypageWheelEvents(panel, panelContainer) {
           e.preventDefault();
           panel.classList.remove('expanded');
           panel.classList.add('collapsed');
-          panel.style.top = '160px';
+          panel.style.top = '100px';
           setTimeout(() => adjustMypagePanelLayout(), 30);
           return;
         }
@@ -1147,7 +1149,7 @@ function setupMypageTouchEvents(panel, panelContainer) {
     // 확장된 상태에서 스크롤이 맨 위에 있고 위로 드래그하면 패널 축소
     if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
       e.preventDefault();
-      const newTop = Math.max(0, Math.min(160, -deltaY));
+      const newTop = Math.max(0, Math.min(100, -deltaY));
       panel.style.top = `${newTop}px`;
       return;
     }
@@ -1155,7 +1157,7 @@ function setupMypageTouchEvents(panel, panelContainer) {
     // 축소된 상태에서 아래로 드래그하면 패널 확장
     if (isCollapsed && deltaY > 0) {
       e.preventDefault();
-      const newTop = Math.max(0, Math.min(160, 160 - deltaY));
+      const newTop = Math.max(0, Math.min(100, 100 - deltaY));
       panel.style.top = `${newTop}px`;
       return;
     }
@@ -1182,18 +1184,18 @@ function setupMypageTouchEvents(panel, panelContainer) {
         // 위로 드래그 - 축소
         panel.classList.remove('expanded');
         panel.classList.add('collapsed');
-        panel.style.top = '160px';
+        panel.style.top = '100px';
       }
     } else {
       // 드래그 거리가 짧으면 원래 위치로 복원
-      if (top < 80) {
+      if (top < 50) {
         panel.classList.remove('collapsed');
         panel.classList.add('expanded');
         panel.style.top = '0px';
       } else {
         panel.classList.remove('expanded');
         panel.classList.add('collapsed');
-        panel.style.top = '160px';
+        panel.style.top = '100px';
       }
     }
 
