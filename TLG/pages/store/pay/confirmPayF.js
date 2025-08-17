@@ -139,7 +139,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           display: flex;
           flex-direction: column;
           justify-content: flex-start;
-          padding-top: 60px;
+          padding-top: 0px;
         }
 
         .success-icon {
