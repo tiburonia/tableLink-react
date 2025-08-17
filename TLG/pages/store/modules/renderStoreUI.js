@@ -1156,25 +1156,37 @@ window.StoreUIManager = {
         .progress-text {
           font-size: 10px;
         }
+
+        #storeBottomBar {
+          padding: 0 16px;
+        }
+
+        .order-btn {
+          margin-left: 12px;
+        }
+
+        .order-text {
+          font-size: 15px;
+        }
       }
 
-        @media (max-width: 480px) {
-          .tlr-stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .loyalty-benefits-grid {
-            gap: 6px;
-          }
-
-          .benefit-item {
-            padding: 10px 6px;
-          }
-
-          .benefit-text {
-            font-size: 10px;
-          }
+      @media (max-width: 480px) {
+        .tlr-stats-grid {
+          grid-template-columns: repeat(2, 1fr);
         }
+
+        .loyalty-benefits-grid {
+          gap: 6px;
+        }
+
+        .benefit-item {
+          padding: 10px 6px;
+        }
+
+        .benefit-text {
+          font-size: 10px;
+        }
+      }
       </style>`;
   }
 };
