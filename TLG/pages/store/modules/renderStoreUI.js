@@ -191,32 +191,59 @@ window.StoreUIManager = {
 
   renderReviewPreviewHTML() {
     return `
-      <div id="reviewPreview" class="review-preview modern-card">
-        <div class="section-header">
-          <h3 class="section-title">최근 리뷰</h3>
-          <button class="see-more-btn modern-text-btn">전체보기</button>
+      <div id="reviewPreview" class="review-preview premium-review-card">
+        <div class="card-gradient-bg"></div>
+        
+        <div class="review-header-section">
+          <div class="review-title-section">
+            <div class="review-icon-wrapper">
+              <span class="review-main-icon">💬</span>
+            </div>
+            <div class="review-title-info">
+              <h3 class="review-title">고객 리뷰</h3>
+              <div class="review-subtitle">실제 방문 고객들의 생생한 후기</div>
+            </div>
+          </div>
+          <div class="review-status-indicator">
+            <span class="fresh-dot"></span>
+            <span class="fresh-text">FRESH</span>
+          </div>
         </div>
+
         <div id="reviewPreviewContent" class="review-content">
-          <div class="review-card modern-review">
-            <div class="review-header">
-              <span class="review-user">🐤 익명</span>
-              <div class="review-meta">
-                <span class="review-score">★ 5</span>
-                <span class="review-date">1일 전</span>
+          <!-- 로딩 스켈레톤 -->
+          <div class="review-loading-skeleton">
+            <div class="skeleton-review-item">
+              <div class="skeleton-user-section">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-user-info">
+                  <div class="skeleton-username"></div>
+                  <div class="skeleton-date"></div>
+                </div>
+                <div class="skeleton-rating"></div>
               </div>
+              <div class="skeleton-review-text"></div>
             </div>
-            <div class="review-text">매장이 깔끔하고 음식이 진짜 맛있었어요! 또 방문할게요.</div>
-          </div>
-          <div class="review-card modern-review">
-            <div class="review-header">
-              <span class="review-user">🍙 user123</span>
-              <div class="review-meta">
-                <span class="review-score">★ 4</span>
-                <span class="review-date">3일 전</span>
+            <div class="skeleton-review-item">
+              <div class="skeleton-user-section">
+                <div class="skeleton-avatar"></div>
+                <div class="skeleton-user-info">
+                  <div class="skeleton-username"></div>
+                  <div class="skeleton-date"></div>
+                </div>
+                <div class="skeleton-rating"></div>
               </div>
+              <div class="skeleton-review-text"></div>
             </div>
-            <div class="review-text">포장 주문했는데 음식이 빨리 나왔어요. 추천!</div>
           </div>
+        </div>
+
+        <div class="review-footer">
+          <button class="see-more-btn modern-outline-btn">
+            <span class="btn-icon">📋</span>
+            <span class="btn-text">모든 리뷰 보기</span>
+            <span class="btn-arrow">→</span>
+          </button>
         </div>
       </div>
     `;
@@ -1208,88 +1235,321 @@ window.StoreUIManager = {
           background: #eff6ff;
         }
 
-        /* 리뷰 프리뷰 */
-        .review-preview {
-          padding: 16px;
+        /* 프리미엄 리뷰 프리뷰 카드 */
+        .premium-review-card {
+          position: relative;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          padding: 20px;
+          margin-bottom: 16px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          overflow: hidden;
         }
 
-        .section-header {
+        .premium-review-card .card-gradient-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+          opacity: 0.03;
+          z-index: 0;
+        }
+
+        .review-header-section {
+          position: relative;
+          z-index: 1;
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
+          align-items: flex-start;
+          margin-bottom: 20px;
         }
 
-        .section-title {
-          font-size: 16px;
+        .review-title-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+        }
+
+        .review-icon-wrapper {
+          width: 44px;
+          height: 44px;
+          background: linear-gradient(135deg, #fef7ff 0%, #f3e8ff 100%);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #e9d5ff;
+        }
+
+        .review-main-icon {
+          font-size: 20px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .review-title-info {
+          flex: 1;
+        }
+
+        .review-title {
+          font-size: 17px;
           font-weight: 700;
           color: #111827;
-          margin: 0;
+          margin: 0 0 2px 0;
+          letter-spacing: -0.3px;
         }
 
-        .modern-text-btn {
-          background: none;
-          border: none;
-          color: #3b82f6;
+        .review-subtitle {
           font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 4px 10px;
-          border-radius: 6px;
-          transition: background 0.2s ease;
+          color: #6b7280;
+          font-weight: 500;
         }
 
-        .modern-text-btn:hover {
-          background: #eff6ff;
-        }
-
-        .review-content {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .modern-review {
-          background: #f8fafc;
-          border-radius: 10px;
-          padding: 12px;
-          border: 1px solid #e2e8f0;
-        }
-
-        .review-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 6px;
-        }
-
-        .review-user {
-          font-size: 13px;
-          color: #3b82f6;
-          font-weight: 600;
-        }
-
-        .review-meta {
+        .review-status-indicator {
           display: flex;
           align-items: center;
           gap: 6px;
+          background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid #bbf7d0;
         }
 
-        .review-score {
-          font-size: 12px;
-          color: #fbbf24;
-          font-weight: 600;
+        .fresh-dot {
+          width: 6px;
+          height: 6px;
+          background: #10b981;
+          border-radius: 50%;
+          animation: freshPulse 2s infinite;
         }
 
-        .review-date {
+        .fresh-text {
           font-size: 11px;
-          color: #9ca3af;
+          font-weight: 700;
+          color: #047857;
+          letter-spacing: 0.5px;
         }
 
-        .review-text {
+        @keyframes freshPulse {
+          0%, 100% { 
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+          }
+          50% { 
+            opacity: 0.8;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+          }
+        }
+
+        .review-content {
+          position: relative;
+          z-index: 1;
+          margin-bottom: 16px;
+        }
+
+        /* 리뷰 로딩 스켈레톤 */
+        .review-loading-skeleton {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .skeleton-review-item {
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 12px;
+          padding: 16px;
+          border: 1px solid #e2e8f0;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .skeleton-review-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%
+          );
+          animation: reviewSkeletonShimmer 2s infinite;
+        }
+
+        .skeleton-user-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .skeleton-avatar {
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 50%;
+          animation: reviewSkeletonPulse 1.8s ease-in-out infinite;
+        }
+
+        .skeleton-user-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .skeleton-username {
+          width: 80px;
+          height: 14px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 6px;
+          animation: reviewSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+
+        .skeleton-date {
+          width: 60px;
+          height: 10px;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          border-radius: 4px;
+          animation: reviewSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.4s;
+        }
+
+        .skeleton-rating {
+          width: 48px;
+          height: 20px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 8px;
+          animation: reviewSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.6s;
+        }
+
+        .skeleton-review-text {
+          width: 100%;
+          height: 32px;
+          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+          border-radius: 6px;
+          animation: reviewSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.8s;
+        }
+
+        @keyframes reviewSkeletonPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(0.98);
+          }
+        }
+
+        @keyframes reviewSkeletonShimmer {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
+          }
+        }
+
+        .review-footer {
+          border-top: 1px solid #f1f5f9;
+          padding-top: 16px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* 실제 리뷰 아이템 스타일 (데이터 로드 후) */
+        .premium-review-item {
+          background: white;
+          border: 1.5px solid #f1f5f9;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 10px;
+          transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .premium-review-item:hover {
+          border-color: #8b5cf6;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(139, 92, 246, 0.1);
+        }
+
+        .premium-review-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .premium-user-avatar {
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 14px;
+          font-weight: 600;
+          color: white;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .premium-user-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .premium-user-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 2px;
+        }
+
+        .premium-review-date {
+          font-size: 11px;
+          color: #6b7280;
+        }
+
+        .premium-rating-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 4px 8px;
+          border-radius: 12px;
+          border: 1px solid #fbbf24;
+        }
+
+        .premium-star-icon {
+          font-size: 12px;
+          color: #f59e0b;
+        }
+
+        .premium-rating-value {
+          font-size: 12px;
+          font-weight: 600;
+          color: #92400e;
+        }
+
+        .premium-review-text {
           font-size: 13px;
           color: #374151;
-          line-height: 1.4;
+          line-height: 1.5;
         }
 
         /* 현대적인 혜택 카드 */

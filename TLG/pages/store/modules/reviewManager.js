@@ -21,22 +21,73 @@ window.ReviewManager = {
       if (reviewPreviewContent) {
         if (reviews.length === 0) {
           reviewPreviewContent.innerHTML = `
-            <div class="review-card" style="text-align: center; color: #888;">
-              <div>아직 등록된 리뷰가 없습니다.</div>
-              <div style="font-size: 13px; margin-top: 4px;">첫 리뷰를 남겨주세요!</div>
+            <div class="empty-review-state">
+              <div class="empty-review-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="#cbd5e1" stroke-width="2" fill="none"/>
+                  <path d="M8 9h8M8 13h6" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="empty-review-title">아직 등록된 리뷰가 없어요</div>
+              <div class="empty-review-desc">이 매장의 첫 번째 리뷰를 남겨보세요!</div>
             </div>
+            <style>
+              .empty-review-state {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 40px 20px;
+                text-align: center;
+              }
+              .empty-review-icon {
+                margin-bottom: 16px;
+                opacity: 0.6;
+              }
+              .empty-review-title {
+                font-size: 16px;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 8px;
+              }
+              .empty-review-desc {
+                font-size: 14px;
+                color: #6b7280;
+                line-height: 1.4;
+              }
+            </style>
           `;
         } else {
-          reviewPreviewContent.innerHTML = reviews.slice(0, 2).map(review => `
-            <div class="review-card">
-              <div class="review-header">
-                <span class="review-user">${review.user || '익명'}</span>
-                <span class="review-score">★ ${review.score}</span>
-                <span class="review-date">${review.date || '날짜 정보 없음'}</span>
+          const reviewsHTML = reviews.slice(0, 2).map((review, index) => {
+            const userInitial = (review.user || '익명').charAt(0);
+            const colors = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+            const avatarColor = colors[index % colors.length];
+            const reviewDate = review.date ? new Date(review.date).toLocaleDateString('ko-KR', {
+              month: 'short',
+              day: 'numeric'
+            }) : '날짜 정보 없음';
+
+            return `
+              <div class="premium-review-item">
+                <div class="premium-review-header">
+                  <div class="premium-user-avatar" style="background: ${avatarColor}">
+                    ${userInitial}
+                  </div>
+                  <div class="premium-user-info">
+                    <div class="premium-user-name">${review.user || '익명'}</div>
+                    <div class="premium-review-date">${reviewDate}</div>
+                  </div>
+                  <div class="premium-rating-badge">
+                    <span class="premium-star-icon">★</span>
+                    <span class="premium-rating-value">${review.score}</span>
+                  </div>
+                </div>
+                <div class="premium-review-text">${review.content}</div>
               </div>
-              <div class="review-text">${review.content}</div>
-            </div>
-          `).join('');
+            `;
+          }).join('');
+
+          reviewPreviewContent.innerHTML = reviewsHTML;
         }
         console.log('✅ 리뷰 미리보기 렌더링 완료');
       } else {
