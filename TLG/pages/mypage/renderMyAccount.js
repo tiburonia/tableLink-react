@@ -364,6 +364,29 @@ async function renderMyAccount() {
     }
   }
 
+  // renderAllOrderHTML 스크립트 미리 로드
+  if (typeof window.renderAllOrderHTML !== 'function') {
+    try {
+      console.log('🔄 renderAllOrderHTML 스크립트 미리 로드 시작');
+      const orderScript = document.createElement('script');
+      orderScript.src = '/TLG/pages/store/order/renderAllOrderHTML.js';
+      
+      await new Promise((resolve, reject) => {
+        orderScript.onload = () => {
+          console.log('✅ renderAllOrderHTML 스크립트 미리 로드 완료');
+          resolve();
+        };
+        orderScript.onerror = () => {
+          console.error('❌ renderAllOrderHTML 스크립트 미리 로드 실패');
+          reject();
+        };
+        document.head.appendChild(orderScript);
+      });
+    } catch (error) {
+      console.error('❌ renderAllOrderHTML 스크립트 로드 중 오류:', error);
+    }
+  }
+
   const main = document.getElementById('main');
 
   // 전역 스타일 완전 리셋
@@ -1203,7 +1226,11 @@ function setupAccountEventListeners() {
 
   const handleViewAllOrdersClick = function(e) {
     e.preventDefault();
-    showAllOrdersModal();
+    if (typeof renderAllOrderHTML === 'function') {
+      renderAllOrderHTML(window.userInfo || { id: 'user1' });
+    } else {
+      showAllOrdersModal();
+    }
   };
 
   const handleViewAllLevelsClick = function(e) {
@@ -1561,7 +1588,11 @@ function showAchievementsModal() {
 }
 
 function showAllOrdersModal() {
-  alert('전체 주문 내역 보기 기능은 개발 중입니다.');
+  if (typeof renderAllOrderHTML === 'function') {
+    renderAllOrderHTML(window.userInfo || { id: 'user1' });
+  } else {
+    alert('전체 주문 내역 보기 기능을 불러올 수 없습니다.');
+  }
 }
 
 function showAllRegularLevelsModal() {
