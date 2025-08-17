@@ -147,8 +147,14 @@ function renderPay(currentOrder, store, tableNum) {
       }
 
       .pay-container {
-        height: 100vh;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         width: 100%;
+        max-width: 430px;
+        margin: 0 auto;
         display: flex;
         flex-direction: column;
         background: #f8fafc;
@@ -156,8 +162,9 @@ function renderPay(currentOrder, store, tableNum) {
         overflow: hidden;
       }
 
-      /* 헤더 */
+      /* 헤더 - 고정 높이 */
       .pay-header {
+        height: 80px;
         background: white;
         padding: 20px;
         border-bottom: 1px solid #e2e8f0;
@@ -198,10 +205,11 @@ function renderPay(currentOrder, store, tableNum) {
         font-weight: 500;
       }
 
-      /* 메인 콘텐츠 */
+      /* 메인 콘텐츠 - 중간 유동 공간, 스크롤 가능 */
       .pay-main {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 20px;
         display: flex;
         flex-direction: column;
@@ -209,7 +217,22 @@ function renderPay(currentOrder, store, tableNum) {
         max-width: 600px;
         margin: 0 auto;
         width: 100%;
-        min-height: 0;
+      }
+
+      /* 푸터 - 고정 높이 */
+      .pay-footer {
+        height: 140px;
+        background: white;
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-width: 600px;
+        margin: 0 auto;
+        width: 100%;
+        flex-shrink: 0;
       }
 
       /* 공통 섹션 스타일 */
@@ -451,21 +474,7 @@ function renderPay(currentOrder, store, tableNum) {
         color: #1d4ed8;
       }
 
-      /* 푸터 */
-      .pay-footer {
-        background: white;
-        padding: 20px;
-        border-top: 1px solid #e2e8f0;
-        box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        max-width: 600px;
-        margin: 0 auto;
-        width: 100%;
-        flex-shrink: 0;
-      }
-
+      /* 버튼 스타일 */
       .confirm-btn {
         display: flex;
         justify-content: space-between;
