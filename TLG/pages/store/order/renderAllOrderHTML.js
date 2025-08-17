@@ -207,15 +207,23 @@ function updateOrdersList(ordersData) {
 
   // 리뷰 작성 버튼 이벤트 리스너 추가
   document.querySelectorAll('.review-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       const orderIndex = parseInt(e.target.closest('.review-btn').getAttribute('data-order-index'));
       const orderId = e.target.closest('.review-btn').getAttribute('data-order-id');
       const order = ordersData[orderIndex];
       console.log('🔍 선택된 주문 정보:', order);
-      if (typeof showReviewModalFromOrders === 'function') {
-        showReviewModalFromOrders(order, orderIndex);
+      
+      // 리뷰 작성 스크립트 로드
+      await loadReviewWriteScript();
+      
+      // 이전 화면 정보 저장
+      window.previousScreen = 'renderAllOrderHTML';
+      
+      // 리뷰 작성 화면으로 이동
+      if (typeof renderReviewWrite === 'function') {
+        renderReviewWrite(order);
       } else {
-        console.error('showReviewModalFromOrders 함수를 찾을 수 없습니다');
+        console.error('renderReviewWrite 함수를 찾을 수 없습니다');
       }
     });
   });
@@ -711,6 +719,34 @@ function getOrderHistoryStyles() {
       }
     </style>
   `;
+}
+
+// 리뷰 작성 스크립트 로드 함수
+async function loadReviewWriteScript() {
+  if (typeof window.renderReviewWrite === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderReviewWrite 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/store/review/renderReviewWrite.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderReviewWrite 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderReviewWrite 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderReviewWrite 스크립트 로드 중 오류:', error);
+    throw error;
+  }
 }
 
 // 전역으로 함수 노출

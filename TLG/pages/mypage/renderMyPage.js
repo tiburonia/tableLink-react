@@ -884,83 +884,7 @@ async function renderMyPage() {
         }
       }
 
-      /* 모달 스타일 */
-      .review-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 2000;
-      }
-
-      .review-modal-content {
-        background: white;
-        padding: 24px;
-        border-radius: 16px;
-        width: 90%;
-        max-width: 400px;
-        max-height: 80%;
-        overflow-y: auto;
-      }
-
-      .modal-btn {
-        padding: 12px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .modal-btn.cancel-btn {
-        background: #f3f4f6;
-        color: #374151;
-      }
-
-      .modal-btn.submit-btn {
-        background: #6366f1;
-        color: white;
-      }
-
-      .star-rating {
-        display: flex;
-        gap: 5px;
-        margin: 10px 0;
-      }
-
-      .star {
-        font-size: 24px;
-        cursor: pointer;
-        color: #d1d5db;
-        transition: color 0.2s;
-      }
-
-      .star.active {
-        color: #f59e0b;
-      }
-
-      .review-textarea {
-        width: 100%;
-        min-height: 100px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 12px;
-        font-size: 14px;
-        resize: vertical;
-        font-family: inherit;
-      }
-
-      .modal-buttons {
-        display: flex;
-        gap: 12px;
-        margin-top: 20px;
-      }
+      
     </style>
   `;
 
@@ -1382,10 +1306,22 @@ async function updateOrderList(currentUserInfo, ordersData) {
     });
 
     document.querySelectorAll('.review-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const orderIndex = parseInt(e.target.getAttribute('data-order-index'));
         const order = ordersData[orderIndex];
-        showReviewModalFromOrders(order, orderIndex);
+        
+        // 리뷰 작성 스크립트 로드
+        await loadReviewWriteScript();
+        
+        // 이전 화면 정보 저장
+        window.previousScreen = 'renderMyPage';
+        
+        // 리뷰 작성 화면으로 이동
+        if (typeof renderReviewWrite === 'function') {
+          renderReviewWrite(order);
+        } else {
+          console.error('renderReviewWrite 함수를 찾을 수 없습니다');
+        }
       });
     });
   } else {
@@ -1560,86 +1496,32 @@ async function checkOrderHasReview(orderId) {
   }
 }
 
-// 리뷰 작성 모달 표시 함수
-function showReviewModalFromOrders(order, orderIndex) {
-  const orderData = order.order_data || {};
-  const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
-  const storeName = orderData.store || order.store_name || '매장 정보 없음';
+// 리뷰 작성 스크립트 로드 함수
+async function loadReviewWriteScript() {
+  if (typeof window.renderReviewWrite === 'function') {
+    return; // 이미 로드됨
+  }
 
-  const modal = document.createElement('div');
-  modal.className = 'review-modal';
-  modal.innerHTML = `
-    <div class="review-modal-content">
-      <h3 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700;">리뷰 작성</h3>
-      <p style="margin: 0 0 16px 0;"><strong>매장:</strong> ${storeName}</p>
-      <p style="margin: 0 0 20px 0; color: #6b7280;"><strong>주문:</strong> ${items}</p>
-
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 8px; font-weight: 600;">평점:</label>
-        <div class="star-rating">
-          <span class="star" data-rating="1">★</span>
-          <span class="star" data-rating="2">★</span>
-          <span class="star" data-rating="3">★</span>
-          <span class="star" data-rating="4">★</span>
-          <span class="star" data-rating="5">★</span>
-        </div>
-      </div>
-
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 8px; font-weight: 600;">리뷰 내용:</label>
-        <textarea class="review-textarea" placeholder="음식과 서비스에 대한 솔직한 후기를 남겨주세요..."></textarea>
-      </div>
-
-      <div class="modal-buttons">
-        <button class="modal-btn cancel-btn">취소</button>
-        <button class="modal-btn submit-btn">리뷰 등록</button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  let selectedRating = 0;
-
-  modal.querySelectorAll('.star').forEach(star => {
-    star.addEventListener('click', (e) => {
-      selectedRating = parseInt(e.target.getAttribute('data-rating'));
-      updateStarDisplay(modal, selectedRating);
+  try {
+    console.log('🔄 renderReviewWrite 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/store/review/renderReviewWrite.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderReviewWrite 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderReviewWrite 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
     });
-  });
-
-  modal.querySelector('.cancel-btn').addEventListener('click', () => {
-    document.body.removeChild(modal);
-  });
-
-  modal.querySelector('.submit-btn').addEventListener('click', async () => {
-    const reviewText = modal.querySelector('.review-textarea').value.trim();
-
-    if (selectedRating === 0) {
-      alert('평점을 선택해주세요.');
-      return;
-    }
-
-    if (reviewText === '') {
-      alert('리뷰 내용을 입력해주세요.');
-      return;
-    }
-
-    try {
-      await submitReviewFromOrders(order, selectedRating, reviewText);
-      document.body.removeChild(modal);
-      renderMyPage();
-    } catch (error) {
-      console.error('리뷰 등록 오류:', error);
-      alert('리뷰 등록에 실패했습니다: ' + error.message);
-    }
-  });
-
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
+  } catch (error) {
+    console.error('❌ renderReviewWrite 스크립트 로드 중 오류:', error);
+    throw error;
+  }
 }
 
 // 별점 표시 업데이트

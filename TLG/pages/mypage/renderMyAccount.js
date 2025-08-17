@@ -1589,6 +1589,8 @@ function showAchievementsModal() {
 
 function showAllOrdersModal() {
   if (typeof renderAllOrderHTML === 'function') {
+    // 이전 화면 정보 저장
+    window.previousScreen = 'renderMyAccount';
     renderAllOrderHTML(window.userInfo || { id: 'user1' });
   } else {
     alert('전체 주문 내역 보기 기능을 불러올 수 없습니다.');
