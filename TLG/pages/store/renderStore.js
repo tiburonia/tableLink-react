@@ -311,11 +311,8 @@ function loadInitialData(store) {
 
     // 리뷰 미리보기 로드 (안전하게)
     if (window.ReviewManager && typeof window.ReviewManager.renderTopReviews === 'function') {
-      // 약간의 딜레이 후 리뷰 데이터 로드 (UI 렌더링 완료 후)
-      setTimeout(() => {
-        window.ReviewManager.renderTopReviews(store);
-        console.log('✅ 리뷰 미리보기 로드 완료');
-      }, 300);
+      window.ReviewManager.renderTopReviews(store);
+      console.log('✅ 리뷰 미리보기 로드 완료');
     } else {
       console.warn('⚠️ ReviewManager를 찾을 수 없음');
     }
