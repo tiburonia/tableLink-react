@@ -1100,15 +1100,17 @@ async function renderMyAccount() {
 
   // DOM이 완전히 렌더링된 후 이벤트 리스너 설정
   setTimeout(() => {
+    console.log('🔧 renderMyAccount DOM 렌더링 완료, 이벤트 리스너 설정 시작');
     setupEventListeners();
     loadAccountData();
-  }, 100);
+  }, 50);
 }
 
 // 이벤트 리스너 설정
 function setupEventListeners() {
   console.log('🔧 이벤트 리스너 등록 중...');
 
+  // DOM 요소들을 다시 한번 체크
   const backBtn = document.getElementById('backBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const editProfileBtn = document.getElementById('editProfileBtn');
@@ -1120,18 +1122,59 @@ function setupEventListeners() {
   const viewAllLevelsBtn = document.getElementById('viewAllLevelsBtn');
   const editPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
 
+  console.log('🔍 DOM 요소 체크:', {
+    backBtn: !!backBtn,
+    backBtnId: backBtn?.id,
+    backBtnType: backBtn?.tagName
+  });
+
   if (backBtn) {
-    console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록');
-    backBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      console.log('🔙 뒤로가기 버튼 클릭됨');
-      if (typeof renderMyPage === 'function') {
-        renderMyPage();
+    console.log('✅ 뒤로가기 버튼 발견, 이벤트 리스너 등록 중...');
+    
+    // 기존 이벤트 리스너 제거 (중복 방지)
+    backBtn.removeEventListener('click', handleBackClick);
+    
+    // 새 이벤트 리스너 추가
+    backBtn.addEventListener('click', handleBackClick);
+    
+    console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록 완료');
+  } else {
+    console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
+    
+    // DOM 전체에서 백 버튼 찾기 시도
+    const allButtons = document.querySelectorAll('button');
+    console.log('🔍 페이지의 모든 버튼:', Array.from(allButtons).map(btn => ({
+      id: btn.id,
+      className: btn.className,
+      text: btn.textContent?.trim().substring(0, 20)
+    })));
+  }
+
+  // 뒤로가기 클릭 핸들러 함수
+  function handleBackClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log('🔙 뒤로가기 버튼 클릭됨');
+    console.log('🔍 renderMyPage 함수 존재 여부:', typeof renderMyPage);
+    console.log('🔍 window.renderMyPage 존재 여부:', typeof window.renderMyPage);
+    
+    if (typeof renderMyPage === 'function') {
+      console.log('✅ renderMyPage 함수 호출');
+      renderMyPage();
+    } else if (typeof window.renderMyPage === 'function') {
+      console.log('✅ window.renderMyPage 함수 호출');
+      window.renderMyPage();
+    } else {
+      console.error('❌ renderMyPage 함수를 찾을 수 없음, 대체 방법 시도');
+      // 대체 방법: 히스토리 백 또는 메인으로 이동
+      if (window.history.length > 1) {
+        console.log('🔄 브라우저 뒤로가기 실행');
+        window.history.back();
       } else {
-        console.error('❌ renderMyPage 함수를 찾을 수 없음');
+        console.log('🏠 메인 페이지로 이동');
+        window.location.href = '/';
       }
-    });
+    }
   }
 
   if (logoutBtn) {
@@ -1524,3 +1567,18 @@ function showEditPersonalInfoModal() {
 
 // 전역 함수 등록
 window.renderMyAccount = renderMyAccount;
+
+// renderMyPage 함수 체크 및 동적 로드
+if (typeof window.renderMyPage !== 'function') {
+  console.log('🔄 renderMyPage 함수 동적 로드 시도');
+  // 스크립트 태그로 renderMyPage 로드 시도
+  const script = document.createElement('script');
+  script.src = '/TLG/pages/mypage/renderMyPage.js';
+  script.onload = () => {
+    console.log('✅ renderMyPage 스크립트 로드 완료');
+  };
+  script.onerror = () => {
+    console.error('❌ renderMyPage 스크립트 로드 실패');
+  };
+  document.head.appendChild(script);
+}
