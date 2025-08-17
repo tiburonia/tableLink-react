@@ -965,41 +965,115 @@ function createLoyaltyCardHTML(levelData, store) {
       `}
       
       ${level?.benefits && level.benefits.length > 0 ? `
-        <div class="level-benefits-section">
+        <div class="level-benefits-section premium-benefits">
           <div class="benefits-header">
-            <span class="benefits-title">🎁 현재 혜택</span>
+            <div class="benefits-title-group">
+              <span class="benefits-icon">🎁</span>
+              <div class="benefits-title-text">
+                <span class="benefits-title">현재 혜택</span>
+                <span class="benefits-subtitle">${level.name} 등급 전용</span>
+              </div>
+            </div>
+            <div class="benefits-count-badge">${level.benefits.length}</div>
           </div>
-          <div class="benefits-showcase">
-            ${level.benefits.slice(0, 2).map(benefit => `
-              <div class="benefit-card">
-                <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
-                <div class="benefit-details">
-                  <div class="benefit-name">${benefit.name}</div>
-                  <div class="benefit-value">
-                    ${benefit.discount ? `${benefit.discount}% 할인` : 
-                      benefit.value ? benefit.value : '특별 혜택'}
+          
+          <div class="benefits-showcase premium-grid">
+            ${level.benefits.map((benefit, index) => `
+              <div class="benefit-card premium-card ${index === 0 ? 'featured-benefit' : ''}" 
+                   style="animation-delay: ${index * 0.1}s;">
+                <div class="benefit-card-header">
+                  <div class="benefit-icon-container">
+                    <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
+                    ${benefit.expires_days ? `
+                      <div class="benefit-expiry">
+                        <span class="expiry-icon">⏰</span>
+                        <span class="expiry-text">${benefit.expires_days}일</span>
+                      </div>
+                    ` : ''}
                   </div>
+                  <div class="benefit-status-indicator ${getBenefitStatus(benefit.type)}"></div>
+                </div>
+                
+                <div class="benefit-content">
+                  <div class="benefit-name">${benefit.name || formatBenefitName(benefit.type)}</div>
+                  <div class="benefit-description">${getBenefitDescription(benefit)}</div>
+                  <div class="benefit-value-display">
+                    ${formatBenefitValue(benefit)}
+                  </div>
+                </div>
+                
+                <div class="benefit-actions">
+                  <button class="benefit-use-btn" onclick="useBenefit('${benefit.type}', ${JSON.stringify(benefit).replace(/"/g, '&quot;')})">
+                    <span class="btn-icon">✨</span>
+                    <span class="btn-text">혜택 사용</span>
+                  </button>
                 </div>
               </div>
             `).join('')}
-            ${level.benefits.length > 2 ? `
-              <div class="more-benefits">+${level.benefits.length - 2}개 혜택 더</div>
-            ` : ''}
           </div>
+          
+          ${level.benefits.length > 3 ? `
+            <div class="benefits-expand-section">
+              <button class="expand-benefits-btn" onclick="showAllBenefits(${JSON.stringify(level.benefits).replace(/"/g, '&quot;')})">
+                <span class="expand-icon">📋</span>
+                <span class="expand-text">모든 혜택 보기 (+${level.benefits.length - 3}개)</span>
+                <span class="expand-arrow">→</span>
+              </button>
+            </div>
+          ` : ''}
         </div>
       ` : `
-        <div class="level-benefits-section">
+        <div class="level-benefits-section new-customer-benefits">
           <div class="benefits-header">
-            <span class="benefits-title">🎁 신규 혜택</span>
-          </div>
-          <div class="benefits-showcase">
-            <div class="benefit-card">
-              <span class="benefit-icon">🎉</span>
-              <div class="benefit-details">
-                <div class="benefit-name">첫방문 환영</div>
-                <div class="benefit-value">특별 서비스</div>
+            <div class="benefits-title-group">
+              <span class="benefits-icon">🌟</span>
+              <div class="benefits-title-text">
+                <span class="benefits-title">신규 고객 혜택</span>
+                <span class="benefits-subtitle">첫 방문을 환영합니다</span>
               </div>
             </div>
+            <div class="new-customer-badge">NEW</div>
+          </div>
+          
+          <div class="benefits-showcase welcome-grid">
+            <div class="benefit-card welcome-card">
+              <div class="benefit-card-header">
+                <div class="benefit-icon-container">
+                  <span class="benefit-icon">🎉</span>
+                </div>
+                <div class="benefit-status-indicator welcome"></div>
+              </div>
+              
+              <div class="benefit-content">
+                <div class="benefit-name">첫방문 환영 혜택</div>
+                <div class="benefit-description">신규 고객을 위한 특별 서비스</div>
+                <div class="benefit-value-display">
+                  <span class="value-highlight">환영 쿠폰</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="benefit-card welcome-card">
+              <div class="benefit-card-header">
+                <div class="benefit-icon-container">
+                  <span class="benefit-icon">⭐</span>
+                </div>
+                <div class="benefit-status-indicator welcome"></div>
+              </div>
+              
+              <div class="benefit-content">
+                <div class="benefit-name">포인트 적립</div>
+                <div class="benefit-description">매 주문시 포인트 적립</div>
+                <div class="benefit-value-display">
+                  <span class="value-highlight">1% 적립</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="welcome-message">
+            <span class="message-icon">💫</span>
+            <span class="message-text">첫 주문 후 단골 등급이 시작됩니다!</span>
           </div>
         </div>
       `}
@@ -1323,6 +1397,430 @@ function createLoyaltyCardHTML(levelData, store) {
         opacity: 0.8;
       }
       
+      /* 혜택 카드 전용 스타일 */
+      .level-benefits-section.premium-benefits,
+      .level-benefits-section.new-customer-benefits {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 16px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        margin-top: 12px;
+      }
+      
+      .benefits-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      
+      .benefits-title-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .benefits-icon {
+        font-size: 20px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+      
+      .benefits-title-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      
+      .benefits-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: white;
+      }
+      
+      .benefits-subtitle {
+        font-size: 10px;
+        opacity: 0.8;
+        font-weight: 500;
+      }
+      
+      .benefits-count-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        min-width: 20px;
+        text-align: center;
+      }
+      
+      .new-customer-badge {
+        background: linear-gradient(45deg, #ff6b6b, #ff8e53);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 9px;
+        font-weight: 700;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+      
+      .benefits-showcase.premium-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .benefits-showcase.welcome-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      
+      .benefit-card.premium-card,
+      .benefit-card.welcome-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+        padding: 12px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        animation: benefitSlideIn 0.5s ease forwards;
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      
+      .benefit-card.featured-benefit {
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+      }
+      
+      .benefit-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+      }
+      
+      @keyframes benefitSlideIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .benefit-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      
+      .benefit-icon-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      
+      .benefit-icon {
+        font-size: 18px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+      
+      .benefit-expiry {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      
+      .expiry-icon {
+        font-size: 8px;
+      }
+      
+      .expiry-text {
+        font-size: 7px;
+        font-weight: 600;
+      }
+      
+      .benefit-status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      
+      .benefit-status-indicator.vip {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+      }
+      
+      .benefit-status-indicator.premium {
+        background: linear-gradient(45deg, #e5e4e2, #ffffff);
+        box-shadow: 0 0 8px rgba(229, 228, 226, 0.4);
+      }
+      
+      .benefit-status-indicator.loyalty {
+        background: linear-gradient(45deg, #3b82f6, #60a5fa);
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+      }
+      
+      .benefit-status-indicator.discount {
+        background: linear-gradient(45deg, #ef4444, #f87171);
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      }
+      
+      .benefit-status-indicator.free {
+        background: linear-gradient(45deg, #10b981, #34d399);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+      
+      .benefit-status-indicator.priority {
+        background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+      }
+      
+      .benefit-status-indicator.welcome {
+        background: linear-gradient(45deg, #8b5cf6, #a78bfa);
+        box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
+      }
+      
+      .benefit-content {
+        margin-bottom: 8px;
+      }
+      
+      .benefit-name {
+        font-size: 12px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+      
+      .benefit-description {
+        font-size: 9px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+        line-height: 1.3;
+      }
+      
+      .benefit-value-display {
+        margin-bottom: 8px;
+      }
+      
+      .value-highlight {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: white;
+      }
+      
+      .value-highlight.discount {
+        background: linear-gradient(45deg, #ef4444, #f87171);
+      }
+      
+      .value-highlight.points {
+        background: linear-gradient(45deg, #f59e0b, #fbbf24);
+      }
+      
+      .value-highlight.free {
+        background: linear-gradient(45deg, #10b981, #34d399);
+      }
+      
+      .value-highlight.priority {
+        background: linear-gradient(45deg, #8b5cf6, #a78bfa);
+      }
+      
+      .value-highlight.amount {
+        background: linear-gradient(45deg, #3b82f6, #60a5fa);
+      }
+      
+      .value-highlight.standard {
+        background: linear-gradient(45deg, #6b7280, #9ca3af);
+      }
+      
+      .benefit-actions {
+        display: flex;
+        justify-content: center;
+      }
+      
+      .benefit-use-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        backdrop-filter: blur(5px);
+      }
+      
+      .benefit-use-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      
+      .btn-icon {
+        font-size: 8px;
+      }
+      
+      .btn-text {
+        font-size: 9px;
+      }
+      
+      .benefits-expand-section {
+        margin-top: 8px;
+        text-align: center;
+      }
+      
+      .expand-benefits-btn {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: center;
+        width: 100%;
+      }
+      
+      .expand-benefits-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.4);
+      }
+      
+      .welcome-message {
+        margin-top: 8px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 6px 8px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+      
+      .message-icon {
+        font-size: 12px;
+      }
+      
+      .message-text {
+        font-size: 9px;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+      
+      /* 혜택 모달 스타일 */
+      .benefits-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      
+      .benefits-modal {
+        background: white;
+        border-radius: 16px;
+        max-width: 400px;
+        width: 100%;
+        max-height: 80vh;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      }
+      
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #e5e5e5;
+      }
+      
+      .modal-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 16px;
+      }
+      
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 20px;
+        cursor: pointer;
+        color: #666;
+        padding: 4px;
+      }
+      
+      .modal-content {
+        padding: 16px;
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      
+      .modal-benefit-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        background: #f8f9fa;
+      }
+      
+      .modal-benefit-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      
+      .modal-benefit-info {
+        flex: 1;
+      }
+      
+      .modal-benefit-name {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 2px;
+      }
+      
+      .modal-benefit-desc {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 2px;
+      }
+      
+      .modal-benefit-expiry {
+        font-size: 11px;
+        color: #999;
+      }
+      
+      .modal-benefit-value {
+        flex-shrink: 0;
+      }
+      
       @media (max-width: 400px) {
         .loyalty-level-card.compact-card {
           padding: 12px;
@@ -1348,6 +1846,23 @@ function createLoyaltyCardHTML(levelData, store) {
         .level-icon {
           font-size: 24px;
         }
+        
+        .benefits-showcase.welcome-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .benefit-card.premium-card,
+        .benefit-card.welcome-card {
+          padding: 10px;
+        }
+        
+        .benefit-name {
+          font-size: 11px;
+        }
+        
+        .benefit-description {
+          font-size: 8px;
+        }
       }
     </style>
   `;
@@ -1367,9 +1882,154 @@ function getBenefitIcon(type) {
     'birthday_gift': '🎂',
     'monthly_free': '📅',
     'priority_service': '⚡',
-    'early_access': '🔓'
+    'early_access': '🔓',
+    'point_multiplier': '⭐',
+    'discount_percent': '🔥',
+    'free_delivery': '🚚'
   };
   return iconMap[type] || '🎁';
+}
+
+// 혜택 상태 표시용 클래스 반환
+function getBenefitStatus(type) {
+  const statusMap = {
+    'vip_coupon': 'vip',
+    'premium_coupon': 'premium',
+    'loyalty_coupon': 'loyalty',
+    'discount_coupon': 'discount',
+    'free_drink': 'free',
+    'free_side': 'free',
+    'free_upgrade': 'upgrade',
+    'priority_service': 'priority',
+    'birthday_gift': 'special',
+    'monthly_free': 'monthly'
+  };
+  return statusMap[type] || 'standard';
+}
+
+// 혜택 이름 포맷팅
+function formatBenefitName(type) {
+  const nameMap = {
+    'discount_coupon': '할인 쿠폰',
+    'loyalty_coupon': '단골 할인',
+    'vip_coupon': 'VIP 할인',
+    'premium_coupon': '프리미엄 할인',
+    'free_drink': '무료 음료',
+    'free_side': '무료 사이드',
+    'free_upgrade': '무료 업그레이드',
+    'priority_service': '우선 서비스',
+    'birthday_gift': '생일 선물',
+    'monthly_free': '월간 무료',
+    'early_access': '신메뉴 체험',
+    'point_multiplier': '포인트 적립',
+    'discount_percent': '할인 혜택',
+    'free_delivery': '무료 배송'
+  };
+  return nameMap[type] || '특별 혜택';
+}
+
+// 혜택 설명 반환
+function getBenefitDescription(benefit) {
+  if (benefit.description) return benefit.description;
+  
+  const descMap = {
+    'vip_coupon': 'VIP 전용 할인 쿠폰',
+    'premium_coupon': '프리미엄 할인 쿠폰',
+    'loyalty_coupon': '단골 고객 전용 할인',
+    'discount_coupon': '매장에서 사용 가능한 할인',
+    'free_drink': '음료 1잔 무료 제공',
+    'free_side': '사이드 메뉴 무료 제공',
+    'free_upgrade': '메뉴 업그레이드 무료',
+    'priority_service': '주문 우선 처리',
+    'birthday_gift': '생일 특별 선물',
+    'monthly_free': '매월 무료 혜택',
+    'early_access': '신메뉴 우선 체험',
+    'point_multiplier': '추가 포인트 적립',
+    'discount_percent': '결제시 할인 적용',
+    'free_delivery': '배달비 무료'
+  };
+  
+  return descMap[benefit.type] || '특별한 혜택을 제공합니다';
+}
+
+// 혜택 값 포맷팅
+function formatBenefitValue(benefit) {
+  if (benefit.discount) {
+    return `<span class="value-highlight discount">${benefit.discount}% 할인</span>`;
+  }
+  
+  if (benefit.point_rate) {
+    return `<span class="value-highlight points">+${benefit.point_rate}% 적립</span>`;
+  }
+  
+  if (benefit.amount) {
+    return `<span class="value-highlight amount">${benefit.amount.toLocaleString()}원</span>`;
+  }
+  
+  if (benefit.type === 'free_drink' || benefit.type === 'free_side') {
+    return `<span class="value-highlight free">무료 제공</span>`;
+  }
+  
+  if (benefit.type === 'priority_service') {
+    return `<span class="value-highlight priority">우선 처리</span>`;
+  }
+  
+  return `<span class="value-highlight standard">특별 혜택</span>`;
+}
+
+// 혜택 사용 함수
+function useBenefit(benefitType, benefitData) {
+  console.log('🎁 혜택 사용:', benefitType, benefitData);
+  
+  // 혜택 타입별 처리
+  switch(benefitType) {
+    case 'vip_coupon':
+    case 'premium_coupon':
+    case 'loyalty_coupon':
+    case 'discount_coupon':
+      alert(`${benefitData.name || '할인 쿠폰'}을 장바구니에 적용했습니다!`);
+      break;
+    case 'free_drink':
+    case 'free_side':
+      alert(`${benefitData.name || '무료 혜택'}을 주문에 추가했습니다!`);
+      break;
+    case 'priority_service':
+      alert('우선 서비스가 적용되었습니다!');
+      break;
+    default:
+      alert(`${benefitData.name || '혜택'}이 적용되었습니다!`);
+  }
+}
+
+// 모든 혜택 보기
+function showAllBenefits(benefits) {
+  console.log('📋 모든 혜택 보기:', benefits);
+  
+  const modal = document.createElement('div');
+  modal.className = 'benefits-modal-overlay';
+  modal.innerHTML = `
+    <div class="benefits-modal">
+      <div class="modal-header">
+        <h3>🎁 모든 혜택</h3>
+        <button class="modal-close" onclick="this.closest('.benefits-modal-overlay').remove()">×</button>
+      </div>
+      <div class="modal-content">
+        ${benefits.map(benefit => `
+          <div class="modal-benefit-item">
+            <span class="modal-benefit-icon">${getBenefitIcon(benefit.type)}</span>
+            <div class="modal-benefit-info">
+              <div class="modal-benefit-name">${benefit.name || formatBenefitName(benefit.type)}</div>
+              <div class="modal-benefit-desc">${getBenefitDescription(benefit)}</div>
+              ${benefit.expires_days ? `<div class="modal-benefit-expiry">유효기간: ${benefit.expires_days}일</div>` : ''}
+            </div>
+            <div class="modal-benefit-value">${formatBenefitValue(benefit)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
 }
 
 // 레벨에 따른 아이콘 반환
@@ -1445,8 +2105,18 @@ window.showAllPromotions = showAllPromotions;
   window.loadAndRenderStore = loadAndRenderStore;
   window.loadPromotionData = loadPromotionData;
   window.loadLoyaltyData = loadLoyaltyData;
+  
+  // 혜택 관련 함수들
+  window.getBenefitIcon = getBenefitIcon;
+  window.getBenefitStatus = getBenefitStatus;
+  window.formatBenefitName = formatBenefitName;
+  window.getBenefitDescription = getBenefitDescription;
+  window.formatBenefitValue = formatBenefitValue;
+  window.useBenefit = useBenefit;
+  window.showAllBenefits = showAllBenefits;
 
   // 함수 등록 확인
   console.log('✅ renderStore 전역 함수 등록 완료:', typeof window.renderStore);
   console.log('🔍 전역 renderStore 존재 여부:', !!window.renderStore);
+  console.log('🎁 전역 혜택 함수들 등록 완료');
 })();
