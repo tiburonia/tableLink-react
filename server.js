@@ -34,6 +34,27 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/regular-levels', require('./routes/regular-levels'));
 
+// 플레이스홀더 이미지 API
+app.get('/api/placeholder/:width/:height', (req, res) => {
+  const { width, height } = req.params;
+  const w = parseInt(width) || 200;
+  const h = parseInt(height) || 200;
+  
+  // SVG 플레이스홀더 이미지 생성
+  const svg = `
+    <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#f1f5f9"/>
+      <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="14" fill="#64748b" text-anchor="middle" dy=".3em">
+        ${w}×${h}
+      </text>
+    </svg>
+  `;
+  
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'public, max-age=86400'); // 1일 캐시
+  res.send(svg);
+});
+
 
 // 정적 페이지 라우트
 app.get('/', (req, res) => {
