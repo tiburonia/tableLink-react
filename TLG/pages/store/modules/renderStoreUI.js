@@ -215,40 +215,66 @@ window.StoreUIManager = {
 
   renderPromotionCardHTML(store) {
     return `
-      <div class="promotion-card modern-gradient-card promotion-theme">
+      <div class="promotion-card modern-benefits-card">
         <div class="promotion-header">
-          <div class="promotion-title">
-            <span class="promotion-emoji">🎉</span>
-            <span>진행중인 혜택</span>
+          <div class="promotion-title-section">
+            <div class="promotion-icon-wrapper">
+              <span class="promotion-main-icon">🎁</span>
+            </div>
+            <div class="promotion-title-info">
+              <h3 class="promotion-title">진행중인 혜택</h3>
+              <div class="promotion-subtitle">특별 혜택을 확인하세요</div>
+            </div>
           </div>
-          <span class="promotion-badge live">LIVE</span>
+          <div class="promotion-status-indicator">
+            <span class="live-dot"></span>
+            <span class="live-text">LIVE</span>
+          </div>
         </div>
+
         <div class="promotion-content">
-          <div class="promotion-item featured">
-            <div class="promotion-left">
-              <span class="promotion-icon">🎁</span>
-              <div class="promotion-info">
-                <div class="promotion-name">신규 방문 혜택</div>
-                <div class="promotion-desc">첫 방문 시 10% 할인</div>
+          <!-- 개선된 로딩 스켈레톤 -->
+          <div class="benefits-loading-skeleton">
+            <div class="skeleton-benefit-item">
+              <div class="skeleton-icon-container">
+                <div class="skeleton-icon"></div>
               </div>
-            </div>
-            <div class="promotion-discount">10%</div>
-          </div>
-          <div class="promotion-item">
-            <div class="promotion-left">
-              <span class="promotion-icon">⭐</span>
-              <div class="promotion-info">
-                <div class="promotion-name">단골 고객 혜택</div>
-                <div class="promotion-desc">레벨 3 이상 5% 추가 할인</div>
+              <div class="skeleton-content">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-desc"></div>
               </div>
+              <div class="skeleton-badge"></div>
             </div>
-            <div class="promotion-tag">VIP</div>
+            <div class="skeleton-benefit-item">
+              <div class="skeleton-icon-container">
+                <div class="skeleton-icon"></div>
+              </div>
+              <div class="skeleton-content">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-desc"></div>
+              </div>
+              <div class="skeleton-badge"></div>
+            </div>
+            <div class="skeleton-benefit-item">
+              <div class="skeleton-icon-container">
+                <div class="skeleton-icon"></div>
+              </div>
+              <div class="skeleton-content">
+                <div class="skeleton-title"></div>
+                <div class="skeleton-desc"></div>
+              </div>
+              <div class="skeleton-badge"></div>
+            </div>
           </div>
         </div>
-        <button class="promotion-detail-btn">
-          <span>혜택 자세히 보기</span>
-          <span class="arrow">→</span>
-        </button>
+
+        <div class="promotion-footer">
+          <button class="promotion-detail-btn modern-outline-btn">
+            <span class="btn-icon">📋</span>
+            <span class="btn-text">전체 혜택 보기</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
       </div>
     `;
   },
@@ -1242,71 +1268,108 @@ window.StoreUIManager = {
           margin-bottom: 16px;
         }
 
-        /* 로딩 스켈레톤 */
+        /* 개선된 로딩 스켈레톤 */
         .benefits-loading-skeleton {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          padding: 4px 0;
         }
 
         .skeleton-benefit-item {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 14px;
-          background: #f8fafc;
+          padding: 16px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
           border-radius: 12px;
-          border: 1px solid #f1f5f9;
+          border: 1px solid #e2e8f0;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .skeleton-benefit-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%
+          );
+          animation: skeletonShimmer 2s infinite;
+        }
+
+        .skeleton-icon-container {
+          flex-shrink: 0;
         }
 
         .skeleton-icon {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
-          border-radius: 8px;
-          animation: skeletonPulse 1.5s ease-in-out infinite;
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 10px;
+          animation: skeletonPulse 1.8s ease-in-out infinite;
+          position: relative;
         }
 
         .skeleton-content {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
+          min-width: 0;
         }
 
         .skeleton-title {
-          height: 14px;
-          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
-          border-radius: 4px;
-          width: 60%;
-          animation: skeletonPulse 1.5s ease-in-out infinite;
-          animation-delay: 0.1s;
+          height: 16px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 6px;
+          width: 65%;
+          animation: skeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.2s;
         }
 
         .skeleton-desc {
           height: 12px;
-          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
           border-radius: 4px;
-          width: 80%;
-          animation: skeletonPulse 1.5s ease-in-out infinite;
-          animation-delay: 0.2s;
+          width: 85%;
+          animation: skeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.4s;
         }
 
         .skeleton-badge {
-          width: 48px;
-          height: 24px;
-          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
-          border-radius: 12px;
-          animation: skeletonPulse 1.5s ease-in-out infinite;
-          animation-delay: 0.3s;
+          width: 52px;
+          height: 28px;
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+          border-radius: 14px;
+          animation: skeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.6s;
+          flex-shrink: 0;
         }
 
         @keyframes skeletonPulse {
           0%, 100% {
-            background-position: 200% 0;
+            opacity: 1;
+            transform: scale(1);
           }
           50% {
-            background-position: -200% 0;
+            opacity: 0.7;
+            transform: scale(0.98);
+          }
+        }
+
+        @keyframes skeletonShimmer {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
           }
         }
 
