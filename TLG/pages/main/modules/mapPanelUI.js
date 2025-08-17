@@ -225,6 +225,8 @@ window.MapPanelUI = {
           margin: 10px auto 6px auto;
           cursor: grab; /* 드래그 가능한 커서 */
           opacity: 0.8;
+          touch-action: none; /* 터치 시 기본 스크롤 방지 */
+          user-select: none; /* 텍스트 선택 방지 */
         }
 
         /* 가게 목록 스크롤 영역 */
@@ -565,7 +567,7 @@ window.MapPanelUI = {
     }, 100);
   },
 
-  // 패널 드래그 기능 설정 (드래그로만 제어, 클릭 토글 완전 제거)
+  // 패널 드래그 기능 설정 (마우스 + 터치 지원)
   setupPanelDrag() {
     const storePanel = document.getElementById('storePanel');
     const panelHandle = document.getElementById('panelHandle');
@@ -579,6 +581,7 @@ window.MapPanelUI = {
     if (currentHeight === 60) storePanel.classList.add('collapsed');
     else storePanel.classList.add('expanded');
 
+    // === 마우스 이벤트 ===
     // 핸들에서만 드래그 시작 (패널 클릭 토글 완전 제거)
     panelHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -641,6 +644,84 @@ window.MapPanelUI = {
         storePanel.classList.remove('collapsed');
         currentHeight = 630;
       }
+    });
+
+    // === 터치 이벤트 (모바일 대응) ===
+    // 터치 시작
+    panelHandle.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startHeight = currentHeight;
+      storePanel.style.transition = 'none'; // 드래그 중에는 transition 비활성화
+      document.body.style.userSelect = 'none'; // 드래그 중 텍스트 선택 방지
+      console.log('📱 모바일 패널 드래그 시작:', startY);
+    });
+
+    // 터치 이동
+    panelHandle.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - startY;
+      let newHeight = startHeight - deltaY;
+
+      // 최대/최소 높이 제한
+      const maxHeight = 630;
+      const minHeight = 60; // collapsed 상태 높이
+
+      newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+      storePanel.style.height = `${newHeight}px`;
+      currentHeight = newHeight;
+
+      // 패널 상태 클래스 업데이트
+      if (newHeight <= minHeight + 10) {
+        storePanel.classList.add('collapsed');
+        storePanel.classList.remove('expanded');
+      } else if (newHeight >= maxHeight - 10) {
+        storePanel.classList.add('expanded');
+        storePanel.classList.remove('collapsed');
+      } else {
+        storePanel.classList.remove('collapsed', 'expanded');
+      }
+    });
+
+    // 터치 종료
+    panelHandle.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      isDragging = false;
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
+      document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
+
+      // 드래그 종료 후 높이에 따라 클래스 결정 및 고정
+      const midPoint = 300; // 패널을 열거나 닫을 임계값
+
+      if (currentHeight < midPoint) {
+        storePanel.style.height = '60px';
+        storePanel.classList.add('collapsed');
+        storePanel.classList.remove('expanded');
+        currentHeight = 60;
+        console.log('📱 모바일 패널 접힘');
+      } else {
+        storePanel.style.height = '630px';
+        storePanel.classList.add('expanded');
+        storePanel.classList.remove('collapsed');
+        currentHeight = 630;
+        console.log('📱 모바일 패널 펼침');
+      }
+    });
+
+    // 터치 취소 (예: 화면 밖으로 나갔을 때)
+    panelHandle.addEventListener('touchcancel', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
+      document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
+      console.log('📱 모바일 패널 드래그 취소');
     });
 
     // 패널 전체에서 클릭 이벤트 완전 차단 (renderStore처럼)
