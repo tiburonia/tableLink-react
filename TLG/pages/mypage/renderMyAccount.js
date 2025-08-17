@@ -1,3 +1,4 @@
+
 // 실제 API 데이터를 UI 표시 형식으로 변환
 async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   console.log('🔄 실제 데이터를 UI 형식으로 변환 시작');
@@ -349,135 +350,132 @@ async function renderMyAccount() {
   }
 
   main.innerHTML = `
-    <div class="account-container">
-      <button class="back-button" id="backBtn"
-      onclick="renderMyPage()">←</button>
+    <div class="account-wrapper">
+      <!-- 상단 네비게이션 -->
+      <header class="account-header">
+        <button class="back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </button>
+        <h1>내 계정</h1>
+        <div class="header-spacer"></div>
+      </header>
 
+      <!-- 스크롤 가능한 컨텐츠 -->
       <div class="account-content">
-        <!-- 프로필 헤더 -->
-        <div class="profile-header">
-          <div class="profile-image-wrapper">
-            <img id="profileImage" src="" alt="프로필" class="profile-image">
-            <div class="vip-badge" id="vipBadge">
-              <span class="vip-text">GOLD</span>
-            </div>
+        <!-- 프로필 카드 -->
+        <div class="profile-card">
+          <div class="profile-avatar">
+            <img id="profileImage" src="" alt="프로필" class="avatar-img">
+            <div class="status-indicator"></div>
           </div>
           <div class="profile-info">
-            <h1 class="user-name" id="userName">로딩중...</h1>
-            <p class="user-email" id="userEmail">이메일을 불러오는 중...</p>
-            <div class="user-stats">
-              <div class="stat-item">
-                <span class="stat-number" id="totalOrders">-</span>
-                <span class="stat-label">총 주문</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-number" id="currentPoints">-</span>
-                <span class="stat-label">포인트</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-number" id="vipLevel">-</span>
-                <span class="stat-label">등급</span>
-              </div>
+            <h2 id="userName" class="user-name">로딩중...</h2>
+            <p id="userEmail" class="user-email">이메일을 불러오는 중...</p>
+            <div class="vip-badge" id="vipBadge">
+              <span class="badge-text">GOLD</span>
             </div>
           </div>
+          <button class="edit-profile-btn" id="editProfileBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m18 2 4 4-14 14H4v-4L18 2z"></path>
+            </svg>
+          </button>
         </div>
 
-        <!-- 이번 달 활동 요약 -->
-        <div class="monthly-summary">
-          <h3>📊 이번 달 활동</h3>
-          <div class="summary-grid">
-            <div class="summary-item orders">
-              <div class="summary-icon">🛍️</div>
-              <div class="summary-content">
-                <div class="summary-number" id="monthlyOrders">-</div>
-                <div class="summary-label">주문</div>
-              </div>
+        <!-- 통계 카드 -->
+        <div class="stats-grid">
+          <div class="stat-card primary">
+            <div class="stat-icon">🛍️</div>
+            <div class="stat-content">
+              <span class="stat-number" id="totalOrders">-</span>
+              <span class="stat-label">총 주문</span>
             </div>
-            <div class="summary-item spent">
-              <div class="summary-icon">💰</div>
-              <div class="summary-content">
-                <div class="summary-number" id="monthlySpent">-</div>
-                <div class="summary-label">사용금액</div>
-              </div>
+          </div>
+          <div class="stat-card secondary">
+            <div class="stat-icon">💎</div>
+            <div class="stat-content">
+              <span class="stat-number" id="currentPoints">-</span>
+              <span class="stat-label">포인트</span>
             </div>
-            <div class="summary-item saved">
-              <div class="summary-icon">🎁</div>
-              <div class="summary-content">
-                <div class="summary-number" id="monthlySaved">-</div>
-                <div class="summary-label">절약금액</div>
-              </div>
+          </div>
+          <div class="stat-card tertiary">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+              <span class="stat-number" id="monthlySpent">-</span>
+              <span class="stat-label">이번달 사용</span>
             </div>
           </div>
         </div>
 
         <!-- 단골 레벨 섹션 -->
-        <div class="regular-levels-section">
-          <h3>💖 나의 단골 레벨</h3>
-          <div class="regular-levels-list" id="regularLevelsListAccount">
-            <div class="loading-placeholder">단골 레벨 정보를 불러오는 중...</div>
+        <div class="section-card">
+          <div class="section-header">
+            <h3>🏆 나의 단골 레벨</h3>
+            <button class="view-all-btn" id="viewAllLevelsBtn">전체보기</button>
+          </div>
+          <div class="regular-levels-container" id="regularLevelsContainer">
+            <div class="loading-skeleton">단골 레벨 정보를 불러오는 중...</div>
           </div>
         </div>
 
-        <!-- 퀵 액션 -->
-        <div class="quick-actions">
-          <button class="quick-action-btn" id="editProfileBtn">
-            <span class="action-icon">👤</span>
-            <span class="action-text">프로필 수정</span>
-          </button>
-          <button class="quick-action-btn" id="couponBtn">
-            <span class="action-icon">🎫</span>
-            <span class="action-text">쿠폰함</span>
-            <span class="notification-badge" id="couponBadge">3</span>
-          </button>
-          <button class="quick-action-btn" id="favoritesBtn">
-            <span class="action-icon">⭐</span>
-            <span class="action-text">즐겨찾기</span>
-          </button>
-          <button class="quick-action-btn" id="achievementsBtn">
-            <span class="action-icon">🏆</span>
-            <span class="action-text">업적</span>
-          </button>
+        <!-- 퀵 액션 메뉴 -->
+        <div class="section-card">
+          <div class="section-header">
+            <h3>⚡ 빠른 메뉴</h3>
+          </div>
+          <div class="quick-menu-grid">
+            <button class="quick-menu-item" id="couponBtn">
+              <div class="menu-icon">🎫</div>
+              <span class="menu-label">쿠폰함</span>
+              <div class="menu-badge" id="couponBadge">3</div>
+            </button>
+            <button class="quick-menu-item" id="favoritesBtn">
+              <div class="menu-icon">⭐</div>
+              <span class="menu-label">즐겨찾기</span>
+            </button>
+            <button class="quick-menu-item" id="achievementsBtn">
+              <div class="menu-icon">🏆</div>
+              <span class="menu-label">업적</span>
+            </button>
+            <button class="quick-menu-item" id="settingsBtn">
+              <div class="menu-icon">⚙️</div>
+              <span class="menu-label">설정</span>
+            </button>
+          </div>
         </div>
 
-        <!-- 최근 주문 내역 -->
-        <div class="recent-orders">
+        <!-- 최근 활동 -->
+        <div class="section-card">
           <div class="section-header">
-            <h3>📦 최근 주문</h3>
+            <h3>📈 최근 활동</h3>
             <button class="view-all-btn" id="viewAllOrdersBtn">전체보기</button>
           </div>
-          <div class="orders-list" id="recentOrdersList">
-            <div class="loading-placeholder">주문 내역을 불러오는 중...</div>
+          <div class="activity-list" id="recentOrdersList">
+            <div class="loading-skeleton">주문 내역을 불러오는 중...</div>
           </div>
         </div>
 
-        <!-- 예약 내역 -->
-        <div class="reservations">
+        <!-- 개인정보 섹션 -->
+        <div class="section-card">
           <div class="section-header">
-            <h3>📅 예약 관리</h3>
-            <button class="view-all-btn" id="viewAllReservationsBtn">전체보기</button>
-          </div>
-          <div class="reservations-list" id="reservationsList">
-            <div class="loading-placeholder">예약 정보를 불러오는 중...</div>
-          </div>
-        </div>
-
-        <!-- 개인정보 카드 -->
-        <div class="personal-info">
-          <div class="section-header">
-            <h3>📋 개인정보</h3>
+            <h3>👤 개인정보</h3>
             <button class="edit-btn" id="editPersonalInfoBtn">수정</button>
           </div>
-          <div class="info-grid" id="personalInfoGrid">
-            <div class="loading-placeholder">개인정보를 불러오는 중...</div>
+          <div class="personal-info-list" id="personalInfoList">
+            <div class="loading-skeleton">개인정보를 불러오는 중...</div>
           </div>
         </div>
 
-        <!-- 하단 액션 버튼들 -->
-        <div class="bottom-actions">
-          <button class="primary-button" id="backToMyPageBtn">
-            마이페이지로 돌아가기
-          </button>
-          <button class="secondary-button" id="logoutBtn">
+        <!-- 로그아웃 버튼 -->
+        <div class="logout-section">
+          <button class="logout-btn" id="logoutBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16,17 21,12 16,7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
             로그아웃
           </button>
         </div>
@@ -491,9 +489,10 @@ async function renderMyAccount() {
         padding: 0 !important;
         width: 100% !important;
         height: 100% !important;
-        overflow: visible !important;
+        overflow: hidden !important;
         position: static !important;
-        background: #f0f0f0 !important;
+        background: #f8fafc !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
       }
 
       #main {
@@ -503,93 +502,121 @@ async function renderMyAccount() {
         top: 50% !important;
         left: 50% !important;
         transform: translate(-50%, -50%) !important;
-        background: white !important;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1) !important;
-        border: 1px solid #ccc !important;
-        overflow-y: auto !important;
-        overflow-x: hidden !important;
+        background: #ffffff !important;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
       }
 
-      .account-container {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      .account-wrapper {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
         position: relative;
-        overflow: visible;
-        padding-bottom: 40px;
       }
 
-      .back-button {
-        position: fixed !important;
-        top: 20px !important;
-        left: 20px !important;
-        width: 48px;
-        height: 48px;
+      /* 헤더 */
+      .account-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 20px 16px 20px;
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        z-index: 10;
+      }
+
+      .back-btn {
+        width: 40px;
+        height: 40px;
         border: none;
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(15px);
-        border-radius: 50%;
-        font-size: 20px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        color: white;
         cursor: pointer;
+        transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #667eea;
-        transition: all 0.3s ease;
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-        z-index: 99999 !important;
-        pointer-events: auto !important;
-        user-select: none;
       }
 
-      .back-button:hover {
-        background: rgba(255, 255, 255, 1);
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
         transform: scale(1.05);
-        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
       }
 
+      .back-btn svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .account-header h1 {
+        color: white;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+        text-align: center;
+        flex: 1;
+      }
+
+      .header-spacer {
+        width: 40px;
+      }
+
+      /* 스크롤 컨텐츠 */
       .account-content {
-        padding: 80px 20px 40px 20px;
-        max-width: 430px;
-        margin: 0 auto;
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f8fafc;
+        border-radius: 24px 24px 0 0;
+        margin-top: -16px;
+        position: relative;
+        z-index: 1;
       }
 
-      .profile-header {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-radius: 24px;
-        padding: 30px 25px;
+      .account-content::-webkit-scrollbar {
+        width: 0;
+      }
+
+      /* 프로필 카드 */
+      .profile-card {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         display: flex;
         align-items: center;
-        gap: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        gap: 16px;
+        position: relative;
       }
 
-      .profile-image-wrapper {
+      .profile-avatar {
         position: relative;
         flex-shrink: 0;
       }
 
-      .profile-image {
-        width: 80px;
-        height: 80px;
+      .avatar-img {
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
-        border: 4px solid #fff;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        border: 3px solid #e5e7eb;
+        object-fit: cover;
       }
 
-      .vip-badge {
+      .status-indicator {
         position: absolute;
-        bottom: -5px;
-        right: -5px;
-        background: linear-gradient(45deg, #ffd700, #ffed4e);
-        color: #333;
-        font-size: 10px;
-        font-weight: bold;
-        padding: 4px 8px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(255, 215, 0, 0.3);
+        bottom: 2px;
+        right: 2px;
+        width: 16px;
+        height: 16px;
+        background: #10b981;
+        border: 3px solid white;
+        border-radius: 50%;
       }
 
       .profile-info {
@@ -597,187 +624,133 @@ async function renderMyAccount() {
       }
 
       .user-name {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 700;
-        color: #333;
-        margin-bottom: 4px;
-        margin: 0;
+        color: #111827;
+        margin: 0 0 4px 0;
       }
 
       .user-email {
-        color: #666;
         font-size: 14px;
-        margin: 4px 0 16px 0;
+        color: #6b7280;
+        margin: 0 0 12px 0;
       }
 
-      .user-stats {
+      .vip-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        color: white;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+      }
+
+      .edit-profile-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: #f3f4f6;
+        border-radius: 10px;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s ease;
         display: flex;
-        gap: 16px;
+        align-items: center;
+        justify-content: center;
       }
 
-      .stat-item {
+      .edit-profile-btn:hover {
+        background: #e5e7eb;
+        color: #374151;
+      }
+
+      .edit-profile-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      /* 통계 그리드 */
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px 16px;
         text-align: center;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+      }
+
+      .stat-card.primary::before {
+        background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+      }
+
+      .stat-card.secondary::before {
+        background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+      }
+
+      .stat-card.tertiary::before {
+        background: linear-gradient(90deg, #10b981, #059669);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-2px);
+      }
+
+      .stat-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      .stat-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
       }
 
       .stat-number {
-        display: block;
-        font-size: 16px;
-        font-weight: bold;
-        color: #667eea;
+        font-size: 18px;
+        font-weight: 700;
+        color: #111827;
       }
 
       .stat-label {
-        font-size: 11px;
-        color: #999;
-        margin-top: 2px;
-      }
-
-      .monthly-summary {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      }
-
-      .monthly-summary h3 {
-        color: #333;
-        font-size: 18px;
-        margin-bottom: 16px;
-        font-weight: 600;
-        margin-top: 0;
-      }
-
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
-      }
-
-      .summary-item {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border-radius: 16px;
-        padding: 16px 12px;
-        text-align: center;
-        transition: transform 0.2s ease;
-      }
-
-      .summary-item:hover {
-        transform: translateY(-2px);
-      }
-
-      .summary-item.orders {
-        background: linear-gradient(135deg, #e3f2fd, #bbdefb);
-      }
-
-      .summary-item.spent {
-        background: linear-gradient(135deg, #fff3e0, #ffcc80);
-      }
-
-      .summary-item.saved {
-        background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
-      }
-
-      .summary-icon {
-        font-size: 20px;
-        margin-bottom: 8px;
-      }
-
-      .summary-number {
-        font-size: 16px;
-        font-weight: bold;
-        color: #333;
-      }
-
-      .summary-label {
         font-size: 12px;
-        color: #666;
-        margin-top: 4px;
-      }
-
-      .regular-levels-section {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-      }
-
-      .regular-levels-section h3 {
-        color: #333;
-        font-size: 18px;
-        margin-bottom: 16px;
-        font-weight: 600;
-        margin-top: 0;
-      }
-
-      .regular-levels-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .quick-actions {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-        margin-bottom: 20px;
-      }
-
-      .quick-action-btn {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: none;
-        border-radius: 16px;
-        padding: 20px 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .quick-action-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-      }
-
-      .action-icon {
-        font-size: 24px;
-      }
-
-      .action-text {
-        font-size: 14px;
+        color: #6b7280;
         font-weight: 500;
-        color: #333;
       }
 
-      .notification-badge {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: #ff4757;
-        color: white;
-        font-size: 10px;
-        font-weight: bold;
-        padding: 2px 6px;
-        border-radius: 10px;
-        min-width: 16px;
-        text-align: center;
-      }
-
-      .recent-orders, .reservations, .personal-info {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 24px;
-        margin-bottom: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      /* 섹션 카드 */
+      .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
       }
 
       .section-header {
@@ -788,9 +761,9 @@ async function renderMyAccount() {
       }
 
       .section-header h3 {
-        color: #333;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 600;
+        color: #111827;
         margin: 0;
       }
 
@@ -802,63 +775,165 @@ async function renderMyAccount() {
         font-weight: 500;
         cursor: pointer;
         transition: color 0.2s ease;
+        padding: 4px 8px;
+        border-radius: 6px;
       }
 
       .view-all-btn:hover, .edit-btn:hover {
+        background: #f3f4f6;
         color: #5a6fd8;
       }
 
-      .order-item, .reservation-item {
-        background: #f8f9fa;
+      /* 퀵 메뉴 */
+      .quick-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+      }
+
+      .quick-menu-item {
+        background: #f8fafc;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+      }
+
+      .quick-menu-item:hover {
+        background: #e5e7eb;
+        transform: translateY(-1px);
+      }
+
+      .menu-icon {
+        font-size: 20px;
+      }
+
+      .menu-label {
+        font-size: 12px;
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .menu-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #ef4444;
+        color: white;
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 10px;
+        min-width: 16px;
+        text-align: center;
+      }
+
+      /* 단골 레벨 컨테이너 */
+      .regular-levels-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .regular-level-item {
+        background: #f8fafc;
         border-radius: 12px;
         padding: 16px;
-        margin-bottom: 12px;
         border-left: 4px solid #667eea;
         transition: transform 0.2s ease;
       }
 
-      .order-item:hover, .reservation-item:hover {
+      .regular-level-item:hover {
         transform: translateX(4px);
       }
 
-      .order-store {
+      .level-store-name {
         font-weight: 600;
-        color: #333;
+        color: #111827;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .level-badge {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .level-progress {
+        font-size: 12px;
+        color: #6b7280;
         margin-bottom: 4px;
       }
 
-      .order-items {
+      .level-benefits {
+        font-size: 11px;
+        color: #667eea;
+        font-weight: 500;
+      }
+
+      /* 활동 리스트 */
+      .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .activity-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        border-left: 4px solid #10b981;
+        transition: transform 0.2s ease;
+      }
+
+      .activity-item:hover {
+        transform: translateX(4px);
+      }
+
+      .activity-store {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 4px;
+      }
+
+      .activity-items {
         font-size: 14px;
-        color: #666;
+        color: #6b7280;
         margin-bottom: 8px;
       }
 
-      .order-meta {
+      .activity-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
         font-size: 12px;
       }
 
-      .order-date {
-        color: #999;
+      .activity-date {
+        color: #9ca3af;
       }
 
-      .order-total {
-        font-weight: bold;
-        color: #667eea;
+      .activity-total {
+        font-weight: 600;
+        color: #10b981;
       }
 
-      .review-status {
-        background: #e8f5e8;
-        color: #2e7d2e;
-        padding: 2px 8px;
-        border-radius: 8px;
-        font-size: 11px;
-      }
-
-      .info-grid {
-        display: grid;
+      /* 개인정보 리스트 */
+      .personal-info-list {
+        display: flex;
+        flex-direction: column;
         gap: 12px;
       }
 
@@ -867,7 +942,7 @@ async function renderMyAccount() {
         justify-content: space-between;
         align-items: center;
         padding: 12px 0;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #f3f4f6;
       }
 
       .info-item:last-child {
@@ -875,130 +950,61 @@ async function renderMyAccount() {
       }
 
       .info-label {
-        color: #666;
         font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
       }
 
       .info-value {
-        color: #333;
-        font-weight: 500;
         font-size: 14px;
+        color: #111827;
+        font-weight: 500;
       }
 
-      .bottom-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+      /* 로그아웃 섹션 */
+      .logout-section {
         margin-top: 20px;
+        padding-bottom: 20px;
       }
 
-      .primary-button, .secondary-button {
+      .logout-btn {
         width: 100%;
+        background: #fee2e2;
+        border: 1px solid #fecaca;
+        border-radius: 12px;
         padding: 16px;
-        border: none;
-        border-radius: 16px;
+        color: #dc2626;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
       }
 
-      .primary-button {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+      .logout-btn:hover {
+        background: #fecaca;
+        border-color: #fca5a5;
       }
 
-      .primary-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+      .logout-btn svg {
+        width: 20px;
+        height: 20px;
       }
 
-      .secondary-button {
-        background: rgba(255, 255, 255, 0.95);
-        color: #333;
-        border: 2px solid #eee;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      }
-
-      .secondary-button:hover {
-        background: #f8f9fa;
-        transform: translateY(-1px);
-      }
-
-      .loading-placeholder {
-        text-align: center;
-        color: #999;
+      /* 로딩 스켈레톤 */
+      .loading-skeleton {
+        background: #f3f4f6;
+        border-radius: 8px;
         padding: 20px;
+        text-align: center;
+        color: #9ca3af;
         font-style: italic;
       }
 
-      .coupon-item {
-        background: linear-gradient(135deg, #fff5f5, #fed7d7);
-        border: 2px dashed #fc8181;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        position: relative;
-      }
-
-      .coupon-item::before {
-        content: '🎫';
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        font-size: 20px;
-      }
-
-      .coupon-name {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-      }
-
-      .coupon-discount {
-        color: #e53e3e;
-        font-weight: bold;
-        font-size: 16px;
-        margin-bottom: 4px;
-      }
-
-      .coupon-valid {
-        font-size: 12px;
-        color: #666;
-      }
-
-      .achievement-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        background: #f8f9fa;
-        border-radius: 12px;
-        margin-bottom: 8px;
-      }
-
-      .achievement-icon {
-        font-size: 24px;
-        width: 40px;
-        text-align: center;
-      }
-
-      .achievement-info {
-        flex: 1;
-      }
-
-      .achievement-name {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 2px;
-      }
-
-      .achievement-date {
-        font-size: 12px;
-        color: #999;
-      }
-
+      /* 모달 스타일 */
       .modal-overlay {
         position: fixed;
         top: 0;
@@ -1009,7 +1015,7 @@ async function renderMyAccount() {
         display: flex;
         justify-content: center;
         align-items: center;
-        z-index: 10000;
+        z-index: 1000;
       }
 
       .modal-content {
@@ -1028,12 +1034,14 @@ async function renderMyAccount() {
         justify-content: space-between;
         align-items: center;
         padding: 20px;
-        border-bottom: 1px solid #eee;
+        border-bottom: 1px solid #f3f4f6;
       }
 
       .modal-header h2 {
         margin: 0;
         font-size: 18px;
+        font-weight: 600;
+        color: #111827;
       }
 
       .modal-close {
@@ -1041,7 +1049,18 @@ async function renderMyAccount() {
         border: none;
         font-size: 24px;
         cursor: pointer;
-        color: #999;
+        color: #9ca3af;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-close:hover {
+        background: #f3f4f6;
+        color: #6b7280;
       }
 
       .modal-body {
@@ -1050,123 +1069,30 @@ async function renderMyAccount() {
         flex: 1;
       }
 
-      .regular-level-account-item {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border-left: 4px solid #667eea;
-        transition: transform 0.2s ease;
-      }
-
-      .regular-level-account-item:hover {
-        transform: translateX(4px);
-      }
-
-      .level-account-store {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 8px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .level-account-badge {
-        color: white;
-        padding: 4px 8px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: bold;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      }
-
-      .level-account-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-        color: #666;
-      }
-
-      .regular-level-modal-account-item {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        border: 1px solid #e9ecef;
-      }
-
-      .level-modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .level-modal-store {
-        font-weight: 600;
-        color: #333;
-      }
-
-      .level-modal-stats {
-        color: #666;
-        font-size: 14px;
-        margin-bottom: 4px;
-      }
-
-      .level-modal-benefits {
-        color: #667eea;
-        font-size: 12px;
-        font-weight: 500;
-      }
-
+      /* 반응형 */
       @media (max-width: 430px) {
         .account-content {
-          padding: 80px 16px 40px 16px;
-        }
-
-        .profile-header {
-          padding: 24px 20px;
-          gap: 16px;
-        }
-
-        .profile-image {
-          width: 70px;
-          height: 70px;
-        }
-
-        .user-name {
-          font-size: 20px;
-        }
-
-        .user-stats {
-          gap: 12px;
-        }
-
-        .stat-number {
-          font-size: 14px;
-        }
-
-        .regular-levels-section {
           padding: 16px;
         }
 
-        .quick-actions {
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
+        .profile-card {
+          padding: 20px;
         }
 
-        .quick-action-btn {
+        .stats-grid {
+          gap: 8px;
+        }
+
+        .stat-card {
           padding: 16px 12px;
         }
 
-        .action-icon {
-          font-size: 20px;
+        .quick-menu-grid {
+          gap: 8px;
         }
 
-        .action-text {
-          font-size: 12px;
+        .quick-menu-item {
+          padding: 12px 6px;
         }
       }
     </style>
@@ -1184,14 +1110,14 @@ function setupEventListeners() {
   console.log('🔧 이벤트 리스너 등록 중...');
 
   const backBtn = document.getElementById('backBtn');
-  const backToMyPageBtn = document.getElementById('backToMyPageBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const editProfileBtn = document.getElementById('editProfileBtn');
   const couponBtn = document.getElementById('couponBtn');
   const favoritesBtn = document.getElementById('favoritesBtn');
   const achievementsBtn = document.getElementById('achievementsBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
   const viewAllOrdersBtn = document.getElementById('viewAllOrdersBtn');
-  const viewAllReservationsBtn = document.getElementById('viewAllReservationsBtn');
+  const viewAllLevelsBtn = document.getElementById('viewAllLevelsBtn');
   const editPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
 
   if (backBtn) {
@@ -1204,15 +1130,6 @@ function setupEventListeners() {
         renderMyPage();
       } else {
         console.error('❌ renderMyPage 함수를 찾을 수 없음');
-      }
-    });
-  }
-
-  if (backToMyPageBtn) {
-    backToMyPageBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (typeof renderMyPage === 'function') {
-        renderMyPage();
       }
     });
   }
@@ -1254,6 +1171,13 @@ function setupEventListeners() {
     });
   }
 
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      alert('설정 기능은 개발 중입니다.');
+    });
+  }
+
   if (viewAllOrdersBtn) {
     viewAllOrdersBtn.addEventListener('click', function(e) {
       e.preventDefault();
@@ -1261,10 +1185,10 @@ function setupEventListeners() {
     });
   }
 
-  if (viewAllReservationsBtn) {
-    viewAllReservationsBtn.addEventListener('click', function(e) {
+  if (viewAllLevelsBtn) {
+    viewAllLevelsBtn.addEventListener('click', function(e) {
       e.preventDefault();
-      showAllReservationsModal();
+      showAllRegularLevelsModal();
     });
   }
 
@@ -1328,13 +1252,10 @@ async function loadAccountData() {
 
     // UI 업데이트
     updateProfileHeader(displayData);
-    updateMonthlySummary(displayData);
-    updateRecentOrders(displayData);
-    updateReservations(displayData);
+    updateStatsGrid(displayData);
+    updateRecentActivity(displayData);
     updatePersonalInfo(displayData);
-
-    // 단골 레벨 정보 업데이트
-    updateRegularLevelsAccount(displayData);
+    updateRegularLevels(displayData);
 
     console.log('✅ 모든 사용자 데이터 로드 및 UI 업데이트 완료');
 
@@ -1357,15 +1278,12 @@ async function loadAccountData() {
         const userData = await userResponse.json();
         const basicData = await convertToDisplayFormat(userData.user, [], []);
         updateProfileHeader(basicData);
-        updateMonthlySummary(basicData);
+        updateStatsGrid(basicData);
         updatePersonalInfo(basicData);
-
-        // 단골 레벨 정보 업데이트 (부분 복구 시에도 적용)
-        updateRegularLevelsAccount(basicData);
+        updateRegularLevels(basicData);
 
         // 주문/리뷰는 빈 데이터로
-        document.getElementById('recentOrdersList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">주문 내역을 불러올 수 없습니다.</p>';
-        document.getElementById('reservationsList').innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">예약 정보를 불러올 수 없습니다.</p>';
+        document.getElementById('recentOrdersList').innerHTML = '<div class="loading-skeleton">주문 내역을 불러올 수 없습니다.</div>';
 
         console.log('✅ 부분 데이터 복구 성공');
         return;
@@ -1378,11 +1296,10 @@ async function loadAccountData() {
     console.log('🔄 더미 데이터로 완전 폴백');
     const fallbackData = generateDummyData(window.userInfo?.id || 'user1');
     updateProfileHeader(fallbackData);
-    updateMonthlySummary(fallbackData);
-    updateRecentOrders(fallbackData);
-    updateReservations(fallbackData);
+    updateStatsGrid(fallbackData);
+    updateRecentActivity(fallbackData);
     updatePersonalInfo(fallbackData);
-    updateRegularLevelsAccount(fallbackData); // 더미 데이터로 단골 레벨 업데이트
+    updateRegularLevels(fallbackData);
   }
 }
 
@@ -1391,145 +1308,100 @@ function updateProfileHeader(data) {
   const profileImage = document.getElementById('profileImage');
   const userName = document.getElementById('userName');
   const userEmail = document.getElementById('userEmail');
-  const totalOrders = document.getElementById('totalOrders');
-  const currentPoints = document.getElementById('currentPoints');
-  const vipLevelElement = document.getElementById('vipLevel');
   const vipBadge = document.getElementById('vipBadge');
 
   if (profileImage) profileImage.src = data.profileImage;
   if (userName) userName.textContent = data.name;
   if (userEmail) userEmail.textContent = data.email;
-  if (totalOrders) totalOrders.textContent = data.totalOrders;
-  if (currentPoints) currentPoints.textContent = `${data.point.toLocaleString()}P`;
-  if (vipLevelElement) vipLevelElement.textContent = data.vipLevel;
-  if (vipBadge) vipBadge.innerHTML = `<span class="vip-text">${data.vipLevel}</span>`;
 
-  // VIP 레벨에 따른 배지 색상 변경
   if (vipBadge) {
+    vipBadge.innerHTML = `<span class="badge-text">${data.vipLevel}</span>`;
+    
+    // VIP 레벨에 따른 배지 색상 변경
     switch(data.vipLevel) {
       case 'PLATINUM':
-        vipBadge.style.background = 'linear-gradient(45deg, #e5e7eb, #d1d5db)';
+        vipBadge.style.background = 'linear-gradient(135deg, #9ca3af, #6b7280)';
         break;
       case 'GOLD':
-        vipBadge.style.background = 'linear-gradient(45deg, #ffd700, #ffed4e)';
+        vipBadge.style.background = 'linear-gradient(135deg, #fbbf24, #f59e0b)';
         break;
       case 'SILVER':
-        vipBadge.style.background = 'linear-gradient(45deg, #c0c0c0, #e8e8e8)';
+        vipBadge.style.background = 'linear-gradient(135deg, #d1d5db, #9ca3af)';
         break;
       default:
-        vipBadge.style.background = 'linear-gradient(45deg, #cd7f32, #daa520)';
+        vipBadge.style.background = 'linear-gradient(135deg, #d97706, #92400e)';
     }
   }
 }
 
-// 월간 요약 업데이트
-function updateMonthlySummary(data) {
-  const monthlyStats = data.monthlyStats.currentMonth;
-  const monthlyOrders = document.getElementById('monthlyOrders');
+// 통계 그리드 업데이트
+function updateStatsGrid(data) {
+  const totalOrders = document.getElementById('totalOrders');
+  const currentPoints = document.getElementById('currentPoints');
   const monthlySpent = document.getElementById('monthlySpent');
-  const monthlySaved = document.getElementById('monthlySaved');
 
-  if (monthlyOrders) monthlyOrders.textContent = `${monthlyStats.orders}회`;
-  if (monthlySpent) monthlySpent.textContent = `${monthlyStats.spent.toLocaleString()}원`;
-  if (monthlySaved) monthlySaved.textContent = `${monthlyStats.savedMoney.toLocaleString()}원`;
+  if (totalOrders) totalOrders.textContent = data.totalOrders;
+  if (currentPoints) currentPoints.textContent = `${data.point.toLocaleString()}P`;
+  if (monthlySpent) monthlySpent.textContent = `${data.monthlyStats.currentMonth.spent.toLocaleString()}원`;
 }
 
-// 단골 레벨 목록 업데이트 (계정 페이지)
-function updateRegularLevelsAccount(data) {
-  const regularLevelsList = document.getElementById('regularLevelsListAccount');
-  if (!regularLevelsList) return;
+// 단골 레벨 업데이트
+function updateRegularLevels(data) {
+  const regularLevelsContainer = document.getElementById('regularLevelsContainer');
+  if (!regularLevelsContainer) return;
 
   if (data.regularLevels && data.regularLevels.length > 0) {
-    regularLevelsList.innerHTML = data.regularLevels.map((levelInfo, index) => `
-      <div class="regular-level-account-item">
-        <div class="level-account-store">
+    regularLevelsContainer.innerHTML = data.regularLevels.slice(0, 3).map((levelInfo) => `
+      <div class="regular-level-item">
+        <div class="level-store-name">
           <span>${levelInfo.store}</span>
-          <span class="level-account-badge" style="background: ${getLevelBadgeBackground(levelInfo.level)};">
-            ${levelInfo.level}
-          </span>
+          <span class="level-badge">${levelInfo.level}</span>
         </div>
-        <div class="level-account-meta">
-          <span>${levelInfo.points} / ${levelInfo.nextLevelPoints} P</span>
-          <span>${levelInfo.benefits.join(', ')}</span>
+        <div class="level-progress">${levelInfo.points} / ${levelInfo.nextLevelPoints} 포인트</div>
+        <div class="level-benefits">${levelInfo.benefits.join(', ')}</div>
+      </div>
+    `).join('');
+  } else {
+    regularLevelsContainer.innerHTML = '<div class="loading-skeleton">등록된 단골 레벨이 없습니다.</div>';
+  }
+}
+
+// 최근 활동 업데이트
+function updateRecentActivity(data) {
+  const activityList = document.getElementById('recentOrdersList');
+  if (!activityList) return;
+
+  const recentOrders = data.orderList.slice(0, 3);
+
+  if (recentOrders.length > 0) {
+    activityList.innerHTML = recentOrders.map(order => `
+      <div class="activity-item">
+        <div class="activity-store">${order.store}</div>
+        <div class="activity-items">${order.items.map(item => `${item.name} × ${item.qty}`).join(', ')}</div>
+        <div class="activity-meta">
+          <span class="activity-date">${order.date}</span>
+          <span class="activity-total">${order.total.toLocaleString()}원</span>
         </div>
       </div>
     `).join('');
   } else {
-    regularLevelsList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">등록된 단골 레벨이 없습니다.</p>';
+    activityList.innerHTML = '<div class="loading-skeleton">최근 주문 내역이 없습니다.</div>';
   }
-}
-
-// 단골 레벨 배지 배경색 결정 함수
-function getLevelBadgeBackground(level) {
-  switch (level) {
-    case 'VVIP': return 'linear-gradient(45deg, #f857a6, #ff5858)';
-    case 'VIP': return 'linear-gradient(45deg, #43e97b, #36d1dc)';
-    case 'REGULAR': return 'linear-gradient(45deg, #24c6dc, #514a9d)';
-    default: return 'linear-gradient(45deg, #bdc3c7, #2c3e50)';
-  }
-}
-
-
-// 최근 주문 업데이트
-function updateRecentOrders(data) {
-  const ordersList = document.getElementById('recentOrdersList');
-  if (!ordersList) return;
-
-  const recentOrders = data.orderList.slice(0, 3); // 최근 3개만
-
-  ordersList.innerHTML = recentOrders.map(order => `
-    <div class="order-item">
-      <div class="order-store">${order.store}</div>
-      <div class="order-items">${order.items.map(item => `${item.name} × ${item.qty}`).join(', ')}</div>
-      <div class="order-meta">
-        <span class="order-date">${order.date}</span>
-        <span class="order-total">${order.total.toLocaleString()}원</span>
-        ${order.reviewId ? '<span class="review-status">리뷰완료</span>' : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-// 예약 업데이트
-function updateReservations(data) {
-  const reservationsList = document.getElementById('reservationsList');
-  if (!reservationsList) return;
-
-  const recentReservations = data.reservationList.slice(0, 2); // 최근 2개만
-
-  reservationsList.innerHTML = recentReservations.map(reservation => `
-    <div class="reservation-item">
-      <div class="order-store">${reservation.store}</div>
-      <div class="order-items">${reservation.date} • ${reservation.people}명</div>
-      <div class="order-meta">
-        <span class="order-date">${reservation.phone}</span>
-        <span class="order-total ${reservation.status === '예약완료' ? 'text-blue' : 'text-green'}">${reservation.status}</span>
-      </div>
-    </div>
-  `).join('');
 }
 
 // 개인정보 업데이트
 function updatePersonalInfo(data) {
-  const personalInfoGrid = document.getElementById('personalInfoGrid');
-  if (!personalInfoGrid) return;
+  const personalInfoList = document.getElementById('personalInfoList');
+  if (!personalInfoList) return;
 
-  personalInfoGrid.innerHTML = `
+  personalInfoList.innerHTML = `
     <div class="info-item">
       <span class="info-label">전화번호</span>
       <span class="info-value">${data.phone}</span>
     </div>
     <div class="info-item">
-      <span class="info-label">주소</span>
-      <span class="info-value">${data.address}</span>
-    </div>
-    <div class="info-item">
-      <span class="info-label">생년월일</span>
-      <span class="info-value">${data.birth}</span>
-    </div>
-    <div class="info-item">
-      <span class="info-label">성별</span>
-      <span class="info-value">${data.gender}</span>
+      <span class="info-label">이메일</span>
+      <span class="info-value">${data.email}</span>
     </div>
     <div class="info-item">
       <span class="info-label">가입일</span>
@@ -1558,31 +1430,31 @@ function showCouponModal() {
         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
       </div>
       <div class="modal-body">
-        <h3 style="margin-bottom: 16px;">💝 사용 가능한 쿠폰</h3>
+        <h3 style="margin-bottom: 16px; color: #111827; font-size: 16px;">💝 사용 가능한 쿠폰</h3>
         ${dummyData.coupons.unused.length > 0 ? dummyData.coupons.unused.map(coupon => `
-          <div class="coupon-item">
-            <div class="coupon-name">${coupon.name}</div>
-            <div class="coupon-discount">
+          <div style="background: linear-gradient(135deg, #fef3c7, #fde68a); border: 2px dashed #f59e0b; border-radius: 12px; padding: 16px; margin-bottom: 12px; position: relative;">
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 4px;">${coupon.name}</div>
+            <div style="color: #d97706; font-weight: bold; font-size: 16px; margin-bottom: 4px;">
               ${coupon.discountType === 'percent' ? coupon.discountValue + '%' : coupon.discountValue.toLocaleString() + '원'} 할인
             </div>
-            <div class="coupon-valid">
+            <div style="font-size: 12px; color: #78716c;">
               유효기간: ${coupon.validUntil} | 최소주문: ${coupon.minOrder.toLocaleString()}원
             </div>
           </div>
-        `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">사용 가능한 쿠폰이 없습니다.</p>'}
+        `).join('') : '<p style="text-align: center; color: #9ca3af; padding: 20px;">사용 가능한 쿠폰이 없습니다.</p>'}
 
-        <h3 style="margin: 24px 0 16px 0;">📝 사용완료 쿠폰</h3>
+        <h3 style="margin: 24px 0 16px 0; color: #111827; font-size: 16px;">📝 사용완료 쿠폰</h3>
         ${dummyData.coupons.used.length > 0 ? dummyData.coupons.used.map(coupon => `
-          <div class="coupon-item" style="opacity: 0.6; background: linear-gradient(135deg, #f7f7f7, #e0e0e0);">
-            <div class="coupon-name">${coupon.name}</div>
-            <div class="coupon-discount">
+          <div style="opacity: 0.6; background: #f3f4f6; border: 2px dashed #d1d5db; border-radius: 12px; padding: 16px; margin-bottom: 12px;">
+            <div style="font-weight: 600; color: #6b7280; margin-bottom: 4px;">${coupon.name}</div>
+            <div style="color: #9ca3af; font-weight: bold; font-size: 16px; margin-bottom: 4px;">
               ${coupon.discountType === 'percent' ? coupon.discountValue + '%' : coupon.discountValue.toLocaleString() + '원'} 할인
             </div>
-            <div class="coupon-valid">
+            <div style="font-size: 12px; color: #9ca3af;">
               사용일: ${coupon.usedDate} | 사용처: ${coupon.store}
             </div>
           </div>
-        `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">사용한 쿠폰이 없습니다.</p>'}
+        `).join('') : '<p style="text-align: center; color: #9ca3af; padding: 20px;">사용한 쿠폰이 없습니다.</p>'}
       </div>
     </div>
   `;
@@ -1601,9 +1473,9 @@ function showFavoritesModal() {
       </div>
       <div class="modal-body">
         ${dummyData.favoriteStores.map((store) => `
-          <div class="favorite-item" style="padding: 12px; background: #f8f9fa; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-weight: 500;">${store}</span>
-            <button style="background: #ff4757; color: white; border: none; padding: 4px 8px; border-radius: 6px; font-size: 12px; cursor: pointer;">삭제</button>
+          <div style="padding: 16px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #667eea;">
+            <span style="font-weight: 600; color: #111827;">${store}</span>
+            <button style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 500;">삭제</button>
           </div>
         `).join('')}
       </div>
@@ -1624,11 +1496,11 @@ function showAchievementsModal() {
       </div>
       <div class="modal-body">
         ${dummyData.achievements.map(achievement => `
-          <div class="achievement-item">
-            <div class="achievement-icon">${achievement.icon}</div>
-            <div class="achievement-info">
-              <div class="achievement-name">${achievement.name}</div>
-              <div class="achievement-date">${achievement.date} 달성</div>
+          <div style="display: flex; align-items: center; gap: 16px; padding: 16px; background: #f8fafc; border-radius: 12px; margin-bottom: 12px;">
+            <div style="font-size: 28px; width: 48px; text-align: center;">${achievement.icon}</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${achievement.name}</div>
+              <div style="font-size: 12px; color: #9ca3af;">${achievement.date} 달성</div>
             </div>
           </div>
         `).join('')}
@@ -1642,28 +1514,12 @@ function showAllOrdersModal() {
   alert('전체 주문 내역 보기 기능은 개발 중입니다.');
 }
 
-function showAllReservationsModal() {
-  alert('전체 예약 내역 보기 기능은 개발 중입니다.');
+function showAllRegularLevelsModal() {
+  alert('전체 단골 레벨 보기 기능은 개발 중입니다.');
 }
 
 function showEditPersonalInfoModal() {
   alert('개인정보 수정 기능은 개발 중입니다.');
-}
-
-function showErrorMessage() {
-  const content = document.querySelector('.account-content');
-  if (content) {
-    content.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #666;">
-        <div style="font-size: 48px; margin-bottom: 16px;">😔</div>
-        <h2>데이터를 불러올 수 없습니다</h2>
-        <p>잠시 후 다시 시도해주세요.</p>
-        <button onclick="if(typeof renderMyPage === 'function') renderMyPage();" style="margin-top: 16px; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
-          마이페이지로 돌아가기
-        </button>
-      </div>
-    `;
-  }
 }
 
 // 전역 함수 등록
