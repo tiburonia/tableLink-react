@@ -900,30 +900,63 @@ function createLoyaltyCardHTML(levelData, store) {
         </div>
       </div>
       
-      ${nextLevel && progressPercent < 100 ? `
+      ${nextLevel ? `
         <div class="level-progress-section">
           <div class="progress-header">
             <span class="next-level-info">다음: ${nextLevelName}</span>
             <span class="progress-percentage">${Math.round(progressPercent)}%</span>
           </div>
           
-          <div class="progress-container">
-            <div class="progress-track">
-              <div class="progress-fill" style="width: ${progressPercent}%;"></div>
-            </div>
+          <div class="requirements-gauges">
+            ${nextLevel.requiredPoints > 0 ? `
+              <div class="gauge-container">
+                <div class="gauge-header">
+                  <span class="gauge-label">포인트</span>
+                  <span class="gauge-value">${points.toLocaleString()}/${nextLevel.requiredPoints.toLocaleString()}</span>
+                </div>
+                <div class="gauge-track">
+                  <div class="gauge-fill points" style="width: ${Math.min(150, (points / nextLevel.requiredPoints) * 100)}%;"></div>
+                </div>
+                <div class="gauge-percent">${Math.round((points / nextLevel.requiredPoints) * 100)}%</div>
+              </div>
+            ` : ''}
+            
+            ${nextLevel.requiredTotalSpent > 0 ? `
+              <div class="gauge-container">
+                <div class="gauge-header">
+                  <span class="gauge-label">누적결제</span>
+                  <span class="gauge-value">${Math.floor(totalSpent / 1000)}K/${Math.floor(nextLevel.requiredTotalSpent / 1000)}K</span>
+                </div>
+                <div class="gauge-track">
+                  <div class="gauge-fill spending" style="width: ${Math.min(150, (totalSpent / nextLevel.requiredTotalSpent) * 100)}%;"></div>
+                </div>
+                <div class="gauge-percent">${Math.round((totalSpent / nextLevel.requiredTotalSpent) * 100)}%</div>
+              </div>
+            ` : ''}
+            
+            ${nextLevel.requiredVisitCount > 0 ? `
+              <div class="gauge-container">
+                <div class="gauge-header">
+                  <span class="gauge-label">방문횟수</span>
+                  <span class="gauge-value">${visitCount}/${nextLevel.requiredVisitCount}</span>
+                </div>
+                <div class="gauge-track">
+                  <div class="gauge-fill visits" style="width: ${Math.min(150, (visitCount / nextLevel.requiredVisitCount) * 100)}%;"></div>
+                </div>
+                <div class="gauge-percent">${Math.round((visitCount / nextLevel.requiredVisitCount) * 100)}%</div>
+              </div>
+            ` : ''}
           </div>
           
-          ${requirementDetails.length > 0 ? `
-            <div class="progress-requirements">
-              ${requirementDetails.slice(0, 2).map(req => `
-                <span class="requirement-item">${req}</span>
-              `).join('')}
-            </div>
+          <div class="evaluation-policy">
+            <span class="policy-label">
+              ${nextLevel.evalPolicy === 'OR' ? '🎯 조건 중 하나만 달성하면 승급' : '🎯 모든 조건을 달성해야 승급'}
+            </span>
+          </div>
+          
+          ${progressPercent >= 100 ? `
+            <div class="level-ready-badge">🎉 승급 가능!</div>
           ` : ''}
-        </div>
-      ` : progressPercent >= 100 && nextLevel ? `
-        <div class="level-ready-section">
-          <div class="ready-badge">🎉 승급 가능!</div>
         </div>
       ` : `
         <div class="level-complete-section">
@@ -1110,36 +1143,102 @@ function createLoyaltyCardHTML(levelData, store) {
         font-weight: 700;
       }
       
-      .progress-container {
+      .requirements-gauges {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
         margin-bottom: 8px;
       }
       
-      .progress-track {
-        height: 6px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
-        overflow: hidden;
+      .gauge-container {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 8px;
+        backdrop-filter: blur(3px);
       }
       
-      .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #ffffff, #f8f9fa);
-        border-radius: 3px;
-        transition: width 0.3s ease;
-      }
-      
-      .progress-requirements {
+      .gauge-header {
         display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
       }
       
-      .requirement-item {
-        background: rgba(255, 255, 255, 0.15);
+      .gauge-label {
+        font-size: 10px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+      
+      .gauge-value {
+        font-size: 9px;
+        font-weight: 600;
+        opacity: 0.8;
+      }
+      
+      .gauge-track {
+        height: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 2px;
+        position: relative;
+      }
+      
+      .gauge-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+        position: relative;
+      }
+      
+      .gauge-fill.points {
+        background: linear-gradient(90deg, #10b981, #34d399);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+      
+      .gauge-fill.spending {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+      }
+      
+      .gauge-fill.visits {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+      }
+      
+      .gauge-percent {
+        text-align: right;
+        font-size: 8px;
+        font-weight: 600;
+        opacity: 0.8;
+      }
+      
+      .evaluation-policy {
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      
+      .policy-label {
+        font-size: 9px;
+        font-weight: 500;
+        opacity: 0.8;
+        background: rgba(255, 255, 255, 0.1);
         padding: 4px 8px;
+        border-radius: 6px;
+        backdrop-filter: blur(3px);
+      }
+      
+      .level-ready-badge {
+        text-align: center;
+        background: rgba(16, 185, 129, 0.2);
+        color: rgba(255, 255, 255, 0.95);
+        padding: 6px 12px;
         border-radius: 8px;
         font-size: 10px;
-        backdrop-filter: blur(3px);
+        font-weight: 600;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(16, 185, 129, 0.3);
       }
       
       .level-ready-section,
