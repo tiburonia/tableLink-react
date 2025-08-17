@@ -283,9 +283,43 @@ window.StoreUIManager = {
     return `
       <div class="loyalty-levels-grid">
         <!-- 실제 데이터가 loadLoyaltyData 함수에서 여기에 동적으로 삽입됩니다 -->
-        <div class="loyalty-loading-placeholder loyalty-theme">
-          <div class="loading-spinner">⏳</div>
-          <div class="loading-text">단골 등급 정보 로딩 중...</div>
+        <div class="loyalty-skeleton-card">
+          <div class="skeleton-card-gradient"></div>
+          
+          <div class="skeleton-level-header">
+            <div class="skeleton-icon-rank">
+              <div class="skeleton-level-icon"></div>
+              <div class="skeleton-level-rank"></div>
+            </div>
+            <div class="skeleton-level-info">
+              <div class="skeleton-level-name"></div>
+              <div class="skeleton-level-subtitle"></div>
+            </div>
+          </div>
+
+          <div class="skeleton-level-stats">
+            <div class="skeleton-stat-item">
+              <div class="skeleton-stat-value"></div>
+              <div class="skeleton-stat-label"></div>
+            </div>
+            <div class="skeleton-stat-item">
+              <div class="skeleton-stat-value"></div>
+              <div class="skeleton-stat-label"></div>
+            </div>
+            <div class="skeleton-stat-item">
+              <div class="skeleton-stat-value"></div>
+              <div class="skeleton-stat-label"></div>
+            </div>
+          </div>
+
+          <div class="skeleton-progress-section">
+            <div class="skeleton-progress-header">
+              <div class="skeleton-next-level"></div>
+              <div class="skeleton-percentage"></div>
+            </div>
+            <div class="skeleton-progress-bar"></div>
+            <div class="skeleton-progress-text"></div>
+          </div>
         </div>
       </div>
     `;
@@ -1606,7 +1640,215 @@ window.StoreUIManager = {
           line-height: 1.2;
         }
 
-        /* 로딩 플레이스홀더 스타일 */
+        /* 단골 레벨 카드 스켈레톤 */
+        .loyalty-skeleton-card {
+          width: 100%;
+          max-width: 350px;
+          border-radius: 16px;
+          padding: 18px 20px;
+          margin: 24px auto;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          border: 2px solid #e2e8f0;
+          position: relative;
+          overflow: hidden;
+          min-height: 140px;
+          animation: loyaltySkeletonPulse 2s ease-in-out infinite;
+        }
+
+        .skeleton-card-gradient {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.6) 50%,
+            transparent 100%
+          );
+          animation: loyaltySkeletonShimmer 2.5s infinite;
+        }
+
+        .skeleton-level-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+
+        .skeleton-icon-rank {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .skeleton-level-icon {
+          width: 28px;
+          height: 28px;
+          background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+          border-radius: 50%;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+        }
+
+        .skeleton-level-rank {
+          width: 32px;
+          height: 12px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 6px;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+
+        .skeleton-level-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .skeleton-level-name {
+          width: 80px;
+          height: 16px;
+          background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+          border-radius: 8px;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.3s;
+        }
+
+        .skeleton-level-subtitle {
+          width: 120px;
+          height: 12px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 6px;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.4s;
+        }
+
+        .skeleton-level-stats {
+          display: flex;
+          justify-content: space-between;
+          gap: 8px;
+          margin-bottom: 16px;
+          padding: 0 8px;
+        }
+
+        .skeleton-stat-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          flex: 1;
+        }
+
+        .skeleton-stat-value {
+          width: 24px;
+          height: 18px;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border-radius: 4px;
+          opacity: 0.3;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.5s;
+        }
+
+        .skeleton-stat-label {
+          width: 20px;
+          height: 10px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 4px;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.6s;
+        }
+
+        .skeleton-progress-section {
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 12px;
+          padding: 12px;
+          backdrop-filter: blur(5px);
+        }
+
+        .skeleton-progress-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .skeleton-next-level {
+          width: 90px;
+          height: 12px;
+          background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+          border-radius: 6px;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.7s;
+        }
+
+        .skeleton-percentage {
+          width: 40px;
+          height: 12px;
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          border-radius: 6px;
+          opacity: 0.4;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.8s;
+        }
+
+        .skeleton-progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(255, 255, 255, 0.3);
+          border-radius: 4px;
+          margin-bottom: 6px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .skeleton-progress-bar::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 35%;
+          height: 100%;
+          background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+          border-radius: 4px;
+          opacity: 0.5;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.9s;
+        }
+
+        .skeleton-progress-text {
+          width: 140px;
+          height: 10px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 4px;
+          margin: 0 auto;
+          animation: loyaltySkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 1s;
+        }
+
+        @keyframes loyaltySkeletonPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(0.98);
+          }
+        }
+
+        @keyframes loyaltySkeletonShimmer {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
+          }
+        }
+
+        /* 로딩 플레이스홀더 스타일 (레거시 지원) */
         .loyalty-loading-placeholder {
           display: flex;
           flex-direction: column;
