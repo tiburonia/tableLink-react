@@ -516,40 +516,327 @@ async function loadPromotionData(store) {
   }, 200);
 }
 
-// 프로모션 UI 업데이트
+// 프로모션 UI 업데이트 (regular_level 테이블의 benefit 컬럼 기반)
 function updatePromotionUI(promotions) {
   const promotionContainer = document.querySelector('.promotion-content');
   if (!promotionContainer) return;
 
-  if (!promotions || promotions.length === 0) {
-    promotionContainer.innerHTML = `
+  // regular_level 테이블의 benefit 데이터를 먼저 로드하여 표시
+  loadRegularLevelBenefits(promotionContainer, promotions);
+}
+
+// regular_level 테이블의 benefit 데이터 로드 및 표시
+async function loadRegularLevelBenefits(container, promotions = []) {
+  try {
+    // 현재 로그인한 사용자 정보 가져오기
+    const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
+    
+    if (!userInfo || !window.currentStore) {
+      // 로그인하지 않은 경우 기본 혜택 표시
+      displayDefaultBenefits(container, promotions);
+      return;
+    }
+
+    // 실제 단골 레벨 정보 가져오기
+    if (window.RegularLevelManager) {
+      const regularLevelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, window.currentStore.id);
+      
+      if (regularLevelData && regularLevelData.level && regularLevelData.level.benefits) {
+        displayRegularLevelBenefits(container, regularLevelData.level.benefits, promotions);
+        return;
+      }
+    }
+
+    // 폴백: 기본 혜택 표시
+    displayDefaultBenefits(container, promotions);
+
+  } catch (error) {
+    console.error('❌ regular_level benefit 로드 실패:', error);
+    displayDefaultBenefits(container, promotions);
+  }
+}
+
+// regular_level의 실제 benefit 데이터 표시
+function displayRegularLevelBenefits(container, benefits, promotions = []) {
+  if (!benefits || benefits.length === 0) {
+    displayDefaultBenefits(container, promotions);
+    return;
+  }
+
+  // 최대 3개의 혜택만 표시
+  const displayBenefits = benefits.slice(0, 3);
+  
+  container.innerHTML = `
+    <div class="benefits-grid premium-benefits-grid">
+      ${displayBenefits.map((benefit, index) => `
+        <div class="benefit-card premium-benefit-card ${index === 0 ? 'featured-benefit' : ''}" 
+             style="animation-delay: ${index * 0.1}s;">
+          <div class="benefit-header">
+            <div class="benefit-icon-container">
+              <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
+              ${benefit.expires_days ? `
+                <div class="benefit-expiry">
+                  <span class="expiry-icon">⏰</span>
+                  <span class="expiry-text">${benefit.expires_days}일</span>
+                </div>
+              ` : ''}
+            </div>
+            <div class="benefit-status ${getBenefitStatus(benefit.type)}"></div>
+          </div>
+          
+          <div class="benefit-content">
+            <div class="benefit-name">${benefit.name || formatBenefitName(benefit.type)}</div>
+            <div class="benefit-description">${getBenefitDescription(benefit)}</div>
+            <div class="benefit-value">
+              ${formatBenefitValue(benefit)}
+            </div>
+          </div>
+          
+          <div class="benefit-actions">
+            <button class="benefit-use-btn" onclick="useBenefit('${benefit.type}', ${JSON.stringify(benefit).replace(/"/g, '&quot;')})">
+              <span class="btn-icon">✨</span>
+              <span class="btn-text">혜택 사용</span>
+            </button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+    
+    ${benefits.length > 3 ? `
+      <div class="benefits-expand">
+        <button class="promotion-detail-btn" onclick="showAllBenefits(${JSON.stringify(benefits).replace(/"/g, '&quot;')})">
+          더 보기 (+${benefits.length - 3}개 혜택)
+        </button>
+      </div>
+    ` : ''}
+    
+    <style>
+      .benefits-grid.premium-benefits-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .benefit-card.premium-benefit-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 12px;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s ease;
+        animation: benefitSlideIn 0.5s ease forwards;
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      
+      .benefit-card.featured-benefit {
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+      }
+      
+      .benefit-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+      }
+      
+      @keyframes benefitSlideIn {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .benefit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      
+      .benefit-icon-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      
+      .benefit-icon {
+        font-size: 18px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+      }
+      
+      .benefit-expiry {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
+      
+      .expiry-icon {
+        font-size: 8px;
+      }
+      
+      .expiry-text {
+        font-size: 7px;
+        font-weight: 600;
+      }
+      
+      .benefit-status {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      
+      .benefit-status.vip {
+        background: linear-gradient(45deg, #ffd700, #ffed4e);
+        box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+      }
+      
+      .benefit-status.premium {
+        background: linear-gradient(45deg, #e5e4e2, #ffffff);
+        box-shadow: 0 0 8px rgba(229, 228, 226, 0.4);
+      }
+      
+      .benefit-status.loyalty {
+        background: linear-gradient(45deg, #3b82f6, #60a5fa);
+        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+      }
+      
+      .benefit-status.discount {
+        background: linear-gradient(45deg, #ef4444, #f87171);
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      }
+      
+      .benefit-status.free {
+        background: linear-gradient(45deg, #10b981, #34d399);
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+      }
+      
+      .benefit-status.priority {
+        background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+      }
+      
+      .benefit-content {
+        margin-bottom: 8px;
+      }
+      
+      .benefit-name {
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        line-height: 1.2;
+      }
+      
+      .benefit-description {
+        font-size: 9px;
+        opacity: 0.8;
+        margin-bottom: 4px;
+        line-height: 1.3;
+      }
+      
+      .benefit-value {
+        margin-bottom: 8px;
+      }
+      
+      .benefit-value .value-highlight {
+        font-size: 10px;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.2);
+      }
+      
+      .benefit-actions {
+        display: flex;
+        justify-content: center;
+      }
+      
+      .benefit-use-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      
+      .benefit-use-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+      }
+      
+      .btn-icon {
+        font-size: 8px;
+      }
+      
+      .benefits-expand {
+        text-align: center;
+        margin-top: 8px;
+      }
+      
+      .benefits-expand .promotion-detail-btn {
+        width: 100%;
+        background: rgba(102, 126, 234, 0.1);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: #667eea;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      
+      .benefits-expand .promotion-detail-btn:hover {
+        background: rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.5);
+      }
+    </style>
+  `;
+}
+
+// 기본 혜택 표시 (로그인하지 않은 경우 또는 regular_level 데이터가 없는 경우)
+function displayDefaultBenefits(container, promotions = []) {
+  if (promotions && promotions.length > 0) {
+    // 기존 프로모션 표시 로직
+    const displayPromotions = promotions.slice(0, 2);
+    
+    container.innerHTML = displayPromotions.map((promotion, index) => `
+      <div class="promotion-item ${index === 0 ? 'featured' : ''}">
+        <div class="promotion-left">
+          <span class="promotion-icon">${getPromotionIcon(promotion.type)}</span>
+          <div class="promotion-info">
+            <div class="promotion-name">${promotion.name}</div>
+            <div class="promotion-desc">${promotion.description}</div>
+          </div>
+        </div>
+        <div class="promotion-discount">${formatDiscountValue(promotion)}</div>
+      </div>
+    `).join('') + (promotions.length > 2 ? `
+      <div class="promotion-more">
+        <button class="promotion-detail-btn">더 보기 (+${promotions.length - 2})</button>
+      </div>
+    ` : '');
+  } else {
+    container.innerHTML = `
       <div class="no-promotion">
         <span class="no-promotion-icon">📭</span>
         <div class="no-promotion-text">현재 진행중인 혜택이 없습니다</div>
       </div>
     `;
-    return;
   }
-
-  // 최대 2개의 프로모션만 표시
-  const displayPromotions = promotions.slice(0, 2);
-  
-  promotionContainer.innerHTML = displayPromotions.map((promotion, index) => `
-    <div class="promotion-item ${index === 0 ? 'featured' : ''}">
-      <div class="promotion-left">
-        <span class="promotion-icon">${getPromotionIcon(promotion.type)}</span>
-        <div class="promotion-info">
-          <div class="promotion-name">${promotion.name}</div>
-          <div class="promotion-desc">${promotion.description}</div>
-        </div>
-      </div>
-      <div class="promotion-discount">${formatDiscountValue(promotion)}</div>
-    </div>
-  `).join('') + (promotions.length > 2 ? `
-    <div class="promotion-more">
-      <button class="promotion-detail-btn">더 보기 (+${promotions.length - 2})</button>
-    </div>
-  ` : '');
 }
 
 // 프로모션 타입에 따른 아이콘 반환
@@ -628,7 +915,7 @@ async function loadLoyaltyData(store) {
   }
 }
 
-// 단골 레벨 카드 UI 업데이트 (실제 데이터 연동 및 진행률 게이지 개선)
+// 단골 레벨 카드 UI 업데이트 (단순화된 버전)
 function updateLoyaltyCardUI(levelData, store) {
   const loyaltyContainer = document.querySelector('.loyalty-levels-grid');
   if (!loyaltyContainer) {
@@ -659,116 +946,16 @@ function updateLoyaltyCardUI(levelData, store) {
     const parentContainer = foundContainer.parentElement;
     if (parentContainer) {
       // 부모 요소에 직접 삽입
-      parentContainer.innerHTML = createLoyaltyCardHTML(levelData, store);
+      parentContainer.innerHTML = createSimpleLoyaltyCardHTML(levelData, store);
       return;
     }
   }
 
-  const level = levelData.level;
-  const stats = levelData.stats || {};
-  const nextLevel = levelData.nextLevel;
-  const progress = levelData.progress || {};
-
-  // 현재 레벨 정보
-  const currentLevelName = level?.name || '신규 고객';
-  const currentLevelRank = level?.rank || 0;
-  const visitCount = stats.visitCount || 0;
-  const points = stats.points || 0;
-  const totalSpent = stats.totalSpent || 0;
-  
-  // 다음 레벨 정보 및 진행률 계산
-  let progressPercent = 0;
-  let requirementDetails = [];
-  let nextLevelName = '단골 고객';
-  
-  if (nextLevel) {
-    nextLevelName = nextLevel.name;
-    
-    // 실제 진행률 계산
-    const requiredPoints = nextLevel.requiredPoints || 0;
-    const requiredSpent = nextLevel.requiredTotalSpent || 0;
-    const requiredVisits = nextLevel.requiredVisitCount || 0;
-    
-    if (nextLevel.evalPolicy === 'OR') {
-      // OR 조건: 가장 높은 진행률 사용
-      const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
-      const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
-      const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
-      
-      progressPercent = Math.max(pointsProgress, spentProgress, visitsProgress);
-      
-      // 필요한 조건들 표시
-      if (requiredPoints > 0 && points < requiredPoints) {
-        requirementDetails.push(`포인트 ${(requiredPoints - points).toLocaleString()}P`);
-      }
-      if (requiredSpent > 0 && totalSpent < requiredSpent) {
-        requirementDetails.push(`결제 ${(requiredSpent - totalSpent).toLocaleString()}원`);
-      }
-      if (requiredVisits > 0 && visitCount < requiredVisits) {
-        requirementDetails.push(`방문 ${requiredVisits - visitCount}회`);
-      }
-    } else {
-      // AND 조건: 모든 조건의 평균 진행률
-      const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
-      const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
-      const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
-      
-      progressPercent = (pointsProgress + spentProgress + visitsProgress) / 3;
-      
-      // 모든 조건 표시
-      if (requiredPoints > 0) {
-        requirementDetails.push(`포인트 ${Math.max(0, requiredPoints - points).toLocaleString()}P`);
-      }
-      if (requiredSpent > 0) {
-        requirementDetails.push(`결제 ${Math.max(0, requiredSpent - totalSpent).toLocaleString()}원`);
-      }
-      if (requiredVisits > 0) {
-        requirementDetails.push(`방문 ${Math.max(0, requiredVisits - visitCount)}회`);
-      }
-    }
-  }
-
-  // 레벨별 색상 및 테마 설정
-  const levelThemes = {
-    0: {
-      gradient: 'linear-gradient(135deg, #6c757d, #495057)',
-      glow: 'rgba(108, 117, 125, 0.3)',
-      icon: '🆕',
-      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
-    },
-    1: {
-      gradient: 'linear-gradient(135deg, #d2691e, #8b4513)',
-      glow: 'rgba(210, 105, 30, 0.4)',
-      icon: '🥉',
-      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,215,0,0.1) 0%, transparent 50%)'
-    },
-    2: {
-      gradient: 'linear-gradient(135deg, #c0c0c0, #708090)',
-      glow: 'rgba(192, 192, 192, 0.4)',
-      icon: '🥈',
-      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%)'
-    },
-    3: {
-      gradient: 'linear-gradient(135deg, #ffd700, #b8860b)',
-      glow: 'rgba(255, 215, 0, 0.5)',
-      icon: '🥇',
-      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.2) 0%, transparent 50%)'
-    },
-    4: {
-      gradient: 'linear-gradient(135deg, #e5e4e2, #c0c0c0)',
-      glow: 'rgba(229, 228, 226, 0.5)',
-      icon: '💎',
-      bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.25) 0%, transparent 50%)'
-    }
-  };
-
-  const theme = levelThemes[currentLevelRank] || levelThemes[0];
-
-  loyaltyContainer.innerHTML = createLoyaltyCardHTML(levelData, store);
+  loyaltyContainer.innerHTML = createSimpleLoyaltyCardHTML(levelData, store);
 }
 
-// 단골 레벨 카드 HTML 생성 함수
-function createLoyaltyCardHTML(levelData, store) {
+// 단순화된 단골 레벨 카드 HTML 생성 함수
+function createSimpleLoyaltyCardHTML(levelData, store) {
   const level = levelData.level;
   const stats = levelData.stats || {};
   const nextLevel = levelData.nextLevel;
@@ -964,119 +1151,15 @@ function createLoyaltyCardHTML(levelData, store) {
         </div>
       `}
       
-      ${level?.benefits && level.benefits.length > 0 ? `
-        <div class="level-benefits-section premium-benefits">
-          <div class="benefits-header">
-            <div class="benefits-title-group">
-              <span class="benefits-icon">🎁</span>
-              <div class="benefits-title-text">
-                <span class="benefits-title">현재 혜택</span>
-                <span class="benefits-subtitle">${level.name} 등급 전용</span>
-              </div>
-            </div>
-            <div class="benefits-count-badge">${level.benefits.length}</div>
-          </div>
-          
-          <div class="benefits-showcase premium-grid">
-            ${level.benefits.map((benefit, index) => `
-              <div class="benefit-card premium-card ${index === 0 ? 'featured-benefit' : ''}" 
-                   style="animation-delay: ${index * 0.1}s;">
-                <div class="benefit-card-header">
-                  <div class="benefit-icon-container">
-                    <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
-                    ${benefit.expires_days ? `
-                      <div class="benefit-expiry">
-                        <span class="expiry-icon">⏰</span>
-                        <span class="expiry-text">${benefit.expires_days}일</span>
-                      </div>
-                    ` : ''}
-                  </div>
-                  <div class="benefit-status-indicator ${getBenefitStatus(benefit.type)}"></div>
-                </div>
-                
-                <div class="benefit-content">
-                  <div class="benefit-name">${benefit.name || formatBenefitName(benefit.type)}</div>
-                  <div class="benefit-description">${getBenefitDescription(benefit)}</div>
-                  <div class="benefit-value-display">
-                    ${formatBenefitValue(benefit)}
-                  </div>
-                </div>
-                
-                <div class="benefit-actions">
-                  <button class="benefit-use-btn" onclick="useBenefit('${benefit.type}', ${JSON.stringify(benefit).replace(/"/g, '&quot;')})">
-                    <span class="btn-icon">✨</span>
-                    <span class="btn-text">혜택 사용</span>
-                  </button>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-          
-          ${level.benefits.length > 3 ? `
-            <div class="benefits-expand-section">
-              <button class="expand-benefits-btn" onclick="showAllBenefits(${JSON.stringify(level.benefits).replace(/"/g, '&quot;')})">
-                <span class="expand-icon">📋</span>
-                <span class="expand-text">모든 혜택 보기 (+${level.benefits.length - 3}개)</span>
-                <span class="expand-arrow">→</span>
-              </button>
-            </div>
-          ` : ''}
+      <div class="level-summary-section">
+        <div class="summary-header">
+          <span class="summary-icon">📊</span>
+          <span class="summary-title">단골 현황</span>
         </div>
-      ` : `
-        <div class="level-benefits-section new-customer-benefits">
-          <div class="benefits-header">
-            <div class="benefits-title-group">
-              <span class="benefits-icon">🌟</span>
-              <div class="benefits-title-text">
-                <span class="benefits-title">신규 고객 혜택</span>
-                <span class="benefits-subtitle">첫 방문을 환영합니다</span>
-              </div>
-            </div>
-            <div class="new-customer-badge">NEW</div>
-          </div>
-          
-          <div class="benefits-showcase welcome-grid">
-            <div class="benefit-card welcome-card">
-              <div class="benefit-card-header">
-                <div class="benefit-icon-container">
-                  <span class="benefit-icon">🎉</span>
-                </div>
-                <div class="benefit-status-indicator welcome"></div>
-              </div>
-              
-              <div class="benefit-content">
-                <div class="benefit-name">첫방문 환영 혜택</div>
-                <div class="benefit-description">신규 고객을 위한 특별 서비스</div>
-                <div class="benefit-value-display">
-                  <span class="value-highlight">환영 쿠폰</span>
-                </div>
-              </div>
-            </div>
-            
-            <div class="benefit-card welcome-card">
-              <div class="benefit-card-header">
-                <div class="benefit-icon-container">
-                  <span class="benefit-icon">⭐</span>
-                </div>
-                <div class="benefit-status-indicator welcome"></div>
-              </div>
-              
-              <div class="benefit-content">
-                <div class="benefit-name">포인트 적립</div>
-                <div class="benefit-description">매 주문시 포인트 적립</div>
-                <div class="benefit-value-display">
-                  <span class="value-highlight">1% 적립</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="welcome-message">
-            <span class="message-icon">💫</span>
-            <span class="message-text">첫 주문 후 단골 등급이 시작됩니다!</span>
-          </div>
+        <div class="summary-content">
+          <span class="summary-text">${currentLevelName} 등급으로 ${store.name}를 이용 중입니다</span>
         </div>
-      `}
+      </div>
     </div>
     
     <style>
@@ -1397,428 +1480,43 @@ function createLoyaltyCardHTML(levelData, store) {
         opacity: 0.8;
       }
       
-      /* 혜택 카드 전용 스타일 */
-      .level-benefits-section.premium-benefits,
-      .level-benefits-section.new-customer-benefits {
+      /* 단골 현황 요약 스타일 */
+      .level-summary-section {
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 16px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        margin-top: 12px;
-      }
-      
-      .benefits-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-      }
-      
-      .benefits-title-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-      
-      .benefits-icon {
-        font-size: 20px;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-      }
-      
-      .benefits-title-text {
-        display: flex;
-        flex-direction: column;
-        gap: 1px;
-      }
-      
-      .benefits-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: white;
-      }
-      
-      .benefits-subtitle {
-        font-size: 10px;
-        opacity: 0.8;
-        font-weight: 500;
-      }
-      
-      .benefits-count-badge {
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: 600;
-        min-width: 20px;
-        text-align: center;
-      }
-      
-      .new-customer-badge {
-        background: linear-gradient(45deg, #ff6b6b, #ff8e53);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 10px;
-        font-size: 9px;
-        font-weight: 700;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      }
-      
-      .benefits-showcase.premium-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 8px;
-      }
-      
-      .benefits-showcase.welcome-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      
-      .benefit-card.premium-card,
-      .benefit-card.welcome-card {
-        background: rgba(255, 255, 255, 0.15);
         border-radius: 12px;
         padding: 12px;
+        margin-top: 12px;
         backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        transition: all 0.3s ease;
-        animation: benefitSlideIn 0.5s ease forwards;
-        opacity: 0;
-        transform: translateY(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
       }
       
-      .benefit-card.featured-benefit {
-        border: 1px solid rgba(255, 215, 0, 0.3);
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
-      }
-      
-      .benefit-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-      }
-      
-      @keyframes benefitSlideIn {
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-      
-      .benefit-card-header {
+      .summary-header {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 8px;
-      }
-      
-      .benefit-icon-container {
-        display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 8px;
+        margin-bottom: 6px;
       }
       
-      .benefit-icon {
-        font-size: 18px;
+      .summary-icon {
+        font-size: 16px;
         filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
       }
       
-      .benefit-expiry {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 2px 4px;
-        border-radius: 4px;
-      }
-      
-      .expiry-icon {
-        font-size: 8px;
-      }
-      
-      .expiry-text {
-        font-size: 7px;
-        font-weight: 600;
-      }
-      
-      .benefit-status-indicator {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        flex-shrink: 0;
-      }
-      
-      .benefit-status-indicator.vip {
-        background: linear-gradient(45deg, #ffd700, #ffed4e);
-        box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
-      }
-      
-      .benefit-status-indicator.premium {
-        background: linear-gradient(45deg, #e5e4e2, #ffffff);
-        box-shadow: 0 0 8px rgba(229, 228, 226, 0.4);
-      }
-      
-      .benefit-status-indicator.loyalty {
-        background: linear-gradient(45deg, #3b82f6, #60a5fa);
-        box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
-      }
-      
-      .benefit-status-indicator.discount {
-        background: linear-gradient(45deg, #ef4444, #f87171);
-        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
-      }
-      
-      .benefit-status-indicator.free {
-        background: linear-gradient(45deg, #10b981, #34d399);
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
-      }
-      
-      .benefit-status-indicator.priority {
-        background: linear-gradient(45deg, #f59e0b, #fbbf24);
-        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
-      }
-      
-      .benefit-status-indicator.welcome {
-        background: linear-gradient(45deg, #8b5cf6, #a78bfa);
-        box-shadow: 0 0 8px rgba(139, 92, 246, 0.4);
-      }
-      
-      .benefit-content {
-        margin-bottom: 8px;
-      }
-      
-      .benefit-name {
+      .summary-title {
         font-size: 12px;
-        font-weight: 700;
-        color: white;
-        margin-bottom: 2px;
-        line-height: 1.2;
-      }
-      
-      .benefit-description {
-        font-size: 9px;
-        opacity: 0.8;
-        margin-bottom: 4px;
-        line-height: 1.3;
-      }
-      
-      .benefit-value-display {
-        margin-bottom: 8px;
-      }
-      
-      .value-highlight {
-        font-size: 10px;
         font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 4px;
         color: white;
       }
       
-      .value-highlight.discount {
-        background: linear-gradient(45deg, #ef4444, #f87171);
-      }
-      
-      .value-highlight.points {
-        background: linear-gradient(45deg, #f59e0b, #fbbf24);
-      }
-      
-      .value-highlight.free {
-        background: linear-gradient(45deg, #10b981, #34d399);
-      }
-      
-      .value-highlight.priority {
-        background: linear-gradient(45deg, #8b5cf6, #a78bfa);
-      }
-      
-      .value-highlight.amount {
-        background: linear-gradient(45deg, #3b82f6, #60a5fa);
-      }
-      
-      .value-highlight.standard {
-        background: linear-gradient(45deg, #6b7280, #9ca3af);
-      }
-      
-      .benefit-actions {
-        display: flex;
-        justify-content: center;
-      }
-      
-      .benefit-use-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 9px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        backdrop-filter: blur(5px);
-      }
-      
-      .benefit-use-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-      
-      .btn-icon {
-        font-size: 8px;
-      }
-      
-      .btn-text {
-        font-size: 9px;
-      }
-      
-      .benefits-expand-section {
-        margin-top: 8px;
+      .summary-content {
         text-align: center;
       }
       
-      .expand-benefits-btn {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 10px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        justify-content: center;
-        width: 100%;
-      }
-      
-      .expand-benefits-btn:hover {
-        background: rgba(255, 255, 255, 0.25);
-        border-color: rgba(255, 255, 255, 0.4);
-      }
-      
-      .welcome-message {
-        margin-top: 8px;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.1);
-        padding: 6px 8px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-      }
-      
-      .message-icon {
-        font-size: 12px;
-      }
-      
-      .message-text {
-        font-size: 9px;
-        font-weight: 500;
-        opacity: 0.9;
-      }
-      
-      /* 혜택 모달 스타일 */
-      .benefits-modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 10000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-      
-      .benefits-modal {
-        background: white;
-        border-radius: 16px;
-        max-width: 400px;
-        width: 100%;
-        max-height: 80vh;
-        overflow: hidden;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      }
-      
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px;
-        border-bottom: 1px solid #e5e5e5;
-      }
-      
-      .modal-header h3 {
-        margin: 0;
-        color: #333;
-        font-size: 16px;
-      }
-      
-      .modal-close {
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: #666;
-        padding: 4px;
-      }
-      
-      .modal-content {
-        padding: 16px;
-        max-height: 60vh;
-        overflow-y: auto;
-      }
-      
-      .modal-benefit-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        background: #f8f9fa;
-      }
-      
-      .modal-benefit-icon {
-        font-size: 20px;
-        flex-shrink: 0;
-      }
-      
-      .modal-benefit-info {
-        flex: 1;
-      }
-      
-      .modal-benefit-name {
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 2px;
-      }
-      
-      .modal-benefit-desc {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 2px;
-      }
-      
-      .modal-benefit-expiry {
+      .summary-text {
         font-size: 11px;
-        color: #999;
-      }
-      
-      .modal-benefit-value {
-        flex-shrink: 0;
+        opacity: 0.9;
+        font-weight: 500;
+        line-height: 1.3;
       }
       
       @media (max-width: 400px) {
