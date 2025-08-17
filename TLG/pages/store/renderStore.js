@@ -837,31 +837,31 @@ function createLoyaltyCardHTML(levelData, store) {
   const levelThemes = {
     0: {
       gradient: 'linear-gradient(135deg, #6c757d, #495057)',
-      glow: 'rgba(108, 117, 125, 0.3)',
+      glow: 'rgba(108, 117, 125, 0.15)',
       icon: '🆕',
       bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%)'
     },
     1: {
       gradient: 'linear-gradient(135deg, #d2691e, #8b4513)',
-      glow: 'rgba(210, 105, 30, 0.4)',
+      glow: 'rgba(210, 105, 30, 0.2)',
       icon: '🥉',
       bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,215,0,0.1) 0%, transparent 50%)'
     },
     2: {
       gradient: 'linear-gradient(135deg, #c0c0c0, #708090)',
-      glow: 'rgba(192, 192, 192, 0.4)',
+      glow: 'rgba(192, 192, 192, 0.2)',
       icon: '🥈',
       bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.15) 0%, transparent 50%)'
     },
     3: {
       gradient: 'linear-gradient(135deg, #ffd700, #b8860b)',
-      glow: 'rgba(255, 215, 0, 0.5)',
+      glow: 'rgba(255, 215, 0, 0.25)',
       icon: '🥇',
       bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.2) 0%, transparent 50%)'
     },
     4: {
       gradient: 'linear-gradient(135deg, #e5e4e2, #c0c0c0)',
-      glow: 'rgba(229, 228, 226, 0.5)',
+      glow: 'rgba(229, 228, 226, 0.25)',
       icon: '💎',
       bgPattern: 'radial-gradient(circle at 20% 80%, rgba(255,255,255,0.25) 0%, transparent 50%)'
     }
@@ -870,8 +870,8 @@ function createLoyaltyCardHTML(levelData, store) {
   const theme = levelThemes[currentLevelRank] || levelThemes[0];
 
   return `
-    <div class="loyalty-level-card premium-card" 
-         style="background: ${theme.gradient}; box-shadow: 0 12px 40px ${theme.glow};">
+    <div class="loyalty-level-card compact-card" 
+         style="background: ${theme.gradient}; box-shadow: 0 4px 16px ${theme.glow};">
       <div class="card-background" style="background: ${theme.bgPattern}"></div>
       
       <div class="level-header">
@@ -881,139 +881,90 @@ function createLoyaltyCardHTML(levelData, store) {
         </div>
         <div class="level-info">
           <div class="level-name">${currentLevelName}</div>
-          <div class="level-subtitle">${store.name} 단골 고객</div>
-          <div class="level-stats">
-            <div class="stat-item">
-              <span class="stat-icon">🏃</span>
-              <span class="stat-value">${visitCount}</span>
-              <span class="stat-label">방문</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-icon">⭐</span>
-              <span class="stat-value">${points.toLocaleString()}</span>
-              <span class="stat-label">포인트</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-icon">💰</span>
-              <span class="stat-value">${Math.floor(totalSpent / 1000)}K</span>
-              <span class="stat-label">누적결제</span>
-            </div>
-          </div>
+          <div class="level-subtitle">${store.name} 단골</div>
+        </div>
+      </div>
+      
+      <div class="level-stats">
+        <div class="stat-item">
+          <span class="stat-value">${visitCount}</span>
+          <span class="stat-label">방문</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${points.toLocaleString()}</span>
+          <span class="stat-label">포인트</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">${Math.floor(totalSpent / 1000)}K</span>
+          <span class="stat-label">누적결제</span>
         </div>
       </div>
       
       ${nextLevel && progressPercent < 100 ? `
         <div class="level-progress-section">
           <div class="progress-header">
-            <span class="next-level-info">
-              <span class="next-icon">🎯</span>
-              다음 등급: <strong>${nextLevelName}</strong>
-            </span>
+            <span class="next-level-info">다음: ${nextLevelName}</span>
             <span class="progress-percentage">${Math.round(progressPercent)}%</span>
           </div>
           
           <div class="progress-container">
             <div class="progress-track">
-              <div class="progress-fill animated-progress" 
-                   style="width: ${progressPercent}%; 
-                          background: linear-gradient(90deg, #ffffff, #f8f9fa);
-                          animation: progressFill 1s ease-out;">
-              </div>
-              <div class="progress-glow" style="left: ${progressPercent}%"></div>
+              <div class="progress-fill" style="width: ${progressPercent}%;"></div>
             </div>
           </div>
           
-          <div class="progress-requirements">
-            <div class="requirement-title">승급까지 필요한 조건 ${nextLevel.evalPolicy === 'OR' ? '(택1)' : '(모두)'}</div>
-            <div class="requirements-grid">
-              ${requirementDetails.map((req, index) => `
-                <div class="requirement-item">
-                  <span class="req-icon">${['🎯', '💳', '👥'][index] || '⭐'}</span>
-                  <span class="req-text">${req}</span>
-                </div>
+          ${requirementDetails.length > 0 ? `
+            <div class="progress-requirements">
+              ${requirementDetails.slice(0, 2).map(req => `
+                <span class="requirement-item">${req}</span>
               `).join('')}
             </div>
-          </div>
+          ` : ''}
         </div>
       ` : progressPercent >= 100 && nextLevel ? `
         <div class="level-ready-section">
-          <div class="ready-badge">
-            <span class="ready-icon">🎉</span>
-            <span class="ready-text">승급 가능!</span>
-          </div>
-          <div class="ready-description">
-            ${nextLevelName} 등급으로 승급할 수 있습니다
-          </div>
+          <div class="ready-badge">🎉 승급 가능!</div>
         </div>
       ` : `
         <div class="level-complete-section">
-          <div class="complete-badge">
-            <span class="complete-icon">🏆</span>
-            <span class="complete-text">최고 등급 달성</span>
-          </div>
-          <div class="complete-description">
-            ${store.name}의 최고 등급 고객입니다
-          </div>
+          <div class="complete-badge">🏆 최고 등급</div>
         </div>
       `}
       
       ${level?.benefits && level.benefits.length > 0 ? `
         <div class="level-benefits-section">
           <div class="benefits-header">
-            <span class="benefits-icon">🎁</span>
-            <span class="benefits-title">현재 혜택</span>
+            <span class="benefits-title">🎁 현재 혜택</span>
           </div>
           <div class="benefits-showcase">
-            ${level.benefits.slice(0, 3).map(benefit => `
+            ${level.benefits.slice(0, 2).map(benefit => `
               <div class="benefit-card">
-                <div class="benefit-icon-bg">
-                  <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
-                </div>
+                <span class="benefit-icon">${getBenefitIcon(benefit.type)}</span>
                 <div class="benefit-details">
                   <div class="benefit-name">${benefit.name}</div>
                   <div class="benefit-value">
                     ${benefit.discount ? `${benefit.discount}% 할인` : 
                       benefit.value ? benefit.value : '특별 혜택'}
                   </div>
-                  ${benefit.expires_days ? `
-                    <div class="benefit-expire">
-                      <span class="expire-icon">⏰</span>
-                      ${benefit.expires_days}일간 유효
-                    </div>
-                  ` : ''}
                 </div>
               </div>
             `).join('')}
-            ${level.benefits.length > 3 ? `
-              <div class="more-benefits">
-                +${level.benefits.length - 3}개 혜택 더
-              </div>
+            ${level.benefits.length > 2 ? `
+              <div class="more-benefits">+${level.benefits.length - 2}개 혜택 더</div>
             ` : ''}
           </div>
         </div>
       ` : `
         <div class="level-benefits-section">
           <div class="benefits-header">
-            <span class="benefits-icon">🎁</span>
-            <span class="benefits-title">신규 고객 혜택</span>
+            <span class="benefits-title">🎁 신규 혜택</span>
           </div>
           <div class="benefits-showcase">
             <div class="benefit-card">
-              <div class="benefit-icon-bg">
-                <span class="benefit-icon">🎉</span>
-              </div>
+              <span class="benefit-icon">🎉</span>
               <div class="benefit-details">
-                <div class="benefit-name">첫방문 환영 혜택</div>
-                <div class="benefit-value">특별 서비스 제공</div>
-              </div>
-            </div>
-            <div class="benefit-card">
-              <div class="benefit-icon-bg">
-                <span class="benefit-icon">💝</span>
-              </div>
-              <div class="benefit-details">
-                <div class="benefit-name">신규 고객 할인</div>
-                <div class="benefit-value">첫 주문 할인 혜택</div>
+                <div class="benefit-name">첫방문 환영</div>
+                <div class="benefit-value">특별 서비스</div>
               </div>
             </div>
           </div>
@@ -1022,21 +973,22 @@ function createLoyaltyCardHTML(levelData, store) {
     </div>
     
     <style>
-      .loyalty-level-card.premium-card {
-        border-radius: 24px;
-        padding: 28px;
-        margin: 24px 0;
+      .loyalty-level-card.compact-card {
+        border-radius: 16px;
+        padding: 16px;
+        margin: 12px 0;
         color: white;
         position: relative;
         overflow: hidden;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.3s ease;
+        max-width: 100%;
       }
       
-      .loyalty-level-card.premium-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+      .loyalty-level-card.compact-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
       }
       
       .card-background {
@@ -1045,62 +997,63 @@ function createLoyaltyCardHTML(levelData, store) {
         left: 0;
         right: 0;
         bottom: 0;
-        opacity: 0.6;
+        opacity: 0.4;
         z-index: -1;
       }
       
       .level-header {
         display: flex;
-        align-items: flex-start;
-        gap: 20px;
-        margin-bottom: 24px;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
       }
       
       .level-icon-container {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 4px;
+        gap: 2px;
+        flex-shrink: 0;
       }
       
       .level-icon {
-        font-size: 48px;
-        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
-        animation: float 3s ease-in-out infinite;
+        font-size: 28px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
       }
       
       .level-rank {
         background: rgba(255, 255, 255, 0.2);
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 9px;
         font-weight: 600;
-        backdrop-filter: blur(10px);
+        backdrop-filter: blur(5px);
       }
       
       .level-info {
         flex: 1;
+        min-width: 0;
       }
       
       .level-name {
-        font-size: 28px;
-        font-weight: 800;
-        margin-bottom: 4px;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-        letter-spacing: -0.5px;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 2px;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        line-height: 1.2;
       }
       
       .level-subtitle {
-        font-size: 14px;
+        font-size: 12px;
         opacity: 0.8;
-        margin-bottom: 16px;
         font-weight: 500;
       }
       
       .level-stats {
         display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+        justify-content: space-between;
       }
       
       .stat-item {
@@ -1108,303 +1061,193 @@ function createLoyaltyCardHTML(levelData, store) {
         flex-direction: column;
         align-items: center;
         background: rgba(255, 255, 255, 0.15);
-        padding: 12px 8px;
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
-        min-width: 60px;
-        transition: all 0.2s ease;
-      }
-      
-      .stat-item:hover {
-        background: rgba(255, 255, 255, 0.25);
-        transform: translateY(-1px);
-      }
-      
-      .stat-icon {
-        font-size: 16px;
-        margin-bottom: 4px;
+        padding: 8px 6px;
+        border-radius: 8px;
+        backdrop-filter: blur(5px);
+        flex: 1;
+        min-width: 0;
       }
       
       .stat-value {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 700;
         line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        text-align: center;
       }
       
       .stat-label {
-        font-size: 10px;
+        font-size: 9px;
         opacity: 0.8;
         margin-top: 2px;
       }
       
       .level-progress-section {
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 20px;
-        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        backdrop-filter: blur(5px);
       }
       
       .progress-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
       
       .next-level-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        font-weight: 500;
-      }
-      
-      .next-icon {
-        font-size: 16px;
+        font-size: 12px;
+        font-weight: 600;
       }
       
       .progress-percentage {
-        font-size: 18px;
+        font-size: 12px;
         font-weight: 700;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       }
       
       .progress-container {
-        position: relative;
-        margin-bottom: 16px;
+        margin-bottom: 8px;
       }
       
       .progress-track {
-        height: 12px;
+        height: 6px;
         background: rgba(255, 255, 255, 0.2);
-        border-radius: 6px;
+        border-radius: 3px;
         overflow: hidden;
-        position: relative;
       }
       
       .progress-fill {
         height: 100%;
-        border-radius: 6px;
-        position: relative;
-        overflow: hidden;
+        background: linear-gradient(90deg, #ffffff, #f8f9fa);
+        border-radius: 3px;
+        transition: width 0.3s ease;
       }
       
-      .progress-glow {
-        position: absolute;
-        top: -2px;
-        width: 4px;
-        height: 16px;
-        background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, transparent 70%);
-        border-radius: 2px;
-        transform: translateX(-50%);
-        animation: glow 2s ease-in-out infinite alternate;
-      }
-      
-      .requirement-title {
-        font-size: 12px;
-        opacity: 0.9;
-        margin-bottom: 8px;
-        font-weight: 600;
-      }
-      
-      .requirements-grid {
+      .progress-requirements {
         display: flex;
+        gap: 6px;
         flex-wrap: wrap;
-        gap: 8px;
       }
       
       .requirement-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
         background: rgba(255, 255, 255, 0.15);
-        padding: 6px 10px;
-        border-radius: 12px;
-        font-size: 12px;
-        backdrop-filter: blur(5px);
-      }
-      
-      .req-icon {
-        font-size: 14px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 10px;
+        backdrop-filter: blur(3px);
       }
       
       .level-ready-section,
       .level-complete-section {
         background: rgba(255, 255, 255, 0.15);
-        border-radius: 16px;
-        padding: 20px;
+        border-radius: 12px;
+        padding: 8px;
         text-align: center;
-        margin-bottom: 20px;
-        backdrop-filter: blur(10px);
+        margin-bottom: 12px;
+        backdrop-filter: blur(5px);
       }
       
       .ready-badge,
       .complete-badge {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        font-size: 18px;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
-      
-      .ready-icon,
-      .complete-icon {
-        font-size: 24px;
-        animation: bounce 1s ease-in-out infinite;
-      }
-      
-      .ready-description,
-      .complete-description {
-        font-size: 14px;
-        opacity: 0.9;
+        font-size: 12px;
+        font-weight: 600;
       }
       
       .level-benefits-section {
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 20px;
-        backdrop-filter: blur(10px);
+        border-radius: 12px;
+        padding: 12px;
+        backdrop-filter: blur(5px);
       }
       
       .benefits-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 16px;
-      }
-      
-      .benefits-icon {
-        font-size: 20px;
+        margin-bottom: 8px;
       }
       
       .benefits-title {
-        font-size: 16px;
+        font-size: 12px;
         font-weight: 600;
       }
       
       .benefits-showcase {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 6px;
       }
       
       .benefit-card {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         background: rgba(255, 255, 255, 0.1);
-        padding: 12px;
-        border-radius: 12px;
-        backdrop-filter: blur(5px);
-        transition: all 0.2s ease;
-      }
-      
-      .benefit-card:hover {
-        background: rgba(255, 255, 255, 0.2);
-        transform: translateX(4px);
-      }
-      
-      .benefit-icon-bg {
-        width: 40px;
-        height: 40px;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(10px);
+        padding: 8px;
+        border-radius: 8px;
+        backdrop-filter: blur(3px);
       }
       
       .benefit-icon {
-        font-size: 20px;
+        font-size: 16px;
+        flex-shrink: 0;
       }
       
       .benefit-details {
         flex: 1;
+        min-width: 0;
       }
       
       .benefit-name {
         font-weight: 600;
-        font-size: 14px;
-        margin-bottom: 2px;
+        font-size: 11px;
+        margin-bottom: 1px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       
       .benefit-value {
-        font-size: 12px;
-        opacity: 0.9;
-        font-weight: 500;
-      }
-      
-      .benefit-expire {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 11px;
-        opacity: 0.7;
-        margin-top: 4px;
-      }
-      
-      .expire-icon {
         font-size: 10px;
+        opacity: 0.8;
+        font-weight: 500;
       }
       
       .more-benefits {
         text-align: center;
-        padding: 8px;
+        padding: 6px;
         background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        font-size: 12px;
+        border-radius: 6px;
+        font-size: 10px;
         opacity: 0.8;
       }
       
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-6px); }
-      }
-      
-      @keyframes progressFill {
-        0% { width: 0%; }
-        100% { width: var(--progress-width, 0%); }
-      }
-      
-      @keyframes glow {
-        0% { opacity: 0.5; }
-        100% { opacity: 1; }
-      }
-      
-      @keyframes bounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-      }
-      
       @media (max-width: 400px) {
-        .loyalty-level-card.premium-card {
-          padding: 20px;
-          margin: 16px 0;
+        .loyalty-level-card.compact-card {
+          padding: 12px;
+          margin: 8px 0;
         }
         
         .level-name {
-          font-size: 24px;
+          font-size: 16px;
         }
         
         .level-stats {
-          gap: 12px;
+          gap: 6px;
         }
         
         .stat-item {
-          min-width: 50px;
-          padding: 8px 6px;
+          padding: 6px 4px;
         }
         
-        .benefit-card {
-          padding: 10px;
+        .stat-value {
+          font-size: 12px;
         }
         
         .level-icon {
-          font-size: 40px;
+          font-size: 24px;
         }
       }
     </style>
