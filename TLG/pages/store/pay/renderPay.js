@@ -471,27 +471,7 @@ function renderPay(currentOrder, store, tableNum) {
         border-color: #cbd5e1;
       }
 
-      @media (max-width: 480px) {
-        .pay-header {
-          padding: 12px;
-        }
-
-        .pay-body {
-          padding: 12px;
-        }
-
-        .order-section, .points-section, .coupon-section, .summary-section {
-          padding: 16px;
-        }
-
-        .pay-footer {
-          padding: 12px;
-        }
-
-        .final-amount {
-          font-size: 18px;
-        }
-      }
+      
     </style>
   `;
 
