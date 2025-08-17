@@ -1209,9 +1209,15 @@ function setupAccountEventListeners() {
     showCouponModal();
   };
 
-  const handleFavoritesClick = function(e) {
+  const handleFavoritesClick = async function(e) {
     e.preventDefault();
-    showFavoritesModal();
+    await loadAllFavoritesScript();
+    if (typeof renderAllFavorites === 'function') {
+      window.previousScreen = 'renderMyAccount';
+      renderAllFavorites(window.userInfo || { id: 'user1' });
+    } else {
+      showFavoritesModal();
+    }
   };
 
   const handleAchievementsClick = function(e) {
@@ -1233,9 +1239,15 @@ function setupAccountEventListeners() {
     }
   };
 
-  const handleViewAllLevelsClick = function(e) {
+  const handleViewAllLevelsClick = async function(e) {
     e.preventDefault();
-    showAllRegularLevelsModal();
+    await loadAllRegularLevelsScript();
+    if (typeof renderAllRegularLevels === 'function') {
+      window.previousScreen = 'renderMyAccount';
+      renderAllRegularLevels(window.userInfo || { id: 'user1' });
+    } else {
+      showAllRegularLevelsModal();
+    }
   };
 
   const handleEditPersonalInfoClick = function(e) {
@@ -1603,6 +1615,61 @@ function showAllRegularLevelsModal() {
 
 function showEditPersonalInfoModal() {
   alert('개인정보 수정 기능은 개발 중입니다.');
+}
+
+// 스크립트 로드 함수들
+async function loadAllFavoritesScript() {
+  if (typeof window.renderAllFavorites === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllFavorites 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllFavorites.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllFavorites 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllFavorites 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllFavorites 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
+
+async function loadAllRegularLevelsScript() {
+  if (typeof window.renderAllRegularLevels === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllRegularLevels 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderAllRegularLevels.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllRegularLevels 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllRegularLevels 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllRegularLevels 스크립트 로드 중 오류:', error);
+    throw error;
+  }
 }
 
 // 전역 함수 등록

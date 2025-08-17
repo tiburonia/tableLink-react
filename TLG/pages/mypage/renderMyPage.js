@@ -61,21 +61,21 @@ async function renderMyPage() {
 
           <!-- 퀵 액션 메뉴 -->
           <div class="quick-actions">
-            <div class="quick-action-item" onclick="renderAllOrderHTML(userInfo)">
+            <div class="quick-action-item" id="quickOrdersBtn">
               <div class="action-icon">📦</div>
               <span class="action-label">주문내역</span>
             </div>
-            <div class="quick-action-item">
+            <div class="quick-action-item" id="quickCouponsBtn">
               <div class="action-icon">🎫</div>
               <span class="action-label">쿠폰함</span>
             </div>
-            <div class="quick-action-item">
+            <div class="quick-action-item" id="quickFavoritesBtn">
               <div class="action-icon">💖</div>
               <span class="action-label">즐겨찾기</span>
             </div>
-            <div class="quick-action-item">
+            <div class="quick-action-item" id="quickPointsBtn">
               <div class="action-icon">🏆</div>
-              <span class="action-label">업적</span>
+              <span class="action-label">포인트</span>
             </div>
           </div>
 
@@ -898,12 +898,55 @@ async function renderMyPage() {
     }
   });
 
+  // 퀵 액션 메뉴 이벤트 리스너 추가
+  const quickOrdersBtn = document.querySelector('#quickOrdersBtn');
+  if (quickOrdersBtn) {
+    quickOrdersBtn.addEventListener('click', async () => {
+      await loadAllOrderScript();
+      if (typeof renderAllOrderHTML === 'function') {
+        window.previousScreen = 'renderMyPage';
+        renderAllOrderHTML(userInfo);
+      }
+    });
+  }
+
+  const quickCouponsBtn = document.querySelector('#quickCouponsBtn');
+  if (quickCouponsBtn) {
+    quickCouponsBtn.addEventListener('click', () => {
+      alert('쿠폰함 기능은 개발 중입니다.');
+    });
+  }
+
+  const quickFavoritesBtn = document.querySelector('#quickFavoritesBtn');
+  if (quickFavoritesBtn) {
+    quickFavoritesBtn.addEventListener('click', async () => {
+      await loadAllFavoritesScript();
+      if (typeof renderAllFavorites === 'function') {
+        window.previousScreen = 'renderMyPage';
+        renderAllFavorites(userInfo);
+      }
+    });
+  }
+
+  const quickPointsBtn = document.querySelector('#quickPointsBtn');
+  if (quickPointsBtn) {
+    quickPointsBtn.addEventListener('click', async () => {
+      await loadAllPointsScript();
+      if (typeof renderAllPoints === 'function') {
+        window.previousScreen = 'renderMyPage';
+        renderAllPoints(userInfo);
+      }
+    });
+  };
+
   // 전체보기 버튼들 이벤트 리스너
   const viewAllReviewsBtn = document.querySelector('#viewAllReviewsBtn');
   if (viewAllReviewsBtn) {
     viewAllReviewsBtn.addEventListener('click', async () => {
       await loadAllReviewScript();
       if (typeof renderAllReview === 'function') {
+        // 이전 화면 정보 저장
+        window.previousScreen = 'renderMyPage';
         renderAllReview(userInfo);
       }
     });
@@ -914,6 +957,8 @@ async function renderMyPage() {
     viewAllFavoritesBtn.addEventListener('click', async () => {
       await loadAllFavoritesScript();
       if (typeof renderAllFavorites === 'function') {
+        // 이전 화면 정보 저장
+        window.previousScreen = 'renderMyPage';
         renderAllFavorites(userInfo);
       }
     });
@@ -924,6 +969,8 @@ async function renderMyPage() {
     viewAllLevelsBtn.addEventListener('click', async () => {
       await loadAllRegularLevelsScript();
       if (typeof renderAllRegularLevels === 'function') {
+        // 이전 화면 정보 저장
+        window.previousScreen = 'renderMyPage';
         renderAllRegularLevels(userInfo);
       }
     });
@@ -934,6 +981,8 @@ async function renderMyPage() {
     viewAllPointsBtn.addEventListener('click', async () => {
       await loadAllPointsScript();
       if (typeof renderAllPoints === 'function') {
+        // 이전 화면 정보 저장
+        window.previousScreen = 'renderMyPage';
         renderAllPoints(userInfo);
       }
     });
@@ -1571,6 +1620,33 @@ function goToStore(storeId) {
 }
 
 // 스크립트 로드 함수들
+async function loadAllOrderScript() {
+  if (typeof window.renderAllOrderHTML === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderAllOrderHTML 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/store/order/renderAllOrderHTML.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderAllOrderHTML 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderAllOrderHTML 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderAllOrderHTML 스크립트 로드 중 오류:', error);
+    throw error;
+  }
+}
+
 async function loadAllReviewScript() {
   if (typeof window.renderAllReview === 'function') {
     return; // 이미 로드됨
