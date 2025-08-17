@@ -41,10 +41,10 @@ window.StoreUIManager = {
                 </div>
               </div>
             </div>
+            ${this.renderReviewPreviewHTML()}
             ${this.renderLoyaltyLevelHTML()}
             ${this.renderPromotionCardHTML(store)}
             ${this.renderTableStatusHTML(store)}
-            ${this.renderReviewPreviewHTML()}
           </div>
           <div id="storeNavBar" class="modern-nav">
             <button class="nav-btn" data-tab="menu">
