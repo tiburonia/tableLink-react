@@ -65,7 +65,7 @@ async function renderStore(store) {
           } else {
             // 기존 링크가 없으면 전체 내용 업데이트
             reviewScoreElement.innerHTML = `${displayRating}&nbsp<span id="reviewLink" class="review-link">리뷰 보기</span>`;
-            
+
             // 새로 생성된 리뷰 링크에 이벤트 리스너 설정
             const newReviewLink = document.getElementById('reviewLink');
             if (newReviewLink) {
@@ -224,7 +224,7 @@ function setupEventListeners(store) {
     if (tllButton) {
       // 기존 onclick 속성 제거
       tllButton.removeAttribute('onclick');
-      
+
       tllButton.addEventListener('click', () => {
         try {
           console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 미리 선택하여 실행`);
@@ -455,10 +455,10 @@ async function loadPromotionData(store) {
     const response = await fetch(`/api/stores/${store.id}/promotions`);
     if (response.ok) {
       const promotionData = await response.json();
-      
+
       if (promotionData.success && promotionData.promotions) {
         console.log(`✅ 매장 ${store.id} 프로모션 ${promotionData.promotions.length}개 로드 완료`);
-        
+
         // 프로모션 카드 UI 업데이트
         updatePromotionUI(promotionData.promotions);
       } else {
@@ -530,7 +530,7 @@ async function loadRegularLevelBenefits(container, promotions = []) {
   try {
     // 현재 로그인한 사용자 정보 가져오기
     const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
-    
+
     if (!userInfo || !window.currentStore) {
       // 로그인하지 않은 경우 기본 혜택 표시
       displayDefaultBenefits(container, promotions);
@@ -540,7 +540,7 @@ async function loadRegularLevelBenefits(container, promotions = []) {
     // 실제 단골 레벨 정보 가져오기
     if (window.RegularLevelManager) {
       const regularLevelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, window.currentStore.id);
-      
+
       if (regularLevelData && regularLevelData.level && regularLevelData.level.benefits) {
         displayRegularLevelBenefits(container, regularLevelData.level.benefits, promotions);
         return;
@@ -565,7 +565,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
 
   // 최대 3개의 혜택만 표시
   const displayBenefits = benefits.slice(0, 3);
-  
+
   container.innerHTML = `
     <div class="benefits-grid premium-benefits-grid">
       ${displayBenefits.map((benefit, index) => `
@@ -583,7 +583,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
             </div>
             <div class="benefit-status ${getBenefitStatus(benefit.type)}"></div>
           </div>
-          
+
           <div class="benefit-content">
             <div class="benefit-name">${benefit.name || formatBenefitName(benefit.type)}</div>
             <div class="benefit-description">${getBenefitDescription(benefit)}</div>
@@ -591,7 +591,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
               ${formatBenefitValue(benefit)}
             </div>
           </div>
-          
+
           <div class="benefit-actions">
             <button class="benefit-use-btn" onclick="useBenefit('${benefit.type}', ${JSON.stringify(benefit).replace(/"/g, '&quot;')})">
               <span class="btn-icon">✨</span>
@@ -601,7 +601,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         </div>
       `).join('')}
     </div>
-    
+
     ${benefits.length > 3 ? `
       <div class="benefits-expand">
         <button class="promotion-detail-btn" onclick="showAllBenefits(${JSON.stringify(benefits).replace(/"/g, '&quot;')})">
@@ -609,7 +609,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         </button>
       </div>
     ` : ''}
-    
+
     <style>
       .benefits-grid.premium-benefits-grid {
         display: grid;
@@ -617,7 +617,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         gap: 8px;
         margin-bottom: 8px;
       }
-      
+
       .benefit-card.premium-benefit-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 12px;
@@ -629,43 +629,43 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         opacity: 0;
         transform: translateY(10px);
       }
-      
+
       .benefit-card.featured-benefit {
         border: 1px solid rgba(255, 215, 0, 0.3);
         box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
       }
-      
+
       .benefit-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
       }
-      
+
       @keyframes benefitSlideIn {
         to {
           opacity: 1;
           transform: translateY(0);
         }
       }
-      
+
       .benefit-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         margin-bottom: 8px;
       }
-      
+
       .benefit-icon-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 2px;
       }
-      
+
       .benefit-icon {
         font-size: 18px;
         filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
       }
-      
+
       .benefit-expiry {
         display: flex;
         align-items: center;
@@ -674,75 +674,75 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         padding: 2px 4px;
         border-radius: 4px;
       }
-      
+
       .expiry-icon {
         font-size: 8px;
       }
-      
+
       .expiry-text {
         font-size: 7px;
         font-weight: 600;
       }
-      
+
       .benefit-status {
         width: 8px;
         height: 8px;
         border-radius: 50%;
         flex-shrink: 0;
       }
-      
+
       .benefit-status.vip {
         background: linear-gradient(45deg, #ffd700, #ffed4e);
         box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
       }
-      
+
       .benefit-status.premium {
         background: linear-gradient(45deg, #e5e4e2, #ffffff);
         box-shadow: 0 0 8px rgba(229, 228, 226, 0.4);
       }
-      
+
       .benefit-status.loyalty {
         background: linear-gradient(45deg, #3b82f6, #60a5fa);
         box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
       }
-      
+
       .benefit-status.discount {
         background: linear-gradient(45deg, #ef4444, #f87171);
         box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
       }
-      
+
       .benefit-status.free {
         background: linear-gradient(45deg, #10b981, #34d399);
         box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
       }
-      
+
       .benefit-status.priority {
         background: linear-gradient(45deg, #f59e0b, #fbbf24);
         box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
       }
-      
+
       .benefit-content {
         margin-bottom: 8px;
       }
-      
+
       .benefit-name {
         font-size: 12px;
         font-weight: 700;
         margin-bottom: 2px;
         line-height: 1.2;
       }
-      
+
       .benefit-description {
         font-size: 9px;
         opacity: 0.8;
         margin-bottom: 4px;
         line-height: 1.3;
       }
-      
+
       .benefit-value {
         margin-bottom: 8px;
       }
-      
+
       .benefit-value .value-highlight {
         font-size: 10px;
         font-weight: 600;
@@ -750,12 +750,12 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         border-radius: 4px;
         background: rgba(255, 255, 255, 0.2);
       }
-      
+
       .benefit-actions {
         display: flex;
         justify-content: center;
       }
-      
+
       .benefit-use-btn {
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
@@ -770,22 +770,22 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         align-items: center;
         gap: 4px;
       }
-      
+
       .benefit-use-btn:hover {
         background: rgba(255, 255, 255, 0.3);
         border-color: rgba(255, 255, 255, 0.5);
         transform: translateY(-1px);
       }
-      
+
       .btn-icon {
         font-size: 8px;
       }
-      
+
       .benefits-expand {
         text-align: center;
         margin-top: 8px;
       }
-      
+
       .benefits-expand .promotion-detail-btn {
         width: 100%;
         background: rgba(102, 126, 234, 0.1);
@@ -798,7 +798,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
         cursor: pointer;
         transition: all 0.3s ease;
       }
-      
+
       .benefits-expand .promotion-detail-btn:hover {
         background: rgba(102, 126, 234, 0.2);
         border-color: rgba(102, 126, 234, 0.5);
@@ -812,7 +812,7 @@ function displayDefaultBenefits(container, promotions = []) {
   if (promotions && promotions.length > 0) {
     // 기존 프로모션 표시 로직
     const displayPromotions = promotions.slice(0, 2);
-    
+
     container.innerHTML = displayPromotions.map((promotion, index) => `
       <div class="promotion-item ${index === 0 ? 'featured' : ''}">
         <div class="promotion-left">
@@ -886,10 +886,10 @@ async function loadLoyaltyData(store) {
     // 실제 단골 레벨 정보 가져오기
     if (window.RegularLevelManager) {
       const regularLevelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, store.id);
-      
+
       if (regularLevelData) {
         console.log('✅ 실제 단골 레벨 데이터 로드:', regularLevelData);
-        
+
         // 기존 loyalty-info 컨테이너 대신 실제 단골 레벨 카드 영역 업데이트
         updateLoyaltyCardUI(regularLevelData, store);
         return;
@@ -920,14 +920,14 @@ function updateLoyaltyCardUI(levelData, store) {
   const loyaltyContainer = document.querySelector('.loyalty-levels-grid');
   if (!loyaltyContainer) {
     console.warn('⚠️ .loyalty-levels-grid 요소를 찾을 수 없음. 다른 선택자 시도...');
-    
+
     // 대안 선택자들 시도
     const alternatives = [
       '.loyalty-card',
       '.modern-gradient-card.loyalty-theme',
       '[class*="loyalty"]'
     ];
-    
+
     let foundContainer = null;
     for (const selector of alternatives) {
       foundContainer = document.querySelector(selector);
@@ -936,12 +936,12 @@ function updateLoyaltyCardUI(levelData, store) {
         break;
       }
     }
-    
+
     if (!foundContainer) {
       console.error('❌ 단골 레벨 컨테이너를 찾을 수 없습니다');
       return;
     }
-    
+
     // 발견된 요소의 부모나 형제 요소에서 업데이트 가능한 컨테이너 찾기
     const parentContainer = foundContainer.parentElement;
     if (parentContainer) {
@@ -967,28 +967,28 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
   const visitCount = stats.visitCount || 0;
   const points = stats.points || 0;
   const totalSpent = stats.totalSpent || 0;
-  
+
   // 다음 레벨 정보 및 진행률 계산
   let progressPercent = 0;
   let requirementDetails = [];
   let nextLevelName = '단골 고객';
-  
+
   if (nextLevel) {
     nextLevelName = nextLevel.name;
-    
+
     // 실제 진행률 계산
     const requiredPoints = nextLevel.requiredPoints || 0;
     const requiredSpent = nextLevel.requiredTotalSpent || 0;
     const requiredVisits = nextLevel.requiredVisitCount || 0;
-    
+
     if (nextLevel.evalPolicy === 'OR') {
       // OR 조건: 가장 높은 진행률 사용
       const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
       const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
       const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
-      
+
       progressPercent = Math.max(pointsProgress, spentProgress, visitsProgress);
-      
+
       // 필요한 조건들 표시
       if (requiredPoints > 0 && points < requiredPoints) {
         requirementDetails.push(`포인트 ${(requiredPoints - points).toLocaleString()}P`);
@@ -1004,9 +1004,9 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
       const pointsProgress = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
       const spentProgress = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
       const visitsProgress = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
-      
+
       progressPercent = (pointsProgress + spentProgress + visitsProgress) / 3;
-      
+
       // 모든 조건 표시
       if (requiredPoints > 0) {
         requirementDetails.push(`포인트 ${Math.max(0, requiredPoints - points).toLocaleString()}P`);
@@ -1060,7 +1060,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
     <div class="loyalty-level-card compact-card" 
          style="background: ${theme.gradient}; box-shadow: 0 4px 16px ${theme.glow};">
       <div class="card-background" style="background: ${theme.bgPattern}"></div>
-      
+
       <div class="level-header">
         <div class="level-icon-container">
           <div class="level-icon">${theme.icon}</div>
@@ -1071,7 +1071,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
           <div class="level-subtitle">${store.name} 단골</div>
         </div>
       </div>
-      
+
       <div class="level-stats">
         <div class="stat-item">
           <span class="stat-value">${visitCount}</span>
@@ -1086,14 +1086,14 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
           <span class="stat-label">누적결제</span>
         </div>
       </div>
-      
+
       ${nextLevel ? `
         <div class="level-progress-section">
           <div class="progress-header">
             <span class="next-level-info">다음: ${nextLevelName}</span>
             <span class="progress-percentage">${Math.round(progressPercent)}%</span>
           </div>
-          
+
           <div class="requirements-gauges">
             ${nextLevel.requiredPoints > 0 ? `
               <div class="gauge-container">
@@ -1107,7 +1107,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
                 <div class="gauge-percent">${Math.round((points / nextLevel.requiredPoints) * 100)}%</div>
               </div>
             ` : ''}
-            
+
             ${nextLevel.requiredTotalSpent > 0 ? `
               <div class="gauge-container">
                 <div class="gauge-header">
@@ -1120,7 +1120,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
                 <div class="gauge-percent">${Math.round((totalSpent / nextLevel.requiredTotalSpent) * 100)}%</div>
               </div>
             ` : ''}
-            
+
             ${nextLevel.requiredVisitCount > 0 ? `
               <div class="gauge-container">
                 <div class="gauge-header">
@@ -1134,13 +1134,13 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
               </div>
             ` : ''}
           </div>
-          
+
           <div class="evaluation-policy">
             <span class="policy-label">
               ${nextLevel.evalPolicy === 'OR' ? '🎯 조건 중 하나만 달성하면 승급' : '🎯 모든 조건을 달성해야 승급'}
             </span>
           </div>
-          
+
           ${progressPercent >= 100 ? `
             <div class="level-ready-badge">🎉 승급 가능!</div>
           ` : ''}
@@ -1150,7 +1150,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
           <div class="complete-badge">🏆 최고 등급</div>
         </div>
       `}
-      
+
       <div class="level-summary-section">
         <div class="summary-header">
           <span class="summary-icon">📊</span>
@@ -1161,7 +1161,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         </div>
       </div>
     </div>
-    
+
     <style>
       .loyalty-level-card.compact-card {
         border-radius: 16px;
@@ -1175,12 +1175,12 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         transition: all 0.3s ease;
         max-width: 100%;
       }
-      
+
       .loyalty-level-card.compact-card:hover {
         transform: translateY(-1px);
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
       }
-      
+
       .card-background {
         position: absolute;
         top: 0;
@@ -1190,14 +1190,14 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         opacity: 0.4;
         z-index: -1;
       }
-      
+
       .level-header {
         display: flex;
         align-items: center;
         gap: 12px;
         margin-bottom: 12px;
       }
-      
+
       .level-icon-container {
         display: flex;
         flex-direction: column;
@@ -1205,12 +1205,12 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         gap: 2px;
         flex-shrink: 0;
       }
-      
+
       .level-icon {
         font-size: 28px;
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
       }
-      
+
       .level-rank {
         background: rgba(255, 255, 255, 0.2);
         padding: 2px 6px;
@@ -1219,12 +1219,12 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         font-weight: 600;
         backdrop-filter: blur(5px);
       }
-      
+
       .level-info {
         flex: 1;
         min-width: 0;
       }
-      
+
       .level-name {
         font-size: 18px;
         font-weight: 700;
@@ -1232,20 +1232,20 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         line-height: 1.2;
       }
-      
+
       .level-subtitle {
         font-size: 12px;
         opacity: 0.8;
         font-weight: 500;
       }
-      
+
       .level-stats {
         display: flex;
         gap: 8px;
         margin-bottom: 12px;
         justify-content: space-between;
       }
-      
+
       .stat-item {
         display: flex;
         flex-direction: column;
@@ -1257,7 +1257,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         flex: 1;
         min-width: 0;
       }
-      
+
       .stat-value {
         font-size: 14px;
         font-weight: 700;
@@ -1268,13 +1268,13 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         width: 100%;
         text-align: center;
       }
-      
+
       .stat-label {
         font-size: 9px;
         opacity: 0.8;
         margin-top: 2px;
       }
-      
+
       .level-progress-section {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 12px;
@@ -1282,57 +1282,57 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         margin-bottom: 12px;
         backdrop-filter: blur(5px);
       }
-      
+
       .progress-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 8px;
       }
-      
+
       .next-level-info {
         font-size: 12px;
         font-weight: 600;
       }
-      
+
       .progress-percentage {
         font-size: 12px;
         font-weight: 700;
       }
-      
+
       .requirements-gauges {
         display: flex;
         flex-direction: column;
         gap: 8px;
         margin-bottom: 8px;
       }
-      
+
       .gauge-container {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 8px;
         padding: 8px;
         backdrop-filter: blur(3px);
       }
-      
+
       .gauge-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 4px;
       }
-      
+
       .gauge-label {
         font-size: 10px;
         font-weight: 600;
         opacity: 0.9;
       }
-      
+
       .gauge-value {
         font-size: 9px;
         font-weight: 600;
         opacity: 0.8;
       }
-      
+
       .gauge-track {
         height: 4px;
         background: rgba(255, 255, 255, 0.2);
@@ -1341,41 +1341,41 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         margin-bottom: 2px;
         position: relative;
       }
-      
+
       .gauge-fill {
         height: 100%;
         border-radius: 2px;
         transition: width 0.3s ease;
         position: relative;
       }
-      
+
       .gauge-fill.points {
         background: linear-gradient(90deg, #10b981, #34d399);
         box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
       }
-      
+
       .gauge-fill.spending {
         background: linear-gradient(90deg, #3b82f6, #60a5fa);
         box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
       }
-      
+
       .gauge-fill.visits {
         background: linear-gradient(90deg, #f59e0b, #fbbf24);
         box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
       }
-      
+
       .gauge-percent {
         text-align: right;
         font-size: 8px;
         font-weight: 600;
         opacity: 0.8;
       }
-      
+
       .evaluation-policy {
         text-align: center;
         margin-bottom: 8px;
       }
-      
+
       .policy-label {
         font-size: 9px;
         font-weight: 500;
@@ -1385,7 +1385,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         border-radius: 6px;
         backdrop-filter: blur(3px);
       }
-      
+
       .level-ready-badge {
         text-align: center;
         background: rgba(16, 185, 129, 0.2);
@@ -1397,7 +1397,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         backdrop-filter: blur(5px);
         border: 1px solid rgba(16, 185, 129, 0.3);
       }
-      
+
       .level-ready-section,
       .level-complete-section {
         background: rgba(255, 255, 255, 0.15);
@@ -1407,35 +1407,35 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         margin-bottom: 12px;
         backdrop-filter: blur(5px);
       }
-      
+
       .ready-badge,
       .complete-badge {
         font-size: 12px;
         font-weight: 600;
       }
-      
+
       .level-benefits-section {
         background: rgba(255, 255, 255, 0.1);
         border-radius: 12px;
         padding: 12px;
         backdrop-filter: blur(5px);
       }
-      
+
       .benefits-header {
         margin-bottom: 8px;
       }
-      
+
       .benefits-title {
         font-size: 12px;
         font-weight: 600;
       }
-      
+
       .benefits-showcase {
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
-      
+
       .benefit-card {
         display: flex;
         align-items: center;
@@ -1445,17 +1445,17 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         border-radius: 8px;
         backdrop-filter: blur(3px);
       }
-      
+
       .benefit-icon {
         font-size: 16px;
         flex-shrink: 0;
       }
-      
+
       .benefit-details {
         flex: 1;
         min-width: 0;
       }
-      
+
       .benefit-name {
         font-weight: 600;
         font-size: 11px;
@@ -1464,13 +1464,13 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         overflow: hidden;
         text-overflow: ellipsis;
       }
-      
+
       .benefit-value {
         font-size: 10px;
         opacity: 0.8;
         font-weight: 500;
       }
-      
+
       .more-benefits {
         text-align: center;
         padding: 6px;
@@ -1479,7 +1479,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         font-size: 10px;
         opacity: 0.8;
       }
-      
+
       /* 단골 현황 요약 스타일 */
       .level-summary-section {
         background: rgba(255, 255, 255, 0.1);
@@ -1489,75 +1489,75 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
         backdrop-filter: blur(5px);
         border: 1px solid rgba(255, 255, 255, 0.15);
       }
-      
+
       .summary-header {
         display: flex;
         align-items: center;
         gap: 8px;
         margin-bottom: 6px;
       }
-      
+
       .summary-icon {
         font-size: 16px;
         filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
       }
-      
+
       .summary-title {
         font-size: 12px;
         font-weight: 600;
         color: white;
       }
-      
+
       .summary-content {
         text-align: center;
       }
-      
+
       .summary-text {
         font-size: 11px;
         opacity: 0.9;
         font-weight: 500;
         line-height: 1.3;
       }
-      
+
       @media (max-width: 400px) {
         .loyalty-level-card.compact-card {
           padding: 12px;
           margin: 8px 0;
         }
-        
+
         .level-name {
           font-size: 16px;
         }
-        
+
         .level-stats {
           gap: 6px;
         }
-        
+
         .stat-item {
           padding: 6px 4px;
         }
-        
+
         .stat-value {
           font-size: 12px;
         }
-        
+
         .level-icon {
           font-size: 24px;
         }
-        
+
         .benefits-showcase.welcome-grid {
           grid-template-columns: 1fr;
         }
-        
+
         .benefit-card.premium-card,
         .benefit-card.welcome-card {
           padding: 10px;
         }
-        
+
         .benefit-name {
           font-size: 11px;
         }
-        
+
         .benefit-description {
           font-size: 8px;
         }
@@ -1616,8 +1616,8 @@ function formatBenefitName(type) {
     'free_side': '무료 사이드',
     'free_upgrade': '무료 업그레이드',
     'priority_service': '우선 서비스',
-    'birthday_gift': '생일 선물',
-    'monthly_free': '월간 무료',
+    'birthday_gift': '생일 특별 선물',
+    'monthly_free': '매월 무료 혜택',
     'early_access': '신메뉴 체험',
     'point_multiplier': '포인트 적립',
     'discount_percent': '할인 혜택',
@@ -1629,7 +1629,7 @@ function formatBenefitName(type) {
 // 혜택 설명 반환
 function getBenefitDescription(benefit) {
   if (benefit.description) return benefit.description;
-  
+
   const descMap = {
     'vip_coupon': 'VIP 전용 할인 쿠폰',
     'premium_coupon': '프리미엄 할인 쿠폰',
@@ -1646,7 +1646,7 @@ function getBenefitDescription(benefit) {
     'discount_percent': '결제시 할인 적용',
     'free_delivery': '배달비 무료'
   };
-  
+
   return descMap[benefit.type] || '특별한 혜택을 제공합니다';
 }
 
@@ -1655,30 +1655,30 @@ function formatBenefitValue(benefit) {
   if (benefit.discount) {
     return `<span class="value-highlight discount">${benefit.discount}% 할인</span>`;
   }
-  
+
   if (benefit.point_rate) {
     return `<span class="value-highlight points">+${benefit.point_rate}% 적립</span>`;
   }
-  
+
   if (benefit.amount) {
     return `<span class="value-highlight amount">${benefit.amount.toLocaleString()}원</span>`;
   }
-  
+
   if (benefit.type === 'free_drink' || benefit.type === 'free_side') {
     return `<span class="value-highlight free">무료 제공</span>`;
   }
-  
+
   if (benefit.type === 'priority_service') {
     return `<span class="value-highlight priority">우선 처리</span>`;
   }
-  
+
   return `<span class="value-highlight standard">특별 혜택</span>`;
 }
 
 // 혜택 사용 함수
 function useBenefit(benefitType, benefitData) {
   console.log('🎁 혜택 사용:', benefitType, benefitData);
-  
+
   // 혜택 타입별 처리
   switch(benefitType) {
     case 'vip_coupon':
@@ -1702,7 +1702,7 @@ function useBenefit(benefitType, benefitData) {
 // 모든 혜택 보기
 function showAllBenefits(benefits) {
   console.log('📋 모든 혜택 보기:', benefits);
-  
+
   const modal = document.createElement('div');
   modal.className = 'benefits-modal-overlay';
   modal.innerHTML = `
@@ -1726,7 +1726,7 @@ function showAllBenefits(benefits) {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
 }
 
@@ -1803,7 +1803,7 @@ window.showAllPromotions = showAllPromotions;
   window.loadAndRenderStore = loadAndRenderStore;
   window.loadPromotionData = loadPromotionData;
   window.loadLoyaltyData = loadLoyaltyData;
-  
+
   // 혜택 관련 함수들
   window.getBenefitIcon = getBenefitIcon;
   window.getBenefitStatus = getBenefitStatus;
