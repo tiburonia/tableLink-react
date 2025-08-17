@@ -4,6 +4,9 @@ window.MapPanelUI = {
     return `
       <div id="storePanel" class="collapsed">
         <div id="panelHandle"></div>
+        <button id="filterToggleBtn" class="filter-toggle-btn expanded">
+          <span class="toggle-icon">▼</span>
+        </button>
         <div id="filterContainer">
           <div class="filter-row">
             <div class="filter-label">카테고리</div>
@@ -122,6 +125,45 @@ window.MapPanelUI = {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          transition: all 0.3s ease;
+        }
+
+        #filterContainer.collapsed {
+          max-height: 0;
+          padding: 0 12px;
+          overflow: hidden;
+          border-bottom: none;
+        }
+
+        .filter-toggle-btn {
+          position: absolute;
+          top: 8px;
+          right: 12px;
+          background: rgba(102, 126, 234, 0.1);
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          z-index: 10;
+        }
+
+        .filter-toggle-btn:hover {
+          background: rgba(102, 126, 234, 0.2);
+          transform: scale(1.1);
+        }
+
+        .filter-toggle-btn .toggle-icon {
+          font-size: 14px;
+          transition: transform 0.3s ease;
+        }
+
+        .filter-toggle-btn.expanded .toggle-icon {
+          transform: rotate(180deg);
         }
 
         .filter-row {
@@ -399,6 +441,41 @@ window.MapPanelUI = {
         console.log('🔍 필터 변경됨:', filterType, '=', clickedTab.getAttribute('data-filter'));
       });
     });
+
+    // 필터 토글 버튼 이벤트 설정
+    this.setupFilterToggle();
+  },
+
+  // 필터 영역 토글 기능 설정
+  setupFilterToggle() {
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const filterContainer = document.getElementById('filterContainer');
+
+    if (!filterToggleBtn || !filterContainer) {
+      console.warn('⚠️ 필터 토글 요소를 찾을 수 없습니다');
+      return;
+    }
+
+    filterToggleBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isExpanded = filterToggleBtn.classList.contains('expanded');
+
+      if (isExpanded) {
+        // 접기
+        filterContainer.classList.add('collapsed');
+        filterToggleBtn.classList.remove('expanded');
+        console.log('📁 필터 영역 접힘');
+      } else {
+        // 펼치기
+        filterContainer.classList.remove('collapsed');
+        filterToggleBtn.classList.add('expanded');
+        console.log('📂 필터 영역 펼침');
+      }
+    });
+
+    console.log('✅ 필터 토글 기능 설정 완료');
   },
 
   // 현재 설정된 모든 필터 값에 따라 매장 필터링
@@ -582,6 +659,14 @@ window.MapPanelUI = {
     const storeListContainer = document.getElementById('storeListContainer');
     if (storeListContainer) {
       storeListContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    // 필터 토글 버튼에서도 이벤트 전파 차단
+    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    if (filterToggleBtn) {
+      filterToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
       });
     }
