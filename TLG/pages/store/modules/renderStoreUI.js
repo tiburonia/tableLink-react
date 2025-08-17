@@ -82,47 +82,100 @@ window.StoreUIManager = {
 
   renderTableStatusHTML(store) {
     return `
-      <div id="TLR" class="tlr-container modern-card">
-        <div class="tlr-header">
-          <div class="tlr-title">
-            <span class="tlr-icon">🏪</span>
-            <span>실시간 테이블 현황</span>
+      <div id="TLR" class="tlr-container premium-table-card">
+        <div class="card-gradient-bg"></div>
+        
+        <div class="tlr-header-new">
+          <div class="status-indicator-wrapper">
+            <div class="status-pulse ${store.isOpen ? 'active' : 'inactive'}"></div>
+            <div class="tlr-title-section">
+              <h3 class="tlr-main-title">테이블 현황</h3>
+              <div class="tlr-status-badge ${store.isOpen ? 'open' : 'closed'}" id="tableStatusBadge">
+                ${store.isOpen ? '실시간 업데이트 중' : '운영중지'}
+              </div>
+            </div>
           </div>
-          <div class="tlr-status-badge ${store.isOpen ? '' : 'closed'}" id="tableStatusBadge">
-            ${store.isOpen ? '로딩중...' : '운영중지'}
-          </div>
-        </div>
-        <div class="tlr-stats-grid">
-          <div class="stat-card primary">
-            <div class="stat-value" id="totalTables">-</div>
-            <div class="stat-label">총 테이블</div>
-          </div>
-          <div class="stat-card success">
-            <div class="stat-value" id="availableTables">-</div>
-            <div class="stat-label">이용 가능</div>
-          </div>
-          <div class="stat-card info">
-            <div class="stat-value" id="totalSeats">-</div>
-            <div class="stat-label">총 좌석</div>
-          </div>
-          <div class="stat-card warning">
-            <div class="stat-value" id="availableSeats">-</div>
-            <div class="stat-label">잔여 좌석</div>
+          <div class="refresh-indicator" id="refreshIndicator">
+            <span class="refresh-icon">🔄</span>
           </div>
         </div>
-        <div class="usage-rate-container">
-          <div class="usage-rate-header">
-            <span>테이블 사용률</span>
-            <span class="usage-percentage" id="occupancyRate">-%</span>
-          </div>
-          <div class="usage-rate-bar">
-            <div class="usage-rate-fill" id="usageRateFill"></div>
+
+        <div class="table-visual-summary">
+          <div class="visual-stats-row">
+            <div class="visual-stat-item occupied">
+              <div class="visual-icon">🔴</div>
+              <div class="visual-data">
+                <span class="visual-number" id="occupiedTablesVisual">-</span>
+                <span class="visual-label">사용중</span>
+              </div>
+            </div>
+            <div class="visual-stat-item available">
+              <div class="visual-icon">🟢</div>
+              <div class="visual-data">
+                <span class="visual-number" id="availableTablesVisual">-</span>
+                <span class="visual-label">이용가능</span>
+              </div>
+            </div>
+            <div class="visual-stat-item total">
+              <div class="visual-icon">⚪</div>
+              <div class="visual-data">
+                <span class="visual-number" id="totalTablesVisual">-</span>
+                <span class="visual-label">전체</span>
+              </div>
+            </div>
           </div>
         </div>
-        <button class="tlr-layout-btn modern-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
-          <span class="btn-icon">🗺️</span>
-          <span>테이블 배치도 보기</span>
-        </button>
+
+        <div class="occupancy-visualization">
+          <div class="occupancy-header">
+            <span class="occupancy-title">좌석 사용률</span>
+            <div class="occupancy-percentage-wrapper">
+              <span class="occupancy-percentage" id="occupancyRateNew">-%</span>
+              <div class="percentage-trend" id="occupancyTrend">
+                <span class="trend-icon">📈</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="occupancy-progress-container">
+            <div class="occupancy-track">
+              <div class="occupancy-fill" id="occupancyFillNew"></div>
+              <div class="occupancy-glow" id="occupancyGlow"></div>
+            </div>
+            <div class="occupancy-markers">
+              <span class="marker low">25%</span>
+              <span class="marker mid">50%</span>
+              <span class="marker high">75%</span>
+            </div>
+          </div>
+          
+          <div class="seats-breakdown">
+            <div class="seats-info">
+              <span class="seats-used" id="usedSeatsCount">-</span>
+              <span class="seats-separator">/</span>
+              <span class="seats-total" id="totalSeatsCount">-</span>
+              <span class="seats-label">좌석</span>
+            </div>
+            <div class="seats-visual" id="seatsVisual">
+              <!-- 좌석 아이콘들이 동적으로 생성됩니다 -->
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-actions-row">
+          <button class="action-btn layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <span class="action-icon">🗺️</span>
+            <span class="action-text">배치도</span>
+          </button>
+          <button class="action-btn refresh-btn" id="manualRefreshBtn">
+            <span class="action-icon">🔄</span>
+            <span class="action-text">새로고침</span>
+          </button>
+          <button class="action-btn reserve-btn" onclick="renderReservationScreen(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <span class="action-icon">📅</span>
+            <span class="action-text">예약</span>
+          </button>
+        </div>
       </div>
     `;
   },
@@ -477,147 +530,446 @@ window.StoreUIManager = {
           border-radius: 12px;
         }
 
-        /* 테이블 현황 스타일 */
-        .tlr-container {
-          padding: 16px;
+        /* 새로운 프리미엄 테이블 현황 스타일 */
+        .premium-table-card {
+          position: relative;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          padding: 20px;
+          margin-bottom: 16px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          overflow: hidden;
         }
 
-        .tlr-header {
+        .card-gradient-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          opacity: 0.03;
+          z-index: 0;
+        }
+
+        .tlr-header-new {
+          position: relative;
+          z-index: 1;
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 14px;
+          align-items: flex-start;
+          margin-bottom: 20px;
         }
 
-        .tlr-title {
+        .status-indicator-wrapper {
           display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 16px;
-          font-weight: 700;
-          color: #111827;
+          align-items: flex-start;
+          gap: 12px;
         }
 
-        .tlr-icon {
+        .status-pulse {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          margin-top: 4px;
+          flex-shrink: 0;
+          position: relative;
+        }
+
+        .status-pulse.active {
+          background: #10b981;
+          animation: pulse-active 2s infinite;
+        }
+
+        .status-pulse.inactive {
+          background: #ef4444;
+          animation: pulse-inactive 2s infinite;
+        }
+
+        @keyframes pulse-active {
+          0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            transform: scale(1.1);
+          }
+        }
+
+        @keyframes pulse-inactive {
+          0%, 100% { 
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+            transform: scale(1.1);
+          }
+        }
+
+        .tlr-title-section {
+          flex: 1;
+        }
+
+        .tlr-main-title {
           font-size: 18px;
+          font-weight: 800;
+          color: #111827;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.5px;
         }
 
         .tlr-status-badge {
-          background: #10b981;
-          color: white;
           font-size: 11px;
           font-weight: 600;
-          padding: 4px 10px;
-          border-radius: 14px;
+          padding: 4px 12px;
+          border-radius: 12px;
+          text-transform: none;
+          letter-spacing: 0.3px;
+          display: inline-block;
+        }
+
+        .tlr-status-badge.open {
+          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+          color: #166534;
+          border: 1px solid #a7f3d0;
+        }
+
+        .tlr-status-badge.closed {
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          color: #dc2626;
+          border: 1px solid #fca5a5;
+        }
+
+        .refresh-indicator {
+          background: rgba(59, 130, 246, 0.1);
+          padding: 8px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+        }
+
+        .refresh-indicator:hover {
+          background: rgba(59, 130, 246, 0.2);
+          transform: scale(1.05);
+        }
+
+        .refresh-icon {
+          font-size: 14px;
+          animation: rotate 2s linear infinite;
+        }
+
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        /* 시각적 통계 섹션 */
+        .table-visual-summary {
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 16px;
+          padding: 16px;
+          margin-bottom: 20px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .visual-stats-row {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .visual-stat-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 8px;
+          border-radius: 12px;
+          transition: all 0.3s ease;
+        }
+
+        .visual-stat-item.occupied {
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          border: 1px solid #fca5a5;
+        }
+
+        .visual-stat-item.available {
+          background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+          border: 1px solid #a7f3d0;
+        }
+
+        .visual-stat-item.total {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border: 1px solid #bfdbfe;
+        }
+
+        .visual-stat-item:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .visual-icon {
+          font-size: 18px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .visual-data {
+          text-align: center;
+        }
+
+        .visual-number {
+          display: block;
+          font-size: 20px;
+          font-weight: 800;
+          color: #111827;
+          line-height: 1;
+          margin-bottom: 2px;
+        }
+
+        .visual-label {
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
 
-        .tlr-status-badge.busy {
-          background: #f59e0b;
+        /* 사용률 시각화 */
+        .occupancy-visualization {
+          background: white;
+          border-radius: 16px;
+          padding: 18px;
+          margin-bottom: 16px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          border: 1px solid #f3f4f6;
         }
 
-        .tlr-status-badge.full {
-          background: #ef4444;
-        }
-
-        .tlr-status-badge.closed {
-          background: #6b7280;
-        }
-
-        .tlr-stats-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 10px;
-          margin-bottom: 14px;
-        }
-
-        .stat-card {
-          background: #f8fafc;
-          border-radius: 10px;
-          padding: 12px 8px;
-          text-align: center;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s ease;
-        }
-
-        .stat-card:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .stat-card.primary {
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-          color: white;
-          border: none;
-        }
-
-        .stat-card.success {
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          color: white;
-          border: none;
-        }
-
-        .stat-card.info {
-          background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-          color: white;
-          border: none;
-        }
-
-        .stat-card.warning {
-          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-          color: white;
-          border: none;
-        }
-
-        .stat-value {
-          font-size: 20px;
-          font-weight: 800;
-          margin-bottom: 2px;
-        }
-
-        .stat-label {
-          font-size: 11px;
-          font-weight: 500;
-          opacity: 0.9;
-        }
-
-        .usage-rate-container {
-          background: #f8fafc;
-          border-radius: 10px;
-          padding: 12px;
-          margin-bottom: 12px;
-        }
-
-        .usage-rate-header {
+        .occupancy-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 6px;
-          font-size: 13px;
-          font-weight: 600;
+          margin-bottom: 16px;
+        }
+
+        .occupancy-title {
+          font-size: 14px;
+          font-weight: 700;
           color: #374151;
         }
 
-        .usage-percentage {
+        .occupancy-percentage-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .occupancy-percentage {
+          font-size: 18px;
+          font-weight: 800;
           color: #3b82f6;
-          font-weight: 700;
         }
 
-        .usage-rate-bar {
+        .percentage-trend {
+          padding: 4px;
+          border-radius: 6px;
+          background: rgba(34, 197, 94, 0.1);
+        }
+
+        .trend-icon {
+          font-size: 12px;
+        }
+
+        .occupancy-progress-container {
+          position: relative;
+          margin-bottom: 12px;
+        }
+
+        .occupancy-track {
+          position: relative;
           width: 100%;
-          height: 6px;
-          background: #e5e7eb;
-          border-radius: 3px;
+          height: 12px;
+          background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 100%);
+          border-radius: 6px;
           overflow: hidden;
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
-        .usage-rate-fill {
+        .occupancy-fill {
+          position: absolute;
+          top: 0;
+          left: 0;
           height: 100%;
-          background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
-          border-radius: 3px;
-          transition: width 0.3s ease;
+          background: linear-gradient(90deg, #10b981 0%, #3b82f6 50%, #8b5cf6 100%);
+          border-radius: 6px;
+          transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
           width: 0%;
+          box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .occupancy-glow {
+          position: absolute;
+          top: -2px;
+          left: 0;
+          height: 16px;
+          background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 50%, transparent 100%);
+          border-radius: 8px;
+          width: 0%;
+          transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: blur(2px);
+        }
+
+        .occupancy-markers {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 6px;
+          padding: 0 2px;
+        }
+
+        .marker {
+          font-size: 9px;
+          color: #9ca3af;
+          font-weight: 500;
+          position: relative;
+        }
+
+        .marker::before {
+          content: '';
+          position: absolute;
+          top: -8px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 1px;
+          height: 4px;
+          background: #d1d5db;
+        }
+
+        /* 좌석 분석 */
+        .seats-breakdown {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 12px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .seats-info {
+          display: flex;
+          align-items: baseline;
+          gap: 4px;
+          font-weight: 600;
+        }
+
+        .seats-used {
+          font-size: 16px;
+          color: #ef4444;
+        }
+
+        .seats-separator {
+          font-size: 14px;
+          color: #9ca3af;
+        }
+
+        .seats-total {
+          font-size: 16px;
+          color: #6b7280;
+        }
+
+        .seats-label {
+          font-size: 12px;
+          color: #9ca3af;
+          margin-left: 4px;
+        }
+
+        .seats-visual {
+          display: flex;
+          gap: 2px;
+          flex-wrap: wrap;
+          max-width: 120px;
+        }
+
+        .seat-icon {
+          width: 8px;
+          height: 8px;
+          border-radius: 2px;
+          transition: all 0.2s ease;
+        }
+
+        .seat-icon.occupied {
+          background: #ef4444;
+          box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
+        }
+
+        .seat-icon.available {
+          background: #10b981;
+          box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
+        }
+
+        /* 액션 버튼들 */
+        .quick-actions-row {
+          display: flex;
+          gap: 8px;
+          margin-top: 16px;
+        }
+
+        .action-btn {
+          flex: 1;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          padding: 12px 8px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-family: inherit;
+        }
+
+        .action-btn:hover {
+          background: #f8fafc;
+          border-color: #3b82f6;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .action-btn.layout-btn:hover {
+          border-color: #8b5cf6;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+        }
+
+        .action-btn.refresh-btn:hover {
+          border-color: #10b981;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+        }
+
+        .action-btn.reserve-btn:hover {
+          border-color: #f59e0b;
+          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+        }
+
+        .action-icon {
+          font-size: 16px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .action-text {
+          font-size: 11px;
+          font-weight: 600;
+          color: #6b7280;
+        }
+
+        .action-btn:hover .action-text {
+          color: #374151;
         }
 
         .modern-btn {

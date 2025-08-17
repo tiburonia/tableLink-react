@@ -78,6 +78,7 @@ window.TableInfoManager = {
   },
 
   updateTableInfoUI(info) {
+    // 기존 요소들 업데이트 (하위 호환성)
     const totalTablesEl = document.getElementById('totalTables');
     const availableTablesEl = document.getElementById('availableTables');
     const totalSeatsEl = document.getElementById('totalSeats');
@@ -92,32 +93,103 @@ window.TableInfoManager = {
     if (availableSeatsEl) availableSeatsEl.textContent = info.availableSeats;
     if (occupancyRateEl) occupancyRateEl.textContent = info.occupancyRate + (info.occupancyRate !== '-' ? '%' : '');
 
-    // 사용률 바 업데이트
+    // 새로운 시각적 요소들 업데이트
+    const totalTablesVisual = document.getElementById('totalTablesVisual');
+    const availableTablesVisual = document.getElementById('availableTablesVisual');
+    const occupiedTablesVisual = document.getElementById('occupiedTablesVisual');
+    const occupancyRateNew = document.getElementById('occupancyRateNew');
+    const occupancyFillNew = document.getElementById('occupancyFillNew');
+    const occupancyGlow = document.getElementById('occupancyGlow');
+    const usedSeatsCount = document.getElementById('usedSeatsCount');
+    const totalSeatsCount = document.getElementById('totalSeatsCount');
+    const seatsVisual = document.getElementById('seatsVisual');
+
+    // 숫자 데이터 계산
+    const totalTables = parseInt(info.totalTables) || 0;
+    const availableTables = parseInt(info.availableTables) || 0;
+    const occupiedTables = totalTables - availableTables;
+    const totalSeats = parseInt(info.totalSeats) || 0;
+    const availableSeats = parseInt(info.availableSeats) || 0;
+    const usedSeats = totalSeats - availableSeats;
+
+    // 시각적 통계 업데이트
+    if (totalTablesVisual) totalTablesVisual.textContent = totalTables;
+    if (availableTablesVisual) availableTablesVisual.textContent = availableTables;
+    if (occupiedTablesVisual) occupiedTablesVisual.textContent = occupiedTables;
+    if (occupancyRateNew) occupancyRateNew.textContent = info.occupancyRate + (info.occupancyRate !== '-' ? '%' : '');
+    if (usedSeatsCount) usedSeatsCount.textContent = usedSeats;
+    if (totalSeatsCount) totalSeatsCount.textContent = totalSeats;
+
+    // 사용률 바 업데이트 (기존)
     if (usageRateFillEl && info.occupancyRate !== '-') {
       const percentage = parseInt(info.occupancyRate) || 0;
       usageRateFillEl.style.width = percentage + '%';
       
-      // 사용률에 따라 바 색상 변경
       if (percentage >= 90) {
-        usageRateFillEl.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'; // 빨간색
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)';
       } else if (percentage >= 70) {
-        usageRateFillEl.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'; // 주황색
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)';
       } else {
-        usageRateFillEl.style.background = 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)'; // 기본 초록-파랑
+        usageRateFillEl.style.background = 'linear-gradient(90deg, #10b981 0%, #3b82f6 100%)';
       }
     } else if (usageRateFillEl) {
       usageRateFillEl.style.width = '0%';
     }
 
+    // 새로운 사용률 바 업데이트
+    if (occupancyFillNew && info.occupancyRate !== '-') {
+      const percentage = parseInt(info.occupancyRate) || 0;
+      occupancyFillNew.style.width = percentage + '%';
+      
+      if (occupancyGlow) {
+        occupancyGlow.style.width = percentage + '%';
+      }
+    } else {
+      if (occupancyFillNew) occupancyFillNew.style.width = '0%';
+      if (occupancyGlow) occupancyGlow.style.width = '0%';
+    }
+
+    // 좌석 시각화 생성
+    if (seatsVisual && totalSeats > 0) {
+      const maxSeatsToShow = 30; // 최대 30개까지만 표시
+      const seatsToShow = Math.min(totalSeats, maxSeatsToShow);
+      const seatRatio = usedSeats / totalSeats;
+      const visualUsedSeats = Math.round(seatsToShow * seatRatio);
+      
+      let seatsHTML = '';
+      for (let i = 0; i < seatsToShow; i++) {
+        const seatClass = i < visualUsedSeats ? 'occupied' : 'available';
+        seatsHTML += `<div class="seat-icon ${seatClass}"></div>`;
+      }
+      
+      if (totalSeats > maxSeatsToShow) {
+        seatsHTML += '<span style="font-size: 10px; color: #9ca3af; margin-left: 4px;">...</span>';
+      }
+      
+      seatsVisual.innerHTML = seatsHTML;
+    }
+
+    // 상태 배지 업데이트
     if (statusBadgeEl) {
       statusBadgeEl.textContent = info.statusText;
       statusBadgeEl.className = `tlr-status-badge ${info.statusClass || ''}`;
     }
 
+    // 수동 새로고침 버튼 이벤트 설정
+    const manualRefreshBtn = document.getElementById('manualRefreshBtn');
+    if (manualRefreshBtn && !manualRefreshBtn.hasAttribute('data-event-set')) {
+      manualRefreshBtn.setAttribute('data-event-set', 'true');
+      manualRefreshBtn.addEventListener('click', () => {
+        if (window.currentStore) {
+          this.loadTableInfo(window.currentStore);
+        }
+      });
+    }
+
     // 헤더의 매장 운영 상태도 함께 업데이트
     this.updateStoreHeaderStatus(info.statusText, info.statusClass);
 
-    console.log(`✅ 테이블 정보 UI 업데이트 완료: ${info.statusText} (사용률: ${info.occupancyRate}%)`);
+    console.log(`✅ 새로운 테이블 정보 UI 업데이트 완료: ${info.statusText} (사용률: ${info.occupancyRate}%)`);
   },
 
   updateStoreHeaderStatus(statusText, statusClass) {
