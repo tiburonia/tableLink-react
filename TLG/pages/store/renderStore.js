@@ -109,11 +109,11 @@ async function renderStore(store) {
           <h2>🚫 매장을 불러올 수 없습니다</h2>
           <p style="color: #999; margin: 10px 0;">${error.message}</p>
           <button onclick="renderMap()" style="
-            padding: 10px 20px; 
-            background: #297efc; 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
+            padding: 10px 20px;
+            background: #297efc;
+            color: white;
+            border: none;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 16px;
           ">지도로 돌아가기</button>
@@ -521,9 +521,103 @@ function updatePromotionUI(promotions) {
   const promotionContainer = document.querySelector('.promotion-content');
   if (!promotionContainer) return;
 
-  // regular_level 테이블의 benefit 데이터를 먼저 로드하여 표시
-  loadRegularLevelBenefits(promotionContainer, promotions);
+  // 프로모션 카드의 HTML 구조를 업데이트
+  const promotionCardHTML = renderPromotionCardHTML(window.currentStore);
+  const promotionCardElement = document.createElement('div');
+  promotionCardElement.innerHTML = promotionCardHTML;
+  const targetContainer = promotionCardElement.querySelector('.promotion-content');
+
+  if (targetContainer) {
+    // 프로모션 데이터 로드 후 실제 혜택 내용으로 스켈레톤 대체
+    if (promotions && promotions.length > 0) {
+      // 실제 혜택 데이터를 표시하는 함수 호출
+      displayPromotions(targetContainer, promotions);
+    } else {
+      // 혜택이 없을 경우 표시
+      targetContainer.innerHTML = `
+        <div class="no-promotion-message">
+          <span class="no-promotion-icon">📭</span>
+          <div class="no-promotion-text">현재 진행중인 혜택이 없습니다</div>
+        </div>
+      `;
+    }
+  }
+
+  // 기존 프로모션 카드 대신 새로 생성된 카드로 교체
+  const existingCard = document.querySelector('.promotion-card');
+  if (existingCard) {
+    existingCard.replaceWith(promotionCardElement.firstElementChild);
+  } else {
+    // 카드가 없으면 그대로 추가
+    document.querySelector('.promotion-area').appendChild(promotionCardElement.firstElementChild);
+  }
+
+  // 프로모션 더보기 버튼에 이벤트 리스너 추가
+  const detailButton = document.querySelector('.promotion-detail-btn');
+  if (detailButton) {
+    detailButton.addEventListener('click', () => {
+      showAllPromotions(window.currentStore);
+    });
+  }
+
+  // 프로모션 데이터 로드 후, regular_level의 benefit 데이터를 로드하여 표시
+  loadRegularLevelBenefits(targetContainer, promotions);
 }
+
+
+// 실제 프로모션 카드 HTML 생성 함수
+function renderPromotionCardHTML(store) {
+  return `
+    <div class="promotion-card modern-benefits-card">
+      <div class="promotion-header">
+        <div class="promotion-title-section">
+          <div class="promotion-icon-wrapper">
+            <span class="promotion-main-icon">🎁</span>
+          </div>
+          <div class="promotion-title-info">
+            <h3 class="promotion-title">진행중인 혜택</h3>
+            <div class="promotion-subtitle">특별 혜택을 확인하세요</div>
+          </div>
+        </div>
+        <div class="promotion-status-indicator">
+          <span class="live-dot"></span>
+          <span class="live-text">LIVE</span>
+        </div>
+      </div>
+
+      <div class="promotion-content">
+        <!-- 로딩 스켈레톤 -->
+        <div class="benefits-loading-skeleton">
+          <div class="skeleton-benefit-item">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-content">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-desc"></div>
+            </div>
+            <div class="skeleton-badge"></div>
+          </div>
+          <div class="skeleton-benefit-item">
+            <div class="skeleton-icon"></div>
+            <div class="skeleton-content">
+              <div class="skeleton-title"></div>
+              <div class="skeleton-desc"></div>
+            </div>
+            <div class="skeleton-badge"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="promotion-footer">
+        <button class="promotion-detail-btn modern-outline-btn">
+          <span class="btn-icon">📋</span>
+          <span class="btn-text">전체 혜택 보기</span>
+          <span class="btn-arrow">→</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
 
 // regular_level 테이블의 benefit 데이터 로드 및 표시
 async function loadRegularLevelBenefits(container, promotions = []) {
@@ -556,6 +650,52 @@ async function loadRegularLevelBenefits(container, promotions = []) {
   }
 }
 
+// 실제 혜택 데이터 표시 (단골 레벨 혜택)
+function displayPromotions(container, promotions = []) {
+  if (!promotions || promotions.length === 0) {
+    container.innerHTML = `
+      <div class="no-promotion-message">
+        <span class="no-promotion-icon">📭</span>
+        <div class="no-promotion-text">현재 진행중인 혜택이 없습니다</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 최대 2개의 혜택만 먼저 표시
+  const displayPromotions = promotions.slice(0, 2);
+
+  container.innerHTML = `
+    ${displayPromotions.map((promotion, index) => `
+      <div class="benefit-item-modern ${index === 0 ? 'featured' : ''}">
+        <div class="benefit-icon-modern">${getBenefitIcon(promotion.type)}</div>
+        <div class="benefit-content-modern">
+          <div class="benefit-name-modern">${promotion.name}</div>
+          <div class="benefit-desc-modern">${promotion.description}</div>
+        </div>
+        <div class="benefit-value-modern">${formatDiscountValue(promotion)}</div>
+      </div>
+    `).join('')}
+    ${promotions.length > 2 ? `
+      <div class="benefits-expand-modern">
+        <button class="promotion-detail-btn modern-outline-btn">
+          <span class="btn-icon">➕</span>
+          <span class="btn-text">더 보기 (${promotions.length - 2}개)</span>
+        </button>
+      </div>
+    ` : ''}
+  `;
+
+  // "더 보기" 버튼에 이벤트 리스너 추가
+  const expandButtons = container.querySelectorAll('.benefits-expand-modern .promotion-detail-btn');
+  expandButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      showAllBenefits(promotions);
+    });
+  });
+}
+
+
 // regular_level의 실제 benefit 데이터 표시
 function displayRegularLevelBenefits(container, benefits, promotions = []) {
   if (!benefits || benefits.length === 0) {
@@ -569,7 +709,7 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
   container.innerHTML = `
     <div class="benefits-grid premium-benefits-grid">
       ${displayBenefits.map((benefit, index) => `
-        <div class="benefit-card premium-benefit-card ${index === 0 ? 'featured-benefit' : ''}" 
+        <div class="benefit-card premium-benefit-card ${index === 0 ? 'featured-benefit' : ''}"
              style="animation-delay: ${index * 0.1}s;">
           <div class="benefit-header">
             <div class="benefit-icon-container">
@@ -809,34 +949,24 @@ function displayRegularLevelBenefits(container, benefits, promotions = []) {
 
 // 기본 혜택 표시 (로그인하지 않은 경우 또는 regular_level 데이터가 없는 경우)
 function displayDefaultBenefits(container, promotions = []) {
-  if (promotions && promotions.length > 0) {
-    // 기존 프로모션 표시 로직
-    const displayPromotions = promotions.slice(0, 2);
-
-    container.innerHTML = displayPromotions.map((promotion, index) => `
-      <div class="promotion-item ${index === 0 ? 'featured' : ''}">
-        <div class="promotion-left">
-          <span class="promotion-icon">${getPromotionIcon(promotion.type)}</span>
-          <div class="promotion-info">
-            <div class="promotion-name">${promotion.name}</div>
-            <div class="promotion-desc">${promotion.description}</div>
-          </div>
-        </div>
-        <div class="promotion-discount">${formatDiscountValue(promotion)}</div>
+  container.innerHTML = `
+    <div class="benefit-item-modern featured">
+      <div class="benefit-icon-modern">🎁</div>
+      <div class="benefit-content-modern">
+        <div class="benefit-name-modern">신규 방문 혜택</div>
+        <div class="benefit-desc-modern">첫 방문 시 특별 할인 제공</div>
       </div>
-    `).join('') + (promotions.length > 2 ? `
-      <div class="promotion-more">
-        <button class="promotion-detail-btn">더 보기 (+${promotions.length - 2})</button>
+      <div class="benefit-value-modern">10%</div>
+    </div>
+    <div class="benefit-item-modern">
+      <div class="benefit-icon-modern">⭐</div>
+      <div class="benefit-content-modern">
+        <div class="benefit-name-modern">단골 고객 혜택</div>
+        <div class="benefit-desc-modern">레벨업 시 추가 할인 혜택</div>
       </div>
-    ` : '');
-  } else {
-    container.innerHTML = `
-      <div class="no-promotion">
-        <span class="no-promotion-icon">📭</span>
-        <div class="no-promotion-text">현재 진행중인 혜택이 없습니다</div>
-      </div>
-    `;
-  }
+      <div class="benefit-value-modern vip">VIP</div>
+    </div>
+  `;
 }
 
 // 프로모션 타입에 따른 아이콘 반환
@@ -1057,7 +1187,7 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
   const theme = levelThemes[currentLevelRank] || levelThemes[0];
 
   return `
-    <div class="loyalty-level-card compact-card" 
+    <div class="loyalty-level-card compact-card"
          style="background: ${theme.gradient}; box-shadow: 0 4px 16px ${theme.glow};">
       <div class="card-background" style="background: ${theme.bgPattern}"></div>
 
@@ -1564,7 +1694,6 @@ function createSimpleLoyaltyCardHTML(levelData, store) {
       }
     </style>
   `;
-
 }
 
 // 혜택 타입별 아이콘 반환
@@ -1613,7 +1742,7 @@ function formatBenefitName(type) {
     'vip_coupon': 'VIP 할인',
     'premium_coupon': '프리미엄 할인',
     'free_drink': '무료 음료',
-    'free_side': '무료 사이드',
+    'free_side': '사이드 메뉴 무료',
     'free_upgrade': '무료 업그레이드',
     'priority_service': '우선 서비스',
     'birthday_gift': '생일 특별 선물',
@@ -1735,7 +1864,7 @@ function getLevelIcon(levelRank) {
   const icons = {
     0: '🆕', // 신규
     1: '🥉', // 브론즈
-    2: '🥈', // 실버  
+    2: '🥈', // 실버
     3: '🥇', // 골드
     4: '💎', // 플래티넘
     5: '👑'  // 다이아몬드

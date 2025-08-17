@@ -1132,131 +1132,321 @@ window.StoreUIManager = {
           line-height: 1.4;
         }
 
-        /* 프로모션 카드 */
-        .modern-gradient-card {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 14px;
-          padding: 16px;
-          margin-bottom: 14px;
-          color: white;
-          box-shadow: 0 6px 24px rgba(102, 126, 234, 0.2);
-          border: none;
+        /* 현대적인 혜택 카드 */
+        .modern-benefits-card {
+          background: white;
+          border-radius: 16px;
+          padding: 20px;
+          margin-bottom: 16px;
+          box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+          border: 1px solid #f1f5f9;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .modern-benefits-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
         }
 
         .promotion-header {
           display: flex;
           justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+
+        .promotion-title-section {
+          display: flex;
           align-items: center;
-          margin-bottom: 12px;
+          gap: 12px;
+          flex: 1;
+        }
+
+        .promotion-icon-wrapper {
+          width: 44px;
+          height: 44px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #bfdbfe;
+        }
+
+        .promotion-main-icon {
+          font-size: 20px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .promotion-title-info {
+          flex: 1;
         }
 
         .promotion-title {
+          font-size: 17px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 2px 0;
+          letter-spacing: -0.3px;
+        }
+
+        .promotion-subtitle {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .promotion-status-indicator {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 16px;
+          background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid #fca5a5;
+        }
+
+        .live-dot {
+          width: 6px;
+          height: 6px;
+          background: #ef4444;
+          border-radius: 50%;
+          animation: livePulse 2s infinite;
+        }
+
+        .live-text {
+          font-size: 11px;
           font-weight: 700;
+          color: #dc2626;
+          letter-spacing: 0.5px;
         }
 
-        .promotion-emoji {
-          font-size: 18px;
-        }
-
-        .promotion-badge.live {
-          background: rgba(239, 68, 68, 0.9);
-          padding: 3px 8px;
-          border-radius: 10px;
-          font-size: 10px;
-          font-weight: 700;
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.8; }
+        @keyframes livePulse {
+          0%, 100% { 
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+          }
+          50% { 
+            opacity: 0.8;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+          }
         }
 
         .promotion-content {
+          margin-bottom: 16px;
+        }
+
+        /* 로딩 스켈레톤 */
+        .benefits-loading-skeleton {
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          margin-bottom: 12px;
+          gap: 12px;
         }
 
-        .promotion-item {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-          padding: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          backdrop-filter: blur(10px);
-        }
-
-        .promotion-item.featured {
-          background: rgba(255, 255, 255, 0.2);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .promotion-left {
+        .skeleton-benefit-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
+          padding: 14px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 1px solid #f1f5f9;
         }
 
-        .promotion-icon {
-          font-size: 18px;
-          width: 30px;
-          text-align: center;
+        .skeleton-icon {
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+          border-radius: 8px;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
         }
 
-        .promotion-name {
+        .skeleton-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .skeleton-title {
+          height: 14px;
+          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+          border-radius: 4px;
+          width: 60%;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
+          animation-delay: 0.1s;
+        }
+
+        .skeleton-desc {
+          height: 12px;
+          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+          border-radius: 4px;
+          width: 80%;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
+          animation-delay: 0.2s;
+        }
+
+        .skeleton-badge {
+          width: 48px;
+          height: 24px;
+          background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+          border-radius: 12px;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
+          animation-delay: 0.3s;
+        }
+
+        @keyframes skeletonPulse {
+          0%, 100% {
+            background-position: 200% 0;
+          }
+          50% {
+            background-position: -200% 0;
+          }
+        }
+
+        @keyframes benefitFadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .promotion-footer {
+          border-top: 1px solid #f1f5f9;
+          padding-top: 16px;
+        }
+
+        .modern-outline-btn {
+          width: 100%;
+          background: white;
+          border: 1.5px solid #e5e7eb;
+          color: #374151;
+          padding: 12px 16px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          cursor: pointer;
           font-size: 14px;
           font-weight: 600;
-          margin-bottom: 3px;
-        }
-
-        .promotion-desc {
-          font-size: 12px;
-          opacity: 0.9;
-        }
-
-        .promotion-discount {
-          background: rgba(255, 255, 255, 0.2);
-          padding: 5px 10px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .promotion-tag {
-          background: rgba(251, 191, 36, 0.9);
-          color: #92400e;
-          padding: 5px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
-        }
-
-        .promotion-detail-btn {
-          width: 100%;
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: white;
-          padding: 10px 14px;
-          border-radius: 8px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
           transition: all 0.2s ease;
+          font-family: inherit;
         }
 
-        .promotion-detail-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
+        .modern-outline-btn:hover {
+          background: #f9fafb;
+          border-color: #3b82f6;
+          color: #3b82f6;
           transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-icon {
+          font-size: 14px;
+        }
+
+        .btn-text {
+          flex: 1;
+        }
+
+        .btn-arrow {
+          font-size: 16px;
+          transition: transform 0.2s ease;
+        }
+
+        .modern-outline-btn:hover .btn-arrow {
+          transform: translateX(2px);
+        }
+
+        /* 실제 혜택 아이템 스타일 (데이터 로드 후) */
+        .benefit-item-modern {
+          background: white;
+          border: 1.5px solid #f1f5f9;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 10px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .benefit-item-modern:hover {
+          border-color: #3b82f6;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+        }
+
+        .benefit-item-modern.featured::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .benefit-icon-modern {
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          border: 1px solid #bfdbfe;
+          flex-shrink: 0;
+        }
+
+        .benefit-content-modern {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .benefit-name-modern {
+          font-size: 14px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 2px;
+          line-height: 1.3;
+        }
+
+        .benefit-desc-modern {
+          font-size: 12px;
+          color: #6b7280;
+          line-height: 1.4;
+        }
+
+        .benefit-value-modern {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 16px;
+          font-size: 12px;
+          font-weight: 700;
+          text-align: center;
+          min-width: 60px;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+
+        .benefit-value-modern.vip {
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
         }
 
         /* 단골 레벨 카드 */
