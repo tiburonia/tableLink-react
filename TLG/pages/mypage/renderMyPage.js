@@ -206,7 +206,7 @@ async function renderMyPage() {
         transform: translateX(-50%);
         width: 100%;
         max-width: 430px;
-        height: 160px;
+        height: 100px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         z-index: 11;
         overflow: hidden;
@@ -228,26 +228,30 @@ async function renderMyPage() {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px;
+        padding: 16px 20px;
         color: white;
       }
 
       .header-title h1 {
         margin: 0;
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
         letter-spacing: -0.5px;
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       }
 
       .header-title p {
-        margin: 4px 0 0 0;
-        font-size: 14px;
+        margin: 2px 0 0 0;
+        font-size: 13px;
         opacity: 0.9;
         font-weight: 400;
       }
 
       .settings-btn {
+        position: fixed;
+        top: 10px;
+        right: 50%;
+        transform: translateX(calc(215px - 54px));
         width: 44px;
         height: 44px;
         background: rgba(255, 255, 255, 0.2);
@@ -261,11 +265,12 @@ async function renderMyPage() {
         transition: all 0.2s ease;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.3);
+        z-index: 1002;
       }
 
       .settings-btn:hover {
         background: rgba(255, 255, 255, 0.3);
-        transform: scale(1.05);
+        transform: translateX(calc(215px - 54px)) scale(1.05);
       }
 
       /* 마이페이지 패널 - renderStore 스타일 적용 */
@@ -282,9 +287,9 @@ async function renderMyPage() {
       }
 
       #mypagePanel.collapsed {
-        top: 160px;
+        top: 100px;
         bottom: 78px;
-        height: calc(100vh - 238px);
+        height: calc(100vh - 178px);
         border-radius: 20px 20px 0 0;
       }
 
