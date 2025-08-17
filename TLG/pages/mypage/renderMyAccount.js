@@ -338,6 +338,9 @@ function generateDummyData(userId) {
 async function renderMyAccount() {
   console.log('🔧 renderMyAccount 시작');
 
+  // 기존 이벤트 리스너 플래그 초기화
+  window.accountEventListenersInitialized = false;
+
   // renderMyPage 스크립트 미리 로드
   if (typeof window.renderMyPage !== 'function') {
     try {
@@ -1143,6 +1146,12 @@ async function renderMyAccount() {
 
 // 계정 페이지 전용 이벤트 리스너 설정
 function setupAccountEventListeners() {
+  // 이미 이벤트가 설정되었는지 확인
+  if (window.accountEventListenersInitialized) {
+    console.log('⚠️ 이벤트 리스너가 이미 설정됨 - 중복 방지');
+    return;
+  }
+
   console.log('🔧 이벤트 리스너 등록 중...');
 
   // DOM 요소들을 다시 한번 체크
@@ -1157,109 +1166,144 @@ function setupAccountEventListeners() {
   const viewAllLevelsBtn = document.getElementById('viewAllLevelsBtn');
   const editPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
 
-  if (backBtn) {
+  // 모든 버튼에 대해 기존 이벤트 제거 및 중복 방지 플래그 설정
+  const buttons = [
+    { element: backBtn, name: 'backBtn' },
+    { element: logoutBtn, name: 'logoutBtn' },
+    { element: editProfileBtn, name: 'editProfileBtn' },
+    { element: couponBtn, name: 'couponBtn' },
+    { element: favoritesBtn, name: 'favoritesBtn' },
+    { element: achievementsBtn, name: 'achievementsBtn' },
+    { element: settingsBtn, name: 'settingsBtn' },
+    { element: viewAllOrdersBtn, name: 'viewAllOrdersBtn' },
+    { element: viewAllLevelsBtn, name: 'viewAllLevelsBtn' },
+    { element: editPersonalInfoBtn, name: 'editPersonalInfoBtn' }
+  ];
+
+  // 기존 이벤트 리스너 모두 제거
+  buttons.forEach(btn => {
+    if (btn.element && !btn.element.dataset.eventSet) {
+      // 기존 이벤트 제거를 위해 복제 후 교체
+      const newElement = btn.element.cloneNode(true);
+      btn.element.parentNode.replaceChild(newElement, btn.element);
+      
+      // 중복 방지 플래그 설정
+      newElement.dataset.eventSet = 'true';
+    }
+  });
+
+  // 새로운 요소들 다시 가져오기
+  const newBackBtn = document.getElementById('backBtn');
+  const newLogoutBtn = document.getElementById('logoutBtn');
+  const newEditProfileBtn = document.getElementById('editProfileBtn');
+  const newCouponBtn = document.getElementById('couponBtn');
+  const newFavoritesBtn = document.getElementById('favoritesBtn');
+  const newAchievementsBtn = document.getElementById('achievementsBtn');
+  const newSettingsBtn = document.getElementById('settingsBtn');
+  const newViewAllOrdersBtn = document.getElementById('viewAllOrdersBtn');
+  const newViewAllLevelsBtn = document.getElementById('viewAllLevelsBtn');
+  const newEditPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
+
+  if (newBackBtn && !newBackBtn.dataset.eventSet) {
     console.log('✅ 뒤로가기 버튼 발견, 이벤트 리스너 등록 중...');
     
-    // 기존 이벤트 리스너 제거 후 새로 등록
-    backBtn.replaceWith(backBtn.cloneNode(true));
-    const newBackBtn = document.getElementById('backBtn');
-    
-    if (newBackBtn) {
-      newBackBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        console.log('🔙 뒤로가기 버튼 클릭됨');
-        
-        // 직접 renderMyPage 호출 시도
-        if (typeof window.renderMyPage === 'function') {
-          console.log('✅ renderMyPage 함수 호출');
-          window.renderMyPage();
-        } else {
-          console.log('🔄 renderMyPage 함수가 없음 - 브라우저 뒤로가기 사용');
-          window.history.back();
-        }
-      });
+    newBackBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log('🔙 뒤로가기 버튼 클릭됨');
       
-      console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록 완료');
-    }
-  } else {
-    console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
-    
-    // 3초 후 다시 시도
-    setTimeout(() => {
-      console.log('🔄 3초 후 뒤로가기 버튼 재검색 시도');
-      const retryBackBtn = document.getElementById('backBtn');
-      if (retryBackBtn) {
-        console.log('✅ 재시도로 뒤로가기 버튼 발견');
-        setupAccountEventListeners();
+      // 직접 renderMyPage 호출 시도
+      if (typeof window.renderMyPage === 'function') {
+        console.log('✅ renderMyPage 함수 호출');
+        window.renderMyPage();
+      } else {
+        console.log('🔄 renderMyPage 함수가 없음 - 브라우저 뒤로가기 사용');
+        window.history.back();
       }
-    }, 3000);
+    });
+    
+    newBackBtn.dataset.eventSet = 'true';
+    console.log('✅ 뒤로가기 버튼 이벤트 리스너 등록 완료');
+  } else if (!newBackBtn) {
+    console.error('❌ 뒤로가기 버튼을 찾을 수 없음');
   }
 
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', function(e) {
+  if (newLogoutBtn && !newLogoutBtn.dataset.eventSet) {
+    newLogoutBtn.addEventListener('click', function(e) {
       e.preventDefault();
       if (confirm('정말 로그아웃 하시겠습니까?')) {
         window.location.href = '/';
       }
     });
+    newLogoutBtn.dataset.eventSet = 'true';
   }
 
-  if (editProfileBtn) {
-    editProfileBtn.addEventListener('click', function(e) {
+  if (newEditProfileBtn && !newEditProfileBtn.dataset.eventSet) {
+    newEditProfileBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showEditProfileModal();
     });
+    newEditProfileBtn.dataset.eventSet = 'true';
   }
 
-  if (couponBtn) {
-    couponBtn.addEventListener('click', function(e) {
+  if (newCouponBtn && !newCouponBtn.dataset.eventSet) {
+    newCouponBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showCouponModal();
     });
+    newCouponBtn.dataset.eventSet = 'true';
   }
 
-  if (favoritesBtn) {
-    favoritesBtn.addEventListener('click', function(e) {
+  if (newFavoritesBtn && !newFavoritesBtn.dataset.eventSet) {
+    newFavoritesBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showFavoritesModal();
     });
+    newFavoritesBtn.dataset.eventSet = 'true';
   }
 
-  if (achievementsBtn) {
-    achievementsBtn.addEventListener('click', function(e) {
+  if (newAchievementsBtn && !newAchievementsBtn.dataset.eventSet) {
+    newAchievementsBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAchievementsModal();
     });
+    newAchievementsBtn.dataset.eventSet = 'true';
   }
 
-  if (settingsBtn) {
-    settingsBtn.addEventListener('click', function(e) {
+  if (newSettingsBtn && !newSettingsBtn.dataset.eventSet) {
+    newSettingsBtn.addEventListener('click', function(e) {
       e.preventDefault();
       alert('설정 기능은 개발 중입니다.');
     });
+    newSettingsBtn.dataset.eventSet = 'true';
   }
 
-  if (viewAllOrdersBtn) {
-    viewAllOrdersBtn.addEventListener('click', function(e) {
+  if (newViewAllOrdersBtn && !newViewAllOrdersBtn.dataset.eventSet) {
+    newViewAllOrdersBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAllOrdersModal();
     });
+    newViewAllOrdersBtn.dataset.eventSet = 'true';
   }
 
-  if (viewAllLevelsBtn) {
-    viewAllLevelsBtn.addEventListener('click', function(e) {
+  if (newViewAllLevelsBtn && !newViewAllLevelsBtn.dataset.eventSet) {
+    newViewAllLevelsBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showAllRegularLevelsModal();
     });
+    newViewAllLevelsBtn.dataset.eventSet = 'true';
   }
 
-  if (editPersonalInfoBtn) {
-    editPersonalInfoBtn.addEventListener('click', function(e) {
+  if (newEditPersonalInfoBtn && !newEditPersonalInfoBtn.dataset.eventSet) {
+    newEditPersonalInfoBtn.addEventListener('click', function(e) {
       e.preventDefault();
       showEditPersonalInfoModal();
     });
+    newEditPersonalInfoBtn.dataset.eventSet = 'true';
   }
+
+  // 전역 플래그 설정하여 중복 호출 방지
+  window.accountEventListenersInitialized = true;
 
   console.log('✅ 모든 이벤트 리스너 설정 완료');
 }
