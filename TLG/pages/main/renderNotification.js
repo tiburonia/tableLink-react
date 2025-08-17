@@ -32,11 +32,11 @@ window.renderNotification = async function renderNotification() {
       <button onclick="TLL().catch(console.error)" title="QR주문">
         <span style="font-size: 22px;">📱</span>
       </button>
-      <button onclick="renderSearch('')" title="검색">
-        <span style="font-size: 22px;">🔍</span>
-      </button>
       <button onclick="renderMap().catch(console.error)" title="지도">
         <span style="font-size: 22px;">📍</span>
+      </button>
+      <button onclick="renderSearch('')" title="검색">
+        <span style="font-size: 22px;">🔍</span>
       </button>
       <button onclick="renderMyPage()" title="마이페이지">
         <span style="font-size: 22px;">👤</span>

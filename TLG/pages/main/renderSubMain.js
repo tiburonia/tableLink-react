@@ -114,11 +114,11 @@ async function renderSubMain() {
       <button id="tllBtn" title="QR주문" onclick="TLL().catch(console.error)">
         <span style="font-size: 22px;">📱</span>
       </button>
-      <button id="searchBtn" title="검색" onclick="renderSearch('')">
-        <span style="font-size: 22px;">🔍</span>
-      </button>
       <button id="renderMapBtn" title="지도" onclick="renderMap().catch(console.error)">
         <span style="font-size: 22px;">📍</span>
+      </button>
+      <button id="searchBtn" title="검색" onclick="renderSearch('')">
+        <span style="font-size: 22px;">🔍</span>
       </button>
       <button onclick="renderMyPage()" title="마이페이지">
         <span style="font-size: 22px;">👤</span>
