@@ -221,7 +221,7 @@ function renderPay(currentOrder, store, tableNum) {
 
       /* 푸터 - 고정 높이 */
       .pay-footer {
-        height: 140px;
+        height: 160px;
         background: white;
         padding: 20px;
         border-top: 1px solid #e2e8f0;
