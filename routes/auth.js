@@ -468,38 +468,82 @@ router.put('/users/update', async (req, res) => {
       });
     }
 
-    // 사용자 정보 업데이트
-    const updateQuery = `
+    // 먼저 테이블 컬럼 확인
+    const columnsResult = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
+    `);
+    
+    const existingColumns = columnsResult.rows.map(row => row.column_name);
+    
+    // 기본 필드만 업데이트 (필수 컬럼들)
+    let updateQuery = `
       UPDATE users 
       SET 
         name = $1,
         phone = $2,
-        email = $3,
-        birth = $4,
-        gender = $5,
-        address = $6,
-        detail_address = $7,
-        email_notifications = $8,
-        sms_notifications = $9,
-        push_notifications = $10,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $11
-      RETURNING *
     `;
-
-    const updateValues = [
+    
+    let updateValues = [
       name?.trim() || null,
-      phone?.trim() || null,
-      email?.trim() || null,
-      birth || null,
-      gender || null,
-      address?.trim() || null,
-      detailAddress?.trim() || null,
-      notifications?.email === true,
-      notifications?.sms === true,
-      notifications?.push === true,
-      userId
+      phone?.trim() || null
     ];
+    
+    let paramIndex = 3;
+    
+    // 선택적 컬럼들 추가
+    if (existingColumns.includes('email')) {
+      updateQuery += `, email = $${paramIndex}`;
+      updateValues.push(email?.trim() || null);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('birth')) {
+      updateQuery += `, birth = $${paramIndex}`;
+      updateValues.push(birth || null);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('gender')) {
+      updateQuery += `, gender = $${paramIndex}`;
+      updateValues.push(gender || null);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('address')) {
+      updateQuery += `, address = $${paramIndex}`;
+      updateValues.push(address?.trim() || null);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('detail_address')) {
+      updateQuery += `, detail_address = $${paramIndex}`;
+      updateValues.push(detailAddress?.trim() || null);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('email_notifications')) {
+      updateQuery += `, email_notifications = $${paramIndex}`;
+      updateValues.push(notifications?.email === true);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('sms_notifications')) {
+      updateQuery += `, sms_notifications = $${paramIndex}`;
+      updateValues.push(notifications?.sms === true);
+      paramIndex++;
+    }
+    
+    if (existingColumns.includes('push_notifications')) {
+      updateQuery += `, push_notifications = $${paramIndex}`;
+      updateValues.push(notifications?.push === true);
+      paramIndex++;
+    }
+    
+    updateQuery += ` WHERE id = $${paramIndex} RETURNING *`;
+    updateValues.push(userId);
 
     const result = await client.query(updateQuery, updateValues);
 
