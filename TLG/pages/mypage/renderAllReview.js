@@ -204,7 +204,7 @@ function showReviewErrorState() {
             <div class="error-icon">⚠️</div>
             <h3>리뷰를 불러올 수 없어요</h3>
             <p>잠시 후 다시 시도해주세요</p>
-            <button class="primary-btn" onclick="renderMyReviews()">
+            <button class="primary-btn" onclick="renderMyReviews(userInfo)">
               <span class="btn-icon">🔄</span>
               다시 시도
             </button>

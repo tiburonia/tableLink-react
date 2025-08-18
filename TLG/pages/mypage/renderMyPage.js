@@ -1368,7 +1368,7 @@ async function renderMyPage() {
       if (typeof renderMyReviews === 'function') {
         // 이전 화면 정보 저장
         window.previousScreen = 'renderMyPage';
-        renderMyReviews(userInfo);
+        renderMyReviews(userInfo.id, userInfo);
       }
     });
   }
@@ -2163,7 +2163,7 @@ async function loadMyReviewsScript() {
   try {
     console.log('🔄 renderMyReviews 스크립트 로드 시작');
     const script = document.createElement('script');
-    script.src = '/TLG/pages/mypage/renderMyReviews.js';
+    script.src = '/TLG/pages/mypage/renderAllReview.js';
     
     await new Promise((resolve, reject) => {
       script.onload = () => {
