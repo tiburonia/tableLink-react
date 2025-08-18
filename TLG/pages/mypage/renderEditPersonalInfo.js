@@ -3,6 +3,12 @@
 async function renderEditPersonalInfo(userInfo) {
   console.log('✏️ 개인정보 수정 화면 렌더링 시작:', userInfo?.id);
 
+  // 전역 userInfo 설정 (없으면 매개변수로 받은 값 사용)
+  if (!window.userInfo && userInfo) {
+    window.userInfo = userInfo;
+    console.log('🔧 전역 userInfo 설정:', window.userInfo);
+  }
+
   // 기존 이벤트 리스너 플래그 초기화
   window.editPersonalInfoEventListenersInitialized = false;
 
@@ -902,25 +908,28 @@ async function handleSavePersonalInfo() {
       }
     };
 
+    console.log('🔄 개인정보 업데이트 요청 데이터:', updateData);
+
     // 저장 중 상태 표시
     const saveBtn = document.getElementById('saveBtn');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<span>저장중...</span>';
     saveBtn.disabled = true;
 
-    // API 호출
-    const response = await fetch('/api/users/update', {
+    // API 호출 (올바른 엔드포인트 사용)
+    const response = await fetch('/users/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData)
     });
 
     if (!response.ok) {
-      throw new Error('개인정보 저장 실패');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `개인정보 저장 실패 (${response.status})`);
     }
 
-    // 성공 처리
-    console.log('✅ 개인정보 저장 완료');
+    const result = await response.json();
+    console.log('✅ 개인정보 저장 완료:', result);
     
     // 성공 상태 표시
     saveBtn.innerHTML = '<span>저장완료</span>';
@@ -941,6 +950,8 @@ async function handleSavePersonalInfo() {
       window.userInfo.phone = phone;
       window.userInfo.email = formData.get('email');
     }
+
+    console.log('✅ 전역 사용자 정보 업데이트 완료:', window.userInfo);
 
     alert('개인정보가 성공적으로 저장되었습니다.');
 

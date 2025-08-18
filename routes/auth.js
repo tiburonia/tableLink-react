@@ -428,7 +428,7 @@ router.post('/coupons/issue', async (req, res) => {
 });
 
 // 사용자 정보 업데이트 API
-router.put('/api/users/update', async (req, res) => {
+router.put('/users/update', async (req, res) => {
   const client = await pool.connect();
   
   try {
