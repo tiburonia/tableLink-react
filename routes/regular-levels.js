@@ -283,31 +283,37 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
   }
 });
 
-// 사용자의 모든 매장 단골 정보 조회
+// 사용자의 모든 매장 단골 정보 조회 (비정규화된 컬럼 사용)
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 10 } = req.query;
 
-    console.log(`👤 사용자 ${userId} 전체 단골 정보 조회`);
+    console.log(`👤 사용자 ${userId} 전체 단골 정보 조회 (비정규화 컬럼 사용)`);
 
     const result = await pool.query(`
       SELECT 
         uss.store_id, s.name as store_name, s.category,
         uss.points, uss.total_spent, uss.visit_count, 
         uss.last_visit_at, uss.current_level_at, uss.current_level_id,
-        rl.level_rank, rl.name as level_name, rl.benefits, rl.description
+        uss.current_level_rank, uss.current_level_name, uss.current_level_description
       FROM user_store_stats uss
       LEFT JOIN stores s ON uss.store_id = s.id
-      LEFT JOIN regular_levels rl ON uss.current_level_id = rl.id
       WHERE uss.user_id = $1
       ORDER BY uss.total_spent DESC, uss.visit_count DESC
       LIMIT $2
     `, [userId, limit]);
 
+    console.log(`📊 조회된 원본 데이터:`, result.rows);
+
     // 각 매장별로 다음 레벨 정보 조회
     const userRegularStores = await Promise.all(result.rows.map(async (row) => {
-      const currentLevelRank = row.level_rank || 0;
+      // 비정규화된 컬럼에서 직접 현재 레벨 정보 가져오기
+      const currentLevelRank = row.current_level_rank || 0;
+      const currentLevelName = row.current_level_name || (currentLevelRank === 0 ? '신규고객' : `레벨 ${currentLevelRank}`);
+      const currentLevelDescription = row.current_level_description || '';
+
+      console.log(`🏪 매장 ${row.store_name}: 랭크 ${currentLevelRank}, 이름 ${currentLevelName}`);
 
       // 다음 레벨 정보 조회
       const nextLevelResult = await pool.query(`
@@ -340,12 +346,12 @@ router.get('/user/:userId', async (req, res) => {
         totalSpent: parseFloat(row.total_spent) || 0,
         visitCount: row.visit_count || 0,
         lastVisitAt: row.last_visit_at,
-        currentLevel: row.level_rank ? {
+        currentLevel: currentLevelRank > 0 ? {
           id: row.current_level_id,
-          rank: row.level_rank,
-          name: row.level_name,
-          description: row.description,
-          benefits: row.benefits,
+          rank: currentLevelRank,
+          name: currentLevelName,
+          description: currentLevelDescription,
+          benefits: null, // 필요시 별도 조회
           achievedAt: row.current_level_at
         } : null,
         nextLevel: nextLevel

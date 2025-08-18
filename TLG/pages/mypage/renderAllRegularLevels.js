@@ -1,11 +1,10 @@
-
 // 단골 레벨 전체보기 렌더링 함수
 async function renderAllRegularLevels(userInfo) {
   try {
     console.log('🏆 단골 레벨 전체보기 화면 렌더링');
 
     const main = document.getElementById('main');
-    
+
     // 스켈레톤 UI 먼저 표시
     main.innerHTML = `
       <div class="regular-levels-container">
@@ -42,7 +41,7 @@ async function renderAllRegularLevels(userInfo) {
               <h2>단골 등급 현황</h2>
               <div class="levels-count skeleton-badge">로딩중...</div>
             </div>
-            
+
             <div id="levelsList" class="levels-list">
               ${generateLevelsSkeletonCards(5)}
             </div>
@@ -96,27 +95,39 @@ function generateLevelsSkeletonCards(count) {
   `).join('');
 }
 
-// 실제 단골 레벨 데이터 로드
+// 실제 단골 레벨 데이터 로드 - 비정규화된 DB 컬럼 직접 사용
 async function loadRegularLevelsData(userInfo) {
   try {
-    const regularLevels = await window.RegularLevelManager.getUserAllRegularLevels(userInfo.id);
+    console.log(`🏆 사용자 ${userInfo.id} 단골 레벨 데이터 로드 (비정규화 컬럼 사용)`);
 
-    // 통계 데이터 계산 (비정규화된 데이터 사용)
-    const totalStores = regularLevels.length;
-    const highestLevel = regularLevels.reduce((max, level) => {
-      const currentRank = level.currentLevelRank || 0;
+    // 비정규화된 컬럼을 직접 조회하는 API 호출
+    const response = await fetch(`/api/regular-levels/user/${userInfo.id}?limit=50`);
+    if (!response.ok) throw new Error('단골 레벨 조회 실패');
+
+    const data = await response.json();
+    const regularStores = data.regularStores || [];
+
+    console.log(`📊 조회된 단골 매장 데이터:`, regularStores);
+
+    // 통계 데이터 계산
+    const totalStores = regularStores.length;
+    const highestLevel = regularStores.reduce((max, store) => {
+      const currentRank = store.currentLevel ? store.currentLevel.rank : 0;
       return currentRank > max ? currentRank : max;
     }, 0);
-    const totalBenefits = regularLevels.reduce((total, level) => {
-      // 혜택 수는 레벨 랭크를 기준으로 추정하거나 별도로 계산
-      return total + (level.currentLevelRank || 0);
+    const totalBenefits = regularStores.reduce((total, store) => {
+      // 혜택 수는 레벨 랭크를 기준으로 추정
+      const rank = store.currentLevel ? store.currentLevel.rank : 0;
+      return total + rank;
     }, 0);
 
+    console.log(`📈 계산된 통계: 매장 ${totalStores}개, 최고 레벨 ${highestLevel}, 총 혜택 ${totalBenefits}개`);
+
     // 통계 업데이트
-    updateRegularLevelsStats(totalStores, highestLevel, totalBenefits);
+    updateLevelsStats(totalStores, highestLevel, totalBenefits);
 
     // 단골 레벨 목록 업데이트
-    updateRegularLevelsList(regularLevels);
+    updateLevelsList(regularStores);
 
   } catch (error) {
     console.error('❌ 단골 레벨 데이터 로드 실패:', error);
@@ -125,7 +136,7 @@ async function loadRegularLevelsData(userInfo) {
 }
 
 // 통계 업데이트
-function updateRegularLevelsStats(totalStores, highestLevel, totalBenefits) {
+function updateLevelsStats(totalStores, highestLevel, totalBenefits) {
   const statNumbers = document.querySelectorAll('.stat-number');
   if (statNumbers[0]) statNumbers[0].textContent = totalStores + '개';
   if (statNumbers[1]) statNumbers[1].textContent = `Lv.${highestLevel}`;
@@ -135,17 +146,17 @@ function updateRegularLevelsStats(totalStores, highestLevel, totalBenefits) {
   statNumbers.forEach(el => el.classList.remove('skeleton-text'));
 }
 
-// 단골 레벨 목록 업데이트 (비정규화된 데이터 사용)
-function updateRegularLevelsList(regularLevels) {
+// 단골 레벨 목록 업데이트 - 비정규화된 데이터 사용
+function updateLevelsList(regularStores) {
   const levelsList = document.getElementById('levelsList');
   const levelsCount = document.querySelector('.levels-count');
 
   if (levelsCount) {
-    levelsCount.textContent = `${regularLevels.length}개`;
+    levelsCount.textContent = `${regularStores.length}개`;
     levelsCount.classList.remove('skeleton-badge');
   }
 
-  if (regularLevels.length === 0) {
+  if (regularStores.length === 0) {
     levelsList.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🏆</div>
@@ -160,89 +171,124 @@ function updateRegularLevelsList(regularLevels) {
     return;
   }
 
-  const levelsHTML = regularLevels.map((levelData, index) => {
-    // 비정규화된 데이터 직접 사용
-    const currentLevelRank = levelData.currentLevelRank || 0;
-    const currentLevelName = window.RegularLevelManager.formatLevelName(currentLevelRank, levelData.currentLevelName);
-    const currentLevelDescription = levelData.currentLevelDescription;
-    const nextLevel = levelData.nextLevel;
-    const progress = levelData.progress || { percentage: 0 };
-    
-    // 레벨 색상 계산
-    const levelColor = window.RegularLevelManager.getLevelColor(currentLevelRank);
-    
+  const levelsHTML = regularStores.map(storeData => {
+    // 비정규화된 컬럼에서 직접 레벨 정보 가져오기
+    const currentLevel = storeData.currentLevel;
+    const levelRank = currentLevel ? currentLevel.rank : 0;
+    const levelName = currentLevel ? currentLevel.name : '신규고객';
+    const levelDescription = currentLevel ? currentLevel.description : '';
+
+    // 레벨 색상 결정
+    const getLevelColor = (rank) => {
+      const colors = {
+        0: '#9ca3af', // 신규고객 - 회색
+        1: '#cd7f32', // 브론즈
+        2: '#c0c0c0', // 실버
+        3: '#ffd700', // 골드
+        4: '#e5e4e2', // 플래티넘
+        5: '#b9f2ff'  // 다이아몬드
+      };
+      return colors[rank] || '#9ca3af';
+    };
+
+    const levelColor = getLevelColor(levelRank);
+
+    // 다음 레벨까지의 진행률 계산
+    let progressPercentage = 0;
+    if (storeData.nextLevel) {
+      const points = storeData.points || 0;
+      const totalSpent = storeData.totalSpent || 0;
+      const visitCount = storeData.visitCount || 0;
+
+      const requiredPoints = storeData.nextLevel.requiredPoints || 0;
+      const requiredSpent = storeData.nextLevel.requiredTotalSpent || 0;
+      const requiredVisits = storeData.nextLevel.requiredVisitCount || 0;
+
+      if (storeData.nextLevel.evalPolicy === 'OR') {
+        const pointsPercent = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+        const spentPercent = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+        const visitsPercent = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+        progressPercentage = Math.max(pointsPercent, spentPercent, visitsPercent);
+      } else {
+        const pointsPercent = requiredPoints > 0 ? Math.min(100, (points / requiredPoints) * 100) : 100;
+        const spentPercent = requiredSpent > 0 ? Math.min(100, (totalSpent / requiredSpent) * 100) : 100;
+        const visitsPercent = requiredVisits > 0 ? Math.min(100, (visitCount / requiredVisits) * 100) : 100;
+        progressPercentage = (pointsPercent + spentPercent + visitsPercent) / 3;
+      }
+    }
+
+    console.log(`🏪 매장 ${storeData.storeName}: 레벨 랭크 ${levelRank}, 이름 ${levelName}, 진행률 ${progressPercentage.toFixed(1)}%`);
+
     return `
-      <div class="level-card" onclick="goToStore(${levelData.storeId})">
+      <div class="level-card" onclick="goToStore(${storeData.storeId})">
         <div class="level-card-header">
           <div class="store-info">
-            <h3 class="store-name">${levelData.storeName || '매장 정보 없음'}</h3>
-            <div class="store-meta">
-              <span class="visit-count">${levelData.visitCount || 0}회 방문</span>
-              <span class="total-spent">${(levelData.totalSpent || 0).toLocaleString()}원</span>
-            </div>
+            <h3 class="store-name">${storeData.storeName}</h3>
+            <div class="store-category">${storeData.category || '기타'}</div>
           </div>
           <div class="level-badge" style="background: ${levelColor}">
-            Lv.${currentLevelRank} ${currentLevelName}
+            <span class="level-name">Lv.${levelRank} ${levelName}</span>
           </div>
         </div>
 
         <div class="level-card-body">
-          ${currentLevelDescription ? `
-            <div class="level-description">
-              <p>${currentLevelDescription}</p>
+          <div class="level-stats">
+            <div class="stat-item">
+              <span class="stat-number">${storeData.visitCount || 0}</span>
+              <span class="stat-label">방문</span>
             </div>
-          ` : ''}
-          
-          ${nextLevel ? `
+            <div class="stat-item">
+              <span class="stat-number">${(storeData.points || 0).toLocaleString()}</span>
+              <span class="stat-label">포인트</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">${(storeData.totalSpent || 0).toLocaleString()}</span>
+              <span class="stat-label">누적결제</span>
+            </div>
+          </div>
+
+          ${storeData.nextLevel ? `
             <div class="progress-section">
               <div class="progress-header">
-                <span class="progress-label">다음 레벨까지</span>
-                <span class="progress-percentage">${progress.percentage}%</span>
+                <span class="next-level">다음: ${storeData.nextLevel.name}</span>
+                <span class="progress-percent">${Math.round(progressPercentage)}%</span>
               </div>
               <div class="progress-bar">
-                <div class="progress-fill" style="width: ${progress.percentage}%"></div>
+                <div class="progress-fill" style="width: ${Math.round(progressPercentage)}%"></div>
               </div>
-              <div class="next-level-info">
-                🎯 ${nextLevel.name} 달성까지 
-                ${progress.points_needed ? `${progress.points_needed}P` : ''}
-                ${progress.spending_needed ? `${progress.spending_needed.toLocaleString()}원` : ''}
-                ${progress.visits_needed ? `${progress.visits_needed}회 방문` : ''} 필요
+              <div class="progress-requirements">
+                ${storeData.nextLevel.requiredVisitCount > storeData.visitCount ? `<span>방문 ${storeData.nextLevel.requiredVisitCount - storeData.visitCount}회 더</span>` : ''}
+                ${storeData.nextLevel.requiredTotalSpent > storeData.totalSpent ? `<span>결제 ${(storeData.nextLevel.requiredTotalSpent - storeData.totalSpent).toLocaleString()}원 더</span>` : ''}
+                ${storeData.nextLevel.requiredPoints > storeData.points ? `<span>포인트 ${storeData.nextLevel.requiredPoints - storeData.points}P 더</span>` : ''}
               </div>
             </div>
           ` : `
-            <div class="max-level-section">
+            <div class="max-level">
               <div class="max-level-badge">🏆 최고 등급 달성!</div>
-              <div class="max-level-message">축하합니다! 이 매장의 최고 단골이에요!</div>
             </div>
           `}
-          
-          <div class="level-stats">
-            <div class="stat-row">
-              <span class="stat-label">보유 포인트</span>
-              <span class="stat-value">${(levelData.points || 0).toLocaleString()}P</span>
+
+          ${levelDescription ? `
+            <div class="level-description">
+              <p>${levelDescription}</p>
             </div>
-            <div class="stat-row">
-              <span class="stat-label">누적 결제</span>
-              <span class="stat-value">${(levelData.totalSpent || 0).toLocaleString()}원</span>
-            </div>
+          ` : ''}
+        </div>
+
+        <div class="level-card-footer">
+          <div class="last-visit">
+            ${storeData.lastVisitAt ? `마지막 방문: ${new Date(storeData.lastVisitAt).toLocaleDateString()}` : '방문 기록 없음'}
           </div>
-          
-          <div class="level-card-footer">
-            <button class="level-detail-btn" onclick="event.stopPropagation(); showLevelDetail(${levelData.storeId})">
-              <span class="btn-icon">📊</span>
-              상세보기
-            </button>
-            <button class="visit-store-btn" onclick="event.stopPropagation(); goToStore(${levelData.storeId})">
-              <span class="btn-icon">🏪</span>
-              매장가기
-            </button>
-          </div>
+          <button class="view-benefits-btn" onclick="event.stopPropagation(); viewStoreBenefits(${storeData.storeId})">
+            혜택 보기
+          </button>
         </div>
       </div>
     `;
   }).join('');
 
   levelsList.innerHTML = levelsHTML;
+  console.log(`✅ ${regularStores.length}개 단골 매장 UI 렌더링 완료`);
 }
 
 // 레벨 상세 정보 보기

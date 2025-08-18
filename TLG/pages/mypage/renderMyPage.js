@@ -1920,7 +1920,7 @@ function updateFavoriteStoresUI(favoriteStoresData) {
   }
 }
 
-// 단골 레벨 업데이트 함수
+// 단골 레벨 업데이트 함수 - 비정규화된 DB 컬럼 직접 사용
 async function updateRegularLevelsList(currentUserInfo) {
   const regularLevelsListDiv = document.getElementById('regularLevelsList');
   if (!regularLevelsListDiv) return;
@@ -1928,54 +1928,73 @@ async function updateRegularLevelsList(currentUserInfo) {
   regularLevelsListDiv.innerHTML = '';
 
   try {
-    if (!window.RegularLevelManager) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = '/TLG/utils/regularLevelManager.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
+    console.log(`🏆 사용자 ${currentUserInfo.id} 단골 레벨 조회 (비정규화 컬럼 사용)`);
 
-    const regularLevels = await window.RegularLevelManager.getUserAllRegularLevels(currentUserInfo.id);
+    // 비정규화된 컬럼을 직접 조회하는 API 호출
+    const response = await fetch(`/api/regular-levels/user/${currentUserInfo.id}`);
+    if (!response.ok) throw new Error('단골 레벨 조회 실패');
 
-    if (regularLevels && regularLevels.length > 0) {
-      const displayLevels = regularLevels.slice(0, 3);
+    const data = await response.json();
+    const regularStores = data.regularStores || [];
 
-      displayLevels.forEach((levelData, index) => {
-        // 비정규화된 데이터 직접 사용
-        const currentLevelRank = levelData.currentLevelRank || 0;
-        const currentLevelName = window.RegularLevelManager.formatLevelName(currentLevelRank, levelData.currentLevelName);
-        const levelColor = window.RegularLevelManager.getLevelColor(currentLevelRank);
+    console.log(`📊 조회된 단골 매장 데이터:`, regularStores);
+
+    if (regularStores && regularStores.length > 0) {
+      const displayStores = regularStores.slice(0, 3);
+
+      displayStores.forEach((storeData, index) => {
+        // 비정규화된 컬럼에서 직접 레벨 정보 가져오기
+        const currentLevel = storeData.currentLevel;
+        const levelRank = currentLevel ? currentLevel.rank : 0;
+        const levelName = currentLevel ? currentLevel.name : '신규고객';
+        const levelDescription = currentLevel ? currentLevel.description : '';
+
+        // 레벨 색상 결정
+        const getLevelColor = (rank) => {
+          const colors = {
+            0: '#9ca3af', // 신규고객 - 회색
+            1: '#cd7f32', // 브론즈
+            2: '#c0c0c0', // 실버
+            3: '#ffd700', // 골드
+            4: '#e5e4e2', // 플래티넘
+            5: '#b9f2ff'  // 다이아몬드
+          };
+          return colors[rank] || '#9ca3af';
+        };
+
+        const levelColor = getLevelColor(levelRank);
+
+        console.log(`🏪 매장 ${storeData.storeName}: 레벨 랭크 ${levelRank}, 이름 ${levelName}`);
 
         const levelCard = document.createElement('div');
         levelCard.className = 'regular-level-item';
-        levelCard.onclick = () => goToStore(levelData.storeId);
+        levelCard.onclick = () => goToStore(storeData.storeId);
 
         levelCard.innerHTML = `
           <div class="level-store-header">
-            <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
+            <div class="level-store-name">${storeData.storeName || '매장 정보 없음'}</div>
             <div class="level-badge" style="background: ${levelColor}">
-              Lv.${currentLevelRank} ${currentLevelName}
+              Lv.${levelRank} ${levelName}
             </div>
           </div>
           <div class="level-progress">
             <div class="level-stats">
-              <span>${levelData.visitCount || 0}회 방문</span>
-              <span>${(levelData.points || 0).toLocaleString()}P</span>
-              <span>${(levelData.totalSpent || 0).toLocaleString()}원</span>
+              <span>${storeData.visitCount || 0}회 방문</span>
+              <span>${(storeData.points || 0).toLocaleString()}P</span>
+              <span>${(storeData.totalSpent || 0).toLocaleString()}원</span>
             </div>
           </div>
-          ${levelData.currentLevelDescription ? `
+          ${levelDescription ? `
             <div class="level-item-description">
-              <p>${levelData.currentLevelDescription}</p>
+              <p>${levelDescription}</p>
             </div>
           ` : ''}
         `;
 
         regularLevelsListDiv.appendChild(levelCard);
       });
+
+      console.log(`✅ ${displayStores.length}개 단골 매장 UI 렌더링 완료`);
     } else {
       regularLevelsListDiv.innerHTML = `
         <div style="text-align: center; padding: 40px 20px; color: #64748b;">
@@ -1984,9 +2003,10 @@ async function updateRegularLevelsList(currentUserInfo) {
           <div style="font-size: 14px;">자주 방문하여 단골 등급을 올려보세요!</div>
         </div>
       `;
+      console.log(`ℹ️ 단골 매장 데이터 없음`);
     }
   } catch (error) {
-    console.error('단골 레벨 조회 실패:', error);
+    console.error('❌ 단골 레벨 조회 실패:', error);
     regularLevelsListDiv.innerHTML = `
       <div style="text-align: center; padding: 40px 20px; color: #ef4444;">
         <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
