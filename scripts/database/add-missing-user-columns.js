@@ -1,9 +1,8 @@
-
 const pool = require('../../shared/config/database');
 
 async function addMissingUserColumns() {
   const client = await pool.connect();
-  
+
   try {
     console.log('📝 사용자 테이블에 누락된 컬럼들 추가 시작...');
 
@@ -14,7 +13,7 @@ async function addMissingUserColumns() {
       WHERE table_name = 'users' 
       ORDER BY ordinal_position
     `);
-    
+
     console.log('🔍 현재 users 테이블 컬럼들:');
     columnsResult.rows.forEach(col => {
       console.log(`   - ${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL 허용' : 'NOT NULL'})`);
@@ -38,17 +37,41 @@ async function addMissingUserColumns() {
     for (const column of columnsToAdd) {
       if (!existingColumns.includes(column.name)) {
         let sql = `ALTER TABLE users ADD COLUMN ${column.name} ${column.type}`;
-        
+
         if (!column.nullable) {
           sql += ` NOT NULL`;
         }
-        
+
         if (column.default) {
           sql += ` DEFAULT ${column.default}`;
         }
 
-        await client.query(sql);
-        console.log(`✅ 컬럼 추가: ${column.name} (${column.type})`);
+        // push_notifications 컬럼 추가 (안전한 방식)
+        if (column.name === 'push_notifications' && !column.nullable) {
+          // 먼저 NULL 허용으로 컬럼 추가
+          await client.query(`
+            ALTER TABLE users 
+            ADD COLUMN ${column.name} ${column.type} ${column.default ? `DEFAULT ${column.default}` : ''}
+          `);
+
+          // 기존 NULL 값들을 기본값으로 업데이트
+          await client.query(`
+            UPDATE users 
+            SET ${column.name} = ${column.default} 
+            WHERE ${column.name} IS NULL
+          `);
+
+          // 이제 NOT NULL 제약조건 추가
+          await client.query(`
+            ALTER TABLE users 
+            ALTER COLUMN ${column.name} SET NOT NULL
+          `);
+
+          console.log(`✅ ${column.name} 컬럼 추가 완료`);
+        } else {
+          await client.query(sql);
+          console.log(`✅ 컬럼 추가: ${column.name} (${column.type})`);
+        }
       } else {
         console.log(`ℹ️ 컬럼 이미 존재: ${column.name}`);
       }
@@ -61,7 +84,7 @@ async function addMissingUserColumns() {
       WHERE table_name = 'users' 
       ORDER BY ordinal_position
     `);
-    
+
     console.log('\n📋 업데이트된 users 테이블 구조:');
     updatedResult.rows.forEach(col => {
       console.log(`   - ${col.column_name}: ${col.data_type} (${col.is_nullable === 'YES' ? 'NULL 허용' : 'NOT NULL'}) ${col.column_default ? `기본값: ${col.column_default}` : ''}`);
@@ -73,7 +96,7 @@ async function addMissingUserColumns() {
       SET email = id || '@tablelink.com'
       WHERE email IS NULL AND id IS NOT NULL
     `);
-    
+
     console.log('✅ 기존 사용자들에게 기본 이메일 설정 완료');
 
     console.log('\n✅ 사용자 테이블 컬럼 추가 완료!');
