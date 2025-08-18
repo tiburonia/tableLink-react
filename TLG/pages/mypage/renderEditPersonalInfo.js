@@ -917,7 +917,7 @@ async function handleSavePersonalInfo() {
     saveBtn.disabled = true;
 
     // API 호출 (올바른 엔드포인트 사용)
-    const response = await fetch('/users/update', {
+    const response = await fetch('/api/users/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updateData)
