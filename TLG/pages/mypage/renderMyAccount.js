@@ -1,3 +1,4 @@
+
 // 실제 API 데이터를 UI 표시 형식으로 변환
 async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   console.log('🔄 실제 데이터를 UI 형식으로 변환 시작');
@@ -85,8 +86,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let reservationList = [];
   try {
     if (userInfo.reservation_list) {
-      reservationList = typeof userInfo.reservation_list === 'string'
-        ? JSON.parse(userInfo.reservation_list)
+      reservationList = typeof userInfo.reservation_list === 'string' 
+        ? JSON.parse(userInfo.reservation_list) 
         : userInfo.reservation_list;
     }
   } catch (e) {
@@ -98,8 +99,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let coupons = { unused: [], used: [] };
   try {
     if (userInfo.coupons) {
-      coupons = typeof userInfo.coupons === 'string'
-        ? JSON.parse(userInfo.coupons)
+      coupons = typeof userInfo.coupons === 'string' 
+        ? JSON.parse(userInfo.coupons) 
         : userInfo.coupons;
     }
   } catch (e) {
@@ -111,8 +112,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let favoriteStores = [];
   try {
     if (userInfo.favorite_stores) {
-      favoriteStores = typeof userInfo.favorite_stores === 'string'
-        ? JSON.parse(userInfo.favorite_stores)
+      favoriteStores = typeof userInfo.favorite_stores === 'string' 
+        ? JSON.parse(userInfo.favorite_stores) 
         : userInfo.favorite_stores;
     }
   } catch (e) {
@@ -346,7 +347,7 @@ async function renderMyAccount() {
       console.log('🔄 renderMyPage 스크립트 미리 로드 시작');
       const script = document.createElement('script');
       script.src = '/TLG/pages/mypage/renderMyPage.js';
-
+      
       await new Promise((resolve, reject) => {
         script.onload = () => {
           console.log('✅ renderMyPage 스크립트 미리 로드 완료');
@@ -369,7 +370,7 @@ async function renderMyAccount() {
       console.log('🔄 renderAllOrderHTML 스크립트 미리 로드 시작');
       const orderScript = document.createElement('script');
       orderScript.src = '/TLG/pages/store/order/renderAllOrderHTML.js';
-
+      
       await new Promise((resolve, reject) => {
         orderScript.onload = () => {
           console.log('✅ renderAllOrderHTML 스크립트 미리 로드 완료');
@@ -383,29 +384,6 @@ async function renderMyAccount() {
       });
     } catch (error) {
       console.error('❌ renderAllOrderHTML 스크립트 로드 중 오류:', error);
-    }
-  }
-
-  // renderMyReviews 스크립트 미리 로드
-  if (typeof window.renderMyReviews !== 'function') {
-    try {
-      console.log('🔄 renderMyReviews 스크립트 미리 로드 시작');
-      const reviewScript = document.createElement('script');
-      reviewScript.src = '/TLG/pages/mypage/renderMyReviews.js';
-
-      await new Promise((resolve, reject) => {
-        reviewScript.onload = () => {
-          console.log('✅ renderMyReviews 스크립트 미리 로드 완료');
-          resolve();
-        };
-        reviewScript.onerror = () => {
-          console.error('❌ renderMyReviews 스크립트 미리 로드 실패');
-          reject();
-        };
-        document.head.appendChild(reviewScript);
-      });
-    } catch (error) {
-      console.error('❌ renderMyReviews 스크립트 로드 중 오류:', error);
     }
   }
 
@@ -1510,7 +1488,7 @@ function setupAccountEventListeners() {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔙 뒤로가기 버튼 클릭됨');
-
+    
     if (typeof window.renderMyPage === 'function') {
       console.log('✅ renderMyPage 함수 호출');
       window.renderMyPage();
@@ -1609,10 +1587,10 @@ function setupAccountEventListeners() {
     if (element) {
       // 기존 이벤트 리스너 제거 (있다면)
       element.removeEventListener('click', config.handler);
-
+      
       // 새 이벤트 리스너 등록
       element.addEventListener('click', config.handler);
-
+      
       console.log(`✅ ${config.id} 이벤트 리스너 등록 완료`);
     } else {
       console.warn(`⚠️ ${config.id} 요소를 찾을 수 없음`);
@@ -1739,7 +1717,7 @@ function updateProfileHeader(data) {
 
   if (vipBadge) {
     vipBadge.innerHTML = `<span class="badge-text">${data.vipLevel}</span>`;
-
+    
     // VIP 레벨에 따른 배지 색상 변경
     switch(data.vipLevel) {
       case 'PLATINUM':
@@ -1951,14 +1929,6 @@ function showAchievementsModal() {
   document.body.appendChild(modal);
 }
 
-function showAllReviewsModal() {
-  if (typeof renderMyReviews === 'function') {
-    renderMyReviews(window.userInfo || { id: 'user1' });
-  } else {
-    alert('내 리뷰 전체보기 기능을 불러올 수 없습니다.');
-  }
-}
-
 function showAllOrdersModal() {
   if (typeof renderAllOrderHTML === 'function') {
     // 이전 화면 정보 저장
@@ -1987,7 +1957,7 @@ async function loadAllFavoritesScript() {
     console.log('🔄 renderAllFavorites 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllFavorites.js';
-
+    
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllFavorites 스크립트 로드 완료');
@@ -2014,7 +1984,7 @@ async function loadAllRegularLevelsScript() {
     console.log('🔄 renderAllRegularLevels 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllRegularLevels.js';
-
+    
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllRegularLevels 스크립트 로드 완료');
@@ -2041,7 +2011,7 @@ async function loadAllCouponsScript() {
     console.log('🔄 renderAllCoupons 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllCoupons.js';
-
+    
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllCoupons 스크립트 로드 완료');
@@ -2061,3 +2031,5 @@ async function loadAllCouponsScript() {
 
 // 전역 함수 등록
 window.renderMyAccount = renderMyAccount;
+
+
