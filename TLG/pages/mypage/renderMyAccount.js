@@ -895,7 +895,7 @@ async function renderMyAccount() {
 
       /* 카드 헤더 */
       .card-header {
-        padding: 24px 24px 16px 24px;
+        padding: 28px 24px 24px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -985,7 +985,7 @@ async function renderMyAccount() {
 
       /* 카드 바디 */
       .card-body {
-        padding: 0 24px 24px 24px;
+        padding: 0 24px 28px 24px;
       }
 
       .card-body.no-padding {
@@ -1102,17 +1102,18 @@ async function renderMyAccount() {
       .regular-levels-container {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 20px;
       }
 
       .regular-level-item {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         border-radius: 16px;
-        padding: 20px;
+        padding: 24px;
         border: 1px solid #e2e8f0;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        margin-bottom: 4px;
       }
 
       .regular-level-item::before {
@@ -1173,17 +1174,18 @@ async function renderMyAccount() {
       .modern-list {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 20px;
       }
 
       .activity-item {
         background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%);
         border-radius: 16px;
-        padding: 20px;
+        padding: 24px;
         border: 1px solid #fdba74;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        margin-bottom: 4px;
       }
 
       .activity-item::before {
