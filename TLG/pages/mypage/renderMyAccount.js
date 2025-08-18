@@ -459,61 +459,134 @@ async function renderMyAccount() {
         </div>
 
         <!-- 단골 레벨 섹션 -->
-        <div class="section-card">
-          <div class="section-header">
-            <h3>🏆 나의 단골 레벨</h3>
-            <button class="view-all-btn" id="viewAllLevelsBtn">전체보기</button>
+        <div class="modern-card loyalty-card">
+          <div class="card-header gradient-header">
+            <div class="header-content">
+              <div class="header-icon">🏆</div>
+              <div class="header-text">
+                <h3>나의 단골 레벨</h3>
+                <p>즐겨찾는 매장에서의 등급</p>
+              </div>
+            </div>
+            <button class="view-all-btn modern-btn" id="viewAllLevelsBtn">
+              <span>전체보기</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
           </div>
-          <div class="regular-levels-container" id="regularLevelsContainer">
-            <div class="loading-skeleton">단골 레벨 정보를 불러오는 중...</div>
+          <div class="card-body">
+            <div class="regular-levels-container" id="regularLevelsContainer">
+              <div class="loading-skeleton modern-skeleton">
+                <div class="skeleton-shimmer"></div>
+                <span>단골 레벨 정보를 불러오는 중...</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- 퀵 액션 메뉴 -->
-        <div class="section-card">
-          <div class="section-header">
-            <h3>⚡ 빠른 메뉴</h3>
+        <div class="modern-card quick-menu-card">
+          <div class="card-header">
+            <div class="header-content">
+              <div class="header-icon">⚡</div>
+              <div class="header-text">
+                <h3>빠른 메뉴</h3>
+                <p>자주 사용하는 기능들</p>
+              </div>
+            </div>
           </div>
-          <div class="quick-menu-grid">
-            <button class="quick-menu-item" id="couponBtn">
-              <div class="menu-icon">🎫</div>
-              <span class="menu-label">쿠폰함</span>
-              <div class="menu-badge" id="couponBadge">3</div>
-            </button>
-            <button class="quick-menu-item" id="favoritesBtn">
-              <div class="menu-icon">⭐</div>
-              <span class="menu-label">즐겨찾기</span>
-            </button>
-            <button class="quick-menu-item" id="achievementsBtn">
-              <div class="menu-icon">🏆</div>
-              <span class="menu-label">업적</span>
-            </button>
-            <button class="quick-menu-item" id="settingsBtn">
-              <div class="menu-icon">⚙️</div>
-              <span class="menu-label">설정</span>
-            </button>
+          <div class="card-body no-padding">
+            <div class="quick-menu-grid modern-grid">
+              <button class="quick-menu-item modern-item" id="couponBtn">
+                <div class="item-background"></div>
+                <div class="item-content">
+                  <div class="menu-icon">🎫</div>
+                  <span class="menu-label">쿠폰함</span>
+                  <div class="menu-badge" id="couponBadge">3</div>
+                </div>
+                <div class="item-hover-effect"></div>
+              </button>
+              <button class="quick-menu-item modern-item" id="favoritesBtn">
+                <div class="item-background"></div>
+                <div class="item-content">
+                  <div class="menu-icon">⭐</div>
+                  <span class="menu-label">즐겨찾기</span>
+                </div>
+                <div class="item-hover-effect"></div>
+              </button>
+              <button class="quick-menu-item modern-item" id="achievementsBtn">
+                <div class="item-background"></div>
+                <div class="item-content">
+                  <div class="menu-icon">🏆</div>
+                  <span class="menu-label">업적</span>
+                </div>
+                <div class="item-hover-effect"></div>
+              </button>
+              <button class="quick-menu-item modern-item" id="settingsBtn">
+                <div class="item-background"></div>
+                <div class="item-content">
+                  <div class="menu-icon">⚙️</div>
+                  <span class="menu-label">설정</span>
+                </div>
+                <div class="item-hover-effect"></div>
+              </button>
+            </div>
           </div>
         </div>
 
         <!-- 최근 활동 -->
-        <div class="section-card">
-          <div class="section-header">
-            <h3>📈 최근 활동</h3>
-            <button class="view-all-btn" id="viewAllOrdersBtn">전체보기</button>
+        <div class="modern-card activity-card">
+          <div class="card-header gradient-header activity-gradient">
+            <div class="header-content">
+              <div class="header-icon">📈</div>
+              <div class="header-text">
+                <h3>최근 활동</h3>
+                <p>최근 주문 내역</p>
+              </div>
+            </div>
+            <button class="view-all-btn modern-btn" id="viewAllOrdersBtn">
+              <span>전체보기</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
           </div>
-          <div class="activity-list" id="recentOrdersList">
-            <div class="loading-skeleton">주문 내역을 불러오는 중...</div>
+          <div class="card-body">
+            <div class="activity-list modern-list" id="recentOrdersList">
+              <div class="loading-skeleton modern-skeleton">
+                <div class="skeleton-shimmer"></div>
+                <span>주문 내역을 불러오는 중...</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- 개인정보 섹션 -->
-        <div class="section-card">
-          <div class="section-header">
-            <h3>👤 개인정보</h3>
-            <button class="edit-btn" id="editPersonalInfoBtn">수정</button>
+        <div class="modern-card info-card">
+          <div class="card-header gradient-header info-gradient">
+            <div class="header-content">
+              <div class="header-icon">👤</div>
+              <div class="header-text">
+                <h3>개인정보</h3>
+                <p>계정 및 프로필 정보</p>
+              </div>
+            </div>
+            <button class="edit-btn modern-btn" id="editPersonalInfoBtn">
+              <span>수정</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </button>
           </div>
-          <div class="personal-info-list" id="personalInfoList">
-            <div class="loading-skeleton">개인정보를 불러오는 중...</div>
+          <div class="card-body">
+            <div class="personal-info-list modern-info-list" id="personalInfoList">
+              <div class="loading-skeleton modern-skeleton">
+                <div class="skeleton-shimmer"></div>
+                <span>개인정보를 불러오는 중...</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -793,221 +866,454 @@ async function renderMyAccount() {
         font-weight: 500;
       }
 
-      /* 섹션 카드 */
-      .section-card {
+      /* 모던 카드 시스템 */
+      .modern-card {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        margin-bottom: 16px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+        border-radius: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        position: relative;
       }
 
-      .section-header {
+      .modern-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), transparent);
+      }
+
+      .modern-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      }
+
+      /* 카드 헤더 */
+      .card-header {
+        padding: 24px 24px 16px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        position: relative;
       }
 
-      .section-header h3 {
-        font-size: 16px;
-        font-weight: 600;
+      .gradient-header {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .gradient-header.activity-gradient {
+        background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%);
+        border-bottom: 1px solid #fdba74;
+      }
+
+      .gradient-header.info-gradient {
+        background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+        border-bottom: 1px solid #93c5fd;
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .header-icon {
+        width: 48px;
+        height: 48px;
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .header-text h3 {
+        font-size: 18px;
+        font-weight: 700;
         color: #111827;
         margin: 0;
+        line-height: 1.2;
       }
 
-      .view-all-btn, .edit-btn {
-        background: none;
-        border: none;
-        color: #667eea;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: color 0.2s ease;
-        padding: 4px 8px;
-        border-radius: 6px;
+      .header-text p {
+        font-size: 13px;
+        color: #6b7280;
+        margin: 4px 0 0 0;
+        line-height: 1.3;
       }
 
-      .view-all-btn:hover, .edit-btn:hover {
-        background: #f3f4f6;
-        color: #5a6fd8;
-      }
-
-      /* 퀵 메뉴 */
-      .quick-menu-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
-      }
-
-      .quick-menu-item {
-        background: #f8fafc;
-        border: none;
+      /* 모던 버튼 */
+      .modern-btn {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.1);
         border-radius: 12px;
-        padding: 16px 8px;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
         cursor: pointer;
         transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        backdrop-filter: blur(8px);
+      }
+
+      .modern-btn:hover {
+        background: white;
+        border-color: #6366f1;
+        color: #6366f1;
+        transform: scale(1.02);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+      }
+
+      .modern-btn svg {
+        transition: transform 0.2s ease;
+      }
+
+      .modern-btn:hover svg {
+        transform: translateX(2px);
+      }
+
+      /* 카드 바디 */
+      .card-body {
+        padding: 0 24px 24px 24px;
+      }
+
+      .card-body.no-padding {
+        padding: 0;
+      }
+
+      /* 퀵 메뉴 모던 그리드 */
+      .modern-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0;
+        padding: 16px;
+      }
+
+      .modern-item {
+        background: none;
+        border: none;
+        padding: 20px 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        border-radius: 16px;
+        margin: 4px;
+      }
+
+      .item-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #f8fafc;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        opacity: 0;
+      }
+
+      .item-hover-effect {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        transition: transform 0.3s ease;
+        pointer-events: none;
+      }
+
+      .modern-item:hover .item-background {
+        opacity: 1;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      }
+
+      .modern-item:hover .item-hover-effect {
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .modern-item:hover {
+        transform: translateY(-2px);
+      }
+
+      .item-content {
+        position: relative;
+        z-index: 2;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 8px;
-        position: relative;
-      }
-
-      .quick-menu-item:hover {
-        background: #e5e7eb;
-        transform: translateY(-1px);
       }
 
       .menu-icon {
-        font-size: 20px;
+        font-size: 24px;
+        transition: transform 0.3s ease;
+      }
+
+      .modern-item:hover .menu-icon {
+        transform: scale(1.1);
       }
 
       .menu-label {
         font-size: 12px;
-        font-weight: 500;
+        font-weight: 600;
         color: #374151;
+        text-align: center;
+        transition: color 0.3s ease;
+      }
+
+      .modern-item:hover .menu-label {
+        color: #111827;
       }
 
       .menu-badge {
         position: absolute;
-        top: 8px;
-        right: 8px;
-        background: #ef4444;
+        top: -8px;
+        right: -8px;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
         color: white;
         font-size: 10px;
-        font-weight: 600;
-        padding: 2px 6px;
-        border-radius: 10px;
-        min-width: 16px;
+        font-weight: 700;
+        padding: 4px 7px;
+        border-radius: 12px;
+        min-width: 20px;
         text-align: center;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        border: 2px solid white;
       }
 
-      /* 단골 레벨 컨테이너 */
+      /* 단골 레벨 모던 컨테이너 */
       .regular-levels-container {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
       }
 
       .regular-level-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        border-left: 4px solid #667eea;
-        transition: transform 0.2s ease;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .regular-level-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 0 2px 2px 0;
       }
 
       .regular-level-item:hover {
         transform: translateX(4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        border-color: #c7d2fe;
       }
 
       .level-store-name {
-        font-weight: 600;
+        font-weight: 700;
         color: #111827;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        font-size: 16px;
       }
 
       .level-badge {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
         color: white;
-        padding: 4px 8px;
-        border-radius: 8px;
+        padding: 6px 12px;
+        border-radius: 20px;
         font-size: 12px;
-        font-weight: 600;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
       }
 
       .level-progress {
-        font-size: 12px;
+        font-size: 13px;
         color: #6b7280;
-        margin-bottom: 4px;
-      }
-
-      .level-benefits {
-        font-size: 11px;
-        color: #667eea;
+        margin-bottom: 8px;
         font-weight: 500;
       }
 
-      /* 활동 리스트 */
-      .activity-list {
+      .level-benefits {
+        font-size: 12px;
+        color: #6366f1;
+        font-weight: 600;
+        background: rgba(99, 102, 241, 0.1);
+        padding: 4px 8px;
+        border-radius: 8px;
+        display: inline-block;
+      }
+
+      /* 활동 리스트 모던 */
+      .modern-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 16px;
       }
 
       .activity-item {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
-        border-left: 4px solid #10b981;
-        transition: transform 0.2s ease;
+        background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%);
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid #fdba74;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .activity-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        border-radius: 0 2px 2px 0;
       }
 
       .activity-item:hover {
         transform: translateX(4px);
+        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
+        border-color: #fbbf24;
       }
 
       .activity-store {
-        font-weight: 600;
+        font-weight: 700;
         color: #111827;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
+        font-size: 16px;
       }
 
       .activity-items {
         font-size: 14px;
         color: #6b7280;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
+        font-weight: 500;
+        line-height: 1.4;
       }
 
       .activity-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 12px;
+        font-size: 13px;
       }
 
       .activity-date {
         color: #9ca3af;
+        font-weight: 500;
       }
 
       .activity-total {
-        font-weight: 600;
-        color: #10b981;
+        font-weight: 700;
+        color: #d97706;
+        background: rgba(217, 119, 6, 0.1);
+        padding: 4px 8px;
+        border-radius: 8px;
       }
 
-      /* 개인정보 리스트 */
-      .personal-info-list {
+      /* 개인정보 모던 리스트 */
+      .modern-info-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 0;
       }
 
       .info-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 0;
-        border-bottom: 1px solid #f3f4f6;
+        padding: 16px 0;
+        border-bottom: 1px solid #e5e7eb;
+        transition: all 0.2s ease;
       }
 
       .info-item:last-child {
         border-bottom: none;
       }
 
+      .info-item:hover {
+        background: rgba(99, 102, 241, 0.02);
+        margin: 0 -16px;
+        padding: 16px 16px;
+        border-radius: 8px;
+      }
+
       .info-label {
         font-size: 14px;
         color: #6b7280;
-        font-weight: 500;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .info-label::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: #6366f1;
+        border-radius: 50%;
       }
 
       .info-value {
         font-size: 14px;
         color: #111827;
+        font-weight: 600;
+      }
+
+      /* 모던 스켈레톤 */
+      .modern-skeleton {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        color: #6b7280;
         font-weight: 500;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+
+      .skeleton-shimmer {
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+        animation: shimmer 1.5s infinite;
+      }
+
+      @keyframes shimmer {
+        0% { left: -100%; }
+        100% { left: 100%; }
       }
 
       /* 로그아웃 섹션 */
@@ -1452,12 +1758,17 @@ function updateRegularLevels(data) {
           <span>${levelInfo.store}</span>
           <span class="level-badge">${levelInfo.level}</span>
         </div>
-        <div class="level-progress">${levelInfo.points} / ${levelInfo.nextLevelPoints} 포인트</div>
+        <div class="level-progress">🎯 ${levelInfo.points} / ${levelInfo.nextLevelPoints} 포인트</div>
         <div class="level-benefits">${levelInfo.benefits.join(', ')}</div>
       </div>
     `).join('');
   } else {
-    regularLevelsContainer.innerHTML = '<div class="loading-skeleton">등록된 단골 레벨이 없습니다.</div>';
+    regularLevelsContainer.innerHTML = `
+      <div class="modern-skeleton">
+        <div class="skeleton-shimmer"></div>
+        <span>등록된 단골 레벨이 없습니다</span>
+      </div>
+    `;
   }
 }
 
@@ -1471,16 +1782,21 @@ function updateRecentActivity(data) {
   if (recentOrders.length > 0) {
     activityList.innerHTML = recentOrders.map(order => `
       <div class="activity-item">
-        <div class="activity-store">${order.store}</div>
+        <div class="activity-store">🏪 ${order.store}</div>
         <div class="activity-items">${order.items.map(item => `${item.name} × ${item.qty}`).join(', ')}</div>
         <div class="activity-meta">
-          <span class="activity-date">${order.date}</span>
+          <span class="activity-date">📅 ${order.date}</span>
           <span class="activity-total">${order.total.toLocaleString()}원</span>
         </div>
       </div>
     `).join('');
   } else {
-    activityList.innerHTML = '<div class="loading-skeleton">최근 주문 내역이 없습니다.</div>';
+    activityList.innerHTML = `
+      <div class="modern-skeleton">
+        <div class="skeleton-shimmer"></div>
+        <span>최근 주문 내역이 없습니다</span>
+      </div>
+    `;
   }
 }
 
@@ -1505,6 +1821,14 @@ function updatePersonalInfo(data) {
     <div class="info-item">
       <span class="info-label">총 사용금액</span>
       <span class="info-value">${data.totalSpent.toLocaleString()}원</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">VIP 등급</span>
+      <span class="info-value">${data.vipLevel}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">보유 포인트</span>
+      <span class="info-value">${data.point.toLocaleString()}P</span>
     </div>
   `;
 }
