@@ -30,17 +30,17 @@ async function renderAllCoupons(userInfo) {
         <!-- 쿠폰 통계 카드 -->
         <div class="coupon-stats-card">
           <div class="stat-item">
-            <div class="stat-number" id="unusedCouponCount">-</div>
+            <div class="stat-number skeleton-stat-number" id="unusedCouponCount">-</div>
             <div class="stat-label">사용 가능</div>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <div class="stat-number" id="usedCouponCount">-</div>
+            <div class="stat-number skeleton-stat-number" id="usedCouponCount">-</div>
             <div class="stat-label">사용 완료</div>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <div class="stat-number" id="totalSavings">-</div>
+            <div class="stat-number skeleton-stat-number" id="totalSavings">-</div>
             <div class="stat-label">총 절약</div>
           </div>
         </div>
@@ -52,7 +52,29 @@ async function renderAllCoupons(userInfo) {
             <span class="coupon-count" id="availableCouponCount">0개</span>
           </div>
           <div id="unusedCouponsList" class="coupons-list">
-            <div class="loading-skeleton">쿠폰 정보를 불러오는 중...</div>
+            <!-- 스켈레톤 로딩 -->
+            <div class="skeleton-coupons-list">
+              <div class="skeleton-coupon-item">
+                <div class="skeleton-coupon-header">
+                  <div class="skeleton-coupon-name"></div>
+                  <div class="skeleton-coupon-discount"></div>
+                </div>
+                <div class="skeleton-coupon-details">
+                  <div class="skeleton-coupon-line"></div>
+                  <div class="skeleton-coupon-line short"></div>
+                </div>
+              </div>
+              <div class="skeleton-coupon-item">
+                <div class="skeleton-coupon-header">
+                  <div class="skeleton-coupon-name"></div>
+                  <div class="skeleton-coupon-discount"></div>
+                </div>
+                <div class="skeleton-coupon-details">
+                  <div class="skeleton-coupon-line"></div>
+                  <div class="skeleton-coupon-line short"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -63,7 +85,19 @@ async function renderAllCoupons(userInfo) {
             <span class="coupon-count" id="usedCouponCountDisplay">0개</span>
           </div>
           <div id="usedCouponsList" class="coupons-list">
-            <div class="loading-skeleton">사용 내역을 불러오는 중...</div>
+            <!-- 스켈레톤 로딩 -->
+            <div class="skeleton-coupons-list">
+              <div class="skeleton-coupon-item">
+                <div class="skeleton-coupon-header">
+                  <div class="skeleton-coupon-name"></div>
+                  <div class="skeleton-coupon-discount"></div>
+                </div>
+                <div class="skeleton-coupon-details">
+                  <div class="skeleton-coupon-line"></div>
+                  <div class="skeleton-coupon-line short"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -223,6 +257,37 @@ async function renderAllCoupons(userInfo) {
         font-size: 12px;
         color: #6b7280;
         font-weight: 500;
+      }
+
+      /* 통계 스켈레톤 */
+      .skeleton-stat-number {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .skeleton-stat-number::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.6) 50%,
+          transparent 100%
+        );
+        animation: statShimmer 2s infinite;
+      }
+
+      @keyframes statShimmer {
+        0% {
+          left: -100%;
+        }
+        100% {
+          left: 100%;
+        }
       }
 
       .stat-divider {
@@ -416,6 +481,106 @@ async function renderAllCoupons(userInfo) {
         text-align: center;
         color: #9ca3af;
         font-style: italic;
+      }
+
+      /* 쿠폰 스켈레톤 */
+      .skeleton-coupons-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .skeleton-coupon-item {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 2px dashed #e5e7eb;
+        border-radius: 12px;
+        padding: 16px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .skeleton-coupon-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.4) 50%,
+          transparent 100%
+        );
+        animation: skeletonShimmer 2s infinite;
+      }
+
+      .skeleton-coupon-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .skeleton-coupon-name {
+        width: 120px;
+        height: 16px;
+        background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+        background-size: 200% 100%;
+        border-radius: 4px;
+        animation: skeletonPulse 1.8s ease-in-out infinite;
+      }
+
+      .skeleton-coupon-discount {
+        width: 70px;
+        height: 24px;
+        background: linear-gradient(90deg, #d1d5db 25%, #e5e7eb 50%, #d1d5db 75%);
+        background-size: 200% 100%;
+        border-radius: 8px;
+        animation: skeletonPulse 1.8s ease-in-out infinite;
+        animation-delay: 0.2s;
+      }
+
+      .skeleton-coupon-details {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .skeleton-coupon-line {
+        height: 12px;
+        background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+        background-size: 200% 100%;
+        border-radius: 4px;
+        animation: skeletonPulse 1.8s ease-in-out infinite;
+        animation-delay: 0.4s;
+      }
+
+      .skeleton-coupon-line:first-child {
+        width: 85%;
+      }
+
+      .skeleton-coupon-line.short {
+        width: 60%;
+        animation-delay: 0.6s;
+      }
+
+      @keyframes skeletonShimmer {
+        0% {
+          left: -100%;
+        }
+        100% {
+          left: 100%;
+        }
+      }
+
+      @keyframes skeletonPulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
       }
 
       /* 빈 상태 */
