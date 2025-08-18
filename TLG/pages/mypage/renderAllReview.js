@@ -1,5 +1,5 @@
 // 내 리뷰 전체보기 렌더링 함수 (renamed to renderMyReviews)
-async function renderMyReviews(storeId, userInfo) { // Modified to accept storeId
+async function renderMyReviews(userId, userInfo) { // Modified to accept userId
   try {
     console.log('⭐ 내 리뷰 전체보기 화면 렌더링');
 
@@ -53,8 +53,8 @@ async function renderMyReviews(storeId, userInfo) { // Modified to accept storeI
     `;
 
     // 실제 데이터 로드
-    // Assuming the intention is to load reviews for the provided storeId, not user reviews based on userInfo.id
-    await loadReviewData(storeId); // Pass storeId
+    // 사용자 ID를 전달하여 해당 사용자의 리뷰 내역 조회
+    await loadReviewData(userId);
 
   } catch (error) {
     console.error('❌ 내 리뷰 전체보기 로드 실패:', error);
@@ -81,15 +81,11 @@ function generateReviewSkeletonCards(count) {
   `).join('');
 }
 
-// 실제 리뷰 데이터 로드
-// Modified to accept storeId and fetch store reviews based on thinking
-async function loadReviewData(storeId) {
+// 실제 리뷰 데이터 로드 - 사용자의 리뷰 내역 조회
+async function loadReviewData(userId) {
   try {
-    // Assuming the API endpoint for store reviews is /api/stores/{storeId}/reviews
-    // and that each review object has storeName, date, score, content, storeId.
-    // If the intention was to show user's own reviews, the original logic was correct but perhaps userInfo was not available.
-    // Given the "userInfo.id used as store ID" thought, this change is made.
-    const response = await fetch(`/api/stores/${storeId}/reviews`);
+    // 사용자의 리뷰 내역을 조회하는 올바른 API 엔드포인트 사용
+    const response = await fetch(`/api/reviews/users/${userId}`);
     if (!response.ok) throw new Error('리뷰 조회 실패');
 
     const data = await response.json();
@@ -156,7 +152,7 @@ function updateReviewsList(reviewsData) {
 
   const reviewsHTML = reviewsData.map((review, index) => {
     return `
-      <div class="review-card" onclick="goToStore(${review.storeId || 1})">
+      <div class="review-card" onclick="goToStore(${review.storeId})">
         <div class="review-card-header">
           <div class="store-info">
             <h3 class="store-name">${review.storeName}</h3>
@@ -204,7 +200,7 @@ function showReviewErrorState() {
             <div class="error-icon">⚠️</div>
             <h3>리뷰를 불러올 수 없어요</h3>
             <p>잠시 후 다시 시도해주세요</p>
-            <button class="primary-btn" onclick="renderMyReviews(userInfo)">
+            <button class="primary-btn" onclick="renderMyReviews('${userId}', userInfo)">
               <span class="btn-icon">🔄</span>
               다시 시도
             </button>
