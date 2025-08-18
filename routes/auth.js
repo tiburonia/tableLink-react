@@ -427,4 +427,106 @@ router.post('/coupons/issue', async (req, res) => {
   }
 });
 
+// 사용자 정보 업데이트 API
+router.put('/api/users/update', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    console.log('📝 사용자 정보 업데이트 요청:', req.body);
+    
+    const { 
+      userId, 
+      name, 
+      phone, 
+      email, 
+      birth, 
+      gender, 
+      address, 
+      detailAddress, 
+      notifications 
+    } = req.body;
+
+    if (!userId || !name || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 필드가 누락되었습니다.'
+      });
+    }
+
+    // 전화번호 중복 검사 (자신 제외)
+    const phoneCheckQuery = `
+      SELECT id FROM users 
+      WHERE phone = $1 AND id != $2
+    `;
+    
+    const phoneCheck = await client.query(phoneCheckQuery, [phone, userId]);
+    
+    if (phoneCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: '이미 사용 중인 전화번호입니다.'
+      });
+    }
+
+    // 사용자 정보 업데이트
+    const updateQuery = `
+      UPDATE users 
+      SET 
+        name = $1,
+        phone = $2,
+        email = $3,
+        birth = $4,
+        gender = $5,
+        address = $6,
+        detail_address = $7,
+        email_notifications = $8,
+        sms_notifications = $9,
+        push_notifications = $10,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $11
+      RETURNING *
+    `;
+
+    const updateValues = [
+      name,
+      phone,
+      email,
+      birth,
+      gender,
+      address,
+      detailAddress,
+      notifications?.email || false,
+      notifications?.sms || false,
+      notifications?.push || false,
+      userId
+    ];
+
+    const result = await client.query(updateQuery, updateValues);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: '사용자를 찾을 수 없습니다.'
+      });
+    }
+
+    console.log('✅ 사용자 정보 업데이트 완료:', userId);
+
+    res.json({
+      success: true,
+      message: '사용자 정보가 성공적으로 업데이트되었습니다.',
+      user: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ 사용자 정보 업데이트 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '서버 오류가 발생했습니다.'
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

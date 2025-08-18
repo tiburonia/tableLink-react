@@ -1651,9 +1651,14 @@ function setupAccountEventListeners() {
     }
   };
 
-  const handleEditPersonalInfoClick = function(e) {
+  const handleEditPersonalInfoClick = async function(e) {
     e.preventDefault();
-    showEditPersonalInfoModal();
+    await loadEditPersonalInfoScript();
+    if (typeof renderEditPersonalInfo === 'function') {
+      renderEditPersonalInfo(window.userInfo || { id: 'user1' });
+    } else {
+      alert('개인정보 수정 기능을 불러올 수 없습니다.');
+    }
   };
 
   // 버튼들과 이벤트 핸들러 매핑
@@ -2032,8 +2037,32 @@ function showAllRegularLevelsModal() {
   alert('전체 단골 레벨 보기 기능은 개발 중입니다.');
 }
 
-function showEditPersonalInfoModal() {
-  alert('개인정보 수정 기능은 개발 중입니다.');
+// 개인정보 수정 스크립트 로드 함수
+async function loadEditPersonalInfoScript() {
+  if (typeof window.renderEditPersonalInfo === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderEditPersonalInfo 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/mypage/renderEditPersonalInfo.js';
+    
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderEditPersonalInfo 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderEditPersonalInfo 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderEditPersonalInfo 스크립트 로드 중 오류:', error);
+    throw error;
+  }
 }
 
 // 스크립트 로드 함수들
