@@ -460,22 +460,22 @@ async function renderMyAccount() {
 
         <!-- 단골 레벨 섹션 -->
         <div class="modern-card loyalty-card">
-          <div class="card-header gradient-header">
+          <div class="card-header loyalty-gradient-header">
             <div class="header-content">
-              <div class="header-icon">🏆</div>
+              <div class="header-icon loyalty-icon">🏆</div>
               <div class="header-text">
                 <h3>나의 단골 레벨</h3>
                 <p>즐겨찾는 매장에서의 등급</p>
               </div>
             </div>
-            <button class="view-all-btn modern-btn" id="viewAllLevelsBtn">
+            <button class="view-all-btn modern-btn loyalty-btn" id="viewAllLevelsBtn">
               <span>전체보기</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"/>
               </svg>
             </button>
           </div>
-          <div class="card-body">
+          <div class="card-body loyalty-body">
             <div class="regular-levels-container" id="regularLevelsContainer">
               <div class="loading-skeleton modern-skeleton">
                 <div class="skeleton-shimmer"></div>
@@ -537,22 +537,22 @@ async function renderMyAccount() {
 
         <!-- 최근 활동 -->
         <div class="modern-card activity-card">
-          <div class="card-header gradient-header activity-gradient">
+          <div class="card-header activity-gradient-header">
             <div class="header-content">
-              <div class="header-icon">📈</div>
+              <div class="header-icon activity-icon">📈</div>
               <div class="header-text">
                 <h3>최근 활동</h3>
                 <p>최근 주문 내역</p>
               </div>
             </div>
-            <button class="view-all-btn modern-btn" id="viewAllOrdersBtn">
+            <button class="view-all-btn modern-btn activity-btn" id="viewAllOrdersBtn">
               <span>전체보기</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                 <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2"/>
               </svg>
             </button>
           </div>
-          <div class="card-body">
+          <div class="card-body activity-body">
             <div class="activity-list modern-list" id="recentOrdersList">
               <div class="loading-skeleton modern-skeleton">
                 <div class="skeleton-shimmer"></div>
@@ -1099,21 +1099,103 @@ async function renderMyAccount() {
       }
 
       /* 단골 레벨 모던 컨테이너 */
+      /* 단골 레벨 카드 전용 스타일 */
+      .loyalty-gradient-header {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-bottom: 1px solid #f59e0b;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .loyalty-gradient-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #f59e0b, #d97706, #f59e0b);
+      }
+
+      .loyalty-icon {
+        background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+        color: white !important;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3) !important;
+      }
+
+      .loyalty-btn {
+        background: rgba(245, 158, 11, 0.1) !important;
+        border-color: #f59e0b !important;
+        color: #d97706 !important;
+      }
+
+      .loyalty-btn:hover {
+        background: rgba(245, 158, 11, 0.2) !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.25) !important;
+      }
+
+      .loyalty-body {
+        padding: 24px !important;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      }
+
+      /* 활동 카드 전용 스타일 */
+      .activity-gradient-header {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        border-bottom: 1px solid #10b981;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .activity-gradient-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #10b981, #059669, #10b981);
+      }
+
+      .activity-icon {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: white !important;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3) !important;
+      }
+
+      .activity-btn {
+        background: rgba(16, 185, 129, 0.1) !important;
+        border-color: #10b981 !important;
+        color: #059669 !important;
+      }
+
+      .activity-btn:hover {
+        background: rgba(16, 185, 129, 0.2) !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.25) !important;
+      }
+
+      .activity-body {
+        padding: 24px !important;
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      }
+
       .regular-levels-container {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 16px;
       }
 
       .regular-level-item {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #fefbf7 100%);
         border-radius: 16px;
-        padding: 24px;
-        border: 1px solid #e2e8f0;
+        padding: 20px;
+        border: 2px solid #f59e0b;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        margin-bottom: 4px;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.1);
       }
 
       .regular-level-item::before {
@@ -1123,14 +1205,15 @@ async function renderMyAccount() {
         top: 0;
         bottom: 0;
         width: 4px;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        background: linear-gradient(135deg, #f59e0b, #d97706);
         border-radius: 0 2px 2px 0;
       }
 
       .regular-level-item:hover {
-        transform: translateX(4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-        border-color: #c7d2fe;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(245, 158, 11, 0.2);
+        border-color: #fbbf24;
+        background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%);
       }
 
       .level-store-name {
@@ -1144,48 +1227,50 @@ async function renderMyAccount() {
       }
 
       .level-badge {
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        background: linear-gradient(135deg, #f59e0b, #d97706);
         color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
+        padding: 8px 16px;
+        border-radius: 24px;
         font-size: 12px;
         font-weight: 700;
-        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
 
       .level-progress {
         font-size: 13px;
-        color: #6b7280;
+        color: #92400e;
         margin-bottom: 8px;
-        font-weight: 500;
+        font-weight: 600;
       }
 
       .level-benefits {
         font-size: 12px;
-        color: #6366f1;
+        color: #d97706;
         font-weight: 600;
-        background: rgba(99, 102, 241, 0.1);
-        padding: 4px 8px;
-        border-radius: 8px;
+        background: rgba(245, 158, 11, 0.15);
+        padding: 6px 12px;
+        border-radius: 12px;
         display: inline-block;
+        border: 1px solid rgba(245, 158, 11, 0.2);
       }
 
       /* 활동 리스트 모던 */
       .modern-list {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 16px;
       }
 
       .activity-item {
-        background: linear-gradient(135deg, #fef7ed 0%, #fed7aa 100%);
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
         border-radius: 16px;
-        padding: 24px;
-        border: 1px solid #fdba74;
+        padding: 20px;
+        border: 2px solid #10b981;
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
-        margin-bottom: 4px;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.1);
       }
 
       .activity-item::before {
@@ -1195,14 +1280,15 @@ async function renderMyAccount() {
         top: 0;
         bottom: 0;
         width: 4px;
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+        background: linear-gradient(135deg, #10b981, #059669);
         border-radius: 0 2px 2px 0;
       }
 
       .activity-item:hover {
-        transform: translateX(4px);
-        box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
-        border-color: #fbbf24;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(16, 185, 129, 0.2);
+        border-color: #34d399;
+        background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);
       }
 
       .activity-store {
@@ -1214,7 +1300,7 @@ async function renderMyAccount() {
 
       .activity-items {
         font-size: 14px;
-        color: #6b7280;
+        color: #047857;
         margin-bottom: 12px;
         font-weight: 500;
         line-height: 1.4;
@@ -1228,16 +1314,17 @@ async function renderMyAccount() {
       }
 
       .activity-date {
-        color: #9ca3af;
+        color: #6b7280;
         font-weight: 500;
       }
 
       .activity-total {
         font-weight: 700;
-        color: #d97706;
-        background: rgba(217, 119, 6, 0.1);
-        padding: 4px 8px;
-        border-radius: 8px;
+        color: #059669;
+        background: rgba(16, 185, 129, 0.15);
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(16, 185, 129, 0.2);
       }
 
       /* 개인정보 모던 리스트 */
