@@ -1,4 +1,3 @@
-
 // 개인정보 수정 화면 렌더링 함수
 async function renderEditPersonalInfo(userInfo) {
   console.log('✏️ 개인정보 수정 화면 렌더링 시작:', userInfo?.id);
@@ -57,14 +56,14 @@ async function renderEditPersonalInfo(userInfo) {
         <!-- 개인정보 입력 폼 -->
         <div class="edit-form-container">
           <form id="personalInfoForm" class="edit-form">
-            
+
             <!-- 기본 정보 섹션 -->
             <div class="form-section">
               <h3 class="section-title">
                 <span class="section-icon">👤</span>
                 기본 정보
               </h3>
-              
+
               <div class="form-group">
                 <label for="userName" class="form-label">이름 *</label>
                 <input 
@@ -215,13 +214,13 @@ async function renderEditPersonalInfo(userInfo) {
             <span class="section-icon">⚠️</span>
             계정 관리
           </h3>
-          
+
           <div class="danger-actions">
             <button type="button" class="danger-btn" id="changePasswordBtn">
               <span class="btn-icon">🔒</span>
               <span>비밀번호 변경</span>
             </button>
-            
+
             <button type="button" class="danger-btn delete" id="deleteAccountBtn">
               <span class="btn-icon">🗑️</span>
               <span>계정 삭제</span>
@@ -710,6 +709,37 @@ async function renderEditPersonalInfo(userInfo) {
   }, 100);
 }
 
+// 개인정보 수정 화면 에러 상태 표시
+function showEditPersonalInfoErrorState() {
+  const main = document.getElementById('main');
+  if (main) {
+    main.innerHTML = `
+      <div class="edit-personal-info-wrapper">
+        <div class="edit-header">
+          <button class="back-btn" onclick="renderMyAccount()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15,18 9,12 15,6"></polyline>
+            </svg>
+          </button>
+          <h1>개인정보 수정</h1>
+        </div>
+
+        <div class="edit-content">
+          <div class="error-state">
+            <div class="error-icon">⚠️</div>
+            <h3>정보를 불러올 수 없어요</h3>
+            <p>잠시 후 다시 시도해주세요</p>
+            <button class="primary-btn" onclick="renderEditPersonalInfo(window.userInfo)">
+              <span class="btn-icon">🔄</span>
+              다시 시도
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
 // 이벤트 리스너 설정
 function setupEditPersonalInfoEventListeners() {
   if (window.editPersonalInfoEventListenersInitialized) {
@@ -831,8 +861,8 @@ async function loadUserDataForEdit(userInfo) {
     console.log('✅ 사용자 데이터 로드 및 폼 채우기 완료');
 
   } catch (error) {
-    console.error('❌ 사용자 데이터 로드 실패:', error);
-    alert('사용자 정보를 불러오는데 실패했습니다.');
+    console.error('❌ 개인정보 수정 화면 로드 실패:', error);
+    showEditPersonalInfoErrorState();
   }
 }
 
@@ -843,10 +873,10 @@ function handleFormChange() {
 
   const form = document.getElementById('personalInfoForm');
   const currentFormData = new FormData(form);
-  
+
   // 변경사항 있는지 확인
   let hasChanges = false;
-  
+
   if (window.originalFormData) {
     for (let [key, value] of currentFormData.entries()) {
       if (window.originalFormData.get(key) !== value) {
@@ -930,11 +960,11 @@ async function handleSavePersonalInfo() {
 
     const result = await response.json();
     console.log('✅ 개인정보 저장 완료:', result);
-    
+
     // 성공 상태 표시
     saveBtn.innerHTML = '<span>저장완료</span>';
     saveBtn.classList.remove('changed');
-    
+
     // 원본 데이터 업데이트
     window.originalFormData = new FormData(form);
 
@@ -958,7 +988,7 @@ async function handleSavePersonalInfo() {
   } catch (error) {
     console.error('❌ 개인정보 저장 실패:', error);
     alert('개인정보 저장에 실패했습니다. 다시 시도해주세요.');
-    
+
     // 저장 버튼 복원
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
@@ -976,7 +1006,7 @@ function handleChangePhoto() {
 // 주소 검색
 function handleAddressSearch() {
   alert('주소 검색 기능은 개발 중입니다.\n직접 입력해주세요.');
-  
+
   // 임시로 입력 필드 활성화
   const addressInput = document.getElementById('userAddress');
   if (addressInput) {
@@ -998,10 +1028,10 @@ function handleChangePassword() {
 // 계정 삭제
 function handleDeleteAccount() {
   const confirmed = confirm('정말로 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.');
-  
+
   if (confirmed) {
     const finalConfirm = confirm('모든 데이터가 영구적으로 삭제됩니다.\n정말 진행하시겠습니까?');
-    
+
     if (finalConfirm) {
       alert('계정 삭제 기능은 개발 중입니다.\n고객센터로 문의해주세요.');
     }

@@ -488,16 +488,16 @@ router.put('/users/update', async (req, res) => {
     `;
 
     const updateValues = [
-      name,
-      phone,
-      email,
-      birth,
-      gender,
-      address,
-      detailAddress,
-      notifications?.email || false,
-      notifications?.sms || false,
-      notifications?.push || false,
+      name?.trim() || null,
+      phone?.trim() || null,
+      email?.trim() || null,
+      birth || null,
+      gender || null,
+      address?.trim() || null,
+      detailAddress?.trim() || null,
+      notifications?.email === true,
+      notifications?.sms === true,
+      notifications?.push === true,
       userId
     ];
 
