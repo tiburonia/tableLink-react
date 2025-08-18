@@ -1364,11 +1364,11 @@ async function renderMyPage() {
   const viewAllReviewsBtn = document.querySelector('#viewAllReviewsBtn');
   if (viewAllReviewsBtn) {
     viewAllReviewsBtn.addEventListener('click', async () => {
-      await loadAllReviewScript();
-      if (typeof renderAllReview === 'function') {
+      await loadMyReviewsScript();
+      if (typeof renderMyReviews === 'function') {
         // 이전 화면 정보 저장
         window.previousScreen = 'renderMyPage';
-        renderAllReview(userInfo);
+        renderMyReviews(userInfo);
       }
     });
   }
@@ -2155,29 +2155,29 @@ async function loadAllOrderScript() {
   }
 }
 
-async function loadAllReviewScript() {
-  if (typeof window.renderAllReview === 'function') {
+async function loadMyReviewsScript() {
+  if (typeof window.renderMyReviews === 'function') {
     return; // 이미 로드됨
   }
 
   try {
-    console.log('🔄 renderAllReview 스크립트 로드 시작');
+    console.log('🔄 renderMyReviews 스크립트 로드 시작');
     const script = document.createElement('script');
-    script.src = '/TLG/pages/mypage/renderAllReview.js';
+    script.src = '/TLG/pages/mypage/renderMyReviews.js';
     
     await new Promise((resolve, reject) => {
       script.onload = () => {
-        console.log('✅ renderAllReview 스크립트 로드 완료');
+        console.log('✅ renderMyReviews 스크립트 로드 완료');
         resolve();
       };
       script.onerror = () => {
-        console.error('❌ renderAllReview 스크립트 로드 실패');
+        console.error('❌ renderMyReviews 스크립트 로드 실패');
         reject();
       };
       document.head.appendChild(script);
     });
   } catch (error) {
-    console.error('❌ renderAllReview 스크립트 로드 중 오류:', error);
+    console.error('❌ renderMyReviews 스크립트 로드 중 오류:', error);
     throw error;
   }
 }
