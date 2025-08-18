@@ -414,7 +414,6 @@ async function renderMyPage() {
         padding: 0 20px 100px 20px;
         scroll-behavior: smooth;
         will-change: scroll-position;
-        max-height: calc(100vh - 178px);
       }
 
       #mypagePanelContainer::-webkit-scrollbar {
@@ -1452,19 +1451,30 @@ function adjustMypagePanelLayout() {
   const vh = window.innerHeight;
   const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
   const bottomBarHeight = bottomBar ? bottomBar.offsetHeight : 78;
-  const handleHeight = panelHandle ? panelHandle.offsetHeight : 24;
-  const panelPadding = 0;
+  const handleHeight = panelHandle ? panelHandle.offsetHeight + 8 : 24; // 핸들 마진 포함
+  const isExpanded = top === 0;
 
-  // 패널 컨테이너 높이 계산
-  const panelHeight = vh - top - bottomBarHeight - handleHeight - panelPadding;
+  // 패널 컨테이너 높이 계산 - 확장된 상태일 때 바텀바까지 꽉 채우기
+  let panelHeight;
+  if (isExpanded) {
+    panelHeight = vh - bottomBarHeight - handleHeight;
+    // 확장된 상태에서는 바텀 패딩을 줄여서 공간 최대화
+    panelContainer.style.paddingBottom = '20px';
+  } else {
+    panelHeight = vh - top - bottomBarHeight - handleHeight;
+    // 축소된 상태에서는 충분한 패딩 유지
+    panelContainer.style.paddingBottom = '100px';
+  }
+
   panelContainer.style.height = `${panelHeight}px`;
+  panelContainer.style.maxHeight = `${panelHeight}px`;
 
   // 스크롤 활성화 보장
   panelContainer.style.overflowY = 'auto';
   panelContainer.style.overflowX = 'hidden';
   panelContainer.style.webkitOverflowScrolling = 'touch';
 
-  console.log(`📐 마이페이지 패널 레이아웃 조정: 높이 ${panelHeight}px, 상단 ${top}px`);
+  console.log(`📐 마이페이지 패널 레이아웃 조정: 높이 ${panelHeight}px, 상단 ${top}px, 확장됨: ${isExpanded}`);
 }
 
 // 마이페이지 패널 휠 이벤트 설정
