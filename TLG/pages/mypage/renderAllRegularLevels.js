@@ -101,14 +101,15 @@ async function loadRegularLevelsData(userInfo) {
   try {
     const regularLevels = await window.RegularLevelManager.getUserAllRegularLevels(userInfo.id);
 
-    // 통계 데이터 계산
+    // 통계 데이터 계산 (비정규화된 데이터 사용)
     const totalStores = regularLevels.length;
     const highestLevel = regularLevels.reduce((max, level) => {
-      const currentRank = level.currentLevel?.rank || 0;
+      const currentRank = level.currentLevelRank || 0;
       return currentRank > max ? currentRank : max;
     }, 0);
     const totalBenefits = regularLevels.reduce((total, level) => {
-      return total + (level.currentLevel?.benefits?.length || 0);
+      // 혜택 수는 레벨 랭크를 기준으로 추정하거나 별도로 계산
+      return total + (level.currentLevelRank || 0);
     }, 0);
 
     // 통계 업데이트
@@ -134,7 +135,7 @@ function updateRegularLevelsStats(totalStores, highestLevel, totalBenefits) {
   statNumbers.forEach(el => el.classList.remove('skeleton-text'));
 }
 
-// 단골 레벨 목록 업데이트
+// 단골 레벨 목록 업데이트 (비정규화된 데이터 사용)
 function updateRegularLevelsList(regularLevels) {
   const levelsList = document.getElementById('levelsList');
   const levelsCount = document.querySelector('.levels-count');
@@ -160,12 +161,15 @@ function updateRegularLevelsList(regularLevels) {
   }
 
   const levelsHTML = regularLevels.map((levelData, index) => {
-    const currentLevel = levelData.currentLevel || { name: '신규 고객', rank: 0 };
+    // 비정규화된 데이터 직접 사용
+    const currentLevelRank = levelData.currentLevelRank || 0;
+    const currentLevelName = window.RegularLevelManager.formatLevelName(currentLevelRank, levelData.currentLevelName);
+    const currentLevelDescription = levelData.currentLevelDescription;
     const nextLevel = levelData.nextLevel;
     const progress = levelData.progress || { percentage: 0 };
     
     // 레벨 색상 계산
-    const levelColor = window.RegularLevelManager.getLevelColor(currentLevel.rank);
+    const levelColor = window.RegularLevelManager.getLevelColor(currentLevelRank);
     
     return `
       <div class="level-card" onclick="goToStore(${levelData.storeId})">
@@ -178,11 +182,17 @@ function updateRegularLevelsList(regularLevels) {
             </div>
           </div>
           <div class="level-badge" style="background: ${levelColor}">
-            Lv.${currentLevel.rank} ${currentLevel.name}
+            Lv.${currentLevelRank} ${currentLevelName}
           </div>
         </div>
 
         <div class="level-card-body">
+          ${currentLevelDescription ? `
+            <div class="level-description">
+              <p>${currentLevelDescription}</p>
+            </div>
+          ` : ''}
+          
           ${nextLevel ? `
             <div class="progress-section">
               <div class="progress-header">
@@ -193,7 +203,10 @@ function updateRegularLevelsList(regularLevels) {
                 <div class="progress-fill" style="width: ${progress.percentage}%"></div>
               </div>
               <div class="next-level-info">
-                🎯 ${nextLevel.name} 달성까지 ${nextLevel.requiredPoints - (levelData.points || 0)}P 필요
+                🎯 ${nextLevel.name} 달성까지 
+                ${progress.points_needed ? `${progress.points_needed}P` : ''}
+                ${progress.spending_needed ? `${progress.spending_needed.toLocaleString()}원` : ''}
+                ${progress.visits_needed ? `${progress.visits_needed}회 방문` : ''} 필요
               </div>
             </div>
           ` : `
@@ -213,17 +226,6 @@ function updateRegularLevelsList(regularLevels) {
               <span class="stat-value">${(levelData.totalSpent || 0).toLocaleString()}원</span>
             </div>
           </div>
-          
-          ${currentLevel.benefits && currentLevel.benefits.length > 0 ? `
-            <div class="benefits-section">
-              <h4 class="benefits-title">🎁 현재 혜택</h4>
-              <div class="benefits-list">
-                ${currentLevel.benefits.map(benefit => `
-                  <div class="benefit-item">${benefit}</div>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
           
           <div class="level-card-footer">
             <button class="level-detail-btn" onclick="event.stopPropagation(); showLevelDetail(${levelData.storeId})">

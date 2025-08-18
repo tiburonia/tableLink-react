@@ -1783,12 +1783,12 @@ function formatBenefitName(type) {
     'premium_coupon': '프리미엄 할인',
     'free_drink': '무료 음료',
     'free_side': '사이드 메뉴 무료',
-    'free_upgrade': '무료 업그레이드',
+    'free_upgrade': '메뉴 업그레이드 무료',
     'priority_service': '우선 서비스',
     'birthday_gift': '생일 특별 선물',
     'monthly_free': '매월 무료 혜택',
     'early_access': '신메뉴 우선 체험',
-    'point_multiplier': '포인트 적립',
+    'point_multiplier': '추가 포인트 적립',
     'discount_percent': '할인 혜택',
     'free_delivery': '무료 배송'
   };

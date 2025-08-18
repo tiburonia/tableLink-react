@@ -57,7 +57,7 @@ window.RegularLevelManager = {
     }
   },
 
-  // 진행률 계산
+  // 진행률 계산 (비정규화된 데이터 사용)
   calculateProgress(userStats, nextLevel) {
     if (!userStats || !nextLevel) return null;
     
@@ -103,41 +103,58 @@ window.RegularLevelManager = {
   // 단골 레벨에 따른 색상 반환
   getLevelColor(levelRank) {
     const colors = {
+      0: '#9ca3af', // 신규고객 - 회색
       1: '#cd7f32', // 브론즈
       2: '#c0c0c0', // 실버
       3: '#ffd700', // 골드
       4: '#e5e4e2', // 플래티넘
       5: '#b9f2ff'  // 다이아몬드
     };
-    return colors[levelRank] || '#cd7f32';
+    return colors[levelRank] || '#9ca3af';
   },
 
-  // 단골 레벨 UI 렌더링
+  // 레벨 이름 포맷팅
+  formatLevelName(levelRank, levelName) {
+    if (!levelName && levelRank === 0) return '신규고객';
+    return levelName || `레벨 ${levelRank}`;
+  },
+
+  // 단골 레벨 UI 렌더링 (비정규화된 데이터 사용)
   renderLevelUI(levelData, containerSelector) {
     const container = document.querySelector(containerSelector);
     if (!container || !levelData) return;
 
-    const level = levelData.level;
     const stats = levelData.stats;
     const nextLevel = levelData.nextLevel;
     const progress = levelData.progress;
 
+    // 비정규화된 컬럼에서 레벨 정보 직접 사용
+    const currentLevelRank = stats?.currentLevelRank || 0;
+    const currentLevelName = this.formatLevelName(currentLevelRank, stats?.currentLevelName);
+    const currentLevelDescription = stats?.currentLevelDescription;
+
     container.innerHTML = `
       <div class="regular-level-card">
         <div class="level-header">
-          <div class="level-badge" style="background: ${this.getLevelColor(level?.level_rank)}">
-            <span class="level-name">${level?.level_name || '신규 고객'}</span>
+          <div class="level-badge" style="background: ${this.getLevelColor(currentLevelRank)}">
+            <span class="level-name">${currentLevelName}</span>
           </div>
           <div class="level-stats">
-            <span class="visit-count">${stats?.visit_count || 0}회 방문</span>
-            <span class="total-spent">${(stats?.total_spent || 0).toLocaleString()}원 누적</span>
+            <span class="visit-count">${stats?.visitCount || 0}회 방문</span>
+            <span class="total-spent">${(stats?.totalSpent || 0).toLocaleString()}원 누적</span>
           </div>
         </div>
+        
+        ${currentLevelDescription ? `
+          <div class="level-description">
+            <p>${currentLevelDescription}</p>
+          </div>
+        ` : ''}
         
         ${nextLevel ? `
           <div class="level-progress">
             <div class="progress-info">
-              <span>다음 레벨: ${nextLevel.level_name}</span>
+              <span>다음 레벨: ${nextLevel.name}</span>
               <span>${progress?.percentage || 0}%</span>
             </div>
             <div class="progress-bar">
@@ -146,23 +163,15 @@ window.RegularLevelManager = {
             <div class="progress-requirements">
               ${progress?.visits_needed ? `<span>방문 ${progress.visits_needed}회 더</span>` : ''}
               ${progress?.spending_needed ? `<span>결제 ${progress.spending_needed.toLocaleString()}원 더</span>` : ''}
+              ${progress?.points_needed ? `<span>포인트 ${progress.points_needed}P 더</span>` : ''}
             </div>
           </div>
-        ` : ''}
-        
-        ${level?.benefits && level.benefits.length > 0 ? `
-          <div class="level-benefits">
-            <h4>🎁 현재 레벨 혜택</h4>
-            <div class="benefits-list">
-              ${level.benefits.map(benefit => `
-                <div class="benefit-item">
-                  <span class="benefit-type">${this.formatBenefitType(benefit.type)}</span>
-                  <span class="benefit-description">${benefit.description || benefit.value}</span>
-                </div>
-              `).join('')}
-            </div>
+        ` : `
+          <div class="max-level-section">
+            <div class="max-level-badge">🏆 최고 등급 달성!</div>
+            <div class="max-level-message">축하합니다! 이 매장의 최고 단골이에요!</div>
           </div>
-        ` : ''}
+        `}
       </div>
       
       <style>
@@ -198,6 +207,16 @@ window.RegularLevelManager = {
           color: #666;
         }
         
+        .level-description {
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 16px;
+          font-size: 13px;
+          color: #555;
+          line-height: 1.4;
+        }
+        
         .level-progress {
           margin-bottom: 16px;
         }
@@ -230,37 +249,27 @@ window.RegularLevelManager = {
           gap: 12px;
           font-size: 12px;
           color: #666;
+          flex-wrap: wrap;
         }
         
-        .level-benefits h4 {
-          margin: 0 0 12px 0;
-          font-size: 14px;
-          color: #333;
+        .max-level-section {
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 12px;
+          padding: 16px;
+          text-align: center;
+          border: 1px solid #fbbf24;
         }
         
-        .benefits-list {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+        .max-level-badge {
+          font-size: 16px;
+          font-weight: 700;
+          color: #92400e;
+          margin-bottom: 4px;
         }
         
-        .benefit-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 12px;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 8px;
-          font-size: 13px;
-        }
-        
-        .benefit-type {
-          font-weight: 600;
-          color: #667eea;
-        }
-        
-        .benefit-description {
-          color: #333;
+        .max-level-message {
+          font-size: 12px;
+          color: #b45309;
         }
       </style>
     `;
@@ -290,4 +299,4 @@ window.RegularLevelManager = {
   }
 };
 
-console.log('✅ RegularLevelManager 로드 완료');
+console.log('✅ RegularLevelManager 로드 완료 (비정규화 데이터 지원)');

@@ -1299,8 +1299,21 @@ async function renderMyPage() {
           font-size: 11px;
         }
       }
+      /* 단골 레벨 설명 추가 */
+      .level-item-description {
+        margin-top: 12px;
+        padding: 10px;
+        background-color: #f9fafb;
+        border-radius: 8px;
+        border: 1px solid #f3f4f6;
+      }
+      .level-item-description p {
+        margin: 0;
+        font-size: 13px;
+        color: #4b5563;
+        line-height: 1.5;
+      }
 
-      
     </style>
   `;
 
@@ -1793,13 +1806,13 @@ async function updateOrderList(currentUserInfo, ordersData) {
       btn.addEventListener('click', async (e) => {
         const orderIndex = parseInt(e.target.closest('.review-btn').getAttribute('data-order-index'));
         const order = ordersData[orderIndex];
-        
+
         // 리뷰 작성 스크립트 로드
         await loadReviewWriteScript();
-        
+
         // 이전 화면 정보 저장
         window.previousScreen = 'renderMyPage';
-        
+
         // 리뷰 작성 화면으로 이동
         if (typeof renderReviewWrite === 'function') {
           renderReviewWrite(order);
@@ -1930,18 +1943,21 @@ async function updateRegularLevelsList(currentUserInfo) {
     if (regularLevels && regularLevels.length > 0) {
       const displayLevels = regularLevels.slice(0, 3);
 
-      displayLevels.forEach(levelData => {
-        const levelDiv = document.createElement('div');
-        levelDiv.className = 'regular-level-item';
-        levelDiv.onclick = () => goToStore(levelData.storeId);
-        const currentLevel = levelData.currentLevel || { name: '신규 고객', rank: 0 };
-        const levelColor = window.RegularLevelManager.getLevelColor(currentLevel.rank);
-        
-        levelDiv.innerHTML = `
+      displayLevels.forEach((levelData, index) => {
+        // 비정규화된 데이터 직접 사용
+        const currentLevelRank = levelData.currentLevelRank || 0;
+        const currentLevelName = window.RegularLevelManager.formatLevelName(currentLevelRank, levelData.currentLevelName);
+        const levelColor = window.RegularLevelManager.getLevelColor(currentLevelRank);
+
+        const levelCard = document.createElement('div');
+        levelCard.className = 'regular-level-item';
+        levelCard.onclick = () => goToStore(levelData.storeId);
+
+        levelCard.innerHTML = `
           <div class="level-store-header">
             <div class="level-store-name">${levelData.storeName || '매장 정보 없음'}</div>
             <div class="level-badge" style="background: ${levelColor}">
-              Lv.${currentLevel.rank} ${currentLevel.name}
+              Lv.${currentLevelRank} ${currentLevelName}
             </div>
           </div>
           <div class="level-progress">
@@ -1951,8 +1967,14 @@ async function updateRegularLevelsList(currentUserInfo) {
               <span>${(levelData.totalSpent || 0).toLocaleString()}원</span>
             </div>
           </div>
+          ${levelData.currentLevelDescription ? `
+            <div class="level-item-description">
+              <p>${levelData.currentLevelDescription}</p>
+            </div>
+          ` : ''}
         `;
-        regularLevelsListDiv.appendChild(levelDiv);
+
+        regularLevelsListDiv.appendChild(levelCard);
       });
     } else {
       regularLevelsListDiv.innerHTML = `
@@ -2062,7 +2084,7 @@ async function loadReviewWriteScript() {
     console.log('🔄 renderReviewWrite 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/store/review/renderReviewWrite.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderReviewWrite 스크립트 로드 완료');
@@ -2147,7 +2169,7 @@ async function loadAllOrderScript() {
     console.log('🔄 renderAllOrderHTML 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/store/order/renderAllOrderHTML.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllOrderHTML 스크립트 로드 완료');
@@ -2174,7 +2196,7 @@ async function loadMyReviewsScript() {
     console.log('🔄 renderMyReviews 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllReview.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderMyReviews 스크립트 로드 완료');
@@ -2201,7 +2223,7 @@ async function loadAllFavoritesScript() {
     console.log('🔄 renderAllFavorites 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllFavorites.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllFavorites 스크립트 로드 완료');
@@ -2228,7 +2250,7 @@ async function loadAllRegularLevelsScript() {
     console.log('🔄 renderAllRegularLevels 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllRegularLevels.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllRegularLevels 스크립트 로드 완료');
@@ -2255,7 +2277,7 @@ async function loadAllPointsScript() {
     console.log('🔄 renderAllPoints 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllPoints.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllPoints 스크립트 로드 완료');
@@ -2282,7 +2304,7 @@ async function loadAllCouponsScript() {
     console.log('🔄 renderAllCoupons 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllCoupons.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllCoupons 스크립트 로드 완료');
