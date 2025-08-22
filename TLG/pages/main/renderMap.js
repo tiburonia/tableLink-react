@@ -972,8 +972,9 @@ async function renderMap() {
 
       const data = await response.json();
       
-      if (data.success && data.documents) {
-        return data.documents;
+      if (data.success && data.places) {
+        console.log(`✅ 장소 검색 성공: ${data.places.length}개 결과`);
+        return data.places;
       } else {
         console.warn('장소 검색 결과가 없습니다:', data);
         return [];
