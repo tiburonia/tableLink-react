@@ -1152,14 +1152,82 @@ async function renderMap() {
     }
 
     try {
-      const response = await fetch(`/api/stores/regions/coordinates?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`);
-      const data = await response.json();
+      // 행정기관 좌표 조회 시도
+      let coords = null;
+      let locationName = `${province} ${city} ${district}`;
       
-      if (data.success && data.coordinates) {
-        const locationName = `${province} ${city} ${district}`;
-        setCurrentLocation(data.coordinates.lat, data.coordinates.lng, locationName);
+      // 1. 시/군/구 행정기관 좌표 시도
+      try {
+        const adminResponse = await fetch(`/api/stores/administrative-office?regionType=sigungu&regionName=${encodeURIComponent(city)}`);
+        const adminData = await adminResponse.json();
+        
+        if (adminData.success && adminData.office) {
+          coords = {
+            lat: adminData.office.latitude,
+            lng: adminData.office.longitude
+          };
+          locationName = `${city} (행정기관)`;
+          console.log(`✅ 시군구 행정기관 좌표 발견: ${city}`);
+        }
+      } catch (error) {
+        console.warn('시군구 행정기관 좌표 조회 실패:', error);
+      }
+      
+      // 2. 시도 행정기관 좌표 시도 (시군구 실패시)
+      if (!coords) {
+        try {
+          const provinceResponse = await fetch(`/api/stores/administrative-office?regionType=sido&regionName=${encodeURIComponent(province)}`);
+          const provinceData = await provinceResponse.json();
+          
+          if (provinceData.success && provinceData.office) {
+            coords = {
+              lat: provinceData.office.latitude,
+              lng: provinceData.office.longitude
+            };
+            locationName = `${province} (도청/시청)`;
+            console.log(`✅ 시도 행정기관 좌표 발견: ${province}`);
+          }
+        } catch (error) {
+          console.warn('시도 행정기관 좌표 조회 실패:', error);
+        }
+      }
+      
+      // 3. 읍면동 중심점 시도 (행정기관 실패시)
+      if (!coords) {
+        try {
+          const districtResponse = await fetch(`/api/stores/eupmyeondong-center?sido=${encodeURIComponent(province)}&sigungu=${encodeURIComponent(city)}&eupmyeondong=${encodeURIComponent(district)}`);
+          const districtData = await districtResponse.json();
+          
+          if (districtData.success && districtData.center) {
+            coords = {
+              lat: districtData.center.latitude,
+              lng: districtData.center.longitude
+            };
+            locationName = `${district} (중심점)`;
+            console.log(`✅ 읍면동 중심점 좌표 발견: ${district}`);
+          }
+        } catch (error) {
+          console.warn('읍면동 중심점 조회 실패:', error);
+        }
+      }
+      
+      // 4. 기본 좌표 API 시도 (모든 것이 실패시)
+      if (!coords) {
+        const response = await fetch(`/api/stores/regions/coordinates?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`);
+        const data = await response.json();
+        
+        if (data.success && data.coordinates) {
+          coords = data.coordinates;
+          locationName = `${province} ${city} ${district}`;
+          console.log(`✅ 기본 좌표 API 성공`);
+        }
+      }
+      
+      if (coords) {
+        setCurrentLocation(coords.lat, coords.lng, locationName);
         locationModal.classList.add('hidden');
         resetRegionSelects();
+        console.log(`📍 위치 설정 완료: ${locationName} - 행정기관 우선`);
       } else {
         alert('해당 지역의 좌표를 찾을 수 없습니다.');
       }
@@ -1214,22 +1282,11 @@ async function renderMap() {
     map.setCenter(position);
     map.setLevel(3);
 
-    // 기존 위치 마커 제거
+    // 기존 위치 마커 제거 (마커 생성하지 않음)
     if (currentLocationMarker) {
       currentLocationMarker.setMap(null);
+      currentLocationMarker = null;
     }
-
-    // 새 위치 마커 생성
-    const markerImageSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTYiIGZpbGw9IiMxMGI5ODEiLz4KPGNpcmNsZSBjeD0iMTYiIGN5PSIxNiIgcj0iMTIiIGZpbGw9IndoaXRlIi8+CjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjgiIGZpbGw9IiMxMGI5ODEiLz4KPC9zdmc+Cg==';
-    const markerImageSize = new kakao.maps.Size(32, 32);
-    const markerImageOption = { offset: new kakao.maps.Point(16, 16) };
-    const markerImage = new kakao.maps.MarkerImage(markerImageSrc, markerImageSize, markerImageOption);
-
-    currentLocationMarker = new kakao.maps.Marker({
-      position: position,
-      image: markerImage,
-      map: map
-    });
 
     // 위치 정보 업데이트
     const locationTextElement = document.getElementById('locationText');
