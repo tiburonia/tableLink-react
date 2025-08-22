@@ -589,6 +589,7 @@ async function renderMyPage() {
         display: flex;
         flex-direction: column;
         gap: 24px;
+        margin-bottom: 80px;
       }
 
       /* 섹션 카드 */
@@ -1472,12 +1473,12 @@ function adjustMypagePanelLayout() {
   let panelHeight;
   if (isExpanded) {
     panelHeight = vh - bottomBarHeight - handleHeight;
-    // 확장된 상태에서는 최소한의 패딩으로 스크롤 공간 확보
-    panelContainer.style.paddingBottom = '40px';
+    // 확장된 상태에서는 충분한 패딩으로 스크롤 끝까지 가능하도록
+    panelContainer.style.paddingBottom = '120px';
   } else {
     panelHeight = vh - top - bottomBarHeight - handleHeight;
-    // 축소된 상태에서는 적절한 패딩
-    panelContainer.style.paddingBottom = '60px';
+    // 축소된 상태에서는 더 큰 패딩
+    panelContainer.style.paddingBottom = '100px';
   }
 
   panelContainer.style.height = `${panelHeight}px`;
