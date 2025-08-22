@@ -1472,12 +1472,12 @@ function adjustMypagePanelLayout() {
   let panelHeight;
   if (isExpanded) {
     panelHeight = vh - bottomBarHeight - handleHeight;
-    // 확장된 상태에서는 바텀 패딩을 줄여서 공간 최대화
-    panelContainer.style.paddingBottom = '20px';
+    // 확장된 상태에서는 최소한의 패딩으로 스크롤 공간 확보
+    panelContainer.style.paddingBottom = '40px';
   } else {
     panelHeight = vh - top - bottomBarHeight - handleHeight;
-    // 축소된 상태에서는 충분한 패딩 유지
-    panelContainer.style.paddingBottom = '100px';
+    // 축소된 상태에서는 적절한 패딩
+    panelContainer.style.paddingBottom = '60px';
   }
 
   panelContainer.style.height = `${panelHeight}px`;
