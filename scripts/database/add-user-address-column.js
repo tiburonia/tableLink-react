@@ -1,4 +1,3 @@
-
 const pool = require('../../shared/config/database');
 
 async function addUserAddressColumn() {
@@ -19,15 +18,24 @@ async function addUserAddressColumn() {
       return;
     }
 
-    // 2. user_address 컬럼 추가
+    // 2. user_address 컬럼 추가 (기본값: 서울시청 좌표)
     await client.query(`
       ALTER TABLE users 
-      ADD COLUMN user_address TEXT
+      ADD COLUMN user_address TEXT DEFAULT '37.5666103,126.9783882'
     `);
 
     console.log('✅ user_address 컬럼 추가 완료');
 
-    // 3. 업데이트된 테이블 구조 확인
+    // 3. 기존 사용자들의 user_address를 서울시청 좌표로 설정
+    await client.query(`
+      UPDATE users 
+      SET user_address = '37.5666103,126.9783882' 
+      WHERE user_address IS NULL
+    `);
+
+    console.log('✅ 기존 사용자들의 기본 주소를 서울시청 좌표로 설정 완료');
+
+    // 4. 업데이트된 테이블 구조 확인
     const updatedResult = await client.query(`
       SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns 
