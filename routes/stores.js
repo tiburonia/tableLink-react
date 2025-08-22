@@ -6,13 +6,13 @@ const pool = require('../shared/config/database');
 router.get('/regions/provinces', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT DISTINCT province 
+      SELECT DISTINCT sido 
       FROM store_address 
-      WHERE province IS NOT NULL 
-      ORDER BY province
+      WHERE sido IS NOT NULL 
+      ORDER BY sido
     `);
 
-    const provinces = result.rows.map(row => row.province);
+    const provinces = result.rows.map(row => row.sido);
 
     res.json({
       success: true,
@@ -40,13 +40,13 @@ router.get('/regions/cities', async (req, res) => {
     }
 
     const result = await pool.query(`
-      SELECT DISTINCT city 
+      SELECT DISTINCT sigungu 
       FROM store_address 
-      WHERE province = $1 AND city IS NOT NULL 
-      ORDER BY city
+      WHERE sido = $1 AND sigungu IS NOT NULL 
+      ORDER BY sigungu
     `, [province]);
 
-    const cities = result.rows.map(row => row.city);
+    const cities = result.rows.map(row => row.sigungu);
 
     res.json({
       success: true,
@@ -74,13 +74,13 @@ router.get('/regions/districts', async (req, res) => {
     }
 
     const result = await pool.query(`
-      SELECT DISTINCT district 
+      SELECT DISTINCT eupmyeondong 
       FROM store_address 
-      WHERE province = $1 AND city = $2 AND district IS NOT NULL 
-      ORDER BY district
+      WHERE sido = $1 AND sigungu = $2 AND eupmyeondong IS NOT NULL 
+      ORDER BY eupmyeondong
     `, [province, city]);
 
-    const districts = result.rows.map(row => row.district);
+    const districts = result.rows.map(row => row.eupmyeondong);
 
     res.json({
       success: true,
@@ -110,7 +110,7 @@ router.get('/regions/coordinates', async (req, res) => {
     const result = await pool.query(`
       SELECT latitude, longitude 
       FROM store_address 
-      WHERE province = $1 AND city = $2 AND district = $3 
+      WHERE sido = $1 AND sigungu = $2 AND eupmyeondong = $3 
         AND latitude IS NOT NULL AND longitude IS NOT NULL 
       LIMIT 1
     `, [province, city, district]);
