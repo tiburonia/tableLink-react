@@ -36,11 +36,35 @@ async function renderMap() {
             <button id="closeModal" class="close-btn">✕</button>
           </div>
           <div class="modal-body">
-            <div class="location-search">
-              <input id="locationSearchInput" type="text" placeholder="주소 또는 장소명을 입력하세요">
-              <button id="locationSearchBtn">검색</button>
+            <div class="region-selection-container">
+              <div class="select-group">
+                <label for="provinceSelect">시/도</label>
+                <select id="provinceSelect" class="region-select">
+                  <option value="">시/도를 선택하세요</option>
+                </select>
+              </div>
+              
+              <div class="select-group">
+                <label for="citySelect">시/군/구</label>
+                <select id="citySelect" class="region-select" disabled>
+                  <option value="">시/군/구를 선택하세요</option>
+                </select>
+              </div>
+              
+              <div class="select-group">
+                <label for="districtSelect">읍/면/동</label>
+                <select id="districtSelect" class="region-select" disabled>
+                  <option value="">읍/면/동을 선택하세요</option>
+                </select>
+              </div>
+              
+              <button id="confirmLocationBtn" class="confirm-location-btn" disabled>
+                📍 이 위치로 설정
+              </button>
             </div>
-            <div id="locationSearchResults" class="location-results"></div>
+            
+            <div class="divider">또는</div>
+            
             <div class="current-location-section">
               <button id="getCurrentLocationBtn" class="get-current-btn">
                 🎯 현재 GPS 위치 사용
@@ -260,78 +284,97 @@ async function renderMap() {
   overflow-y: auto;
 }
 
-.location-search {
-  display: flex;
-  gap: 8px;
+.region-selection-container {
+  margin-bottom: 20px;
+}
+
+.select-group {
   margin-bottom: 16px;
 }
 
-#locationSearchInput {
-  flex: 1;
+.select-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 6px;
+}
+
+.region-select {
+  width: 100%;
   padding: 12px 16px;
   border: 2px solid #e2e8f0;
   border-radius: 12px;
   font-size: 14px;
+  background: white;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-#locationSearchInput:focus {
+.region-select:focus {
   border-color: #4299e1;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
 
-#locationSearchBtn {
-  padding: 12px 20px;
+.region-select:disabled {
+  background: #f7fafc;
+  color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.confirm-location-btn {
+  width: 100%;
+  padding: 14px 20px;
   background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
   color: white;
   border: none;
   border-radius: 12px;
   font-weight: 600;
+  font-size: 15px;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  margin-top: 8px;
 }
 
-#locationSearchBtn:hover {
+.confirm-location-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #3182ce 0%, #2c5282 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
 }
 
-.location-results {
-  max-height: 200px;
-  overflow-y: auto;
-  margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f7fafc;
+.confirm-location-btn:disabled {
+  background: #e2e8f0;
+  color: #a0aec0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
-.location-result-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.location-result-item:last-child {
-  border-bottom: none;
-}
-
-.location-result-item:hover {
-  background: #edf2f7;
-}
-
-.location-name {
-  font-weight: 600;
-  color: #2d3748;
-  margin-bottom: 4px;
-}
-
-.location-address {
-  font-size: 12px;
+.divider {
+  text-align: center;
+  margin: 20px 0;
+  position: relative;
   color: #718096;
+  font-size: 14px;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.divider span, .divider {
+  background: white;
+  padding: 0 16px;
+  position: relative;
+  z-index: 2;
 }
 
 .current-location-section {
@@ -941,22 +984,20 @@ async function renderMap() {
   // 위치 설정 모달 열기
   locationBtn.addEventListener('click', () => {
     locationModal.classList.remove('hidden');
-    locationSearchInput.focus();
+    loadProvinces(); // 시/도 데이터 로드
   });
 
   // 모달 닫기
   closeModal.addEventListener('click', () => {
     locationModal.classList.add('hidden');
-    locationSearchInput.value = '';
-    locationSearchResults.innerHTML = '';
+    resetRegionSelects();
   });
 
   // 모달 외부 클릭으로 닫기
   locationModal.addEventListener('click', (e) => {
     if (e.target === locationModal) {
       locationModal.classList.add('hidden');
-      locationSearchInput.value = '';
-      locationSearchResults.innerHTML = '';
+      resetRegionSelects();
     }
   });
 
@@ -972,9 +1013,9 @@ async function renderMap() {
 
       const data = await response.json();
       
-      if (data.success && data.places) {
-        console.log(`✅ 장소 검색 성공: ${data.places.length}개 결과`);
-        return data.places;
+      if (data.success && data.documents && data.documents.length > 0) {
+        console.log(`✅ 장소 검색 성공: ${data.documents.length}개 결과`);
+        return data.documents;
       } else {
         console.warn('장소 검색 결과가 없습니다:', data);
         return [];
@@ -985,63 +1026,146 @@ async function renderMap() {
     }
   }
 
-  // 장소 검색 결과 표시
-  function displayLocationResults(places) {
-    if (places.length === 0) {
-      locationSearchResults.innerHTML = `
-        <div class="location-result-item" style="text-align: center; color: #718096;">
-          검색 결과가 없습니다
-        </div>
-      `;
+  // 지역 선택 관련 변수들
+  const provinceSelect = document.getElementById('provinceSelect');
+  const citySelect = document.getElementById('citySelect');
+  const districtSelect = document.getElementById('districtSelect');
+  const confirmLocationBtn = document.getElementById('confirmLocationBtn');
+
+  // 지역 데이터 로드
+  async function loadProvinces() {
+    try {
+      const response = await fetch('/api/stores/regions/provinces');
+      const data = await response.json();
+      
+      if (data.success) {
+        provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
+        data.provinces.forEach(province => {
+          const option = document.createElement('option');
+          option.value = province;
+          option.textContent = province;
+          provinceSelect.appendChild(option);
+        });
+      }
+    } catch (error) {
+      console.error('시/도 데이터 로드 실패:', error);
+    }
+  }
+
+  async function loadCities(province) {
+    try {
+      const response = await fetch(`/api/stores/regions/cities?province=${encodeURIComponent(province)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
+        citySelect.disabled = false;
+        data.cities.forEach(city => {
+          const option = document.createElement('option');
+          option.value = city;
+          option.textContent = city;
+          citySelect.appendChild(option);
+        });
+        
+        // 하위 선택 초기화
+        districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
+        districtSelect.disabled = true;
+        confirmLocationBtn.disabled = true;
+      }
+    } catch (error) {
+      console.error('시/군/구 데이터 로드 실패:', error);
+    }
+  }
+
+  async function loadDistricts(province, city) {
+    try {
+      const response = await fetch(`/api/stores/regions/districts?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
+        districtSelect.disabled = false;
+        data.districts.forEach(district => {
+          const option = document.createElement('option');
+          option.value = district;
+          option.textContent = district;
+          districtSelect.appendChild(option);
+        });
+        
+        confirmLocationBtn.disabled = true;
+      }
+    } catch (error) {
+      console.error('읍/면/동 데이터 로드 실패:', error);
+    }
+  }
+
+  // 지역 선택 초기화
+  function resetRegionSelects() {
+    provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
+    citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
+    districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
+    citySelect.disabled = true;
+    districtSelect.disabled = true;
+    confirmLocationBtn.disabled = true;
+  }
+
+  // 지역 선택 이벤트 리스너
+  provinceSelect.addEventListener('change', (e) => {
+    const province = e.target.value;
+    if (province) {
+      loadCities(province);
+    } else {
+      citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
+      citySelect.disabled = true;
+      districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
+      districtSelect.disabled = true;
+      confirmLocationBtn.disabled = true;
+    }
+  });
+
+  citySelect.addEventListener('change', (e) => {
+    const city = e.target.value;
+    const province = provinceSelect.value;
+    if (province && city) {
+      loadDistricts(province, city);
+    } else {
+      districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
+      districtSelect.disabled = true;
+      confirmLocationBtn.disabled = true;
+    }
+  });
+
+  districtSelect.addEventListener('change', (e) => {
+    const district = e.target.value;
+    confirmLocationBtn.disabled = !district;
+  });
+
+  // 위치 확인 버튼 클릭
+  confirmLocationBtn.addEventListener('click', async () => {
+    const province = provinceSelect.value;
+    const city = citySelect.value;
+    const district = districtSelect.value;
+    
+    if (!province || !city || !district) {
+      alert('모든 지역을 선택해주세요.');
       return;
     }
 
-    locationSearchResults.innerHTML = places.slice(0, 10).map(place => `
-      <div class="location-result-item" data-lat="${place.y}" data-lng="${place.x}">
-        <div class="location-name">${place.place_name}</div>
-        <div class="location-address">${place.address_name}</div>
-      </div>
-    `).join('');
-
-    // 검색 결과 클릭 이벤트
-    locationSearchResults.querySelectorAll('.location-result-item').forEach(item => {
-      if (item.dataset.lat && item.dataset.lng) {
-        item.addEventListener('click', () => {
-          const lat = parseFloat(item.dataset.lat);
-          const lng = parseFloat(item.dataset.lng);
-          const placeName = item.querySelector('.location-name').textContent;
-          
-          setCurrentLocation(lat, lng, placeName);
-          locationModal.classList.add('hidden');
-          locationSearchInput.value = '';
-          locationSearchResults.innerHTML = '';
-        });
+    try {
+      const response = await fetch(`/api/stores/regions/coordinates?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`);
+      const data = await response.json();
+      
+      if (data.success && data.coordinates) {
+        const locationName = `${province} ${city} ${district}`;
+        setCurrentLocation(data.coordinates.lat, data.coordinates.lng, locationName);
+        locationModal.classList.add('hidden');
+        resetRegionSelects();
+      } else {
+        alert('해당 지역의 좌표를 찾을 수 없습니다.');
       }
-    });
-  }
-
-  // 위치 검색
-  async function performLocationSearch() {
-    const query = locationSearchInput.value.trim();
-    if (!query) return;
-
-    locationSearchResults.innerHTML = `
-      <div class="location-result-item" style="text-align: center; color: #718096;">
-        <div style="margin: 10px 0;">검색 중...</div>
-      </div>
-    `;
-
-    const places = await searchPlaces(query);
-    displayLocationResults(places);
-  }
-
-  // 위치 검색 버튼 클릭
-  locationSearchBtn.addEventListener('click', performLocationSearch);
-
-  // 위치 검색 Enter 키
-  locationSearchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      performLocationSearch();
+    } catch (error) {
+      console.error('좌표 조회 실패:', error);
+      alert('위치 정보를 가져올 수 없습니다.');
     }
   });
 

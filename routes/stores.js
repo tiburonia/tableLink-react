@@ -2,179 +2,145 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// 행정기관 좌표 배치 조회 (성능 최적화)
-router.post('/administrative-offices-batch', async (req, res) => {
+// 지역 선택 - 시/도 목록 조회
+router.get('/regions/provinces', async (req, res) => {
   try {
-    const { requests } = req.body;
+    const result = await pool.query(`
+      SELECT DISTINCT province 
+      FROM store_address 
+      WHERE province IS NOT NULL 
+      ORDER BY province
+    `);
 
-    if (!requests || !Array.isArray(requests)) {
-      return res.status(400).json({
-        success: false,
-        error: '요청 배열이 필요합니다'
-      });
-    }
-
-    console.log(`🚀 행정기관 좌표 배치 조회: ${requests.length}개 요청`);
-
-    // 요청을 타입별로 그룹화
-    const sidoRequests = requests.filter(req => req.regionType === 'sido');
-    const sigunguRequests = requests.filter(req => req.regionType === 'sigungu');
-
-    const offices = [];
-
-    // 시도 단위 배치 조회
-    if (sidoRequests.length > 0) {
-      const sidoNames = sidoRequests.map(req => `%${req.regionName}%`);
-      const sidoQuery = `
-        SELECT latitude, longitude, region_name as name
-        FROM administrative_offices 
-        WHERE region_type = 'sido' AND (${sidoNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
-      `;
-      const sidoResult = await pool.query(sidoQuery, sidoNames);
-      offices.push(...sidoResult.rows);
-    }
-
-    // 시군구 단위 배치 조회
-    if (sigunguRequests.length > 0) {
-      const sigunguNames = sigunguRequests.map(req => `%${req.regionName}%`);
-      const sigunguQuery = `
-        SELECT latitude, longitude, region_name as name
-        FROM administrative_offices 
-        WHERE region_type = 'sigungu' AND (${sigunguNames.map((_, i) => `region_name LIKE $${i + 1}`).join(' OR ')})
-      `;
-      const sigunguResult = await pool.query(sigunguQuery, sigunguNames);
-      offices.push(...sigunguResult.rows);
-    }
-
-    console.log(`✅ 배치 조회 완료: ${offices.length}개 행정기관`);
+    const provinces = result.rows.map(row => row.province);
 
     res.json({
       success: true,
-      offices: offices
+      provinces: provinces
     });
   } catch (error) {
-    console.error('❌ 행정기관 배치 조회 실패:', error);
+    console.error('시/도 목록 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '서버 오류'
+      error: '시/도 목록 조회 실패'
     });
   }
 });
 
-// 행정기관 좌표 조회 (기존 API 유지)
-router.get('/administrative-office', async (req, res) => {
+// 지역 선택 - 시/군/구 목록 조회
+router.get('/regions/cities', async (req, res) => {
   try {
-    const { regionType, regionName } = req.query;
+    const { province } = req.query;
 
-    if (!regionType || !regionName) {
+    if (!province) {
       return res.status(400).json({
         success: false,
-        error: '지역 타입과 이름이 필요합니다'
+        error: '시/도를 선택해주세요'
       });
     }
 
-    console.log(`🏛️ 행정기관 좌표 조회: ${regionType} - ${regionName}`);
-
-    let query;
-    if (regionType === 'sido') {
-      query = `
-        SELECT latitude, longitude, region_name as name
-        FROM administrative_offices 
-        WHERE region_type = 'sido' AND region_name LIKE $1
-        LIMIT 1
-      `;
-    } else {
-      query = `
-        SELECT latitude, longitude, region_name as name
-        FROM administrative_offices 
-        WHERE region_type = 'sigungu' AND region_name LIKE $1
-        LIMIT 1
-      `;
-    }
-
-    const result = await pool.query(query, [`%${regionName}%`]);
-
-    if (result.rows.length > 0) {
-      const office = result.rows[0];
-      console.log(`✅ 행정기관 좌표 발견: ${office.name} (${office.latitude}, ${office.longitude})`);
-      res.json({
-        success: true,
-        office: office
-      });
-    } else {
-      console.log(`⚠️ 행정기관 좌표 없음: ${regionType} - ${regionName}`);
-      res.json({
-        success: false,
-        error: '행정기관을 찾을 수 없습니다'
-      });
-    }
-  } catch (error) {
-    console.error('❌ 행정기관 좌표 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '서버 오류'
-    });
-  }
-});
-
-// 읍면동 중심점 좌표 계산 API (ST_PointOnSurface 사용)
-router.get('/eupmyeondong-center', async (req, res) => {
-  try {
-    const { sido, sigungu, eupmyeondong } = req.query;
-
-    if (!sido || !sigungu || !eupmyeondong) {
-      return res.status(400).json({
-        success: false,
-        error: 'sido, sigungu, eupmyeondong이 모두 필요합니다'
-      });
-    }
-
-    console.log(`📍 읍면동 중심점 계산: ${sido} ${sigungu} ${eupmyeondong}`);
-
-    // PostGIS가 없는 경우 단순 평균 좌표로 중심점 계산
     const result = await pool.query(`
-      SELECT 
-        AVG(sa.latitude) as center_lat,
-        AVG(sa.longitude) as center_lng,
-        COUNT(*) as store_count
-      FROM store_address sa
-      WHERE sa.sido = $1 
-        AND sa.sigungu = $2 
-        AND sa.eupmyeondong = $3
-        AND sa.latitude IS NOT NULL 
-        AND sa.longitude IS NOT NULL
-      HAVING COUNT(*) > 0;
-    `, [sido, sigungu, eupmyeondong]);
+      SELECT DISTINCT city 
+      FROM store_address 
+      WHERE province = $1 AND city IS NOT NULL 
+      ORDER BY city
+    `, [province]);
 
-    if (result.rows.length === 0 || !result.rows[0].center_lat) {
-      console.log(`⚠️ 읍면동 중심점 계산 실패: ${sido} ${sigungu} ${eupmyeondong}`);
+    const cities = result.rows.map(row => row.city);
+
+    res.json({
+      success: true,
+      cities: cities
+    });
+  } catch (error) {
+    console.error('시/군/구 목록 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '시/군/구 목록 조회 실패'
+    });
+  }
+});
+
+// 지역 선택 - 읍/면/동 목록 조회
+router.get('/regions/districts', async (req, res) => {
+  try {
+    const { province, city } = req.query;
+
+    if (!province || !city) {
+      return res.status(400).json({
+        success: false,
+        error: '시/도와 시/군/구를 선택해주세요'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT DISTINCT district 
+      FROM store_address 
+      WHERE province = $1 AND city = $2 AND district IS NOT NULL 
+      ORDER BY district
+    `, [province, city]);
+
+    const districts = result.rows.map(row => row.district);
+
+    res.json({
+      success: true,
+      districts: districts
+    });
+  } catch (error) {
+    console.error('읍/면/동 목록 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '읍/면/동 목록 조회 실패'
+    });
+  }
+});
+
+// 지역 선택 - 좌표 조회
+router.get('/regions/coordinates', async (req, res) => {
+  try {
+    const { province, city, district } = req.query;
+
+    if (!province || !city || !district) {
+      return res.status(400).json({
+        success: false,
+        error: '모든 지역을 선택해주세요'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT latitude, longitude 
+      FROM store_address 
+      WHERE province = $1 AND city = $2 AND district = $3 
+        AND latitude IS NOT NULL AND longitude IS NOT NULL 
+      LIMIT 1
+    `, [province, city, district]);
+
+    if (result.rows.length === 0) {
       return res.json({
         success: false,
-        error: '해당 읍면동의 중심점을 계산할 수 없습니다'
+        error: '해당 지역의 좌표를 찾을 수 없습니다'
       });
     }
 
-    const center = result.rows[0];
-    console.log(`✅ 읍면동 중심점: ${sido} ${sigungu} ${eupmyeondong} (${center.center_lat}, ${center.center_lng})`);
+    const { latitude, longitude } = result.rows[0];
 
     res.json({
       success: true,
-      center: {
-        latitude: parseFloat(center.center_lat),
-        longitude: parseFloat(center.center_lng)
+      coordinates: {
+        lat: parseFloat(latitude),
+        lng: parseFloat(longitude)
       }
     });
-
   } catch (error) {
-    console.error('❌ 읍면동 중심점 계산 실패:', error);
+    console.error('좌표 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '읍면동 중심점 계산 실패: ' + error.message
+      error: '좌표 조회 실패'
     });
   }
 });
 
-// 위치 정보 조회 API
+// 현재 위치 정보 조회 (카카오 API 프록시)
 router.get('/get-location-info', async (req, res) => {
   try {
     const { lat, lng } = req.query;
