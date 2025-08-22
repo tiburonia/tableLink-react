@@ -723,26 +723,50 @@ async function renderMap() {
       return;
     }
 
+    console.log(`🔍 통합 검색 시작: "${keyword}"`);
+    
     try {
       // 매장 검색과 장소 검색을 동시에 실행
+      console.log(`📡 매장 검색 및 장소 검색 API 호출 시작`);
+      
       const [storeResponse, placeResults] = await Promise.all([
         fetch('/api/stores/search?query=' + encodeURIComponent(keyword)),
         searchPlaces(keyword)
       ]);
 
+      console.log(`📡 매장 검색 응답 상태: ${storeResponse.status}`);
+      console.log(`📡 장소 검색 결과: ${placeResults?.length || 0}개`);
+
       const storeData = await storeResponse.json();
       const stores = storeData.stores || [];
+      
+      console.log(`📊 매장 검색 결과: ${stores.length}개`);
+      console.log(`📊 장소 검색 결과: ${placeResults?.length || 0}개`);
 
       displayCombinedResults(stores, placeResults, keyword);
+      
+      // 검색 결과창 표시
+      searchResults.classList.remove('hidden');
+      
     } catch (error) {
-      console.error('검색 실패:', error);
-      searchResults.innerHTML = '<div class="search-result-item">검색 중 오류가 발생했습니다.</div>';
+      console.error('❌ 통합 검색 실패:', error);
+      searchResults.innerHTML = `
+        <div class="search-result-item">
+          <div style="text-align: center; padding: 20px; color: #e74c3c;">
+            <div style="font-size: 18px; margin-bottom: 8px;">⚠️</div>
+            <div style="font-weight: 600; margin-bottom: 4px;">검색 중 오류가 발생했습니다</div>
+            <div style="font-size: 12px; color: #999;">잠시 후 다시 시도해주세요</div>
+          </div>
+        </div>
+      `;
       searchResults.classList.remove('hidden');
     }
   }
 
   // 통합 검색 결과 표시 (매장 + 위치)
   function displayCombinedResults(stores, places, keyword) {
+    console.log(`🔍 검색 결과 표시: 매장 ${stores?.length || 0}개, 장소 ${places?.length || 0}개`);
+    
     // 현재 위치 UI 숨기기
     const locationInfo = document.getElementById('locationInfo');
     if (locationInfo) {
@@ -750,16 +774,18 @@ async function renderMap() {
     }
 
     let resultHTML = '';
+    const totalResults = (stores?.length || 0) + (places?.length || 0);
 
     // 위치 검색 결과가 있으면 먼저 표시
     if (places && places.length > 0) {
+      console.log(`📍 장소 검색 결과 표시: ${places.length}개`);
       resultHTML += `
         <div style="padding: 8px 16px; background: #f0f9ff; font-size: 12px; font-weight: 600; color: #1e40af; border-bottom: 1px solid #e0e7ff;">
-          📍 위치 검색 결과
+          📍 위치 검색 결과 (${places.length}개)
         </div>
       `;
       
-      resultHTML += places.slice(0, 3).map(place => `
+      resultHTML += places.slice(0, 5).map(place => `
         <div class="search-result-item location-search-item" data-lat="${place.y}" data-lng="${place.x}">
           <div class="result-name">📍 ${place.place_name}</div>
           <div class="result-info">${place.address_name} • 위치로 이동</div>
@@ -768,11 +794,12 @@ async function renderMap() {
     }
 
     // 매장 검색 결과 표시
-    if (stores.length > 0) {
+    if (stores && stores.length > 0) {
+      console.log(`🏪 매장 검색 결과 표시: ${stores.length}개`);
       if (resultHTML) {
         resultHTML += `
           <div style="padding: 8px 16px; background: #fef3f2; font-size: 12px; font-weight: 600; color: #b91c1c; border-bottom: 1px solid #fecaca;">
-            🏪 매장 검색 결과
+            🏪 매장 검색 결과 (${stores.length}개)
           </div>
         `;
       }
@@ -785,8 +812,18 @@ async function renderMap() {
       `).join('');
     }
 
-    if (!resultHTML) {
-      resultHTML = '<div class="search-result-item">검색 결과가 없습니다.</div>';
+    // 결과가 하나도 없을 때만 "검색 결과가 없습니다" 표시
+    if (totalResults === 0) {
+      console.log(`⚠️ "${keyword}" 검색 결과 없음`);
+      resultHTML = `<div class="search-result-item">
+        <div style="text-align: center; padding: 20px; color: #666;">
+          <div style="font-size: 18px; margin-bottom: 8px;">🔍</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">"${keyword}"에 대한 검색 결과가 없습니다</div>
+          <div style="font-size: 12px; color: #999;">다른 키워드로 검색해보세요</div>
+        </div>
+      </div>`;
+    } else {
+      console.log(`✅ 총 ${totalResults}개 검색 결과 표시 완료`);
     }
 
     searchResults.innerHTML = resultHTML;
