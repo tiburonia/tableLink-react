@@ -1389,7 +1389,7 @@ router.get('/eupmyeondong-center', async (req, res) => {
   }
 });
 
-// 매장 상위 사용자 조회 API
+// 매장 상위 사용자 조회 API (더미 데이터)
 router.get('/:storeId/top-users', async (req, res) => {
   try {
     const storeId = parseInt(req.params.storeId);
@@ -1401,47 +1401,97 @@ router.get('/:storeId/top-users', async (req, res) => {
       });
     }
 
-    console.log(`🏆 매장 ${storeId} 상위 사용자 조회`);
+    console.log(`🏆 매장 ${storeId} 상위 사용자 조회 (더미 데이터)`);
 
-    // 매장의 상위 사용자들을 단골 레벨 기준으로 조회
-    const result = await pool.query(`
-      SELECT DISTINCT
-        u.id as user_id,
-        u.name as user_name,
-        us.points,
-        us.total_spent,
-        us.visit_count,
-        us.last_visit_at,
-        rl.name as level_name,
-        rl.rank as level_rank,
-        rl.description as level_description
-      FROM user_stats us
-      JOIN users u ON us.user_id = u.id
-      LEFT JOIN regular_levels rl ON us.current_level_id = rl.id
-      WHERE us.store_id = $1
-        AND us.visit_count > 0
-      ORDER BY 
-        rl.rank DESC NULLS LAST,
-        us.total_spent DESC,
-        us.visit_count DESC,
-        us.points DESC
-      LIMIT 10
-    `, [storeId]);
+    // 더미 상위 사용자 데이터 생성
+    const dummyTopUsers = [
+      {
+        user_id: 'user001',
+        name: '김단골',
+        user_name: '김단골',
+        points: 8500,
+        total_spent: 450000,
+        visit_count: 42,
+        level_name: '다이아몬드',
+        level_rank: 5,
+        level_description: '최고 단골 고객',
+        last_visit_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2일 전
+      },
+      {
+        user_id: 'user002',
+        name: '박VIP',
+        user_name: '박VIP',
+        points: 6200,
+        total_spent: 320000,
+        visit_count: 28,
+        level_name: '플래티넘',
+        level_rank: 4,
+        level_description: 'VIP 고객',
+        last_visit_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // 1일 전
+      },
+      {
+        user_id: 'user003',
+        name: '이골드',
+        user_name: '이골드',
+        points: 4100,
+        total_spent: 180000,
+        visit_count: 19,
+        level_name: '골드',
+        level_rank: 3,
+        level_description: '골드 회원',
+        last_visit_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3일 전
+      },
+      {
+        user_id: 'user004',
+        name: '최실버',
+        user_name: '최실버',
+        points: 2800,
+        total_spent: 95000,
+        visit_count: 12,
+        level_name: '실버',
+        level_rank: 2,
+        level_description: '단골 고객',
+        last_visit_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5일 전
+      },
+      {
+        user_id: 'user005',
+        name: '정브론즈',
+        user_name: '정브론즈',
+        points: 1200,
+        total_spent: 45000,
+        visit_count: 8,
+        level_name: '브론즈',
+        level_rank: 1,
+        level_description: '신규 단골',
+        last_visit_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7일 전
+      },
+      {
+        user_id: 'user006',
+        name: '윤신규',
+        user_name: '윤신규',
+        points: 800,
+        total_spent: 28000,
+        visit_count: 5,
+        level_name: '브론즈',
+        level_rank: 1,
+        level_description: '신규 단골',
+        last_visit_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) // 10일 전
+      }
+    ];
 
-    const topUsers = result.rows.map(user => ({
-      user_id: user.user_id,
-      name: user.user_name,
-      user_name: user.user_name, // 호환성을 위해 둘 다 제공
-      points: parseInt(user.points) || 0,
-      total_spent: parseFloat(user.total_spent) || 0,
-      visit_count: parseInt(user.visit_count) || 0,
-      level_name: user.level_name || '브론즈',
-      level_rank: parseInt(user.level_rank) || 1,
-      level_description: user.level_description || '신규 단골',
-      last_visit_at: user.last_visit_at
+    // 매장별로 약간 다른 데이터를 위해 storeId로 시드값 사용
+    const seed = storeId % 1000;
+    const adjustedUsers = dummyTopUsers.map((user, index) => ({
+      ...user,
+      points: user.points + (seed * (index + 1)),
+      total_spent: user.total_spent + (seed * 100),
+      visit_count: user.visit_count + Math.floor(seed / 100)
     }));
 
-    console.log(`✅ 매장 ${storeId} 상위 사용자 ${topUsers.length}명 조회 완료`);
+    // 상위 5명만 반환
+    const topUsers = adjustedUsers.slice(0, 5);
+
+    console.log(`✅ 매장 ${storeId} 상위 사용자 ${topUsers.length}명 조회 완료 (더미 데이터)`);
 
     res.json({
       success: true,
