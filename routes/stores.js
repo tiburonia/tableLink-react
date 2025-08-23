@@ -1389,4 +1389,74 @@ router.get('/eupmyeondong-center', async (req, res) => {
   }
 });
 
+// 매장 상위 사용자 조회 API
+router.get('/:storeId/top-users', async (req, res) => {
+  try {
+    const storeId = parseInt(req.params.storeId);
+
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID입니다'
+      });
+    }
+
+    console.log(`🏆 매장 ${storeId} 상위 사용자 조회`);
+
+    // 매장의 상위 사용자들을 단골 레벨 기준으로 조회
+    const result = await pool.query(`
+      SELECT DISTINCT
+        u.id as user_id,
+        u.name as user_name,
+        us.points,
+        us.total_spent,
+        us.visit_count,
+        us.last_visit_at,
+        rl.name as level_name,
+        rl.rank as level_rank,
+        rl.description as level_description
+      FROM user_stats us
+      JOIN users u ON us.user_id = u.id
+      LEFT JOIN regular_levels rl ON us.current_level_id = rl.id
+      WHERE us.store_id = $1
+        AND us.visit_count > 0
+      ORDER BY 
+        rl.rank DESC NULLS LAST,
+        us.total_spent DESC,
+        us.visit_count DESC,
+        us.points DESC
+      LIMIT 10
+    `, [storeId]);
+
+    const topUsers = result.rows.map(user => ({
+      user_id: user.user_id,
+      name: user.user_name,
+      user_name: user.user_name, // 호환성을 위해 둘 다 제공
+      points: parseInt(user.points) || 0,
+      total_spent: parseFloat(user.total_spent) || 0,
+      visit_count: parseInt(user.visit_count) || 0,
+      level_name: user.level_name || '브론즈',
+      level_rank: parseInt(user.level_rank) || 1,
+      level_description: user.level_description || '신규 단골',
+      last_visit_at: user.last_visit_at
+    }));
+
+    console.log(`✅ 매장 ${storeId} 상위 사용자 ${topUsers.length}명 조회 완료`);
+
+    res.json({
+      success: true,
+      storeId: storeId,
+      users: topUsers,
+      total: topUsers.length
+    });
+
+  } catch (error) {
+    console.error('❌ 상위 사용자 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '상위 사용자 조회 실패'
+    });
+  }
+});
+
 module.exports = { router, updateStoreRating };

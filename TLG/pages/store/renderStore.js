@@ -332,13 +332,14 @@ function loadInitialData(store) {
       console.warn('⚠️ TableInfoManager를 찾을 수 없음');
     }
 
-    // 프로모션 및 단골 레벨 정보 로드
+    // 프로모션, 단골 레벨, 상위 사용자 정보 로드
     try {
       loadPromotionData(store);
+      loadTopUsersData(store);
       loadLoyaltyData(store);
-      console.log('✅ 프로모션/단골 데이터 로드 완료');
+      console.log('✅ 프로모션/단골/상위사용자 데이터 로드 완료');
     } catch (promoError) {
-      console.error('❌ 프로모션/단골 데이터 로드 중 오류:', promoError);
+      console.error('❌ 프로모션/단골/상위사용자 데이터 로드 중 오류:', promoError);
     }
 
     // 첫 화면(메뉴 탭) 설정
@@ -1963,6 +1964,156 @@ function showAllPromotions(store) {
 // 전역 함수로도 등록
 window.showAllPromotions = showAllPromotions;
 
+// 상위 사용자 데이터 로드
+async function loadTopUsersData(store) {
+  try {
+    console.log(`🏆 매장 ${store.id} 상위 사용자 정보 로드`);
+
+    // 실제 상위 사용자 데이터 조회
+    const response = await fetch(`/api/stores/${store.id}/top-users`);
+    if (response.ok) {
+      const topUsersData = await response.json();
+
+      if (topUsersData.success && topUsersData.users) {
+        console.log(`✅ 매장 ${store.id} 상위 사용자 ${topUsersData.users.length}명 로드 완료`);
+
+        // 상위 사용자 카드 UI 업데이트
+        updateTopUsersUI(topUsersData.users);
+      } else {
+        console.log(`⚠️ 매장 ${store.id} 상위 사용자 데이터 없음`);
+        updateTopUsersUI([]);
+      }
+    } else {
+      console.error('❌ 상위 사용자 데이터 조회 실패');
+      updateTopUsersUI([]);
+    }
+
+  } catch (error) {
+    console.error('❌ 상위 사용자 데이터 로드 중 오류:', error);
+    // 상위 사용자 로드 실패시 기본 안내 메시지 표시
+    const topUsersContainer = document.querySelector('.top-users-content');
+    if (topUsersContainer) {
+      topUsersContainer.innerHTML = `
+        <div class="no-top-users">
+          <span class="no-users-icon">👤</span>
+          <div class="no-users-text">단골 고객 정보를 불러올 수 없습니다</div>
+        </div>
+      `;
+    }
+  }
+
+  // 상위 사용자 더보기 버튼에 이벤트 리스너 추가
+  setTimeout(() => {
+    const topUsersBtn = document.querySelector('.top-users-detail-btn');
+    if (topUsersBtn) {
+      console.log('🎯 상위 사용자 버튼 이벤트 설정');
+      topUsersBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('🏆 상위 사용자 전체 보기 클릭됨');
+        showAllTopUsers(store);
+      });
+    }
+  }, 200);
+}
+
+// 상위 사용자 UI 업데이트
+function updateTopUsersUI(users) {
+  const topUsersContainer = document.querySelector('.top-users-content');
+  if (!topUsersContainer) return;
+
+  if (!users || users.length === 0) {
+    topUsersContainer.innerHTML = `
+      <div class="no-top-users-message">
+        <span class="no-users-icon">👑</span>
+        <div class="no-users-text">아직 단골 고객이 없습니다</div>
+      </div>
+    `;
+    return;
+  }
+
+  // 최대 3명의 상위 사용자만 표시
+  const displayUsers = users.slice(0, 3);
+
+  topUsersContainer.innerHTML = `
+    ${displayUsers.map((user, index) => {
+      const rank = index + 1;
+      const avatarColor = getAvatarColor(user.name || user.user_name);
+      const initial = (user.name || user.user_name || '?').charAt(0).toUpperCase();
+      
+      return `
+        <div class="top-user-item rank-${rank}">
+          <div class="rank-badge rank-${rank}">${rank}</div>
+          <div class="user-avatar" style="background: ${avatarColor};">
+            ${initial}
+          </div>
+          <div class="user-info">
+            <div class="user-name">${user.name || user.user_name || '익명'}</div>
+            <div class="user-level">${user.level_name || '브론즈'} 등급</div>
+          </div>
+          <div class="user-stats">
+            <div class="user-stat">
+              <span class="stat-icon">🏪</span>
+              <span>${user.visit_count || 0}회</span>
+            </div>
+            <div class="user-stat">
+              <span class="stat-icon">💰</span>
+              <span>${formatCurrency(user.total_spent || 0)}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('')}
+    ${users.length > 3 ? `
+      <div class="users-expand">
+        <button class="top-users-detail-btn" onclick="showAllTopUsers(${JSON.stringify(window.currentStore).replace(/"/g, '&quot;')})">
+          더 보기 (+${users.length - 3}명)
+        </button>
+      </div>
+    ` : ''}
+  `;
+}
+
+// 사용자 아바타 색상 생성
+function getAvatarColor(name) {
+  const colors = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+    'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+  ];
+  
+  const hash = name.split('').reduce((a, b) => {
+    a = ((a << 5) - a) + b.charCodeAt(0);
+    return a & a;
+  }, 0);
+  
+  return colors[Math.abs(hash) % colors.length];
+}
+
+// 금액 포맷팅
+function formatCurrency(amount) {
+  const num = parseFloat(amount) || 0;
+  if (num >= 1000000) {
+    return `${Math.floor(num / 1000000)}M원`;
+  } else if (num >= 1000) {
+    return `${Math.floor(num / 1000)}K원`;
+  } else {
+    return `${num.toLocaleString()}원`;
+  }
+}
+
+// 모든 상위 사용자 보기
+function showAllTopUsers(store) {
+  console.log('🏆 상위 사용자 전체 보기:', store.name);
+  
+  // 여기서 상위 사용자 전체 목록 모달이나 페이지를 표시할 수 있습니다
+  alert(`${store.name}의 모든 단골 고객 목록을 보여줍니다. (개발 예정)`);
+}
+
 // 전역 함수 등록 (즉시 실행)
 (function() {
   console.log('🔧 renderStore 전역 함수 등록 중...');
@@ -1971,6 +2122,7 @@ window.showAllPromotions = showAllPromotions;
   window.renderTableLayout = renderTableLayout;
   window.loadAndRenderStore = loadAndRenderStore;
   window.loadPromotionData = loadPromotionData;
+  window.loadTopUsersData = loadTopUsersData;
   window.loadLoyaltyData = loadLoyaltyData;
 
   // 혜택 관련 함수들
@@ -1981,6 +2133,12 @@ window.showAllPromotions = showAllPromotions;
   window.formatBenefitValue = formatBenefitValue;
   window.useBenefit = useBenefit;
   window.showAllBenefits = showAllBenefits;
+
+  // 상위 사용자 관련 함수들
+  window.updateTopUsersUI = updateTopUsersUI;
+  window.getAvatarColor = getAvatarColor;
+  window.formatCurrency = formatCurrency;
+  window.showAllTopUsers = showAllTopUsers;
 
   // 함수 등록 확인
   console.log('✅ renderStore 전역 함수 등록 완료:', typeof window.renderStore);

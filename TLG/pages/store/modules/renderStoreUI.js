@@ -42,6 +42,7 @@ window.StoreUIManager = {
               </div>
             </div>
             ${this.renderReviewPreviewHTML()}
+            ${this.renderTopUsersHTML(store)}
             ${this.renderLoyaltyLevelHTML()}
             ${this.renderPromotionCardHTML(store)}
             ${this.renderTableStatusHTML(store)}
@@ -308,6 +309,80 @@ window.StoreUIManager = {
           <button class="promotion-detail-btn modern-outline-btn">
             <span class="btn-icon">📋</span>
             <span class="btn-text">전체 혜택 보기</span>
+            <span class="btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  renderTopUsersHTML(store) {
+    return `
+      <div class="top-users-card premium-top-users-card">
+        <div class="card-gradient-bg"></div>
+        
+        <div class="top-users-header">
+          <div class="top-users-title-section">
+            <div class="top-users-icon-wrapper">
+              <span class="top-users-main-icon">👑</span>
+            </div>
+            <div class="top-users-title-info">
+              <h3 class="top-users-title">매장 단골 랭킹</h3>
+              <div class="top-users-subtitle">${store.name}의 VIP 고객들</div>
+            </div>
+          </div>
+          <div class="top-users-status-indicator">
+            <span class="crown-dot"></span>
+            <span class="crown-text">VIP</span>
+          </div>
+        </div>
+
+        <div class="top-users-content">
+          <!-- 로딩 스켈레톤 -->
+          <div class="top-users-loading-skeleton">
+            <div class="skeleton-user-item rank-1">
+              <div class="skeleton-rank-badge"></div>
+              <div class="skeleton-user-avatar"></div>
+              <div class="skeleton-user-info">
+                <div class="skeleton-user-name"></div>
+                <div class="skeleton-user-level"></div>
+              </div>
+              <div class="skeleton-user-stats">
+                <div class="skeleton-stat"></div>
+                <div class="skeleton-stat"></div>
+              </div>
+            </div>
+            <div class="skeleton-user-item rank-2">
+              <div class="skeleton-rank-badge"></div>
+              <div class="skeleton-user-avatar"></div>
+              <div class="skeleton-user-info">
+                <div class="skeleton-user-name"></div>
+                <div class="skeleton-user-level"></div>
+              </div>
+              <div class="skeleton-user-stats">
+                <div class="skeleton-stat"></div>
+                <div class="skeleton-stat"></div>
+              </div>
+            </div>
+            <div class="skeleton-user-item rank-3">
+              <div class="skeleton-rank-badge"></div>
+              <div class="skeleton-user-avatar"></div>
+              <div class="skeleton-user-info">
+                <div class="skeleton-user-name"></div>
+                <div class="skeleton-user-level"></div>
+              </div>
+              <div class="skeleton-user-stats">
+                <div class="skeleton-stat"></div>
+                <div class="skeleton-stat"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="top-users-footer">
+          <button class="top-users-detail-btn modern-outline-btn">
+            <span class="btn-icon">🏆</span>
+            <span class="btn-text">전체 랭킹 보기</span>
             <span class="btn-arrow">→</span>
           </button>
         </div>
@@ -1998,6 +2073,402 @@ window.StoreUIManager = {
         .benefit-text {
           text-align: center;
           line-height: 1.2;
+        }
+
+        /* 상위 사용자 카드 */
+        .premium-top-users-card {
+          position: relative;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 20px;
+          padding: 20px;
+          margin-bottom: 16px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          overflow: hidden;
+        }
+
+        .premium-top-users-card .card-gradient-bg {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 60px;
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          opacity: 0.03;
+          z-index: 0;
+        }
+
+        .top-users-header {
+          position: relative;
+          z-index: 1;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 20px;
+        }
+
+        .top-users-title-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+        }
+
+        .top-users-icon-wrapper {
+          width: 44px;
+          height: 44px;
+          background: linear-gradient(135deg, #fef7cd 0%, #fef3c7 100%);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #fbbf24;
+        }
+
+        .top-users-main-icon {
+          font-size: 20px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .top-users-title-info {
+          flex: 1;
+        }
+
+        .top-users-title {
+          font-size: 17px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0 0 2px 0;
+          letter-spacing: -0.3px;
+        }
+
+        .top-users-subtitle {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .top-users-status-indicator {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          padding: 6px 12px;
+          border-radius: 20px;
+          border: 1px solid #fbbf24;
+        }
+
+        .crown-dot {
+          width: 6px;
+          height: 6px;
+          background: #f59e0b;
+          border-radius: 50%;
+          animation: crownPulse 2s infinite;
+        }
+
+        .crown-text {
+          font-size: 11px;
+          font-weight: 700;
+          color: #92400e;
+          letter-spacing: 0.5px;
+        }
+
+        @keyframes crownPulse {
+          0%, 100% { 
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+          }
+          50% { 
+            opacity: 0.8;
+            box-shadow: 0 0 0 4px rgba(245, 158, 11, 0);
+          }
+        }
+
+        .top-users-content {
+          position: relative;
+          z-index: 1;
+          margin-bottom: 16px;
+        }
+
+        /* 상위 사용자 로딩 스켈레톤 */
+        .top-users-loading-skeleton {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .skeleton-user-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .skeleton-user-item.rank-1 {
+          border-color: #fbbf24;
+          background: linear-gradient(135deg, #fef7cd 0%, #fef3c7 100%);
+        }
+
+        .skeleton-user-item.rank-2 {
+          border-color: #e5e7eb;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .skeleton-user-item.rank-3 {
+          border-color: #d97706;
+          background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        }
+
+        .skeleton-user-item::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.4) 50%,
+            transparent 100%
+          );
+          animation: userSkeletonShimmer 2s infinite;
+        }
+
+        .skeleton-rank-badge {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          animation: userSkeletonPulse 1.8s ease-in-out infinite;
+        }
+
+        .skeleton-user-item.rank-1 .skeleton-rank-badge {
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        }
+
+        .skeleton-user-item.rank-2 .skeleton-rank-badge {
+          background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+        }
+
+        .skeleton-user-item.rank-3 .skeleton-rank-badge {
+          background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        }
+
+        .skeleton-user-avatar {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 50%;
+          animation: userSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.2s;
+          flex-shrink: 0;
+        }
+
+        .skeleton-user-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-width: 0;
+        }
+
+        .skeleton-user-name {
+          width: 80px;
+          height: 16px;
+          background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+          border-radius: 6px;
+          animation: userSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.3s;
+        }
+
+        .skeleton-user-level {
+          width: 60px;
+          height: 12px;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+          border-radius: 4px;
+          animation: userSkeletonPulse 1.8s ease-in-out infinite;
+          animation-delay: 0.4s;
+        }
+
+        .skeleton-user-stats {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          align-items: flex-end;
+        }
+
+        .skeleton-stat {
+          width: 48px;
+          height: 12px;
+          background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+          border-radius: 4px;
+          animation: userSkeletonPulse 1.8s ease-in-out infinite;
+        }
+
+        .skeleton-stat:first-child {
+          animation-delay: 0.5s;
+        }
+
+        .skeleton-stat:last-child {
+          animation-delay: 0.6s;
+        }
+
+        @keyframes userSkeletonPulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.7;
+            transform: scale(0.98);
+          }
+        }
+
+        @keyframes userSkeletonShimmer {
+          0% {
+            left: -100%;
+          }
+          100% {
+            left: 100%;
+          }
+        }
+
+        .top-users-footer {
+          border-top: 1px solid #f1f5f9;
+          padding-top: 16px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* 실제 상위 사용자 아이템 스타일 (데이터 로드 후) */
+        .top-user-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border: 1.5px solid #f1f5f9;
+          border-radius: 12px;
+          margin-bottom: 10px;
+          transition: all 0.2s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .top-user-item:hover {
+          border-color: #fbbf24;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(251, 191, 36, 0.1);
+        }
+
+        .top-user-item.rank-1 {
+          border-color: #fbbf24;
+          background: linear-gradient(135deg, #fef7cd 0%, #fef3c7 100%);
+        }
+
+        .top-user-item.rank-2 {
+          border-color: #e5e7eb;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        }
+
+        .top-user-item.rank-3 {
+          border-color: #d97706;
+          background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        }
+
+        .rank-badge {
+          width: 28px;
+          height: 28px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: 700;
+          color: white;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+          flex-shrink: 0;
+        }
+
+        .rank-badge.rank-1 {
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+        }
+
+        .rank-badge.rank-2 {
+          background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+          color: #374151;
+          box-shadow: 0 2px 8px rgba(229, 231, 235, 0.3);
+        }
+
+        .rank-badge.rank-3 {
+          background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+          box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+        }
+
+        .user-avatar {
+          width: 44px;
+          height: 44px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 16px;
+          font-weight: 600;
+          color: white;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+          flex-shrink: 0;
+          border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .user-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .user-name {
+          font-size: 14px;
+          font-weight: 600;
+          color: #111827;
+          margin-bottom: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .user-level {
+          font-size: 12px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .user-stats {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+
+        .user-stat {
+          font-size: 11px;
+          font-weight: 600;
+          color: #374151;
+          display: flex;
+          align-items: center;
+          gap: 2px;
+        }
+
+        .stat-icon {
+          font-size: 10px;
         }
 
         /* 단골 레벨 카드 스켈레톤 */
