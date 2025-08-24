@@ -1,4 +1,3 @@
-
 // POS 시스템 상태
 let currentStore = null;
 let currentTable = null;
@@ -15,22 +14,23 @@ let orderFilter = 'all';
 async function renderPOS() {
   try {
     console.log('📟 POS 시스템 초기화 중...');
-    
+
     // 기본 UI 렌더링
     renderPOSLayout();
-    
+
     // URL에서 매장 ID 추출
     const urlParts = window.location.pathname.split('/');
     const storeId = urlParts[2]; // /pos/:storeId
-    
+
     if (storeId) {
       console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);
       await loadStoreById(storeId);
     } else {
-      // 매장 정보 로드
-      await loadStoreData();
+      // 매장 정보 로드 (기존에는 매장 선택 UI를 통해 로드했으나, 이제는 URL 필수)
+      showError('매장 ID가 URL에 포함되어야 합니다. (예: /pos/123)');
+      return; // 매장 ID가 없으면 초기화 중단
     }
-    
+
     console.log('✅ POS 시스템 초기화 완료');
   } catch (error) {
     console.error('❌ POS 시스템 초기화 실패:', error);
@@ -41,7 +41,7 @@ async function renderPOS() {
 // POS 레이아웃 렌더링
 function renderPOSLayout() {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div class="pos-container">
       <!-- 상단 헤더 바 -->
@@ -50,17 +50,16 @@ function renderPOSLayout() {
           <h1 class="pos-logo">🍽️ TableLink POS</h1>
           <div class="store-selector">
             <span id="storeName">매장을 선택해주세요</span>
-            <button onclick="selectStore()" class="store-select-btn" id="storeSelectBtn">매장 선택</button>
           </div>
         </div>
-        
+
         <div class="header-center">
           <div class="search-bar">
             <input type="text" placeholder="테이블/주문번호 검색..." id="searchInput" />
             <button class="search-btn">🔍</button>
           </div>
         </div>
-        
+
         <div class="header-right">
           <button class="header-btn notification-btn" title="알림">
             🔔
@@ -89,7 +88,7 @@ function renderPOSLayout() {
           <aside class="filter-panel">
             <div class="filter-section">
               <h3>필터</h3>
-              
+
               <div class="filter-group">
                 <label>층/구역</label>
                 <select id="floorFilter" onchange="applyTableFilter()">
@@ -99,7 +98,7 @@ function renderPOSLayout() {
                   <option value="terrace">테라스</option>
                 </select>
               </div>
-              
+
               <div class="filter-group">
                 <label>테이블 상태</label>
                 <div class="status-filters">
@@ -144,7 +143,7 @@ function renderPOSLayout() {
               <h3 id="panelTitle">테이블을 선택하세요</h3>
               <button class="panel-close" onclick="closeDetailPanel()">✕</button>
             </div>
-            
+
             <div class="panel-content" id="panelContent">
               <div class="select-table-message">
                 테이블을 클릭하여 주문 관리를 시작하세요
@@ -753,10 +752,10 @@ function switchHomeMode(mode) {
   homeMode = mode;
   document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelector(`[onclick="switchHomeMode('${mode}')"]`).classList.add('active');
-  
+
   document.querySelectorAll('.home-mode').forEach(el => el.classList.remove('active'));
   document.getElementById(mode === 'table_map' ? 'tableMapMode' : 'orderListMode').classList.add('active');
-  
+
   if (mode === 'table_map') {
     renderTableMap();
   } else {
@@ -767,7 +766,7 @@ function switchHomeMode(mode) {
 // 테이블 맵 렌더링
 function renderTableMap() {
   const mapGrid = document.getElementById('mapGrid');
-  
+
   if (!allTables || allTables.length === 0) {
     mapGrid.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; color: #64748b; margin-top: 50px;">
@@ -776,7 +775,7 @@ function renderTableMap() {
     `;
     return;
   }
-  
+
   mapGrid.innerHTML = allTables.map(table => `
     <div class="table-item ${table.status || 'empty'}" onclick="selectTableFromMap('${table.tableNumber}')">
       <div class="table-number">T${table.tableNumber}</div>
@@ -795,11 +794,11 @@ function selectTableFromMap(tableNumber) {
   document.querySelectorAll('.table-item').forEach(item => {
     item.classList.remove('selected');
   });
-  
+
   // 새로운 선택
   event.target.closest('.table-item').classList.add('selected');
   currentTable = tableNumber;
-  
+
   // 세부 패널 업데이트
   updateDetailPanel(tableNumber);
 }
@@ -808,7 +807,7 @@ function selectTableFromMap(tableNumber) {
 function updateDetailPanel(tableNumber) {
   const panelTitle = document.getElementById('panelTitle');
   const panelContent = document.getElementById('panelContent');
-  
+
   panelTitle.textContent = `테이블 ${tableNumber}`;
   panelContent.innerHTML = `
     <div class="table-actions">
@@ -817,7 +816,7 @@ function updateDetailPanel(tableNumber) {
       <button class="action-btn" onclick="moveTable()">테이블 이동</button>
       <button class="action-btn warning" onclick="processPayment()">결제 처리</button>
     </div>
-    
+
     <div class="current-orders">
       <h4>현재 주문</h4>
       <div class="order-items">
@@ -830,7 +829,7 @@ function updateDetailPanel(tableNumber) {
 // 주문 리스트 렌더링
 function renderOrderList() {
   const orderTimeline = document.getElementById('orderTimeline');
-  
+
   orderTimeline.innerHTML = `
     <div style="text-align: center; color: #64748b; margin-top: 50px;">
       주문 데이터를 불러오는 중...
@@ -841,13 +840,13 @@ function renderOrderList() {
 // 상태별 필터링
 function filterByStatus(status) {
   tableFilter = status;
-  
+
   // 버튼 활성화 상태 업데이트
   document.querySelectorAll('.status-filter-btn').forEach(btn => {
     btn.classList.remove('active');
   });
   document.querySelector(`[data-status="${status}"]`).classList.add('active');
-  
+
   // 테이블 필터링 로직
   applyTableFilter();
 }
@@ -855,7 +854,7 @@ function filterByStatus(status) {
 // 테이블 필터 적용
 function applyTableFilter() {
   const tables = document.querySelectorAll('.table-item');
-  
+
   tables.forEach(table => {
     const shouldShow = tableFilter === 'all' || table.classList.contains(tableFilter);
     table.style.display = shouldShow ? 'flex' : 'none';
@@ -865,12 +864,12 @@ function applyTableFilter() {
 // 주문 필터링
 function filterOrders(status) {
   orderFilter = status;
-  
+
   document.querySelectorAll('.order-filter-btn').forEach(btn => {
     btn.classList.remove('active');
   });
   document.querySelector(`[onclick="filterOrders('${status}')"]`).classList.add('active');
-  
+
   // 주문 필터링 로직 구현
   renderOrderList();
 }
@@ -881,7 +880,7 @@ function closeDetailPanel() {
     item.classList.remove('selected');
   });
   currentTable = null;
-  
+
   document.getElementById('panelTitle').textContent = '테이블을 선택하세요';
   document.getElementById('panelContent').innerHTML = `
     <div class="select-table-message">
@@ -890,178 +889,27 @@ function closeDetailPanel() {
   `;
 }
 
-// 매장 선택
-async function selectStore() {
-  try {
-    console.log('🏪 매장 선택 모달 표시');
-    
-    const response = await fetch('/api/stores');
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error('매장 목록 조회 실패');
-    }
-    
-    const stores = data.stores;
-    
-    // 매장 선택 모달 생성
-    const modal = document.createElement('div');
-    modal.className = 'store-modal';
-    modal.innerHTML = `
-      <div class="modal-overlay">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h3>매장 선택</h3>
-            <button onclick="closeStoreModal()" class="close-btn">×</button>
-          </div>
-          <div class="store-list">
-            ${stores.map(store => `
-              <div class="store-item" onclick="chooseStore(${store.id}, '${store.name}', '${store.category}')">
-                <div class="store-name">${store.name}</div>
-                <div class="store-category">${store.category}</div>
-                <div class="store-status ${store.isOpen ? 'open' : 'closed'}">
-                  ${store.isOpen ? '영업중' : '영업종료'}
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-      
-      <style>
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0,0,0,0.5);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10000;
-        }
-        
-        .modal-content {
-          background: white;
-          border-radius: 12px;
-          width: 90%;
-          max-width: 600px;
-          max-height: 80vh;
-          overflow: hidden;
-        }
-        
-        .modal-header {
-          padding: 20px;
-          border-bottom: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        
-        .close-btn {
-          background: none;
-          border: none;
-          font-size: 24px;
-          cursor: pointer;
-          color: #64748b;
-        }
-        
-        .store-list {
-          max-height: 400px;
-          overflow-y: auto;
-          padding: 20px;
-        }
-        
-        .store-item {
-          padding: 16px;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          margin-bottom: 12px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-        
-        .store-item:hover {
-          background: #f8fafc;
-          border-color: #3b82f6;
-        }
-        
-        .store-name {
-          font-weight: 600;
-          margin-bottom: 4px;
-        }
-        
-        .store-category {
-          color: #64748b;
-          font-size: 14px;
-        }
-        
-        .store-status {
-          margin-top: 8px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-        
-        .store-status.open {
-          color: #16a34a;
-        }
-        
-        .store-status.closed {
-          color: #ef4444;
-        }
-      </style>
-    `;
-    
-    document.body.appendChild(modal);
-    
-  } catch (error) {
-    console.error('❌ 매장 선택 실패:', error);
-    showError('매장 목록을 불러오는데 실패했습니다.');
-  }
-}
-
-// 매장 선택 완료
-async function chooseStore(storeId, storeName, storeCategory) {
-  try {
-    console.log(`🏪 매장 선택: ${storeName} (ID: ${storeId})`);
-    
-    currentStore = { id: storeId, name: storeName, category: storeCategory };
-    
-    document.getElementById('storeName').textContent = storeName;
-    
-    await loadStoreDetails(storeId);
-    closeStoreModal();
-    
-    console.log('✅ 매장 선택 완료');
-    
-  } catch (error) {
-    console.error('❌ 매장 선택 실패:', error);
-    showError('매장 정보를 불러오는데 실패했습니다.');
-  }
-}
-
-// 매장 상세 정보 로드
+// 테이블 상세 정보 로드
 async function loadStoreDetails(storeId) {
   try {
     const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error('매장 정보 조회 실패');
     }
-    
+
     const store = data.store;
     allMenus = store.menu || [];
-    
+
     // 테이블 정보 로드
     await loadTables(store.tables || []);
-    
+
     // 테이블 맵 렌더링
     if (homeMode === 'table_map') {
       renderTableMap();
     }
-    
+
   } catch (error) {
     console.error('❌ 매장 상세 정보 로드 실패:', error);
     throw error;
@@ -1083,61 +931,39 @@ async function loadTables(tables) {
 async function loadStoreById(storeId) {
   try {
     console.log(`🏪 매장 ID ${storeId}로 직접 로드 중...`);
-    
+
     const response = await fetch(`/api/stores/${storeId}`);
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error('매장 정보 조회 실패');
     }
-    
+
     const store = data.store;
-    
+
     currentStore = { 
       id: parseInt(storeId), 
       name: store.name, 
       category: store.category || '기타' 
     };
-    
-    // 매장이 URL로 지정된 경우 매장 선택 버튼 숨기기
+
+    // 매장 정보 표시 및 매장 선택 UI 제거
     document.getElementById('storeName').textContent = `${store.name} (${store.category || '기타'})`;
-    const selectBtn = document.getElementById('storeSelectBtn');
-    if (selectBtn) {
-      selectBtn.style.display = 'none';
-    }
-    
-    // 매장 고정 표시 추가
     const storeSelector = document.querySelector('.store-selector');
-    if (storeSelector && !storeSelector.querySelector('.store-locked-badge')) {
-      const lockedBadge = document.createElement('span');
-      lockedBadge.className = 'store-locked-badge';
-      lockedBadge.innerHTML = '🔒 고정';
-      lockedBadge.title = 'URL로 지정된 매장입니다';
-      storeSelector.appendChild(lockedBadge);
+    if (storeSelector) {
+      storeSelector.innerHTML = `${store.name} (${store.category || '기타'}) <span class="store-locked-badge">🔒 고정</span>`;
     }
-    
+
     await loadStoreDetails(storeId);
-    
+
     console.log(`✅ 매장 ${store.name} 로드 완료 (URL 고정 모드)`);
-    
+
   } catch (error) {
     console.error('❌ 매장 직접 로드 실패:', error);
     showError('매장 정보를 불러오는데 실패했습니다.');
   }
 }
 
-// 초기 매장 데이터 로드
-async function loadStoreData() {
-  console.log('📊 POS 시스템 준비 완료');
-}
-
-// 매장 선택 모달 닫기
-function closeStoreModal() {
-  const modal = document.querySelector('.store-modal');
-  if (modal) {
-    modal.remove();
-  }
-}
 
 // 에러 표시
 function showError(message) {
