@@ -365,27 +365,52 @@ function renderKDSInterface(store) {
           </div>
         </div>
 
-        <!-- 주문 카드 10 -->
-        <div class="order-card pending" data-order-id="10">
-          <div class="order-header">
-            <div class="order-number">#110</div>
-            <div class="order-type">포장</div>
+        <!-- 다기능 카드 (10번 위치) -->
+        <div class="multifunction-card">
+          <div class="multifunction-header">
+            <div class="multifunction-title">📊 주방 상태</div>
           </div>
-          <div class="order-time">오후 1:50</div>
-          <div class="order-status pending">치즈치킨</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">치즈치킨</span>
-              <span class="qty">1</span>
+          
+          <div class="queue-info">
+            <div class="queue-item">
+              <div class="queue-label">대기 중</div>
+              <div class="queue-count" id="waitingCount">+3</div>
             </div>
-            <div class="item">
-              <span class="item-name">소스</span>
-              <span class="qty">1</span>
+            <div class="queue-item">
+              <div class="queue-label">조리 중</div>
+              <div class="queue-count cooking" id="cookingCount">3</div>
             </div>
           </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(10)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(10)">취소</button>
+
+          <div class="quick-stats">
+            <div class="stat-item">
+              <div class="stat-label">오늘 완료</div>
+              <div class="stat-value">27건</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">평균 시간</div>
+              <div class="stat-value">8분</div>
+            </div>
+          </div>
+
+          <div class="multifunction-actions">
+            <button class="multi-btn settings-btn" onclick="showKDSSettings()">
+              ⚙️ 설정
+            </button>
+            <button class="multi-btn history-btn" onclick="showOrderHistory()">
+              📋 내역
+            </button>
+            <button class="multi-btn refresh-btn" onclick="refreshKDS()">
+              🔄 새로고침
+            </button>
+            <button class="multi-btn alert-btn" onclick="toggleAlerts()">
+              🔔 알림
+            </button>
+          </div>
+
+          <div class="system-status">
+            <div class="status-indicator online">● 온라인</div>
+            <div class="last-update" id="lastUpdate">최종 업데이트: 방금 전</div>
           </div>
         </div>
       </div>
@@ -883,6 +908,158 @@ function renderKDSInterface(store) {
       .order-card.cooking .order-actions {
         display: none;
       }
+
+      /* 다기능 카드 스타일 */
+      .multifunction-card {
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+        border: 2px solid #4a90e2;
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        color: #f9fafb;
+        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+        backdrop-filter: blur(5px);
+        min-height: 180px;
+        overflow: hidden;
+      }
+
+      .dev-mode .multifunction-card {
+        min-height: auto;
+        height: auto;
+        flex-shrink: 0;
+        padding: 16px;
+        margin-bottom: 0;
+      }
+
+      .multifunction-card:hover {
+        border-color: #63b3ed;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3);
+      }
+
+      .multifunction-header {
+        margin-bottom: 12px;
+        text-align: center;
+      }
+
+      .multifunction-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #4a90e2;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .queue-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .queue-item {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 6px 8px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .queue-label {
+        font-size: 8px;
+        color: #cbd5e0;
+        margin-bottom: 2px;
+      }
+
+      .queue-count {
+        font-size: 14px;
+        font-weight: 800;
+        color: #f59e0b;
+      }
+
+      .queue-count.cooking {
+        color: #ef4444;
+      }
+
+      .quick-stats {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .stat-item {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 4px 6px;
+        border-radius: 6px;
+        text-align: center;
+      }
+
+      .stat-label {
+        font-size: 7px;
+        color: #a0aec0;
+        margin-bottom: 1px;
+      }
+
+      .stat-value {
+        font-size: 9px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .multifunction-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+
+      .multi-btn {
+        background: linear-gradient(135deg, rgba(74, 144, 226, 0.8) 0%, rgba(99, 179, 237, 0.8) 100%);
+        border: none;
+        color: white;
+        padding: 4px 6px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 7px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        text-align: center;
+      }
+
+      .dev-mode .multi-btn {
+        padding: 6px 8px;
+        font-size: 8px;
+      }
+
+      .multi-btn:hover {
+        background: linear-gradient(135deg, rgba(74, 144, 226, 1) 0%, rgba(99, 179, 237, 1) 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(74, 144, 226, 0.3);
+      }
+
+      .system-status {
+        margin-top: auto;
+        text-align: center;
+        padding-top: 6px;
+        border-top: 1px solid rgba(160, 174, 192, 0.2);
+      }
+
+      .status-indicator {
+        font-size: 8px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .status-indicator.online {
+        color: #10b981;
+      }
+
+      .last-update {
+        font-size: 6px;
+        color: #718096;
+        font-family: 'Courier New', monospace;
+      }
     </style>
   `;
 
@@ -899,6 +1076,12 @@ function renderKDSInterface(store) {
   // 시간 업데이트 시작
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
+
+  // 마지막 업데이트 시간 초기화
+  updateLastUpdateTime();
+  
+  // 주문 카운트 업데이트
+  updateOrderCounts();
 
   console.log('✅ KDS 인터페이스 렌더링 완료');
 }
@@ -978,6 +1161,9 @@ function startCooking(orderId) {
 
     // 카드 스타일 변경
     orderCard.className = 'order-card cooking';
+    
+    // 카운트 업데이트
+    updateOrderCounts();
   }
 }
 
@@ -1068,10 +1254,63 @@ function renderKDSError() {
   `;
 }
 
+// 다기능 카드 기능들
+function showKDSSettings() {
+  alert('KDS 설정 메뉴:\n• 화면 밝기 조절\n• 알림음 설정\n• 자동 새로고침 간격\n• 카드 표시 옵션');
+}
+
+function showOrderHistory() {
+  alert('주문 내역:\n• 오늘 완료: 27건\n• 취소: 2건\n• 평균 조리시간: 8분\n• 최고 주문량 시간: 12-13시');
+}
+
+function refreshKDS() {
+  console.log('🔄 KDS 수동 새로고침');
+  if (window.currentStoreId) {
+    loadKDSOrders(window.currentStoreId);
+    updateLastUpdateTime();
+  }
+}
+
+function toggleAlerts() {
+  const isEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
+  localStorage.setItem('kdsAlertsEnabled', (!isEnabled).toString());
+  alert(isEnabled ? '🔔 알림이 비활성화되었습니다' : '🔔 알림이 활성화되었습니다');
+}
+
+function updateLastUpdateTime() {
+  const lastUpdateElement = document.getElementById('lastUpdate');
+  if (lastUpdateElement) {
+    const now = new Date();
+    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    lastUpdateElement.textContent = `최종 업데이트: ${timeString}`;
+  }
+}
+
+// 카운트 업데이트 함수
+function updateOrderCounts() {
+  const waitingCards = document.querySelectorAll('.order-card.pending').length;
+  const cookingCards = document.querySelectorAll('.order-card.cooking').length;
+  
+  const waitingCount = document.getElementById('waitingCount');
+  const cookingCountElement = document.getElementById('cookingCount');
+  
+  if (waitingCount) {
+    waitingCount.textContent = waitingCards > 9 ? `+${waitingCards - 9}` : '0';
+  }
+  
+  if (cookingCountElement) {
+    cookingCountElement.textContent = cookingCards.toString();
+  }
+}
+
 // 전역 함수로 노출
 window.renderKDS = renderKDS;
 window.showOrderDetail = showOrderDetail;
 window.startCooking = startCooking;
 window.cancelOrder = cancelOrder;
+window.showKDSSettings = showKDSSettings;
+window.showOrderHistory = showOrderHistory;
+window.refreshKDS = refreshKDS;
+window.toggleAlerts = toggleAlerts;
 
 console.log('✅ KDS 시스템 로드 완료');
