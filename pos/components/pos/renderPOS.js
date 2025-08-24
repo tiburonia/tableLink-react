@@ -264,6 +264,7 @@ function renderPOSLayout() {
         color: #1e293b;
         font-weight: 600;
         font-size: 16px;
+        margin-bottom: 0px;
       }
 
       .header-center {
