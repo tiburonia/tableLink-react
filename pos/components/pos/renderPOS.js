@@ -84,50 +84,6 @@ function renderPOSLayout() {
       <div class="pos-main">
         <!-- 테이블 맵 모드 -->
         <div id="tableMapMode" class="home-mode ${homeMode === 'table_map' ? 'active' : ''}">
-          <!-- 좌측 필터 패널 -->
-          <aside class="filter-panel">
-            <div class="filter-section">
-              <h3>필터</h3>
-
-              <div class="filter-group">
-                <label>층/구역</label>
-                <select id="floorFilter" onchange="applyTableFilter()">
-                  <option value="all">전체</option>
-                  <option value="1F">1층</option>
-                  <option value="2F">2층</option>
-                  <option value="terrace">테라스</option>
-                </select>
-              </div>
-
-              <div class="filter-group">
-                <label>테이블 상태</label>
-                <div class="status-filters">
-                  <button class="status-filter-btn active" data-status="all" onclick="filterByStatus('all')">
-                    전체
-                  </button>
-                  <button class="status-filter-btn" data-status="empty" onclick="filterByStatus('empty')">
-                    <span class="status-dot empty"></span> 빈자리
-                  </button>
-                  <button class="status-filter-btn" data-status="seated" onclick="filterByStatus('seated')">
-                    <span class="status-dot seated"></span> 착석
-                  </button>
-                  <button class="status-filter-btn" data-status="ordered" onclick="filterByStatus('ordered')">
-                    <span class="status-dot ordered"></span> 주문대기
-                  </button>
-                  <button class="status-filter-btn" data-status="cooking" onclick="filterByStatus('cooking')">
-                    <span class="status-dot cooking"></span> 조리중
-                  </button>
-                  <button class="status-filter-btn" data-status="payment" onclick="filterByStatus('payment')">
-                    <span class="status-dot payment"></span> 결제대기
-                  </button>
-                  <button class="status-filter-btn" data-status="hold" onclick="filterByStatus('hold')">
-                    <span class="status-dot hold"></span> 홀드
-                  </button>
-                </div>
-              </div>
-            </div>
-          </aside>
-
           <!-- 중앙 테이블 맵 -->
           <main class="table-map-container">
             <div class="table-map" id="tableMap">
@@ -388,80 +344,7 @@ function renderPOSLayout() {
         pointer-events: all;
       }
 
-      /* 필터 패널 */
-      .filter-panel {
-        width: 280px;
-        background: white;
-        border-right: 1px solid #e2e8f0;
-        padding: 20px;
-        overflow-y: auto;
-      }
-
-      .filter-section h3 {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 16px;
-        color: #1e293b;
-      }
-
-      .filter-group {
-        margin-bottom: 20px;
-      }
-
-      .filter-group label {
-        display: block;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
-        color: #374151;
-      }
-
-      .filter-group select {
-        width: 100%;
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: white;
-      }
-
-      .status-filters {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .status-filter-btn {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 12px;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        text-align: left;
-        font-size: 14px;
-        transition: all 0.2s;
-      }
-
-      .status-filter-btn.active {
-        background: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-      }
-
-      .status-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-      }
-
-      .status-dot.empty { background: #9ca3af; }
-      .status-dot.seated { background: #3b82f6; }
-      .status-dot.ordered { background: #fbbf24; }
-      .status-dot.cooking { background: #f97316; }
-      .status-dot.payment { background: #8b5cf6; }
-      .status-dot.hold { background: #ef4444; }
+      
 
       /* 테이블 맵 */
       .table-map-container {
@@ -511,12 +394,14 @@ function renderPOSLayout() {
         background: #eff6ff;
       }
 
-      .table-item.empty { border-color: #9ca3af; }
-      .table-item.seated { border-color: #3b82f6; background: #eff6ff; }
-      .table-item.ordered { border-color: #fbbf24; background: #fffbeb; }
-      .table-item.cooking { border-color: #f97316; background: #fff7ed; }
-      .table-item.payment { border-color: #8b5cf6; background: #f3f4f6; }
-      .table-item.hold { border-color: #ef4444; background: #fef2f2; }
+      .table-item.available { 
+        border-color: #10b981; 
+        background: #ecfdf5; 
+      }
+      .table-item.occupied { 
+        border-color: #ef4444; 
+        background: #fef2f2; 
+      }
 
       .table-number {
         font-size: 18px;
@@ -710,9 +595,6 @@ function renderPOSLayout() {
 
       /* 반응형 */
       @media (max-width: 1200px) {
-        .filter-panel {
-          width: 220px;
-        }
         .detail-panel {
           width: 300px;
         }
@@ -721,9 +603,6 @@ function renderPOSLayout() {
       @media (max-width: 900px) {
         .header-center {
           display: none;
-        }
-        .filter-panel {
-          width: 200px;
         }
       }
     </style>
@@ -759,16 +638,24 @@ function renderTableMap() {
     return;
   }
 
-  mapGrid.innerHTML = allTables.map(table => `
-    <div class="table-item ${table.status || 'empty'}" onclick="selectTableFromMap('${table.tableNumber}')">
-      <div class="table-number">T${table.tableNumber}</div>
-      <div class="table-info">${table.seats}석</div>
-      <div class="table-badges">
-        ${table.timer ? `<div class="badge timer">${table.timer}</div>` : ''}
-        ${table.amount ? `<div class="badge amount">${table.amount}원</div>` : ''}
+  mapGrid.innerHTML = allTables.map(table => {
+    const status = table.isOccupied ? 'occupied' : 'available';
+    const statusText = table.isOccupied ? '사용중' : '이용가능';
+    const occupiedTime = table.isOccupied && table.occupiedSince 
+      ? getTimeDifferenceText(table.occupiedSince) 
+      : '';
+    
+    return `
+      <div class="table-item ${status}" onclick="selectTableFromMap('${table.tableNumber}')">
+        <div class="table-number">T${table.tableNumber}</div>
+        <div class="table-info">${table.seats}석</div>
+        <div class="table-badges">
+          <div class="badge ${status === 'occupied' ? 'timer' : 'amount'}">${statusText}</div>
+          ${occupiedTime ? `<div class="badge timer">${occupiedTime}</div>` : ''}
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // 테이블 맵에서 테이블 선택
@@ -820,28 +707,17 @@ function renderOrderList() {
   `;
 }
 
-// 상태별 필터링
-function filterByStatus(status) {
-  tableFilter = status;
-
-  // 버튼 활성화 상태 업데이트
-  document.querySelectorAll('.status-filter-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  document.querySelector(`[data-status="${status}"]`).classList.add('active');
-
-  // 테이블 필터링 로직
-  applyTableFilter();
-}
-
-// 테이블 필터 적용
-function applyTableFilter() {
-  const tables = document.querySelectorAll('.table-item');
-
-  tables.forEach(table => {
-    const shouldShow = tableFilter === 'all' || table.classList.contains(tableFilter);
-    table.style.display = shouldShow ? 'flex' : 'none';
-  });
+// 시간 차이 텍스트 반환
+function getTimeDifferenceText(occupiedSince) {
+  const now = new Date();
+  const occupied = new Date(occupiedSince);
+  const diffMinutes = Math.floor((now - occupied) / (1000 * 60));
+  
+  if (diffMinutes < 1) return '방금 전';
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+  
+  const diffHours = Math.floor(diffMinutes / 60);
+  return `${diffHours}시간 ${diffMinutes % 60}분 전`;
 }
 
 // 주문 필터링
@@ -885,8 +761,8 @@ async function loadStoreDetails(storeId) {
     const store = data.store;
     allMenus = store.menu || [];
 
-    // 테이블 정보 로드
-    await loadTables(store.tables || []);
+    // 실제 데이터베이스에서 테이블 정보 로드
+    await loadTables();
 
     // 테이블 맵 렌더링
     if (homeMode === 'table_map') {
@@ -899,15 +775,22 @@ async function loadStoreDetails(storeId) {
   }
 }
 
-// 테이블 목록 로드
-async function loadTables(tables) {
-  // 실제 테이블 데이터를 시뮬레이션
-  allTables = tables.map(table => ({
-    ...table,
-    status: Math.random() > 0.7 ? ['seated', 'ordered', 'cooking', 'payment'][Math.floor(Math.random() * 4)] : 'empty',
-    timer: Math.random() > 0.5 ? `${Math.floor(Math.random() * 60)}분` : null,
-    amount: Math.random() > 0.6 ? `${(Math.floor(Math.random() * 50) + 10) * 1000}` : null
-  }));
+// 테이블 목록 로드 (실제 데이터베이스 사용)
+async function loadTables() {
+  try {
+    const response = await fetch(`/api/pos/stores/${currentStore.id}/tables`);
+    const data = await response.json();
+    
+    if (data.success) {
+      allTables = data.tables || [];
+      console.log(`🪑 매장 ${currentStore.id} 테이블 ${allTables.length}개 로드 완료`);
+    } else {
+      throw new Error('테이블 데이터 로드 실패');
+    }
+  } catch (error) {
+    console.error('❌ 테이블 데이터 로드 실패:', error);
+    allTables = [];
+  }
 }
 
 // URL에서 매장 ID로 직접 로드
@@ -989,10 +872,8 @@ window.chooseStore = chooseStore;
 window.closeStoreModal = closeStoreModal;
 window.switchHomeMode = switchHomeMode;
 window.selectTableFromMap = selectTableFromMap;
-window.filterByStatus = filterByStatus;
 window.filterOrders = filterOrders;
 window.closeDetailPanel = closeDetailPanel;
-window.applyTableFilter = applyTableFilter;
 window.createNewOrder = createNewOrder;
 window.showPickupQueue = showPickupQueue;
 window.showUnassignedOrders = showUnassignedOrders;
