@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 
@@ -25,9 +26,22 @@
   <script src="shared/utils/cacheFileManager.js"></script>
 
   <script>
-    //KDS 페이지 초기 진입
-    document.addEventListener('DOMContentLoaded', () => {
-      renderKDS();
+    // KDS 페이지 초기 진입
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📟 KDS 페이지 DOM 로드 완료');
+      
+      // KDS 렌더링 함수 실행
+      if (typeof renderKDS === 'function') {
+        renderKDS();
+      } else {
+        console.error('❌ renderKDS 함수를 찾을 수 없습니다');
+        document.getElementById('main').innerHTML = `
+          <div style="padding: 40px; text-align: center; color: red;">
+            <h1>KDS 로딩 실패</h1>
+            <p>renderKDS 함수를 찾을 수 없습니다.</p>
+          </div>
+        `;
+      }
     });
   </script>
 </body>
