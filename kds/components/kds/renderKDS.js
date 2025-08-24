@@ -132,238 +132,7 @@ function renderKDSInterface(store) {
 
       <!-- 주문 그리드 -->
       <div class="orders-grid ${isDevMode ? 'dev-mode' : ''}" id="ordersGrid">
-        <!-- 주문 카드 1 -->
-        <div class="order-card pending" data-order-id="1">
-          <div class="order-header">
-            <div class="order-number">#101</div>
-            <div class="order-type">포장</div>
-          </div>
-          <div class="order-time">오후 12:45</div>
-          <div class="order-status pending">일반</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">양념치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">공기밥</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">소스</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(1)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(1)">취소</button>
-          </div>
-        </div>
-
-        <!-- 주문 카드 2 (조리중) -->
-        <div class="order-card cooking" data-order-id="2">
-          <div class="order-header">
-            <div class="order-number">#102</div>
-            <div class="order-type">포장</div>
-          </div>
-          <div class="order-time">오후 12:50</div>
-          <div class="order-status cooking">중간맛</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">후라이드치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">소스</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-timer">
-            <div class="timer-display">05:23</div>
-          </div>
-        </div>
-
-        <!-- 주문 카드 3 -->
-        <div class="order-card pending" data-order-id="3">
-          <div class="order-header">
-            <div class="order-number">#103</div>
-            <div class="order-type">매장</div>
-          </div>
-          <div class="order-time">오후 1:15</div>
-          <div class="order-status pending">특대 스페셜 콤보</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">양념치킨</span>
-              <span class="qty">2</span>
-            </div>
-            <div class="item">
-              <span class="item-name">공기밥</span>
-              <span class="qty">2</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">2</span>
-            </div>
-            <div class="item">
-              <span class="item-name">소스</span>
-              <span class="qty">2</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(3)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(3)">취소</button>
-          </div>
-        </div>
-
-        <!-- 주문 카드 4 -->
-        <div class="order-card pending" data-order-id="4">
-          <div class="order-header">
-            <div class="order-number">#104</div>
-            <div class="order-type">포장</div>
-          </div>
-          <div class="order-time">오후 1:20</div>
-          <div class="order-status pending">매운맛 + 순한맛</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">불닭치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">후라이드치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨소스</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(4)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(4)">취소</button>
-          </div>
-        </div>
-
-        <!-- 주문 카드 5 (조리중) -->
-        <div class="order-card cooking" data-order-id="5">
-          <div class="order-header">
-            <div class="order-number">#105</div>
-            <div class="order-type">매장</div>
-          </div>
-          <div class="order-time">오후 1:25</div>
-          <div class="order-status cooking">일반맛</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">후라이드치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-timer">
-            <div class="timer-display">02:47</div>
-          </div>
-        </div>
-
-        <!-- 주문 카드 6 (조리중) -->
-        <div class="order-card cooking" data-order-id="6">
-          <div class="order-header">
-            <div class="order-number">#106</div>
-            <div class="order-type">포장</div>
-          </div>
-          <div class="order-time">오후 1:30</div>
-          <div class="order-status cooking">특대 스페셜 콤보</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">양념치킨</span>
-              <span class="qty">2</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-timer">
-            <div class="timer-display">01:12</div>
-          </div>
-        </div>
-
-        <!-- 주문 카드 7 -->
-        <div class="order-card pending" data-order-id="7">
-          <div class="order-header">
-            <div class="order-number">#107</div>
-            <div class="order-type">매장</div>
-          </div>
-          <div class="order-time">오후 1:35</div>
-          <div class="order-status pending">간장치킨</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">간장치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(7)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(7)">취소</button>
-          </div>
-        </div>
-
-        <!-- 주문 카드 8 -->
-        <div class="order-card pending" data-order-id="8">
-          <div class="order-header">
-            <div class="order-number">#108</div>
-            <div class="order-type">포장</div>
-          </div>
-          <div class="order-time">오후 1:40</div>
-          <div class="order-status pending">마늘치킨</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">마늘치킨</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">소스</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(8)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(8)">취소</button>
-          </div>
-        </div>
-
-        <!-- 주문 카드 9 -->
-        <div class="order-card pending" data-order-id="9">
-          <div class="order-header">
-            <div class="order-number">#109</div>
-            <div class="order-type">매장</div>
-          </div>
-          <div class="order-time">오후 1:45</div>
-          <div class="order-status pending">허니머스터드</div>
-          <div class="order-items">
-            <div class="item">
-              <span class="item-name">허니머스터드</span>
-              <span class="qty">1</span>
-            </div>
-            <div class="item">
-              <span class="item-name">치킨무</span>
-              <span class="qty">1</span>
-            </div>
-          </div>
-          <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(9)">조리시작</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(9)">취소</button>
-          </div>
-        </div>
+        <!-- 주문 카드들이 동적으로 생성됩니다 -->
 
         <!-- 다기능 카드 (10번 위치) -->
         <div class="multifunction-card">
@@ -1114,6 +883,125 @@ function renderKDSInterface(store) {
         color: #718096;
         font-family: 'Courier New', monospace;
       }
+
+      /* 아이템별 조리 상태 스타일 */
+      .item {
+        position: relative;
+      }
+
+      .item.pending {
+        background: rgba(245, 158, 11, 0.1);
+        border-left: 3px solid #f59e0b;
+      }
+
+      .item.cooking {
+        background: rgba(239, 68, 68, 0.1);
+        border-left: 3px solid #ef4444;
+        animation: cooking-item-pulse 2s infinite;
+      }
+
+      .item.completed {
+        background: rgba(16, 185, 129, 0.1);
+        border-left: 3px solid #10b981;
+        opacity: 0.7;
+      }
+
+      @keyframes cooking-item-pulse {
+        0%, 100% {
+          background: rgba(239, 68, 68, 0.1);
+        }
+        50% {
+          background: rgba(239, 68, 68, 0.2);
+        }
+      }
+
+      .item-actions {
+        position: absolute;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .item-btn {
+        padding: 2px 6px;
+        border: none;
+        border-radius: 4px;
+        font-size: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .item-btn.start-btn {
+        background: #10b981;
+        color: white;
+      }
+
+      .item-btn.complete-btn {
+        background: #6366f1;
+        color: white;
+      }
+
+      .item-btn:hover {
+        transform: scale(1.1);
+      }
+
+      .urgent-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ef4444;
+        color: white;
+        font-size: 8px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 700;
+        animation: urgent-pulse 1s infinite;
+      }
+
+      @keyframes urgent-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+
+      .order-summary {
+        font-size: 8px;
+        color: #9ca3af;
+        text-align: center;
+        padding: 4px 0;
+        border-top: 1px solid rgba(156, 163, 175, 0.2);
+        margin: 8px 0;
+      }
+
+      .order-customer {
+        font-size: 9px;
+        color: #d1d5db;
+        font-weight: 500;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .table-info {
+        font-size: 8px;
+        color: #60a5fa;
+        text-align: center;
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+
+      .start-all-btn {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      }
+
+      .detail-btn {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      }
+
+      .dev-mode .item-actions {
+        position: static;
+        margin-left: auto;
+        margin-top: 4px;
+      }
     </style>
   `;
 
@@ -1182,43 +1070,252 @@ function updateCurrentTime() {
 async function loadKDSOrders(storeId) {
   try {
     console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
-    console.log(`✅ KDS 주문 데이터 로딩 완료 (더미 데이터 사용)`);
+
+    const response = await fetch(`/api/orders/kds/${storeId}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('주문 데이터 조회 실패');
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      updateKDSOrderCards(data.orders);
+      updateOrderCounts();
+      updateLastUpdateTime();
+      console.log(`✅ KDS 주문 데이터 로딩 완료 (${data.orders.length}개)`);
+    } else {
+      throw new Error(data.error || '데이터 조회 실패');
+    }
+
   } catch (error) {
     console.error('❌ KDS 주문 데이터 로딩 실패:', error);
   }
 }
 
-// 조리 시작
-function startCooking(orderId) {
-  console.log('🍳 조리 시작:', orderId);
-  const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
-  if (orderCard) {
-    const status = orderCard.querySelector('.order-status');
-    const actions = orderCard.querySelector('.order-actions');
+// KDS 주문 카드 업데이트
+function updateKDSOrderCards(orders) {
+  const ordersGrid = document.getElementById('ordersGrid');
+  if (!ordersGrid) return;
 
-    status.textContent = '조리 진행중';
-    status.className = 'order-status cooking';
+  // 기존 주문 카드들 제거 (다기능 카드와 빈 슬롯 제외)
+  const existingCards = ordersGrid.querySelectorAll('.order-card');
+  existingCards.forEach(card => card.remove());
 
-    // 타이머 추가
-    if (!orderCard.querySelector('.order-timer')) {
-      const timer = document.createElement('div');
-      timer.className = 'order-timer';
-      timer.innerHTML = '<div class="timer-display">00:00</div>';
-      orderCard.appendChild(timer);
-      startTimer(orderId);
-    }
+  // 주문 카드들 생성
+  let cardCount = 0;
+  const maxCards = 9; // 다기능 카드(10번)를 위해 9개까지
 
-    // 액션 버튼 숨김
-    if (actions) {
-      actions.style.display = 'none';
-    }
+  orders.forEach(order => {
+    if (cardCount >= maxCards) return;
 
-    // 카드 스타일 변경
-    orderCard.className = 'order-card cooking';
-    
-    // 카운트 업데이트
-    updateOrderCounts();
+    const orderCard = createOrderCard(order);
+    ordersGrid.insertBefore(orderCard, ordersGrid.querySelector('.multifunction-card'));
+    cardCount++;
+  });
+
+  // 빈 슬롯 생성 (9개 미만일 때)
+  for (let i = cardCount; i < maxCards; i++) {
+    const emptySlot = createEmptySlot(i + 1);
+    ordersGrid.insertBefore(emptySlot, ordersGrid.querySelector('.multifunction-card'));
   }
+
+  console.log(`📟 KDS 카드 업데이트 완료: ${cardCount}개 주문, ${maxCards - cardCount}개 빈 슬롯`);
+}
+
+// 주문 카드 생성
+function createOrderCard(order) {
+  const orderTime = new Date(order.orderDate);
+  const timeString = orderTime.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  const urgentClass = order.isUrgent ? ' urgent' : '';
+  const statusClass = order.overallStatus.toLowerCase();
+
+  const card = document.createElement('div');
+  card.className = `order-card ${statusClass}${urgentClass}`;
+  card.dataset.orderId = order.id;
+
+  const itemsHTML = order.items.map(item => {
+    const itemStatusClass = item.cooking_status.toLowerCase();
+    const statusIcon = {
+      'pending': '⏳',
+      'cooking': '🔥',
+      'completed': '✅'
+    }[item.cooking_status.toLowerCase()] || '';
+
+    return `
+      <div class="item ${itemStatusClass}" data-item-id="${item.id}">
+        <span class="item-name">${item.menu_name} ${statusIcon}</span>
+        <span class="qty">${item.quantity}</span>
+        <div class="item-actions">
+          ${item.cooking_status === 'PENDING' ? 
+            `<button class="item-btn start-btn" onclick="startCookingItem(${item.id})">시작</button>` : ''}
+          ${item.cooking_status === 'COOKING' ? 
+            `<button class="item-btn complete-btn" onclick="completeCookingItem(${item.id})">완료</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  card.innerHTML = `
+    <div class="order-header">
+      <div class="order-number">#${order.id}</div>
+      <div class="order-type">${order.tableNumber ? '매장' : '배달'}</div>
+      ${order.isUrgent ? '<div class="urgent-badge">긴급</div>' : ''}
+    </div>
+    <div class="order-time">${timeString}</div>
+    <div class="order-customer">${order.customerName}</div>
+    ${order.tableNumber ? `<div class="table-info">테이블 ${order.tableNumber}</div>` : ''}
+    <div class="order-items">${itemsHTML}</div>
+    <div class="order-summary">
+      대기: ${order.pendingCount} | 조리중: ${order.cookingCount} | 완료: ${order.completedCount}
+    </div>
+    <div class="order-actions">
+      ${order.pendingCount > 0 ? 
+        `<button class="action-btn start-all-btn" onclick="startCookingOrder(${order.id})">전체 조리시작</button>` : ''}
+      <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">상세보기</button>
+    </div>
+    ${order.cookingCount > 0 ? `
+      <div class="order-timer">
+        <div class="timer-display" id="timer-${order.id}">
+          ${calculateCookingTime(order)}
+        </div>
+      </div>
+    ` : ''}
+  `;
+
+  return card;
+}
+
+// 빈 슬롯 생성
+function createEmptySlot(slotNumber) {
+  const slot = document.createElement('div');
+  slot.className = 'empty-card-slot';
+  slot.innerHTML = `
+    <div class="slot-number">${slotNumber}</div>
+    <div class="slot-placeholder">주문 대기 중</div>
+  `;
+  return slot;
+}
+
+// 조리 시간 계산
+function calculateCookingTime(order) {
+  const cookingItems = order.items.filter(item => item.cooking_status === 'COOKING');
+  if (cookingItems.length === 0) return '00:00';
+
+  const earliestStart = cookingItems.reduce((earliest, item) => {
+    const startTime = new Date(item.started_at);
+    return !earliest || startTime < earliest ? startTime : earliest;
+  }, null);
+
+  if (!earliestStart) return '00:00';
+
+  const now = new Date();
+  const diffMinutes = Math.floor((now - earliestStart) / (1000 * 60));
+  const diffSeconds = Math.floor(((now - earliestStart) % (1000 * 60)) / 1000);
+
+  return `${diffMinutes.toString().padStart(2, '0')}:${diffSeconds.toString().padStart(2, '0')}`;
+}
+
+// 개별 메뉴 조리 시작
+async function startCookingItem(itemId) {
+  try {
+    console.log('🍳 메뉴 아이템 조리 시작:', itemId);
+
+    const response = await fetch(`/api/orders/items/${itemId}/start-cooking`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ 메뉴 조리 시작 완료:', result.message);
+      // 즉시 데이터 새로고침
+      if (window.currentStoreId) {
+        await loadKDSOrders(window.currentStoreId);
+      }
+    } else {
+      alert('조리 시작 실패: ' + result.error);
+    }
+  } catch (error) {
+    console.error('❌ 메뉴 조리 시작 실패:', error);
+    alert('조리 시작 중 오류가 발생했습니다.');
+  }
+}
+
+// 개별 메뉴 조리 완료
+async function completeCookingItem(itemId) {
+  try {
+    console.log('✅ 메뉴 아이템 조리 완료:', itemId);
+
+    const response = await fetch(`/api/orders/items/${itemId}/complete-cooking`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ 메뉴 조리 완료:', result.message);
+      // 즉시 데이터 새로고침
+      if (window.currentStoreId) {
+        await loadKDSOrders(window.currentStoreId);
+      }
+    } else {
+      alert('조리 완료 실패: ' + result.error);
+    }
+  } catch (error) {
+    console.error('❌ 메뉴 조리 완료 실패:', error);
+    alert('조리 완료 중 오류가 발생했습니다.');
+  }
+}
+
+// 주문 전체 조리 시작
+async function startCookingOrder(orderId) {
+  try {
+    console.log('🍳 주문 전체 조리 시작:', orderId);
+
+    const response = await fetch(`/api/orders/${orderId}/start-cooking`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ 주문 전체 조리 시작 완료:', result.message);
+      // 즉시 데이터 새로고침
+      if (window.currentStoreId) {
+        await loadKDSOrders(window.currentStoreId);
+      }
+    } else {
+      alert('조리 시작 실패: ' + result.error);
+    }
+  } catch (error) {
+    console.error('❌ 주문 조리 시작 실패:', error);
+    alert('조리 시작 중 오류가 발생했습니다.');
+  }
+}
+
+// 조리 시작 (레거시 - 호환성 유지)
+function startCooking(orderId) {
+  startCookingOrder(orderId);
 }
 
 // 주문 취소
@@ -1270,12 +1367,12 @@ function showOrderDetail(orderId) {
   alert(`주문 #${orderId} 상세 정보\n(상세 화면은 곧 구현될 예정입니다)`);
 }
 
-// KDS 자동 새로고침 설정
+// KDS 자동 새로고침 설정 (더 자주 업데이트)
 function setupKDSAutoRefresh(storeId) {
   setInterval(() => {
     console.log('🔄 KDS 자동 새로고침');
     loadKDSOrders(storeId);
-  }, 30000);
+  }, 10000); // 10초마다 새로고침
 }
 
 // 매장 선택 화면 렌더링
@@ -1361,6 +1458,9 @@ function updateOrderCounts() {
 window.renderKDS = renderKDS;
 window.showOrderDetail = showOrderDetail;
 window.startCooking = startCooking;
+window.startCookingOrder = startCookingOrder;
+window.startCookingItem = startCookingItem;
+window.completeCookingItem = completeCookingItem;
 window.cancelOrder = cancelOrder;
 window.showKDSSettings = showKDSSettings;
 window.showOrderHistory = showOrderHistory;

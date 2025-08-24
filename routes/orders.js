@@ -182,7 +182,26 @@ router.post('/pay', async (req, res) => {
       new Date()            // $11 - order_date
     ]);
 
-    console.log(`✅ 주문 ID ${orderResult.rows[0].id} orders 테이블에 저장 완료`);
+    const orderId = orderResult.rows[0].id;
+    console.log(`✅ 주문 ID ${orderId} orders 테이블에 저장 완료`);
+
+    // order_items 테이블에 메뉴별 조리 상태 데이터 저장
+    if (orderData.items && orderData.items.length > 0) {
+      for (const item of orderData.items) {
+        await client.query(`
+          INSERT INTO order_items (
+            order_id, menu_name, quantity, price, cooking_status
+          ) VALUES ($1, $2, $3, $4, $5)
+        `, [
+          orderId,
+          item.name,
+          item.quantity || 1,
+          item.price,
+          'PENDING'  // 기본 상태는 조리 대기
+        ]);
+      }
+      console.log(`✅ 주문 ID ${orderId}의 메뉴 아이템들을 order_items에 저장 완료`);
+    }
 
     // 매장별 포인트 사용분 차감 처리
     if (usedPoint > 0) {
@@ -678,16 +697,16 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
-// KDS용 매장별 주문 조회 API
+// KDS용 매장별 주문 조회 API (order_items 포함)
 router.get('/kds/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { status } = req.query;
 
-    console.log(`📟 KDS - 매장 ${storeId} 주문 조회 (상태: ${status || '전체'})`);
+    console.log(`📟 KDS - 매장 ${storeId} 주문 조회`);
 
-    let query = `
-      SELECT
+    // 조리가 완료되지 않은 order_items가 있는 주문들만 조회
+    const query = `
+      SELECT DISTINCT
         o.id, o.store_id, o.user_id, o.table_number, o.order_data,
         o.original_amount, o.used_point, o.coupon_discount, o.final_amount,
         o.order_status, o.order_date, o.created_at,
@@ -696,39 +715,45 @@ router.get('/kds/:storeId', async (req, res) => {
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.store_id = $1
+      INNER JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.store_id = $1 
+      AND oi.cooking_status IN ('PENDING', 'COOKING')
+      ORDER BY o.order_date ASC
     `;
 
-    const params = [parseInt(storeId)];
+    const result = await pool.query(query, [parseInt(storeId)]);
 
-    // 상태별 필터링
-    if (status) {
-      query += ` AND o.order_status = $${params.length + 1}`;
-      params.push(status);
-    } else {
-      // KDS에서는 완료되지 않은 주문만 표시
-      query += ` AND o.order_status IN ('pending', 'cooking', 'completed')`;
-    }
+    const orders = [];
+    
+    for (const row of result.rows) {
+      // 각 주문의 order_items 조회
+      const itemsResult = await pool.query(`
+        SELECT id, menu_name, quantity, price, cooking_status, started_at, completed_at
+        FROM order_items 
+        WHERE order_id = $1
+        ORDER BY created_at ASC
+      `, [row.id]);
 
-    query += ` ORDER BY 
-      CASE 
-        WHEN o.order_status = 'pending' THEN 1
-        WHEN o.order_status = 'cooking' THEN 2
-        WHEN o.order_status = 'completed' THEN 3
-        ELSE 4
-      END,
-      o.order_date ASC
-      LIMIT 50
-    `;
-
-    const result = await pool.query(query, params);
-
-    const orders = result.rows.map(row => {
       const orderTime = new Date(row.order_date);
       const now = new Date();
       const waitingMinutes = Math.floor((now - orderTime) / (1000 * 60));
 
-      return {
+      // 전체 아이템 중 조리 상태별 분류
+      const items = itemsResult.rows;
+      const pendingItems = items.filter(item => item.cooking_status === 'PENDING');
+      const cookingItems = items.filter(item => item.cooking_status === 'COOKING');
+      const completedItems = items.filter(item => item.cooking_status === 'COMPLETED');
+
+      // 주문 전체 상태 결정
+      let overallStatus = 'PENDING';
+      if (cookingItems.length > 0) {
+        overallStatus = 'COOKING';
+      }
+      if (pendingItems.length === 0 && cookingItems.length === 0) {
+        overallStatus = 'COMPLETED';
+      }
+
+      orders.push({
         id: row.id,
         storeId: row.store_id,
         storeName: row.store_name,
@@ -741,33 +766,24 @@ router.get('/kds/:storeId', async (req, res) => {
         usedPoint: row.used_point || 0,
         couponDiscount: row.coupon_discount || 0,
         finalAmount: row.final_amount,
-        orderStatus: row.order_status,
         orderDate: row.order_date,
         createdAt: row.created_at,
         waitingMinutes: waitingMinutes,
-        isUrgent: waitingMinutes > 15 && row.order_status === 'pending'
-      };
-    });
+        overallStatus: overallStatus,
+        items: items,
+        pendingCount: pendingItems.length,
+        cookingCount: cookingItems.length,
+        completedCount: completedItems.length,
+        isUrgent: waitingMinutes > 15
+      });
+    }
 
-    // 상태별로 분류
-    const ordersByStatus = {
-      urgent: orders.filter(o => o.isUrgent),
-      pending: orders.filter(o => o.orderStatus === 'pending' && !o.isUrgent),
-      cooking: orders.filter(o => o.orderStatus === 'cooking'),
-      completed: orders.filter(o => o.orderStatus === 'completed')
-    };
-
-    console.log(`✅ KDS - 매장 ${storeId} 주문 조회 완료:`, {
-      urgent: ordersByStatus.urgent.length,
-      pending: ordersByStatus.pending.length,
-      cooking: ordersByStatus.cooking.length,
-      completed: ordersByStatus.completed.length
-    });
+    console.log(`✅ KDS - 매장 ${storeId} 주문 ${orders.length}개 조회 완료`);
 
     res.json({
       success: true,
       storeId: parseInt(storeId),
-      orders: ordersByStatus,
+      orders: orders,
       totalOrders: orders.length
     });
 
@@ -776,6 +792,122 @@ router.get('/kds/:storeId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'KDS 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 개별 메뉴 아이템 조리 시작 API
+router.put('/items/:itemId/start-cooking', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    console.log(`🍳 메뉴 아이템 ${itemId} 조리 시작`);
+
+    const result = await pool.query(`
+      UPDATE order_items 
+      SET cooking_status = 'COOKING', started_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND cooking_status = 'PENDING'
+      RETURNING *
+    `, [parseInt(itemId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '메뉴 아이템을 찾을 수 없거나 이미 조리가 시작되었습니다'
+      });
+    }
+
+    const updatedItem = result.rows[0];
+    console.log(`✅ 메뉴 아이템 ${itemId} 조리 시작 완료: ${updatedItem.menu_name}`);
+
+    res.json({
+      success: true,
+      item: updatedItem,
+      message: `${updatedItem.menu_name} 조리를 시작했습니다`
+    });
+
+  } catch (error) {
+    console.error('❌ 조리 시작 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '조리 시작 처리 실패'
+    });
+  }
+});
+
+// 개별 메뉴 아이템 조리 완료 API
+router.put('/items/:itemId/complete-cooking', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+
+    console.log(`✅ 메뉴 아이템 ${itemId} 조리 완료`);
+
+    const result = await pool.query(`
+      UPDATE order_items 
+      SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND cooking_status = 'COOKING'
+      RETURNING *
+    `, [parseInt(itemId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '메뉴 아이템을 찾을 수 없거나 조리 중 상태가 아닙니다'
+      });
+    }
+
+    const completedItem = result.rows[0];
+    console.log(`✅ 메뉴 아이템 ${itemId} 조리 완료: ${completedItem.menu_name}`);
+
+    res.json({
+      success: true,
+      item: completedItem,
+      message: `${completedItem.menu_name} 조리가 완료되었습니다`
+    });
+
+  } catch (error) {
+    console.error('❌ 조리 완료 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '조리 완료 처리 실패'
+    });
+  }
+});
+
+// 주문 전체 조리 시작 API
+router.put('/:orderId/start-cooking', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🍳 주문 ${orderId} 전체 조리 시작`);
+
+    const result = await pool.query(`
+      UPDATE order_items 
+      SET cooking_status = 'COOKING', started_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1 AND cooking_status = 'PENDING'
+      RETURNING *
+    `, [parseInt(orderId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '조리 시작할 메뉴가 없습니다'
+      });
+    }
+
+    console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 시작 완료`);
+
+    res.json({
+      success: true,
+      updatedItems: result.rows,
+      message: `주문 #${orderId}의 모든 메뉴 조리를 시작했습니다`
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 조리 시작 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 조리 시작 처리 실패'
     });
   }
 });
