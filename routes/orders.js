@@ -976,4 +976,63 @@ router.put('/:orderId/start-cooking', async (req, res) => {
   }
 });
 
+// 주문 완료 API (KDS용)
+router.put('/:orderId/complete', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`✅ 주문 ${orderId} 완료 처리 시작`);
+
+    // 해당 주문의 모든 조리중인 아이템을 완료로 변경
+    const result = await pool.query(`
+      UPDATE order_items
+      SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1 AND cooking_status = 'COOKING'
+      RETURNING *
+    `, [parseInt(orderId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '완료할 조리중인 메뉴가 없습니다'
+      });
+    }
+
+    console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 완료`);
+
+    // 📡 KDS 실시간 업데이트 전송 (주문 완료)
+    if (global.kdsWebSocket) {
+      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [orderId]);
+      if (orderResult.rows.length > 0) {
+        const storeId = orderResult.rows[0].store_id;
+        console.log(`📡 주문 ${orderId} 완료 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
+        
+        // 주문 완료 이벤트
+        global.kdsWebSocket.broadcast(storeId, 'order-completed', {
+          orderId: orderId,
+          itemCount: result.rows.length,
+          items: result.rows.map(item => ({
+            itemId: item.id,
+            menuName: item.menu_name
+          })),
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      completedItems: result.rows,
+      message: `주문 #${orderId}이 완료되었습니다`
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 완료 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 완료 처리 실패'
+    });
+  }
+});
+
 module.exports = router;
