@@ -50,7 +50,7 @@ function renderPOSLayout() {
           <h1 class="pos-logo">🍽️ TableLink POS</h1>
           <div class="store-selector">
             <span id="storeName">매장을 선택해주세요</span>
-            <button onclick="selectStore()" class="store-select-btn">매장 선택</button>
+            <button onclick="selectStore()" class="store-select-btn" id="storeSelectBtn">매장 선택</button>
           </div>
         </div>
         
@@ -273,6 +273,16 @@ function renderPOSLayout() {
         border-radius: 6px;
         cursor: pointer;
         font-size: 14px;
+      }
+
+      .store-locked-badge {
+        background: #10b981;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        margin-left: 8px;
       }
 
       .header-center {
@@ -1089,11 +1099,26 @@ async function loadStoreById(storeId) {
       category: store.category || '기타' 
     };
     
-    document.getElementById('storeName').textContent = store.name;
+    // 매장이 URL로 지정된 경우 매장 선택 버튼 숨기기
+    document.getElementById('storeName').textContent = `${store.name} (${store.category || '기타'})`;
+    const selectBtn = document.getElementById('storeSelectBtn');
+    if (selectBtn) {
+      selectBtn.style.display = 'none';
+    }
+    
+    // 매장 고정 표시 추가
+    const storeSelector = document.querySelector('.store-selector');
+    if (storeSelector && !storeSelector.querySelector('.store-locked-badge')) {
+      const lockedBadge = document.createElement('span');
+      lockedBadge.className = 'store-locked-badge';
+      lockedBadge.innerHTML = '🔒 고정';
+      lockedBadge.title = 'URL로 지정된 매장입니다';
+      storeSelector.appendChild(lockedBadge);
+    }
     
     await loadStoreDetails(storeId);
     
-    console.log(`✅ 매장 ${store.name} 로드 완료`);
+    console.log(`✅ 매장 ${store.name} 로드 완료 (URL 고정 모드)`);
     
   } catch (error) {
     console.error('❌ 매장 직접 로드 실패:', error);
