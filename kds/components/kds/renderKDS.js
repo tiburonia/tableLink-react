@@ -1,3 +1,4 @@
+
 // KDS 메인 렌더링 함수
 async function renderKDS() {
   const main = document.getElementById('main');
@@ -110,12 +111,178 @@ function renderKDSInterface(store) {
             <button class="ctrl-btn settings-btn">⚙</button>
             <button class="ctrl-btn exit-btn">✖</button>
           </div>
+          <div class="summary-info">
+            <div class="summary-row">DFC: 1163</div>
+            <div class="summary-row">DFC SOLD: 1</div>
+            <div class="summary-row">DFC COMBO: 1474</div>
+            <div class="summary-row">DFC Meals & Total: 8</div>
+            <div class="summary-row">8</div>
+          </div>
         </div>
       </div>
 
       <!-- 주문 그리드 -->
       <div class="orders-grid" id="ordersGrid">
-        <!-- 주문 카드들이 여기에 동적으로 생성됩니다 -->
+        <!-- 주문 카드 1 -->
+        <div class="order-card pending" data-order-id="1">
+          <div class="order-header">
+            <div class="order-number">#101</div>
+            <div class="order-type">Take Away</div>
+          </div>
+          <div class="order-time">12:45 PM</div>
+          <div class="order-status pending">REGULAR</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Chinese Fries</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Rice</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Gravy</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(1)">Start</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(1)">Cancel</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 2 (조리중) -->
+        <div class="order-card cooking" data-order-id="2">
+          <div class="order-header">
+            <div class="order-number">#102</div>
+            <div class="order-type">Take Away</div>
+          </div>
+          <div class="order-time">12:50 PM</div>
+          <div class="order-status cooking">MEDIUM-C</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Gravy</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-timer">
+            <div class="timer-display">05:23</div>
+          </div>
+        </div>
+
+        <!-- 주문 카드 3 -->
+        <div class="order-card pending" data-order-id="3">
+          <div class="order-header">
+            <div class="order-number">#103</div>
+            <div class="order-type">Dine In</div>
+          </div>
+          <div class="order-time">1:15 PM</div>
+          <div class="order-status pending">LARGE SPECIAL COMBO LARGE</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Chinese Fries</span>
+              <span class="qty">2</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Rice</span>
+              <span class="qty">2</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">2</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Gravy</span>
+              <span class="qty">2</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(3)">Start</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(3)">Cancel</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 4 -->
+        <div class="order-card pending" data-order-id="4">
+          <div class="order-header">
+            <div class="order-number">#104</div>
+            <div class="order-type">Take Away</div>
+          </div>
+          <div class="order-time">1:20 PM</div>
+          <div class="order-status pending">HOT + SPICY - 1</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Chinese Sauce</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(4)">Start</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(4)">Cancel</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 5 (조리중) -->
+        <div class="order-card cooking" data-order-id="5">
+          <div class="order-header">
+            <div class="order-number">#105</div>
+            <div class="order-type">Dine In</div>
+          </div>
+          <div class="order-time">1:25 PM</div>
+          <div class="order-status cooking">REGULAR - 1</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Chinese</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-timer">
+            <div class="timer-display">02:47</div>
+          </div>
+        </div>
+
+        <!-- 주문 카드 6 (조리중) -->
+        <div class="order-card cooking" data-order-id="6">
+          <div class="order-header">
+            <div class="order-number">#106</div>
+            <div class="order-type">Take Away</div>
+          </div>
+          <div class="order-time">1:30 PM</div>
+          <div class="order-status cooking">LARGE SPECIAL COMBO LARGE</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">Modified Protein</span>
+              <span class="qty">2</span>
+            </div>
+            <div class="item">
+              <span class="item-name">Chinese</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-timer">
+            <div class="timer-display">01:12</div>
+          </div>
+        </div>
       </div>
 
       <!-- 하단 상태바 -->
@@ -148,27 +315,25 @@ function renderKDSInterface(store) {
       }
 
       .kds-container {
-        width: 1920px;
-        height: 1080px;
+        width: 1200px;
+        height: 500px;
         background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
         display: flex;
         flex-direction: column;
-        position: fixed;
-        top: 0;
-        left: 0;
-        transform-origin: top left;
-        transform: scale(calc(100vw / 1920), calc(100vh / 1080));
+        margin: 20px auto;
+        border: 2px solid #444;
+        border-radius: 8px;
       }
 
       /* 헤더 스타일 */
       .kds-header {
-        height: 80px;
+        height: 60px;
         background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
         border-bottom: 2px solid #555;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 30px;
+        padding: 0 20px;
       }
 
       .header-left .date-time {
@@ -176,13 +341,13 @@ function renderKDSInterface(store) {
       }
 
       .date {
-        font-size: 16px;
+        font-size: 12px;
         color: #ccc;
         margin-bottom: 2px;
       }
 
       .time {
-        font-size: 20px;
+        font-size: 14px;
         font-weight: bold;
         color: #fff;
         font-family: 'Courier New', monospace;
@@ -191,9 +356,9 @@ function renderKDSInterface(store) {
       .header-center .pagination {
         display: flex;
         align-items: center;
-        gap: 1.5vw;
+        gap: 10px;
         background: #666;
-        padding: 0.8vh 1.5vw;
+        padding: 8px 15px;
         border-radius: 6px;
       }
 
@@ -201,33 +366,39 @@ function renderKDSInterface(store) {
         background: #555;
         border: none;
         color: white;
-        padding: 0.8vh 1vw;
+        padding: 5px 10px;
         border-radius: 4px;
         cursor: pointer;
-        font-size: clamp(12px, 1vw, 14px);
+        font-size: 12px;
       }
 
       .page-info {
         color: white;
         font-weight: bold;
-        font-size: clamp(14px, 1.2vw, 16px);
-        min-width: 5vw;
+        font-size: 12px;
+        min-width: 60px;
         text-align: center;
       }
 
-      .header-right .control-buttons {
+      .header-right {
         display: flex;
-        gap: 10px;
+        gap: 15px;
+        align-items: center;
+      }
+
+      .control-buttons {
+        display: flex;
+        gap: 8px;
       }
 
       .ctrl-btn {
         background: #666;
         border: none;
         color: white;
-        padding: 10px 16px;
+        padding: 8px 12px;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 600;
         transition: all 0.2s ease;
       }
@@ -241,14 +412,24 @@ function renderKDSInterface(store) {
       .settings-btn { background: #666; }
       .exit-btn { background: #e74c3c; }
 
+      .summary-info {
+        font-size: 10px;
+        color: #ccc;
+        text-align: right;
+      }
+
+      .summary-row {
+        margin-bottom: 1px;
+      }
+
       /* 주문 그리드 */
       .orders-grid {
         flex: 1;
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(2, 1fr);
-        gap: 20px;
-        padding: 20px;
+        gap: 8px;
+        padding: 10px;
         overflow: hidden;
       }
 
@@ -256,56 +437,69 @@ function renderKDSInterface(store) {
       .order-card {
         background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
         border: 2px solid #555;
-        border-radius: 12px;
-        padding: 20px;
+        border-radius: 8px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
         position: relative;
         cursor: pointer;
         transition: all 0.3s ease;
+        font-size: 11px;
       }
 
       .order-card:hover {
         border-color: #777;
-        transform: translateY(-2px);
+        transform: translateY(-1px);
+      }
+
+      .order-card.pending {
+        border-color: #f39c12;
+        background: linear-gradient(135deg, #3a3520 0%, #2a2510 100%);
+      }
+
+      .order-card.cooking {
+        border-color: #e74c3c;
+        background: linear-gradient(135deg, #4a2a2a 0%, #3a1a1a 100%);
       }
 
       .order-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 8px;
+      }
+
+      .order-number {
+        font-size: 16px;
+        font-weight: bold;
+        color: #4a90e2;
       }
 
       .order-type {
         background: #4a90e2;
         color: white;
-        padding: 6px 12px;
+        padding: 4px 8px;
         border-radius: 4px;
-        font-size: 12px;
+        font-size: 10px;
         font-weight: bold;
       }
 
       .order-time {
         color: #ccc;
-        font-size: 14px;
+        font-size: 11px;
         font-family: 'Courier New', monospace;
-      }
-
-      .order-number {
-        font-size: 24px;
-        font-weight: bold;
-        color: #4a90e2;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
       }
 
       .order-status {
-        font-size: clamp(13px, 1.2vw, 16px);
+        font-size: 11px;
         font-weight: bold;
-        margin-bottom: 1.2vh;
-        padding: 0.8vh;
-        border-radius: 6px;
+        margin-bottom: 8px;
+        padding: 6px;
+        border-radius: 4px;
         text-align: center;
+        word-wrap: break-word;
+        line-height: 1.2;
       }
 
       .order-status.pending {
@@ -318,14 +512,9 @@ function renderKDSInterface(store) {
         color: white;
       }
 
-      .order-status.completed {
-        background: #27ae60;
-        color: white;
-      }
-
       .order-items {
         flex: 1;
-        margin-bottom: 1.2vh;
+        margin-bottom: 8px;
         overflow-y: auto;
       }
 
@@ -333,33 +522,45 @@ function renderKDSInterface(store) {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 0.5vh 0;
+        padding: 3px 0;
         border-bottom: 1px solid #444;
         color: #ddd;
-        font-size: clamp(11px, 1vw, 14px);
+        font-size: 10px;
+      }
+
+      .item:last-child {
+        border-bottom: none;
+      }
+
+      .item-name {
+        flex: 1;
+        margin-right: 8px;
+        word-wrap: break-word;
       }
 
       .qty {
         background: #666;
         color: white;
-        padding: 0.2vh 0.6vw;
-        border-radius: 12px;
-        font-size: clamp(10px, 0.8vw, 12px);
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 9px;
         font-weight: bold;
+        min-width: 20px;
+        text-align: center;
       }
 
       .order-actions {
         display: flex;
-        gap: 0.8vw;
+        gap: 6px;
       }
 
       .action-btn {
         flex: 1;
-        padding: 1vh;
+        padding: 6px;
         border: none;
-        border-radius: 6px;
+        border-radius: 4px;
         cursor: pointer;
-        font-size: clamp(11px, 1vw, 14px);
+        font-size: 10px;
         font-weight: bold;
         transition: all 0.2s ease;
       }
@@ -384,40 +585,46 @@ function renderKDSInterface(store) {
 
       .order-timer {
         position: absolute;
-        top: 1.5vw;
-        right: 1.5vw;
+        top: 10px;
+        right: 10px;
         background: #e74c3c;
         color: white;
-        padding: 0.8vh 1vw;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-weight: bold;
       }
 
       .timer-display {
-        font-size: clamp(12px, 1.2vw, 16px);
+        font-size: 11px;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
       }
 
       /* 하단 상태바 */
       .status-bar {
-        height: 6vh;
-        min-height: 50px;
+        height: 40px;
         background: linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%);
         border-top: 2px solid #555;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 2vw;
+        padding: 0 20px;
       }
 
       .status-btn {
         background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        padding: 1vh 1.5vw;
-        border-radius: 6px;
+        padding: 6px 12px;
+        border-radius: 4px;
         cursor: pointer;
-        font-size: clamp(11px, 1vw, 14px);
+        font-size: 11px;
         font-weight: 600;
         transition: all 0.2s ease;
       }
@@ -429,41 +636,18 @@ function renderKDSInterface(store) {
       .status-right {
         display: flex;
         align-items: center;
-        gap: 1.5vw;
+        gap: 15px;
       }
 
       .version {
         color: rgba(255, 255, 255, 0.8);
-        font-size: clamp(10px, 0.8vw, 12px);
+        font-size: 10px;
         font-family: 'Courier New', monospace;
       }
 
-      /* 조리 중인 카드 특별 스타일 */
-      .order-card[data-order-id="2"],
-      .order-card[data-order-id="5"],
-      .order-card[data-order-id="6"] {
-        border-color: #e74c3c;
-        background: linear-gradient(135deg, #4a2a2a 0%, #3a1a1a 100%);
-      }
-
-      .order-card[data-order-id="2"] .order-timer .timer-display,
-      .order-card[data-order-id="5"] .order-timer .timer-display,
-      .order-card[data-order-id="6"] .order-timer .timer-display {
-        animation: pulse 1s infinite;
-      }
-
-      @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.6; }
-        100% { opacity: 1; }
-      }
-
-      /* 대기 중인 주문 스타일 */
-      .order-card[data-order-id="1"],
-      .order-card[data-order-id="3"],
-      .order-card[data-order-id="4"] {
-        border-color: #f39c12;
-        background: linear-gradient(135deg, #3a3520 0%, #2a2510 100%);
+      /* 조리중인 카드 숨김 처리 */
+      .order-card.cooking .order-actions {
+        display: none;
       }
     </style>
   `;
@@ -483,28 +667,10 @@ function setupKDSEventListeners(store) {
   // 주문 카드 클릭 이벤트
   document.querySelectorAll('.order-card').forEach(card => {
     card.addEventListener('click', function(e) {
-      // Action buttons are not part of the order card click
       if (!e.target.classList.contains('action-btn') && !e.target.classList.contains('start-btn') && !e.target.classList.contains('cancel-btn')) {
         const orderId = this.dataset.orderId;
         showOrderDetail(orderId);
       }
-    });
-  });
-
-  // 액션 버튼 이벤트
-  document.querySelectorAll('.start-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const orderId = this.closest('.order-card').dataset.orderId;
-      startCooking(orderId);
-    });
-  });
-
-  document.querySelectorAll('.cancel-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const orderId = this.closest('.order-card').dataset.orderId;
-      cancelOrder(orderId);
     });
   });
 
@@ -533,46 +699,14 @@ function updateCurrentTime() {
   }
 }
 
-// 주문 데이터 로딩 (placeholder, actual implementation needed for dynamic data)
+// 주문 데이터 로딩
 async function loadKDSOrders(storeId) {
   try {
     console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
-
-    // Placeholder for actual API call to fetch orders
-    // For now, we'll use the static data already in the HTML for demonstration
-    // In a real application, this would fetch from `/api/orders/kds/${storeId}`
-
-    // Example of how you might update if you had actual data:
-    // const response = await fetch(`/api/orders/kds/${storeId}`);
-    // if (!response.ok) throw new Error('주문 데이터 조회 실패');
-    // const data = await response.json();
-    // updateOrderCards(data.orders);
-    // updateOrderCounts(data.orders);
-
-    console.log(`✅ KDS 주문 데이터 로딩 완료 (using static data for now)`);
-
+    console.log(`✅ KDS 주문 데이터 로딩 완료 (더미 데이터 사용)`);
   } catch (error) {
     console.error('❌ KDS 주문 데이터 로딩 실패:', error);
   }
-}
-
-// 주문 카드 업데이트 (placeholder, as static data is used in renderKDSInterface)
-function updateOrderCards(orders) {
-  // This function would dynamically render order cards based on fetched data.
-  // Currently, the cards are hardcoded in renderKDSInterface.
-  console.log("updateOrderCards called, but using static data.");
-}
-
-// 주문 섹션 업데이트 (placeholder)
-function updateOrderSection(containerId, orders, status) {
-  // This function would dynamically render order cards based on fetched data.
-  console.log(`updateOrderSection called for ${containerId}`);
-}
-
-// 주문 카운트 업데이트 (placeholder)
-function updateOrderCounts(orders) {
-  // This function would update the count display for each order status.
-  console.log("updateOrderCounts called, but using static data.");
 }
 
 // 조리 시작
@@ -580,14 +714,11 @@ function startCooking(orderId) {
   console.log('🍳 조리 시작:', orderId);
   const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
   if (orderCard) {
-    // UI 업데이트
     const status = orderCard.querySelector('.order-status');
     const actions = orderCard.querySelector('.order-actions');
-    const orderHeader = orderCard.querySelector('.order-header');
-    const orderItems = orderCard.querySelector('.order-items');
 
     status.textContent = 'Cooking in Progress';
-    status.className = 'order-status cooking'; // Change status class for styling
+    status.className = 'order-status cooking';
 
     // 타이머 추가
     if (!orderCard.querySelector('.order-timer')) {
@@ -595,8 +726,6 @@ function startCooking(orderId) {
       timer.className = 'order-timer';
       timer.innerHTML = '<div class="timer-display">00:00</div>';
       orderCard.appendChild(timer);
-
-      // Start the timer
       startTimer(orderId);
     }
 
@@ -605,14 +734,8 @@ function startCooking(orderId) {
       actions.style.display = 'none';
     }
 
-    // 카드 스타일 변경 (adjust as needed)
-    orderCard.style.borderColor = '#e74c3c'; // Red border for cooking
-    orderCard.style.background = 'linear-gradient(135deg, #4a2a2a 0%, #3a1a1a 100%)'; // Dark red background
-
-    // Ensure the order status is correctly styled for 'cooking'
-    if (orderCard.querySelector('.order-status')) {
-      orderCard.querySelector('.order-status').classList.add('cooking');
-    }
+    // 카드 스타일 변경
+    orderCard.className = 'order-card cooking';
   }
 }
 
@@ -622,28 +745,18 @@ function cancelOrder(orderId) {
   if (confirm('이 주문을 취소하시겠습니까?')) {
     const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
     if (orderCard) {
-      // Dim the card and change status to "Cancelled"
       orderCard.style.opacity = '0.5';
       orderCard.style.filter = 'grayscale(100%)';
 
       const status = orderCard.querySelector('.order-status');
       if (status) {
         status.textContent = 'Cancelled';
-        status.className = 'order-status'; // Reset classes
-        // Apply a specific style for cancelled status if needed
-        status.style.background = '#95a5a6'; // Grey background
+        status.style.background = '#95a5a6';
       }
 
       const actions = orderCard.querySelector('.order-actions');
       if (actions) {
-        actions.style.display = 'none'; // Hide action buttons
-      }
-
-      // Stop any running timer for this order
-      const timerId = orderCard.dataset.timerId;
-      if (timerId) {
-        clearInterval(parseInt(timerId));
-        delete orderCard.dataset.timerId;
+        actions.style.display = 'none';
       }
     }
   }
@@ -662,14 +775,8 @@ function startTimer(orderId) {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-
-    // Apply pulse animation if it's not already applied
-    if (!timerDisplay.style.animation) {
-        timerDisplay.style.animation = 'pulse 1s infinite';
-    }
   }, 1000);
 
-  // Store the interval ID on the card element
   if (orderCard) {
     orderCard.dataset.timerId = interval;
   }
@@ -683,7 +790,6 @@ function showOrderDetail(orderId) {
 
 // KDS 자동 새로고침 설정
 function setupKDSAutoRefresh(storeId) {
-  // 30초마다 주문 데이터 새로고침
   setInterval(() => {
     console.log('🔄 KDS 자동 새로고침');
     loadKDSOrders(storeId);
@@ -725,6 +831,5 @@ window.renderKDS = renderKDS;
 window.showOrderDetail = showOrderDetail;
 window.startCooking = startCooking;
 window.cancelOrder = cancelOrder;
-window.loadKDSOrders = loadKDSOrders; // Added for potential external use or testing
 
 console.log('✅ KDS 시스템 로드 완료');
