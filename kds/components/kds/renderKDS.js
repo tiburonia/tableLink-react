@@ -99,32 +99,32 @@ function renderKDSInterface(store) {
       <div class="kds-header">
         <div class="header-left">
           <div class="date-time">
-            <div class="date">27 Sep 2019</div>
-            <div class="time" id="currentTime">10:31:35 PM</div>
+            <div class="date">2024년 1월 27일</div>
+            <div class="time" id="currentTime">오후 10:31:35</div>
           </div>
         </div>
         ${!isDevMode ? `
         <div class="header-center">
           <div class="pagination">
             <button class="nav-btn">◀</button>
-            <span class="page-info">Page 1 / 1</span>
+            <span class="page-info">페이지 1 / 1</span>
             <button class="nav-btn">▶</button>
           </div>
         </div>
         ` : ''}
         <div class="header-right">
           <div class="control-buttons">
-            <button class="ctrl-btn orders-btn">Orders</button>
-            ${!isDevMode ? '<button class="ctrl-btn functions-btn">Functions</button>' : ''}
+            <button class="ctrl-btn orders-btn">주문</button>
+            ${!isDevMode ? '<button class="ctrl-btn functions-btn">기능</button>' : ''}
             <button class="ctrl-btn settings-btn">⚙</button>
             <button class="ctrl-btn exit-btn">✖</button>
           </div>
           ${!isDevMode ? `
           <div class="summary-info">
-            <div class="summary-row">DFC: 1163</div>
-            <div class="summary-row">DFC SOLD: 1</div>
-            <div class="summary-row">DFC COMBO: 1474</div>
-            <div class="summary-row">DFC Meals & Total: 8</div>
+            <div class="summary-row">치킨: 1163</div>
+            <div class="summary-row">판매완료: 1</div>
+            <div class="summary-row">콤보: 1474</div>
+            <div class="summary-row">세트 메뉴: 8</div>
             <div class="summary-row">8</div>
           </div>
           ` : ''}
@@ -137,31 +137,31 @@ function renderKDSInterface(store) {
         <div class="order-card pending" data-order-id="1">
           <div class="order-header">
             <div class="order-number">#101</div>
-            <div class="order-type">Take Away</div>
+            <div class="order-type">포장</div>
           </div>
-          <div class="order-time">12:45 PM</div>
-          <div class="order-status pending">REGULAR</div>
+          <div class="order-time">오후 12:45</div>
+          <div class="order-status pending">일반</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Chinese Fries</span>
+              <span class="item-name">양념치킨</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Rice</span>
+              <span class="item-name">공기밥</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">치킨무</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Gravy</span>
+              <span class="item-name">소스</span>
               <span class="qty">1</span>
             </div>
           </div>
           <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(1)">Start</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(1)">Cancel</button>
+            <button class="action-btn start-btn" onclick="startCooking(1)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(1)">취소</button>
           </div>
         </div>
 
@@ -169,17 +169,17 @@ function renderKDSInterface(store) {
         <div class="order-card cooking" data-order-id="2">
           <div class="order-header">
             <div class="order-number">#102</div>
-            <div class="order-type">Take Away</div>
+            <div class="order-type">포장</div>
           </div>
-          <div class="order-time">12:50 PM</div>
-          <div class="order-status cooking">MEDIUM-C</div>
+          <div class="order-time">오후 12:50</div>
+          <div class="order-status cooking">중간맛</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">후라이드치킨</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Gravy</span>
+              <span class="item-name">소스</span>
               <span class="qty">1</span>
             </div>
           </div>
@@ -192,31 +192,31 @@ function renderKDSInterface(store) {
         <div class="order-card pending" data-order-id="3">
           <div class="order-header">
             <div class="order-number">#103</div>
-            <div class="order-type">Dine In</div>
+            <div class="order-type">매장</div>
           </div>
-          <div class="order-time">1:15 PM</div>
-          <div class="order-status pending">LARGE SPECIAL COMBO LARGE</div>
+          <div class="order-time">오후 1:15</div>
+          <div class="order-status pending">특대 스페셜 콤보</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Chinese Fries</span>
+              <span class="item-name">양념치킨</span>
               <span class="qty">2</span>
             </div>
             <div class="item">
-              <span class="item-name">Rice</span>
+              <span class="item-name">공기밥</span>
               <span class="qty">2</span>
             </div>
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">치킨무</span>
               <span class="qty">2</span>
             </div>
             <div class="item">
-              <span class="item-name">Gravy</span>
+              <span class="item-name">소스</span>
               <span class="qty">2</span>
             </div>
           </div>
           <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(3)">Start</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(3)">Cancel</button>
+            <button class="action-btn start-btn" onclick="startCooking(3)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(3)">취소</button>
           </div>
         </div>
 
@@ -224,27 +224,27 @@ function renderKDSInterface(store) {
         <div class="order-card pending" data-order-id="4">
           <div class="order-header">
             <div class="order-number">#104</div>
-            <div class="order-type">Take Away</div>
+            <div class="order-type">포장</div>
           </div>
-          <div class="order-time">1:20 PM</div>
-          <div class="order-status pending">HOT + SPICY - 1</div>
+          <div class="order-time">오후 1:20</div>
+          <div class="order-status pending">매운맛 + 순한맛</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">불닭치킨</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">후라이드치킨</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Chinese Sauce</span>
+              <span class="item-name">치킨소스</span>
               <span class="qty">1</span>
             </div>
           </div>
           <div class="order-actions">
-            <button class="action-btn start-btn" onclick="startCooking(4)">Start</button>
-            <button class="action-btn cancel-btn" onclick="cancelOrder(4)">Cancel</button>
+            <button class="action-btn start-btn" onclick="startCooking(4)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(4)">취소</button>
           </div>
         </div>
 
@@ -252,17 +252,17 @@ function renderKDSInterface(store) {
         <div class="order-card cooking" data-order-id="5">
           <div class="order-header">
             <div class="order-number">#105</div>
-            <div class="order-type">Dine In</div>
+            <div class="order-type">매장</div>
           </div>
-          <div class="order-time">1:25 PM</div>
-          <div class="order-status cooking">REGULAR - 1</div>
+          <div class="order-time">오후 1:25</div>
+          <div class="order-status cooking">일반맛</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">후라이드치킨</span>
               <span class="qty">1</span>
             </div>
             <div class="item">
-              <span class="item-name">Chinese</span>
+              <span class="item-name">치킨무</span>
               <span class="qty">1</span>
             </div>
           </div>
@@ -275,17 +275,17 @@ function renderKDSInterface(store) {
         <div class="order-card cooking" data-order-id="6">
           <div class="order-header">
             <div class="order-number">#106</div>
-            <div class="order-type">Take Away</div>
+            <div class="order-type">포장</div>
           </div>
-          <div class="order-time">1:30 PM</div>
-          <div class="order-status cooking">LARGE SPECIAL COMBO LARGE</div>
+          <div class="order-time">오후 1:30</div>
+          <div class="order-status cooking">특대 스페셜 콤보</div>
           <div class="order-items">
             <div class="item">
-              <span class="item-name">Modified Protein</span>
+              <span class="item-name">양념치킨</span>
               <span class="qty">2</span>
             </div>
             <div class="item">
-              <span class="item-name">Chinese</span>
+              <span class="item-name">치킨무</span>
               <span class="qty">1</span>
             </div>
           </div>
@@ -298,14 +298,14 @@ function renderKDSInterface(store) {
       <!-- 하단 상태바 -->
       <div class="status-bar">
         <div class="status-left">
-          <button class="status-btn">Filter - All Order</button>
+          <button class="status-btn">필터 - 전체 주문</button>
         </div>
         <div class="status-center">
-          <button class="status-btn">View By : GRILL</button>
+          <button class="status-btn">보기 기준 : 그릴</button>
         </div>
         <div class="status-right">
-          <button class="status-btn">History</button>
-          <div class="version">Version 6.4.36</div>
+          <button class="status-btn">기록</button>
+          <div class="version">버전 6.4.36</div>
         </div>
       </div>
     </div>
@@ -332,12 +332,13 @@ function renderKDSInterface(store) {
       .kds-container {
         width: 1200px;
         height: 500px;
-        background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         display: flex;
         flex-direction: column;
         margin: 20px auto;
-        border: 2px solid #444;
-        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       }
 
       /* 개발 모드 스타일 */
@@ -349,19 +350,20 @@ function renderKDSInterface(store) {
         top: 10px;
         right: 10px;
         z-index: 1000;
-        background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
       }
 
       /* 헤더 스타일 */
       .kds-header {
         height: 60px;
-        background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
-        border-bottom: 2px solid #555;
+        background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+        border-bottom: 2px solid #ddd6fe;
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 0 20px;
+        border-radius: 14px 14px 0 0;
       }
 
       .dev-mode .kds-header {
@@ -375,7 +377,7 @@ function renderKDSInterface(store) {
 
       .date {
         font-size: 12px;
-        color: #ccc;
+        color: rgba(255, 255, 255, 0.8);
         margin-bottom: 2px;
       }
 
@@ -390,26 +392,32 @@ function renderKDSInterface(store) {
         display: flex;
         align-items: center;
         gap: 10px;
-        background: #666;
+        background: rgba(255, 255, 255, 0.15);
         padding: 8px 15px;
-        border-radius: 6px;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
       }
 
       .nav-btn {
-        background: #555;
+        background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        padding: 5px 10px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         cursor: pointer;
         font-size: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .nav-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
       }
 
       .page-info {
         color: white;
         font-weight: bold;
         font-size: 12px;
-        min-width: 60px;
+        min-width: 80px;
         text-align: center;
       }
 
@@ -425,15 +433,16 @@ function renderKDSInterface(store) {
       }
 
       .ctrl-btn {
-        background: #666;
+        background: rgba(255, 255, 255, 0.15);
         border: none;
         color: white;
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
         transition: all 0.2s ease;
+        backdrop-filter: blur(10px);
       }
 
       .dev-mode .ctrl-btn {
@@ -483,16 +492,18 @@ function renderKDSInterface(store) {
 
       /* 주문 카드 */
       .order-card {
-        background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-        border: 2px solid #555;
-        border-radius: 8px;
-        padding: 12px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
         display: flex;
         flex-direction: column;
         position: relative;
         cursor: pointer;
         transition: all 0.3s ease;
-        font-size: 11px;
+        font-size: 12px;
+        color: #334155;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
       }
 
       /* 개발 모드 카드 - 리스트 아이템 형태 */
@@ -500,24 +511,25 @@ function renderKDSInterface(store) {
         min-height: auto;
         height: auto;
         flex-shrink: 0;
-        padding: 10px;
+        padding: 12px;
         margin-bottom: 0;
-        font-size: 10px;
+        font-size: 11px;
       }
 
       .order-card:hover {
-        border-color: #777;
-        transform: translateY(-1px);
+        border-color: #c7d2fe;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
       }
 
       .order-card.pending {
-        border-color: #f39c12;
-        background: linear-gradient(135deg, #3a3520 0%, #2a2510 100%);
+        border-color: #fbbf24;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
       }
 
       .order-card.cooking {
-        border-color: #e74c3c;
-        background: linear-gradient(135deg, #4a2a2a 0%, #3a1a1a 100%);
+        border-color: #f87171;
+        background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
       }
 
       .order-header {
@@ -774,12 +786,13 @@ function updateCurrentTime() {
   const timeElement = document.getElementById('currentTime');
   if (timeElement) {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    });
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+    const seconds = now.getSeconds();
+    const ampm = hours >= 12 ? '오후' : '오전';
+    const hour12 = hours % 12 || 12;
+    
+    const timeString = `${ampm} ${hour12}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     timeElement.textContent = timeString;
   }
 }
@@ -802,7 +815,7 @@ function startCooking(orderId) {
     const status = orderCard.querySelector('.order-status');
     const actions = orderCard.querySelector('.order-actions');
 
-    status.textContent = 'Cooking in Progress';
+    status.textContent = '조리 진행중';
     status.className = 'order-status cooking';
 
     // 타이머 추가
@@ -835,7 +848,7 @@ function cancelOrder(orderId) {
 
       const status = orderCard.querySelector('.order-status');
       if (status) {
-        status.textContent = 'Cancelled';
+        status.textContent = '취소됨';
         status.style.background = '#95a5a6';
       }
 
@@ -870,7 +883,7 @@ function startTimer(orderId) {
 // 주문 상세 보기
 function showOrderDetail(orderId) {
   console.log('📋 주문 상세 보기:', orderId);
-  alert(`주문 #${orderId} 상세 정보\n(상세 모달은 곧 구현될 예정입니다)`);
+  alert(`주문 #${orderId} 상세 정보\n(상세 화면은 곧 구현될 예정입니다)`);
 }
 
 // KDS 자동 새로고침 설정
