@@ -1,11 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLink KDS - 주방 디스플레이</title>
+  <title>TableLink KDS</title>
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
   <link rel="stylesheet" href="shared/css/favoriteStore.css" />
   <link rel="stylesheet" href="shared/css/globalBody.css" />
@@ -29,7 +29,7 @@
     // KDS 페이지 초기 진입
     document.addEventListener('DOMContentLoaded', function() {
       console.log('📟 KDS 페이지 DOM 로드 완료');
-      
+
       // KDS 렌더링 함수 실행
       if (typeof renderKDS === 'function') {
         renderKDS();

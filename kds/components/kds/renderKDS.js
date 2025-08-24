@@ -73,8 +73,8 @@ async function renderKDSMain(storeId) {
     // 주문 데이터 로딩
     await loadKDSOrders(storeId);
 
-    // 자동 새로고침 설정
-    setupKDSAutoRefresh(storeId);
+    // WebSocket 연결 설정
+    setupKDSWebSocket(storeId);
 
   } catch (error) {
     console.error('❌ KDS 메인 화면 렌더링 실패:', error);
@@ -139,7 +139,7 @@ function renderKDSInterface(store) {
           <div class="multifunction-header">
             <div class="multifunction-title">📊 주방 상태</div>
           </div>
-          
+
           <div class="queue-info">
             <div class="queue-item">
               <div class="queue-label">대기 중</div>
@@ -875,6 +875,9 @@ function renderKDSInterface(store) {
       .status-indicator.online {
         color: #10b981;
       }
+      .status-indicator.offline {
+        color: #ef4444;
+      }
 
       .last-update {
         font-size: 6px;
@@ -1019,7 +1022,7 @@ function renderKDSInterface(store) {
 
   // 마지막 업데이트 시간 초기화
   updateLastUpdateTime();
-  
+
   // 주문 카운트 업데이트
   updateOrderCounts();
 
@@ -1064,7 +1067,7 @@ function updateCurrentTime() {
   }
 }
 
-// 주문 데이터 로딩
+// 주문 데이터 로딩 (폴링 또는 WebSocket 호출 시 사용)
 async function loadKDSOrders(storeId) {
   try {
     console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
@@ -1081,7 +1084,7 @@ async function loadKDSOrders(storeId) {
     }
 
     const data = await response.json();
-    
+
     if (data.success) {
       updateKDSOrderCards(data.orders);
       updateOrderCounts();
@@ -1095,6 +1098,203 @@ async function loadKDSOrders(storeId) {
     console.error('❌ KDS 주문 데이터 로딩 실패:', error);
   }
 }
+
+// KDS WebSocket 연결 설정 (실시간 업데이트)
+function setupKDSWebSocket(storeId) {
+  console.log('🔌 KDS WebSocket 연결 시작...');
+
+  // Socket.IO 클라이언트 연결
+  const socket = io({
+    transports: ['websocket', 'polling']
+  });
+
+  window.kdsSocket = socket;
+  window.currentStoreId = storeId;
+
+  // 연결 성공
+  socket.on('connect', () => {
+    console.log('✅ KDS WebSocket 연결 성공:', socket.id);
+
+    // KDS 룸 참여
+    socket.emit('join-kds-room', storeId);
+    console.log(`📟 매장 ${storeId} KDS 룸 참여`);
+
+    // 연결 상태 표시 업데이트
+    updateConnectionStatus(true);
+  });
+
+  // 연결 해제
+  socket.on('disconnect', (reason) => {
+    console.log('❌ KDS WebSocket 연결 해제:', reason);
+    updateConnectionStatus(false);
+  });
+
+  // 재연결 시도
+  socket.on('reconnect', (attemptNumber) => {
+    console.log('🔄 KDS WebSocket 재연결 성공:', attemptNumber);
+    socket.emit('join-kds-room', storeId);
+    updateConnectionStatus(true);
+  });
+
+  // KDS 실시간 업데이트 수신
+  socket.on('kds-update', (updateData) => {
+    console.log('📡 KDS 실시간 업데이트 수신:', updateData);
+    handleKDSRealTimeUpdate(updateData);
+  });
+
+  // 연결 오류
+  socket.on('connect_error', (error) => {
+    console.error('❌ KDS WebSocket 연결 오류:', error);
+    updateConnectionStatus(false);
+  });
+
+  // 백업용 폴링 (WebSocket 실패 시)
+  const backupPolling = setInterval(() => {
+    if (!socket.connected) {
+      console.log('🔄 WebSocket 연결 끊김 - 백업 폴링 실행');
+      loadKDSOrders(storeId);
+    }
+  }, 10000); // 10초마다 백업 체크
+
+  window.kdsBackupPolling = backupPolling;
+
+  console.log('✅ KDS WebSocket 시스템 초기화 완료');
+}
+
+// KDS 실시간 업데이트 처리
+function handleKDSRealTimeUpdate(updateData) {
+  const { type, storeId, data, timestamp } = updateData;
+
+  console.log(`📡 실시간 업데이트 처리: ${type}`, data);
+
+  switch (type) {
+    case 'new-order':
+      handleNewOrderUpdate(data);
+      break;
+    case 'cooking-started':
+      handleCookingStartedUpdate(data);
+      break;
+    case 'cooking-completed':
+      handleCookingCompletedUpdate(data);
+      break;
+    case 'order-cooking-started':
+      handleOrderCookingStartedUpdate(data);
+      break;
+    case 'order-update':
+    default:
+      // 전체 데이터 새로고침
+      refreshKDSData();
+      break;
+  }
+
+  // 업데이트 시간 갱신
+  updateLastUpdateTime();
+
+  // 실시간 업데이트 알림 표시
+  showRealTimeUpdateNotification(type, data);
+}
+
+// 새 주문 실시간 업데이트 처리
+function handleNewOrderUpdate(data) {
+  console.log('🆕 새 주문 실시간 업데이트:', data);
+
+  // 전체 데이터 새로고침 (새 주문이므로)
+  refreshKDSData();
+
+  // 새 주문 알림음 (옵션)
+  playNewOrderSound();
+}
+
+// 조리 시작 실시간 업데이트 처리
+function handleCookingStartedUpdate(data) {
+  console.log('🍳 조리 시작 실시간 업데이트:', data);
+
+  // 해당 아이템의 상태만 업데이트
+  updateItemStatus(data.itemId, 'COOKING');
+
+  // 전체 데이터 새로고침
+  refreshKDSData();
+}
+
+// 조리 완료 실시간 업데이트 처리
+function handleCookingCompletedUpdate(data) {
+  console.log('✅ 조리 완료 실시간 업데이트:', data);
+
+  // 해당 아이템의 상태만 업데이트
+  updateItemStatus(data.itemId, 'COMPLETED');
+
+  // 전체 데이터 새로고침 (완료된 주문은 화면에서 제거될 수 있음)
+  refreshKDSData();
+}
+
+// 주문 전체 조리 시작 실시간 업데이트 처리
+function handleOrderCookingStartedUpdate(data) {
+  console.log('🍳🍳 주문 전체 조리 시작 실시간 업데이트:', data);
+
+  // 전체 데이터 새로고침
+  refreshKDSData();
+}
+
+// 개별 아이템 상태 업데이트
+function updateItemStatus(itemId, newStatus) {
+  const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
+  if (itemElement) {
+    // 기존 상태 클래스 제거
+    itemElement.classList.remove('pending', 'cooking', 'completed');
+
+    // 새 상태 클래스 추가
+    itemElement.classList.add(newStatus.toLowerCase());
+
+    // 상태 아이콘 업데이트
+    const statusIcon = {
+      'PENDING': '⏳',
+      'COOKING': '🔥',
+      'COMPLETED': '✅'
+    }[newStatus] || '';
+
+    const nameElement = itemElement.querySelector('.item-name');
+    if (nameElement) {
+      const text = nameElement.textContent.replace(/(⏳|🔥|✅)/g, '').trim();
+      nameElement.textContent = `${text} ${statusIcon}`;
+    }
+
+    console.log(`🔄 아이템 ${itemId} 상태 업데이트: ${newStatus}`);
+  }
+}
+
+// KDS 데이터 새로고침
+function refreshKDSData() {
+  if (window.currentStoreId) {
+    loadKDSOrders(window.currentStoreId);
+  }
+}
+
+// 새 주문 알림음 재생
+function playNewOrderSound() {
+  try {
+    // 알림 설정이 활성화된 경우에만 재생
+    const alertsEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
+    if (alertsEnabled) {
+      // 간단한 비프음 (Web Audio API 사용)
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+  } catch (error) {
+    console.log('🔇 알림음 재생 실패:', error);
+  }
+}
+
 
 // KDS 주문 카드 업데이트
 function updateKDSOrderCards(orders) {
@@ -1155,9 +1355,9 @@ function createOrderCard(order) {
         <span class="item-name">${item.menu_name} ${statusIcon}</span>
         <span class="qty">${item.quantity}</span>
         <div class="item-actions">
-          ${item.cooking_status === 'PENDING' ? 
+          ${item.cooking_status === 'PENDING' ?
             `<button class="item-btn start-btn" onclick="startCookingItem(${item.id})">시작</button>` : ''}
-          ${item.cooking_status === 'COOKING' ? 
+          ${item.cooking_status === 'COOKING' ?
             `<button class="item-btn complete-btn" onclick="completeCookingItem(${item.id})">완료</button>` : ''}
         </div>
       </div>
@@ -1178,7 +1378,7 @@ function createOrderCard(order) {
       대기: ${order.pendingCount} | 조리중: ${order.cookingCount} | 완료: ${order.completedCount}
     </div>
     <div class="order-actions">
-      ${order.pendingCount > 0 ? 
+      ${order.pendingCount > 0 ?
         `<button class="action-btn start-all-btn" onclick="startCookingOrder(${order.id})">전체 조리시작</button>` : ''}
       <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">상세보기</button>
     </div>
@@ -1339,7 +1539,7 @@ function cancelOrder(orderId) {
   }
 }
 
-// 타이머 시작
+// 타이머 시작 (현재 사용되지 않음, calculateCookingTime이 사용됨)
 function startTimer(orderId) {
   const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
   const timerDisplay = orderCard?.querySelector('.timer-display');
@@ -1365,13 +1565,68 @@ function showOrderDetail(orderId) {
   alert(`주문 #${orderId} 상세 정보\n(상세 화면은 곧 구현될 예정입니다)`);
 }
 
-// KDS 자동 새로고침 설정 (더 자주 업데이트)
-function setupKDSAutoRefresh(storeId) {
-  setInterval(() => {
-    console.log('🔄 KDS 자동 새로고침');
-    loadKDSOrders(storeId);
-  }, 10000); // 10초마다 새로고침
+// 연결 상태 업데이트
+function updateConnectionStatus(isConnected) {
+  const statusIndicator = document.querySelector('.status-indicator');
+  if (statusIndicator) {
+    if (isConnected) {
+      statusIndicator.textContent = '● 실시간 연결됨';
+      statusIndicator.className = 'status-indicator online';
+    } else {
+      statusIndicator.textContent = '● 연결 끊김';
+      statusIndicator.className = 'status-indicator offline';
+    }
+  }
 }
+
+// 실시간 업데이트 알림 표시
+function showRealTimeUpdateNotification(type, data) {
+  const messages = {
+    'new-order': `🆕 새 주문 #${data?.orderId || ''}`,
+    'cooking-started': `🍳 ${data?.menuName || '메뉴'} 조리 시작`,
+    'cooking-completed': `✅ ${data?.menuName || '메뉴'} 조리 완료`,
+    'order-cooking-started': `🍳 주문 #${data?.orderId || ''} 전체 조리 시작`,
+    'order-update': '🔄 주문 정보 업데이트'
+  };
+
+  const message = messages[type] || '📡 실시간 업데이트';
+
+  const notification = document.createElement('div');
+  notification.innerHTML = message;
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    animation: slideInRight 0.3s ease-out;
+    border-left: 4px solid #fbbf24;
+  `;
+
+  document.body.appendChild(notification);
+
+  // 2초 후 자동 제거
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.3s ease-in';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 2000);
+}
+
+// 업데이트 알림 표시 (기존 함수 - 호환성 유지)
+function showUpdateNotification() {
+  showRealTimeUpdateNotification('order-update');
+}
+
 
 // 매장 선택 화면 렌더링
 function renderKDSStoreSelection() {
@@ -1416,7 +1671,6 @@ function refreshKDS() {
   console.log('🔄 KDS 수동 새로고침');
   if (window.currentStoreId) {
     loadKDSOrders(window.currentStoreId);
-    updateLastUpdateTime();
   }
 }
 
@@ -1439,18 +1693,32 @@ function updateLastUpdateTime() {
 function updateOrderCounts() {
   const waitingCards = document.querySelectorAll('.order-card.pending').length;
   const cookingCards = document.querySelectorAll('.order-card.cooking').length;
-  
+
   const waitingCount = document.getElementById('waitingCount');
   const cookingCountElement = document.getElementById('cookingCount');
-  
+
   if (waitingCount) {
     waitingCount.textContent = waitingCards > 9 ? `+${waitingCards - 9}` : '0';
   }
-  
+
   if (cookingCountElement) {
     cookingCountElement.textContent = cookingCards.toString();
   }
 }
+
+// 페이지 언로드 시 WebSocket 정리
+window.addEventListener('beforeunload', () => {
+  if (window.kdsSocket) {
+    window.kdsSocket.emit('leave-kds-room', window.currentStoreId);
+    window.kdsSocket.disconnect();
+    console.log('🔌 KDS WebSocket 연결 정리 완료');
+  }
+
+  if (window.kdsBackupPolling) {
+    clearInterval(window.kdsBackupPolling);
+    console.log('🔄 KDS 백업 폴링 정리 완료');
+  }
+});
 
 // 전역 함수로 노출
 window.renderKDS = renderKDS;

@@ -44,7 +44,7 @@ router.post('/pay', async (req, res) => {
     if (usedPoint > 0) {
       try {
         const storePointsResult = await client.query(`
-          SELECT points FROM user_store_stats 
+          SELECT points FROM user_store_stats
           WHERE user_id = $1 AND store_id = $2
         `, [userId, storeId]);
 
@@ -229,14 +229,14 @@ router.post('/pay', async (req, res) => {
     if (tableUniqueId && actualTableNumber) {
       try {
         const occupiedTime = new Date();
-        
+
         console.log(`🔍 [ORDER] 테이블 점유 처리 시작: unique_id=${tableUniqueId}, tableNumber=${actualTableNumber}, storeId=${storeId}`);
-        
+
         // 현재 테이블 상태 확인
         const currentTableResult = await client.query(`
           SELECT * FROM store_tables WHERE unique_id = $1
         `, [tableUniqueId]);
-        
+
         if (currentTableResult.rows.length === 0) {
           console.error(`❌ [ORDER] 테이블을 찾을 수 없음: unique_id=${tableUniqueId}`);
         } else {
@@ -248,10 +248,10 @@ router.post('/pay', async (req, res) => {
             autoReleaseSource: currentTable.auto_release_source
           });
         }
-        
+
         // 테이블을 점유 상태로 설정 (auto_release_source = 'ORDER')
         const updateResult = await client.query(`
-          UPDATE store_tables 
+          UPDATE store_tables
           SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
           WHERE unique_id = $4
           RETURNING *
@@ -273,9 +273,9 @@ router.post('/pay', async (req, res) => {
         setTimeout(async () => {
           try {
             console.log(`🕐 [ORDER] 테이블 ${actualTableNumber} 3분 자동 해제 체크 시작`);
-            
+
             const tableResult = await pool.query(`
-              SELECT * FROM store_tables 
+              SELECT * FROM store_tables
               WHERE unique_id = $1 AND is_occupied = true AND auto_release_source = 'ORDER'
             `, [tableUniqueId]);
 
@@ -289,7 +289,7 @@ router.post('/pay', async (req, res) => {
 
               if (diffMinutes >= 3) {
                 await pool.query(`
-                  UPDATE store_tables 
+                  UPDATE store_tables
                   SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
                   WHERE unique_id = $4
                 `, [false, null, null, tableUniqueId]);
@@ -716,7 +716,7 @@ router.get('/kds/:storeId', async (req, res) => {
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN stores s ON o.store_id = s.id
       INNER JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.store_id = $1 
+      WHERE o.store_id = $1
       AND oi.cooking_status IN ('PENDING', 'COOKING')
       ORDER BY o.order_date ASC
     `;
@@ -724,12 +724,12 @@ router.get('/kds/:storeId', async (req, res) => {
     const result = await pool.query(query, [parseInt(storeId)]);
 
     const orders = [];
-    
+
     for (const row of result.rows) {
       // 각 주문의 order_items 조회
       const itemsResult = await pool.query(`
         SELECT id, menu_name, quantity, price, cooking_status, started_at, completed_at
-        FROM order_items 
+        FROM order_items
         WHERE order_id = $1
         ORDER BY created_at ASC
       `, [row.id]);
@@ -804,7 +804,7 @@ router.put('/items/:itemId/start-cooking', async (req, res) => {
     console.log(`🍳 메뉴 아이템 ${itemId} 조리 시작`);
 
     const result = await pool.query(`
-      UPDATE order_items 
+      UPDATE order_items
       SET cooking_status = 'COOKING', started_at = CURRENT_TIMESTAMP
       WHERE id = $1 AND cooking_status = 'PENDING'
       RETURNING *
@@ -819,6 +819,18 @@ router.put('/items/:itemId/start-cooking', async (req, res) => {
 
     const updatedItem = result.rows[0];
     console.log(`✅ 메뉴 아이템 ${itemId} 조리 시작 완료: ${updatedItem.menu_name}`);
+
+    // 📡 KDS 실시간 업데이트 전송
+    if (global.kdsWebSocket && updatedItem.order_id) {
+      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [updatedItem.order_id]);
+      if (orderResult.rows.length > 0) {
+        global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-started', {
+          itemId: updatedItem.id,
+          orderId: updatedItem.order_id,
+          menuName: updatedItem.menu_name
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -843,7 +855,7 @@ router.put('/items/:itemId/complete-cooking', async (req, res) => {
     console.log(`✅ 메뉴 아이템 ${itemId} 조리 완료`);
 
     const result = await pool.query(`
-      UPDATE order_items 
+      UPDATE order_items
       SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
       WHERE id = $1 AND cooking_status = 'COOKING'
       RETURNING *
@@ -858,6 +870,18 @@ router.put('/items/:itemId/complete-cooking', async (req, res) => {
 
     const completedItem = result.rows[0];
     console.log(`✅ 메뉴 아이템 ${itemId} 조리 완료: ${completedItem.menu_name}`);
+
+    // 📡 KDS 실시간 업데이트 전송
+    if (global.kdsWebSocket && completedItem.order_id) {
+      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [completedItem.order_id]);
+      if (orderResult.rows.length > 0) {
+        global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-completed', {
+          itemId: completedItem.id,
+          orderId: completedItem.order_id,
+          menuName: completedItem.menu_name
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -882,7 +906,7 @@ router.put('/:orderId/start-cooking', async (req, res) => {
     console.log(`🍳 주문 ${orderId} 전체 조리 시작`);
 
     const result = await pool.query(`
-      UPDATE order_items 
+      UPDATE order_items
       SET cooking_status = 'COOKING', started_at = CURRENT_TIMESTAMP
       WHERE order_id = $1 AND cooking_status = 'PENDING'
       RETURNING *
@@ -896,6 +920,21 @@ router.put('/:orderId/start-cooking', async (req, res) => {
     }
 
     console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 시작 완료`);
+
+    // 📡 KDS 실시간 업데이트 전송 (각 항목별로)
+    if (global.kdsWebSocket) {
+      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [orderId]);
+      if (orderResult.rows.length > 0) {
+        result.rows.forEach(item => {
+          global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-started', {
+            itemId: item.id,
+            orderId: item.order_id,
+            menuName: item.menu_name
+          });
+        });
+      }
+    }
+
 
     res.json({
       success: true,

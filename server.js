@@ -1,9 +1,18 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 const pool = require('./shared/config/database');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"]
+  }
+});
 const PORT = 5000;
 
 // CORS, JSON 파싱
@@ -134,10 +143,83 @@ async function checkAndReleaseExpiredTables() {
   }
 }
 
+// WebSocket 연결 관리
+const kdsClients = new Map(); // storeId -> Set of socket IDs
+
+io.on('connection', (socket) => {
+  console.log('🔌 클라이언트 연결:', socket.id);
+
+  // KDS 룸 참여
+  socket.on('join-kds-room', (storeId) => {
+    const roomName = `kds-store-${storeId}`;
+    socket.join(roomName);
+    
+    if (!kdsClients.has(storeId)) {
+      kdsClients.set(storeId, new Set());
+    }
+    kdsClients.get(storeId).add(socket.id);
+    
+    console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여`);
+  });
+
+  // KDS 룸 나가기
+  socket.on('leave-kds-room', (storeId) => {
+    const roomName = `kds-store-${storeId}`;
+    socket.leave(roomName);
+    
+    if (kdsClients.has(storeId)) {
+      kdsClients.get(storeId).delete(socket.id);
+      if (kdsClients.get(storeId).size === 0) {
+        kdsClients.delete(storeId);
+      }
+    }
+    
+    console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
+  });
+
+  // 연결 해제
+  socket.on('disconnect', () => {
+    console.log('🔌 클라이언트 연결 해제:', socket.id);
+    
+    // 모든 KDS 룸에서 제거
+    for (const [storeId, clientSet] of kdsClients.entries()) {
+      if (clientSet.has(socket.id)) {
+        clientSet.delete(socket.id);
+        if (clientSet.size === 0) {
+          kdsClients.delete(storeId);
+        }
+      }
+    }
+  });
+});
+
+// KDS 주문 데이터 실시간 업데이트 함수
+function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
+  const roomName = `kds-store-${storeId}`;
+  const clientCount = kdsClients.get(storeId)?.size || 0;
+  
+  if (clientCount > 0) {
+    console.log(`📡 KDS 실시간 업데이트 전송 - 매장 ${storeId}, 타입: ${updateType}, 클라이언트: ${clientCount}개`);
+    io.to(roomName).emit('kds-update', {
+      type: updateType,
+      storeId: storeId,
+      timestamp: new Date().toISOString(),
+      data: data
+    });
+  }
+}
+
+// 전역으로 WebSocket 인스턴스 노출
+global.kdsWebSocket = {
+  broadcast: broadcastKDSUpdate,
+  getConnectedClients: (storeId) => kdsClients.get(storeId)?.size || 0
+};
+
 // 서버 실행
-app.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 TableLink 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
+  console.log(`🔌 WebSocket 서버 활성화됨`);
 
   // 서버 시작 시 만료된 테이블들 해제
   checkAndReleaseExpiredTables();
