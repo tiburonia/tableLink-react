@@ -10,8 +10,14 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
-// 루트 디렉토리의 정적 파일 서빙
-app.use(express.static(__dirname));
+// 정적 파일 서빙 설정
+app.use('/shared', express.static(path.join(__dirname, 'shared')));
+app.use('/TLG', express.static(path.join(__dirname, 'TLG')));
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.use('/kds', express.static(path.join(__dirname, 'kds')));
+app.use('/pos', express.static(path.join(__dirname, 'pos')));
+app.use('/tlm-components', express.static(path.join(__dirname, 'tlm-components')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 라우트 모듈 import
 const authRoutes = require('./routes/auth');
@@ -39,7 +45,7 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
   const { width, height } = req.params;
   const w = parseInt(width) || 200;
   const h = parseInt(height) || 200;
-  
+
   // SVG 플레이스홀더 이미지 생성
   const svg = `
     <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -49,7 +55,7 @@ app.get('/api/placeholder/:width/:height', (req, res) => {
       </text>
     </svg>
   `;
-  
+
   res.setHeader('Content-Type', 'image/svg+xml');
   res.setHeader('Cache-Control', 'public, max-age=86400'); // 1일 캐시
   res.send(svg);
