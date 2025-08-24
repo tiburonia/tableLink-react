@@ -15,8 +15,17 @@ async function renderPOS() {
     // 기본 UI 렌더링
     renderPOSLayout();
     
-    // 매장 정보 로드
-    await loadStoreData();
+    // URL에서 매장 ID 추출
+    const urlParts = window.location.pathname.split('/');
+    const storeId = urlParts[2]; // /pos/:storeId
+    
+    if (storeId) {
+      console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);
+      await loadStoreById(storeId);
+    } else {
+      // 매장 정보 로드
+      await loadStoreData();
+    }
     
     console.log('✅ POS 시스템 초기화 완료');
   } catch (error) {
@@ -451,6 +460,42 @@ function closeStoreModal() {
   const modal = document.querySelector('.store-modal');
   if (modal) {
     modal.remove();
+  }
+}
+
+// URL에서 매장 ID로 직접 로드
+async function loadStoreById(storeId) {
+  try {
+    console.log(`🏪 매장 ID ${storeId}로 직접 로드 중...`);
+    
+    const response = await fetch(`/api/stores/${storeId}`);
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error('매장 정보 조회 실패');
+    }
+    
+    const store = data.store;
+    
+    // 매장 정보 설정
+    currentStore = { 
+      id: parseInt(storeId), 
+      name: store.name, 
+      category: store.category || '기타' 
+    };
+    
+    // UI 업데이트
+    document.getElementById('storeName').textContent = store.name;
+    document.getElementById('storeCategory').textContent = store.category || '기타';
+    
+    // 매장 상세 정보 로드
+    await loadStoreDetails(storeId);
+    
+    console.log(`✅ 매장 ${store.name} 로드 완료`);
+    
+  } catch (error) {
+    console.error('❌ 매장 직접 로드 실패:', error);
+    showError('매장 정보를 불러오는데 실패했습니다.');
   }
 }
 

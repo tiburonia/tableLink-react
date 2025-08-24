@@ -38,6 +38,7 @@ const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
 const cacheRoutes = require('./routes/cache');
 const posRoutes = require('./routes/pos');
+const regularLevelsRoutes = require('./routes/regular-levels');
 
 // 라우트 연결
 app.use('/api', authRoutes);
@@ -49,7 +50,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/pos', posRoutes);
-app.use('/api/regular-levels', require('./routes/regular-levels'));
+app.use('/api/regular-levels', regularLevelsRoutes);
 
 // 플레이스홀더 이미지 API
 app.get('/api/placeholder/:width/:height', (req, res) => {
@@ -160,12 +161,12 @@ io.on('connection', (socket) => {
   socket.on('join-kds-room', (storeId) => {
     const roomName = `kds-store-${storeId}`;
     socket.join(roomName);
-    
+
     if (!kdsClients.has(storeId)) {
       kdsClients.set(storeId, new Set());
     }
     kdsClients.get(storeId).add(socket.id);
-    
+
     console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여`);
   });
 
@@ -173,21 +174,21 @@ io.on('connection', (socket) => {
   socket.on('leave-kds-room', (storeId) => {
     const roomName = `kds-store-${storeId}`;
     socket.leave(roomName);
-    
+
     if (kdsClients.has(storeId)) {
       kdsClients.get(storeId).delete(socket.id);
       if (kdsClients.get(storeId).size === 0) {
         kdsClients.delete(storeId);
       }
     }
-    
+
     console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
   });
 
   // 연결 해제
   socket.on('disconnect', () => {
     console.log('🔌 클라이언트 연결 해제:', socket.id);
-    
+
     // 모든 KDS 룸에서 제거
     for (const [storeId, clientSet] of kdsClients.entries()) {
       if (clientSet.has(socket.id)) {
@@ -204,9 +205,9 @@ io.on('connection', (socket) => {
 function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
   const roomName = `kds-store-${storeId}`;
   const clientCount = kdsClients.get(storeId)?.size || 0;
-  
+
   console.log(`📡 KDS 브로드캐스트 시도 - 매장 ${storeId}, 타입: ${updateType}, 연결된 클라이언트: ${clientCount}개`);
-  
+
   if (clientCount > 0) {
     const updateData = {
       type: updateType,
@@ -214,14 +215,14 @@ function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
       timestamp: new Date().toISOString(),
       data: data
     };
-    
+
     console.log(`📡 KDS 실시간 업데이트 전송 중 - 룸: ${roomName}`, updateData);
     io.to(roomName).emit('kds-update', updateData);
     console.log(`✅ KDS 실시간 업데이트 전송 완료 - 매장 ${storeId}`);
   } else {
     console.log(`⚠️ KDS 클라이언트 없음 - 매장 ${storeId}에 연결된 클라이언트가 없습니다`);
   }
-  
+
   // 연결된 모든 클라이언트 로깅
   console.log(`📊 현재 KDS 연결 상태:`, Array.from(kdsClients.entries()).map(([id, clients]) => 
     `매장 ${id}: ${clients.size}개 클라이언트`
