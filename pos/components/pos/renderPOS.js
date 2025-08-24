@@ -65,36 +65,33 @@ function renderPOSLayout() {
         
         <div class="table-selector">
           <span>테이블 선택:</span>
-          <select id="tableSelect" class="table-select" onchange="selectTable(this.value)">
+          <select id="tableSelect" onchange="selectTable(this.value)">
             <option value="">테이블을 선택하세요</option>
           </select>
         </div>
         
         <div class="order-list" id="orderList">
-          <div class="empty-order">
-            <h3>주문 내역이 없습니다</h3>
-            <p>메뉴를 선택해주세요</p>
-          </div>
+          <div class="empty-order">주문할 메뉴를 선택해주세요</div>
         </div>
         
         <div class="order-summary" id="orderSummary" style="display: none;">
           <div class="summary-row">
-            <span>주문 수량:</span>
+            <span>총 수량:</span>
             <span id="totalItems">0개</span>
           </div>
           <div class="summary-row">
-            <span>주문 금액:</span>
+            <span>소계:</span>
             <span id="subtotal">0원</span>
           </div>
-          <div class="total-row">
+          <div class="summary-row total">
             <span>총 금액:</span>
             <span id="totalAmount">0원</span>
           </div>
         </div>
         
-        <div class="action-buttons">
-          <button class="btn btn-clear" onclick="clearOrder()">전체 삭제</button>
-          <button class="btn btn-pay" id="payBtn" onclick="processPayment()" disabled>결제하기</button>
+        <div class="order-actions">
+          <button onclick="clearOrder()" class="clear-btn">전체 삭제</button>
+          <button onclick="processPayment()" id="payBtn" class="pay-btn" disabled>결제하기</button>
         </div>
       </div>
     </div>
@@ -104,29 +101,67 @@ function renderPOSLayout() {
 // 매장 선택
 async function selectStore() {
   try {
-    console.log('🏪 매장 선택 창 열기');
+    console.log('🏪 매장 선택 모달 표시');
     
-    // 간단한 매장 선택을 위해 기본 매장 사용
-    const storeId = prompt('매장 ID를 입력하세요 (예: 4549):');
-    if (!storeId) return;
-    
-    console.log(`📍 매장 ${storeId} 정보 로드 중...`);
-    
-    const response = await fetch(`/api/stores/${storeId}`);
-    if (!response.ok) throw new Error('매장 정보를 불러올 수 없습니다');
-    
+    const response = await fetch('/api/stores');
     const data = await response.json();
-    currentStore = data.store;
+    
+    if (!data.success) {
+      throw new Error('매장 목록 조회 실패');
+    }
+    
+    const stores = data.stores;
+    
+    // 매장 선택 모달 생성
+    const modal = document.createElement('div');
+    modal.className = 'store-modal';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>매장 선택</h3>
+          <button onclick="closeStoreModal()" class="close-btn">×</button>
+        </div>
+        <div class="store-list">
+          ${stores.map(store => `
+            <div class="store-item" onclick="chooseStore(${store.id}, '${store.name}', '${store.category}')">
+              <div class="store-name">${store.name}</div>
+              <div class="store-category">${store.category}</div>
+              <div class="store-status ${store.isOpen ? 'open' : 'closed'}">
+                ${store.isOpen ? '영업중' : '영업종료'}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+  } catch (error) {
+    console.error('❌ 매장 선택 실패:', error);
+    showError('매장 목록을 불러오는데 실패했습니다.');
+  }
+}
+
+// 매장 선택 완료
+async function chooseStore(storeId, storeName, storeCategory) {
+  try {
+    console.log(`🏪 매장 선택: ${storeName} (ID: ${storeId})`);
+    
+    // 매장 정보 저장
+    currentStore = { id: storeId, name: storeName, category: storeCategory };
     
     // UI 업데이트
-    document.getElementById('storeName').textContent = currentStore.name;
-    document.getElementById('storeCategory').textContent = currentStore.category;
+    document.getElementById('storeName').textContent = storeName;
+    document.getElementById('storeCategory').textContent = storeCategory;
     
-    // 메뉴 및 테이블 정보 로드
-    await loadMenuData();
-    await loadTableData();
+    // 매장 상세 정보 로드
+    await loadStoreDetails(storeId);
     
-    console.log(`✅ 매장 선택 완료: ${currentStore.name}`);
+    // 모달 닫기
+    closeStoreModal();
+    
+    console.log('✅ 매장 선택 완료');
     
   } catch (error) {
     console.error('❌ 매장 선택 실패:', error);
@@ -134,75 +169,43 @@ async function selectStore() {
   }
 }
 
-// 매장 데이터 로드
-async function loadStoreData() {
-  // 기본적으로 빈 상태로 시작
-  console.log('📊 매장 데이터 로드 대기 중...');
-}
-
-// 메뉴 데이터 로드
-async function loadMenuData() {
+// 매장 상세 정보 로드
+async function loadStoreDetails(storeId) {
   try {
-    if (!currentStore) return;
+    const response = await fetch(`/api/stores/${storeId}`);
+    const data = await response.json();
     
-    console.log(`🍽️ 매장 ${currentStore.id} 메뉴 로드 중...`);
-    
-    allMenus = currentStore.menu || [];
-    
-    // 카테고리 추출
-    const categorySet = new Set(['all']);
-    allMenus.forEach(menu => {
-      if (menu.category) categorySet.add(menu.category);
-    });
-    categories = Array.from(categorySet);
-    
-    // 카테고리 버튼 렌더링
-    renderCategories();
-    
-    // 메뉴 그리드 렌더링
-    renderMenuGrid();
-    
-    console.log(`✅ 메뉴 ${allMenus.length}개 로드 완료`);
-    
-  } catch (error) {
-    console.error('❌ 메뉴 로드 실패:', error);
-    showError('메뉴를 불러오는데 실패했습니다.');
-  }
-}
-
-// 테이블 데이터 로드
-async function loadTableData() {
-  try {
-    if (!currentStore) return;
-    
-    console.log(`🪑 매장 ${currentStore.id} 테이블 정보 로드 중...`);
-    
-    const tableSelect = document.getElementById('tableSelect');
-    tableSelect.innerHTML = '<option value="">테이블을 선택하세요</option>';
-    
-    if (currentStore.tables && currentStore.tables.length > 0) {
-      currentStore.tables.forEach(table => {
-        const option = document.createElement('option');
-        option.value = table.tableNumber;
-        option.textContent = `${table.tableName} (${table.seats}석)${table.isOccupied ? ' - 사용중' : ''}`;
-        option.disabled = table.isOccupied;
-        tableSelect.appendChild(option);
-      });
+    if (!data.success) {
+      throw new Error('매장 정보 조회 실패');
     }
     
-    console.log(`✅ 테이블 ${currentStore.tables?.length || 0}개 로드 완료`);
+    const store = data.store;
+    allMenus = store.menu || [];
+    
+    // 메뉴 카테고리 생성
+    createMenuCategories();
+    
+    // 메뉴 표시
+    displayMenus();
+    
+    // 테이블 목록 로드
+    loadTables(store.tables || []);
     
   } catch (error) {
-    console.error('❌ 테이블 로드 실패:', error);
-    showError('테이블 정보를 불러오는데 실패했습니다.');
+    console.error('❌ 매장 상세 정보 로드 실패:', error);
+    throw error;
   }
 }
 
-// 카테고리 렌더링
-function renderCategories() {
-  const categoriesContainer = document.getElementById('menuCategories');
+// 메뉴 카테고리 생성
+function createMenuCategories() {
+  const categoriesDiv = document.getElementById('menuCategories');
   
-  categoriesContainer.innerHTML = categories.map(category => `
+  // 고유 카테고리 추출
+  const uniqueCategories = [...new Set(allMenus.map(menu => menu.category || '기타'))];
+  categories = ['all', ...uniqueCategories];
+  
+  categoriesDiv.innerHTML = categories.map(category => `
     <button class="category-btn ${category === selectedCategory ? 'active' : ''}" 
             onclick="selectCategory('${category}')">
       ${category === 'all' ? '전체' : category}
@@ -210,34 +213,60 @@ function renderCategories() {
   `).join('');
 }
 
-// 메뉴 그리드 렌더링
-function renderMenuGrid() {
+// 카테고리 선택
+function selectCategory(category) {
+  selectedCategory = category;
+  
+  // 카테고리 버튼 활성화 상태 업데이트
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+  
+  // 메뉴 표시
+  displayMenus();
+}
+
+// 메뉴 표시
+function displayMenus() {
   const menuGrid = document.getElementById('menuGrid');
   
   let filteredMenus = allMenus;
   if (selectedCategory !== 'all') {
-    filteredMenus = allMenus.filter(menu => menu.category === selectedCategory);
+    filteredMenus = allMenus.filter(menu => (menu.category || '기타') === selectedCategory);
   }
   
   if (filteredMenus.length === 0) {
-    menuGrid.innerHTML = '<div class="loading">메뉴가 없습니다</div>';
+    menuGrid.innerHTML = '<div class="no-menu">해당 카테고리에 메뉴가 없습니다</div>';
     return;
   }
   
   menuGrid.innerHTML = filteredMenus.map(menu => `
-    <div class="menu-item" onclick="addToOrder('${menu.name}', ${menu.price})">
-      <div class="menu-item-name">${menu.name}</div>
-      <div class="menu-item-price">${menu.price?.toLocaleString()}원</div>
-      ${menu.description ? `<div style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">${menu.description}</div>` : ''}
+    <div class="menu-item ${!menu.isAvailable ? 'disabled' : ''}" 
+         onclick="${menu.isAvailable ? `addToOrder('${menu.name}', ${menu.price})` : ''}">
+      <div class="menu-image">🍽️</div>
+      <div class="menu-info">
+        <div class="menu-name">${menu.name}</div>
+        <div class="menu-price">${menu.price?.toLocaleString()}원</div>
+        <div class="menu-desc">${menu.description || ''}</div>
+      </div>
     </div>
   `).join('');
 }
 
-// 카테고리 선택
-function selectCategory(category) {
-  selectedCategory = category;
-  renderCategories();
-  renderMenuGrid();
+// 테이블 목록 로드
+function loadTables(tables) {
+  const tableSelect = document.getElementById('tableSelect');
+  
+  tableSelect.innerHTML = '<option value="">테이블을 선택하세요</option>';
+  
+  tables.forEach(table => {
+    const option = document.createElement('option');
+    option.value = table.tableNumber;
+    option.textContent = `${table.tableName} (${table.seats}석) ${table.isOccupied ? '[사용중]' : ''}`;
+    option.disabled = table.isOccupied;
+    tableSelect.appendChild(option);
+  });
 }
 
 // 테이블 선택
@@ -248,9 +277,10 @@ function selectTable(tableNumber) {
 }
 
 // 주문에 메뉴 추가
-function addToOrder(menuName, price) {
-  console.log(`➕ 메뉴 추가: ${menuName} (${price}원)`);
+function addToOrder(menuName, menuPrice) {
+  console.log(`➕ 메뉴 추가: ${menuName} (${menuPrice}원)`);
   
+  // 기존 항목 찾기
   const existingItem = currentOrder.find(item => item.name === menuName);
   
   if (existingItem) {
@@ -259,9 +289,9 @@ function addToOrder(menuName, price) {
   } else {
     currentOrder.push({
       name: menuName,
-      price: price,
+      price: menuPrice,
       quantity: 1,
-      totalPrice: price
+      totalPrice: menuPrice
     });
   }
   
@@ -274,48 +304,43 @@ function renderOrderList() {
   const orderList = document.getElementById('orderList');
   
   if (currentOrder.length === 0) {
-    orderList.innerHTML = `
-      <div class="empty-order">
-        <h3>주문 내역이 없습니다</h3>
-        <p>메뉴를 선택해주세요</p>
-      </div>
-    `;
+    orderList.innerHTML = '<div class="empty-order">주문할 메뉴를 선택해주세요</div>';
     return;
   }
   
   orderList.innerHTML = currentOrder.map((item, index) => `
     <div class="order-item">
-      <div class="item-details">
+      <div class="item-info">
         <div class="item-name">${item.name}</div>
         <div class="item-price">${item.price.toLocaleString()}원</div>
       </div>
-      <div class="quantity-controls">
-        <button class="qty-btn" onclick="updateQuantity(${index}, -1)">-</button>
-        <span style="margin: 0 10px; font-weight: bold;">${item.quantity}</span>
-        <button class="qty-btn" onclick="updateQuantity(${index}, 1)">+</button>
-        <button class="remove-btn" onclick="removeFromOrder(${index})">삭제</button>
+      <div class="item-controls">
+        <button onclick="changeQuantity(${index}, -1)" class="qty-btn">-</button>
+        <span class="quantity">${item.quantity}</span>
+        <button onclick="changeQuantity(${index}, 1)" class="qty-btn">+</button>
+        <button onclick="removeItem(${index})" class="remove-btn">삭제</button>
       </div>
     </div>
   `).join('');
 }
 
 // 수량 변경
-function updateQuantity(index, change) {
+function changeQuantity(index, change) {
   const item = currentOrder[index];
   item.quantity += change;
   
   if (item.quantity <= 0) {
-    removeFromOrder(index);
-    return;
+    currentOrder.splice(index, 1);
+  } else {
+    item.totalPrice = item.price * item.quantity;
   }
   
-  item.totalPrice = item.price * item.quantity;
   renderOrderList();
   updateOrderSummary();
 }
 
-// 주문에서 제거
-function removeFromOrder(index) {
+// 아이템 제거
+function removeItem(index) {
   currentOrder.splice(index, 1);
   renderOrderList();
   updateOrderSummary();
@@ -369,7 +394,7 @@ async function processPayment() {
     const totalAmount = currentOrder.reduce((sum, item) => sum + item.totalPrice, 0);
     
     const orderData = {
-      userId: 'pos_order', // POS 주문 임시 사용자
+      userId: 'pos-user', // POS 전용 사용자
       storeId: currentStore.id,
       storeName: currentStore.name,
       tableNumber: currentTable,
@@ -399,47 +424,56 @@ async function processPayment() {
     
     const result = await response.json();
     
-    if (result.success) {
-      alert(`결제 완료!\n주문번호: ${result.result.orderId}\n총 금액: ${totalAmount.toLocaleString()}원`);
-      
-      // 주문 초기화
-      currentOrder = [];
-      currentTable = null;
-      document.getElementById('tableSelect').value = '';
-      renderOrderList();
-      updateOrderSummary();
-      
-      console.log('✅ 결제 완료:', result.result.orderId);
-    } else {
+    if (!result.success) {
       throw new Error(result.error || '결제 실패');
     }
     
+    console.log('✅ 결제 성공:', result);
+    
+    // 성공 메시지 표시
+    alert(`결제가 완료되었습니다!\n주문번호: ${result.result.orderId}\n총 금액: ${totalAmount.toLocaleString()}원`);
+    
+    // 주문 초기화
+    currentOrder = [];
+    currentTable = null;
+    document.getElementById('tableSelect').value = '';
+    renderOrderList();
+    updateOrderSummary();
+    
   } catch (error) {
     console.error('❌ 결제 실패:', error);
-    alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+    alert('결제에 실패했습니다: ' + error.message);
   }
+}
+
+// 매장 선택 모달 닫기
+function closeStoreModal() {
+  const modal = document.querySelector('.store-modal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// 초기 매장 데이터 로드
+async function loadStoreData() {
+  // 현재는 매장 선택 버튼을 통해 로드하므로 별도 처리 없음
+  console.log('📊 POS 시스템 준비 완료');
 }
 
 // 에러 표시
 function showError(message) {
-  const main = document.getElementById('main');
-  const errorDiv = document.createElement('div');
-  errorDiv.className = 'error';
-  errorDiv.textContent = message;
-  main.appendChild(errorDiv);
-  
-  setTimeout(() => {
-    errorDiv.remove();
-  }, 5000);
+  alert(message);
 }
 
-// 전역 함수 등록
+// 전역 함수들을 window 객체에 등록
 window.renderPOS = renderPOS;
 window.selectStore = selectStore;
+window.chooseStore = chooseStore;
+window.closeStoreModal = closeStoreModal;
 window.selectCategory = selectCategory;
 window.selectTable = selectTable;
 window.addToOrder = addToOrder;
-window.updateQuantity = updateQuantity;
-window.removeFromOrder = removeFromOrder;
+window.changeQuantity = changeQuantity;
+window.removeItem = removeItem;
 window.clearOrder = clearOrder;
 window.processPayment = processPayment;

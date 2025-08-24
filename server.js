@@ -37,6 +37,7 @@ const tablesRoutes = require('./routes/tables');
 const cartRoutes = require('./routes/cart');
 const adminRoutes = require('./routes/admin');
 const cacheRoutes = require('./routes/cache');
+const posRoutes = require('./routes/pos');
 
 // 라우트 연결
 app.use('/api', authRoutes);
@@ -47,6 +48,7 @@ app.use('/api/tables', tablesRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
+app.use('/api/pos', posRoutes);
 app.use('/api/regular-levels', require('./routes/regular-levels'));
 
 // 플레이스홀더 이미지 API
