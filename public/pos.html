@@ -413,14 +413,18 @@
 <body>
   <div id="main"></div>
 
-  <script src="shared/utils/logOut.js"></script>
-  <script src="shared/utils/localStorage.js"></script>
-  <script src="pos/components/pos/renderPOS.js"></script>
+  <script src="/shared/utils/logOut.js"></script>
+  <script src="/shared/utils/localStorage.js"></script>
+  <script src="/pos/components/pos/renderPOS.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🚀 TableLink POS 시스템 시작');
-      renderPOS();
+      if (typeof renderPOS === 'function') {
+        renderPOS();
+      } else {
+        console.error('❌ renderPOS 함수를 찾을 수 없습니다');
+      }
     });
   </script>
 </body>
