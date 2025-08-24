@@ -87,8 +87,14 @@ async function renderKDSMain(storeId) {
 function renderKDSInterface(store) {
   const main = document.getElementById('main');
 
+  // URL에서 dev 모드 확인
+  const urlParams = new URLSearchParams(window.location.search);
+  const isDevMode = urlParams.get('dev') === 'true';
+
+  console.log(isDevMode ? '🔧 개발 모드 활성화' : '📺 풀스크린 모드');
+
   main.innerHTML = `
-    <div class="kds-container">
+    <div class="kds-container ${isDevMode ? 'dev-mode' : ''}">
       <!-- KDS 헤더 -->
       <div class="kds-header">
         <div class="header-left">
@@ -97,6 +103,7 @@ function renderKDSInterface(store) {
             <div class="time" id="currentTime">10:31:35 PM</div>
           </div>
         </div>
+        ${!isDevMode ? `
         <div class="header-center">
           <div class="pagination">
             <button class="nav-btn">◀</button>
@@ -104,13 +111,15 @@ function renderKDSInterface(store) {
             <button class="nav-btn">▶</button>
           </div>
         </div>
+        ` : ''}
         <div class="header-right">
           <div class="control-buttons">
             <button class="ctrl-btn orders-btn">Orders</button>
-            <button class="ctrl-btn functions-btn">Functions</button>
+            ${!isDevMode ? '<button class="ctrl-btn functions-btn">Functions</button>' : ''}
             <button class="ctrl-btn settings-btn">⚙</button>
             <button class="ctrl-btn exit-btn">✖</button>
           </div>
+          ${!isDevMode ? `
           <div class="summary-info">
             <div class="summary-row">DFC: 1163</div>
             <div class="summary-row">DFC SOLD: 1</div>
@@ -118,11 +127,12 @@ function renderKDSInterface(store) {
             <div class="summary-row">DFC Meals & Total: 8</div>
             <div class="summary-row">8</div>
           </div>
+          ` : ''}
         </div>
       </div>
 
       <!-- 주문 그리드 -->
-      <div class="orders-grid" id="ordersGrid">
+      <div class="orders-grid ${isDevMode ? 'dev-mode' : ''}" id="ordersGrid">
         <!-- 주문 카드 1 -->
         <div class="order-card pending" data-order-id="1">
           <div class="order-header">
@@ -314,6 +324,11 @@ function renderKDSInterface(store) {
         overflow: hidden;
       }
 
+      /* 개발 모드일 때 body 스타일 조정 */
+      body.dev-mode {
+        overflow: visible;
+      }
+
       .kds-container {
         width: 1200px;
         height: 500px;
@@ -325,6 +340,19 @@ function renderKDSInterface(store) {
         border-radius: 8px;
       }
 
+      /* 개발 모드 스타일 */
+      .kds-container.dev-mode {
+        width: 500px;
+        height: 800px;
+        margin: 10px;
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
       /* 헤더 스타일 */
       .kds-header {
         height: 60px;
@@ -334,6 +362,11 @@ function renderKDSInterface(store) {
         align-items: center;
         justify-content: space-between;
         padding: 0 20px;
+      }
+
+      .dev-mode .kds-header {
+        height: 50px;
+        padding: 0 15px;
       }
 
       .header-left .date-time {
@@ -403,6 +436,11 @@ function renderKDSInterface(store) {
         transition: all 0.2s ease;
       }
 
+      .dev-mode .ctrl-btn {
+        padding: 6px 8px;
+        font-size: 10px;
+      }
+
       .ctrl-btn:hover {
         background: #777;
       }
@@ -433,6 +471,16 @@ function renderKDSInterface(store) {
         overflow: hidden;
       }
 
+      /* 개발 모드 그리드 - 리스트 형태 */
+      .orders-grid.dev-mode {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
       /* 주문 카드 */
       .order-card {
         background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
@@ -445,6 +493,16 @@ function renderKDSInterface(store) {
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 11px;
+      }
+
+      /* 개발 모드 카드 - 리스트 아이템 형태 */
+      .dev-mode .order-card {
+        min-height: auto;
+        height: auto;
+        flex-shrink: 0;
+        padding: 10px;
+        margin-bottom: 0;
+        font-size: 10px;
       }
 
       .order-card:hover {
@@ -515,6 +573,12 @@ function renderKDSInterface(store) {
       .order-items {
         flex: 1;
         margin-bottom: 8px;
+        overflow-y: auto;
+      }
+
+      .dev-mode .order-items {
+        flex: none;
+        max-height: 100px;
         overflow-y: auto;
       }
 
@@ -617,6 +681,20 @@ function renderKDSInterface(store) {
         padding: 0 20px;
       }
 
+      .dev-mode .status-bar {
+        height: 35px;
+        padding: 0 15px;
+      }
+
+      .dev-mode .status-btn {
+        padding: 4px 8px;
+        font-size: 10px;
+      }
+
+      .dev-mode .version {
+        font-size: 9px;
+      }
+
       .status-btn {
         background: rgba(255, 255, 255, 0.2);
         border: none;
@@ -651,6 +729,13 @@ function renderKDSInterface(store) {
       }
     </style>
   `;
+
+  // 개발 모드일 때 body 클래스 추가
+  if (isDevMode) {
+    document.body.classList.add('dev-mode');
+  } else {
+    document.body.classList.remove('dev-mode');
+  }
 
   // 이벤트 리스너 설정
   setupKDSEventListeners(store);
