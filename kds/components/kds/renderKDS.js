@@ -319,8 +319,8 @@ function renderKDSInterface(store) {
 
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #1a1a1a;
-        color: white;
+        background: #ffffff;
+        color: #333;
         overflow: hidden;
       }
 
@@ -332,13 +332,14 @@ function renderKDSInterface(store) {
       .kds-container {
         width: 1200px;
         height: 500px;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
         display: flex;
         flex-direction: column;
         margin: 20px auto;
-        border: 2px solid #e2e8f0;
-        border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        border: 2px solid #444;
+        border-radius: 20px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
       }
 
       /* 개발 모드 스타일 */
@@ -350,25 +351,26 @@ function renderKDSInterface(store) {
         top: 10px;
         right: 10px;
         z-index: 1000;
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
       }
 
       /* 헤더 스타일 */
       .kds-header {
         height: 60px;
-        background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
-        border-bottom: 2px solid #ddd6fe;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 20px;
-        border-radius: 14px 14px 0 0;
+        padding: 0 24px;
+        border-radius: 18px 18px 0 0;
+        backdrop-filter: blur(10px);
       }
 
       .dev-mode .kds-header {
         height: 50px;
-        padding: 0 15px;
+        padding: 0 20px;
       }
 
       .header-left .date-time {
@@ -492,18 +494,19 @@ function renderKDSInterface(store) {
 
       /* 주문 카드 */
       .order-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 16px;
+        background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+        border: 1px solid #6b7280;
+        border-radius: 16px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         position: relative;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-size: 12px;
-        color: #334155;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        color: #f9fafb;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(5px);
       }
 
       /* 개발 모드 카드 - 리스트 아이템 형태 */
@@ -511,25 +514,38 @@ function renderKDSInterface(store) {
         min-height: auto;
         height: auto;
         flex-shrink: 0;
-        padding: 12px;
+        padding: 16px;
         margin-bottom: 0;
         font-size: 11px;
       }
 
       .order-card:hover {
-        border-color: #c7d2fe;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        border-color: #9ca3af;
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+        background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
       }
 
       .order-card.pending {
-        border-color: #fbbf24;
-        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-color: #f59e0b;
+        background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
       }
 
       .order-card.cooking {
-        border-color: #f87171;
-        background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+        border-color: #ef4444;
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        animation: cooking-pulse 2s infinite;
+      }
+
+      @keyframes cooking-pulse {
+        0%, 100% {
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+        }
+        50% {
+          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
+        }
       }
 
       .order-header {
@@ -540,46 +556,53 @@ function renderKDSInterface(store) {
       }
 
       .order-number {
-        font-size: 16px;
-        font-weight: bold;
-        color: #4a90e2;
+        font-size: 18px;
+        font-weight: 800;
+        color: #60a5fa;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
       .order-type {
-        background: #4a90e2;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 8px;
         font-size: 10px;
-        font-weight: bold;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
       }
 
       .order-time {
-        color: #ccc;
+        color: #d1d5db;
         font-size: 11px;
         font-family: 'Courier New', monospace;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        font-weight: 500;
       }
 
       .order-status {
-        font-size: 11px;
-        font-weight: bold;
-        margin-bottom: 8px;
-        padding: 6px;
-        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
         text-align: center;
         word-wrap: break-word;
-        line-height: 1.2;
+        line-height: 1.3;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       .order-status.pending {
-        background: #f39c12;
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         color: white;
+        box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
       }
 
       .order-status.cooking {
-        background: #e74c3c;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
       }
 
       .order-items {
@@ -598,65 +621,84 @@ function renderKDSInterface(store) {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 3px 0;
-        border-bottom: 1px solid #444;
-        color: #ddd;
-        font-size: 10px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(107, 114, 128, 0.3);
+        color: #e5e7eb;
+        font-size: 11px;
+        transition: all 0.2s ease;
       }
 
       .item:last-child {
         border-bottom: none;
       }
 
+      .item:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
       .item-name {
         flex: 1;
-        margin-right: 8px;
+        margin-right: 12px;
         word-wrap: break-word;
+        font-weight: 500;
       }
 
       .qty {
-        background: #666;
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
         color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 9px;
-        font-weight: bold;
-        min-width: 20px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        min-width: 24px;
         text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
 
       .order-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
+        margin-top: 8px;
       }
 
       .action-btn {
         flex: 1;
-        padding: 6px;
+        padding: 10px 16px;
         border: none;
-        border-radius: 4px;
+        border-radius: 10px;
         cursor: pointer;
-        font-size: 10px;
-        font-weight: bold;
-        transition: all 0.2s ease;
+        font-size: 11px;
+        font-weight: 700;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       .start-btn {
-        background: #27ae60;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
       }
 
       .start-btn:hover {
-        background: #229954;
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
       }
 
       .cancel-btn {
-        background: #e74c3c;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         color: white;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
       }
 
       .cancel-btn:hover {
-        background: #c0392b;
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
       }
 
       .order-timer {
@@ -684,22 +726,23 @@ function renderKDSInterface(store) {
 
       /* 하단 상태바 */
       .status-bar {
-        height: 40px;
-        background: linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%);
-        border-top: 2px solid #555;
+        height: 50px;
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+        border-top: 1px solid rgba(107, 114, 128, 0.3);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 20px;
+        padding: 0 24px;
+        border-radius: 0 0 18px 18px;
       }
 
       .dev-mode .status-bar {
-        height: 35px;
-        padding: 0 15px;
+        height: 40px;
+        padding: 0 20px;
       }
 
       .dev-mode .status-btn {
-        padding: 4px 8px;
+        padding: 6px 12px;
         font-size: 10px;
       }
 
@@ -708,31 +751,36 @@ function renderKDSInterface(store) {
       }
 
       .status-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 4px;
+        background: linear-gradient(135deg, rgba(75, 85, 99, 0.8) 0%, rgba(55, 65, 81, 0.8) 100%);
+        border: 1px solid rgba(156, 163, 175, 0.3);
+        color: #f3f4f6;
+        padding: 8px 16px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 11px;
         font-weight: 600;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
       }
 
       .status-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, rgba(107, 114, 128, 0.9) 0%, rgba(75, 85, 99, 0.9) 100%);
+        border-color: rgba(156, 163, 175, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .status-right {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 20px;
       }
 
       .version {
-        color: rgba(255, 255, 255, 0.8);
+        color: rgba(209, 213, 219, 0.8);
         font-size: 10px;
         font-family: 'Courier New', monospace;
+        font-weight: 500;
       }
 
       /* 조리중인 카드 숨김 처리 */
