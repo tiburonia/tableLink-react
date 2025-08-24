@@ -413,6 +413,14 @@ function renderKDSInterface(store) {
             <div class="last-update" id="lastUpdate">최종 업데이트: 방금 전</div>
           </div>
         </div>
+
+        <!-- 빈 카드 슬롯들 (필요한 만큼 추가) -->
+        ${Array.from({length: Math.max(0, 9 - 9)}, (_, i) => `
+          <div class="empty-card-slot">
+            <div class="slot-number">${10 + i}</div>
+            <div class="slot-placeholder">주문 대기 중</div>
+          </div>
+        `).join('')}
       </div>
 
       <!-- 하단 상태바 -->
@@ -907,6 +915,52 @@ function renderKDSInterface(store) {
       /* 조리중인 카드 숨김 처리 */
       .order-card.cooking .order-actions {
         display: none;
+      }
+
+      /* 빈 카드 슬롯 스타일 */
+      .empty-card-slot {
+        background: linear-gradient(135deg, rgba(55, 65, 81, 0.3) 0%, rgba(75, 85, 99, 0.3) 100%);
+        border: 2px dashed rgba(156, 163, 175, 0.4);
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        color: rgba(156, 163, 175, 0.6);
+        min-height: 180px;
+        text-align: center;
+        transition: all 0.3s ease;
+      }
+
+      .dev-mode .empty-card-slot {
+        min-height: auto;
+        height: 120px;
+        flex-shrink: 0;
+        padding: 16px;
+        margin-bottom: 0;
+      }
+
+      .empty-card-slot:hover {
+        border-color: rgba(156, 163, 175, 0.6);
+        background: linear-gradient(135deg, rgba(55, 65, 81, 0.4) 0%, rgba(75, 85, 99, 0.4) 100%);
+      }
+
+      .slot-number {
+        font-size: 24px;
+        font-weight: 800;
+        color: rgba(156, 163, 175, 0.4);
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+      }
+
+      .slot-placeholder {
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(156, 163, 175, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       /* 다기능 카드 스타일 */
