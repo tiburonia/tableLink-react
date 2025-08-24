@@ -69,6 +69,11 @@ app.get('/KDS', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kds.html'));
 });
 
+// 매장별 KDS 라우트
+app.get('/kds/:storeId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'kds.html'));
+});
+
 app.get('/POS', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pos.html'));
 });
