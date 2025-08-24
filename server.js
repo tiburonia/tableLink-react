@@ -95,6 +95,11 @@ app.get('/POS', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'pos.html'));
 });
 
+// 매장별 POS 라우트
+app.get('/pos/:storeId', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pos.html'));
+});
+
 app.get('/tlm.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
