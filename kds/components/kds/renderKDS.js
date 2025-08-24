@@ -292,6 +292,102 @@ function renderKDSInterface(store) {
             <div class="timer-display">01:12</div>
           </div>
         </div>
+
+        <!-- 주문 카드 7 -->
+        <div class="order-card pending" data-order-id="7">
+          <div class="order-header">
+            <div class="order-number">#107</div>
+            <div class="order-type">매장</div>
+          </div>
+          <div class="order-time">오후 1:35</div>
+          <div class="order-status pending">간장치킨</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">간장치킨</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">치킨무</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(7)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(7)">취소</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 8 -->
+        <div class="order-card pending" data-order-id="8">
+          <div class="order-header">
+            <div class="order-number">#108</div>
+            <div class="order-type">포장</div>
+          </div>
+          <div class="order-time">오후 1:40</div>
+          <div class="order-status pending">마늘치킨</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">마늘치킨</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">소스</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(8)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(8)">취소</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 9 -->
+        <div class="order-card pending" data-order-id="9">
+          <div class="order-header">
+            <div class="order-number">#109</div>
+            <div class="order-type">매장</div>
+          </div>
+          <div class="order-time">오후 1:45</div>
+          <div class="order-status pending">허니머스터드</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">허니머스터드</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">치킨무</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(9)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(9)">취소</button>
+          </div>
+        </div>
+
+        <!-- 주문 카드 10 -->
+        <div class="order-card pending" data-order-id="10">
+          <div class="order-header">
+            <div class="order-number">#110</div>
+            <div class="order-type">포장</div>
+          </div>
+          <div class="order-time">오후 1:50</div>
+          <div class="order-status pending">치즈치킨</div>
+          <div class="order-items">
+            <div class="item">
+              <span class="item-name">치즈치킨</span>
+              <span class="qty">1</span>
+            </div>
+            <div class="item">
+              <span class="item-name">소스</span>
+              <span class="qty">1</span>
+            </div>
+          </div>
+          <div class="order-actions">
+            <button class="action-btn start-btn" onclick="startCooking(10)">조리시작</button>
+            <button class="action-btn cancel-btn" onclick="cancelOrder(10)">취소</button>
+          </div>
+        </div>
       </div>
 
       <!-- 하단 상태바 -->
@@ -474,10 +570,10 @@ function renderKDSInterface(store) {
       .orders-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 기본 3열 */
-        grid-template-rows: repeat(2, 1fr); /* 기본 2행 */
-        gap: 8px; /* 카드 간 간격 */
-        padding: 10px;
+        grid-template-columns: repeat(5, 1fr); /* 5열로 변경 */
+        grid-template-rows: repeat(2, 1fr); /* 2행 유지 */
+        gap: 6px; /* 카드 간 간격 축소 */
+        padding: 8px;
         overflow: hidden;
       }
 
@@ -495,17 +591,18 @@ function renderKDSInterface(store) {
       .order-card {
         background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
         border: 1px solid #6b7280;
-        border-radius: 16px;
-        padding: 20px;
+        border-radius: 12px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
         position: relative;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 12px;
+        font-size: 10px;
         color: #f9fafb;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         backdrop-filter: blur(5px);
+        min-height: 180px;
       }
 
       /* 개발 모드 카드 - 리스트 아이템 형태 */
@@ -555,7 +652,7 @@ function renderKDSInterface(store) {
       }
 
       .order-number {
-        font-size: 18px;
+        font-size: 14px;
         font-weight: 800;
         color: #60a5fa;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -564,32 +661,32 @@ function renderKDSInterface(store) {
       .order-type {
         background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
-        padding: 6px 12px;
-        border-radius: 8px;
-        font-size: 10px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 8px;
         font-weight: 600;
         box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
       }
 
       .order-time {
         color: #d1d5db;
-        font-size: 11px;
+        font-size: 9px;
         font-family: 'Courier New', monospace;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
         font-weight: 500;
       }
 
       .order-status {
-        font-size: 12px;
+        font-size: 9px;
         font-weight: 700;
-        margin-bottom: 12px;
-        padding: 8px 12px;
-        border-radius: 8px;
+        margin-bottom: 8px;
+        padding: 4px 6px;
+        border-radius: 6px;
         text-align: center;
         word-wrap: break-word;
-        line-height: 1.3;
+        line-height: 1.2;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
       }
 
       .order-status.pending {
@@ -620,10 +717,10 @@ function renderKDSInterface(store) {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 0;
+        padding: 3px 0;
         border-bottom: 1px solid rgba(107, 114, 128, 0.3);
         color: #e5e7eb;
-        font-size: 11px;
+        font-size: 9px;
         transition: all 0.2s ease;
       }
 
@@ -665,15 +762,15 @@ function renderKDSInterface(store) {
 
       .action-btn {
         flex: 1;
-        padding: 10px 16px;
+        padding: 6px 10px;
         border: none;
-        border-radius: 10px;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 11px;
+        font-size: 8px;
         font-weight: 700;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
       }
 
       .start-btn {
