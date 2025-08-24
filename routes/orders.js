@@ -678,4 +678,106 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
+// KDS용 매장별 주문 조회 API
+router.get('/kds/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { status } = req.query;
+
+    console.log(`📟 KDS - 매장 ${storeId} 주문 조회 (상태: ${status || '전체'})`);
+
+    let query = `
+      SELECT
+        o.id, o.store_id, o.user_id, o.table_number, o.order_data,
+        o.original_amount, o.used_point, o.coupon_discount, o.final_amount,
+        o.order_status, o.order_date, o.created_at,
+        u.name as customer_name, u.phone as customer_phone,
+        s.name as store_name
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.store_id = $1
+    `;
+
+    const params = [parseInt(storeId)];
+
+    // 상태별 필터링
+    if (status) {
+      query += ` AND o.order_status = $${params.length + 1}`;
+      params.push(status);
+    } else {
+      // KDS에서는 완료되지 않은 주문만 표시
+      query += ` AND o.order_status IN ('pending', 'cooking', 'completed')`;
+    }
+
+    query += ` ORDER BY 
+      CASE 
+        WHEN o.order_status = 'pending' THEN 1
+        WHEN o.order_status = 'cooking' THEN 2
+        WHEN o.order_status = 'completed' THEN 3
+        ELSE 4
+      END,
+      o.order_date ASC
+      LIMIT 50
+    `;
+
+    const result = await pool.query(query, params);
+
+    const orders = result.rows.map(row => {
+      const orderTime = new Date(row.order_date);
+      const now = new Date();
+      const waitingMinutes = Math.floor((now - orderTime) / (1000 * 60));
+
+      return {
+        id: row.id,
+        storeId: row.store_id,
+        storeName: row.store_name,
+        userId: row.user_id,
+        customerName: row.customer_name || '손님',
+        customerPhone: row.customer_phone || '',
+        tableNumber: row.table_number || '배달',
+        orderData: row.order_data,
+        originalAmount: row.original_amount,
+        usedPoint: row.used_point || 0,
+        couponDiscount: row.coupon_discount || 0,
+        finalAmount: row.final_amount,
+        orderStatus: row.order_status,
+        orderDate: row.order_date,
+        createdAt: row.created_at,
+        waitingMinutes: waitingMinutes,
+        isUrgent: waitingMinutes > 15 && row.order_status === 'pending'
+      };
+    });
+
+    // 상태별로 분류
+    const ordersByStatus = {
+      urgent: orders.filter(o => o.isUrgent),
+      pending: orders.filter(o => o.orderStatus === 'pending' && !o.isUrgent),
+      cooking: orders.filter(o => o.orderStatus === 'cooking'),
+      completed: orders.filter(o => o.orderStatus === 'completed')
+    };
+
+    console.log(`✅ KDS - 매장 ${storeId} 주문 조회 완료:`, {
+      urgent: ordersByStatus.urgent.length,
+      pending: ordersByStatus.pending.length,
+      cooking: ordersByStatus.cooking.length,
+      completed: ordersByStatus.completed.length
+    });
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      orders: ordersByStatus,
+      totalOrders: orders.length
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
 module.exports = router;

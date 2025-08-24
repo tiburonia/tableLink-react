@@ -853,6 +853,109 @@ function closeOrderDetail() {
   }
 }
 
+// KDS 주문 데이터 로딩
+async function loadKDSOrders(storeId) {
+  try {
+    console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
+    
+    const response = await fetch(`/api/orders/kds/${storeId}`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('주문 데이터 조회 실패');
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || '주문 데이터 조회 실패');
+    }
+    
+    console.log(`✅ KDS 주문 데이터 로딩 완료:`, {
+      urgent: data.orders.urgent.length,
+      pending: data.orders.pending.length,
+      cooking: data.orders.cooking.length,
+      completed: data.orders.completed.length
+    });
+    
+    // 주문 카드 업데이트
+    updateOrderCards(data.orders);
+    
+    // 카운트 업데이트
+    updateOrderCounts(data.orders);
+    
+  } catch (error) {
+    console.error('❌ KDS 주문 데이터 로딩 실패:', error);
+    showKDSError('주문 데이터를 불러오는데 실패했습니다.');
+  }
+}
+
+// 주문 카드 업데이트
+function updateOrderCards(orders) {
+  updateOrderSection('urgentOrders', orders.urgent, 'urgent');
+  updateOrderSection('pendingOrders', orders.pending, 'pending');
+  updateOrderSection('cookingOrders', orders.cooking, 'cooking');
+  updateOrderSection('completedOrders', orders.completed, 'completed');
+}
+
+// 주문 섹션 업데이트
+function updateOrderSection(containerId, orders, status) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  if (orders.length === 0) {
+    container.innerHTML = `
+      <div class="no-orders">
+        <p>📭 ${getStatusText(status)} 주문이 없습니다</p>
+      </div>
+    `;
+    return;
+  }
+  
+  const ordersHTML = orders.map(order => createOrderCard(order, status)).join('');
+  container.innerHTML = ordersHTML;
+}
+
+// 주문 카운트 업데이트
+function updateOrderCounts(orders) {
+  const urgentCount = document.getElementById('urgentCount');
+  const pendingCount = document.getElementById('pendingCount');
+  const cookingCount = document.getElementById('cookingCount');
+  const completedCount = document.getElementById('completedCount');
+  
+  if (urgentCount) urgentCount.textContent = orders.urgent.length;
+  if (pendingCount) pendingCount.textContent = orders.pending.length;
+  if (cookingCount) cookingCount.textContent = orders.cooking.length;
+  if (completedCount) completedCount.textContent = orders.completed.length;
+}
+
+// KDS 에러 표시
+function showKDSError(message) {
+  const container = document.querySelector('.orders-grid');
+  if (container) {
+    container.innerHTML = `
+      <div class="kds-error">
+        <h3>⚠️ 오류 발생</h3>
+        <p>${message}</p>
+        <button onclick="location.reload()" class="retry-btn">다시 시도</button>
+      </div>
+    `;
+  }
+}
+
+// KDS 자동 새로고침 설정
+function setupKDSAutoRefresh(storeId) {
+  // 30초마다 자동 새로고침
+  setInterval(() => {
+    console.log('🔄 KDS 자동 새로고침 실행');
+    loadKDSOrders(storeId);
+  }, 30000);
+}
+
 // KDS 자동 새로고침 설정
 function setupKDSAutoRefresh(storeId) {
   // 30초마다 주문 데이터 새로고침
