@@ -191,9 +191,9 @@ function renderKDSInterface(store) {
       .header-center .pagination {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 1.5vw;
         background: #666;
-        padding: 8px 20px;
+        padding: 0.8vh 1.5vw;
         border-radius: 6px;
       }
 
@@ -201,21 +201,17 @@ function renderKDSInterface(store) {
         background: #555;
         border: none;
         color: white;
-        padding: 8px 12px;
+        padding: 0.8vh 1vw;
         border-radius: 4px;
         cursor: pointer;
-        font-size: 14px;
-      }
-
-      .nav-btn:hover {
-        background: #777;
+        font-size: clamp(12px, 1vw, 14px);
       }
 
       .page-info {
         color: white;
         font-weight: bold;
-        font-size: 16px;
-        min-width: 80px;
+        font-size: clamp(14px, 1.2vw, 16px);
+        min-width: 5vw;
         text-align: center;
       }
 
@@ -304,10 +300,10 @@ function renderKDSInterface(store) {
       }
 
       .order-status {
-        font-size: 16px;
+        font-size: clamp(13px, 1.2vw, 16px);
         font-weight: bold;
-        margin-bottom: 15px;
-        padding: 8px;
+        margin-bottom: 1.2vh;
+        padding: 0.8vh;
         border-radius: 6px;
         text-align: center;
       }
@@ -329,44 +325,41 @@ function renderKDSInterface(store) {
 
       .order-items {
         flex: 1;
-        margin-bottom: 15px;
+        margin-bottom: 1.2vh;
+        overflow-y: auto;
       }
 
       .item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 0;
+        padding: 0.5vh 0;
         border-bottom: 1px solid #444;
         color: #ddd;
-        font-size: 14px;
-      }
-
-      .item:last-child {
-        border-bottom: none;
+        font-size: clamp(11px, 1vw, 14px);
       }
 
       .qty {
         background: #666;
         color: white;
-        padding: 2px 8px;
+        padding: 0.2vh 0.6vw;
         border-radius: 12px;
-        font-size: 12px;
+        font-size: clamp(10px, 0.8vw, 12px);
         font-weight: bold;
       }
 
       .order-actions {
         display: flex;
-        gap: 10px;
+        gap: 0.8vw;
       }
 
       .action-btn {
         flex: 1;
-        padding: 12px;
+        padding: 1vh;
         border: none;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: clamp(11px, 1vw, 14px);
         font-weight: bold;
         transition: all 0.2s ease;
       }
@@ -391,39 +384,40 @@ function renderKDSInterface(store) {
 
       .order-timer {
         position: absolute;
-        top: 20px;
-        right: 20px;
+        top: 1.5vw;
+        right: 1.5vw;
         background: #e74c3c;
         color: white;
-        padding: 8px 12px;
+        padding: 0.8vh 1vw;
         border-radius: 6px;
         font-family: 'Courier New', monospace;
         font-weight: bold;
       }
 
       .timer-display {
-        font-size: 16px;
+        font-size: clamp(12px, 1.2vw, 16px);
       }
 
       /* 하단 상태바 */
       .status-bar {
-        height: 60px;
+        height: 6vh;
+        min-height: 50px;
         background: linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%);
         border-top: 2px solid #555;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 30px;
+        padding: 0 2vw;
       }
 
       .status-btn {
         background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        padding: 10px 20px;
+        padding: 1vh 1.5vw;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: clamp(11px, 1vw, 14px);
         font-weight: 600;
         transition: all 0.2s ease;
       }
@@ -435,12 +429,12 @@ function renderKDSInterface(store) {
       .status-right {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 1.5vw;
       }
 
       .version {
         color: rgba(255, 255, 255, 0.8);
-        font-size: 12px;
+        font-size: clamp(10px, 0.8vw, 12px);
         font-family: 'Courier New', monospace;
       }
 
