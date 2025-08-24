@@ -148,27 +148,27 @@ function renderKDSInterface(store) {
       }
 
       .kds-container {
-        width: 1920px;
-        height: 1080px;
+        width: 768px;
+        height: 432px;
         background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
         display: flex;
         flex-direction: column;
-        position: fixed;
-        top: 0;
-        left: 0;
-        transform-origin: top left;
-        transform: scale(calc(100vw / 1920), calc(100vh / 1080));
+        position: relative;
+        margin: 20px auto;
+        border: 1px solid #555;
+        border-radius: 8px;
+        overflow: hidden;
       }
 
       /* 헤더 스타일 */
       .kds-header {
-        height: 80px;
+        height: 32px;
         background: linear-gradient(135deg, #4a4a4a 0%, #3a3a3a 100%);
-        border-bottom: 2px solid #555;
+        border-bottom: 1px solid #555;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 30px;
+        padding: 0 12px;
       }
 
       .header-left .date-time {
@@ -176,13 +176,13 @@ function renderKDSInterface(store) {
       }
 
       .date {
-        font-size: 16px;
+        font-size: 6px;
         color: #ccc;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
       }
 
       .time {
-        font-size: 20px;
+        font-size: 8px;
         font-weight: bold;
         color: #fff;
         font-family: 'Courier New', monospace;
@@ -191,20 +191,20 @@ function renderKDSInterface(store) {
       .header-center .pagination {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 8px;
         background: #666;
-        padding: 8px 20px;
-        border-radius: 6px;
+        padding: 3px 8px;
+        border-radius: 2px;
       }
 
       .nav-btn {
         background: #555;
         border: none;
         color: white;
-        padding: 8px 12px;
-        border-radius: 4px;
+        padding: 3px 5px;
+        border-radius: 2px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 6px;
       }
 
       .nav-btn:hover {
@@ -214,24 +214,24 @@ function renderKDSInterface(store) {
       .page-info {
         color: white;
         font-weight: bold;
-        font-size: 16px;
-        min-width: 80px;
+        font-size: 6px;
+        min-width: 32px;
         text-align: center;
       }
 
       .header-right .control-buttons {
         display: flex;
-        gap: 10px;
+        gap: 4px;
       }
 
       .ctrl-btn {
         background: #666;
         border: none;
         color: white;
-        padding: 10px 16px;
-        border-radius: 6px;
+        padding: 4px 6px;
+        border-radius: 2px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 6px;
         font-weight: 600;
         transition: all 0.2s ease;
       }
@@ -251,17 +251,17 @@ function renderKDSInterface(store) {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         grid-template-rows: repeat(2, 1fr);
-        gap: 20px;
-        padding: 20px;
+        gap: 8px;
+        padding: 8px;
         overflow: hidden;
       }
 
       /* 주문 카드 */
       .order-card {
         background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-        border: 2px solid #555;
-        border-radius: 12px;
-        padding: 20px;
+        border: 1px solid #555;
+        border-radius: 5px;
+        padding: 8px;
         display: flex;
         flex-direction: column;
         position: relative;
@@ -271,44 +271,44 @@ function renderKDSInterface(store) {
 
       .order-card:hover {
         border-color: #777;
-        transform: translateY(-2px);
+        transform: translateY(-1px);
       }
 
       .order-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 15px;
+        margin-bottom: 6px;
       }
 
       .order-type {
         background: #4a90e2;
         color: white;
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 12px;
+        padding: 2px 5px;
+        border-radius: 2px;
+        font-size: 5px;
         font-weight: bold;
       }
 
       .order-time {
         color: #ccc;
-        font-size: 14px;
+        font-size: 6px;
         font-family: 'Courier New', monospace;
       }
 
       .order-number {
-        font-size: 24px;
+        font-size: 10px;
         font-weight: bold;
         color: #4a90e2;
-        margin-bottom: 10px;
+        margin-bottom: 4px;
       }
 
       .order-status {
-        font-size: 16px;
+        font-size: 6px;
         font-weight: bold;
-        margin-bottom: 15px;
-        padding: 8px;
-        border-radius: 6px;
+        margin-bottom: 6px;
+        padding: 3px;
+        border-radius: 2px;
         text-align: center;
       }
 
@@ -329,17 +329,17 @@ function renderKDSInterface(store) {
 
       .order-items {
         flex: 1;
-        margin-bottom: 15px;
+        margin-bottom: 6px;
       }
 
       .item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 0;
+        padding: 2px 0;
         border-bottom: 1px solid #444;
         color: #ddd;
-        font-size: 14px;
+        font-size: 6px;
       }
 
       .item:last-child {
@@ -349,24 +349,24 @@ function renderKDSInterface(store) {
       .qty {
         background: #666;
         color: white;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 12px;
+        padding: 1px 3px;
+        border-radius: 5px;
+        font-size: 5px;
         font-weight: bold;
       }
 
       .order-actions {
         display: flex;
-        gap: 10px;
+        gap: 4px;
       }
 
       .action-btn {
         flex: 1;
-        padding: 12px;
+        padding: 5px;
         border: none;
-        border-radius: 6px;
+        border-radius: 2px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 6px;
         font-weight: bold;
         transition: all 0.2s ease;
       }
@@ -391,39 +391,39 @@ function renderKDSInterface(store) {
 
       .order-timer {
         position: absolute;
-        top: 20px;
-        right: 20px;
+        top: 8px;
+        right: 8px;
         background: #e74c3c;
         color: white;
-        padding: 8px 12px;
-        border-radius: 6px;
+        padding: 3px 5px;
+        border-radius: 2px;
         font-family: 'Courier New', monospace;
         font-weight: bold;
       }
 
       .timer-display {
-        font-size: 16px;
+        font-size: 6px;
       }
 
       /* 하단 상태바 */
       .status-bar {
-        height: 60px;
+        height: 24px;
         background: linear-gradient(135deg, #7b68ee 0%, #6a5acd 100%);
-        border-top: 2px solid #555;
+        border-top: 1px solid #555;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 30px;
+        padding: 0 12px;
       }
 
       .status-btn {
         background: rgba(255, 255, 255, 0.2);
         border: none;
         color: white;
-        padding: 10px 20px;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 2px;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 6px;
         font-weight: 600;
         transition: all 0.2s ease;
       }
@@ -435,12 +435,12 @@ function renderKDSInterface(store) {
       .status-right {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 8px;
       }
 
       .version {
         color: rgba(255, 255, 255, 0.8);
-        font-size: 12px;
+        font-size: 5px;
         font-family: 'Courier New', monospace;
       }
 
