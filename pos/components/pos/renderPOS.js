@@ -48,8 +48,8 @@ function renderPOSLayout() {
       <header class="pos-header">
         <div class="header-left">
           <h1 class="pos-logo">🍽️ TableLink POS</h1>
-          <div class="store-selector">
-            <span id="storeName">매장을 선택해주세요</span>
+          <div class="store-info">
+            <span id="storeName">매장 정보 로딩중...</span>
           </div>
         </div>
 
@@ -258,30 +258,12 @@ function renderPOSLayout() {
         color: #1e293b;
       }
 
-      .store-selector {
+      .store-info {
         display: flex;
         align-items: center;
-        gap: 10px;
-      }
-
-      .store-select-btn {
-        padding: 6px 12px;
-        background: #3b82f6;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-      }
-
-      .store-locked-badge {
-        background: #10b981;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 500;
-        margin-left: 8px;
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 16px;
       }
 
       .header-center {
@@ -947,12 +929,8 @@ async function loadStoreById(storeId) {
       category: store.category || '기타' 
     };
 
-    // 매장 정보 표시 및 매장 선택 UI 제거
+    // 매장 정보 표시
     document.getElementById('storeName').textContent = `${store.name} (${store.category || '기타'})`;
-    const storeSelector = document.querySelector('.store-selector');
-    if (storeSelector) {
-      storeSelector.innerHTML = `${store.name} (${store.category || '기타'}) <span class="store-locked-badge">🔒 고정</span>`;
-    }
 
     await loadStoreDetails(storeId);
 
