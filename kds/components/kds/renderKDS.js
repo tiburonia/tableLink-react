@@ -1,4 +1,3 @@
-
 // KDS 메인 렌더링 함수
 async function renderKDS() {
   const main = document.getElementById('main');
@@ -475,9 +474,9 @@ function renderKDSInterface(store) {
       .orders-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        grid-template-rows: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(3, 1fr); /* 기본 3열 */
+        grid-template-rows: repeat(2, 1fr); /* 기본 2행 */
+        gap: 8px; /* 카드 간 간격 */
         padding: 10px;
         overflow: hidden;
       }
@@ -649,11 +648,11 @@ function renderKDSInterface(store) {
       .qty {
         background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
         color: white;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 8px;
         font-weight: 700;
-        min-width: 24px;
+        min-width: 18px;
         text-align: center;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
       }
@@ -703,18 +702,18 @@ function renderKDSInterface(store) {
 
       .order-timer {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 8px;
+        right: 8px;
         background: #e74c3c;
         color: white;
-        padding: 4px 8px;
+        padding: 2px 6px;
         border-radius: 4px;
         font-family: 'Courier New', monospace;
         font-weight: bold;
       }
 
       .timer-display {
-        font-size: 11px;
+        font-size: 9px;
         animation: pulse 1s infinite;
       }
 
@@ -839,7 +838,7 @@ function updateCurrentTime() {
     const seconds = now.getSeconds();
     const ampm = hours >= 12 ? '오후' : '오전';
     const hour12 = hours % 12 || 12;
-    
+
     const timeString = `${ampm} ${hour12}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     timeElement.textContent = timeString;
   }
