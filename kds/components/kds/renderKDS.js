@@ -426,7 +426,7 @@ function renderKDSInterface(store) {
 
       .kds-container {
         width: 1200px;
-        height: 500px;
+        height: 600px;
         background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
         display: flex;
         flex-direction: column;
