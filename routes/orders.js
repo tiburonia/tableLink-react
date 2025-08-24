@@ -323,6 +323,19 @@ router.post('/pay', async (req, res) => {
 
     await client.query('COMMIT');
 
+    // 📡 새 주문 KDS 실시간 업데이트 전송
+    if (global.kdsWebSocket) {
+      console.log(`📡 새 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
+      global.kdsWebSocket.broadcast(storeId, 'new-order', {
+        orderId: orderId,
+        storeName: storeName,
+        tableNumber: actualTableNumber,
+        customerName: user.name || '손님',
+        itemCount: orderData.items ? orderData.items.length : 0,
+        totalAmount: orderData.total
+      });
+    }
+
     res.json({
       success: true,
       message: '결제가 완료되었습니다',
@@ -824,10 +837,13 @@ router.put('/items/:itemId/start-cooking', async (req, res) => {
     if (global.kdsWebSocket && updatedItem.order_id) {
       const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [updatedItem.order_id]);
       if (orderResult.rows.length > 0) {
-        global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-started', {
+        const storeId = orderResult.rows[0].store_id;
+        console.log(`📡 메뉴 아이템 ${updatedItem.id} 조리 시작 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
+        global.kdsWebSocket.broadcast(storeId, 'cooking-started', {
           itemId: updatedItem.id,
           orderId: updatedItem.order_id,
-          menuName: updatedItem.menu_name
+          menuName: updatedItem.menu_name,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -875,10 +891,13 @@ router.put('/items/:itemId/complete-cooking', async (req, res) => {
     if (global.kdsWebSocket && completedItem.order_id) {
       const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [completedItem.order_id]);
       if (orderResult.rows.length > 0) {
-        global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-completed', {
+        const storeId = orderResult.rows[0].store_id;
+        console.log(`📡 메뉴 아이템 ${completedItem.id} 조리 완료 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
+        global.kdsWebSocket.broadcast(storeId, 'cooking-completed', {
           itemId: completedItem.id,
           orderId: completedItem.order_id,
-          menuName: completedItem.menu_name
+          menuName: completedItem.menu_name,
+          timestamp: new Date().toISOString()
         });
       }
     }
@@ -921,16 +940,22 @@ router.put('/:orderId/start-cooking', async (req, res) => {
 
     console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 시작 완료`);
 
-    // 📡 KDS 실시간 업데이트 전송 (각 항목별로)
+    // 📡 KDS 실시간 업데이트 전송 (주문 전체 조리 시작)
     if (global.kdsWebSocket) {
       const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [orderId]);
       if (orderResult.rows.length > 0) {
-        result.rows.forEach(item => {
-          global.kdsWebSocket.broadcast(orderResult.rows[0].store_id, 'cooking-started', {
+        const storeId = orderResult.rows[0].store_id;
+        console.log(`📡 주문 ${orderId} 전체 조리 시작 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
+        
+        // 주문 전체 조리 시작 이벤트
+        global.kdsWebSocket.broadcast(storeId, 'order-cooking-started', {
+          orderId: orderId,
+          itemCount: result.rows.length,
+          items: result.rows.map(item => ({
             itemId: item.id,
-            orderId: item.order_id,
             menuName: item.menu_name
-          });
+          })),
+          timestamp: new Date().toISOString()
         });
       }
     }

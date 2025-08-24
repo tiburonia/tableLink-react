@@ -198,15 +198,27 @@ function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
   const roomName = `kds-store-${storeId}`;
   const clientCount = kdsClients.get(storeId)?.size || 0;
   
+  console.log(`📡 KDS 브로드캐스트 시도 - 매장 ${storeId}, 타입: ${updateType}, 연결된 클라이언트: ${clientCount}개`);
+  
   if (clientCount > 0) {
-    console.log(`📡 KDS 실시간 업데이트 전송 - 매장 ${storeId}, 타입: ${updateType}, 클라이언트: ${clientCount}개`);
-    io.to(roomName).emit('kds-update', {
+    const updateData = {
       type: updateType,
-      storeId: storeId,
+      storeId: parseInt(storeId),
       timestamp: new Date().toISOString(),
       data: data
-    });
+    };
+    
+    console.log(`📡 KDS 실시간 업데이트 전송 중 - 룸: ${roomName}`, updateData);
+    io.to(roomName).emit('kds-update', updateData);
+    console.log(`✅ KDS 실시간 업데이트 전송 완료 - 매장 ${storeId}`);
+  } else {
+    console.log(`⚠️ KDS 클라이언트 없음 - 매장 ${storeId}에 연결된 클라이언트가 없습니다`);
   }
+  
+  // 연결된 모든 클라이언트 로깅
+  console.log(`📊 현재 KDS 연결 상태:`, Array.from(kdsClients.entries()).map(([id, clients]) => 
+    `매장 ${id}: ${clients.size}개 클라이언트`
+  ));
 }
 
 // 전역으로 WebSocket 인스턴스 노출

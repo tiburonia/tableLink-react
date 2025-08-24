@@ -1101,11 +1101,13 @@ async function loadKDSOrders(storeId) {
 
 // KDS WebSocket 연결 설정 (실시간 업데이트)
 function setupKDSWebSocket(storeId) {
-  console.log('🔌 KDS WebSocket 연결 시작...');
+  console.log(`🔌 KDS WebSocket 연결 시작... (매장 ID: ${storeId})`);
 
   // Socket.IO 클라이언트 연결
   const socket = io({
-    transports: ['websocket', 'polling']
+    transports: ['websocket', 'polling'],
+    timeout: 20000,
+    forceNew: true
   });
 
   window.kdsSocket = socket;
@@ -1116,35 +1118,57 @@ function setupKDSWebSocket(storeId) {
     console.log('✅ KDS WebSocket 연결 성공:', socket.id);
 
     // KDS 룸 참여
-    socket.emit('join-kds-room', storeId);
-    console.log(`📟 매장 ${storeId} KDS 룸 참여`);
+    socket.emit('join-kds-room', parseInt(storeId));
+    console.log(`📟 매장 ${storeId} KDS 룸 참여 요청 전송`);
 
     // 연결 상태 표시 업데이트
     updateConnectionStatus(true);
+    
+    // 연결 확인 메시지
+    showRealTimeUpdateNotification('connection', { message: 'KDS 실시간 연결됨' });
   });
 
   // 연결 해제
   socket.on('disconnect', (reason) => {
     console.log('❌ KDS WebSocket 연결 해제:', reason);
     updateConnectionStatus(false);
+    showRealTimeUpdateNotification('disconnection', { message: '연결 끊김' });
   });
 
   // 재연결 시도
   socket.on('reconnect', (attemptNumber) => {
     console.log('🔄 KDS WebSocket 재연결 성공:', attemptNumber);
-    socket.emit('join-kds-room', storeId);
+    socket.emit('join-kds-room', parseInt(storeId));
     updateConnectionStatus(true);
+    showRealTimeUpdateNotification('reconnection', { message: '재연결됨' });
+  });
+
+  // 재연결 시도 중
+  socket.on('reconnect_attempt', (attemptNumber) => {
+    console.log(`🔄 KDS WebSocket 재연결 시도 ${attemptNumber}번째`);
   });
 
   // KDS 실시간 업데이트 수신
   socket.on('kds-update', (updateData) => {
     console.log('📡 KDS 실시간 업데이트 수신:', updateData);
-    handleKDSRealTimeUpdate(updateData);
+    
+    // 데이터 유효성 검증
+    if (updateData && updateData.storeId == storeId) {
+      handleKDSRealTimeUpdate(updateData);
+    } else {
+      console.log('⚠️ KDS 업데이트 데이터 불일치 또는 무효:', updateData);
+    }
   });
 
   // 연결 오류
   socket.on('connect_error', (error) => {
     console.error('❌ KDS WebSocket 연결 오류:', error);
+    updateConnectionStatus(false);
+  });
+
+  // 연결 타임아웃
+  socket.on('connect_timeout', () => {
+    console.error('⏰ KDS WebSocket 연결 타임아웃');
     updateConnectionStatus(false);
   });
 
@@ -1157,6 +1181,14 @@ function setupKDSWebSocket(storeId) {
   }, 10000); // 10초마다 백업 체크
 
   window.kdsBackupPolling = backupPolling;
+
+  // 연결 상태 주기적 확인
+  const statusCheck = setInterval(() => {
+    console.log(`📊 KDS WebSocket 상태 체크 - 연결됨: ${socket.connected}, ID: ${socket.id}`);
+    updateConnectionStatus(socket.connected);
+  }, 30000); // 30초마다 상태 체크
+
+  window.kdsStatusCheck = statusCheck;
 
   console.log('✅ KDS WebSocket 시스템 초기화 완료');
 }
@@ -1717,6 +1749,22 @@ window.addEventListener('beforeunload', () => {
   if (window.kdsBackupPolling) {
     clearInterval(window.kdsBackupPolling);
     console.log('🔄 KDS 백업 폴링 정리 완료');
+  }
+
+  if (window.kdsStatusCheck) {
+    clearInterval(window.kdsStatusCheck);
+    console.log('📊 KDS 상태 체크 정리 완료');
+  }
+});
+
+// 페이지 포커스 시 연결 상태 확인
+window.addEventListener('focus', () => {
+  if (window.kdsSocket && window.currentStoreId) {
+    console.log('👁️ KDS 페이지 포커스 - 연결 상태 확인');
+    if (!window.kdsSocket.connected) {
+      console.log('🔄 KDS 페이지 포커스 시 재연결 시도');
+      window.kdsSocket.connect();
+    }
   }
 });
 
