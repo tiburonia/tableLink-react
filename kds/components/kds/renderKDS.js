@@ -227,22 +227,32 @@ function renderKDSInterface(store) {
       }
 
       .kds-container {
-        width: 1200px;
-        height: 600px;
+        width: 95vw;
+        height: 90vh;
+        max-width: 1400px;
+        max-height: 800px;
+        min-width: 1000px;
+        min-height: 600px;
         background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
         display: flex;
         flex-direction: column;
-        margin: 20px auto;
+        margin: 2vh auto;
         border: 2px solid #444;
         border-radius: 20px;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
         overflow: hidden;
+        aspect-ratio: 16/9;
       }
 
       /* 개발 모드 스타일 */
       .kds-container.dev-mode {
         width: 500px;
         height: 800px;
+        max-width: none;
+        max-height: none;
+        min-width: none;
+        min-height: none;
+        aspect-ratio: none;
         margin: 10px;
         position: fixed;
         top: 10px;
@@ -254,19 +264,23 @@ function renderKDSInterface(store) {
 
       /* 헤더 스타일 */
       .kds-header {
-        height: 60px;
+        height: 8vh;
+        min-height: 50px;
+        max-height: 70px;
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 24px;
+        padding: 0 2vw;
         border-radius: 18px 18px 0 0;
         backdrop-filter: blur(10px);
       }
 
       .dev-mode .kds-header {
         height: 50px;
+        min-height: none;
+        max-height: none;
         padding: 0 20px;
       }
 
@@ -374,9 +388,11 @@ function renderKDSInterface(store) {
         display: grid;
         grid-template-columns: repeat(5, 1fr); /* 5열로 변경 */
         grid-template-rows: repeat(2, 1fr); /* 2행 유지 */
-        gap: 6px; /* 카드 간 간격 축소 */
-        padding: 8px;
+        gap: 0.5vw; /* 뷰포트 기반 간격 */
+        padding: 1vh 1vw;
         overflow: hidden;
+        min-gap: 4px;
+        max-gap: 12px;
       }
 
       /* 개발 모드 그리드 - 리스트 형태 */
@@ -393,18 +409,18 @@ function renderKDSInterface(store) {
       .order-card {
         background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
         border: 1px solid #6b7280;
-        border-radius: 12px;
-        padding: 12px;
+        border-radius: min(12px, 1vh);
+        padding: min(12px, 1.5vh);
         display: flex;
         flex-direction: column;
         position: relative;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 10px;
+        font-size: max(10px, min(0.9vw, 14px));
         color: #f9fafb;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         backdrop-filter: blur(5px);
-        min-height: 180px;
+        min-height: max(180px, 20vh);
       }
 
       /* 개발 모드 카드 - 리스트 아이템 형태 */
@@ -624,18 +640,22 @@ function renderKDSInterface(store) {
 
       /* 하단 상태바 */
       .status-bar {
-        height: 50px;
+        height: 6vh;
+        min-height: 40px;
+        max-height: 60px;
         background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
         border-top: 1px solid rgba(107, 114, 128, 0.3);
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 24px;
+        padding: 0 2vw;
         border-radius: 0 0 18px 18px;
       }
 
       .dev-mode .status-bar {
         height: 40px;
+        min-height: none;
+        max-height: none;
         padding: 0 20px;
       }
 
