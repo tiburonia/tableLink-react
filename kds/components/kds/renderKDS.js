@@ -681,8 +681,8 @@ function renderKDSInterface(store) {
         font-weight: 500;
       }
 
-      /* 조리중인 카드 숨김 처리 */
-      .order-card.cooking .order-actions {
+      /* 조리중인 카드는 완료 버튼만 표시 */
+      .order-card.cooking .start-all-btn {
         display: none;
       }
 
@@ -996,6 +996,18 @@ function renderKDSInterface(store) {
 
       .detail-btn {
         background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+      }
+
+      .complete-btn {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+      }
+
+      .complete-btn:hover {
+        background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
       }
 
       .dev-mode .item-actions {
@@ -1333,26 +1345,45 @@ function updateKDSOrderCards(orders) {
   const ordersGrid = document.getElementById('ordersGrid');
   if (!ordersGrid) return;
 
-  // 기존 주문 카드들 제거 (다기능 카드와 빈 슬롯 제외)
+  // 기존 주문 카드들과 빈 슬롯 제거 (다기능 카드 제외)
   const existingCards = ordersGrid.querySelectorAll('.order-card');
+  const existingSlots = ordersGrid.querySelectorAll('.empty-card-slot');
   existingCards.forEach(card => card.remove());
+  existingSlots.forEach(slot => slot.remove());
 
-  // 주문 카드들 생성
-  let cardCount = 0;
+  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
   const maxCards = 9; // 다기능 카드(10번)를 위해 9개까지
 
-  orders.forEach(order => {
+  // 조리 완료된 주문만 필터링 (완료된 주문은 화면에서 제거)
+  const activeOrders = orders.filter(order => {
+    const hasActiveItems = order.items.some(item => 
+      item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
+    );
+    return hasActiveItems;
+  });
+
+  // 주문 카드들을 1번부터 순서대로 생성
+  let cardCount = 0;
+  activeOrders.forEach(order => {
     if (cardCount >= maxCards) return;
 
     const orderCard = createOrderCard(order);
-    ordersGrid.insertBefore(orderCard, ordersGrid.querySelector('.multifunction-card'));
+    if (multifunctionCard) {
+      ordersGrid.insertBefore(orderCard, multifunctionCard);
+    } else {
+      ordersGrid.appendChild(orderCard);
+    }
     cardCount++;
   });
 
   // 빈 슬롯 생성 (9개 미만일 때)
   for (let i = cardCount; i < maxCards; i++) {
     const emptySlot = createEmptySlot(i + 1);
-    ordersGrid.insertBefore(emptySlot, ordersGrid.querySelector('.multifunction-card'));
+    if (multifunctionCard) {
+      ordersGrid.insertBefore(emptySlot, multifunctionCard);
+    } else {
+      ordersGrid.appendChild(emptySlot);
+    }
   }
 
   console.log(`📟 KDS 카드 업데이트 완료: ${cardCount}개 주문, ${maxCards - cardCount}개 빈 슬롯`);
@@ -1412,6 +1443,8 @@ function createOrderCard(order) {
     <div class="order-actions">
       ${order.pendingCount > 0 ?
         `<button class="action-btn start-all-btn" onclick="startCookingOrder(${order.id})">전체 조리시작</button>` : ''}
+      ${order.cookingCount > 0 && order.pendingCount === 0 ?
+        `<button class="action-btn complete-btn" onclick="completeOrder(${order.id})">주문 완료</button>` : ''}
       <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">상세보기</button>
     </div>
     ${order.cookingCount > 0 ? `
@@ -1588,6 +1621,35 @@ function startTimer(orderId) {
 
   if (orderCard) {
     orderCard.dataset.timerId = interval;
+  }
+}
+
+// 주문 완료
+async function completeOrder(orderId) {
+  try {
+    console.log('✅ 주문 완료:', orderId);
+
+    const response = await fetch(`/api/orders/${orderId}/complete`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ 주문 완료 처리:', result.message);
+      // 즉시 데이터 새로고침
+      if (window.currentStoreId) {
+        await loadKDSOrders(window.currentStoreId);
+      }
+    } else {
+      alert('주문 완료 실패: ' + result.error);
+    }
+  } catch (error) {
+    console.error('❌ 주문 완료 실패:', error);
+    alert('주문 완료 중 오류가 발생했습니다.');
   }
 }
 
@@ -1775,6 +1837,7 @@ window.startCooking = startCooking;
 window.startCookingOrder = startCookingOrder;
 window.startCookingItem = startCookingItem;
 window.completeCookingItem = completeCookingItem;
+window.completeOrder = completeOrder;
 window.cancelOrder = cancelOrder;
 window.showKDSSettings = showKDSSettings;
 window.showOrderHistory = showOrderHistory;
