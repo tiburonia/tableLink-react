@@ -1454,7 +1454,7 @@ function showOrderModal(tllOrderInfo = null) {
           <!-- 고객 정보 입력 -->
           <div class="customer-section">
             <div class="section-title">👤 고객 정보</div>
-            
+
             ${tllOrderInfo ? `
               <!-- TLL 주문 정보 표시 -->
               <div class="tll-order-info">
@@ -1916,10 +1916,10 @@ function showOrderModal(tllOrderInfo = null) {
   `;
 
   document.body.appendChild(modal);
-  
+
   // TLL 주문 정보를 전역 변수에 저장
   window.currentTLLOrder = tllOrderInfo;
-  
+
   loadMenuItems();
 }
 
@@ -2044,7 +2044,7 @@ function changeQuantity(index, change) {
 function updateSubmitButton() {
   const submitBtn = document.getElementById('submitOrderBtn');
   const hasItems = currentOrderItems.length > 0;
-  
+
   // TLL 주문인 경우 고객 정보 입력 불필요
   if (window.currentTLLOrder) {
     submitBtn.disabled = !hasItems;
@@ -2075,10 +2075,10 @@ function updateSubmitButton() {
 async function submitOrder() {
   try {
     const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     // TLL 주문 정보 확인
     const tllOrderInfo = window.currentTLLOrder;
-    
+
     const orderData = {
       storeId: currentStore.id,
       storeName: currentStore.name,
@@ -2101,7 +2101,7 @@ async function submitOrder() {
       // 일반 POS 주문인 경우
       const customerType = document.querySelector('input[name="customerType"]:checked').value;
       orderData.isGuestOrder = customerType === 'guest';
-      
+
       if (customerType === 'guest') {
         orderData.guestPhone = document.getElementById('guestPhone').value.trim();
         orderData.guestName = document.getElementById('guestName').value.trim();
@@ -2216,190 +2216,336 @@ async function processPayment() {
 
 // 결제 모달 표시
 function showPaymentModal(orders) {
+  // 기존 모달이 있다면 제거
+  const existingModal = document.getElementById('paymentModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
   const modal = document.createElement('div');
   modal.id = 'paymentModal';
-  modal.innerHTML = `
-    <div class="modal-overlay" onclick="closePaymentModal(event)">
-      <div class="modal-content payment-modal" onclick="event.stopPropagation()">
-        <div class="modal-header">
-          <h2>💳 결제 처리 - 테이블 ${currentTable}</h2>
-          <button class="close-btn" onclick="closePaymentModal()">✕</button>
-        </div>
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+  `;
 
-        <div class="modal-body">
-          <div class="payment-orders">
-            <div class="section-title">결제할 주문 선택</div>
+  modal.innerHTML = `
+    <div class="payment-modal-content" onclick="event.stopPropagation()" style="
+      width: 90%;
+      max-width: 600px;
+      height: 90%;
+      max-height: 700px;
+      background: white;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      animation: slideUp 0.3s ease;
+      overflow: hidden;
+    ">
+      <div class="modal-header" style="
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      ">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">💳 결제 처리 - 테이블 ${currentTable}</h2>
+        <button class="close-btn" onclick="closePaymentModal()" style="
+          background: none;
+          border: none;
+          font-size: 24px;
+          cursor: pointer;
+          color: #64748b;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">✕</button>
+      </div>
+
+      <div class="modal-body" style="
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      ">
+        <div class="payment-orders">
+          <div class="section-title" style="
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          ">결제할 주문 선택</div>
+          <div style="max-height: 400px; overflow-y: auto;">
             ${orders.map((order, index) => `
-              <div class="payment-order-item" data-order-id="${order.id}">
-                <div class="order-header">
-                  <div class="order-info">
-                    <span class="customer-name">👤 ${order.customerName}</span>
-                    <span class="order-time">${formatOrderTime(order.orderDate)}</span>
-                    <span class="order-source">${getOrderSourceText(order.orderSource || 'POS')}</span>
+              <div class="payment-order-item" data-order-id="${order.id}" style="
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 12px;
+                transition: all 0.2s ease;
+              ">
+                <div class="order-header" style="
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: flex-start;
+                  gap: 16px;
+                  margin-bottom: 12px;
+                ">
+                  <div class="order-info" style="flex: 1; min-width: 0;">
+                    <div style="margin-bottom: 4px;">
+                      <span class="customer-name" style="font-size: 16px; font-weight: 700; color: #1e293b;">👤 ${order.customerName}</span>
+                      <span class="order-source" style="
+                        font-size: 12px;
+                        background: #e2e8f0;
+                        color: #64748b;
+                        padding: 2px 6px;
+                        border-radius: 4px;
+                        margin-left: 8px;
+                      ">${getOrderSourceText(order.orderSource || 'POS')}</span>
+                    </div>
+                    <span class="order-time" style="font-size: 13px; color: #64748b; font-weight: 500;">${formatOrderTime(order.orderDate)}</span>
                   </div>
-                  <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
+                  <div class="order-amount" style="
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #059669;
+                    background: #ecfdf5;
+                    padding: 8px 12px;
+                    border-radius: 8px;
+                    border: 1px solid #bbf7d0;
+                    white-space: nowrap;
+                    flex-shrink: 0;
+                  ">₩${order.finalAmount.toLocaleString()}</div>
                 </div>
 
-                <div class="order-items">
+                <div class="order-items" style="
+                  background: #f1f5f9;
+                  border-radius: 6px;
+                  padding: 12px;
+                  margin-bottom: 12px;
+                ">
                   ${order.orderData && order.orderData.items ? 
                     order.orderData.items.map(item => `
-                      <div class="menu-item">
-                        <span class="menu-name">${item.name}</span>
-                        <span class="menu-quantity">x${item.quantity || 1}</span>
+                      <div class="menu-item" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 4px 0;
+                        font-size: 14px;
+                      ">
+                        <span class="menu-name" style="color: #374151; font-weight: 600;">${item.name}</span>
+                        <span class="menu-quantity" style="
+                          color: #6b7280;
+                          background: #e2e8f0;
+                          padding: 2px 6px;
+                          border-radius: 4px;
+                          font-size: 12px;
+                          font-weight: 700;
+                        ">x${item.quantity || 1}</span>
                       </div>
                     `).join('') : 
-                    '<div class="no-items">주문 상세 정보 없음</div>'
+                    '<div class="no-items" style="text-align: center; color: #9ca3af; padding: 12px;">주문 상세 정보 없음</div>'
                   }
                 </div>
 
                 <div class="order-actions">
-                  <label class="payment-checkbox">
-                    <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" ${orders.length === 1 ? 'checked' : ''}>
-                    <span class="checkmark"></span>
+                  <label class="payment-checkbox" style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 600;
+                  ">
+                    <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" ${orders.length === 1 ? 'checked' : ''} style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: #3b82f6;
+                    ">
                     <span>결제 선택</span>
                   </label>
                 </div>
               </div>
             `).join('')}
           </div>
+        </div>
 
-          <div class="payment-summary">
-            <div class="section-title">결제 정보</div>
-            <div class="payment-method-selection">
-              <label class="radio-option">
-                <input type="radio" name="paymentMethod" value="CARD" checked>
-                <span>💳 카드</span>
-              </label>
-              <label class="radio-option">
-                <input type="radio" name="paymentMethod" value="CASH">
-                <span>💵 현금</span>
-              </label>
-              <label class="radio-option">
-                <input type="radio" name="paymentMethod" value="POS">
-                <span>📟 POS 통합</span>
-              </label>
+        <div class="payment-summary">
+          <div class="section-title" style="
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f1f5f9;
+          ">결제 정보</div>
+
+          <div class="payment-method-selection" style="
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+          ">
+            <label class="radio-option" style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 500;
+            ">
+              <input type="radio" name="paymentMethod" value="CARD" checked style="accent-color: #3b82f6;">
+              <span>💳 카드</span>
+            </label>
+            <label class="radio-option" style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 500;
+            ">
+              <input type="radio" name="paymentMethod" value="CASH" style="accent-color: #3b82f6;">
+              <span>💵 현금</span>
+            </label>
+            <label class="radio-option" style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              cursor: pointer;
+              font-size: 14px;
+              font-weight: 500;
+            ">
+              <input type="radio" name="paymentMethod" value="POS" style="accent-color: #3b82f6;">
+              <span>📟 POS 통합</span>
+            </label>
+          </div>
+
+          <div class="payment-total" style="
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 16px;
+          ">
+            <div class="total-line" style="
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+              font-size: 14px;
+              color: #475569;
+            ">
+              <span>선택된 주문 수:</span>
+              <span id="selectedOrderCount">${orders.length === 1 ? '1' : '0'}개</span>
             </div>
-
-            <div class="payment-total">
-              <div class="total-line">
-                <span>선택된 주문 수:</span>
-                <span id="selectedOrderCount">${orders.length === 1 ? '1' : '0'}개</span>
-              </div>
-              <div class="total-line final">
-                <span>총 결제 금액:</span>
-                <span id="totalPaymentAmount">₩${orders.length === 1 ? orders[0].finalAmount.toLocaleString() : '0'}</span>
-              </div>
+            <div class="total-line final" style="
+              display: flex;
+              justify-content: space-between;
+              font-weight: 600;
+              font-size: 16px;
+              color: #1e293b;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 8px;
+              margin-bottom: 0;
+            ">
+              <span>총 결제 금액:</span>
+              <span id="totalPaymentAmount" style="color: #059669; font-weight: 800;">₩${orders.length === 1 ? orders[0].finalAmount.toLocaleString() : '0'}</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="closePaymentModal()">취소</button>
-          <button class="btn btn-primary" onclick="processSelectedPayments()" id="processPaymentBtn">
-            결제 처리
-          </button>
-        </div>
+      <div class="modal-footer" style="
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        flex-shrink: 0;
+      ">
+        <button class="btn btn-secondary" onclick="closePaymentModal()" style="
+          padding: 10px 20px;
+          border: 2px solid #e2e8f0;
+          border-radius: 6px;
+          background: white;
+          color: #64748b;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        ">취소</button>
+        <button class="btn btn-primary" onclick="processSelectedPayments()" id="processPaymentBtn" style="
+          padding: 10px 20px;
+          border: none;
+          border-radius: 6px;
+          background: #3b82f6;
+          color: white;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        ">결제 처리</button>
       </div>
     </div>
 
     <style>
-      .payment-modal {
-        width: 90%;
-        max-width: 600px;
-        height: 90%;
-        max-height: 700px;
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
 
-      .payment-orders {
-        max-height: 400px;
-        overflow-y: auto;
-        margin-bottom: 20px;
-      }
-
-      .payment-order-item {
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
+      @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
       }
 
       .payment-order-item.selected {
-        border-color: #3b82f6;
-        background: #eff6ff;
+        border-color: #3b82f6 !important;
+        background: #eff6ff !important;
       }
 
-      .order-source {
-        font-size: 12px;
-        background: #e2e8f0;
-        color: #64748b;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-left: 8px;
+      .btn:hover {
+        transform: translateY(-1px);
       }
 
-      .payment-method-selection {
-        display: flex;
-        gap: 16px;
-        margin-bottom: 16px;
+      .btn-secondary:hover {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
       }
 
-      .payment-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        font-size: 14px;
+      .btn-primary:hover {
+        background: #2563eb !important;
       }
 
-      .payment-checkbox input[type="checkbox"] {
-        display: none;
-      }
-
-      .checkmark {
-        width: 18px;
-        height: 18px;
-        border: 2px solid #d1d5db;
-        border-radius: 4px;
-        position: relative;
-      }
-
-      .payment-checkbox input[type="checkbox"]:checked + .checkmark {
-        background: #3b82f6;
-        border-color: #3b82f6;
-      }
-
-      .payment-checkbox input[type="checkbox"]:checked + .checkmark:after {
-        content: '✓';
-        position: absolute;
-        color: white;
-        font-size: 12px;
-        top: -2px;
-        left: 2px;
-      }
-
-      .payment-total {
-        background: #f1f5f9;
-        border-radius: 8px;
-        padding: 16px;
-      }
-
-      .total-line {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 8px;
-      }
-
-      .total-line.final {
-        font-weight: 600;
-        font-size: 16px;
-        color: #1e293b;
-        border-top: 1px solid #cbd5e1;
-        padding-top: 8px;
-        margin-bottom: 0;
+      .btn-primary:disabled {
+        background: #9ca3af !important;
+        cursor: not-allowed !important;
       }
     </style>
   `;
+
+  // 모달 클릭 시 닫기 (오버레이 클릭)
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closePaymentModal();
+    }
+  });
 
   document.body.appendChild(modal);
 
@@ -2410,6 +2556,7 @@ function showPaymentModal(orders) {
   });
 
   updatePaymentSummary();
+  console.log('💳 결제 모달 표시 완료');
 }
 
 // 결제 요약 정보 업데이트
@@ -2422,7 +2569,7 @@ function updatePaymentSummary() {
 
   document.getElementById('selectedOrderCount').textContent = `${selectedCount}개`;
   document.getElementById('totalPaymentAmount').textContent = `₩${totalAmount.toLocaleString()}`;
-  
+
   const processBtn = document.getElementById('processPaymentBtn');
   processBtn.disabled = selectedCount === 0;
 
@@ -2443,7 +2590,7 @@ async function processSelectedPayments() {
   try {
     const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-    
+
     if (checkboxes.length === 0) {
       alert('결제할 주문을 선택해주세요.');
       return;
@@ -2457,7 +2604,7 @@ async function processSelectedPayments() {
 
     for (const checkbox of checkboxes) {
       const orderId = checkbox.dataset.orderId;
-      
+
       try {
         const response = await fetch(`/api/pos/orders/${orderId}/payment`, {
           method: 'POST',
