@@ -14,6 +14,13 @@ let orderFilter = 'all';
 let posSocket = null;
 let isWebSocketConnected = false;
 
+// POS 시스템 메인 컨트롤러 (Refactored)
+// let currentStore = null; // Moved to global scope
+// let currentTable = null; // Moved to global scope
+// let allMenus = []; // Moved to global scope
+// let allTables = []; // Moved to global scope
+// let homeMode = 'table_map'; // Moved to global scope
+
 // 매장 선택 함수
 function selectStore(storeId, storeName) {
   // URL 업데이트
@@ -26,10 +33,17 @@ function selectStore(storeId, storeName) {
   console.log(`✅ POS 매장 선택: ${storeName} (ID: ${storeId})`);
 }
 
-// POS 시스템 초기화
+// POS 시스템 초기화 (Refactored)
 async function renderPOS() {
   try {
     console.log('📟 POS 시스템 초기화 중...');
+
+    // 전역 변수 초기화 (Re-initializing based on refactoring)
+    window.currentStore = null;
+    window.currentTable = null;
+    window.allMenus = [];
+    window.allTables = [];
+    window.homeMode = homeMode; // Keep the current homeMode setting
 
     // 기본 UI 렌더링
     renderPOSLayout();
@@ -40,24 +54,216 @@ async function renderPOS() {
 
     if (storeId) {
       console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);
-      await loadStoreById(storeId);
-
-      // WebSocket 연결 시작
+      await loadStoreById(storeId); // Renamed from loadStoreDetails to loadStoreById for clarity
       initWebSocket(storeId);
     } else {
-      // 매장 정보 로드 (기존에는 매장 선택 UI를 통해 로드했으나, 이제는 URL 필수)
-      showError('매장 ID가 URL에 포함되어야 합니다. (예: /pos/123)');
+      showPOSNotification('매장 ID가 URL에 포함되어야 합니다. (예: /pos/123)', 'error');
       return; // 매장 ID가 없으면 초기화 중단
     }
 
     console.log('✅ POS 시스템 초기화 완료');
   } catch (error) {
     console.error('❌ POS 시스템 초기화 실패:', error);
-    showError('POS 시스템 초기화에 실패했습니다.');
+    showPOSNotification('POS 시스템 초기화에 실패했습니다.', 'error');
   }
 }
 
-// POS 레이아웃 렌더링
+// URL에서 매장 ID로 직접 로드 (Refactored)
+async function loadStoreById(storeId) {
+  try {
+    console.log(`🏪 매장 ID ${storeId}로 직접 로드 중...`);
+
+    const response = await fetch(`/api/stores/${storeId}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error('매장 정보 조회 실패');
+    }
+
+    const store = data.store;
+    currentStore = { 
+      id: parseInt(storeId), 
+      name: store.name, 
+      category: store.category || '기타' 
+    };
+    window.currentStore = currentStore; // Update global state
+
+    // 매장 정보 표시
+    document.getElementById('storeName').textContent = `${store.name} (${store.category || '기타'})`;
+
+    await loadStoreDetails(storeId); // Call the actual loading function
+    console.log(`✅ 매장 ${store.name} 로드 완료`);
+
+  } catch (error) {
+    console.error('❌ 매장 직접 로드 실패:', error);
+    showPOSNotification('매장 정보를 불러오는데 실패했습니다.', 'error');
+  }
+}
+
+// 매장 상세 정보 로드 (Refactored)
+async function loadStoreDetails(storeId) {
+  try {
+    const response = await fetch(`/api/stores/${storeId}`);
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error('매장 정보 조회 실패');
+    }
+
+    const store = data.store;
+
+    // 메뉴 데이터 처리
+    let menu = store.menu || [];
+    if (typeof menu === 'string') {
+      try {
+        menu = JSON.parse(menu);
+      } catch (error) {
+        console.warn('메뉴 JSON 파싱 실패:', error);
+        menu = [];
+      }
+    }
+    allMenus = menu;
+    window.allMenus = allMenus; // Update global state
+
+    console.log(`🍽️ 매장 ${storeId} 메뉴 ${allMenus.length}개 로드 완료`);
+
+    // 테이블 정보 로드
+    await loadTables();
+
+    // 테이블 맵 렌더링
+    if (homeMode === 'table_map') {
+      renderTableMap();
+    }
+
+  } catch (error) {
+    console.error('❌ 매장 상세 정보 로드 실패:', error);
+    throw error;
+  }
+}
+
+// 테이블 목록 로드 (Refactored)
+async function loadTables() {
+  try {
+    const response = await fetch(`/api/pos/stores/${currentStore.id}/tables`);
+    const data = await response.json();
+
+    if (data.success) {
+      allTables = data.tables || [];
+      window.allTables = allTables; // Update global state
+      console.log(`🪑 매장 ${currentStore.id} 테이블 ${allTables.length}개 로드 완료`);
+    } else {
+      throw new Error('테이블 데이터 로드 실패');
+    }
+  } catch (error) {
+    console.error('❌ 테이블 데이터 로드 실패:', error);
+    allTables = [];
+    window.allTables = []; // Update global state
+  }
+}
+
+// 테이블 맵 새로고침 (Refactored)
+async function refreshTableMap() {
+  try {
+    await loadTables();
+    if (homeMode === 'table_map') {
+      renderTableMap();
+    }
+  } catch (error) {
+    console.error('❌ 테이블 맵 새로고침 실패:', error);
+  }
+}
+
+// 현재 테이블 주문 새로고침 (Refactored)
+async function refreshCurrentTableOrders() {
+  if (currentTable) {
+    await updateDetailPanel(currentTable);
+  }
+}
+
+// 세부 패널 닫기 (Refactored)
+function closeDetailPanel() {
+  document.querySelectorAll('.table-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+  currentTable = null;
+  window.currentTable = null; // Clear global state
+
+  document.getElementById('panelTitle').textContent = '테이블을 선택하세요';
+  document.getElementById('panelContent').innerHTML = `
+    <div class="select-table-message">
+      테이블을 클릭하여 주문 관리를 시작하세요
+    </div>
+  `;
+}
+
+// 스텁 함수들 (To be moved to respective modules)
+function createNewOrder() {
+  showPOSNotification('새 포장 주문 기능 - 개발 예정', 'info');
+}
+
+function showPickupQueue() {
+  showPOSNotification('픽업 대기함 기능 - 개발 예정', 'info');
+}
+
+function showUnassignedOrders() {
+  showPOSNotification('미지정 주문함 기능 - 개발 예정', 'info');
+}
+
+function openQuickMenu() {
+  showPOSNotification('빠른 메뉴 기능 - 개발 예정', 'info');
+}
+
+function viewOrders() {
+  showPOSNotification('주문 내역 기능 - 개발 예정', 'info');
+}
+
+function moveTable() {
+  showPOSNotification('테이블 이동 기능 - 개발 예정', 'info');
+}
+
+// 전역 함수들을 window 객체에 등록
+window.renderPOS = renderPOS;
+window.selectStore = selectStore; // Keeping this as it's part of the main flow
+window.loadStoreById = loadStoreById;
+window.loadStoreDetails = loadStoreDetails;
+window.loadTables = loadTables;
+window.refreshTableMap = refreshTableMap;
+window.refreshCurrentTableOrders = refreshCurrentTableOrders;
+window.closeDetailPanel = closeDetailPanel;
+window.createNewOrder = createNewOrder;
+window.showPickupQueue = showPickupQueue;
+window.showUnassignedOrders = showUnassignedOrders;
+window.openQuickMenu = openQuickMenu;
+window.viewOrders = viewOrders;
+window.moveTable = moveTable;
+window.selectStore = selectStore;
+window.switchHomeMode = switchHomeMode; // Keeping this
+window.selectTableFromMap = selectTableFromMap; // Keeping this
+window.filterOrders = filterOrders; // Keeping this
+window.occupyTable = occupyTable; // Keeping this
+window.releaseTable = releaseTable; // Keeping this
+window.addOrder = addOrder; // Keeping this
+window.processPayment = processPayment; // Keeping this
+window.showOrderModal = showOrderModal; // Keeping this
+window.closeOrderModal = closeOrderModal; // Keeping this
+window.selectOrderType = selectOrderType; // Keeping this
+window.toggleCustomerType = toggleCustomerType; // Keeping this
+window.filterMenuCategory = filterMenuCategory; // Keeping this
+window.addMenuItem = addMenuItem; // Keeping this
+window.changeQuantity = changeQuantity; // Keeping this
+window.submitOrder = submitOrder; // Keeping this
+window.showPaymentModal = showPaymentModal; // Keeping this
+window.closePaymentModal = closePaymentModal; // Keeping this
+window.updatePaymentSummary = updatePaymentSummary; // Keeping this
+window.processSelectedPayments = processSelectedPayments; // Keeping this
+window.initWebSocket = initWebSocket; // Keeping this for WebSocket initialization
+window.updateConnectionStatus = updateConnectionStatus; // Keeping this for connection status display
+window.handlePOSRealTimeUpdate = handlePOSRealTimeUpdate; // Keeping this for handling real-time updates
+window.handleNewOrderNotification = handleNewOrderNotification; // Keeping this for new order notifications
+window.handleTableStatusUpdate = handleTableStatusUpdate; // Keeping this for table status updates
+window.showPOSNotification = showPOSNotification; // Keeping this for displaying notifications
+
+// POS 레이아웃 렌더링 (Original code, untouched)
 function renderPOSLayout() {
   const main = document.getElementById('main');
 
@@ -1147,9 +1353,12 @@ function renderPOSLayout() {
   `;
 }
 
+
 // 홈 모드 전환
 function switchHomeMode(mode) {
   homeMode = mode;
+  window.homeMode = mode; // Update global state
+
   document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
   document.querySelector(`[onclick="switchHomeMode('${mode}')"]`).classList.add('active');
 
@@ -1206,6 +1415,7 @@ function selectTableFromMap(tableNumber) {
   // 새로운 선택
   event.target.closest('.table-item').classList.add('selected');
   currentTable = tableNumber;
+  window.currentTable = tableNumber; // Update global state
 
   // 세부 패널 업데이트
   updateDetailPanel(tableNumber);
@@ -1227,8 +1437,8 @@ async function updateDetailPanel(tableNumber) {
 
   try {
     // 현재 테이블 상태 확인
-    const currentTable = allTables.find(t => t.tableNumber == tableNumber);
-    const isOccupied = currentTable ? currentTable.isOccupied : false;
+    const currentTableData = allTables.find(t => t.tableNumber == tableNumber);
+    const isOccupied = currentTableData ? currentTableData.isOccupied : false;
 
     // 통합 주문 조회 (메모리 + DB)
     const allOrdersResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/all-orders`);
@@ -1391,118 +1601,6 @@ function filterOrders(status) {
 
   // 주문 필터링 로직 구현
   renderOrderList();
-}
-
-// 세부 패널 닫기
-function closeDetailPanel() {
-  document.querySelectorAll('.table-item').forEach(item => {
-    item.classList.remove('selected');
-  });
-  currentTable = null;
-
-  document.getElementById('panelTitle').textContent = '테이블을 선택하세요';
-  document.getElementById('panelContent').innerHTML = `
-    <div class="select-table-message">
-      테이블을 클릭하여 주문 관리를 시작하세요
-    </div>
-  `;
-}
-
-// 테이블 상세 정보 로드
-async function loadStoreDetails(storeId) {
-  try {
-    const response = await fetch(`/api/stores/${storeId}`);
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error('매장 정보 조회 실패');
-    }
-
-    const store = data.store;
-
-    // 메뉴 데이터 처리
-    let menu = store.menu || [];
-    if (typeof menu === 'string') {
-      try {
-        menu = JSON.parse(menu);
-      } catch (error) {
-        console.warn('메뉴 JSON 파싱 실패:', error);
-        menu = [];
-      }
-    }
-    allMenus = menu;
-
-    console.log(`🍽️ 매장 ${storeId} 메뉴 ${allMenus.length}개 로드 완료`);
-
-    // 실제 데이터베이스에서 테이블 정보 로드
-    await loadTables();
-
-    // 테이블 맵 렌더링
-    if (homeMode === 'table_map') {
-      renderTableMap();
-    }
-
-  } catch (error) {
-    console.error('❌ 매장 상세 정보 로드 실패:', error);
-    throw error;
-  }
-}
-
-// 테이블 목록 로드 (실제 데이터베이스 사용)
-async function loadTables() {
-  try {
-    const response = await fetch(`/api/pos/stores/${currentStore.id}/tables`);
-    const data = await response.json();
-
-    if (data.success) {
-      allTables = data.tables || [];
-      console.log(`🪑 매장 ${currentStore.id} 테이블 ${allTables.length}개 로드 완료`);
-    } else {
-      throw new Error('테이블 데이터 로드 실패');
-    }
-  } catch (error) {
-    console.error('❌ 테이블 데이터 로드 실패:', error);
-    allTables = [];
-  }
-}
-
-// URL에서 매장 ID로 직접 로드
-async function loadStoreById(storeId) {
-  try {
-    console.log(`🏪 매장 ID ${storeId}로 직접 로드 중...`);
-
-    const response = await fetch(`/api/stores/${storeId}`);
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error('매장 정보 조회 실패');
-    }
-
-    const store = data.store;
-
-    currentStore = { 
-      id: parseInt(storeId), 
-      name: store.name, 
-      category: store.category || '기타' 
-    };
-
-    // 매장 정보 표시
-    document.getElementById('storeName').textContent = `${store.name} (${store.category || '기타'})`;
-
-    await loadStoreDetails(storeId);
-
-    console.log(`✅ 매장 ${store.name} 로드 완료 (URL 고정 모드)`);
-
-  } catch (error) {
-    console.error('❌ 매장 직접 로드 실패:', error);
-    showError('매장 정보를 불러오는데 실패했습니다.');
-  }
-}
-
-
-// 에러 표시
-function showError(message) {
-  alert(message);
 }
 
 // 테이블 점유 기능
@@ -1818,6 +1916,7 @@ function showOrderModal(tllOrderInfo = null) {
 
       .customer-type-selector {
         display: flex;
+        flex-direction: column;
         gap: 12px;
         margin-bottom: 16px;
       }
@@ -2544,31 +2643,6 @@ function closeOrderModal(event) {
   // 주문 상태 초기화
   currentOrderItems = [];
   window.currentTLLOrder = null;
-}
-
-// 액션 함수들 (스텁)
-function createNewOrder() {
-  alert('새 포장 주문 기능 - 개발 예정');
-}
-
-function showPickupQueue() {
-  alert('픽업 대기함 기능 - 개발 예정');
-}
-
-function showUnassignedOrders() {
-  alert('미지정 주문함 기능 - 개발 예정');
-}
-
-function openQuickMenu() {
-  alert('빠른 메뉴 기능 - 개발 예정');
-}
-
-function viewOrders() {
-  alert('주문 내역 기능 - 개발 예정');
-}
-
-function moveTable() {
-  alert('테이블 이동 기능 - 개발 예정');
 }
 
 // 결제 처리 기능
@@ -3429,13 +3503,6 @@ function showPaymentModal(orders, pendingOrder = false) {
     </style>
   `;
 
-  // 모달 클릭 시 닫기 (오버레이 클릭)
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      closePaymentModal();
-    }
-  });
-
   document.body.appendChild(modal);
 
   // 체크박스 이벤트 리스너 추가
@@ -3469,6 +3536,7 @@ function showPaymentModal(orders, pendingOrder = false) {
   updatePaymentSummary();
   console.log('💳 결제 모달 표시 완료');
 }
+
 
 // 결제 요약 정보 업데이트
 function updatePaymentSummary() {
@@ -3604,7 +3672,7 @@ function initWebSocket(storeId) {
 
       // 연결 상태 표시 업데이트
       updateConnectionStatus(true);
-      showNotification('🔌 실시간 연결 활성화');
+      showPOSNotification('🔌 실시간 연결 활성화');
     });
 
     // 연결 해제
@@ -3612,7 +3680,7 @@ function initWebSocket(storeId) {
       console.log('❌ POS WebSocket 연결 해제:', reason);
       isWebSocketConnected = false;
       updateConnectionStatus(false);
-      showNotification('⚠️ 실시간 연결 해제됨', 'warning');
+      showPOSNotification('⚠️ 실시간 연결 해제됨', 'warning');
     });
 
     // 재연결 시도
@@ -3621,13 +3689,13 @@ function initWebSocket(storeId) {
       posSocket.emit('join-pos-room', parseInt(storeId));
       isWebSocketConnected = true;
       updateConnectionStatus(true);
-      showNotification('🔄 실시간 연결 복구');
+      showPOSNotification('🔄 실시간 연결 복구');
     });
 
     // POS 룸 참여 확인
     posSocket.on('join-pos-room-success', (data) => {
       console.log(`✅ POS 룸 참여 확인 - 매장 ${data.storeId}, 클라이언트: ${data.clientCount}개`);
-      showNotification(`📡 매장 ${data.storeId} 실시간 연결 완료`);
+      showPOSNotification(`📡 매장 ${data.storeId} 실시간 연결 완료`);
     });
 
     // POS 실시간 업데이트 수신
@@ -3651,7 +3719,7 @@ function initWebSocket(storeId) {
     // 연결 에러 처리
     posSocket.on('connect_error', (error) => {
       console.error('❌ POS WebSocket 연결 에러:', error);
-      showNotification('⚠️ 실시간 연결 오류 발생', 'error');
+      showPOSNotification('⚠️ 실시간 연결 오류 발생', 'error');
     });
 
   } catch (error) {
@@ -3704,7 +3772,7 @@ function handleNewOrderNotification(data) {
 
   console.log(`🆕 새 주문 알림 수신 - 주문 ${orderId}, 테이블 ${tableNumber}, 출처: ${source}`);
 
-  showNotification(
+  showPOSNotification(
     `🆕 새 주문 접수! (${source})\n테이블 ${tableNumber} | ${customerName} | ${itemCount}개 메뉴\n₩${totalAmount.toLocaleString()}`, 
     'success'
   );
@@ -3737,29 +3805,10 @@ function handleTableStatusUpdate(data) {
   const statusText = isOccupied ? '점유됨' : '해제됨';
   const sourceText = source === 'TLL' ? 'TLL 주문' : source === 'TLM' ? 'TLM 관리' : 'POS';
 
-  showNotification(
+  showPOSNotification(
     `🪑 테이블 ${tableNumber} ${statusText} (${sourceText})`,
     isOccupied ? 'warning' : 'success'
   );
-}
-
-// 테이블 맵 새로고침
-async function refreshTableMap() {
-  try {
-    await loadTables();
-    if (homeMode === 'table_map') {
-      renderTableMap();
-    }
-  } catch (error) {
-    console.error('❌ 테이블 맵 새로고침 실패:', error);
-  }
-}
-
-// 현재 테이블 주문 새로고침
-async function refreshCurrentTableOrders() {
-  if (currentTable) {
-    await updateDetailPanel(currentTable);
-  }
 }
 
 // 주문 카운트 업데이트 (스텁 함수 - 필요시 구현)
@@ -3769,7 +3818,7 @@ function updateOrderCounts() {
 }
 
 // 알림 표시 함수
-function showNotification(message, type = 'info') {
+function showPOSNotification(message, type = 'info') {
   // 기존 알림 제거
   const existingNotification = document.querySelector('.pos-notification');
   if (existingNotification) {
@@ -3794,37 +3843,3 @@ function showNotification(message, type = 'info') {
     }
   }, 5000);
 }
-
-// 전역 함수들을 window 객체에 등록
-window.renderPOS = renderPOS;
-window.selectStore = selectStore;
-window.chooseStore = chooseStore;
-window.closeStoreModal = closeStoreModal;
-window.switchHomeMode = switchHomeMode;
-window.selectTableFromMap = selectTableFromMap;
-window.filterOrders = filterOrders;
-window.closeDetailPanel = closeDetailPanel;
-window.occupyTable = occupyTable;
-window.releaseTable = releaseTable;
-window.createNewOrder = createNewOrder;
-window.showPickupQueue = showPickupQueue;
-window.showUnassignedOrders = showUnassignedOrders;
-window.openQuickMenu = openQuickMenu;
-window.addOrder = addOrder;
-window.viewOrders = viewOrders;
-window.moveTable = moveTable;
-window.processPayment = processPayment;
-// 주문 모달 관련 함수들
-window.showOrderModal = showOrderModal;
-window.closeOrderModal = closeOrderModal;
-window.selectOrderType = selectOrderType;
-window.toggleCustomerType = toggleCustomerType;
-window.filterMenuCategory = filterMenuCategory;
-window.addMenuItem = addMenuItem;
-window.changeQuantity = changeQuantity;
-window.submitOrder = submitOrder;
-// 결제 모달 관련 함수들
-window.showPaymentModal = showPaymentModal;
-window.closePaymentModal = closePaymentModal;
-window.updatePaymentSummary = updatePaymentSummary;
-window.processSelectedPayments = processSelectedPayments;
