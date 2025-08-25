@@ -468,7 +468,6 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     let currentUserId = null;
     let currentGuestPhone = null;
-    let finalCustomerName = '포스 주문';
     let actualTableNumber = tableNumber; // 실제 주문이 연결될 테이블 번호 (TLL 주문이 있다면 해당 테이블)
 
     // TLL 연동 주문인지 확인
@@ -476,7 +475,6 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       // TLL 연동 주문 - 기존 정보 사용
       currentUserId = pendingOrder.userId;
       currentGuestPhone = pendingOrder.guestPhone;
-      finalCustomerName = pendingOrder.customerName;
       console.log('🔗 TLL 연동 주문 결제 처리');
     } else {
       // 일반 POS 주문 - 고객 타입에 따라 처리
@@ -516,16 +514,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
             }
 
             currentGuestPhone = guestPhone;
-            finalCustomerName = guestName || `게스트 (${guestPhone})`;
           } catch (guestError) {
             console.error('⚠️ 게스트 처리 실패:', guestError);
             // 게스트 처리 실패해도 주문은 계속 진행
             currentGuestPhone = guestPhone;
-            finalCustomerName = guestName || `게스트 (${guestPhone})`;
           }
         } else {
           // 익명 게스트
-          finalCustomerName = '익명 게스트';
           console.log('👤 익명 게스트 결제');
         }
       } else {
@@ -555,12 +550,10 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           }
 
           currentUserId = posUserId;
-          finalCustomerName = `POS 매장${storeId} 회원`;
           console.log('👤 POS 회원 결제');
         } catch (userError) {
           console.error('⚠️ POS 사용자 생성 실패:', userError);
           // 사용자 생성 실패 시 비회원으로 처리
-          finalCustomerName = 'POS 익명 주문';
           console.log('👤 POS 사용자 생성 실패 - 익명으로 처리');
         }
       }
@@ -705,7 +698,6 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       orderId: orderId,
       paymentMethod: paymentMethod,
       finalAmount: pendingOrder.totalAmount,
-      customerName: finalCustomerName,
       message: '결제가 성공적으로 완료되었습니다'
     });
 
