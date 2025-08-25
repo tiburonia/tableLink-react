@@ -735,15 +735,18 @@ function renderPOSLayout() {
 
       /* POS 주문 아이템 스타일 */
       .pos-container .order-item {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        background: white;
         border: 1px solid #e2e8f0;
         border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        transition: all 0.2s ease;
+        padding: 20px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
 
       .pos-container .order-item::before {
@@ -753,70 +756,71 @@ function renderPOSLayout() {
         left: 0;
         width: 4px;
         height: 100%;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        border-radius: 0 2px 2px 0;
+        background: #3b82f6;
+        border-radius: 0 4px 4px 0;
       }
 
       .pos-container .order-item:hover {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border-color: rgba(59, 130, 246, 0.3);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-color: #3b82f6;
       }
 
       .pos-container .order-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
+        gap: 16px;
       }
 
       .pos-container .order-info {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+        flex: 1;
+        min-width: 0;
       }
 
       .pos-container .customer-name {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 700;
         color: #1e293b;
+        margin-bottom: 4px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
       }
 
       .pos-container .order-time {
-        font-size: 12px;
+        font-size: 13px;
         color: #64748b;
         font-weight: 500;
       }
 
       .pos-container .order-amount {
-        font-size: 16px;
-        font-weight: 700;
+        font-size: 18px;
+        font-weight: 800;
         color: #059669;
         background: #ecfdf5;
-        padding: 4px 8px;
-        border-radius: 6px;
-        border: 1px solid #d1fae5;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid #bbf7d0;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
 
       .pos-container .order-details {
-        margin: 12px 0;
         background: #f8fafc;
         border-radius: 8px;
-        padding: 8px;
-        border: 1px solid #f1f5f9;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
       }
 
       .pos-container .menu-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 6px 0;
-        font-size: 13px;
+        padding: 8px 0;
+        font-size: 14px;
         border-bottom: 1px solid #f1f5f9;
+        gap: 12px;
       }
 
       .pos-container .menu-item:last-child {
@@ -826,94 +830,137 @@ function renderPOSLayout() {
       .pos-container .menu-name {
         flex: 1;
         color: #374151;
-        font-weight: 500;
+        font-weight: 600;
+        min-width: 0;
+        word-break: break-word;
       }
 
       .pos-container .menu-quantity {
         color: #6b7280;
-        background: #f1f5f9;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 600;
-        margin: 0 8px;
-        min-width: 24px;
+        background: #e2e8f0;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 32px;
         text-align: center;
+        flex-shrink: 0;
       }
 
       .pos-container .menu-price {
         color: #059669;
-        font-weight: 600;
-        font-size: 12px;
-        min-width: 60px;
+        font-weight: 700;
+        font-size: 14px;
+        min-width: 80px;
         text-align: right;
+        flex-shrink: 0;
       }
 
       .pos-container .order-status {
         display: flex;
         justify-content: flex-end;
-        margin-top: 12px;
+        align-items: center;
+        gap: 8px;
       }
 
       .pos-container .status-badge {
-        padding: 4px 8px;
-        border-radius: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
         font-size: 11px;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
       }
 
       .pos-container .status-badge.pending {
         background: #fef3c7;
-        color: #d97706;
-        border: 1px solid #fde68a;
+        color: #92400e;
+        border-color: #fcd34d;
       }
 
       .pos-container .status-badge.cooking {
-        background: #ddd6fe;
-        color: #7c3aed;
-        border: 1px solid #c4b5fd;
+        background: #ede9fe;
+        color: #6b21a8;
+        border-color: #c4b5fd;
+        animation: pulse 2s infinite;
       }
 
+      .pos-container .status-badge.ready,
       .pos-container .status-badge.completed {
         background: #dcfce7;
-        color: #16a34a;
-        border: 1px solid #bbf7d0;
+        color: #166534;
+        border-color: #86efac;
       }
 
       .pos-container .status-badge.cancelled {
         background: #fecaca;
-        color: #dc2626;
-        border: 1px solid #fca5a5;
+        color: #991b1b;
+        border-color: #f87171;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
       }
 
       .pos-container .no-orders, 
       .pos-container .no-items {
         text-align: center;
-        color: #94a3b8;
+        color: #64748b;
         font-style: italic;
-        padding: 24px 20px;
+        padding: 32px 24px;
         background: #f8fafc;
-        border-radius: 8px;
-        border: 1px dashed #cbd5e1;
-        margin: 12px 0;
+        border-radius: 12px;
+        border: 2px dashed #cbd5e1;
+        margin: 16px 0;
       }
 
       .pos-container .loading-message, 
       .pos-container .error-message {
         text-align: center;
         color: #64748b;
-        padding: 40px 20px;
+        padding: 40px 24px;
         background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid #f1f5f9;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        font-size: 14px;
       }
 
       .pos-container .error-message {
         color: #dc2626;
         background: #fef2f2;
         border-color: #fecaca;
+      }
+
+      /* 반응형 레이아웃 */
+      @media (max-width: 768px) {
+        .pos-container .order-item {
+          padding: 16px;
+          margin-bottom: 12px;
+        }
+
+        .pos-container .order-header {
+          flex-direction: column;
+          gap: 12px;
+          align-items: stretch;
+        }
+
+        .pos-container .order-amount {
+          font-size: 16px;
+          text-align: center;
+          align-self: stretch;
+        }
+
+        .pos-container .menu-item {
+          font-size: 13px;
+          padding: 6px 0;
+        }
+
+        .pos-container .menu-price {
+          min-width: 60px;
+        }
       }
 
       /* 반응형 */
