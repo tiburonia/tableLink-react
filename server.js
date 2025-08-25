@@ -197,7 +197,14 @@ io.on('connection', (socket) => {
     }
     posClients.get(storeId).add(socket.id);
 
-    console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여`);
+    const clientCount = posClients.get(storeId).size;
+    console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여 (총 ${clientCount}개 클라이언트)`);
+    
+    // 참여 확인 응답
+    socket.emit('join-pos-room-success', {
+      storeId: parseInt(storeId),
+      clientCount: clientCount
+    });
   });
 
   // POS 룸 나가기

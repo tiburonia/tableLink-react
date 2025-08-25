@@ -332,9 +332,32 @@ router.post('/pay', async (req, res) => {
         tableNumber: actualTableNumber,
         customerName: user.name || '손님',
         itemCount: orderData.items ? orderData.items.length : 0,
-        totalAmount: orderData.total
+        totalAmount: orderData.total,
+        source: 'TLL'
       });
     }
+
+    // POS 실시간 새 주문 알림
+    if (global.posWebSocket) {
+      console.log(`📡 TLL 주문 ${orderId} POS 실시간 알림 전송`);
+      global.posWebSocket.broadcastNewOrder(storeId, {
+        orderId: orderId,
+        storeName: storeName,
+        tableNumber: actualTableNumber,
+        customerName: user.name || '손님',
+        itemCount: orderData.items ? orderData.items.length : 0,
+        totalAmount: orderData.total,
+        source: 'TLL'
+      });
+
+      // POS 전체 업데이트도 전송
+      global.posWebSocket.broadcast(storeId, 'order-update', {
+        orderId: orderId,
+        tableNumber: actualTableNumber,
+        action: 'new-order'
+      });
+    }
+
 
     res.json({
       success: true,
@@ -946,7 +969,7 @@ router.put('/:orderId/start-cooking', async (req, res) => {
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
         console.log(`📡 주문 ${orderId} 전체 조리 시작 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
-        
+
         // 주문 전체 조리 시작 이벤트
         global.kdsWebSocket.broadcast(storeId, 'order-cooking-started', {
           orderId: orderId,
@@ -1006,7 +1029,7 @@ router.put('/:orderId/complete', async (req, res) => {
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
         console.log(`📡 주문 ${orderId} 완료 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
-        
+
         // 주문 완료 이벤트
         global.kdsWebSocket.broadcast(storeId, 'order-completed', {
           orderId: orderId,

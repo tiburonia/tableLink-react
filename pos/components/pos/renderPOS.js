@@ -1006,18 +1006,20 @@ async function updateDetailPanel(tableNumber) {
     let activeOrders = [];
     
     if (isOccupied) {
-      // 테이블이 점유된 경우, 점유 시점 이후의 주문들만 조회
-      const occupiedSince = new Date(currentTable.occupiedSince);
-      
+      // 테이블이 점유된 경우, 해당 테이블의 모든 주문 조회 (점유 시점 필터링 제거)
       const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
       const ordersData = await ordersResponse.json();
       
-      // 현재 테이블의 점유 시점 이후 주문들만 필터링
+      // 현재 테이블의 모든 주문 표시 (최근 24시간 내)
       activeOrders = ordersData.success ? 
         ordersData.orders.filter(order => {
           const orderDate = new Date(order.orderDate);
-          return order.tableNumber == tableNumber && orderDate >= occupiedSince;
+          const now = new Date();
+          const diffHours = (now - orderDate) / (1000 * 60 * 60);
+          return order.tableNumber == tableNumber && diffHours <= 24;
         }) : [];
+      
+      console.log(`📊 테이블 ${tableNumber} 주문 조회: 전체 ${ordersData.orders?.length || 0}개 중 ${activeOrders.length}개 표시`);
     }
 
     panelContent.innerHTML = `
@@ -2027,6 +2029,12 @@ function initWebSocket(storeId) {
       showNotification('🔄 실시간 연결 복구');
     });
 
+    // POS 룸 참여 확인
+    posSocket.on('join-pos-room-success', (data) => {
+      console.log(`✅ POS 룸 참여 확인 - 매장 ${data.storeId}, 클라이언트: ${data.clientCount}개`);
+      showNotification(`📡 매장 ${data.storeId} 실시간 연결 완료`);
+    });
+
     // POS 실시간 업데이트 수신
     posSocket.on('pos-update', (data) => {
       console.log('📡 POS 실시간 업데이트 수신:', data);
@@ -2043,6 +2051,12 @@ function initWebSocket(storeId) {
     posSocket.on('table-update', (data) => {
       console.log('🪑 테이블 상태 실시간 업데이트:', data);
       handleTableStatusUpdate(data);
+    });
+
+    // 연결 에러 처리
+    posSocket.on('connect_error', (error) => {
+      console.error('❌ POS WebSocket 연결 에러:', error);
+      showNotification('⚠️ 실시간 연결 오류 발생', 'error');
     });
 
   } catch (error) {
@@ -2091,16 +2105,19 @@ function handlePOSRealTimeUpdate(data) {
 
 // 새 주문 알림 처리
 function handleNewOrderNotification(data) {
-  const { orderId, storeName, tableNumber, customerName, itemCount, totalAmount } = data;
+  const { orderId, storeName, tableNumber, customerName, itemCount, totalAmount, source } = data;
+  
+  console.log(`🆕 새 주문 알림 수신 - 주문 ${orderId}, 테이블 ${tableNumber}, 출처: ${source}`);
   
   showNotification(
-    `🆕 새 주문 접수!\n테이블 ${tableNumber} | ${itemCount}개 메뉴 | ₩${totalAmount.toLocaleString()}`, 
+    `🆕 새 주문 접수! (${source})\n테이블 ${tableNumber} | ${customerName} | ${itemCount}개 메뉴\n₩${totalAmount.toLocaleString()}`, 
     'success'
   );
   
   // 현재 보고 있는 테이블이면 즉시 새로고침
   if (currentTable && currentTable == tableNumber) {
-    setTimeout(() => updateDetailPanel(currentTable), 1000);
+    console.log(`🔄 현재 테이블 ${currentTable} 세부 정보 새로고침`);
+    setTimeout(() => updateDetailPanel(currentTable), 500);
   }
   
   // 테이블 맵 새로고침
@@ -2109,7 +2126,7 @@ function handleNewOrderNotification(data) {
 
 // 테이블 상태 업데이트 처리
 function handleTableStatusUpdate(data) {
-  const { tableNumber, isOccupied, source } = data;
+  const { tableNumber, isOccupied, source, occupiedSince } = data;
   
   console.log(`🪑 테이블 ${tableNumber} 상태 변경: ${isOccupied ? '점유' : '해제'} (${source})`);
   
@@ -2118,11 +2135,15 @@ function handleTableStatusUpdate(data) {
   
   // 현재 보고 있는 테이블이면 세부 정보 새로고침
   if (currentTable && currentTable == tableNumber) {
-    updateDetailPanel(currentTable);
+    console.log(`🔄 테이블 ${currentTable} 상태 변경으로 인한 세부 정보 새로고침`);
+    setTimeout(() => updateDetailPanel(currentTable), 500);
   }
   
+  const statusText = isOccupied ? '점유됨' : '해제됨';
+  const sourceText = source === 'TLL' ? 'TLL 주문' : source === 'TLM' ? 'TLM 관리' : 'POS';
+  
   showNotification(
-    `🪑 테이블 ${tableNumber} ${isOccupied ? '점유됨' : '해제됨'}`,
+    `🪑 테이블 ${tableNumber} ${statusText} (${sourceText})`,
     isOccupied ? 'warning' : 'success'
   );
 }

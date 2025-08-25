@@ -163,10 +163,18 @@ router.post('/occupy', async (req, res) => {
 
     // POS 실시간 테이블 상태 업데이트 알림
     if (global.posWebSocket) {
+      console.log(`📡 TLL 테이블 점유 POS 알림 전송 - 매장 ${storeId}, 테이블 ${tableName}`);
       global.posWebSocket.broadcastTableUpdate(storeId, {
         tableNumber: tableName.replace('테이블 ', ''),
         isOccupied: true,
-        source: 'TLL'
+        source: 'TLL',
+        occupiedSince: occupiedTime
+      });
+      
+      // 전체 테이블 업데이트도 전송
+      global.posWebSocket.broadcast(storeId, 'table-update', {
+        tableNumber: tableName.replace('테이블 ', ''),
+        action: 'occupied'
       });
     }
 
