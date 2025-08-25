@@ -916,25 +916,26 @@ async function updateDetailPanel(tableNumber) {
   `;
 
   try {
-    // 해당 테이블의 주문 정보 조회
-    const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
-    const ordersData = await ordersResponse.json();
-    
-    // 현재 테이블의 주문들 필터링
-    const tableOrders = ordersData.success ? 
-      ordersData.orders.filter(order => order.tableNumber == tableNumber) : [];
-
-    // 최근 주문 (24시간 이내)
-    const recentOrders = tableOrders.filter(order => {
-      const orderDate = new Date(order.orderDate);
-      const now = new Date();
-      const diffHours = (now - orderDate) / (1000 * 60 * 60);
-      return diffHours <= 24;
-    });
-
     // 현재 테이블 상태 확인
     const currentTable = allTables.find(t => t.tableNumber == tableNumber);
     const isOccupied = currentTable ? currentTable.isOccupied : false;
+    
+    let activeOrders = [];
+    
+    if (isOccupied) {
+      // 테이블이 점유된 경우, 점유 시점 이후의 주문들만 조회
+      const occupiedSince = new Date(currentTable.occupiedSince);
+      
+      const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
+      const ordersData = await ordersResponse.json();
+      
+      // 현재 테이블의 점유 시점 이후 주문들만 필터링
+      activeOrders = ordersData.success ? 
+        ordersData.orders.filter(order => {
+          const orderDate = new Date(order.orderDate);
+          return order.tableNumber == tableNumber && orderDate >= occupiedSince;
+        }) : [];
+    }
 
     panelContent.innerHTML = `
       <div class="table-status-section">
@@ -965,10 +966,10 @@ async function updateDetailPanel(tableNumber) {
       </div>
 
       <div class="current-orders">
-        <h4>최근 주문 (24시간)</h4>
+        <h4>${isOccupied ? '현재 점유 주문' : '주문 없음'}</h4>
         <div class="order-items">
-          ${recentOrders.length > 0 ? 
-            recentOrders.map(order => `
+          ${activeOrders.length > 0 ? 
+            activeOrders.map(order => `
               <div class="order-item">
                 <div class="order-header">
                   <div class="order-info">
@@ -996,7 +997,7 @@ async function updateDetailPanel(tableNumber) {
                 </div>
               </div>
             `).join('') :
-            '<div class="no-orders">최근 주문이 없습니다</div>'
+            `<div class="no-orders">${isOccupied ? '점유된 테이블이지만 주문이 없습니다' : '테이블이 비어있습니다'}</div>`
           }
         </div>
       </div>
