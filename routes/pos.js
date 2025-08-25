@@ -305,29 +305,29 @@ router.post('/orders', async (req, res) => {
     }
 
     // 주문 데이터 저장
+    const orderData = {
+      items: items,
+      storeId: storeId,
+      storeName: storeName,
+      tableNumber: tableNumber
+    };
+
     const orderResult = await client.query(`
       INSERT INTO orders (
-        user_id, guest_phone, store_id, table_number, order_data,
-        total_amount, original_amount, final_amount, order_source, order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        user_id, guest_phone, store_id, store_name, table_number, 
+        order_data, final_amount, customer_name, order_source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       RETURNING id
     `, [
-      currentUserId,                 // $1
-      currentGuestPhone,             // $2 (Using guest_phone as the link for non-members)
-      parseInt(storeId),             // $3
-      parseInt(tableNumber),         // $4
-      JSON.stringify({               // $5
-        items: items,
-        storeId: storeId,
-        storeName: storeName,
-        tableNumber: tableNumber
-      }),
-      totalAmount,                   // $6
-      totalAmount,                   // $7
-      totalAmount,                   // $8
-      orderSource,                   // $9
-      'completed',                   // $10
-      new Date()                     // $11
+      currentUserId, 
+      currentGuestPhone, 
+      parseInt(storeId), 
+      storeName, 
+      parseInt(tableNumber), 
+      JSON.stringify(orderData), 
+      totalAmount, 
+      finalCustomerName, 
+      orderSource
     ]);
 
     const orderId = orderResult.rows[0].id;
@@ -403,55 +403,35 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
     // 해당 테이블의 최근 24시간 내 활성 주문 조회
-    const result = await pool.query(`
-      SELECT 
-        o.id, o.user_id, o.guest_phone, o.order_source, o.order_date,
-        u.name as user_name, u.phone as user_phone,
-        g.name as guest_name, g.phone as guest_phone
+    const response = await pool.query(`
+      SELECT o.user_id, o.guest_phone, u.name as user_name, o.customer_name, o.order_date
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_phone = g.phone -- Joining guests on phone for TLL guest lookup
       WHERE o.store_id = $1 AND o.table_number = $2 
       AND o.order_date >= NOW() - INTERVAL '24 hours'
-      AND o.order_status != 'archived'
-      AND o.order_source = 'TLL'
       ORDER BY o.order_date DESC
       LIMIT 1
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    if (result.rows.length === 0) {
-      return res.json({
+    if (response.rows.length > 0) {
+      const tllOrder = response.rows[0];
+
+      res.json({
         success: true,
-        hasTLLOrder: false,
-        message: '해당 테이블에 TLL 주문이 없습니다'
+        tllOrder: {
+          userId: tllOrder.user_id,
+          guestPhone: tllOrder.guest_phone,
+          customerName: tllOrder.customer_name || tllOrder.user_name || '고객',
+          isGuest: !tllOrder.user_id,
+          phone: tllOrder.guest_phone || null
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        tllOrder: null
       });
     }
-
-    const order = result.rows[0];
-    const isGuest = !!order.guest_phone; // Determining if it's a guest order based on guest_phone
-
-    const tllOrderInfo = {
-      orderId: order.id,
-      userId: order.user_id,
-      guestPhone: order.guest_phone, // Returning guest_phone
-      customerName: isGuest ? (order.guest_name || '게스트') : (order.user_name || 'TLL 사용자'),
-      phone: isGuest ? order.guest_phone : order.user_phone,
-      isGuest: isGuest,
-      orderDate: order.order_date,
-      orderSource: order.order_source
-    };
-
-    console.log(`✅ POS - 테이블 ${tableNumber} TLL 주문 정보 조회 완료:`, {
-      orderId: order.id,
-      customerName: tllOrderInfo.customerName,
-      isGuest: isGuest
-    });
-
-    res.json({
-      success: true,
-      hasTLLOrder: true,
-      tllOrder: tllOrderInfo
-    });
 
   } catch (error) {
     console.error('❌ POS 테이블 TLL 주문 조회 실패:', error);

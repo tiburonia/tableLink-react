@@ -2091,12 +2091,9 @@ async function submitOrder() {
     if (tllOrderInfo) {
       // TLL 주문인 경우 - 기존 고객 정보 사용
       orderData.userId = tllOrderInfo.userId;
-      orderData.guestId = tllOrderInfo.guestId;
+      orderData.guestPhone = tllOrderInfo.guestPhone;
       orderData.isGuestOrder = tllOrderInfo.isGuest;
       orderData.customerName = tllOrderInfo.customerName;
-      if (tllOrderInfo.phone) {
-        orderData.guestPhone = tllOrderInfo.phone;
-      }
     } else {
       // 일반 POS 주문인 경우
       const customerType = document.querySelector('input[name="customerType"]:checked').value;
