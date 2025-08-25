@@ -593,6 +593,167 @@ function renderPOSLayout() {
         justify-content: center;
       }
 
+      /* 테이블 상태 섹션 */
+      .table-status-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .table-status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .table-status-header h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .status-indicator {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .status-indicator.occupied {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+
+      .status-indicator.available {
+        background: #f0fdf4;
+        color: #16a34a;
+      }
+
+      .table-control-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      /* 주문 아이템 스타일 */
+      .order-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+
+      .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .order-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .customer-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .order-time {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .order-amount {
+        font-size: 14px;
+        font-weight: 700;
+        color: #059669;
+      }
+
+      .order-details {
+        margin: 8px 0;
+      }
+
+      .menu-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        font-size: 12px;
+      }
+
+      .menu-name {
+        flex: 1;
+        color: #374151;
+      }
+
+      .menu-quantity {
+        color: #6b7280;
+        margin: 0 8px;
+      }
+
+      .menu-price {
+        color: #059669;
+        font-weight: 500;
+      }
+
+      .order-status {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+
+      .status-badge {
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 500;
+      }
+
+      .status-badge.pending {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .status-badge.cooking {
+        background: #ddd6fe;
+        color: #7c3aed;
+      }
+
+      .status-badge.completed {
+        background: #dcfce7;
+        color: #16a34a;
+      }
+
+      .status-badge.cancelled {
+        background: #fecaca;
+        color: #dc2626;
+      }
+
+      .no-orders, .no-items {
+        text-align: center;
+        color: #6b7280;
+        font-style: italic;
+        padding: 20px;
+      }
+
+      .loading-message, .error-message {
+        text-align: center;
+        color: #6b7280;
+        padding: 40px 20px;
+      }
+
+      .error-message {
+        color: #dc2626;
+      }
+
       /* 반응형 */
       @media (max-width: 1200px) {
         .detail-panel {
@@ -674,26 +835,114 @@ function selectTableFromMap(tableNumber) {
 }
 
 // 세부 패널 업데이트
-function updateDetailPanel(tableNumber) {
+async function updateDetailPanel(tableNumber) {
   const panelTitle = document.getElementById('panelTitle');
   const panelContent = document.getElementById('panelContent');
 
   panelTitle.textContent = `테이블 ${tableNumber}`;
+  
+  // 로딩 상태 표시
   panelContent.innerHTML = `
-    <div class="table-actions">
-      <button class="action-btn primary" onclick="addOrder()">주문 추가</button>
-      <button class="action-btn" onclick="viewOrders()">주문 내역</button>
-      <button class="action-btn" onclick="moveTable()">테이블 이동</button>
-      <button class="action-btn warning" onclick="processPayment()">결제 처리</button>
-    </div>
-
-    <div class="current-orders">
-      <h4>현재 주문</h4>
-      <div class="order-items">
-        <!-- 주문 항목들이 여기에 표시됩니다 -->
-      </div>
+    <div class="loading-message">
+      테이블 정보를 불러오는 중...
     </div>
   `;
+
+  try {
+    // 해당 테이블의 주문 정보 조회
+    const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
+    const ordersData = await ordersResponse.json();
+    
+    // 현재 테이블의 주문들 필터링
+    const tableOrders = ordersData.success ? 
+      ordersData.orders.filter(order => order.tableNumber == tableNumber) : [];
+
+    // 최근 주문 (24시간 이내)
+    const recentOrders = tableOrders.filter(order => {
+      const orderDate = new Date(order.orderDate);
+      const now = new Date();
+      const diffHours = (now - orderDate) / (1000 * 60 * 60);
+      return diffHours <= 24;
+    });
+
+    // 현재 테이블 상태 확인
+    const currentTable = allTables.find(t => t.tableNumber == tableNumber);
+    const isOccupied = currentTable ? currentTable.isOccupied : false;
+
+    panelContent.innerHTML = `
+      <div class="table-status-section">
+        <div class="table-status-header">
+          <h4>테이블 상태</h4>
+          <div class="status-indicator ${isOccupied ? 'occupied' : 'available'}">
+            ${isOccupied ? '🔴 사용중' : '🟢 이용가능'}
+          </div>
+        </div>
+        
+        <div class="table-control-actions">
+          ${isOccupied ? 
+            `<button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
+              테이블 해제
+            </button>` :
+            `<button class="action-btn primary" onclick="occupyTable('${tableNumber}')">
+              테이블 점유
+            </button>`
+          }
+        </div>
+      </div>
+
+      <div class="table-actions">
+        <button class="action-btn primary" onclick="addOrder()">주문 추가</button>
+        <button class="action-btn" onclick="viewOrders()">주문 내역</button>
+        <button class="action-btn" onclick="moveTable()">테이블 이동</button>
+        <button class="action-btn warning" onclick="processPayment()">결제 처리</button>
+      </div>
+
+      <div class="current-orders">
+        <h4>최근 주문 (24시간)</h4>
+        <div class="order-items">
+          ${recentOrders.length > 0 ? 
+            recentOrders.map(order => `
+              <div class="order-item">
+                <div class="order-header">
+                  <div class="order-info">
+                    <span class="customer-name">👤 ${order.customerName}</span>
+                    <span class="order-time">${formatOrderTime(order.orderDate)}</span>
+                  </div>
+                  <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
+                </div>
+                
+                <div class="order-details">
+                  ${order.orderData && order.orderData.items ? 
+                    order.orderData.items.map(item => `
+                      <div class="menu-item">
+                        <span class="menu-name">${item.name}</span>
+                        <span class="menu-quantity">x${item.quantity || 1}</span>
+                        <span class="menu-price">₩${item.price.toLocaleString()}</span>
+                      </div>
+                    `).join('') : 
+                    '<div class="no-items">주문 상세 정보 없음</div>'
+                  }
+                </div>
+                
+                <div class="order-status">
+                  <span class="status-badge ${order.orderStatus}">${getStatusText(order.orderStatus)}</span>
+                </div>
+              </div>
+            `).join('') :
+            '<div class="no-orders">최근 주문이 없습니다</div>'
+          }
+        </div>
+      </div>
+    `;
+
+  } catch (error) {
+    console.error('❌ 테이블 정보 로드 실패:', error);
+    panelContent.innerHTML = `
+      <div class="error-message">
+        테이블 정보를 불러오는데 실패했습니다.
+      </div>
+    `;
+  }
 }
 
 // 주문 리스트 렌더링
@@ -832,6 +1081,105 @@ function showError(message) {
   alert(message);
 }
 
+// 테이블 점유 기능
+async function occupyTable(tableNumber) {
+  try {
+    console.log(`🔒 [POS] 테이블 ${tableNumber} 점유 요청`);
+    
+    const response = await fetch('/api/tables/occupy-manual', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        storeId: currentStore.id,
+        tableName: `테이블 ${tableNumber}`,
+        duration: 0 // 무제한 (수동 해제)
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(`테이블 ${tableNumber}이 점유 상태로 변경되었습니다.`);
+      
+      // 테이블 상태 업데이트
+      await loadTables();
+      renderTableMap();
+      updateDetailPanel(tableNumber);
+    } else {
+      alert('오류: ' + data.error);
+    }
+    
+  } catch (error) {
+    console.error('❌ [POS] 테이블 점유 실패:', error);
+    alert('테이블 점유 요청 실패');
+  }
+}
+
+// 테이블 해제 기능
+async function releaseTable(tableNumber) {
+  try {
+    console.log(`🔓 [POS] 테이블 ${tableNumber} 해제 요청`);
+    
+    const response = await fetch('/api/tables/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        storeId: currentStore.id,
+        tableName: `테이블 ${tableNumber}`,
+        isOccupied: false
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert(`테이블 ${tableNumber}이 해제되었습니다.`);
+      
+      // 테이블 상태 업데이트
+      await loadTables();
+      renderTableMap();
+      updateDetailPanel(tableNumber);
+    } else {
+      alert('오류: ' + data.error);
+    }
+    
+  } catch (error) {
+    console.error('❌ [POS] 테이블 해제 실패:', error);
+    alert('테이블 해제 요청 실패');
+  }
+}
+
+// 시간 포맷팅 함수
+function formatOrderTime(orderDate) {
+  const date = new Date(orderDate);
+  const now = new Date();
+  const diffMinutes = Math.floor((now - date) / (1000 * 60));
+  
+  if (diffMinutes < 1) return '방금 전';
+  if (diffMinutes < 60) return `${diffMinutes}분 전`;
+  
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}시간 전`;
+  
+  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5);
+}
+
+// 주문 상태 텍스트 변환
+function getStatusText(status) {
+  const statusMap = {
+    'pending': '대기중',
+    'cooking': '조리중',
+    'ready': '완료',
+    'completed': '완료',
+    'cancelled': '취소됨'
+  };
+  return statusMap[status] || status;
+}
+
 // 액션 함수들 (스텁)
 function createNewOrder() {
   alert('새 포장 주문 기능 - 개발 예정');
@@ -874,6 +1222,8 @@ window.switchHomeMode = switchHomeMode;
 window.selectTableFromMap = selectTableFromMap;
 window.filterOrders = filterOrders;
 window.closeDetailPanel = closeDetailPanel;
+window.occupyTable = occupyTable;
+window.releaseTable = releaseTable;
 window.createNewOrder = createNewOrder;
 window.showPickupQueue = showPickupQueue;
 window.showUnassignedOrders = showUnassignedOrders;
