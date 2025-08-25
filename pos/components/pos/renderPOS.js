@@ -1414,11 +1414,32 @@ function addOrder() {
     return;
   }
 
-  showOrderModal();
+  // 해당 테이블의 TLL 주문 확인
+  checkTableTLLOrder(currentTable);
+}
+
+// 테이블의 TLL 주문 확인
+async function checkTableTLLOrder(tableNumber) {
+  try {
+    const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/orders`);
+    const data = await response.json();
+
+    if (data.success && data.tllOrder) {
+      // TLL 주문이 있는 경우 - 해당 사용자로 자동 주문
+      showOrderModal(data.tllOrder);
+    } else {
+      // TLL 주문이 없는 경우 - 일반 POS 주문
+      showOrderModal();
+    }
+  } catch (error) {
+    console.error('❌ TLL 주문 확인 실패:', error);
+    // 에러 시 일반 POS 주문으로 처리
+    showOrderModal();
+  }
 }
 
 // 주문 모달 표시
-function showOrderModal() {
+function showOrderModal(tllOrderInfo = null) {
   const modal = document.createElement('div');
   modal.id = 'orderModal';
   modal.innerHTML = `
@@ -1433,25 +1454,53 @@ function showOrderModal() {
           <!-- 고객 정보 입력 -->
           <div class="customer-section">
             <div class="section-title">👤 고객 정보</div>
-            <div class="customer-type-selector">
-              <label class="radio-option">
-                <input type="radio" name="customerType" value="member" checked onchange="toggleCustomerType()">
-                <span>회원</span>
-              </label>
-              <label class="radio-option">
-                <input type="radio" name="customerType" value="guest" onchange="toggleCustomerType()">
-                <span>비회원</span>
-              </label>
-            </div>
+            
+            ${tllOrderInfo ? `
+              <!-- TLL 주문 정보 표시 -->
+              <div class="tll-order-info">
+                <div class="tll-badge">🔗 TLL 연동 주문</div>
+                <div class="tll-customer-info">
+                  <div class="customer-detail">
+                    <span class="label">고객명:</span>
+                    <span class="value">${tllOrderInfo.customerName}</span>
+                  </div>
+                  <div class="customer-detail">
+                    <span class="label">주문방식:</span>
+                    <span class="value">${tllOrderInfo.isGuest ? 'TLL 비회원' : 'TLL 회원'}</span>
+                  </div>
+                  ${tllOrderInfo.phone ? `
+                    <div class="customer-detail">
+                      <span class="label">연락처:</span>
+                      <span class="value">${tllOrderInfo.phone}</span>
+                    </div>
+                  ` : ''}
+                </div>
+                <div class="tll-note">
+                  기존 TLL 주문에 메뉴를 추가합니다
+                </div>
+              </div>
+            ` : `
+              <!-- 일반 POS 주문 -->
+              <div class="customer-type-selector">
+                <label class="radio-option">
+                  <input type="radio" name="customerType" value="member" checked onchange="toggleCustomerType()">
+                  <span>회원</span>
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="customerType" value="guest" onchange="toggleCustomerType()">
+                  <span>비회원</span>
+                </label>
+              </div>
 
-            <div id="memberInfo" class="customer-info">
-              <div class="info-text">POS 회원 주문으로 처리됩니다</div>
-            </div>
+              <div id="memberInfo" class="customer-info">
+                <div class="info-text">POS 회원 주문으로 처리됩니다</div>
+              </div>
 
-            <div id="guestInfo" class="customer-info" style="display: none;">
-              <input type="tel" id="guestPhone" placeholder="전화번호 (예: 010-1234-5678)" class="input-field">
-              <input type="text" id="guestName" placeholder="고객 이름 (선택사항)" class="input-field">
-            </div>
+              <div id="guestInfo" class="customer-info" style="display: none;">
+                <input type="tel" id="guestPhone" placeholder="전화번호 (예: 010-1234-5678)" class="input-field">
+                <input type="text" id="guestName" placeholder="고객 이름 (선택사항)" class="input-field">
+              </div>
+            `}
           </div>
 
           <!-- 메뉴 선택 -->
@@ -1608,6 +1657,54 @@ function showOrderModal() {
         background: #f8fafc;
         border-radius: 6px;
         border: 1px solid #e2e8f0;
+      }
+
+      .tll-order-info {
+        background: #eff6ff;
+        border: 2px solid #3b82f6;
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .tll-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 12px;
+      }
+
+      .tll-customer-info {
+        margin-bottom: 12px;
+      }
+
+      .customer-detail {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      .customer-detail .label {
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .customer-detail .value {
+        color: #1e293b;
+        font-weight: 600;
+      }
+
+      .tll-note {
+        font-size: 12px;
+        color: #3b82f6;
+        font-style: italic;
+        background: rgba(59, 130, 246, 0.1);
+        padding: 8px;
+        border-radius: 4px;
       }
 
       .input-field {
@@ -1819,6 +1916,10 @@ function showOrderModal() {
   `;
 
   document.body.appendChild(modal);
+  
+  // TLL 주문 정보를 전역 변수에 저장
+  window.currentTLLOrder = tllOrderInfo;
+  
   loadMenuItems();
 }
 
@@ -1942,14 +2043,29 @@ function changeQuantity(index, change) {
 // 제출 버튼 상태 업데이트
 function updateSubmitButton() {
   const submitBtn = document.getElementById('submitOrderBtn');
-  const customerType = document.querySelector('input[name="customerType"]:checked').value;
   const hasItems = currentOrderItems.length > 0;
+  
+  // TLL 주문인 경우 고객 정보 입력 불필요
+  if (window.currentTLLOrder) {
+    submitBtn.disabled = !hasItems;
+    return;
+  }
 
+  // 일반 POS 주문인 경우
+  const customerTypeElements = document.querySelectorAll('input[name="customerType"]');
+  if (customerTypeElements.length === 0) {
+    submitBtn.disabled = !hasItems;
+    return;
+  }
+
+  const customerType = document.querySelector('input[name="customerType"]:checked').value;
   let isValid = hasItems;
 
   if (customerType === 'guest') {
-    const guestPhone = document.getElementById('guestPhone').value.trim();
-    isValid = hasItems && guestPhone.length > 0;
+    const guestPhone = document.getElementById('guestPhone');
+    if (guestPhone) {
+      isValid = hasItems && guestPhone.value.trim().length > 0;
+    }
   }
 
   submitBtn.disabled = !isValid;
@@ -1958,21 +2074,38 @@ function updateSubmitButton() {
 // 주문 제출
 async function submitOrder() {
   try {
-    const customerType = document.querySelector('input[name="customerType"]:checked').value;
     const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
+    
+    // TLL 주문 정보 확인
+    const tllOrderInfo = window.currentTLLOrder;
+    
     const orderData = {
       storeId: currentStore.id,
       storeName: currentStore.name,
       tableNumber: currentTable,
       items: currentOrderItems,
       totalAmount: totalAmount,
-      isGuestOrder: customerType === 'guest'
+      isTLLOrder: !!tllOrderInfo
     };
 
-    if (customerType === 'guest') {
-      orderData.guestPhone = document.getElementById('guestPhone').value.trim();
-      orderData.guestName = document.getElementById('guestName').value.trim();
+    if (tllOrderInfo) {
+      // TLL 주문인 경우 - 기존 고객 정보 사용
+      orderData.userId = tllOrderInfo.userId;
+      orderData.guestId = tllOrderInfo.guestId;
+      orderData.isGuestOrder = tllOrderInfo.isGuest;
+      orderData.customerName = tllOrderInfo.customerName;
+      if (tllOrderInfo.phone) {
+        orderData.guestPhone = tllOrderInfo.phone;
+      }
+    } else {
+      // 일반 POS 주문인 경우
+      const customerType = document.querySelector('input[name="customerType"]:checked').value;
+      orderData.isGuestOrder = customerType === 'guest';
+      
+      if (customerType === 'guest') {
+        orderData.guestPhone = document.getElementById('guestPhone').value.trim();
+        orderData.guestName = document.getElementById('guestName').value.trim();
+      }
     }
 
     console.log('💳 POS 주문 제출:', orderData);
@@ -2016,6 +2149,7 @@ function closeOrderModal(event) {
 
   // 주문 상태 초기화
   currentOrderItems = [];
+  window.currentTLLOrder = null;
 }
 
 // 액션 함수들 (스텁)
