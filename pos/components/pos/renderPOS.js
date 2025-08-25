@@ -1499,7 +1499,7 @@ function showOrderModal(tllOrderInfo = null) {
                       <input type="radio" name="posOrderType" value="pos_member" checked>
                     </div>
                   </div>
-                  
+
                   <div class="order-type-option" onclick="selectOrderType('pos_guest')" data-type="pos_guest">
                     <div class="option-icon">👤</div>
                     <div class="option-content">
@@ -2287,7 +2287,7 @@ function updateSubmitButton() {
 
   // 일반 POS 주문인 경우
   const posOrderType = document.querySelector('input[name="posOrderType"]:checked')?.value;
-  
+
   if (posOrderType) {
     // 새로운 POS 주문 구조
     submitBtn.disabled = !hasItems;
@@ -2334,14 +2334,14 @@ async function submitOrder() {
     } else {
       // 일반 POS 주문인 경우 - 새로운 구조
       const posOrderType = document.querySelector('input[name="posOrderType"]:checked')?.value;
-      
+
       if (posOrderType) {
         orderData.isGuestOrder = posOrderType === 'pos_guest';
-        
+
         if (posOrderType === 'pos_guest') {
           const guestPhone = document.getElementById('posGuestPhone')?.value.trim();
           const guestName = document.getElementById('posGuestName')?.value.trim();
-          
+
           orderData.guestPhone = guestPhone || null;
           orderData.guestName = guestName || '익명 고객';
         }
@@ -2537,7 +2537,7 @@ function showPaymentModal(memoryOrder, tllOrder = null) {
             padding-bottom: 8px;
             border-bottom: 1px solid #f1f5f9;
           ">🏪 POS 주문 내역</div>
-          
+
           <div class="order-item" style="
             background: #f8fafc;
             border: 1px solid #e2e8f0;
@@ -2605,7 +2605,7 @@ function showPaymentModal(memoryOrder, tllOrder = null) {
             padding-bottom: 8px;
             border-bottom: 1px solid #f1f5f9;
           ">🔗 TLL 연동 주문</div>
-          
+
           <div style="
             background: #fef3c7;
             border: 2px solid #f59e0b;
@@ -2666,7 +2666,7 @@ function showPaymentModal(memoryOrder, tllOrder = null) {
                 ">
               </div>
             </div>
-            
+
             <div class="customer-option" onclick="selectCustomerType('guest')" data-type="guest" style="
               display: flex;
               align-items: center;
@@ -2812,270 +2812,12 @@ function showPaymentModal(memoryOrder, tllOrder = null) {
             font-weight: 600;
             font-size: 16px;
             color: #1e293b;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 8px;
             margin-bottom: 0;
           ">
             <span>총 결제 금액:</span>
-            <span style="color: #059669; font-weight: 800;">₩${totalAmount.toLocaleString()}</span>
-          </div>
-        </div>
-              <div class="payment-order-item" data-order-id="${order.id}" style="
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 12px;
-                transition: all 0.2s ease;
-              ">
-                <div class="order-header" style="
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: flex-start;
-                  gap: 16px;
-                  margin-bottom: 12px;
-                ">
-                  <div class="order-info" style="flex: 1; min-width: 0;">
-                    <div style="margin-bottom: 4px;">
-                      <span class="customer-name" style="font-size: 16px; font-weight: 700; color: #1e293b;">👤 ${order.customerName}</span>
-                      <span class="order-source" style="
-                        font-size: 12px;
-                        background: #e2e8f0;
-                        color: #64748b;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        margin-left: 8px;
-                      ">${getOrderSourceText(order.orderSource || 'POS')}</span>
-                    </div>
-                    <span class="order-time" style="font-size: 13px; color: #64748b; font-weight: 500;">${formatOrderTime(order.orderDate)}</span>
-                  </div>
-                  <div class="order-amount" style="
-                    font-size: 18px;
-                    font-weight: 800;
-                    color: #059669;
-                    background: #ecfdf5;
-                    padding: 8px 12px;
-                    border-radius: 8px;
-                    border: 1px solid #bbf7d0;
-                    white-space: nowrap;
-                    flex-shrink: 0;
-                  ">₩${order.finalAmount.toLocaleString()}</div>
-                </div>
-
-                <div class="order-items" style="
-                  background: #f1f5f9;
-                  border-radius: 6px;
-                  padding: 12px;
-                  margin-bottom: 12px;
-                ">
-                  ${order.orderData && order.orderData.items ? 
-                    order.orderData.items.map(item => `
-                      <div class="menu-item" style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        padding: 4px 0;
-                        font-size: 14px;
-                      ">
-                        <span class="menu-name" style="color: #374151; font-weight: 600;">${item.name}</span>
-                        <span class="menu-quantity" style="
-                          color: #6b7280;
-                          background: #e2e8f0;
-                          padding: 2px 6px;
-                          border-radius: 4px;
-                          font-size: 12px;
-                          font-weight: 700;
-                        ">x${item.quantity || 1}</span>
-                      </div>
-                    `).join('') : 
-                    '<div class="no-items" style="text-align: center; color: #9ca3af; padding: 12px;">주문 상세 정보 없음</div>'
-                  }
-                </div>
-
-                <div class="order-actions">
-                  <label class="payment-checkbox" style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    cursor: pointer;
-                    font-size: 14px;
-                    font-weight: 600;
-                  ">
-                    <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" ${orders.length === 1 ? 'checked' : ''} style="
-                      width: 18px;
-                      height: 18px;
-                      accent-color: #3b82f6;
-                    ">
-                    <span>결제 선택</span>
-                  </label>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <div class="payment-summary">
-          <div class="section-title" style="
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #f1f5f9;
-          ">결제 정보</div>
-
-          <div class="payment-method-selection" style="
-            display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-          ">
-            <label class="radio-option" style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 500;
-            ">
-              <input type="radio" name="paymentMethod" value="CARD" checked style="accent-color: #3b82f6;">
-              <span>💳 카드</span>
-            </label>
-            <label class="radio-option" style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 500;
-            ">
-              <input type="radio" name="paymentMethod" value="CASH" style="accent-color: #3b82f6;">
-              <span>💵 현금</span>
-            </label>
-            <label class="radio-option" style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              cursor: pointer;
-              font-size: 14px;
-              font-weight: 500;
-            ">
-              <input type="radio" name="paymentMethod" value="POS" style="accent-color: #3b82f6;">
-              <span>📟 POS 통합</span>
-            </label>
-          </div>
-
-          <!-- TLL 비회원 주문 전화번호 입력 옵션 -->
-          <div id="tllGuestPhoneSection" style="display: none;">
-            <div style="
-              background: #fef3c7;
-              border: 2px solid #f59e0b;
-              border-radius: 8px;
-              padding: 16px;
-              margin-bottom: 16px;
-            ">
-              <div style="
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                margin-bottom: 12px;
-              ">
-                <span style="font-size: 18px;">👤</span>
-                <span style="font-weight: 600; color: #92400e;">TLL 비회원 고객 정보</span>
-              </div>
-              
-              <div style="margin-bottom: 12px;">
-                <label style="
-                  display: flex;
-                  align-items: center;
-                  gap: 8px;
-                  cursor: pointer;
-                  font-size: 14px;
-                  font-weight: 500;
-                ">
-                  <input type="checkbox" id="saveGuestPhone" style="
-                    width: 18px;
-                    height: 18px;
-                    accent-color: #f59e0b;
-                  ">
-                  <span>고객 전화번호를 저장하여 재방문시 활용</span>
-                </label>
-              </div>
-
-              <div id="guestPhoneInputGroup" style="display: none;">
-                <div style="margin-bottom: 12px;">
-                  <label style="
-                    display: block;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 6px;
-                  ">전화번호</label>
-                  <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678" style="
-                    width: 100%;
-                    padding: 8px 12px;
-                    border: 2px solid #f59e0b;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    outline: none;
-                  ">
-                </div>
-                <div>
-                  <label style="
-                    display: block;
-                    font-size: 13px;
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 6px;
-                  ">고객 이름 (선택사항)</label>
-                  <input type="text" id="paymentGuestName" placeholder="고객 이름" style="
-                    width: 100%;
-                    padding: 8px 12px;
-                    border: 2px solid #f59e0b;
-                    border-radius: 6px;
-                    font-size: 14px;
-                    outline: none;
-                  ">
-                </div>
-              </div>
-
-              <div style="
-                font-size: 12px;
-                color: #92400e;
-                margin-top: 8px;
-                line-height: 1.4;
-              ">
-                💡 전화번호를 저장하면 다음 방문시 고객 정보와 방문 횟수를 확인할 수 있습니다
-              </div>
-            </div>
-          </div>
-
-          <div class="payment-total" style="
-            background: #f1f5f9;
-            border-radius: 8px;
-            padding: 16px;
-          ">
-            <div class="total-line" style="
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 8px;
-              font-size: 14px;
-              color: #475569;
-            ">
-              <span>선택된 주문 수:</span>
-              <span id="selectedOrderCount">${orders.length === 1 ? '1' : '0'}개</span>
-            </div>
-            <div class="total-line final" style="
-              display: flex;
-              justify-content: space-between;
-              font-weight: 600;
-              font-size: 16px;
-              color: #1e293b;
-              border-top: 1px solid #cbd5e1;
-              padding-top: 8px;
-              margin-bottom: 0;
-            ">
-              <span>총 결제 금액:</span>
-              <span id="totalPaymentAmount" style="color: #059669; font-weight: 800;">₩${orders.length === 1 ? orders[0].finalAmount.toLocaleString() : '0'}</span>
-            </div>
+            <span id="totalPaymentAmount" style="color: #059669; font-weight: 800;">₩${totalAmount.toLocaleString()}</span>
           </div>
         </div>
       </div>
@@ -3178,7 +2920,7 @@ function showPaymentModal(memoryOrder, tllOrder = null) {
     // 전화번호 저장 체크박스 이벤트
     const savePhoneCheckbox = modal.querySelector('#saveGuestPhone');
     const phoneInputGroup = modal.querySelector('#guestPhoneInputGroup');
-    
+
     if (savePhoneCheckbox && phoneInputGroup) {
       savePhoneCheckbox.addEventListener('change', function() {
         phoneInputGroup.style.display = this.checked ? 'block' : 'none';
@@ -3235,7 +2977,7 @@ async function processPayment() {
     if (customerType === 'guest') {
       const guestPhone = document.getElementById('guestPhone')?.value.trim();
       const guestName = document.getElementById('guestName')?.value.trim();
-      
+
       if (guestPhone) {
         paymentData.guestPhone = guestPhone;
       }
@@ -3271,7 +3013,7 @@ async function processPayment() {
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
     alert('결제 처리 중 오류가 발생했습니다.');
-    
+
     const processBtn = document.getElementById('processPaymentBtn');
     processBtn.disabled = false;
     processBtn.textContent = '결제 처리';
