@@ -138,7 +138,7 @@ router.post('/orders', async (req, res) => {
       guestName,
       isTLLOrder,
       userId,
-      guestId,
+      guestId, // This guestId is from TLL, not our new guest table PK
       customerName
     } = req.body;
 
@@ -156,7 +156,7 @@ router.post('/orders', async (req, res) => {
     await client.query('BEGIN');
 
     let currentUserId = null;
-    let currentGuestId = null;
+    let currentGuestPhone = null;
     let finalCustomerName = 'POS 주문';
     let orderSource = 'POS';
     let shouldClearExistingOrders = false;
@@ -165,10 +165,14 @@ router.post('/orders', async (req, res) => {
     if (isTLLOrder && (userId || guestId)) {
       console.log('🔗 TLL 주문 연동 처리 시작');
       currentUserId = userId;
-      currentGuestId = guestId;
+      // TLL에서는 기존 guest_id를 phone으로 변환해야 함 (임시 처리)
+      if (guestId && !userId) {
+        // 기존 guestId에서 phone 조회 로직이 필요하지만 일단 스킵
+        console.log('⚠️ TLL 게스트 연동은 추후 구현 예정');
+      }
       finalCustomerName = customerName || 'TLL 연동 주문';
-      orderSource = 'POS_TLL'; // TLL 주문에 POS에서 추가된 메뉴임을 표시
-      
+      orderSource = 'POS'; // TLL 주문에 POS에서 추가된 메뉴 (POS 소스로 표시)
+
       console.log(`✅ TLL 주문 연동: ${isGuestOrder ? '게스트' : '회원'} - ${finalCustomerName}`);
     } else {
       // 기존 일반 POS 주문 로직
@@ -177,10 +181,9 @@ router.post('/orders', async (req, res) => {
 
     // 현재 테이블의 기존 주문 확인 (24시간 내)
     const existingOrdersResult = await client.query(`
-      SELECT o.user_id, o.guest_id, u.name as user_name, g.name as guest_name, o.order_date
+      SELECT o.user_id, o.guest_phone, u.name as user_name, o.order_date
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_id = g.id
       WHERE o.store_id = $1 AND o.table_number = $2 
       AND o.order_date >= NOW() - INTERVAL '24 hours'
       ORDER BY o.order_date DESC
@@ -192,39 +195,53 @@ router.post('/orders', async (req, res) => {
 
     if (isGuestOrder && !isTLLOrder) {
       // 일반 POS 비회원 처리
-      if (!guestPhone) {
-        throw new Error('비회원 주문 시 전화번호는 필수입니다');
-      }
+      let targetPhone = guestPhone || null; // 전화번호는 nullable
 
-      if (isTLLOrder && currentGuestId) {
-        // TLL 연동 게스트 주문 - 기존 ID 사용
-        console.log(`🔗 TLL 연동 게스트 주문 - Guest ID: ${currentGuestId}, 이름: ${finalCustomerName}`);
-      } else {
-        // 일반 POS 게스트 주문 - 새로 생성 또는 조회
+      if (targetPhone) {
+        // 전화번호가 있는 경우 - 기존 게스트 확인/생성
         const existingGuest = await client.query(
-          'SELECT id, name FROM guests WHERE phone = $1',
-          [guestPhone]
+          'SELECT phone, visit_count FROM guests WHERE phone = $1',
+          [targetPhone]
         );
 
         if (existingGuest.rows.length > 0) {
-          currentGuestId = existingGuest.rows[0].id;
-          finalCustomerName = existingGuest.rows[0].name || guestName || 'POS 손님';
+          // 기존 게스트 - 방문 횟수 업데이트
+          const currentVisitCount = existingGuest.rows[0].visit_count || {};
+          const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+
+          await client.query(`
+            UPDATE guests 
+            SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE phone = $3
+          `, [`{${storeId}}`, storeVisitCount, targetPhone]);
+
+          console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
         } else {
-          const newGuest = await client.query(
-            'INSERT INTO guests (phone, name) VALUES ($1, $2) RETURNING id',
-            [guestPhone, guestName || 'POS 손님']
+          // 새 게스트 생성
+          const initialVisitCount = { [storeId]: 1 };
+
+          await client.query(
+            'INSERT INTO guests (phone, visit_count) VALUES ($1, $2)',
+            [targetPhone, JSON.stringify(initialVisitCount)]
           );
-          currentGuestId = newGuest.rows[0].id;
-          finalCustomerName = guestName || 'POS 손님';
+
+          console.log(`✨ 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
         }
-        
-        console.log(`👤 일반 POS 비회원 주문 - Guest ID: ${currentGuestId}, 이름: ${finalCustomerName}`);
+
+        currentGuestPhone = targetPhone;
+        finalCustomerName = guestName || `게스트 (${targetPhone})`;
+      } else {
+        // 전화번호 없는 경우 - 익명 게스트 (visit_count 업데이트 없음)
+        currentGuestPhone = null;
+        finalCustomerName = '익명 게스트';
+        console.log(`👤 익명 게스트 주문`);
       }
 
       // 기존 주문과 비교 - 다른 사용자가 주문했었다면 초기화
       if (existingOrdersResult.rows.length > 0) {
         const existingOrder = existingOrdersResult.rows[0];
-        if (existingOrder.user_id || existingOrder.guest_id !== currentGuestId) {
+        if (existingOrder.user_id || existingOrder.guest_phone !== currentGuestPhone) {
           shouldClearExistingOrders = true;
           console.log(`🔄 다른 사용자 감지 - 기존 주문 초기화 예정`);
         }
@@ -260,14 +277,14 @@ router.post('/orders', async (req, res) => {
 
         currentUserId = posUserId;
         finalCustomerName = 'POS 사용자';
-        
+
         console.log(`👤 일반 POS 회원 주문 - User ID: ${currentUserId}`);
       }
 
       // 기존 주문과 비교 - 다른 사용자가 주문했었다면 초기화
       if (existingOrdersResult.rows.length > 0) {
         const existingOrder = existingOrdersResult.rows[0];
-        if (existingOrder.guest_id || existingOrder.user_id !== currentUserId) {
+        if (existingOrder.guest_phone || existingOrder.user_id !== currentUserId) {
           shouldClearExistingOrders = true;
           console.log(`🔄 다른 사용자 감지 - 기존 주문 초기화 예정`);
         }
@@ -290,13 +307,13 @@ router.post('/orders', async (req, res) => {
     // 주문 데이터 저장
     const orderResult = await client.query(`
       INSERT INTO orders (
-        user_id, guest_id, store_id, table_number, order_data,
+        user_id, guest_phone, store_id, table_number, order_data,
         total_amount, original_amount, final_amount, order_source, order_status, order_date
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING id
     `, [
       currentUserId,                 // $1
-      currentGuestId,                // $2
+      currentGuestPhone,             // $2 (Using guest_phone as the link for non-members)
       parseInt(storeId),             // $3
       parseInt(tableNumber),         // $4
       JSON.stringify({               // $5
@@ -382,18 +399,18 @@ router.post('/orders', async (req, res) => {
 router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
   try {
     const { storeId, tableNumber } = req.params;
-    
+
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
     // 해당 테이블의 최근 24시간 내 활성 주문 조회
     const result = await pool.query(`
       SELECT 
-        o.id, o.user_id, o.guest_id, o.order_source, o.order_date,
+        o.id, o.user_id, o.guest_phone, o.order_source, o.order_date,
         u.name as user_name, u.phone as user_phone,
         g.name as guest_name, g.phone as guest_phone
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_id = g.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone -- Joining guests on phone for TLL guest lookup
       WHERE o.store_id = $1 AND o.table_number = $2 
       AND o.order_date >= NOW() - INTERVAL '24 hours'
       AND o.order_status != 'archived'
@@ -411,12 +428,12 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
     }
 
     const order = result.rows[0];
-    const isGuest = !!order.guest_id;
+    const isGuest = !!order.guest_phone; // Determining if it's a guest order based on guest_phone
 
     const tllOrderInfo = {
       orderId: order.id,
       userId: order.user_id,
-      guestId: order.guest_id,
+      guestPhone: order.guest_phone, // Returning guest_phone
       customerName: isGuest ? (order.guest_name || '게스트') : (order.user_name || 'TLL 사용자'),
       phone: isGuest ? order.guest_phone : order.user_phone,
       isGuest: isGuest,
@@ -497,7 +514,7 @@ router.post('/orders/:orderId/payment', async (req, res) => {
       SELECT o.*, u.name as user_name, u.point as user_point, g.name as guest_name
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_id = g.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone -- Join with guests using guest_phone
       WHERE o.id = $1
     `, [parseInt(orderId)]);
 

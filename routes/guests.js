@@ -11,7 +11,7 @@ router.get('/phone/:phone', async (req, res) => {
     console.log(`🔍 게스트 조회: ${phone}`);
     
     const result = await pool.query(`
-      SELECT id, phone, name, visit_count, last_order_date, total_spent, created_at
+      SELECT phone, visit_count, created_at, updated_at
       FROM guests
       WHERE phone = $1
     `, [phone]);
@@ -31,10 +31,10 @@ router.get('/phone/:phone', async (req, res) => {
       SELECT o.id, o.store_id, s.name as store_name, o.final_amount, o.order_date
       FROM orders o
       LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.guest_id = $1
+      WHERE o.guest_phone = $1
       ORDER BY o.order_date DESC
       LIMIT 5
-    `, [guest.id]);
+    `, [guest.phone]);
     
     res.json({
       success: true,
@@ -54,19 +54,19 @@ router.get('/phone/:phone', async (req, res) => {
 });
 
 // 게스트를 회원으로 전환
-router.post('/:guestId/convert-to-member', async (req, res) => {
+router.post('/:guestPhone/convert-to-member', async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { guestId } = req.params;
+    const { guestPhone } = req.params;
     const { userId } = req.body;
     
-    console.log(`🔄 게스트 ${guestId}를 회원 ${userId}로 전환 시작`);
+    console.log(`🔄 게스트 ${guestPhone}를 회원 ${userId}로 전환 시작`);
     
     await client.query('BEGIN');
     
     // 게스트 정보 조회
-    const guestResult = await client.query('SELECT * FROM guests WHERE id = $1', [guestId]);
+    const guestResult = await client.query('SELECT * FROM guests WHERE phone = $1', [guestPhone]);
     if (guestResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: '게스트를 찾을 수 없습니다' });
     }
@@ -82,21 +82,21 @@ router.post('/:guestId/convert-to-member', async (req, res) => {
     // 게스트의 모든 주문을 회원으로 이전
     const transferResult = await client.query(`
       UPDATE orders 
-      SET user_id = $1, guest_id = NULL, order_source = 'TLL'
-      WHERE guest_id = $2
+      SET user_id = $1, guest_phone = NULL, order_source = 'TLL'
+      WHERE guest_phone = $2
       RETURNING id
-    `, [userId, guestId]);
+    `, [userId, guestPhone]);
     
     console.log(`✅ ${transferResult.rows.length}개 주문 이전 완료`);
     
     // 게스트 데이터 삭제 (주문 이전 후)
-    await client.query('DELETE FROM guests WHERE id = $1', [guestId]);
+    await client.query('DELETE FROM guests WHERE phone = $1', [guestPhone]);
     
     await client.query('COMMIT');
     
     res.json({
       success: true,
-      message: `게스트 ${guest.name}(${guest.phone})가 회원으로 전환되었습니다`,
+      message: `게스트 ${guestPhone}가 회원으로 전환되었습니다`,
       transferredOrders: transferResult.rows.length,
       guestInfo: guest
     });
@@ -122,11 +122,11 @@ router.get('/store/:storeId', async (req, res) => {
     console.log(`👥 매장 ${storeId} 게스트 목록 조회`);
     
     const result = await pool.query(`
-      SELECT DISTINCT g.id, g.phone, g.name, g.visit_count, g.total_spent, g.last_order_date
+      SELECT DISTINCT g.phone, g.visit_count, g.created_at, g.updated_at
       FROM guests g
-      INNER JOIN orders o ON g.id = o.guest_id
+      INNER JOIN orders o ON g.phone = o.guest_phone
       WHERE o.store_id = $1
-      ORDER BY g.last_order_date DESC
+      ORDER BY g.updated_at DESC
       LIMIT $2
     `, [parseInt(storeId), parseInt(limit)]);
     

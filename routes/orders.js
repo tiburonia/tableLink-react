@@ -160,10 +160,9 @@ router.post('/pay', async (req, res) => {
     // 🆕 동일 테이블의 기존 주문 확인 (24시간 내)
     if (actualTableNumber) {
       const existingOrdersResult = await client.query(`
-        SELECT o.user_id, o.guest_id, u.name as user_name, g.name as guest_name, o.order_date
+        SELECT o.user_id, o.guest_phone, u.name as user_name, o.order_date
         FROM orders o
         LEFT JOIN users u ON o.user_id = u.id
-        LEFT JOIN guests g ON o.guest_id = g.id
         WHERE o.store_id = $1 AND o.table_number = $2 
         AND o.order_date >= NOW() - INTERVAL '24 hours'
         AND o.order_status != 'archived'
@@ -177,7 +176,7 @@ router.post('/pay', async (req, res) => {
       // 다른 사용자의 기존 주문이 있다면 아카이브 처리
       if (existingOrdersResult.rows.length > 0) {
         const existingOrder = existingOrdersResult.rows[0];
-        if (existingOrder.user_id !== userId || existingOrder.guest_id) {
+        if (existingOrder.user_id !== userId || existingOrder.guest_phone) {
           await client.query(`
             UPDATE orders 
             SET order_status = 'archived'
