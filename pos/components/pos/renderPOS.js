@@ -1010,13 +1010,15 @@ async function updateDetailPanel(tableNumber) {
       const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
       const ordersData = await ordersResponse.json();
       
-      // 현재 테이블의 모든 주문 표시 (최근 24시간 내)
+      // 현재 테이블의 활성 주문만 표시 (아카이브된 주문 제외, 최근 24시간 내)
       activeOrders = ordersData.success ? 
         ordersData.orders.filter(order => {
           const orderDate = new Date(order.orderDate);
           const now = new Date();
           const diffHours = (now - orderDate) / (1000 * 60 * 60);
-          return order.tableNumber == tableNumber && diffHours <= 24;
+          return order.tableNumber == tableNumber && 
+                 order.orderStatus !== 'archived' && 
+                 diffHours <= 24;
         }) : [];
       
       console.log(`📊 테이블 ${tableNumber} 주문 조회: 전체 ${ordersData.orders?.length || 0}개 중 ${activeOrders.length}개 표시`);

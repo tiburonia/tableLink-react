@@ -37,6 +37,43 @@ router.post('/pay', async (req, res) => {
     }
 
     const user = userResult.rows[0];
+
+    // 🆕 동일 테이블의 기존 주문 확인 (24시간 내)
+    if (actualTableNumber) {
+      const existingOrdersResult = await client.query(`
+        SELECT DISTINCT o.user_id, o.guest_id, u.name as user_name, g.name as guest_name
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        LEFT JOIN guests g ON o.guest_id = g.id
+        WHERE o.store_id = $1 AND o.table_number = $2 
+        AND o.order_date >= NOW() - INTERVAL '24 hours'
+        AND o.order_status != 'archived'
+        ORDER BY o.order_date DESC
+        LIMIT 1
+      `, [storeId, actualTableNumber]);
+
+      console.log(`🔍 TLL 주문 - 테이블 ${actualTableNumber} 기존 주문 확인:`, 
+        existingOrdersResult.rows.length > 0 ? existingOrdersResult.rows[0] : '없음');
+
+      // 다른 사용자의 기존 주문이 있다면 아카이브 처리
+      if (existingOrdersResult.rows.length > 0) {
+        const existingOrder = existingOrdersResult.rows[0];
+        if (existingOrder.user_id !== userId || existingOrder.guest_id) {
+          await client.query(`
+            UPDATE orders 
+            SET order_status = 'archived'
+            WHERE store_id = $1 AND table_number = $2 
+            AND order_date >= NOW() - INTERVAL '24 hours'
+            AND order_status != 'archived'
+            AND (user_id != $3 OR user_id IS NULL)
+          `, [storeId, actualTableNumber, userId]);
+          
+          console.log(`🗄️ TLL 주문 - 테이블 ${actualTableNumber}의 기존 다른 사용자 주문들을 아카이브 처리 완료`);
+        } else {
+          console.log(`✅ TLL 주문 - 동일 사용자의 추가 주문으로 기존 주문과 통합 처리`);
+        }
+      }
+    }
     const currentCoupons = user.coupons || { unused: [], used: [] };
 
     // 매장별 포인트 사용 검증
