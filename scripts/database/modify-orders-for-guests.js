@@ -68,8 +68,8 @@ async function modifyOrdersForGuests() {
     await client.query(`
       UPDATE orders 
       SET order_source = CASE 
-        WHEN user_id IS NOT NULL THEN 'TLL'
-        ELSE 'TLL'
+        WHEN user_id IS NOT NULL THEN 'TLL'::order_source_enum
+        ELSE 'TLL'::order_source_enum
       END
       WHERE order_source IS NULL
     `);
