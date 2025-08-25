@@ -288,6 +288,71 @@ router.get('/stores/:storeId/table/:tableNumber/pending-orders', async (req, res
   }
 });
 
+// 테이블의 모든 주문 조회 (메모리 + DB 통합)
+router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    const orderKey = `${storeId}-${tableNumber}`;
+
+    console.log(`🔍 POS - 테이블 ${tableNumber} 모든 주문 조회 (메모리+DB 통합)`);
+
+    // 1. 메모리 주문 조회
+    const pendingOrder = pendingOrders.get(orderKey);
+
+    // 2. DB 주문 조회 (최근 24시간 내)
+    const dbOrdersResponse = await pool.query(`
+      SELECT o.id, o.user_id, o.guest_phone, u.name as user_name, 
+             o.order_date, o.final_amount, o.order_data, o.order_status, o.payment_status,
+             o.order_source
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      WHERE o.store_id = $1 AND o.table_number = $2 
+      AND o.order_date >= NOW() - INTERVAL '24 hours'
+      AND o.order_status != 'archived'
+      ORDER BY o.order_date DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    const dbOrders = dbOrdersResponse.rows.map(order => ({
+      id: order.id,
+      type: 'completed',
+      userId: order.user_id,
+      guestPhone: order.guest_phone,
+      customerName: order.user_name || '고객',
+      orderDate: order.order_date,
+      finalAmount: order.final_amount,
+      orderData: order.order_data,
+      orderStatus: order.order_status,
+      paymentStatus: order.payment_status,
+      orderSource: order.order_source,
+      isPaid: order.payment_status === 'completed'
+    }));
+
+    // 3. 응답 데이터 구성
+    const responseData = {
+      success: true,
+      tableNumber: parseInt(tableNumber),
+      pendingOrder: pendingOrder ? {
+        ...pendingOrder,
+        type: 'pending',
+        isPaid: false
+      } : null,
+      completedOrders: dbOrders,
+      totalOrders: (pendingOrder ? 1 : 0) + dbOrders.length
+    };
+
+    console.log(`✅ 테이블 ${tableNumber} 주문 조회 완료: 미결제 ${pendingOrder ? 1 : 0}개, 완료 ${dbOrders.length}개`);
+
+    res.json(responseData);
+
+  } catch (error) {
+    console.error('❌ POS 테이블 통합 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '테이블 주문 조회 실패'
+    });
+  }
+});
+
 // 테이블의 TLL 주문 정보 조회
 router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
   try {
@@ -295,9 +360,9 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
-    // 해당 테이블의 최근 24시간 내 활성 주문 조회
+    // 해당 테이블의 최근 24시간 내 활성 주문 조회 (customer_name 컬럼 제거)
     const response = await pool.query(`
-      SELECT o.user_id, o.guest_phone, u.name as user_name, o.customer_name, o.order_date
+      SELECT o.user_id, o.guest_phone, u.name as user_name, o.order_date
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1 AND o.table_number = $2 
@@ -314,7 +379,7 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
         tllOrder: {
           userId: tllOrder.user_id,
           guestPhone: tllOrder.guest_phone,
-          customerName: tllOrder.customer_name || tllOrder.user_name || '고객',
+          customerName: tllOrder.user_name || '고객',
           isGuest: !tllOrder.user_id,
           phone: tllOrder.guest_phone || null
         }

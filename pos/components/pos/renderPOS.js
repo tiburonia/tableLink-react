@@ -806,6 +806,18 @@ function renderPOSLayout() {
         flex-shrink: 0;
       }
 
+      .order-amount.pending {
+        color: #d97706;
+        background: #fef3c7;
+        border-color: #fed7aa;
+      }
+
+      .order-amount.completed {
+        color: #059669;
+        background: #ecfdf5;
+        border-color: #bbf7d0;
+      }
+
       .pos-container .order-details {
         background: #f8fafc;
         border-radius: 8px;
@@ -898,6 +910,100 @@ function renderPOSLayout() {
         background: #fecaca;
         color: #991b1b;
         border-color: #f87171;
+      }
+
+      /* 미결제/완료 주문 섹션 스타일 */
+      .pending-orders-section, .completed-orders-section {
+        margin-bottom: 20px;
+      }
+
+      .pending-orders-section h4 {
+        color: #d97706;
+        background: #fef3c7;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        border: 1px solid #fed7aa;
+      }
+
+      .completed-orders-section h4 {
+        color: #059669;
+        background: #ecfdf5;
+        padding: 8px 12px;
+        border-radius: 6px;
+        margin-bottom: 12px;
+        border: 1px solid #bbf7d0;
+      }
+
+      .pending-order-card {
+        border: 2px solid #fbbf24;
+        background: #fffbeb;
+        border-radius: 12px;
+        padding: 4px;
+      }
+
+      .pending-order::before {
+        background: #fbbf24 !important;
+      }
+
+      .completed-order::before {
+        background: #10b981 !important;
+      }
+
+      /* 배지 스타일 */
+      .tll-badge, .pos-badge, .source-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-left: 8px;
+      }
+
+      .tll-badge {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .pos-badge {
+        background: #10b981;
+        color: white;
+      }
+
+      .source-badge.tll {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .source-badge.pos {
+        background: #10b981;
+        color: white;
+      }
+
+      .payment-badge {
+        font-size: 10px;
+        background: #f3f4f6;
+        color: #374151;
+        padding: 2px 6px;
+        border-radius: 12px;
+        margin-left: 8px;
+      }
+
+      .btn-small {
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+      }
+
+      .btn-warning {
+        background: #f59e0b;
+        color: white;
+        border: 1px solid #d97706;
+      }
+
+      .btn-warning:hover {
+        background: #d97706;
       }
 
       @keyframes pulse {
@@ -1062,33 +1168,25 @@ async function updateDetailPanel(tableNumber) {
     const currentTable = allTables.find(t => t.tableNumber == tableNumber);
     const isOccupied = currentTable ? currentTable.isOccupied : false;
 
-    let activeOrders = [];
+    // 통합 주문 조회 (메모리 + DB)
+    const allOrdersResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/all-orders`);
+    const allOrdersData = await allOrdersResponse.json();
 
-    if (isOccupied) {
-      // 테이블이 점유된 경우, 해당 테이블의 모든 주문 조회 (점유 시점 필터링 제거)
-      const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
-      const ordersData = await ordersResponse.json();
+    let pendingOrder = null;
+    let completedOrders = [];
 
-      // 현재 테이블의 활성 주문만 표시 (아카이브된 주문 제외, 최근 24시간 내)
-      activeOrders = ordersData.success ? 
-        ordersData.orders.filter(order => {
-          const orderDate = new Date(order.orderDate);
-          const now = new Date();
-          const diffHours = (now - orderDate) / (1000 * 60 * 60);
-          return order.tableNumber == tableNumber && 
-                 order.orderStatus !== 'archived' && 
-                 diffHours <= 24;
-        }) : [];
-
-      console.log(`📊 테이블 ${tableNumber} 주문 조회: 전체 ${ordersData.orders?.length || 0}개 중 ${activeOrders.length}개 표시`);
+    if (allOrdersData.success) {
+      pendingOrder = allOrdersData.pendingOrder;
+      completedOrders = allOrdersData.completedOrders || [];
+      console.log(`📊 테이블 ${tableNumber} 주문 조회: 미결제 ${pendingOrder ? 1 : 0}개, 완료 ${completedOrders.length}개`);
     }
 
     panelContent.innerHTML = `
       <div class="table-status-section">
         <div class="table-status-header">
           <h4>테이블 상태</h4>
-          <div class="status-indicator ${isOccupied ? 'occupied' : 'available'}">
-            ${isOccupied ? '🔴 사용중' : '🟢 이용가능'}
+          <div class="status-indicator ${isOccupied || pendingOrder ? 'occupied' : 'available'}">
+            ${isOccupied || pendingOrder ? '🔴 사용중' : '🟢 이용가능'}
           </div>
         </div>
 
@@ -1108,21 +1206,57 @@ async function updateDetailPanel(tableNumber) {
         <button class="action-btn primary" onclick="addOrder()">주문 추가</button>
         <button class="action-btn" onclick="viewOrders()">주문 내역</button>
         <button class="action-btn" onclick="moveTable()">테이블 이동</button>
-        <button class="action-btn warning" onclick="processPayment()">결제 처리</button>
+        <button class="action-btn warning" onclick="processPayment()" ${!pendingOrder && completedOrders.length === 0 ? 'disabled' : ''}>결제 처리</button>
       </div>
 
-      <div class="current-orders">
-        <h4>${isOccupied ? '현재 점유 주문' : '주문 없음'}</h4>
+      <!-- 미결제 주문 (메모리에 저장된 주문) -->
+      ${pendingOrder ? `
+        <div class="pending-orders-section">
+          <h4>🔄 미결제 주문 (결제 대기중)</h4>
+          <div class="pending-order-card">
+            <div class="order-item pending-order">
+              <div class="order-header">
+                <div class="order-info">
+                  <span class="customer-name">👤 ${pendingOrder.customerName || '포스 주문'}</span>
+                  <span class="order-time">${formatOrderTime(pendingOrder.createdAt)}</span>
+                  ${pendingOrder.isTLLOrder ? '<span class="tll-badge">TLL 연동</span>' : '<span class="pos-badge">POS</span>'}
+                </div>
+                <div class="order-amount pending">₩${pendingOrder.totalAmount.toLocaleString()}</div>
+              </div>
+
+              <div class="order-details">
+                ${pendingOrder.items.map(item => `
+                  <div class="menu-item">
+                    <span class="menu-name">${item.name}</span>
+                    <span class="menu-quantity">x${item.quantity || 1}</span>
+                    <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
+                  </div>
+                `).join('')}
+              </div>
+
+              <div class="order-status">
+                <span class="status-badge pending">결제 대기</span>
+                <button class="btn btn-small btn-warning" onclick="processPayment()">결제하기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- 완료된 주문 (DB에 저장된 주문) -->
+      <div class="completed-orders-section">
+        <h4>${completedOrders.length > 0 ? `✅ 완료된 주문 (${completedOrders.length}개)` : '주문 없음'}</h4>
         <div class="order-items">
-          ${activeOrders.length > 0 ? 
-            activeOrders.map(order => `
-              <div class="order-item">
+          ${completedOrders.length > 0 ? 
+            completedOrders.map(order => `
+              <div class="order-item completed-order">
                 <div class="order-header">
                   <div class="order-info">
                     <span class="customer-name">👤 ${order.customerName}</span>
                     <span class="order-time">${formatOrderTime(order.orderDate)}</span>
+                    <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">${getOrderSourceText(order.orderSource || 'POS')}</span>
                   </div>
-                  <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
+                  <div class="order-amount completed">₩${order.finalAmount.toLocaleString()}</div>
                 </div>
 
                 <div class="order-details">
@@ -1131,7 +1265,7 @@ async function updateDetailPanel(tableNumber) {
                       <div class="menu-item">
                         <span class="menu-name">${item.name}</span>
                         <span class="menu-quantity">x${item.quantity || 1}</span>
-                        <span class="menu-price">₩${item.price.toLocaleString()}</span>
+                        <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
                       </div>
                     `).join('') : 
                     '<div class="no-items">주문 상세 정보 없음</div>'
@@ -1139,11 +1273,12 @@ async function updateDetailPanel(tableNumber) {
                 </div>
 
                 <div class="order-status">
-                  <span class="status-badge ${order.orderStatus}">${getStatusText(order.orderStatus)}</span>
+                  <span class="status-badge completed">결제 완료</span>
+                  <span class="payment-badge">💳 ${order.paymentStatus === 'completed' ? '결제됨' : '미결제'}</span>
                 </div>
               </div>
             `).join('') :
-            `<div class="no-orders">${isOccupied ? '점유된 테이블이지만 주문이 없습니다' : '테이블이 비어있습니다'}</div>`
+            (!pendingOrder ? `<div class="no-orders">테이블이 비어있습니다</div>` : '')
           }
         </div>
       </div>
