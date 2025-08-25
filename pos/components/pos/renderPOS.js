@@ -1457,8 +1457,10 @@ function showOrderModal(tllOrderInfo = null) {
 
             ${tllOrderInfo ? `
               <!-- TLL 주문 정보 표시 -->
-              <div class="tll-order-info">
-                <div class="tll-badge">🔗 TLL 연동 주문</div>
+              <div class="tll-order-info ${tllOrderInfo.isGuest ? 'guest-order' : 'member-order'}">
+                <div class="tll-badge ${tllOrderInfo.isGuest ? 'guest' : 'member'}">
+                  ${tllOrderInfo.isGuest ? '👤 TLL 비회원 주문' : '🔗 TLL 회원 주문'}
+                </div>
                 <div class="tll-customer-info">
                   <div class="customer-detail">
                     <span class="label">고객명:</span>
@@ -1476,29 +1478,52 @@ function showOrderModal(tllOrderInfo = null) {
                   ` : ''}
                 </div>
                 <div class="tll-note">
-                  기존 TLL 주문에 메뉴를 추가합니다
+                  ${tllOrderInfo.isGuest ? 
+                    '기존 TLL 비회원 주문에 메뉴를 추가합니다' : 
+                    '기존 TLL 회원 주문에 메뉴를 추가합니다'
+                  }
                 </div>
               </div>
             ` : `
-              <!-- 일반 POS 주문 -->
-              <div class="customer-type-selector">
-                <label class="radio-option">
-                  <input type="radio" name="customerType" value="member" checked onchange="toggleCustomerType()">
-                  <span>회원</span>
-                </label>
-                <label class="radio-option">
-                  <input type="radio" name="customerType" value="guest" onchange="toggleCustomerType()">
-                  <span>비회원</span>
-                </label>
-              </div>
+              <!-- 일반 POS 주문 - 간소화된 구조 -->
+              <div class="pos-order-info">
+                <div class="pos-badge">🏪 POS 직접 주문</div>
+                <div class="order-type-selector">
+                  <div class="order-type-option" onclick="selectOrderType('pos_member')" data-type="pos_member">
+                    <div class="option-icon">👨‍💼</div>
+                    <div class="option-content">
+                      <div class="option-title">POS 회원 주문</div>
+                      <div class="option-desc">시스템 회원으로 처리</div>
+                    </div>
+                    <div class="option-radio">
+                      <input type="radio" name="posOrderType" value="pos_member" checked>
+                    </div>
+                  </div>
+                  
+                  <div class="order-type-option" onclick="selectOrderType('pos_guest')" data-type="pos_guest">
+                    <div class="option-icon">👤</div>
+                    <div class="option-content">
+                      <div class="option-title">POS 비회원 주문</div>
+                      <div class="option-desc">전화번호로 게스트 관리</div>
+                    </div>
+                    <div class="option-radio">
+                      <input type="radio" name="posOrderType" value="pos_guest">
+                    </div>
+                  </div>
+                </div>
 
-              <div id="memberInfo" class="customer-info">
-                <div class="info-text">POS 회원 주문으로 처리됩니다</div>
-              </div>
-
-              <div id="guestInfo" class="customer-info" style="display: none;">
-                <input type="tel" id="guestPhone" placeholder="전화번호 (예: 010-1234-5678)" class="input-field">
-                <input type="text" id="guestName" placeholder="고객 이름 (선택사항)" class="input-field">
+                <!-- POS 비회원 정보 입력 (초기에는 숨김) -->
+                <div id="posGuestInfo" class="pos-guest-form" style="display: none;">
+                  <div class="form-group">
+                    <label class="form-label">전화번호</label>
+                    <input type="tel" id="posGuestPhone" placeholder="010-1234-5678 (선택사항)" class="input-field">
+                    <div class="input-hint">전화번호를 입력하면 재방문시 고객 정보를 확인할 수 있습니다</div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">고객 이름</label>
+                    <input type="text" id="posGuestName" placeholder="고객 이름 (선택사항)" class="input-field">
+                  </div>
+                </div>
               </div>
             `}
           </div>
@@ -1660,21 +1685,161 @@ function showOrderModal(tllOrderInfo = null) {
       }
 
       .tll-order-info {
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+
+      .tll-order-info.member-order {
         background: #eff6ff;
         border: 2px solid #3b82f6;
-        border-radius: 8px;
-        padding: 16px;
+      }
+
+      .tll-order-info.guest-order {
+        background: #fef3c7;
+        border: 2px solid #f59e0b;
       }
 
       .tll-badge {
-        background: #3b82f6;
         color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 600;
+        padding: 6px 16px;
+        border-radius: 25px;
+        font-size: 13px;
+        font-weight: 700;
         display: inline-block;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .tll-badge.member {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      }
+
+      .tll-badge.guest {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+      }
+
+      .pos-order-info {
+        background: #f8fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+      }
+
+      .pos-badge {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 6px 16px;
+        border-radius: 25px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-block;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .order-type-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .order-type-option {
+        display: flex;
+        align-items: center;
+        padding: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .order-type-option:hover {
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .order-type-option.selected {
+        border-color: #10b981;
+        background: #f0fdf4;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+      }
+
+      .option-icon {
+        font-size: 28px;
+        margin-right: 16px;
+        flex-shrink: 0;
+      }
+
+      .option-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .option-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+      }
+
+      .option-desc {
+        font-size: 13px;
+        color: #64748b;
+        line-height: 1.4;
+      }
+
+      .option-radio {
+        margin-left: 12px;
+        flex-shrink: 0;
+      }
+
+      .option-radio input[type="radio"] {
+        width: 20px;
+        height: 20px;
+        accent-color: #10b981;
+      }
+
+      .pos-guest-form {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .form-group {
+        margin-bottom: 16px;
+      }
+
+      .form-group:last-child {
+        margin-bottom: 0;
+      }
+
+      .form-label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+      }
+
+      .input-hint {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+        line-height: 1.4;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
 
       .tll-customer-info {
@@ -1923,18 +2088,52 @@ function showOrderModal(tllOrderInfo = null) {
   loadMenuItems();
 }
 
-// 고객 유형 전환
+// POS 주문 타입 선택
+function selectOrderType(type) {
+  // 모든 옵션에서 selected 클래스 제거
+  document.querySelectorAll('.order-type-option').forEach(option => {
+    option.classList.remove('selected');
+  });
+
+  // 선택된 옵션에 selected 클래스 추가
+  const selectedOption = document.querySelector(`[data-type="${type}"]`);
+  if (selectedOption) {
+    selectedOption.classList.add('selected');
+  }
+
+  // 라디오 버튼 업데이트
+  const radioBtn = document.querySelector(`input[value="${type}"]`);
+  if (radioBtn) {
+    radioBtn.checked = true;
+  }
+
+  // 비회원 폼 표시/숨김
+  const guestForm = document.getElementById('posGuestInfo');
+  if (guestForm) {
+    if (type === 'pos_guest') {
+      guestForm.style.display = 'block';
+    } else {
+      guestForm.style.display = 'none';
+    }
+  }
+
+  updateSubmitButton();
+}
+
+// 고객 유형 전환 (레거시 지원)
 function toggleCustomerType() {
-  const customerType = document.querySelector('input[name="customerType"]:checked').value;
+  const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
   const memberInfo = document.getElementById('memberInfo');
   const guestInfo = document.getElementById('guestInfo');
 
-  if (customerType === 'member') {
-    memberInfo.style.display = 'block';
-    guestInfo.style.display = 'none';
-  } else {
-    memberInfo.style.display = 'none';
-    guestInfo.style.display = 'block';
+  if (memberInfo && guestInfo) {
+    if (customerType === 'member') {
+      memberInfo.style.display = 'block';
+      guestInfo.style.display = 'none';
+    } else {
+      memberInfo.style.display = 'none';
+      guestInfo.style.display = 'block';
+    }
   }
 
   updateSubmitButton();
@@ -2048,27 +2247,33 @@ function updateSubmitButton() {
   // TLL 주문인 경우 고객 정보 입력 불필요
   if (window.currentTLLOrder) {
     submitBtn.disabled = !hasItems;
+    if (hasItems) {
+      submitBtn.textContent = '주문 추가';
+    }
     return;
   }
 
   // 일반 POS 주문인 경우
+  const posOrderType = document.querySelector('input[name="posOrderType"]:checked')?.value;
+  
+  if (posOrderType) {
+    // 새로운 POS 주문 구조
+    submitBtn.disabled = !hasItems;
+    if (hasItems) {
+      submitBtn.textContent = posOrderType === 'pos_member' ? '회원 주문 추가' : '비회원 주문 추가';
+    }
+    return;
+  }
+
+  // 레거시 구조 지원
   const customerTypeElements = document.querySelectorAll('input[name="customerType"]');
   if (customerTypeElements.length === 0) {
     submitBtn.disabled = !hasItems;
     return;
   }
 
-  const customerType = document.querySelector('input[name="customerType"]:checked').value;
-  let isValid = hasItems;
-
-  if (customerType === 'guest') {
-    const guestPhone = document.getElementById('guestPhone');
-    if (guestPhone) {
-      isValid = hasItems && guestPhone.value.trim().length > 0;
-    }
-  }
-
-  submitBtn.disabled = !isValid;
+  const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
+  submitBtn.disabled = !hasItems;
 }
 
 // 주문 제출
@@ -2095,13 +2300,28 @@ async function submitOrder() {
       orderData.isGuestOrder = tllOrderInfo.isGuest;
       orderData.customerName = tllOrderInfo.customerName;
     } else {
-      // 일반 POS 주문인 경우
-      const customerType = document.querySelector('input[name="customerType"]:checked').value;
-      orderData.isGuestOrder = customerType === 'guest';
+      // 일반 POS 주문인 경우 - 새로운 구조
+      const posOrderType = document.querySelector('input[name="posOrderType"]:checked')?.value;
+      
+      if (posOrderType) {
+        orderData.isGuestOrder = posOrderType === 'pos_guest';
+        
+        if (posOrderType === 'pos_guest') {
+          const guestPhone = document.getElementById('posGuestPhone')?.value.trim();
+          const guestName = document.getElementById('posGuestName')?.value.trim();
+          
+          orderData.guestPhone = guestPhone || null;
+          orderData.guestName = guestName || '익명 고객';
+        }
+      } else {
+        // 레거시 구조 지원
+        const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
+        orderData.isGuestOrder = customerType === 'guest';
 
-      if (customerType === 'guest') {
-        orderData.guestPhone = document.getElementById('guestPhone').value.trim();
-        orderData.guestName = document.getElementById('guestName').value.trim();
+        if (customerType === 'guest') {
+          orderData.guestPhone = document.getElementById('guestPhone')?.value.trim();
+          orderData.guestName = document.getElementById('guestName')?.value.trim();
+        }
       }
     }
 
@@ -2436,6 +2656,91 @@ function showPaymentModal(orders) {
             </label>
           </div>
 
+          <!-- TLL 비회원 주문 전화번호 입력 옵션 -->
+          <div id="tllGuestPhoneSection" style="display: none;">
+            <div style="
+              background: #fef3c7;
+              border: 2px solid #f59e0b;
+              border-radius: 8px;
+              padding: 16px;
+              margin-bottom: 16px;
+            ">
+              <div style="
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-bottom: 12px;
+              ">
+                <span style="font-size: 18px;">👤</span>
+                <span style="font-weight: 600; color: #92400e;">TLL 비회원 고객 정보</span>
+              </div>
+              
+              <div style="margin-bottom: 12px;">
+                <label style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  cursor: pointer;
+                  font-size: 14px;
+                  font-weight: 500;
+                ">
+                  <input type="checkbox" id="saveGuestPhone" style="
+                    width: 18px;
+                    height: 18px;
+                    accent-color: #f59e0b;
+                  ">
+                  <span>고객 전화번호를 저장하여 재방문시 활용</span>
+                </label>
+              </div>
+
+              <div id="guestPhoneInputGroup" style="display: none;">
+                <div style="margin-bottom: 12px;">
+                  <label style="
+                    display: block;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #92400e;
+                    margin-bottom: 6px;
+                  ">전화번호</label>
+                  <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678" style="
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 2px solid #f59e0b;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    outline: none;
+                  ">
+                </div>
+                <div>
+                  <label style="
+                    display: block;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: #92400e;
+                    margin-bottom: 6px;
+                  ">고객 이름 (선택사항)</label>
+                  <input type="text" id="paymentGuestName" placeholder="고객 이름" style="
+                    width: 100%;
+                    padding: 8px 12px;
+                    border: 2px solid #f59e0b;
+                    border-radius: 6px;
+                    font-size: 14px;
+                    outline: none;
+                  ">
+                </div>
+              </div>
+
+              <div style="
+                font-size: 12px;
+                color: #92400e;
+                margin-top: 8px;
+                line-height: 1.4;
+              ">
+                💡 전화번호를 저장하면 다음 방문시 고객 정보와 방문 횟수를 확인할 수 있습니다
+              </div>
+            </div>
+          </div>
+
           <div class="payment-total" style="
             background: #f1f5f9;
             border-radius: 8px;
@@ -2547,10 +2852,32 @@ function showPaymentModal(orders) {
   document.body.appendChild(modal);
 
   // 체크박스 이벤트 리스너 추가
-  const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+  const checkboxes = modal.querySelectorAll('input[type="checkbox"][data-order-id]');
   checkboxes.forEach(checkbox => {
     checkbox.addEventListener('change', updatePaymentSummary);
   });
+
+  // TLL 비회원 주문이 있는지 확인
+  const hasTLLGuestOrder = orders.some(order => 
+    (order.orderSource === 'TLL' || !order.userId) && order.customerName && !order.userId
+  );
+
+  if (hasTLLGuestOrder) {
+    const tllSection = modal.querySelector('#tllGuestPhoneSection');
+    if (tllSection) {
+      tllSection.style.display = 'block';
+    }
+
+    // 전화번호 저장 체크박스 이벤트
+    const savePhoneCheckbox = modal.querySelector('#saveGuestPhone');
+    const phoneInputGroup = modal.querySelector('#guestPhoneInputGroup');
+    
+    if (savePhoneCheckbox && phoneInputGroup) {
+      savePhoneCheckbox.addEventListener('change', function() {
+        phoneInputGroup.style.display = this.checked ? 'block' : 'none';
+      });
+    }
+  }
 
   updatePaymentSummary();
   console.log('💳 결제 모달 표시 완료');
@@ -2599,18 +2926,32 @@ async function processSelectedPayments() {
 
     const results = [];
 
+    // TLL 비회원 전화번호 저장 옵션 확인
+    const saveGuestPhone = document.getElementById('saveGuestPhone')?.checked;
+    const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
+    const guestName = document.getElementById('paymentGuestName')?.value.trim();
+
     for (const checkbox of checkboxes) {
       const orderId = checkbox.dataset.orderId;
 
       try {
+        const paymentData = {
+          paymentMethod: paymentMethod
+        };
+
+        // TLL 비회원 주문에 대한 전화번호 저장 처리
+        if (saveGuestPhone && guestPhone) {
+          paymentData.guestPhone = guestPhone;
+          paymentData.guestName = guestName || '고객';
+          paymentData.updateGuestInfo = true;
+        }
+
         const response = await fetch(`/api/pos/orders/${orderId}/payment`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            paymentMethod: paymentMethod
-          })
+          body: JSON.stringify(paymentData)
         });
 
         const result = await response.json();
@@ -2901,6 +3242,7 @@ window.processPayment = processPayment;
 // 주문 모달 관련 함수들
 window.showOrderModal = showOrderModal;
 window.closeOrderModal = closeOrderModal;
+window.selectOrderType = selectOrderType;
 window.toggleCustomerType = toggleCustomerType;
 window.filterMenuCategory = filterMenuCategory;
 window.addMenuItem = addMenuItem;

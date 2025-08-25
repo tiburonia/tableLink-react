@@ -483,7 +483,12 @@ router.post('/orders/:orderId/payment', async (req, res) => {
   const client = await pool.connect();
   try {
     const { orderId } = req.params;
-    const { paymentMethod = 'POS' } = req.body;
+    const { 
+      paymentMethod = 'POS', 
+      guestPhone, 
+      guestName, 
+      updateGuestInfo = false 
+    } = req.body;
 
     console.log(`💳 POS 주문 ${orderId} 결제 처리 요청`);
 
@@ -491,10 +496,9 @@ router.post('/orders/:orderId/payment', async (req, res) => {
 
     // 주문 정보 조회
     const orderResult = await client.query(`
-      SELECT o.*, u.name as user_name, u.point as user_point, g.name as guest_name
+      SELECT o.*, u.name as user_name, u.point as user_point
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_phone = g.phone -- Join with guests using guest_phone
       WHERE o.id = $1
     `, [parseInt(orderId)]);
 
@@ -515,15 +519,65 @@ router.post('/orders/:orderId/payment', async (req, res) => {
       });
     }
 
-    // 결제 완료 상태로 업데이트
-    await client.query(`
-      UPDATE orders
-      SET order_status = 'paid', 
-          payment_status = 'completed',
-          payment_method = $1,
-          payment_date = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [paymentMethod, parseInt(orderId)]);
+    // TLL 비회원 주문에 대한 게스트 정보 업데이트 처리
+    if (updateGuestInfo && guestPhone && !order.user_id) {
+      console.log(`📞 TLL 비회원 주문 ${orderId}에 게스트 정보 추가: ${guestPhone}`);
+      
+      // 기존 게스트 확인
+      const existingGuest = await client.query(
+        'SELECT phone, visit_count FROM guests WHERE phone = $1',
+        [guestPhone]
+      );
+
+      if (existingGuest.rows.length > 0) {
+        // 기존 게스트 - 방문 횟수 업데이트
+        const currentVisitCount = existingGuest.rows[0].visit_count || {};
+        const storeVisitCount = (currentVisitCount[order.store_id] || 0) + 1;
+
+        await client.query(`
+          UPDATE guests 
+          SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE phone = $3
+        `, [`{${order.store_id}}`, storeVisitCount, guestPhone]);
+
+        console.log(`✅ 기존 게스트 방문 횟수 업데이트 - 매장 ${order.store_id}: ${storeVisitCount}번째 방문`);
+      } else {
+        // 새 게스트 생성
+        const initialVisitCount = { [order.store_id]: 1 };
+
+        await client.query(
+          'INSERT INTO guests (phone, visit_count) VALUES ($1, $2)',
+          [guestPhone, JSON.stringify(initialVisitCount)]
+        );
+
+        console.log(`✨ 새 게스트 생성 - 매장 ${order.store_id}: 첫 방문`);
+      }
+
+      // 주문 테이블에 게스트 전화번호 업데이트
+      await client.query(`
+        UPDATE orders
+        SET guest_phone = $1,
+            customer_name = $2,
+            order_status = 'paid', 
+            payment_status = 'completed',
+            payment_method = $3,
+            payment_date = CURRENT_TIMESTAMP
+        WHERE id = $4
+      `, [guestPhone, guestName || '고객', paymentMethod, parseInt(orderId)]);
+
+      console.log(`📝 주문 ${orderId}에 게스트 정보 저장 완료`);
+    } else {
+      // 일반 결제 완료 처리
+      await client.query(`
+        UPDATE orders
+        SET order_status = 'paid', 
+            payment_status = 'completed',
+            payment_method = $1,
+            payment_date = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [paymentMethod, parseInt(orderId)]);
+    }
 
     // TLL 회원 주문인 경우 포인트 적립 처리
     if (order.user_id && order.order_source !== 'TLL') {
@@ -562,8 +616,11 @@ router.post('/orders/:orderId/payment', async (req, res) => {
       orderId: parseInt(orderId),
       paymentMethod: paymentMethod,
       finalAmount: order.final_amount,
-      customerName: order.user_name || order.guest_name || 'POS 주문',
-      message: '결제가 성공적으로 완료되었습니다'
+      customerName: order.user_name || order.customer_name || 'POS 주문',
+      guestPhoneSaved: updateGuestInfo && guestPhone ? guestPhone : null,
+      message: updateGuestInfo && guestPhone ? 
+        '결제가 완료되었으며 고객 정보가 저장되었습니다' : 
+        '결제가 성공적으로 완료되었습니다'
     });
 
   } catch (error) {
