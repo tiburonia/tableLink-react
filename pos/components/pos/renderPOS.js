@@ -238,7 +238,7 @@ window.filterOrders = filterOrders; // Keeping this
 window.occupyTable = occupyTable; // Keeping this
 window.releaseTable = releaseTable; // Keeping this
 window.addOrder = addOrder; // Keeping this
-window.processPayment = processPayment; // Keeping this
+// window.processPayment는 paymentModal.js에서 등록됨
 window.showOrderModal = showOrderModal; // Keeping this
 window.closeOrderModal = closeOrderModal; // Keeping this
 window.selectOrderType = selectOrderType; // Keeping this
@@ -2656,10 +2656,8 @@ function closeOrderModal(event) {
   window.currentTLLOrder = null;
 }
 
-// 결제 처리 기능
-function processPayment() {
-  return window.processPayment();
-}
+// 결제 처리 기능은 paymentModal.js에서 처리
+// function processPayment() - 제거하여 paymentModal.js의 함수 사용
 
 // 결제 모달 표시
 function showPaymentModal(orders, pendingOrder = false) {
