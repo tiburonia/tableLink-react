@@ -638,120 +638,187 @@ function renderPOSLayout() {
         gap: 8px;
       }
 
-      /* 주문 아이템 스타일 */
-      .order-item {
-        background: white;
+      /* POS 주문 아이템 스타일 */
+      .pos-container .order-item {
+        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 12px;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .pos-container .order-item::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 0 2px 2px 0;
+      }
+
+      .pos-container .order-item:hover {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+      }
+
+      .pos-container .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
         margin-bottom: 12px;
       }
 
-      .order-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .order-info {
+      .pos-container .order-info {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
       }
 
-      .customer-name {
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
+      .pos-container .customer-name {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 6px;
       }
 
-      .order-time {
+      .pos-container .order-time {
         font-size: 12px;
-        color: #6b7280;
+        color: #64748b;
+        font-weight: 500;
       }
 
-      .order-amount {
-        font-size: 14px;
+      .pos-container .order-amount {
+        font-size: 16px;
         font-weight: 700;
         color: #059669;
+        background: #ecfdf5;
+        padding: 4px 8px;
+        border-radius: 6px;
+        border: 1px solid #d1fae5;
       }
 
-      .order-details {
-        margin: 8px 0;
+      .pos-container .order-details {
+        margin: 12px 0;
+        background: #f8fafc;
+        border-radius: 8px;
+        padding: 8px;
+        border: 1px solid #f1f5f9;
       }
 
-      .menu-item {
+      .pos-container .menu-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 0;
-        font-size: 12px;
+        padding: 6px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #f1f5f9;
       }
 
-      .menu-name {
+      .pos-container .menu-item:last-child {
+        border-bottom: none;
+      }
+
+      .pos-container .menu-name {
         flex: 1;
         color: #374151;
-      }
-
-      .menu-quantity {
-        color: #6b7280;
-        margin: 0 8px;
-      }
-
-      .menu-price {
-        color: #059669;
         font-weight: 500;
       }
 
-      .order-status {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 8px;
-      }
-
-      .status-badge {
+      .pos-container .menu-quantity {
+        color: #6b7280;
+        background: #f1f5f9;
         padding: 2px 6px;
         border-radius: 4px;
-        font-size: 10px;
-        font-weight: 500;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 0 8px;
+        min-width: 24px;
+        text-align: center;
       }
 
-      .status-badge.pending {
+      .pos-container .menu-price {
+        color: #059669;
+        font-weight: 600;
+        font-size: 12px;
+        min-width: 60px;
+        text-align: right;
+      }
+
+      .pos-container .order-status {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+
+      .pos-container .status-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .pos-container .status-badge.pending {
         background: #fef3c7;
         color: #d97706;
+        border: 1px solid #fde68a;
       }
 
-      .status-badge.cooking {
+      .pos-container .status-badge.cooking {
         background: #ddd6fe;
         color: #7c3aed;
+        border: 1px solid #c4b5fd;
       }
 
-      .status-badge.completed {
+      .pos-container .status-badge.completed {
         background: #dcfce7;
         color: #16a34a;
+        border: 1px solid #bbf7d0;
       }
 
-      .status-badge.cancelled {
+      .pos-container .status-badge.cancelled {
         background: #fecaca;
         color: #dc2626;
+        border: 1px solid #fca5a5;
       }
 
-      .no-orders, .no-items {
+      .pos-container .no-orders, 
+      .pos-container .no-items {
         text-align: center;
-        color: #6b7280;
+        color: #94a3b8;
         font-style: italic;
-        padding: 20px;
+        padding: 24px 20px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px dashed #cbd5e1;
+        margin: 12px 0;
       }
 
-      .loading-message, .error-message {
+      .pos-container .loading-message, 
+      .pos-container .error-message {
         text-align: center;
-        color: #6b7280;
+        color: #64748b;
         padding: 40px 20px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #f1f5f9;
       }
 
-      .error-message {
+      .pos-container .error-message {
         color: #dc2626;
+        background: #fef2f2;
+        border-color: #fecaca;
       }
 
       /* 반응형 */
