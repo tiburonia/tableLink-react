@@ -560,6 +560,9 @@ function renderPOSLayout() {
       .panel-content {
         flex: 1;
         padding: 20px;
+        overflow-y: auto;
+        min-height: 0;
+        height: 100%;
       }
 
       .select-table-message {
@@ -624,6 +627,16 @@ function renderPOSLayout() {
         width: 350px;
         background: white;
         border-left: 1px solid #e2e8f0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
+
+      .order-detail-panel .panel-content {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+        padding: 20px;
       }
 
       .select-order-message {
@@ -1081,6 +1094,55 @@ function renderPOSLayout() {
           display: none;
         }
       }
+
+      /* 스크롤 가능한 섹션들 */
+      .scrollable-section {
+        max-height: 300px;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .table-actions {
+        margin-bottom: 16px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* 스크롤바 스타일링 */
+      .panel-content::-webkit-scrollbar,
+      .order-items::-webkit-scrollbar,
+      .scrollable-section::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .panel-content::-webkit-scrollbar-track,
+      .order-items::-webkit-scrollbar-track,
+      .scrollable-section::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 3px;
+      }
+
+      .panel-content::-webkit-scrollbar-thumb,
+      .order-items::-webkit-scrollbar-thumb,
+      .scrollable-section::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+      }
+
+      .panel-content::-webkit-scrollbar-thumb:hover,
+      .order-items::-webkit-scrollbar-thumb:hover,
+      .scrollable-section::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
+      /* Firefox 스크롤바 스타일 */
+      .panel-content,
+      .order-items,
+      .scrollable-section {
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f1f5f9;
+      }
     </style>
   `;
 }
@@ -1246,7 +1308,7 @@ async function updateDetailPanel(tableNumber) {
       <!-- 완료된 주문 (DB에 저장된 주문) -->
       <div class="completed-orders-section">
         <h4>${completedOrders.length > 0 ? `✅ 완료된 주문 (${completedOrders.length}개)` : '주문 없음'}</h4>
-        <div class="order-items">
+        <div class="order-items scrollable-section">
           ${completedOrders.length > 0 ? 
             completedOrders.map(order => `
               <div class="order-item completed-order">
@@ -3099,7 +3161,11 @@ function showPaymentModal(orders, pendingOrder = false) {
           </div>
         </div>
 
-        <div class="payment-summary">
+        <div class="payment-summary" style="
+          background: #f1f5f9;
+          border-radius: 8px;
+          padding: 16px;
+        ">
           <div class="section-title" style="
             font-size: 14px;
             font-weight: 600;
