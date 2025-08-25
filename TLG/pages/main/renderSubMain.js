@@ -9,7 +9,7 @@ async function renderSubMain() {
       <!-- 헤더 -->
       <header id="subHeader">
         <div class="header-left">
-          <img src="TableLink.png" alt="TableLink" class="logo" />
+          <img src="/TableLink.png" alt="TableLink" class="logo" />
           <span class="logo-text">TableLink</span>
         </div>
         <div class="header-right">

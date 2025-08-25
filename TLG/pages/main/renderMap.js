@@ -27,7 +27,7 @@ async function renderMap() {
         </div>
         <div id="searchResults" class="search-results hidden"></div>
       </div>
-      
+
       <!-- 위치 설정 모달 -->
       <div id="locationModal" class="location-modal hidden">
         <div class="modal-content">
@@ -43,28 +43,28 @@ async function renderMap() {
                   <option value="">시/도를 선택하세요</option>
                 </select>
               </div>
-              
+
               <div class="select-group">
                 <label for="citySelect">시/군/구</label>
                 <select id="citySelect" class="region-select" disabled>
                   <option value="">시/군/구를 선택하세요</option>
                 </select>
               </div>
-              
+
               <div class="select-group">
                 <label for="districtSelect">읍/면/동</label>
                 <select id="districtSelect" class="region-select" disabled>
                   <option value="">읍/면/동을 선택하세요</option>
                 </select>
               </div>
-              
+
               <button id="confirmLocationBtn" class="confirm-location-btn" disabled>
                 📍 이 위치로 설정
               </button>
             </div>
-            
+
             <div class="divider">또는</div>
-            
+
             <div class="current-location-section">
               <button id="getCurrentLocationBtn" class="get-current-btn">
                 🎯 현재 GPS 위치 사용
@@ -767,11 +767,11 @@ async function renderMap() {
     }
 
     console.log(`🔍 통합 검색 시작: "${keyword}"`);
-    
+
     try {
       // 매장 검색과 장소 검색을 동시에 실행
       console.log(`📡 매장 검색 및 장소 검색 API 호출 시작`);
-      
+
       const [storeResponse, placeResults] = await Promise.all([
         fetch('/api/stores/search?query=' + encodeURIComponent(keyword)),
         searchPlaces(keyword)
@@ -782,15 +782,15 @@ async function renderMap() {
 
       const storeData = await storeResponse.json();
       const stores = storeData.stores || [];
-      
+
       console.log(`📊 매장 검색 결과: ${stores.length}개`);
       console.log(`📊 장소 검색 결과: ${placeResults?.length || 0}개`);
 
       displayCombinedResults(stores, placeResults, keyword);
-      
+
       // 검색 결과창 표시
       searchResults.classList.remove('hidden');
-      
+
     } catch (error) {
       console.error('❌ 통합 검색 실패:', error);
       searchResults.innerHTML = `
@@ -809,7 +809,7 @@ async function renderMap() {
   // 통합 검색 결과 표시 (매장 + 위치)
   function displayCombinedResults(stores, places, keyword) {
     console.log(`🔍 검색 결과 표시: 매장 ${stores?.length || 0}개, 장소 ${places?.length || 0}개`);
-    
+
     // 현재 위치 UI 숨기기
     const locationInfo = document.getElementById('locationInfo');
     if (locationInfo) {
@@ -827,7 +827,7 @@ async function renderMap() {
           📍 위치 검색 결과 (${places.length}개)
         </div>
       `;
-      
+
       resultHTML += places.slice(0, 5).map(place => `
         <div class="search-result-item location-search-item" data-lat="${place.y}" data-lng="${place.x}">
           <div class="result-name">📍 ${place.place_name}</div>
@@ -846,7 +846,7 @@ async function renderMap() {
           </div>
         `;
       }
-      
+
       resultHTML += stores.slice(0, 7).map(store => `
         <div class="search-result-item store-search-item" data-store-id="${store.id}">
           <div class="result-name">🏪 ${store.name}</div>
@@ -877,7 +877,7 @@ async function renderMap() {
         const lat = parseFloat(item.dataset.lat);
         const lng = parseFloat(item.dataset.lng);
         const placeName = item.querySelector('.result-name').textContent.replace('📍 ', '');
-        
+
         setCurrentLocation(lat, lng, placeName);
         hideSearchResults();
         searchInput.value = placeName;
@@ -907,7 +907,7 @@ async function renderMap() {
     searchResults.classList.remove('hidden');
   }
 
-  
+
 
   // 검색 결과 숨기기 함수
   function hideSearchResults() {
@@ -1006,13 +1006,13 @@ async function renderMap() {
     try {
       const center = map.getCenter();
       const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(query)}&x=${center.getLng()}&y=${center.getLat()}&radius=20000`);
-      
+
       if (!response.ok) {
         throw new Error(`검색 실패: ${response.status}`);
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.documents && data.documents.length > 0) {
         console.log(`✅ 장소 검색 성공: ${data.documents.length}개 결과`);
         return data.documents;
@@ -1037,7 +1037,7 @@ async function renderMap() {
     try {
       const response = await fetch('/api/stores/regions/provinces');
       const data = await response.json();
-      
+
       if (data.success) {
         provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
         data.provinces.forEach(province => {
@@ -1056,7 +1056,7 @@ async function renderMap() {
     try {
       const response = await fetch(`/api/stores/regions/cities?province=${encodeURIComponent(province)}`);
       const data = await response.json();
-      
+
       if (data.success) {
         citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
         citySelect.disabled = false;
@@ -1066,7 +1066,7 @@ async function renderMap() {
           option.textContent = city;
           citySelect.appendChild(option);
         });
-        
+
         // 하위 선택 초기화
         districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
         districtSelect.disabled = true;
@@ -1081,7 +1081,7 @@ async function renderMap() {
     try {
       const response = await fetch(`/api/stores/regions/districts?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}`);
       const data = await response.json();
-      
+
       if (data.success) {
         districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
         districtSelect.disabled = false;
@@ -1091,7 +1091,7 @@ async function renderMap() {
           option.textContent = district;
           districtSelect.appendChild(option);
         });
-        
+
         confirmLocationBtn.disabled = true;
       }
     } catch (error) {
@@ -1145,7 +1145,7 @@ async function renderMap() {
     const province = provinceSelect.value;
     const city = citySelect.value;
     const district = districtSelect.value;
-    
+
     if (!province || !city || !district) {
       alert('모든 지역을 선택해주세요.');
       return;
@@ -1155,12 +1155,12 @@ async function renderMap() {
       // 행정기관 좌표 조회 시도
       let coords = null;
       let locationName = `${province} ${city} ${district}`;
-      
+
       // 1. 시/군/구 행정기관 좌표 시도
       try {
         const adminResponse = await fetch(`/api/stores/administrative-office?regionType=sigungu&regionName=${encodeURIComponent(city)}`);
         const adminData = await adminResponse.json();
-        
+
         if (adminData.success && adminData.office) {
           coords = {
             lat: adminData.office.latitude,
@@ -1172,13 +1172,13 @@ async function renderMap() {
       } catch (error) {
         console.warn('시군구 행정기관 좌표 조회 실패:', error);
       }
-      
+
       // 2. 시도 행정기관 좌표 시도 (시군구 실패시)
       if (!coords) {
         try {
           const provinceResponse = await fetch(`/api/stores/administrative-office?regionType=sido&regionName=${encodeURIComponent(province)}`);
           const provinceData = await provinceResponse.json();
-          
+
           if (provinceData.success && provinceData.office) {
             coords = {
               lat: provinceData.office.latitude,
@@ -1191,13 +1191,13 @@ async function renderMap() {
           console.warn('시도 행정기관 좌표 조회 실패:', error);
         }
       }
-      
+
       // 3. 읍면동 중심점 시도 (행정기관 실패시)
       if (!coords) {
         try {
           const districtResponse = await fetch(`/api/stores/eupmyeondong-center?sido=${encodeURIComponent(province)}&sigungu=${encodeURIComponent(city)}&eupmyeondong=${encodeURIComponent(district)}`);
           const districtData = await districtResponse.json();
-          
+
           if (districtData.success && districtData.center) {
             coords = {
               lat: districtData.center.latitude,
@@ -1210,19 +1210,19 @@ async function renderMap() {
           console.warn('읍면동 중심점 조회 실패:', error);
         }
       }
-      
+
       // 4. 기본 좌표 API 시도 (모든 것이 실패시)
       if (!coords) {
         const response = await fetch(`/api/stores/regions/coordinates?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`);
         const data = await response.json();
-        
+
         if (data.success && data.coordinates) {
           coords = data.coordinates;
           locationName = `${province} ${city} ${district}`;
           console.log(`✅ 기본 좌표 API 성공`);
         }
       }
-      
+
       if (coords) {
         setCurrentLocation(coords.lat, coords.lng, locationName);
         locationModal.classList.add('hidden');
@@ -1247,19 +1247,19 @@ async function renderMap() {
         (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
-          
+
           setCurrentLocation(lat, lng, '현재 GPS 위치');
           locationModal.classList.add('hidden');
           locationSearchInput.value = '';
           locationSearchResults.innerHTML = '';
-          
+
           getCurrentLocationBtn.textContent = '🎯 현재 GPS 위치 사용';
           getCurrentLocationBtn.disabled = false;
         },
         (error) => {
           console.error('GPS 위치 가져오기 실패:', error);
           alert('위치 정보를 가져올 수 없습니다. 브라우저 설정에서 위치 권한을 확인해주세요.');
-          
+
           getCurrentLocationBtn.textContent = '🎯 현재 GPS 위치 사용';
           getCurrentLocationBtn.disabled = false;
         },
@@ -1277,7 +1277,7 @@ async function renderMap() {
   // 현재 위치 설정 함수
   function setCurrentLocation(lat, lng, locationName) {
     const position = new kakao.maps.LatLng(lat, lng);
-    
+
     // 지도 중심을 설정된 위치로 이동
     map.setCenter(position);
     map.setLevel(3);

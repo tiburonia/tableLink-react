@@ -14,6 +14,18 @@ let orderFilter = 'all';
 let posSocket = null;
 let isWebSocketConnected = false;
 
+// 매장 선택 함수
+function selectStore(storeId, storeName) {
+  // URL 업데이트
+  const newUrl = `/pos/${storeId}`;
+  window.history.pushState({ storeId }, '', newUrl);
+
+  // POS 시스템 리로드
+  renderPOS();
+
+  console.log(`✅ POS 매장 선택: ${storeName} (ID: ${storeId})`);
+}
+
 // POS 시스템 초기화
 async function renderPOS() {
   try {
@@ -29,7 +41,7 @@ async function renderPOS() {
     if (storeId) {
       console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);
       await loadStoreById(storeId);
-      
+
       // WebSocket 연결 시작
       initWebSocket(storeId);
     } else {
@@ -427,7 +439,7 @@ function renderPOSLayout() {
         pointer-events: all;
       }
 
-      
+
 
       /* 테이블 맵 */
       .table-map-container {
@@ -955,7 +967,7 @@ function renderTableMap() {
     const occupiedTime = table.isOccupied && table.occupiedSince 
       ? getTimeDifferenceText(table.occupiedSince) 
       : '';
-    
+
     return `
       <div class="table-item ${status}" onclick="selectTableFromMap('${table.tableNumber}')">
         <div class="table-number">T${table.tableNumber}</div>
@@ -990,7 +1002,7 @@ async function updateDetailPanel(tableNumber) {
   const panelContent = document.getElementById('panelContent');
 
   panelTitle.textContent = `테이블 ${tableNumber}`;
-  
+
   // 로딩 상태 표시
   panelContent.innerHTML = `
     <div class="loading-message">
@@ -1002,14 +1014,14 @@ async function updateDetailPanel(tableNumber) {
     // 현재 테이블 상태 확인
     const currentTable = allTables.find(t => t.tableNumber == tableNumber);
     const isOccupied = currentTable ? currentTable.isOccupied : false;
-    
+
     let activeOrders = [];
-    
+
     if (isOccupied) {
       // 테이블이 점유된 경우, 해당 테이블의 모든 주문 조회 (점유 시점 필터링 제거)
       const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=50`);
       const ordersData = await ordersResponse.json();
-      
+
       // 현재 테이블의 활성 주문만 표시 (아카이브된 주문 제외, 최근 24시간 내)
       activeOrders = ordersData.success ? 
         ordersData.orders.filter(order => {
@@ -1020,7 +1032,7 @@ async function updateDetailPanel(tableNumber) {
                  order.orderStatus !== 'archived' && 
                  diffHours <= 24;
         }) : [];
-      
+
       console.log(`📊 테이블 ${tableNumber} 주문 조회: 전체 ${ordersData.orders?.length || 0}개 중 ${activeOrders.length}개 표시`);
     }
 
@@ -1032,7 +1044,7 @@ async function updateDetailPanel(tableNumber) {
             ${isOccupied ? '🔴 사용중' : '🟢 이용가능'}
           </div>
         </div>
-        
+
         <div class="table-control-actions">
           ${isOccupied ? 
             `<button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
@@ -1065,7 +1077,7 @@ async function updateDetailPanel(tableNumber) {
                   </div>
                   <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
                 </div>
-                
+
                 <div class="order-details">
                   ${order.orderData && order.orderData.items ? 
                     order.orderData.items.map(item => `
@@ -1078,7 +1090,7 @@ async function updateDetailPanel(tableNumber) {
                     '<div class="no-items">주문 상세 정보 없음</div>'
                   }
                 </div>
-                
+
                 <div class="order-status">
                   <span class="status-badge ${order.orderStatus}">${getStatusText(order.orderStatus)}</span>
                 </div>
@@ -1116,10 +1128,10 @@ function getTimeDifferenceText(occupiedSince) {
   const now = new Date();
   const occupied = new Date(occupiedSince);
   const diffMinutes = Math.floor((now - occupied) / (1000 * 60));
-  
+
   if (diffMinutes < 1) return '방금 전';
   if (diffMinutes < 60) return `${diffMinutes}분 전`;
-  
+
   const diffHours = Math.floor(diffMinutes / 60);
   return `${diffHours}시간 ${diffMinutes % 60}분 전`;
 }
@@ -1163,7 +1175,7 @@ async function loadStoreDetails(storeId) {
     }
 
     const store = data.store;
-    
+
     // 메뉴 데이터 처리
     let menu = store.menu || [];
     if (typeof menu === 'string') {
@@ -1175,7 +1187,7 @@ async function loadStoreDetails(storeId) {
       }
     }
     allMenus = menu;
-    
+
     console.log(`🍽️ 매장 ${storeId} 메뉴 ${allMenus.length}개 로드 완료`);
 
     // 실제 데이터베이스에서 테이블 정보 로드
@@ -1197,7 +1209,7 @@ async function loadTables() {
   try {
     const response = await fetch(`/api/pos/stores/${currentStore.id}/tables`);
     const data = await response.json();
-    
+
     if (data.success) {
       allTables = data.tables || [];
       console.log(`🪑 매장 ${currentStore.id} 테이블 ${allTables.length}개 로드 완료`);
@@ -1253,7 +1265,7 @@ function showError(message) {
 async function occupyTable(tableNumber) {
   try {
     console.log(`🔒 [POS] 테이블 ${tableNumber} 점유 요청`);
-    
+
     const response = await fetch('/api/tables/occupy-manual', {
       method: 'POST',
       headers: {
@@ -1265,12 +1277,12 @@ async function occupyTable(tableNumber) {
         duration: 0 // 무제한 (수동 해제)
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       alert(`테이블 ${tableNumber}이 점유 상태로 변경되었습니다.`);
-      
+
       // 테이블 상태 업데이트
       await loadTables();
       renderTableMap();
@@ -1278,7 +1290,7 @@ async function occupyTable(tableNumber) {
     } else {
       alert('오류: ' + data.error);
     }
-    
+
   } catch (error) {
     console.error('❌ [POS] 테이블 점유 실패:', error);
     alert('테이블 점유 요청 실패');
@@ -1289,7 +1301,7 @@ async function occupyTable(tableNumber) {
 async function releaseTable(tableNumber) {
   try {
     console.log(`🔓 [POS] 테이블 ${tableNumber} 해제 요청`);
-    
+
     const response = await fetch('/api/tables/update', {
       method: 'POST',
       headers: {
@@ -1301,12 +1313,12 @@ async function releaseTable(tableNumber) {
         isOccupied: false
       })
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       alert(`테이블 ${tableNumber}이 해제되었습니다.`);
-      
+
       // 테이블 상태 업데이트
       await loadTables();
       renderTableMap();
@@ -1314,7 +1326,7 @@ async function releaseTable(tableNumber) {
     } else {
       alert('오류: ' + data.error);
     }
-    
+
   } catch (error) {
     console.error('❌ [POS] 테이블 해제 실패:', error);
     alert('테이블 해제 요청 실패');
@@ -1326,13 +1338,13 @@ function formatOrderTime(orderDate) {
   const date = new Date(orderDate);
   const now = new Date();
   const diffMinutes = Math.floor((now - date) / (1000 * 60));
-  
+
   if (diffMinutes < 1) return '방금 전';
   if (diffMinutes < 60) return `${diffMinutes}분 전`;
-  
+
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours}시간 전`;
-  
+
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5);
 }
 
@@ -1354,7 +1366,7 @@ function addOrder() {
     alert('테이블을 먼저 선택해주세요.');
     return;
   }
-  
+
   showOrderModal();
 }
 
@@ -1369,7 +1381,7 @@ function showOrderModal() {
           <h2>🍽️ 주문 추가 - 테이블 ${currentTable}</h2>
           <button class="close-btn" onclick="closeOrderModal()">✕</button>
         </div>
-        
+
         <div class="modal-body">
           <!-- 고객 정보 입력 -->
           <div class="customer-section">
@@ -1384,11 +1396,11 @@ function showOrderModal() {
                 <span>비회원</span>
               </label>
             </div>
-            
+
             <div id="memberInfo" class="customer-info">
               <div class="info-text">POS 회원 주문으로 처리됩니다</div>
             </div>
-            
+
             <div id="guestInfo" class="customer-info" style="display: none;">
               <input type="tel" id="guestPhone" placeholder="전화번호 (예: 010-1234-5678)" class="input-field">
               <input type="text" id="guestName" placeholder="고객 이름 (선택사항)" class="input-field">
@@ -1404,7 +1416,7 @@ function showOrderModal() {
               <button class="category-btn" onclick="filterMenuCategory('사이드')">사이드</button>
               <button class="category-btn" onclick="filterMenuCategory('음료')">음료</button>
             </div>
-            
+
             <div class="menu-grid" id="menuGrid">
               <!-- 메뉴 아이템들이 여기에 표시됩니다 -->
             </div>
@@ -1768,7 +1780,7 @@ function toggleCustomerType() {
   const customerType = document.querySelector('input[name="customerType"]:checked').value;
   const memberInfo = document.getElementById('memberInfo');
   const guestInfo = document.getElementById('guestInfo');
-  
+
   if (customerType === 'member') {
     memberInfo.style.display = 'block';
     guestInfo.style.display = 'none';
@@ -1776,26 +1788,26 @@ function toggleCustomerType() {
     memberInfo.style.display = 'none';
     guestInfo.style.display = 'block';
   }
-  
+
   updateSubmitButton();
 }
 
 // 메뉴 아이템 로드
 function loadMenuItems() {
   const menuGrid = document.getElementById('menuGrid');
-  
+
   if (!allMenus || allMenus.length === 0) {
     menuGrid.innerHTML = '<div class="empty-order">메뉴 데이터가 없습니다</div>';
     return;
   }
-  
+
   const menuHTML = allMenus.map(menu => `
     <div class="menu-item-card" onclick="addMenuItem('${menu.name}', ${menu.price})" data-category="${menu.category || '기타'}">
       <div class="menu-item-name">${menu.name}</div>
       <div class="menu-item-price">₩${menu.price.toLocaleString()}</div>
     </div>
   `).join('');
-  
+
   menuGrid.innerHTML = menuHTML;
 }
 
@@ -1804,7 +1816,7 @@ function filterMenuCategory(category) {
   // 버튼 활성화 상태 변경
   document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
   event.target.classList.add('active');
-  
+
   // 메뉴 아이템 필터링
   const menuCards = document.querySelectorAll('.menu-item-card');
   menuCards.forEach(card => {
@@ -1823,7 +1835,7 @@ let currentOrderItems = [];
 // 메뉴 아이템 추가
 function addMenuItem(name, price) {
   const existingItem = currentOrderItems.find(item => item.name === name);
-  
+
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
@@ -1833,7 +1845,7 @@ function addMenuItem(name, price) {
       quantity: 1
     });
   }
-  
+
   updateOrderDisplay();
   updateSubmitButton();
 }
@@ -1842,13 +1854,13 @@ function addMenuItem(name, price) {
 function updateOrderDisplay() {
   const orderItemsContainer = document.getElementById('orderItems');
   const totalAmountElement = document.getElementById('totalAmount');
-  
+
   if (currentOrderItems.length === 0) {
     orderItemsContainer.innerHTML = '<div class="empty-order">메뉴를 선택해주세요</div>';
     totalAmountElement.textContent = '₩0';
     return;
   }
-  
+
   const itemsHTML = currentOrderItems.map((item, index) => `
     <div class="order-item-row">
       <div class="item-name">${item.name}</div>
@@ -1860,9 +1872,9 @@ function updateOrderDisplay() {
       <div class="item-price">₩${(item.price * item.quantity).toLocaleString()}</div>
     </div>
   `).join('');
-  
+
   orderItemsContainer.innerHTML = itemsHTML;
-  
+
   const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   totalAmountElement.textContent = `₩${totalAmount.toLocaleString()}`;
 }
@@ -1871,11 +1883,11 @@ function updateOrderDisplay() {
 function changeQuantity(index, change) {
   const item = currentOrderItems[index];
   item.quantity += change;
-  
+
   if (item.quantity <= 0) {
     currentOrderItems.splice(index, 1);
   }
-  
+
   updateOrderDisplay();
   updateSubmitButton();
 }
@@ -1885,14 +1897,14 @@ function updateSubmitButton() {
   const submitBtn = document.getElementById('submitOrderBtn');
   const customerType = document.querySelector('input[name="customerType"]:checked').value;
   const hasItems = currentOrderItems.length > 0;
-  
+
   let isValid = hasItems;
-  
+
   if (customerType === 'guest') {
     const guestPhone = document.getElementById('guestPhone').value.trim();
     isValid = hasItems && guestPhone.length > 0;
   }
-  
+
   submitBtn.disabled = !isValid;
 }
 
@@ -1901,7 +1913,7 @@ async function submitOrder() {
   try {
     const customerType = document.querySelector('input[name="customerType"]:checked').value;
     const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    
+
     const orderData = {
       storeId: currentStore.id,
       storeName: currentStore.name,
@@ -1910,14 +1922,14 @@ async function submitOrder() {
       totalAmount: totalAmount,
       isGuestOrder: customerType === 'guest'
     };
-    
+
     if (customerType === 'guest') {
       orderData.guestPhone = document.getElementById('guestPhone').value.trim();
       orderData.guestName = document.getElementById('guestName').value.trim();
     }
-    
+
     console.log('💳 POS 주문 제출:', orderData);
-    
+
     const response = await fetch('/api/pos/orders', {
       method: 'POST',
       headers: {
@@ -1925,13 +1937,13 @@ async function submitOrder() {
       },
       body: JSON.stringify(orderData)
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       alert(`주문이 성공적으로 추가되었습니다!\n주문번호: ${result.orderId}`);
       closeOrderModal();
-      
+
       // 테이블 세부 정보 새로고침
       if (currentTable) {
         updateDetailPanel(currentTable);
@@ -1939,7 +1951,7 @@ async function submitOrder() {
     } else {
       alert('주문 처리 실패: ' + result.error);
     }
-    
+
   } catch (error) {
     console.error('❌ POS 주문 제출 실패:', error);
     alert('주문 처리 중 오류가 발생했습니다.');
@@ -1949,12 +1961,12 @@ async function submitOrder() {
 // 주문 모달 닫기
 function closeOrderModal(event) {
   if (event && event.target !== event.currentTarget) return;
-  
+
   const modal = document.getElementById('orderModal');
   if (modal) {
     modal.remove();
   }
-  
+
   // 주문 상태 초기화
   currentOrderItems = [];
 }
@@ -2071,7 +2083,7 @@ function initWebSocket(storeId) {
 function updateConnectionStatus(isConnected) {
   const syncTime = document.getElementById('syncTime');
   const syncIndicator = document.getElementById('syncIndicator');
-  
+
   if (syncTime && syncIndicator) {
     if (isConnected) {
       syncTime.textContent = '실시간 연결됨';
@@ -2086,9 +2098,9 @@ function updateConnectionStatus(isConnected) {
 // POS 실시간 업데이트 처리
 function handlePOSRealTimeUpdate(data) {
   const { type, storeId, timestamp, updateData } = data;
-  
+
   console.log(`📡 POS 실시간 업데이트 처리: ${type}`);
-  
+
   switch (type) {
     case 'order-update':
       refreshCurrentTableOrders();
@@ -2108,20 +2120,20 @@ function handlePOSRealTimeUpdate(data) {
 // 새 주문 알림 처리
 function handleNewOrderNotification(data) {
   const { orderId, storeName, tableNumber, customerName, itemCount, totalAmount, source } = data;
-  
+
   console.log(`🆕 새 주문 알림 수신 - 주문 ${orderId}, 테이블 ${tableNumber}, 출처: ${source}`);
-  
+
   showNotification(
     `🆕 새 주문 접수! (${source})\n테이블 ${tableNumber} | ${customerName} | ${itemCount}개 메뉴\n₩${totalAmount.toLocaleString()}`, 
     'success'
   );
-  
+
   // 현재 보고 있는 테이블이면 즉시 새로고침
   if (currentTable && currentTable == tableNumber) {
     console.log(`🔄 현재 테이블 ${currentTable} 세부 정보 새로고침`);
     setTimeout(() => updateDetailPanel(currentTable), 500);
   }
-  
+
   // 테이블 맵 새로고침
   refreshTableMap();
 }
@@ -2129,21 +2141,21 @@ function handleNewOrderNotification(data) {
 // 테이블 상태 업데이트 처리
 function handleTableStatusUpdate(data) {
   const { tableNumber, isOccupied, source, occupiedSince } = data;
-  
+
   console.log(`🪑 테이블 ${tableNumber} 상태 변경: ${isOccupied ? '점유' : '해제'} (${source})`);
-  
+
   // 테이블 맵 새로고침
   refreshTableMap();
-  
+
   // 현재 보고 있는 테이블이면 세부 정보 새로고침
   if (currentTable && currentTable == tableNumber) {
     console.log(`🔄 테이블 ${currentTable} 상태 변경으로 인한 세부 정보 새로고침`);
     setTimeout(() => updateDetailPanel(currentTable), 500);
   }
-  
+
   const statusText = isOccupied ? '점유됨' : '해제됨';
   const sourceText = source === 'TLL' ? 'TLL 주문' : source === 'TLM' ? 'TLM 관리' : 'POS';
-  
+
   showNotification(
     `🪑 테이블 ${tableNumber} ${statusText} (${sourceText})`,
     isOccupied ? 'warning' : 'success'
@@ -2182,7 +2194,7 @@ function showNotification(message, type = 'info') {
   if (existingNotification) {
     existingNotification.remove();
   }
-  
+
   const notification = document.createElement('div');
   notification.className = `pos-notification ${type}`;
   notification.innerHTML = `
@@ -2191,9 +2203,9 @@ function showNotification(message, type = 'info') {
       <button class="notification-close" onclick="this.parentElement.parentElement.remove()">✕</button>
     </div>
   `;
-  
+
   document.body.appendChild(notification);
-  
+
   // 5초 후 자동 제거
   setTimeout(() => {
     if (notification.parentNode) {
