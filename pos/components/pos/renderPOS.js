@@ -236,7 +236,6 @@ window.showUnassignedOrders = showUnassignedOrders;
 window.openQuickMenu = openQuickMenu;
 window.viewOrders = viewOrders;
 window.moveTable = moveTable;
-window.selectStore = selectStore;
 window.switchHomeMode = switchHomeMode; // Keeping this
 window.selectTableFromMap = selectTableFromMap; // Keeping this
 window.filterOrders = filterOrders; // Keeping this
@@ -2986,36 +2985,11 @@ function showPaymentModalForPendingOrder(orderData) {
           </div>
         </div>
 
-        <div class="modal-footer" style="
-          padding: 16px 20px;
-          border-top: 1px solid #e2e8f0;
-          display: flex;
-          gap: 12px;
-          justify-content: flex-end;
-          flex-shrink: 0;
-        ">
-          <button class="btn btn-secondary" onclick="closePaymentModal()" style="
-            padding: 10px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            background: white;
-            color: #64748b;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-          ">취소</button>
-          <button class="btn btn-primary" onclick="processPayment()" id="processPaymentBtn" style="
-            padding: 10px 16px;
-            border: none;
-            border-radius: 6px;
-            background: #3b82f6;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-          ">결제 처리</button>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePaymentModal()">취소</button>
+          <button class="btn btn-primary" onclick="processPayment()" id="processPaymentBtn" disabled>
+            결제 처리
+          </button>
         </div>
       </div>
     </div>

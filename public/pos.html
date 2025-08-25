@@ -17,19 +17,27 @@
   <script src="/shared/utils/logOut.js"></script>
   <script src="/shared/utils/localStorage.js"></script>
   
-  <!-- POS 모듈들 -->
-  <script src="/pos/utils/posSocket.js"></script>
+  <!-- POS 모듈들 (로딩 순서 중요) -->
   <script src="/pos/utils/posNotification.js"></script>
+  <script src="/pos/utils/posSocket.js"></script>
   <script src="/pos/components/pos/posLayout.js"></script>
   <script src="/pos/components/pos/tableMap.js"></script>
+  <script src="/pos/components/pos/detailPanel.js"></script>
   <script src="/pos/components/pos/orderModal.js"></script>
   <script src="/pos/components/pos/paymentModal.js"></script>
-  <script src="/pos/components/pos/detailPanel.js"></script>
   <script src="/pos/components/pos/renderPOS.js"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🚀 TableLink POS 시스템 시작');
+      
+      // 전역 상태 초기화
+      window.currentStore = null;
+      window.currentTable = null;
+      window.allMenus = [];
+      window.allTables = [];
+      window.homeMode = 'table_map';
+      
       if (typeof renderPOS === 'function') {
         renderPOS();
       } else {
