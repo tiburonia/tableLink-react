@@ -6,7 +6,6 @@ let categories = [];
 let selectedCategory = 'all';
 let allTables = [];
 let homeMode = 'table_map'; // 'table_map' 또는 'order_list'
-let tableFilter = 'all';
 let orderFilter = 'all';
 
 // WebSocket 연결 상태는 posSocket.js에서 관리
@@ -2468,11 +2467,9 @@ function filterMenuCategory(category) {
   });
 }
 
-// 현재 주문 상태
-// let currentOrderItems = []; // Replaced with window.currentOrderItems
-
 // 메뉴 아이템 추가
 function addMenuItem(name, price) {
+  // currentOrderItems 배열이 없으면 초기화
   if (!window.currentOrderItems) {
     window.currentOrderItems = [];
   }
