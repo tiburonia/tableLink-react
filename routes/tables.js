@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -66,7 +65,7 @@ router.post('/update', async (req, res) => {
 
     const table = tableResult.rows[0];
     const occupiedSince = isOccupied ? new Date() : null;
-    
+
     await pool.query(`
       UPDATE store_tables 
       SET is_occupied = $1, occupied_since = $2 
@@ -78,18 +77,18 @@ router.post('/update', async (req, res) => {
       [table.unique_id]
     );
 
+    // POS 실시간 테이블 상태 업데이트 알림
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: tableName.replace('테이블 ', ''),
+        isOccupied: isOccupied,
+        source: 'TLM'
+      });
+    }
+
     res.json({
       success: true,
-      message: `${table.table_name} 상태가 ${isOccupied ? '사용중' : '빈 테이블'}으로 변경되었습니다`,
-      table: {
-        id: updatedTable.rows[0].id,
-        uniqueId: updatedTable.rows[0].unique_id,
-        tableNumber: updatedTable.rows[0].table_number,
-        tableName: updatedTable.rows[0].table_name,
-        seats: updatedTable.rows[0].seats,
-        isOccupied: updatedTable.rows[0].is_occupied,
-        occupiedSince: updatedTable.rows[0].occupied_since
-      }
+      message: `테이블 ${tableName} 상태가 업데이트되었습니다`
     });
 
   } catch (error) {
@@ -109,7 +108,7 @@ router.post('/occupy', async (req, res) => {
     const allTables = await pool.query(`
       SELECT * FROM store_tables WHERE store_id = $1
     `, [storeId]);
-    
+
     console.log(`📊 매장 ${storeId}의 전체 테이블:`, allTables.rows.map(t => `${t.table_name} (ID: ${t.id})`));
 
     const existingTable = await pool.query(`
@@ -161,6 +160,15 @@ router.post('/occupy', async (req, res) => {
         console.error('❌ [TLL] 테이블 자동 해제 실패:', error);
       }
     }, 2 * 60 * 1000);
+
+    // POS 실시간 테이블 상태 업데이트 알림
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: tableName.replace('테이블 ', ''),
+        isOccupied: true,
+        source: 'TLL'
+      });
+    }
 
     res.json({
       success: true,
@@ -226,6 +234,15 @@ router.post('/occupy-manual', async (req, res) => {
       }, duration * 60 * 1000);
     }
 
+    // POS 실시간 테이블 상태 업데이트 알림
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: tableName.replace('테이블 ', ''),
+        isOccupied: true,
+        source: 'TLM'
+      });
+    }
+
     const message = duration > 0 
       ? `${table.table_name}이 점유 상태로 변경되었습니다. ${duration}분 후 자동 해제됩니다.`
       : `${table.table_name}이 점유 상태로 변경되었습니다. (수동 해제 필요)`;
@@ -242,7 +259,7 @@ router.post('/occupy-manual', async (req, res) => {
     console.error('❌ [TLM] 테이블 점유 상태 설정 실패:', error);
     res.status(500).json({ error: '테이블 점유 상태 설정 실패' });
   }
-  
+
 });
 
 module.exports = router;

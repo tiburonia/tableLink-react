@@ -10,6 +10,10 @@ let homeMode = 'table_map'; // 'table_map' 또는 'order_list'
 let tableFilter = 'all';
 let orderFilter = 'all';
 
+// WebSocket 연결 상태
+let posSocket = null;
+let isWebSocketConnected = false;
+
 // POS 시스템 초기화
 async function renderPOS() {
   try {
@@ -25,6 +29,9 @@ async function renderPOS() {
     if (storeId) {
       console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);
       await loadStoreById(storeId);
+      
+      // WebSocket 연결 시작
+      initWebSocket(storeId);
     } else {
       // 매장 정보 로드 (기존에는 매장 선택 UI를 통해 로드했으나, 이제는 URL 필수)
       showError('매장 ID가 URL에 포함되어야 합니다. (예: /pos/123)');
@@ -66,8 +73,8 @@ function renderPOSLayout() {
             <span class="notification-badge">3</span>
           </button>
           <div class="sync-status">
-            <span class="sync-time">마지막 동기화: 방금 전</span>
-            <div class="sync-indicator active"></div>
+            <span class="sync-time" id="syncTime">연결 중...</span>
+            <div class="sync-indicator" id="syncIndicator"></div>
           </div>
           <div class="home-mode-toggle">
             <button class="mode-btn ${homeMode === 'table_map' ? 'active' : ''}" onclick="switchHomeMode('table_map')">
@@ -296,6 +303,82 @@ function renderPOSLayout() {
         height: 8px;
         border-radius: 50%;
         background: #10b981;
+        transition: background-color 0.3s ease;
+      }
+
+      .sync-indicator.inactive {
+        background: #ef4444;
+      }
+
+      /* POS 실시간 알림 스타일 */
+      .pos-notification {
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        max-width: 400px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        border-left: 4px solid #3b82f6;
+        animation: slideInFromRight 0.3s ease-out;
+      }
+
+      .pos-notification.success {
+        border-left-color: #10b981;
+      }
+
+      .pos-notification.warning {
+        border-left-color: #f59e0b;
+      }
+
+      .pos-notification.error {
+        border-left-color: #ef4444;
+      }
+
+      .notification-content {
+        padding: 16px 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+      }
+
+      .notification-message {
+        flex: 1;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #374151;
+        white-space: pre-line;
+      }
+
+      .notification-close {
+        background: none;
+        border: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: #9ca3af;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .notification-close:hover {
+        color: #6b7280;
+      }
+
+      @keyframes slideInFromRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
       }
 
       .home-mode-toggle {
@@ -1899,6 +1982,201 @@ function moveTable() {
 
 function processPayment() {
   alert('결제 처리 기능 - 개발 예정');
+}
+
+// WebSocket 초기화
+function initWebSocket(storeId) {
+  try {
+    console.log(`🔌 POS WebSocket 연결 시작... (매장 ID: ${storeId})`);
+
+    // Socket.IO 클라이언트 연결
+    posSocket = io({
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    });
+
+    // 연결 성공
+    posSocket.on('connect', () => {
+      console.log('✅ POS WebSocket 연결 성공:', posSocket.id);
+      isWebSocketConnected = true;
+
+      // POS 룸 참여
+      posSocket.emit('join-pos-room', parseInt(storeId));
+      console.log(`📟 매장 ${storeId} POS 룸 참여 요청 전송`);
+
+      // 연결 상태 표시 업데이트
+      updateConnectionStatus(true);
+      showNotification('🔌 실시간 연결 활성화');
+    });
+
+    // 연결 해제
+    posSocket.on('disconnect', (reason) => {
+      console.log('❌ POS WebSocket 연결 해제:', reason);
+      isWebSocketConnected = false;
+      updateConnectionStatus(false);
+      showNotification('⚠️ 실시간 연결 해제됨', 'warning');
+    });
+
+    // 재연결 시도
+    posSocket.on('reconnect', (attemptNumber) => {
+      console.log('🔄 POS WebSocket 재연결 성공:', attemptNumber);
+      posSocket.emit('join-pos-room', parseInt(storeId));
+      isWebSocketConnected = true;
+      updateConnectionStatus(true);
+      showNotification('🔄 실시간 연결 복구');
+    });
+
+    // POS 실시간 업데이트 수신
+    posSocket.on('pos-update', (data) => {
+      console.log('📡 POS 실시간 업데이트 수신:', data);
+      handlePOSRealTimeUpdate(data);
+    });
+
+    // 새 주문 알림 수신
+    posSocket.on('new-order', (data) => {
+      console.log('🆕 새 주문 실시간 알림 수신:', data);
+      handleNewOrderNotification(data);
+    });
+
+    // 테이블 상태 변경 알림
+    posSocket.on('table-update', (data) => {
+      console.log('🪑 테이블 상태 실시간 업데이트:', data);
+      handleTableStatusUpdate(data);
+    });
+
+  } catch (error) {
+    console.error('❌ POS WebSocket 초기화 실패:', error);
+    updateConnectionStatus(false);
+  }
+}
+
+// 연결 상태 업데이트
+function updateConnectionStatus(isConnected) {
+  const syncTime = document.getElementById('syncTime');
+  const syncIndicator = document.getElementById('syncIndicator');
+  
+  if (syncTime && syncIndicator) {
+    if (isConnected) {
+      syncTime.textContent = '실시간 연결됨';
+      syncIndicator.className = 'sync-indicator active';
+    } else {
+      syncTime.textContent = '연결 끊김';
+      syncIndicator.className = 'sync-indicator inactive';
+    }
+  }
+}
+
+// POS 실시간 업데이트 처리
+function handlePOSRealTimeUpdate(data) {
+  const { type, storeId, timestamp, updateData } = data;
+  
+  console.log(`📡 POS 실시간 업데이트 처리: ${type}`);
+  
+  switch (type) {
+    case 'order-update':
+      refreshCurrentTableOrders();
+      updateOrderCounts();
+      break;
+    case 'table-update':
+      refreshTableMap();
+      break;
+    case 'menu-update':
+      loadStoreDetails(storeId);
+      break;
+    default:
+      console.log('🔄 알 수 없는 업데이트 타입:', type);
+  }
+}
+
+// 새 주문 알림 처리
+function handleNewOrderNotification(data) {
+  const { orderId, storeName, tableNumber, customerName, itemCount, totalAmount } = data;
+  
+  showNotification(
+    `🆕 새 주문 접수!\n테이블 ${tableNumber} | ${itemCount}개 메뉴 | ₩${totalAmount.toLocaleString()}`, 
+    'success'
+  );
+  
+  // 현재 보고 있는 테이블이면 즉시 새로고침
+  if (currentTable && currentTable == tableNumber) {
+    setTimeout(() => updateDetailPanel(currentTable), 1000);
+  }
+  
+  // 테이블 맵 새로고침
+  refreshTableMap();
+}
+
+// 테이블 상태 업데이트 처리
+function handleTableStatusUpdate(data) {
+  const { tableNumber, isOccupied, source } = data;
+  
+  console.log(`🪑 테이블 ${tableNumber} 상태 변경: ${isOccupied ? '점유' : '해제'} (${source})`);
+  
+  // 테이블 맵 새로고침
+  refreshTableMap();
+  
+  // 현재 보고 있는 테이블이면 세부 정보 새로고침
+  if (currentTable && currentTable == tableNumber) {
+    updateDetailPanel(currentTable);
+  }
+  
+  showNotification(
+    `🪑 테이블 ${tableNumber} ${isOccupied ? '점유됨' : '해제됨'}`,
+    isOccupied ? 'warning' : 'success'
+  );
+}
+
+// 테이블 맵 새로고침
+async function refreshTableMap() {
+  try {
+    await loadTables();
+    if (homeMode === 'table_map') {
+      renderTableMap();
+    }
+  } catch (error) {
+    console.error('❌ 테이블 맵 새로고침 실패:', error);
+  }
+}
+
+// 현재 테이블 주문 새로고침
+async function refreshCurrentTableOrders() {
+  if (currentTable) {
+    await updateDetailPanel(currentTable);
+  }
+}
+
+// 주문 카운트 업데이트 (스텁 함수 - 필요시 구현)
+function updateOrderCounts() {
+  // 주문 리스트 모드에서 카운트 업데이트 로직
+  console.log('📊 주문 카운트 업데이트');
+}
+
+// 알림 표시 함수
+function showNotification(message, type = 'info') {
+  // 기존 알림 제거
+  const existingNotification = document.querySelector('.pos-notification');
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+  
+  const notification = document.createElement('div');
+  notification.className = `pos-notification ${type}`;
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-message">${message}</span>
+      <button class="notification-close" onclick="this.parentElement.parentElement.remove()">✕</button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // 5초 후 자동 제거
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
 }
 
 // 전역 함수들을 window 객체에 등록

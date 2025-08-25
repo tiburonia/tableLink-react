@@ -154,6 +154,7 @@ async function checkAndReleaseExpiredTables() {
 
 // WebSocket 연결 관리
 const kdsClients = new Map(); // storeId -> Set of socket IDs
+const posClients = new Map(); // storeId -> Set of socket IDs
 
 io.on('connection', (socket) => {
   console.log('🔌 클라이언트 연결:', socket.id);
@@ -186,6 +187,34 @@ io.on('connection', (socket) => {
     console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
   });
 
+  // POS 룸 참여
+  socket.on('join-pos-room', (storeId) => {
+    const roomName = `pos-store-${storeId}`;
+    socket.join(roomName);
+
+    if (!posClients.has(storeId)) {
+      posClients.set(storeId, new Set());
+    }
+    posClients.get(storeId).add(socket.id);
+
+    console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여`);
+  });
+
+  // POS 룸 나가기
+  socket.on('leave-pos-room', (storeId) => {
+    const roomName = `pos-store-${storeId}`;
+    socket.leave(roomName);
+
+    if (posClients.has(storeId)) {
+      posClients.get(storeId).delete(socket.id);
+      if (posClients.get(storeId).size === 0) {
+        posClients.delete(storeId);
+      }
+    }
+
+    console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
+  });
+
   // 연결 해제
   socket.on('disconnect', () => {
     console.log('🔌 클라이언트 연결 해제:', socket.id);
@@ -196,6 +225,16 @@ io.on('connection', (socket) => {
         clientSet.delete(socket.id);
         if (clientSet.size === 0) {
           kdsClients.delete(storeId);
+        }
+      }
+    }
+
+    // 모든 POS 룸에서 제거
+    for (const [storeId, clientSet] of posClients.entries()) {
+      if (clientSet.has(socket.id)) {
+        clientSet.delete(socket.id);
+        if (clientSet.size === 0) {
+          posClients.delete(storeId);
         }
       }
     }
@@ -230,10 +269,62 @@ function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
   ));
 }
 
+// POS 실시간 업데이트 함수
+function broadcastPOSUpdate(storeId, updateType = 'order-update', data = null) {
+  const roomName = `pos-store-${storeId}`;
+  const clientCount = posClients.get(storeId)?.size || 0;
+
+  console.log(`📡 POS 브로드캐스트 시도 - 매장 ${storeId}, 타입: ${updateType}, 연결된 클라이언트: ${clientCount}개`);
+
+  if (clientCount > 0) {
+    const updateData = {
+      type: updateType,
+      storeId: parseInt(storeId),
+      timestamp: new Date().toISOString(),
+      updateData: data
+    };
+
+    console.log(`📡 POS 실시간 업데이트 전송 중 - 룸: ${roomName}`, updateData);
+    io.to(roomName).emit('pos-update', updateData);
+    console.log(`✅ POS 실시간 업데이트 전송 완료 - 매장 ${storeId}`);
+  } else {
+    console.log(`⚠️ POS 클라이언트 없음 - 매장 ${storeId}에 연결된 클라이언트가 없습니다`);
+  }
+}
+
+// 새 주문 알림 브로드캐스트
+function broadcastNewOrder(storeId, orderData) {
+  const posRoomName = `pos-store-${storeId}`;
+  const posClientCount = posClients.get(storeId)?.size || 0;
+
+  if (posClientCount > 0) {
+    console.log(`📡 POS 새 주문 알림 전송 - 매장 ${storeId}`, orderData);
+    io.to(posRoomName).emit('new-order', orderData);
+  }
+}
+
+// 테이블 상태 변경 브로드캐스트
+function broadcastTableUpdate(storeId, tableData) {
+  const posRoomName = `pos-store-${storeId}`;
+  const posClientCount = posClients.get(storeId)?.size || 0;
+
+  if (posClientCount > 0) {
+    console.log(`📡 POS 테이블 상태 업데이트 전송 - 매장 ${storeId}`, tableData);
+    io.to(posRoomName).emit('table-update', tableData);
+  }
+}
+
 // 전역으로 WebSocket 인스턴스 노출
 global.kdsWebSocket = {
   broadcast: broadcastKDSUpdate,
   getConnectedClients: (storeId) => kdsClients.get(storeId)?.size || 0
+};
+
+global.posWebSocket = {
+  broadcast: broadcastPOSUpdate,
+  broadcastNewOrder: broadcastNewOrder,
+  broadcastTableUpdate: broadcastTableUpdate,
+  getConnectedClients: (storeId) => posClients.get(storeId)?.size || 0
 };
 
 // 서버 실행

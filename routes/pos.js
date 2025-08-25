@@ -250,6 +250,20 @@ router.post('/orders', async (req, res) => {
         source: 'POS'
       });
     }
+
+    // POS 실시간 새 주문 알림
+    if (global.posWebSocket) {
+      console.log(`📡 POS 주문 ${orderId} 실시간 알림 전송`);
+      global.posWebSocket.broadcastNewOrder(storeId, {
+        orderId: orderId,
+        storeName: storeName,
+        tableNumber: tableNumber,
+        customerName: isGuestOrder ? (guestName || '게스트') : 'POS 주문',
+        itemCount: items.length,
+        totalAmount: totalAmount,
+        source: 'POS'
+      });
+    }
     
     res.json({
       success: true,
