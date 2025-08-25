@@ -199,7 +199,7 @@ io.on('connection', (socket) => {
 
     const clientCount = posClients.get(storeId).size;
     console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여 (총 ${clientCount}개 클라이언트)`);
-    
+
     // 참여 확인 응답
     socket.emit('join-pos-room-success', {
       storeId: parseInt(storeId),
@@ -321,18 +321,34 @@ function broadcastTableUpdate(storeId, tableData) {
   }
 }
 
+// POS WebSocket 글로벌 객체
+global.posWebSocket = {
+  broadcast: (storeId, eventName, data) => {
+    broadcastPOSUpdate(storeId, eventName, data);
+  },
+  broadcastTableUpdate: (storeId, tableData) => {
+    const roomName = `pos-store-${storeId}`;
+    const clientCount = posClients.get(storeId)?.size || 0;
+
+    if (clientCount > 0) {
+      console.log(`📡 POS 테이블 상태 업데이트 전송 - 매장 ${storeId}, 테이블 ${tableData.tableNumber}`);
+      io.to(roomName).emit('table-update', {
+        type: 'table-update',
+        storeId: parseInt(storeId),
+        timestamp: new Date().toISOString(),
+        updateData: tableData
+      });
+      console.log(`✅ POS 테이블 상태 업데이트 전송 완료`);
+    }
+  }
+};
+
 // 전역으로 WebSocket 인스턴스 노출
 global.kdsWebSocket = {
   broadcast: broadcastKDSUpdate,
   getConnectedClients: (storeId) => kdsClients.get(storeId)?.size || 0
 };
 
-global.posWebSocket = {
-  broadcast: broadcastPOSUpdate,
-  broadcastNewOrder: broadcastNewOrder,
-  broadcastTableUpdate: broadcastTableUpdate,
-  getConnectedClients: (storeId) => posClients.get(storeId)?.size || 0
-};
 
 // 서버 실행
 server.listen(PORT, '0.0.0.0', () => {

@@ -201,6 +201,24 @@ router.post('/orders', async (req, res) => {
     // 메모리에 저장
     pendingOrders.set(orderKey, existingOrder);
 
+    // 🪑 테이블 자동 점유 처리 (POS 주문 추가 시)
+    try {
+      console.log(`🔒 POS 주문 추가로 인한 테이블 ${tableNumber} 자동 점유 처리`);
+      
+      await pool.query(`
+        UPDATE store_tables 
+        SET is_occupied = true, 
+            occupied_since = CURRENT_TIMESTAMP,
+            auto_release_source = 'POS'
+        WHERE store_id = $1 AND table_number = $2 AND is_occupied = false
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+      
+      console.log(`✅ 테이블 ${tableNumber} POS 주문으로 인한 자동 점유 완료`);
+    } catch (tableError) {
+      console.error('❌ 테이블 자동 점유 실패:', tableError);
+      // 테이블 점유 실패해도 주문은 처리되도록 함
+    }
+
     // 📡 POS 실시간 업데이트
     if (global.posWebSocket) {
       global.posWebSocket.broadcast(storeId, 'order-update', {
@@ -208,6 +226,14 @@ router.post('/orders', async (req, res) => {
         action: 'order-added',
         itemCount: existingOrder.items.length,
         totalAmount: existingOrder.totalAmount
+      });
+
+      // 테이블 상태 변경 알림
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: parseInt(tableNumber),
+        isOccupied: true,
+        source: 'POS',
+        occupiedSince: new Date().toISOString()
       });
     }
 
@@ -535,6 +561,24 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     pendingOrders.delete(orderKey);
     console.log(`🗑️ 테이블 ${tableNumber} 메모리 주문 제거 완료`);
 
+    // 🪑 결제 완료 후 테이블 해제 처리
+    try {
+      console.log(`🔓 POS 결제 완료로 인한 테이블 ${tableNumber} 자동 해제 처리`);
+      
+      await client.query(`
+        UPDATE store_tables 
+        SET is_occupied = false, 
+            occupied_since = NULL,
+            auto_release_source = NULL
+        WHERE store_id = $1 AND table_number = $2
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+      
+      console.log(`✅ 테이블 ${tableNumber} POS 결제 완료로 인한 자동 해제 완료`);
+    } catch (tableError) {
+      console.error('❌ 테이블 자동 해제 실패:', tableError);
+      // 테이블 해제 실패해도 결제는 완료되도록 함
+    }
+
     // 📡 결제 완료 실시간 업데이트
     if (global.posWebSocket) {
       global.posWebSocket.broadcast(storeId, 'payment-completed', {
@@ -543,6 +587,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         paymentMethod: paymentMethod,
         finalAmount: pendingOrder.totalAmount,
         timestamp: new Date().toISOString()
+      });
+
+      // 테이블 해제 상태 변경 알림
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: parseInt(tableNumber),
+        isOccupied: false,
+        source: 'POS'
       });
     }
 
