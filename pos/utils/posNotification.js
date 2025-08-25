@@ -98,4 +98,4 @@ function showPOSNotification(message, type = 'info') {
 }
 
 // 전역 함수 등록
-window.showPOSNotification = showPOSNotification;
+window.showPOSNotification = showPOSNotification;indow.showPOSNotification = showPOSNotification;

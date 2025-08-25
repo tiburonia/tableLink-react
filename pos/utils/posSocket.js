@@ -85,17 +85,31 @@ function handlePOSRealTimeUpdate(data) {
 
   switch (type) {
     case 'order-update':
-      refreshCurrentTableOrders();
+      if (typeof refreshCurrentTableOrders === 'function') {
+        refreshCurrentTableOrders();
+      }
+      if (typeof updateOrderCounts === 'function') {
+        updateOrderCounts();
+      }
       break;
     case 'table-update':
-      refreshTableMap();
+      if (typeof refreshTableMap === 'function') {
+        refreshTableMap();
+      }
       break;
     case 'menu-update':
-      loadStoreDetails(storeId);
+      if (typeof loadStoreDetails === 'function') {
+        loadStoreDetails(storeId);
+      }
       break;
     default:
       console.log('🔄 알 수 없는 업데이트 타입:', type);
   }
+}
+
+// 주문 카운트 업데이트
+function updateOrderCounts() {
+  console.log('📊 주문 카운트 업데이트');
 }
 
 // 새 주문 알림 처리
@@ -109,9 +123,13 @@ function handleNewOrderNotification(data) {
   );
 
   if (window.currentTable && window.currentTable == tableNumber) {
-    setTimeout(() => updateDetailPanel(window.currentTable), 500);
+    if (typeof updateDetailPanel === 'function') {
+      setTimeout(() => updateDetailPanel(window.currentTable), 500);
+    }
   }
-  refreshTableMap();
+  if (typeof refreshTableMap === 'function') {
+    refreshTableMap();
+  }
 }
 
 // 테이블 상태 업데이트 처리
@@ -119,9 +137,13 @@ function handleTableStatusUpdate(data) {
   const { tableNumber, isOccupied, source, occupiedSince } = data;
   console.log(`🪑 테이블 ${tableNumber} 상태 변경: ${isOccupied ? '점유' : '해제'} (${source})`);
 
-  refreshTableMap();
+  if (typeof refreshTableMap === 'function') {
+    refreshTableMap();
+  }
   if (window.currentTable && window.currentTable == tableNumber) {
-    setTimeout(() => updateDetailPanel(window.currentTable), 500);
+    if (typeof updateDetailPanel === 'function') {
+      setTimeout(() => updateDetailPanel(window.currentTable), 500);
+    }
   }
 
   const statusText = isOccupied ? '점유됨' : '해제됨';
@@ -135,3 +157,4 @@ window.updateConnectionStatus = updateConnectionStatus;
 window.handlePOSRealTimeUpdate = handlePOSRealTimeUpdate;
 window.handleNewOrderNotification = handleNewOrderNotification;
 window.handleTableStatusUpdate = handleTableStatusUpdate;
+window.updateOrderCounts = updateOrderCounts;
