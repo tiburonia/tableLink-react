@@ -483,39 +483,46 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       if (customerType === 'guest') {
         // 비회원 처리
         if (guestPhone) {
-          // 전화번호 있는 게스트
-          const existingGuest = await client.query(
-            'SELECT phone, visit_count FROM guests WHERE phone = $1',
-            [guestPhone]
-          );
-
-          if (existingGuest.rows.length > 0) {
-            // 기존 게스트 - 방문 횟수 업데이트
-            const currentVisitCount = existingGuest.rows[0].visit_count || {};
-            const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
-
-            await client.query(`
-              UPDATE guests 
-              SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
-                  updated_at = CURRENT_TIMESTAMP
-              WHERE phone = $3
-            `, [`{${storeId}}`, storeVisitCount, guestPhone]);
-
-            console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
-          } else {
-            // 새 게스트 생성
-            const initialVisitCount = { [storeId]: 1 };
-
-            await client.query(
-              'INSERT INTO guests (phone, visit_count) VALUES ($1, $2)',
-              [guestPhone, JSON.stringify(initialVisitCount)]
+          try {
+            // 전화번호 있는 게스트
+            const existingGuest = await client.query(
+              'SELECT phone, visit_count FROM guests WHERE phone = $1',
+              [guestPhone]
             );
 
-            console.log(`✨ 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
-          }
+            if (existingGuest.rows.length > 0) {
+              // 기존 게스트 - 방문 횟수 업데이트
+              const currentVisitCount = existingGuest.rows[0].visit_count || {};
+              const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
 
-          currentGuestPhone = guestPhone;
-          finalCustomerName = guestName || `게스트 (${guestPhone})`;
+              await client.query(`
+                UPDATE guests 
+                SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE phone = $3
+              `, [`{${storeId}}`, storeVisitCount, guestPhone]);
+
+              console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
+            } else {
+              // 새 게스트 생성
+              const initialVisitCount = { [storeId]: 1 };
+
+              await client.query(
+                'INSERT INTO guests (phone, visit_count) VALUES ($1, $2)',
+                [guestPhone, JSON.stringify(initialVisitCount)]
+              );
+
+              console.log(`✨ 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
+            }
+
+            currentGuestPhone = guestPhone;
+            finalCustomerName = guestName || `게스트 (${guestPhone})`;
+          } catch (guestError) {
+            console.error('⚠️ 게스트 처리 실패:', guestError);
+            // 게스트 처리 실패해도 주문은 계속 진행
+            currentGuestPhone = guestPhone;
+            finalCustomerName = guestName || `게스트 (${guestPhone})`;
+          }
         } else {
           // 익명 게스트
           finalCustomerName = '익명 게스트';
@@ -523,31 +530,39 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         }
       } else {
         // 회원 처리 (POS 전용 사용자)
-        const posUserId = 'pos_user';
-        const existingUser = await client.query(
-          'SELECT id, name FROM users WHERE id = $1',
-          [posUserId]
-        );
+        try {
+          const posUserId = `pos_user_${storeId}`;
+          const existingUser = await client.query(
+            'SELECT id, name FROM users WHERE id = $1',
+            [posUserId]
+          );
 
-        if (existingUser.rows.length === 0) {
-          await client.query(`
-            INSERT INTO users (id, name, phone, email, point, coupons, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `, [
-            posUserId,
-            'POS 사용자',
-            '000-0000-0000',
-            'pos@system.com',
-            0,
-            JSON.stringify({ unused: [], used: [] }),
-            new Date()
-          ]);
-          console.log('✅ POS 전용 사용자 생성');
+          if (existingUser.rows.length === 0) {
+            await client.query(`
+              INSERT INTO users (id, name, phone, email, point, coupons, created_at)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              ON CONFLICT (id) DO NOTHING
+            `, [
+              posUserId,
+              `POS 매장${storeId} 사용자`,
+              '000-0000-0000',
+              `pos${storeId}@system.com`,
+              0,
+              JSON.stringify({ unused: [], used: [] }),
+              new Date()
+            ]);
+            console.log(`✅ POS 전용 사용자 생성: ${posUserId}`);
+          }
+
+          currentUserId = posUserId;
+          finalCustomerName = `POS 매장${storeId} 회원`;
+          console.log('👤 POS 회원 결제');
+        } catch (userError) {
+          console.error('⚠️ POS 사용자 생성 실패:', userError);
+          // 사용자 생성 실패 시 비회원으로 처리
+          finalCustomerName = 'POS 익명 주문';
+          console.log('👤 POS 사용자 생성 실패 - 익명으로 처리');
         }
-
-        currentUserId = posUserId;
-        finalCustomerName = 'POS 회원';
-        console.log('👤 POS 회원 결제');
       }
     }
 
@@ -622,26 +637,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       ]);
     }
 
-    // 포인트 적립 처리 (회원인 경우)
-    if (currentUserId && currentUserId !== 'pos_user') {
-      try {
-        await client.query(
-          'SELECT update_user_store_stats($1, $2, $3, $4)',
-          [currentUserId, pendingOrder.storeId, pendingOrder.totalAmount, new Date()]
-        );
-        console.log(`🎉 POS 결제 포인트 적립 완료`);
-      } catch (pointError) {
-        console.error('⚠️ 포인트 적립 실패:', pointError);
-      }
-    }
-
-    await client.query('COMMIT');
-
-    // 메모리에서 주문 제거
-    pendingOrders.delete(orderKey);
-    console.log(`🗑️ 테이블 ${tableNumber} 메모리 주문 제거 완료`);
-
-    // 🪑 결제 완료 후 테이블 해제 처리
+    // 🪑 결제 완료 후 테이블 해제 처리 (트랜잭션 내에서 실행)
     try {
       console.log(`🔓 POS 결제 완료로 인한 테이블 ${tableNumber} 자동 해제 처리`);
 
@@ -658,6 +654,34 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       console.error('❌ 테이블 자동 해제 실패:', tableError);
       // 테이블 해제 실패해도 결제는 완료되도록 함
     }
+
+    // 포인트 적립 처리 (회원인 경우)
+    if (currentUserId && !currentUserId.startsWith('pos_user')) {
+      try {
+        // user_store_stats 테이블에 레코드가 없을 수도 있으므로 UPSERT 방식 사용
+        await client.query(`
+          INSERT INTO user_store_stats (user_id, store_id, points, total_spent, visit_count, updated_at)
+          VALUES ($1, $2, $3, $4, 1, CURRENT_TIMESTAMP)
+          ON CONFLICT (user_id, store_id) 
+          DO UPDATE SET 
+            points = user_store_stats.points + $3,
+            total_spent = user_store_stats.total_spent + $4,
+            visit_count = user_store_stats.visit_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        `, [currentUserId, pendingOrder.storeId, Math.floor(pendingOrder.totalAmount * 0.1), pendingOrder.totalAmount]);
+
+        console.log(`🎉 POS 결제 포인트 적립 완료: ${Math.floor(pendingOrder.totalAmount * 0.1)}원`);
+      } catch (pointError) {
+        console.error('⚠️ 포인트 적립 실패:', pointError);
+        // 포인트 적립 실패해도 결제는 완료되도록 함
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // 메모리에서 주문 제거
+    pendingOrders.delete(orderKey);
+    console.log(`🗑️ 테이블 ${tableNumber} 메모리 주문 제거 완료`);
 
     // 📡 결제 완료 실시간 업데이트
     if (global.posWebSocket) {
