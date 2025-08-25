@@ -1,7 +1,6 @@
 // POS 시스템 상태
 let currentStore = null;
 let currentTable = null;
-let currentOrder = [];
 let allMenus = [];
 let categories = [];
 let selectedCategory = 'all';
@@ -79,10 +78,10 @@ async function loadStoreById(storeId) {
     }
 
     const store = data.store;
-    currentStore = { 
-      id: parseInt(storeId), 
-      name: store.name, 
-      category: store.category || '기타' 
+    currentStore = {
+      id: parseInt(storeId),
+      name: store.name,
+      category: store.category || '기타'
     };
     window.currentStore = currentStore; // Update global state
 
@@ -687,13 +686,13 @@ function renderPOSLayout() {
         background: #eff6ff;
       }
 
-      .table-item.available { 
-        border-color: #10b981; 
-        background: #ecfdf5; 
+      .table-item.available {
+        border-color: #10b981;
+        background: #ecfdf5;
       }
-      .table-item.occupied { 
-        border-color: #ef4444; 
-        background: #fef2f2; 
+      .table-item.occupied {
+        border-color: #ef4444;
+        background: #fef2f2;
       }
 
       .table-number {
@@ -1222,7 +1221,7 @@ function renderPOSLayout() {
         50% { opacity: 0.7; }
       }
 
-      .pos-container .no-orders, 
+      .pos-container .no-orders,
       .pos-container .no-items {
         text-align: center;
         color: #64748b;
@@ -1234,7 +1233,7 @@ function renderPOSLayout() {
         margin: 16px 0;
       }
 
-      .pos-container .loading-message, 
+      .pos-container .loading-message,
       .pos-container .error-message {
         text-align: center;
         color: #64748b;
@@ -1380,8 +1379,8 @@ function renderTableMap() {
   mapGrid.innerHTML = allTables.map(table => {
     const status = table.isOccupied ? 'occupied' : 'available';
     const statusText = table.isOccupied ? '사용중' : '이용가능';
-    const occupiedTime = table.isOccupied && table.occupiedSince 
-      ? getTimeDifferenceText(table.occupiedSince) 
+    const occupiedTime = table.isOccupied && table.occupiedSince
+      ? getTimeDifferenceText(table.occupiedSince)
       : '';
 
     return `
@@ -1455,7 +1454,7 @@ async function updateDetailPanel(tableNumber) {
         </div>
 
         <div class="table-control-actions">
-          ${isOccupied ? 
+          ${isOccupied ?
             `<button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
               테이블 해제
             </button>` :
@@ -1511,7 +1510,7 @@ async function updateDetailPanel(tableNumber) {
       <div class="completed-orders-section">
         <h4>${completedOrders.length > 0 ? `✅ 완료된 주문 (${completedOrders.length}개)` : '주문 없음'}</h4>
         <div class="order-items scrollable-section">
-          ${completedOrders.length > 0 ? 
+          ${completedOrders.length > 0 ?
             completedOrders.map(order => `
               <div class="order-item completed-order">
                 <div class="order-header">
@@ -1524,14 +1523,14 @@ async function updateDetailPanel(tableNumber) {
                 </div>
 
                 <div class="order-details">
-                  ${order.orderData && order.orderData.items ? 
+                  ${order.orderData && order.orderData.items ?
                     order.orderData.items.map(item => `
                       <div class="menu-item">
                         <span class="menu-name">${item.name}</span>
                         <span class="menu-quantity">x${item.quantity || 1}</span>
                         <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
                       </div>
-                    `).join('') : 
+                    `).join('') :
                     '<div class="no-items">주문 상세 정보 없음</div>'
                   }
                 </div>
@@ -2470,16 +2469,20 @@ function filterMenuCategory(category) {
 }
 
 // 현재 주문 상태
-let currentOrderItems = [];
+// let currentOrderItems = []; // Replaced with window.currentOrderItems
 
 // 메뉴 아이템 추가
 function addMenuItem(name, price) {
-  const existingItem = currentOrderItems.find(item => item.name === name);
+  if (!window.currentOrderItems) {
+    window.currentOrderItems = [];
+  }
+
+  const existingItem = window.currentOrderItems.find(item => item.name === name);
 
   if (existingItem) {
     existingItem.quantity += 1;
   } else {
-    currentOrderItems.push({
+    window.currentOrderItems.push({
       name: name,
       price: price,
       quantity: 1
@@ -2495,13 +2498,17 @@ function updateOrderDisplay() {
   const orderItemsContainer = document.getElementById('orderItems');
   const totalAmountElement = document.getElementById('totalAmount');
 
-  if (currentOrderItems.length === 0) {
+  if (!window.currentOrderItems) {
+    window.currentOrderItems = [];
+  }
+
+  if (window.currentOrderItems.length === 0) {
     orderItemsContainer.innerHTML = '<div class="empty-order">메뉴를 선택해주세요</div>';
     totalAmountElement.textContent = '₩0';
     return;
   }
 
-  const itemsHTML = currentOrderItems.map((item, index) => `
+  const itemsHTML = window.currentOrderItems.map((item, index) => `
     <div class="order-item-row">
       <div class="item-name">${item.name}</div>
       <div class="item-controls">
@@ -2515,19 +2522,24 @@ function updateOrderDisplay() {
 
   orderItemsContainer.innerHTML = itemsHTML;
 
-  const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalAmount = window.currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   totalAmountElement.textContent = `₩${totalAmount.toLocaleString()}`;
 }
 
 // 수량 변경
 function changeQuantity(index, change) {
-  const item = currentOrderItems[index];
-  item.quantity += change;
-
-  if (item.quantity <= 0) {
-    currentOrderItems.splice(index, 1);
+  if (!window.currentOrderItems) {
+    window.currentOrderItems = [];
   }
 
+  const item = window.currentOrderItems[index];
+  if (item) {
+    item.quantity += change;
+
+    if (item.quantity <= 0) {
+      window.currentOrderItems.splice(index, 1);
+    }
+  }
   updateOrderDisplay();
   updateSubmitButton();
 }
@@ -2535,7 +2547,13 @@ function changeQuantity(index, change) {
 // 제출 버튼 상태 업데이트
 function updateSubmitButton() {
   const submitBtn = document.getElementById('submitOrderBtn');
-  const hasItems = currentOrderItems.length > 0;
+  if (!submitBtn) return;
+
+  if (!window.currentOrderItems) {
+    window.currentOrderItems = [];
+  }
+
+  const hasItems = window.currentOrderItems.length > 0;
 
   // TLL 주문인 경우 고객 정보 입력 불필요
   if (window.currentTLLOrder) {
@@ -2572,7 +2590,11 @@ function updateSubmitButton() {
 // 주문 제출
 async function submitOrder() {
   try {
-    const totalAmount = currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    if (!window.currentOrderItems) {
+      window.currentOrderItems = [];
+    }
+
+    const totalAmount = window.currentOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     // TLL 주문 정보 확인
     const tllOrderInfo = window.currentTLLOrder;
@@ -2581,7 +2603,7 @@ async function submitOrder() {
       storeId: currentStore.id,
       storeName: currentStore.name,
       tableNumber: currentTable,
-      items: currentOrderItems,
+      items: window.currentOrderItems,
       totalAmount: totalAmount,
       isTLLOrder: !!tllOrderInfo
     };
@@ -2633,7 +2655,7 @@ function closeOrderModal(event) {
   }
 
   // 주문 상태 초기화
-  currentOrderItems = [];
+  window.currentOrderItems = [];
   window.currentTLLOrder = null;
 }
 
@@ -2665,8 +2687,8 @@ async function processPayment() {
     }
 
     // 현재 테이블의 미결제 주문만 필터링
-    const unpaidOrders = ordersData.orders.filter(order => 
-      order.tableNumber == currentTable && 
+    const unpaidOrders = ordersData.orders.filter(order =>
+      order.tableNumber == currentTable &&
       (order.orderStatus === 'completed' || order.orderStatus === 'pending') &&
       (!order.paymentStatus || order.paymentStatus !== 'completed')
     );
@@ -3156,7 +3178,7 @@ function showPaymentModal(orders, pendingOrder = false) {
                   padding: 12px;
                   margin-bottom: 12px;
                 ">
-                  ${order.orderData && order.orderData.items ? 
+                  ${order.orderData && order.orderData.items ?
                     order.orderData.items.map(item => `
                       <div class="menu-item" style="
                         display: flex;
@@ -3175,7 +3197,7 @@ function showPaymentModal(orders, pendingOrder = false) {
                           font-weight: 700;
                         ">x${item.quantity || 1}</span>
                       </div>
-                    `).join('') : 
+                    `).join('') :
                     '<div class="no-items" style="text-align: center; color: #9ca3af; padding: 12px;">주문 상세 정보 없음</div>'
                   }
                 </div>
@@ -3479,7 +3501,7 @@ function showPaymentModal(orders, pendingOrder = false) {
   });
 
   // TLL 비회원 주문이 있는지 확인
-  const hasTLLGuestOrder = orders.some(order => 
+  const hasTLLGuestOrder = orders.some(order =>
     (order.orderSource === 'TLL' || !order.userId) && order.customerName && !order.userId
   );
 
