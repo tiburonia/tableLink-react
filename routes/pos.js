@@ -177,7 +177,7 @@ router.post('/orders', async (req, res) => {
 
     // 현재 테이블의 기존 주문 확인 (24시간 내)
     const existingOrdersResult = await client.query(`
-      SELECT DISTINCT o.user_id, o.guest_id, u.name as user_name, g.name as guest_name
+      SELECT o.user_id, o.guest_id, u.name as user_name, g.name as guest_name, o.order_date
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN guests g ON o.guest_id = g.id
