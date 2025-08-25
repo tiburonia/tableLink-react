@@ -51,6 +51,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/cache', cacheRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/regular-levels', regularLevelsRoutes);
+app.use('/api/guests', require('./routes/guests'));
 
 // 플레이스홀더 이미지 API
 app.get('/api/placeholder/:width/:height', (req, res) => {

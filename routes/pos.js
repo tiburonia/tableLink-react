@@ -129,18 +129,59 @@ router.post('/orders', async (req, res) => {
   const client = await pool.connect();
   
   try {
-    const { storeId, storeName, tableNumber, items, totalAmount } = req.body;
+    const { 
+      storeId, storeName, tableNumber, items, totalAmount,
+      guestPhone, guestName, isGuestOrder = false 
+    } = req.body;
     
     console.log('💳 POS 주문 처리:', {
       storeId, storeName, tableNumber, 
       itemCount: items?.length, 
-      totalAmount
+      totalAmount, isGuestOrder, guestPhone
     });
     
     await client.query('BEGIN');
     
-    // POS 사용자 확인
-    const posUser = await ensurePOSUser();
+    let userId = null;
+    let guestId = null;
+    let orderSource = 'POS_MEMBER';
+    
+    if (isGuestOrder && guestPhone) {
+      // 게스트 주문 처리
+      orderSource = 'POS_GUEST';
+      
+      // 기존 게스트 확인 또는 생성
+      let guestResult = await client.query('SELECT * FROM guests WHERE phone = $1', [guestPhone]);
+      
+      if (guestResult.rows.length === 0) {
+        // 새 게스트 생성
+        guestResult = await client.query(`
+          INSERT INTO guests (phone, name, visit_count, total_spent)
+          VALUES ($1, $2, $3, $4)
+          RETURNING *
+        `, [guestPhone, guestName || '손님', 1, totalAmount]);
+        
+        console.log('✅ 새 게스트 생성:', guestResult.rows[0]);
+      } else {
+        // 기존 게스트 업데이트
+        await client.query(`
+          UPDATE guests 
+          SET visit_count = visit_count + 1,
+              total_spent = total_spent + $1,
+              last_order_date = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `, [totalAmount, guestResult.rows[0].id]);
+        
+        console.log('✅ 기존 게스트 업데이트:', guestResult.rows[0]);
+      }
+      
+      guestId = guestResult.rows[0].id;
+    } else {
+      // 기존 POS 회원 주문
+      const posUser = await ensurePOSUser();
+      userId = posUser.id;
+    }
     
     // 주문 데이터 생성
     const orderData = {
@@ -148,29 +189,33 @@ router.post('/orders', async (req, res) => {
       total: totalAmount,
       storeName: storeName,
       tableNumber: tableNumber,
-      source: 'POS'
+      source: 'POS',
+      orderSource: orderSource,
+      guestInfo: isGuestOrder ? { phone: guestPhone, name: guestName } : null
     };
     
     // 주문 저장
     const orderResult = await client.query(`
       INSERT INTO orders (
-        user_id, store_id, table_number, order_data,
+        user_id, guest_id, store_id, table_number, order_data,
         total_amount, original_amount, used_point, coupon_discount, final_amount,
-        order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        order_status, order_source, order_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING id
     `, [
-      posUser.id,
-      storeId,
-      tableNumber,
-      JSON.stringify(orderData),
-      totalAmount,
-      totalAmount,
-      0,
-      0,
-      totalAmount,
-      'completed',
-      new Date()
+      userId,                 // $1
+      guestId,               // $2  
+      storeId,               // $3
+      tableNumber,           // $4
+      JSON.stringify(orderData), // $5
+      totalAmount,           // $6
+      totalAmount,           // $7
+      0,                     // $8
+      0,                     // $9
+      totalAmount,           // $10
+      'completed',           // $11
+      orderSource,           // $12
+      new Date()            // $13
     ]);
     
     const orderId = orderResult.rows[0].id;
