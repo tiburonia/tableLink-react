@@ -481,4 +481,104 @@ router.get('/stores/:storeId/stats', async (req, res) => {
   }
 });
 
+// TLL 연동 POS 주문 결제 처리 API
+router.post('/orders/:orderId/payment', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { orderId } = req.params;
+    const { paymentMethod = 'POS' } = req.body;
+
+    console.log(`💳 POS 주문 ${orderId} 결제 처리 요청`);
+
+    await client.query('BEGIN');
+
+    // 주문 정보 조회
+    const orderResult = await client.query(`
+      SELECT o.*, u.name as user_name, u.point as user_point, g.name as guest_name
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guests g ON o.guest_id = g.id
+      WHERE o.id = $1
+    `, [parseInt(orderId)]);
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
+    }
+
+    const order = orderResult.rows[0];
+
+    // 이미 결제 완료된 주문인지 확인
+    if (order.order_status === 'paid' || order.payment_status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        error: '이미 결제가 완료된 주문입니다'
+      });
+    }
+
+    // 결제 완료 상태로 업데이트
+    await client.query(`
+      UPDATE orders
+      SET order_status = 'paid', 
+          payment_status = 'completed',
+          payment_method = $1,
+          payment_date = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [paymentMethod, parseInt(orderId)]);
+
+    // TLL 회원 주문인 경우 포인트 적립 처리
+    if (order.user_id && order.order_source !== 'TLL') {
+      const earnedPoint = Math.floor(order.final_amount * 0.1);
+
+      // 매장별 포인트 적립
+      try {
+        await client.query(
+          'SELECT update_user_store_stats($1, $2, $3, $4)',
+          [order.user_id, order.store_id, order.final_amount, new Date()]
+        );
+        console.log(`🎉 POS 결제 - 매장 ${order.store_id}에서 ${earnedPoint}원 포인트 적립 완료`);
+      } catch (pointError) {
+        console.error('⚠️ POS 결제 포인트 적립 실패:', pointError);
+        // 포인트 적립 실패해도 결제는 완료되도록 처리
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // 📡 결제 완료 실시간 업데이트
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcast(order.store_id, 'payment-completed', {
+        orderId: parseInt(orderId),
+        tableNumber: order.table_number,
+        paymentMethod: paymentMethod,
+        finalAmount: order.final_amount,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    console.log(`✅ POS 주문 ${orderId} 결제 처리 완료 (${paymentMethod})`);
+
+    res.json({
+      success: true,
+      orderId: parseInt(orderId),
+      paymentMethod: paymentMethod,
+      finalAmount: order.final_amount,
+      customerName: order.user_name || order.guest_name || 'POS 주문',
+      message: '결제가 성공적으로 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 주문 결제 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 주문 결제 처리 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;

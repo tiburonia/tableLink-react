@@ -2177,8 +2177,348 @@ function moveTable() {
   alert('테이블 이동 기능 - 개발 예정');
 }
 
-function processPayment() {
-  alert('결제 처리 기능 - 개발 예정');
+// 결제 처리 기능
+async function processPayment() {
+  if (!currentTable) {
+    alert('테이블을 먼저 선택해주세요.');
+    return;
+  }
+
+  try {
+    // 현재 테이블의 미결제 주문들 조회
+    const ordersResponse = await fetch(`/api/orders/stores/${currentStore.id}?limit=10`);
+    const ordersData = await ordersResponse.json();
+
+    if (!ordersData.success) {
+      throw new Error('주문 조회 실패');
+    }
+
+    // 현재 테이블의 미결제 주문만 필터링
+    const unpaidOrders = ordersData.orders.filter(order => 
+      order.tableNumber == currentTable && 
+      (order.orderStatus === 'completed' || order.orderStatus === 'pending') &&
+      (!order.paymentStatus || order.paymentStatus !== 'completed')
+    );
+
+    if (unpaidOrders.length === 0) {
+      alert(`테이블 ${currentTable}에 결제할 주문이 없습니다.`);
+      return;
+    }
+
+    // 결제할 주문 선택 모달 표시
+    showPaymentModal(unpaidOrders);
+
+  } catch (error) {
+    console.error('❌ 결제 처리 준비 실패:', error);
+    alert('결제 처리 준비에 실패했습니다.');
+  }
+}
+
+// 결제 모달 표시
+function showPaymentModal(orders) {
+  const modal = document.createElement('div');
+  modal.id = 'paymentModal';
+  modal.innerHTML = `
+    <div class="modal-overlay" onclick="closePaymentModal(event)">
+      <div class="modal-content payment-modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <h2>💳 결제 처리 - 테이블 ${currentTable}</h2>
+          <button class="close-btn" onclick="closePaymentModal()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="payment-orders">
+            <div class="section-title">결제할 주문 선택</div>
+            ${orders.map((order, index) => `
+              <div class="payment-order-item" data-order-id="${order.id}">
+                <div class="order-header">
+                  <div class="order-info">
+                    <span class="customer-name">👤 ${order.customerName}</span>
+                    <span class="order-time">${formatOrderTime(order.orderDate)}</span>
+                    <span class="order-source">${getOrderSourceText(order.orderSource || 'POS')}</span>
+                  </div>
+                  <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
+                </div>
+
+                <div class="order-items">
+                  ${order.orderData && order.orderData.items ? 
+                    order.orderData.items.map(item => `
+                      <div class="menu-item">
+                        <span class="menu-name">${item.name}</span>
+                        <span class="menu-quantity">x${item.quantity || 1}</span>
+                      </div>
+                    `).join('') : 
+                    '<div class="no-items">주문 상세 정보 없음</div>'
+                  }
+                </div>
+
+                <div class="order-actions">
+                  <label class="payment-checkbox">
+                    <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" ${orders.length === 1 ? 'checked' : ''}>
+                    <span class="checkmark"></span>
+                    <span>결제 선택</span>
+                  </label>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="payment-summary">
+            <div class="section-title">결제 정보</div>
+            <div class="payment-method-selection">
+              <label class="radio-option">
+                <input type="radio" name="paymentMethod" value="CARD" checked>
+                <span>💳 카드</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="paymentMethod" value="CASH">
+                <span>💵 현금</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="paymentMethod" value="POS">
+                <span>📟 POS 통합</span>
+              </label>
+            </div>
+
+            <div class="payment-total">
+              <div class="total-line">
+                <span>선택된 주문 수:</span>
+                <span id="selectedOrderCount">${orders.length === 1 ? '1' : '0'}개</span>
+              </div>
+              <div class="total-line final">
+                <span>총 결제 금액:</span>
+                <span id="totalPaymentAmount">₩${orders.length === 1 ? orders[0].finalAmount.toLocaleString() : '0'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closePaymentModal()">취소</button>
+          <button class="btn btn-primary" onclick="processSelectedPayments()" id="processPaymentBtn">
+            결제 처리
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .payment-modal {
+        width: 90%;
+        max-width: 600px;
+        height: 90%;
+        max-height: 700px;
+      }
+
+      .payment-orders {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+      }
+
+      .payment-order-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .payment-order-item.selected {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .order-source {
+        font-size: 12px;
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+      }
+
+      .payment-method-selection {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .payment-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .payment-checkbox input[type="checkbox"] {
+        display: none;
+      }
+
+      .checkmark {
+        width: 18px;
+        height: 18px;
+        border: 2px solid #d1d5db;
+        border-radius: 4px;
+        position: relative;
+      }
+
+      .payment-checkbox input[type="checkbox"]:checked + .checkmark {
+        background: #3b82f6;
+        border-color: #3b82f6;
+      }
+
+      .payment-checkbox input[type="checkbox"]:checked + .checkmark:after {
+        content: '✓';
+        position: absolute;
+        color: white;
+        font-size: 12px;
+        top: -2px;
+        left: 2px;
+      }
+
+      .payment-total {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .total-line {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .total-line.final {
+        font-weight: 600;
+        font-size: 16px;
+        color: #1e293b;
+        border-top: 1px solid #cbd5e1;
+        padding-top: 8px;
+        margin-bottom: 0;
+      }
+    </style>
+  `;
+
+  document.body.appendChild(modal);
+
+  // 체크박스 이벤트 리스너 추가
+  const checkboxes = modal.querySelectorAll('input[type="checkbox"]');
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updatePaymentSummary);
+  });
+
+  updatePaymentSummary();
+}
+
+// 결제 요약 정보 업데이트
+function updatePaymentSummary() {
+  const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+  const selectedCount = checkboxes.length;
+  const totalAmount = Array.from(checkboxes).reduce((sum, checkbox) => {
+    return sum + parseInt(checkbox.dataset.amount);
+  }, 0);
+
+  document.getElementById('selectedOrderCount').textContent = `${selectedCount}개`;
+  document.getElementById('totalPaymentAmount').textContent = `₩${totalAmount.toLocaleString()}`;
+  
+  const processBtn = document.getElementById('processPaymentBtn');
+  processBtn.disabled = selectedCount === 0;
+
+  // 선택된 주문 아이템 하이라이트
+  document.querySelectorAll('.payment-order-item').forEach(item => {
+    const orderId = item.dataset.orderId;
+    const checkbox = document.querySelector(`input[type="checkbox"][data-order-id="${orderId}"]`);
+    if (checkbox && checkbox.checked) {
+      item.classList.add('selected');
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
+
+// 선택된 주문들 결제 처리
+async function processSelectedPayments() {
+  try {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]:checked');
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    
+    if (checkboxes.length === 0) {
+      alert('결제할 주문을 선택해주세요.');
+      return;
+    }
+
+    const processBtn = document.getElementById('processPaymentBtn');
+    processBtn.disabled = true;
+    processBtn.textContent = '처리 중...';
+
+    const results = [];
+
+    for (const checkbox of checkboxes) {
+      const orderId = checkbox.dataset.orderId;
+      
+      try {
+        const response = await fetch(`/api/pos/orders/${orderId}/payment`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            paymentMethod: paymentMethod
+          })
+        });
+
+        const result = await response.json();
+        results.push({ orderId, success: result.success, result });
+
+      } catch (error) {
+        console.error(`❌ 주문 ${orderId} 결제 실패:`, error);
+        results.push({ orderId, success: false, error: error.message });
+      }
+    }
+
+    // 결과 처리
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.length - successCount;
+
+    if (successCount > 0) {
+      alert(`${successCount}개 주문 결제가 완료되었습니다.${failCount > 0 ? `\n(${failCount}개 실패)` : ''}`);
+    } else {
+      alert('모든 주문 결제에 실패했습니다.');
+    }
+
+    closePaymentModal();
+
+    // 테이블 정보 새로고침
+    if (currentTable) {
+      await updateDetailPanel(currentTable);
+    }
+
+  } catch (error) {
+    console.error('❌ 결제 처리 실패:', error);
+    alert('결제 처리 중 오류가 발생했습니다.');
+  }
+}
+
+// 주문 소스 텍스트 변환
+function getOrderSourceText(source) {
+  const sourceMap = {
+    'TLL': 'TLL 주문',
+    'POS': 'POS 주문',
+    'POS_TLL': 'POS+TLL'
+  };
+  return sourceMap[source] || source;
+}
+
+// 결제 모달 닫기
+function closePaymentModal(event) {
+  if (event && event.target !== event.currentTarget) return;
+
+  const modal = document.getElementById('paymentModal');
+  if (modal) {
+    modal.remove();
+  }
 }
 
 // WebSocket 초기화
@@ -2422,3 +2762,8 @@ window.filterMenuCategory = filterMenuCategory;
 window.addMenuItem = addMenuItem;
 window.changeQuantity = changeQuantity;
 window.submitOrder = submitOrder;
+// 결제 모달 관련 함수들
+window.showPaymentModal = showPaymentModal;
+window.closePaymentModal = closePaymentModal;
+window.updatePaymentSummary = updatePaymentSummary;
+window.processSelectedPayments = processSelectedPayments;
