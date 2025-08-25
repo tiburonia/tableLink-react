@@ -151,14 +151,14 @@ router.post('/orders', async (req, res) => {
     });
 
     const orderKey = `${storeId}-${tableNumber}`;
-    
+
     // 기존 메모리 주문이 있는지 확인
     let existingOrder = pendingOrders.get(orderKey);
-    
+
     if (isTLLOrder && (userId || guestPhone)) {
       // TLL 주문 연동 - 기존 주문에 메뉴 추가
       console.log('🔗 TLL 주문 연동 - 메뉴 추가');
-      
+
       if (existingOrder) {
         // 기존 주문에 새 메뉴 추가
         existingOrder.items.push(...items);
@@ -184,7 +184,7 @@ router.post('/orders', async (req, res) => {
     } else {
       // 일반 POS 주문 - 새로운 주문으로 기존 주문 교체
       console.log('📦 일반 POS 주문 생성');
-      
+
       existingOrder = {
         storeId: parseInt(storeId),
         storeName,
@@ -204,7 +204,7 @@ router.post('/orders', async (req, res) => {
     // 🪑 테이블 자동 점유 처리 (POS 주문 추가 시)
     try {
       console.log(`🔒 POS 주문 추가로 인한 테이블 ${tableNumber} 자동 점유 처리`);
-      
+
       await pool.query(`
         UPDATE store_tables 
         SET is_occupied = true, 
@@ -212,7 +212,7 @@ router.post('/orders', async (req, res) => {
             auto_release_source = 'POS'
         WHERE store_id = $1 AND table_number = $2 AND is_occupied = false
       `, [parseInt(storeId), parseInt(tableNumber)]);
-      
+
       console.log(`✅ 테이블 ${tableNumber} POS 주문으로 인한 자동 점유 완료`);
     } catch (tableError) {
       console.error('❌ 테이블 자동 점유 실패:', tableError);
@@ -262,9 +262,9 @@ router.get('/stores/:storeId/table/:tableNumber/pending-orders', async (req, res
   try {
     const { storeId, tableNumber } = req.params;
     const orderKey = `${storeId}-${tableNumber}`;
-    
+
     const pendingOrder = pendingOrders.get(orderKey);
-    
+
     if (pendingOrder) {
       res.json({
         success: true,
@@ -404,6 +404,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     let currentUserId = null;
     let currentGuestPhone = null;
     let finalCustomerName = '포스 주문';
+    let actualTableNumber = tableNumber; // 실제 주문이 연결될 테이블 번호 (TLL 주문이 있다면 해당 테이블)
 
     // TLL 연동 주문인지 확인
     if (pendingOrder.isTLLOrder) {
@@ -485,14 +486,28 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       }
     }
 
-    // 기존 주문 아카이브 처리 (다른 사용자)
-    await client.query(`
-      UPDATE orders 
-      SET order_status = 'archived'
-      WHERE store_id = $1 AND table_number = $2 
-      AND order_date >= NOW() - INTERVAL '24 hours'
-      AND order_status != 'archived'
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    // 🆕 동일 테이블의 기존 TLL 주문 확인 (24시간 내) - 아카이브하지 않고 유지
+    if (actualTableNumber) {
+      const existingOrdersResult = await client.query(`
+        SELECT o.id, o.user_id, o.guest_phone, u.name as user_name, o.order_date, o.final_amount
+        FROM orders o
+        LEFT JOIN users u ON o.user_id = u.id
+        WHERE o.store_id = $1 AND o.table_number = $2 
+        AND o.order_date >= NOW() - INTERVAL '24 hours'
+        AND o.order_status != 'archived'
+        ORDER BY o.order_date DESC
+      `, [parseInt(storeId), actualTableNumber]);
+
+      console.log(`🔍 POS 결제 - 테이블 ${actualTableNumber} 기존 TLL 주문 확인: ${existingOrdersResult.rows.length}개 발견`);
+
+      // 기존 TLL 주문들을 아카이브하지 않고 유지 (추가 주문으로 처리)
+      if (existingOrdersResult.rows.length > 0) {
+        console.log(`✅ POS 결제 - 테이블 ${actualTableNumber}의 기존 TLL 주문들 유지, 추가 주문으로 처리`);
+        existingOrdersResult.rows.forEach((order, index) => {
+          console.log(`   ${index + 1}. 주문 ID ${order.id}: ${order.user_name || '게스트'} - ₩${order.final_amount.toLocaleString()}`);
+        });
+      }
+    }
 
     // 주문 데이터 DB 저장
     const orderData = {
@@ -564,7 +579,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     // 🪑 결제 완료 후 테이블 해제 처리
     try {
       console.log(`🔓 POS 결제 완료로 인한 테이블 ${tableNumber} 자동 해제 처리`);
-      
+
       await client.query(`
         UPDATE store_tables 
         SET is_occupied = false, 
@@ -572,7 +587,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
             auto_release_source = NULL
         WHERE store_id = $1 AND table_number = $2
       `, [parseInt(storeId), parseInt(tableNumber)]);
-      
+
       console.log(`✅ 테이블 ${tableNumber} POS 결제 완료로 인한 자동 해제 완료`);
     } catch (tableError) {
       console.error('❌ 테이블 자동 해제 실패:', tableError);

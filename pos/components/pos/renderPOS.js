@@ -2075,7 +2075,7 @@ function selectCustomerType(type) {
   }
 
   // 라디오 버튼 업데이트
-  const radioBtn = document.querySelector(`input[value="${type}"]`);
+  const radioBtn = document.querySelector(`input[name="customerType"][value="${type}"]`);
   if (radioBtn) {
     radioBtn.checked = true;
   }
@@ -2089,6 +2089,8 @@ function selectCustomerType(type) {
       guestSection.style.display = 'none';
     }
   }
+
+  updateSubmitButton();
 }
 
 // POS 주문 타입 선택 (레거시 지원)
@@ -2105,7 +2107,7 @@ function selectOrderType(type) {
   }
 
   // 라디오 버튼 업데이트
-  const radioBtn = document.querySelector(`input[value="${type}"]`);
+  const radioBtn = document.querySelector(`input[name="posOrderType"][value="${type}"]`);
   if (radioBtn) {
     radioBtn.checked = true;
   }
@@ -2132,10 +2134,10 @@ function toggleCustomerType() {
   if (memberInfo && guestInfo) {
     if (customerType === 'member') {
       memberInfo.style.display = 'block';
-      guestInfo.style.display = 'none';
+      guestForm.style.display = 'none'; // guestInfo 대신 guestForm 사용
     } else {
       memberInfo.style.display = 'none';
-      guestInfo.style.display = 'block';
+      guestForm.style.display = 'block'; // guestInfo 대신 guestForm 사용
     }
   }
 
@@ -2258,7 +2260,7 @@ function updateSubmitButton() {
 
   // 일반 POS 주문인 경우
   const posOrderType = document.querySelector('input[name="posOrderType"]:checked')?.value;
-  
+
   if (posOrderType) {
     // 새로운 POS 주문 구조
     submitBtn.disabled = !hasItems;
@@ -2456,7 +2458,7 @@ function showPaymentModalForPendingOrder(orderData) {
           align-items: center;
           flex-shrink: 0;
         ">
-          <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">💳 결제 처리 - 테이블 ${currentTable}</h2>
+          <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">💳 추가 주문 결제 - 테이블 ${currentTable}</h2>
           <button class="close-btn" onclick="closePaymentModal()" style="
             background: none;
             border: none;
@@ -2489,7 +2491,7 @@ function showPaymentModalForPendingOrder(orderData) {
               padding-bottom: 8px;
               border-bottom: 1px solid #f1f5f9;
             ">📋 주문 내역</div>
-            
+
             <div style="
               background: #f8fafc;
               border: 1px solid #e2e8f0;
@@ -2508,7 +2510,7 @@ function showPaymentModalForPendingOrder(orderData) {
                   margin-left: 8px;
                 ">TLL 연동</span>` : ''}
               </div>
-              
+
               ${orderData.items.map(item => `
                 <div style="
                   display: flex;
@@ -2530,7 +2532,7 @@ function showPaymentModalForPendingOrder(orderData) {
                   <span style="color: #059669; font-weight: 700;">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
                 </div>
               `).join('')}
-              
+
               <div style="
                 border-top: 1px solid #e2e8f0;
                 margin-top: 12px;
@@ -2557,7 +2559,7 @@ function showPaymentModalForPendingOrder(orderData) {
               padding-bottom: 8px;
               border-bottom: 1px solid #f1f5f9;
             ">💳 결제 방법</div>
-            
+
             <div style="
               display: flex;
               gap: 16px;
@@ -2610,7 +2612,7 @@ function showPaymentModalForPendingOrder(orderData) {
               padding-bottom: 8px;
               border-bottom: 1px solid #f1f5f9;
             ">👤 고객 유형 선택</div>
-            
+
             <div class="customer-type-options" style="
               display: flex;
               flex-direction: column;
@@ -2636,7 +2638,7 @@ function showPaymentModalForPendingOrder(orderData) {
                   <input type="radio" name="customerType" value="member" checked style="width: 18px; height: 18px; accent-color: #3b82f6;">
                 </div>
               </div>
-              
+
               <div class="customer-type-option" onclick="selectCustomerType('guest')" data-type="guest" style="
                 display: flex;
                 align-items: center;
@@ -2732,7 +2734,7 @@ function showPaymentModalForPendingOrder(orderData) {
             cursor: pointer;
             transition: all 0.2s;
           ">취소</button>
-          <button class="btn btn-primary" onclick="processSelectedPayments()" id="processPaymentBtn" style="
+          <button class="btn btn-primary" onclick="processPayment()" id="processPaymentBtn" style="
             padding: 10px 16px;
             border: none;
             border-radius: 6px;
@@ -2787,8 +2789,9 @@ function showPaymentModalForPendingOrder(orderData) {
   console.log('💳 메모리 주문 결제 모달 표시 완료');
 }
 
+
 // 결제 모달 표시
-function showPaymentModal(orders) {
+function showPaymentModal(orders, pendingOrder = false) {
   // 기존 모달이 있다면 제거
   const existingModal = document.getElementById('paymentModal');
   if (existingModal) {
@@ -2832,7 +2835,7 @@ function showPaymentModal(orders) {
         align-items: center;
         flex-shrink: 0;
       ">
-        <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">💳 결제 처리 - 테이블 ${currentTable}</h2>
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">💳 ${pendingOrder ? '추가 주문 결제' : '결제 처리'} - 테이블 ${currentTable}</h2>
         <button class="close-btn" onclick="closePaymentModal()" style="
           background: none;
           border: none;
@@ -3022,7 +3025,7 @@ function showPaymentModal(orders) {
               padding-bottom: 8px;
               border-bottom: 1px solid #f1f5f9;
             ">👤 고객 유형 선택</div>
-            
+
             <div class="customer-type-options" style="
               display: flex;
               flex-direction: column;
@@ -3048,7 +3051,7 @@ function showPaymentModal(orders) {
                   <input type="radio" name="customerType" value="member" checked style="width: 20px; height: 20px; accent-color: #3b82f6;">
                 </div>
               </div>
-              
+
               <div class="customer-type-option" onclick="selectCustomerType('guest')" data-type="guest" style="
                 display: flex;
                 align-items: center;
@@ -3254,7 +3257,7 @@ function showPaymentModal(orders) {
     // 전화번호 저장 체크박스 이벤트
     const savePhoneCheckbox = modal.querySelector('#saveGuestPhone');
     const phoneInputGroup = modal.querySelector('#guestPhoneInputGroup');
-    
+
     if (savePhoneCheckbox && phoneInputGroup) {
       savePhoneCheckbox.addEventListener('change', function() {
         phoneInputGroup.style.display = this.checked ? 'block' : 'none';
@@ -3297,7 +3300,7 @@ async function processSelectedPayments() {
   try {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     const customerType = document.querySelector('input[name="customerType"]:checked').value;
-    
+
     const processBtn = document.getElementById('processPaymentBtn');
     processBtn.disabled = true;
     processBtn.textContent = '처리 중...';
@@ -3311,7 +3314,7 @@ async function processSelectedPayments() {
     if (customerType === 'guest') {
       const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
       const guestName = document.getElementById('paymentGuestName')?.value.trim();
-      
+
       if (guestPhone) {
         paymentData.guestPhone = guestPhone;
       }
@@ -3334,7 +3337,7 @@ async function processSelectedPayments() {
 
     if (result.success) {
       alert(`결제가 완료되었습니다!\n주문번호: ${result.orderId}\n결제금액: ₩${result.finalAmount.toLocaleString()}\n고객: ${result.customerName}`);
-      
+
       closePaymentModal();
 
       // 테이블 정보 새로고침
