@@ -443,13 +443,10 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     const { storeId, tableNumber } = req.params;
     const { 
       paymentMethod = 'POS',
-      customerType, // 'member' 또는 'guest'
-      guestPhone,
-      guestName
+      guestPhone
     } = req.body;
 
     console.log(`💳 POS 메모리 주문 결제 처리 (테이블 ${tableNumber}):`, {
-      customerType,
       paymentMethod,
       guestPhone: guestPhone ? '***' : undefined
     });
@@ -466,15 +463,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 🔄 회원 또는 게스트 처리 로직
+    // 🔄 전화번호 기반 자동 회원/게스트 판단 로직
     let currentUserId = null;
     let finalGuestPhone = null;
 
-    if (customerType === 'member' && guestPhone) {
-      // 회원 처리
-      console.log(`🔍 회원 확인 중: ${guestPhone}`);
-      finalGuestPhone = guestPhone;
-
+    if (guestPhone && guestPhone.trim()) {
+      console.log(`🔍 전화번호 확인 중: ${guestPhone}`);
+      
       try {
         // 1. 기존 회원 확인
         const existingUser = await client.query(
@@ -486,9 +481,11 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           // 기존 회원이 있는 경우 - 회원 계정으로 처리
           currentUserId = existingUser.rows[0].id;
           finalGuestPhone = null; // 회원인 경우 guest_phone은 null
-          console.log(`👨‍💼 기존 회원 발견: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
+          console.log(`👨‍💼 기존 회원으로 처리: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
         } else {
-          // 2. 회원이 없다면 게스트 테이블에서 확인
+          // 2. 회원이 없다면 게스트로 처리
+          finalGuestPhone = guestPhone;
+          
           const existingGuest = await client.query(
             'SELECT phone, visit_count FROM guests WHERE phone = $1',
             [guestPhone]
@@ -506,7 +503,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
               WHERE phone = $3
             `, [`{${storeId}}`, storeVisitCount, guestPhone]);
 
-            console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
+            console.log(`👤 기존 게스트로 처리 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
           } else {
             // 3. 완전히 새로운 전화번호 - 새 게스트 생성
             const initialVisitCount = { [storeId]: 1 };
@@ -517,51 +514,11 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
               ON CONFLICT (phone) DO NOTHING
             `, [guestPhone, JSON.stringify(initialVisitCount)]);
 
-            console.log(`🆕 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
+            console.log(`🆕 새 게스트로 등록 - 매장 ${storeId}: 첫 방문`);
           }
         }
       } catch (error) {
-        console.error('❌ 회원/게스트 처리 실패:', error);
-        throw error;
-      }
-    } else if (customerType === 'guest' && guestPhone) {
-      // 게스트 처리 (강제 게스트)
-      console.log(`👤 게스트 처리: ${guestPhone}`);
-      finalGuestPhone = guestPhone;
-
-      try {
-        const existingGuest = await client.query(
-          'SELECT phone, visit_count FROM guests WHERE phone = $1',
-          [guestPhone]
-        );
-
-        if (existingGuest.rows.length > 0) {
-          // 기존 게스트 - 방문 횟수 업데이트
-          const currentVisitCount = existingGuest.rows[0].visit_count || {};
-          const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
-
-          await client.query(`
-            UPDATE guests 
-            SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE phone = $3
-          `, [`{${storeId}}`, storeVisitCount, guestPhone]);
-
-          console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
-        } else {
-          // 새 게스트 생성
-          const initialVisitCount = { [storeId]: 1 };
-
-          await client.query(`
-            INSERT INTO guests (phone, visit_count) 
-            VALUES ($1, $2) 
-            ON CONFLICT (phone) DO NOTHING
-          `, [guestPhone, JSON.stringify(initialVisitCount)]);
-
-          console.log(`🆕 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
-        }
-      } catch (error) {
-        console.error('❌ 게스트 처리 실패:', error);
+        console.error('❌ 전화번호 처리 실패:', error);
         throw error;
       }
     } else {
@@ -570,26 +527,24 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     }
 
     // 🆕 동일 테이블의 기존 TLL 주문 확인 (24시간 내) - 아카이브하지 않고 유지
-    if (actualTableNumber) {
-      const existingOrdersResult = await client.query(`
-        SELECT o.id, o.user_id, o.guest_phone, u.name as user_name, o.order_date, o.final_amount
-        FROM orders o
-        LEFT JOIN users u ON o.user_id = u.id
-        WHERE o.store_id = $1 AND o.table_number = $2 
-        AND o.order_date >= NOW() - INTERVAL '24 hours'
-        AND o.order_status != 'archived'
-        ORDER BY o.order_date DESC
-      `, [parseInt(storeId), actualTableNumber]);
+    const existingOrdersResult = await client.query(`
+      SELECT o.id, o.user_id, o.guest_phone, u.name as user_name, o.order_date, o.final_amount
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      WHERE o.store_id = $1 AND o.table_number = $2 
+      AND o.order_date >= NOW() - INTERVAL '24 hours'
+      AND o.order_status != 'archived'
+      ORDER BY o.order_date DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
 
-      console.log(`🔍 POS 결제 - 테이블 ${actualTableNumber} 기존 TLL 주문 확인: ${existingOrdersResult.rows.length}개 발견`);
+    console.log(`🔍 POS 결제 - 테이블 ${tableNumber} 기존 TLL 주문 확인: ${existingOrdersResult.rows.length}개 발견`);
 
-      // 기존 TLL 주문들을 아카이브하지 않고 유지 (추가 주문으로 처리)
-      if (existingOrdersResult.rows.length > 0) {
-        console.log(`✅ POS 결제 - 테이블 ${actualTableNumber}의 기존 TLL 주문들 유지, 추가 주문으로 처리`);
-        existingOrdersResult.rows.forEach((order, index) => {
-          console.log(`   ${index + 1}. 주문 ID ${order.id}: ${order.user_name || '게스트'} - ₩${order.final_amount.toLocaleString()}`);
-        });
-      }
+    // 기존 TLL 주문들을 아카이브하지 않고 유지 (추가 주문으로 처리)
+    if (existingOrdersResult.rows.length > 0) {
+      console.log(`✅ POS 결제 - 테이블 ${tableNumber}의 기존 TLL 주문들 유지, 추가 주문으로 처리`);
+      existingOrdersResult.rows.forEach((order, index) => {
+        console.log(`   ${index + 1}. 주문 ID ${order.id}: ${order.user_name || '게스트'} - ₩${order.final_amount.toLocaleString()}`);
+      });
     }
 
     // 주문 데이터 DB 저장

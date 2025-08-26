@@ -248,29 +248,7 @@ function showPaymentModalForPendingOrder(orderData) {
               border-radius: 8px;
               padding: 16px;
             ">
-              <div class="customer-type-section">
-                <h6 class="mb-3">고객 유형</h6>
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeMember" value="member">
-                  <label class="form-check-label" for="customerTypeMember">
-                    기존 회원
-                  </label>
-                </div>
-                <div class="form-check mb-2">
-                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeGuest" value="guest">
-                  <label class="form-check-label" for="customerTypeGuest">
-                    게스트 (전화번호 입력)
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeAnonymous" value="anonymous" checked>
-                  <label class="form-check-label" for="customerTypeAnonymous">
-                    익명 결제 (전화번호 없음)
-                  </label>
-                </div>
-              </div>
-
-              <div id="customerPhoneInputContainer" style="margin-top: 16px;">
+              <div>
                 <label style="
                   display: block;
                   font-size: 13px;
@@ -278,7 +256,7 @@ function showPaymentModalForPendingOrder(orderData) {
                   color: #374151;
                   margin-bottom: 6px;
                 ">📞 전화번호 (선택사항)</label>
-                <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678 (입력 시 회원 혜택)" style="
+                <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678 (입력 시 자동으로 회원/게스트 판단)" style="
                   width: 100%;
                   padding: 10px 12px;
                   border: 1px solid #d1d5db;
@@ -290,12 +268,13 @@ function showPaymentModalForPendingOrder(orderData) {
                 <div style="
                   font-size: 12px;
                   color: #6b7280;
-                  margin-top: 4px;
+                  margin-top: 8px;
                   line-height: 1.4;
                 ">
-                  💡 전화번호 입력 시:
-                  <br>• 기존 회원인 경우 자동으로 포인트 적립 및 회원명으로 관리
-                  <br>• 신규 고객인 경우 게스트로 등록하여 방문 이력 관리
+                  💡 <strong>자동 처리:</strong>
+                  <br>• 전화번호 입력 시 기존 회원인지 자동 확인
+                  <br>• 회원이면 포인트 적립, 신규 고객이면 게스트로 등록
+                  <br>• 전화번호 없이도 결제 가능 (익명 결제)
                 </div>
               </div>
 
@@ -312,15 +291,13 @@ function showPaymentModalForPendingOrder(orderData) {
                   color: #1e40af;
                   font-weight: 600;
                   margin-bottom: 4px;
-                ">📋 정보 입력 안내</div>
+                ">✨ 간편 결제</div>
                 <div style="
                   font-size: 11px;
                   color: #3730a3;
                   line-height: 1.4;
                 ">
-                  • 전화번호를 입력하지 않아도 결제 가능합니다
-                  <br>• 전화번호 입력 시 회원/게스트 구분 없이 자동으로 최적의 방식으로 처리됩니다
-                  <br>• 기존 회원이면 회원명과 포인트 혜택이, 신규 고객이면 게스트 방문 이력 관리가 적용됩니다
+                  전화번호만 입력하면 서버에서 자동으로 회원/게스트를 판단하여 최적의 혜택을 제공합니다.
                 </div>
               </div>
             </div>
@@ -418,24 +395,7 @@ function showPaymentModalForPendingOrder(orderData) {
   // 전화번호 입력 포맷팅 설정
   setupPhoneInputFormatting();
 
-  // 고객 유형 변경 시 전화번호 입력 필드 표시/숨김
-  const customerTypeRadios = document.querySelectorAll('input[name="customerType"]');
-  const customerPhoneInputContainer = document.getElementById('customerPhoneInputContainer');
-
-  customerTypeRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-      if (radio.value === 'anonymous') {
-        customerPhoneInputContainer.style.display = 'none';
-      } else {
-        customerPhoneInputContainer.style.display = 'block';
-      }
-    });
-  });
-
-  // 초기 로드 시 익명 결제가 선택되어 있으면 전화번호 입력 필드 숨김
-  if (document.getElementById('customerTypeAnonymous').checked) {
-    customerPhoneInputContainer.style.display = 'none';
-  }
+  
 
   console.log('💳 메모리 주문 결제 모달 표시 완료');
 }
@@ -462,22 +422,11 @@ function setupPhoneInputFormatting() {
 async function processPendingOrderPayment() {
   try {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-    const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
     const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
 
     // 유효성 검사
     if (!paymentMethod) {
       alert('결제 방법을 선택해주세요.');
-      return;
-    }
-
-    if (!customerType) {
-      alert('고객 유형을 선택해주세요.');
-      return;
-    }
-
-    if ((customerType === 'member' || customerType === 'guest') && !guestPhone) {
-      alert('전화번호를 입력해주세요.');
       return;
     }
 
@@ -494,8 +443,6 @@ async function processPendingOrderPayment() {
       }
       paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
     }
-
-    paymentData.customerType = customerType;
 
     const processBtn = document.querySelector('.btn-primary');
     if (processBtn) {
@@ -514,7 +461,7 @@ async function processPendingOrderPayment() {
     const result = await response.json();
 
     if (result.success) {
-      const customerInfo = result.customerName || (customerType === 'anonymous' ? '익명' : '게스트');
+      const customerInfo = guestPhone ? `전화번호: ${guestPhone}` : '익명 결제';
       showPOSNotification(`결제가 완료되었습니다!\n주문번호: ${result.orderId}\n결제금액: ₩${result.finalAmount.toLocaleString()}\n고객: ${customerInfo}`, 'success');
       closePaymentModal();
 
