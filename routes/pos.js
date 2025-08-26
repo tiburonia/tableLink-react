@@ -603,9 +603,9 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     const orderResult = await client.query(`
       INSERT INTO orders (
         user_id, guest_phone, store_id, table_number, 
-        order_data, final_amount, order_source,
+        order_data, total_amount, final_amount, order_source,
         order_status, payment_status, payment_method, payment_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id
     `, [
       currentUserId, 
@@ -613,7 +613,8 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       pendingOrder.storeId, 
       pendingOrder.tableNumber, 
       JSON.stringify(orderData), 
-      pendingOrder.totalAmount, 
+      pendingOrder.totalAmount,  // total_amount
+      pendingOrder.totalAmount,  // final_amount
       currentUserId ? 'POS_MEMBER' : 'POS_GUEST',
       'paid',
       'completed',
