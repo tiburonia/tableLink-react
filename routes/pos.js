@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -467,87 +466,107 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     await client.query('BEGIN');
 
+    // 🔄 회원 또는 게스트 처리 로직
     let currentUserId = null;
-    let currentGuestPhone = null;
-    let actualTableNumber = tableNumber; // 실제 주문이 연결될 테이블 번호 (TLL 주문이 있다면 해당 테이블)
+    let finalGuestPhone = null;
 
-    // TLL 연동 주문인지 확인
-    if (pendingOrder.isTLLOrder) {
-      // TLL 연동 주문 - 기존 정보 사용
-      currentUserId = pendingOrder.userId;
-      currentGuestPhone = pendingOrder.guestPhone;
-      console.log('🔗 TLL 연동 주문 결제 처리');
-    } else {
-      // 일반 POS 주문 - 전화번호 기반 계정 관리
-      if (customerType === 'guest' && guestPhone) {
-        try {
-          console.log(`📞 전화번호 기반 계정 처리: ${guestPhone}`);
+    if (customerType === 'member' && guestPhone) {
+      // 회원 처리
+      console.log(`🔍 회원 확인 중: ${guestPhone}`);
+      finalGuestPhone = guestPhone;
 
-          // 1. 먼저 회원 테이블에서 해당 전화번호 확인
-          const existingUser = await client.query(
-            'SELECT id, name, phone FROM users WHERE phone = $1',
+      try {
+        // 1. 기존 회원 확인
+        const existingUser = await client.query(
+          'SELECT id, name FROM users WHERE phone = $1',
+          [guestPhone]
+        );
+
+        if (existingUser.rows.length > 0) {
+          // 기존 회원이 있는 경우 - 회원 계정으로 처리
+          currentUserId = existingUser.rows[0].id;
+          finalGuestPhone = null; // 회원인 경우 guest_phone은 null
+          console.log(`👨‍💼 기존 회원 발견: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
+        } else {
+          // 2. 회원이 없다면 게스트 테이블에서 확인
+          const existingGuest = await client.query(
+            'SELECT phone, visit_count FROM guests WHERE phone = $1',
             [guestPhone]
           );
 
-          if (existingUser.rows.length > 0) {
-            // 기존 회원이 있는 경우 - 회원 계정으로 처리
-            currentUserId = existingUser.rows[0].id;
-            console.log(`👨‍💼 기존 회원 발견: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
+          if (existingGuest.rows.length > 0) {
+            // 기존 게스트 - 방문 횟수 업데이트
+            const currentVisitCount = existingGuest.rows[0].visit_count || {};
+            const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+
+            await client.query(`
+              UPDATE guests 
+              SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE phone = $3
+            `, [`{${storeId}}`, storeVisitCount, guestPhone]);
+
+            console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
           } else {
-            // 2. 회원이 없다면 게스트 테이블에서 확인
-            const existingGuest = await client.query(
-              'SELECT phone, visit_count FROM guests WHERE phone = $1',
-              [guestPhone]
-            );
+            // 3. 완전히 새로운 전화번호 - 새 게스트 생성
+            const initialVisitCount = { [storeId]: 1 };
 
-            if (existingGuest.rows.length > 0) {
-              // 기존 게스트 - 방문 횟수 업데이트
-              const currentVisitCount = existingGuest.rows[0].visit_count || {};
-              const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+            await client.query(`
+              INSERT INTO guests (phone, visit_count) 
+              VALUES ($1, $2) 
+              ON CONFLICT (phone) DO NOTHING
+            `, [guestPhone, JSON.stringify(initialVisitCount)]);
 
-              await client.query(`
-                UPDATE guests 
-                SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE phone = $3
-              `, [`{${storeId}}`, storeVisitCount, guestPhone]);
-
-              console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
-            } else {
-              // 3. 완전히 새로운 전화번호 - 새 게스트 생성
-              const initialVisitCount = { [storeId]: 1 };
-
-              await client.query(
-                'INSERT INTO guests (phone, visit_count) VALUES ($1, $2)',
-                [guestPhone, JSON.stringify(initialVisitCount)]
-              );
-
-              console.log(`✨ 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
-            }
-
-            currentGuestPhone = guestPhone;
+            console.log(`🆕 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
           }
-        } catch (phoneError) {
-          console.error('⚠️ 전화번호 기반 계정 처리 실패:', phoneError);
-          // 전화번호 처리 실패해도 주문은 계속 진행
-          currentGuestPhone = guestPhone;
         }
-      } else {
-        // 익명 게스트 (전화번호도 없고 회원도 아님) - POS 전용 사용자 생성
-        console.log('👤 익명 게스트 결제 - POS 전용 사용자로 처리');
-        
-        try {
-          const posUser = await ensurePOSUser();
-          currentUserId = posUser.id;
-          console.log(`✅ POS 전용 사용자로 익명 주문 처리: ${posUser.name}`);
-        } catch (userError) {
-          console.error('⚠️ POS 전용 사용자 처리 실패:', userError);
-          return res.status(500).json({
-            success: false,
-            error: 'POS 사용자 처리 실패'
-          });
-        }
+      } catch (error) {
+        console.error('❌ 회원/게스트 처리 실패:', error);
+        throw error;
       }
+    } else if (customerType === 'guest' && guestPhone) {
+      // 게스트 처리 (강제 게스트)
+      console.log(`👤 게스트 처리: ${guestPhone}`);
+      finalGuestPhone = guestPhone;
+
+      try {
+        const existingGuest = await client.query(
+          'SELECT phone, visit_count FROM guests WHERE phone = $1',
+          [guestPhone]
+        );
+
+        if (existingGuest.rows.length > 0) {
+          // 기존 게스트 - 방문 횟수 업데이트
+          const currentVisitCount = existingGuest.rows[0].visit_count || {};
+          const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+
+          await client.query(`
+            UPDATE guests 
+            SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE phone = $3
+          `, [`{${storeId}}`, storeVisitCount, guestPhone]);
+
+          console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
+        } else {
+          // 새 게스트 생성
+          const initialVisitCount = { [storeId]: 1 };
+
+          await client.query(`
+            INSERT INTO guests (phone, visit_count) 
+            VALUES ($1, $2) 
+            ON CONFLICT (phone) DO NOTHING
+          `, [guestPhone, JSON.stringify(initialVisitCount)]);
+
+          console.log(`🆕 새 게스트 생성 - 매장 ${storeId}: 첫 방문`);
+        }
+      } catch (error) {
+        console.error('❌ 게스트 처리 실패:', error);
+        throw error;
+      }
+    } else {
+      console.log('👤 익명 게스트 결제 (전화번호 없음)');
+      finalGuestPhone = null;
     }
 
     // 🆕 동일 테이블의 기존 TLL 주문 확인 (24시간 내) - 아카이브하지 않고 유지
@@ -590,13 +609,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       RETURNING id
     `, [
       currentUserId, 
-      currentGuestPhone, 
+      finalGuestPhone,
       pendingOrder.storeId, 
       pendingOrder.tableNumber, 
       JSON.stringify(orderData), 
       pendingOrder.totalAmount,  // total_amount
       pendingOrder.totalAmount,  // final_amount
-      currentUserId && !currentUserId.startsWith('pos') ? 'POS_MEMBER' : 'POS_GUEST',
+      currentUserId ? 'POS_MEMBER' : 'POS_GUEST',
       'paid',
       'completed',
       paymentMethod,

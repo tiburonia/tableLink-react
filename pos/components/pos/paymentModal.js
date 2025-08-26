@@ -1,4 +1,3 @@
-
 // 결제 모달 관리 모듈
 
 // 결제 처리 기능
@@ -24,8 +23,8 @@ async function processPayment() {
       throw new Error('주문 조회 실패');
     }
 
-    const unpaidOrders = ordersData.orders.filter(order => 
-      order.tableNumber == window.currentTable && 
+    const unpaidOrders = ordersData.orders.filter(order =>
+      order.tableNumber == window.currentTable &&
       (order.orderStatus === 'completed' || order.orderStatus === 'pending') &&
       (!order.paymentStatus || order.paymentStatus !== 'completed')
     );
@@ -249,7 +248,29 @@ function showPaymentModalForPendingOrder(orderData) {
               border-radius: 8px;
               padding: 16px;
             ">
-              <div style="margin-bottom: 12px;">
+              <div class="customer-type-section">
+                <h6 class="mb-3">고객 유형</h6>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeMember" value="member">
+                  <label class="form-check-label" for="customerTypeMember">
+                    기존 회원
+                  </label>
+                </div>
+                <div class="form-check mb-2">
+                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeGuest" value="guest">
+                  <label class="form-check-label" for="customerTypeGuest">
+                    게스트 (전화번호 입력)
+                  </label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="customerType" id="customerTypeAnonymous" value="anonymous" checked>
+                  <label class="form-check-label" for="customerTypeAnonymous">
+                    익명 결제 (전화번호 없음)
+                  </label>
+                </div>
+              </div>
+
+              <div id="customerPhoneInputContainer" style="margin-top: 16px;">
                 <label style="
                   display: block;
                   font-size: 13px;
@@ -283,6 +304,7 @@ function showPaymentModalForPendingOrder(orderData) {
                 border: 1px solid #bfdbfe;
                 border-radius: 6px;
                 padding: 12px;
+                margin-top: 16px;
                 margin-bottom: 0;
               ">
                 <div style="
@@ -392,10 +414,29 @@ function showPaymentModalForPendingOrder(orderData) {
   `;
 
   document.body.appendChild(modal);
-  
+
   // 전화번호 입력 포맷팅 설정
   setupPhoneInputFormatting();
-  
+
+  // 고객 유형 변경 시 전화번호 입력 필드 표시/숨김
+  const customerTypeRadios = document.querySelectorAll('input[name="customerType"]');
+  const customerPhoneInputContainer = document.getElementById('customerPhoneInputContainer');
+
+  customerTypeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (radio.value === 'anonymous') {
+        customerPhoneInputContainer.style.display = 'none';
+      } else {
+        customerPhoneInputContainer.style.display = 'block';
+      }
+    });
+  });
+
+  // 초기 로드 시 익명 결제가 선택되어 있으면 전화번호 입력 필드 숨김
+  if (document.getElementById('customerTypeAnonymous').checked) {
+    customerPhoneInputContainer.style.display = 'none';
+  }
+
   console.log('💳 메모리 주문 결제 모달 표시 완료');
 }
 
@@ -422,74 +463,29 @@ async function processPendingOrderPayment() {
   try {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
     const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
-    const guestPhone = document.getElementById('paymentGuestPhone')?.value;
-    const guestName = document.getElementById('paymentGuestName')?.value;
-    
-    const processBtn = document.querySelector('.btn-primary');
-    if (processBtn) {
-      processBtn.disabled = true;
-      processBtn.textContent = '처리 중...';
+    const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
+
+    // 유효성 검사
+    if (!paymentMethod) {
+      alert('결제 방법을 선택해주세요.');
+      return;
     }
 
-    console.log('💳 POS 결제 요청:', {
-      paymentMethod,
-      customerType,
-      guestPhone: guestPhone ? '***' : undefined,
-      tableNumber: currentTable
-    });
-
-    const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${currentTable}/payment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        paymentMethod: paymentMethod,
-        customerType: customerType,
-        guestPhone: guestPhone,
-        guestName: guestName
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.success) {
-      alert(`결제가 완료되었습니다!\n주문번호: ${data.orderId}\n결제금액: ₩${data.finalAmount.toLocaleString()}`);
-      
-      // 결제 모달 닫기
-      const modal = document.getElementById('paymentModal');
-      if (modal) {
-        modal.remove();
-      }
-      
-      // 테이블 상태 업데이트
-      await loadTables();
-      renderTableMap();
-      updateDetailPanel(currentTable);
-      
-      console.log('✅ POS 결제 완료:', data);
-    } else {
-      alert('결제 실패: ' + data.error);
-      console.error('❌ POS 결제 실패:', data.error);
+    if (!customerType) {
+      alert('고객 유형을 선택해주세요.');
+      return;
     }
 
-  } catch (error) {
-    console.error('❌ POS 결제 처리 실패:', error);
-    alert('결제 처리 중 오류가 발생했습니다.');
-  } finally {
-    const processBtn = document.querySelector('.btn-primary');
-    if (processBtn) {
-      processBtn.disabled = false;
-      processBtn.textContent = '결제 처리';
+    if ((customerType === 'member' || customerType === 'guest') && !guestPhone) {
+      alert('전화번호를 입력해주세요.');
+      return;
     }
-  }nst paymentData = {
+
+    const paymentData = {
       paymentMethod: paymentMethod
     };
 
     // 전화번호 수집 (선택사항)
-    const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
-
-    // 전화번호가 입력된 경우 형식 검증
     if (guestPhone) {
       const phoneRegex = /^010-?\d{4}-?\d{4}$/;
       if (!phoneRegex.test(guestPhone)) {
@@ -497,6 +493,14 @@ async function processPendingOrderPayment() {
         return;
       }
       paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    }
+
+    paymentData.customerType = customerType;
+
+    const processBtn = document.querySelector('.btn-primary');
+    if (processBtn) {
+      processBtn.disabled = true;
+      processBtn.textContent = '처리 중...';
     }
 
     console.log('💳 메모리 주문 결제 처리 요청:', paymentData);
@@ -510,10 +514,10 @@ async function processPendingOrderPayment() {
     const result = await response.json();
 
     if (result.success) {
-      const customerInfo = result.customerName || '고객';
+      const customerInfo = result.customerName || (customerType === 'anonymous' ? '익명' : '게스트');
       showPOSNotification(`결제가 완료되었습니다!\n주문번호: ${result.orderId}\n결제금액: ₩${result.finalAmount.toLocaleString()}\n고객: ${customerInfo}`, 'success');
       closePaymentModal();
-      
+
       // 테이블 정보 새로고침
       if (window.currentTable) {
         await updateDetailPanel(window.currentTable);

@@ -23,16 +23,17 @@ async function fixPOSGuestOrders() {
     `);
     console.log('✅ 기존 제약조건 제거 완료');
     
-    // 새로운 제약조건 추가 (user_id 또는 guest_phone 중 하나는 반드시 있어야 함)
+    // 새로운 제약조건 추가 (익명 주문 허용)
     await client.query(`
       ALTER TABLE orders 
       ADD CONSTRAINT chk_orders_user_or_guest 
       CHECK (
         (user_id IS NOT NULL) OR 
-        (guest_phone IS NOT NULL AND guest_phone != '')
+        (guest_phone IS NOT NULL AND guest_phone != '') OR
+        (user_id IS NULL AND guest_phone IS NULL)
       )
     `);
-    console.log('✅ 새로운 제약조건 추가 완료');
+    console.log('✅ 새로운 제약조건 추가 완료 (익명 주문 허용)');
     
     // guest_phone 인덱스 추가
     await client.query(`
@@ -55,9 +56,13 @@ async function fixPOSGuestOrders() {
       console.log(`  - ${col.column_name} (${col.data_type}) ${col.is_nullable === 'NO' ? 'NOT NULL' : 'NULL'} ${col.column_default ? `DEFAULT ${col.column_default}` : ''}`);
     });
     
-    // 제약조건 확인
+    // 제약조건 확인 (PostgreSQL 호환성 개선)
     const constraintsResult = await client.query(`
-      SELECT conname, consrc 
+      SELECT conname, 
+             CASE WHEN pg_get_constraintdef(oid) IS NOT NULL 
+                  THEN pg_get_constraintdef(oid) 
+                  ELSE 'N/A' 
+             END as definition
       FROM pg_constraint 
       WHERE conrelid = 'orders'::regclass 
       AND contype = 'c'
@@ -65,10 +70,11 @@ async function fixPOSGuestOrders() {
     
     console.log('\n📋 orders 테이블 제약조건:');
     constraintsResult.rows.forEach(constraint => {
-      console.log(`  - ${constraint.conname}: ${constraint.consrc || 'N/A'}`);
+      console.log(`  - ${constraint.conname}: ${constraint.definition}`);
     });
     
     console.log('🎉 POS 게스트 주문 지원 수정 완료!');
+    console.log('✅ 이제 전화번호 없는 익명 주문도 가능합니다.');
     process.exit(0);
     
   } catch (error) {
