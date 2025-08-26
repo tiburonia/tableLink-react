@@ -497,7 +497,16 @@ async function processPendingOrderPayment() {
         const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
         const guestName = document.getElementById('paymentGuestName')?.value.trim();
 
-        if (guestPhone) paymentData.guestPhone = guestPhone;
+        // 전화번호 형식 검증
+        if (guestPhone) {
+          const phoneRegex = /^010-?\d{4}-?\d{4}$/;
+          if (!phoneRegex.test(guestPhone)) {
+            showPOSNotification('올바른 전화번호 형식을 입력해주세요. (010-1234-5678)', 'warning');
+            return;
+          }
+          paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+        }
+        
         if (guestName) paymentData.guestName = guestName;
       }
     }
@@ -513,7 +522,8 @@ async function processPendingOrderPayment() {
     const result = await response.json();
 
     if (result.success) {
-      showPOSNotification(`결제가 완료되었습니다!\n주문번호: ${result.orderId}\n결제금액: ₩${result.finalAmount.toLocaleString()}\n고객: ${result.customerName}`, 'success');
+      const customerInfo = result.customerName || '고객';
+      showPOSNotification(`결제가 완료되었습니다!\n주문번호: ${result.orderId}\n결제금액: ₩${result.finalAmount.toLocaleString()}\n고객: ${customerInfo}`, 'success');
       closePaymentModal();
       
       // 테이블 정보 새로고침

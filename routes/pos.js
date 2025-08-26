@@ -478,10 +478,10 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       console.log('🔗 TLL 연동 주문 결제 처리');
     } else {
       // 일반 POS 주문 - 전화번호 기반 계정 관리
-      if (guestPhone) {
+      if (customerType === 'guest' && guestPhone) {
         try {
           console.log(`📞 전화번호 기반 계정 처리: ${guestPhone}`);
-          
+
           // 1. 먼저 회원 테이블에서 해당 전화번호 확인
           const existingUser = await client.query(
             'SELECT id, name, phone FROM users WHERE phone = $1',
