@@ -232,8 +232,8 @@ function showPaymentModalForPendingOrder(orderData) {
           </div>
 
           ${!orderData.isTLLOrder ? `
-          <!-- 고객 유형 선택 (일반 POS 주문만) -->
-          <div class="customer-type-section">
+          <!-- 고객 정보 입력 (일반 POS 주문만) -->
+          <div class="customer-info-section">
             <div class="section-title" style="
               font-size: 14px;
               font-weight: 600;
@@ -241,110 +241,91 @@ function showPaymentModalForPendingOrder(orderData) {
               margin-bottom: 12px;
               padding-bottom: 8px;
               border-bottom: 1px solid #f1f5f9;
-            ">👤 고객 유형 선택</div>
+            ">👤 고객 정보 (선택사항)</div>
 
-            <div class="customer-type-options" style="
-              display: flex;
-              flex-direction: column;
-              gap: 12px;
-              margin-bottom: 16px;
+            <div style="
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 16px;
             ">
-              <div class="customer-type-option selected" onclick="selectCustomerType('member')" data-type="member" style="
-                display: flex;
-                align-items: center;
-                padding: 12px;
-                border: 2px solid #3b82f6;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                background: #eff6ff;
-              ">
-                <div class="option-icon" style="font-size: 20px; margin-right: 12px;">👨‍💼</div>
-                <div class="option-content" style="flex: 1;">
-                  <div class="option-title" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">회원 고객</div>
-                  <div class="option-desc" style="font-size: 12px; color: #64748b;">POS 시스템 회원으로 처리</div>
-                </div>
-                <div class="option-radio" style="margin-left: 8px;">
-                  <input type="radio" name="customerType" value="member" checked style="width: 18px; height: 18px; accent-color: #3b82f6;">
+              <div style="margin-bottom: 12px;">
+                <label style="
+                  display: block;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #374151;
+                  margin-bottom: 6px;
+                ">📞 전화번호 (선택사항)</label>
+                <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678 (입력 시 회원 혜택)" style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border: 1px solid #d1d5db;
+                  border-radius: 6px;
+                  font-size: 14px;
+                  outline: none;
+                  transition: border-color 0.2s ease;
+                " onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#d1d5db'">
+                <div style="
+                  font-size: 12px;
+                  color: #6b7280;
+                  margin-top: 4px;
+                  line-height: 1.4;
+                ">
+                  💡 전화번호 입력 시:
+                  <br>• 기존 회원인 경우 자동으로 포인트 적립
+                  <br>• 신규 고객인 경우 게스트로 등록하여 방문 이력 관리
                 </div>
               </div>
 
-              <div class="customer-type-option" onclick="selectCustomerType('guest')" data-type="guest" style="
-                display: flex;
-                align-items: center;
-                padding: 12px;
-                border: 2px solid #e2e8f0;
-                border-radius: 8px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-                background: white;
-              ">
-                <div class="option-icon" style="font-size: 20px; margin-right: 12px;">👤</div>
-                <div class="option-content" style="flex: 1;">
-                  <div class="option-title" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">비회원 고객</div>
-                  <div class="option-desc" style="font-size: 12px; color: #64748b;">전화번호로 계정 관리 (기존 고객 자동 연결)</div>
-                </div>
-                <div class="option-radio" style="margin-left: 8px;">
-                  <input type="radio" name="customerType" value="guest" style="width: 18px; height: 18px; accent-color: #f59e0b;">
+              <div style="margin-bottom: 12px;">
+                <label style="
+                  display: block;
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #374151;
+                  margin-bottom: 6px;
+                ">👤 고객 이름 (선택사항)</label>
+                <input type="text" id="paymentGuestName" placeholder="고객 이름" style="
+                  width: 100%;
+                  padding: 10px 12px;
+                  border: 1px solid #d1d5db;
+                  border-radius: 6px;
+                  font-size: 14px;
+                  outline: none;
+                  transition: border-color 0.2s ease;
+                " onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#d1d5db'">
+                <div style="
+                  font-size: 12px;
+                  color: #6b7280;
+                  margin-top: 4px;
+                  line-height: 1.4;
+                ">
+                  영수증 및 주문 관리에 사용됩니다
                 </div>
               </div>
-            </div>
 
-            <!-- 비회원 정보 입력 (초기에는 숨김) -->
-            <div id="guestInfoSection" style="display: none;">
               <div style="
-                background: #fef3c7;
-                border: 2px solid #f59e0b;
-                border-radius: 8px;
+                background: #eff6ff;
+                border: 1px solid #bfdbfe;
+                border-radius: 6px;
                 padding: 12px;
-                animation: fadeIn 0.3s ease;
+                margin-bottom: 0;
               ">
-                <div style="margin-bottom: 8px;">
-                  <label style="
-                    display: block;
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 4px;
-                  ">전화번호 (권장)</label>
-                  <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678" style="
-                    width: 100%;
-                    padding: 6px 8px;
-                    border: 1px solid #f59e0b;
-                    border-radius: 4px;
-                    font-size: 13px;
-                    outline: none;
-                  ">
-                  <div style="
-                    font-size: 10px;
-                    color: #92400e;
-                    margin-top: 2px;
-                    line-height: 1.3;
-                  ">💡 전화번호 입력 시 포인트 적립 및 주문 이력 관리가 가능합니다</div>
-                </div>
-                <div style="margin-bottom: 8px;">
-                  <label style="
-                    display: block;
-                    font-size: 12px;
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 4px;
-                  ">고객 이름 (선택사항)</label>
-                  <input type="text" id="paymentGuestName" placeholder="고객 이름" style="
-                    width: 100%;
-                    padding: 6px 8px;
-                    border: 1px solid #f59e0b;
-                    border-radius: 4px;
-                    font-size: 13px;
-                    outline: none;
-                  ">
-                </div>
+                <div style="
+                  font-size: 12px;
+                  color: #1e40af;
+                  font-weight: 600;
+                  margin-bottom: 4px;
+                ">📋 정보 입력 안내</div>
                 <div style="
                   font-size: 11px;
-                  color: #92400e;
-                  line-height: 1.3;
+                  color: #3730a3;
+                  line-height: 1.4;
                 ">
-                  💡 전화번호를 입력하면 재방문시 고객 정보 확인 가능
+                  • 전화번호나 이름을 입력하지 않아도 결제 가능합니다
+                  <br>• 전화번호 입력 시 회원/게스트 구분 없이 자동으로 최적의 방식으로 처리됩니다
+                  <br>• 기존 회원이면 회원 혜택이, 신규 고객이면 게스트 관리가 적용됩니다
                 </div>
               </div>
             </div>
@@ -438,37 +419,28 @@ function showPaymentModalForPendingOrder(orderData) {
   `;
 
   document.body.appendChild(modal);
+  
+  // 전화번호 입력 포맷팅 설정
+  setupPhoneInputFormatting();
+  
   console.log('💳 메모리 주문 결제 모달 표시 완료');
 }
 
-// 고객 유형 선택
-function selectCustomerType(type) {
-  document.querySelectorAll('.customer-type-option').forEach(option => {
-    option.classList.remove('selected');
-    option.style.borderColor = '#e2e8f0';
-    option.style.background = 'white';
-  });
-
-  const selectedOption = document.querySelector(`[data-type="${type}"]`);
-  if (selectedOption) {
-    selectedOption.classList.add('selected');
-    if (type === 'member') {
-      selectedOption.style.borderColor = '#3b82f6';
-      selectedOption.style.background = '#eff6ff';
-    } else {
-      selectedOption.style.borderColor = '#f59e0b';
-      selectedOption.style.background = '#fef3c7';
-    }
+// 전화번호 형식 자동 변환
+function formatPhoneNumber(input) {
+  const value = input.value.replace(/[^0-9]/g, '');
+  if (value.length >= 11) {
+    input.value = value.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
   }
+}
 
-  const radioBtn = document.querySelector(`input[name="customerType"][value="${type}"]`);
-  if (radioBtn) {
-    radioBtn.checked = true;
-  }
-
-  const guestSection = document.getElementById('guestInfoSection');
-  if (guestSection) {
-    guestSection.style.display = type === 'guest' ? 'block' : 'none';
+// 전화번호 입력 필드에 이벤트 리스너 추가
+function setupPhoneInputFormatting() {
+  const phoneInput = document.getElementById('paymentGuestPhone');
+  if (phoneInput) {
+    phoneInput.addEventListener('input', function() {
+      formatPhoneNumber(this);
+    });
   }
 }
 
@@ -487,28 +459,22 @@ async function processPendingOrderPayment() {
       paymentMethod: paymentMethod
     };
 
-    // 비TLL 주문인 경우에만 고객 유형 처리
-    const customerTypeRadio = document.querySelector('input[name="customerType"]:checked');
-    if (customerTypeRadio) {
-      const customerType = customerTypeRadio.value;
-      paymentData.customerType = customerType;
+    // 고객 정보 수집 (선택사항)
+    const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
+    const guestName = document.getElementById('paymentGuestName')?.value.trim();
 
-      if (customerType === 'guest') {
-        const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
-        const guestName = document.getElementById('paymentGuestName')?.value.trim();
-
-        // 전화번호 형식 검증
-        if (guestPhone) {
-          const phoneRegex = /^010-?\d{4}-?\d{4}$/;
-          if (!phoneRegex.test(guestPhone)) {
-            showPOSNotification('올바른 전화번호 형식을 입력해주세요. (010-1234-5678)', 'warning');
-            return;
-          }
-          paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
-        }
-        
-        if (guestName) paymentData.guestName = guestName;
+    // 전화번호가 입력된 경우 형식 검증
+    if (guestPhone) {
+      const phoneRegex = /^010-?\d{4}-?\d{4}$/;
+      if (!phoneRegex.test(guestPhone)) {
+        showPOSNotification('올바른 전화번호 형식을 입력해주세요. (010-1234-5678)', 'warning');
+        return;
       }
+      paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    }
+    
+    if (guestName) {
+      paymentData.guestName = guestName;
     }
 
     console.log('💳 메모리 주문 결제 처리 요청:', paymentData);
@@ -558,6 +524,5 @@ function closePaymentModal(event) {
 
 // 전역 함수 등록
 window.processPayment = processPayment;
-window.selectCustomerType = selectCustomerType;
 window.closePaymentModal = closePaymentModal;
 window.processPendingOrderPayment = processPendingOrderPayment;
