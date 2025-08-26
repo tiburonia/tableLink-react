@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -531,41 +532,21 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           // 전화번호 처리 실패해도 주문은 계속 진행
           currentGuestPhone = guestPhone;
         }
-      } else if (customerType === 'member') {
-        // 전화번호 없이 회원으로 처리하는 경우 (POS 전용 사용자)
-        try {
-          const posUserId = `pos_user_${storeId}`;
-          const existingUser = await client.query(
-            'SELECT id, name FROM users WHERE id = $1',
-            [posUserId]
-          );
-
-          if (existingUser.rows.length === 0) {
-            await client.query(`
-              INSERT INTO users (id, name, phone, email, point, coupons, created_at)
-              VALUES ($1, $2, $3, $4, $5, $6, $7)
-              ON CONFLICT (id) DO NOTHING
-            `, [
-              posUserId,
-              `POS 매장${storeId} 사용자`,
-              '000-0000-0000',
-              `pos${storeId}@system.com`,
-              0,
-              JSON.stringify({ unused: [], used: [] }),
-              new Date()
-            ]);
-            console.log(`✅ POS 전용 사용자 생성: ${posUserId}`);
-          }
-
-          currentUserId = posUserId;
-          console.log('👤 POS 회원 결제 (전화번호 없음)');
-        } catch (userError) {
-          console.error('⚠️ POS 사용자 생성 실패:', userError);
-          console.log('👤 POS 사용자 생성 실패 - 익명으로 처리');
-        }
       } else {
-        // 익명 게스트 (전화번호도 없고 회원도 아님)
-        console.log('👤 익명 게스트 결제');
+        // 익명 게스트 (전화번호도 없고 회원도 아님) - POS 전용 사용자 생성
+        console.log('👤 익명 게스트 결제 - POS 전용 사용자로 처리');
+        
+        try {
+          const posUser = await ensurePOSUser();
+          currentUserId = posUser.id;
+          console.log(`✅ POS 전용 사용자로 익명 주문 처리: ${posUser.name}`);
+        } catch (userError) {
+          console.error('⚠️ POS 전용 사용자 처리 실패:', userError);
+          return res.status(500).json({
+            success: false,
+            error: 'POS 사용자 처리 실패'
+          });
+        }
       }
     }
 
@@ -615,7 +596,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       JSON.stringify(orderData), 
       pendingOrder.totalAmount,  // total_amount
       pendingOrder.totalAmount,  // final_amount
-      currentUserId ? 'POS_MEMBER' : 'POS_GUEST',
+      currentUserId && !currentUserId.startsWith('pos') ? 'POS_MEMBER' : 'POS_GUEST',
       'paid',
       'completed',
       paymentMethod,
@@ -658,7 +639,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     }
 
     // 포인트 적립 처리 (회원인 경우)
-    if (currentUserId && !currentUserId.startsWith('pos_user')) {
+    if (currentUserId && !currentUserId.startsWith('pos')) {
       try {
         // user_store_stats 테이블에 레코드가 없을 수도 있으므로 UPSERT 방식 사용
         await client.query(`

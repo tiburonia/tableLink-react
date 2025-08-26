@@ -421,6 +421,9 @@ function setupPhoneInputFormatting() {
 async function processPendingOrderPayment() {
   try {
     const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    const customerType = document.querySelector('input[name="customerType"]:checked')?.value;
+    const guestPhone = document.getElementById('paymentGuestPhone')?.value;
+    const guestName = document.getElementById('paymentGuestName')?.value;
     
     const processBtn = document.querySelector('.btn-primary');
     if (processBtn) {
@@ -428,7 +431,58 @@ async function processPendingOrderPayment() {
       processBtn.textContent = '처리 중...';
     }
 
-    const paymentData = {
+    console.log('💳 POS 결제 요청:', {
+      paymentMethod,
+      customerType,
+      guestPhone: guestPhone ? '***' : undefined,
+      tableNumber: currentTable
+    });
+
+    const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${currentTable}/payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        paymentMethod: paymentMethod,
+        customerType: customerType,
+        guestPhone: guestPhone,
+        guestName: guestName
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert(`결제가 완료되었습니다!\n주문번호: ${data.orderId}\n결제금액: ₩${data.finalAmount.toLocaleString()}`);
+      
+      // 결제 모달 닫기
+      const modal = document.getElementById('paymentModal');
+      if (modal) {
+        modal.remove();
+      }
+      
+      // 테이블 상태 업데이트
+      await loadTables();
+      renderTableMap();
+      updateDetailPanel(currentTable);
+      
+      console.log('✅ POS 결제 완료:', data);
+    } else {
+      alert('결제 실패: ' + data.error);
+      console.error('❌ POS 결제 실패:', data.error);
+    }
+
+  } catch (error) {
+    console.error('❌ POS 결제 처리 실패:', error);
+    alert('결제 처리 중 오류가 발생했습니다.');
+  } finally {
+    const processBtn = document.querySelector('.btn-primary');
+    if (processBtn) {
+      processBtn.disabled = false;
+      processBtn.textContent = '결제 처리';
+    }
+  }nst paymentData = {
       paymentMethod: paymentMethod
     };
 
