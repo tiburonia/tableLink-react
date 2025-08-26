@@ -282,7 +282,7 @@ function showPaymentModalForPendingOrder(orderData) {
                 <div class="option-icon" style="font-size: 20px; margin-right: 12px;">👤</div>
                 <div class="option-content" style="flex: 1;">
                   <div class="option-title" style="font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">비회원 고객</div>
-                  <div class="option-desc" style="font-size: 12px; color: #64748b;">전화번호로 게스트 관리 (선택사항)</div>
+                  <div class="option-desc" style="font-size: 12px; color: #64748b;">전화번호로 계정 관리 (기존 고객 자동 연결)</div>
                 </div>
                 <div class="option-radio" style="margin-left: 8px;">
                   <input type="radio" name="customerType" value="guest" style="width: 18px; height: 18px; accent-color: #f59e0b;">
@@ -306,7 +306,7 @@ function showPaymentModalForPendingOrder(orderData) {
                     font-weight: 600;
                     color: #92400e;
                     margin-bottom: 4px;
-                  ">전화번호 (선택사항)</label>
+                  ">전화번호 (권장)</label>
                   <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678" style="
                     width: 100%;
                     padding: 6px 8px;
@@ -315,6 +315,12 @@ function showPaymentModalForPendingOrder(orderData) {
                     font-size: 13px;
                     outline: none;
                   ">
+                  <div style="
+                    font-size: 10px;
+                    color: #92400e;
+                    margin-top: 2px;
+                    line-height: 1.3;
+                  ">💡 전화번호 입력 시 포인트 적립 및 주문 이력 관리가 가능합니다</div>
                 </div>
                 <div style="margin-bottom: 8px;">
                   <label style="

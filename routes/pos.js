@@ -477,12 +477,23 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       currentGuestPhone = pendingOrder.guestPhone;
       console.log('🔗 TLL 연동 주문 결제 처리');
     } else {
-      // 일반 POS 주문 - 고객 타입에 따라 처리
-      if (customerType === 'guest') {
-        // 비회원 처리
-        if (guestPhone) {
-          try {
-            // 전화번호 있는 게스트
+      // 일반 POS 주문 - 전화번호 기반 계정 관리
+      if (guestPhone) {
+        try {
+          console.log(`📞 전화번호 기반 계정 처리: ${guestPhone}`);
+          
+          // 1. 먼저 회원 테이블에서 해당 전화번호 확인
+          const existingUser = await client.query(
+            'SELECT id, name, phone FROM users WHERE phone = $1',
+            [guestPhone]
+          );
+
+          if (existingUser.rows.length > 0) {
+            // 기존 회원이 있는 경우 - 회원 계정으로 처리
+            currentUserId = existingUser.rows[0].id;
+            console.log(`👨‍💼 기존 회원 발견: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
+          } else {
+            // 2. 회원이 없다면 게스트 테이블에서 확인
             const existingGuest = await client.query(
               'SELECT phone, visit_count FROM guests WHERE phone = $1',
               [guestPhone]
@@ -502,7 +513,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
               console.log(`👤 기존 게스트 방문 횟수 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
             } else {
-              // 새 게스트 생성
+              // 3. 완전히 새로운 전화번호 - 새 게스트 생성
               const initialVisitCount = { [storeId]: 1 };
 
               await client.query(
@@ -514,17 +525,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
             }
 
             currentGuestPhone = guestPhone;
-          } catch (guestError) {
-            console.error('⚠️ 게스트 처리 실패:', guestError);
-            // 게스트 처리 실패해도 주문은 계속 진행
-            currentGuestPhone = guestPhone;
           }
-        } else {
-          // 익명 게스트
-          console.log('👤 익명 게스트 결제');
+        } catch (phoneError) {
+          console.error('⚠️ 전화번호 기반 계정 처리 실패:', phoneError);
+          // 전화번호 처리 실패해도 주문은 계속 진행
+          currentGuestPhone = guestPhone;
         }
-      } else {
-        // 회원 처리 (POS 전용 사용자)
+      } else if (customerType === 'member') {
+        // 전화번호 없이 회원으로 처리하는 경우 (POS 전용 사용자)
         try {
           const posUserId = `pos_user_${storeId}`;
           const existingUser = await client.query(
@@ -550,12 +558,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           }
 
           currentUserId = posUserId;
-          console.log('👤 POS 회원 결제');
+          console.log('👤 POS 회원 결제 (전화번호 없음)');
         } catch (userError) {
           console.error('⚠️ POS 사용자 생성 실패:', userError);
-          // 사용자 생성 실패 시 비회원으로 처리
           console.log('👤 POS 사용자 생성 실패 - 익명으로 처리');
         }
+      } else {
+        // 익명 게스트 (전화번호도 없고 회원도 아님)
+        console.log('👤 익명 게스트 결제');
       }
     }
 
