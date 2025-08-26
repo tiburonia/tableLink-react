@@ -614,7 +614,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       pendingOrder.tableNumber, 
       JSON.stringify(orderData), 
       pendingOrder.totalAmount, 
-      pendingOrder.orderSource,
+      currentUserId ? 'POS_MEMBER' : 'POS_GUEST',
       'paid',
       'completed',
       paymentMethod,
