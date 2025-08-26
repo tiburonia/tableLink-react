@@ -273,35 +273,8 @@ function showPaymentModalForPendingOrder(orderData) {
                   line-height: 1.4;
                 ">
                   💡 전화번호 입력 시:
-                  <br>• 기존 회원인 경우 자동으로 포인트 적립
+                  <br>• 기존 회원인 경우 자동으로 포인트 적립 및 회원명으로 관리
                   <br>• 신규 고객인 경우 게스트로 등록하여 방문 이력 관리
-                </div>
-              </div>
-
-              <div style="margin-bottom: 12px;">
-                <label style="
-                  display: block;
-                  font-size: 13px;
-                  font-weight: 600;
-                  color: #374151;
-                  margin-bottom: 6px;
-                ">👤 고객 이름 (선택사항)</label>
-                <input type="text" id="paymentGuestName" placeholder="고객 이름" style="
-                  width: 100%;
-                  padding: 10px 12px;
-                  border: 1px solid #d1d5db;
-                  border-radius: 6px;
-                  font-size: 14px;
-                  outline: none;
-                  transition: border-color 0.2s ease;
-                " onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#d1d5db'">
-                <div style="
-                  font-size: 12px;
-                  color: #6b7280;
-                  margin-top: 4px;
-                  line-height: 1.4;
-                ">
-                  영수증 및 주문 관리에 사용됩니다
                 </div>
               </div>
 
@@ -323,9 +296,9 @@ function showPaymentModalForPendingOrder(orderData) {
                   color: #3730a3;
                   line-height: 1.4;
                 ">
-                  • 전화번호나 이름을 입력하지 않아도 결제 가능합니다
+                  • 전화번호를 입력하지 않아도 결제 가능합니다
                   <br>• 전화번호 입력 시 회원/게스트 구분 없이 자동으로 최적의 방식으로 처리됩니다
-                  <br>• 기존 회원이면 회원 혜택이, 신규 고객이면 게스트 관리가 적용됩니다
+                  <br>• 기존 회원이면 회원명과 포인트 혜택이, 신규 고객이면 게스트 방문 이력 관리가 적용됩니다
                 </div>
               </div>
             </div>
@@ -459,9 +432,8 @@ async function processPendingOrderPayment() {
       paymentMethod: paymentMethod
     };
 
-    // 고객 정보 수집 (선택사항)
+    // 전화번호 수집 (선택사항)
     const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
-    const guestName = document.getElementById('paymentGuestName')?.value.trim();
 
     // 전화번호가 입력된 경우 형식 검증
     if (guestPhone) {
@@ -471,10 +443,6 @@ async function processPendingOrderPayment() {
         return;
       }
       paymentData.guestPhone = guestPhone.replace(/[^0-9]/g, '').replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
-    }
-    
-    if (guestName) {
-      paymentData.guestName = guestName;
     }
 
     console.log('💳 메모리 주문 결제 처리 요청:', paymentData);
