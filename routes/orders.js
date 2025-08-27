@@ -248,13 +248,15 @@ router.post('/pay', async (req, res) => {
     // 3. order_items 테이블에 메뉴별 데이터 저장
     if (orderData.items && orderData.items.length > 0) {
       for (const item of orderData.items) {
-        await client.query(`
+        // order_items 테이블 스키마에 맞게 INSERT 쿼리 수정
+        const orderItemQuery = `
           INSERT INTO order_items (
-            order_id, paid_order_id, menu_name, quantity, price, cooking_status
-          ) VALUES ($1, $2, $3, $4, $5, $6)
-        `, [
+            order_id, menu_name, quantity, price, cooking_status
+          ) VALUES ($1, $2, $3, $4, $5)
+        `;
+        
+        await client.query(orderItemQuery, [
           orderId,
-          paidOrderId,
           item.name,
           item.quantity || 1,
           item.price,

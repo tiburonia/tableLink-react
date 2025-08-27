@@ -398,22 +398,60 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
     
-    // 에러 페이지 렌더링
+    // 에러 페이지 렌더링 - 개선된 UI
     main.innerHTML = `
       <div class="payment-error-container">
         <div class="error-content">
-          <div class="error-icon">❌</div>
-          <h1 class="error-title">결제 실패</h1>
-          <p class="error-message">${error.message || '결제 처리 중 오류가 발생했습니다.'}</p>
+          <div class="error-icon-wrapper">
+            <div class="error-icon">⚠️</div>
+            <div class="error-ripple"></div>
+          </div>
+          
+          <h1 class="error-title">결제 처리 실패</h1>
+          <p class="error-message">${error.message || '결제 처리 중 일시적인 오류가 발생했습니다.'}</p>
+          
+          <div class="error-details">
+            <div class="detail-item">
+              <span class="detail-icon">🏪</span>
+              <span class="detail-text">매장: ${orderData?.store || '알 수 없음'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-icon">🪑</span>
+              <span class="detail-text">테이블: ${orderData?.table || '알 수 없음'}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-icon">💰</span>
+              <span class="detail-text">주문금액: ${orderData?.total?.toLocaleString() || '0'}원</span>
+            </div>
+          </div>
+
+          <div class="error-help">
+            <p>잠시 후 다시 시도해주세요.</p>
+            <p>문제가 지속되면 매장에 문의해주세요.</p>
+          </div>
           
           <div class="action-buttons">
-            <button id="retryPayment" class="btn primary">다시 시도</button>
-            <button id="backToOrder" class="btn secondary">주문 화면으로</button>
+            <button id="retryPayment" class="btn primary">
+              <span class="btn-icon">🔄</span>
+              <span class="btn-text">다시 시도</span>
+            </button>
+            <button id="backToOrder" class="btn secondary">
+              <span class="btn-icon">←</span>
+              <span class="btn-text">주문 화면으로</span>
+            </button>
+            <button id="backToMain" class="btn tertiary">
+              <span class="btn-icon">🏠</span>
+              <span class="btn-text">메인으로</span>
+            </button>
           </div>
         </div>
       </div>
 
       <style>
+        * {
+          box-sizing: border-box;
+        }
+
         .payment-error-container {
           position: fixed;
           top: 0;
@@ -423,43 +461,135 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           width: 100%;
           max-width: 430px;
           margin: 0 auto;
-          background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+          background: linear-gradient(135deg, #fef1f2 0%, #fee2e2 50%, #fecaca 100%);
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           padding: 20px;
-          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 100vh;
         }
 
         .error-content {
-          max-width: 400px;
           width: 100%;
+          max-width: 380px;
           text-align: center;
           background: white;
-          border-radius: 16px;
-          padding: 40px 30px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-          margin: 60px auto 0 auto;
-          display: flex;
-          flex-direction: column;
+          border-radius: 20px;
+          padding: 40px 32px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+          border: 1px solid rgba(248, 113, 113, 0.2);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .error-icon-wrapper {
+          position: relative;
+          display: inline-block;
+          margin-bottom: 24px;
         }
 
         .error-icon {
-          font-size: 64px;
-          margin-bottom: 20px;
+          font-size: 72px;
+          margin-bottom: 0;
+          position: relative;
+          z-index: 2;
+          animation: shake 0.5s ease-in-out;
+        }
+
+        .error-ripple {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 120px;
+          height: 120px;
+          border: 3px solid #f87171;
+          border-radius: 50%;
+          opacity: 0.3;
+          animation: ripple 2s infinite;
+        }
+
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-4px); }
+          75% { transform: translateX(4px); }
+        }
+
+        @keyframes ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.7;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0;
+          }
         }
 
         .error-title {
-          font-size: 28px;
-          font-weight: 700;
+          font-size: 24px;
+          font-weight: 800;
           color: #dc2626;
-          margin: 0 0 12px 0;
+          margin: 0 0 16px 0;
+          letter-spacing: -0.5px;
         }
 
         .error-message {
           font-size: 16px;
-          color: #64748b;
-          margin: 0 0 30px 0;
+          color: #6b7280;
+          margin: 0 0 24px 0;
           line-height: 1.6;
+          font-weight: 500;
+        }
+
+        .error-details {
+          background: #f9fafb;
+          border-radius: 12px;
+          padding: 20px;
+          margin-bottom: 24px;
+          text-align: left;
+        }
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .detail-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .detail-icon {
+          font-size: 16px;
+          width: 24px;
+          text-align: center;
+        }
+
+        .error-help {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 32px;
+          border: 1px solid #bfdbfe;
+        }
+
+        .error-help p {
+          margin: 0 0 8px 0;
+          font-size: 13px;
+          color: #1e40af;
+          font-weight: 500;
+          line-height: 1.4;
+        }
+
+        .error-help p:last-child {
+          margin-bottom: 0;
         }
 
         .action-buttons {
@@ -469,38 +599,99 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         }
 
         .btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
           padding: 16px 24px;
           border: none;
-          border-radius: 12px;
+          border-radius: 14px;
           font-size: 16px;
-          font-weight: 600;
+          font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
           width: 100%;
+          text-decoration: none;
+          outline: none;
+        }
+
+        .btn-icon {
+          font-size: 18px;
         }
 
         .btn.primary {
           background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
           color: white;
+          box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
         }
 
         .btn.primary:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(220, 38, 38, 0.3);
+          box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
         }
 
         .btn.secondary {
-          background: white;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
           color: #475569;
           border: 2px solid #e2e8f0;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
         .btn.secondary:hover {
-          background: #f8fafc;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
           border-color: #cbd5e1;
+          transform: translateY(-1px);
+        }
+
+        .btn.tertiary {
+          background: transparent;
+          color: #6b7280;
+          border: 1px solid #d1d5db;
+        }
+
+        .btn.tertiary:hover {
+          background: #f9fafb;
+          color: #374151;
+          border-color: #9ca3af;
+        }
+
+        .btn:active {
+          transform: translateY(0);
+        }
+
+        @media (max-width: 480px) {
+          .payment-error-container {
+            padding: 16px;
+          }
+          
+          .error-content {
+            padding: 32px 24px;
+          }
+          
+          .error-title {
+            font-size: 22px;
+          }
+          
+          .error-icon {
+            font-size: 64px;
+          }
         }
       </style>
     `;
+
+    // 에러 페이지 버튼 이벤트
+    document.getElementById('retryPayment')?.addEventListener('click', () => {
+      renderPay(currentOrder, store, orderData.tableNum);
+    });
+
+    document.getElementById('backToOrder')?.addEventListener('click', () => {
+      renderOrderScreen(store, orderData.tableNum);
+    });
+
+    // 메인으로 버튼 추가
+    document.getElementById('backToMain')?.addEventListener('click', () => {
+      renderMap();
+    });
 
     // 에러 페이지 버튼 이벤트
     document.getElementById('retryPayment')?.addEventListener('click', () => {

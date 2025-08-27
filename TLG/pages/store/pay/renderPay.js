@@ -532,6 +532,7 @@ function renderPay(currentOrder, store, tableNum) {
       const userId = window.userInfo?.id || localStorage.getItem('userId');
       if (!userId) {
         document.getElementById('storePointDisplay').textContent = '로그인 필요';
+        console.warn('⚠️ 사용자 ID를 찾을 수 없습니다. 로그인이 필요합니다.');
         return;
       }
 
@@ -566,11 +567,17 @@ function renderPay(currentOrder, store, tableNum) {
       const userId = window.userInfo?.id || localStorage.getItem('userId');
       if (!userId) {
         document.getElementById('couponList').innerHTML = '<p>로그인이 필요합니다</p>';
+        console.warn('⚠️ 쿠폰 로드: 사용자 ID를 찾을 수 없습니다.');
         return;
       }
 
       // 사용자 정보에서 쿠폰 데이터 가져오기
       const response = await fetch(`/api/auth/user/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
 
       if (data.success && data.user && data.user.coupons && data.user.coupons.unused && data.user.coupons.unused.length > 0) {
