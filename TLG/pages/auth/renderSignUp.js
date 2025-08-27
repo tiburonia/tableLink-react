@@ -546,7 +546,7 @@ async function renderSignUp() {
         align-items: center;
         justify-content: center;
         position: relative;
-        margin: 20px 0 16px;
+        margin: 32px 0 16px;
         box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
         touch-action: manipulation;
         flex-shrink: 0;
@@ -609,11 +609,11 @@ async function renderSignUp() {
 
       /* 로그인 링크 섹션 */
       .login-link-section {
-        margin: 40px 0 16px 0;
+        margin: 60px 0 24px 0;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 16px;
+        gap: 20px;
         flex-shrink: 0;
       }
 
