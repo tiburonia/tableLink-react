@@ -195,14 +195,14 @@ async function renderLogin() {
       }
 
       .login-container {
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.98);
         backdrop-filter: blur(20px);
         border-radius: 24px;
         padding: 40px 32px;
         width: 100%;
         max-width: 440px;
         box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         position: relative;
         z-index: 2;
         animation: slideUp 0.8s ease-out;
@@ -248,9 +248,9 @@ async function renderLogin() {
       }
 
       .brand-subtitle {
-        color: #64748b;
+        color: #475569;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         margin: 0;
       }
 
@@ -294,8 +294,9 @@ async function renderLogin() {
         position: absolute;
         left: 48px;
         top: 16px;
-        color: #64748b;
+        color: #475569;
         font-size: 16px;
+        font-weight: 500;
         pointer-events: none;
         transition: all 0.3s ease;
         transform-origin: left top;
@@ -307,7 +308,7 @@ async function renderLogin() {
         top: 50%;
         transform: translateY(-50%);
         font-size: 18px;
-        color: #94a3b8;
+        color: #64748b;
       }
 
       .primary-btn {
@@ -361,8 +362,9 @@ async function renderLogin() {
       }
 
       .signup-text {
-        color: #64748b;
+        color: #475569;
         font-size: 14px;
+        font-weight: 500;
         margin-right: 8px;
       }
 
@@ -399,11 +401,11 @@ async function renderLogin() {
       }
 
       .divider-text {
-        background: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.98);
         padding: 0 16px;
-        color: #64748b;
+        color: #475569;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
       }
 
       .quick-access-section {
@@ -412,8 +414,8 @@ async function renderLogin() {
 
       .section-title {
         font-size: 16px;
-        font-weight: 700;
-        color: #1e293b;
+        font-weight: 800;
+        color: #0f172a;
         margin-bottom: 16px;
         text-align: center;
       }
@@ -570,7 +572,8 @@ async function renderLogin() {
 
       .footer-text {
         font-size: 12px;
-        color: #94a3b8;
+        color: #64748b;
+        font-weight: 500;
         margin: 0;
       }
 
