@@ -81,17 +81,24 @@ function renderTableContent(tableNumber, data) {
   const panelContent = document.getElementById('panelContent');
   if (!panelContent) return;
 
-  const { table, pendingOrders, completedOrders, tllOrder } = data;
-  const isOccupied = table.isOccupied || pendingOrders.length > 0;
-  const hasPendingOrders = pendingOrders.length > 0;
-  const hasCompletedOrders = completedOrders.length > 0;
+  const { table, currentSession, completedTLLOrders, tllOrder } = data;
+  const isOccupied = table.isOccupied || !!currentSession;
+  const hasActiveSession = !!currentSession;
+  const hasCompletedOrders = completedTLLOrders.length > 0;
+
+  console.log(`🎨 테이블 ${tableNumber} UI 렌더링:`, {
+    isOccupied,
+    hasActiveSession,
+    hasCompletedOrders,
+    sessionItemCount: currentSession?.itemCount || 0
+  });
 
   panelContent.innerHTML = `
     ${TableStatusUI.render(tableNumber, table, isOccupied)}
-    ${TableActionsUI.render(tableNumber, isOccupied, hasPendingOrders, hasCompletedOrders)}
+    ${TableActionsUI.render(tableNumber, isOccupied, hasActiveSession, hasCompletedOrders)}
     ${TLLInfoUI.render(tllOrder)}
-    ${PendingOrdersUI.render(pendingOrders)}
-    ${CompletedOrdersUI.render(completedOrders)}
+    ${CurrentSessionUI.render(currentSession)}
+    ${CompletedOrdersUI.render(completedTLLOrders)}
     ${getTableDetailStyles()}
   `;
 }
@@ -111,30 +118,17 @@ async function loadTableDetailData(tableNumber) {
     const allOrdersData = await allOrdersResponse.json();
     const tllOrderData = await tllOrderResponse.json();
 
-    // new logic: get current session
-    let currentSession = null;
-    if (allOrdersData.success && allOrdersData.currentSession) {
-      const sessionItems = allOrdersData.currentSession.items.map(item => ({
-        menuName: item.menuName,
-        quantity: item.quantity,
-        price: item.price,
-        cookingStatus: item.cookingStatus
-      }));
-
-      currentSession = {
-        ...allOrdersData.currentSession,
-        items: sessionItems,
-        sessionStarted: allOrdersData.currentSession.startedAt,
-        totalAmount: allOrdersData.currentSession.totalAmount
-      };
-    }
+    console.log(`🔍 테이블 ${tableNumber} 데이터 로드:`, {
+      success: allOrdersData.success,
+      currentSession: allOrdersData.currentSession,
+      completedTLLOrders: allOrdersData.completedTLLOrders?.length || 0
+    });
 
     return {
       table: currentTable || { tableNumber, isOccupied: false },
-      pendingOrders: allOrdersData.success ? allOrdersData.pendingOrders : [],
-      completedOrders: allOrdersData.success ? allOrdersData.completedOrders : [],
-      tllOrder: tllOrderData.success ? tllOrderData.tllOrder : null,
-      currentSession: currentSession // Add currentSession to the data
+      currentSession: allOrdersData.success ? allOrdersData.currentSession : null,
+      completedTLLOrders: allOrdersData.success ? allOrdersData.completedTLLOrders : [],
+      tllOrder: tllOrderData.success ? tllOrderData.tllOrder : null
     };
 
   } catch (error) {
@@ -266,105 +260,152 @@ const TLLInfoUI = {
   }
 };
 
-// 미결제 주문 UI 모듈
-const PendingOrdersUI = {
-  render(pendingOrders) {
-    // Removed the old logic for rendering individual pending orders
-    // New logic will render the current session if available
+// 현재 세션 UI 모듈
+const CurrentSessionUI = {
+  render(currentSession) {
+    if (!currentSession) {
+      return `
+        <div class="current-session-section">
+          <div class="section-header">
+            <h4>📋 현재 세션</h4>
+          </div>
+          <div class="no-active-session">
+            <div class="no-session-icon">🍽️</div>
+            <div class="no-session-text">활성 세션이 없습니다</div>
+            <div class="no-session-hint">메뉴를 주문하면 새 세션이 시작됩니다</div>
+          </div>
+        </div>
+      `;
+    }
 
-    // Check if there's a current session available in the data
-    const hasCurrentSession = window.currentSessionData && window.currentSessionData.currentSession;
+    const items = currentSession.items || [];
+    const sessionStartTime = new Date(currentSession.sessionStarted);
 
     return `
-      <div class="pending-orders-section">
+      <div class="current-session-section">
         <div class="section-header">
-          <h4>🔄 미결제 주문</h4>
+          <h4>📋 현재 세션</h4>
+          <div class="session-badge active">진행중</div>
         </div>
-        <div class="orders-container">
-          ${hasCurrentSession ? this.renderCurrentSession(window.currentSessionData.currentSession) : '<div class="no-active-session">활성 세션이 없습니다</div>'}
+        
+        <div class="session-card" data-session-id="${currentSession.orderId}">
+          <div class="session-header">
+            <div class="session-info-left">
+              <div class="customer-name">
+                <span class="customer-icon">👤</span>
+                ${currentSession.customerName || '포스 주문'}
+              </div>
+              <div class="session-time">
+                <span class="time-icon">🕐</span>
+                시작: ${sessionStartTime.toLocaleTimeString()}
+              </div>
+            </div>
+            <div class="session-amount">
+              <span class="amount-label">총 금액</span>
+              <span class="amount-value">₩${currentSession.totalAmount.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div class="session-items-container">
+            <div class="items-header">
+              <span class="items-title">주문 내역 (${items.length}개)</span>
+              <button class="items-toggle" onclick="toggleSessionItems(this)">
+                <span class="toggle-icon">▼</span>
+              </button>
+            </div>
+            
+            <div class="session-items">
+              ${items.map(item => `
+                <div class="session-item">
+                  <div class="item-info">
+                    <span class="item-name">${item.menuName}</span>
+                    <span class="item-qty">x${item.quantity}</span>
+                  </div>
+                  <div class="item-details">
+                    <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
+                    <span class="cooking-status status-${item.cookingStatus.toLowerCase()}">
+                      ${this.getCookingStatusText(item.cookingStatus)}
+                    </span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="session-actions">
+            <button class="session-btn btn-add" onclick="openAddOrderModal('${window.currentTable}')">
+              <span class="btn-icon">➕</span>
+              메뉴 추가
+            </button>
+            <button class="session-btn btn-payment" onclick="processSessionPayment('${currentSession.orderId}')">
+              <span class="btn-icon">💳</span>
+              결제 처리
+            </button>
+          </div>
         </div>
       </div>
     `;
   },
 
-  renderCurrentSession(session) {
-    const items = session.items || [];
-
-    return `
-      <div class="current-session" data-session-id="${session.id}">
-        <div class="session-header">
-          <span class="session-title">📋 현재 세션</span>
-          <span class="session-amount">₩${session.totalAmount.toLocaleString()}</span>
-          <span class="session-status ${session.status.toLowerCase()}">${session.status}</span>
-        </div>
-        <div class="session-info">
-          <span class="customer-name">${session.customerName || '포스 주문'}</span>
-          <span class="session-time">시작: ${new Date(session.sessionStarted).toLocaleTimeString()}</span>
-        </div>
-        <div class="session-items">
-          ${items.map(item => `
-            <div class="session-item">
-              <span class="item-name">${item.menuName}</span>
-              <span class="item-qty">x${item.quantity}</span>
-              <span class="item-price">₩${item.price.toLocaleString()}</span>
-              <span class="cooking-status ${item.cookingStatus.toLowerCase()}">${item.cookingStatus}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="session-actions">
-           <button class="btn-small btn-primary" onclick="processSessionPayment('${session.id}')">
-            결제하기
-          </button>
-        </div>
-      </div>
-    `;
+  getCookingStatusText(status) {
+    const statusMap = {
+      'PENDING': '대기중',
+      'COOKING': '조리중',
+      'COMPLETED': '완료',
+      'SERVED': '서빙완료'
+    };
+    return statusMap[status] || status;
   }
 };
 
-// 완료된 주문 UI 모듈
+// 완료된 TLL 주문 UI 모듈
 const CompletedOrdersUI = {
-  render(completedOrders) {
-    const hasOrders = completedOrders.length > 0;
+  render(completedTLLOrders) {
+    const hasOrders = completedTLLOrders.length > 0;
 
     return `
-      <div class="completed-orders-section">
-        <h4>✅ 완료된 주문 ${hasOrders ? `(${completedOrders.length}개)` : ''}</h4>
-        <div class="orders-container ${completedOrders.length > 3 ? 'scrollable' : ''}">
+      <div class="completed-tll-orders-section">
+        <div class="section-header">
+          <h4>🔗 최근 TLL 결제내역</h4>
+          ${hasOrders ? `<span class="order-count-badge">${completedTLLOrders.length}</span>` : ''}
+        </div>
+        <div class="orders-container ${completedTLLOrders.length > 2 ? 'scrollable-tll' : ''}">
           ${hasOrders ?
-            completedOrders.map(order => this.renderOrderCard(order)).join('') :
-            '<div class="no-orders">완료된 주문이 없습니다</div>'
+            completedTLLOrders.map(order => this.renderTLLOrderCard(order)).join('') :
+            '<div class="no-tll-orders">최근 TLL 결제내역이 없습니다</div>'
           }
         </div>
       </div>
     `;
   },
 
-  renderOrderCard(order) {
+  renderTLLOrderCard(order) {
     const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
     const items = orderData?.items || [];
+    const paymentTime = new Date(order.orderDate);
 
     return `
-      <div class="order-card completed" data-order-id="${order.id}">
-        <div class="order-header">
-          <div class="order-info">
-            <div class="customer-info">
-              <span class="customer-name">👤 ${order.customerName}</span>
-              <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">
-                ${OrderUtils.getOrderSourceText(order.orderSource || 'POS')}
-              </span>
-            </div>
-            <div class="order-time">${OrderUtils.formatOrderTime(order.orderDate)}</div>
+      <div class="tll-order-card" data-order-id="${order.id}">
+        <div class="tll-order-header">
+          <div class="customer-info">
+            <span class="customer-icon">👤</span>
+            <span class="customer-name">${order.customerName}</span>
+            <span class="tll-badge">TLL</span>
           </div>
-          <div class="order-amount completed">₩${order.finalAmount.toLocaleString()}</div>
+          <div class="payment-time">
+            <span class="time-icon">🕐</span>
+            ${this.formatTimeAgo(paymentTime)}
+          </div>
         </div>
 
-        <div class="order-items collapsed" onclick="toggleOrderItems(this)">
+        <div class="tll-order-items collapsed" onclick="toggleTLLItems(this)">
           <div class="items-summary">
-            ${items.length}개 메뉴 <span class="expand-icon">▼</span>
+            <span class="items-text">${items.length}개 메뉴</span>
+            <span class="expand-icon">▼</span>
           </div>
           <div class="items-detail">
             ${items.map(item => `
-              <div class="menu-item">
+              <div class="tll-menu-item">
                 <span class="menu-name">${item.name}</span>
                 <span class="menu-quantity">×${item.quantity || 1}</span>
                 <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
@@ -373,12 +414,28 @@ const CompletedOrdersUI = {
           </div>
         </div>
 
-        <div class="order-actions">
-          <span class="status-badge completed">결제 완료</span>
-          <span class="payment-method">💳 카드</span>
+        <div class="tll-order-footer">
+          <div class="payment-amount">₩${order.finalAmount.toLocaleString()}</div>
+          <div class="payment-status">
+            <span class="status-icon">✅</span>
+            결제완료
+          </div>
         </div>
       </div>
     `;
+  },
+
+  formatTimeAgo(date) {
+    const now = new Date();
+    const diffMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffMinutes < 1) return '방금 전';
+    if (diffMinutes < 60) return `${diffMinutes}분 전`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}시간 전`;
+
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5);
   }
 };
 
@@ -434,13 +491,28 @@ function updateTimers() {
   });
 }
 
-// 주문 항목 토글
-function toggleOrderItems(element) {
-  const orderItems = element.closest('.order-items');
-  const expandIcon = orderItems.querySelector('.expand-icon');
+// 세션 아이템 토글
+function toggleSessionItems(button) {
+  const sessionCard = button.closest('.session-card');
+  const itemsContainer = sessionCard.querySelector('.session-items');
+  const toggleIcon = button.querySelector('.toggle-icon');
 
-  orderItems.classList.toggle('collapsed');
-  expandIcon.textContent = orderItems.classList.contains('collapsed') ? '▼' : '▲';
+  itemsContainer.classList.toggle('collapsed');
+  toggleIcon.textContent = itemsContainer.classList.contains('collapsed') ? '▼' : '▲';
+}
+
+// TLL 주문 아이템 토글
+function toggleTLLItems(element) {
+  const tllItems = element.closest('.tll-order-items');
+  const expandIcon = tllItems.querySelector('.expand-icon');
+
+  tllItems.classList.toggle('collapsed');
+  expandIcon.textContent = tllItems.classList.contains('collapsed') ? '▼' : '▲';
+}
+
+// 주문 항목 토글 (하위호환)
+function toggleOrderItems(element) {
+  toggleTLLItems(element);
 }
 
 // 테이블 데이터 새로고침
@@ -1355,6 +1427,412 @@ function getTableDetailStyles() {
         color: white;
       }
 
+      /* 현재 세션 스타일 */
+      .current-session-section {
+        margin-bottom: 20px;
+        background: #f0f9ff;
+        border: 2px solid #0ea5e9;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .session-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .session-badge.active {
+        background: #10b981;
+        color: white;
+      }
+
+      .no-active-session {
+        padding: 40px 20px;
+        text-align: center;
+      }
+
+      .no-session-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.6;
+      }
+
+      .no-session-text {
+        font-size: 16px;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 8px;
+      }
+
+      .no-session-hint {
+        font-size: 14px;
+        color: #94a3b8;
+      }
+
+      .session-card {
+        background: white;
+        margin: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+
+      .session-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .session-info-left {
+        flex: 1;
+      }
+
+      .customer-name, .session-time {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .customer-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .session-time {
+        font-size: 13px;
+        color: #64748b;
+      }
+
+      .customer-icon, .time-icon {
+        font-size: 14px;
+      }
+
+      .session-amount {
+        text-align: right;
+      }
+
+      .amount-label {
+        display: block;
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+      }
+
+      .amount-value {
+        font-size: 20px;
+        font-weight: 800;
+        color: #059669;
+      }
+
+      .session-items-container {
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .items-header {
+        padding: 16px 20px;
+        background: #f8fafc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+      }
+
+      .items-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .items-toggle {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .toggle-icon {
+        font-size: 12px;
+        color: #64748b;
+        transition: transform 0.2s;
+      }
+
+      .session-items {
+        padding: 0 20px 16px 20px;
+      }
+
+      .session-items.collapsed {
+        display: none;
+      }
+
+      .session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .session-item:last-child {
+        border-bottom: none;
+      }
+
+      .item-info {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .item-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .item-qty {
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .item-details {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .item-price {
+        font-size: 14px;
+        font-weight: 700;
+        color: #059669;
+      }
+
+      .cooking-status {
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .status-pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status-cooking {
+        background: #ddd6fe;
+        color: #7c3aed;
+      }
+
+      .status-completed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .session-actions {
+        padding: 16px 20px;
+        display: flex;
+        gap: 12px;
+      }
+
+      .session-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+      }
+
+      .btn-add {
+        background: #f3f4f6;
+        color: #374151;
+        border: 2px solid #e5e7eb;
+      }
+
+      .btn-add:hover {
+        background: #e5e7eb;
+        transform: translateY(-1px);
+      }
+
+      .btn-payment {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      }
+
+      .btn-payment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+      }
+
+      .btn-icon {
+        font-size: 16px;
+      }
+
+      /* 완료된 TLL 주문 스타일 */
+      .completed-tll-orders-section {
+        margin-bottom: 20px;
+        background: #fafafa;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+
+      .order-count-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .scrollable-tll {
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .no-tll-orders {
+        text-align: center;
+        color: #94a3b8;
+        font-style: italic;
+        padding: 32px 20px;
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+        margin: 16px;
+      }
+
+      .tll-order-card {
+        background: white;
+        margin: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.2s;
+      }
+
+      .tll-order-card:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+      }
+
+      .tll-order-header {
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .tll-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-left: 8px;
+      }
+
+      .payment-time {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .tll-order-items {
+        background: #f8fafc;
+        cursor: pointer;
+      }
+
+      .tll-order-items .items-summary {
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .tll-order-items.collapsed .items-detail {
+        display: none;
+      }
+
+      .tll-order-items:not(.collapsed) .items-summary {
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .items-text {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .items-detail {
+        padding: 0 16px 12px 16px;
+      }
+
+      .tll-menu-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 12px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .tll-menu-item:last-child {
+        border-bottom: none;
+      }
+
+      .tll-order-footer {
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+      }
+
+      .payment-amount {
+        font-size: 16px;
+        font-weight: 700;
+        color: #059669;
+      }
+
+      .payment-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #16a34a;
+        font-weight: 600;
+      }
+
+      .status-icon {
+        font-size: 14px;
+      }
+
       /* 반응형 */
       @media (max-width: 768px) {
         .status-grid, .action-grid {
@@ -1368,6 +1846,16 @@ function getTableDetailStyles() {
         .btn-text {
           font-size: 12px;
         }
+
+        .session-header {
+          flex-direction: column;
+          gap: 16px;
+          align-items: stretch;
+        }
+
+        .session-actions {
+          flex-direction: column;
+        }
       }
     </style>
   `;
@@ -1377,13 +1865,15 @@ function getTableDetailStyles() {
 window.renderTableDetailPanel = renderTableDetailPanel;
 window.refreshTableData = refreshTableData;
 window.toggleOrderItems = toggleOrderItems;
+window.toggleSessionItems = toggleSessionItems;
+window.toggleTLLItems = toggleTLLItems;
 window.openAddOrderModal = openAddOrderModal;
 window.openPaymentModal = openPaymentModal;
 window.processOrderPayment = processOrderPayment;
-window.processSessionPayment = processSessionPayment; // Added for session payment
+window.processSessionPayment = processSessionPayment;
 window.moveTableOrders = moveTableOrders;
-window.occupyTable = occupyTable; // occupyTable 함수 전역 등록
-window.releaseTable = releaseTable; // releaseTable 함수 전역 등록
+window.occupyTable = occupyTable;
+window.releaseTable = releaseTable;
 
 
 console.log('✅ 개선된 테이블 상세 정보 패널 UI 모듈 로드 완료');

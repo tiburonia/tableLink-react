@@ -1,6 +1,6 @@
 // 결제 모달 관리 모듈
 
-// 결제 처리 기능
+// 결제 처리 기능 (세션 기반)
 async function processPayment() {
   if (!window.currentTable) {
     showPOSNotification('테이블을 먼저 선택해주세요.', 'warning');
@@ -8,22 +8,22 @@ async function processPayment() {
   }
 
   try {
-    // 테이블의 미결제 주문 조회
+    // 테이블의 현재 세션 조회
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/all-orders`);
     const data = await response.json();
 
     if (!data.success) {
-      throw new Error('주문 정보 조회 실패');
+      throw new Error('세션 정보 조회 실패');
     }
 
-    const pendingOrders = data.pendingOrders || [];
+    const currentSession = data.currentSession;
 
-    if (pendingOrders.length === 0) {
-      showPOSNotification('결제할 주문이 없습니다.', 'warning');
+    if (!currentSession) {
+      showPOSNotification('결제할 활성 세션이 없습니다.', 'warning');
       return;
     }
 
-    showPaymentModal(pendingOrders);
+    showPaymentModal(currentSession);
 
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
@@ -31,13 +31,15 @@ async function processPayment() {
   }
 }
 
-// 결제 모달 표시
-function showPaymentModal(orders) {
+// 결제 모달 표시 (세션 기반)
+function showPaymentModal(currentSession) {
   // 기존 모달이 있다면 제거
   const existingModal = document.getElementById('paymentModal');
   if (existingModal) {
     existingModal.remove();
   }
+
+  const sessionItems = currentSession.items || [];
 
   const modal = document.createElement('div');
   modal.id = 'paymentModal';
@@ -45,46 +47,46 @@ function showPaymentModal(orders) {
     <div class="modal-overlay" onclick="closePaymentModal(event)">
       <div class="modal-content payment-modal">
         <div class="modal-header">
-          <h2>💳 결제 처리 - 테이블 ${window.currentTable}</h2>
+          <h2>💳 세션 결제 처리 - 테이블 ${window.currentTable}</h2>
           <button class="close-btn" onclick="closePaymentModal()">✕</button>
         </div>
 
         <div class="modal-body">
-          <div class="payment-orders">
-            <div class="section-title">결제할 주문 선택</div>
-            <div class="orders-container">
-              ${orders.map(order => `
-                <div class="payment-order-item" data-order-id="${order.id}">
-                  <div class="order-header">
-                    <div class="order-info">
-                      <span class="customer-name">👤 ${order.customerName}</span>
-                      <span class="order-time">${formatOrderTime(order.orderDate)}</span>
-                      <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">${getOrderSourceText(order.orderSource || 'POS')}</span>
-                    </div>
-                    <div class="order-amount">₩${order.finalAmount.toLocaleString()}</div>
-                  </div>
-
-                  <div class="order-items">
-                    ${order.orderData && order.orderData.items ?
-                      order.orderData.items.map(item => `
-                        <div class="menu-item">
-                          <span class="menu-name">${item.name}</span>
-                          <span class="menu-quantity">x${item.quantity || 1}</span>
-                          <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
-                        </div>
-                      `).join('') :
-                      '<div class="no-items">주문 상세 정보 없음</div>'
-                    }
-                  </div>
-
-                  <div class="order-actions">
-                    <label class="payment-checkbox">
-                      <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" checked>
-                      <span>결제 선택</span>
-                    </label>
-                  </div>
+          <div class="session-summary">
+            <div class="section-title">결제할 세션 정보</div>
+            
+            <div class="session-info-card">
+              <div class="session-header">
+                <div class="customer-info">
+                  <span class="customer-icon">👤</span>
+                  <span class="customer-name">${currentSession.customerName}</span>
+                  <span class="session-badge">세션</span>
                 </div>
-              `).join('')}
+                <div class="session-time">
+                  시작: ${new Date(currentSession.sessionStarted).toLocaleTimeString()}
+                </div>
+              </div>
+
+              <div class="session-items">
+                <div class="items-header">
+                  <span class="items-title">주문 내역 (${sessionItems.length}개)</span>
+                </div>
+                <div class="items-list">
+                  ${sessionItems.map(item => `
+                    <div class="session-item">
+                      <span class="item-name">${item.menuName}</span>
+                      <span class="item-quantity">×${item.quantity}</span>
+                      <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
+                      <span class="cooking-status status-${item.cookingStatus.toLowerCase()}">${getCookingStatusText(item.cookingStatus)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <div class="session-total">
+                <div class="total-label">세션 총 금액</div>
+                <div class="total-amount">₩${currentSession.totalAmount.toLocaleString()}</div>
+              </div>
             </div>
           </div>
 
@@ -121,12 +123,12 @@ function showPaymentModal(orders) {
             <!-- 결제 총계 -->
             <div class="payment-total">
               <div class="total-line">
-                <span>선택된 주문:</span>
-                <span id="selectedOrderCount">${orders.length}개</span>
+                <span>세션 항목:</span>
+                <span id="sessionItemCount">${sessionItems.length}개</span>
               </div>
               <div class="total-line final">
                 <span>총 결제 금액:</span>
-                <span id="totalPaymentAmount">₩${orders.reduce((sum, order) => sum + order.finalAmount, 0).toLocaleString()}</span>
+                <span id="totalPaymentAmount">₩${currentSession.totalAmount.toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -542,55 +544,18 @@ function updatePaymentSummary() {
   });
 }
 
-// 선택된 주문들 결제 처리
+// 세션 결제 처리
 async function processSelectedPayments() {
-  // 현재 세션 확인
-  const currentSession = document.querySelector('.current-session'); // This selector might need adjustment based on actual implementation
-  if (!currentSession) {
-    showPOSNotification('결제할 활성 세션이 없습니다.', 'warning'); // Use showPOSNotification for consistency
-    return;
-  }
-
-  // Assuming 'currentSession' will contain the total amount for the session
-  const sessionAmountElement = currentSession.querySelector('.session-amount'); // Adjust selector if needed
-  if (!sessionAmountElement) {
-    showPOSNotification('세션 금액 정보를 찾을 수 없습니다.', 'error');
-    return;
-  }
-  const sessionAmount = sessionAmountElement.textContent.replace(/[₩,]/g, '');
-  const totalAmount = parseInt(sessionAmount);
-
-
   const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
   const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
-
-  // Note: The original code selected individual orders. The new requirement implies paying for the whole session.
-  // We need to get the order IDs associated with the current session.
-  // This part will heavily depend on how the 'currentSession' element or data is structured.
-  // For now, let's assume we can get all checked order IDs to represent the session's items.
-  const selectedCheckboxes = document.querySelectorAll('input[type="checkbox"][data-order-id]:checked');
-  if (selectedCheckboxes.length === 0) {
-    showPOSNotification('결제할 주문을 선택해주세요.', 'warning');
-    return;
-  }
-
-  // In the new model, we are paying for the session, not individual orders.
-  // So, we should ideally send a single order ID representing the session, or a list of items for the session.
-  // For now, we'll pass the order IDs that were checked, assuming they represent the session.
-  // A more robust implementation would fetch the session's primary order ID.
-  const orderIdsForSession = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.orderId));
-
+  const totalAmountText = document.getElementById('totalPaymentAmount').textContent;
+  const totalAmount = parseInt(totalAmountText.replace(/[₩,]/g, ''));
 
   const processBtn = document.getElementById('processPaymentBtn');
   processBtn.disabled = true;
   processBtn.textContent = '처리 중...';
 
   const paymentData = {
-    // Assuming we're sending a single orderId for the session, or a representation of the session.
-    // If 'orderIdsForSession' represents all items in the current session's order,
-    // this might need to be adjusted to send a single 'orderId' that represents the session.
-    orderIds: orderIdsForSession, // This might need to be changed to a single session order ID
-    totalAmount: totalAmount, // Sending the total amount for the session
     paymentMethod: paymentMethod
   };
 
@@ -599,49 +564,52 @@ async function processSelectedPayments() {
     paymentData.guestPhone = guestPhone;
   }
 
-  console.log('💳 결제 처리 요청 (세션 기반):', paymentData);
+  console.log('💳 세션 결제 처리 요청:', paymentData);
 
-  // Assuming the API endpoint handles session-based payment processing
-  const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(paymentData)
-  });
+  try {
+    const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(paymentData)
+    });
 
-  const result = await response.json();
+    const result = await response.json();
 
-  if (result.success) {
-    // 결제 성공 후 UI 업데이트
-    window.showPOSNotification(
-      `테이블 ${window.currentTable} 세션 결제 완료 (총 ₩${totalAmount.toLocaleString()})`,
-      'success'
-    );
+    if (result.success) {
+      // 결제 성공 후 UI 업데이트
+      window.showPOSNotification(
+        `테이블 ${window.currentTable} 세션 결제 완료 (총 ₩${totalAmount.toLocaleString()})`,
+        'success'
+      );
 
-    // 모달 닫기
-    closePaymentModal();
+      // 모달 닫기
+      closePaymentModal();
 
-    // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
-    await window.loadTables();
-    window.renderTableMap();
+      // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
+      await window.loadTables();
+      window.renderTableMap();
 
-    // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
-    if (window.currentTable) {
-      window.updateDetailPanel(window.currentTable);
+      // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
+      if (window.currentTable && typeof window.renderTableDetailPanel === 'function') {
+        window.renderTableDetailPanel(window.currentTable);
+      }
+
+      console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 세션 자동 해제 완료`);
+      window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
+    } else {
+      window.showPOSNotification('결제 처리 실패: ' + result.error, 'error');
     }
-
-    console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 세션 자동 해제 완료`);
-    window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
-  } else {
-    // alert('결제 처리 실패: ' + result.error); // Use showPOSNotification
-    showPOSNotification('결제 처리 실패: ' + result.error, 'error');
-  }
-
-  // Re-enable button and reset text
-  if (processBtn) {
-    processBtn.disabled = false;
-    processBtn.textContent = '결제 처리';
+  } catch (error) {
+    console.error('❌ 결제 처리 중 오류:', error);
+    window.showPOSNotification('결제 처리 중 오류가 발생했습니다.', 'error');
+  } finally {
+    // Re-enable button and reset text
+    if (processBtn) {
+      processBtn.disabled = false;
+      processBtn.textContent = '결제 처리';
+    }
   }
 }
 
@@ -668,6 +636,17 @@ function formatOrderTime(orderDate) {
   if (diffHours < 24) return `${diffHours}시간 전`;
 
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5);
+}
+
+// 조리 상태 텍스트 변환
+function getCookingStatusText(status) {
+  const statusMap = {
+    'PENDING': '대기중',
+    'COOKING': '조리중', 
+    'COMPLETED': '완료',
+    'SERVED': '서빙완료'
+  };
+  return statusMap[status] || status;
 }
 
 // 주문 소스 텍스트 변환
