@@ -526,13 +526,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     // 🆕 동일 테이블의 기존 TLL 주문 확인 (24시간 내) - 아카이브하지 않고 유지
     const existingOrdersResult = await client.query(`
-      SELECT o.id, o.user_id, o.guest_phone, u.name as user_name, o.order_date, o.final_amount
+      SELECT o.id, p.user_id, p.guest_phone, u.name as user_name, p.payment_date, p.final_amount
       FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
+      JOIN paid_orders p ON o.paid_order_id = p.id
+      LEFT JOIN users u ON p.user_id = u.id
       WHERE o.store_id = $1 AND o.table_number = $2 
-      AND o.order_date >= NOW() - INTERVAL '24 hours'
-      AND o.order_status != 'archived'
-      ORDER BY o.order_date DESC
+      AND p.payment_date >= NOW() - INTERVAL '24 hours'
+      AND o.cooking_status != 'COMPLETED'
+      ORDER BY p.payment_date DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     console.log(`🔍 POS 결제 - 테이블 ${tableNumber} 기존 TLL 주문 확인: ${existingOrdersResult.rows.length}개 발견`);
