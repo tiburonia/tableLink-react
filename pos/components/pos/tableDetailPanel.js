@@ -528,6 +528,12 @@ async function releaseTable(tableNumber) {
   try {
     console.log(`🔓 [POS] 테이블 ${tableNumber} 해제 요청`);
 
+    // 확인 대화상자
+    const confirmed = confirm(`테이블 ${tableNumber}을 해제하시겠습니까?\n\n해제 시 해당 테이블의 모든 TLL 주문 정보가 숨겨집니다.`);
+    if (!confirmed) {
+      return;
+    }
+
     const response = await fetch('/api/tables/update', {
       method: 'POST',
       headers: {

@@ -390,14 +390,17 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
-    // 해당 테이블의 최근 24시간 내 TLL 주문 조회
+    // 해당 테이블의 최근 24시간 내 활성 TLL 주문 조회 (아카이브되지 않은 것만)
     const response = await pool.query(`
       SELECT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND (p.order_source = 'TLL' OR p.user_id IS NOT NULL)
       AND (p.payment_date >= NOW() - INTERVAL '24 hours' OR p.payment_status = 'pending')
+      AND (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
+      AND (o.is_visible IS NULL OR o.is_visible = true)
       ORDER BY COALESCE(p.payment_date, CURRENT_TIMESTAMP) DESC
       LIMIT 1
     `, [parseInt(storeId), parseInt(tableNumber)]);
@@ -592,12 +595,38 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         WHERE paid_order_id = $1
       `, [orderId]);
 
+      console.log(`✅ 주문 ${orderId} 결제 완료 및 아카이브 처리: ₩${order.final_amount.toLocaleString()}`);
+
       completedOrders.push({
         orderId: orderId,
         amount: order.final_amount
       });
 
       console.log(`✅ 주문 ${orderId} 결제 완료 및 아카이브 처리: ₩${order.final_amount.toLocaleString()}`);
+    }
+
+    // 🗄️ POS 결제 완료 후 해당 테이블의 모든 TLL 주문도 아카이브 처리
+    try {
+      console.log(`🗄️ 테이블 ${tableNumber}의 모든 TLL 주문 아카이브 처리`);
+
+      await client.query(`
+        UPDATE orders 
+        SET cooking_status = 'ARCHIVED',
+            is_visible = false,
+            table_release_source = 'POS_PAYMENT_COMPLETED',
+            archived_at = CURRENT_TIMESTAMP
+        WHERE paid_order_id IN (
+          SELECT p.id FROM paid_orders p
+          WHERE p.store_id = $1 AND p.table_number = $2 
+          AND p.order_source = 'TLL'
+          AND p.payment_status = 'completed'
+        )
+        AND cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED')
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+
+      console.log(`✅ 테이블 ${tableNumber}의 TLL 주문들 아카이브 처리 완료`);
+    } catch (archiveError) {
+      console.error('❌ TLL 주문 아카이브 실패:', archiveError);
     }
 
     // 🪑 결제 완료 후 테이블 해제 처리
