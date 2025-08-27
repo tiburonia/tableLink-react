@@ -72,6 +72,27 @@ router.post('/update', async (req, res) => {
       WHERE unique_id = $3
     `, [isOccupied, occupiedSince, table.unique_id]);
 
+    // 🆕 테이블 해제 시 해당 테이블의 TLL 주문들을 TABLE_RELEASED 상태로 변경
+    if (!isOccupied) {
+      await pool.query(`
+        UPDATE orders 
+        SET cooking_status = 'TABLE_RELEASED',
+            is_visible = false,
+            table_release_source = 'MANUAL',
+            archived_at = CURRENT_TIMESTAMP
+        WHERE paid_order_id IN (
+          SELECT p.id FROM paid_orders p 
+          WHERE p.store_id = $1 AND p.table_number = $2 
+          AND p.order_source = 'TLL'
+          AND p.payment_status = 'completed'
+          AND p.payment_date >= NOW() - INTERVAL '24 hours'
+        )
+        AND cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED')
+      `, [storeId, parseInt(tableName.replace('테이블 ', ''))]);
+
+      console.log(`🗄️ 테이블 ${tableName} 해제로 인한 TLL 주문들 TABLE_RELEASED 처리 완료`);
+    }
+
     const updatedTable = await pool.query(
       'SELECT * FROM store_tables WHERE unique_id = $1',
       [table.unique_id]
@@ -153,7 +174,24 @@ router.post('/occupy', async (req, res) => {
               WHERE unique_id = $4
             `, [false, null, null, table.unique_id]);
 
-            console.log(`✅ [TLL] 테이블 ${table.table_name} 자동 해제 완료`);
+            // 🆕 TLL 자동 해제 시 해당 테이블의 TLL 주문들을 TABLE_RELEASED 상태로 변경
+            await pool.query(`
+              UPDATE orders 
+              SET cooking_status = 'TABLE_RELEASED',
+                  is_visible = false,
+                  table_release_source = 'AUTO_TLL',
+                  archived_at = CURRENT_TIMESTAMP
+              WHERE paid_order_id IN (
+                SELECT p.id FROM paid_orders p 
+                WHERE p.store_id = $1 AND p.table_number = $2 
+                AND p.order_source = 'TLL'
+                AND p.payment_status = 'completed'
+                AND p.payment_date >= NOW() - INTERVAL '24 hours'
+              )
+              AND cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED')
+            `, [storeId, parseInt(table.table_name.replace('테이블 ', ''))]);
+
+            console.log(`✅ [TLL] 테이블 ${table.table_name} 자동 해제 및 주문 아카이브 완료`);
           }
         }
       } catch (error) {
@@ -234,7 +272,24 @@ router.post('/occupy-manual', async (req, res) => {
               WHERE unique_id = $4
             `, [false, null, null, table.unique_id]);
 
-            console.log(`✅ [TLM] 테이블 ${table.table_name} ${duration}분 후 자동 해제 완료`);
+            // 🆕 TLM 자동 해제 시 해당 테이블의 TLL 주문들을 TABLE_RELEASED 상태로 변경
+            await pool.query(`
+              UPDATE orders 
+              SET cooking_status = 'TABLE_RELEASED',
+                  is_visible = false,
+                  table_release_source = 'AUTO_TLM',
+                  archived_at = CURRENT_TIMESTAMP
+              WHERE paid_order_id IN (
+                SELECT p.id FROM paid_orders p 
+                WHERE p.store_id = $1 AND p.table_number = $2 
+                AND p.order_source = 'TLL'
+                AND p.payment_status = 'completed'
+                AND p.payment_date >= NOW() - INTERVAL '24 hours'
+              )
+              AND cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED')
+            `, [storeId, parseInt(table.table_name.replace('테이블 ', ''))]);
+
+            console.log(`✅ [TLM] 테이블 ${table.table_name} ${duration}분 후 자동 해제 및 주문 아카이브 완료`);
           }
         } catch (error) {
           console.error('❌ [TLM] 테이블 자동 해제 실패:', error);

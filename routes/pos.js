@@ -305,27 +305,33 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
 
     console.log(`🔍 POS - 테이블 ${tableNumber} 모든 주문 조회 (DB 기반)`);
 
-    // 미결제 주문 조회 (payment_status = 'pending')
+    // 미결제 주문 조회 (payment_status = 'pending', 아카이브되지 않은 것만)
     const pendingOrdersResponse = await pool.query(`
       SELECT p.id, p.user_id, p.guest_phone, u.name as user_name, 
              p.order_data, p.original_amount, p.final_amount, p.order_source,
              CURRENT_TIMESTAMP as order_date
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND p.payment_status = 'pending'
+      AND (o.is_visible IS NULL OR o.is_visible = true)
+      AND (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
       ORDER BY p.id DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    // 완료된 주문 조회 (payment_status = 'completed')
+    // 완료된 TLL 주문만 조회 (POS 결제 완료된 주문은 제외)
     const completedOrdersResponse = await pool.query(`
       SELECT p.id, p.user_id, p.guest_phone, u.name as user_name, 
              p.payment_date, p.final_amount, p.order_data, p.payment_status,
              p.order_source
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND p.payment_status = 'completed'
+      AND p.order_source = 'TLL'
+      AND (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
       AND p.payment_date >= NOW() - INTERVAL '24 hours'
       ORDER BY p.payment_date DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
@@ -577,12 +583,21 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         WHERE id = $4
       `, [paymentMethod, currentUserId, finalGuestPhone, orderId]);
 
+      // 🆕 POS 결제 완료된 주문을 ARCHIVED 상태로 변경하여 POS UI에서 숨김
+      await client.query(`
+        UPDATE orders 
+        SET cooking_status = 'ARCHIVED',
+            is_visible = false,
+            archived_at = CURRENT_TIMESTAMP
+        WHERE paid_order_id = $1
+      `, [orderId]);
+
       completedOrders.push({
         orderId: orderId,
         amount: order.final_amount
       });
 
-      console.log(`✅ 주문 ${orderId} 결제 완료: ₩${order.final_amount.toLocaleString()}`);
+      console.log(`✅ 주문 ${orderId} 결제 완료 및 아카이브 처리: ₩${order.final_amount.toLocaleString()}`);
     }
 
     // 🪑 결제 완료 후 테이블 해제 처리
