@@ -580,21 +580,24 @@ router.get('/kds/:storeId', async (req, res) => {
         userId: row.user_id,
         guestPhone: row.guest_phone,
         customerName: row.customer_name || '손님',
-        tableNumber: row.table_number || '배달',
+        tableNumber: row.table_number,
         orderData: row.order_data,
         totalAmount: row.total_amount,
-        cookingStatus: row.cooking_status,
+        cookingStatus: row.cooking_status, // KDS가 이 필드를 참조
         paymentDate: row.payment_date,
         createdAt: row.created_at,
+        orderDate: row.created_at, // 호환성을 위해 추가
         waitingMinutes: waitingMinutes,
         items: items,
         pendingCount: pendingItems.length,
         cookingCount: cookingItems.length,
         completedCount: completedItems.length,
         isUrgent: waitingMinutes > 15,
-        orderSource: row.order_source
+        orderSource: row.order_source || 'TLL'
       });
     }
+
+    console.log(`✅ KDS - 매장 ${storeId} 주문 ${orders.length}개 조회 완료 (PENDING: ${orders.filter(o => o.cookingStatus === 'PENDING').length}개, COOKING: ${orders.filter(o => o.cookingStatus === 'COOKING').length}개)`);
 
     console.log(`✅ KDS - 매장 ${storeId} 주문 ${orders.length}개 조회 완료`);
 
