@@ -300,7 +300,7 @@ function broadcastPOSUpdate(storeId, updateType = 'order-update', data = null) {
 }
 
 // 새 주문 알림 브로드캐스트
-function broadcastNewOrder(storeId, orderData) {
+function broadcastPOSNewOrder(storeId, orderData) {
   const posRoomName = `pos-store-${storeId}`;
   const posClientCount = posClients.get(storeId)?.size || 0;
 
@@ -311,7 +311,7 @@ function broadcastNewOrder(storeId, orderData) {
 }
 
 // 테이블 상태 변경 브로드캐스트
-function broadcastTableUpdate(storeId, tableData) {
+function broadcastPOSTableUpdate(storeId, tableData) {
   const posRoomName = `pos-store-${storeId}`;
   const posClientCount = posClients.get(storeId)?.size || 0;
 
@@ -323,24 +323,9 @@ function broadcastTableUpdate(storeId, tableData) {
 
 // POS WebSocket 글로벌 객체
 global.posWebSocket = {
-  broadcast: (storeId, eventName, data) => {
-    broadcastPOSUpdate(storeId, eventName, data);
-  },
-  broadcastTableUpdate: (storeId, tableData) => {
-    const roomName = `pos-store-${storeId}`;
-    const clientCount = posClients.get(storeId)?.size || 0;
-
-    if (clientCount > 0) {
-      console.log(`📡 POS 테이블 상태 업데이트 전송 - 매장 ${storeId}, 테이블 ${tableData.tableNumber}`);
-      io.to(roomName).emit('table-update', {
-        type: 'table-update',
-        storeId: parseInt(storeId),
-        timestamp: new Date().toISOString(),
-        updateData: tableData
-      });
-      console.log(`✅ POS 테이블 상태 업데이트 전송 완료`);
-    }
-  }
+  broadcast: broadcastPOSUpdate,
+  broadcastNewOrder: broadcastPOSNewOrder,
+  broadcastTableUpdate: broadcastPOSTableUpdate
 };
 
 // 전역으로 WebSocket 인스턴스 노출

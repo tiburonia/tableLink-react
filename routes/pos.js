@@ -320,7 +320,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       ORDER BY p.id DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    // 완료된 TLL 주문만 조회 (POS 결제 완료된 주문은 제외)
+    // 완료된 TLL 주문만 조회 (아카이브되지 않은 것만)
     const completedOrdersResponse = await pool.query(`
       SELECT p.id, p.user_id, p.guest_phone, u.name as user_name, 
              p.payment_date, p.final_amount, p.order_data, p.payment_status,
@@ -331,9 +331,13 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND p.payment_status = 'completed'
       AND p.order_source = 'TLL'
-      AND (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
-      AND p.payment_date >= NOW() - INTERVAL '24 hours'
+      AND p.payment_date >= NOW() - INTERVAL '12 hours'
+      AND (
+        o.id IS NULL OR 
+        (o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED') AND o.is_visible = true)
+      )
       ORDER BY p.payment_date DESC
+      LIMIT 5
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     const pendingOrders = pendingOrdersResponse.rows.map(order => ({
@@ -392,16 +396,20 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     // 해당 테이블의 최근 24시간 내 활성 TLL 주문 조회 (아카이브되지 않은 것만)
     const response = await pool.query(`
-      SELECT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
+      SELECT DISTINCT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
-      AND (p.order_source = 'TLL' OR p.user_id IS NOT NULL)
-      AND (p.payment_date >= NOW() - INTERVAL '24 hours' OR p.payment_status = 'pending')
-      AND (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
-      AND (o.is_visible IS NULL OR o.is_visible = true)
-      ORDER BY COALESCE(p.payment_date, CURRENT_TIMESTAMP) DESC
+      AND p.order_source = 'TLL'
+      AND p.payment_status = 'completed'
+      AND p.payment_date >= NOW() - INTERVAL '24 hours'
+      AND (
+        o.id IS NULL OR 
+        (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
+        AND (o.is_visible IS NULL OR o.is_visible = true)
+      )
+      ORDER BY p.payment_date DESC
       LIMIT 1
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
@@ -609,7 +617,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     try {
       console.log(`🗄️ 테이블 ${tableNumber}의 모든 TLL 주문 아카이브 처리`);
 
-      await client.query(`
+      const tllArchiveResult = await client.query(`
         UPDATE orders 
         SET cooking_status = 'ARCHIVED',
             is_visible = false,
@@ -620,11 +628,25 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           WHERE p.store_id = $1 AND p.table_number = $2 
           AND p.order_source = 'TLL'
           AND p.payment_status = 'completed'
+          AND p.payment_date >= NOW() - INTERVAL '24 hours'
         )
-        AND cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED')
+        AND (cooking_status IS NULL OR cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
+        RETURNING id, paid_order_id
       `, [parseInt(storeId), parseInt(tableNumber)]);
 
-      console.log(`✅ 테이블 ${tableNumber}의 TLL 주문들 아카이브 처리 완료`);
+      console.log(`✅ 테이블 ${tableNumber}의 TLL 주문들 아카이브 처리 완료: ${tllArchiveResult.rows.length}개`);
+
+      // order_items도 아카이브 처리
+      if (tllArchiveResult.rows.length > 0) {
+        const orderIds = tllArchiveResult.rows.map(row => row.id);
+        await client.query(`
+          UPDATE order_items 
+          SET cooking_status = 'ARCHIVED'
+          WHERE order_id = ANY($1)
+        `, [orderIds]);
+        console.log(`✅ TLL 주문 아이템들도 아카이브 처리 완료`);
+      }
+
     } catch (archiveError) {
       console.error('❌ TLL 주문 아카이브 실패:', archiveError);
     }

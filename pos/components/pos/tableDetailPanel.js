@@ -528,8 +528,16 @@ async function releaseTable(tableNumber) {
   try {
     console.log(`🔓 [POS] 테이블 ${tableNumber} 해제 요청`);
 
-    // 확인 대화상자
-    const confirmed = confirm(`테이블 ${tableNumber}을 해제하시겠습니까?\n\n해제 시 해당 테이블의 모든 TLL 주문 정보가 숨겨집니다.`);
+    // 테이블 상태 확인
+    const tableData = window.allTables?.find(t => t.tableNumber == tableNumber);
+    const hasOrders = tableData?.isOccupied || false;
+
+    let confirmMessage = `테이블 ${tableNumber}을 해제하시겠습니까?`;
+    if (hasOrders) {
+      confirmMessage += `\n\n⚠️ 해제 시 해당 테이블의 모든 주문 정보가 숨겨집니다.`;
+    }
+
+    const confirmed = confirm(confirmMessage);
     if (!confirmed) {
       return;
     }
