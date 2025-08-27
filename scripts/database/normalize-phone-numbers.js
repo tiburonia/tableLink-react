@@ -9,8 +9,48 @@ async function normalizePhoneNumbers() {
     
     await client.query('BEGIN');
     
-    // 1. users 테이블 전화번호 정규화
-    console.log('👥 users 테이블 전화번호 정규화 중...');
+    // 1. 먼저 중복 전화번호 처리
+    console.log('🔍 중복 전화번호 검사 및 처리 중...');
+    
+    // 정규화된 형태로 중복될 수 있는 전화번호들 찾기
+    const potentialDuplicates = await client.query(`
+      SELECT phone, COUNT(*) as count
+      FROM users 
+      WHERE phone IS NOT NULL AND phone != ''
+      GROUP BY phone 
+      HAVING COUNT(*) > 1
+    `);
+    
+    console.log(`🚨 발견된 중복 전화번호: ${potentialDuplicates.rows.length}개`);
+    
+    // 각 중복 전화번호 처리 (가장 최근 계정만 유지)
+    for (const duplicate of potentialDuplicates.rows) {
+      console.log(`🔧 중복 전화번호 ${duplicate.phone} 처리 중... (${duplicate.count}개 계정)`);
+      
+      const duplicateAccounts = await client.query(`
+        SELECT id, name, created_at
+        FROM users 
+        WHERE phone = $1
+        ORDER BY created_at DESC
+      `, [duplicate.phone]);
+      
+      // 첫 번째(가장 최근) 계정 제외하고 나머지 전화번호 NULL로 변경
+      for (let i = 1; i < duplicateAccounts.rows.length; i++) {
+        const account = duplicateAccounts.rows[i];
+        await client.query(`
+          UPDATE users 
+          SET phone = NULL 
+          WHERE id = $1
+        `, [account.id]);
+        
+        console.log(`   📱 ${account.name || account.id}의 전화번호 제거 (중복 해결)`);
+      }
+      
+      console.log(`   ✅ ${duplicateAccounts.rows[0].name || duplicateAccounts.rows[0].id}의 전화번호 유지`);
+    }
+    
+    // 2. users 테이블 전화번호 정규화
+    console.log('\n👥 users 테이블 전화번호 정규화 중...');
     
     const usersResult = await client.query(`
       SELECT id, phone, name 
@@ -25,18 +65,36 @@ async function normalizePhoneNumbers() {
       const normalizedPhone = normalizePhoneFormat(originalPhone);
       
       if (normalizedPhone && normalizedPhone !== originalPhone) {
-        await client.query(`
-          UPDATE users 
-          SET phone = $1 
-          WHERE id = $2
+        // 정규화된 번호가 이미 다른 계정에 있는지 확인
+        const existingUser = await client.query(`
+          SELECT id FROM users 
+          WHERE phone = $1 AND id != $2
         `, [normalizedPhone, user.id]);
         
-        console.log(`✅ ${user.name || user.id}: ${originalPhone} → ${normalizedPhone}`);
-        userUpdated++;
+        if (existingUser.rows.length > 0) {
+          console.log(`⚠️ ${user.name || user.id}: ${originalPhone} → ${normalizedPhone} (이미 존재하는 번호, 현재 계정 전화번호 제거)`);
+          
+          // 현재 계정의 전화번호를 NULL로 설정
+          await client.query(`
+            UPDATE users 
+            SET phone = NULL 
+            WHERE id = $1
+          `, [user.id]);
+        } else {
+          // 정규화 실행
+          await client.query(`
+            UPDATE users 
+            SET phone = $1 
+            WHERE id = $2
+          `, [normalizedPhone, user.id]);
+          
+          console.log(`✅ ${user.name || user.id}: ${originalPhone} → ${normalizedPhone}`);
+          userUpdated++;
+        }
       }
     }
     
-    // 2. guests 테이블 전화번호 정규화
+    // 3. guests 테이블 전화번호 정규화
     console.log('\n👤 guests 테이블 전화번호 정규화 중...');
     
     const guestsResult = await client.query(`
@@ -53,7 +111,7 @@ async function normalizePhoneNumbers() {
       if (normalizedPhone && normalizedPhone !== originalPhone) {
         // 기존 정규화된 번호가 있는지 확인
         const existingGuest = await client.query(`
-          SELECT phone FROM guests WHERE phone = $1
+          SELECT phone, visit_count FROM guests WHERE phone = $1
         `, [normalizedPhone]);
         
         if (existingGuest.rows.length === 0) {
@@ -61,6 +119,7 @@ async function normalizePhoneNumbers() {
           await client.query(`
             INSERT INTO guests (phone, visit_count)
             VALUES ($1, $2)
+            ON CONFLICT (phone) DO NOTHING
           `, [normalizedPhone, guest.visit_count]);
           
           // 기존 레코드 삭제
@@ -72,11 +131,14 @@ async function normalizePhoneNumbers() {
           guestUpdated++;
         } else {
           // 이미 정규화된 번호가 존재하면 방문 기록 병합
+          const existingVisitCount = existingGuest.rows[0].visit_count || [];
+          const mergedVisitCount = [...existingVisitCount, ...(guest.visit_count || [])];
+          
           await client.query(`
             UPDATE guests 
-            SET visit_count = visit_count || $1
+            SET visit_count = $1
             WHERE phone = $2
-          `, [JSON.stringify(guest.visit_count), normalizedPhone]);
+          `, [JSON.stringify(mergedVisitCount), normalizedPhone]);
           
           // 기존 레코드 삭제
           await client.query(`
@@ -89,7 +151,7 @@ async function normalizePhoneNumbers() {
       }
     }
     
-    // 3. paid_orders 테이블 guest_phone 정규화
+    // 4. paid_orders 테이블 guest_phone 정규화
     console.log('\n💳 paid_orders 테이블 guest_phone 정규화 중...');
     
     const ordersResult = await client.query(`
