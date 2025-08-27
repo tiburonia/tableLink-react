@@ -195,15 +195,25 @@ router.post('/orders', async (req, res) => {
       const newOrderResult = await client.query(`
         INSERT INTO orders (
           store_id, table_number, customer_name,
-          total_amount, cooking_status, session_started_at
-        ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+          total_amount, cooking_status, session_started_at, order_data
+        ) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)
         RETURNING id
       `, [
         parseInt(storeId), 
         parseInt(tableNumber), 
         finalCustomerName,
         totalAmount,
-        'OPEN'  // 새로운 세션 시작
+        'OPEN',  // 새로운 세션 시작
+        JSON.stringify({
+          sessionType: 'POS',
+          items: items,
+          isTLLOrder: isTLLOrder,
+          customerInfo: {
+            userId: currentUserId,
+            guestPhone: finalGuestPhone,
+            customerName: finalCustomerName
+          }
+        })
       ]);
 
       orderId = newOrderResult.rows[0].id;
