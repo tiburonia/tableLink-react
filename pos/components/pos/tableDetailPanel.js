@@ -196,17 +196,10 @@ const TableActionsUI = {
             </button>
           ` : ''}
 
-          ${isOccupied ? `
-            <button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
-              <span class="btn-icon">🔓</span>
-              <span class="btn-text">테이블 해제</span>
-            </button>
-          ` : `
-            <button class="action-btn secondary" onclick="occupyTable('${tableNumber}')">
-              <span class="btn-icon">🔒</span>
-              <span class="btn-text">테이블 점유</span>
-            </button>
-          `}
+          <button class="action-btn ${isOccupied ? 'warning' : 'secondary'}" onclick="${isOccupied ? 'releaseTable' : 'occupyTable'}('${tableNumber}')">
+            <span class="btn-icon">${isOccupied ? '🔓' : '🔒'}</span>
+            <span class="btn-text">${isOccupied ? '테이블 해제' : '테이블 점유'}</span>
+          </button>
 
           <button class="action-btn" onclick="moveTableOrders('${tableNumber}')"
                   ${!hasPendingOrders && !hasCompletedOrders ? 'disabled' : ''}>
