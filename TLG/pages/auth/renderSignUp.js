@@ -94,7 +94,7 @@ async function renderSignUp() {
               <input type="tel" id="signupPhone" class="form-input" placeholder="010-1234-5678" autocomplete="tel">
               <div class="input-status" id="phoneStatus"></div>
             </div>
-            <div class="form-hint" id="phoneHint" >기존 주문 내역 연동을 위해 입력해주세요</div>
+            <div class="form-hint" id="phoneHint" style="margin-bottom: 8px;">기존 주문 내역 연동을 위해 입력해주세요</div>
 
             <button type="button" class="search-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -622,6 +622,7 @@ async function renderSignUp() {
         width: 100%;
         height: 1px;
         background-color: rgba(255, 255, 255, 0.2);
+        margin-top: 12px;
       }
 
       .divider-text {
