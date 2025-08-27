@@ -1,4 +1,3 @@
-
 async function renderSignUp() {
   const main = document.getElementById('main');
 
@@ -133,20 +132,16 @@ async function renderSignUp() {
           </button>
         </form>
 
-        <!-- 구분선 -->
-        <div class="divider-section">
+        <!-- 로그인 링크 섹션 -->
+        <div class="login-link-section">
           <div class="divider-line">
             <span class="divider-text">또는</span>
           </div>
-        </div>
-
-        <!-- 로그인 링크 -->
-        <div class="auth-link-section">
-          <button type="button" class="auth-link-btn" onclick="renderLogin()">
+          <button type="button" class="login-link-btn" onclick="renderLogin()">
             <svg class="back-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span>이미 계정이 있으신가요? <strong>로그인하기</strong></span>
+            <span>이미 계정이 있으신가요? 로그인하기</span>
           </button>
         </div>
       </div>
@@ -155,34 +150,24 @@ async function renderSignUp() {
     <style>
       * {
         box-sizing: border-box;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
 
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
-        overflow: hidden;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px;
+        overflow: scroll;
+
       }
 
       #signupContainer {
-        width: 100%;
-        max-width: 390px;
-        height: 95vh;
-        max-height: 780px;
-        background: rgba(255, 255, 255, 0.08);
+        width: 390px;
+        height: 760px;
+        background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
         display: flex;
         flex-direction: column;
+        position: relative;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
       }
 
       /* 헤더 */
@@ -190,20 +175,20 @@ async function renderSignUp() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: max(env(safe-area-inset-top), 20px) 24px 20px;
-        background: rgba(255, 255, 255, 0.12);
+        padding: max(env(safe-area-inset-top), 16px) 20px 16px;
+        background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(30px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         flex-shrink: 0;
         z-index: 100;
       }
 
       .back-btn {
-        width: 36px;
-        height: 36px;
-        background: rgba(255, 255, 255, 0.15);
+        width: 32px;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.2);
         border: none;
-        border-radius: 12px;
+        border-radius: 10px;
         color: white;
         cursor: pointer;
         display: flex;
@@ -214,29 +199,29 @@ async function renderSignUp() {
       }
 
       .back-btn:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.3);
         transform: translateX(-2px);
       }
 
       .signup-header h1 {
         margin: 0;
         color: white;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
         letter-spacing: -0.3px;
       }
 
       .header-spacer {
-        width: 36px;
+        width: 32px;
       }
 
-      /* 메인 콘텐츠 */
+      /* 컨텐츠 */
       .signup-content {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        padding: 0 24px;
+        padding: 0 20px 20px;
         display: flex;
         flex-direction: column;
         min-height: 0;
@@ -245,7 +230,7 @@ async function renderSignUp() {
       /* 브랜드 섹션 */
       .welcome-section {
         text-align: center;
-        padding: 28px 0 24px;
+        margin: 24px 0 20px;
         flex-shrink: 0;
       }
 
@@ -253,74 +238,71 @@ async function renderSignUp() {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 10px;
+        margin-bottom: 12px;
       }
 
       .logo-icon {
-        font-size: 28px;
-        width: 50px;
-        height: 50px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 16px;
+        font-size: 24px;
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
       }
 
       .brand-text {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 800;
         color: white;
-        letter-spacing: -0.6px;
+        letter-spacing: -0.5px;
       }
 
       .welcome-text {
         margin: 0;
-        color: rgba(255, 255, 255, 0.85);
-        font-size: 14px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 13px;
         font-weight: 500;
-        line-height: 1.5;
+        line-height: 1.4;
       }
 
       /* 폼 */
       .signup-form {
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 18px;
         flex: 1;
         min-height: 0;
-        margin-bottom: 8px;
       }
 
       .form-group {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         flex-shrink: 0;
       }
 
       .form-label {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: white;
         display: flex;
         align-items: center;
-        gap: 6px;
-        margin-bottom: 2px;
+        gap: 4px;
       }
 
       .required {
-        color: #ff7875;
-        font-size: 12px;
-        font-weight: 700;
+        color: #ff6b6b;
+        font-size: 11px;
       }
 
       .optional {
-        color: rgba(255, 255, 255, 0.55);
-        font-size: 12px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 11px;
         font-weight: 500;
       }
 
@@ -332,47 +314,45 @@ async function renderSignUp() {
 
       .form-input {
         width: 100%;
-        height: 48px;
-        padding: 0 48px 0 16px;
+        height: 44px;
+        padding: 0 44px 0 14px;
         font-size: 16px;
-        border: 1.5px solid rgba(255, 255, 255, 0.25);
-        border-radius: 12px;
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
         background: rgba(255, 255, 255, 0.95);
-        color: #2d3748;
+        color: #333;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-weight: 500;
-        outline: none;
       }
 
       .form-input::placeholder {
-        color: #a0aec0;
+        color: #999;
         font-weight: 400;
       }
 
       .form-input:focus {
-        border-color: rgba(255, 255, 255, 0.6);
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.8);
         background: white;
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
       }
 
       .form-input.error {
-        border-color: #ff7875;
+        border-color: #ff6b6b;
         background: #fff5f5;
       }
 
       .form-input.success {
-        border-color: #52c41a;
-        background: #f6ffed;
+        border-color: #51cf66;
+        background: #f8fff9;
       }
 
       .input-status,
       .input-icon {
         position: absolute;
         right: 16px;
-        color: #a0aec0;
+        color: #999;
         pointer-events: none;
-        font-size: 14px;
       }
 
       .input-action {
@@ -380,10 +360,10 @@ async function renderSignUp() {
         right: 12px;
         background: none;
         border: none;
-        color: #718096;
+        color: #666;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 8px;
+        padding: 6px;
+        border-radius: 6px;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
@@ -391,62 +371,59 @@ async function renderSignUp() {
       }
 
       .input-action:hover {
-        color: #4a5568;
-        background: rgba(0, 0, 0, 0.04);
+        color: #333;
+        background: rgba(0, 0, 0, 0.05);
       }
 
       .form-hint {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.65);
-        margin-top: 4px;
-        min-height: 16px;
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 2px;
+        min-height: 14px;
         transition: all 0.3s ease;
-        line-height: 1.4;
-        padding-left: 2px;
+        line-height: 1.3;
       }
 
       .form-hint.error {
-        color: #ff9c99;
-        font-weight: 500;
+        color: #ff8a95;
       }
 
       .form-hint.success {
-        color: #73d13d;
-        font-weight: 500;
+        color: #69db7c;
       }
 
       .search-btn {
         width: 100%;
-        background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
         border: none;
         border-radius: 12px;
-        padding: 14px 18px;
+        padding: 12px 16px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         display: none;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        margin-top: 12px;
+        gap: 8px;
+        margin-top: 8px;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(66, 153, 225, 0.25);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+        position: relative;
+        z-index: 15;
       }
 
       .search-btn:hover {
-        background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 6px 20px rgba(66, 153, 225, 0.35);
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
       }
 
       /* 주문 내역 미리보기 */
       .orders-preview {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-        margin-top: 16px;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-top: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
         flex-shrink: 0;
       }
@@ -455,39 +432,39 @@ async function renderSignUp() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
 
       .preview-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .preview-icon {
-        font-size: 16px;
+        font-size: 14px;
       }
 
       .preview-title {
         font-weight: 700;
-        color: #2d3748;
-        font-size: 14px;
+        color: #333;
+        font-size: 13px;
       }
 
       .preview-count {
         background: #667eea;
         color: white;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 700;
       }
 
       .preview-content {
-        color: #4a5568;
-        font-size: 13px;
-        line-height: 1.5;
-        max-height: 160px;
+        color: #666;
+        font-size: 12px;
+        line-height: 1.4;
+        max-height: 140px;
         overflow-y: auto;
       }
 
@@ -495,8 +472,8 @@ async function renderSignUp() {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 0;
-        border-bottom: 1px solid #f1f5f9;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0f0f0;
       }
 
       .order-preview-item:last-child {
@@ -506,62 +483,62 @@ async function renderSignUp() {
       .order-item-info {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 4px;
       }
 
       .store-name {
         font-weight: 600;
-        color: #2d3748;
-        font-size: 14px;
+        color: #333;
+        font-size: 13px;
       }
 
       .order-date {
-        font-size: 12px;
-        color: #718096;
+        font-size: 11px;
+        color: #999;
       }
 
       .order-amount {
         font-weight: 700;
         color: #667eea;
-        font-size: 14px;
+        font-size: 13px;
       }
 
       .preview-summary {
-        margin-top: 20px;
-        padding-top: 20px;
-        border-top: 1px solid #f1f5f9;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #f0f0f0;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        font-size: 13px;
+        gap: 12px;
+        font-size: 12px;
       }
 
       .summary-item {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 2px;
       }
 
       .summary-label {
-        color: #718096;
+        color: #666;
         font-weight: 500;
       }
 
       .summary-value {
-        color: #2d3748;
+        color: #333;
         font-weight: 700;
-        font-size: 15px;
+        font-size: 14px;
       }
 
       /* 회원가입 버튼 */
       .signup-btn {
         width: 100%;
-        height: 52px;
-        background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+        height: 48px;
+        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
         color: white;
         border: none;
-        border-radius: 14px;
-        font-size: 16px;
+        border-radius: 12px;
+        font-size: 15px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -569,30 +546,28 @@ async function renderSignUp() {
         align-items: center;
         justify-content: center;
         position: relative;
-        margin: 24px 0 0;
-        box-shadow: 0 6px 25px rgba(82, 196, 26, 0.3);
+        margin: 20px 0 16px;
+        box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
         touch-action: manipulation;
         flex-shrink: 0;
       }
 
       .signup-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 35px rgba(82, 196, 26, 0.4);
+        box-shadow: 0 6px 24px rgba(81, 207, 102, 0.4);
       }
 
       .signup-btn:disabled {
-        background: linear-gradient(135deg, #d9d9d9 0%, #bfbfbf 100%);
-        color: rgba(255, 255, 255, 0.6);
+        background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+        color: rgba(255, 255, 255, 0.7);
         cursor: not-allowed;
         box-shadow: none;
-        transform: none;
       }
 
       .btn-content {
         display: flex;
         align-items: center;
-        gap: 8px;
-        transition: opacity 0.3s ease;
+        gap: 6px;
+        transition: transform 0.3s ease;
       }
 
       .signup-btn.loading .btn-content {
@@ -611,8 +586,8 @@ async function renderSignUp() {
       }
 
       .loading-spinner {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-top: 2px solid white;
         border-radius: 50%;
@@ -632,9 +607,13 @@ async function renderSignUp() {
         transform: translateX(2px);
       }
 
-      /* 구분선 섹션 */
-      .divider-section {
-        padding: 32px 0 24px;
+      /* 로그인 링크 섹션 */
+      .login-link-section {
+        margin: 40px 0 16px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
         flex-shrink: 0;
       }
 
@@ -651,79 +630,59 @@ async function renderSignUp() {
         left: 50%;
         transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: rgba(255, 255, 255, 0.7);
-        padding: 0 16px;
-        font-size: 13px;
+        color: rgba(255, 255, 255, 0.6);
+        padding: 0 10px;
+        font-size: 12px;
         font-weight: 500;
         white-space: nowrap;
       }
 
-      /* 인증 링크 섹션 */
-      .auth-link-section {
-        padding-bottom: max(env(safe-area-inset-bottom), 24px);
-        flex-shrink: 0;
-        display: flex;
-        justify-content: center;
-      }
-
-      .auth-link-btn {
+      .login-link-btn {
         display: flex;
         align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 12px;
-        color: rgba(255, 255, 255, 0.85);
+        gap: 8px;
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.8);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
         transition: all 0.3s ease;
         touch-action: manipulation;
         text-decoration: none;
-        padding: 14px 20px;
-        backdrop-filter: blur(10px);
       }
 
-      .auth-link-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
+      .login-link-btn:hover {
         color: white;
-        border-color: rgba(255, 255, 255, 0.25);
-        transform: translateY(-1px);
       }
 
-      .auth-link-btn strong {
-        font-weight: 700;
-        color: #73d13d;
-      }
-
-      .auth-link-btn .back-icon {
-        stroke: rgba(255, 255, 255, 0.7);
+      .login-link-btn .back-icon {
+        stroke: rgba(255, 255, 255, 0.8);
         transition: all 0.3s ease;
-        flex-shrink: 0;
       }
 
-      .auth-link-btn:hover .back-icon {
+      .login-link-btn:hover .back-icon {
         stroke: white;
         transform: translateX(-2px);
       }
 
       /* 스크롤바 */
       .signup-content::-webkit-scrollbar {
-        width: 4px;
+        width: 3px;
       }
 
       .signup-content::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 2px;
       }
 
       .signup-content::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.3);
         border-radius: 2px;
       }
 
       .signup-content::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.5);
       }
 
       .preview-content::-webkit-scrollbar {
@@ -731,68 +690,38 @@ async function renderSignUp() {
       }
 
       .preview-content::-webkit-scrollbar-track {
-        background: #f8fafc;
+        background: #f8f9fa;
         border-radius: 2px;
       }
 
       .preview-content::-webkit-scrollbar-thumb {
-        background: #e2e8f0;
+        background: #dee2e6;
         border-radius: 2px;
       }
 
       .preview-content::-webkit-scrollbar-thumb:hover {
-        background: #cbd5e0;
-      }
-
-      /* 반응형 디자인 */
-      @media (max-width: 400px) {
-        .signup-content {
-          padding: 0 20px;
-        }
-
-        .signup-header {
-          padding-left: 20px;
-          padding-right: 20px;
-        }
-      }
-
-      @media (max-height: 700px) {
-        .welcome-section {
-          padding: 20px 0 16px;
-        }
-
-        .signup-form {
-          gap: 16px;
-        }
-
-        .divider-section {
-          padding: 24px 0 16px;
-        }
+        background: #adb5bd;
       }
 
       /* Safe area 지원 */
       @supports (padding: max(0px)) {
         .signup-header {
-          padding-top: max(env(safe-area-inset-top), 20px);
+          padding-top: max(env(safe-area-inset-top), 16px);
         }
 
-        .auth-link-section {
-          padding-bottom: max(env(safe-area-inset-bottom), 24px);
+        .login-link-section {
+          margin-bottom: max(env(safe-area-inset-bottom), 20px);
         }
       }
 
       /* 터치 디바이스 최적화 */
       @media (pointer: coarse) {
         .form-input {
-          height: 50px;
+          height: 48px;
         }
 
         .signup-btn {
-          height: 54px;
-        }
-
-        .search-btn {
-          padding: 16px 20px;
+          height: 50px;
         }
       }
     </style>
@@ -862,6 +791,11 @@ function setupSignupForm() {
       updateInputStatus(phoneInput, '', '', '');
       searchBtn.style.display = 'none';
       isPhoneValid = true;
+      // login-link 위치 원래대로
+      const loginLinkSection = document.querySelector('.login-link-section');
+      if (loginLinkSection) {
+        loginLinkSection.classList.remove('with-search-btn');
+      }
       updateSubmitButton();
       return;
     }
@@ -871,6 +805,11 @@ function setupSignupForm() {
       searchBtn.style.display = 'none';
       hideGuestOrdersPreview();
       isPhoneValid = false;
+      // login-link 위치 원래대로
+      const loginLinkSection = document.querySelector('.login-link-section');
+      if (loginLinkSection) {
+        loginLinkSection.classList.remove('with-search-btn');
+      }
       updateSubmitButton();
       return;
     }
@@ -930,11 +869,21 @@ function setupSignupForm() {
         updateInputStatus(phoneInput, 'success', '✅', '사용 가능한 전화번호입니다');
         searchBtn.style.display = 'flex';
         isPhoneValid = true;
+        // login-link 위치 조정
+        const loginLinkSection = document.querySelector('.login-link-section');
+        if (loginLinkSection) {
+          loginLinkSection.classList.add('with-search-btn');
+        }
       } else {
         updateInputStatus(phoneInput, 'error', '❌', '이미 등록된 전화번호입니다');
         searchBtn.style.display = 'none';
         hideGuestOrdersPreview();
         isPhoneValid = false;
+        // login-link 위치 원래대로
+        const loginLinkSection = document.querySelector('.login-link-section');
+        if (loginLinkSection) {
+          loginLinkSection.classList.remove('with-search-btn');
+        }
       }
     } catch (error) {
       updateInputStatus(phoneInput, 'error', '❌', '전화번호 확인 중 오류가 발생했습니다');
@@ -1008,7 +957,7 @@ function setupSignupForm() {
       id.length >= 3 && 
       pw.length >= 4 && 
       pw === pwConfirm &&
-      (phone.length === 0 || isPhoneValid);
+      (phone.length === 0 || isPhoneValid); // 전화번호가 비어있거나 유효해야 함
 
     submitBtn.disabled = !isFormValid;
   }
@@ -1151,7 +1100,7 @@ function showGuestOrdersPreview(orders, stats) {
   `).join('');
 
   content.innerHTML = ordersHtml + 
-    (orders.length > 5 ? `<div style="text-align: center; margin-top: 16px; color: #718096; font-size: 12px;">외 ${orders.length - 5}건 더</div>` : '');
+    (orders.length > 5 ? `<div style="text-align: center; margin-top: 12px; color: #999; font-size: 12px;">외 ${orders.length - 5}건 더</div>` : '');
 
   if (stats) {
     summary.innerHTML = `
@@ -1169,7 +1118,7 @@ function showGuestOrdersPreview(orders, stats) {
   preview.style.display = 'block';
 }
 
-// 게스트 주문 내역 미리보기 숨김 함수
+// 게스트 주문 내역 미리보이 숨김 함수
 function hideGuestOrdersPreview() {
   const preview = document.getElementById('guestOrdersPreview');
   if (preview) {
@@ -1225,9 +1174,9 @@ function showInfoMessage(message) {
 
 function showToast(message, type) {
   const colors = {
-    success: { bg: '#52c41a', shadow: 'rgba(82, 196, 26, 0.3)' },
-    error: { bg: '#ff4d4f', shadow: 'rgba(255, 77, 79, 0.3)' },
-    info: { bg: '#1890ff', shadow: 'rgba(24, 144, 255, 0.3)' }
+    success: { bg: '#51cf66', shadow: 'rgba(81, 207, 102, 0.3)' },
+    error: { bg: '#ff6b6b', shadow: 'rgba(255, 107, 107, 0.3)' },
+    info: { bg: '#339af0', shadow: 'rgba(51, 154, 240, 0.3)' }
   };
 
   const color = colors[type] || colors.info;
@@ -1236,7 +1185,7 @@ function showToast(message, type) {
   toast.textContent = message;
   toast.style.cssText = `
     position: fixed;
-    top: 24px;
+    top: 20px;
     left: 50%;
     transform: translateX(-50%);
     background: ${color.bg};
@@ -1246,9 +1195,9 @@ function showToast(message, type) {
     font-weight: 600;
     z-index: 10000;
     font-size: 14px;
-    box-shadow: 0 10px 40px ${color.shadow};
+    box-shadow: 0 8px 32px ${color.shadow};
     backdrop-filter: blur(10px);
-    animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: slideDown 0.3s ease;
     max-width: 90%;
     text-align: center;
   `;
@@ -1257,12 +1206,12 @@ function showToast(message, type) {
   const style = document.createElement('style');
   style.textContent = `
     @keyframes slideDown {
-      from { opacity: 0; transform: translate(-50%, -20px) scale(0.95); }
-      to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      from { opacity: 0; transform: translate(-50%, -20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
     }
     @keyframes slideUp {
-      from { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      to { opacity: 0; transform: translate(-50%, -20px) scale(0.95); }
+      from { opacity: 1; transform: translate(-50%, 0); }
+      to { opacity: 0; transform: translate(-50%, -20px); }
     }
   `;
   document.head.appendChild(style);
@@ -1270,12 +1219,12 @@ function showToast(message, type) {
   document.body.appendChild(toast);
 
   setTimeout(() => {
-    toast.style.animation = 'slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards';
+    toast.style.animation = 'slideUp 0.3s ease forwards';
     setTimeout(() => {
       toast.remove();
       style.remove();
-    }, 400);
-  }, 3500);
+    }, 300);
+  }, 3000);
 }
 
 // 전역 함수로 등록
