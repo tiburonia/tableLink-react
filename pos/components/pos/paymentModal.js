@@ -1,4 +1,3 @@
-
 // 결제 모달 관리 모듈
 
 // 결제 처리 기능
@@ -584,14 +583,26 @@ async function processSelectedPayments() {
     const result = await response.json();
 
     if (result.success) {
-      showPOSNotification(`결제가 완료되었습니다!\n완료된 주문: ${result.completedOrders.length}개\n결제금액: ₩${result.totalAmount.toLocaleString()}\n결제방법: ${result.paymentMethod}`, 'success');
+      // 결제 성공 후 UI 업데이트
+      window.showPOSNotification(
+        `${result.completedOrders.length}개 주문 결제 완료 (총 ₩${result.totalAmount.toLocaleString()})`,
+        'success'
+      );
 
+      // 모달 닫기
       closePaymentModal();
 
-      // 테이블 정보 새로고침
+      // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
+      await window.loadTables();
+      window.renderTableMap();
+
+      // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
       if (window.currentTable) {
         window.updateDetailPanel(window.currentTable);
       }
+
+      console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 자동 해제 완료`);
+      window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
     } else {
       alert('결제 처리 실패: ' + result.error);
     }

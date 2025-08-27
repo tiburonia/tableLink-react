@@ -233,6 +233,31 @@ async function renderBasicTableDetail(tableNumber) {
       console.log(`📊 테이블 ${tableNumber} 주문 조회: 미결제 ${pendingOrders.length}개, 완료 ${completedOrders.length}개`);
     }
 
+    // 결제 완료 시 점유 상태 자동 해제 로직
+    const processPaymentAndRelease = async (orderId) => {
+      try {
+        const response = await fetch(`/api/pos/stores/${currentStore.id}/orders/${orderId}/payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentMethod: 'card' }) // 임시 결제 수단
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          showPOSNotification('결제가 성공적으로 완료되었습니다.', 'success');
+          // 결제 완료 후 테이블 점유 상태 해제
+          await releaseTable(tableNumber);
+          await refreshCurrentTableOrders(); // 상세 패널 업데이트
+          await refreshTableMap(); // 테이블 맵 업데이트
+        } else {
+          showPOSNotification(`결제 실패: ${result.message}`, 'error');
+        }
+      } catch (error) {
+        console.error('❌ 결제 처리 중 오류 발생:', error);
+        showPOSNotification('결제 처리 중 오류가 발생했습니다.', 'error');
+      }
+    };
+
     panelContent.innerHTML = `
       <div class="table-status-section">
         <div class="table-status-header">
@@ -335,6 +360,9 @@ async function renderBasicTableDetail(tableNumber) {
 
       ${getBasicDetailPanelStyles()}
     `;
+
+    // 전역 함수 등록 (결제 처리 버튼 클릭 시 호출될 함수)
+    window.processOrderPayment = processPaymentAndRelease;
 
   } catch (error) {
     console.error('❌ 테이블 상세 정보 로드 실패:', error);
@@ -691,6 +719,14 @@ function moveTable() {
   showPOSNotification('테이블 이동 기능 - 개발 예정', 'info');
 }
 
+// WebSocket 이벤트 리스너 설정
+  setupWebSocketListeners();
+
+  // 전역 함수들을 window 객체에 등록
+  window.occupyTable = (tableNumber) => window.TableDetailPanel.occupyTable(tableNumber);
+  window.releaseTable = (tableNumber) => window.TableDetailPanel.releaseTable(tableNumber);
+
+
 // 전역 함수들을 window 객체에 등록
 window.renderPOS = renderPOS;
 window.selectStore = selectStore;
@@ -732,3 +768,46 @@ function getOrderSourceText(source) {
   };
   return sourceMap[source] || source;
 }
+
+// Dummy TableDetailPanel object for global functions to reference
+// In a real scenario, this would be imported or defined elsewhere.
+window.TableDetailPanel = {
+  occupyTable: async function(tableNumber) {
+    console.log(`Attempting to occupy table ${tableNumber}`);
+    try {
+      const response = await fetch(`/api/pos/stores/${currentStore.id}/tables/${tableNumber}/occupy`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        showPOSNotification(`테이블 ${tableNumber} 점유 상태로 변경되었습니다.`, 'success');
+        await refreshTableMap(); // Refresh table map to show status change
+        if (window.currentTable == tableNumber) {
+          await updateDetailPanel(tableNumber); // Refresh detail panel if it's the current one
+        }
+      } else {
+        throw new Error(data.message || '테이블 점유 상태 변경 실패');
+      }
+    } catch (error) {
+      console.error('❌ 테이블 점유 실패:', error);
+      showPOSNotification(`테이블 ${tableNumber} 점유 중 오류 발생: ${error.message}`, 'error');
+    }
+  },
+  releaseTable: async function(tableNumber) {
+    console.log(`Attempting to release table ${tableNumber}`);
+    try {
+      const response = await fetch(`/api/pos/stores/${currentStore.id}/tables/${tableNumber}/release`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        showPOSNotification(`테이블 ${tableNumber} 점유 상태가 해제되었습니다.`, 'success');
+        await refreshTableMap(); // Refresh table map to show status change
+        if (window.currentTable == tableNumber) {
+          await updateDetailPanel(tableNumber); // Refresh detail panel if it's the current one
+        }
+      } else {
+        throw new Error(data.message || '테이블 점유 상태 해제 실패');
+      }
+    } catch (error) {
+      console.error('❌ 테이블 점유 해제 실패:', error);
+      showPOSNotification(`테이블 ${tableNumber} 점유 해제 중 오류 발생: ${error.message}`, 'error');
+    }
+  }
+};

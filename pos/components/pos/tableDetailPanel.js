@@ -1,10 +1,9 @@
-
 // 포스 테이블 상세 정보 패널 UI 모듈
 
 // 테이블 상세 패널 렌더링
 async function renderTableDetailPanel(tableNumber) {
   const detailPanel = document.getElementById('detailPanel');
-  
+
   if (!detailPanel) {
     console.error('❌ detailPanel 요소를 찾을 수 없습니다');
     return;
@@ -19,13 +18,13 @@ async function renderTableDetailPanel(tableNumber) {
   try {
     // 테이블 데이터 로드
     const tableData = await loadTableDetailData(tableNumber);
-    
+
     // UI 렌더링
     renderTableContent(tableNumber, tableData);
-    
+
     // 이벤트 리스너 등록
     attachTableDetailEvents(tableNumber);
-    
+
   } catch (error) {
     console.error('❌ 테이블 상세 정보 로드 실패:', error);
     showErrorState();
@@ -102,7 +101,7 @@ async function loadTableDetailData(tableNumber) {
   try {
     // 현재 테이블 상태 확인
     const currentTable = window.allTables?.find(t => t.tableNumber == tableNumber);
-    
+
     // API 요청들을 병렬로 처리
     const [allOrdersResponse, tllOrderResponse] = await Promise.all([
       fetch(`/api/pos/stores/${window.currentStore?.id}/table/${tableNumber}/all-orders`),
@@ -129,7 +128,7 @@ async function loadTableDetailData(tableNumber) {
 const TableStatusUI = {
   render(tableNumber, table, isOccupied) {
     const occupiedTime = table.occupiedSince ? this.formatTimeSince(table.occupiedSince) : '';
-    
+
     return `
       <div class="table-status-section">
         <div class="status-header">
@@ -138,7 +137,7 @@ const TableStatusUI = {
             ${isOccupied ? '🔴 사용중' : '🟢 이용가능'}
           </div>
         </div>
-        
+
         <div class="status-grid">
           <div class="status-item">
             <span class="status-label">테이블 번호</span>
@@ -189,14 +188,14 @@ const TableActionsUI = {
             <span class="btn-icon">📦</span>
             <span class="btn-text">주문 추가</span>
           </button>
-          
+
           ${hasPendingOrders ? `
             <button class="action-btn success pulse" onclick="openPaymentModal('${tableNumber}')">
               <span class="btn-icon">💳</span>
               <span class="btn-text">결제 처리</span>
             </button>
           ` : ''}
-          
+
           ${isOccupied ? `
             <button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
               <span class="btn-icon">🔓</span>
@@ -208,8 +207,8 @@ const TableActionsUI = {
               <span class="btn-text">테이블 점유</span>
             </button>
           `}
-          
-          <button class="action-btn" onclick="moveTableOrders('${tableNumber}')" 
+
+          <button class="action-btn" onclick="moveTableOrders('${tableNumber}')"
                   ${!hasPendingOrders && !hasCompletedOrders ? 'disabled' : ''}>
             <span class="btn-icon">🔄</span>
             <span class="btn-text">테이블 이동</span>
@@ -224,7 +223,7 @@ const TableActionsUI = {
 const TLLInfoUI = {
   render(tllOrder) {
     if (!tllOrder) return '';
-    
+
     return `
       <div class="tll-info-section">
         <h4>🔗 TLL 연동 정보</h4>
@@ -235,8 +234,8 @@ const TLLInfoUI = {
           <div class="customer-details">
             <div class="customer-name">
               ${tllOrder.customerName}
-              ${tllOrder.isGuest ? 
-                '<span class="customer-badge guest">게스트</span>' : 
+              ${tllOrder.isGuest ?
+                '<span class="customer-badge guest">게스트</span>' :
                 '<span class="customer-badge member">회원</span>'
               }
             </div>
@@ -259,9 +258,9 @@ const TLLInfoUI = {
 const PendingOrdersUI = {
   render(pendingOrders) {
     if (pendingOrders.length === 0) return '';
-    
+
     const totalAmount = pendingOrders.reduce((sum, order) => sum + order.finalAmount, 0);
-    
+
     return `
       <div class="pending-orders-section">
         <div class="section-header">
@@ -281,7 +280,7 @@ const PendingOrdersUI = {
   renderOrderCard(order) {
     const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
     const items = orderData?.items || [];
-    
+
     return `
       <div class="order-card pending" data-order-id="${order.id}">
         <div class="order-header">
@@ -296,7 +295,7 @@ const PendingOrdersUI = {
           </div>
           <div class="order-amount pending">₩${order.finalAmount.toLocaleString()}</div>
         </div>
-        
+
         <div class="order-items">
           ${items.map(item => `
             <div class="menu-item">
@@ -306,7 +305,7 @@ const PendingOrdersUI = {
             </div>
           `).join('')}
         </div>
-        
+
         <div class="order-actions">
           <span class="status-badge pending">결제 대기</span>
           <button class="btn-small btn-primary" onclick="processOrderPayment('${order.id}')">
@@ -322,12 +321,12 @@ const PendingOrdersUI = {
 const CompletedOrdersUI = {
   render(completedOrders) {
     const hasOrders = completedOrders.length > 0;
-    
+
     return `
       <div class="completed-orders-section">
         <h4>✅ 완료된 주문 ${hasOrders ? `(${completedOrders.length}개)` : ''}</h4>
         <div class="orders-container ${completedOrders.length > 3 ? 'scrollable' : ''}">
-          ${hasOrders ? 
+          ${hasOrders ?
             completedOrders.map(order => this.renderOrderCard(order)).join('') :
             '<div class="no-orders">완료된 주문이 없습니다</div>'
           }
@@ -339,7 +338,7 @@ const CompletedOrdersUI = {
   renderOrderCard(order) {
     const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
     const items = orderData?.items || [];
-    
+
     return `
       <div class="order-card completed" data-order-id="${order.id}">
         <div class="order-header">
@@ -354,7 +353,7 @@ const CompletedOrdersUI = {
           </div>
           <div class="order-amount completed">₩${order.finalAmount.toLocaleString()}</div>
         </div>
-        
+
         <div class="order-items collapsed" onclick="toggleOrderItems(this)">
           <div class="items-summary">
             ${items.length}개 메뉴 <span class="expand-icon">▼</span>
@@ -369,7 +368,7 @@ const CompletedOrdersUI = {
             `).join('')}
           </div>
         </div>
-        
+
         <div class="order-actions">
           <span class="status-badge completed">결제 완료</span>
           <span class="payment-method">💳 카드</span>
@@ -409,14 +408,14 @@ const OrderUtils = {
 function attachTableDetailEvents(tableNumber) {
   // 타이머 업데이트
   updateTimers();
-  
+
   // 5초마다 타이머 업데이트
   if (window.tableTimerInterval) {
     clearInterval(window.tableTimerInterval);
   }
-  
+
   window.tableTimerInterval = setInterval(updateTimers, 5000);
-  
+
   console.log(`✅ 테이블 ${tableNumber} 상세 패널 이벤트 리스너 등록 완료`);
 }
 
@@ -435,7 +434,7 @@ function updateTimers() {
 function toggleOrderItems(element) {
   const orderItems = element.closest('.order-items');
   const expandIcon = orderItems.querySelector('.expand-icon');
-  
+
   orderItems.classList.toggle('collapsed');
   expandIcon.textContent = orderItems.classList.contains('collapsed') ? '▼' : '▲';
 }
@@ -446,7 +445,7 @@ async function refreshTableData(tableNumber) {
   if (refreshBtn) {
     refreshBtn.style.animation = 'spin 1s linear infinite';
   }
-  
+
   try {
     await renderTableDetailPanel(tableNumber);
     showPOSNotification('테이블 정보가 새로고침되었습니다', 'success');
@@ -480,7 +479,13 @@ function openPaymentModal(tableNumber) {
 
 function processOrderPayment(orderId) {
   if (typeof processPayment === 'function') {
-    processPayment([orderId]);
+    processPayment([orderId]).then(async () => {
+      // 결제 완료 후 테이블 점유 상태 자동 해제
+      const tableNumber = window.currentTable;
+      if (tableNumber) {
+        await releaseTable(tableNumber);
+      }
+    });
   } else {
     console.log(`주문 ${orderId} 개별 결제 처리`);
   }
@@ -490,6 +495,75 @@ function moveTableOrders(tableNumber) {
   console.log(`테이블 ${tableNumber} 주문 이동`);
   showPOSNotification('테이블 이동 기능은 준비중입니다', 'info');
 }
+
+// 테이블 점유 함수
+async function occupyTable(tableNumber) {
+  try {
+    console.log(`🔒 [POS] 테이블 ${tableNumber} 점유 요청`);
+
+    const response = await fetch('/api/tables/occupy-manual', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        storeId: window.currentStore.id,
+        tableName: `테이블 ${tableNumber}`,
+        duration: 0
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      window.showPOSNotification(`테이블 ${tableNumber}이 점유 상태로 변경되었습니다.`, 'success');
+      await window.loadTables();
+      window.renderTableMap();
+      renderTableDetailPanel(tableNumber); // 현재 패널 새로고침
+    } else {
+      window.showPOSNotification('오류: ' + data.error, 'error');
+    }
+
+  } catch (error) {
+    console.error('❌ [POS] 테이블 점유 실패:', error);
+    window.showPOSNotification('테이블 점유 실패', 'error');
+  }
+}
+
+// 테이블 해제 함수
+async function releaseTable(tableNumber) {
+  try {
+    console.log(`🔓 [POS] 테이블 ${tableNumber} 해제 요청`);
+
+    const response = await fetch('/api/tables/update', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        storeId: window.currentStore.id,
+        tableName: `테이블 ${tableNumber}`,
+        isOccupied: false
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      window.showPOSNotification(`테이블 ${tableNumber}이 해제되었습니다.`, 'success');
+      await window.loadTables();
+      window.renderTableMap();
+      renderTableDetailPanel(tableNumber); // 현재 패널 새로고침
+    } else {
+      window.showPOSNotification('오류: ' + data.error, 'error');
+    }
+
+  } catch (error) {
+    console.error('❌ [POS] 테이블 해제 실패:', error);
+    window.showPOSNotification('테이블 해제 실패', 'error');
+  }
+}
+
 
 // 스타일
 function getTableDetailStyles() {
@@ -1096,16 +1170,27 @@ function getTableDetailStyles() {
         border-radius: 8px;
       }
 
+      /* 점유/해제 버튼 스타일 */
+      .detail-action-btn.occupy {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        color: white;
+      }
+
+      .detail-action-btn.release {
+        background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);
+        color: white;
+      }
+
       /* 반응형 */
       @media (max-width: 768px) {
         .status-grid, .action-grid {
           grid-template-columns: 1fr;
         }
-        
+
         .action-btn {
           padding: 16px;
         }
-        
+
         .btn-text {
           font-size: 12px;
         }
@@ -1122,5 +1207,8 @@ window.openAddOrderModal = openAddOrderModal;
 window.openPaymentModal = openPaymentModal;
 window.processOrderPayment = processOrderPayment;
 window.moveTableOrders = moveTableOrders;
+window.occupyTable = occupyTable; // occupyTable 함수 전역 등록
+window.releaseTable = releaseTable; // releaseTable 함수 전역 등록
+
 
 console.log('✅ 개선된 테이블 상세 정보 패널 UI 모듈 로드 완료');
