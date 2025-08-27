@@ -287,7 +287,7 @@ const CurrentSessionUI = {
           <h4>📋 현재 세션</h4>
           <div class="session-badge active">진행중</div>
         </div>
-        
+
         <div class="session-card" data-session-id="${currentSession.orderId}">
           <div class="session-header">
             <div class="session-info-left">
@@ -307,13 +307,13 @@ const CurrentSessionUI = {
           </div>
 
           <div class="session-items-container">
-            <div class="items-header">
+            <div class="items-header" onclick="toggleSessionItems(this)">
               <span class="items-title">주문 내역 (${items.length}개)</span>
-              <button class="items-toggle" onclick="toggleSessionItems(this)">
+              <button class="items-toggle">
                 <span class="toggle-icon">▼</span>
               </button>
             </div>
-            
+
             <div class="session-items">
               ${items.map(item => `
                 <div class="session-item">
@@ -333,10 +333,6 @@ const CurrentSessionUI = {
           </div>
 
           <div class="session-actions">
-            <button class="session-btn btn-add" onclick="openAddOrderModal('${window.currentTable}')">
-              <span class="btn-icon">➕</span>
-              메뉴 추가
-            </button>
             <button class="session-btn btn-payment" onclick="processSessionPayment('${currentSession.orderId}')">
               <span class="btn-icon">💳</span>
               결제 처리
@@ -1391,29 +1387,51 @@ function getTableDetailStyles() {
         text-transform: uppercase;
       }
 
-      .cooking-status.pending {
+      .status-pending {
         background: #fef3c7;
         color: #92400e;
       }
 
-      .cooking-status.completed {
+      .status-cooking {
+        background: #ddd6fe;
+        color: #7c3aed;
+      }
+
+      .status-completed {
         background: #dcfce7;
         color: #166534;
       }
 
-      .no-active-session {
-        text-align: center;
-        color: #64748b;
-        font-style: italic;
-        padding: 32px 20px;
-        background: #f8fafc;
-        border: 2px dashed #cbd5e1;
-        border-radius: 8px;
-      }
       .session-actions {
         display: flex;
-        justify-content: flex-end;
-        margin-top: 12px;
+        justify-content: center;
+        padding: 16px 20px;
+      }
+
+      .session-btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.2s;
+        min-width: 120px;
+      }
+
+      .btn-payment {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+      }
+
+      .btn-payment:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
       }
 
       /* 점유/해제 버튼 스타일 */
@@ -1638,53 +1656,6 @@ function getTableDetailStyles() {
       .status-completed {
         background: #dcfce7;
         color: #166534;
-      }
-
-      .session-actions {
-        padding: 16px 20px;
-        display: flex;
-        gap: 12px;
-      }
-
-      .session-btn {
-        flex: 1;
-        padding: 12px 16px;
-        border: none;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        transition: all 0.2s;
-      }
-
-      .btn-add {
-        background: #f3f4f6;
-        color: #374151;
-        border: 2px solid #e5e7eb;
-      }
-
-      .btn-add:hover {
-        background: #e5e7eb;
-        transform: translateY(-1px);
-      }
-
-      .btn-payment {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-      }
-
-      .btn-payment:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-      }
-
-      .btn-icon {
-        font-size: 16px;
       }
 
       /* 완료된 TLL 주문 스타일 */

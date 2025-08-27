@@ -1,4 +1,3 @@
-
 // 주문 모달 관리 모듈
 
 let currentOrderItems = [];
@@ -664,12 +663,21 @@ async function submitOrder() {
     const result = await response.json();
 
     if (result.success) {
-      showPOSNotification(`주문이 성공적으로 추가되었습니다!\n주문번호: ${result.orderId}\n메뉴 ${result.orderData.itemCount}개 | 총 ₩${result.orderData.totalAmount.toLocaleString()}\n\n결제를 진행해주세요.`, 'success');
+      window.showPOSNotification(
+        `테이블 ${window.currentTable}에 주문이 추가되었습니다.`,
+        'success'
+      );
+
       closeOrderModal();
 
-      // 테이블 세부 정보 새로고침
-      if (window.currentTable) {
-        window.updateDetailPanel(window.currentTable);
+      // 테이블 맵 새로고침
+      if (typeof window.renderTableMap === 'function') {
+        window.renderTableMap();
+      }
+
+      // 현재 선택된 테이블의 상세 패널 새로고침
+      if (window.currentTable && typeof window.renderTableDetailPanel === 'function') {
+        window.renderTableDetailPanel(window.currentTable);
       }
     } else {
       alert('주문 처리 실패: ' + result.error);
@@ -700,10 +708,7 @@ window.addOrder = addOrder;
 window.checkTableTLLOrder = checkTableTLLOrder;
 window.showOrderModal = showOrderModal;
 window.closeOrderModal = closeOrderModal;
-window.loadMenuItems = loadMenuItems;
-window.filterMenuCategory = filterMenuCategory;
 window.addMenuItem = addMenuItem;
-window.updateOrderDisplay = updateOrderDisplay;
-window.changeQuantity = changeQuantity;
-window.updateSubmitButton = updateSubmitButton;
 window.submitOrder = submitOrder;
+window.changeQuantity = changeQuantity;
+window.currentOrderItems = currentOrderItems;
