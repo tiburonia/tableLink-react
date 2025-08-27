@@ -157,8 +157,8 @@ async function renderSignUp() {
       }
 
       #signupContainer {
-        height: 100%;
-        width: 100%;
+        height: 760px;
+        width: 390px;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;

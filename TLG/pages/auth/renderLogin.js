@@ -152,8 +152,8 @@ async function renderLogin() {
       }
 
       #loginContainer {
-        height: 100%;
-        width: 100%;
+        height: 760px;
+        width: 390px;
         position: relative;
         display: flex;
         align-items: center;
