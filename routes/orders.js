@@ -254,7 +254,7 @@ router.post('/pay', async (req, res) => {
             order_id, menu_name, quantity, price, cooking_status
           ) VALUES ($1, $2, $3, $4, $5)
         `;
-        
+
         await client.query(orderItemQuery, [
           orderId,
           item.name,
@@ -586,13 +586,14 @@ router.get('/kds/:storeId', async (req, res) => {
         cookingStatus: row.cooking_status,
         paymentDate: row.payment_date,
         createdAt: row.created_at,
+        orderDate: row.created_at, // KDS 호환성을 위해 추가
         waitingMinutes: waitingMinutes,
         items: items,
         pendingCount: pendingItems.length,
         cookingCount: cookingItems.length,
         completedCount: completedItems.length,
         isUrgent: waitingMinutes > 15,
-        orderSource: row.order_source
+        orderSource: row.order_source || 'TLL'
       });
     }
 

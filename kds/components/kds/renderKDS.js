@@ -1135,7 +1135,7 @@ function setupKDSWebSocket(storeId) {
 
     // 연결 상태 표시 업데이트
     updateConnectionStatus(true);
-    
+
     // 연결 확인 메시지
     showRealTimeUpdateNotification('connection', { message: 'KDS 실시간 연결됨' });
   });
@@ -1163,7 +1163,7 @@ function setupKDSWebSocket(storeId) {
   // KDS 실시간 업데이트 수신
   socket.on('kds-update', (updateData) => {
     console.log('📡 KDS 실시간 업데이트 수신:', updateData);
-    
+
     // 데이터 유효성 검증
     if (updateData && updateData.storeId == storeId) {
       handleKDSRealTimeUpdate(updateData);
@@ -1356,7 +1356,7 @@ function updateKDSOrderCards(orders) {
 
   // 조리 완료된 주문만 필터링 (완료된 주문은 화면에서 제거)
   const activeOrders = orders.filter(order => {
-    const hasActiveItems = order.items.some(item => 
+    const hasActiveItems = order.items.some(item =>
       item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
     );
     return hasActiveItems;
@@ -1391,7 +1391,7 @@ function updateKDSOrderCards(orders) {
 
 // 주문 카드 생성
 function createOrderCard(order) {
-  const orderTime = new Date(order.orderDate);
+  const orderTime = new Date(order.createdAt || order.paymentDate);
   const timeString = orderTime.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -1399,7 +1399,7 @@ function createOrderCard(order) {
   });
 
   const urgentClass = order.isUrgent ? ' urgent' : '';
-  const statusClass = order.overallStatus.toLowerCase();
+  const statusClass = order.cookingStatus.toLowerCase();
 
   const card = document.createElement('div');
   card.className = `order-card ${statusClass}${urgentClass}`;
