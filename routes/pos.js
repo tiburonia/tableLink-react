@@ -415,9 +415,10 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
-    // 해당 테이블의 최근 24시간 내 활성 TLL 주문 조회 (아카이브되지 않은 것만)
+    // 해당 테이블의 최근 24시간 내 활성 TLL 주문 조회 (POS에서 처리 완료되지 않은 것만)
     const response = await pool.query(`
-      SELECT DISTINCT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
+      SELECT DISTINCT p.user_id, p.guest_phone, u.name as user_name, p.payment_date,
+             p.processing_status, p.processing_completed_at
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN orders o ON p.id = o.paid_order_id
@@ -425,6 +426,7 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
       AND p.order_source = 'TLL'
       AND p.payment_status = 'completed'
       AND p.payment_date >= NOW() - INTERVAL '24 hours'
+      AND (p.processing_status IS NULL OR p.processing_status != 'COMPLETED_BY_POS')
       AND (
         o.id IS NULL OR 
         (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
@@ -437,6 +439,8 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
     if (response.rows.length > 0) {
       const tllOrder = response.rows[0];
 
+      console.log(`🔍 활성 TLL 주문 발견: ${tllOrder.user_name || '게스트'} (처리상태: ${tllOrder.processing_status || '미처리'})`);
+
       res.json({
         success: true,
         tllOrder: {
@@ -444,10 +448,12 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
           guestPhone: tllOrder.guest_phone,
           customerName: tllOrder.user_name || '게스트',
           isGuest: !tllOrder.user_id,
-          phone: tllOrder.guest_phone || null
+          phone: tllOrder.guest_phone || null,
+          processingStatus: tllOrder.processing_status
         }
       });
     } else {
+      console.log(`✅ 테이블 ${tableNumber}에 활성 TLL 주문 없음 (모두 처리 완료 또는 만료)`);
       res.json({
         success: true,
         tllOrder: null
@@ -651,10 +657,11 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     console.log(`✅ 테이블 세션 ${orderId} 결제 완료 (결제 ID: ${paidOrderId})`);
 
-    // 🗄️ 해당 테이블의 TLL 주문들도 아카이브 처리
+    // 🗄️ 해당 테이블의 TLL 주문들 완전 아카이브 처리 및 연동 정보 초기화
     try {
-      console.log(`🗄️ 테이블 ${tableNumber}의 모든 TLL 주문 아카이브 처리`);
+      console.log(`🗄️ 테이블 ${tableNumber}의 모든 TLL 주문 아카이브 처리 및 연동 정보 초기화`);
 
+      // 1. TLL 주문들 아카이브 처리
       const tllArchiveResult = await client.query(`
         UPDATE orders 
         SET cooking_status = 'ARCHIVED',
@@ -673,8 +680,37 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       `, [parseInt(storeId), parseInt(tableNumber)]);
 
       console.log(`✅ 테이블 ${tableNumber}의 TLL 주문들 아카이브 처리 완료: ${tllArchiveResult.rows.length}개`);
+
+      // 2. 해당 테이블의 TLL 결제 정보들도 처리 완료 상태로 마킹
+      const tllPaymentUpdateResult = await client.query(`
+        UPDATE paid_orders 
+        SET processing_status = 'COMPLETED_BY_POS',
+            processing_completed_at = CURRENT_TIMESTAMP
+        WHERE store_id = $1 AND table_number = $2 
+        AND order_source = 'TLL'
+        AND payment_status = 'completed'
+        AND payment_date >= NOW() - INTERVAL '24 hours'
+        AND (processing_status IS NULL OR processing_status != 'COMPLETED_BY_POS')
+        RETURNING id
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+
+      console.log(`✅ 테이블 ${tableNumber}의 TLL 결제 정보 처리 완료 마킹: ${tllPaymentUpdateResult.rows.length}개`);
+
+      // 3. 테이블의 TLL 연동 상태 정보 완전 초기화
+      await client.query(`
+        UPDATE store_tables 
+        SET tll_linked_user = NULL,
+            tll_linked_phone = NULL,
+            tll_linked_at = NULL,
+            tll_orders_count = 0,
+            last_tll_activity = NULL
+        WHERE store_id = $1 AND table_number = $2
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+
+      console.log(`🔄 테이블 ${tableNumber}의 TLL 연동 정보 완전 초기화 완료`);
+
     } catch (archiveError) {
-      console.error('❌ TLL 주문 아카이브 실패:', archiveError);
+      console.error('❌ TLL 주문 아카이브 및 연동 초기화 실패:', archiveError);
     }
 
     // 🪑 결제 완료 후 테이블 해제 처리
