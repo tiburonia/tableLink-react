@@ -3,28 +3,587 @@ async function renderLogin() {
   const main = document.getElementById('main');
   
   main.innerHTML = `
-    <div id="loginContainer">
-      <h1>TableLink</h1>
-      <input id='id' type='text' placeholder='아이디'/>
-      <input id='pw' type='password' placeholder='비밀번호'/>
-      <div>
-        <button id='join'>회원가입</button>
-        <button id='login'>로그인</button>
+    <div class="login-layout">
+      <!-- 배경 애니메이션 -->
+      <div class="background-animation">
+        <div class="floating-element element-1"></div>
+        <div class="floating-element element-2"></div>
+        <div class="floating-element element-3"></div>
+        <div class="floating-element element-4"></div>
       </div>
-      <hr>
-      <div style="width: 70%; display: flex; flex-direction: column; gap: 8px;">
-        <button id='quickLogin' style="width: 100%; padding: 12px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 14px;">⚡ 빠른 로그인 (user1)</button>
-        <button id='adminLogin' style="width: 100%; padding: 12px; background: #444; color: white; border: none; border-radius: 6px; font-size: 14px;">🛠️ Admin 로그인</button>
-        <button id='goKDS' style="width: 100%; padding: 12px; background: #222; color: white; border: none; border-radius: 6px; font-size: 14px;">📟 KDS</button>
-        <button id='goPOS' style="width: 100%; padding: 12px; background: #666; color: white; border: none; border-radius: 6px; font-size: 14px;">💳 POS</button>
-        <button id='goTLM' style="width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 14px;">🏪 사장님 앱</button>
+
+      <!-- 로그인 컨테이너 -->
+      <div class="login-container">
+        <!-- 헤더 섹션 -->
+        <div class="login-header">
+          <div class="brand-logo">
+            <div class="logo-icon">🍽️</div>
+            <h1 class="brand-name">TableLink</h1>
+          </div>
+          <p class="brand-subtitle">스마트 테이블 주문의 새로운 경험</p>
+        </div>
+
+        <!-- 로그인 폼 -->
+        <div class="login-form-section">
+          <div class="form-group">
+            <div class="input-wrapper">
+              <input id="id" type="text" placeholder=" " class="form-input" autocomplete="username" />
+              <label class="form-label">아이디</label>
+              <div class="input-icon">👤</div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="input-wrapper">
+              <input id="pw" type="password" placeholder=" " class="form-input" autocomplete="current-password" />
+              <label class="form-label">비밀번호</label>
+              <div class="input-icon">🔒</div>
+            </div>
+          </div>
+
+          <!-- 로그인 버튼 -->
+          <button id="login" class="primary-btn login-btn">
+            <span class="btn-text">로그인</span>
+            <div class="btn-loading" style="display: none;">
+              <div class="spinner"></div>
+            </div>
+          </button>
+
+          <!-- 회원가입 링크 -->
+          <div class="signup-section">
+            <span class="signup-text">아직 계정이 없으신가요?</span>
+            <button id="join" class="link-btn">회원가입하기</button>
+          </div>
+        </div>
+
+        <!-- 구분선 -->
+        <div class="divider">
+          <span class="divider-text">또는</span>
+        </div>
+
+        <!-- 빠른 액세스 섹션 -->
+        <div class="quick-access-section">
+          <h3 class="section-title">빠른 접근</h3>
+          
+          <div class="quick-buttons-grid">
+            <button id="quickLogin" class="quick-btn user-btn">
+              <div class="quick-btn-icon">⚡</div>
+              <div class="quick-btn-content">
+                <span class="quick-btn-title">빠른 로그인</span>
+                <span class="quick-btn-desc">user1 계정</span>
+              </div>
+            </button>
+
+            <button id="adminLogin" class="quick-btn admin-btn">
+              <div class="quick-btn-icon">🛠️</div>
+              <div class="quick-btn-content">
+                <span class="quick-btn-title">관리자</span>
+                <span class="quick-btn-desc">Admin Panel</span>
+              </div>
+            </button>
+          </div>
+
+          <div class="system-buttons-grid">
+            <button id="goKDS" class="system-btn kds-btn">
+              <div class="system-btn-icon">📟</div>
+              <div class="system-btn-content">
+                <span class="system-btn-title">KDS</span>
+                <span class="system-btn-desc">주방 디스플레이</span>
+              </div>
+            </button>
+
+            <button id="goPOS" class="system-btn pos-btn">
+              <div class="system-btn-icon">💳</div>
+              <div class="system-btn-content">
+                <span class="system-btn-title">POS</span>
+                <span class="system-btn-desc">포스 시스템</span>
+              </div>
+            </button>
+
+            <button id="goTLM" class="system-btn tlm-btn">
+              <div class="system-btn-icon">🏪</div>
+              <div class="system-btn-content">
+                <span class="system-btn-title">사장님 앱</span>
+                <span class="system-btn-desc">매장 관리</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 푸터 -->
+        <div class="login-footer">
+          <p class="footer-text">© 2024 TableLink. 모든 권리 보유.</p>
+        </div>
       </div>
     </div>
 
     <style>
-      #main {
-        background: #f0f8ff;
-        font-family: sans-serif;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      .login-layout {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+      }
+
+      .background-animation {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        z-index: 1;
+      }
+
+      .floating-element {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        animation: float 6s ease-in-out infinite;
+      }
+
+      .element-1 {
+        width: 80px;
+        height: 80px;
+        top: 20%;
+        left: 10%;
+        animation-delay: 0s;
+      }
+
+      .element-2 {
+        width: 120px;
+        height: 120px;
+        top: 60%;
+        right: 10%;
+        animation-delay: -2s;
+      }
+
+      .element-3 {
+        width: 60px;
+        height: 60px;
+        top: 30%;
+        right: 30%;
+        animation-delay: -4s;
+      }
+
+      .element-4 {
+        width: 100px;
+        height: 100px;
+        bottom: 20%;
+        left: 20%;
+        animation-delay: -1s;
+      }
+
+      @keyframes float {
+        0%, 100% {
+          transform: translateY(0px) rotate(0deg);
+          opacity: 0.5;
+        }
+        50% {
+          transform: translateY(-20px) rotate(180deg);
+          opacity: 0.8;
+        }
+      }
+
+      .login-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 40px 32px;
+        width: 100%;
+        max-width: 440px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        z-index: 2;
+        animation: slideUp 0.8s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .login-header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+
+      .brand-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .logo-icon {
+        font-size: 32px;
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+      }
+
+      .brand-name {
+        font-size: 28px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0;
+      }
+
+      .brand-subtitle {
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 500;
+        margin: 0;
+      }
+
+      .login-form-section {
+        margin-bottom: 32px;
+      }
+
+      .form-group {
+        margin-bottom: 24px;
+      }
+
+      .input-wrapper {
+        position: relative;
+      }
+
+      .form-input {
+        width: 100%;
+        padding: 16px 20px 16px 48px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        font-size: 16px;
+        background: #fafbfc;
+        transition: all 0.3s ease;
+        outline: none;
+      }
+
+      .form-input:focus {
+        border-color: #667eea;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      }
+
+      .form-input:not(:placeholder-shown) + .form-label,
+      .form-input:focus + .form-label {
+        transform: translateY(-28px) scale(0.85);
+        color: #667eea;
+        font-weight: 600;
+      }
+
+      .form-label {
+        position: absolute;
+        left: 48px;
+        top: 16px;
+        color: #64748b;
+        font-size: 16px;
+        pointer-events: none;
+        transition: all 0.3s ease;
+        transform-origin: left top;
+      }
+
+      .input-icon {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 18px;
+        color: #94a3b8;
+      }
+
+      .primary-btn {
+        width: 100%;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
+
+      .primary-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+      }
+
+      .primary-btn:active {
+        transform: translateY(0);
+      }
+
+      .primary-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .btn-loading .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top: 2px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .signup-section {
+        text-align: center;
+        margin-top: 16px;
+      }
+
+      .signup-text {
+        color: #64748b;
+        font-size: 14px;
+        margin-right: 8px;
+      }
+
+      .link-btn {
+        background: none;
+        border: none;
+        color: #667eea;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        transition: color 0.3s ease;
+      }
+
+      .link-btn:hover {
+        color: #764ba2;
+      }
+
+      .divider {
+        position: relative;
+        text-align: center;
+        margin: 32px 0;
+      }
+
+      .divider::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: #e2e8f0;
+      }
+
+      .divider-text {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 0 16px;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .quick-access-section {
+        margin-bottom: 24px;
+      }
+
+      .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .quick-buttons-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .quick-btn {
+        padding: 16px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+      }
+
+      .quick-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .user-btn:hover {
+        border-color: #22c55e;
+        background: #f0fdf4;
+      }
+
+      .admin-btn:hover {
+        border-color: #6b7280;
+        background: #f9fafb;
+      }
+
+      .quick-btn-icon {
+        font-size: 24px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+      }
+
+      .quick-btn-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+      }
+
+      .quick-btn-desc {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0;
+      }
+
+      .system-buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .system-btn {
+        padding: 14px 8px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        background: #ffffff;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        text-align: center;
+      }
+
+      .system-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+      }
+
+      .kds-btn:hover {
+        border-color: #2c3e50;
+        background: #f8f9fa;
+      }
+
+      .pos-btn:hover {
+        border-color: #666666;
+        background: #f8f9fa;
+      }
+
+      .tlm-btn:hover {
+        border-color: #667eea;
+        background: #f0f4ff;
+      }
+
+      .system-btn-icon {
+        font-size: 20px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+      }
+
+      .system-btn-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0;
+      }
+
+      .system-btn-desc {
+        font-size: 10px;
+        color: #64748b;
+        margin: 0;
+      }
+
+      .login-footer {
+        text-align: center;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-text {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: 0;
+      }
+
+      /* 반응형 디자인 */
+      @media (max-width: 480px) {
+        .login-container {
+          margin: 20px;
+          padding: 24px 20px;
+          max-width: none;
+        }
+
+        .brand-name {
+          font-size: 24px;
+        }
+
+        .form-input {
+          padding: 14px 16px 14px 44px;
+        }
+
+        .form-label {
+          left: 44px;
+          top: 14px;
+        }
+
+        .input-icon {
+          left: 14px;
+        }
+
+        .quick-buttons-grid {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+
+        .system-buttons-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+      }
+
+      @media (max-height: 800px) {
+        .login-container {
+          max-height: 90vh;
+          overflow-y: auto;
+        }
       }
     </style>
   `;
@@ -74,46 +633,21 @@ async function renderLogin() {
 
   // 로딩 화면 함수
   const showLoadingScreen = () => {
-    main.innerHTML = `
-      <div id="loadingContainer">
-        <h1>TableLink</h1>
-        <div class="loading-spinner"></div>
-        <p>로그인 중...</p>
-      </div>
+    const btnText = login.querySelector('.btn-text');
+    const btnLoading = login.querySelector('.btn-loading');
+    
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'flex';
+    login.disabled = true;
+  };
 
-      <style>
-        #loadingContainer {
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          height: 100vh;
-          background: #f0f8ff;
-          font-family: sans-serif;
-        }
-
-        .loading-spinner {
-          width: 40px;
-          height: 40px;
-          border: 4px solid #e0e0e0;
-          border-top: 4px solid #297efc;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-          margin: 20px 0;
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        #loadingContainer p {
-          color: #297efc;
-          font-size: 16px;
-          margin: 10px 0;
-        }
-      </style>
-    `;
+  const hideLoadingScreen = () => {
+    const btnText = login.querySelector('.btn-text');
+    const btnLoading = login.querySelector('.btn-loading');
+    
+    btnText.style.display = 'inline';
+    btnLoading.style.display = 'none';
+    login.disabled = false;
   };
 
   // 개발용 빠른 로그인
@@ -173,11 +707,13 @@ async function renderLogin() {
           }
         }, 100);
       } else {
+        hideLoadingScreen();
         await renderLogin();
         alert(data.error || '빠른 로그인 실패');
       }
     } catch (error) {
       console.error('빠른 로그인 오류:', error);
+      hideLoadingScreen();
       await renderLogin();
       alert('서버 연결에 실패했습니다');
     }
@@ -239,18 +775,20 @@ async function renderLogin() {
           }
         }, 100);
       } else {
+        hideLoadingScreen();
         await renderLogin();
         alert(data.error || '로그인 실패');
       }
     } catch (error) {
       console.error('로그인 오류:', error);
+      hideLoadingScreen();
       await renderLogin();
       alert('서버 연결에 실패했습니다');
     }
   });
 
   const handleEnterKey = (event) => {
-    if (!document.getElementById('loginContainer')) {
+    if (!document.querySelector('.login-container')) {
       return;
     }
 
