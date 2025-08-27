@@ -2,12 +2,15 @@
 
 // 결제 처리 기능 (세션 기반)
 async function processPayment() {
+  console.log('💳 processPayment 함수 호출됨');
+  
   if (!window.currentTable) {
     showPOSNotification('테이블을 먼저 선택해주세요.', 'warning');
     return;
   }
 
   try {
+    console.log('🔍 세션 정보 조회 중...');
     // 테이블의 현재 세션 조회
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/all-orders`);
     const data = await response.json();
@@ -23,6 +26,7 @@ async function processPayment() {
       return;
     }
 
+    console.log('💳 결제 모달 표시 - 현재 세션:', currentSession);
     showPaymentModal(currentSession);
 
   } catch (error) {
@@ -515,16 +519,20 @@ function setupPhoneInputFormatting() {
 
 // 결제 요약 정보 업데이트 (세션 기반)
 function updatePaymentSummary() {
+  console.log('🔄 updatePaymentSummary 호출됨');
   // 세션 기반 결제에서는 별도의 업데이트가 필요하지 않음
   // 결제 버튼은 항상 활성화 상태 (세션이 있는 경우)
   const processBtn = document.getElementById('processPaymentBtn');
   if (processBtn) {
     processBtn.disabled = false;
+    console.log('✅ 결제 버튼 활성화됨');
   }
 }
 
 // 세션 결제 처리
 async function processSelectedPayments() {
+  console.log('💳 processSelectedPayments 함수 호출됨');
+  
   const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
   const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
   const totalAmountText = document.getElementById('totalPaymentAmount').textContent;
@@ -544,6 +552,7 @@ async function processSelectedPayments() {
   }
 
   console.log('💳 세션 결제 처리 요청:', paymentData);
+  console.log('🔗 요청 URL:', `/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`);
 
   try {
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
@@ -554,9 +563,13 @@ async function processSelectedPayments() {
       body: JSON.stringify(paymentData)
     });
 
+    console.log('📡 결제 API 응답 상태:', response.status);
     const result = await response.json();
+    console.log('📊 결제 API 응답 데이터:', result);
 
     if (result.success) {
+      console.log('✅ 결제 성공 - UI 업데이트 시작');
+      
       // 결제 성공 후 UI 업데이트
       window.showPOSNotification(
         `테이블 ${window.currentTable} 세션 결제 완료 (총 ₩${totalAmount.toLocaleString()})`,
@@ -578,6 +591,7 @@ async function processSelectedPayments() {
       console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 세션 자동 해제 완료`);
       window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
     } else {
+      console.log('❌ 결제 실패:', result.error);
       window.showPOSNotification('결제 처리 실패: ' + result.error, 'error');
     }
   } catch (error) {
@@ -585,6 +599,7 @@ async function processSelectedPayments() {
     window.showPOSNotification('결제 처리 중 오류가 발생했습니다.', 'error');
   } finally {
     // Re-enable button and reset text
+    console.log('🔄 결제 버튼 상태 복원');
     if (processBtn) {
       processBtn.disabled = false;
       processBtn.textContent = '결제 처리';
