@@ -149,11 +149,14 @@ async function renderLogin() {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
         overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       #loginContainer {
-        height: 760px;
-        width: 390px;
+        width: 100%;
+        height: 100%;
         position: relative;
         display: flex;
         align-items: center;
