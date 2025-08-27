@@ -245,10 +245,11 @@ async function renderLogin() {
         -webkit-text-fill-color: transparent;
         background-clip: text;
         margin: 0;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
       }
 
       .brand-subtitle {
-        color: #475569;
+        color: #334155;
         font-size: 14px;
         font-weight: 600;
         margin: 0;
