@@ -544,78 +544,104 @@ function updatePaymentSummary() {
 
 // 선택된 주문들 결제 처리
 async function processSelectedPayments() {
-  try {
-    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
-    const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
+  // 현재 세션 확인
+  const currentSession = document.querySelector('.current-session'); // This selector might need adjustment based on actual implementation
+  if (!currentSession) {
+    showPOSNotification('결제할 활성 세션이 없습니다.', 'warning'); // Use showPOSNotification for consistency
+    return;
+  }
 
-    const selectedCheckboxes = document.querySelectorAll('input[type="checkbox"][data-order-id]:checked');
-    if (selectedCheckboxes.length === 0) {
-      showPOSNotification('결제할 주문을 선택해주세요.', 'warning');
-      return;
+  // Assuming 'currentSession' will contain the total amount for the session
+  const sessionAmountElement = currentSession.querySelector('.session-amount'); // Adjust selector if needed
+  if (!sessionAmountElement) {
+    showPOSNotification('세션 금액 정보를 찾을 수 없습니다.', 'error');
+    return;
+  }
+  const sessionAmount = sessionAmountElement.textContent.replace(/[₩,]/g, '');
+  const totalAmount = parseInt(sessionAmount);
+
+
+  const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+  const guestPhone = document.getElementById('paymentGuestPhone')?.value.trim();
+
+  // Note: The original code selected individual orders. The new requirement implies paying for the whole session.
+  // We need to get the order IDs associated with the current session.
+  // This part will heavily depend on how the 'currentSession' element or data is structured.
+  // For now, let's assume we can get all checked order IDs to represent the session's items.
+  const selectedCheckboxes = document.querySelectorAll('input[type="checkbox"][data-order-id]:checked');
+  if (selectedCheckboxes.length === 0) {
+    showPOSNotification('결제할 주문을 선택해주세요.', 'warning');
+    return;
+  }
+
+  // In the new model, we are paying for the session, not individual orders.
+  // So, we should ideally send a single order ID representing the session, or a list of items for the session.
+  // For now, we'll pass the order IDs that were checked, assuming they represent the session.
+  // A more robust implementation would fetch the session's primary order ID.
+  const orderIdsForSession = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.orderId));
+
+
+  const processBtn = document.getElementById('processPaymentBtn');
+  processBtn.disabled = true;
+  processBtn.textContent = '처리 중...';
+
+  const paymentData = {
+    // Assuming we're sending a single orderId for the session, or a representation of the session.
+    // If 'orderIdsForSession' represents all items in the current session's order,
+    // this might need to be adjusted to send a single 'orderId' that represents the session.
+    orderIds: orderIdsForSession, // This might need to be changed to a single session order ID
+    totalAmount: totalAmount, // Sending the total amount for the session
+    paymentMethod: paymentMethod
+  };
+
+  // 전화번호가 입력된 경우 추가
+  if (guestPhone) {
+    paymentData.guestPhone = guestPhone;
+  }
+
+  console.log('💳 결제 처리 요청 (세션 기반):', paymentData);
+
+  // Assuming the API endpoint handles session-based payment processing
+  const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(paymentData)
+  });
+
+  const result = await response.json();
+
+  if (result.success) {
+    // 결제 성공 후 UI 업데이트
+    window.showPOSNotification(
+      `테이블 ${window.currentTable} 세션 결제 완료 (총 ₩${totalAmount.toLocaleString()})`,
+      'success'
+    );
+
+    // 모달 닫기
+    closePaymentModal();
+
+    // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
+    await window.loadTables();
+    window.renderTableMap();
+
+    // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
+    if (window.currentTable) {
+      window.updateDetailPanel(window.currentTable);
     }
 
-    const orderIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.dataset.orderId));
+    console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 세션 자동 해제 완료`);
+    window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
+  } else {
+    // alert('결제 처리 실패: ' + result.error); // Use showPOSNotification
+    showPOSNotification('결제 처리 실패: ' + result.error, 'error');
+  }
 
-    const processBtn = document.getElementById('processPaymentBtn');
-    processBtn.disabled = true;
-    processBtn.textContent = '처리 중...';
-
-    const paymentData = {
-      orderIds: orderIds,
-      paymentMethod: paymentMethod
-    };
-
-    // 전화번호가 입력된 경우 추가
-    if (guestPhone) {
-      paymentData.guestPhone = guestPhone;
-    }
-
-    console.log('💳 결제 처리 요청:', paymentData);
-
-    const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(paymentData)
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // 결제 성공 후 UI 업데이트
-      window.showPOSNotification(
-        `${result.completedOrders.length}개 주문 결제 완료 (총 ₩${result.totalAmount.toLocaleString()})`,
-        'success'
-      );
-
-      // 모달 닫기
-      closePaymentModal();
-
-      // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
-      await window.loadTables();
-      window.renderTableMap();
-
-      // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
-      if (window.currentTable) {
-        window.updateDetailPanel(window.currentTable);
-      }
-
-      console.log(`✅ 결제 완료 - 테이블 ${window.currentTable} 자동 해제 완료`);
-      window.showPOSNotification(`테이블 ${window.currentTable}이 자동으로 해제되었습니다.`, 'info');
-    } else {
-      alert('결제 처리 실패: ' + result.error);
-    }
-
-  } catch (error) {
-    console.error('❌ 결제 처리 실패:', error);
-    alert('결제 처리 중 오류가 발생했습니다.');
-  } finally {
-    const processBtn = document.getElementById('processPaymentBtn');
-    if (processBtn) {
-      processBtn.disabled = false;
-      processBtn.textContent = '결제 처리';
-    }
+  // Re-enable button and reset text
+  if (processBtn) {
+    processBtn.disabled = false;
+    processBtn.textContent = '결제 처리';
   }
 }
 

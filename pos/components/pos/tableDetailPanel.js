@@ -111,11 +111,30 @@ async function loadTableDetailData(tableNumber) {
     const allOrdersData = await allOrdersResponse.json();
     const tllOrderData = await tllOrderResponse.json();
 
+    // new logic: get current session
+    let currentSession = null;
+    if (allOrdersData.success && allOrdersData.currentSession) {
+      const sessionItems = allOrdersData.currentSession.items.map(item => ({
+        menuName: item.menuName,
+        quantity: item.quantity,
+        price: item.price,
+        cookingStatus: item.cookingStatus
+      }));
+
+      currentSession = {
+        ...allOrdersData.currentSession,
+        items: sessionItems,
+        sessionStarted: allOrdersData.currentSession.startedAt,
+        totalAmount: allOrdersData.currentSession.totalAmount
+      };
+    }
+
     return {
       table: currentTable || { tableNumber, isOccupied: false },
       pendingOrders: allOrdersData.success ? allOrdersData.pendingOrders : [],
       completedOrders: allOrdersData.success ? allOrdersData.completedOrders : [],
-      tllOrder: tllOrderData.success ? tllOrderData.tllOrder : null
+      tllOrder: tllOrderData.success ? tllOrderData.tllOrder : null,
+      currentSession: currentSession // Add currentSession to the data
     };
 
   } catch (error) {
@@ -250,58 +269,50 @@ const TLLInfoUI = {
 // 미결제 주문 UI 모듈
 const PendingOrdersUI = {
   render(pendingOrders) {
-    if (pendingOrders.length === 0) return '';
+    // Removed the old logic for rendering individual pending orders
+    // New logic will render the current session if available
 
-    const totalAmount = pendingOrders.reduce((sum, order) => sum + order.finalAmount, 0);
+    // Check if there's a current session available in the data
+    const hasCurrentSession = window.currentSessionData && window.currentSessionData.currentSession;
 
     return `
       <div class="pending-orders-section">
         <div class="section-header">
           <h4>🔄 미결제 주문</h4>
-          <div class="orders-summary">
-            <span class="order-count">${pendingOrders.length}개</span>
-            <span class="total-amount">₩${totalAmount.toLocaleString()}</span>
-          </div>
         </div>
         <div class="orders-container">
-          ${pendingOrders.map(order => this.renderOrderCard(order)).join('')}
+          ${hasCurrentSession ? this.renderCurrentSession(window.currentSessionData.currentSession) : '<div class="no-active-session">활성 세션이 없습니다</div>'}
         </div>
       </div>
     `;
   },
 
-  renderOrderCard(order) {
-    const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
-    const items = orderData?.items || [];
+  renderCurrentSession(session) {
+    const items = session.items || [];
 
     return `
-      <div class="order-card pending" data-order-id="${order.id}">
-        <div class="order-header">
-          <div class="order-info">
-            <div class="customer-info">
-              <span class="customer-name">👤 ${order.customerName || '포스 주문'}</span>
-              <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">
-                ${OrderUtils.getOrderSourceText(order.orderSource || 'POS')}
-              </span>
-            </div>
-            <div class="order-time">${OrderUtils.formatOrderTime(order.orderDate)}</div>
-          </div>
-          <div class="order-amount pending">₩${order.finalAmount.toLocaleString()}</div>
+      <div class="current-session" data-session-id="${session.id}">
+        <div class="session-header">
+          <span class="session-title">📋 현재 세션</span>
+          <span class="session-amount">₩${session.totalAmount.toLocaleString()}</span>
+          <span class="session-status ${session.status.toLowerCase()}">${session.status}</span>
         </div>
-
-        <div class="order-items">
+        <div class="session-info">
+          <span class="customer-name">${session.customerName || '포스 주문'}</span>
+          <span class="session-time">시작: ${new Date(session.sessionStarted).toLocaleTimeString()}</span>
+        </div>
+        <div class="session-items">
           ${items.map(item => `
-            <div class="menu-item">
-              <span class="menu-name">${item.name}</span>
-              <span class="menu-quantity">×${item.quantity || 1}</span>
-              <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
+            <div class="session-item">
+              <span class="item-name">${item.menuName}</span>
+              <span class="item-qty">x${item.quantity}</span>
+              <span class="item-price">₩${item.price.toLocaleString()}</span>
+              <span class="cooking-status ${item.cookingStatus.toLowerCase()}">${item.cookingStatus}</span>
             </div>
           `).join('')}
         </div>
-
-        <div class="order-actions">
-          <span class="status-badge pending">결제 대기</span>
-          <button class="btn-small btn-primary" onclick="processOrderPayment('${order.id}')">
+        <div class="session-actions">
+           <button class="btn-small btn-primary" onclick="processSessionPayment('${session.id}')">
             결제하기
           </button>
         </div>
@@ -454,6 +465,7 @@ async function refreshTableData(tableNumber) {
 // 액션 함수들
 function openAddOrderModal(tableNumber) {
   window.currentTable = tableNumber;
+  // Assuming addOrder function is defined elsewhere and handles session logic
   if (typeof addOrder === 'function') {
     addOrder();
   } else {
@@ -463,12 +475,30 @@ function openAddOrderModal(tableNumber) {
 
 function openPaymentModal(tableNumber) {
   window.currentTable = tableNumber;
+  // Assuming processPayment function is defined elsewhere
   if (typeof processPayment === 'function') {
     processPayment();
   } else {
     console.log(`결제 모달 열기 - 테이블 ${tableNumber}`);
   }
 }
+
+// Function to process payment for the entire session
+function processSessionPayment(sessionId) {
+  if (typeof processPayment === 'function') {
+    // Pass the session ID to the payment processing function
+    processPayment(sessionId).then(async () => {
+      // After successful payment, potentially clear the session or update table status
+      // This part depends on the backend implementation for session payment
+      window.showPOSNotification('세션 결제가 완료되었습니다.', 'success');
+      // Refresh the panel to reflect the closed session
+      await renderTableDetailPanel(window.currentTable);
+    });
+  } else {
+    console.log(`세션 ${sessionId} 결제 처리`);
+  }
+}
+
 
 function processOrderPayment(orderId) {
   if (typeof processPayment === 'function') {
@@ -1177,6 +1207,143 @@ function getTableDetailStyles() {
         border-radius: 8px;
       }
 
+      /* Session specific styles */
+      .current-session {
+        background: #eef2ff;
+        border: 1px solid #a5b4fc;
+        border-left: 4px solid #6366f1;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+      }
+
+      .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .session-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #4f46e5;
+      }
+
+      .session-amount {
+        font-size: 15px;
+        font-weight: 700;
+        color: #3b82f6;
+      }
+
+      .session-status {
+        padding: 4px 8px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .session-status.open {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .session-status.closed {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .session-info {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 12px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .customer-name {
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .session-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed #c7d2fe;
+      }
+
+      .session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        gap: 8px;
+      }
+
+      .item-name {
+        flex: 1;
+        color: #374151;
+        font-weight: 500;
+        min-width: 0;
+        word-break: break-word;
+      }
+
+      .item-qty {
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .item-price {
+        color: #059669;
+        font-weight: 700;
+        font-size: 11px;
+        min-width: 60px;
+        text-align: right;
+      }
+
+      .cooking-status {
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .cooking-status.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .cooking-status.completed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .no-active-session {
+        text-align: center;
+        color: #64748b;
+        font-style: italic;
+        padding: 32px 20px;
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+      }
+      .session-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 12px;
+      }
+
       /* 점유/해제 버튼 스타일 */
       .detail-action-btn.occupy {
         background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
@@ -1213,6 +1380,7 @@ window.toggleOrderItems = toggleOrderItems;
 window.openAddOrderModal = openAddOrderModal;
 window.openPaymentModal = openPaymentModal;
 window.processOrderPayment = processOrderPayment;
+window.processSessionPayment = processSessionPayment; // Added for session payment
 window.moveTableOrders = moveTableOrders;
 window.occupyTable = occupyTable; // occupyTable 함수 전역 등록
 window.releaseTable = releaseTable; // releaseTable 함수 전역 등록
