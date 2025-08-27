@@ -385,7 +385,7 @@ async function renderSignUp() {
       }
 
       .phone-hint-spacing {
-        margin-bottom: 20px !important;
+        margin-bottom: 40px !important;
       }
 
       .form-hint.error {
@@ -613,7 +613,7 @@ async function renderSignUp() {
 
       /* 로그인 링크 섹션 */
       .login-link-section {
-        margin: 60px 0 24px 0;
+        margin: 80px 0 24px 0;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -626,7 +626,7 @@ async function renderSignUp() {
         width: 100%;
         height: 1px;
         background-color: rgba(255, 255, 255, 0.2);
-        margin-top: 24px;
+        margin-top: 40px;
       }
 
       .divider-text {
