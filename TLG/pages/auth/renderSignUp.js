@@ -609,7 +609,7 @@ async function renderSignUp() {
 
       /* 로그인 링크 섹션 */
       .login-link-section {
-        margin: 24px 0 16px 0;
+        margin: 40px 0 16px 0;
         display: flex;
         flex-direction: column;
         align-items: center;
