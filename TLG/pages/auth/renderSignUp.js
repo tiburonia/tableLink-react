@@ -154,13 +154,11 @@ async function renderSignUp() {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
         overflow: hidden;
-        left: 50%;
-        transform: translateX(-50%);
       }
 
       #signupContainer {
-        height: 760px;
-        width: 390px;
+        height: 100%;
+        width: 100%;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;
