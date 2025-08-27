@@ -1,4 +1,3 @@
-
 // POS 시스템 상태
 let currentStore = null;
 let currentTable = null;
@@ -184,8 +183,26 @@ function closeDetailPanel() {
   `;
 }
 
-// 세부 패널 업데이트 (새 DB 구조에 맞게 수정)
+// 세부 패널 업데이트 (새 테이블 상세 패널 모듈 사용)
 async function updateDetailPanel(tableNumber) {
+  window.currentTable = tableNumber;
+
+  try {
+    // 새로운 테이블 상세 패널 모듈을 사용하여 렌더링
+    if (typeof renderTableDetailPanel === 'function') {
+      await renderTableDetailPanel(tableNumber);
+    } else {
+      // 폴백: 기본 UI 렌더링
+      await renderBasicTableDetail(tableNumber);
+    }
+  } catch (error) {
+    console.error('❌ 테이블 상세 정보 로드 실패:', error);
+    await renderBasicTableDetail(tableNumber);
+  }
+}
+
+// 기본 테이블 상세 정보 렌더링 (폴백)
+async function renderBasicTableDetail(tableNumber) {
   const panelTitle = document.getElementById('panelTitle');
   const panelContent = document.getElementById('panelContent');
 
@@ -219,76 +236,68 @@ async function updateDetailPanel(tableNumber) {
     panelContent.innerHTML = `
       <div class="table-status-section">
         <div class="table-status-header">
-          <h4>테이블 상태</h4>
+          <h4>📊 테이블 상태</h4>
           <div class="status-indicator ${isOccupied || pendingOrders.length > 0 ? 'occupied' : 'available'}">
             ${isOccupied || pendingOrders.length > 0 ? '🔴 사용중' : '🟢 이용가능'}
           </div>
         </div>
 
-        <div class="table-control-actions">
-          ${isOccupied ?
-            `<button class="action-btn warning" onclick="releaseTable('${tableNumber}')">
-              테이블 해제
-            </button>` :
-            `<button class="action-btn primary" onclick="occupyTable('${tableNumber}')">
-              테이블 점유
-            </button>`
-          }
+        <div class="table-actions">
+          <button class="action-btn primary" onclick="addOrder()">
+            📦 주문 추가
+          </button>
+          ${pendingOrders.length > 0 ? `
+            <button class="action-btn success pulse" onclick="processPayment()">
+              💳 결제 처리 (${pendingOrders.length}개)
+            </button>
+          ` : ''}
+          <button class="action-btn secondary" onclick="refreshCurrentTableOrders()">
+            🔄 새로고침
+          </button>
         </div>
-      </div>
-
-      <div class="table-actions">
-        <button class="action-btn primary" onclick="addOrder()">주문 추가</button>
-        <button class="action-btn" onclick="viewOrders()">주문 내역</button>
-        <button class="action-btn" onclick="moveTable()">테이블 이동</button>
-        <button class="action-btn warning" onclick="processPayment()" ${pendingOrders.length === 0 ? 'disabled' : ''}>결제 처리</button>
       </div>
 
       <!-- 미결제 주문 -->
       ${pendingOrders.length > 0 ? `
         <div class="pending-orders-section">
           <h4>🔄 미결제 주문 (${pendingOrders.length}개)</h4>
-          <div class="order-items scrollable-section">
-            ${pendingOrders.map(order => `
-              <div class="order-item pending-order" data-order-id="${order.id}">
-                <div class="order-header">
-                  <div class="order-info">
-                    <span class="customer-name">👤 ${order.customerName}</span>
-                    <span class="order-time">${formatOrderTime(order.orderDate)}</span>
-                    <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">${getOrderSourceText(order.orderSource || 'POS')}</span>
-                  </div>
-                  <div class="order-amount pending">₩${order.finalAmount.toLocaleString()}</div>
+          <div class="order-items">
+          ${pendingOrders.map(order => `
+            <div class="order-item pending-order">
+              <div class="order-header">
+                <div class="order-info">
+                  <span class="customer-name">👤 ${order.customerName}</span>
+                  <span class="order-time">${formatOrderTime(order.orderDate)}</span>
+                  <span class="source-badge ${order.orderSource?.toLowerCase() || 'pos'}">${getOrderSourceText(order.orderSource || 'POS')}</span>
                 </div>
-
-                <div class="order-details">
-                  ${order.orderData && order.orderData.items ?
-                    order.orderData.items.map(item => `
-                      <div class="menu-item">
-                        <span class="menu-name">${item.name}</span>
-                        <span class="menu-quantity">x${item.quantity || 1}</span>
-                        <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
-                      </div>
-                    `).join('') :
-                    '<div class="no-items">주문 상세 정보 없음</div>'
-                  }
-                </div>
-
-                <div class="order-status">
-                  <span class="status-badge pending">결제 대기</span>
-                  <label class="payment-checkbox">
-                    <input type="checkbox" data-order-id="${order.id}" data-amount="${order.finalAmount}" checked>
-                    <span>결제 선택</span>
-                  </label>
-                </div>
+                <div class="order-amount pending">₩${order.finalAmount.toLocaleString()}</div>
               </div>
-            `).join('')}
+
+              <div class="order-details">
+                ${order.orderData && order.orderData.items ?
+                  order.orderData.items.map(item => `
+                    <div class="menu-item">
+                      <span class="menu-name">${item.name}</span>
+                      <span class="menu-quantity">×${item.quantity || 1}</span>
+                      <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
+                    </div>
+                  `).join('') : ''
+                }
+              </div>
+
+              <div class="order-actions">
+                <span class="status-badge pending">결제 대기</span>
+                <button class="btn-small btn-primary" onclick="processOrderPayment('${order.id}')">결제하기</button>
+              </div>
+            </div>
+          `).join('')}
           </div>
         </div>
       ` : ''}
 
       <!-- 완료된 주문 -->
       <div class="completed-orders-section">
-        <h4>${completedOrders.length > 0 ? `✅ 완료된 주문 (${completedOrders.length}개)` : '주문 없음'}</h4>
+        <h4>${completedOrders.length > 0 ? `✅ 완료된 주문 (${completedOrders.length}개)` : '완료된 주문 없음'}</h4>
         <div class="order-items scrollable-section">
           ${completedOrders.length > 0 ?
             completedOrders.map(order => `
@@ -307,35 +316,355 @@ async function updateDetailPanel(tableNumber) {
                     order.orderData.items.map(item => `
                       <div class="menu-item">
                         <span class="menu-name">${item.name}</span>
-                        <span class="menu-quantity">x${item.quantity || 1}</span>
+                        <span class="menu-quantity">×${item.quantity || 1}</span>
                         <span class="menu-price">₩${(item.price * (item.quantity || 1)).toLocaleString()}</span>
                       </div>
-                    `).join('') :
-                    '<div class="no-items">주문 상세 정보 없음</div>'
+                    `).join('') : ''
                   }
                 </div>
 
-                <div class="order-status">
+                <div class="order-actions">
                   <span class="status-badge completed">결제 완료</span>
-                  <span class="payment-badge">💳 결제됨</span>
+                  <span class="payment-method">💳 카드</span>
                 </div>
               </div>
-            `).join('') :
-            (!pendingOrders.length ? `<div class="no-orders">테이블이 비어있습니다</div>` : '')
+            `).join('') : '<div class="no-orders">완료된 주문이 없습니다</div>'
           }
         </div>
       </div>
+
+      ${getBasicDetailPanelStyles()}
     `;
 
   } catch (error) {
-    console.error('❌ 테이블 정보 로드 실패:', error);
+    console.error('❌ 테이블 상세 정보 로드 실패:', error);
     panelContent.innerHTML = `
       <div class="error-message">
-        테이블 정보를 불러오는데 실패했습니다.
+        ⚠️ 테이블 정보를 불러오는데 실패했습니다.
+        <button class="retry-btn" onclick="updateDetailPanel('${tableNumber}')">다시 시도</button>
       </div>
     `;
   }
 }
+
+// 기본 스타일 (폴백용)
+function getBasicDetailPanelStyles() {
+  return `
+    <style>
+      .table-status-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+
+      .table-status-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .table-status-header h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .status-indicator {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .status-indicator.occupied {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+      }
+
+      .status-indicator.available {
+        background: #f0fdf4;
+        color: #16a34a;
+        border: 1px solid #bbf7d0;
+      }
+
+      .table-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+      }
+
+      .action-btn {
+        padding: 12px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        color: #374151;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: center;
+      }
+
+      .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+
+      .action-btn.primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        border-color: #3b82f6;
+      }
+
+      .action-btn.secondary {
+        background: linear-gradient(135deg, #64748b, #475569);
+        color: white;
+        border-color: #64748b;
+      }
+
+      .action-btn.success {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border-color: #10b981;
+      }
+
+      .action-btn.pulse {
+        animation: pulse-glow 2s infinite;
+      }
+
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        50% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      }
+
+      .pending-orders-section, .completed-orders-section {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+
+      .pending-orders-section h4, .completed-orders-section h4 {
+        margin: 0 0 16px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .order-items {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .order-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .order-item.pending-order {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .order-item.completed-order {
+        border-left: 4px solid #10b981;
+      }
+
+      .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .order-info {
+        flex: 1;
+      }
+
+      .customer-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-right: 8px;
+      }
+
+      .order-time {
+        font-size: 11px;
+        color: #64748b;
+        margin-right: 8px;
+      }
+
+      .source-badge {
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .source-badge.tll {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .source-badge.pos {
+        background: #10b981;
+        color: white;
+      }
+
+      .order-amount {
+        font-size: 14px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 8px;
+      }
+
+      .order-amount.pending {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .order-amount.completed {
+        background: #ecfdf5;
+        color: #059669;
+      }
+
+      .order-details {
+        margin-bottom: 12px;
+      }
+
+      .menu-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        font-size: 12px;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .menu-item:last-child {
+        border-bottom: none;
+      }
+
+      .menu-name {
+        flex: 1;
+        color: #374151;
+        font-weight: 500;
+      }
+
+      .menu-quantity {
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 700;
+        margin: 0 8px;
+      }
+
+      .menu-price {
+        color: #059669;
+        font-weight: 700;
+        font-size: 11px;
+      }
+
+      .order-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .status-badge.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status-badge.completed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .payment-method {
+        font-size: 10px;
+        color: #64748b;
+      }
+
+      .btn-small {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-primary {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #2563eb;
+      }
+
+      .no-orders {
+        text-align: center;
+        color: #64748b;
+        font-style: italic;
+        padding: 32px 20px;
+        background: #f8fafc;
+        border: 2px dashed #cbd5e1;
+        border-radius: 8px;
+      }
+
+      .loading-message, .error-message {
+        text-align: center;
+        color: #64748b;
+        padding: 32px 20px;
+        background: #f8fafc;
+        border-radius: 8px;
+      }
+
+      .retry-btn {
+        margin-top: 16px;
+        padding: 8px 16px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+
+      .retry-btn:hover {
+        background: #2563eb;
+      }
+
+      .scrollable-section {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+    </style>
+  `;
+}
+
 
 // 스텁 함수들
 function createNewOrder() {
