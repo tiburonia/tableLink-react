@@ -1,7 +1,6 @@
-
 async function renderSignUp() {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div id="signupContainer">
       <header class="signup-header">
@@ -50,7 +49,7 @@ async function renderSignUp() {
                 </svg>
               </button>
             </div>
-            <div class="form-hint" id="pwHint">최소 4자 이상 입력해주세요</div>
+            <div class="form-hint" id="pwHint">비밀번호는 4자 이상 입력해주세요</div>
           </div>
 
           <!-- 비밀번호 확인 -->
@@ -96,7 +95,7 @@ async function renderSignUp() {
               <div class="input-status" id="phoneStatus"></div>
             </div>
             <div class="form-hint" id="phoneHint">기존 주문 내역 연동을 위해 입력해주세요</div>
-            
+
             <button type="button" class="search-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
@@ -134,10 +133,9 @@ async function renderSignUp() {
         </form>
 
         <!-- 로그인 링크 -->
-        <div class="login-link">
-          이미 계정이 있으신가요? 
-          <button onclick="renderLogin()" class="link-btn">로그인하기</button>
-        </div>
+        <a href="#" id="loginLink" class="login-link" onclick="renderLogin(); return false;">
+          ← 로그인 화면으로 돌아가기
+        </a>
       </div>
     </div>
 
@@ -150,7 +148,7 @@ async function renderSignUp() {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         overflow: scroll;
-       
+
       }
 
       #signupContainer {
@@ -387,26 +385,28 @@ async function renderSignUp() {
       }
 
       .search-btn {
-        margin-top: 8px;
-        padding: 10px 14px;
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
+        width: 100%;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
         color: white;
-        font-size: 12px;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        display: flex;
+        display: none;
         align-items: center;
-        gap: 6px;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-        align-self: flex-start;
-        touch-action: manipulation;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+        position: relative;
+        z-index: 15;
       }
 
       .search-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
       }
 
       /* 주문 내역 미리보기 */
@@ -601,13 +601,20 @@ async function renderSignUp() {
 
       /* 로그인 링크 */
       .login-link {
+        display: block;
         text-align: center;
-        margin: 0 0 max(env(safe-area-inset-bottom), 20px);
+        margin: 24px 0 16px 0;
         color: rgba(255, 255, 255, 0.8);
-        font-size: 13px;
+        text-decoration: none;
+        font-size: 14px;
         font-weight: 500;
-        padding-bottom: 4px;
-        flex-shrink: 0;
+        transition: all 0.3s ease;
+        position: relative;
+        z-index: 10;
+      }
+
+      .login-link.with-search-btn {
+        margin-top: 40px;
       }
 
       .link-btn {
@@ -668,7 +675,7 @@ async function renderSignUp() {
         .signup-header {
           padding-top: max(env(safe-area-inset-top), 16px);
         }
-        
+
         .login-link {
           margin-bottom: max(env(safe-area-inset-bottom), 20px);
         }
@@ -679,7 +686,7 @@ async function renderSignUp() {
         .form-input {
           height: 48px;
         }
-        
+
         .signup-btn {
           height: 50px;
         }
@@ -710,14 +717,14 @@ function setupSignupForm() {
   idInput.addEventListener('input', (e) => {
     const value = e.target.value.trim();
     clearTimeout(idCheckTimeout);
-    
+
     if (value.length < 3) {
       updateInputStatus(idInput, 'error', '❌', '아이디는 3자 이상이어야 합니다');
       isIdValid = false;
       updateSubmitButton();
       return;
     }
-    
+
     if (!/^[a-zA-Z0-9]{3,20}$/.test(value)) {
       updateInputStatus(idInput, 'error', '❌', '영문과 숫자만 사용 가능합니다');
       isIdValid = false;
@@ -726,7 +733,7 @@ function setupSignupForm() {
     }
 
     updateInputStatus(idInput, 'checking', '⏳', '아이디 확인 중...');
-    
+
     idCheckTimeout = setTimeout(async () => {
       await checkIdAvailability(value);
     }, 500);
@@ -739,34 +746,44 @@ function setupSignupForm() {
   // 전화번호 실시간 검증
   let phoneCheckTimeout;
   let isPhoneValid = true;
-  
+
   phoneInput.addEventListener('input', (e) => {
     const value = formatPhoneNumber(e.target.value);
     e.target.value = value;
-    
+
     clearTimeout(phoneCheckTimeout);
-    
+
     if (value.length === 0) {
       hideGuestOrdersPreview();
       updateInputStatus(phoneInput, '', '', '');
       searchBtn.style.display = 'none';
       isPhoneValid = true;
+      // login-link 위치 원래대로
+      const loginLink = document.getElementById('loginLink');
+      if (loginLink) {
+        loginLink.classList.remove('with-search-btn');
+      }
       updateSubmitButton();
       return;
     }
-    
+
     if (value.length < 13) {
       updateInputStatus(phoneInput, 'error', '❌', '올바른 전화번호를 입력하세요');
       hideGuestOrdersPreview();
       searchBtn.style.display = 'none';
       isPhoneValid = false;
+      // login-link 위치 원래대로
+      const loginLink = document.getElementById('loginLink');
+      if (loginLink) {
+        loginLink.classList.remove('with-search-btn');
+      }
       updateSubmitButton();
       return;
     }
 
     // 전화번호 중복 검사
     updateInputStatus(phoneInput, 'checking', '⏳', '전화번호 확인 중...');
-    
+
     phoneCheckTimeout = setTimeout(async () => {
       await checkPhoneAvailability(value);
     }, 500);
@@ -784,9 +801,9 @@ function setupSignupForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       });
-      
+
       const data = await response.json();
-      
+
       if (data.available) {
         updateInputStatus(idInput, 'success', '✅', '사용 가능한 아이디입니다');
         isIdValid = true;
@@ -812,18 +829,28 @@ function setupSignupForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone })
       });
-      
+
       const data = await response.json();
-      
+
       if (data.available) {
         updateInputStatus(phoneInput, 'success', '✅', '사용 가능한 전화번호입니다');
         searchBtn.style.display = 'flex';
         isPhoneValid = true;
+        // login-link 위치 조정
+        const loginLink = document.getElementById('loginLink');
+        if (loginLink) {
+          loginLink.classList.add('with-search-btn');
+        }
       } else {
         updateInputStatus(phoneInput, 'error', '❌', '이미 등록된 전화번호입니다');
         searchBtn.style.display = 'none';
         hideGuestOrdersPreview();
         isPhoneValid = false;
+        // login-link 위치 원래대로
+        const loginLink = document.getElementById('loginLink');
+        if (loginLink) {
+          loginLink.classList.remove('with-search-btn');
+        }
       }
     } catch (error) {
       updateInputStatus(phoneInput, 'error', '❌', '전화번호 확인 중 오류가 발생했습니다');
@@ -838,20 +865,20 @@ function setupSignupForm() {
   function validatePassword() {
     const pw = pwInput.value;
     const pwConfirm = pwConfirmInput.value;
-    
+
     if (pw.length === 0) {
       updateInputStatus(pwInput, '', '', '');
       updateInputStatus(pwConfirmInput, '', '', '');
       updateSubmitButton();
       return;
     }
-    
+
     if (pw.length < 4) {
       updateInputStatus(pwInput, 'error', '❌', '비밀번호는 4자 이상이어야 합니다');
     } else {
       updateInputStatus(pwInput, 'success', '✅', '사용 가능한 비밀번호입니다');
     }
-    
+
     if (pwConfirm.length > 0) {
       if (pw === pwConfirm) {
         updateInputStatus(pwConfirmInput, 'success', '✅', '비밀번호가 일치합니다');
@@ -861,7 +888,7 @@ function setupSignupForm() {
     } else {
       updateInputStatus(pwConfirmInput, '', '', '');
     }
-    
+
     updateSubmitButton();
   }
 
@@ -870,10 +897,10 @@ function setupSignupForm() {
     const container = input.closest('.input-container');
     const statusElement = container.querySelector('.input-status');
     const hint = container.closest('.form-group').querySelector('.form-hint');
-    
+
     input.className = `form-input ${status}`;
     if (statusElement) statusElement.textContent = icon;
-    
+
     if (message) {
       hint.textContent = message;
       hint.className = `form-hint ${status}`;
@@ -889,7 +916,7 @@ function setupSignupForm() {
     const pw = pwInput.value;
     const pwConfirm = pwConfirmInput.value;
     const phone = phoneInput.value.trim();
-    
+
     const isFormValid = 
       isIdValid && 
       !isIdChecking && 
@@ -898,37 +925,37 @@ function setupSignupForm() {
       pw.length >= 4 && 
       pw === pwConfirm &&
       (phone.length === 0 || isPhoneValid); // 전화번호가 비어있거나 유효해야 함
-    
+
     submitBtn.disabled = !isFormValid;
   }
 
   // 폼 제출 처리
   async function handleSignupSubmit(e) {
     e.preventDefault();
-    
+
     if (submitBtn.disabled) return;
-    
+
     const formData = {
       id: idInput.value.trim(),
       pw: pwInput.value.trim(),
       name: nameInput.value.trim() || null,
       phone: phoneInput.value.trim() || null
     };
-    
+
     submitBtn.classList.add('loading');
-    
+
     try {
       const response = await fetch('/api/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         showSuccessMessage('🎉 회원가입이 완료되었습니다!');
-        
+
         if (formData.phone) {
           try {
             await convertGuestToMember(formData.phone, formData.id);
@@ -936,7 +963,7 @@ function setupSignupForm() {
             console.warn('게스트 주문 연동 실패:', conversionError);
           }
         }
-        
+
         setTimeout(() => {
           renderLogin();
         }, 2000);
@@ -959,9 +986,9 @@ function setupSignupForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         console.log(`✅ 게스트 ${guestPhone}의 주문 ${data.transferredOrders}건이 회원 ${userId}로 이전됨`);
         showSuccessMessage('🔄 기존 주문 내역이 회원 계정에 연동되었습니다!');
@@ -977,31 +1004,31 @@ function setupSignupForm() {
 async function searchOrdersByPhone() {
   const phoneInput = document.getElementById('signupPhone');
   const phone = phoneInput.value.trim();
-  
+
   if (!phone || phone.length < 13) {
     showErrorMessage('올바른 전화번호를 입력해주세요');
     return;
   }
-  
+
   const searchBtn = document.getElementById('searchOrdersBtn');
   const originalHtml = searchBtn.innerHTML;
-  
+
   searchBtn.innerHTML = `
     <div style="width: 12px; height: 12px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: spin 1s linear infinite;"></div>
     <span>검색중...</span>
   `;
   searchBtn.disabled = true;
-  
+
   try {
     const response = await fetch(`/api/orders/guest-phone/${phone}`);
     const data = await response.json();
-    
+
     if (data.success && data.orders && data.orders.length > 0) {
       const stats = {
         totalOrders: data.orders.length,
         totalAmount: data.orders.reduce((sum, order) => sum + (order.final_amount || 0), 0)
       };
-      
+
       showGuestOrdersPreview(data.orders, stats);
       showSuccessMessage(`📱 ${phone} 번호로 ${data.orders.length}건의 주문 내역을 찾았습니다!`);
     } else {
@@ -1024,9 +1051,9 @@ function showGuestOrdersPreview(orders, stats) {
   const content = document.getElementById('guestOrdersContent');
   const count = document.getElementById('previewCount');
   const summary = document.getElementById('previewSummary');
-  
+
   count.textContent = `${orders.length}건`;
-  
+
   const ordersHtml = orders.slice(0, 5).map(order => `
     <div class="order-preview-item">
       <div class="order-item-info">
@@ -1038,10 +1065,10 @@ function showGuestOrdersPreview(orders, stats) {
       </div>
     </div>
   `).join('');
-  
+
   content.innerHTML = ordersHtml + 
     (orders.length > 5 ? `<div style="text-align: center; margin-top: 12px; color: #999; font-size: 12px;">외 ${orders.length - 5}건 더</div>` : '');
-  
+
   if (stats) {
     summary.innerHTML = `
       <div class="summary-item">
@@ -1054,11 +1081,11 @@ function showGuestOrdersPreview(orders, stats) {
       </div>
     `;
   }
-  
+
   preview.style.display = 'block';
 }
 
-// 게스트 주문 내역 미리보기 숨김 함수
+// 게스트 주문 내역 미리보이 숨김 함수
 function hideGuestOrdersPreview() {
   const preview = document.getElementById('guestOrdersPreview');
   if (preview) {
@@ -1078,7 +1105,7 @@ function formatPhoneNumber(value) {
 function togglePassword(inputId) {
   const input = document.getElementById(inputId);
   const button = input.parentElement.querySelector('.input-action');
-  
+
   if (input.type === 'password') {
     input.type = 'text';
     button.innerHTML = `
@@ -1118,9 +1145,9 @@ function showToast(message, type) {
     error: { bg: '#ff6b6b', shadow: 'rgba(255, 107, 107, 0.3)' },
     info: { bg: '#339af0', shadow: 'rgba(51, 154, 240, 0.3)' }
   };
-  
+
   const color = colors[type] || colors.info;
-  
+
   const toast = document.createElement('div');
   toast.textContent = message;
   toast.style.cssText = `
@@ -1141,7 +1168,7 @@ function showToast(message, type) {
     max-width: 90%;
     text-align: center;
   `;
-  
+
   // 애니메이션 추가
   const style = document.createElement('style');
   style.textContent = `
@@ -1155,9 +1182,9 @@ function showToast(message, type) {
     }
   `;
   document.head.appendChild(style);
-  
+
   document.body.appendChild(toast);
-  
+
   setTimeout(() => {
     toast.style.animation = 'slideUp 0.3s ease forwards';
     setTimeout(() => {
