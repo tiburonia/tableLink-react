@@ -148,18 +148,19 @@ async function renderSignUp() {
 
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        height: 100vh;
+        width: 390px;
+        height: 760px;
+        margin: 0 auto;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
         overflow: hidden;
+        left: 50%;
+        transform: translateX(-50%);
       }
 
       #signupContainer {
-        height: 100vh;
-        max-width: 100%;
-        width: 100%;
-        margin: 0;
+        width: 390px;
+        height: 760px;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;
@@ -219,9 +220,10 @@ async function renderSignUp() {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        padding: 0 20px;
+        padding: 0 20px 20px;
         display: flex;
         flex-direction: column;
+        min-height: 0;
       }
 
       /* 브랜드 섹션 */
@@ -741,6 +743,8 @@ function setupSignupForm() {
 
   // 전화번호 실시간 검증
   let phoneCheckTimeout;
+  let isPhoneValid = true;
+  
   phoneInput.addEventListener('input', (e) => {
     const value = formatPhoneNumber(e.target.value);
     e.target.value = value;
@@ -751,6 +755,7 @@ function setupSignupForm() {
       hideGuestOrdersPreview();
       updateInputStatus(phoneInput, '', '', '');
       searchBtn.style.display = 'none';
+      isPhoneValid = true;
       updateSubmitButton();
       return;
     }
@@ -759,13 +764,17 @@ function setupSignupForm() {
       updateInputStatus(phoneInput, 'error', '❌', '올바른 전화번호를 입력하세요');
       hideGuestOrdersPreview();
       searchBtn.style.display = 'none';
+      isPhoneValid = false;
       updateSubmitButton();
       return;
     }
 
-    updateInputStatus(phoneInput, 'success', '✅', '유효한 전화번호입니다');
-    searchBtn.style.display = 'flex';
-    updateSubmitButton();
+    // 전화번호 중복 검사
+    updateInputStatus(phoneInput, 'checking', '⏳', '전화번호 확인 중...');
+    
+    phoneCheckTimeout = setTimeout(async () => {
+      await checkPhoneAvailability(value);
+    }, 500);
   });
 
   // 폼 제출 이벤트
@@ -795,6 +804,37 @@ function setupSignupForm() {
       isIdValid = false;
     } finally {
       isIdChecking = false;
+      updateSubmitButton();
+    }
+  }
+
+  // 전화번호 중복 확인
+  async function checkPhoneAvailability(phone) {
+    isPhoneChecking = true;
+    try {
+      const response = await fetch('/api/users/check-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone })
+      });
+      
+      const data = await response.json();
+      
+      if (data.available) {
+        updateInputStatus(phoneInput, 'success', '✅', '사용 가능한 전화번호입니다');
+        searchBtn.style.display = 'flex';
+        isPhoneValid = true;
+      } else {
+        updateInputStatus(phoneInput, 'error', '❌', '이미 등록된 전화번호입니다');
+        searchBtn.style.display = 'none';
+        hideGuestOrdersPreview();
+        isPhoneValid = false;
+      }
+    } catch (error) {
+      updateInputStatus(phoneInput, 'error', '❌', '전화번호 확인 중 오류가 발생했습니다');
+      isPhoneValid = false;
+    } finally {
+      isPhoneChecking = false;
       updateSubmitButton();
     }
   }
@@ -853,6 +893,7 @@ function setupSignupForm() {
     const id = idInput.value.trim();
     const pw = pwInput.value;
     const pwConfirm = pwConfirmInput.value;
+    const phone = phoneInput.value.trim();
     
     const isFormValid = 
       isIdValid && 
@@ -860,7 +901,8 @@ function setupSignupForm() {
       !isPhoneChecking &&
       id.length >= 3 && 
       pw.length >= 4 && 
-      pw === pwConfirm;
+      pw === pwConfirm &&
+      (phone.length === 0 || isPhoneValid); // 전화번호가 비어있거나 유효해야 함
     
     submitBtn.disabled = !isFormValid;
   }

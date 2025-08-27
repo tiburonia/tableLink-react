@@ -30,6 +30,33 @@ router.post('/users/check-id', async (req, res) => {
   }
 });
 
+// 전화번호 중복 체크 API
+router.post('/users/check-phone', async (req, res) => {
+  const { phone } = req.body;
+
+  if (!phone) {
+    return res.status(400).json({ error: '전화번호를 입력해주세요' });
+  }
+
+  // 전화번호 형식 검증
+  if (!/^010-\d{4}-\d{4}$/.test(phone)) {
+    return res.status(400).json({ error: '올바른 전화번호 형식이 아닙니다' });
+  }
+
+  try {
+    const result = await pool.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
+    
+    if (result.rows.length > 0) {
+      res.json({ available: false, message: '이미 등록된 전화번호입니다' });
+    } else {
+      res.json({ available: true, message: '사용 가능한 전화번호입니다' });
+    }
+  } catch (error) {
+    console.error('전화번호 중복 체크 실패:', error);
+    res.status(500).json({ error: '전화번호 중복 체크 중 오류가 발생했습니다' });
+  }
+});
+
 // 사용자 회원가입 API
 router.post('/users/signup', async (req, res) => {
   const { id, pw, name, phone } = req.body;
