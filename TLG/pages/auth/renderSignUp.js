@@ -94,7 +94,7 @@ async function renderSignUp() {
               <input type="tel" id="signupPhone" class="form-input" placeholder="010-1234-5678" autocomplete="tel">
               <div class="input-status" id="phoneStatus"></div>
             </div>
-            <div class="form-hint" id="phoneHint">기존 주문 내역 연동을 위해 입력해주세요</div>
+            <div class="form-hint" id="phoneHint" >기존 주문 내역 연동을 위해 입력해주세요</div>
 
             <button type="button" class="search-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,14 +134,14 @@ async function renderSignUp() {
 
         <!-- 로그인 링크 섹션 -->
         <div class="login-link-section">
-          <div class="divider-line">
+          <div class="divider-line" margin="20px">
             <span class="divider-text">또는</span>
           </div>
           <button type="button" class="login-link-btn" onclick="renderLogin()">
             <svg class="back-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span>이미 계정이 있으신가요? 로그인하기</span>
+            <span margin="20px">이미 계정이 있으신가요? 로그인하기</span>
           </button>
         </div>
       </div>
