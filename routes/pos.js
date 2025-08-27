@@ -277,6 +277,21 @@ router.post('/orders', async (req, res) => {
       }
     }
 
+    // 📡 KDS 실시간 업데이트 전송 (POS 주문도 KDS에 표시)
+    if (global.kdsWebSocket) {
+      console.log(`📡 POS 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
+      global.kdsWebSocket.broadcast(storeId, 'new-order', {
+        orderId: orderId,
+        paidOrderId: null, // POS 주문은 아직 결제 전
+        storeName: storeName,
+        tableNumber: parseInt(tableNumber),
+        customerName: finalCustomerName,
+        itemCount: items.length,
+        totalAmount: totalAmount,
+        source: 'POS'
+      });
+    }
+
     res.json({
       success: true,
       orderId: orderId,

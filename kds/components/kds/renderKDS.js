@@ -470,6 +470,38 @@ function renderKDSInterface(store) {
         box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
       }
 
+      .order-type.pos-type {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
+      }
+
+      .pos-badge {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 7px;
+        font-weight: 700;
+        position: absolute;
+        top: -4px;
+        right: 20px;
+        animation: pos-pulse 2s infinite;
+      }
+
+      @keyframes pos-pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+
+      .order-card.pos-order {
+        border-left: 4px solid #f59e0b;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
+      }
+
       .order-time {
         color: #d1d5db;
         font-size: 9px;
@@ -1400,9 +1432,10 @@ function createOrderCard(order) {
 
   const urgentClass = order.isUrgent ? ' urgent' : '';
   const statusClass = order.cookingStatus.toLowerCase();
+  const posClass = order.isPOSOrder ? ' pos-order' : '';
 
   const card = document.createElement('div');
-  card.className = `order-card ${statusClass}${urgentClass}`;
+  card.className = `order-card ${statusClass}${urgentClass}${posClass}`;
   card.dataset.orderId = order.id;
 
   const itemsHTML = order.items.map(item => {
@@ -1430,8 +1463,9 @@ function createOrderCard(order) {
   card.innerHTML = `
     <div class="order-header">
       <div class="order-number">#${order.id}</div>
-      <div class="order-type">${order.tableNumber ? '매장' : '배달'}</div>
+      <div class="order-type ${order.isPOSOrder ? 'pos-type' : ''}">${order.isPOSOrder ? 'POS' : (order.tableNumber ? '매장' : '배달')}</div>
       ${order.isUrgent ? '<div class="urgent-badge">긴급</div>' : ''}
+      ${order.isPOSOrder ? '<div class="pos-badge">미결제</div>' : ''}
     </div>
     <div class="order-time">${timeString}</div>
     <div class="order-customer">${order.customerName}</div>
@@ -1439,6 +1473,7 @@ function createOrderCard(order) {
     <div class="order-items">${itemsHTML}</div>
     <div class="order-summary">
       대기: ${order.pendingCount} | 조리중: ${order.cookingCount} | 완료: ${order.completedCount}
+      ${order.isPOSOrder ? ' | 💳 결제대기' : ''}
     </div>
     <div class="order-actions">
       ${order.pendingCount > 0 ?

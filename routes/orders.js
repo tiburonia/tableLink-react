@@ -534,7 +534,7 @@ router.get('/kds/:storeId', async (req, res) => {
 
     console.log(`📟 KDS - 매장 ${storeId} 주문 조회`);
 
-    // 조리가 완료되지 않은 orders 조회
+    // 조리가 완료되지 않은 orders 조회 (POS OPEN 상태 포함)
     const query = `
       SELECT 
         o.id as order_id, o.paid_order_id, o.store_id, o.table_number, 
@@ -546,8 +546,16 @@ router.get('/kds/:storeId', async (req, res) => {
       LEFT JOIN paid_orders p ON o.paid_order_id = p.id
       LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.store_id = $1
-      AND o.cooking_status IN ('PENDING', 'COOKING')
-      ORDER BY o.created_at ASC
+      AND o.cooking_status IN ('PENDING', 'COOKING', 'OPEN')
+      AND (o.is_visible IS NULL OR o.is_visible = true)
+      ORDER BY 
+        CASE 
+          WHEN o.cooking_status = 'OPEN' THEN 1
+          WHEN o.cooking_status = 'PENDING' THEN 2
+          WHEN o.cooking_status = 'COOKING' THEN 3
+          ELSE 4
+        END,
+        o.created_at ASC
     `;
 
     const result = await pool.query(query, [parseInt(storeId)]);
@@ -572,6 +580,10 @@ router.get('/kds/:storeId', async (req, res) => {
       const cookingItems = items.filter(item => item.cooking_status === 'COOKING');
       const completedItems = items.filter(item => item.cooking_status === 'COMPLETED');
 
+      // POS OPEN 상태 주문의 경우 특별 처리
+      const displayStatus = row.cooking_status === 'OPEN' ? 'PENDING' : row.cooking_status;
+      const isPOSOrder = !row.paid_order_id || row.order_source === 'POS';
+      
       orders.push({
         id: row.order_id,
         paidOrderId: row.paid_order_id,
@@ -579,12 +591,12 @@ router.get('/kds/:storeId', async (req, res) => {
         storeName: row.store_name,
         userId: row.user_id,
         guestPhone: row.guest_phone,
-        customerName: row.customer_name || '손님',
+        customerName: row.customer_name || (isPOSOrder ? 'POS 주문' : '손님'),
         tableNumber: row.table_number || '배달',
         orderData: row.order_data,
         totalAmount: row.total_amount,
-        cookingStatus: row.cooking_status,
-        paymentDate: row.payment_date,
+        cookingStatus: displayStatus,
+        paymentDate: row.payment_date || row.created_at,
         createdAt: row.created_at,
         orderDate: row.created_at, // KDS 호환성을 위해 추가
         waitingMinutes: waitingMinutes,
@@ -593,7 +605,8 @@ router.get('/kds/:storeId', async (req, res) => {
         cookingCount: cookingItems.length,
         completedCount: completedItems.length,
         isUrgent: waitingMinutes > 15,
-        orderSource: row.order_source || 'TLL'
+        orderSource: row.order_source || (isPOSOrder ? 'POS' : 'TLL'),
+        isPOSOrder: isPOSOrder
       });
     }
 
