@@ -1,4 +1,3 @@
-
 // POS 레이아웃 관리 모듈
 function renderPOSLayout() {
   const main = document.getElementById('main');
@@ -35,14 +34,14 @@ function renderPOSLayout() {
               🗺️ 테이블 맵
             </button>
             <button class="mode-btn ${window.homeMode === 'order_list' ? 'active' : ''}" onclick="switchHomeMode('order_list')">
-              📋 주문 리스트
+              📋 주문 목록
             </button>
           </div>
         </div>
       </header>
 
       <!-- 메인 컨텐츠 영역 -->
-      <div class="pos-main">
+      <main class="pos-main-content">
         <!-- 테이블 맵 모드 -->
         <div id="tableMapMode" class="home-mode ${window.homeMode === 'table_map' ? 'active' : ''}">
           <main class="table-map-container">
@@ -109,7 +108,7 @@ function renderPOSLayout() {
             </div>
           </aside>
         </div>
-      </div>
+      </main>
 
       <!-- 하단 액션바 -->
       <footer class="pos-footer">
@@ -118,10 +117,10 @@ function renderPOSLayout() {
             📦 새 포장 주문
           </button>
           <button class="action-btn" onclick="showPickupQueue()">
-            🛍️ 픽업 대기함 <span class="queue-count">2</span>
+            🛍️ 픽업 대기함 <span class="queue-count">0</span>
           </button>
-          <button class="action-btn warning" onclick="showUnassignedOrders()">
-            ❓ 미지정 주문함 <span class="unassigned-count">1</span>
+          <button class="action-btn" onclick="showUnassignedOrders()">
+            📋 미지정 주문함 <span class="unassigned-count">0</span>
           </button>
           <button class="action-btn" onclick="openQuickMenu()">
             ⚡ 빠른 메뉴
@@ -130,20 +129,7 @@ function renderPOSLayout() {
       </footer>
     </div>
 
-    ${getPOSLayoutStyles()}
-  `;
-}
-
-// POS 레이아웃 스타일
-function getPOSLayoutStyles() {
-  return `
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-
       .pos-container {
         height: 100vh;
         display: flex;
@@ -155,34 +141,36 @@ function getPOSLayoutStyles() {
       /* 헤더 스타일 */
       .pos-header {
         background: white;
-        border-bottom: 1px solid #e2e8f0;
         padding: 12px 20px;
+        border-bottom: 2px solid #e2e8f0;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        z-index: 1000;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        z-index: 100;
       }
 
       .header-left {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 16px;
       }
 
       .pos-logo {
+        margin: 0;
         font-size: 20px;
         font-weight: 700;
         color: #1e293b;
       }
 
       .store-info {
-        display: flex;
-        align-items: center;
-        color: #1e293b;
+        background: #eff6ff;
+        color: #1e40af;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 14px;
         font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 0px;
+        border: 1px solid #3b82f6;
       }
 
       .header-center {
@@ -196,89 +184,128 @@ function getPOSLayoutStyles() {
         background: #f1f5f9;
         border-radius: 8px;
         overflow: hidden;
+        border: 2px solid #e2e8f0;
+        transition: border-color 0.2s;
       }
 
-      .search-bar input {
+      .search-bar:focus-within {
+        border-color: #3b82f6;
+      }
+
+      #searchInput {
         flex: 1;
-        padding: 10px 16px;
+        padding: 10px 12px;
         border: none;
         background: transparent;
+        font-size: 14px;
         outline: none;
       }
 
       .search-btn {
-        padding: 10px 16px;
-        background: #64748b;
+        background: #3b82f6;
         color: white;
         border: none;
+        padding: 10px 16px;
         cursor: pointer;
+        font-size: 16px;
+        transition: background 0.2s;
+      }
+
+      .search-btn:hover {
+        background: #2563eb;
       }
 
       .header-right {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 16px;
       }
 
       .header-btn {
         position: relative;
-        padding: 8px 12px;
         background: #f1f5f9;
-        border: none;
-        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 12px;
         cursor: pointer;
         font-size: 16px;
+        transition: all 0.2s;
+      }
+
+      .header-btn:hover {
+        background: #e2e8f0;
       }
 
       .notification-badge {
         position: absolute;
-        top: -5px;
-        right: -5px;
+        top: -4px;
+        right: -4px;
         background: #ef4444;
         color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 600;
+        min-width: 16px;
+        text-align: center;
       }
 
       .sync-status {
         display: flex;
         align-items: center;
         gap: 8px;
+        padding: 6px 12px;
+        background: #f1f5f9;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .sync-time {
         font-size: 12px;
         color: #64748b;
+        font-weight: 500;
       }
 
       .sync-indicator {
         width: 8px;
         height: 8px;
         border-radius: 50%;
+        background: #94a3b8;
+        transition: background 0.3s;
+      }
+
+      .sync-indicator.active {
         background: #10b981;
-        transition: background-color 0.3s ease;
+        animation: pulse 2s infinite;
       }
 
       .sync-indicator.inactive {
         background: #ef4444;
       }
 
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
       .home-mode-toggle {
         display: flex;
         background: #f1f5f9;
         border-radius: 8px;
-        overflow: hidden;
+        padding: 2px;
+        border: 1px solid #e2e8f0;
       }
 
       .mode-btn {
         padding: 8px 16px;
         border: none;
         background: transparent;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
         cursor: pointer;
-        font-size: 14px;
         transition: all 0.2s;
+        color: #64748b;
       }
 
       .mode-btn.active {
@@ -286,12 +313,17 @@ function getPOSLayoutStyles() {
         color: white;
       }
 
+      .mode-btn:not(.active):hover {
+        background: #e2e8f0;
+      }
+
       /* 메인 컨텐츠 */
-      .pos-main {
+      .pos-main-content {
         flex: 1;
-        display: flex;
-        position: relative;
+        padding: 20px;
         overflow: hidden;
+        display: flex; /* Ensure flex is applied to the main content area */
+        position: relative; /* For positioning child modes */
       }
 
       .home-mode {
@@ -304,6 +336,7 @@ function getPOSLayoutStyles() {
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.3s ease;
+        overflow: auto; /* Allow scrolling within each mode */
       }
 
       .home-mode.active {
@@ -315,7 +348,7 @@ function getPOSLayoutStyles() {
       .table-map-container {
         flex: 1;
         padding: 20px;
-        overflow: auto;
+        overflow: auto; /* Changed from hidden to auto for scrolling */
       }
 
       .table-map {
@@ -455,8 +488,9 @@ function getPOSLayoutStyles() {
       /* 하단 액션바 */
       .pos-footer {
         background: white;
-        border-top: 1px solid #e2e8f0;
-        padding: 16px 20px;
+        border-top: 2px solid #e2e8f0;
+        padding: 12px 20px;
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
       }
 
       .action-bar {
@@ -466,63 +500,117 @@ function getPOSLayoutStyles() {
       }
 
       .action-btn {
-        position: relative;
-        padding: 12px 20px;
-        border: 1px solid #e2e8f0;
+        padding: 12px 24px;
+        border: none;
         border-radius: 8px;
-        background: white;
-        cursor: pointer;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
+        cursor: pointer;
         transition: all 0.2s;
-      }
-
-      .action-btn:hover {
-        background: #f8fafc;
+        position: relative;
+        min-width: 140px;
+        text-align: center;
       }
 
       .action-btn.primary {
         background: #3b82f6;
         color: white;
-        border-color: #3b82f6;
       }
 
-      .action-btn.warning {
-        background: #f59e0b;
-        color: white;
-        border-color: #f59e0b;
+      .action-btn.primary:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+      }
+
+      .action-btn:not(.primary) {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+      }
+
+      .action-btn:not(.primary):hover {
+        background: #e2e8f0;
+        color: #475569;
       }
 
       .queue-count, .unassigned-count {
-        position: absolute;
-        top: -5px;
-        right: -5px;
         background: #ef4444;
         color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 11px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 700;
+        margin-left: 6px;
+        min-width: 16px;
+        display: inline-block;
+        text-align: center;
       }
 
-      /* 반응형 */
-      @media (max-width: 1200px) {
-        .detail-panel {
-          width: 300px;
+      /* 반응형 디자인 */
+      @media (max-width: 1024px) {
+        .pos-header {
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .header-center {
+          order: 3;
+          flex-basis: 100%;
+          margin: 0;
+          max-width: none;
+        }
+
+        .action-bar {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .action-btn {
+          min-width: 120px;
+          font-size: 12px;
+          padding: 10px 16px;
         }
       }
 
-      @media (max-width: 900px) {
-        .header-center {
+      @media (max-width: 768px) {
+        .pos-header {
+          padding: 8px 12px;
+        }
+
+        .pos-main-content {
+          padding: 12px;
+        }
+
+        .pos-footer {
+          padding: 8px 12px;
+        }
+
+        .home-mode-toggle {
           display: none;
+        }
+
+        .header-right {
+          gap: 8px;
+        }
+
+        .action-btn {
+          min-width: 100px;
+          font-size: 11px;
+          padding: 8px 12px;
         }
       }
     </style>
   `;
 }
+
+// POS 레이아웃 스타일
+// function getPOSLayoutStyles() { // This function is no longer needed as styles are inlined
+//   return `
+//     <style>
+//       // ... styles ...
+//     </style>
+//   `;
+// }
 
 // 홈 모드 전환
 function switchHomeMode(mode) {
@@ -543,11 +631,13 @@ function switchHomeMode(mode) {
 // 주문 리스트 렌더링
 function renderOrderList() {
   const orderTimeline = document.getElementById('orderTimeline');
-  orderTimeline.innerHTML = `
-    <div style="text-align: center; color: #64748b; margin-top: 50px;">
-      주문 데이터를 불러오는 중...
-    </div>
-  `;
+  if (orderTimeline) {
+    orderTimeline.innerHTML = `
+      <div style="text-align: center; color: #64748b; margin-top: 50px;">
+        주문 데이터를 불러오는 중...
+      </div>
+    `;
+  }
 }
 
 // 주문 필터링
@@ -560,8 +650,37 @@ function filterOrders(status) {
   renderOrderList();
 }
 
+// Helper function to close the detail panel (assuming it exists and is needed)
+function closeDetailPanel() {
+  const detailPanel = document.getElementById('detailPanel');
+  if (detailPanel) {
+    detailPanel.style.display = 'none'; // Or some other way to hide it
+  }
+}
+
+// Helper function to render the table map (assuming it exists and is needed)
+function renderTableMap() {
+  const mapGrid = document.getElementById('mapGrid');
+  if (mapGrid) {
+    mapGrid.innerHTML = `
+      <div style="text-align: center; color: #64748b; margin-top: 50px;">
+        테이블 맵을 불러오는 중...
+      </div>
+    `;
+  }
+}
+
+// Placeholder functions for buttons in footer
+function createNewOrder() { console.log('Creating new order...'); }
+function showPickupQueue() { console.log('Showing pickup queue...'); }
+function showUnassignedOrders() { console.log('Showing unassigned orders...'); }
+function openQuickMenu() { console.log('Opening quick menu...'); }
+
+
 // 전역 함수 등록
 window.renderPOSLayout = renderPOSLayout;
 window.switchHomeMode = switchHomeMode;
 window.filterOrders = filterOrders;
 window.renderOrderList = renderOrderList;
+window.closeDetailPanel = closeDetailPanel; // Register closeDetailPanel
+window.renderTableMap = renderTableMap; // Register renderTableMap
