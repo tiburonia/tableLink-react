@@ -487,15 +487,10 @@ function showPaymentModal(currentSession) {
 
   document.body.appendChild(modal);
 
-  // 체크박스 이벤트 리스너 추가
-  const checkboxes = modal.querySelectorAll('input[type="checkbox"][data-order-id]');
-  checkboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', updatePaymentSummary);
-  });
-
   // 전화번호 입력 포맷팅 설정
   setupPhoneInputFormatting();
 
+  // 세션 기반 결제이므로 결제 버튼 활성화
   updatePaymentSummary();
   console.log('💳 결제 모달 표시 완료');
 }
@@ -518,30 +513,14 @@ function setupPhoneInputFormatting() {
   }
 }
 
-// 결제 요약 정보 업데이트
+// 결제 요약 정보 업데이트 (세션 기반)
 function updatePaymentSummary() {
-  const checkboxes = document.querySelectorAll('input[type="checkbox"][data-order-id]:checked');
-  const selectedCount = checkboxes.length;
-  const totalAmount = Array.from(checkboxes).reduce((sum, checkbox) => {
-    return sum + parseInt(checkbox.dataset.amount);
-  }, 0);
-
-  document.getElementById('selectedOrderCount').textContent = `${selectedCount}개`;
-  document.getElementById('totalPaymentAmount').textContent = `₩${totalAmount.toLocaleString()}`;
-
+  // 세션 기반 결제에서는 별도의 업데이트가 필요하지 않음
+  // 결제 버튼은 항상 활성화 상태 (세션이 있는 경우)
   const processBtn = document.getElementById('processPaymentBtn');
-  processBtn.disabled = selectedCount === 0;
-
-  // 선택된 주문 아이템 하이라이트
-  document.querySelectorAll('.payment-order-item').forEach(item => {
-    const orderId = item.dataset.orderId;
-    const checkbox = document.querySelector(`input[type="checkbox"][data-order-id="${orderId}"]`);
-    if (checkbox && checkbox.checked) {
-      item.classList.add('selected');
-    } else {
-      item.classList.remove('selected');
-    }
-  });
+  if (processBtn) {
+    processBtn.disabled = false;
+  }
 }
 
 // 세션 결제 처리
