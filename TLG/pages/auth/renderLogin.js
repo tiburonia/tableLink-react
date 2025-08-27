@@ -452,7 +452,7 @@ async function renderLogin() {
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 12px;
         padding: 16px 12px;
-        color: white;
+        color: #1f2937;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
@@ -513,7 +513,7 @@ async function renderLogin() {
         border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 10px;
         padding: 12px 8px;
-        color: white;
+        color: #1f2937;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
