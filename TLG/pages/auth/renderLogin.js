@@ -47,7 +47,7 @@ async function renderLogin() {
         
         // 스크립트 동적 로드
         const script = document.createElement('script');
-        script.src = '/TLG/pages/main/renderSignUp.js';
+        script.src = '/TLG/pages/auth/renderSignUp.js';
         script.onload = () => {
           console.log('✅ renderSignUp 스크립트 로드 완료');
           if (typeof window.renderSignUp === 'function') {

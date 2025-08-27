@@ -79,25 +79,70 @@ router.post('/:guestPhone/convert-to-member', async (req, res) => {
       return res.status(404).json({ success: false, error: '회원을 찾을 수 없습니다' });
     }
     
-    // 게스트의 모든 주문을 회원으로 이전
-    const transferResult = await client.query(`
+    // 1. orders 테이블의 게스트 주문을 회원으로 이전
+    const orderTransferResult = await client.query(`
       UPDATE orders 
-      SET user_id = $1, guest_phone = NULL, order_source = 'TLL'
+      SET user_id = $1, guest_phone = NULL
       WHERE guest_phone = $2
       RETURNING id
     `, [userId, guestPhone]);
     
-    console.log(`✅ ${transferResult.rows.length}개 주문 이전 완료`);
+    console.log(`✅ orders 테이블 ${orderTransferResult.rows.length}개 주문 이전 완료`);
+    
+    // 2. paid_orders 테이블의 게스트 주문을 회원으로 이전
+    const paidOrderTransferResult = await client.query(`
+      UPDATE paid_orders 
+      SET user_id = $1, guest_phone = NULL
+      WHERE guest_phone = $2
+      RETURNING id
+    `, [userId, guestPhone]);
+    
+    console.log(`✅ paid_orders 테이블 ${paidOrderTransferResult.rows.length}개 결제 내역 이전 완료`);
+    
+    // 3. user_store_stats 테이블에 게스트의 매장별 통계 정보 병합
+    try {
+      const guestStatsResult = await client.query(`
+        SELECT 
+          p.store_id,
+          COUNT(*) as visit_count,
+          SUM(p.final_amount) as total_spent,
+          FLOOR(SUM(p.final_amount) * 0.1) as earned_points
+        FROM paid_orders p
+        WHERE p.user_id = $1
+        GROUP BY p.store_id
+      `, [userId]);
+      
+      for (const stat of guestStatsResult.rows) {
+        await client.query(`
+          INSERT INTO user_store_stats (user_id, store_id, points, total_spent, visit_count, updated_at)
+          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+          ON CONFLICT (user_id, store_id) 
+          DO UPDATE SET 
+            points = user_store_stats.points + $3,
+            total_spent = user_store_stats.total_spent + $4,
+            visit_count = user_store_stats.visit_count + $5,
+            updated_at = CURRENT_TIMESTAMP
+        `, [userId, stat.store_id, stat.earned_points, stat.total_spent, stat.visit_count]);
+      }
+      
+      console.log(`✅ user_store_stats ${guestStatsResult.rows.length}개 매장 통계 병합 완료`);
+    } catch (statsError) {
+      console.warn('⚠️ 매장별 통계 병합 실패:', statsError);
+    }
     
     // 게스트 데이터 삭제 (주문 이전 후)
     await client.query('DELETE FROM guests WHERE phone = $1', [guestPhone]);
     
     await client.query('COMMIT');
     
+    const totalTransferred = orderTransferResult.rows.length + paidOrderTransferResult.rows.length;
+    
     res.json({
       success: true,
       message: `게스트 ${guestPhone}가 회원으로 전환되었습니다`,
-      transferredOrders: transferResult.rows.length,
+      transferredOrders: orderTransferResult.rows.length,
+      transferredPayments: paidOrderTransferResult.rows.length,
+      totalTransferred: totalTransferred,
       guestInfo: guest
     });
     

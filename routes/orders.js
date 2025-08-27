@@ -583,7 +583,7 @@ router.get('/kds/:storeId', async (req, res) => {
       // POS OPEN 상태 주문의 경우 특별 처리
       const displayStatus = row.cooking_status === 'OPEN' ? 'PENDING' : row.cooking_status;
       const isPOSOrder = !row.paid_order_id || row.order_source === 'POS';
-      
+
       orders.push({
         id: row.order_id,
         paidOrderId: row.paid_order_id,
