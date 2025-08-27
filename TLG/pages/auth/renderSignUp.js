@@ -148,17 +148,17 @@ async function renderSignUp() {
 
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        width: 100%;
-        max-width: 430px;
+        width: 390px;
+        height: 760px;
         margin: 0 auto;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
+        overflow: hidden;
       }
 
       #signupContainer {
-        min-height: 100vh;
-        width: 100%;
+        height: 760px;
+        width: 390px;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;

@@ -143,23 +143,23 @@ async function renderLogin() {
 
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        width: 100%;
-        max-width: 430px;
+        width: 390px;
+        height: 760px;
         margin: 0 auto;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
-        overflow-x: hidden;
+        overflow: hidden;
       }
 
       #loginContainer {
-        min-height: 100vh;
-        width: 100%;
+        height: 760px;
+        width: 390px;
         position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 20px;
+        box-sizing: border-box;
       }
 
       /* 배경 애니메이션 */
@@ -227,15 +227,16 @@ async function renderLogin() {
       /* 메인 컨텐츠 */
       .login-content {
         width: 100%;
-        max-width: 320px;
+        max-width: 300px;
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(20px);
         border-radius: 24px;
-        padding: 32px 24px;
+        padding: 28px 20px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
         position: relative;
         z-index: 10;
+        margin: 0 auto;
       }
 
       /* 브랜드 섹션 */
@@ -539,19 +540,14 @@ async function renderLogin() {
       .pos:hover { background: #f9fafb; }
       .tlm:hover { background: #f0f4ff; }
 
-      /* 반응형 */
-      @media (max-height: 700px) {
-        #loginContainer {
-          align-items: flex-start;
-          padding-top: 40px;
-        }
-
+      /* TLG 760px 높이에 최적화 */
+      @media (max-height: 760px) {
         .login-content {
-          padding: 24px 20px;
+          padding: 24px 18px;
         }
 
         .brand-section {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
         .logo-icon {
@@ -561,7 +557,11 @@ async function renderLogin() {
         }
 
         .brand-title {
-          font-size: 24px;
+          font-size: 22px;
+        }
+
+        .dev-buttons {
+          gap: 8px;
         }
       }
 
