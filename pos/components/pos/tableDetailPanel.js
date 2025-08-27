@@ -1380,9 +1380,9 @@ function getTableDetailStyles() {
       }
 
       .cooking-status {
-        padding: 2px 6px;
-        border-radius: 8px;
-        font-size: 9px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
       }
@@ -1402,6 +1402,7 @@ function getTableDetailStyles() {
         color: #166534;
       }
 
+      /* 세션 액션 */
       .session-actions {
         display: flex;
         justify-content: center;
@@ -1832,6 +1833,49 @@ function getTableDetailStyles() {
   `;
 }
 
+// 테이블 주문 로딩 상태 표시
+function showTableOrdersLoading() {
+  const panelContent = document.getElementById('panelContent');
+  if (panelContent) {
+    panelContent.innerHTML = `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">주문 정보를 불러오는 중...</div>
+      </div>
+    `;
+  }
+}
+
+// 테이블 주문 로드 (개선된 버전)
+async function loadTableOrders(storeId, tableNumber) {
+  try {
+    console.log(`🔍 POS - 테이블 ${tableNumber} 주문 조회 시작`);
+
+    // 로딩 상태 표시
+    showTableOrdersLoading();
+
+    const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/all-orders`, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return data; // Assume data contains currentSession and completedTLLOrders
+
+  } catch (error) {
+    console.error(`❌ POS - 테이블 ${tableNumber} 주문 조회 실패:`, error);
+    // 에러 상태 표시
+    showErrorState(); // Re-use the general error state display
+    throw error;
+  }
+}
+
 // 전역 함수 등록
 window.renderTableDetailPanel = renderTableDetailPanel;
 window.refreshTableData = refreshTableData;
@@ -1845,6 +1889,7 @@ window.processSessionPayment = processSessionPayment;
 window.moveTableOrders = moveTableOrders;
 window.occupyTable = occupyTable;
 window.releaseTable = releaseTable;
+window.loadTableOrders = loadTableOrders; // Ensure this is globally available if needed elsewhere
 
 
 console.log('✅ 개선된 테이블 상세 정보 패널 UI 모듈 로드 완료');
