@@ -1,7 +1,6 @@
-
 async function renderLogin() {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div class="login-layout">
       <!-- 배경 애니메이션 -->
@@ -64,7 +63,7 @@ async function renderLogin() {
         <!-- 빠른 액세스 섹션 -->
         <div class="quick-access-section">
           <h3 class="section-title">빠른 접근</h3>
-          
+
           <div class="quick-buttons-grid">
             <button id="quickLogin" class="quick-btn user-btn">
               <div class="quick-btn-icon">⚡</div>
@@ -419,71 +418,99 @@ async function renderLogin() {
         text-align: center;
       }
 
+      .login-link {
+        display: block;
+        text-align: center;
+        margin: 24px 0 16px 0;
+        color: rgba(255, 255, 255, 0.8);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: color 0.3s ease;
+        position: relative;
+        z-index: 10;
+      }
+
+      .login-link:hover {
+        color: white;
+      }
+
       .quick-buttons-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: 12px;
-        margin-bottom: 16px;
+        margin: 20px 0 16px 0;
+        position: relative;
+        z-index: 5;
       }
 
       .quick-btn {
-        padding: 16px 12px;
-        border: 2px solid #e2e8f0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 12px;
-        background: #ffffff;
+        padding: 16px 12px;
+        color: white;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
-        flex-direction: column;
         align-items: center;
-        gap: 8px;
-        text-align: center;
+        gap: 12px;
+        text-align: left;
+        min-height: 60px;
+        position: relative;
+        z-index: 6;
       }
 
       .quick-btn:hover {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
+        border-color: rgba(255, 255, 255, 0.4);
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-      }
-
-      .user-btn:hover {
-        border-color: #22c55e;
-        background: #f0fdf4;
-      }
-
-      .admin-btn:hover {
-        border-color: #6b7280;
-        background: #f9fafb;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
       }
 
       .quick-btn-icon {
         font-size: 24px;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        min-width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .quick-btn-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
 
       .quick-btn-title {
         font-size: 14px;
         font-weight: 600;
-        color: #1e293b;
-        margin: 0;
+        line-height: 1.2;
       }
 
       .quick-btn-desc {
-        font-size: 12px;
-        color: #64748b;
-        margin: 0;
+        font-size: 11px;
+        opacity: 0.8;
+        line-height: 1.2;
       }
 
       .system-buttons-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
+        margin: 16px 0 20px 0;
+        padding: 0 4px;
+        position: relative;
+        z-index: 5;
       }
 
       .system-btn {
-        padding: 14px 8px;
-        border: 2px solid #e2e8f0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 10px;
-        background: #ffffff;
+        padding: 12px 8px;
+        color: white;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
@@ -491,44 +518,48 @@ async function renderLogin() {
         align-items: center;
         gap: 6px;
         text-align: center;
+        min-height: 70px;
+        font-size: 11px;
+        position: relative;
+        z-index: 8;
+        margin-bottom: 8px;
       }
 
       .system-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-      }
-
-      .kds-btn:hover {
-        border-color: #2c3e50;
-        background: #f8f9fa;
-      }
-
-      .pos-btn:hover {
-        border-color: #666666;
-        background: #f8f9fa;
-      }
-
-      .tlm-btn:hover {
-        border-color: #667eea;
-        background: #f0f4ff;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
       }
 
       .system-btn-icon {
-        font-size: 20px;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        font-size: 18px;
+        margin-bottom: 2px;
+      }
+
+      .system-btn-content {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
 
       .system-btn-title {
-        font-size: 12px;
         font-weight: 600;
-        color: #1e293b;
-        margin: 0;
+        font-size: 11px;
+        line-height: 1.1;
       }
 
       .system-btn-desc {
-        font-size: 10px;
-        color: #64748b;
-        margin: 0;
+        font-size: 9px;
+        opacity: 0.7;
+        line-height: 1.1;
+      }
+
+      /* searchOrderbtn-sea 전용 스타일 추가 */
+      #searchOrderbtn-sea {
+        position: relative;
+        z-index: 12;
+        margin-top: 12px;
+        clear: both;
       }
 
       .login-footer {
@@ -603,7 +634,7 @@ async function renderLogin() {
       // renderSignUp 함수가 로드되지 않은 경우 동적으로 로드
       if (typeof renderSignUp !== 'function' && typeof window.renderSignUp !== 'function') {
         console.log('🔄 renderSignUp 함수 동적 로드 시도');
-        
+
         // 스크립트 동적 로드
         const script = document.createElement('script');
         script.src = '/TLG/pages/auth/renderSignUp.js';
@@ -635,7 +666,7 @@ async function renderLogin() {
   const showLoadingScreen = () => {
     const btnText = login.querySelector('.btn-text');
     const btnLoading = login.querySelector('.btn-loading');
-    
+
     btnText.style.display = 'none';
     btnLoading.style.display = 'flex';
     login.disabled = true;
@@ -644,7 +675,7 @@ async function renderLogin() {
   const hideLoadingScreen = () => {
     const btnText = login.querySelector('.btn-text');
     const btnLoading = login.querySelector('.btn-loading');
-    
+
     btnText.style.display = 'inline';
     btnLoading.style.display = 'none';
     login.disabled = false;
@@ -1142,7 +1173,7 @@ async function renderLogin() {
   window.selectStoreForPOS = function(storeId, storeName) {
     console.log(`✅ POS 매장 선택: ${storeName} (ID: ${storeId})`);
     closePOSStoreSearchModal();
-    
+
     // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/pos/${storeId}`;
@@ -1478,7 +1509,7 @@ async function renderLogin() {
   window.selectStoreForKDS = function(storeId, storeName) {
     console.log(`✅ KDS 매장 선택: ${storeName} (ID: ${storeId})`);
     closeKDSStoreSearchModal();
-    
+
     // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/kds/${storeId}`;
@@ -1814,7 +1845,7 @@ async function renderLogin() {
   window.selectStoreForTLM = function(storeId, storeName) {
     console.log(`✅ TLM 매장 선택: ${storeName} (ID: ${storeId})`);
     closeStoreSearchModal();
-    
+
     // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/tlm/${storeId}`;
@@ -1834,15 +1865,15 @@ async function renderLogin() {
     const tlmModal = document.getElementById('storeSearchModal');
     const kdsModal = document.getElementById('kdsStoreSearchModal');
     const posModal = document.getElementById('posStoreSearchModal');
-    
+
     if (tlmModal && e.target.classList.contains('modal-overlay')) {
       closeStoreSearchModal();
     }
-    
+
     if (kdsModal && e.target.classList.contains('modal-overlay')) {
       closeKDSStoreSearchModal();
     }
-    
+
     if (posModal && e.target.classList.contains('modal-overlay')) {
       closePOSStoreSearchModal();
     }
