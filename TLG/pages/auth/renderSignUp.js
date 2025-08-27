@@ -149,23 +149,21 @@ async function renderSignUp() {
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
-        height: 100vh;
+        width: 100%;
+        max-width: 430px;
+        margin: 0 auto;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
-        overflow: hidden;
       }
 
       #signupContainer {
-        height: 100vh;
-        max-width: 100%;
+        min-height: 100vh;
         width: 100%;
-        margin: 0;
         background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;
         flex-direction: column;
         position: relative;
-        overflow: hidden;
       }
 
       /* 헤더 */
@@ -219,9 +217,10 @@ async function renderSignUp() {
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
-        padding: 0 20px;
+        padding: 0 20px 20px;
         display: flex;
         flex-direction: column;
+        min-height: 0;
       }
 
       /* 브랜드 섹션 */
