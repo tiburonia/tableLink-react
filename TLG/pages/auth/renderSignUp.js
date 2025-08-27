@@ -149,20 +149,23 @@ async function renderSignUp() {
       #main {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
+        height: 100vh;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
         position: relative;
-        overflow-x: hidden;
+        overflow: hidden;
       }
 
       #signupContainer {
-        min-height: 100vh;
-        max-width: 400px;
-        margin: 0 auto;
-        background: rgba(255, 255, 255, 0.1);
+        height: 100vh;
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+        background: rgba(255, 255, 255, 0.05);
         backdrop-filter: blur(20px);
         display: flex;
         flex-direction: column;
         position: relative;
+        overflow: hidden;
       }
 
       /* 헤더 */
@@ -170,27 +173,27 @@ async function renderSignUp() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 20px 24px;
+        padding: max(env(safe-area-inset-top), 16px) 20px 16px;
         background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(30px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        position: sticky;
-        top: 0;
+        flex-shrink: 0;
         z-index: 100;
       }
 
       .back-btn {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         background: rgba(255, 255, 255, 0.2);
         border: none;
-        border-radius: 12px;
+        border-radius: 10px;
         color: white;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        touch-action: manipulation;
       }
 
       .back-btn:hover {
@@ -201,19 +204,22 @@ async function renderSignUp() {
       .signup-header h1 {
         margin: 0;
         color: white;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
         letter-spacing: -0.3px;
       }
 
       .header-spacer {
-        width: 36px;
+        width: 32px;
       }
 
       /* 컨텐츠 */
       .signup-content {
         flex: 1;
-        padding: 32px 24px 40px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 20px;
         display: flex;
         flex-direction: column;
       }
@@ -221,23 +227,24 @@ async function renderSignUp() {
       /* 브랜드 섹션 */
       .welcome-section {
         text-align: center;
-        margin-bottom: 40px;
+        margin: 24px 0 20px;
+        flex-shrink: 0;
       }
 
       .brand-logo {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 12px;
-        margin-bottom: 16px;
+        gap: 10px;
+        margin-bottom: 12px;
       }
 
       .logo-icon {
-        font-size: 32px;
-        width: 56px;
-        height: 56px;
+        font-size: 24px;
+        width: 44px;
+        height: 44px;
         background: rgba(255, 255, 255, 0.2);
-        border-radius: 16px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -246,7 +253,7 @@ async function renderSignUp() {
       }
 
       .brand-text {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 800;
         color: white;
         letter-spacing: -0.5px;
@@ -255,7 +262,7 @@ async function renderSignUp() {
       .welcome-text {
         margin: 0;
         color: rgba(255, 255, 255, 0.9);
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 500;
         line-height: 1.4;
       }
@@ -264,17 +271,20 @@ async function renderSignUp() {
       .signup-form {
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 18px;
+        flex: 1;
+        min-height: 0;
       }
 
       .form-group {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
+        flex-shrink: 0;
       }
 
       .form-label {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: white;
         display: flex;
@@ -284,12 +294,12 @@ async function renderSignUp() {
 
       .required {
         color: #ff6b6b;
-        font-size: 12px;
+        font-size: 11px;
       }
 
       .optional {
         color: rgba(255, 255, 255, 0.6);
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 500;
       }
 
@@ -301,12 +311,12 @@ async function renderSignUp() {
 
       .form-input {
         width: 100%;
-        height: 50px;
-        padding: 0 50px 0 16px;
-        font-size: 15px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.9);
+        height: 44px;
+        padding: 0 44px 0 14px;
+        font-size: 16px;
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.95);
         color: #333;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         font-weight: 500;
@@ -321,8 +331,7 @@ async function renderSignUp() {
         outline: none;
         border-color: rgba(255, 255, 255, 0.8);
         background: white;
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
-        transform: translateY(-1px);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
       }
 
       .form-input.error {
@@ -364,11 +373,12 @@ async function renderSignUp() {
       }
 
       .form-hint {
-        font-size: 12px;
+        font-size: 11px;
         color: rgba(255, 255, 255, 0.7);
-        margin-top: 4px;
-        min-height: 16px;
+        margin-top: 2px;
+        min-height: 14px;
         transition: all 0.3s ease;
+        line-height: 1.3;
       }
 
       .form-hint.error {
@@ -380,75 +390,76 @@ async function renderSignUp() {
       }
 
       .search-btn {
-        margin-top: 12px;
-        padding: 12px 16px;
+        margin-top: 8px;
+        padding: 10px 14px;
         background: rgba(255, 255, 255, 0.2);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 10px;
+        border-radius: 8px;
         color: white;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         transition: all 0.3s ease;
         backdrop-filter: blur(10px);
         align-self: flex-start;
+        touch-action: manipulation;
       }
 
       .search-btn:hover {
         background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-1px);
       }
 
       /* 주문 내역 미리보기 */
       .orders-preview {
         background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        margin-top: 12px;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-top: 8px;
         border: 1px solid rgba(255, 255, 255, 0.2);
+        flex-shrink: 0;
       }
 
       .preview-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
 
       .preview-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
       }
 
       .preview-icon {
-        font-size: 16px;
+        font-size: 14px;
       }
 
       .preview-title {
         font-weight: 700;
         color: #333;
-        font-size: 14px;
+        font-size: 13px;
       }
 
       .preview-count {
         background: #667eea;
         color: white;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 700;
       }
 
       .preview-content {
         color: #666;
-        font-size: 13px;
-        line-height: 1.5;
-        max-height: 180px;
+        font-size: 12px;
+        line-height: 1.4;
+        max-height: 140px;
         overflow-y: auto;
       }
 
@@ -517,12 +528,12 @@ async function renderSignUp() {
       /* 회원가입 버튼 */
       .signup-btn {
         width: 100%;
-        height: 54px;
+        height: 48px;
         background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
         color: white;
         border: none;
-        border-radius: 14px;
-        font-size: 16px;
+        border-radius: 12px;
+        font-size: 15px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -530,13 +541,14 @@ async function renderSignUp() {
         align-items: center;
         justify-content: center;
         position: relative;
-        margin-top: 16px;
-        box-shadow: 0 8px 32px rgba(81, 207, 102, 0.3);
+        margin: 20px 0 16px;
+        box-shadow: 0 4px 20px rgba(81, 207, 102, 0.3);
+        touch-action: manipulation;
+        flex-shrink: 0;
       }
 
       .signup-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px rgba(81, 207, 102, 0.4);
+        box-shadow: 0 6px 24px rgba(81, 207, 102, 0.4);
       }
 
       .signup-btn:disabled {
@@ -544,13 +556,12 @@ async function renderSignUp() {
         color: rgba(255, 255, 255, 0.7);
         cursor: not-allowed;
         box-shadow: none;
-        transform: none;
       }
 
       .btn-content {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
         transition: transform 0.3s ease;
       }
 
@@ -570,8 +581,8 @@ async function renderSignUp() {
       }
 
       .loading-spinner {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-top: 2px solid white;
         border-radius: 50%;
@@ -588,16 +599,18 @@ async function renderSignUp() {
       }
 
       .signup-btn:hover:not(:disabled) .btn-arrow {
-        transform: translateX(3px);
+        transform: translateX(2px);
       }
 
       /* 로그인 링크 */
       .login-link {
         text-align: center;
-        margin-top: 32px;
+        margin: 0 0 max(env(safe-area-inset-bottom), 20px);
         color: rgba(255, 255, 255, 0.8);
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
+        padding-bottom: 4px;
+        flex-shrink: 0;
       }
 
       .link-btn {
@@ -607,37 +620,36 @@ async function renderSignUp() {
         font-weight: 700;
         cursor: pointer;
         text-decoration: underline;
-        font-size: 14px;
+        font-size: 13px;
         transition: all 0.2s ease;
+        touch-action: manipulation;
       }
 
       .link-btn:hover {
         color: #51cf66;
       }
 
-      /* 반응형 */
-      @media (max-width: 480px) {
-        #signupContainer {
-          max-width: 100%;
-          background: rgba(255, 255, 255, 0.05);
-        }
-
-        .signup-content {
-          padding: 24px 20px 32px;
-        }
-
-        .signup-header {
-          padding: 16px 20px;
-        }
-
-        .form-input {
-          font-size: 16px; /* iOS 줌 방지 */
-        }
+      /* 스크롤바 */
+      .signup-content::-webkit-scrollbar {
+        width: 3px;
       }
 
-      /* 스크롤바 */
+      .signup-content::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+      }
+
+      .signup-content::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+      }
+
+      .signup-content::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+
       .preview-content::-webkit-scrollbar {
-        width: 4px;
+        width: 3px;
       }
 
       .preview-content::-webkit-scrollbar-track {
@@ -652,6 +664,28 @@ async function renderSignUp() {
 
       .preview-content::-webkit-scrollbar-thumb:hover {
         background: #adb5bd;
+      }
+
+      /* Safe area 지원 */
+      @supports (padding: max(0px)) {
+        .signup-header {
+          padding-top: max(env(safe-area-inset-top), 16px);
+        }
+        
+        .login-link {
+          margin-bottom: max(env(safe-area-inset-bottom), 20px);
+        }
+      }
+
+      /* 터치 디바이스 최적화 */
+      @media (pointer: coarse) {
+        .form-input {
+          height: 48px;
+        }
+        
+        .signup-btn {
+          height: 50px;
+        }
       }
     </style>
   `;
