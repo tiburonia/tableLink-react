@@ -1356,11 +1356,11 @@ function updateKDSOrderCards(orders) {
 
   // 조리 완료된 주문만 필터링 (완료된 주문은 화면에서 제거)
   const activeOrders = orders.filter(order => {
-    // cookingStatus 필드 사용 (기존 overallStatus 대신)
-    return order.cookingStatus === 'PENDING' || order.cookingStatus === 'COOKING';
+    const hasActiveItems = order.items.some(item => 
+      item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
+    );
+    return hasActiveItems;
   });
-
-  console.log(`📟 KDS 활성 주문 필터링: 전체 ${orders.length}개 중 ${activeOrders.length}개 표시`);
 
   // 주문 카드들을 1번부터 순서대로 생성
   let cardCount = 0;
@@ -1391,8 +1391,7 @@ function updateKDSOrderCards(orders) {
 
 // 주문 카드 생성
 function createOrderCard(order) {
-  // createdAt 또는 paymentDate 사용
-  const orderTime = new Date(order.createdAt || order.paymentDate);
+  const orderTime = new Date(order.orderDate);
   const timeString = orderTime.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -1400,7 +1399,7 @@ function createOrderCard(order) {
   });
 
   const urgentClass = order.isUrgent ? ' urgent' : '';
-  const statusClass = order.cookingStatus.toLowerCase(); // overallStatus → cookingStatus
+  const statusClass = order.overallStatus.toLowerCase();
 
   const card = document.createElement('div');
   card.className = `order-card ${statusClass}${urgentClass}`;
@@ -1428,15 +1427,10 @@ function createOrderCard(order) {
     `;
   }).join('');
 
-  // 주문 출처 표시 개선
-  const orderTypeText = order.orderSource === 'TLL' ? 'TLL' : 
-                       order.orderSource === 'POS' ? 'POS' : 
-                       order.tableNumber ? '매장' : '배달';
-
   card.innerHTML = `
     <div class="order-header">
       <div class="order-number">#${order.id}</div>
-      <div class="order-type">${orderTypeText}</div>
+      <div class="order-type">${order.tableNumber ? '매장' : '배달'}</div>
       ${order.isUrgent ? '<div class="urgent-badge">긴급</div>' : ''}
     </div>
     <div class="order-time">${timeString}</div>

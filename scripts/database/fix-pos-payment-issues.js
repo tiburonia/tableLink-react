@@ -111,31 +111,7 @@ async function fixPOSPaymentIssues() {
       console.log('✅ order_items paid_order_id 동기화 완료');
     }
 
-    // 4. paid_orders 테이블에 처리 상태 컬럼 추가
-    console.log('💳 paid_orders 테이블 처리 상태 컬럼 확인 및 추가...');
-
-    const processingColumns = [
-      { name: 'processing_status', type: 'VARCHAR(50)', comment: 'POS 처리 상태' },
-      { name: 'processing_completed_at', type: 'TIMESTAMP', comment: 'POS 처리 완료 시간' }
-    ];
-
-    for (const col of processingColumns) {
-      const existsResult = await client.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'paid_orders' AND column_name = $1
-      `, [col.name]);
-
-      if (existsResult.rows.length === 0) {
-        await client.query(`
-          ALTER TABLE paid_orders 
-          ADD COLUMN ${col.name} ${col.type}
-        `);
-        console.log(`✅ paid_orders.${col.name} 컬럼 추가 완료: ${col.comment}`);
-      }
-    }
-
-    // 5. 기존 오류로 인해 실패한 데이터 정리
+    // 4. 기존 오류로 인해 실패한 데이터 정리
     console.log('🧹 오류로 인해 불완전한 결제 데이터 정리...');
 
     // CLOSED 상태이지만 테이블이 여전히 점유 상태인 경우 해제
@@ -163,7 +139,7 @@ async function fixPOSPaymentIssues() {
 
     await client.query('COMMIT');
 
-    // 6. 수정된 컬럼 정보 확인
+    // 5. 수정된 컬럼 정보 확인
     const updatedColumns = await client.query(`
       SELECT 
         table_name, 
@@ -175,7 +151,6 @@ async function fixPOSPaymentIssues() {
       WHERE (table_name = 'orders' AND column_name = 'table_release_source')
       OR (table_name = 'store_tables' AND column_name = 'auto_release_source')
       OR (table_name = 'order_items' AND column_name = 'paid_order_id')
-      OR (table_name = 'paid_orders' AND column_name IN ('processing_status', 'processing_completed_at'))
       ORDER BY table_name, column_name
     `);
 
