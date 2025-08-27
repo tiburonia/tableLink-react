@@ -132,10 +132,18 @@ async function renderSignUp() {
           </button>
         </form>
 
-        <!-- 로그인 링크 -->
-        <a href="#" id="loginLink" class="login-link" onclick="renderLogin(); return false;">
-          ← 로그인 화면으로 돌아가기
-        </a>
+        <!-- 로그인 링크 섹션 -->
+        <div class="login-link-section">
+          <div class="divider-line">
+            <span class="divider-text">또는</span>
+          </div>
+          <button type="button" class="login-link-btn" onclick="renderLogin()">
+            <svg class="back-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>이미 계정이 있으신가요? 로그인하기</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -599,38 +607,63 @@ async function renderSignUp() {
         transform: translateX(2px);
       }
 
-      /* 로그인 링크 */
-      .login-link {
-        display: block;
-        text-align: center;
+      /* 로그인 링크 섹션 */
+      .login-link-section {
         margin: 24px 0 16px 0;
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 500;
-        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+      }
+
+      .divider-line {
         position: relative;
-        z-index: 10;
+        width: 100%;
+        height: 1px;
+        background-color: rgba(255, 255, 255, 0.2);
       }
 
-      .login-link.with-search-btn {
-        margin-top: 40px;
+      .divider-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: rgba(255, 255, 255, 0.6);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
       }
 
-      .link-btn {
+      .login-link-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         background: none;
         border: none;
-        color: white;
-        font-weight: 700;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        font-weight: 500;
         cursor: pointer;
-        text-decoration: underline;
-        font-size: 13px;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
         touch-action: manipulation;
+        text-decoration: none;
       }
 
-      .link-btn:hover {
-        color: #51cf66;
+      .login-link-btn:hover {
+        color: white;
+      }
+
+      .login-link-btn .back-icon {
+        stroke: rgba(255, 255, 255, 0.8);
+        transition: all 0.3s ease;
+      }
+
+      .login-link-btn:hover .back-icon {
+        stroke: white;
+        transform: translateX(-2px);
       }
 
       /* 스크롤바 */
@@ -676,7 +709,7 @@ async function renderSignUp() {
           padding-top: max(env(safe-area-inset-top), 16px);
         }
 
-        .login-link {
+        .login-link-section {
           margin-bottom: max(env(safe-area-inset-bottom), 20px);
         }
       }
@@ -759,9 +792,9 @@ function setupSignupForm() {
       searchBtn.style.display = 'none';
       isPhoneValid = true;
       // login-link 위치 원래대로
-      const loginLink = document.getElementById('loginLink');
-      if (loginLink) {
-        loginLink.classList.remove('with-search-btn');
+      const loginLinkSection = document.querySelector('.login-link-section');
+      if (loginLinkSection) {
+        loginLinkSection.classList.remove('with-search-btn');
       }
       updateSubmitButton();
       return;
@@ -769,13 +802,13 @@ function setupSignupForm() {
 
     if (value.length < 13) {
       updateInputStatus(phoneInput, 'error', '❌', '올바른 전화번호를 입력하세요');
-      hideGuestOrdersPreview();
       searchBtn.style.display = 'none';
+      hideGuestOrdersPreview();
       isPhoneValid = false;
       // login-link 위치 원래대로
-      const loginLink = document.getElementById('loginLink');
-      if (loginLink) {
-        loginLink.classList.remove('with-search-btn');
+      const loginLinkSection = document.querySelector('.login-link-section');
+      if (loginLinkSection) {
+        loginLinkSection.classList.remove('with-search-btn');
       }
       updateSubmitButton();
       return;
@@ -837,9 +870,9 @@ function setupSignupForm() {
         searchBtn.style.display = 'flex';
         isPhoneValid = true;
         // login-link 위치 조정
-        const loginLink = document.getElementById('loginLink');
-        if (loginLink) {
-          loginLink.classList.add('with-search-btn');
+        const loginLinkSection = document.querySelector('.login-link-section');
+        if (loginLinkSection) {
+          loginLinkSection.classList.add('with-search-btn');
         }
       } else {
         updateInputStatus(phoneInput, 'error', '❌', '이미 등록된 전화번호입니다');
@@ -847,9 +880,9 @@ function setupSignupForm() {
         hideGuestOrdersPreview();
         isPhoneValid = false;
         // login-link 위치 원래대로
-        const loginLink = document.getElementById('loginLink');
-        if (loginLink) {
-          loginLink.classList.remove('with-search-btn');
+        const loginLinkSection = document.querySelector('.login-link-section');
+        if (loginLinkSection) {
+          loginLinkSection.classList.remove('with-search-btn');
         }
       }
     } catch (error) {
