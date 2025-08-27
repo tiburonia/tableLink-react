@@ -342,17 +342,22 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       sessionItems = itemsResponse.rows;
     }
 
-    // 3. 완료된 TLL 주문들 (최근 12시간)
+    // 3. 완료된 TLL 주문들 (최근 12시간, 아카이브되지 않은 것만)
     const completedTLLResponse = await pool.query(`
       SELECT p.id, p.user_id, p.guest_phone, u.name as user_name, 
              p.payment_date, p.final_amount, p.order_data, p.payment_status,
              p.order_source
       FROM paid_orders p
       LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND p.payment_status = 'completed'
       AND p.order_source = 'TLL'
       AND p.payment_date >= NOW() - INTERVAL '12 hours'
+      AND (
+        o.id IS NULL OR 
+        (o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED', 'CLOSED') AND o.is_visible = true)
+      )
       ORDER BY p.payment_date DESC
       LIMIT 5
     `, [parseInt(storeId), parseInt(tableNumber)]);
@@ -427,8 +432,7 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
       AND p.payment_date >= NOW() - INTERVAL '24 hours'
       AND (
         o.id IS NULL OR 
-        (o.cooking_status IS NULL OR o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED'))
-        AND (o.is_visible IS NULL OR o.is_visible = true)
+        (o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED', 'CLOSED') AND o.is_visible = true)
       )
       ORDER BY p.payment_date DESC
       LIMIT 1
