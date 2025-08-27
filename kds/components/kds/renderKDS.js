@@ -183,11 +183,24 @@ function renderKDSInterface(store) {
           </div>
         </div>
 
-        <!-- 빈 카드 슬롯들 (필요한 만큼 추가) -->
-        ${Array.from({length: Math.max(0, 9 - 9)}, (_, i) => `
-          <div class="empty-card-slot">
-            <div class="slot-number">${10 + i}</div>
-            <div class="slot-placeholder">주문 대기 중</div>
+        <!-- 로딩 스켈레톤 카드들 (초기 로딩 시) -->
+        ${Array.from({length: 9}, (_, i) => `
+          <div class="skeleton-order-card" id="skeleton-card-${i + 1}">
+            <div class="skeleton-header">
+              <div class="skeleton-order-number"></div>
+              <div class="skeleton-order-type"></div>
+            </div>
+            <div class="skeleton-time"></div>
+            <div class="skeleton-customer"></div>
+            <div class="skeleton-items">
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item"></div>
+              <div class="skeleton-item short"></div>
+            </div>
+            <div class="skeleton-actions">
+              <div class="skeleton-btn"></div>
+              <div class="skeleton-btn"></div>
+            </div>
           </div>
         `).join('')}
       </div>
@@ -718,7 +731,127 @@ function renderKDSInterface(store) {
         display: none;
       }
 
-      /* 빈 카드 슬롯 스타일 */
+      /* 스켈레톤 로딩 카드 스타일 */
+      .skeleton-order-card {
+        background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+        border: 1px solid #6b7280;
+        border-radius: 12px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        height: 280px;
+        animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
+        pointer-events: none;
+      }
+
+      .dev-mode .skeleton-order-card {
+        height: auto;
+        flex-shrink: 0;
+        padding: 16px;
+        margin-bottom: 0;
+      }
+
+      @keyframes skeleton-pulse {
+        0% {
+          opacity: 0.6;
+        }
+        100% {
+          opacity: 0.8;
+        }
+      }
+
+      .skeleton-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .skeleton-order-number {
+        height: 16px;
+        width: 60px;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 4px;
+      }
+
+      .skeleton-order-type {
+        height: 14px;
+        width: 40px;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 6px;
+      }
+
+      .skeleton-time {
+        height: 12px;
+        width: 80px;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+
+      .skeleton-customer {
+        height: 14px;
+        width: 100px;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 4px;
+        margin-bottom: 12px;
+      }
+
+      .skeleton-items {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+
+      .skeleton-item {
+        height: 12px;
+        width: 100%;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 4px;
+      }
+
+      .skeleton-item.short {
+        width: 70%;
+      }
+
+      .skeleton-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+      }
+
+      .skeleton-btn {
+        flex: 1;
+        height: 24px;
+        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 2s infinite;
+        border-radius: 6px;
+      }
+
+      @keyframes skeleton-shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+
+      /* 빈 카드 슬롯 스타일 (실제 데이터 로딩 후) */
       .empty-card-slot {
         background: linear-gradient(135deg, rgba(55, 65, 81, 0.3) 0%, rgba(75, 85, 99, 0.3) 100%);
         border: 2px dashed rgba(156, 163, 175, 0.4);
@@ -915,6 +1048,64 @@ function renderKDSInterface(store) {
         font-size: 6px;
         color: #718096;
         font-family: 'Courier New', monospace;
+      }
+
+      /* 에러 카드 스타일 */
+      .error-card {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        border: 1px solid #f87171;
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 280px;
+        color: white;
+        text-align: center;
+        grid-column: span 2;
+      }
+
+      .dev-mode .error-card {
+        height: auto;
+        flex-shrink: 0;
+        padding: 16px;
+        margin-bottom: 0;
+        grid-column: span 1;
+      }
+
+      .error-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .error-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+
+      .error-message {
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+
+      .retry-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+
+      .retry-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
       }
 
       /* 아이템별 조리 상태 스타일 */
@@ -1116,6 +1307,9 @@ async function loadKDSOrders(storeId) {
   try {
     console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
 
+    // 로딩 상태 표시
+    showLoadingState();
+
     const response = await fetch(`/api/orders/kds/${storeId}`, {
       headers: {
         'Cache-Control': 'no-cache',
@@ -1140,6 +1334,78 @@ async function loadKDSOrders(storeId) {
 
   } catch (error) {
     console.error('❌ KDS 주문 데이터 로딩 실패:', error);
+    showErrorState();
+  }
+}
+
+// 로딩 상태 표시
+function showLoadingState() {
+  const ordersGrid = document.getElementById('ordersGrid');
+  if (!ordersGrid) return;
+
+  // 기존 주문 카드들 제거하고 스켈레톤 표시
+  const existingCards = ordersGrid.querySelectorAll('.order-card, .empty-card-slot');
+  existingCards.forEach(card => card.remove());
+
+  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
+  
+  // 스켈레톤 카드들 생성 (9개)
+  for (let i = 0; i < 9; i++) {
+    const skeletonCard = document.createElement('div');
+    skeletonCard.className = 'skeleton-order-card';
+    skeletonCard.id = `skeleton-card-${i + 1}`;
+    skeletonCard.innerHTML = `
+      <div class="skeleton-header">
+        <div class="skeleton-order-number"></div>
+        <div class="skeleton-order-type"></div>
+      </div>
+      <div class="skeleton-time"></div>
+      <div class="skeleton-customer"></div>
+      <div class="skeleton-items">
+        <div class="skeleton-item"></div>
+        <div class="skeleton-item"></div>
+        <div class="skeleton-item short"></div>
+      </div>
+      <div class="skeleton-actions">
+        <div class="skeleton-btn"></div>
+        <div class="skeleton-btn"></div>
+      </div>
+    `;
+
+    if (multifunctionCard) {
+      ordersGrid.insertBefore(skeletonCard, multifunctionCard);
+    } else {
+      ordersGrid.appendChild(skeletonCard);
+    }
+  }
+}
+
+// 에러 상태 표시
+function showErrorState() {
+  const ordersGrid = document.getElementById('ordersGrid');
+  if (!ordersGrid) return;
+
+  // 스켈레톤 카드들 제거
+  const skeletonCards = ordersGrid.querySelectorAll('.skeleton-order-card');
+  skeletonCards.forEach(card => card.remove());
+
+  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
+  
+  // 에러 카드 표시
+  const errorCard = document.createElement('div');
+  errorCard.className = 'error-card';
+  errorCard.innerHTML = `
+    <div class="error-content">
+      <div class="error-icon">⚠️</div>
+      <div class="error-message">주문 데이터를 불러올 수 없습니다</div>
+      <button class="retry-btn" onclick="refreshKDS()">다시 시도</button>
+    </div>
+  `;
+
+  if (multifunctionCard) {
+    ordersGrid.insertBefore(errorCard, multifunctionCard);
+  } else {
+    ordersGrid.appendChild(errorCard);
   }
 }
 
@@ -1376,6 +1642,10 @@ function playNewOrderSound() {
 function updateKDSOrderCards(orders) {
   const ordersGrid = document.getElementById('ordersGrid');
   if (!ordersGrid) return;
+
+  // 스켈레톤 카드들 제거 (첫 로딩 완료 시)
+  const skeletonCards = ordersGrid.querySelectorAll('.skeleton-order-card');
+  skeletonCards.forEach(card => card.remove());
 
   // 기존 주문 카드들과 빈 슬롯 제거 (다기능 카드 제외)
   const existingCards = ordersGrid.querySelectorAll('.order-card');
