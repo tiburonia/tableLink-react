@@ -897,4 +897,80 @@ router.get('/:paidOrderId/review-status', async (req, res) => {
   }
 });
 
+
+// 전화번호로 게스트 주문 내역 조회 API
+router.get('/guest-phone/:phone', async (req, res) => {
+  try {
+    const { phone } = req.params;
+    const { limit = 20 } = req.query;
+
+    console.log(`📱 전화번호 ${phone}로 게스트 주문 내역 조회`);
+
+    // paid_orders 테이블에서 해당 전화번호의 주문 내역 조회
+    const ordersResult = await pool.query(`
+      SELECT 
+        p.id,
+        p.store_id,
+        s.name as store_name,
+        p.order_data,
+        p.original_amount,
+        p.final_amount,
+        p.payment_status,
+        p.payment_date,
+        p.order_source,
+        p.table_number
+      FROM paid_orders p
+      LEFT JOIN stores s ON p.store_id = s.id
+      WHERE p.guest_phone = $1
+      ORDER BY p.payment_date DESC
+      LIMIT $2
+    `, [phone, parseInt(limit)]);
+
+    // guests 테이블에서 방문 정보도 조회
+    const guestInfoResult = await pool.query(`
+      SELECT phone, visit_count, created_at, updated_at
+      FROM guests
+      WHERE phone = $1
+    `, [phone]);
+
+    const orders = ordersResult.rows.map(order => ({
+      id: order.id,
+      store_id: order.store_id,
+      store_name: order.store_name,
+      order_data: order.order_data,
+      original_amount: order.original_amount,
+      final_amount: order.final_amount,
+      payment_status: order.payment_status,
+      payment_date: order.payment_date,
+      order_date: order.payment_date, // 호환성을 위해 추가
+      order_source: order.order_source,
+      table_number: order.table_number
+    }));
+
+    const guestInfo = guestInfoResult.rows.length > 0 ? guestInfoResult.rows[0] : null;
+
+    console.log(`✅ 전화번호 ${phone}의 주문 내역 ${orders.length}건 조회 완료`);
+
+    res.json({
+      success: true,
+      phone: phone,
+      orders: orders,
+      guestInfo: guestInfo,
+      totalCount: orders.length,
+      stats: {
+        totalOrders: orders.length,
+        totalAmount: orders.reduce((sum, order) => sum + (order.final_amount || 0), 0),
+        latestOrderDate: orders.length > 0 ? orders[0].payment_date : null
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전화번호 게스트 주문 내역 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 내역 조회 실패: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
