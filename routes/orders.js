@@ -37,8 +37,6 @@ router.post('/pay', async (req, res) => {
     }
 
     const user = userResult.rows[0];
-
-    
     const currentCoupons = user.coupons || { unused: [], used: [] };
 
     // 매장별 포인트 사용 검증
@@ -74,12 +72,9 @@ router.post('/pay', async (req, res) => {
       }
     }
 
-    const appliedPoint = Math.min(usedPoint, userStorePoints, orderData.total); // userStorePoints 사용
+    const appliedPoint = Math.min(usedPoint, userStorePoints, orderData.total);
     const finalAmount = orderData.total - (couponDiscount || 0) - appliedPoint;
     const earnedPoint = Math.floor(orderData.total * 0.1);
-
-    // users 테이블의 포인트는 전체 통합 포인트로 유지, 매장별 포인트는 user_store_stats 에서 관리
-    // const newPoint = user.point - appliedPoint + earnedPoint;
 
     let newCoupons = { ...currentCoupons };
     if (usedCoupon) {
@@ -90,9 +85,9 @@ router.post('/pay', async (req, res) => {
       }
     }
 
-    // 첫 주문 여부 확인 (orders 테이블에서)
+    // 첫 주문 여부 확인 (paid_orders 테이블에서)
     const orderCountResult = await client.query(
-      'SELECT COUNT(*) as order_count FROM orders WHERE user_id = $1',
+      'SELECT COUNT(*) as order_count FROM paid_orders WHERE user_id = $1',
       [userId]
     );
     const isFirstOrder = parseInt(orderCountResult.rows[0].order_count) === 0;
@@ -117,20 +112,18 @@ router.post('/pay', async (req, res) => {
       newCoupons.unused.push(welcomeCoupon);
     }
 
-    // users 테이블에서 포인트와 쿠폰만 업데이트
-    // user.point 업데이트 로직 제거, coupons만 업데이트
+    // users 테이블에서 쿠폰만 업데이트
     await client.query(
       'UPDATE users SET coupons = $1 WHERE id = $2',
       [JSON.stringify(newCoupons), userId]
     );
 
-    // 테이블 정보 처리 (앞쪽으로 이동)
+    // 테이블 정보 처리
     let tableUniqueId = null;
     let actualTableNumber = null;
 
     if (tableNumber && storeId) {
       try {
-        // 테이블 번호에서 숫자만 추출 (예: "테이블 5" -> 5)
         const tableNumMatch = tableNumber.toString().match(/\d+/);
         const tableNum = tableNumMatch ? parseInt(tableNumMatch[0]) : null;
 
@@ -160,82 +153,112 @@ router.post('/pay', async (req, res) => {
     // 🆕 동일 테이블의 기존 주문 확인 (24시간 내)
     if (actualTableNumber) {
       const existingOrdersResult = await client.query(`
-        SELECT o.user_id, o.guest_phone, u.name as user_name, o.order_date
-        FROM orders o
-        LEFT JOIN users u ON o.user_id = u.id
-        WHERE o.store_id = $1 AND o.table_number = $2 
-        AND o.order_date >= NOW() - INTERVAL '24 hours'
-        AND o.order_status != 'archived'
-        ORDER BY o.order_date DESC
+        SELECT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
+        FROM paid_orders p
+        LEFT JOIN users u ON p.user_id = u.id
+        WHERE p.store_id = $1 AND p.table_number = $2 
+        AND p.payment_date >= NOW() - INTERVAL '24 hours'
+        ORDER BY p.payment_date DESC
         LIMIT 1
       `, [storeId, actualTableNumber]);
 
       console.log(`🔍 TLL 주문 - 테이블 ${actualTableNumber} 기존 주문 확인:`, 
         existingOrdersResult.rows.length > 0 ? existingOrdersResult.rows[0] : '없음');
 
-      // 다른 사용자의 기존 주문이 있다면 아카이브 처리
+      // 다른 사용자의 기존 주문이 있다면 해당 orders를 완료 처리
       if (existingOrdersResult.rows.length > 0) {
         const existingOrder = existingOrdersResult.rows[0];
         if (existingOrder.user_id !== userId || existingOrder.guest_phone) {
           await client.query(`
             UPDATE orders 
-            SET order_status = 'archived'
-            WHERE store_id = $1 AND table_number = $2 
-            AND order_date >= NOW() - INTERVAL '24 hours'
-            AND order_status != 'archived'
-            AND (user_id != $3 OR user_id IS NULL)
+            SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+            WHERE paid_order_id IN (
+              SELECT id FROM paid_orders 
+              WHERE store_id = $1 AND table_number = $2 
+              AND payment_date >= NOW() - INTERVAL '24 hours'
+              AND (user_id != $3 OR user_id IS NULL)
+            )
+            AND cooking_status != 'COMPLETED'
           `, [storeId, actualTableNumber, userId]);
-          
-          console.log(`🗄️ TLL 주문 - 테이블 ${actualTableNumber}의 기존 다른 사용자 주문들을 아카이브 처리 완료`);
+
+          console.log(`🗄️ TLL 주문 - 테이블 ${actualTableNumber}의 기존 다른 사용자 주문들의 제조 상태를 완료 처리`);
         } else {
           console.log(`✅ TLL 주문 - 동일 사용자의 추가 주문으로 기존 주문과 통합 처리`);
         }
       }
     }
 
-    // 주문 데이터 저장
-    const orderResult = await client.query(`
-      INSERT INTO orders (
-        user_id, store_id, table_number, order_data,
-        total_amount, original_amount, used_point, coupon_discount, final_amount,
-        order_status, order_date
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    // 1. paid_orders 테이블에 결제 정보 저장
+    const paidOrderResult = await client.query(`
+      INSERT INTO paid_orders (
+        store_id, user_id, guest_phone, table_number, order_data,
+        original_amount, used_point, coupon_discount, final_amount,
+        payment_method, payment_status, payment_date, order_source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING id
     `, [
-      userId,                 // $1
-      storeId,               // $2
-      actualTableNumber,     // $3
-      JSON.stringify({       // $4
+      storeId,               // $1
+      userId,                // $2
+      user.phone || null,    // $3 - TLL 주문이므로 회원 전화번호 저장
+      actualTableNumber,     // $4
+      JSON.stringify({       // $5
         ...orderData,
         storeId: storeId,
         storeName: storeName,
         tableNumber: tableNumber
       }),
-      orderData.total,       // $5 - total_amount
       orderData.total,       // $6 - original_amount
       appliedPoint,          // $7 - used_point
       couponDiscount || 0,   // $8 - coupon_discount
       finalAmount,           // $9 - final_amount
-      'completed',           // $10 - order_status
-      new Date()            // $11 - order_date
+      'card',                // $10 - payment_method
+      'completed',           // $11 - payment_status
+      new Date(),            // $12 - payment_date
+      'TLL'                  // $13 - order_source
+    ]);
+
+    const paidOrderId = paidOrderResult.rows[0].id;
+    console.log(`✅ 결제 정보 ID ${paidOrderId} paid_orders 테이블에 저장 완료`);
+
+    // 2. orders 테이블에 KDS용 제조 정보 저장
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        paid_order_id, store_id, table_number, customer_name,
+        order_data, total_amount, cooking_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id
+    `, [
+      paidOrderId,           // $1
+      storeId,               // $2
+      actualTableNumber,     // $3
+      user.name || '손님',   // $4
+      JSON.stringify({       // $5
+        items: orderData.items,
+        storeId: storeId,
+        storeName: storeName,
+        tableNumber: tableNumber
+      }),
+      orderData.total,       // $6
+      'PENDING'              // $7
     ]);
 
     const orderId = orderResult.rows[0].id;
-    console.log(`✅ 주문 ID ${orderId} orders 테이블에 저장 완료`);
+    console.log(`✅ 제조 정보 ID ${orderId} orders 테이블에 저장 완료`);
 
-    // order_items 테이블에 메뉴별 조리 상태 데이터 저장
+    // 3. order_items 테이블에 메뉴별 데이터 저장
     if (orderData.items && orderData.items.length > 0) {
       for (const item of orderData.items) {
         await client.query(`
           INSERT INTO order_items (
-            order_id, menu_name, quantity, price, cooking_status
-          ) VALUES ($1, $2, $3, $4, $5)
+            order_id, paid_order_id, menu_name, quantity, price, cooking_status
+          ) VALUES ($1, $2, $3, $4, $5, $6)
         `, [
           orderId,
+          paidOrderId,
           item.name,
           item.quantity || 1,
           item.price,
-          'PENDING'  // 기본 상태는 조리 대기
+          'PENDING'
         ]);
       }
       console.log(`✅ 주문 ID ${orderId}의 메뉴 아이템들을 order_items에 저장 완료`);
@@ -251,7 +274,7 @@ router.post('/pay', async (req, res) => {
       console.log(`💰 매장 ${storeId}에서 포인트 ${usedPoint}원 차감 완료`);
     }
 
-    // 포인트 적립 처리 (단골 지표 업데이트)
+    // 포인트 적립 처리
     try {
       await client.query(
         'SELECT update_user_store_stats($1, $2, $3, $4)',
@@ -260,7 +283,6 @@ router.post('/pay', async (req, res) => {
       console.log(`🎉 매장 ${storeId}에서 ${earnedPoint}원 포인트 적립 완료`);
     } catch (pointError) {
       console.error('⚠️ 포인트 적립 실패:', pointError);
-      // 포인트 적립 실패해도 주문은 완료되도록 처리
     }
 
     // 🆕 결제 완료 후 테이블 자동 점유 처리
@@ -270,24 +292,6 @@ router.post('/pay', async (req, res) => {
 
         console.log(`🔍 [ORDER] 테이블 점유 처리 시작: unique_id=${tableUniqueId}, tableNumber=${actualTableNumber}, storeId=${storeId}`);
 
-        // 현재 테이블 상태 확인
-        const currentTableResult = await client.query(`
-          SELECT * FROM store_tables WHERE unique_id = $1
-        `, [tableUniqueId]);
-
-        if (currentTableResult.rows.length === 0) {
-          console.error(`❌ [ORDER] 테이블을 찾을 수 없음: unique_id=${tableUniqueId}`);
-        } else {
-          const currentTable = currentTableResult.rows[0];
-          console.log(`📊 [ORDER] 현재 테이블 상태:`, {
-            tableName: currentTable.table_name,
-            isOccupied: currentTable.is_occupied,
-            occupiedSince: currentTable.occupied_since,
-            autoReleaseSource: currentTable.auto_release_source
-          });
-        }
-
-        // 테이블을 점유 상태로 설정 (auto_release_source = 'ORDER')
         const updateResult = await client.query(`
           UPDATE store_tables
           SET is_occupied = $1, occupied_since = $2, auto_release_source = $3
@@ -296,15 +300,7 @@ router.post('/pay', async (req, res) => {
         `, [true, occupiedTime, 'ORDER', tableUniqueId]);
 
         if (updateResult.rows.length > 0) {
-          const updatedTable = updateResult.rows[0];
-          console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 점유 처리 완료:`, {
-            tableName: updatedTable.table_name,
-            isOccupied: updatedTable.is_occupied,
-            occupiedSince: updatedTable.occupied_since,
-            autoReleaseSource: updatedTable.auto_release_source
-          });
-        } else {
-          console.error(`❌ [ORDER] 테이블 점유 업데이트 실패: unique_id=${tableUniqueId}`);
+          console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 점유 처리 완료`);
         }
 
         // 주문 완료 후 3분 뒤 자동 해제 스케줄링
@@ -323,8 +319,6 @@ router.post('/pay', async (req, res) => {
               const now = new Date();
               const diffMinutes = Math.floor((now - occupiedSince) / (1000 * 60));
 
-              console.log(`📊 [ORDER] 테이블 ${actualTableNumber} 점유 시간: ${diffMinutes}분`);
-
               if (diffMinutes >= 3) {
                 await pool.query(`
                   UPDATE store_tables
@@ -333,30 +327,16 @@ router.post('/pay', async (req, res) => {
                 `, [false, null, null, tableUniqueId]);
 
                 console.log(`✅ [ORDER] 테이블 ${actualTableNumber} 3분 후 자동 해제 완료`);
-              } else {
-                console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 아직 3분 미만 (${diffMinutes}분)`);
               }
-            } else {
-              console.log(`ℹ️ [ORDER] 테이블 ${actualTableNumber} 이미 해제됨 또는 다른 소스로 변경됨`);
             }
           } catch (error) {
             console.error('❌ [ORDER] 테이블 자동 해제 실패:', error);
           }
-        }, 3 * 60 * 1000); // 3분
+        }, 3 * 60 * 1000);
 
       } catch (tableError) {
         console.error('❌ [ORDER] 테이블 점유 처리 실패:', tableError);
-        console.error('❌ [ORDER] 상세 에러 정보:', {
-          message: tableError.message,
-          stack: tableError.stack,
-          tableUniqueId: tableUniqueId,
-          actualTableNumber: actualTableNumber,
-          storeId: storeId
-        });
-        // 테이블 점유 실패해도 주문은 완료되도록 처리
       }
-    } else {
-      console.log(`ℹ️ [ORDER] 테이블 정보 없음: tableUniqueId=${tableUniqueId}, actualTableNumber=${actualTableNumber}`);
     }
 
     await client.query('COMMIT');
@@ -366,6 +346,7 @@ router.post('/pay', async (req, res) => {
       console.log(`📡 새 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
       global.kdsWebSocket.broadcast(storeId, 'new-order', {
         orderId: orderId,
+        paidOrderId: paidOrderId,
         storeName: storeName,
         tableNumber: actualTableNumber,
         customerName: user.name || '손님',
@@ -377,9 +358,10 @@ router.post('/pay', async (req, res) => {
 
     // POS 실시간 새 주문 알림
     if (global.posWebSocket) {
-      console.log(`📡 TLL 주문 ${orderId} POS 실시간 알림 전송`);
+      console.log(`📡 TLL 주문 ${paidOrderId} POS 실시간 알림 전송`);
       global.posWebSocket.broadcastNewOrder(storeId, {
         orderId: orderId,
+        paidOrderId: paidOrderId,
         storeName: storeName,
         tableNumber: actualTableNumber,
         customerName: user.name || '손님',
@@ -387,21 +369,14 @@ router.post('/pay', async (req, res) => {
         totalAmount: orderData.total,
         source: 'TLL'
       });
-
-      // POS 전체 업데이트도 전송
-      global.posWebSocket.broadcast(storeId, 'order-update', {
-        orderId: orderId,
-        tableNumber: actualTableNumber,
-        action: 'new-order'
-      });
     }
-
 
     res.json({
       success: true,
       message: '결제가 완료되었습니다',
       result: {
-        orderId: orderResult.rows[0].id,
+        orderId: orderId,
+        paidOrderId: paidOrderId,
         appliedPoint: appliedPoint,
         earnedPoint: earnedPoint,
         finalTotal: finalTotal,
@@ -422,7 +397,7 @@ router.post('/pay', async (req, res) => {
   }
 });
 
-// 매장별 주문 내역 조회 API
+// 매장별 주문 내역 조회 API (paid_orders 기반)
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -432,25 +407,25 @@ router.get('/stores/:storeId', async (req, res) => {
 
     let query = `
       SELECT
-        o.id, o.store_id, o.user_id, o.table_number, o.order_data,
-        o.original_amount, o.used_point, o.coupon_discount, o.final_amount,
-        o.order_status, o.order_date, o.created_at,
+        p.id, p.store_id, p.user_id, p.guest_phone, p.table_number, p.order_data,
+        p.original_amount, p.used_point, p.coupon_discount, p.final_amount,
+        p.payment_status, p.payment_date, p.order_source, p.created_at,
         u.name as customer_name, u.phone as customer_phone,
         s.name as store_name
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.store_id = $1
+      FROM paid_orders p
+      LEFT JOIN users u ON p.user_id = u.id
+      LEFT JOIN stores s ON p.store_id = s.id
+      WHERE p.store_id = $1
     `;
 
     const params = [parseInt(storeId)];
 
     if (status) {
-      query += ` AND o.order_status = $${params.length + 1}`;
+      query += ` AND p.payment_status = $${params.length + 1}`;
       params.push(status);
     }
 
-    query += ` ORDER BY o.order_date DESC LIMIT $${params.length + 1}`;
+    query += ` ORDER BY p.payment_date DESC LIMIT $${params.length + 1}`;
     params.push(parseInt(limit));
 
     const result = await pool.query(query, params);
@@ -460,16 +435,18 @@ router.get('/stores/:storeId', async (req, res) => {
       storeId: row.store_id,
       storeName: row.store_name,
       userId: row.user_id,
+      guestPhone: row.guest_phone,
       customerName: row.customer_name || '알 수 없음',
-      customerPhone: row.customer_phone || '정보없음',
+      customerPhone: row.customer_phone || row.guest_phone || '정보없음',
       tableNumber: row.table_number,
       orderData: row.order_data,
       originalAmount: row.original_amount,
       usedPoint: row.used_point || 0,
       couponDiscount: row.coupon_discount || 0,
       finalAmount: row.final_amount,
-      orderStatus: row.order_status,
-      orderDate: row.order_date,
+      paymentStatus: row.payment_status,
+      paymentDate: row.payment_date,
+      orderSource: row.order_source,
       createdAt: row.created_at
     }));
 
@@ -491,7 +468,7 @@ router.get('/stores/:storeId', async (req, res) => {
   }
 });
 
-// 사용자별 주문 내역 조회 API
+// 사용자별 주문 내역 조회 API (paid_orders 기반)
 router.get('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -499,23 +476,22 @@ router.get('/users/:userId', async (req, res) => {
 
     console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
 
-    // orders 테이블에서 주문 내역 조회
     const ordersResult = await pool.query(`
       SELECT
-        o.id,
-        o.store_id,
+        p.id,
+        p.store_id,
         s.name as store_name,
-        o.order_data,
-        o.total_amount,
-        o.final_amount,
-        o.order_status,
-        o.order_date,
-        o.created_at,
-        o.table_number
-      FROM orders o
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.user_id = $1
-      ORDER BY o.order_date DESC
+        p.order_data,
+        p.original_amount,
+        p.final_amount,
+        p.payment_status,
+        p.payment_date,
+        p.created_at,
+        p.table_number
+      FROM paid_orders p
+      LEFT JOIN stores s ON p.store_id = s.id
+      WHERE p.user_id = $1
+      ORDER BY p.payment_date DESC
       LIMIT $2
     `, [userId, limit]);
 
@@ -524,10 +500,10 @@ router.get('/users/:userId', async (req, res) => {
       store_id: order.store_id,
       store_name: order.store_name,
       order_data: order.order_data,
-      total_amount: order.total_amount,
+      total_amount: order.original_amount,
       final_amount: order.final_amount,
-      order_status: order.order_status,
-      order_date: order.order_date,
+      order_status: order.payment_status,
+      order_date: order.payment_date,
       created_at: order.created_at,
       table_number: order.table_number
     }));
@@ -549,250 +525,27 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-// 마이페이지용 사용자별 주문 내역 조회 API (별도 엔드포인트)
-router.get('/mypage/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { limit = 10 } = req.query;
-
-    console.log(`📋 마이페이지 - 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
-
-    const ordersResult = await pool.query(`
-      SELECT
-        o.id,
-        o.store_id,
-        s.name as store_name,
-        o.order_data,
-        o.total_amount,
-        o.final_amount,
-        o.order_status,
-        o.order_date,
-        o.table_number
-      FROM orders o
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.user_id = $1
-      ORDER BY o.order_date DESC
-      LIMIT $2
-    `, [userId, limit]);
-
-    const orders = ordersResult.rows.map(order => ({
-      id: order.id,
-      store_id: order.store_id,
-      store_name: order.store_name,
-      order_data: order.order_data,
-      total_amount: order.total_amount,
-      final_amount: order.final_amount,
-      order_status: order.order_status,
-      order_date: order.order_date,
-      table_number: order.table_number
-    }));
-
-    console.log(`📦 마이페이지 - 사용자 ${userId}의 주문 수: ${orders.length}개`);
-
-    res.json({
-      success: true,
-      orders: orders,
-      totalCount: orders.length
-    });
-
-  } catch (error) {
-    console.error('❌ 마이페이지 주문 내역 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '주문 내역 조회 실패: ' + error.message
-    });
-  }
-});
-
-// 최근 주문 조회 API (TLM용)
-router.get('/recent/:storeId', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-    const limit = req.query.limit || 5;
-
-    console.log(`📋 매장 ${storeId} 최근 주문 조회 (최대 ${limit}개)`);
-
-    const result = await pool.query(`
-      SELECT
-        o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.order_data, u.name as customer_name, s.name as store_name
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.store_id = $1
-      ORDER BY o.order_date DESC
-      LIMIT $2
-    `, [storeId, limit]);
-
-    const orders = result.rows.map(row => ({
-      id: row.id,
-      table_number: row.table_number,
-      final_amount: row.final_amount,
-      order_date: row.order_date,
-      order_status: row.order_status,
-      customer_name: row.customer_name,
-      order_data: row.order_data,
-      store_name: row.store_name
-    }));
-
-    console.log(`✅ 매장 ${storeId} 최근 주문 ${orders.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      orders: orders
-    });
-
-  } catch (error) {
-    console.error('❌ 최근 주문 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '최근 주문 조회 실패'
-    });
-  }
-});
-
-// 전체 주문 조회 API (TLM용)
-router.get('/store/:storeId', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-    const limit = req.query.limit || 50;
-
-    console.log(`📋 매장 ${storeId} 전체 주문 조회 (최대 ${limit}개)`);
-
-    const result = await pool.query(`
-      SELECT
-        o.id, o.table_number, o.final_amount, o.order_date, o.order_status,
-        o.order_data, u.name as customer_name, s.name as store_name
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN stores s ON o.store_id = s.id
-      WHERE o.store_id = $1
-      ORDER BY o.order_date DESC
-      LIMIT $2
-    `, [parseInt(storeId), limit]);
-
-    const orders = result.rows.map(row => ({
-      id: row.id,
-      table_number: row.table_number,
-      final_amount: row.final_amount,
-      order_date: row.order_date,
-      order_status: row.order_status,
-      customer_name: row.customer_name,
-      order_data: row.order_data,
-      store_name: row.store_name
-    }));
-
-    console.log(`✅ 매장 ${storeId} 전체 주문 ${orders.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      storeId: parseInt(storeId),
-      total: orders.length,
-      orders: orders
-    });
-
-  } catch (error) {
-    console.error('❌ 전체 주문 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '전체 주문 조회 실패: ' + error.message
-    });
-  }
-});
-
-// 주문 상태 업데이트 API (TLM용)
-router.put('/:orderId/status', async (req, res) => {
-  try {
-    const { orderId } = req.params;
-    const { status } = req.body;
-
-    console.log(`📝 주문 ${orderId} 상태 업데이트: ${status}`);
-
-    const result = await pool.query(`
-      UPDATE orders
-      SET order_status = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `, [status, parseInt(orderId)]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '주문을 찾을 수 없습니다'
-      });
-    }
-
-    console.log(`✅ 주문 ${orderId} 상태 업데이트 완료: ${status}`);
-
-    res.json({
-      success: true,
-      order: result.rows[0],
-      message: `주문 상태가 ${status}로 변경되었습니다`
-    });
-
-  } catch (error) {
-    console.error('❌ 주문 상태 업데이트 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '주문 상태 업데이트 실패'
-    });
-  }
-});
-
-// 주문별 리뷰 존재 여부 확인
-router.get('/:orderId/review-status', async (req, res) => {
-  try {
-    const { orderId } = req.params;
-
-    console.log(`🔍 주문 ${orderId}의 리뷰 존재 여부 확인`);
-
-    const result = await pool.query(
-      'SELECT COUNT(*) as review_count FROM reviews WHERE order_id = $1',
-      [orderId]
-    );
-
-    const hasReview = parseInt(result.rows[0].review_count) > 0;
-
-    console.log(`✅ 주문 ${orderId} 리뷰 존재 여부: ${hasReview ? '있음' : '없음'}`);
-
-    res.json({
-      success: true,
-      orderId: orderId,
-      hasReview: hasReview,
-      reviewCount: parseInt(result.rows[0].review_count)
-    });
-
-  } catch (error) {
-    console.error('❌ 주문 리뷰 상태 확인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '리뷰 상태 확인에 실패했습니다'
-    });
-  }
-});
-
-// KDS용 매장별 주문 조회 API (order_items 포함)
+// KDS용 매장별 주문 조회 API (orders + order_items)
 router.get('/kds/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
     console.log(`📟 KDS - 매장 ${storeId} 주문 조회`);
 
-    // 조리가 완료되지 않은 order_items가 있는 주문들만 조회
+    // 조리가 완료되지 않은 orders 조회
     const query = `
-      SELECT DISTINCT
-        o.id, o.store_id, o.user_id, o.table_number, o.order_data,
-        o.original_amount, o.used_point, o.coupon_discount, o.final_amount,
-        o.order_status, o.order_date, o.created_at,
-        u.name as customer_name, u.phone as customer_phone,
+      SELECT 
+        o.id as order_id, o.paid_order_id, o.store_id, o.table_number, 
+        o.customer_name, o.order_data, o.total_amount, o.cooking_status,
+        o.started_at, o.completed_at, o.created_at,
+        p.user_id, p.guest_phone, p.payment_date, p.order_source,
         s.name as store_name
       FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN paid_orders p ON o.paid_order_id = p.id
       LEFT JOIN stores s ON o.store_id = s.id
-      INNER JOIN order_items oi ON o.id = oi.order_id
       WHERE o.store_id = $1
-      AND oi.cooking_status IN ('PENDING', 'COOKING')
-      ORDER BY o.order_date ASC
+      AND o.cooking_status IN ('PENDING', 'COOKING')
+      ORDER BY o.created_at ASC
     `;
 
     const result = await pool.query(query, [parseInt(storeId)]);
@@ -806,49 +559,38 @@ router.get('/kds/:storeId', async (req, res) => {
         FROM order_items
         WHERE order_id = $1
         ORDER BY created_at ASC
-      `, [row.id]);
+      `, [row.order_id]);
 
-      const orderTime = new Date(row.order_date);
+      const orderTime = new Date(row.created_at);
       const now = new Date();
       const waitingMinutes = Math.floor((now - orderTime) / (1000 * 60));
 
-      // 전체 아이템 중 조리 상태별 분류
       const items = itemsResult.rows;
       const pendingItems = items.filter(item => item.cooking_status === 'PENDING');
       const cookingItems = items.filter(item => item.cooking_status === 'COOKING');
       const completedItems = items.filter(item => item.cooking_status === 'COMPLETED');
 
-      // 주문 전체 상태 결정
-      let overallStatus = 'PENDING';
-      if (cookingItems.length > 0) {
-        overallStatus = 'COOKING';
-      }
-      if (pendingItems.length === 0 && cookingItems.length === 0) {
-        overallStatus = 'COMPLETED';
-      }
-
       orders.push({
-        id: row.id,
+        id: row.order_id,
+        paidOrderId: row.paid_order_id,
         storeId: row.store_id,
         storeName: row.store_name,
         userId: row.user_id,
+        guestPhone: row.guest_phone,
         customerName: row.customer_name || '손님',
-        customerPhone: row.customer_phone || '',
         tableNumber: row.table_number || '배달',
         orderData: row.order_data,
-        originalAmount: row.original_amount,
-        usedPoint: row.used_point || 0,
-        couponDiscount: row.coupon_discount || 0,
-        finalAmount: row.final_amount,
-        orderDate: row.order_date,
+        totalAmount: row.total_amount,
+        cookingStatus: row.cooking_status,
+        paymentDate: row.payment_date,
         createdAt: row.created_at,
         waitingMinutes: waitingMinutes,
-        overallStatus: overallStatus,
         items: items,
         pendingCount: pendingItems.length,
         cookingCount: cookingItems.length,
         completedCount: completedItems.length,
-        isUrgent: waitingMinutes > 15
+        isUrgent: waitingMinutes > 15,
+        orderSource: row.order_source
       });
     }
 
@@ -896,10 +638,12 @@ router.put('/items/:itemId/start-cooking', async (req, res) => {
 
     // 📡 KDS 실시간 업데이트 전송
     if (global.kdsWebSocket && updatedItem.order_id) {
-      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [updatedItem.order_id]);
+      const orderResult = await pool.query(`
+        SELECT o.store_id FROM orders o WHERE o.id = $1
+      `, [updatedItem.order_id]);
+
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
-        console.log(`📡 메뉴 아이템 ${updatedItem.id} 조리 시작 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
         global.kdsWebSocket.broadcast(storeId, 'cooking-started', {
           itemId: updatedItem.id,
           orderId: updatedItem.order_id,
@@ -950,10 +694,12 @@ router.put('/items/:itemId/complete-cooking', async (req, res) => {
 
     // 📡 KDS 실시간 업데이트 전송
     if (global.kdsWebSocket && completedItem.order_id) {
-      const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [completedItem.order_id]);
+      const orderResult = await pool.query(`
+        SELECT o.store_id FROM orders o WHERE o.id = $1
+      `, [completedItem.order_id]);
+
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
-        console.log(`📡 메뉴 아이템 ${completedItem.id} 조리 완료 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
         global.kdsWebSocket.broadcast(storeId, 'cooking-completed', {
           itemId: completedItem.id,
           orderId: completedItem.order_id,
@@ -999,16 +745,20 @@ router.put('/:orderId/start-cooking', async (req, res) => {
       });
     }
 
+    // orders 테이블도 업데이트
+    await pool.query(`
+      UPDATE orders
+      SET cooking_status = 'COOKING', started_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [parseInt(orderId)]);
+
     console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 시작 완료`);
 
-    // 📡 KDS 실시간 업데이트 전송 (주문 전체 조리 시작)
+    // 📡 KDS 실시간 업데이트 전송
     if (global.kdsWebSocket) {
       const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [orderId]);
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
-        console.log(`📡 주문 ${orderId} 전체 조리 시작 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
-
-        // 주문 전체 조리 시작 이벤트
         global.kdsWebSocket.broadcast(storeId, 'order-cooking-started', {
           orderId: orderId,
           itemCount: result.rows.length,
@@ -1020,7 +770,6 @@ router.put('/:orderId/start-cooking', async (req, res) => {
         });
       }
     }
-
 
     res.json({
       success: true,
@@ -1052,6 +801,13 @@ router.put('/:orderId/complete', async (req, res) => {
       RETURNING *
     `, [parseInt(orderId)]);
 
+    // orders 테이블도 완료로 업데이트
+    await pool.query(`
+      UPDATE orders
+      SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [parseInt(orderId)]);
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -1061,14 +817,11 @@ router.put('/:orderId/complete', async (req, res) => {
 
     console.log(`✅ 주문 ${orderId}의 메뉴 ${result.rows.length}개 조리 완료`);
 
-    // 📡 KDS 실시간 업데이트 전송 (주문 완료)
+    // 📡 KDS 실시간 업데이트 전송
     if (global.kdsWebSocket) {
       const orderResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [orderId]);
       if (orderResult.rows.length > 0) {
         const storeId = orderResult.rows[0].store_id;
-        console.log(`📡 주문 ${orderId} 완료 - KDS 실시간 업데이트 전송 (매장 ${storeId})`);
-
-        // 주문 완료 이벤트
         global.kdsWebSocket.broadcast(storeId, 'order-completed', {
           orderId: orderId,
           itemCount: result.rows.length,
@@ -1092,6 +845,38 @@ router.put('/:orderId/complete', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '주문 완료 처리 실패'
+    });
+  }
+});
+
+// 주문별 리뷰 존재 여부 확인 (paid_orders 기반)
+router.get('/:paidOrderId/review-status', async (req, res) => {
+  try {
+    const { paidOrderId } = req.params;
+
+    console.log(`🔍 결제주문 ${paidOrderId}의 리뷰 존재 여부 확인`);
+
+    const result = await pool.query(
+      'SELECT COUNT(*) as review_count FROM reviews WHERE paid_order_id = $1',
+      [paidOrderId]
+    );
+
+    const hasReview = parseInt(result.rows[0].review_count) > 0;
+
+    console.log(`✅ 결제주문 ${paidOrderId} 리뷰 존재 여부: ${hasReview ? '있음' : '없음'}`);
+
+    res.json({
+      success: true,
+      paidOrderId: paidOrderId,
+      hasReview: hasReview,
+      reviewCount: parseInt(result.rows[0].review_count)
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 리뷰 상태 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '리뷰 상태 확인에 실패했습니다'
     });
   }
 });
