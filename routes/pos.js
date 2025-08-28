@@ -667,14 +667,64 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     const paidOrderId = paidOrderResult.rows[0].id;
 
+    // 3-1. TL회원인 경우 user_paid_orders에도 저장
+    if (currentUserId && !currentUserId.startsWith('pos')) {
+      console.log(`💳 TL회원 POS 결제 - user_paid_orders에도 저장: ${currentUserId}`);
+      
+      await client.query(`
+        INSERT INTO user_paid_orders (
+          user_id, store_id, table_number, order_data,
+          original_amount, used_point, coupon_discount, final_amount,
+          payment_method, payment_status, payment_date, order_source
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, $11)
+      `, [
+        currentUserId,           // $1 - TL회원 ID
+        parseInt(storeId),       // $2
+        parseInt(tableNumber),   // $3
+        JSON.stringify({         // $4
+          items: orderItems,
+          sessionId: orderId,
+          customerName: session.customer_name,
+          sessionStarted: session.session_started_at
+        }),
+        totalAmount,             // $5 - original_amount
+        0,                       // $6 - used_point (POS에서는 0)
+        0,                       // $7 - coupon_discount (POS에서는 0)
+        totalAmount,             // $8 - final_amount
+        paymentMethod,           // $9 - payment_method
+        'completed',             // $10 - payment_status
+        'POS'                    // $11 - order_source
+      ]);
+
+      console.log(`✅ TL회원 POS 결제 user_paid_orders 저장 완료: ${currentUserId}`);
+    }
+
     // 4. orders 세션을 CLOSED 상태로 변경
-    await client.query(`
+    let updateQuery = `
       UPDATE orders 
       SET cooking_status = 'CLOSED',
           paid_order_id = $1,
-          completed_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [paidOrderId, orderId]);
+          completed_at = CURRENT_TIMESTAMP`;
+    let updateParams = [paidOrderId, orderId];
+
+    // TL회원인 경우 user_paid_order_id도 설정
+    if (currentUserId && !currentUserId.startsWith('pos')) {
+      const userPaidOrderResult = await client.query(
+        'SELECT id FROM user_paid_orders WHERE user_id = $1 AND store_id = $2 ORDER BY created_at DESC LIMIT 1',
+        [currentUserId, parseInt(storeId)]
+      );
+      
+      if (userPaidOrderResult.rows.length > 0) {
+        const userPaidOrderId = userPaidOrderResult.rows[0].id;
+        updateQuery += `, user_paid_order_id = $3`;
+        updateParams.push(userPaidOrderId);
+      }
+    }
+
+    updateQuery += ` WHERE id = $${updateParams.length + 1}`;
+    updateParams.push(orderId);
+
+    await client.query(updateQuery, updateParams);
 
     // 5. order_items의 cooking_status를 COMPLETED로 변경
     await client.query(`
