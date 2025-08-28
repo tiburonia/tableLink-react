@@ -186,6 +186,37 @@ function renderSignUp() {
         transform: translateY(-50%) scale(1);
       }
 
+      .check-btn {
+        width: 100%;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 12px;
+      }
+
+      .check-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+      }
+
+      .check-btn:active {
+        transform: translateY(0);
+      }
+
+      .check-btn:disabled {
+        background: #d1d5db;
+        color: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
       .input-status {
         margin-top: 8px;
         font-size: 13px;
@@ -528,10 +559,10 @@ function renderSignUp() {
                 autocomplete="username"
                 maxlength="20"
               >
-              <button type="button" class="input-action-btn" id="checkIdBtn">중복확인</button>
             </div>
             <div class="input-status" id="userIdStatus"></div>
             <div class="form-hint">영문과 숫자만 사용 가능합니다</div>
+            <button type="button" class="check-btn" id="checkIdBtn" disabled>아이디 중복확인</button>
           </div>
 
           <div class="form-group">
@@ -602,10 +633,10 @@ function renderSignUp() {
                 autocomplete="tel"
                 maxlength="13"
               >
-              <button type="button" class="input-action-btn" id="checkPhoneBtn" style="display: none;">중복확인</button>
             </div>
             <div class="input-status" id="userPhoneStatus"></div>
             <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다</div>
+            <button type="button" class="check-btn" id="checkPhoneBtn" style="display: none;" disabled>전화번호 중복확인</button>
           </div>
 
           <button type="submit" class="signup-btn" id="signupBtn" disabled>
@@ -798,19 +829,24 @@ function renderSignUp() {
 
         const data = await response.json();
         
-        if (data.available) {
-          utils.showStatus('userId', '사용 가능한 아이디입니다', 'success', '✅');
-          validation.userId.isChecked = true;
+        if (response.ok && data.success) {
+          if (data.available) {
+            utils.showStatus('userId', '사용 가능한 아이디입니다', 'success', '✅');
+            validation.userId.isChecked = true;
+          } else {
+            utils.showStatus('userId', '이미 사용중인 아이디입니다', 'error', '❌');
+            validation.userId.isChecked = false;
+          }
         } else {
-          utils.showStatus('userId', '이미 사용중인 아이디입니다', 'error', '❌');
-          validation.userId.isChecked = false;
+          throw new Error(data.error || '중복 확인에 실패했습니다');
         }
       } catch (error) {
+        console.error('아이디 중복 확인 오류:', error);
         utils.showStatus('userId', '중복 확인 중 오류가 발생했습니다', 'error', '❌');
         validation.userId.isChecked = false;
       } finally {
         elements.checkIdBtn.disabled = false;
-        elements.checkIdBtn.textContent = '중복확인';
+        elements.checkIdBtn.textContent = '아이디 중복확인';
         utils.updateSubmitButton();
       }
     });
@@ -925,19 +961,24 @@ function renderSignUp() {
 
         const data = await response.json();
         
-        if (data.available) {
-          utils.showStatus('userPhone', '사용 가능한 전화번호입니다', 'success', '✅');
-          validation.phone.isChecked = true;
+        if (response.ok && data.success) {
+          if (data.available) {
+            utils.showStatus('userPhone', '사용 가능한 전화번호입니다', 'success', '✅');
+            validation.phone.isChecked = true;
+          } else {
+            utils.showStatus('userPhone', '이미 등록된 전화번호입니다', 'error', '❌');
+            validation.phone.isChecked = false;
+          }
         } else {
-          utils.showStatus('userPhone', '이미 등록된 전화번호입니다', 'error', '❌');
-          validation.phone.isChecked = false;
+          throw new Error(data.error || '중복 확인에 실패했습니다');
         }
       } catch (error) {
+        console.error('전화번호 중복 확인 오류:', error);
         utils.showStatus('userPhone', '중복 확인 중 오류가 발생했습니다', 'error', '❌');
         validation.phone.isChecked = false;
       } finally {
         elements.checkPhoneBtn.disabled = false;
-        elements.checkPhoneBtn.textContent = '중복확인';
+        elements.checkPhoneBtn.textContent = '전화번호 중복확인';
         utils.updateSubmitButton();
       }
     });
