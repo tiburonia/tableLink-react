@@ -728,7 +728,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   }
 }
 
+// 함수를 전역으로 등록
 window.confirmPay = confirmPay;
+
+console.log('✅ confirmPay 함수가 전역으로 등록되었습니다');
 
 export async function renderPayScreen(storeId, orderData) {
   try {

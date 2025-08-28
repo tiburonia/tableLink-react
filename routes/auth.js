@@ -262,7 +262,7 @@ router.post('/logout', (req, res) => {
   res.json({ success: true, message: '로그아웃 완료' });
 });
 
-// 사용자 정보 조회 API
+// 사용자 정보 조회 API (POST 방식)
 router.post('/users/info', async (req, res) => {
   const { userId } = req.body;
 
@@ -294,6 +294,53 @@ router.post('/users/info', async (req, res) => {
   } catch (error) {
     console.error('사용자 정보 조회 실패:', error);
     res.status(500).json({ error: '사용자 정보 조회 실패' });
+  }
+});
+
+// 사용자 정보 조회 API (GET 방식)
+router.get('/user/:userId', async (req, res) => {
+  const { userId } = req.params;
+
+  console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
+      return res.status(404).json({ 
+        success: false, 
+        error: '사용자를 찾을 수 없습니다' 
+      });
+    }
+
+    const user = result.rows[0];
+    
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id})`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email || '',
+        address: user.address || '',
+        birth: user.birth || '',
+        gender: user.gender || '',
+        point: user.point || 0,
+        orderList: user.order_list || [],
+        reservationList: user.reservation_list || [],
+        coupons: user.coupons || { unused: [], used: [] },
+        favoriteStores: user.favorite_stores || []
+      }
+    });
+  } catch (error) {
+    console.error('❌ 사용자 정보 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '사용자 정보 조회 실패' 
+    });
   }
 });
 

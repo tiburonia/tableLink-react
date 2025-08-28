@@ -1,6 +1,17 @@
 
-function renderPay(currentOrder, store, tableNum) {
+async function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
+
+  // confirmPay 함수 동적 로드
+  if (!window.confirmPay) {
+    try {
+      console.log('🔄 confirmPay 함수 로드 중...');
+      const confirmPayModule = await import('/TLG/pages/store/pay/confirmPayF.js');
+      console.log('✅ confirmPay 함수 로드 완료');
+    } catch (error) {
+      console.error('❌ confirmPay 함수 로드 실패:', error);
+    }
+  }
 
   // 매장 메뉴 데이터 안전하게 처리
   let menuData = [];
@@ -529,18 +540,22 @@ function renderPay(currentOrder, store, tableNum) {
   async function loadStorePoint() {
     try {
       // 전역 userInfo 객체에서 사용자 ID 가져오기
-      const userId = window.userInfo?.id || localStorage.getItem('userId');
-      if (!userId) {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+      if (!userInfo || !userInfo.id) {
         document.getElementById('storePointDisplay').textContent = '로그인 필요';
-        console.warn('⚠️ 사용자 ID를 찾을 수 없습니다. 로그인이 필요합니다.');
+        console.warn('⚠️ 사용자 정보를 찾을 수 없습니다. 로그인이 필요합니다.');
         return;
       }
+
+      const userId = userInfo.id;
+      console.log(`💰 사용자 ${userId}의 매장 ${orderData.storeId} 포인트 조회 중...`);
 
       const response = await fetch(`/api/regular-levels/user/${userId}/store/${orderData.storeId}/points`);
       const data = await response.json();
 
       if (data.success && data.points !== undefined) {
         const points = data.points || 0;
+        console.log(`✅ 매장 포인트 조회 완료: ${points}P`);
         document.getElementById('storePointDisplay').textContent = `${points.toLocaleString()}P`;
 
         const usePointInput = document.getElementById('usePoint');
@@ -552,10 +567,11 @@ function renderPay(currentOrder, store, tableNum) {
           maxPointBtn.disabled = false;
         }
       } else {
+        console.log('ℹ️ 사용 가능한 포인트가 없습니다');
         document.getElementById('storePointDisplay').textContent = '0P';
       }
     } catch (error) {
-      console.error('포인트 조회 실패:', error);
+      console.error('❌ 포인트 조회 실패:', error);
       document.getElementById('storePointDisplay').textContent = '조회 실패';
     }
   }
@@ -564,12 +580,15 @@ function renderPay(currentOrder, store, tableNum) {
   async function loadCoupons() {
     try {
       // 전역 userInfo 객체에서 사용자 ID 가져오기
-      const userId = window.userInfo?.id || localStorage.getItem('userId');
-      if (!userId) {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+      if (!userInfo || !userInfo.id) {
         document.getElementById('couponList').innerHTML = '<p>로그인이 필요합니다</p>';
-        console.warn('⚠️ 쿠폰 로드: 사용자 ID를 찾을 수 없습니다.');
+        console.warn('⚠️ 쿠폰 로드: 사용자 정보를 찾을 수 없습니다.');
         return;
       }
+
+      const userId = userInfo.id;
+      console.log(`🎫 사용자 ${userId}의 쿠폰 조회 중...`);
 
       // 사용자 정보에서 쿠폰 데이터 가져오기
       const response = await fetch(`/api/auth/user/${userId}`);
@@ -581,6 +600,8 @@ function renderPay(currentOrder, store, tableNum) {
       const data = await response.json();
 
       if (data.success && data.user && data.user.coupons && data.user.coupons.unused && data.user.coupons.unused.length > 0) {
+        console.log(`✅ 사용 가능한 쿠폰 ${data.user.coupons.unused.length}개 발견`);
+        
         const couponSelect = document.createElement('select');
         couponSelect.id = 'couponSelect';
 
@@ -595,10 +616,11 @@ function renderPay(currentOrder, store, tableNum) {
 
         document.getElementById('couponList').appendChild(couponSelect);
       } else {
+        console.log('ℹ️ 사용 가능한 쿠폰이 없습니다');
         document.getElementById('couponList').innerHTML = '<p>사용 가능한 쿠폰이 없습니다</p>';
       }
     } catch (error) {
-      console.error('쿠폰 조회 실패:', error);
+      console.error('❌ 쿠폰 조회 실패:', error);
       document.getElementById('couponList').innerHTML = '<p>쿠폰 조회에 실패했습니다</p>';
     }
   }
@@ -642,7 +664,7 @@ function renderPay(currentOrder, store, tableNum) {
     });
 
     // 결제 확인
-    document.getElementById('confirmPayBtn').addEventListener('click', () => {
+    document.getElementById('confirmPayBtn').addEventListener('click', async () => {
       const usePointInput = document.getElementById('usePoint');
       const usePoint = parseInt(usePointInput.value) || 0;
       const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
@@ -657,12 +679,29 @@ function renderPay(currentOrder, store, tableNum) {
 
       const finalAmount = Math.max(0, orderData.total - validatedPoints - couponDiscount);
 
-      // confirmPay 함수 호출
-      if (typeof confirmPay === 'function') {
-        confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
-      } else {
-        console.error('❌ confirmPay 함수를 찾을 수 없습니다');
-        alert('결제 처리 중 오류가 발생했습니다.');
+      console.log('💳 결제 확인 버튼 클릭:', {
+        validatedPoints,
+        selectedCouponId,
+        couponDiscount,
+        finalAmount
+      });
+
+      // confirmPay 함수 동적 로드 및 호출
+      try {
+        if (typeof window.confirmPay !== 'function') {
+          console.log('🔄 confirmPay 함수 로드 중...');
+          const confirmPayModule = await import('/TLG/pages/store/pay/confirmPayF.js');
+          console.log('✅ confirmPay 함수 로드 완료');
+        }
+
+        if (typeof window.confirmPay === 'function') {
+          window.confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
+        } else {
+          throw new Error('confirmPay 함수를 로드할 수 없습니다');
+        }
+      } catch (error) {
+        console.error('❌ confirmPay 함수 로드/실행 실패:', error);
+        alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
       }
     });
 
