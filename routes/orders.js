@@ -715,50 +715,61 @@ router.get('/users/:userId', async (req, res) => {
     const { userId } = req.params;
     const { limit = 10 } = req.query;
 
-    console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개)`);
+    console.log(`📋 사용자 ${userId} 주문 내역 조회 (최대 ${limit}개) - user_paid_orders 테이블 사용`);
 
     const ordersResult = await pool.query(`
       SELECT
         upo.id,
         upo.store_id,
         s.name as store_name,
+        s.category as store_category,
         upo.order_data,
         upo.original_amount,
+        upo.used_point,
+        upo.coupon_discount,
         upo.final_amount,
         upo.payment_status,
+        upo.payment_method,
         upo.payment_date,
+        upo.order_source,
         upo.created_at,
         upo.table_number
       FROM user_paid_orders upo
       LEFT JOIN stores s ON upo.store_id = s.id
-      WHERE upo.user_id = $1
+      WHERE upo.user_id = $1 AND upo.payment_status = 'completed'
       ORDER BY upo.payment_date DESC
       LIMIT $2
-    `, [userId, limit]);
+    `, [userId, parseInt(limit)]);
 
     const orders = ordersResult.rows.map(order => ({
       id: order.id,
       store_id: order.store_id,
-      store_name: order.store_name,
+      store_name: order.store_name || '매장 정보 없음',
+      store_category: order.store_category,
       order_data: order.order_data,
       total_amount: order.original_amount,
+      used_point: order.used_point || 0,
+      coupon_discount: order.coupon_discount || 0,
       final_amount: order.final_amount,
       order_status: order.payment_status,
+      payment_method: order.payment_method,
+      order_source: order.order_source,
       order_date: order.payment_date,
       created_at: order.created_at,
       table_number: order.table_number
     }));
 
-    console.log(`📦 사용자 ${userId}의 주문 수: ${orders.length}개`);
+    console.log(`📦 사용자 ${userId}의 user_paid_orders 주문 수: ${orders.length}개`);
 
     res.json({
       success: true,
       orders: orders,
-      totalCount: orders.length
+      totalCount: orders.length,
+      source: 'user_paid_orders'
     });
 
   } catch (error) {
-    console.error('❌ 사용자 주문 내역 조회 실패:', error);
+    console.error('❌ 사용자 주문 내역 조회 실패 (user_paid_orders):', error);
     res.status(500).json({
       success: false,
       error: '주문 내역 조회 실패: ' + error.message
@@ -1108,31 +1119,33 @@ router.put('/:orderId/complete', async (req, res) => {
   }
 });
 
-// 주문별 리뷰 존재 여부 확인 (paid_orders 기반)
+// 주문별 리뷰 존재 여부 확인 (user_paid_orders 기반)
 router.get('/:paidOrderId/review-status', async (req, res) => {
   try {
     const { paidOrderId } = req.params;
 
-    console.log(`🔍 결제주문 ${paidOrderId}의 리뷰 존재 여부 확인`);
+    console.log(`🔍 사용자 결제주문 ${paidOrderId}의 리뷰 존재 여부 확인 (user_paid_orders 기준)`);
 
+    // user_paid_orders 기준으로 리뷰 확인
     const result = await pool.query(
-      'SELECT COUNT(*) as review_count FROM reviews WHERE paid_order_id = $1',
+      'SELECT COUNT(*) as review_count FROM reviews WHERE user_paid_order_id = $1',
       [paidOrderId]
     );
 
     const hasReview = parseInt(result.rows[0].review_count) > 0;
 
-    console.log(`✅ 결제주문 ${paidOrderId} 리뷰 존재 여부: ${hasReview ? '있음' : '없음'}`);
+    console.log(`✅ 사용자 결제주문 ${paidOrderId} 리뷰 존재 여부: ${hasReview ? '있음' : '없음'}`);
 
     res.json({
       success: true,
       paidOrderId: paidOrderId,
       hasReview: hasReview,
-      reviewCount: parseInt(result.rows[0].review_count)
+      reviewCount: parseInt(result.rows[0].review_count),
+      source: 'user_paid_orders'
     });
 
   } catch (error) {
-    console.error('❌ 주문 리뷰 상태 확인 실패:', error);
+    console.error('❌ 주문 리뷰 상태 확인 실패 (user_paid_orders):', error);
     res.status(500).json({
       success: false,
       error: '리뷰 상태 확인에 실패했습니다'

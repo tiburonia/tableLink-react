@@ -887,6 +887,17 @@ async function renderMyPage() {
         font-weight: 600;
       }
 
+      .order-discount {
+        margin-top: 8px;
+        padding: 6px 12px;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        border: 1px solid #fbbf24;
+      }
+
       .order-footer {
         display: flex;
         justify-content: space-between;
@@ -1782,11 +1793,24 @@ async function updateOrderList(currentUserInfo, ordersData) {
       orderDiv.className = 'order-item';
 
       const orderData = order.order_data || {};
-      const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : '메뉴 정보 없음';
-      const storeName = orderData.store || order.store_name || '매장 정보 없음';
+      const items = orderData.items ? orderData.items.map(i => `${i.name}(${i.quantity || i.qty || 1}개)`).join(', ') : '메뉴 정보 없음';
+      const storeName = order.store_name || orderData.store || '매장 정보 없음';
       const hasReview = reviewStatuses[index];
       const orderDate = new Date(order.order_date).toLocaleDateString();
-      const orderAmount = order.final_amount?.toLocaleString() || order.total_amount?.toLocaleString() || '0';
+      
+      // user_paid_orders 테이블의 필드명에 맞게 수정
+      const originalAmount = order.total_amount || order.original_amount || 0;
+      const usedPoint = order.used_point || 0;
+      const couponDiscount = order.coupon_discount || 0;
+      const finalAmount = order.final_amount || originalAmount;
+      const orderAmount = finalAmount.toLocaleString();
+
+      // 할인 정보 표시
+      let discountInfo = '';
+      if (usedPoint > 0 || couponDiscount > 0) {
+        const totalDiscount = usedPoint + couponDiscount;
+        discountInfo = `<div class="order-discount">할인: -${totalDiscount.toLocaleString()}원 (포인트: ${usedPoint.toLocaleString()}원, 쿠폰: ${couponDiscount.toLocaleString()}원)</div>`;
+      }
 
       orderDiv.innerHTML = `
         <div class="order-item-header">
@@ -1796,12 +1820,15 @@ async function updateOrderList(currentUserInfo, ordersData) {
               <span>${orderDate}</span>
               <span>•</span>
               <span>${order.table_number ? `테이블 ${order.table_number}` : '포장'}</span>
+              <span>•</span>
+              <span>${order.payment_method || 'card'}</span>
             </div>
           </div>
           <div class="order-status">완료</div>
         </div>
         <div class="order-info">
           <strong>주문 메뉴:</strong> ${items}
+          ${discountInfo}
         </div>
         <div class="order-footer">
           <div class="order-amount">${orderAmount}원</div>
