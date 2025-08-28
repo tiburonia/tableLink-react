@@ -577,6 +577,29 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
   }
 }
 
+// 결제 성공 후 메시지 처리를 위한 이벤트 리스너 추가
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'PAYMENT_SUCCESS') {
+    console.log('💳 결제 성공 메시지 수신:', event.data);
+    
+    if (event.data.action === 'GO_TO_MAIN') {
+      // 로그인 정보 유지하며 메인으로 이동
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        window.location.href = '/';
+      }
+    } else if (event.data.action === 'GO_TO_MYPAGE') {
+      // 마이페이지로 이동
+      if (typeof renderMyPage === 'function') {
+        renderMyPage();
+      } else {
+        window.location.href = '/mypage';
+      }
+    }
+  }
+});
+
 // 함수를 전역으로 등록
 window.confirmPay = confirmPay;
 window.handlePaymentFailure = handlePaymentFailure;

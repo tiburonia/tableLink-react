@@ -227,19 +227,39 @@
 
     <script>
         function goToMain() {
-            if (window.opener) {
-                window.opener.location.href = '/';
-                window.close();
-            } else {
+            try {
+                if (window.opener && !window.opener.closed) {
+                    // 부모 창이 존재하고 닫히지 않았을 때
+                    window.opener.postMessage({ 
+                        type: 'PAYMENT_SUCCESS',
+                        action: 'GO_TO_MAIN' 
+                    }, '*');
+                    window.close();
+                } else {
+                    // 단독 창이거나 부모 창이 없을 때
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.log('부모 창 접근 실패, 현재 창에서 이동:', error);
                 window.location.href = '/';
             }
         }
 
         function goToMyPage() {
-            if (window.opener) {
-                window.opener.location.href = '/mypage';
-                window.close();
-            } else {
+            try {
+                if (window.opener && !window.opener.closed) {
+                    // 부모 창이 존재하고 닫히지 않았을 때
+                    window.opener.postMessage({ 
+                        type: 'PAYMENT_SUCCESS',
+                        action: 'GO_TO_MYPAGE' 
+                    }, '*');
+                    window.close();
+                } else {
+                    // 단독 창이거나 부모 창이 없을 때
+                    window.location.href = '/mypage';
+                }
+            } catch (error) {
+                console.log('부모 창 접근 실패, 현재 창에서 이동:', error);
                 window.location.href = '/mypage';
             }
         }
