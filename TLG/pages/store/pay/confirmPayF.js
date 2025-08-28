@@ -169,7 +169,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
                 <span>테이블 ${orderData.table}</span>
               </div>
               <div class="items-list">
-                ${orderData.items.map(item => 
+                ${orderData.items.map(item =>
                   `<div class="item-row">
                     <span class="item-name">${item.name} × ${item.qty}</span>
                     <span class="item-price">${item.totalPrice.toLocaleString()}원</span>
@@ -210,8 +210,16 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           </div>
 
           <div class="action-buttons">
-            <button id="goToMain" class="btn primary">메인으로</button>
-            <button id="goToMyPage" class="btn secondary">주문내역 보기</button>
+            <button id="goToMain" class="btn primary">
+              🏠 메인으로 이동
+            </button>
+            <button id="goToMyPage" class="btn secondary">
+              👤 마이페이지
+            </button>
+          </div>
+
+          <div class="auto-redirect-notice">
+            <span class="redirect-timer" id="redirectTimer">3</span>초 후 자동으로 메인으로 이동합니다
           </div>
         </div>
       </div>
@@ -467,6 +475,20 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           transform: translateY(0);
         }
 
+        .auto-redirect-notice {
+          text-align: center;
+          margin-top: 20px;
+          font-size: 14px;
+          color: #64748b;
+          opacity: 0.8;
+        }
+
+        .redirect-timer {
+          font-weight: bold;
+          color: #3b82f6;
+        }
+
+
         @media (max-width: 480px) {
           .payment-success-container {
             padding: 12px;
@@ -499,6 +521,21 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     document.getElementById('goToMyPage').addEventListener('click', () => {
       renderMyPage();
     });
+
+    // 자동 리다이렉트 타이머 설정
+    let countdown = 3;
+    const timerElement = document.getElementById('redirectTimer');
+    timerElement.textContent = countdown;
+
+    const redirectInterval = setInterval(() => {
+      countdown--;
+      timerElement.textContent = countdown;
+      if (countdown <= 0) {
+        clearInterval(redirectInterval);
+        renderMap(); // 로그인 정보 유지한 상태로 renderMap 호출
+      }
+    }, 1000);
+
 
     console.log('✅ 결제 성공 페이지 렌더링 완료');
 
