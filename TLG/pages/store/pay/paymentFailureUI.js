@@ -76,24 +76,25 @@ function renderPaymentFailure(error, orderData, currentOrder, store) {
 function getFailureStyles() {
   return `
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       .payment-failure-container {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
         width: 100%;
         max-width: 430px;
         margin: 0 auto;
+        min-height: 100vh;
         background: linear-gradient(135deg, #fef1f2 0%, #fee2e2 50%, #fecaca 100%);
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
         padding: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        min-height: 100vh;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
       }
 
       .failure-content {
@@ -328,6 +329,44 @@ function getFailureStyles() {
 
         .failure-icon {
           font-size: 64px;
+        }
+
+        .failure-ripple {
+          width: 120px;
+          height: 120px;
+        }
+      }
+
+      @media (max-height: 700px) {
+        .payment-failure-container {
+          align-items: flex-start;
+          padding-top: 40px;
+        }
+
+        .failure-content {
+          padding: 24px 20px;
+        }
+
+        .failure-icon {
+          font-size: 60px;
+        }
+
+        .failure-animation {
+          margin-bottom: 24px;
+        }
+
+        .failure-header {
+          margin-bottom: 24px;
+        }
+
+        .order-summary {
+          margin-bottom: 20px;
+          padding: 20px;
+        }
+
+        .help-section {
+          margin-bottom: 24px;
+          padding: 16px;
         }
       }
     </style>
