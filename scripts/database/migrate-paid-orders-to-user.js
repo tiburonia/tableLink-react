@@ -57,15 +57,8 @@ async function migratePaidOrdersToUser() {
           
           console.log(`📦 ${updateResult.rows.length}개 주문을 회원 ${userId}에게 이전`);
           
-          // 4. orders 테이블도 함께 업데이트
-          const ordersUpdateResult = await client.query(`
-            UPDATE orders 
-            SET user_id = $1, guest_phone = NULL
-            WHERE guest_phone = $2 AND user_id IS NULL
-            RETURNING id
-          `, [userId, guest_phone]);
-          
-          console.log(`📋 ${ordersUpdateResult.rows.length}개 주문 세션을 회원 ${userId}에게 이전`);
+          // 4. orders 테이블 업데이트는 제거 (orders 테이블에는 guest_phone 컬럼이 없음)
+          console.log(`📋 orders 테이블 업데이트 스킵 (guest_phone 컬럼 없음)`);
           
           // 5. user_store_stats 테이블에 매장별 통계 정보 생성/업데이트
           if (updateResult.rows.length > 0) {
@@ -217,15 +210,8 @@ async function migrateSinglePhoneNumber(phoneNumber) {
     
     console.log(`📦 ${updateResult.rows.length}개 결제 내역을 회원 ${user.id}에게 이전`);
     
-    // orders 테이블 마이그레이션
-    const ordersUpdateResult = await client.query(`
-      UPDATE orders 
-      SET user_id = $1, guest_phone = NULL
-      WHERE guest_phone = $2 AND user_id IS NULL
-      RETURNING id
-    `, [user.id, phoneNumber]);
-    
-    console.log(`📋 ${ordersUpdateResult.rows.length}개 주문 세션을 회원 ${user.id}에게 이전`);
+    // orders 테이블 마이그레이션은 제거 (orders 테이블에는 guest_phone 컬럼이 없음)
+    console.log(`📋 orders 테이블 업데이트 스킵 (guest_phone 컬럼 없음)`);
     
     // 매장별 통계 생성
     if (updateResult.rows.length > 0) {
