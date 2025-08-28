@@ -41,7 +41,7 @@ const posRoutes = require('./routes/pos');
 const regularLevelsRoutes = require('./routes/regular-levels');
 
 // 라우트 연결
-app.use('/api', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/stores', storesRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/reviews', reviewsRoutes);
