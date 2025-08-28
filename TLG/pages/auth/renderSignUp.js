@@ -9,80 +9,77 @@ function renderSignUp() {
         box-sizing: border-box;
       }
 
+      body {
+        overflow-x: hidden;
+      }
+
       .signup-container {
-        width: 100%;
-        height: 100vh;
+        width: 100vw;
+        min-height: 100vh;
         display: flex;
         justify-content: center;
         align-items: center;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 20px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        position: fixed;
+        top: 0;
+        left: 0;
       }
 
       .signup-card {
         background: white;
-        border-radius: 20px;
-        padding: 40px;
+        border-radius: 16px;
+        padding: 32px;
         width: 100%;
-        max-width: 450px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        max-width: 420px;
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
         position: relative;
-        overflow: hidden;
-      }
-
-      .signup-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        margin: auto;
       }
 
       .header {
         text-align: center;
-        margin-bottom: 40px;
+        margin-bottom: 32px;
       }
 
       .logo {
-        width: 60px;
-        height: 60px;
+        width: 56px;
+        height: 56px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
+        border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 20px;
+        margin: 0 auto 16px;
         color: white;
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
       }
 
       .title {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 700;
         color: #1e293b;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .subtitle {
         color: #64748b;
-        font-size: 16px;
+        font-size: 14px;
       }
 
       .form-group {
-        margin-bottom: 25px;
+        margin-bottom: 20px;
         position: relative;
       }
 
       .form-label {
         display: block;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: #374151;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .required {
@@ -91,11 +88,11 @@ function renderSignUp() {
 
       .form-input {
         width: 100%;
-        padding: 16px 20px;
+        padding: 14px 16px;
         border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        font-size: 16px;
-        transition: all 0.3s ease;
+        border-radius: 8px;
+        font-size: 15px;
+        transition: all 0.2s ease;
         background: #fafafa;
       }
 
@@ -117,9 +114,9 @@ function renderSignUp() {
       }
 
       .input-status {
-        font-size: 12px;
-        margin-top: 8px;
-        min-height: 18px;
+        font-size: 11px;
+        margin-top: 6px;
+        min-height: 16px;
         font-weight: 500;
       }
 
@@ -132,21 +129,21 @@ function renderSignUp() {
       }
 
       .form-hint {
-        font-size: 12px;
+        font-size: 11px;
         color: #64748b;
-        margin-top: 6px;
+        margin-top: 4px;
       }
 
       .check-btn {
         position: absolute;
-        right: 12px;
-        top: 36px;
+        right: 8px;
+        top: 28px;
         background: #667eea;
         color: white;
         border: none;
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 12px;
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
@@ -163,23 +160,23 @@ function renderSignUp() {
 
       .primary-btn {
         width: 100%;
-        padding: 18px 24px;
+        padding: 16px 20px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: 16px;
+        border-radius: 8px;
+        font-size: 15px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         position: relative;
         overflow: hidden;
       }
 
       .primary-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
+        transform: translateY(-1px);
+        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
       }
 
       .primary-btn:active {
@@ -199,13 +196,13 @@ function renderSignUp() {
       }
 
       .btn-loading .spinner {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-top: 2px solid white;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin-right: 10px;
+        margin-right: 8px;
       }
 
       @keyframes spin {
@@ -215,10 +212,10 @@ function renderSignUp() {
 
       .back-to-login {
         text-align: center;
-        padding-top: 20px;
+        padding-top: 16px;
         border-top: 1px solid #e5e7eb;
         color: #64748b;
-        font-size: 14px;
+        font-size: 13px;
       }
 
       .back-to-login a {
@@ -235,15 +232,15 @@ function renderSignUp() {
       }
 
       .password-strength {
-        margin-top: 8px;
+        margin-top: 6px;
       }
 
       .strength-bar {
-        height: 4px;
+        height: 3px;
         background: #e5e7eb;
         border-radius: 2px;
         overflow: hidden;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
 
       .strength-fill {
@@ -274,7 +271,7 @@ function renderSignUp() {
       }
 
       .strength-text {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 500;
       }
 
@@ -293,20 +290,20 @@ function renderSignUp() {
 
       .loading-content {
         background: white;
-        padding: 30px;
-        border-radius: 15px;
+        padding: 24px;
+        border-radius: 12px;
         text-align: center;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.2);
       }
 
       .loading-spinner {
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border: 3px solid #e5e7eb;
         border-top: 3px solid #667eea;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
+        margin: 0 auto 16px;
       }
     </style>
 
@@ -404,8 +401,8 @@ function renderSignUp() {
     id: { isValid: false, isChecked: false },
     password: { isValid: false },
     passwordConfirm: { isValid: false },
-    name: { isValid: true }, // 선택사항이므로 기본값 true
-    phone: { isValid: true, isChecked: false } // 선택사항이므로 기본값 true
+    name: { isValid: true },
+    phone: { isValid: true, isChecked: false }
   };
 
   // 유틸리티 함수들
@@ -494,13 +491,8 @@ function renderSignUp() {
   checkIdBtn.addEventListener('click', async () => {
     const id = idInput.value.trim();
     
-    if (!id) {
-      showStatus('idStatus', '아이디를 입력해주세요', 'error');
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-      showStatus('idStatus', '영문과 숫자만 3-20자로 입력해주세요', 'error');
+    if (!id || !/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+      showStatus('idStatus', '올바른 아이디를 입력해주세요', 'error');
       return;
     }
 
@@ -549,7 +541,6 @@ function renderSignUp() {
       validationState.password.isValid = true;
     }
 
-    // 비밀번호 확인 재검증
     if (pwConfirmInput.value) {
       const confirmPassword = pwConfirmInput.value;
       if (password !== confirmPassword) {
@@ -583,13 +574,13 @@ function renderSignUp() {
     validateForm();
   });
 
-  // 이름 유효성 검사 (선택사항)
+  // 이름 유효성 검사
   nameInput.addEventListener('input', () => {
     const name = nameInput.value.trim();
     
     if (!name) {
       showStatus('nameStatus', '', '');
-      validationState.name.isValid = true; // 선택사항이므로 항상 유효
+      validationState.name.isValid = true;
     } else if (name.length < 2) {
       showStatus('nameStatus', '이름은 2자 이상 입력해주세요', 'error');
       validationState.name.isValid = false;
@@ -623,9 +614,9 @@ function renderSignUp() {
     
     if (!value) {
       showStatus('phoneStatus', '', '');
-      validationState.phone.isValid = true; // 선택사항이므로 빈 값도 유효
+      validationState.phone.isValid = true;
     } else if (!/^010-\d{4}-\d{4}$/.test(value)) {
-      showStatus('phoneStatus', '올바른 전화번호 형식이 아닙니다 (010-0000-0000)', 'error');
+      showStatus('phoneStatus', '올바른 전화번호 형식이 아닙니다', 'error');
       validationState.phone.isValid = false;
     } else {
       showStatus('phoneStatus', '중복 확인을 해주세요', '');
@@ -639,13 +630,8 @@ function renderSignUp() {
   checkPhoneBtn.addEventListener('click', async () => {
     const phone = phoneInput.value.trim();
     
-    if (!phone) {
-      showStatus('phoneStatus', '전화번호를 입력해주세요', 'error');
-      return;
-    }
-
-    if (!/^010-\d{4}-\d{4}$/.test(phone)) {
-      showStatus('phoneStatus', '올바른 전화번호 형식이 아닙니다', 'error');
+    if (!phone || !/^010-\d{4}-\d{4}$/.test(phone)) {
+      showStatus('phoneStatus', '올바른 전화번호를 입력해주세요', 'error');
       return;
     }
 
@@ -701,7 +687,6 @@ function renderSignUp() {
       const data = await response.json();
 
       if (data.success) {
-        // 성공 메시지 표시
         main.innerHTML = `
           <div class="signup-container">
             <div class="signup-card" style="text-align: center;">
@@ -718,10 +703,7 @@ function renderSignUp() {
     } catch (error) {
       console.error('회원가입 오류:', error);
       showLoading(false);
-      
-      // 에러 메시지 표시
-      const errorMsg = error.message || '회원가입 중 오류가 발생했습니다';
-      alert(errorMsg);
+      alert(error.message || '회원가입 중 오류가 발생했습니다');
     }
   });
 
@@ -732,7 +714,6 @@ function renderSignUp() {
     } else if (typeof window.renderLogin === 'function') {
       window.renderLogin();
     } else {
-      // renderLogin 함수 동적 로드
       const script = document.createElement('script');
       script.src = '/TLG/pages/auth/renderLogin.js';
       script.onload = () => {
@@ -744,13 +725,10 @@ function renderSignUp() {
     }
   });
 
-  // 초기 상태 검증
   validateForm();
-
   console.log('✅ 회원가입 화면 렌더링 완료');
 }
 
-// 전역에서 접근 가능하도록 설정
 if (typeof window !== 'undefined') {
   window.renderSignUp = renderSignUp;
 }
