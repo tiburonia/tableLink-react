@@ -1,6 +1,38 @@
-
 async function renderPay(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
+
+  // userInfo를 안전하게 가져오기 (쿠키 우선)
+  function getUserInfoSafely() {
+    try {
+      // 쿠키에서 userInfo 찾기
+      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+      const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
+
+      if (userInfoCookie) {
+        const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
+        return JSON.parse(userInfoValue);
+      }
+
+      // localStorage 확인
+      const localStorageUserInfo = localStorage.getItem('userInfo');
+      if (localStorageUserInfo) {
+        return JSON.parse(localStorageUserInfo);
+      }
+
+      // window.userInfo 확인
+      if (window.userInfo && window.userInfo.id) {
+        return window.userInfo;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('❌ 사용자 정보 파싱 오류:', error);
+      return null;
+    }
+  }
+
+  const userInfo = getUserInfoSafely();
+  console.log('userInfo:', userInfo);
 
   // confirmPay 함수 동적 로드
   if (!window.confirmPay) {
@@ -538,18 +570,18 @@ async function renderPay(currentOrder, store, tableNum) {
 
   // 매장별 포인트 로드
   async function loadStorePoint() {
+    // 사용자 정보 확인
+    const userInfo = getUserInfoSafely();
+    if (!userInfo || !userInfo.id) {
+      console.error('❌ 사용자 정보가 없습니다');
+      document.getElementById('storePointDisplay').textContent = '로그인 필요';
+      return;
+    }
+
+    const userId = userInfo.id;
+    console.log(`💰 사용자 ${userId}의 매장 ${orderData.storeId} 포인트 조회 중...`);
+
     try {
-      // 전역 userInfo 객체에서 사용자 ID 가져오기
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-      if (!userInfo || !userInfo.id) {
-        document.getElementById('storePointDisplay').textContent = '로그인 필요';
-        console.warn('⚠️ 사용자 정보를 찾을 수 없습니다. 로그인이 필요합니다.');
-        return;
-      }
-
-      const userId = userInfo.id;
-      console.log(`💰 사용자 ${userId}의 매장 ${orderData.storeId} 포인트 조회 중...`);
-
       const response = await fetch(`/api/regular-levels/user/${userId}/store/${orderData.storeId}/points`);
       const data = await response.json();
 
@@ -578,50 +610,45 @@ async function renderPay(currentOrder, store, tableNum) {
 
   // 쿠폰 로드
   async function loadCoupons() {
-    try {
-      // 전역 userInfo 객체에서 사용자 ID 가져오기
-      const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-      if (!userInfo || !userInfo.id) {
-        document.getElementById('couponList').innerHTML = '<p>로그인이 필요합니다</p>';
-        console.warn('⚠️ 쿠폰 로드: 사용자 정보를 찾을 수 없습니다.');
-        return;
-      }
+    // userInfo 가져오기
+    const userInfo = getUserInfoSafely();
+    if (!userInfo || !userInfo.id) {
+      document.getElementById('couponList').innerHTML = '<p>로그인이 필요합니다</p>';
+      console.warn('⚠️ 쿠폰 로드: 사용자 정보를 찾을 수 없습니다.');
+      return;
+    }
 
-      const userId = userInfo.id;
-      console.log(`🎫 사용자 ${userId}의 쿠폰 조회 중...`);
+    const userId = userInfo.id;
+    console.log(`🎫 사용자 ${userId}의 쿠폰 조회 중...`);
 
-      // 사용자 정보에서 쿠폰 데이터 가져오기
-      const response = await fetch(`/api/auth/user/${userId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
+    // 사용자 정보에서 쿠폰 데이터 가져오기
+    const response = await fetch(`/api/auth/user/${userId}`);
 
-      if (data.success && data.user && data.user.coupons && data.user.coupons.unused && data.user.coupons.unused.length > 0) {
-        console.log(`✅ 사용 가능한 쿠폰 ${data.user.coupons.unused.length}개 발견`);
-        
-        const couponSelect = document.createElement('select');
-        couponSelect.id = 'couponSelect';
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-        couponSelect.innerHTML = `
-          <option value="">쿠폰을 선택하세요</option>
-          ${data.user.coupons.unused.map(coupon => `
-            <option value="${coupon.id}" data-discount="${coupon.discountValue || coupon.discount_amount || 0}">
-              ${coupon.name} - ${(coupon.discountValue || coupon.discount_amount || 0).toLocaleString()}원 할인
-            </option>
-          `).join('')}
-        `;
+    const data = await response.json();
 
-        document.getElementById('couponList').appendChild(couponSelect);
-      } else {
-        console.log('ℹ️ 사용 가능한 쿠폰이 없습니다');
-        document.getElementById('couponList').innerHTML = '<p>사용 가능한 쿠폰이 없습니다</p>';
-      }
-    } catch (error) {
-      console.error('❌ 쿠폰 조회 실패:', error);
-      document.getElementById('couponList').innerHTML = '<p>쿠폰 조회에 실패했습니다</p>';
+    if (data.success && data.user && data.user.coupons && data.user.coupons.unused && data.user.coupons.unused.length > 0) {
+      console.log(`✅ 사용 가능한 쿠폰 ${data.user.coupons.unused.length}개 발견`);
+
+      const couponSelect = document.createElement('select');
+      couponSelect.id = 'couponSelect';
+
+      couponSelect.innerHTML = `
+        <option value="">쿠폰을 선택하세요</option>
+        ${data.user.coupons.unused.map(coupon => `
+          <option value="${coupon.id}" data-discount="${coupon.discountValue || coupon.discount_amount || 0}">
+            ${coupon.name} - ${(coupon.discountValue || coupon.discount_amount || 0).toLocaleString()}원 할인
+          </option>
+        `).join('')}
+      `;
+
+      document.getElementById('couponList').appendChild(couponSelect);
+    } else {
+      console.log('ℹ️ 사용 가능한 쿠폰이 없습니다');
+      document.getElementById('couponList').innerHTML = '<p>사용 가능한 쿠폰이 없습니다</p>';
     }
   }
 
@@ -645,14 +672,14 @@ async function renderPay(currentOrder, store, tableNum) {
       const value = parseInt(e.target.value) || 0;
       const maxPoints = parseInt(e.target.max) || 0;
       const maxUsable = Math.min(maxPoints, orderData.total);
-      
+
       if (value > maxUsable) {
         e.target.value = maxUsable;
       }
       if (value < 0) {
         e.target.value = 0;
       }
-      
+
       calculateFinalAmount();
     });
 
@@ -668,10 +695,10 @@ async function renderPay(currentOrder, store, tableNum) {
       const usePointInput = document.getElementById('usePoint');
       const usePoint = parseInt(usePointInput.value) || 0;
       const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
-      
+
       // 포인트 사용량 재검증
       const validatedPoints = Math.min(usePoint, maxUsable);
-      
+
       const couponSelect = document.getElementById('couponSelect');
       const selectedCouponId = couponSelect ? couponSelect.value : null;
       const couponDiscount = couponSelect ? 
@@ -716,7 +743,7 @@ async function renderPay(currentOrder, store, tableNum) {
     const usePointInput = document.getElementById('usePoint');
     const usePoint = parseInt(usePointInput.value) || 0;
     const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
-    
+
     // 포인트 사용량 실시간 제한
     const validatedPoints = Math.min(usePoint, maxUsable);
     if (usePoint !== validatedPoints) {

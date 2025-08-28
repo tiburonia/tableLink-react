@@ -1,3 +1,32 @@
+// 쿠키에서 userInfo를 가져오는 헬퍼 함수
+function getUserInfoFromCookie() {
+  try {
+    // 쿠키에서 userInfo 찾기
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
+
+    if (userInfoCookie) {
+      const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
+      return JSON.parse(userInfoValue);
+    }
+
+    // 쿠키에 없으면 localStorage 확인
+    const localStorageUserInfo = localStorage.getItem('userInfo');
+    if (localStorageUserInfo) {
+      return JSON.parse(localStorageUserInfo);
+    }
+
+    // window.userInfo 확인
+    if (window.userInfo && window.userInfo.id) {
+      return window.userInfo;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ 사용자 정보 파싱 오류:', error);
+    return null;
+  }
+}
 
 async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0) {
   console.log('💳 결제 확인 처리 시작');
@@ -7,9 +36,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('쿠폰 ID:', couponId);
   console.log('쿠폰 할인:', couponDiscount);
 
-  // userInfo 안전하게 가져오기
-  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  // userInfo 안전하게 가져오기 (쿠키 우선)
+  const userInfo = getUserInfoFromCookie();
   if (!userInfo || !userInfo.id) {
+    console.error('❌ 사용자 정보 없음:', {
+      cookies: document.cookie,
+      localStorage: localStorage.getItem('userInfo'),
+      windowUserInfo: window.userInfo
+    });
     throw new Error('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
   }
 
@@ -18,9 +52,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   try {
     // 토스페이먼츠 결제 처리
     console.log('💳 토스페이먼츠 결제 시작');
-    
+
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+
     // 토스페이먼츠 결제창 호출
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
