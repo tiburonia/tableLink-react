@@ -67,29 +67,33 @@ router.post('/users/check-phone', async (req, res) => {
 
 // 사용자 회원가입 API
 router.post('/users/signup', async (req, res) => {
-  const { id, pw, name, phone } = req.body;
-
-  // 서버 측 유효성 검증
-  if (!id || !pw) {
-    return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다' });
-  }
-
-  // 아이디 형식 검증
-  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
-  }
-
-  // 비밀번호 길이 검증
-  if (pw.length < 4) {
-    return res.status(400).json({ error: '비밀번호는 최소 4자 이상이어야 합니다' });
-  }
-
-  // 전화번호 형식 검증 (입력된 경우에만)
-  if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
-    return res.status(400).json({ error: '전화번호 형식이 올바르지 않습니다' });
-  }
-
+  const client = await pool.connect();
+  
   try {
+    const { id, pw, name, phone } = req.body;
+
+    // 서버 측 유효성 검증
+    if (!id || !pw) {
+      return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다' });
+    }
+
+    // 아이디 형식 검증
+    if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
+      return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+    }
+
+    // 비밀번호 길이 검증
+    if (pw.length < 4) {
+      return res.status(400).json({ error: '비밀번호는 최소 4자 이상이어야 합니다' });
+    }
+
+    // 전화번호 형식 검증 (입력된 경우에만)
+    if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
+      return res.status(400).json({ error: '전화번호 형식이 올바르지 않습니다' });
+    }
+
+    await client.query('BEGIN');
+
     // 데이터 정제
     const cleanedData = {
       id: id.trim(),
@@ -98,7 +102,8 @@ router.post('/users/signup', async (req, res) => {
       phone: phone ? phone.trim() : null
     };
 
-    await pool.query(`
+    // 회원 생성
+    await client.query(`
       INSERT INTO users (
         id, pw, name, phone, 
         email_notifications, sms_notifications, push_notifications
@@ -112,16 +117,108 @@ router.post('/users/signup', async (req, res) => {
       true,  // sms_notifications 기본값
       false  // push_notifications 기본값
     ]);
-    
+
     console.log(`✅ 새 사용자 가입: ${cleanedData.id} (${cleanedData.name || '익명'})`);
-    res.json({ success: true, message: '회원가입 성공' });
+
+    // 🔄 전화번호가 있는 경우 기존 게스트 주문 자동 연결
+    let transferredOrders = 0;
+    let transferredPayments = 0;
+
+    if (cleanedData.phone) {
+      console.log(`🔍 전화번호 ${cleanedData.phone}로 기존 게스트 주문 확인 중...`);
+
+      // 1. orders 테이블의 게스트 주문을 회원으로 이전
+      const orderTransferResult = await client.query(`
+        UPDATE orders 
+        SET user_id = $1, guest_phone = NULL
+        WHERE guest_phone = $2
+        RETURNING id
+      `, [cleanedData.id, cleanedData.phone]);
+
+      transferredOrders = orderTransferResult.rows.length;
+
+      // 2. paid_orders 테이블의 게스트 주문을 회원으로 이전
+      const paidOrderTransferResult = await client.query(`
+        UPDATE paid_orders 
+        SET user_id = $1, guest_phone = NULL
+        WHERE guest_phone = $2
+        RETURNING id, store_id, final_amount
+      `, [cleanedData.id, cleanedData.phone]);
+
+      transferredPayments = paidOrderTransferResult.rows.length;
+
+      // 3. user_store_stats 테이블에 매장별 통계 정보 생성/업데이트
+      if (paidOrderTransferResult.rows.length > 0) {
+        try {
+          console.log(`📊 매장별 통계 정보 생성 중...`);
+
+          const statsData = {};
+          for (const order of paidOrderTransferResult.rows) {
+            const storeId = order.store_id;
+            if (!statsData[storeId]) {
+              statsData[storeId] = {
+                totalSpent: 0,
+                visitCount: 0,
+                points: 0
+              };
+            }
+            statsData[storeId].totalSpent += order.final_amount;
+            statsData[storeId].visitCount += 1;
+            statsData[storeId].points += Math.floor(order.final_amount * 0.1);
+          }
+
+          // 각 매장별 통계 정보 삽입
+          for (const [storeId, stats] of Object.entries(statsData)) {
+            await client.query(`
+              INSERT INTO user_store_stats (user_id, store_id, points, total_spent, visit_count, updated_at)
+              VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+              ON CONFLICT (user_id, store_id) 
+              DO UPDATE SET 
+                points = user_store_stats.points + $3,
+                total_spent = user_store_stats.total_spent + $4,
+                visit_count = user_store_stats.visit_count + $5,
+                updated_at = CURRENT_TIMESTAMP
+            `, [cleanedData.id, parseInt(storeId), stats.points, stats.totalSpent, stats.visitCount]);
+          }
+
+          console.log(`✅ ${Object.keys(statsData).length}개 매장 통계 정보 생성 완료`);
+        } catch (statsError) {
+          console.warn('⚠️ 매장별 통계 생성 실패:', statsError);
+        }
+      }
+
+      // 4. guests 테이블에서 해당 전화번호 삭제
+      if (transferredOrders > 0 || transferredPayments > 0) {
+        await client.query('DELETE FROM guests WHERE phone = $1', [cleanedData.phone]);
+        console.log(`🗑️ 게스트 데이터 정리 완료: ${cleanedData.phone}`);
+      }
+
+      console.log(`🔄 게스트 주문 자동 연결 완료 - 주문: ${transferredOrders}개, 결제내역: ${transferredPayments}개`);
+    }
+
+    await client.query('COMMIT');
+    
+    res.json({ 
+      success: true, 
+      message: '회원가입 성공',
+      transferredData: cleanedData.phone ? {
+        transferredOrders,
+        transferredPayments,
+        phone: cleanedData.phone
+      } : null
+    });
+
   } catch (error) {
+    await client.query('ROLLBACK');
+    
     if (error.code === '23505') {
       res.status(409).json({ error: '이미 존재하는 아이디입니다' });
     } else {
       console.error('회원가입 실패:', error);
       res.status(500).json({ error: '회원가입 처리 중 오류가 발생했습니다' });
     }
+  } finally {
+    client.release();
   }
 });
 
