@@ -34,6 +34,17 @@ async function renderPay(currentOrder, store, tableNum) {
   const userInfo = getUserInfoSafely();
   console.log('userInfo:', userInfo);
 
+  // 토스페이먼츠 모듈 미리 로드
+  if (!window.requestTossPayment) {
+    try {
+      console.log('🔄 토스페이먼츠 모듈 미리 로드 중...');
+      await import('/TLG/pages/store/pay/tossPayments.js');
+      console.log('✅ 토스페이먼츠 모듈 미리 로드 완료');
+    } catch (error) {
+      console.error('❌ 토스페이먼츠 모듈 로드 실패:', error);
+    }
+  }
+
   // confirmPay 함수 동적 로드
   if (!window.confirmPay) {
     try {

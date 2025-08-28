@@ -50,6 +50,20 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('✅ 사용자 정보 확인:', userInfo.id);
 
   try {
+    // 토스페이먼츠 모듈 동적 로드
+    if (!window.requestTossPayment) {
+      console.log('🔄 토스페이먼츠 모듈 로드 중...');
+      await import('/TLG/pages/store/pay/tossPayments.js');
+      
+      // 모듈 로드 후 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (!window.requestTossPayment) {
+        throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다.');
+      }
+      console.log('✅ 토스페이먼츠 모듈 로드 완료');
+    }
+
     // 토스페이먼츠 결제 처리
     console.log('💳 토스페이먼츠 결제 시작');
 
