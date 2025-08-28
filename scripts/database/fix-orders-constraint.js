@@ -114,11 +114,11 @@ async function fixOrdersConstraint() {
     
     // 7. 제약조건 확인
     const constraintCheck = await client.query(`
-      SELECT constraint_name, 
+      SELECT conname as constraint_name, 
              pg_get_constraintdef(oid) as definition
       FROM pg_constraint 
       WHERE conrelid = 'orders'::regclass 
-      AND constraint_name = 'chk_orders_payment_reference'
+      AND conname = 'chk_orders_payment_reference'
     `);
     
     if (constraintCheck.rows.length > 0) {
