@@ -1,13 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
-// 토스페이먼츠 샌드박스 설정
-const TOSS_CLIENT_KEY = process.env.TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
-const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
+// 토스페이먼츠 샌드박스 설정 - 환경변수에서 키 가져오기
+const TOSS_CLIENT_KEY = process.env.TOSS_CLIENT_KEY;
+const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const TOSS_API_URL = 'https://api.tosspayments.com/v1/payments';
+
+// 키가 설정되지 않은 경우 경고
+if (!TOSS_CLIENT_KEY || !TOSS_SECRET_KEY) {
+  console.warn('⚠️ 토스페이먼츠 API 키가 환경변수에 설정되지 않았습니다.');
+  console.warn('TOSS_CLIENT_KEY와 TOSS_SECRET_KEY 환경변수를 설정해주세요.');
+}
 
 // 클라이언트 키 제공
 router.get('/client-key', (req, res) => {
+  if (!TOSS_CLIENT_KEY) {
+    return res.status(500).json({ 
+      success: false,
+      error: '토스페이먼츠 클라이언트 키가 설정되지 않았습니다.' 
+    });
+  }
+
   res.json({ 
     success: true,
     clientKey: TOSS_CLIENT_KEY 
@@ -20,6 +33,17 @@ router.post('/success', async (req, res) => {
     const { paymentKey, orderId, amount } = req.body;
 
     console.log('✅ 토스페이먼츠 결제 승인 요청:', { paymentKey, orderId, amount });
+
+    // 키 검증
+    if (!TOSS_SECRET_KEY) {
+      console.error('❌ 토스페이먼츠 시크릿 키가 설정되지 않음');
+      return res.status(500).json({
+        success: false,
+        error: '토스페이먼츠 설정이 완료되지 않았습니다.'
+      });
+    }
+
+    console.log('🔑 사용 중인 시크릿 키 (앞 4자리):', TOSS_SECRET_KEY.substring(0, 4) + '...');
 
     // 토스페이먼츠 결제 승인
     const response = await fetch(`${TOSS_API_URL}/confirm`, {
