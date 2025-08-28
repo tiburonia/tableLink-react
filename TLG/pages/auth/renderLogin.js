@@ -301,6 +301,7 @@ async function renderLogin() {
         transform: translateY(-28px) scale(0.85);
         color: #667eea;
         font-weight: 600;
+        opacity: 0;
       }
 
       .form-label {
