@@ -111,7 +111,11 @@
                 const orderId = urlParams.get('orderId');
                 const amount = urlParams.get('amount');
 
+                console.log('📋 URL 파라미터:', { paymentKey, orderId, amount });
+                console.log('🔗 전체 URL:', window.location.href);
+
                 if (!paymentKey || !orderId || !amount) {
+                    console.error('❌ 누락된 파라미터:', { paymentKey, orderId, amount });
                     throw new Error('결제 정보가 올바르지 않습니다.');
                 }
 
