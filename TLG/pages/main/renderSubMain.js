@@ -338,9 +338,9 @@ async function apiFetchUserStats() {
     }
 
     const [ordersRes, reviewsRes, favoritesRes, pointsRes] = await Promise.allSettled([
-      fetch(`/api/orders/mypage/${userInfo.id}?limit=1000`),
+      fetch(`/api/orders/users/${userInfo.id}?limit=1000`),
       fetch(`/api/reviews/users/${userInfo.id}`),
-      fetch(`/api/users/favorites/${userInfo.id}`),
+      fetch(`/api/auth/users/favorites/${userInfo.id}`),
       fetch(`/api/regular-levels/user/${userInfo.id}/all-points`)
     ]);
 
@@ -672,7 +672,7 @@ async function apiFetchFavorites() {
   try {
     if (!userInfo?.id) return [];
     
-    const response = await fetch(`/api/users/favorites/${userInfo.id}`);
+    const response = await fetch(`/api/auth/users/favorites/${userInfo.id}`);
     if (!response.ok) throw new Error('즐겨찾기 조회 실패');
     
     const data = await response.json();
@@ -687,7 +687,7 @@ async function apiFetchRecentStores() {
   try {
     if (!userInfo?.id) return [];
     
-    const response = await fetch(`/api/orders/mypage/${userInfo.id}?limit=5`);
+    const response = await fetch(`/api/orders/users/${userInfo.id}?limit=5`);
     if (!response.ok) throw new Error('최근 방문 조회 실패');
     
     const data = await response.json();
