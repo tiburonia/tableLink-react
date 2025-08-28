@@ -156,6 +156,47 @@ async function renderPay(currentOrder, store, tableNum) {
           <div id="couponList" class="coupon-select"></div>
         </section>
 
+        <!-- 결제 수단 선택 -->
+        <section class="payment-method-section">
+          <div class="section-title">
+            <h2>결제 수단</h2>
+          </div>
+          <div class="payment-methods">
+            <div class="payment-method-item active" data-method="카드">
+              <div class="method-icon">💳</div>
+              <div class="method-info">
+                <span class="method-name">신용/체크카드</span>
+                <span class="method-desc">간편하고 빠른 결제</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="계좌이체">
+              <div class="method-icon">🏦</div>
+              <div class="method-info">
+                <span class="method-name">계좌이체</span>
+                <span class="method-desc">퀵계좌이체로 간편결제</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="가상계좌">
+              <div class="method-icon">🏪</div>
+              <div class="method-info">
+                <span class="method-name">가상계좌</span>
+                <span class="method-desc">계좌번호 발급 후 입금</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="휴대폰">
+              <div class="method-icon">📱</div>
+              <div class="method-info">
+                <span class="method-name">휴대폰</span>
+                <span class="method-desc">휴대폰 요금과 합산</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+          </div>
+        </section>
+
         <!-- 결제 요약 -->
         <section class="summary-section">
           <div class="summary-details">
@@ -466,6 +507,89 @@ async function renderPay(currentOrder, store, tableNum) {
         font-weight: 500;
       }
 
+      /* 결제 수단 선택 */
+      .payment-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .payment-method-item {
+        display: flex;
+        align-items: center;
+        padding: 16px 20px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        background: #f8fafc;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        gap: 16px;
+      }
+
+      .payment-method-item:hover {
+        border-color: #3b82f6;
+        background: white;
+      }
+
+      .payment-method-item.active {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .method-icon {
+        font-size: 24px;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(59, 130, 246, 0.1);
+        border-radius: 8px;
+      }
+
+      .payment-method-item.active .method-icon {
+        background: rgba(59, 130, 246, 0.2);
+      }
+
+      .method-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .method-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .method-desc {
+        font-size: 13px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .method-check {
+        width: 24px;
+        height: 24px;
+        border: 2px solid #e2e8f0;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+        color: transparent;
+        transition: all 0.2s ease;
+      }
+
+      .payment-method-item.active .method-check {
+        border-color: #3b82f6;
+        background: #3b82f6;
+        color: white;
+      }
+
       /* 결제 요약 */
       .summary-section {
         background: linear-gradient(135deg, #f8fafc, #f1f5f9);
@@ -701,6 +825,23 @@ async function renderPay(currentOrder, store, tableNum) {
       }
     });
 
+    // 결제 수단 선택
+    document.addEventListener('click', (e) => {
+      const methodItem = e.target.closest('.payment-method-item');
+      if (methodItem) {
+        // 모든 결제 수단 선택 해제
+        document.querySelectorAll('.payment-method-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        
+        // 선택된 결제 수단 활성화
+        methodItem.classList.add('active');
+        
+        const selectedMethod = methodItem.dataset.method;
+        console.log('💳 결제 수단 선택:', selectedMethod);
+      }
+    });
+
     // 결제 확인
     document.getElementById('confirmPayBtn').addEventListener('click', async () => {
       const usePointInput = document.getElementById('usePoint');
@@ -717,11 +858,15 @@ async function renderPay(currentOrder, store, tableNum) {
 
       const finalAmount = Math.max(0, orderData.total - validatedPoints - couponDiscount);
 
+      // 선택된 결제 수단 가져오기
+      const selectedPaymentMethod = document.querySelector('.payment-method-item.active')?.dataset.method || '카드';
+
       console.log('💳 결제 확인 버튼 클릭:', {
         validatedPoints,
         selectedCouponId,
         couponDiscount,
-        finalAmount
+        finalAmount,
+        paymentMethod: selectedPaymentMethod
       });
 
       // confirmPay 함수 동적 로드 및 호출
@@ -733,7 +878,7 @@ async function renderPay(currentOrder, store, tableNum) {
         }
 
         if (typeof window.confirmPay === 'function') {
-          window.confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
+          window.confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount, selectedPaymentMethod);
         } else {
           throw new Error('confirmPay 함수를 로드할 수 없습니다');
         }

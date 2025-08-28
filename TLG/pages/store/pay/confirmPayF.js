@@ -28,7 +28,7 @@ function getUserInfoFromCookie() {
   }
 }
 
-async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0) {
+async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0, paymentMethod = '카드') {
   console.log('💳 결제 확인 처리 시작');
   console.log('주문 데이터:', orderData);
   console.log('사용 포인트:', pointsUsed);
@@ -77,7 +77,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       customerName: userInfo.name || '고객',
       customerEmail: userInfo.email || 'guest@tablelink.com',
       customerMobilePhone: userInfo.phone || undefined
-    });
+    }, paymentMethod);
 
     if (!paymentResult.success) {
       throw new Error(paymentResult.message || '결제가 취소되었습니다.');

@@ -45,11 +45,12 @@ async function initTossPayments() {
 /**
  * 토스페이먼츠 결제 요청
  * @param {Object} paymentData - 결제 정보
+ * @param {string} paymentMethod - 결제 수단 ('카드', '계좌이체', '가상계좌')
  * @returns {Promise<Object>} 결제 결과
  */
-async function requestTossPayment(paymentData) {
+async function requestTossPayment(paymentData, paymentMethod = '카드') {
   try {
-    console.log('💳 토스페이먼츠 결제 요청:', paymentData);
+    console.log('💳 토스페이먼츠 결제 요청:', paymentData, '결제수단:', paymentMethod);
     
     const toss = await initTossPayments();
 
@@ -58,8 +59,8 @@ async function requestTossPayment(paymentData) {
     const successUrl = `${baseUrl}/toss-success.html?orderId=${paymentData.orderId}&amount=${paymentData.amount}`;
     const failUrl = `${baseUrl}/toss-fail.html?orderId=${paymentData.orderId}`;
 
-    // 결제 요청
-    const result = await toss.requestPayment('카드', {
+    // 결제 공통 옵션
+    const paymentOptions = {
       amount: paymentData.amount,
       orderId: paymentData.orderId,
       orderName: paymentData.orderName,
@@ -68,19 +69,50 @@ async function requestTossPayment(paymentData) {
       customerMobilePhone: paymentData.customerMobilePhone,
       successUrl: successUrl,
       failUrl: failUrl,
-    });
+    };
 
-    console.log('✅ 토스페이먼츠 결제 요청 성공:', result);
+    let result;
+
+    // 결제 수단별 처리
+    switch (paymentMethod) {
+      case '카드':
+        result = await toss.requestPayment('카드', paymentOptions);
+        break;
+        
+      case '계좌이체':
+        // 퀵계좌이체 (간편결제)
+        result = await toss.requestPayment('계좌이체', paymentOptions);
+        break;
+        
+      case '가상계좌':
+        // 가상계좌는 입금 기한 설정 가능
+        const virtualAccountOptions = {
+          ...paymentOptions,
+          validHours: 24 // 24시간 후 만료
+        };
+        result = await toss.requestPayment('가상계좌', virtualAccountOptions);
+        break;
+        
+      case '휴대폰':
+        result = await toss.requestPayment('휴대폰', paymentOptions);
+        break;
+        
+      default:
+        throw new Error(`지원하지 않는 결제 수단입니다: ${paymentMethod}`);
+    }
+
+    console.log(`✅ 토스페이먼츠 ${paymentMethod} 결제 요청 성공:`, result);
 
     return {
       success: true,
       paymentKey: result.paymentKey,
       orderId: result.orderId,
-      method: result.method
+      method: result.method || paymentMethod,
+      paymentMethod: paymentMethod
     };
 
   } catch (error) {
-    console.error('❌ 토스페이먼츠 결제 실패:', error);
+    console.error(`❌ 토스페이먼츠 ${paymentMethod} 결제 실패:`, error);
     
     if (error.code === 'USER_CANCEL') {
       return {
@@ -91,7 +123,7 @@ async function requestTossPayment(paymentData) {
     
     return {
       success: false,
-      message: error.message || '결제 처리 중 오류가 발생했습니다.'
+      message: error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`
     };
   }
 }
