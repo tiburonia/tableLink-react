@@ -7,26 +7,30 @@ const pool = require('../shared/config/database');
 router.post('/users/check-id', async (req, res) => {
   const { id } = req.body;
 
+  console.log(`🔍 아이디 중복 확인 요청: ${id}`);
+
   if (!id) {
-    return res.status(400).json({ error: '아이디를 입력해주세요' });
+    return res.status(400).json({ success: false, error: '아이디를 입력해주세요' });
   }
 
   // 아이디 형식 검증
   if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-    return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+    return res.status(400).json({ success: false, error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
   }
 
   try {
     const result = await pool.query('SELECT id FROM users WHERE id = $1', [id.trim()]);
     
     if (result.rows.length > 0) {
-      res.json({ available: false, message: '이미 사용 중인 아이디입니다' });
+      console.log(`❌ 아이디 중복: ${id}`);
+      res.json({ success: true, available: false, message: '이미 사용 중인 아이디입니다' });
     } else {
-      res.json({ available: true, message: '사용 가능한 아이디입니다' });
+      console.log(`✅ 아이디 사용 가능: ${id}`);
+      res.json({ success: true, available: true, message: '사용 가능한 아이디입니다' });
     }
   } catch (error) {
-    console.error('아이디 중복 체크 실패:', error);
-    res.status(500).json({ error: '아이디 중복 체크 중 오류가 발생했습니다' });
+    console.error('❌ 아이디 중복 체크 실패:', error);
+    res.status(500).json({ success: false, error: '아이디 중복 체크 중 오류가 발생했습니다' });
   }
 });
 
@@ -34,26 +38,30 @@ router.post('/users/check-id', async (req, res) => {
 router.post('/users/check-phone', async (req, res) => {
   const { phone } = req.body;
 
+  console.log(`📞 전화번호 중복 확인 요청: ${phone}`);
+
   if (!phone) {
-    return res.status(400).json({ error: '전화번호를 입력해주세요' });
+    return res.status(400).json({ success: false, error: '전화번호를 입력해주세요' });
   }
 
   // 전화번호 형식 검증
   if (!/^010-\d{4}-\d{4}$/.test(phone)) {
-    return res.status(400).json({ error: '올바른 전화번호 형식이 아닙니다' });
+    return res.status(400).json({ success: false, error: '올바른 전화번호 형식이 아닙니다' });
   }
 
   try {
     const result = await pool.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
     
     if (result.rows.length > 0) {
-      res.json({ available: false, message: '이미 등록된 전화번호입니다' });
+      console.log(`❌ 전화번호 중복: ${phone}`);
+      res.json({ success: true, available: false, message: '이미 등록된 전화번호입니다' });
     } else {
-      res.json({ available: true, message: '사용 가능한 전화번호입니다' });
+      console.log(`✅ 전화번호 사용 가능: ${phone}`);
+      res.json({ success: true, available: true, message: '사용 가능한 전화번호입니다' });
     }
   } catch (error) {
-    console.error('전화번호 중복 체크 실패:', error);
-    res.status(500).json({ error: '전화번호 중복 체크 중 오류가 발생했습니다' });
+    console.error('❌ 전화번호 중복 체크 실패:', error);
+    res.status(500).json({ success: false, error: '전화번호 중복 체크 중 오류가 발생했습니다' });
   }
 });
 
