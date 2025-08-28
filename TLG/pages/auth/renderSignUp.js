@@ -18,11 +18,12 @@ function renderSignUp() {
         min-height: 100vh;
         background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         padding: 20px;
         position: relative;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
       }
 
       .signup-page::before {
@@ -48,10 +49,13 @@ function renderSignUp() {
         padding: 40px;
         width: 100%;
         max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
         box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
         border: 1px solid rgba(255, 255, 255, 0.2);
         position: relative;
         z-index: 1;
+        margin: 20px 0;
       }
 
       .signup-header {
@@ -425,9 +429,14 @@ function renderSignUp() {
 
       /* 반응형 디자인 */
       @media (max-width: 640px) {
+        .signup-page {
+          padding: 10px;
+        }
+
         .signup-container {
           padding: 24px;
-          margin: 10px;
+          margin: 10px 0;
+          max-height: 95vh;
         }
 
         .signup-title {
@@ -437,6 +446,51 @@ function renderSignUp() {
         .form-input {
           padding: 14px 16px;
           font-size: 16px;
+        }
+      }
+
+      /* 세로 화면 대응 */
+      @media (max-height: 800px) {
+        .signup-container {
+          max-height: 95vh;
+          padding: 30px;
+        }
+
+        .signup-header {
+          margin-bottom: 30px;
+        }
+
+        .logo-container {
+          width: 60px;
+          height: 60px;
+          margin-bottom: 16px;
+        }
+
+        .logo-text {
+          font-size: 24px;
+        }
+
+        .signup-title {
+          font-size: 28px;
+        }
+      }
+
+      @media (max-height: 700px) {
+        .signup-container {
+          max-height: 98vh;
+          padding: 20px;
+        }
+
+        .signup-header {
+          margin-bottom: 20px;
+        }
+
+        .form-container {
+          gap: 18px;
+        }
+
+        .form-group {
+          margin-bottom: 0;
         }
       }
 
