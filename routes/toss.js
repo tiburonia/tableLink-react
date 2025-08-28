@@ -72,3 +72,77 @@ router.get('/fail', async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const crypto = require('crypto');
+
+// 토스페이먼츠 샌드박스 설정
+const TOSS_CLIENT_KEY = process.env.TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
+const TOSS_API_URL = 'https://api.tosspayments.com/v1/payments';
+
+// 클라이언트 키 제공
+router.get('/client-key', (req, res) => {
+  res.json({ clientKey: TOSS_CLIENT_KEY });
+});
+
+// 결제 성공 처리
+router.post('/success', async (req, res) => {
+  try {
+    const { paymentKey, orderId, amount } = req.body;
+
+    // 토스페이먼츠 결제 승인
+    const response = await fetch(`${TOSS_API_URL}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(TOSS_SECRET_KEY + ':').toString('base64')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount
+      })
+    });
+
+    const paymentData = await response.json();
+
+    if (response.ok) {
+      console.log('✅ 토스페이먼츠 결제 승인 성공:', paymentData);
+      
+      res.json({
+        success: true,
+        paymentKey,
+        orderId,
+        paymentData
+      });
+    } else {
+      console.error('❌ 토스페이먼츠 결제 승인 실패:', paymentData);
+      res.status(400).json({
+        success: false,
+        error: paymentData.message || '결제 승인에 실패했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 토스페이먼츠 결제 승인 에러:', error);
+    res.status(500).json({
+      success: false,
+      error: '결제 승인 처리 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 결제 실패 처리
+router.post('/fail', (req, res) => {
+  const { code, message, orderId } = req.body;
+  
+  console.log('❌ 토스페이먼츠 결제 실패:', { code, message, orderId });
+  
+  res.json({
+    success: false,
+    error: message || '결제가 실패했습니다.'
+  });
+});
+
+module.exports = router;

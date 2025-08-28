@@ -7,7 +7,28 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('쿠폰 할인:', couponDiscount);
 
   try {
-    // 결제 처리 API 호출
+    // 토스페이먼츠 결제 처리
+    console.log('💳 토스페이먼츠 결제 시작');
+    
+    const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // 토스페이먼츠 결제창 호출
+    const paymentResult = await window.requestTossPayment({
+      amount: finalAmount,
+      orderId: orderId,
+      orderName: `${orderData.store} 주문`,
+      customerName: userInfo.name || '고객',
+      customerEmail: userInfo.email || 'guest@tablelink.com',
+      customerMobilePhone: userInfo.phone || undefined
+    });
+
+    if (!paymentResult.success) {
+      throw new Error(paymentResult.message || '결제가 취소되었습니다.');
+    }
+
+    console.log('✅ 토스페이먼츠 결제 성공:', paymentResult);
+
+    // 결제 처리 API 호출 (PG 결제 정보 포함)
     const response = await fetch('/api/orders/pay', {
       method: 'POST',
       headers: {
@@ -30,7 +51,11 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         usedPoint: pointsUsed || 0,
         finalTotal: finalAmount,
         selectedCouponId: couponId,
-        couponDiscount: couponDiscount || 0
+        couponDiscount: couponDiscount || 0,
+        // PG 결제 정보 추가
+        pgPaymentKey: paymentResult.paymentKey,
+        pgOrderId: paymentResult.orderId,
+        pgPaymentMethod: paymentResult.method || 'CARD'
       })
     });
 

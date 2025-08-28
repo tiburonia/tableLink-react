@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 완료 - TableLink</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% {
+                transform: translate3d(0,0,0);
+            }
+            40%, 43% {
+                transform: translate3d(0, -10px, 0);
+            }
+            70% {
+                transform: translate3d(0, -5px, 0);
+            }
+        }
+
+        h1 {
+            color: #1e293b;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .loading {
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✅</div>
+        <h1>결제 처리 중</h1>
+        <p class="loading">결제를 확인하고 있습니다<span class="spinner"></span></p>
+        <button class="btn" id="backBtn" style="display: none;" onclick="goBack()">TableLink로 돌아가기</button>
+    </div>
+
+    <script>
+        async function processPayment() {
+            try {
+                // URL 파라미터에서 결제 정보 가져오기
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentKey = urlParams.get('paymentKey');
+                const orderId = urlParams.get('orderId');
+                const amount = urlParams.get('amount');
+
+                if (!paymentKey || !orderId || !amount) {
+                    throw new Error('결제 정보가 올바르지 않습니다.');
+                }
+
+                // 토스페이먼츠 결제 승인 요청
+                const response = await fetch('/api/toss/success', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        paymentKey,
+                        orderId,
+                        amount: parseInt(amount)
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.querySelector('.container').innerHTML = `
+                        <div class="success-icon">🎉</div>
+                        <h1>결제 완료!</h1>
+                        <p>결제가 성공적으로 처리되었습니다.</p>
+                        <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+                    `;
+                } else {
+                    throw new Error(result.error || '결제 승인에 실패했습니다.');
+                }
+
+            } catch (error) {
+                console.error('❌ 결제 처리 실패:', error);
+                document.querySelector('.container').innerHTML = `
+                    <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
+                    <h1>결제 실패</h1>
+                    <p style="color: #dc2626; margin-bottom: 20px;">${error.message}</p>
+                    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+                `;
+            }
+        }
+
+        function goBack() {
+            if (window.opener) {
+                window.opener.location.href = '/';
+                window.close();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // 페이지 로드 시 결제 처리
+        processPayment();
+    </script>
+</body>
+</html>

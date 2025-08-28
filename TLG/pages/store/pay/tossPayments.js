@@ -19,17 +19,27 @@ async function initTossPayments() {
 
     await new Promise((resolve, reject) => {
       script.onload = resolve;
-      script.onerror = reject;
+      script.onerror = () => reject(new Error('토스페이먼츠 SDK 로드 실패'));
     });
   }
 
-  // 클라이언트 키로 초기화 (환경변수에서 가져옴)
-  const clientKey = await fetch('/api/toss/client-key')
-    .then(res => res.json())
-    .then(data => data.clientKey);
+  // 클라이언트 키로 초기화
+  try {
+    const response = await fetch('/api/toss/client-key');
+    const data = await response.json();
+    
+    if (!data.clientKey) {
+      throw new Error('토스페이먼츠 클라이언트 키를 가져올 수 없습니다.');
+    }
 
-  tossPayments = window.TossPayments(clientKey);
-  return tossPayments;
+    tossPayments = window.TossPayments(data.clientKey);
+    console.log('✅ 토스페이먼츠 SDK 초기화 완료');
+    return tossPayments;
+    
+  } catch (error) {
+    console.error('❌ 토스페이먼츠 초기화 실패:', error);
+    throw error;
+  }
 }
 
 /**
@@ -39,8 +49,16 @@ async function initTossPayments() {
  */
 async function requestTossPayment(paymentData) {
   try {
+    console.log('💳 토스페이먼츠 결제 요청:', paymentData);
+    
     const toss = await initTossPayments();
 
+    // 성공/실패 URL 설정
+    const baseUrl = window.location.origin;
+    const successUrl = `${baseUrl}/toss-success.html?orderId=${paymentData.orderId}&amount=${paymentData.amount}`;
+    const failUrl = `${baseUrl}/toss-fail.html?orderId=${paymentData.orderId}`;
+
+    // 결제 요청
     const result = await toss.requestPayment('카드', {
       amount: paymentData.amount,
       orderId: paymentData.orderId,
@@ -48,9 +66,11 @@ async function requestTossPayment(paymentData) {
       customerName: paymentData.customerName,
       customerEmail: paymentData.customerEmail,
       customerMobilePhone: paymentData.customerMobilePhone,
-      successUrl: window.location.origin + '/api/toss/success',
-      failUrl: window.location.origin + '/api/toss/fail',
+      successUrl: successUrl,
+      failUrl: failUrl,
     });
+
+    console.log('✅ 토스페이먼츠 결제 요청 성공:', result);
 
     return {
       success: true,
@@ -61,6 +81,14 @@ async function requestTossPayment(paymentData) {
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 결제 실패:', error);
+    
+    if (error.code === 'USER_CANCEL') {
+      return {
+        success: false,
+        message: '결제를 취소했습니다.'
+      };
+    }
+    
     return {
       success: false,
       message: error.message || '결제 처리 중 오류가 발생했습니다.'
@@ -70,3 +98,43 @@ async function requestTossPayment(paymentData) {
 
 // 전역 함수로 등록
 window.requestTossPayment = requestTossPayment;
+
+// 결제 성공/실패 페이지용 유틸리티
+window.tossPaymentUtils = {
+  // URL 파라미터 파싱
+  getUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      paymentKey: params.get('paymentKey'),
+      orderId: params.get('orderId'),
+      amount: params.get('amount')
+    };
+  },
+
+  // 결제 승인 요청
+  async confirmPayment(paymentKey, orderId, amount) {
+    try {
+      const response = await fetch('/api/toss/success', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentKey,
+          orderId,
+          amount: parseInt(amount)
+        })
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error('❌ 결제 승인 요청 실패:', error);
+      return {
+        success: false,
+        error: '결제 승인 처리 중 오류가 발생했습니다.'
+      };
+    }
+  }
+};
+
+console.log('✅ 토스페이먼츠 SDK 모듈 로드 완료');
