@@ -1617,7 +1617,7 @@ function setupMypageTouchEvents(panel, panelContainer) {
 // 즐겨찾기 매장을 불러오는 함수
 async function loadFavoriteStores(userId) {
   try {
-    const response = await fetch(`/api/users/favorites/${userId}`);
+    const response = await fetch(`/api/auth/users/favorites/${userId}`);
     if (!response.ok) {
       throw new Error('즐겨찾기 매장 정보 조회 실패');
     }
@@ -1668,7 +1668,7 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
   // 통계 정보 업데이트
   if (totalOrders) {
     try {
-      const allOrdersResponse = await fetch(`/api/orders/mypage/${userInfo.id}?limit=1000`);
+      const allOrdersResponse = await fetch(`/api/orders/mypage/${window.userInfo.id}?limit=1000`);
       if (allOrdersResponse.ok) {
         const allOrdersData = await allOrdersResponse.json();
         totalOrders.textContent = allOrdersData.orders?.length || 0;
@@ -1682,7 +1682,7 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
 
   if (totalReviews) {
     try {
-      const reviewsResponse = await fetch(`/api/reviews/users/${userInfo.id}`);
+      const reviewsResponse = await fetch(`/api/reviews/users/${window.userInfo.id}`);
       if (reviewsResponse.ok) {
         const reviewsData = await reviewsResponse.json();
         totalReviews.textContent = reviewsData.total || 0;
@@ -1716,24 +1716,40 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
 // 사용자 데이터를 비동기로 로드하는 함수
 async function loadUserData() {
   try {
-    const userResponse = await fetch('/api/users/info', {
+    // userInfo 존재 여부 확인
+    if (!window.userInfo || !window.userInfo.id) {
+      console.error('❌ 사용자 정보가 없습니다. 로그인이 필요합니다.');
+      // 로그인 페이지로 리다이렉트
+      if (typeof renderLogin === 'function') {
+        renderLogin();
+        return;
+      }
+      throw new Error('로그인이 필요합니다');
+    }
+
+    console.log('📖 사용자 데이터 로드 시작:', window.userInfo.id);
+
+    const userResponse = await fetch('/api/auth/users/info', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: userInfo.id })
+      body: JSON.stringify({ userId: window.userInfo.id })
     });
 
-    if (!userResponse.ok) throw new Error('사용자 정보 조회 실패');
+    if (!userResponse.ok) {
+      console.error('❌ 사용자 정보 API 응답 실패:', userResponse.status, userResponse.statusText);
+      throw new Error('사용자 정보 조회 실패');
+    }
     const userData = await userResponse.json();
     const currentUserInfo = userData.user;
 
-    const ordersResponse = await fetch(`/api/orders/mypage/${userInfo.id}?limit=3`);
+    const ordersResponse = await fetch(`/api/orders/mypage/${window.userInfo.id}?limit=3`);
     let ordersData = [];
     if (ordersResponse.ok) {
       const ordersResult = await ordersResponse.json();
       ordersData = ordersResult.orders || [];
     }
 
-    const favoriteStoresData = await loadFavoriteStores(userInfo.id);
+    const favoriteStoresData = await loadFavoriteStores(window.userInfo.id);
 
     // 프로필 정보 업데이트
     updateProfileSection(currentUserInfo, ordersData, favoriteStoresData);
@@ -1842,10 +1858,15 @@ async function updateReviewList(currentUserInfo) {
   reviewList.innerHTML = '';
 
   try {
+    console.log('📝 리뷰 내역 조회 시작:', currentUserInfo.id);
     const response = await fetch(`/api/reviews/users/${currentUserInfo.id}`);
-    if (!response.ok) throw new Error('리뷰 조회 실패');
+    if (!response.ok) {
+      console.error('❌ 리뷰 API 응답 실패:', response.status);
+      throw new Error('리뷰 조회 실패');
+    }
 
     const data = await response.json();
+    console.log('📝 리뷰 데이터:', data);
     if (data.success && data.reviews && data.reviews.length > 0) {
       data.reviews.slice(0, 3).forEach(review => {
         const reviewDiv = document.createElement('div');
