@@ -1,371 +1,391 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>결제 완료 - TableLink</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        .success-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-            animation: bounce 1s ease-in-out;
-        }
-
-        @keyframes bounce {
-            0%, 20%, 53%, 80%, 100% {
-                transform: translate3d(0,0,0);
-            }
-            40%, 43% {
-                transform: translate3d(0, -10px, 0);
-            }
-            70% {
-                transform: translate3d(0, -5px, 0);
-            }
-        }
-
-        h1 {
-            color: #1e293b;
-            margin-bottom: 16px;
-            font-size: 24px;
-        }
-
-        .loading {
-            color: #64748b;
-            margin-bottom: 20px;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 50%;
-            border-top-color: #3b82f6;
-            animation: spin 1s ease-in-out infinite;
-            margin-left: 8px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-        }
-
-        .btn.primary {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        }
-
-        .btn.secondary {
-            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-        }
-
-        .btn.primary:hover {
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-        }
-
-        .btn.secondary:hover {
-            box-shadow: 0 4px 12px rgba(77, 89, 101, 0.3);
-        }
-
-        .payment-info {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 20px 0;
-            text-align: left;
-            border: 1px solid #e5e7eb;
-        }
-
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .info-item .label {
-            color: #4b5563;
-            font-weight: 500;
-        }
-
-        .info-item .value {
-            color: #1f2937;
-            font-weight: 600;
-        }
-
-        .order-status {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-            border: 1px solid #86efac;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .status-icon {
-            font-size: 32px;
-        }
-
-        .status-text h3 {
-            margin: 0 0 4px 0;
-            color: #166534;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .status-text p {
-            margin: 0;
-            color: #22c55e;
-            font-size: 14px;
-        }
-
-        .warning-message {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 1px solid #fbbf24;
-            border-radius: 12px;
-            padding: 20px;
-            margin: 20px 0;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            text-align: center;
-        }
-
-        .warning-icon {
-            font-size: 32px;
-        }
-
-        .warning-message p {
-            margin: 0;
-            color: #92400e;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .actions {
-            margin-top: 32px;
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="success-icon">✅</div>
-        <h1>결제 처리 중</h1>
-        <p class="loading">결제를 확인하고 있습니다<span class="spinner"></span></p>
-        <button class="btn" id="backBtn" style="display: none;" onclick="goBack()">TableLink로 돌아가기</button>
-    </div>
-
-    <script>
-        function goToMain() {
-            window.opener ? window.opener.location.href = '/' : window.location.href = '/';
-        }
-
-        function goToMyPage() {
-            window.opener ? window.opener.location.href = '/mypage' : window.location.href = '/mypage';
-        }
-
-        function showSuccessPage(paymentKey, orderId, amount, orderResult = null) {
-            document.querySelector('.container').innerHTML = `
-                <div class="success-content">
-                    <div class="success-icon">✅</div>
-                    <h1>결제 및 주문 완료!</h1>
-                    <p>토스페이먼츠를 통한 결제가 완료되고 주문이 접수되었습니다.</p>
-
-                    <div class="payment-info">
-                        <div class="info-item">
-                            <span class="label">결제 금액:</span>
-                            <span class="value">${parseInt(amount).toLocaleString()}원</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">주문 번호:</span>
-                            <span class="value">${orderId}</span>
-                        </div>
-                        ${orderResult ? `
-                        <div class="info-item">
-                            <span class="label">주문 ID:</span>
-                            <span class="value">${orderResult.result?.orderId || 'N/A'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="label">매장:</span>
-                            <span class="value">${orderResult.result?.storeName || 'N/A'}</span>
-                        </div>
-                        ` : ''}
-                        <div class="info-item">
-                            <span class="label">결제 키:</span>
-                            <span class="value">${paymentKey}</span>
-                        </div>
-                    </div>
-
-                    ${orderResult ? `
-                    <div class="order-status">
-                        <div class="status-icon">🍳</div>
-                        <div class="status-text">
-                            <h3>주문이 접수되었습니다!</h3>
-                            <p>매장에서 조리를 시작합니다.</p>
-                        </div>
-                    </div>
-                    ` : `
-                    <div class="warning-message">
-                        <div class="warning-icon">⚠️</div>
-                        <p>결제는 완료되었으나 주문 정보를 찾을 수 없습니다.<br>고객센터로 문의해주세요.</p>
-                    </div>
-                    `}
-
-                    <div class="actions">
-                        <button onclick="goToMain()" class="btn primary">메인으로</button>
-                        <button onclick="goToMyPage()" class="btn secondary">주문내역 보기</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        async function processPayment() {
-            try {
-                // URL 파라미터에서 결제 정보 가져오기
-                const urlParams = new URLSearchParams(window.location.search);
-                const paymentKey = urlParams.get('paymentKey');
-                const orderId = urlParams.get('orderId');
-                const amount = urlParams.get('amount');
-
-                console.log('📋 URL 파라미터:', { paymentKey, orderId, amount });
-                console.log('🔗 전체 URL:', window.location.href);
-
-                if (!paymentKey || !orderId || !amount) {
-                    console.error('❌ 누락된 파라미터:', { paymentKey, orderId, amount });
-                    throw new Error('결제 정보가 올바르지 않습니다.');
-                }
-
-                // 3. 결제 승인 API 호출
-                const approvalResponse = await fetch('/api/toss/success', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        paymentKey: paymentKey,
-                        orderId: orderId,
-                        amount: parseInt(amount)
-                    })
-                });
-
-                if (!approvalResponse.ok) {
-                    throw new Error('결제 승인에 실패했습니다.');
-                }
-
-                const approvalResult = await approvalResponse.json();
-                console.log('✅ 토스페이먼츠 결제 승인 완료:', approvalResult);
-
-                // 4. 주문 생성 API 호출 (저장된 주문 데이터 사용)
-                const savedOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
-                console.log('💾 저장된 주문 데이터:', savedOrderData);
-
-                if (savedOrderData && savedOrderData.userId) {
-                    console.log('🔄 주문 생성 API 호출 시작');
-
-                    const orderResponse = await fetch('/api/orders/pay', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            ...savedOrderData,
-                            pgPaymentKey: paymentKey,
-                            pgOrderId: orderId,
-                            pgPaymentMethod: 'CARD'
-                        })
-                    });
-
-                    if (!orderResponse.ok) {
-                        const errorData = await orderResponse.json();
-                        throw new Error(errorData.error || '주문 생성에 실패했습니다.');
-                    }
-
-                    const orderResult = await orderResponse.json();
-                    console.log('✅ 주문 생성 완료:', orderResult);
-
-                    // 저장된 주문 데이터 삭제
-                    sessionStorage.removeItem('pendingOrderData');
-
-                    // 5. 성공 페이지 표시 (주문 정보 포함)
-                    showSuccessPage(paymentKey, orderId, amount, orderResult);
-                } else {
-                    console.warn('⚠️ 저장된 주문 데이터가 없습니다. 결제만 승인됨');
-                    showSuccessPage(paymentKey, orderId, amount);
-                }
-
-            } catch (error) {
-                console.error('❌ 결제 처리 실패:', error);
-                document.querySelector('.container').innerHTML = `
-                    <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
-                    <h1>결제 실패</h1>
-                    <p style="color: #dc2626; margin-bottom: 20px;">${error.message}</p>
-                    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-                `;
-            }
-        }
-
-        function goBack() {
-            if (window.opener) {
-                window.opener.location.href = '/';
-                window.close();
-            } else {
-                window.location.href = '/';
-            }
-        }
-
-        // 페이지 로드 시 결제 처리
-        processPayment();
-    </script>
-</body>
-</html>
+"},
+  {"line": 2, "content": "<!DOCTYPE html>"},
+  {"line": 3, "content": "<html lang=\"ko\">"},
+  {"line": 4, "content": "<head>"},
+  {"line": 5, "content": "    <meta charset=\"UTF-8\">"},
+  {"line": 6, "content": "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"},
+  {"line": 7, "content": "    <title>결제 완료 - TableLink</title>"},
+  {"line": 8, "content": "    <style>"},
+  {"line": 9, "content": "        * {"},
+  {"line": 10, "content": "            margin: 0;"},
+  {"line": 11, "content": "            padding: 0;"},
+  {"line": 12, "content": "            box-sizing: border-box;"},
+  {"line": 13, "content": "        }"},
+  {"line": 14, "content": ""},
+  {"line": 15, "content": "        body {"},
+  {"line": 16, "content": "            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;"},
+  {"line": 17, "content": "            background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);"},
+  {"line": 18, "content": "            display: flex;"},
+  {"line": 19, "content": "            align-items: center;"},
+  {"line": 20, "content": "            justify-content: center;"},
+  {"line": 21, "content": "            min-height: 100vh;"},
+  {"line": 22, "content": "            padding: 20px;"},
+  {"line": 23, "content": "        }"},
+  {"line": 24, "content": ""},
+  {"line": 25, "content": "        .container {"},
+  {"line": 26, "content": "            background: white;"},
+  {"line": 27, "content": "            border-radius: 16px;"},
+  {"line": 28, "content": "            padding: 40px;"},
+  {"line": 29, "content": "            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);"},
+  {"line": 30, "content": "            text-align: center;"},
+  {"line": 31, "content": "            max-width: 400px;"},
+  {"line": 32, "content": "            width: 100%;"},
+  {"line": 33, "content": "        }"},
+  {"line": 34, "content": ""},
+  {"line": 35, "content": "        .success-icon {"},
+  {"line": 36, "content": "            font-size: 64px;"},
+  {"line": 37, "content": "            margin-bottom: 20px;"},
+  {"line": 38, "content": "            animation: bounce 1s ease-in-out;"},
+  {"line": 39, "content": "        }"},
+  {"line": 40, "content": ""},
+  {"line": 41, "content": "        @keyframes bounce {"},
+  {"line": 42, "content": "            0%, 20%, 53%, 80%, 100% {"},
+  {"line": 43, "content": "                transform: translate3d(0,0,0);"},
+  {"line": 44, "content": "            }"},
+  {"line": 45, "content": "            40%, 43% {"},
+  {"line": 46, "content": "                transform: translate3d(0, -10px, 0);"},
+  {"line": 47, "content": "            }"},
+  {"line": 48, "content": "            70% {"},
+  {"line": 49, "content": "                transform: translate3d(0, -5px, 0);"},
+  {"line": 50, "content": "            }"},
+  {"line": 51, "content": "        }"},
+  {"line": 52, "content": ""},
+  {"line": 53, "content": "        h1 {"},
+  {"line": 54, "content": "            color: #1e293b;"},
+  {"line": 55, "content": "            margin-bottom: 16px;"},
+  {"line": 56, "content": "            font-size: 24px;"},
+  {"line": 57, "content": "        }"},
+  {"line": 58, "content": ""},
+  {"line": 59, "content": "        .loading {"},
+  {"line": 60, "content": "            color: #64748b;"},
+  {"line": 61, "content": "            margin-bottom: 20px;"},
+  {"line": 62, "content": "        }"},
+  {"line": 63, "content": ""},
+  {"line": 64, "content": "        .spinner {"},
+  {"line": 65, "content": "            display: inline-block;"},
+  {"line": 66, "content": "            width: 20px;"},
+  {"line": 67, "content": "            height: 20px;"},
+  {"line": 68, "content": "            border: 2px solid #e2e8f0;"},
+  {"line": 69, "content": "            border-radius: 50%;"},
+  {"line": 70, "content": "            border-top-color: #3b82f6;"},
+  {"line": 71, "content": "            animation: spin 1s ease-in-out infinite;"},
+  {"line": 72, "content": "            margin-left: 8px;"},
+  {"line": 73, "content": "        }"},
+  {"line": 74, "content": ""},
+  {"line": 75, "content": "        @keyframes spin {"},
+  {"line": 76, "content": "            to { transform: rotate(360deg); }"},
+  {"line": 77, "content": "        }"},
+  {"line": 78, "content": ""},
+  {"line": 79, "content": "        .btn {"},
+  {"line": 80, "content": "            background: linear-gradient(135deg, #059669 0%, #047857 100%);"},
+  {"line": 81, "content": "            color: white;"},
+  {"line": 82, "content": "            border: none;"},
+  {"line": 83, "content": "            padding: 12px 24px;"},
+  {"line": 84, "content": "            border-radius: 8px;"},
+  {"line": 85, "content": "            font-size: 16px;"},
+  {"line": 86, "content": "            font-weight: 600;"},
+  {"line": 87, "content": "            cursor: pointer;"},
+  {"line": 88, "content": "            margin-top: 20px;"},
+  {"line": 89, "content": "            transition: transform 0.2s ease, box-shadow 0.2s ease;"},
+  {"line": 90, "content": "        }"},
+  {"line": 91, "content": ""},
+  {"line": 92, "content": "        .btn:hover {"},
+  {"line": 93, "content": "            transform: translateY(-2px);"},
+  {"line": 94, "content": "            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);"},
+  {"line": 95, "content": "        }"},
+  {"line": 96, "content": ""},
+  {"line": 97, "content": "        .btn.primary {"},
+  {"line": 98, "content": "            background: linear-gradient(135deg, #059669 0%, #047857 100%);"},
+  {"line": 99, "content": "        }"},
+  {"line": 100, "content": ""},
+  {"line": 101, "content": "        .btn.secondary {"},
+  {"line": 102, "content": "            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);"},
+  {"line": 103, "content": "        }"},
+  {"line": 104, "content": ""},
+  {"line": 105, "content": "        .btn.primary:hover {"},
+  {"line": 106, "content": "            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);"},
+  {"line": 107, "content": "        }"},
+  {"line": 108, "content": ""},
+  {"line": 109, "content": "        .btn.secondary:hover {"},
+  {"line": 110, "content": "            box-shadow: 0 4px 12px rgba(77, 89, 101, 0.3);"},
+  {"line": 111, "content": "        }"},
+  {"line": 112, "content": ""},
+  {"line": 113, "content": "        .payment-info {"},
+  {"line": 114, "content": "            background: #f9fafb;"},
+  {"line": 115, "content": "            border-radius: 8px;"},
+  {"line": 116, "content": "            padding: 16px;"},
+  {"line": 117, "content": "            margin: 20px 0;"},
+  {"line": 118, "content": "            text-align: left;"},
+  {"line": 119, "content": "            border: 1px solid #e5e7eb;"},
+  {"line": 120, "content": "        }"},
+  {"line": 121, "content": ""},
+  {"line": 122, "content": "        .info-item {"},
+  {"line": 123, "content": "            display: flex;"},
+  {"line": 124, "content": "            justify-content: space-between;"},
+  {"line": 125, "content": "            margin-bottom: 8px;"},
+  {"line": 126, "content": "            font-size: 14px;"},
+  {"line": 127, "content": "        }"},
+  {"line": 128, "content": ""},
+  {"line": 129, "content": "        .info-item:last-child {"},
+  {"line": 130, "content": "            margin-bottom: 0;"},
+  {"line": 131, "content": "        }"},
+  {"line": 132, "content": ""},
+  {"line": 133, "content": "        .info-item .label {"},
+  {"line": 134, "content": "            color: #4b5563;"},
+  {"line": 135, "content": "            font-weight: 500;"},
+  {"line": 136, "content": "        }"},
+  {"line": 137, "content": ""},
+  {"line": 138, "content": "        .info-item .value {"},
+  {"line": 139, "content": "            color: #1f2937;"},
+  {"line": 140, "content": "            font-weight: 600;"},
+  {"line": 141, "content": "        }"},
+  {"line": 142, "content": ""},
+  {"line": 143, "content": "        .order-status {"},
+  {"line": 144, "content": "            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);"},
+  {"line": 145, "content": "            border: 1px solid #86efac;"},
+  {"line": 146, "content": "            border-radius: 12px;"},
+  {"line": 147, "content": "            padding: 20px;"},
+  {"line": 148, "content": "            margin: 20px 0;"},
+  {"line": 149, "content": "            display: flex;"},
+  {"line": 150, "content": "            align-items: center;"},
+  {"line": 151, "content": "            gap: 16px;"},
+  {"line": 152, "content": "        }"},
+  {"line": 153, "content": ""},
+  {"line": 154, "content": "        .status-icon {"},
+  {"line": 155, "content": "            font-size: 32px;"},
+  {"line": 156, "content": "        }"},
+  {"line": 157, "content": ""},
+  {"line": 158, "content": "        .status-text h3 {"},
+  {"line": 159, "content": "            margin: 0 0 4px 0;"},
+  {"line": 160, "content": "            color: #166534;"},
+  {"line": 161, "content": "            font-size: 16px;"},
+  {"line": 162, "content": "            font-weight: 700;"},
+  {"line": 163, "content": "        }"},
+  {"line": 164, "content": ""},
+  {"line": 165, "content": "        .status-text p {"},
+  {"line": 166, "content": "            margin: 0;"},
+  {"line": 167, "content": "            color: #22c55e;"},
+  {"line": 168, "content": "            font-size: 14px;"},
+  {"line": 169, "content": "        }"},
+  {"line": 170, "content": ""},
+  {"line": 171, "content": "        .warning-message {"},
+  {"line": 172, "content": "            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);"},
+  {"line": 173, "content": "            border: 1px solid #fbbf24;"},
+  {"line": 174, "content": "            border-radius: 12px;"},
+  {"line": 175, "content": "            padding: 20px;"},
+  {"line": 176, "content": "            margin: 20px 0;"},
+  {"line": 177, "content": "            display: flex;"},
+  {"line": 178, "content": "            align-items: center;"},
+  {"line": 179, "content": "            gap: 16px;"},
+  {"line": 180, "content": "            text-align: center;"},
+  {"line": 181, "content": "        }"},
+  {"line": 182, "content": ""},
+  {"line": 183, "content": "        .warning-icon {"},
+  {"line": 184, "content": "            font-size: 32px;"},
+  {"line": 185, "content": "        }"},
+  {"line": 186, "content": ""},
+  {"line": 187, "content": "        .warning-message p {"},
+  {"line": 188, "content": "            margin: 0;"},
+  {"line": 189, "content": "            color: #92400e;"},
+  {"line": 190, "content": "            font-size: 14px;"},
+  {"line": 191, "content": "            line-height: 1.5;"},
+  {"line": 192, "content": "        }"},
+  {"line": 193, "content": ""},
+  {"line": 194, "content": "        .actions {"},
+  {"line": 195, "content": "            margin-top: 32px;"},
+  {"line": 196, "content": "            display: flex;"},
+  {"line": 197, "content": "            gap: 12px;"},
+  {"line": 198, "content": "            justify-content: center;"},
+  {"line": 199, "content": "        }"},
+  {"line": 200, "content": "    </style>"},
+  {"line": 201, "content": "</head>"},
+  {"line": 202, "content": "<body>"},
+  {"line": 203, "content": "    <div class=\"container\">"},
+  {"line": 204, "content": "        <div class=\"success-icon\">✅</div>"},
+  {"line": 205, "content": "        <h1>결제 처리 중</h1>"},
+  {"line": 206, "content": "        <p class=\"loading\">결제를 확인하고 있습니다<span class=\"spinner\"></span></p>"},
+  {"line": 207, "content": "        <button class=\"btn\" id=\"backBtn\" style=\"display: none;\" onclick=\"goBack()\">TableLink로 돌아가기</button>"},
+  {"line": 208, "content": "    </div>"},
+  {"line": 209, "content": ""},
+  {"line": 210, "content": "    <script>"},
+  {"line": 211, "content": "        function goToMain() {"},
+  {"line": 212, "content": "            window.opener ? window.opener.location.href = '/' : window.location.href = '/';"},
+  {"line": 213, "content": "        }"},
+  {"line": 214, "content": ""},
+  {"line": 215, "content": "        function goToMyPage() {"},
+  {"line": 216, "content": "            window.opener ? window.opener.location.href = '/mypage' : window.location.href = '/mypage';"},
+  {"line": 217, "content": "        }"},
+  {"line": 218, "content": ""},
+  {"line": 219, "content": "        function showSuccessPage(paymentKey, orderId, amount, orderResult = null) {"},
+  {"line": 220, "content": "            document.querySelector('.container').innerHTML = `"},
+  {"line": 221, "content": "                <div class=\"success-content\">"},
+  {"line": 222, "content": "                    <div class=\"success-icon\">✅</div>"},
+  {"line": 223, "content": "                    <h1>결제 및 주문 완료!</h1>"},
+  {"line": 224, "content": "                    <p>토스페이먼츠를 통한 결제가 완료되고 주문이 접수되었습니다.</p>"},
+  {"line": 225, "content": ""},
+  {"line": 226, "content": "                    <div class=\"payment-info\">"},
+  {"line": 227, "content": "                        <div class=\"info-item\">"},
+  {"line": 228, "content": "                            <span class=\"label\">결제 금액:</span>"},
+  {"line": 229, "content": "                            <span class=\"value\">${parseInt(amount).toLocaleString()}원</span>"},
+  {"line": 230, "content": "                        </div>"},
+  {"line": 231, "content": "                        <div class=\"info-item\">"},
+  {"line": 232, "content": "                            <span class=\"label\">주문 번호:</span>"},
+  {"line": 233, "content": "                            <span class=\"value\">${orderId}</span>"},
+  {"line": 234, "content": "                        </div>"},
+  {"line": 235, "content": "                        ${orderResult ? `"},
+  {"line": 236, "content": "                        <div class=\"info-item\">"},
+  {"line": 237, "content": "                            <span class=\"label\">주문 ID:</span>"},
+  {"line": 238, "content": "                            <span class=\"value\">${orderResult.result?.orderId || 'N/A'}</span>"},
+  {"line": 239, "content": "                        </div>"},
+  {"line": 240, "content": "                        <div class=\"info-item\">"},
+  {"line": 241, "content": "                            <span class=\"label\">매장:</span>"},
+  {"line": 242, "content": "                            <span class=\"value\">${orderResult.result?.storeName || 'N/A'}</span>"},
+  {"line": 243, "content": "                        </div>"},
+  {"line": 244, "content": "                        ` : ''}"},
+  {"line": 245, "content": "                        <div class=\"info-item\">"},
+  {"line": 246, "content": "                            <span class=\"label\">결제 키:</span>"},
+  {"line": 247, "content": "                            <span class=\"value\">${paymentKey}</span>"},
+  {"line": 248, "content": "                        </div>"},
+  {"line": 249, "content": "                    </div>"},
+  {"line": 250, "content": ""},
+  {"line": 251, "content": "                    ${orderResult ? `"},
+  {"line": 252, "content": "                    <div class=\"order-status\">"},
+  {"line": 253, "content": "                        <div class=\"status-icon\">🍳</div>"},
+  {"line": 254, "content": "                        <div class=\"status-text\">"},
+  {"line": 255, "content": "                            <h3>주문이 접수되었습니다!</h3>"},
+  {"line": 256, "content": "                            <p>매장에서 조리를 시작합니다.</p>"},
+  {"line": 257, "content": "                        </div>"},
+  {"line": 258, "content": "                    </div>"},
+  {"line": 259, "content": "                    ` : `"},
+  {"line": 260, "content": "                    <div class=\"warning-message\">"},
+  {"line": 261, "content": "                        <div class=\"warning-icon\">⚠️</div>"},
+  {"line": 262, "content": "                        <p>결제는 완료되었으나 주문 정보를 찾을 수 없습니다.<br>고객센터로 문의해주세요.</p>"},
+  {"line": 263, "content": "                    </div>"},
+  {"line": 264, "content": "                    `} "},
+  {"line": 265, "content": ""},
+  {"line": 266, "content": "                    <div class=\"actions\">"},
+  {"line": 267, "content": "                        <button onclick=\"goToMain()\" class=\"btn primary\">메인으로</button>"},
+  {"line": 268, "content": "                        <button onclick=\"goToMyPage()\" class=\"btn secondary\">주문내역 보기</button>"},
+  {"line": 269, "content": "                    </div>"},
+  {"line": 270, "content": "                </div>"},
+  {"line": 271, "content": "            `;"},
+  {"line": 272, "content": "        }"},
+  {"line": 273, "content": ""},
+  {"line": 274, "content": "        async function processPayment() {"},
+  {"line": 275, "content": "            try {"},
+  {"line": 276, "content": "                // URL 파라미터에서 결제 정보 가져오기"},
+  {"line": 277, "content": "                const urlParams = new URLSearchParams(window.location.search);"},
+  {"line": 278, "content": "                const paymentKey = urlParams.get('paymentKey');"},
+  {"line": 279, "content": "                const orderId = urlParams.get('orderId');"},
+  {"line": 280, "content": "                const amount = urlParams.get('amount');"},
+  {"line": 281, "content": ""},
+  {"line": 282, "content": "                console.log('📋 URL 파라미터:', { paymentKey, orderId, amount });"},
+  {"line": 283, "content": "                console.log('🔗 전체 URL:', window.location.href);"},
+  {"line": 284, "content": ""},
+  {"line": 285, "content": "                if (!paymentKey || !orderId || !amount) {"},
+  {"line": 286, "content": "                    console.error('❌ 누락된 파라미터:', { paymentKey, orderId, amount });"},
+  {"line": 287, "content": "                    throw new Error('결제 정보가 올바르지 않습니다.');"},
+  {"line": 288, "content": "                }"},
+  {"line": 289, "content": ""},
+  {"line": 290, "content": "                // 3. 결제 승인 API 호출"},
+  {"line": 291, "content": "                const approvalResponse = await fetch('/api/toss/success', {"},
+  {"line": 292, "content": "                    method: 'POST',"},
+  {"line": 293, "content": "                    headers: {"},
+  {"line": 294, "content": "                        'Content-Type': 'application/json'"},
+  {"line": 295, "content": "                    },"},
+  {"line": 296, "content": "                    body: JSON.stringify({"},
+  {"line": 297, "content": "                        paymentKey: paymentKey,"},
+  {"line": 298, "content": "                        orderId: orderId,"},
+  {"line": 299, "content": "                        amount: parseInt(amount)"},
+  {"line": 300, "content": "                    })"},
+  {"line": 301, "content": "                });"},
+  {"line": 302, "content": ""},
+  {"line": 303, "content": "                if (!approvalResponse.ok) {"},
+  {"line": 304, "content": "                    throw new Error('결제 승인에 실패했습니다.');"},
+  {"line": 305, "content": "                }"},
+  {"line": 306, "content": ""},
+  {"line": 307, "content": "                const approvalResult = await approvalResponse.json();"},
+  {"line": 308, "content": "                console.log('✅ 토스페이먼츠 결제 승인 완료:', approvalResult);"},
+  {"line": 309, "content": ""},
+  {"line": 310, "content": "                // 4. 주문 생성 API 호출 (저장된 주문 데이터 사용)"},
+  {"line": 311, "content": "                const savedOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');"},
+  {"line": 312, "content": "                console.log('💾 저장된 주문 데이터:', savedOrderData);"},
+  {"line": 313, "content": ""},
+  {"line": 314, "content": "                if (savedOrderData && savedOrderData.userId) {"},
+  {"line": 315, "content": "                    console.log('🔄 주문 생성 API 호출 시작');"},
+  {"line": 316, "content": "                    // TL회원 결제 정보를 paid_orders에서 조회"},
+  {"line": 317, "content": "                    const orderQuery = await fetch('/api/orders/paid-orders', {"},
+  {"line": 318, "content": "                        method: 'POST',"},
+  {"line": 319, "content": "                        headers: { 'Content-Type': 'application/json' },"},
+  {"line": 320, "content": "                        body: JSON.stringify({ paymentKey, orderId, amount })"},
+  {"line": 321, "content": "                    });"},
+  {"line": 322, "content": ""},
+  {"line": 323, "content": "                    if (!orderQuery.ok) {"},
+  {"line": 324, "content": "                        const errorData = await orderQuery.json();"},
+  {"line": 325, "content": "                        throw new Error(errorData.error || '주문 정보를 조회할 수 없습니다.');"},
+  {"line": 326, "content": "                    }"},
+  {"line": 327, "content": ""},
+  {"line": 328, "content": "                    const orderResult = await orderQuery.json();"},
+  {"line": 329, "content": "                    console.log('✅ 주문 정보 조회 완료:', orderResult);"},
+  {"line": 330, "content": ""},
+  {"line": 331, "content": "                    // 기존 저장된 주문 데이터 사용 (결제 정보만 추가)"},
+  {"line": 332, "content": "                    const finalOrderData = {"},
+  {"line": 333, "content": "                        ...savedOrderData,"},
+  {"line": 334, "content": "                        pgPaymentKey: paymentKey,"},
+  {"line": 335, "content": "                        pgOrderId: orderId,"},
+  {"line": 336, "content": "                        pgPaymentMethod: 'CARD' // 또는 실제 결제 수단"},
+  {"line": 337, "content": "                    };"},
+  {"line": 338, "content": ""},
+  {"line": 339, "content": "                    // 5. 주문 생성 API 호출 (최종 주문 데이터 전달)"},
+  {"line": 340, "content": "                    const orderResponse = await fetch('/api/orders/pay', {"},
+  {"line": 341, "content": "                        method: 'POST',"},
+  {"line": 342, "content": "                        headers: {"},
+  {"line": 343, "content": "                            'Content-Type': 'application/json'"},
+  {"line": 344, "content": "                        },"},
+  {"line": 345, "content": "                        body: JSON.stringify(finalOrderData)"},
+  {"line": 346, "content": "                    });"},
+  {"line": 347, "content": ""},
+  {"line": 348, "content": "                    if (!orderResponse.ok) {"},
+  {"line": 349, "content": "                        const errorData = await orderResponse.json();"},
+  {"line": 350, "content": "                        throw new Error(errorData.error || '주문 생성에 실패했습니다.');"},
+  {"line": 351, "content": "                    }"},
+  {"line": 352, "content": ""},
+  {"line": 353, "content": "                    const orderResult = await orderResponse.json();"},
+  {"line": 354, "content": "                    console.log('✅ 주문 생성 완료:', orderResult);"},
+  {"line": 355, "content": ""},
+  {"line": 356, "content": "                    // 저장된 주문 데이터 삭제"},
+  {"line": 357, "content": "                    sessionStorage.removeItem('pendingOrderData');"},
+  {"line": 358, "content": ""},
+  {"line": 359, "content": "                    // 6. 성공 페이지 표시 (주문 정보 포함)"},
+  {"line": 360, "content": "                    showSuccessPage(paymentKey, orderId, amount, orderResult);"},
+  {"line": 361, "content": "                } else {"},
+  {"line": 362, "content": "                    console.warn('⚠️ 저장된 주문 데이터가 없습니다. 결제만 승인됨');"},
+  {"line": 363, "content": "                    showSuccessPage(paymentKey, orderId, amount);"},
+  {"line": 364, "content": "                }"},
+  {"line": 365, "content": ""},
+  {"line": 366, "content": "            } catch (error) {"},
+  {"line": 367, "content": "                console.error('❌ 결제 처리 실패:', error);"},
+  {"line": 368, "content": "                document.querySelector('.container').innerHTML = `"},
+  {"line": 369, "content": "                    <div style=\"font-size: 64px; margin-bottom: 20px;\">❌</div>"},
+  {"line": 370, "content": "                    <h1>결제 실패</h1>"},
+  {"line": 371, "content": "                    <p style=\"color: #dc2626; margin-bottom: 20px;\">${error.message}</p>"},
+  {"line": 372, "content": "                    <button class=\"btn\" onclick=\"goBack()\">TableLink로 돌아가기</button>"},
+  {"line": 373, "content": "                `;"},
+  {"line": 374, "content": "            }"},
+  {"line": 375, "content": "        }"},
+  {"line": 376, "content": ""},
+  {"line": 377, "content": "        function goBack() {"},
+  {"line": 378, "content": "            if (window.opener) {"},
+  {"line": 379, "content": "                window.opener.location.href = '/';"},
+  {"line": 380, "content": "                window.close();"},
+  {"line": 381, "content": "            } else {"},
+  {"line": 382, "content": "                window.location.href = '/';"},
+  {"line": 383, "content": "            }"},
+  {"line": 384, "content": "        }"},
+  {"line": 385, "content": ""},
+  {"line": 386, "content": "        // 페이지 로드 시 결제 처리"},
+  {"line": 387, "content": "        processPayment();"},
+  {"line": 388, "content": "    </script>"},
+  {"line": 389, "content": "</body>"},
+  {"line": 390, "content": "</html>"},
+  {"line": 391, "content": "
