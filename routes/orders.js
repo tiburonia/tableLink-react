@@ -7,6 +7,220 @@ router.post('/pay', async (req, res) => {
   const client = await pool.connect();
   try {
     const {
+
+// 비회원 결제 처리 API (게스트 전용)
+router.post('/guest-pay', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const {
+      guestPhone,
+      storeId,
+      storeName,
+      tableNumber,
+      orderData,
+      finalTotal
+    } = req.body;
+
+    console.log('💳 비회원 결제 처리 요청:', {
+      guestPhone: guestPhone ? '***' : undefined,
+      storeId,
+      storeName,
+      tableNumber,
+      orderTotal: orderData?.total,
+      finalTotal
+    });
+
+    await client.query('BEGIN');
+
+    // 전화번호 검증
+    if (!guestPhone || guestPhone.trim() === '') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: '전화번호는 필수입니다' });
+    }
+
+    // 테이블 정보 처리
+    let actualTableNumber = null;
+    if (tableNumber && storeId) {
+      try {
+        const tableNumMatch = tableNumber.toString().match(/\d+/);
+        const tableNum = tableNumMatch ? parseInt(tableNumMatch[0]) : null;
+
+        if (tableNum) {
+          const tableResult = await client.query(`
+            SELECT table_number FROM store_tables
+            WHERE store_id = $1 AND table_number = $2
+          `, [storeId, tableNum]);
+
+          actualTableNumber = tableResult.rows.length > 0 ? tableNum : tableNumber;
+        } else {
+          actualTableNumber = tableNumber;
+        }
+      } catch (error) {
+        console.error(`❌ 테이블 정보 조회 실패:`, error);
+        actualTableNumber = tableNumber;
+      }
+    }
+
+    // 기존 게스트 정보 업데이트 또는 생성
+    try {
+      const existingGuest = await client.query(
+        'SELECT phone, visit_count FROM guests WHERE phone = $1',
+        [guestPhone]
+      );
+
+      if (existingGuest.rows.length > 0) {
+        const currentVisitCount = existingGuest.rows[0].visit_count || {};
+        const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+
+        await client.query(`
+          UPDATE guests 
+          SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+              updated_at = CURRENT_TIMESTAMP
+          WHERE phone = $3
+        `, [`{${storeId}}`, storeVisitCount, guestPhone]);
+
+        console.log(`👤 기존 게스트 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
+      } else {
+        const initialVisitCount = { [storeId]: 1 };
+        await client.query(`
+          INSERT INTO guests (phone, visit_count) 
+          VALUES ($1, $2)
+        `, [guestPhone, JSON.stringify(initialVisitCount)]);
+
+        console.log(`🆕 새 게스트 등록 - 매장 ${storeId}: 첫 방문`);
+      }
+    } catch (guestError) {
+      console.error('❌ 게스트 정보 처리 실패:', guestError);
+    }
+
+    // 1. 비회원 결제 정보를 paid_orders 테이블에만 저장
+    const paidOrderResult = await client.query(`
+      INSERT INTO paid_orders (
+        guest_phone, store_id, table_number, order_data,
+        original_amount, final_amount, payment_method, 
+        payment_status, payment_date, order_source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id
+    `, [
+      guestPhone,            // $1 - 게스트 전화번호
+      storeId,               // $2
+      actualTableNumber,     // $3
+      JSON.stringify({       // $4
+        ...orderData,
+        storeId: storeId,
+        storeName: storeName,
+        tableNumber: tableNumber
+      }),
+      orderData.total,       // $5 - original_amount
+      finalTotal,            // $6 - final_amount
+      'card',                // $7 - payment_method
+      'completed',           // $8 - payment_status
+      new Date(),            // $9 - payment_date
+      'TLL'                  // $10 - order_source
+    ]);
+
+    const paidOrderId = paidOrderResult.rows[0].id;
+    console.log(`✅ 비회원 결제 정보 ID ${paidOrderId} paid_orders 테이블에만 저장 완료`);
+
+    // 2. orders 테이블에 KDS용 제조 정보 저장 (paid_order_id 참조)
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        paid_order_id, store_id, table_number, customer_name,
+        order_data, total_amount, cooking_status, guest_phone
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
+    `, [
+      paidOrderId,           // $1 - paid_orders.id 참조
+      storeId,               // $2
+      actualTableNumber,     // $3
+      '게스트',              // $4
+      JSON.stringify({       // $5
+        items: orderData.items,
+        storeId: storeId,
+        storeName: storeName,
+        tableNumber: tableNumber
+      }),
+      orderData.total,       // $6
+      'PENDING',             // $7
+      guestPhone             // $8
+    ]);
+
+    const orderId = orderResult.rows[0].id;
+    console.log(`✅ 비회원 제조 정보 ID ${orderId} orders 테이블에 저장 완료`);
+
+    // 3. order_items 테이블에 메뉴별 데이터 저장
+    if (orderData.items && orderData.items.length > 0) {
+      for (const item of orderData.items) {
+        await client.query(`
+          INSERT INTO order_items (
+            order_id, menu_name, quantity, price, cooking_status
+          ) VALUES ($1, $2, $3, $4, $5)
+        `, [
+          orderId,
+          item.name,
+          item.quantity || 1,
+          item.price,
+          'PENDING'
+        ]);
+      }
+      console.log(`✅ 비회원 주문 ID ${orderId}의 메뉴 아이템들을 order_items에 저장 완료`);
+    }
+
+    await client.query('COMMIT');
+
+    // 📡 새 주문 KDS 실시간 업데이트 전송
+    if (global.kdsWebSocket) {
+      console.log(`📡 비회원 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
+      global.kdsWebSocket.broadcast(storeId, 'new-order', {
+        orderId: orderId,
+        paidOrderId: paidOrderId,
+        storeName: storeName,
+        tableNumber: actualTableNumber,
+        customerName: '게스트',
+        itemCount: orderData.items ? orderData.items.length : 0,
+        totalAmount: orderData.total,
+        source: 'TLL_GUEST'
+      });
+    }
+
+    // POS 실시간 새 주문 알림
+    if (global.posWebSocket) {
+      console.log(`📡 비회원 주문 ${paidOrderId} POS 실시간 알림 전송`);
+      global.posWebSocket.broadcastNewOrder(storeId, {
+        orderId: orderId,
+        paidOrderId: paidOrderId,
+        storeName: storeName,
+        tableNumber: actualTableNumber,
+        customerName: '게스트',
+        itemCount: orderData.items ? orderData.items.length : 0,
+        totalAmount: orderData.total,
+        source: 'TLL_GUEST'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '비회원 결제가 완료되었습니다',
+      result: {
+        orderId: orderId,
+        paidOrderId: paidOrderId,
+        finalTotal: finalTotal,
+        storeId: storeId,
+        storeName: storeName,
+        isGuest: true
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('비회원 결제 처리 실패:', error);
+    res.status(500).json({ error: '비회원 결제 처리 실패: ' + error.message });
+  } finally {
+    client.release();
+  }
+});
+
+
       userId,
       storeId,
       storeName,
@@ -188,7 +402,7 @@ router.post('/pay', async (req, res) => {
       }
     }
 
-    // 1. TL회원 결제 정보를 user_paid_orders 테이블에 저장
+    // 1. TL회원 결제 정보를 user_paid_orders 테이블에만 저장
     const paidOrderResult = await client.query(`
       INSERT INTO user_paid_orders (
         user_id, store_id, table_number, order_data,
@@ -217,7 +431,7 @@ router.post('/pay', async (req, res) => {
     ]);
 
     const paidOrderId = paidOrderResult.rows[0].id;
-    console.log(`✅ 결제 정보 ID ${paidOrderId} paid_orders 테이블에 저장 완료`);
+    console.log(`✅ TL회원 결제 정보 ID ${paidOrderId} user_paid_orders 테이블에만 저장 완료`);
 
     // 2. orders 테이블에 KDS용 제조 정보 저장 (user_paid_order_id 참조)
     const orderResult = await client.query(`
@@ -398,7 +612,7 @@ router.post('/pay', async (req, res) => {
   }
 });
 
-// 매장별 주문 내역 조회 API (paid_orders 기반)
+// 매장별 주문 내역 조회 API (paid_orders + user_paid_orders 통합)
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -406,30 +620,52 @@ router.get('/stores/:storeId', async (req, res) => {
 
     console.log(`📋 매장 ${storeId} 주문 내역 조회 (제한: ${limit}개, 상태: ${status || '전체'})`);
 
-    let query = `
+    // TL회원 주문과 비회원 주문을 UNION으로 통합 조회
+    let memberQuery = `
       SELECT
-        p.id, p.store_id, p.user_id, p.guest_phone, p.table_number, p.order_data,
-        p.original_amount, p.used_point, p.coupon_discount, p.final_amount,
-        p.payment_status, p.payment_date, p.order_source, p.created_at,
-        u.name as customer_name, u.phone as customer_phone,
-        s.name as store_name
+        upo.id, upo.store_id, upo.user_id, NULL as guest_phone, upo.table_number, 
+        upo.order_data, upo.original_amount, upo.used_point, upo.coupon_discount, 
+        upo.final_amount, upo.payment_status, upo.payment_date, upo.order_source, 
+        upo.created_at, u.name as customer_name, u.phone as customer_phone,
+        s.name as store_name, 'TL_MEMBER' as order_type
+      FROM user_paid_orders upo
+      LEFT JOIN users u ON upo.user_id = u.id
+      LEFT JOIN stores s ON upo.store_id = s.id
+      WHERE upo.store_id = $1
+    `;
+
+    let guestQuery = `
+      SELECT
+        p.id, p.store_id, NULL as user_id, p.guest_phone, p.table_number, 
+        p.order_data, p.original_amount, p.used_point, p.coupon_discount, 
+        p.final_amount, p.payment_status, p.payment_date, p.order_source, 
+        p.created_at, '게스트' as customer_name, p.guest_phone as customer_phone,
+        s.name as store_name, 'GUEST' as order_type
       FROM paid_orders p
-      LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN stores s ON p.store_id = s.id
-      WHERE p.store_id = $1
+      WHERE p.store_id = $1 AND p.user_id IS NULL AND p.guest_phone IS NOT NULL
     `;
 
     const params = [parseInt(storeId)];
+    let paramIndex = 2;
 
     if (status) {
-      query += ` AND p.payment_status = $${params.length + 1}`;
+      memberQuery += ` AND upo.payment_status = $${paramIndex}`;
+      guestQuery += ` AND p.payment_status = $${paramIndex}`;
       params.push(status);
+      paramIndex++;
     }
 
-    query += ` ORDER BY p.payment_date DESC LIMIT $${params.length + 1}`;
+    const unionQuery = `
+      (${memberQuery}) 
+      UNION ALL 
+      (${guestQuery})
+      ORDER BY payment_date DESC 
+      LIMIT $${paramIndex}
+    `;
     params.push(parseInt(limit));
 
-    const result = await pool.query(query, params);
+    const result = await pool.query(unionQuery, params);
 
     const orders = result.rows.map(row => ({
       id: row.id,
@@ -438,7 +674,7 @@ router.get('/stores/:storeId', async (req, res) => {
       userId: row.user_id,
       guestPhone: row.guest_phone,
       customerName: row.customer_name || '알 수 없음',
-      customerPhone: row.customer_phone || row.guest_phone || '정보없음',
+      customerPhone: row.customer_phone || '정보없음',
       tableNumber: row.table_number,
       orderData: row.order_data,
       originalAmount: row.original_amount,
@@ -448,16 +684,22 @@ router.get('/stores/:storeId', async (req, res) => {
       paymentStatus: row.payment_status,
       paymentDate: row.payment_date,
       orderSource: row.order_source,
-      createdAt: row.created_at
+      createdAt: row.created_at,
+      orderType: row.order_type,
+      isMember: row.order_type === 'TL_MEMBER'
     }));
 
-    console.log(`✅ 매장 ${storeId} 주문 내역 ${orders.length}개 조회 완료`);
+    console.log(`✅ 매장 ${storeId} 통합 주문 내역 ${orders.length}개 조회 완료 (TL회원+비회원)`);
 
     res.json({
       success: true,
       storeId: parseInt(storeId),
       total: orders.length,
-      orders: orders
+      orders: orders,
+      stats: {
+        memberOrders: orders.filter(o => o.isMember).length,
+        guestOrders: orders.filter(o => !o.isMember).length
+      }
     });
 
   } catch (error) {
