@@ -79,17 +79,6 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         store: orderData.store,
         storeId: orderData.storeId,
         date: orderData.date,
-        items: orderData.items,
-        total: orderData.total
-      },
-      usedPoint: pointsUsed,
-      finalTotal: finalAmount,
-      selectedCouponId: selectedCouponId,
-      couponDiscount: couponDiscount
-    };
-
-    console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
-    sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData)); orderData.date,
         table: orderData.table,
         tableNum: orderData.tableNum,
         items: orderData.items,
@@ -101,8 +90,8 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       couponDiscount: couponDiscount || 0
     };
 
+    console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
     sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
-    console.log('💾 주문 데이터 저장 완료:', pendingOrderData);
 
     // 토스페이먼츠 결제창 호출
     const paymentResult = await window.requestTossPayment({
