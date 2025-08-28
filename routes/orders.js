@@ -57,41 +57,70 @@ router.post('/guest-pay', async (req, res) => {
 
     // 기존 게스트 정보 업데이트 또는 생성
     try {
-      const existingGuest = await client.query(
-        'SELECT phone, visit_count FROM guests WHERE phone = $1',
-        [guestPhone]
+      // 전화번호 정규화 (하이픈 제거)
+      const normalizedPhone = guestPhone.replace(/[^0-9]/g, '');
+
+      // 먼저 해당 전화번호가 기존 회원인지 확인
+      const existingUser = await client.query(
+        'SELECT id, name FROM users WHERE phone = $1 OR phone = $2',
+        [guestPhone, normalizedPhone]
       );
 
-      if (existingGuest.rows.length > 0) {
-        const currentVisitCount = existingGuest.rows[0].visit_count || {};
-        const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
-
-        await client.query(`
-          UPDATE guests 
-          SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
-              updated_at = CURRENT_TIMESTAMP
-          WHERE phone = $3
-        `, [`{${storeId}}`, storeVisitCount, guestPhone]);
-
-        console.log(`👤 기존 게스트 업데이트 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
+      if (existingUser.rows.length > 0) {
+        console.log(`⚠️ 전화번호 ${guestPhone}는 기존 회원입니다: ${existingUser.rows[0].name}`);
+        // 기존 회원이면 게스트로 처리하지 않음
       } else {
-        const initialVisitCount = { [storeId]: 1 };
-        await client.query(`
-          INSERT INTO guests (phone, visit_count) 
-          VALUES ($1, $2)
-        `, [guestPhone, JSON.stringify(initialVisitCount)]);
+        // 게스트 처리
+        const existingGuest = await client.query(
+          'SELECT phone, visit_count FROM guests WHERE phone = $1',
+          [guestPhone]
+        );
 
-        console.log(`🆕 새 게스트 등록 - 매장 ${storeId}: 첫 방문`);
+        if (existingGuest.rows.length > 0) {
+          // 기존 게스트의 방문 횟수 업데이트
+          let currentVisitCount = {};
+          try {
+            currentVisitCount = typeof existingGuest.rows[0].visit_count === 'string'
+              ? JSON.parse(existingGuest.rows[0].visit_count)
+              : existingGuest.rows[0].visit_count || {};
+          } catch (parseError) {
+            console.warn('⚠️ visit_count JSON 파싱 실패, 초기화:', parseError);
+            currentVisitCount = {};
+          }
+
+          const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+          currentVisitCount[storeId] = storeVisitCount;
+
+          await client.query(`
+            UPDATE guests
+            SET visit_count = $1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE phone = $2
+          `, [JSON.stringify(currentVisitCount), guestPhone]);
+
+          console.log(`👤 기존 게스트 방문 횟수 업데이트: 매장 ${storeId} - ${storeVisitCount}회`);
+        } else {
+          // 새 게스트 등록
+          const initialVisitCount = { [storeId]: 1 };
+          await client.query(`
+            INSERT INTO guests (phone, visit_count, created_at, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (phone) DO NOTHING
+          `, [guestPhone, JSON.stringify(initialVisitCount)]);
+
+          console.log(`🆕 새 게스트 등록: ${guestPhone} - 매장 ${storeId} 첫 방문`);
+        }
       }
     } catch (guestError) {
-      console.error('❌ 게스트 정보 처리 실패:', guestError);
+      console.error('⚠️ 게스트 정보 처리 실패:', guestError);
+      // 게스트 정보 처리 실패해도 주문은 계속 진행
     }
 
     // 1. 비회원 결제 정보를 paid_orders 테이블에만 저장
     const paidOrderResult = await client.query(`
       INSERT INTO paid_orders (
         guest_phone, store_id, table_number, order_data,
-        original_amount, final_amount, payment_method, 
+        original_amount, final_amount, payment_method,
         payment_status, payment_date, order_source
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id
@@ -368,13 +397,13 @@ router.post('/pay', async (req, res) => {
         SELECT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
         FROM paid_orders p
         LEFT JOIN users u ON p.user_id = u.id
-        WHERE p.store_id = $1 AND p.table_number = $2 
+        WHERE p.store_id = $1 AND p.table_number = $2
         AND p.payment_date >= NOW() - INTERVAL '24 hours'
         ORDER BY p.payment_date DESC
         LIMIT 1
       `, [storeId, actualTableNumber]);
 
-      console.log(`🔍 TLL 주문 - 테이블 ${actualTableNumber} 기존 주문 확인:`, 
+      console.log(`🔍 TLL 주문 - 테이블 ${actualTableNumber} 기존 주문 확인:`,
         existingOrdersResult.rows.length > 0 ? existingOrdersResult.rows[0] : '없음');
 
       // 다른 사용자의 기존 주문이 있다면 해당 orders를 완료 처리
@@ -382,11 +411,11 @@ router.post('/pay', async (req, res) => {
         const existingOrder = existingOrdersResult.rows[0];
         if (existingOrder.user_id !== userId || existingOrder.guest_phone) {
           await client.query(`
-            UPDATE orders 
+            UPDATE orders
             SET cooking_status = 'COMPLETED', completed_at = CURRENT_TIMESTAMP
             WHERE paid_order_id IN (
-              SELECT id FROM paid_orders 
-              WHERE store_id = $1 AND table_number = $2 
+              SELECT id FROM paid_orders
+              WHERE store_id = $1 AND table_number = $2
               AND payment_date >= NOW() - INTERVAL '24 hours'
               AND (user_id != $3 OR user_id IS NULL)
             )
@@ -621,9 +650,9 @@ router.get('/stores/:storeId', async (req, res) => {
     // TL회원 주문과 비회원 주문을 UNION으로 통합 조회
     let memberQuery = `
       SELECT
-        upo.id, upo.store_id, upo.user_id, NULL as guest_phone, upo.table_number, 
-        upo.order_data, upo.original_amount, upo.used_point, upo.coupon_discount, 
-        upo.final_amount, upo.payment_status, upo.payment_date, upo.order_source, 
+        upo.id, upo.store_id, upo.user_id, NULL as guest_phone, upo.table_number,
+        upo.order_data, upo.original_amount, upo.used_point, upo.coupon_discount,
+        upo.final_amount, upo.payment_status, upo.payment_date, upo.order_source,
         upo.created_at, u.name as customer_name, u.phone as customer_phone,
         s.name as store_name, 'TL_MEMBER' as order_type
       FROM user_paid_orders upo
@@ -634,9 +663,9 @@ router.get('/stores/:storeId', async (req, res) => {
 
     let guestQuery = `
       SELECT
-        p.id, p.store_id, NULL as user_id, p.guest_phone, p.table_number, 
-        p.order_data, p.original_amount, p.used_point, p.coupon_discount, 
-        p.final_amount, p.payment_status, p.payment_date, p.order_source, 
+        p.id, p.store_id, NULL as user_id, p.guest_phone, p.table_number,
+        p.order_data, p.original_amount, p.used_point, p.coupon_discount,
+        p.final_amount, p.payment_status, p.payment_date, p.order_source,
         p.created_at, '게스트' as customer_name, p.guest_phone as customer_phone,
         s.name as store_name, 'GUEST' as order_type
       FROM paid_orders p
@@ -655,10 +684,10 @@ router.get('/stores/:storeId', async (req, res) => {
     }
 
     const unionQuery = `
-      (${memberQuery}) 
-      UNION ALL 
+      (${memberQuery})
+      UNION ALL
       (${guestQuery})
-      ORDER BY payment_date DESC 
+      ORDER BY payment_date DESC
       LIMIT $${paramIndex}
     `;
     params.push(parseInt(limit));
@@ -786,12 +815,12 @@ router.get('/kds/:storeId', async (req, res) => {
 
     // 조리가 완료되지 않은 orders 조회 (user_paid_orders와 paid_orders 모두 지원)
     const query = `
-      SELECT 
-        o.id as order_id, o.paid_order_id, o.user_paid_order_id, 
-        o.store_id, o.table_number, o.customer_name, o.order_data, 
+      SELECT
+        o.id as order_id, o.paid_order_id, o.user_paid_order_id,
+        o.store_id, o.table_number, o.customer_name, o.order_data,
         o.total_amount, o.cooking_status, o.started_at, o.completed_at, o.created_at,
         COALESCE(upo.user_id, p.user_id) as user_id,
-        p.guest_phone, 
+        p.guest_phone,
         COALESCE(upo.payment_date, p.payment_date) as payment_date,
         COALESCE(upo.order_source, p.order_source) as order_source,
         s.name as store_name
@@ -802,8 +831,8 @@ router.get('/kds/:storeId', async (req, res) => {
       WHERE o.store_id = $1
       AND o.cooking_status IN ('PENDING', 'COOKING', 'OPEN')
       AND (o.is_visible IS NULL OR o.is_visible = true)
-      ORDER BY 
-        CASE 
+      ORDER BY
+        CASE
           WHEN o.cooking_status = 'OPEN' THEN 1
           WHEN o.cooking_status = 'PENDING' THEN 2
           WHEN o.cooking_status = 'COOKING' THEN 3
@@ -1164,7 +1193,7 @@ router.get('/guest-phone/:phone', async (req, res) => {
 
     // paid_orders 테이블에서 해당 전화번호의 주문 내역 조회
     const ordersResult = await pool.query(`
-      SELECT 
+      SELECT
         p.id,
         p.store_id,
         s.name as store_name,

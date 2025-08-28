@@ -576,10 +576,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       console.log(`🔍 전화번호 확인 중: ${guestPhone}`);
       
       try {
-        // 기존 회원 확인
+        // 전화번호 정규화 (하이픈 제거)
+        const normalizedPhone = guestPhone.replace(/[^0-9]/g, '');
+        
+        // 기존 회원 확인 (정규화된 전화번호와 원본 전화번호 모두 확인)
         const existingUser = await client.query(
-          'SELECT id, name FROM users WHERE phone = $1',
-          [guestPhone]
+          'SELECT id, name FROM users WHERE phone = $1 OR phone = $2',
+          [guestPhone, normalizedPhone]
         );
 
         if (existingUser.rows.length > 0) {
@@ -589,28 +592,41 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         } else {
           finalGuestPhone = guestPhone;
           
+          // 게스트 테이블 확인 및 처리
           const existingGuest = await client.query(
             'SELECT phone, visit_count FROM guests WHERE phone = $1',
             [guestPhone]
           );
 
           if (existingGuest.rows.length > 0) {
-            const currentVisitCount = existingGuest.rows[0].visit_count || {};
+            // 기존 게스트의 방문 횟수 업데이트
+            let currentVisitCount = {};
+            try {
+              currentVisitCount = typeof existingGuest.rows[0].visit_count === 'string' 
+                ? JSON.parse(existingGuest.rows[0].visit_count) 
+                : existingGuest.rows[0].visit_count || {};
+            } catch (parseError) {
+              console.warn('⚠️ visit_count JSON 파싱 실패, 초기화:', parseError);
+              currentVisitCount = {};
+            }
+            
             const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
+            currentVisitCount[storeId] = storeVisitCount;
 
             await client.query(`
               UPDATE guests 
-              SET visit_count = jsonb_set(visit_count, $1, $2::text::jsonb),
+              SET visit_count = $1,
                   updated_at = CURRENT_TIMESTAMP
-              WHERE phone = $3
-            `, [`{${storeId}}`, storeVisitCount, guestPhone]);
+              WHERE phone = $2
+            `, [JSON.stringify(currentVisitCount), guestPhone]);
 
             console.log(`👤 기존 게스트로 처리 - 매장 ${storeId}: ${storeVisitCount}번째 방문`);
           } else {
+            // 새 게스트 등록
             const initialVisitCount = { [storeId]: 1 };
             await client.query(`
-              INSERT INTO guests (phone, visit_count) 
-              VALUES ($1, $2) 
+              INSERT INTO guests (phone, visit_count, created_at, updated_at) 
+              VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
               ON CONFLICT (phone) DO NOTHING
             `, [guestPhone, JSON.stringify(initialVisitCount)]);
 
