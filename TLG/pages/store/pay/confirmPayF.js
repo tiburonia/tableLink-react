@@ -54,10 +54,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     if (!window.requestTossPayment) {
       console.log('🔄 토스페이먼츠 모듈 로드 중...');
       await import('/TLG/pages/store/pay/tossPayments.js');
-      
+
       // 모듈 로드 후 잠시 대기
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       if (!window.requestTossPayment) {
         throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다.');
       }
@@ -501,10 +501,10 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
     }
   } catch (loadError) {
     console.error('❌ 결제 실패 UI 로드 실패:', loadError);
-    
+
     // 폴백: 기본 에러 알림
     alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
-    
+
     // 주문 화면으로 돌아가기
     if (typeof renderOrderScreen === 'function') {
       renderOrderScreen(store, orderData.tableNum);

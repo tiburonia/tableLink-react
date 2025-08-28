@@ -440,12 +440,13 @@ router.post('/pay', async (req, res) => {
     }
 
     // 1. TL회원 결제 정보를 user_paid_orders 테이블에만 저장
-    await client.query(`
+    const userPaidOrderResult = await client.query(`
         INSERT INTO user_paid_orders (
           user_id, store_id, table_number, order_data,
           original_amount, used_point, coupon_discount, final_amount,
           payment_method, payment_status, payment_date, order_source, payment_reference
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, $11, $12)
+        RETURNING id
       `, [
         userId,
         storeId,
@@ -471,11 +472,6 @@ router.post('/pay', async (req, res) => {
         }) : null
       ]);
 
-    const paidOrderId = paidOrderResult.rows[0].id; // This needs to be fetched from the insert query result for user_paid_orders
-    // FIX: Fetching the inserted ID correctly
-    const userPaidOrderResult = await client.query(`
-      SELECT id FROM user_paid_orders WHERE user_id = $1 AND store_id = $2 AND final_amount = $3 AND payment_method = $4 ORDER BY payment_date DESC LIMIT 1
-    `, [userId, storeId, finalAmount, pgPaymentMethod || 'CARD']);
     const userPaidOrderId = userPaidOrderResult.rows[0].id;
 
     console.log(`✅ TL회원 결제 정보 ID ${userPaidOrderId} user_paid_orders 테이블에만 저장 완료`);
@@ -604,33 +600,41 @@ router.post('/pay', async (req, res) => {
     await client.query('COMMIT');
 
     // 📡 새 주문 KDS 실시간 업데이트 전송
-    if (global.kdsWebSocket) {
-      console.log(`📡 새 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
-      global.kdsWebSocket.broadcast(storeId, 'new-order', {
-        orderId: orderId,
-        paidOrderId: userPaidOrderId, // Use userPaidOrderId here
-        storeName: storeName,
-        tableNumber: actualTableNumber,
-        customerName: user.name || '손님',
-        itemCount: orderData.items ? orderData.items.length : 0,
-        totalAmount: orderData.total,
-        source: 'TLL'
-      });
+    try {
+      if (global.kdsWebSocket) {
+        console.log(`📡 새 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
+        global.kdsWebSocket.broadcast(storeId, 'new-order', {
+          orderId: orderId,
+          paidOrderId: userPaidOrderId,
+          storeName: storeName,
+          tableNumber: actualTableNumber,
+          customerName: user.name || '손님',
+          itemCount: orderData.items ? orderData.items.length : 0,
+          totalAmount: orderData.total,
+          source: 'TLL'
+        });
+      }
+    } catch (wsError) {
+      console.error('❌ KDS WebSocket 브로드캐스트 실패:', wsError);
     }
 
     // POS 실시간 새 주문 알림
-    if (global.posWebSocket) {
-      console.log(`📡 TLL 주문 ${userPaidOrderId} POS 실시간 알림 전송`); // Use userPaidOrderId here
-      global.posWebSocket.broadcastNewOrder(storeId, {
-        orderId: orderId,
-        paidOrderId: userPaidOrderId, // Use userPaidOrderId here
-        storeName: storeName,
-        tableNumber: actualTableNumber,
-        customerName: user.name || '손님',
-        itemCount: orderData.items ? orderData.items.length : 0,
-        totalAmount: orderData.total,
-        source: 'TLL'
-      });
+    try {
+      if (global.posWebSocket) {
+        console.log(`📡 TLL 주문 ${userPaidOrderId} POS 실시간 알림 전송`);
+        global.posWebSocket.broadcastNewOrder(storeId, {
+          orderId: orderId,
+          paidOrderId: userPaidOrderId,
+          storeName: storeName,
+          tableNumber: actualTableNumber,
+          customerName: user.name || '손님',
+          itemCount: orderData.items ? orderData.items.length : 0,
+          totalAmount: orderData.total,
+          source: 'TLL'
+        });
+      }
+    } catch (wsError) {
+      console.error('❌ POS WebSocket 브로드캐스트 실패:', wsError);
     }
 
     res.json({
@@ -1175,11 +1179,13 @@ router.get('/:paidOrderId/review-status', async (req, res) => {
 
     console.log(`🔍 사용자 결제주문 ${paidOrderId}의 리뷰 존재 여부 확인 (user_paid_orders 기준)`);
 
-    // user_paid_orders 기준으로 리뷰 확인
-    const result = await pool.query(
-      'SELECT COUNT(*) as review_count FROM reviews WHERE user_paid_order_id = $1',
-      [paidOrderId]
-    );
+    // orders 테이블을 통해서 리뷰 확인 (user_paid_order_id 대신 paid_order_id 사용)
+    const result = await pool.query(`
+      SELECT COUNT(r.*) as review_count 
+      FROM reviews r
+      JOIN orders o ON r.order_id = o.id
+      WHERE o.user_paid_order_id = $1
+    `, [paidOrderId]);
 
     const hasReview = parseInt(result.rows[0].review_count) > 0;
 
