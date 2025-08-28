@@ -2,116 +2,116 @@ async function renderLogin() {
   const main = document.getElementById('main');
 
   main.innerHTML = `
-    <div class="login-layout">
-      <!-- 배경 애니메이션 -->
-      <div class="background-animation">
-        <div class="floating-element element-1"></div>
-        <div class="floating-element element-2"></div>
-        <div class="floating-element element-3"></div>
-        <div class="floating-element element-4"></div>
-      </div>
-
-      <!-- 로그인 컨테이너 -->
-      <div class="login-container">
-        <!-- 헤더 섹션 -->
-        <div class="login-header">
+    <!-- 헤더 -->
+    <header id="loginHeader">
+      <div class="header-background"></div>
+      <div class="header-content">
+        <div class="header-title">
           <div class="brand-logo">
             <div class="logo-icon">🍽️</div>
             <h1 class="brand-name">TableLink</h1>
           </div>
           <p class="brand-subtitle">스마트 테이블 주문의 새로운 경험</p>
         </div>
+      </div>
+    </header>
 
-        <!-- 로그인 폼 -->
-        <div class="login-form-section">
-          <div class="form-group">
-            <div class="input-wrapper">
-              <input id="id" type="text" placeholder=" " class="form-input" autocomplete="username" />
-              <label class="form-label">아이디</label>
-              <div class="input-icon">👤</div>
+    <!-- 로그인 패널 -->
+    <div id="loginPanel" class="collapsed">
+      <div id="loginPanelHandle"></div>
+      <div id="loginPanelContainer">
+        <div id="loginInfoContainer">
+          <!-- 로그인 폼 -->
+          <div class="login-form-section">
+            <div class="form-group">
+              <div class="input-wrapper">
+                <input id="id" type="text" placeholder=" " class="form-input" autocomplete="username" />
+                <label class="form-label">아이디</label>
+                <div class="input-icon">👤</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <div class="input-wrapper">
+                <input id="pw" type="password" placeholder=" " class="form-input" autocomplete="current-password" />
+                <label class="form-label">비밀번호</label>
+                <div class="input-icon">🔒</div>
+              </div>
+            </div>
+
+            <!-- 로그인 버튼 -->
+            <button id="login" class="primary-btn login-btn">
+              <span class="btn-text">로그인</span>
+              <div class="btn-loading" style="display: none;">
+                <div class="spinner"></div>
+              </div>
+            </button>
+
+            <!-- 회원가입 링크 -->
+            <div class="signup-section">
+              <span class="signup-text">아직 계정이 없으신가요?</span>
+              <button id="join" class="link-btn">회원가입하기</button>
             </div>
           </div>
 
-          <div class="form-group">
-            <div class="input-wrapper">
-              <input id="pw" type="password" placeholder=" " class="form-input" autocomplete="current-password" />
-              <label class="form-label">비밀번호</label>
-              <div class="input-icon">🔒</div>
+          <!-- 구분선 -->
+          <div class="divider">
+            <span class="divider-text">또는</span>
+          </div>
+
+          <!-- 빠른 액세스 섹션 -->
+          <div class="quick-access-section">
+            <h3 class="section-title">빠른 접근</h3>
+
+            <div class="quick-buttons-grid">
+              <button id="quickLogin" class="quick-btn user-btn">
+                <div class="quick-btn-icon">⚡</div>
+                <div class="quick-btn-content">
+                  <span class="quick-btn-title">빠른 로그인</span>
+                  <span class="quick-btn-desc">user1 계정</span>
+                </div>
+              </button>
+
+              <button id="adminLogin" class="quick-btn admin-btn">
+                <div class="quick-btn-icon">🛠️</div>
+                <div class="quick-btn-content">
+                  <span class="quick-btn-title">관리자</span>
+                  <span class="quick-btn-desc">Admin Panel</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="system-buttons-grid">
+              <button id="goKDS" class="system-btn kds-btn">
+                <div class="system-btn-icon">📟</div>
+                <div class="system-btn-content">
+                  <span class="system-btn-title">KDS</span>
+                  <span class="system-btn-desc">주방 디스플레이</span>
+                </div>
+              </button>
+
+              <button id="goPOS" class="system-btn pos-btn">
+                <div class="system-btn-icon">💳</div>
+                <div class="system-btn-content">
+                  <span class="system-btn-title">POS</span>
+                  <span class="system-btn-desc">포스 시스템</span>
+                </div>
+              </button>
+
+              <button id="goTLM" class="system-btn tlm-btn">
+                <div class="system-btn-icon">🏪</div>
+                <div class="system-btn-content">
+                  <span class="system-btn-title">사장님 앱</span>
+                  <span class="system-btn-desc">매장 관리</span>
+                </div>
+              </button>
             </div>
           </div>
 
-          <!-- 로그인 버튼 -->
-          <button id="login" class="primary-btn login-btn">
-            <span class="btn-text">로그인</span>
-            <div class="btn-loading" style="display: none;">
-              <div class="spinner"></div>
-            </div>
-          </button>
-
-          <!-- 회원가입 링크 -->
-          <div class="signup-section">
-            <span class="signup-text">아직 계정이 없으신가요?</span>
-            <button id="join" class="link-btn">회원가입하기</button>
+          <!-- 푸터 -->
+          <div class="login-footer">
+            <p class="footer-text">© 2024 TableLink. 모든 권리 보유.</p>
           </div>
-        </div>
-
-        <!-- 구분선 -->
-        <div class="divider">
-          <span class="divider-text">또는</span>
-        </div>
-
-        <!-- 빠른 액세스 섹션 -->
-        <div class="quick-access-section">
-          <h3 class="section-title">빠른 접근</h3>
-
-          <div class="quick-buttons-grid">
-            <button id="quickLogin" class="quick-btn user-btn">
-              <div class="quick-btn-icon">⚡</div>
-              <div class="quick-btn-content">
-                <span class="quick-btn-title">빠른 로그인</span>
-                <span class="quick-btn-desc">user1 계정</span>
-              </div>
-            </button>
-
-            <button id="adminLogin" class="quick-btn admin-btn">
-              <div class="quick-btn-icon">🛠️</div>
-              <div class="quick-btn-content">
-                <span class="quick-btn-title">관리자</span>
-                <span class="quick-btn-desc">Admin Panel</span>
-              </div>
-            </button>
-          </div>
-
-          <div class="system-buttons-grid">
-            <button id="goKDS" class="system-btn kds-btn">
-              <div class="system-btn-icon">📟</div>
-              <div class="system-btn-content">
-                <span class="system-btn-title">KDS</span>
-                <span class="system-btn-desc">주방 디스플레이</span>
-              </div>
-            </button>
-
-            <button id="goPOS" class="system-btn pos-btn">
-              <div class="system-btn-icon">💳</div>
-              <div class="system-btn-content">
-                <span class="system-btn-title">POS</span>
-                <span class="system-btn-desc">포스 시스템</span>
-              </div>
-            </button>
-
-            <button id="goTLM" class="system-btn tlm-btn">
-              <div class="system-btn-icon">🏪</div>
-              <div class="system-btn-content">
-                <span class="system-btn-title">사장님 앱</span>
-                <span class="system-btn-desc">매장 관리</span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- 푸터 -->
-        <div class="login-footer">
-          <p class="footer-text">© 2024 TableLink. 모든 권리 보유.</p>
         </div>
       </div>
     </div>
@@ -123,105 +123,42 @@ async function renderLogin() {
         box-sizing: border-box;
       }
 
-      .login-layout {
-        min-height: 100vh;
+      /* 헤더 영역 */
+      #loginHeader {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        height: 160px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative;
+        z-index: 11;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
       }
 
-      .background-animation {
+      .header-background {
         position: absolute;
         top: 0;
         left: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        z-index: 1;
+        right: 0;
+        bottom: 0;
+        background: url('TableLink.png') center/cover;
+        opacity: 0.1;
       }
 
-      .floating-element {
-        position: absolute;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        animation: float 6s ease-in-out infinite;
-      }
-
-      .element-1 {
-        width: 80px;
-        height: 80px;
-        top: 20%;
-        left: 10%;
-        animation-delay: 0s;
-      }
-
-      .element-2 {
-        width: 120px;
-        height: 120px;
-        top: 60%;
-        right: 10%;
-        animation-delay: -2s;
-      }
-
-      .element-3 {
-        width: 60px;
-        height: 60px;
-        top: 30%;
-        right: 30%;
-        animation-delay: -4s;
-      }
-
-      .element-4 {
-        width: 100px;
-        height: 100px;
-        bottom: 20%;
-        left: 20%;
-        animation-delay: -1s;
-      }
-
-      @keyframes float {
-        0%, 100% {
-          transform: translateY(0px) rotate(0deg);
-          opacity: 0.5;
-        }
-        50% {
-          transform: translateY(-20px) rotate(180deg);
-          opacity: 0.8;
-        }
-      }
-
-      .login-container {
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(20px);
-        border-radius: 24px;
-        padding: 40px 32px;
-        width: 100%;
-        max-width: 440px;
-        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+      .header-content {
         position: relative;
-        z-index: 2;
-        animation: slideUp 0.8s ease-out;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 16px 20px;
+        color: white;
       }
 
-      @keyframes slideUp {
-        from {
-          opacity: 0;
-          transform: translateY(30px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      .login-header {
+      .header-title {
         text-align: center;
-        margin-bottom: 32px;
       }
 
       .brand-logo {
@@ -240,7 +177,7 @@ async function renderLogin() {
       .brand-name {
         font-size: 28px;
         font-weight: 800;
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #ffffff, #f0f4ff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -249,14 +186,89 @@ async function renderLogin() {
       }
 
       .brand-subtitle {
-        color: #334155;
+        color: rgba(255, 255, 255, 0.9);
         font-size: 14px;
         font-weight: 600;
         margin: 0;
       }
 
+      /* 로그인 패널 - renderMyPage 스타일 */
+      #loginPanel {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        background: white;
+        box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 10;
+      }
+
+      #loginPanel.collapsed {
+        top: 160px;
+        bottom: 0;
+        height: calc(100vh - 160px);
+        border-radius: 20px 20px 0 0;
+      }
+
+      #loginPanel.expanded {
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        border-radius: 0;
+        z-index: 99;
+      }
+
+      #loginPanelHandle {
+        width: 40px;
+        height: 4px;
+        background: #d1d5db;
+        border-radius: 2px;
+        margin: 12px auto 8px auto;
+        cursor: grab;
+        touch-action: none;
+        transition: background 0.2s ease;
+      }
+
+      #loginPanelHandle:hover {
+        background: #9ca3af;
+      }
+
+      #loginPanelContainer {
+        position: relative;
+        height: calc(100% - 24px);
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 20px 40px 20px;
+        scroll-behavior: smooth;
+        will-change: scroll-position;
+      }
+
+      #loginPanelContainer::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      #loginPanelContainer::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #loginPanelContainer::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+      }
+
+      #loginPanelContainer::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      /* 로그인 폼 스타일 */
       .login-form-section {
         margin-bottom: 32px;
+        padding-top: 20px;
       }
 
       .form-group {
@@ -402,7 +414,7 @@ async function renderLogin() {
       }
 
       .divider-text {
-        background: rgba(255, 255, 255, 0.98);
+        background: white;
         padding: 0 16px;
         color: #475569;
         font-size: 14px;
@@ -421,35 +433,16 @@ async function renderLogin() {
         text-align: center;
       }
 
-      .login-link {
-        display: block;
-        text-align: center;
-        margin: 24px 0 16px 0;
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-        font-size: 14px;
-        font-weight: 500;
-        transition: color 0.3s ease;
-        position: relative;
-        z-index: 10;
-      }
-
-      .login-link:hover {
-        color: white;
-      }
-
       .quick-buttons-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
         margin: 20px 0 16px 0;
-        position: relative;
-        z-index: 5;
       }
 
       .quick-btn {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 16px 12px;
         color: #1f2937;
@@ -460,15 +453,13 @@ async function renderLogin() {
         gap: 12px;
         text-align: left;
         min-height: 60px;
-        position: relative;
-        z-index: 6;
       }
 
       .quick-btn:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.15));
-        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-color: #cbd5e1;
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
       }
 
       .quick-btn-icon {
@@ -503,14 +494,11 @@ async function renderLogin() {
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
         margin: 16px 0 20px 0;
-        padding: 0 4px;
-        position: relative;
-        z-index: 5;
       }
 
       .system-btn {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 12px 8px;
         color: #1f2937;
@@ -523,14 +511,12 @@ async function renderLogin() {
         text-align: center;
         min-height: 70px;
         font-size: 11px;
-        position: relative;
-        z-index: 8;
         margin-bottom: 8px;
       }
 
       .system-btn:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-        border-color: rgba(255, 255, 255, 0.3);
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-color: #cbd5e1;
         transform: translateY(-1px);
       }
 
@@ -557,18 +543,11 @@ async function renderLogin() {
         line-height: 1.1;
       }
 
-      /* searchOrderbtn-sea 전용 스타일 추가 */
-      #searchOrderbtn-sea {
-        position: relative;
-        z-index: 12;
-        margin-top: 12px;
-        clear: both;
-      }
-
       .login-footer {
         text-align: center;
         padding-top: 20px;
         border-top: 1px solid #e2e8f0;
+        margin-top: 40px;
       }
 
       .footer-text {
@@ -580,10 +559,13 @@ async function renderLogin() {
 
       /* 반응형 디자인 */
       @media (max-width: 480px) {
-        .login-container {
-          margin: 20px;
-          padding: 24px 20px;
-          max-width: none;
+        #loginHeader {
+          height: 140px;
+        }
+
+        #loginPanel.collapsed {
+          top: 140px;
+          height: calc(100vh - 140px);
         }
 
         .brand-name {
@@ -615,14 +597,14 @@ async function renderLogin() {
       }
 
       @media (max-height: 800px) {
-        .login-container {
-          max-height: 90vh;
-          overflow-y: auto;
+        #loginPanelContainer {
+          padding-bottom: 20px;
         }
       }
     </style>
   `;
 
+  // DOM 요소 가져오기
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
   const join = document.querySelector('#join');
@@ -633,13 +615,15 @@ async function renderLogin() {
   const goPOS = document.querySelector('#goPOS');
   const goTLM = document.querySelector('#goTLM');
 
+  // 패널 핸들링 설정
+  setupLoginPanelHandling();
+
+  // 기존 이벤트 리스너들...
   join.addEventListener('click', async () => {
     try {
-      // renderSignUp 함수가 로드되지 않은 경우 동적으로 로드
       if (typeof renderSignUp !== 'function' && typeof window.renderSignUp !== 'function') {
         console.log('🔄 renderSignUp 함수 동적 로드 시도');
 
-        // 스크립트 동적 로드
         const script = document.createElement('script');
         script.src = '/TLG/pages/auth/renderSignUp.js';
         script.onload = () => {
@@ -656,7 +640,6 @@ async function renderLogin() {
         };
         document.head.appendChild(script);
       } else {
-        // 함수가 이미 로드된 경우 바로 실행
         const signUpFunc = window.renderSignUp || renderSignUp;
         signUpFunc();
       }
@@ -666,7 +649,6 @@ async function renderLogin() {
     }
   });
 
-  // 로딩 화면 함수
   const showLoadingScreen = () => {
     const btnText = login.querySelector('.btn-text');
     const btnLoading = login.querySelector('.btn-loading');
@@ -685,7 +667,6 @@ async function renderLogin() {
     login.disabled = false;
   };
 
-  // 개발용 빠른 로그인
   quickLogin.addEventListener('click', async () => {
     try {
       showLoadingScreen();
@@ -823,7 +804,7 @@ async function renderLogin() {
   });
 
   const handleEnterKey = (event) => {
-    if (!document.querySelector('.login-container')) {
+    if (!document.querySelector('#loginPanelContainer')) {
       return;
     }
 
@@ -851,7 +832,6 @@ async function renderLogin() {
     showPOSStoreSearchModal();
   });
 
-  // 사장님 앱 버튼
   goTLM.addEventListener('click', () => {
     showStoreSearchModal();
   });
@@ -1055,11 +1035,8 @@ async function renderLogin() {
     `;
 
     document.body.appendChild(modal);
-
-    // 검색 기능 설정
     setupPOSStoreSearch();
 
-    // 입력 필드에 포커스
     setTimeout(() => {
       const input = document.getElementById('posStoreNameInput');
       if (input) input.focus();
@@ -1077,7 +1054,6 @@ async function renderLogin() {
     input.addEventListener('input', (e) => {
       const query = e.target.value.trim();
 
-      // 이전 타이머 취소
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
@@ -1087,13 +1063,11 @@ async function renderLogin() {
         return;
       }
 
-      // 200ms 딜레이 후 검색 실행
       searchTimeout = setTimeout(() => {
         searchStoresForPOS(query);
       }, 200);
     });
 
-    // 엔터키로 첫 번째 결과 선택
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const firstResult = results.querySelector('.store-result-item');
@@ -1112,7 +1086,6 @@ async function renderLogin() {
     try {
       console.log(`🔍 POS 매장 검색: "${query}"`);
 
-      // 로딩 상태 표시
       results.innerHTML = `
         <div class="loading-results">
           <div class="loading-spinner"></div>
@@ -1178,7 +1151,6 @@ async function renderLogin() {
     console.log(`✅ POS 매장 선택: ${storeName} (ID: ${storeId})`);
     closePOSStoreSearchModal();
 
-    // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/pos/${storeId}`;
     }, 200);
@@ -1391,11 +1363,8 @@ async function renderLogin() {
     `;
 
     document.body.appendChild(modal);
-
-    // 검색 기능 설정
     setupKDSStoreSearch();
 
-    // 입력 필드에 포커스
     setTimeout(() => {
       const input = document.getElementById('kdsStoreNameInput');
       if (input) input.focus();
@@ -1413,7 +1382,6 @@ async function renderLogin() {
     input.addEventListener('input', (e) => {
       const query = e.target.value.trim();
 
-      // 이전 타이머 취소
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
@@ -1423,13 +1391,11 @@ async function renderLogin() {
         return;
       }
 
-      // 200ms 딜레이 후 검색 실행
       searchTimeout = setTimeout(() => {
         searchStoresForKDS(query);
       }, 200);
     });
 
-    // 엔터키로 첫 번째 결과 선택
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const firstResult = results.querySelector('.store-result-item');
@@ -1448,7 +1414,6 @@ async function renderLogin() {
     try {
       console.log(`🔍 KDS 매장 검색: "${query}"`);
 
-      // 로딩 상태 표시
       results.innerHTML = `
         <div class="loading-results">
           <div class="loading-spinner"></div>
@@ -1514,7 +1479,6 @@ async function renderLogin() {
     console.log(`✅ KDS 매장 선택: ${storeName} (ID: ${storeId})`);
     closeKDSStoreSearchModal();
 
-    // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/kds/${storeId}`;
     }, 200);
@@ -1727,11 +1691,8 @@ async function renderLogin() {
     `;
 
     document.body.appendChild(modal);
-
-    // 검색 기능 설정
     setupStoreSearch();
 
-    // 입력 필드에 포커스
     setTimeout(() => {
       const input = document.getElementById('storeNameInput');
       if (input) input.focus();
@@ -1749,7 +1710,6 @@ async function renderLogin() {
     input.addEventListener('input', (e) => {
       const query = e.target.value.trim();
 
-      // 이전 타이머 취소
       if (searchTimeout) {
         clearTimeout(searchTimeout);
       }
@@ -1759,13 +1719,11 @@ async function renderLogin() {
         return;
       }
 
-      // 200ms 딜레이 후 검색 실행
       searchTimeout = setTimeout(() => {
         searchStoresForTLM(query);
       }, 200);
     });
 
-    // 엔터키로 첫 번째 결과 선택
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const firstResult = results.querySelector('.store-result-item');
@@ -1784,7 +1742,6 @@ async function renderLogin() {
     try {
       console.log(`🔍 TLM 매장 검색: "${query}"`);
 
-      // 로딩 상태 표시
       results.innerHTML = `
         <div class="loading-results">
           <div class="loading-spinner"></div>
@@ -1850,7 +1807,6 @@ async function renderLogin() {
     console.log(`✅ TLM 매장 선택: ${storeName} (ID: ${storeId})`);
     closeStoreSearchModal();
 
-    // 약간의 딜레이 후 이동 (모달 닫힘 애니메이션 완료 후)
     setTimeout(() => {
       window.location.href = `/tlm/${storeId}`;
     }, 200);
@@ -1881,5 +1837,155 @@ async function renderLogin() {
     if (posModal && e.target.classList.contains('modal-overlay')) {
       closePOSStoreSearchModal();
     }
+  });
+}
+
+// 로그인 패널 핸들링 함수
+function setupLoginPanelHandling() {
+  const panel = document.getElementById('loginPanel');
+  const panelContainer = document.getElementById('loginPanelContainer');
+
+  if (!panel || !panelContainer) return;
+
+  adjustLoginPanelLayout();
+  window.addEventListener('resize', () => adjustLoginPanelLayout());
+  panel.addEventListener('transitionend', () => adjustLoginPanelLayout());
+
+  setupLoginWheelEvents(panel, panelContainer);
+  setupLoginTouchEvents(panel, panelContainer);
+
+  setTimeout(() => adjustLoginPanelLayout(), 0);
+}
+
+function adjustLoginPanelLayout() {
+  const panel = document.getElementById('loginPanel');
+  const panelContainer = document.getElementById('loginPanelContainer');
+
+  if (!panel || !panelContainer) return;
+
+  const vh = window.innerHeight;
+  const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+  const handleHeight = 24;
+  const isExpanded = top === 0;
+
+  let panelHeight;
+  if (isExpanded) {
+    panelHeight = vh - handleHeight;
+    panelContainer.style.paddingBottom = '80px';
+  } else {
+    panelHeight = vh - top - handleHeight;
+    panelContainer.style.paddingBottom = '60px';
+  }
+
+  panelContainer.style.height = `${panelHeight}px`;
+  panelContainer.style.maxHeight = `${panelHeight}px`;
+  panelContainer.style.overflowY = 'auto';
+  panelContainer.style.overflowX = 'hidden';
+  panelContainer.style.webkitOverflowScrolling = 'touch';
+}
+
+function setupLoginWheelEvents(panel, panelContainer) {
+  panel.addEventListener('wheel', (e) => {
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+    const isExpanded = top === 0;
+    const isCollapsed = !isExpanded;
+
+    if (e.deltaY > 0) {
+      if (isCollapsed) {
+        e.preventDefault();
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+        setTimeout(() => adjustLoginPanelLayout(), 30);
+        return;
+      }
+      return;
+    }
+
+    if (e.deltaY < 0) {
+      if (isExpanded) {
+        if (panelContainer.scrollTop <= 0) {
+          e.preventDefault();
+          panel.classList.remove('expanded');
+          panel.classList.add('collapsed');
+          panel.style.top = '160px';
+          setTimeout(() => adjustLoginPanelLayout(), 30);
+          return;
+        }
+        return;
+      }
+    }
+  });
+}
+
+function setupLoginTouchEvents(panel, panelContainer) {
+  let startY = 0;
+  let currentY = 0;
+  let isDragging = false;
+  let initialScrollTop = 0;
+
+  panel.addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    initialScrollTop = panelContainer.scrollTop;
+    isDragging = true;
+    panel.style.transition = 'none';
+  });
+
+  panel.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+
+    currentY = e.touches[0].clientY;
+    const deltaY = startY - currentY;
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+    const isExpanded = top === 0;
+    const isCollapsed = !isExpanded;
+
+    if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
+      e.preventDefault();
+      const newTop = Math.max(0, Math.min(160, -deltaY));
+      panel.style.top = `${newTop}px`;
+      return;
+    }
+
+    if (isCollapsed && deltaY > 0) {
+      e.preventDefault();
+      const newTop = Math.max(0, Math.min(160, 160 - deltaY));
+      panel.style.top = `${newTop}px`;
+      return;
+    }
+  });
+
+  panel.addEventListener('touchend', (e) => {
+    if (!isDragging) return;
+
+    isDragging = false;
+    const deltaY = startY - currentY;
+    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+
+    panel.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
+    if (Math.abs(deltaY) > 50) {
+      if (deltaY > 0) {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      } else {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      }
+    } else {
+      if (top < 80) {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      } else {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      }
+    }
+
+    setTimeout(() => adjustLoginPanelLayout(), 30);
   });
 }

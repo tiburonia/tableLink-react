@@ -84,18 +84,23 @@ function getFailureStyles() {
      
 
       .payment-failure-container {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
         width: 100%;
         max-width: 430px;
-        margin: 0 auto;
-        min-height: 100vh;
+        height: 100vh;
         background: linear-gradient(135deg, #fef1f2 0%, #fee2e2 50%, #fecaca 100%);
         padding: 20px;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        overflow-y : auto;
+        overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        box-sizing: border-box;
       }
 
       .failure-content {
@@ -105,10 +110,12 @@ function getFailureStyles() {
         background: white;
         border-radius: 24px;
         padding: 40px 32px;
+        margin: 20px 0 40px 0;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         border: 1px solid rgba(248, 113, 113, 0.2);
         position: relative;
         overflow: hidden;
+        flex-shrink: 0;
       }
 
       .failure-animation {
