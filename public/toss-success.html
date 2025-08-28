@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -86,11 +85,116 @@
             font-weight: 600;
             cursor: pointer;
             margin-top: 20px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        }
+
+        .btn.primary:hover {
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+        }
+
+        .btn.secondary:hover {
+            box-shadow: 0 4px 12px rgba(77, 89, 101, 0.3);
+        }
+
+        .payment-info {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            text-align: left;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-item .label {
+            color: #4b5563;
+            font-weight: 500;
+        }
+
+        .info-item .value {
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .order-status {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            border: 1px solid #86efac;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-icon {
+            font-size: 32px;
+        }
+
+        .status-text h3 {
+            margin: 0 0 4px 0;
+            color: #166534;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .status-text p {
+            margin: 0;
+            color: #22c55e;
+            font-size: 14px;
+        }
+
+        .warning-message {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #fbbf24;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .warning-icon {
+            font-size: 32px;
+        }
+
+        .warning-message p {
+            margin: 0;
+            color: #92400e;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .actions {
+            margin-top: 32px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
         }
     </style>
 </head>
@@ -103,6 +207,69 @@
     </div>
 
     <script>
+        function goToMain() {
+            window.opener ? window.opener.location.href = '/' : window.location.href = '/';
+        }
+
+        function goToMyPage() {
+            window.opener ? window.opener.location.href = '/mypage' : window.location.href = '/mypage';
+        }
+
+        function showSuccessPage(paymentKey, orderId, amount, orderResult = null) {
+            document.querySelector('.container').innerHTML = `
+                <div class="success-content">
+                    <div class="success-icon">✅</div>
+                    <h1>결제 및 주문 완료!</h1>
+                    <p>토스페이먼츠를 통한 결제가 완료되고 주문이 접수되었습니다.</p>
+
+                    <div class="payment-info">
+                        <div class="info-item">
+                            <span class="label">결제 금액:</span>
+                            <span class="value">${parseInt(amount).toLocaleString()}원</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">주문 번호:</span>
+                            <span class="value">${orderId}</span>
+                        </div>
+                        ${orderResult ? `
+                        <div class="info-item">
+                            <span class="label">주문 ID:</span>
+                            <span class="value">${orderResult.result?.orderId || 'N/A'}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">매장:</span>
+                            <span class="value">${orderResult.result?.storeName || 'N/A'}</span>
+                        </div>
+                        ` : ''}
+                        <div class="info-item">
+                            <span class="label">결제 키:</span>
+                            <span class="value">${paymentKey}</span>
+                        </div>
+                    </div>
+
+                    ${orderResult ? `
+                    <div class="order-status">
+                        <div class="status-icon">🍳</div>
+                        <div class="status-text">
+                            <h3>주문이 접수되었습니다!</h3>
+                            <p>매장에서 조리를 시작합니다.</p>
+                        </div>
+                    </div>
+                    ` : `
+                    <div class="warning-message">
+                        <div class="warning-icon">⚠️</div>
+                        <p>결제는 완료되었으나 주문 정보를 찾을 수 없습니다.<br>고객센터로 문의해주세요.</p>
+                    </div>
+                    `}
+
+                    <div class="actions">
+                        <button onclick="goToMain()" class="btn primary">메인으로</button>
+                        <button onclick="goToMyPage()" class="btn secondary">주문내역 보기</button>
+                    </div>
+                </div>
+            `;
+        }
+
         async function processPayment() {
             try {
                 // URL 파라미터에서 결제 정보 가져오기
@@ -119,30 +286,62 @@
                     throw new Error('결제 정보가 올바르지 않습니다.');
                 }
 
-                // 토스페이먼츠 결제 승인 요청
-                const response = await fetch('/api/toss/success', {
+                // 3. 결제 승인 API 호출
+                const approvalResponse = await fetch('/api/toss/success', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        paymentKey,
-                        orderId,
+                        paymentKey: paymentKey,
+                        orderId: orderId,
                         amount: parseInt(amount)
                     })
                 });
 
-                const result = await response.json();
+                if (!approvalResponse.ok) {
+                    throw new Error('결제 승인에 실패했습니다.');
+                }
 
-                if (result.success) {
-                    document.querySelector('.container').innerHTML = `
-                        <div class="success-icon">🎉</div>
-                        <h1>결제 완료!</h1>
-                        <p>결제가 성공적으로 처리되었습니다.</p>
-                        <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-                    `;
+                const approvalResult = await approvalResponse.json();
+                console.log('✅ 토스페이먼츠 결제 승인 완료:', approvalResult);
+
+                // 4. 주문 생성 API 호출 (저장된 주문 데이터 사용)
+                const savedOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
+                console.log('💾 저장된 주문 데이터:', savedOrderData);
+
+                if (savedOrderData && savedOrderData.userId) {
+                    console.log('🔄 주문 생성 API 호출 시작');
+
+                    const orderResponse = await fetch('/api/orders/pay', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            ...savedOrderData,
+                            pgPaymentKey: paymentKey,
+                            pgOrderId: orderId,
+                            pgPaymentMethod: 'CARD'
+                        })
+                    });
+
+                    if (!orderResponse.ok) {
+                        const errorData = await orderResponse.json();
+                        throw new Error(errorData.error || '주문 생성에 실패했습니다.');
+                    }
+
+                    const orderResult = await orderResponse.json();
+                    console.log('✅ 주문 생성 완료:', orderResult);
+
+                    // 저장된 주문 데이터 삭제
+                    sessionStorage.removeItem('pendingOrderData');
+
+                    // 5. 성공 페이지 표시 (주문 정보 포함)
+                    showSuccessPage(paymentKey, orderId, amount, orderResult);
                 } else {
-                    throw new Error(result.error || '결제 승인에 실패했습니다.');
+                    console.warn('⚠️ 저장된 주문 데이터가 없습니다. 결제만 승인됨');
+                    showSuccessPage(paymentKey, orderId, amount);
                 }
 
             } catch (error) {

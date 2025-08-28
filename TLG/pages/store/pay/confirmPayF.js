@@ -69,6 +69,30 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // 주문 데이터를 sessionStorage에 저장 (결제 성공 후 사용)
+    const pendingOrderData = {
+      userId: userInfo.id,
+      storeId: orderData.storeId,
+      storeName: orderData.store,
+      tableNumber: orderData.tableNum,
+      orderData: {
+        store: orderData.store,
+        storeId: orderData.storeId,
+        date: orderData.date,
+        table: orderData.table,
+        tableNum: orderData.tableNum,
+        items: orderData.items,
+        total: orderData.total
+      },
+      usedPoint: pointsUsed || 0,
+      finalTotal: finalAmount,
+      selectedCouponId: couponId,
+      couponDiscount: couponDiscount || 0
+    };
+
+    sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
+    console.log('💾 주문 데이터 저장 완료:', pendingOrderData);
+
     // 토스페이먼츠 결제창 호출
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
@@ -80,6 +104,8 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     }, paymentMethod);
 
     if (!paymentResult.success) {
+      // 결제 실패 시 저장된 주문 데이터 삭제
+      sessionStorage.removeItem('pendingOrderData');
       throw new Error(paymentResult.message || '결제가 취소되었습니다.');
     }
 
