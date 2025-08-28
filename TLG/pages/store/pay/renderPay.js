@@ -694,15 +694,7 @@ async function renderPay(currentOrder, store, tableNum) {
           console.log('✅ confirmPay 함수 로드 완료');
         }
 
-        // userInfo 가져오기
-        const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-        if (!userInfo || !userInfo.id) {
-          throw new Error('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
-        }
-
         if (typeof window.confirmPay === 'function') {
-          // userInfo를 전역 변수로 설정
-          window.userInfo = userInfo;
           window.confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount);
         } else {
           throw new Error('confirmPay 함수를 로드할 수 없습니다');

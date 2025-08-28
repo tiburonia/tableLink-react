@@ -7,6 +7,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('쿠폰 ID:', couponId);
   console.log('쿠폰 할인:', couponDiscount);
 
+  // userInfo 안전하게 가져오기
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+  if (!userInfo || !userInfo.id) {
+    throw new Error('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+  }
+
+  console.log('✅ 사용자 정보 확인:', userInfo.id);
+
   try {
     // 토스페이먼츠 결제 처리
     console.log('💳 토스페이먼츠 결제 시작');
