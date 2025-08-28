@@ -95,6 +95,7 @@ async function renderSignUp() {
               <div class="input-status" id="phoneStatus"></div>
             </div>
             <div class="form-hint" id="phoneHint" style="margin-bottom: 8px;">기존 주문 내역 연동을 위해 입력해주세요</div>
+           
 
             <button type="button" class="search-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
