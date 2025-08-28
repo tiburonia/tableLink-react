@@ -98,10 +98,20 @@ router.post('/users/signup', async (req, res) => {
       phone: phone ? phone.trim() : null
     };
 
-    await pool.query(
-      'INSERT INTO users (id, pw, name, phone) VALUES ($1, $2, $3, $4)',
-      [cleanedData.id, cleanedData.pw, cleanedData.name, cleanedData.phone]
-    );
+    await pool.query(`
+      INSERT INTO users (
+        id, pw, name, phone, 
+        email_notifications, sms_notifications, push_notifications
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [
+      cleanedData.id, 
+      cleanedData.pw, 
+      cleanedData.name, 
+      cleanedData.phone,
+      true,  // email_notifications 기본값
+      true,  // sms_notifications 기본값
+      false  // push_notifications 기본값
+    ]);
     
     console.log(`✅ 새 사용자 가입: ${cleanedData.id} (${cleanedData.name || '익명'})`);
     res.json({ success: true, message: '회원가입 성공' });
