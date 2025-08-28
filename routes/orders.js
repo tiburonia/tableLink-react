@@ -2,12 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
 
-// 결제 처리 API (기존 /pay 엔드포인트 유지)
-router.post('/pay', async (req, res) => {
-  const client = await pool.connect();
-  try {
-    const {
-
 // 비회원 결제 처리 API (게스트 전용)
 router.post('/guest-pay', async (req, res) => {
   const client = await pool.connect();
@@ -220,7 +214,11 @@ router.post('/guest-pay', async (req, res) => {
   }
 });
 
-
+// 결제 처리 API (TL회원용)
+router.post('/pay', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const {
       userId,
       storeId,
       storeName,
