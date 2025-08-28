@@ -1,4 +1,3 @@
-
 async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0) {
   console.log('💳 결제 확인 처리 시작');
   console.log('주문 데이터:', orderData);
@@ -50,7 +49,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           <div class="success-icon">✅</div>
           <h1 class="success-title">결제 완료!</h1>
           <p class="success-message">주문이 성공적으로 접수되었습니다.</p>
-          
+
           <div class="order-summary-card">
             <div class="summary-header">
               <h3>주문 내역</h3>
@@ -364,19 +363,19 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           .payment-success-container {
             padding: 12px;
           }
-          
+
           .success-content {
             padding: 16px;
           }
-          
+
           .order-summary-card {
             padding: 20px;
           }
-          
+
           .success-title {
             font-size: 28px;
           }
-          
+
           .success-icon {
             font-size: 60px;
           }
@@ -397,7 +396,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
-    
+
     // 에러 페이지 렌더링 - 개선된 UI
     main.innerHTML = `
       <div class="payment-error-container">
@@ -406,10 +405,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
             <div class="error-icon">⚠️</div>
             <div class="error-ripple"></div>
           </div>
-          
+
           <h1 class="error-title">결제 처리 실패</h1>
           <p class="error-message">${error.message || '결제 처리 중 일시적인 오류가 발생했습니다.'}</p>
-          
+
           <div class="error-details">
             <div class="detail-item">
               <span class="detail-icon">🏪</span>
@@ -429,7 +428,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
             <p>잠시 후 다시 시도해주세요.</p>
             <p>문제가 지속되면 매장에 문의해주세요.</p>
           </div>
-          
+
           <div class="action-buttons">
             <button id="retryPayment" class="btn primary">
               <span class="btn-icon">🔄</span>
@@ -663,15 +662,15 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           .payment-error-container {
             padding: 16px;
           }
-          
+
           .error-content {
             padding: 32px 24px;
           }
-          
+
           .error-title {
             font-size: 22px;
           }
-          
+
           .error-icon {
             font-size: 64px;
           }
@@ -705,3 +704,24 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 }
 
 window.confirmPay = confirmPay;
+
+export async function renderPayScreen(storeId, orderData) {
+  try {
+    // 토스페이먼츠 모듈 동적 로드
+    if (!window.requestTossPayment) {
+      const script = document.createElement('script');
+      script.src = '/TLG/pages/store/pay/tossPayments.js';
+      script.type = 'module';
+      document.head.appendChild(script);
+
+      await new Promise(resolve => {
+        script.onload = resolve;
+      });
+    }
+
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+
+    if (!userInfo) {
+      alert('로그인이 필요합니다.');
+      return;
+    }

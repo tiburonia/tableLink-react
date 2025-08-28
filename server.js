@@ -39,6 +39,7 @@ const adminRoutes = require('./routes/admin');
 const cacheRoutes = require('./routes/cache');
 const posRoutes = require('./routes/pos');
 const regularLevelsRoutes = require('./routes/regular-levels');
+const tossRouter = require('./routes/toss');
 
 // 라우트 연결
 app.use('/api/auth', authRoutes);
@@ -52,6 +53,7 @@ app.use('/api/cache', cacheRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/regular-levels', regularLevelsRoutes);
 app.use('/api/guests', require('./routes/guests'));
+app.use('/api/toss', tossRouter);
 
 // 플레이스홀더 이미지 API
 app.get('/api/placeholder/:width/:height', (req, res) => {
