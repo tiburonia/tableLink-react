@@ -85,8 +85,8 @@ function generateSkeletonCards(count) {
 // 실제 주문 데이터 로드
 async function loadOrderData(userInfo) {
   try {
-    // orders 테이블에서 전체 주문 내역 가져오기
-    const response = await fetch(`/api/orders/mypage/${userInfo.id}?limit=100`);
+    // paid_orders 테이블에서 전체 주문 내역 가져오기
+    const response = await fetch(`/api/orders/users/${userInfo.id}?limit=100`);
 
     if (!response.ok) throw new Error('주문 내역 조회 실패');
     const data = await response.json();
