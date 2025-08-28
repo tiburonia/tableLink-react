@@ -81,6 +81,7 @@ function getFailureStyles() {
         padding: 0;
         box-sizing: border-box;
       }
+     
 
       .payment-failure-container {
         width: 100%;
@@ -93,7 +94,7 @@ function getFailureStyles() {
         align-items: center;
         justify-content: center;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        overflow-y: auto;
+        overflow-y : auto;
         -webkit-overflow-scrolling: touch;
       }
 
