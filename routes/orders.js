@@ -188,47 +188,46 @@ router.post('/pay', async (req, res) => {
       }
     }
 
-    // 1. paid_orders 테이블에 결제 정보 저장
+    // 1. TL회원 결제 정보를 user_paid_orders 테이블에 저장
     const paidOrderResult = await client.query(`
-      INSERT INTO paid_orders (
-        store_id, user_id, guest_phone, table_number, order_data,
+      INSERT INTO user_paid_orders (
+        user_id, store_id, table_number, order_data,
         original_amount, used_point, coupon_discount, final_amount,
         payment_method, payment_status, payment_date, order_source
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id
     `, [
-      storeId,               // $1
-      userId,                // $2
-      user.phone || null,    // $3 - TLL 주문이므로 회원 전화번호 저장
-      actualTableNumber,     // $4
-      JSON.stringify({       // $5
+      userId,                // $1 - TL회원 ID
+      storeId,               // $2
+      actualTableNumber,     // $3
+      JSON.stringify({       // $4
         ...orderData,
         storeId: storeId,
         storeName: storeName,
         tableNumber: tableNumber
       }),
-      orderData.total,       // $6 - original_amount
-      appliedPoint,          // $7 - used_point
-      couponDiscount || 0,   // $8 - coupon_discount
-      finalAmount,           // $9 - final_amount
-      'card',                // $10 - payment_method
-      'completed',           // $11 - payment_status
-      new Date(),            // $12 - payment_date
-      'TLL'                  // $13 - order_source
+      orderData.total,       // $5 - original_amount
+      appliedPoint,          // $6 - used_point
+      couponDiscount || 0,   // $7 - coupon_discount
+      finalAmount,           // $8 - final_amount
+      'card',                // $9 - payment_method
+      'completed',           // $10 - payment_status
+      new Date(),            // $11 - payment_date
+      'TLL'                  // $12 - order_source
     ]);
 
     const paidOrderId = paidOrderResult.rows[0].id;
     console.log(`✅ 결제 정보 ID ${paidOrderId} paid_orders 테이블에 저장 완료`);
 
-    // 2. orders 테이블에 KDS용 제조 정보 저장
+    // 2. orders 테이블에 KDS용 제조 정보 저장 (user_paid_order_id 참조)
     const orderResult = await client.query(`
       INSERT INTO orders (
-        paid_order_id, store_id, table_number, customer_name,
+        user_paid_order_id, store_id, table_number, customer_name,
         order_data, total_amount, cooking_status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING id
     `, [
-      paidOrderId,           // $1
+      paidOrderId,           // $1 - user_paid_orders.id 참조
       storeId,               // $2
       actualTableNumber,     // $3
       user.name || '손님',   // $4
@@ -470,7 +469,7 @@ router.get('/stores/:storeId', async (req, res) => {
   }
 });
 
-// 사용자별 주문 내역 조회 API (paid_orders 기반)
+// 사용자별 주문 내역 조회 API (user_paid_orders 기반)
 router.get('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -480,20 +479,20 @@ router.get('/users/:userId', async (req, res) => {
 
     const ordersResult = await pool.query(`
       SELECT
-        p.id,
-        p.store_id,
+        upo.id,
+        upo.store_id,
         s.name as store_name,
-        p.order_data,
-        p.original_amount,
-        p.final_amount,
-        p.payment_status,
-        p.payment_date,
-        p.created_at,
-        p.table_number
-      FROM paid_orders p
-      LEFT JOIN stores s ON p.store_id = s.id
-      WHERE p.user_id = $1
-      ORDER BY p.payment_date DESC
+        upo.order_data,
+        upo.original_amount,
+        upo.final_amount,
+        upo.payment_status,
+        upo.payment_date,
+        upo.created_at,
+        upo.table_number
+      FROM user_paid_orders upo
+      LEFT JOIN stores s ON upo.store_id = s.id
+      WHERE upo.user_id = $1
+      ORDER BY upo.payment_date DESC
       LIMIT $2
     `, [userId, limit]);
 
@@ -534,16 +533,20 @@ router.get('/kds/:storeId', async (req, res) => {
 
     console.log(`📟 KDS - 매장 ${storeId} 주문 조회`);
 
-    // 조리가 완료되지 않은 orders 조회 (POS OPEN 상태 포함)
+    // 조리가 완료되지 않은 orders 조회 (user_paid_orders와 paid_orders 모두 지원)
     const query = `
       SELECT 
-        o.id as order_id, o.paid_order_id, o.store_id, o.table_number, 
-        o.customer_name, o.order_data, o.total_amount, o.cooking_status,
-        o.started_at, o.completed_at, o.created_at,
-        p.user_id, p.guest_phone, p.payment_date, p.order_source,
+        o.id as order_id, o.paid_order_id, o.user_paid_order_id, 
+        o.store_id, o.table_number, o.customer_name, o.order_data, 
+        o.total_amount, o.cooking_status, o.started_at, o.completed_at, o.created_at,
+        COALESCE(upo.user_id, p.user_id) as user_id,
+        p.guest_phone, 
+        COALESCE(upo.payment_date, p.payment_date) as payment_date,
+        COALESCE(upo.order_source, p.order_source) as order_source,
         s.name as store_name
       FROM orders o
       LEFT JOIN paid_orders p ON o.paid_order_id = p.id
+      LEFT JOIN user_paid_orders upo ON o.user_paid_order_id = upo.id
       LEFT JOIN stores s ON o.store_id = s.id
       WHERE o.store_id = $1
       AND o.cooking_status IN ('PENDING', 'COOKING', 'OPEN')

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -20,7 +19,7 @@ router.post('/users/check-id', async (req, res) => {
 
   try {
     const result = await pool.query('SELECT id FROM users WHERE id = $1', [id.trim()]);
-    
+
     if (result.rows.length > 0) {
       console.log(`❌ 아이디 중복: ${id}`);
       res.json({ success: true, available: false, message: '이미 사용 중인 아이디입니다' });
@@ -51,7 +50,7 @@ router.post('/users/check-phone', async (req, res) => {
 
   try {
     const result = await pool.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
-    
+
     if (result.rows.length > 0) {
       console.log(`❌ 전화번호 중복: ${phone}`);
       res.json({ success: true, available: false, message: '이미 등록된 전화번호입니다' });
@@ -68,7 +67,7 @@ router.post('/users/check-phone', async (req, res) => {
 // 사용자 회원가입 API
 router.post('/users/signup', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id, pw, name, phone } = req.body;
 
@@ -197,7 +196,7 @@ router.post('/users/signup', async (req, res) => {
     }
 
     await client.query('COMMIT');
-    
+
     res.json({ 
       success: true, 
       message: '회원가입 성공',
@@ -210,7 +209,7 @@ router.post('/users/signup', async (req, res) => {
 
   } catch (error) {
     await client.query('ROLLBACK');
-    
+
     if (error.code === '23505') {
       res.status(409).json({ error: '이미 존재하는 아이디입니다' });
     } else {
@@ -390,7 +389,7 @@ router.post('/users/favorite/toggle', async (req, res) => {
       'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
       [userId, parseInt(storeId)]
     );
-    
+
     const isFavorited = currentFavorite.rows.length > 0;
     console.log(`📋 현재 즐겨찾기 상태: ${isFavorited ? '등록됨' : '등록안됨'}`);
 
@@ -572,10 +571,10 @@ router.post('/coupons/issue', async (req, res) => {
 // 사용자 정보 업데이트 API
 router.put('/users/update', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     console.log('📝 사용자 정보 업데이트 요청:', req.body);
-    
+
     const { 
       userId, 
       name, 
@@ -600,9 +599,9 @@ router.put('/users/update', async (req, res) => {
       SELECT id FROM users 
       WHERE phone = $1 AND id != $2
     `;
-    
+
     const phoneCheck = await client.query(phoneCheckQuery, [phone, userId]);
-    
+
     if (phoneCheck.rows.length > 0) {
       return res.status(409).json({
         success: false,
@@ -616,9 +615,9 @@ router.put('/users/update', async (req, res) => {
       FROM information_schema.columns 
       WHERE table_name = 'users'
     `);
-    
+
     const existingColumns = columnsResult.rows.map(row => row.column_name);
-    
+
     // 기본 필드만 업데이트 (필수 컬럼들)
     let updateQuery = `
       UPDATE users 
@@ -627,63 +626,63 @@ router.put('/users/update', async (req, res) => {
         phone = $2,
         updated_at = CURRENT_TIMESTAMP
     `;
-    
+
     let updateValues = [
       name?.trim() || null,
       phone?.trim() || null
     ];
-    
+
     let paramIndex = 3;
-    
+
     // 선택적 컬럼들 추가
     if (existingColumns.includes('email')) {
       updateQuery += `, email = $${paramIndex}`;
       updateValues.push(email?.trim() || null);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('birth')) {
       updateQuery += `, birth = $${paramIndex}`;
       updateValues.push(birth || null);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('gender')) {
       updateQuery += `, gender = $${paramIndex}`;
       updateValues.push(gender || null);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('address')) {
       updateQuery += `, address = $${paramIndex}`;
       updateValues.push(address?.trim() || null);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('detail_address')) {
       updateQuery += `, detail_address = $${paramIndex}`;
       updateValues.push(detailAddress?.trim() || null);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('email_notifications')) {
       updateQuery += `, email_notifications = $${paramIndex}`;
       updateValues.push(notifications?.email === true);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('sms_notifications')) {
       updateQuery += `, sms_notifications = $${paramIndex}`;
       updateValues.push(notifications?.sms === true);
       paramIndex++;
     }
-    
+
     if (existingColumns.includes('push_notifications')) {
       updateQuery += `, push_notifications = $${paramIndex}`;
       updateValues.push(notifications?.push === true);
       paramIndex++;
     }
-    
+
     updateQuery += ` WHERE id = $${paramIndex} RETURNING *`;
     updateValues.push(userId);
 
