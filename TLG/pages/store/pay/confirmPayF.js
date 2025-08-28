@@ -1,3 +1,4 @@
+
 async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0) {
   console.log('💳 결제 확인 처리 시작');
   console.log('주문 데이터:', orderData);
@@ -422,7 +423,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
 
-    // 에러 페이지 렌더링 - 개선된 UI
+    // 에러 페이지 렌더링
     main.innerHTML = `
       <div class="payment-error-container">
         <div class="error-content">
@@ -472,10 +473,6 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       </div>
 
       <style>
-        * {
-          box-sizing: border-box;
-        }
-
         .payment-error-container {
           position: fixed;
           top: 0;
@@ -712,18 +709,8 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       renderOrderScreen(store, orderData.tableNum);
     });
 
-    // 메인으로 버튼 추가
     document.getElementById('backToMain')?.addEventListener('click', () => {
       renderMap();
-    });
-
-    // 에러 페이지 버튼 이벤트
-    document.getElementById('retryPayment')?.addEventListener('click', () => {
-      renderPay(currentOrder, store, orderData.tableNum);
-    });
-
-    document.getElementById('backToOrder')?.addEventListener('click', () => {
-      renderOrderScreen(store, orderData.tableNum);
     });
   }
 }
@@ -732,24 +719,3 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 window.confirmPay = confirmPay;
 
 console.log('✅ confirmPay 함수가 전역으로 등록되었습니다');
-
-export async function renderPayScreen(storeId, orderData) {
-  try {
-    // 토스페이먼츠 모듈 동적 로드
-    if (!window.requestTossPayment) {
-      const script = document.createElement('script');
-      script.src = '/TLG/pages/store/pay/tossPayments.js';
-      script.type = 'module';
-      document.head.appendChild(script);
-
-      await new Promise(resolve => {
-        script.onload = resolve;
-      });
-    }
-
-    const userInfo = JSON.parse(localStorage.getItem('userInfo'));
-
-    if (!userInfo) {
-      alert('로그인이 필요합니다.');
-      return;
-    }
