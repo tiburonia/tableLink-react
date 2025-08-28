@@ -1668,7 +1668,7 @@ async function updateProfileSection(currentUserInfo, ordersData, favoriteStoresD
   // 통계 정보 업데이트
   if (totalOrders) {
     try {
-      const allOrdersResponse = await fetch(`/api/orders/mypage/${window.userInfo.id}?limit=1000`);
+      const allOrdersResponse = await fetch(`/api/orders/users/${window.userInfo.id}?limit=1000`);
       if (allOrdersResponse.ok) {
         const allOrdersData = await allOrdersResponse.json();
         totalOrders.textContent = allOrdersData.orders?.length || 0;
@@ -1742,7 +1742,7 @@ async function loadUserData() {
     const userData = await userResponse.json();
     const currentUserInfo = userData.user;
 
-    const ordersResponse = await fetch(`/api/orders/mypage/${window.userInfo.id}?limit=3`);
+    const ordersResponse = await fetch(`/api/orders/users/${window.userInfo.id}?limit=3`);
     let ordersData = [];
     if (ordersResponse.ok) {
       const ordersResult = await ordersResponse.json();
