@@ -700,12 +700,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     }
 
     // 4. orders 세션을 CLOSED 상태로 변경
-    let updateQuery = `
-      UPDATE orders 
-      SET cooking_status = 'CLOSED',
-          paid_order_id = $1,
-          completed_at = CURRENT_TIMESTAMP`;
-    let updateParams = [paidOrderId, orderId];
+    let userPaidOrderId = null;
 
     // TL회원인 경우 user_paid_order_id도 설정
     if (currentUserId && !currentUserId.startsWith('pos')) {
@@ -715,16 +710,29 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
       );
       
       if (userPaidOrderResult.rows.length > 0) {
-        const userPaidOrderId = userPaidOrderResult.rows[0].id;
-        updateQuery += `, user_paid_order_id = $3`;
-        updateParams.push(userPaidOrderId);
+        userPaidOrderId = userPaidOrderResult.rows[0].id;
       }
     }
 
-    updateQuery += ` WHERE id = $${updateParams.length + 1}`;
-    updateParams.push(orderId);
-
-    await client.query(updateQuery, updateParams);
+    // 조건에 따라 다른 쿼리 실행
+    if (userPaidOrderId) {
+      await client.query(`
+        UPDATE orders 
+        SET cooking_status = 'CLOSED',
+            paid_order_id = $1,
+            user_paid_order_id = $2,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `, [paidOrderId, userPaidOrderId, orderId]);
+    } else {
+      await client.query(`
+        UPDATE orders 
+        SET cooking_status = 'CLOSED',
+            paid_order_id = $1,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [paidOrderId, orderId]);
+    }
 
     // 5. order_items의 cooking_status를 COMPLETED로 변경
     await client.query(`
