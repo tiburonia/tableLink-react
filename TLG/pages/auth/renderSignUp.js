@@ -1,4 +1,3 @@
-
 async function renderSignUp() {
   const main = document.getElementById('main');
 
@@ -7,7 +6,7 @@ async function renderSignUp() {
       <!-- 헤더 -->
       <header class="signup-header">
         <button class="back-btn" onclick="renderLogin()">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
@@ -15,237 +14,249 @@ async function renderSignUp() {
         <div class="header-spacer"></div>
       </header>
 
-      <!-- 컨텐츠 -->
+      <!-- 메인 컨텐츠 -->
       <div class="signup-content">
         <!-- 브랜드 섹션 -->
         <div class="brand-section">
           <div class="brand-logo">
-            <div class="logo-container">
+            <div class="logo-wrapper">
               <div class="logo-icon">🍽️</div>
               <div class="logo-glow"></div>
             </div>
-            <div class="brand-text">
-              <span class="brand-name">TableLink</span>
-              <span class="brand-tagline">테이블의 새로운 경험</span>
+            <div class="brand-info">
+              <h2 class="brand-name">TableLink</h2>
+              <p class="brand-tagline">새로운 식사 경험의 시작</p>
             </div>
-          </div>
-          <div class="welcome-message">
-            <h2>환영합니다!</h2>
-            <p>몇 가지 정보만 입력하시면<br>바로 시작할 수 있어요</p>
           </div>
         </div>
 
         <!-- 회원가입 폼 -->
         <form class="signup-form" id="signupForm">
           <!-- 아이디 입력 -->
-          <div class="form-group">
+          <div class="input-group">
+            <label for="signupId" class="input-label">
+              아이디 <span class="required">*</span>
+            </label>
             <div class="input-wrapper">
-              <label class="input-label" for="signupId">
-                <span class="label-text">아이디</span>
-                <span class="label-required">*</span>
-              </label>
-              <div class="input-container">
-                <input 
-                  type="text" 
-                  id="signupId" 
-                  class="form-input" 
-                  placeholder="영문, 숫자 3-20자" 
-                  autocomplete="username"
-                  maxlength="20"
-                >
-                <div class="input-status" id="idStatus"></div>
-                <div class="input-underline"></div>
-              </div>
-              <div class="form-hint" id="idHint">영문과 숫자만 사용할 수 있어요</div>
+              <input 
+                type="text" 
+                id="signupId" 
+                class="form-input" 
+                placeholder="영문, 숫자 조합 3-20자"
+                autocomplete="username"
+                maxlength="20"
+                required
+              >
+              <div class="input-status" id="idStatus"></div>
             </div>
+            <div class="input-hint" id="idHint">영문과 숫자만 사용 가능합니다</div>
           </div>
 
           <!-- 비밀번호 입력 -->
-          <div class="form-group">
+          <div class="input-group">
+            <label for="signupPw" class="input-label">
+              비밀번호 <span class="required">*</span>
+            </label>
             <div class="input-wrapper">
-              <label class="input-label" for="signupPw">
-                <span class="label-text">비밀번호</span>
-                <span class="label-required">*</span>
-              </label>
-              <div class="input-container">
-                <input 
-                  type="password" 
-                  id="signupPw" 
-                  class="form-input" 
-                  placeholder="최소 4자 이상" 
-                  autocomplete="new-password"
-                >
-                <button type="button" class="input-action" onclick="togglePassword('signupPw')">
-                  <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </button>
-                <div class="input-underline"></div>
-              </div>
-              <div class="form-hint" id="pwHint">안전한 비밀번호를 만들어 주세요</div>
+              <input 
+                type="password" 
+                id="signupPw" 
+                class="form-input" 
+                placeholder="최소 4자 이상"
+                autocomplete="new-password"
+                required
+              >
+              <button type="button" class="input-toggle" onclick="togglePasswordVisibility('signupPw')">
+                <svg class="eye-icon show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C7 20 2.73 16.39 1 12A18.45 18.45 0 0 1 5.06 5.06M9.9 4.24A9.12 9.12 0 0 1 12 4C17 4 21.27 7.61 23 12A18.5 18.5 0 0 1 19.42 16.42"/>
+                  <path d="M1 1L23 23" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M10.584 10.587A2 2 0 0 0 13.415 13.414" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="input-status" id="pwStatus"></div>
             </div>
+            <div class="input-hint" id="pwHint">안전한 비밀번호를 설정해주세요</div>
           </div>
 
           <!-- 비밀번호 확인 -->
-          <div class="form-group">
+          <div class="input-group">
+            <label for="signupPwConfirm" class="input-label">
+              비밀번호 확인 <span class="required">*</span>
+            </label>
             <div class="input-wrapper">
-              <label class="input-label" for="signupPwConfirm">
-                <span class="label-text">비밀번호 확인</span>
-                <span class="label-required">*</span>
-              </label>
-              <div class="input-container">
-                <input 
-                  type="password" 
-                  id="signupPwConfirm" 
-                  class="form-input" 
-                  placeholder="비밀번호를 다시 입력해 주세요" 
-                  autocomplete="new-password"
-                >
-                <button type="button" class="input-action" onclick="togglePassword('signupPwConfirm')">
-                  <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </button>
-                <div class="input-underline"></div>
-              </div>
-              <div class="form-hint" id="pwConfirmHint">비밀번호가 일치하는지 확인해 주세요</div>
+              <input 
+                type="password" 
+                id="signupPwConfirm" 
+                class="form-input" 
+                placeholder="비밀번호를 다시 입력해주세요"
+                autocomplete="new-password"
+                required
+              >
+              <button type="button" class="input-toggle" onclick="togglePasswordVisibility('signupPwConfirm')">
+                <svg class="eye-icon show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon hide" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C7 20 2.73 16.39 1 12A18.45 18.45 0 0 1 5.06 5.06M9.9 4.24A9.12 9.12 0 0 1 12 4C17 4 21.27 7.61 23 12A18.5 18.5 0 0 1 19.42 16.42"/>
+                  <path d="M1 1L23 23" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M10.584 10.587A2 2 0 0 0 13.415 13.414" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div class="input-status" id="pwConfirmStatus"></div>
             </div>
+            <div class="input-hint" id="pwConfirmHint">위에서 입력한 비밀번호와 같아야 합니다</div>
           </div>
 
           <!-- 이름 입력 -->
-          <div class="form-group">
+          <div class="input-group">
+            <label for="signupName" class="input-label">
+              이름 <span class="optional">선택사항</span>
+            </label>
             <div class="input-wrapper">
-              <label class="input-label" for="signupName">
-                <span class="label-text">이름</span>
-                <span class="label-optional">선택사항</span>
-              </label>
-              <div class="input-container">
-                <input 
-                  type="text" 
-                  id="signupName" 
-                  class="form-input" 
-                  placeholder="실명을 입력해 주세요" 
-                  autocomplete="name"
-                >
-                <div class="input-icon">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 21V19A4 4 0 0 0 16 15H8A4 4 0 0 0 4 19V21"/>
-                    <circle cx="12" cy="7" r="4"/>
-                  </svg>
-                </div>
-                <div class="input-underline"></div>
+              <input 
+                type="text" 
+                id="signupName" 
+                class="form-input" 
+                placeholder="실명을 입력해주세요"
+                autocomplete="name"
+              >
+              <div class="input-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21V19A4 4 0 0 0 16 15H8A4 4 0 0 0 4 19V21"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
               </div>
-              <div class="form-hint">개인화된 서비스를 위해 입력해 주세요</div>
             </div>
+            <div class="input-hint">개인화된 서비스 제공을 위해 입력해주세요</div>
           </div>
 
           <!-- 전화번호 입력 -->
-          <div class="form-group">
+          <div class="input-group">
+            <label for="signupPhone" class="input-label">
+              전화번호 <span class="optional">선택사항</span>
+            </label>
             <div class="input-wrapper">
-              <label class="input-label" for="signupPhone">
-                <span class="label-text">전화번호</span>
-                <span class="label-optional">선택사항</span>
-              </label>
-              <div class="input-container">
-                <input 
-                  type="tel" 
-                  id="signupPhone" 
-                  class="form-input" 
-                  placeholder="010-1234-5678" 
-                  autocomplete="tel"
-                >
-                <div class="input-status" id="phoneStatus"></div>
-                <div class="input-underline"></div>
-              </div>
-              <div class="form-hint phone-hint" id="phoneHint">기존 주문 내역 연동을 위해 입력해 주세요</div>
-              
-              <!-- 주문내역 찾기 버튼 -->
-              <button type="button" class="search-order-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
-                <div class="btn-content">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                  <span>주문내역 찾기</span>
-                </div>
-                <div class="btn-ripple"></div>
-              </button>
+              <input 
+                type="tel" 
+                id="signupPhone" 
+                class="form-input" 
+                placeholder="010-1234-5678"
+                autocomplete="tel"
+              >
+              <div class="input-status" id="phoneStatus"></div>
             </div>
+            <div class="input-hint" id="phoneHint">기존 주문 내역 연동을 위해 입력해주세요</div>
+
+            <!-- 주문내역 검색 버튼 -->
+            <button type="button" class="search-orders-btn" id="searchOrdersBtn" onclick="searchOrdersByPhone()" style="display: none;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+              주문 내역 찾기
+            </button>
           </div>
 
-          <!-- 게스트 주문 내역 미리보기 -->
-          <div class="orders-preview-container" id="guestOrdersPreview" style="display: none;">
-            <div class="preview-card">
-              <div class="preview-header">
-                <div class="preview-title">
-                  <div class="preview-icon">📋</div>
-                  <span>발견된 주문 내역</span>
-                  <div class="preview-badge" id="previewCount"></div>
-                </div>
-              </div>
-              <div class="preview-content" id="guestOrdersContent"></div>
-              <div class="preview-summary" id="previewSummary"></div>
+          <!-- 주문 내역 미리보기 -->
+          <div class="orders-preview" id="guestOrdersPreview" style="display: none;">
+            <div class="preview-header">
+              <div class="preview-icon">📋</div>
+              <div class="preview-title">발견된 주문 내역</div>
+              <div class="preview-count" id="previewCount">0건</div>
             </div>
+            <div class="preview-content" id="guestOrdersContent"></div>
+            <div class="preview-summary" id="previewSummary"></div>
           </div>
 
           <!-- 회원가입 버튼 -->
-          <button type="submit" class="signup-submit-btn" id="signupBtn" disabled>
-            <div class="btn-content">
-              <span class="btn-text">계정 만들기</span>
-              <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path d="M5 12H19M12 5L19 12L12 19" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
+          <button type="submit" class="signup-btn" id="signupBtn" disabled>
+            <span class="btn-text">회원가입</span>
             <div class="btn-loading" style="display: none;">
-              <div class="loading-spinner"></div>
-              <span>계정 생성중...</span>
+              <div class="spinner"></div>
+              계정 생성 중...
             </div>
-            <div class="btn-shine"></div>
+            <svg class="btn-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12H19M12 5L19 12L12 19" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
         </form>
 
         <!-- 로그인 링크 -->
-        <div class="login-link-section">
+        <div class="login-link">
           <div class="divider">
-            <span class="divider-text">또는</span>
+            <span>또는</span>
           </div>
-          <button type="button" class="login-link-btn" onclick="renderLogin()">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 12H5M12 19L5 12L12 5" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>이미 계정이 있으신가요? 로그인하기</span>
+          <button type="button" class="login-btn" onclick="renderLogin()">
+            이미 계정이 있으신가요? 로그인하기
           </button>
         </div>
       </div>
     </div>
 
     <style>
+      /* 기본 리셋 및 변수 */
       * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
       }
 
+      :root {
+        --primary-color: #667eea;
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --secondary-color: #f8fafc;
+        --accent-color: #10b981;
+        --error-color: #ef4444;
+        --warning-color: #f59e0b;
+        --text-dark: #1f2937;
+        --text-light: #6b7280;
+        --border-color: #e5e7eb;
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+        --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 메인 컨테이너 */
       #main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', system-ui, sans-serif;
-        overflow: auto;
-        position: relative;
+        background: var(--primary-gradient);
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
       }
 
       #signupContainer {
-        width: 390px;
-        height: 760px;
-        background: rgba(255, 255, 255, 0.08);
-        backdrop-filter: blur(24px);
+        width: 100%;
+        max-width: 420px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        display: flex;
-        flex-direction: column;
-        position: relative;
         overflow: hidden;
-        box-shadow: 0 32px 64px rgba(0, 0, 0, 0.2);
+        animation: slideUp 0.6s ease-out;
+      }
+
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       /* 헤더 */
@@ -253,40 +264,34 @@ async function renderSignUp() {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: max(env(safe-area-inset-top), 20px) 24px 20px;
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(32px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-        flex-shrink: 0;
-        z-index: 100;
+        padding: 24px;
+        background: var(--primary-gradient);
+        color: white;
+        position: relative;
       }
 
       .back-btn {
         width: 40px;
         height: 40px;
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.2);
         border: none;
-        border-radius: 12px;
+        border-radius: var(--radius-sm);
         color: white;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: var(--transition);
+        backdrop-filter: blur(10px);
       }
 
       .back-btn:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.3);
         transform: translateX(-2px);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
       }
 
       .signup-header h1 {
-        margin: 0;
-        color: white;
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: -0.5px;
       }
@@ -297,21 +302,15 @@ async function renderSignUp() {
 
       /* 컨텐츠 */
       .signup-content {
-        flex: 1;
+        padding: 32px 24px 24px;
+        max-height: 70vh;
         overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-        padding: 0 24px 24px;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
       }
 
       /* 브랜드 섹션 */
       .brand-section {
         text-align: center;
-        margin: 32px 0 40px;
-        flex-shrink: 0;
+        margin-bottom: 32px;
       }
 
       .brand-logo {
@@ -319,10 +318,9 @@ async function renderSignUp() {
         flex-direction: column;
         align-items: center;
         gap: 16px;
-        margin-bottom: 24px;
       }
 
-      .logo-container {
+      .logo-wrapper {
         position: relative;
         display: flex;
         align-items: center;
@@ -330,121 +328,84 @@ async function renderSignUp() {
       }
 
       .logo-icon {
-        font-size: 32px;
-        width: 64px;
-        height: 64px;
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
+        font-size: 28px;
+        width: 56px;
+        height: 56px;
+        background: var(--primary-gradient);
+        border-radius: var(--radius-md);
         display: flex;
         align-items: center;
         justify-content: center;
-        backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.25);
         position: relative;
         z-index: 2;
+        box-shadow: var(--shadow-md);
       }
 
       .logo-glow {
         position: absolute;
-        width: 64px;
-        height: 64px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, transparent 70%);
+        width: 56px;
+        height: 56px;
+        background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
         border-radius: 50%;
-        filter: blur(8px);
+        filter: blur(10px);
         z-index: 1;
       }
 
-      .brand-text {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
+      .brand-info {
+        text-align: center;
       }
 
       .brand-name {
-        font-size: 28px;
+        font-size: 24px;
         font-weight: 800;
-        color: white;
-        letter-spacing: -1px;
-        background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--text-dark);
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
       }
 
       .brand-tagline {
         font-size: 14px;
-        color: rgba(255, 255, 255, 0.8);
+        color: var(--text-light);
         font-weight: 500;
       }
 
-      .welcome-message h2 {
-        margin: 0 0 8px 0;
-        font-size: 24px;
-        font-weight: 700;
-        color: white;
-        letter-spacing: -0.5px;
-      }
-
-      .welcome-message p {
-        margin: 0;
-        font-size: 16px;
-        color: rgba(255, 255, 255, 0.85);
-        line-height: 1.5;
-        font-weight: 400;
-      }
-
-      /* 폼 */
+      /* 폼 스타일 */
       .signup-form {
         display: flex;
         flex-direction: column;
-        gap: 28px;
-        flex: 1;
-        min-height: 0;
+        gap: 24px;
       }
 
-      .form-group {
-        display: flex;
-        flex-direction: column;
-        flex-shrink: 0;
-      }
-
-      .input-wrapper {
+      .input-group {
         display: flex;
         flex-direction: column;
         gap: 8px;
       }
 
       .input-label {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-dark);
         display: flex;
         align-items: center;
-        gap: 6px;
-        margin-bottom: 8px;
+        gap: 4px;
       }
 
-      .label-text {
-        font-size: 15px;
-        font-weight: 600;
-        color: white;
-        letter-spacing: -0.2px;
-      }
-
-      .label-required {
-        color: #ff6b6b;
+      .required {
+        color: var(--error-color);
         font-size: 12px;
-        font-weight: 700;
       }
 
-      .label-optional {
-        color: rgba(255, 255, 255, 0.6);
-        font-size: 12px;
-        font-weight: 500;
-        background: rgba(255, 255, 255, 0.1);
+      .optional {
+        color: var(--text-light);
+        font-size: 11px;
+        background: var(--secondary-color);
         padding: 2px 6px;
-        border-radius: 6px;
-        backdrop-filter: blur(8px);
+        border-radius: 4px;
+        font-weight: 500;
       }
 
-      .input-container {
+      .input-wrapper {
         position: relative;
         display: flex;
         align-items: center;
@@ -452,331 +413,267 @@ async function renderSignUp() {
 
       .form-input {
         width: 100%;
-        height: 56px;
-        padding: 16px 48px 16px 16px;
-        font-size: 16px;
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 14px;
-        background: rgba(255, 255, 255, 0.95);
-        color: #1a1a1a;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 48px;
+        padding: 12px 16px;
+        padding-right: 48px;
+        font-size: 15px;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: white;
+        color: var(--text-dark);
+        transition: var(--transition);
         font-weight: 500;
-        position: relative;
-        z-index: 2;
       }
 
       .form-input::placeholder {
-        color: #888;
+        color: var(--text-light);
         font-weight: 400;
       }
 
       .form-input:focus {
         outline: none;
-        border-color: rgba(255, 255, 255, 0.6);
-        background: white;
-        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.1);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         transform: translateY(-1px);
       }
 
+      .form-input.success {
+        border-color: var(--accent-color);
+        background: rgba(16, 185, 129, 0.05);
+      }
+
       .form-input.error {
-        border-color: #ff6b6b;
-        background: #fff8f8;
+        border-color: var(--error-color);
+        background: rgba(239, 68, 68, 0.05);
         animation: shake 0.4s ease-in-out;
       }
 
-      .form-input.success {
-        border-color: #51cf66;
-        background: #f8fff9;
+      .form-input.warning {
+        border-color: var(--warning-color);
+        background: rgba(245, 158, 11, 0.05);
       }
 
-      .input-underline {
-        position: absolute;
-        bottom: 0;
-        left: 50%;
-        width: 0;
-        height: 2px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        transform: translateX(-50%);
-        z-index: 3;
-      }
-
-      .form-input:focus + .input-action + .input-underline,
-      .form-input:focus + .input-underline {
-        width: 100%;
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-4px); }
+        75% { transform: translateX(4px); }
       }
 
       .input-status,
-      .input-icon {
+      .input-icon,
+      .input-toggle {
         position: absolute;
         right: 16px;
-        color: #888;
-        pointer-events: none;
-        z-index: 3;
+        color: var(--text-light);
+        font-size: 16px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s ease;
       }
 
-      .input-action {
-        position: absolute;
-        right: 12px;
+      .input-toggle {
         background: none;
         border: none;
-        color: #666;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 8px;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 3;
+        padding: 4px;
+        border-radius: 4px;
+        transition: var(--transition);
       }
 
-      .input-action:hover {
-        color: #333;
+      .input-toggle:hover {
         background: rgba(0, 0, 0, 0.05);
-        transform: scale(1.05);
+        color: var(--text-dark);
       }
 
-      .form-hint {
+      .input-hint {
         font-size: 12px;
-        color: rgba(255, 255, 255, 0.7);
-        margin-top: 6px;
-        min-height: 16px;
-        transition: all 0.3s ease;
-        line-height: 1.4;
+        color: var(--text-light);
         font-weight: 500;
+        min-height: 16px;
+        transition: var(--transition);
       }
 
-      .form-hint.error {
-        color: #ff8a95;
-        font-weight: 600;
+      .input-hint.success {
+        color: var(--accent-color);
       }
 
-      .form-hint.success {
-        color: #69db7c;
-        font-weight: 600;
+      .input-hint.error {
+        color: var(--error-color);
       }
 
-      .phone-hint {
-        margin-bottom: 16px !important;
+      .input-hint.warning {
+        color: var(--warning-color);
       }
 
-      /* 주문내역 찾기 버튼 */
-      .search-order-btn {
+      /* 검색 버튼 */
+      .search-orders-btn {
         width: 100%;
+        padding: 12px 16px;
         background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         color: white;
         border: none;
-        border-radius: 14px;
-        padding: 14px 20px;
-        font-size: 15px;
+        border-radius: var(--radius-md);
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        display: none;
+        display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
         margin-top: 12px;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
-        position: relative;
-        overflow: hidden;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
       }
 
-      .search-order-btn:hover {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
-      }
-
-      .btn-ripple {
-        position: absolute;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
-        transform: scale(0);
-        animation: ripple 0.6s linear;
-        pointer-events: none;
+      .search-orders-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
       }
 
       /* 주문 내역 미리보기 */
-      .orders-preview-container {
-        margin-top: 20px;
-        flex-shrink: 0;
-      }
-
-      .preview-card {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(16px);
+      .orders-preview {
+        background: var(--secondary-color);
+        border-radius: var(--radius-md);
+        padding: 16px;
+        margin-top: 16px;
+        border: 1px solid var(--border-color);
       }
 
       .preview-header {
-        margin-bottom: 16px;
-      }
-
-      .preview-title {
         display: flex;
         align-items: center;
         gap: 8px;
+        margin-bottom: 12px;
       }
 
       .preview-icon {
         font-size: 16px;
       }
 
-      .preview-title span {
-        font-weight: 700;
-        color: #1a1a1a;
-        font-size: 15px;
+      .preview-title {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 14px;
+        flex: 1;
       }
 
-      .preview-badge {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+      .preview-count {
+        background: var(--primary-gradient);
         color: white;
-        padding: 4px 10px;
+        padding: 4px 8px;
         border-radius: 12px;
         font-size: 11px;
-        font-weight: 700;
-        margin-left: auto;
+        font-weight: 600;
       }
 
       .preview-content {
-        color: #555;
-        font-size: 13px;
-        line-height: 1.5;
-        max-height: 160px;
+        max-height: 120px;
         overflow-y: auto;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
 
-      .order-preview-item {
+      .order-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 14px 0;
-        border-bottom: 1px solid #f0f0f0;
-        transition: all 0.2s ease;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
+        font-size: 13px;
       }
 
-      .order-preview-item:hover {
-        background: rgba(103, 126, 234, 0.05);
-        margin: 0 -8px;
-        padding: 14px 8px;
-        border-radius: 8px;
-      }
-
-      .order-preview-item:last-child {
+      .order-item:last-child {
         border-bottom: none;
       }
 
-      .order-item-info {
+      .store-info {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 2px;
       }
 
       .store-name {
         font-weight: 600;
-        color: #1a1a1a;
-        font-size: 14px;
+        color: var(--text-dark);
       }
 
       .order-date {
-        font-size: 12px;
-        color: #888;
+        color: var(--text-light);
+        font-size: 11px;
       }
 
       .order-amount {
-        font-weight: 700;
-        color: #667eea;
-        font-size: 14px;
+        font-weight: 600;
+        color: var(--primary-color);
       }
 
       .preview-summary {
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px solid #f0f0f0;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        font-size: 13px;
+        gap: 8px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
       }
 
       .summary-item {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
         text-align: center;
-        padding: 12px;
-        background: rgba(103, 126, 234, 0.05);
-        border-radius: 12px;
+        padding: 8px;
+        background: white;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-color);
       }
 
       .summary-label {
-        color: #666;
-        font-weight: 500;
+        font-size: 11px;
+        color: var(--text-light);
+        margin-bottom: 2px;
       }
 
       .summary-value {
-        color: #1a1a1a;
         font-weight: 700;
-        font-size: 16px;
+        color: var(--text-dark);
+        font-size: 14px;
       }
 
       /* 회원가입 버튼 */
-      .signup-submit-btn {
+      .signup-btn {
         width: 100%;
-        height: 56px;
-        background: linear-gradient(135deg, #51cf66 0%, #40c057 100%);
+        height: 52px;
+        background: var(--primary-gradient);
         color: white;
         border: none;
-        border-radius: 16px;
+        border-radius: var(--radius-md);
         font-size: 16px;
         font-weight: 700;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         display: flex;
         align-items: center;
         justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
+        transition: var(--transition);
+        box-shadow: var(--shadow-md);
         position: relative;
-        margin: 40px 0 20px;
-        box-shadow: 0 6px 24px rgba(81, 207, 102, 0.3);
-        flex-shrink: 0;
         overflow: hidden;
       }
 
-      .signup-submit-btn:hover:not(:disabled) {
+      .signup-btn:hover:not(:disabled) {
         transform: translateY(-2px);
-        box-shadow: 0 12px 32px rgba(81, 207, 102, 0.4);
+        box-shadow: var(--shadow-lg);
       }
 
-      .signup-submit-btn:disabled {
+      .signup-btn:disabled {
         background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-        color: rgba(255, 255, 255, 0.8);
         cursor: not-allowed;
         transform: none;
-        box-shadow: none;
+        box-shadow: var(--shadow-sm);
       }
 
-      .signup-submit-btn .btn-content {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.3s ease;
-      }
-
-      .signup-submit-btn.loading .btn-content {
+      .signup-btn.loading .btn-text,
+      .signup-btn.loading .btn-arrow {
         opacity: 0;
       }
 
-      .signup-submit-btn.loading .btn-loading {
+      .signup-btn.loading .btn-loading {
         display: flex !important;
       }
 
@@ -789,105 +686,71 @@ async function renderSignUp() {
         font-weight: 600;
       }
 
-      .loading-spinner {
-        width: 20px;
-        height: 20px;
+      .spinner {
+        width: 18px;
+        height: 18px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-top: 2px solid white;
         border-radius: 50%;
         animation: spin 1s linear infinite;
       }
 
-      .btn-shine {
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.6s ease;
-      }
-
-      .signup-submit-btn:hover:not(:disabled) .btn-shine {
-        left: 100%;
-      }
-
       .btn-arrow {
         transition: transform 0.3s ease;
       }
 
-      .signup-submit-btn:hover:not(:disabled) .btn-arrow {
+      .signup-btn:hover:not(:disabled) .btn-arrow {
         transform: translateX(2px);
       }
 
-      /* 로그인 링크 섹션 */
-      .login-link-section {
-        margin: 40px 0 24px 0;
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* 로그인 링크 */
+      .login-link {
+        margin-top: 32px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 24px;
-        flex-shrink: 0;
+        gap: 16px;
       }
 
       .divider {
         position: relative;
         width: 100%;
         height: 1px;
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--border-color);
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
-      .divider-text {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: rgba(255, 255, 255, 0.7);
+      .divider span {
+        background: white;
         padding: 0 16px;
+        color: var(--text-light);
         font-size: 13px;
         font-weight: 500;
       }
 
-      .login-link-btn {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        color: rgba(255, 255, 255, 0.9);
+      .login-btn {
+        background: none;
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s ease;
         padding: 12px 20px;
-        border-radius: 12px;
-        backdrop-filter: blur(16px);
+        border-radius: var(--radius-md);
+        transition: var(--transition);
       }
 
-      .login-link-btn:hover {
-        background: rgba(255, 255, 255, 0.15);
-        color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-      }
-
-      /* 애니메이션 */
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-4px); }
-        75% { transform: translateX(4px); }
-      }
-
-      @keyframes ripple {
-        to {
-          transform: scale(4);
-          opacity: 0;
-        }
+      .login-btn:hover {
+        background: var(--secondary-color);
+        color: var(--text-dark);
+        border-color: var(--primary-color);
       }
 
       /* 스크롤바 */
@@ -896,17 +759,17 @@ async function renderSignUp() {
       }
 
       .signup-content::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--secondary-color);
         border-radius: 2px;
       }
 
       .signup-content::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.3);
+        background: var(--border-color);
         border-radius: 2px;
       }
 
       .signup-content::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.5);
+        background: var(--text-light);
       }
 
       .preview-content::-webkit-scrollbar {
@@ -914,48 +777,59 @@ async function renderSignUp() {
       }
 
       .preview-content::-webkit-scrollbar-track {
-        background: #f8f9fa;
+        background: white;
         border-radius: 2px;
       }
 
       .preview-content::-webkit-scrollbar-thumb {
-        background: #dee2e6;
+        background: var(--border-color);
         border-radius: 2px;
       }
 
       /* 반응형 */
-      @media (max-height: 800px) {
+      @media (max-width: 480px) {
+        #main {
+          padding: 12px;
+        }
+
+        #signupContainer {
+          max-width: 100%;
+        }
+
+        .signup-content {
+          padding: 24px 20px 20px;
+        }
+
         .brand-section {
-          margin: 20px 0 30px;
+          margin-bottom: 24px;
         }
-        
-        .welcome-message h2 {
-          font-size: 20px;
-        }
-        
-        .form-group {
+
+        .signup-form {
           gap: 20px;
         }
       }
 
-      /* Safe area 지원 */
-      @supports (padding: max(0px)) {
-        .signup-header {
-          padding-top: max(env(safe-area-inset-top), 20px);
+      @media (max-height: 700px) {
+        .signup-content {
+          max-height: 60vh;
         }
 
-        .login-link-section {
-          margin-bottom: max(env(safe-area-inset-bottom), 24px);
+        .brand-section {
+          margin-bottom: 20px;
+        }
+
+        .signup-form {
+          gap: 16px;
         }
       }
     </style>
   `;
 
   // 폼 유효성 검사 및 이벤트 설정
-  setupSignupForm();
+  setupSignupFormLogic();
 }
 
-function setupSignupForm() {
+function setupSignupFormLogic() {
   const form = document.getElementById('signupForm');
   const idInput = document.getElementById('signupId');
   const pwInput = document.getElementById('signupPw');
@@ -965,56 +839,42 @@ function setupSignupForm() {
   const submitBtn = document.getElementById('signupBtn');
   const searchBtn = document.getElementById('searchOrdersBtn');
 
-  let isIdChecking = false;
-  let isIdValid = false;
-  let isPhoneChecking = false;
-
-  // 버튼 리플 효과
-  function addRippleEffect(button, event) {
-    const rect = button.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = event.clientX - rect.left - size / 2;
-    const y = event.clientY - rect.top - size / 2;
-    
-    const ripple = document.createElement('div');
-    ripple.className = 'btn-ripple';
-    ripple.style.width = ripple.style.height = size + 'px';
-    ripple.style.left = x + 'px';
-    ripple.style.top = y + 'px';
-    
-    button.appendChild(ripple);
-    
-    setTimeout(() => {
-      ripple.remove();
-    }, 600);
-  }
-
-  // 검색 버튼에 리플 효과 추가
-  searchBtn.addEventListener('click', (e) => {
-    addRippleEffect(searchBtn, e);
-  });
+  let validationState = {
+    id: { valid: false, checking: false },
+    password: { valid: false },
+    passwordConfirm: { valid: false },
+    phone: { valid: true, checking: false } // 선택사항이므로 기본값 true
+  };
 
   // 아이디 실시간 검증
   let idCheckTimeout;
-  idInput.addEventListener('input', (e) => {
+  idInput.addEventListener('input', async (e) => {
     const value = e.target.value.trim();
     clearTimeout(idCheckTimeout);
 
+    if (value.length === 0) {
+      resetInputState(idInput, 'idHint', '영문과 숫자만 사용 가능합니다');
+      validationState.id.valid = false;
+      updateSubmitButton();
+      return;
+    }
+
     if (value.length < 3) {
-      updateInputStatus(idInput, 'error', '❌', '아이디는 3자 이상이어야 합니다');
-      isIdValid = false;
+      setInputError(idInput, 'idHint', '아이디는 3자 이상이어야 합니다');
+      validationState.id.valid = false;
       updateSubmitButton();
       return;
     }
 
     if (!/^[a-zA-Z0-9]{3,20}$/.test(value)) {
-      updateInputStatus(idInput, 'error', '❌', '영문과 숫자만 사용 가능합니다');
-      isIdValid = false;
+      setInputError(idInput, 'idHint', '영문과 숫자만 사용 가능합니다');
+      validationState.id.valid = false;
       updateSubmitButton();
       return;
     }
 
-    updateInputStatus(idInput, 'checking', '⏳', '아이디 확인 중...');
+    setInputWarning(idInput, 'idHint', '아이디 확인 중...', '⏳');
+    validationState.id.checking = true;
 
     idCheckTimeout = setTimeout(async () => {
       await checkIdAvailability(value);
@@ -1022,38 +882,35 @@ function setupSignupForm() {
   });
 
   // 비밀번호 실시간 검증
-  pwInput.addEventListener('input', validatePassword);
-  pwConfirmInput.addEventListener('input', validatePassword);
+  pwInput.addEventListener('input', validatePasswords);
+  pwConfirmInput.addEventListener('input', validatePasswords);
 
   // 전화번호 실시간 검증
   let phoneCheckTimeout;
-  let isPhoneValid = true;
-
   phoneInput.addEventListener('input', (e) => {
     const value = formatPhoneNumber(e.target.value);
     e.target.value = value;
 
     clearTimeout(phoneCheckTimeout);
+    hideGuestOrdersPreview();
+    searchBtn.style.display = 'none';
 
     if (value.length === 0) {
-      hideGuestOrdersPreview();
-      updateInputStatus(phoneInput, '', '', '');
-      searchBtn.style.display = 'none';
-      isPhoneValid = true;
+      resetInputState(phoneInput, 'phoneHint', '기존 주문 내역 연동을 위해 입력해주세요');
+      validationState.phone.valid = true; // 선택사항이므로 비어있어도 유효
       updateSubmitButton();
       return;
     }
 
     if (value.length < 13) {
-      updateInputStatus(phoneInput, 'error', '❌', '올바른 전화번호를 입력하세요');
-      searchBtn.style.display = 'none';
-      hideGuestOrdersPreview();
-      isPhoneValid = false;
+      setInputError(phoneInput, 'phoneHint', '올바른 전화번호 형식을 입력해주세요');
+      validationState.phone.valid = false;
       updateSubmitButton();
       return;
     }
 
-    updateInputStatus(phoneInput, 'checking', '⏳', '전화번호 확인 중...');
+    setInputWarning(phoneInput, 'phoneHint', '전화번호 확인 중...', '⏳');
+    validationState.phone.checking = true;
 
     phoneCheckTimeout = setTimeout(async () => {
       await checkPhoneAvailability(value);
@@ -1061,11 +918,10 @@ function setupSignupForm() {
   });
 
   // 폼 제출 이벤트
-  form.addEventListener('submit', handleSignupSubmit);
+  form.addEventListener('submit', handleFormSubmit);
 
   // 아이디 중복 확인
   async function checkIdAvailability(id) {
-    isIdChecking = true;
     try {
       const response = await fetch('/api/users/check-id', {
         method: 'POST',
@@ -1076,123 +932,129 @@ function setupSignupForm() {
       const data = await response.json();
 
       if (data.available) {
-        updateInputStatus(idInput, 'success', '✅', '사용 가능한 아이디입니다');
-        isIdValid = true;
+        setInputSuccess(idInput, 'idHint', '사용 가능한 아이디입니다', '✅');
+        validationState.id.valid = true;
       } else {
-        updateInputStatus(idInput, 'error', '❌', data.message || '사용할 수 없는 아이디입니다');
-        isIdValid = false;
+        setInputError(idInput, 'idHint', data.message || '이미 사용 중인 아이디입니다', '❌');
+        validationState.id.valid = false;
       }
     } catch (error) {
-      updateInputStatus(idInput, 'error', '❌', '아이디 확인 중 오류가 발생했습니다');
-      isIdValid = false;
+      setInputError(idInput, 'idHint', '아이디 확인 중 오류가 발생했습니다', '❌');
+      validationState.id.valid = false;
     } finally {
-      isIdChecking = false;
+      validationState.id.checking = false;
       updateSubmitButton();
     }
   }
 
   // 전화번호 중복 확인
   async function checkPhoneAvailability(phone) {
-    isPhoneChecking = true;
     try {
       const response = await fetch('/api/users/check-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
+        body: JSON.JSON.stringify({ phone })
       });
 
       const data = await response.json();
 
       if (data.available) {
-        updateInputStatus(phoneInput, 'success', '✅', '사용 가능한 전화번호입니다');
+        setInputSuccess(phoneInput, 'phoneHint', '사용 가능한 전화번호입니다', '✅');
         searchBtn.style.display = 'flex';
-        isPhoneValid = true;
+        validationState.phone.valid = true;
       } else {
-        updateInputStatus(phoneInput, 'error', '❌', '이미 등록된 전화번호입니다');
-        searchBtn.style.display = 'none';
-        hideGuestOrdersPreview();
-        isPhoneValid = false;
+        setInputError(phoneInput, 'phoneHint', '이미 등록된 전화번호입니다', '❌');
+        validationState.phone.valid = false;
       }
     } catch (error) {
-      updateInputStatus(phoneInput, 'error', '❌', '전화번호 확인 중 오류가 발생했습니다');
-      isPhoneValid = false;
+      setInputError(phoneInput, 'phoneHint', '전화번호 확인 중 오류가 발생했습니다', '❌');
+      validationState.phone.valid = false;
     } finally {
-      isPhoneChecking = false;
+      validationState.phone.checking = false;
       updateSubmitButton();
     }
   }
 
   // 비밀번호 검증
-  function validatePassword() {
+  function validatePasswords() {
     const pw = pwInput.value;
     const pwConfirm = pwConfirmInput.value;
 
+    // 비밀번호 검증
     if (pw.length === 0) {
-      updateInputStatus(pwInput, '', '', '');
-      updateInputStatus(pwConfirmInput, '', '', '');
-      updateSubmitButton();
-      return;
+      resetInputState(pwInput, 'pwHint', '안전한 비밀번호를 설정해주세요');
+      validationState.password.valid = false;
+    } else if (pw.length < 4) {
+      setInputError(pwInput, 'pwHint', '비밀번호는 4자 이상이어야 합니다', '❌');
+      validationState.password.valid = false;
+    } else {
+      setInputSuccess(pwInput, 'pwHint', '사용 가능한 비밀번호입니다', '✅');
+      validationState.password.valid = true;
     }
 
-    if (pw.length < 4) {
-      updateInputStatus(pwInput, 'error', '❌', '비밀번호는 4자 이상이어야 합니다');
+    // 비밀번호 확인 검증
+    if (pwConfirm.length === 0) {
+      resetInputState(pwConfirmInput, 'pwConfirmHint', '위에서 입력한 비밀번호와 같아야 합니다');
+      validationState.passwordConfirm.valid = false;
+    } else if (pw !== pwConfirm) {
+      setInputError(pwConfirmInput, 'pwConfirmHint', '비밀번호가 일치하지 않습니다', '❌');
+      validationState.passwordConfirm.valid = false;
     } else {
-      updateInputStatus(pwInput, 'success', '✅', '사용 가능한 비밀번호입니다');
-    }
-
-    if (pwConfirm.length > 0) {
-      if (pw === pwConfirm) {
-        updateInputStatus(pwConfirmInput, 'success', '✅', '비밀번호가 일치합니다');
-      } else {
-        updateInputStatus(pwConfirmInput, 'error', '❌', '비밀번호가 일치하지 않습니다');
-      }
-    } else {
-      updateInputStatus(pwConfirmInput, '', '', '');
+      setInputSuccess(pwConfirmInput, 'pwConfirmHint', '비밀번호가 일치합니다', '✅');
+      validationState.passwordConfirm.valid = true;
     }
 
     updateSubmitButton();
   }
 
-  // 입력 상태 업데이트
-  function updateInputStatus(input, status, icon, message) {
-    const container = input.closest('.input-container');
-    const statusElement = container.querySelector('.input-status');
-    const hint = container.closest('.input-wrapper').querySelector('.form-hint');
+  // 입력 상태 설정 함수들
+  function setInputSuccess(input, hintId, message, icon = '') {
+    input.className = 'form-input success';
+    const status = input.parentElement.querySelector('.input-status');
+    if (status) status.textContent = icon;
+    document.getElementById(hintId).textContent = message;
+    document.getElementById(hintId).className = 'input-hint success';
+  }
 
-    input.className = `form-input ${status}`;
-    if (statusElement) statusElement.textContent = icon;
+  function setInputError(input, hintId, message, icon = '') {
+    input.className = 'form-input error';
+    const status = input.parentElement.querySelector('.input-status');
+    if (status) status.textContent = icon;
+    document.getElementById(hintId).textContent = message;
+    document.getElementById(hintId).className = 'input-hint error';
+  }
 
-    if (message) {
-      hint.textContent = message;
-      hint.className = `form-hint ${status}`;
-    } else {
-      const originalHint = hint.getAttribute('data-original') || '';
-      hint.textContent = originalHint;
-      hint.className = 'form-hint';
-    }
+  function setInputWarning(input, hintId, message, icon = '') {
+    input.className = 'form-input warning';
+    const status = input.parentElement.querySelector('.input-status');
+    if (status) status.textContent = icon;
+    document.getElementById(hintId).textContent = message;
+    document.getElementById(hintId).className = 'input-hint warning';
+  }
+
+  function resetInputState(input, hintId, message) {
+    input.className = 'form-input';
+    const status = input.parentElement.querySelector('.input-status');
+    if (status) status.textContent = '';
+    document.getElementById(hintId).textContent = message;
+    document.getElementById(hintId).className = 'input-hint';
   }
 
   // 제출 버튼 상태 업데이트
   function updateSubmitButton() {
-    const id = idInput.value.trim();
-    const pw = pwInput.value;
-    const pwConfirm = pwConfirmInput.value;
-    const phone = phoneInput.value.trim();
-
     const isFormValid = 
-      isIdValid && 
-      !isIdChecking && 
-      !isPhoneChecking &&
-      id.length >= 3 && 
-      pw.length >= 4 && 
-      pw === pwConfirm &&
-      (phone.length === 0 || isPhoneValid);
+      validationState.id.valid &&
+      validationState.password.valid &&
+      validationState.passwordConfirm.valid &&
+      validationState.phone.valid &&
+      !validationState.id.checking &&
+      !validationState.phone.checking;
 
     submitBtn.disabled = !isFormValid;
   }
 
   // 폼 제출 처리
-  async function handleSignupSubmit(e) {
+  async function handleFormSubmit(e) {
     e.preventDefault();
 
     if (submitBtn.disabled) return;
@@ -1216,8 +1078,9 @@ function setupSignupForm() {
       const data = await response.json();
 
       if (data.success) {
-        showSuccessToast('🎉 회원가입이 완료되었습니다!');
+        showToast('🎉 회원가입이 완료되었습니다!', 'success');
 
+        // 전화번호가 있는 경우 게스트 주문 연동 시도
         if (formData.phone) {
           try {
             await convertGuestToMember(formData.phone, formData.id);
@@ -1234,7 +1097,7 @@ function setupSignupForm() {
       }
     } catch (error) {
       console.error('회원가입 오류:', error);
-      showErrorToast(error.message || '회원가입 중 오류가 발생했습니다');
+      showToast(error.message || '회원가입 중 오류가 발생했습니다', 'error');
     } finally {
       submitBtn.classList.remove('loading');
     }
@@ -1253,7 +1116,7 @@ function setupSignupForm() {
 
       if (data.success) {
         console.log(`✅ 게스트 ${guestPhone}의 주문 ${data.transferredOrders}건이 회원 ${userId}로 이전됨`);
-        showSuccessToast('🔄 기존 주문 내역이 회원 계정에 연동되었습니다!');
+        showToast('🔄 기존 주문 내역이 회원 계정에 연동되었습니다!', 'success');
       }
     } catch (error) {
       console.error('게스트 회원 전환 실패:', error);
@@ -1262,13 +1125,13 @@ function setupSignupForm() {
   }
 }
 
-// 전화번호로 주문내역 검색 함수
+// 전화번호로 주문내역 검색
 async function searchOrdersByPhone() {
   const phoneInput = document.getElementById('signupPhone');
   const phone = phoneInput.value.trim();
 
   if (!phone || phone.length < 13) {
-    showErrorToast('올바른 전화번호를 입력해주세요');
+    showToast('올바른 전화번호를 입력해주세요', 'error');
     return;
   }
 
@@ -1276,10 +1139,8 @@ async function searchOrdersByPhone() {
   const originalContent = searchBtn.innerHTML;
 
   searchBtn.innerHTML = `
-    <div class="btn-content">
-      <div style="width: 16px; height: 16px; border: 2px solid transparent; border-top: 2px solid currentColor; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-      <span>검색중...</span>
-    </div>
+    <div class="spinner"></div>
+    검색 중...
   `;
   searchBtn.disabled = true;
 
@@ -1294,14 +1155,14 @@ async function searchOrdersByPhone() {
       };
 
       showGuestOrdersPreview(data.orders, stats);
-      showSuccessToast(`📱 ${data.orders.length}건의 주문 내역을 찾았습니다!`);
+      showToast(`📱 ${data.orders.length}건의 주문 내역을 찾았습니다!`, 'success');
     } else {
       hideGuestOrdersPreview();
-      showInfoToast('해당 전화번호로 등록된 주문 내역이 없습니다');
+      showToast('해당 전화번호로 등록된 주문 내역이 없습니다', 'info');
     }
   } catch (error) {
     console.error('주문내역 검색 실패:', error);
-    showErrorToast('주문내역 검색 중 오류가 발생했습니다');
+    showToast('주문내역 검색 중 오류가 발생했습니다', 'error');
     hideGuestOrdersPreview();
   } finally {
     searchBtn.innerHTML = originalContent;
@@ -1309,7 +1170,7 @@ async function searchOrdersByPhone() {
   }
 }
 
-// 게스트 주문 내역 미리보기 표시 함수
+// 게스트 주문 내역 미리보기 표시
 function showGuestOrdersPreview(orders, stats) {
   const preview = document.getElementById('guestOrdersPreview');
   const content = document.getElementById('guestOrdersContent');
@@ -1319,28 +1180,26 @@ function showGuestOrdersPreview(orders, stats) {
   count.textContent = `${orders.length}건`;
 
   const ordersHtml = orders.slice(0, 5).map(order => `
-    <div class="order-preview-item">
-      <div class="order-item-info">
+    <div class="order-item">
+      <div class="store-info">
         <div class="store-name">${order.store_name || '매장 정보 없음'}</div>
         <div class="order-date">${new Date(order.payment_date || order.order_date).toLocaleDateString('ko-KR')}</div>
       </div>
-      <div class="order-amount">
-        ${(order.final_amount || 0).toLocaleString()}원
-      </div>
+      <div class="order-amount">${(order.final_amount || 0).toLocaleString()}원</div>
     </div>
   `).join('');
 
   content.innerHTML = ordersHtml + 
-    (orders.length > 5 ? `<div style="text-align: center; margin-top: 16px; color: #999; font-size: 13px;">외 ${orders.length - 5}건 더</div>` : '');
+    (orders.length > 5 ? `<div style="text-align: center; margin-top: 12px; color: #6b7280; font-size: 12px;">외 ${orders.length - 5}건 더</div>` : '');
 
   if (stats) {
     summary.innerHTML = `
       <div class="summary-item">
-        <div class="summary-label">총 주문 횟수</div>
+        <div class="summary-label">총 주문</div>
         <div class="summary-value">${stats.totalOrders}회</div>
       </div>
       <div class="summary-item">
-        <div class="summary-label">총 주문 금액</div>
+        <div class="summary-label">총 금액</div>
         <div class="summary-value">${stats.totalAmount.toLocaleString()}원</div>
       </div>
     `;
@@ -1349,7 +1208,7 @@ function showGuestOrdersPreview(orders, stats) {
   preview.style.display = 'block';
 }
 
-// 게스트 주문 내역 미리보기 숨김 함수
+// 게스트 주문 내역 미리보기 숨김
 function hideGuestOrdersPreview() {
   const preview = document.getElementById('guestOrdersPreview');
   if (preview) {
@@ -1366,70 +1225,60 @@ function formatPhoneNumber(value) {
 }
 
 // 비밀번호 표시/숨김 토글
-function togglePassword(inputId) {
+function togglePasswordVisibility(inputId) {
   const input = document.getElementById(inputId);
-  const button = input.parentElement.querySelector('.input-action');
-  const eyeIcon = button.querySelector('.eye-icon');
+  const button = input.parentElement.querySelector('.input-toggle');
+  const showIcon = button.querySelector('.eye-icon.show');
+  const hideIcon = button.querySelector('.eye-icon.hide');
 
   if (input.type === 'password') {
     input.type = 'text';
-    eyeIcon.innerHTML = `
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C7 20 2.73 16.39 1 12A18.45 18.45 0 0 1 5.06 5.06M9.9 4.24A9.12 9.12 0 0 1 12 4C17 4 21.27 7.61 23 12A18.5 18.5 0 0 1 19.42 16.42"/>
-      <path d="M1 1L23 23" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M10.584 10.587A2 2 0 0 0 13.415 13.414" stroke-linecap="round" stroke-linejoin="round"/>
-    `;
+    showIcon.style.display = 'none';
+    hideIcon.style.display = 'block';
   } else {
     input.type = 'password';
-    eyeIcon.innerHTML = `
-      <path d="M1 12S5 4 12 4S23 12 23 12S19 20 12 20S1 12 1 12Z"/>
-      <circle cx="12" cy="12" r="3"/>
-    `;
+    showIcon.style.display = 'block';
+    hideIcon.style.display = 'none';
   }
 }
 
-// 토스트 메시지 함수들
-function showSuccessToast(message) {
-  showToast(message, 'success');
-}
-
-function showErrorToast(message) {
-  showToast(message, 'error');
-}
-
-function showInfoToast(message) {
-  showToast(message, 'info');
-}
-
-function showToast(message, type) {
+// 토스트 메시지
+function showToast(message, type = 'info') {
   const colors = {
-    success: { bg: 'linear-gradient(135deg, #51cf66 0%, #40c057 100%)', shadow: 'rgba(81, 207, 102, 0.3)' },
-    error: { bg: 'linear-gradient(135deg, #ff6b6b 0%, #fa5252 100%)', shadow: 'rgba(255, 107, 107, 0.3)' },
-    info: { bg: 'linear-gradient(135deg, #339af0 0%, #228be6 100%)', shadow: 'rgba(51, 154, 240, 0.3)' }
+    success: '#10b981',
+    error: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6'
   };
 
-  const color = colors[type] || colors.info;
+  const icons = {
+    success: '✅',
+    error: '❌',
+    warning: '⚠️',
+    info: 'ℹ️'
+  };
 
   const toast = document.createElement('div');
   toast.innerHTML = `
     <div style="display: flex; align-items: center; gap: 8px;">
-      <div style="font-size: 16px;">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</div>
+      <span style="font-size: 16px;">${icons[type]}</span>
       <span>${message}</span>
     </div>
   `;
-  
+
   toast.style.cssText = `
     position: fixed;
     top: 24px;
     left: 50%;
     transform: translateX(-50%);
-    background: ${color.bg};
+    background: ${colors[type]};
     color: white;
     padding: 16px 24px;
-    border-radius: 16px;
+    border-radius: 12px;
     font-weight: 600;
     z-index: 10000;
     font-size: 14px;
-    box-shadow: 0 12px 32px ${color.shadow};
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(16px);
     animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     max-width: 90%;
@@ -1477,5 +1326,5 @@ function showToast(message, type) {
 
 // 전역 함수로 등록
 window.renderSignUp = renderSignUp;
-window.togglePassword = togglePassword;
+window.togglePasswordVisibility = togglePasswordVisibility;
 window.searchOrdersByPhone = searchOrdersByPhone;
