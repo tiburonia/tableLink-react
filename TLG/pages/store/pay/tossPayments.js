@@ -97,6 +97,23 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
         result = await toss.requestPayment('휴대폰', paymentOptions);
         break;
         
+      case '간편결제':
+        // 간편결제 (페이코, 삼성페이 등)
+        result = await toss.requestPayment('간편결제', paymentOptions);
+        break;
+        
+      case '문화상품권':
+        result = await toss.requestPayment('문화상품권', paymentOptions);
+        break;
+        
+      case '도서문화상품권':
+        result = await toss.requestPayment('도서문화상품권', paymentOptions);
+        break;
+        
+      case '게임문화상품권':
+        result = await toss.requestPayment('게임문화상품권', paymentOptions);
+        break;
+        
       default:
         throw new Error(`지원하지 않는 결제 수단입니다: ${paymentMethod}`);
     }

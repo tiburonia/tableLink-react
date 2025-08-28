@@ -194,6 +194,38 @@ async function renderPay(currentOrder, store, tableNum) {
               </div>
               <div class="method-check">✓</div>
             </div>
+            <div class="payment-method-item" data-method="간편결제">
+              <div class="method-icon">⚡</div>
+              <div class="method-info">
+                <span class="method-name">간편결제</span>
+                <span class="method-desc">페이코, 삼성페이 등</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="문화상품권">
+              <div class="method-icon">🎫</div>
+              <div class="method-info">
+                <span class="method-name">문화상품권</span>
+                <span class="method-desc">상품권으로 결제</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="도서문화상품권">
+              <div class="method-icon">📚</div>
+              <div class="method-info">
+                <span class="method-name">도서문화상품권</span>
+                <span class="method-desc">도서/문화 상품권</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
+            <div class="payment-method-item" data-method="게임문화상품권">
+              <div class="method-icon">🎮</div>
+              <div class="method-info">
+                <span class="method-name">게임문화상품권</span>
+                <span class="method-desc">게임 상품권으로 결제</span>
+              </div>
+              <div class="method-check">✓</div>
+            </div>
           </div>
         </section>
 
