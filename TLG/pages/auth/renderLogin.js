@@ -110,7 +110,7 @@ async function renderLogin() {
 
           <!-- 푸터 -->
           <div class="login-footer">
-            <p class="footer-text">© 2024 TableLink. 모든 권리 보유.</p>
+            <p class="footer-text">© 2025 TableLink. 모든 권리 보유.</p>
           </div>
         </div>
       </div>
