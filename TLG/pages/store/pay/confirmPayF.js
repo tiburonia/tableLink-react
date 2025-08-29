@@ -36,17 +36,6 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('쿠폰 ID:', couponId);
   console.log('쿠폰 할인:', couponDiscount);
 
-  // 토스페이먼츠 결제 완료/실패 메시지 리스너 등록 (중복 방지)
-  if (!window.tossMessageListenerRegistered) {
-    window.addEventListener('message', (event) => {
-      if (event.data.type === 'TOSS_PAYMENT_FAILED') {
-        console.log('❌ 토스페이먼츠 결제 실패 알림 수신:', event.data);
-        showPaymentFailure(event.data.message || '결제가 실패했습니다.');
-      }
-    });
-    window.tossMessageListenerRegistered = true;
-  }
-
   // userInfo 안전하게 가져오기 (쿠키 우선)
   const userInfo = getUserInfoFromCookie();
   if (!userInfo || !userInfo.id) {
@@ -55,9 +44,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       localStorage: localStorage.getItem('userInfo'),
       windowUserInfo: window.userInfo
     });
-
-    alert('로그인이 필요합니다.');
-    return;
+    throw new Error('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
   }
 
   console.log('✅ 사용자 정보 확인:', userInfo.id);
