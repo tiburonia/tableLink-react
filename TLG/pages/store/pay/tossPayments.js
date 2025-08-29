@@ -130,35 +130,18 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       throw new Error('토스페이먼츠 SDK 초기화 실패');
     }
 
-    if (typeof toss.payment !== 'function') {
-      console.error('❌ toss.payment가 함수가 아님:', typeof toss.payment);
-      console.error('🔍 toss 객체 구조:', Object.keys(toss));
-      throw new Error('토스페이먼츠 payment 메서드를 찾을 수 없습니다.');
+    console.log('🔍 toss 객체 구조:', Object.keys(toss));
+
+    if (typeof toss.requestPayment !== 'function') {
+      console.error('❌ toss.requestPayment가 함수가 아님:', typeof toss.requestPayment);
+      throw new Error('토스페이먼츠 requestPayment 메서드를 찾을 수 없습니다.');
     }
 
     console.log('✅ 토스페이먼츠 객체 검증 완료');
 
-    // 결제 메서드 확인 및 준비
-    let paymentFunction;
-    
-    if (typeof toss.requestPayment === 'function') {
-      console.log('✅ 직접 결제 요청 방식 사용');
-      paymentFunction = toss.requestPayment.bind(toss);
-    } else if (typeof toss.payment === 'function') {
-      console.log('🔄 Payment 객체 생성 방식 사용');
-      const payment = toss.payment({
-        customerKey: paymentData.customerKey || paymentData.orderId
-      });
-      
-      if (!payment || typeof payment.requestPayment !== 'function') {
-        throw new Error('Payment 객체 생성 실패 또는 requestPayment 메서드 없음');
-      }
-      
-      paymentFunction = payment.requestPayment.bind(payment);
-      console.log('✅ Payment 객체 생성 완료');
-    } else {
-      throw new Error('결제 요청 메서드를 찾을 수 없습니다');
-    }
+    // 직접 requestPayment 메서드 사용
+    const paymentFunction = toss.requestPayment.bind(toss);
+    console.log('✅ 직접 결제 요청 방식 사용');
 
     // 결제 성공 후 처리할 콜백 함수 미리 등록
     const handlePaymentComplete = async (result) => {
