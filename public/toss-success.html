@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -226,13 +227,21 @@
 
     <script>
         function goToMain() {
-            // 현재 창에서 직접 이동
-            window.location.href = '/';
+            if (window.opener) {
+                window.opener.location.href = '/';
+                window.close();
+            } else {
+                window.location.href = '/';
+            }
         }
 
         function goToMyPage() {
-            // 현재 창에서 직접 이동
-            window.location.href = '/mypage';
+            if (window.opener) {
+                window.opener.location.href = '/mypage';
+                window.close();
+            } else {
+                window.location.href = '/mypage';
+            }
         }
 
         function showSuccessPage(paymentKey, orderId, amount, orderResult = null) {
@@ -348,7 +357,7 @@
 
                 if (savedOrderData && savedOrderData.userId) {
                     console.log('🔄 주문 생성 API 호출 시작');
-
+                    
                     // 기존 저장된 주문 데이터에 결제 정보 추가
                     const finalOrderData = {
                         ...savedOrderData,
@@ -390,8 +399,12 @@
         }
 
         function goBack() {
-            // 현재 창에서 직접 메인으로 이동
-            window.location.href = '/';
+            if (window.opener) {
+                window.opener.location.href = '/';
+                window.close();
+            } else {
+                window.location.href = '/';
+            }
         }
 
         // 페이지 로드 시 결제 처리
