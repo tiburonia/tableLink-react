@@ -1,83 +1,86 @@
 function goToMain() {
+    console.log('🔄 메인으로 이동 시도 - postMessage 전용');
+    
+    // 무조건 postMessage로 부모에게 알림
+    const message = {
+        type: 'PAYMENT_COMPLETE',
+        action: 'navigate',
+        url: '/',
+        timestamp: Date.now()
+    };
+
+    // 모든 가능한 부모에게 메시지 전송
     try {
-        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.postMessage({
-                    type: 'PAYMENT_SUCCESS_REDIRECT',
-                    action: 'navigate',
-                    url: '/'
-                }, window.location.origin);
-
-                // 창 닫기 시도
-                setTimeout(() => {
-                    window.close();
-                }, 300);
-                return;
-            } catch (crossOriginError) {
-                console.warn('부모 창 통신 실패:', crossOriginError);
-            }
+            console.log('📨 opener에게 메시지 전송');
+            window.opener.postMessage(message, '*');
         }
-
-        // iframe인 경우 부모로 메시지 전달
-        if (window.parent && window.parent !== window) {
-            try {
-                window.parent.postMessage({
-                    type: 'PAYMENT_SUCCESS_REDIRECT',
-                    action: 'navigate',
-                    url: '/'
-                }, window.location.origin);
-                return;
-            } catch (error) {
-                console.warn('iframe 부모 통신 실패:', error);
-            }
-        }
-    } catch (error) {
-        console.warn('리디렉션 실패:', error);
+    } catch (e) {
+        console.log('opener 메시지 실패:', e);
     }
 
-    // 기본적으로 현재 창에서 리디렉트
-    window.location.href = '/';
+    try {
+        if (window.parent && window.parent !== window) {
+            console.log('📨 parent에게 메시지 전송');
+            window.parent.postMessage(message, '*');
+        }
+    } catch (e) {
+        console.log('parent 메시지 실패:', e);
+    }
+
+    try {
+        if (window.top && window.top !== window) {
+            console.log('📨 top에게 메시지 전송');
+            window.top.postMessage(message, '*');
+        }
+    } catch (e) {
+        console.log('top 메시지 실패:', e);
+    }
+
+    // 3초 후 창 닫기 시도
+    setTimeout(() => {
+        try {
+            console.log('🔒 창 닫기 시도');
+            window.close();
+        } catch (e) {
+            console.log('창 닫기 실패, 직접 이동:', e);
+            window.location.href = '/';
+        }
+    }, 3000);
 }
 
 function goToMyPage() {
+    console.log('🔄 마이페이지로 이동 시도 - postMessage 전용');
+    
+    const message = {
+        type: 'PAYMENT_COMPLETE',
+        action: 'navigate',
+        url: '/mypage',
+        timestamp: Date.now()
+    };
+
+    // 모든 가능한 부모에게 메시지 전송
     try {
-        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.postMessage({
-                    type: 'PAYMENT_SUCCESS_REDIRECT',
-                    action: 'navigate',
-                    url: '/mypage'
-                }, window.location.origin);
-
-                setTimeout(() => {
-                    window.close();
-                }, 300);
-                return;
-            } catch (crossOriginError) {
-                console.warn('부모 창 통신 실패:', crossOriginError);
-            }
+            window.opener.postMessage(message, '*');
         }
-
-        // iframe인 경우 부모로 메시지 전달
         if (window.parent && window.parent !== window) {
-            try {
-                window.parent.postMessage({
-                    type: 'PAYMENT_SUCCESS_REDIRECT',
-                    action: 'navigate',
-                    url: '/mypage'
-                }, window.location.origin);
-                return;
-            } catch (error) {
-                console.warn('iframe 부모 통신 실패:', error);
-            }
+            window.parent.postMessage(message, '*');
         }
-    } catch (error) {
-        console.warn('리디렉션 실패:', error);
+        if (window.top && window.top !== window) {
+            window.top.postMessage(message, '*');
+        }
+    } catch (e) {
+        console.log('메시지 전송 실패:', e);
     }
 
-    window.location.href = '/mypage';
+    setTimeout(() => {
+        try {
+            window.close();
+        } catch (e) {
+            window.location.href = '/mypage';
+        }
+    }, 3000);
 }
 
 function displaySuccess(result, orderData) {
@@ -312,43 +315,37 @@ async function processPayment() {
 }
 
 function goBack() {
+    console.log('🔄 뒤로가기 시도 - postMessage 전용');
+    
+    const message = {
+        type: 'PAYMENT_CANCEL',
+        action: 'navigate',
+        url: '/',
+        timestamp: Date.now()
+    };
+
+    // 모든 가능한 부모에게 메시지 전송
     try {
-        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.postMessage({
-                    type: 'PAYMENT_REDIRECT',
-                    action: 'navigate',
-                    url: '/'
-                }, window.location.origin);
-
-                setTimeout(() => {
-                    window.close();
-                }, 300);
-                return;
-            } catch (crossOriginError) {
-                console.warn('부모 창 통신 실패:', crossOriginError);
-            }
+            window.opener.postMessage(message, '*');
         }
-
-        // iframe인 경우 부모로 메시지 전달
         if (window.parent && window.parent !== window) {
-            try {
-                window.parent.postMessage({
-                    type: 'PAYMENT_REDIRECT',
-                    action: 'navigate',
-                    url: '/'
-                }, window.location.origin);
-                return;
-            } catch (error) {
-                console.warn('iframe 부모 통신 실패:', error);
-            }
+            window.parent.postMessage(message, '*');
         }
-    } catch (error) {
-        console.warn('리디렉션 실패:', error);
+        if (window.top && window.top !== window) {
+            window.top.postMessage(message, '*');
+        }
+    } catch (e) {
+        console.log('메시지 전송 실패:', e);
     }
 
-    window.location.href = '/';
+    setTimeout(() => {
+        try {
+            window.close();
+        } catch (e) {
+            window.location.href = '/';
+        }
+    }, 3000);
 }
 
 window.addEventListener('load', () => {

@@ -1,4 +1,3 @@
-
 // URL 파라미터에서 에러 메시지 가져오기
 const urlParams = new URLSearchParams(window.location.search);
 const code = urlParams.get('code');
@@ -9,35 +8,37 @@ if (message) {
 }
 
 function goBack() {
+    console.log('🔄 결제 실패 후 뒤로가기 - postMessage 전용');
+
+    const message = {
+        type: 'PAYMENT_FAIL',
+        action: 'navigate',
+        url: '/',
+        timestamp: Date.now()
+    };
+
+    // 모든 가능한 부모에게 메시지 전송
     try {
-        // 부모 창이 있고 같은 도메인인 경우
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.postMessage({ 
-                    type: 'PAYMENT_FAILURE_REDIRECT', 
-                    action: 'navigate', 
-                    url: '/' 
-                }, '*');
-                
-                setTimeout(() => {
-                    window.close();
-                }, 300);
-                return;
-            } catch (crossOriginError) {
-                console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
-            }
+            window.opener.postMessage(message, '*');
         }
-        
-        // 최상위 창에서 리디렉트 시도
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage(message, '*');
+        }
         if (window.top && window.top !== window) {
-            window.top.location.href = '/';
-            return;
+            window.top.postMessage(message, '*');
         }
-    } catch (error) {
-        console.warn('부모 창 통신 실패:', error);
+    } catch (e) {
+        console.log('메시지 전송 실패:', e);
     }
-    
-    window.location.href = '/';
+
+    setTimeout(() => {
+        try {
+            window.close();
+        } catch (e) {
+            window.location.href = '/';
+        }
+    }, 3000);
 }
 
 console.log('❌ 토스페이먼츠 결제 실패:', { code, message });

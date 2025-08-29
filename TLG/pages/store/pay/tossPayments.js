@@ -53,10 +53,10 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     const toss = await initTossPayments();
 
-    // 성공/실패 URL을 서버 API 엔드포인트로 설정 (Cross-Origin 문제 해결)
+    // postMessage 기반 안전한 리디렉션을 위한 설정
     const baseUrl = window.location.origin;
-    const successUrl = `${baseUrl}/api/toss/success`;
-    const failUrl = `${baseUrl}/api/toss/fail`;
+    const successUrl = `${baseUrl}/toss-success.html`;
+    const failUrl = `${baseUrl}/toss-fail.html`;
 
     // 결제 공통 옵션
     const paymentOptions = {
