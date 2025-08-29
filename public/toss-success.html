@@ -367,15 +367,24 @@
                 if (savedOrderData && savedOrderData.userId) {
                     console.log('🔄 주문 생성 API 호출 시작');
 
+                    // 테이블 번호 정규화
+                    const normalizedTableNumber = parseInt(savedOrderData.tableNumber) || 
+                        parseInt(savedOrderData.orderData?.tableNum) || 
+                        parseInt(savedOrderData.orderData?.table) || 
+                        savedOrderData.tableNumber;
+
                     // 기존 저장된 주문 데이터에 결제 정보 추가
                     const finalOrderData = {
                         ...savedOrderData,
+                        tableNumber: normalizedTableNumber,
                         pgPaymentKey: paymentKey,
                         pgOrderId: orderId,
                         pgPaymentMethod: 'CARD'
                     };
 
                     // 주문 생성 API 호출
+                    console.log('📝 주문 생성 요청 데이터:', finalOrderData);
+                    
                     const orderResponse = await fetch('/api/orders/pay', {
                         method: 'POST',
                         headers: {
@@ -389,7 +398,12 @@
                         console.log('✅ 주문 생성 완료:', orderResult);
                     } else {
                         const errorData = await orderResponse.json();
-                        console.error('❌ 주문 생성 실패:', errorData);
+                        console.error('❌ 주문 생성 실패:', {
+                            status: orderResponse.status,
+                            statusText: orderResponse.statusText,
+                            error: errorData,
+                            requestData: finalOrderData
+                        });
                     }
 
                     // 저장된 주문 데이터 삭제

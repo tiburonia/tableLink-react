@@ -76,15 +76,20 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       throw new Error(`올바르지 않은 URL 형식입니다: ${error.message}`);
     }
 
-    // 전화번호 정규화 및 검증
+    // 전화번호 정규화 및 검증 (더 엄격한 검증)
     let validPhone = null;
-    if (paymentData.customerMobilePhone) {
+    if (paymentData.customerMobilePhone && paymentData.customerMobilePhone.trim()) {
       // 숫자만 추출
       const phoneDigits = paymentData.customerMobilePhone.replace(/\D/g, '');
       
-      // 010으로 시작하는 11자리인지 확인
-      if (phoneDigits.length === 11 && phoneDigits.startsWith('010')) {
-        validPhone = `${phoneDigits.slice(0, 3)}-${phoneDigits.slice(3, 7)}-${phoneDigits.slice(7, 11)}`;
+      // 010으로 시작하는 11자리이거나 01로 시작하는 10-11자리인지 확인
+      if ((phoneDigits.length === 11 && phoneDigits.startsWith('010')) ||
+          (phoneDigits.length >= 10 && phoneDigits.length <= 11 && phoneDigits.startsWith('01'))) {
+        if (phoneDigits.length === 11) {
+          validPhone = `${phoneDigits.slice(0, 3)}-${phoneDigits.slice(3, 7)}-${phoneDigits.slice(7, 11)}`;
+        } else if (phoneDigits.length === 10) {
+          validPhone = `${phoneDigits.slice(0, 3)}-${phoneDigits.slice(3, 6)}-${phoneDigits.slice(6, 10)}`;
+        }
       }
     }
 

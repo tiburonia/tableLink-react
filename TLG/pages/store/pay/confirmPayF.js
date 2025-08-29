@@ -88,18 +88,21 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+    // 테이블 번호 정규화 처리
+    const normalizedTableNumber = parseInt(orderData.tableNum) || parseInt(orderData.table) || orderData.tableNum || orderData.table;
+    
     // 주문 데이터를 sessionStorage에 저장 (결제 성공 후 사용)
     const pendingOrderData = {
       userId: userInfo.id,
       storeId: orderData.storeId,
       storeName: orderData.store,
-      tableNumber: orderData.tableNum,
+      tableNumber: normalizedTableNumber,
       orderData: {
         store: orderData.store,
         storeId: orderData.storeId,
         date: orderData.date,
         table: orderData.table,
-        tableNum: orderData.tableNum,
+        tableNum: normalizedTableNumber,
         items: orderData.items,
         total: orderData.total
       },
@@ -112,11 +115,23 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
     sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
 
-    // 사용자 정보 안전성 검증
+    // 사용자 정보 안전성 검증 (전화번호 유효성 추가 확인)
+    let validPhone = null;
+    if (userInfo.phone && userInfo.phone.trim()) {
+      const phoneStr = userInfo.phone.trim();
+      const phoneDigits = phoneStr.replace(/\D/g, '');
+      
+      // 유효한 전화번호 형식인지 확인
+      if ((phoneDigits.length === 11 && phoneDigits.startsWith('010')) ||
+          (phoneDigits.length >= 10 && phoneDigits.length <= 11 && phoneDigits.startsWith('01'))) {
+        validPhone = phoneStr;
+      }
+    }
+
     const safeUserInfo = {
       name: userInfo.name || '고객',
       email: userInfo.email || 'guest@tablelink.com',
-      phone: userInfo.phone && userInfo.phone.trim() ? userInfo.phone.trim() : null
+      phone: validPhone
     };
 
     console.log('👤 검증된 사용자 정보:', {
