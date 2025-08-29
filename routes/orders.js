@@ -599,7 +599,6 @@ router.post('/pay', async (req, res) => {
 
     const items = orderData.items; // items 변수 정의
     const customerName = user.name || '손님'; // customerName 변수 정의
-    const finalTotal = finalTotal; // finalTotal 변수 정의
 
     // 📡 KDS 실시간 업데이트 전송
     try {
