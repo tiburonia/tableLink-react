@@ -102,7 +102,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       window.pendingOrderData = pendingOrderData;
     }
 
-    // 토스페이먼츠 결제창 호출
+    // 토스페이먼츠 결제 (SPA 방식)
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
       orderId: orderId,
@@ -113,15 +113,20 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     }, paymentMethod);
 
     if (!paymentResult.success) {
-      // 결제 실패 시 저장된 주문 데이터 삭제
+      // 결제 실패/취소 시 저장된 주문 데이터 삭제
       sessionStorage.removeItem('pendingOrderData');
       delete window.pendingOrderData;
-      throw new Error(paymentResult.message || '결제가 취소되었습니다.');
+      
+      if (paymentResult.cancelled) {
+        throw new Error('결제가 취소되었습니다.');
+      } else {
+        throw new Error(paymentResult.message || '결제 처리 중 오류가 발생했습니다.');
+      }
     }
 
-    console.log('✅ 토스페이먼츠 결제 성공:', paymentResult);
+    console.log('✅ 토스페이먼츠 결제 및 승인 완료:', paymentResult);
 
-    // 결제 처리 API 호출 (PG 결제 정보 포함)
+    // 주문 처리 API 호출 (이미 PG 승인 완료된 상태)
     const response = await fetch('/api/orders/pay', {
       method: 'POST',
       headers: {
@@ -145,7 +150,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         finalTotal: finalAmount,
         selectedCouponId: couponId,
         couponDiscount: couponDiscount || 0,
-        // PG 결제 정보 추가
+        // PG 결제 정보 (이미 승인 완료)
         pgPaymentKey: paymentResult.paymentKey,
         pgOrderId: paymentResult.orderId,
         pgPaymentMethod: paymentResult.method || 'CARD'
@@ -154,13 +159,23 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || '결제 처리에 실패했습니다.');
+      throw new Error(errorData.error || '주문 처리에 실패했습니다.');
     }
 
     const result = await response.json();
     console.log('✅ 결제 성공:', result);
 
-    // 성공 페이지 렌더링
+    // 결제 성공 UI 모듈 동적 로드 및 렌더링
+    if (!window.renderPaymentSuccess) {
+      console.log('🔄 결제 성공 UI 모듈 로드 중...');
+      await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+    }
+
+    // 결제 성공 UI 렌더링
+    window.renderPaymentSuccess(orderData, paymentResult, userInfo);
+
+    // 기존 성공 페이지 코드 제거
+    /*
     main.innerHTML = `
       <div class="payment-success-container">
         <div class="success-content">
@@ -587,12 +602,12 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
     // 결제 실패 UI 모듈 동적 로드
     if (!window.renderPaymentFailure) {
       console.log('🔄 결제 실패 UI 모듈 로드 중...');
-      await import('/TLG/pages/store/pay/paymentFailureUI.js');
+      await import('/TLG/pages/store/pay/paymentSuccessUI.js');
     }
 
     // 결제 실패 UI 렌더링
     if (typeof window.renderPaymentFailure === 'function') {
-      window.renderPaymentFailure(error, orderData, currentOrder, store);
+      window.renderPaymentFailure(error, orderData);
     } else {
       throw new Error('결제 실패 UI 모듈을 로드할 수 없습니다');
     }
