@@ -92,16 +92,17 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     let result;
 
-    // 결제 수단별 처리
+    // 결제 수단별 처리 (현재 창에서 직접 리다이렉트)
     switch (paymentMethod) {
       case '카드':
-        result = await toss.requestPayment('카드', paymentOptions);
-        break;
+        // requestPayment는 현재 창에서 리다이렉트되므로 await 불가
+        toss.requestPayment('카드', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '계좌이체':
         // 퀵계좌이체 (간편결제)
-        result = await toss.requestPayment('계좌이체', paymentOptions);
-        break;
+        toss.requestPayment('계좌이체', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '가상계좌':
         // 가상계좌는 입금 기한 설정 가능
@@ -109,29 +110,29 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
           ...paymentOptions,
           validHours: 24 // 24시간 후 만료
         };
-        result = await toss.requestPayment('가상계좌', virtualAccountOptions);
-        break;
+        toss.requestPayment('가상계좌', virtualAccountOptions);
+        return { success: true, redirecting: true };
 
       case '휴대폰':
-        result = await toss.requestPayment('휴대폰', paymentOptions);
-        break;
+        toss.requestPayment('휴대폰', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '간편결제':
         // 간편결제 (페이코, 삼성페이 등)
-        result = await toss.requestPayment('간편결제', paymentOptions);
-        break;
+        toss.requestPayment('간편결제', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '문화상품권':
-        result = await toss.requestPayment('문화상품권', paymentOptions);
-        break;
+        toss.requestPayment('문화상품권', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '도서문화상품권':
-        result = await toss.requestPayment('도서문화상품권', paymentOptions);
-        break;
+        toss.requestPayment('도서문화상품권', paymentOptions);
+        return { success: true, redirecting: true };
 
       case '게임문화상품권':
-        result = await toss.requestPayment('게임문화상품권', paymentOptions);
-        break;
+        toss.requestPayment('게임문화상품권', paymentOptions);
+        return { success: true, redirecting: true };
 
       default:
         throw new Error(`지원하지 않는 결제 수단입니다: ${paymentMethod}`);
