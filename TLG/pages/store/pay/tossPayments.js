@@ -53,9 +53,10 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     const toss = await initTossPayments();
 
-    // 성공/실패 URL 설정 (상대 경로 사용으로 CORS 문제 해결)
-    const successUrl = `/toss-success.html`;
-    const failUrl = `/toss-fail.html`;
+    // 성공/실패 URL 설정 (토스페이먼츠는 절대 경로 필요)
+    const baseUrl = window.location.origin;
+    const successUrl = `${baseUrl}/toss-success.html`;
+    const failUrl = `${baseUrl}/toss-fail.html`;
 
     // 결제 공통 옵션
     const paymentOptions = {
@@ -136,9 +137,18 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       };
     }
 
+    // 토스페이먼츠 특정 오류 메시지 처리
+    let errorMessage = error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`;
+    
+    if (errorMessage.includes('successUrl')) {
+      errorMessage = '결제 완료 페이지 URL 설정에 문제가 있습니다. 고객센터에 문의해주세요.';
+    } else if (errorMessage.includes('failUrl')) {
+      errorMessage = '결제 실패 페이지 URL 설정에 문제가 있습니다. 고객센터에 문의해주세요.';
+    }
+
     return {
       success: false,
-      message: error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`
+      message: errorMessage
     };
   }
 }
