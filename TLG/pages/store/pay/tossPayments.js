@@ -7,36 +7,78 @@
 let tossPayments = null;
 
 async function initTossPayments() {
-  if (tossPayments) return tossPayments;
+  if (tossPayments) {
+    console.log('✅ 기존 토스페이먼츠 인스턴스 반환');
+    return tossPayments;
+  }
 
   // 토스페이먼츠 SDK 동적 로드
   if (!window.TossPayments) {
+    console.log('🔄 토스페이먼츠 SDK 로드 시작');
+    
     const script = document.createElement('script');
     script.src = 'https://js.tosspayments.com/v1/payment-widget';
     script.async = true;
     document.head.appendChild(script);
 
     await new Promise((resolve, reject) => {
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('토스페이먼츠 SDK 로드 실패'));
+      script.onload = () => {
+        console.log('✅ 토스페이먼츠 SDK 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ 토스페이먼츠 SDK 스크립트 로드 실패');
+        reject(new Error('토스페이먼츠 SDK 로드 실패'));
+      };
     });
+
+    // SDK 로드 후 잠시 대기
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
+
+  // TossPayments 객체 검증
+  if (!window.TossPayments || typeof window.TossPayments !== 'function') {
+    console.error('❌ window.TossPayments가 함수가 아님:', typeof window.TossPayments);
+    throw new Error('토스페이먼츠 SDK가 올바르게 로드되지 않았습니다.');
+  }
+
+  console.log('✅ window.TossPayments 검증 완료');
 
   // 클라이언트 키로 초기화
   try {
+    console.log('🔑 토스페이먼츠 클라이언트 키 요청');
+    
     const response = await fetch('/api/toss/client-key');
+    if (!response.ok) {
+      throw new Error(`클라이언트 키 요청 실패: ${response.status}`);
+    }
+    
     const data = await response.json();
+    console.log('✅ 클라이언트 키 응답 수신:', data.success);
 
     if (!data.clientKey) {
       throw new Error('토스페이먼츠 클라이언트 키를 가져올 수 없습니다.');
     }
 
+    console.log('🔄 토스페이먼츠 인스턴스 생성 중...');
     tossPayments = window.TossPayments(data.clientKey);
+    
+    if (!tossPayments) {
+      throw new Error('토스페이먼츠 인스턴스 생성 실패');
+    }
+    
+    // payment 메서드 검증
+    if (typeof tossPayments.payment !== 'function') {
+      console.error('❌ tossPayments.payment가 함수가 아님:', typeof tossPayments.payment);
+      throw new Error('토스페이먼츠 payment 메서드를 찾을 수 없습니다.');
+    }
+
     console.log('✅ 토스페이먼츠 SDK 초기화 완료');
     return tossPayments;
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 초기화 실패:', error);
+    tossPayments = null; // 초기화 실패 시 null로 재설정
     throw error;
   }
 }
@@ -54,10 +96,30 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     const toss = await initTossPayments();
     const baseUrl = window.location.origin;
 
+    // 토스페이먼츠 객체 검증
+    if (!toss || typeof toss.payment !== 'function') {
+      console.error('❌ 토스페이먼츠 객체가 올바르게 초기화되지 않음:', toss);
+      throw new Error('토스페이먼츠 SDK 초기화 실패');
+    }
+
+    console.log('✅ 토스페이먼츠 객체 검증 완료');
+
     // Payment 객체 생성 (customerKey 사용)
-    const payment = toss.payment({
-      customerKey: paymentData.customerKey || paymentData.orderId // orderId를 customerKey로 사용
-    });
+    let payment;
+    try {
+      payment = toss.payment({
+        customerKey: paymentData.customerKey || paymentData.orderId // orderId를 customerKey로 사용
+      });
+      
+      if (!payment || typeof payment.requestPayment !== 'function') {
+        throw new Error('Payment 객체 생성 실패');
+      }
+      
+      console.log('✅ Payment 객체 생성 완료');
+    } catch (paymentError) {
+      console.error('❌ Payment 객체 생성 실패:', paymentError);
+      throw new Error('결제 객체 초기화 실패: ' + paymentError.message);
+    }
 
     // 결제 성공 후 처리할 콜백 함수 미리 등록
     const handlePaymentComplete = async (result) => {
@@ -73,35 +135,52 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     // 전역에 콜백 등록 (popup에서 접근 가능하도록)
     window.handleTossPaymentComplete = handlePaymentComplete;
 
+    // 결제 수단 매핑
+    let mappedMethod;
+    switch (paymentMethod) {
+      case '카드':
+        mappedMethod = 'CARD';
+        break;
+      case '계좌이체':
+        mappedMethod = 'TRANSFER';
+        break;
+      case '가상계좌':
+        mappedMethod = 'VIRTUAL_ACCOUNT';
+        break;
+      default:
+        mappedMethod = 'CARD';
+        break;
+    }
+
     // 결제 요청 옵션
     const paymentOptions = {
-      method: paymentMethod === '카드' ? 'CARD' : paymentMethod.toUpperCase(),
+      method: mappedMethod,
       amount: {
         currency: 'KRW',
         value: paymentData.amount
       },
       orderId: paymentData.orderId,
       orderName: paymentData.orderName,
-      successUrl: `${baseUrl}/toss-success.html`,
-      failUrl: `${baseUrl}/toss-fail.html`,
+      successUrl: `${baseUrl}/api/toss/success`,
+      failUrl: `${baseUrl}/api/toss/fail`,
       customerEmail: paymentData.customerEmail,
       customerName: paymentData.customerName,
       customerMobilePhone: paymentData.customerMobilePhone
     };
 
     // 결제 수단별 추가 옵션
-    if (paymentMethod === '카드') {
+    if (mappedMethod === 'CARD') {
       paymentOptions.card = {
         flowMode: 'DEFAULT', // popup으로 열림
         useEscrow: false
       };
-    } else if (paymentMethod === '계좌이체') {
+    } else if (mappedMethod === 'TRANSFER') {
       paymentOptions.transfer = {
         cashReceipt: {
           type: '소득공제'
         }
       };
-    } else if (paymentMethod === '가상계좌') {
+    } else if (mappedMethod === 'VIRTUAL_ACCOUNT') {
       paymentOptions.virtualAccount = {
         validHours: 24,
         cashReceipt: {
