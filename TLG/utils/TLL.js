@@ -668,7 +668,32 @@ window.TLL = async function TLL(preselectedStore = null) {
       console.log(`🏪 선택된 매장:`, selectedStore);
       console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
       console.log(`✅ TLL - 주문 화면으로 이동`);
-      renderOrderScreen(selectedStore, tableName);
+      
+      // renderOrderScreen 스크립트 로드 후 호출
+      try {
+        if (typeof renderOrderScreen !== 'function') {
+          console.log('🔄 renderOrderScreen 스크립트 로드 중...');
+          const script = document.createElement('script');
+          script.src = '/TLG/pages/store/renderOrderScreen.js';
+          
+          await new Promise((resolve, reject) => {
+            script.onload = () => {
+              console.log('✅ renderOrderScreen 스크립트 로드 완료');
+              resolve();
+            };
+            script.onerror = () => {
+              console.error('❌ renderOrderScreen 스크립트 로드 실패');
+              reject();
+            };
+            document.head.appendChild(script);
+          });
+        }
+        
+        renderOrderScreen(selectedStore, tableName);
+      } catch (error) {
+        console.error('❌ renderOrderScreen 로드 또는 실행 실패:', error);
+        alert('주문 화면 로드에 실패했습니다. 다시 시도해주세요.');
+      }
     });
   } else {
     console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');
