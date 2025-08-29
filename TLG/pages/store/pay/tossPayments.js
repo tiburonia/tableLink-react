@@ -54,9 +54,10 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     
     const toss = await initTossPayments();
 
-    // 성공/실패 URL 설정 (상대 경로 사용으로 CORS 방지)
-    const successUrl = `/toss-success.html`;
-    const failUrl = `/toss-fail.html`;
+    // 성공/실패 URL 설정 (절대 경로 사용 - 토스페이먼츠 요구사항)
+    const baseUrl = window.location.origin;
+    const successUrl = `${baseUrl}/toss-success.html`;
+    const failUrl = `${baseUrl}/toss-fail.html`;
 
     // 결제 공통 옵션
     const paymentOptions = {
