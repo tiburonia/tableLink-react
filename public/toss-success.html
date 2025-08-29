@@ -424,8 +424,13 @@
 
         function goBack() {
             if (window.opener) {
-                window.opener.location.href = '/';
-                window.close();
+                try {
+                    window.opener.postMessage({ action: 'navigate', url: '/' }, '*');
+                    window.close();
+                } catch (error) {
+                    console.warn('postMessage 실패, 현재 창에서 이동:', error);
+                    window.location.href = '/';
+                }
             } else {
                 window.location.href = '/';
             }
