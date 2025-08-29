@@ -93,6 +93,39 @@
       renderLogin()
     });
   </script>
+
+  <!-- 앱 초기화 스크립트 -->
+  <script src="/TLG/utils/authManager.js"></script>
+  <script>
+    // DOM이 완전히 로드된 후 앱 초기화
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
+    }
+
+    // 토스페이먼츠 팝업창으로부터 메시지 수신
+    window.addEventListener('message', function(event) {
+      console.log('📨 메시지 수신:', event.data);
+
+      if (event.data && event.data.action) {
+        switch (event.data.action) {
+          case 'navigate':
+            console.log('🔄 페이지 이동:', event.data.url);
+            window.location.href = event.data.url;
+            break;
+
+          case 'payment-success':
+            console.log('✅ 결제 성공 알림:', event.data);
+            // 필요시 추가 처리 로직
+            break;
+
+          default:
+            console.log('ℹ️ 알 수 없는 액션:', event.data.action);
+        }
+      }
+    }, false);
+  </script>
 </body>
 
 </html>

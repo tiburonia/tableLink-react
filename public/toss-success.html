@@ -228,8 +228,13 @@
     <script>
         function goToMain() {
             if (window.opener) {
-                window.opener.location.href = '/';
-                window.close();
+                try {
+                    window.opener.postMessage({ action: 'navigate', url: '/' }, '*');
+                    window.close();
+                } catch (error) {
+                    console.warn('postMessage 실패, 현재 창에서 이동:', error);
+                    window.location.href = '/';
+                }
             } else {
                 window.location.href = '/';
             }
@@ -237,8 +242,13 @@
 
         function goToMyPage() {
             if (window.opener) {
-                window.opener.location.href = '/mypage';
-                window.close();
+                try {
+                    window.opener.postMessage({ action: 'navigate', url: '/mypage' }, '*');
+                    window.close();
+                } catch (error) {
+                    console.warn('postMessage 실패, 현재 창에서 이동:', error);
+                    window.location.href = '/mypage';
+                }
             } else {
                 window.location.href = '/mypage';
             }
@@ -391,6 +401,20 @@
 
                 // 성공 페이지 표시
                 showSuccessPage(paymentKey, orderId, amount, orderResult);
+
+                // 부모 창에 결제 완료 알림
+                if (window.opener) {
+                    try {
+                        window.opener.postMessage({ 
+                            action: 'payment-success', 
+                            paymentKey: paymentKey,
+                            orderId: orderId,
+                            amount: amount 
+                        }, '*');
+                    } catch (error) {
+                        console.warn('부모 창 통신 실패:', error);
+                    }
+                }
 
             } catch (error) {
                 console.error('❌ 결제 처리 실패:', error);
