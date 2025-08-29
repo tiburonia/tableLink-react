@@ -78,11 +78,13 @@ function initializeApp() {
 
   // 일반적인 로그인 상태 확인 후 적절한 화면 렌더링
   if (checkLoginStatus()) {
-    // 로그인 상태면 지도 화면으로
-    if (typeof renderMap === 'function') {
+    // 로그인 상태면 서브메인 화면으로
+    if (typeof renderSubMain === 'function') {
+      renderSubMain();
+    } else if (typeof renderMap === 'function') {
       renderMap();
     } else {
-      console.error('❌ renderMap 함수를 찾을 수 없음');
+      console.error('❌ renderSubMain, renderMap 함수를 찾을 수 없음');
     }
   } else {
     // 로그인하지 않은 상태면 로그인 화면으로
