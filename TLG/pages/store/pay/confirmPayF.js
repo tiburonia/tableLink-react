@@ -40,11 +40,22 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   const userInfo = getUserInfoFromCookie();
   if (!userInfo || !userInfo.id) {
     console.error('❌ 사용자 정보 없음:', {
-      cookies: document.cookie,
-      localStorage: localStorage.getItem('userInfo'),
-      windowUserInfo: window.userInfo
+      cookies: document.cookie ? '존재함' : '없음',
+      localStorage: localStorage.getItem('userInfo') ? '존재함' : '없음',
+      windowUserInfo: window.userInfo ? '존재함' : '없음'
     });
-    throw new Error('로그인 정보를 찾을 수 없습니다. 다시 로그인해주세요.');
+    
+    // 사용자에게 친화적인 메시지와 함께 로그인 유도
+    alert('로그인 정보가 만료되었습니다. 다시 로그인해주세요.');
+    
+    // 로그인 페이지로 이동 또는 로그인 모달 표시
+    if (typeof renderLogin === 'function') {
+      renderLogin();
+    } else {
+      window.location.reload();
+    }
+    
+    throw new Error('로그인 정보를 찾을 수 없습니다.');
   }
 
   console.log('✅ 사용자 정보 확인:', userInfo.id);
@@ -93,15 +104,35 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
     sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
 
-    // 토스페이먼츠 결제창 호출 (현재 창에서 리다이렉트)
-    const paymentResult = await window.requestTossPayment({
+    // 사용자 정보 안전성 검증
+    const safeUserInfo = {
+      name: userInfo.name || '고객',
+      email: userInfo.email || 'guest@tablelink.com',
+      phone: userInfo.phone && userInfo.phone.trim() ? userInfo.phone.trim() : null
+    };
+
+    console.log('👤 검증된 사용자 정보:', {
+      name: safeUserInfo.name,
+      email: safeUserInfo.email,
+      hasPhone: !!safeUserInfo.phone
+    });
+
+    // 토스페이먼츠 결제 데이터 준비
+    const tossPaymentData = {
       amount: finalAmount,
       orderId: orderId,
       orderName: `${orderData.store} 주문`,
-      customerName: userInfo.name || '게스트',
-      customerEmail: userInfo.email || 'guest@tablelink.com',
-      customerMobilePhone: userInfo.phone || ''
-    }, paymentMethod);
+      customerName: safeUserInfo.name,
+      customerEmail: safeUserInfo.email
+    };
+
+    // 전화번호가 있을 때만 추가
+    if (safeUserInfo.phone) {
+      tossPaymentData.customerMobilePhone = safeUserInfo.phone;
+    }
+
+    // 토스페이먼츠 결제창 호출 (현재 창에서 리다이렉트)
+    const paymentResult = await window.requestTossPayment(tossPaymentData, paymentMethod);
 
     if (!paymentResult.success) {
       throw new Error(paymentResult.message || '토스페이먼츠 결제 실패');

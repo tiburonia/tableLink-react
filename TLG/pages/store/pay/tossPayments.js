@@ -76,17 +76,38 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       throw new Error(`올바르지 않은 URL 형식입니다: ${error.message}`);
     }
 
-    // 결제 공통 옵션
+    // 전화번호 정규화 및 검증
+    let validPhone = null;
+    if (paymentData.customerMobilePhone) {
+      // 숫자만 추출
+      const phoneDigits = paymentData.customerMobilePhone.replace(/\D/g, '');
+      
+      // 010으로 시작하는 11자리인지 확인
+      if (phoneDigits.length === 11 && phoneDigits.startsWith('010')) {
+        validPhone = `${phoneDigits.slice(0, 3)}-${phoneDigits.slice(3, 7)}-${phoneDigits.slice(7, 11)}`;
+      }
+    }
+
+    console.log('📱 전화번호 검증:', {
+      original: paymentData.customerMobilePhone,
+      valid: validPhone
+    });
+
+    // 결제 공통 옵션 (전화번호가 유효하지 않으면 제외)
     const paymentOptions = {
       amount: paymentData.amount,
       orderId: paymentData.orderId,
       orderName: paymentData.orderName,
-      customerName: paymentData.customerName,
-      customerEmail: paymentData.customerEmail,
-      customerMobilePhone: paymentData.customerMobilePhone,
+      customerName: paymentData.customerName || '고객',
+      customerEmail: paymentData.customerEmail || 'guest@tablelink.com',
       successUrl: successUrl,
       failUrl: failUrl,
     };
+
+    // 유효한 전화번호가 있을 때만 추가
+    if (validPhone) {
+      paymentOptions.customerMobilePhone = validPhone;
+    }
 
     console.log('💳 토스페이먼츠 결제 옵션:', paymentOptions);
 
@@ -166,6 +187,10 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       errorMessage = '결제 완료 페이지 URL 형식이 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해주세요.';
     } else if (error.code === 'INCORRECT_FAIL_URL_FORMAT') {
       errorMessage = '결제 실패 페이지 URL 형식이 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해주세요.';
+    } else if (errorMessage.includes('전화번호') || errorMessage.includes('phone') || errorMessage.includes('Phone')) {
+      errorMessage = '전화번호 형식에 문제가 있습니다. 마이페이지에서 전화번호를 확인해주세요.';
+    } else if (errorMessage.includes('customerMobilePhone')) {
+      errorMessage = '고객 전화번호 정보에 문제가 있습니다. 다시 시도해주세요.';
     } else if (errorMessage.includes('successUrl') || errorMessage.includes('Success URL')) {
       errorMessage = '결제 완료 페이지 URL 설정에 문제가 있습니다. 페이지를 새로고침 후 다시 시도해주세요.';
     } else if (errorMessage.includes('failUrl') || errorMessage.includes('Fail URL')) {
