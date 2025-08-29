@@ -1,3 +1,4 @@
+
 // 인증 관리자 - 앱 초기화 및 사용자 상태 관리
 console.log('🔧 AuthManager 로드 시작');
 
@@ -110,7 +111,7 @@ function setUserInfo(userInfo) {
   }
 }
 
-// 사용자 로그아웃 처리
+// 사용자 로그아웃 처리 (내부용)
 function clearUserInfo() {
   console.log('🪚 사용자 정보 정리');
 
@@ -130,6 +131,51 @@ function clearUserInfo() {
     console.log('🗑️ 쿠키 사용자 정보 삭제 완료');
   } catch (error) {
     console.error('❌ 쿠키 정리 실패:', error);
+  }
+}
+
+// 통합 로그아웃 함수 (UI용)
+function logOutF() {
+  console.log('🚪 사용자 로그아웃 처리 시작');
+
+  // userInfo 객체가 존재하는 경우 개별 속성 초기화
+  if (typeof userInfo !== 'undefined' && userInfo !== null) {
+    userInfo.id = "";
+    userInfo.pw = "";
+    userInfo.name = "";
+    userInfo.phone = "";
+    userInfo.email = "";
+    userInfo.address = "";
+    userInfo.birth = "";
+    userInfo.gender = "";
+    userInfo.point = 0;
+    userInfo.totalCost = 0;
+    userInfo.realCost = 0;
+    userInfo.orderList = [];
+    userInfo.reservationList = [];
+    userInfo.coupons = { unused: [], used: [] };
+    userInfo.favorites = [];
+    console.log('🧹 지역 userInfo 객체 초기화 완료');
+  }
+
+  // 전역 사용자 정보 완전 초기화
+  clearUserInfo();
+
+  console.log('✅ 로그아웃 처리 완료');
+  alert('로그아웃 완료');
+  
+  // 로그인 화면으로 이동
+  try {
+    if (typeof renderLogin === 'function') {
+      renderLogin();
+      console.log('🔄 로그인 화면으로 이동 완료');
+    } else {
+      console.error('❌ renderLogin 함수를 찾을 수 없음');
+      window.location.reload();
+    }
+  } catch (error) {
+    console.error('❌ 로그인 화면 이동 실패:', error);
+    window.location.reload();
   }
 }
 
@@ -177,6 +223,7 @@ window.addEventListener('message', function(event) {
 window.initializeApp = initializeApp;
 window.setUserInfo = setUserInfo;
 window.clearUserInfo = clearUserInfo;
+window.logOutF = logOutF;  // 통합 로그아웃 함수 추가
 window.isLoggedIn = isLoggedIn;
 
-console.log('✅ AuthManager 로드 완료 - initializeApp 함수 및 postMessage 리스너 등록됨');
+console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');
