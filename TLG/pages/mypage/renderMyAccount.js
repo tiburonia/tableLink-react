@@ -1,4 +1,3 @@
-
 // 실제 API 데이터를 UI 표시 형식으로 변환
 async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   console.log('🔄 실제 데이터를 UI 형식으로 변환 시작');
@@ -86,8 +85,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let reservationList = [];
   try {
     if (userInfo.reservation_list) {
-      reservationList = typeof userInfo.reservation_list === 'string' 
-        ? JSON.parse(userInfo.reservation_list) 
+      reservationList = typeof userInfo.reservation_list === 'string'
+        ? JSON.parse(userInfo.reservation_list)
         : userInfo.reservation_list;
     }
   } catch (e) {
@@ -99,8 +98,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let coupons = { unused: [], used: [] };
   try {
     if (userInfo.coupons) {
-      coupons = typeof userInfo.coupons === 'string' 
-        ? JSON.parse(userInfo.coupons) 
+      coupons = typeof userInfo.coupons === 'string'
+        ? JSON.parse(userInfo.coupons)
         : userInfo.coupons;
     }
   } catch (e) {
@@ -112,8 +111,8 @@ async function convertToDisplayFormat(userInfo, ordersData, reviewsData) {
   let favoriteStores = [];
   try {
     if (userInfo.favorite_stores) {
-      favoriteStores = typeof userInfo.favorite_stores === 'string' 
-        ? JSON.parse(userInfo.favorite_stores) 
+      favoriteStores = typeof userInfo.favorite_stores === 'string'
+        ? JSON.parse(userInfo.favorite_stores)
         : userInfo.favorite_stores;
     }
   } catch (e) {
@@ -347,7 +346,7 @@ async function renderMyAccount() {
       console.log('🔄 renderMyPage 스크립트 미리 로드 시작');
       const script = document.createElement('script');
       script.src = '/TLG/pages/mypage/renderMyPage.js';
-      
+
       await new Promise((resolve, reject) => {
         script.onload = () => {
           console.log('✅ renderMyPage 스크립트 미리 로드 완료');
@@ -370,7 +369,7 @@ async function renderMyAccount() {
       console.log('🔄 renderAllOrderHTML 스크립트 미리 로드 시작');
       const orderScript = document.createElement('script');
       orderScript.src = '/TLG/pages/store/order/renderAllOrderHTML.js';
-      
+
       await new Promise((resolve, reject) => {
         orderScript.onload = () => {
           console.log('✅ renderAllOrderHTML 스크립트 미리 로드 완료');
@@ -1577,7 +1576,7 @@ function setupAccountEventListeners() {
     e.preventDefault();
     e.stopPropagation();
     console.log('🔙 뒤로가기 버튼 클릭됨');
-    
+
     if (typeof window.renderMyPage === 'function') {
       console.log('✅ renderMyPage 함수 호출');
       window.renderMyPage();
@@ -1590,7 +1589,47 @@ function setupAccountEventListeners() {
   const handleLogoutClick = function(e) {
     e.preventDefault();
     if (confirm('정말 로그아웃 하시겠습니까?')) {
-      window.location.href = '/';
+      console.log('🚪 로그아웃 확인 - 완전한 로그아웃 처리');
+
+      try {
+        // authManager의 logOutF 함수 직접 호출
+        if (typeof window.logOutF === 'function') {
+          console.log('✅ logOutF 함수 발견 - 호출 중');
+          window.logOutF();
+        } else {
+          console.warn('⚠️ logOutF 함수 없음 - 수동 로그아웃 처리');
+
+          // 수동으로 완전한 로그아웃 처리
+          window.userInfo = null;
+
+          // localStorage 완전 초기화
+          localStorage.clear();
+          console.log('🗑️ localStorage 완전 초기화 완료');
+
+          // 쿠키 삭제
+          document.cookie = 'userInfo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+          console.log('🗑️ 쿠키 삭제 완료');
+
+          console.log('✅ 수동 로그아웃 처리 완료');
+          alert('로그아웃 완료');
+
+          // 로그인 화면으로 이동
+          if (typeof renderLogin === 'function') {
+            renderLogin();
+          } else {
+            window.location.href = '/';
+          }
+        }
+      } catch (error) {
+        console.error('❌ 로그아웃 처리 중 오류:', error);
+
+        // 오류 발생 시 강제 로그아웃
+        window.userInfo = null;
+        localStorage.clear();
+        document.cookie = 'userInfo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+        alert('로그아웃 완료');
+        window.location.reload();
+      }
     }
   };
 
@@ -1681,10 +1720,10 @@ function setupAccountEventListeners() {
     if (element) {
       // 기존 이벤트 리스너 제거 (있다면)
       element.removeEventListener('click', config.handler);
-      
+
       // 새 이벤트 리스너 등록
       element.addEventListener('click', config.handler);
-      
+
       console.log(`✅ ${config.id} 이벤트 리스너 등록 완료`);
     } else {
       console.warn(`⚠️ ${config.id} 요소를 찾을 수 없음`);
@@ -1811,7 +1850,7 @@ function updateProfileHeader(data) {
 
   if (vipBadge) {
     vipBadge.innerHTML = `<span class="badge-text">${data.vipLevel}</span>`;
-    
+
     // VIP 레벨에 따른 배지 색상 변경
     switch(data.vipLevel) {
       case 'PLATINUM':
@@ -2047,7 +2086,7 @@ async function loadEditPersonalInfoScript() {
     console.log('🔄 renderEditPersonalInfo 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderEditPersonalInfo.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderEditPersonalInfo 스크립트 로드 완료');
@@ -2075,7 +2114,7 @@ async function loadAllFavoritesScript() {
     console.log('🔄 renderAllFavorites 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllFavorites.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllFavorites 스크립트 로드 완료');
@@ -2102,7 +2141,7 @@ async function loadAllRegularLevelsScript() {
     console.log('🔄 renderAllRegularLevels 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllRegularLevels.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllRegularLevels 스크립트 로드 완료');
@@ -2129,7 +2168,7 @@ async function loadAllCouponsScript() {
     console.log('🔄 renderAllCoupons 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/mypage/renderAllCoupons.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderAllCoupons 스크립트 로드 완료');
@@ -2149,5 +2188,3 @@ async function loadAllCouponsScript() {
 
 // 전역 함수 등록
 window.renderMyAccount = renderMyAccount;
-
-
