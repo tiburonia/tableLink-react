@@ -1407,7 +1407,10 @@ router.post('/user-paid-orders', async (req, res) => {
         paymentDate: order.created_at,
         paymentMethod: order.payment_method,
         paymentReference: order.payment_reference,
-        tableNumber: order.table_number
+        tableNumber: order.table_number,
+        // 토스페이먼츠 키 정보 명시적 제공
+        tossPaymentKey: paymentKey,
+        tossOrderId: orderId
       }
     });
 
@@ -1419,6 +1422,103 @@ router.post('/user-paid-orders', async (req, res) => {
     });
   } finally {
     client.release();
+  }
+});
+
+// 토스페이먼츠 키로 주문 상태 조회 API
+router.get('/toss-payment/:paymentKey', async (req, res) => {
+  try {
+    const { paymentKey } = req.params;
+
+    console.log('🔍 토스페이먼츠 키로 주문 상태 조회:', paymentKey);
+
+    // user_paid_orders와 paid_orders에서 통합 검색
+    const memberOrderQuery = `
+      SELECT 
+        'TL_MEMBER' as order_type,
+        upo.id, upo.user_id, upo.store_id, upo.table_number,
+        upo.order_data, upo.final_amount, upo.payment_status,
+        upo.payment_date, upo.payment_reference,
+        s.name as store_name, u.name as user_name
+      FROM user_paid_orders upo
+      LEFT JOIN stores s ON upo.store_id = s.id
+      LEFT JOIN users u ON upo.user_id = u.id
+      WHERE upo.payment_reference->>'pgPaymentKey' = $1
+    `;
+
+    const guestOrderQuery = `
+      SELECT 
+        'GUEST' as order_type,
+        p.id, NULL as user_id, p.store_id, p.table_number,
+        p.order_data, p.final_amount, p.payment_status,
+        p.payment_date, p.payment_reference,
+        s.name as store_name, '게스트' as user_name
+      FROM paid_orders p
+      LEFT JOIN stores s ON p.store_id = s.id
+      WHERE p.payment_reference->>'pgPaymentKey' = $1
+      AND p.user_id IS NULL
+    `;
+
+    const unionQuery = `
+      (${memberOrderQuery})
+      UNION ALL
+      (${guestOrderQuery})
+      ORDER BY payment_date DESC
+      LIMIT 1
+    `;
+
+    const result = await pool.query(unionQuery, [paymentKey, paymentKey]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '해당 결제 키로 주문을 찾을 수 없습니다.'
+      });
+    }
+
+    const order = result.rows[0];
+    
+    // 토스페이먼츠 정보 파싱
+    let tossInfo = null;
+    if (order.payment_reference) {
+      try {
+        tossInfo = typeof order.payment_reference === 'string' 
+          ? JSON.parse(order.payment_reference) 
+          : order.payment_reference;
+      } catch (parseError) {
+        console.warn('⚠️ 토스 정보 파싱 실패:', parseError);
+      }
+    }
+
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        orderType: order.order_type,
+        userId: order.user_id,
+        userName: order.user_name,
+        storeId: order.store_id,
+        storeName: order.store_name,
+        tableNumber: order.table_number,
+        orderData: order.order_data,
+        finalAmount: order.final_amount,
+        paymentStatus: order.payment_status,
+        paymentDate: order.payment_date,
+        tossPaymentInfo: tossInfo ? {
+          paymentKey: tossInfo.pgPaymentKey,
+          orderId: tossInfo.pgOrderId,
+          method: tossInfo.pgPaymentMethod,
+          provider: tossInfo.provider
+        } : null
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 토스 키 기반 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 조회 중 오류가 발생했습니다.'
+    });
   }
 });
 

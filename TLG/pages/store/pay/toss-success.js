@@ -1,41 +1,59 @@
 
 function goToMain() {
     try {
+        // postMessage로 부모 창에 메시지 전송 시도
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.location.href;
-                window.opener.location.href = '/';
-                window.close();
-                return;
-            } catch (e) {
-                window.opener.postMessage({ action: 'navigate', url: '/' }, '*');
-                window.close();
-                return;
-            }
+            window.opener.postMessage({ 
+                type: 'PAYMENT_SUCCESS_REDIRECT', 
+                action: 'navigate', 
+                url: '/' 
+            }, window.location.origin);
+            
+            // 잠시 대기 후 창 닫기
+            setTimeout(() => {
+                try {
+                    window.close();
+                } catch (e) {
+                    // 창 닫기 실패시 현재 창에서 리다이렉트
+                    window.location.href = '/';
+                }
+            }, 500);
+            return;
         }
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
+    
+    // 기본적으로 현재 창에서 리다이렉트
     window.location.href = '/';
 }
 
 function goToMyPage() {
     try {
+        // postMessage로 부모 창에 메시지 전송 시도
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.location.href;
-                window.opener.location.href = '/mypage';
-                window.close();
-                return;
-            } catch (e) {
-                window.opener.postMessage({ action: 'navigate', url: '/mypage' }, '*');
-                window.close();
-                return;
-            }
+            window.opener.postMessage({ 
+                type: 'PAYMENT_SUCCESS_REDIRECT', 
+                action: 'navigate', 
+                url: '/mypage' 
+            }, window.location.origin);
+            
+            // 잠시 대기 후 창 닫기
+            setTimeout(() => {
+                try {
+                    window.close();
+                } catch (e) {
+                    // 창 닫기 실패시 현재 창에서 리다이렉트
+                    window.location.href = '/mypage';
+                }
+            }, 500);
+            return;
         }
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
+    
+    // 기본적으로 현재 창에서 리다이렉트
     window.location.href = '/mypage';
 }
 
@@ -256,21 +274,30 @@ async function processPayment() {
 
 function goBack() {
     try {
+        // postMessage로 부모 창에 메시지 전송 시도
         if (window.opener && !window.opener.closed) {
-            try {
-                window.opener.location.href;
-                window.opener.location.href = '/';
-                window.close();
-                return;
-            } catch (e) {
-                window.opener.postMessage({ action: 'navigate', url: '/' }, '*');
-                window.close();
-                return;
-            }
+            window.opener.postMessage({ 
+                type: 'PAYMENT_REDIRECT', 
+                action: 'navigate', 
+                url: '/' 
+            }, window.location.origin);
+            
+            // 잠시 대기 후 창 닫기
+            setTimeout(() => {
+                try {
+                    window.close();
+                } catch (e) {
+                    // 창 닫기 실패시 현재 창에서 리다이렉트
+                    window.location.href = '/';
+                }
+            }, 500);
+            return;
         }
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
+    
+    // 기본적으로 현재 창에서 리다이렉트
     window.location.href = '/';
 }
 

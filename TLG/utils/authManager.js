@@ -86,10 +86,45 @@ function isLoggedIn() {
   return window.userInfo && window.userInfo.id;
 }
 
+// 결제 완료 후 postMessage 리스너 추가
+window.addEventListener('message', function(event) {
+  // 보안을 위해 동일한 origin에서 온 메시지만 처리
+  if (event.origin !== window.location.origin) {
+    return;
+  }
+  
+  console.log('📨 메시지 수신:', event.data);
+  
+  if (event.data.type === 'PAYMENT_SUCCESS_REDIRECT' || 
+      event.data.type === 'PAYMENT_FAILURE_REDIRECT' || 
+      event.data.type === 'PAYMENT_REDIRECT') {
+    
+    if (event.data.action === 'navigate' && event.data.url) {
+      console.log('🔄 결제 완료 후 리다이렉트:', event.data.url);
+      
+      if (event.data.url === '/mypage') {
+        // 마이페이지로 이동
+        if (typeof renderMyPage === 'function') {
+          renderMyPage();
+        } else {
+          window.location.href = '/mypage';
+        }
+      } else if (event.data.url === '/') {
+        // 메인으로 이동
+        if (typeof renderMap === 'function') {
+          renderMap();
+        } else {
+          window.location.href = '/';
+        }
+      }
+    }
+  }
+});
+
 // 전역 함수로 내보내기
 window.initializeApp = initializeApp;
 window.setUserInfo = setUserInfo;
 window.clearUserInfo = clearUserInfo;
 window.isLoggedIn = isLoggedIn;
 
-console.log('✅ AuthManager 로드 완료 - initializeApp 함수 등록됨');
+console.log('✅ AuthManager 로드 완료 - initializeApp 함수 및 postMessage 리스너 등록됨');

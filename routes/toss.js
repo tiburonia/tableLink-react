@@ -27,6 +27,69 @@ router.get('/client-key', (req, res) => {
   });
 });
 
+// 결제 승인 처리 (POST) - 프론트엔드에서 사용
+router.post('/confirm', async (req, res) => {
+  try {
+    const { paymentKey, orderId, amount } = req.body;
+
+    console.log('✅ 토스페이먼츠 결제 승인 요청 (/confirm):', { paymentKey, orderId, amount });
+
+    // 키 검증
+    if (!TOSS_SECRET_KEY) {
+      console.error('❌ 토스페이먼츠 시크릿 키가 설정되지 않음');
+      return res.status(500).json({
+        success: false,
+        error: '토스페이먼츠 설정이 완료되지 않았습니다.'
+      });
+    }
+
+    console.log('🔑 사용 중인 시크릿 키 (앞 4자리):', TOSS_SECRET_KEY.substring(0, 4) + '...');
+
+    // 토스페이먼츠 결제 승인
+    const response = await fetch(`${TOSS_API_URL}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(TOSS_SECRET_KEY + ':').toString('base64')}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        paymentKey,
+        orderId,
+        amount
+      })
+    });
+
+    const paymentData = await response.json();
+
+    if (response.ok) {
+      console.log('✅ 토스페이먼츠 결제 승인 성공 (/confirm):', paymentData.paymentKey);
+
+      res.json({
+        success: true,
+        paymentKey,
+        orderId,
+        paymentData,
+        approvedAt: paymentData.approvedAt,
+        method: paymentData.method,
+        totalAmount: paymentData.totalAmount
+      });
+    } else {
+      console.error('❌ 토스페이먼츠 결제 승인 실패 (/confirm):', paymentData);
+      res.status(400).json({
+        success: false,
+        error: paymentData.message || '결제 승인에 실패했습니다.'
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ 토스페이먼츠 결제 승인 에러 (/confirm):', error);
+    res.status(500).json({
+      success: false,
+      error: '결제 승인 처리 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 // 결제 성공 처리 (POST)
 router.post('/success', async (req, res) => {
   try {

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -179,7 +178,7 @@ router.post('/orders', async (req, res) => {
       // 기존 OPEN 세션이 있으면 해당 order_id 사용
       const existingOrder = existingOrderResult.rows[0];
       orderId = existingOrder.id;
-      
+
       // 총 금액 업데이트
       await client.query(`
         UPDATE orders 
@@ -353,7 +352,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
         WHERE order_id = $1
         ORDER BY created_at ASC
       `, [orderId]);
-      
+
       sessionItems = itemsResponse.rows;
     }
 
@@ -492,7 +491,7 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     if (response.rows.length > 0) {
       const tllOrder = response.rows[0];
-      
+
       // 토스페이먼츠 결제 정보 파싱
       let paymentInfo = null;
       if (tllOrder.payment_reference) {
@@ -522,8 +521,19 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
             paymentKey: paymentInfo.pgPaymentKey,
             orderId: paymentInfo.pgOrderId,
             method: paymentInfo.pgPaymentMethod,
-            provider: paymentInfo.provider
-          } : null
+            provider: paymentInfo.provider,
+            // 추가 정보 제공
+            isOnlinePayment: true,
+            paymentProvider: '토스페이먼츠'
+          } : {
+            // 토스페이먼츠 정보가 없는 경우
+            paymentKey: null,
+            orderId: null,
+            method: tllOrder.payment_method,
+            provider: 'UNKNOWN',
+            isOnlinePayment: false,
+            paymentProvider: '기타'
+          }
         }
       });
     } else {
@@ -634,11 +644,11 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     if (guestPhone && guestPhone.trim()) {
       console.log(`🔍 전화번호 확인 중: ${guestPhone}`);
-      
+
       try {
         // 전화번호 정규화 (하이픈 제거)
         const normalizedPhone = guestPhone.replace(/[^0-9]/g, '');
-        
+
         // 기존 회원 확인 (정규화된 전화번호와 원본 전화번호 모두 확인)
         const existingUser = await client.query(
           'SELECT id, name FROM users WHERE phone = $1 OR phone = $2',
@@ -651,7 +661,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
           console.log(`👨‍💼 기존 회원으로 처리: ${existingUser.rows[0].name} (${existingUser.rows[0].id})`);
         } else {
           finalGuestPhone = guestPhone;
-          
+
           // 게스트 테이블 확인 및 처리
           const existingGuest = await client.query(
             'SELECT phone, visit_count FROM guests WHERE phone = $1',
@@ -669,7 +679,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
               console.warn('⚠️ visit_count JSON 파싱 실패, 초기화:', parseError);
               currentVisitCount = {};
             }
-            
+
             const storeVisitCount = (currentVisitCount[storeId] || 0) + 1;
             currentVisitCount[storeId] = storeVisitCount;
 
@@ -730,7 +740,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     // 3-1. TL회원인 경우 user_paid_orders에도 저장
     if (currentUserId && !currentUserId.startsWith('pos')) {
       console.log(`💳 TL회원 POS 결제 - user_paid_orders에도 저장: ${currentUserId}`);
-      
+
       await client.query(`
         INSERT INTO user_paid_orders (
           user_id, store_id, table_number, order_data,
@@ -768,7 +778,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
         'SELECT id FROM user_paid_orders WHERE user_id = $1 AND store_id = $2 ORDER BY created_at DESC LIMIT 1',
         [currentUserId, parseInt(storeId)]
       );
-      
+
       if (userPaidOrderResult.rows.length > 0) {
         userPaidOrderId = userPaidOrderResult.rows[0].id;
       }
