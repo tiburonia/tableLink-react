@@ -174,13 +174,10 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
         break;
     }
 
-    // 결제 요청 옵션
+    // 결제 요청 옵션 (토스페이먼츠 SDK v1 형식)
     const paymentOptions = {
       method: mappedMethod,
-      amount: {
-        currency: 'KRW',
-        value: paymentData.amount
-      },
+      amount: paymentData.amount,
       orderId: paymentData.orderId,
       orderName: paymentData.orderName,
       successUrl: `${baseUrl}/api/toss/success`,
@@ -193,7 +190,6 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     // 결제 수단별 추가 옵션
     if (mappedMethod === 'CARD') {
       paymentOptions.card = {
-        flowMode: 'DEFAULT', // popup으로 열림
         useEscrow: false
       };
     } else if (mappedMethod === 'TRANSFER') {
