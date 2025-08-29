@@ -38,7 +38,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
   // userInfo 안전하게 가져오기 (다중 소스 체크)
   let userInfo = getUserInfoFromCookie();
-  
+
   // 쿠키에서 실패시 다른 소스들 확인
   if (!userInfo || !userInfo.id) {
     // window.userInfo 확인
@@ -51,17 +51,17 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         localStorage: localStorage.getItem('userInfo') ? '존재함' : '없음',
         windowUserInfo: window.userInfo ? '존재함' : '없음'
       });
-      
+
       // 사용자에게 친화적인 메시지와 함께 로그인 유도
       alert('로그인 정보가 만료되었습니다. 다시 로그인해주세요.');
-      
+
       // 로그인 페이지로 이동
       if (typeof renderLogin === 'function') {
         renderLogin();
       } else {
         window.location.reload();
       }
-      
+
       throw new Error('로그인 정보를 찾을 수 없습니다.');
     }
   }
@@ -90,7 +90,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     // 테이블 번호 정규화 처리
     const normalizedTableNumber = parseInt(orderData.tableNum) || parseInt(orderData.table) || orderData.tableNum || orderData.table;
-    
+
     // 주문 데이터를 sessionStorage에 저장 (결제 성공 후 사용)
     const pendingOrderData = {
       userId: userInfo.id,
@@ -120,7 +120,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     if (userInfo.phone && userInfo.phone.trim()) {
       const phoneStr = userInfo.phone.trim();
       const phoneDigits = phoneStr.replace(/\D/g, '');
-      
+
       // 유효한 전화번호 형식인지 확인
       if ((phoneDigits.length === 11 && phoneDigits.startsWith('010')) ||
           (phoneDigits.length >= 10 && phoneDigits.length <= 11 && phoneDigits.startsWith('01'))) {
@@ -163,8 +163,27 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     console.log('✅ 토스페이먼츠 결제 리다이렉트 시작:', paymentResult);
 
-    // 결제창으로 리다이렉트되므로 여기서는 더 이상 처리하지 않음
-    return { success: true, redirecting: true, message: '결제창으로 이동 중입니다.' };
+    // 🔄 성공 처리 및 리다이렉트
+    console.log('✅ 결제 및 주문 완료 - 지도 화면으로 이동');
+
+    // 지도 화면으로 리다이렉트
+    window.location.href = '/?redirect=map';
+
+    // 실제로는 결제창으로 리다이렉트되므로, 여기서는 더 이상 처리가 되지 않습니다.
+    // 아래 코드는 이전 로직의 일부로, 새로운 SPA 구조에서는 불필요하여 주석 처리합니다.
+    /*
+    const result = paymentResult; // 실제 결제 성공 시 반환되는 객체 형태에 따라 수정 필요
+    if (result.success) {
+      console.log('✅ 결제 및 주문 완료 - 성공 페이지로 이동');
+
+      // 성공 페이지로 리다이렉트 (URL에 결제 정보 포함)
+      const successUrl = `/toss-success.html?paymentKey=${result.paymentKey}&orderId=${result.orderId}&amount=${result.amount}`;
+      window.location.href = successUrl;
+    } else {
+      throw new Error(result.message || '결제 정보 처리 실패');
+    }
+    */
+
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
 

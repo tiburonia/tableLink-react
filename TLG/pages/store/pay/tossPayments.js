@@ -53,20 +53,12 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     const toss = await initTossPayments();
 
-    // 성공/실패 URL 설정 (Replit 환경에 맞는 올바른 URL 형식)
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = window.location.port;
-    
-    // Replit 환경에서는 포트가 있을 때만 포트 포함
-    const baseUrl = port && port !== '80' && port !== '443' 
-      ? `${protocol}//${hostname}:${port}` 
-      : `${protocol}//${hostname}`;
-    
-    const successUrl = `${baseUrl}/toss-success.html`;
-    const failUrl = `${baseUrl}/toss-fail.html`;
-    
-    console.log('🔗 토스페이먼츠 URL 설정:', { baseUrl, successUrl, failUrl });
+    // 성공/실패 URL 설정 (SPA 구조에 맞게 현재 페이지로 설정)
+    const baseUrl = window.location.origin;
+    const successUrl = `${baseUrl}/`;
+    const failUrl = `${baseUrl}/`;
+
+    console.log('🔗 토스페이먼츠 URL 설정:', {baseUrl, successUrl, failUrl});
 
     // URL 유효성 검증
     try {
@@ -81,7 +73,7 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     if (paymentData.customerMobilePhone && paymentData.customerMobilePhone.trim()) {
       // 숫자만 추출
       const phoneDigits = paymentData.customerMobilePhone.replace(/\D/g, '');
-      
+
       // 010으로 시작하는 11자리이거나 01로 시작하는 10-11자리인지 확인
       if ((phoneDigits.length === 11 && phoneDigits.startsWith('010')) ||
           (phoneDigits.length >= 10 && phoneDigits.length <= 11 && phoneDigits.startsWith('01'))) {
@@ -184,7 +176,7 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     // 토스페이먼츠 특정 오류 메시지 처리
     let errorMessage = error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`;
-    
+
     // 토스페이먼츠 에러 코드별 처리
     if (error.code === 'INCORRECT_SUCCESS_URL_FORMAT') {
       errorMessage = '결제 완료 페이지 URL 형식이 올바르지 않습니다. 페이지를 새로고침 후 다시 시도해주세요.';
