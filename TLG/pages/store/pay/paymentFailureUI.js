@@ -385,36 +385,28 @@ function setupFailureEventListeners(currentOrder, store, orderData) {
   // 다시 시도
   document.getElementById('retryPayment')?.addEventListener('click', () => {
     console.log('🔄 결제 재시도');
-    if (typeof window.renderPay === 'function' && store && orderData) {
-      window.renderPay(currentOrder, store, orderData.tableNum || orderData.table);
+    if (typeof renderPay === 'function') {
+      renderPay(currentOrder, store, orderData.tableNum);
     } else {
-      console.error('❌ renderPay 함수를 찾을 수 없거나 필요한 데이터가 누락되었습니다:', {
-        renderPay: typeof window.renderPay,
-        store: !!store,
-        orderData: !!orderData
-      });
+      console.error('❌ renderPay 함수를 찾을 수 없습니다');
     }
   });
 
   // 주문 화면으로
   document.getElementById('backToOrder')?.addEventListener('click', () => {
     console.log('← 주문 화면으로 돌아가기');
-    if (typeof window.renderOrderScreen === 'function' && store && orderData) {
-      window.renderOrderScreen(store, orderData.tableNum || orderData.table);
+    if (typeof renderOrderScreen === 'function') {
+      renderOrderScreen(store, orderData.tableNum);
     } else {
-      console.error('❌ renderOrderScreen 함수를 찾을 수 없거나 필요한 데이터가 누락되었습니다:', {
-        renderOrderScreen: typeof window.renderOrderScreen,
-        store: !!store,
-        orderData: !!orderData
-      });
+      console.error('❌ renderOrderScreen 함수를 찾을 수 없습니다');
     }
   });
 
   // 메인으로
   document.getElementById('backToMain')?.addEventListener('click', () => {
     console.log('🏠 메인 화면으로 돌아가기');
-    if (typeof window.renderMap === 'function') {
-      window.renderMap();
+    if (typeof renderMap === 'function') {
+      renderMap();
     } else {
       console.error('❌ renderMap 함수를 찾을 수 없습니다');
     }

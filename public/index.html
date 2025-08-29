@@ -68,8 +68,6 @@
   <!--결제 완료 화면 렌더링 함수-->
   <script src="TLG/pages/store/pay/renderPay.js"></script>
   <script src="TLG/pages/store/pay/confirmPayF.js"></script>
-  <!--결제 성공/실패 UI 모듈 (동적 로드)-->
-  <!-- <script src="TLG/pages/store/pay/paymentSuccessUI.js"></script> -->
   <!--장바구니 화면 렌더링 함수-->
   <script src="TLG/pages/store/cart/saveCart.js"></script>
   <!--장바구니 위젯 렌더링 함수-->
@@ -88,24 +86,12 @@
   <script src="../TLG/pages/store/promotion/renderPromotionDetail.js"></script>
   <!-- 서브 메인 화면 렌더링 함수 추가 -->
   <script src="TLG/pages/main/renderSubMain.js"></script>
-  
-  <!-- 인증 관리자 모듈 -->
-  <script src="TLG/utils/authManager.js"></script>
 
   <script>
-    // 페이지 로드 시 앱 초기화
+    //초기 진입 렌더링 함수
     document.addEventListener('DOMContentLoaded', () => {
-      if (typeof initializeApp === 'function') {
-        initializeApp();
-      } else {
-        console.error('❌ authManager가 로드되지 않음');
-      }
+      renderLogin()
     });
-
-    // URL 파라미터 기반 리다이렉션 처리
-    if (typeof handleUrlRedirection === 'function') {
-      handleUrlRedirection();
-    }
   </script>
 </body>
 
