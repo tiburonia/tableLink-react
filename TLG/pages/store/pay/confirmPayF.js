@@ -215,28 +215,35 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
     // 결제 실패 UI 모듈 동적 로드
     if (!window.renderPaymentFailure) {
       console.log('🔄 결제 실패 UI 모듈 로드 중...');
-
-      try {
-        await import('/TLG/pages/store/pay/paymentFailureUI.js');
-        console.log('✅ 결제 실패 UI 모듈 import 완료');
-      } catch (importError) {
-        console.error('❌ 결제 실패 UI 모듈 import 실패:', importError);
-        // 폴백으로 paymentSuccessUI에서 실패 함수 로드 시도
-        try {
-          await import('/TLG/pages/store/pay/paymentSuccessUI.js');
-          console.log('✅ 결제 실패 UI 모듈 폴백 import 완료');
-        } catch (fallbackError) {
-          console.error('❌ 결제 실패 UI 모듈 폴백 import도 실패:', fallbackError);
-          throw new Error('결제 실패 UI를 불러올 수 없습니다.');
-        }
-      }
+      await import('/TLG/pages/store/pay/paymentFailureUI.js');
     }
 
-    // 결제 실패 UI 렌더링
     if (typeof window.renderPaymentFailure === 'function') {
-      window.renderPaymentFailure(error, orderData);
+      // sessionStorage에서 store 정보 복구 시도
+      let storeData = store;
+      if (!storeData) {
+        try {
+          const pendingData = sessionStorage.getItem('pendingOrderData');
+          if (pendingData) {
+            const parsed = JSON.parse(pendingData);
+            storeData = {
+              id: parsed.storeId,
+              name: parsed.storeName,
+              menu: parsed.orderData?.items?.map(item => ({
+                name: item.name,
+                price: item.price
+              })) || []
+            };
+          }
+        } catch (e) {
+          console.warn('⚠️ sessionStorage에서 store 정보 복구 실패:', e);
+        }
+      }
+
+      window.renderPaymentFailure(error, orderData, currentOrder, storeData);
     } else {
-      throw new Error('결제 실패 UI 함수를 찾을 수 없습니다');
+      console.error('❌ 결제 실패 UI를 로드할 수 없습니다');
+      alert(`결제 실패: ${error.message}`);
     }
   } catch (loadError) {
     console.error('❌ 결제 실패 UI 로드 실패:', loadError);
