@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -226,22 +227,39 @@
 
     <script>
         function goToMain() {
-            // 로그인 상태 유지하며 지도 화면으로 이동
             try {
-                // 현재 창에서 메인 페이지로 이동 후 renderMap 호출
-                window.location.href = '/?redirect=map';
+                if (window.opener && !window.opener.closed) {
+                    // 부모 창이 존재하고 닫히지 않았을 때
+                    window.opener.postMessage({ 
+                        type: 'PAYMENT_SUCCESS',
+                        action: 'GO_TO_MAIN' 
+                    }, '*');
+                    window.close();
+                } else {
+                    // 단독 창이거나 부모 창이 없을 때
+                    window.location.href = '/';
+                }
             } catch (error) {
-                console.error('메인 이동 실패:', error);
-                window.location.replace('/');
+                console.log('부모 창 접근 실패, 현재 창에서 이동:', error);
+                window.location.href = '/';
             }
         }
 
         function goToMyPage() {
-            // 로그인 상태 유지하며 마이페이지로 이동
             try {
-                window.location.href = '/mypage';
+                if (window.opener && !window.opener.closed) {
+                    // 부모 창이 존재하고 닫히지 않았을 때
+                    window.opener.postMessage({ 
+                        type: 'PAYMENT_SUCCESS',
+                        action: 'GO_TO_MYPAGE' 
+                    }, '*');
+                    window.close();
+                } else {
+                    // 단독 창이거나 부모 창이 없을 때
+                    window.location.href = '/mypage';
+                }
             } catch (error) {
-                console.error('마이페이지 이동 실패:', error);
+                console.log('부모 창 접근 실패, 현재 창에서 이동:', error);
                 window.location.href = '/mypage';
             }
         }
@@ -297,21 +315,6 @@
                         <button onclick="goToMain()" class="btn primary">메인으로</button>
                         <button onclick="goToMyPage()" class="btn secondary">주문내역 보기</button>
                     </div>
-
-                    <script>
-                        // 결제 성공 후 3초 뒤 자동으로 지도 화면으로 이동
-                        setTimeout(() => {
-                            console.log('💳 결제 성공 - 자동으로 지도 화면으로 이동');
-                            try {
-                                // 지도 화면으로 리다이렉트
-                                window.location.href = '/?redirect=map';
-                            } catch (error) {
-                                console.error('자동 리다이렉트 실패:', error);
-                                // 수동 버튼 클릭 유도
-                                document.querySelector('.actions').style.display = 'block';
-                            }
-                        }, 3000);
-                    </script>
                 </div>
             `;
         }
@@ -329,15 +332,6 @@
         }
 
         async function processPayment() {
-            console.log('🚀 결제 처리 프로세스 시작');
-
-            // 로딩 상태 업데이트
-            const container = document.querySelector('.container');
-            if (container) {
-                container.querySelector('h1').textContent = '결제 승인 처리 중';
-                container.querySelector('.loading').textContent = '토스페이먼츠 결제를 확인하고 있습니다...';
-            }
-
             try {
                 // URL 파라미터에서 결제 정보 가져오기
                 const urlParams = new URLSearchParams(window.location.search);
@@ -383,25 +377,16 @@
 
                 if (savedOrderData && savedOrderData.userId) {
                     console.log('🔄 주문 생성 API 호출 시작');
-
-                    // 테이블 번호 정규화
-                    const normalizedTableNumber = parseInt(savedOrderData.tableNumber) || 
-                        parseInt(savedOrderData.orderData?.tableNum) || 
-                        parseInt(savedOrderData.orderData?.table) || 
-                        savedOrderData.tableNumber;
-
+                    
                     // 기존 저장된 주문 데이터에 결제 정보 추가
                     const finalOrderData = {
                         ...savedOrderData,
-                        tableNumber: normalizedTableNumber,
                         pgPaymentKey: paymentKey,
                         pgOrderId: orderId,
                         pgPaymentMethod: 'CARD'
                     };
 
                     // 주문 생성 API 호출
-                    console.log('📝 주문 생성 요청 데이터:', finalOrderData);
-
                     const orderResponse = await fetch('/api/orders/pay', {
                         method: 'POST',
                         headers: {
@@ -415,12 +400,7 @@
                         console.log('✅ 주문 생성 완료:', orderResult);
                     } else {
                         const errorData = await orderResponse.json();
-                        console.error('❌ 주문 생성 실패:', {
-                            status: orderResponse.status,
-                            statusText: orderResponse.statusText,
-                            error: errorData,
-                            requestData: finalOrderData
-                        });
+                        console.error('❌ 주문 생성 실패:', errorData);
                     }
 
                     // 저장된 주문 데이터 삭제
@@ -434,27 +414,16 @@
 
             } catch (error) {
                 console.error('❌ 결제 처리 실패:', error);
-
-                // 에러 타입에 따른 처리
-                let errorMessage = '결제 처리 중 오류가 발생했습니다.';
-
-                if (error.message) {
-                    errorMessage = error.message;
-                } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    errorMessage = '네트워크 연결에 문제가 있습니다. 잠시 후 다시 시도해주세요.';
-                }
-
-                showErrorPage({ message: errorMessage });
+                showErrorPage(error);
             }
         }
 
         function goBack() {
-            // 현재 창에서 안전하게 지도 화면으로 이동
-            try {
-                window.location.href = '/?redirect=map';
-            } catch (error) {
-                console.error('goBack 실패:', error);
-                window.location.replace('/');
+            if (window.opener) {
+                window.opener.location.href = '/';
+                window.close();
+            } else {
+                window.location.href = '/';
             }
         }
 

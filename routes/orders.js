@@ -597,30 +597,19 @@ router.post('/pay', async (req, res) => {
 
     await client.query('COMMIT');
 
-    const items = orderData.items; // items 변수 정의
-    const customerName = user.name || '손님'; // customerName 변수 정의
-
-    // 📡 KDS 실시간 업데이트 전송
+    // 📡 새 주문 KDS 실시간 업데이트 전송
     try {
       if (global.kdsWebSocket) {
         console.log(`📡 TL회원 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
         global.kdsWebSocket.broadcast(storeId, 'new-order', {
           orderId: orderId,
-          paidOrderId: userPaidOrderId,
+          userPaidOrderId: userPaidOrderId,
           storeName: storeName,
-          tableNumber: parseInt(tableNumber),
-          customerName: customerName,
-          itemCount: items.length,
-          totalAmount: finalTotal,
-          source: 'TLL',
-          orderItems: items.map(item => ({
-            name: item.name,
-            quantity: item.qty || item.quantity || 1,
-            price: item.price,
-            cookingStatus: 'PENDING'
-          })),
-          orderTime: new Date().toISOString(),
-          paymentMethod: pgPaymentMethod || 'CARD'
+          tableNumber: actualTableNumber,
+          customerName: user.name || '손님',
+          itemCount: orderData.items ? orderData.items.length : 0,
+          totalAmount: orderData.total,
+          source: 'TLL'
         });
       }
     } catch (wsError) {
@@ -629,37 +618,17 @@ router.post('/pay', async (req, res) => {
 
     // POS 실시간 새 주문 알림
     try {
-      // 📡 TL회원 주문 실시간 알림 전송 (POS)
       if (global.posWebSocket) {
-        console.log(`📡 TL회원 주문 ${orderId} POS 실시간 알림 전송`);
-
-        // 새 주문 알림
-        global.posWebSocket.broadcast(storeId, 'new-order', {
+        console.log(`📡 TL회원 주문 ${userPaidOrderId} POS 실시간 알림 전송`);
+        global.posWebSocket.broadcastNewOrder(storeId, {
           orderId: orderId,
           userPaidOrderId: userPaidOrderId,
           storeName: storeName,
-          tableNumber: parseInt(tableNumber),
-          customerName: customerName,
-          itemCount: items.length,
-          totalAmount: finalTotal,
-          source: 'TLL',
-          orderItems: items.map(item => ({
-            name: item.name,
-            quantity: item.qty || item.quantity || 1,
-            price: item.price
-          }))
-        });
-
-        // 테이블 상태 업데이트
-        global.posWebSocket.broadcastTableUpdate(storeId, {
-          tableNumber: parseInt(tableNumber),
-          isOccupied: true,
-          source: 'TLL',
-          occupiedSince: new Date().toISOString(),
-          customerInfo: {
-            name: customerName,
-            orderCount: 1
-          }
+          tableNumber: actualTableNumber,
+          customerName: user.name || '손님',
+          itemCount: orderData.items ? orderData.items.length : 0,
+          totalAmount: orderData.total,
+          source: 'TLL'
         });
       }
     } catch (wsError) {
