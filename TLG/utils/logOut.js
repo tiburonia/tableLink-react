@@ -18,6 +18,22 @@ const logOutF= function() {
     userInfo.coupons.used = [];
     userInfo.favorites = [];
 
+    // localStorage 완전 초기화
+    try {
+        localStorage.clear();
+        console.log('✅ localStorage 완전 초기화 완료');
+    } catch (error) {
+        console.error('❌ localStorage 초기화 실패:', error);
+    }
+
+    // 쿠키도 삭제
+    try {
+        document.cookie = 'userInfo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+        console.log('✅ 사용자 정보 쿠키 삭제 완료');
+    } catch (error) {
+        console.error('❌ 쿠키 삭제 실패:', error);
+    }
+
     alert('로그아웃 완료');
     renderLogin(); // 로그인 화면 렌더링
 

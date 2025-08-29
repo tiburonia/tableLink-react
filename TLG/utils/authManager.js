@@ -1,4 +1,3 @@
-
 // 인증 관리자 - 앱 초기화 및 사용자 상태 관리
 console.log('🔧 AuthManager 로드 시작');
 
@@ -25,11 +24,11 @@ function getCookieUserInfo() {
 // 앱 초기화 함수
 function initializeApp() {
   console.log('🚀 앱 초기화 시작');
-  
+
   try {
     // 1. 쿠키에서 사용자 정보 확인 (우선순위)
     let savedUserInfo = getCookieUserInfo();
-    
+
     // 2. 쿠키에 없으면 localStorage에서 확인 (백업)
     if (!savedUserInfo) {
       try {
@@ -43,11 +42,11 @@ function initializeApp() {
         localStorage.removeItem('userInfo');
       }
     }
-    
+
     if (savedUserInfo && savedUserInfo.id) {
       window.userInfo = savedUserInfo;
       console.log('✅ 저장된 사용자 정보 복원:', savedUserInfo.name || savedUserInfo.id);
-      
+
       // localStorage와 쿠키 동기화
       try {
         localStorage.setItem('userInfo', JSON.stringify(savedUserInfo));
@@ -55,7 +54,7 @@ function initializeApp() {
       } catch (error) {
         console.warn('⚠️ localStorage 동기화 실패:', error);
       }
-      
+
       // 사용자가 로그인되어 있으면 메인 화면으로
       console.log('🏠 로그인 상태 확인됨 - 메인 화면으로 이동');
       if (typeof renderMap === 'function') {
@@ -70,17 +69,17 @@ function initializeApp() {
       console.log('ℹ️ 저장된 사용자 정보 없음 - 로그인 화면 표시');
       // 기존 잘못된 데이터 정리
       clearUserInfo();
-      
+
       if (typeof renderLogin === 'function') {
         renderLogin();
       }
     }
-    
+
     console.log('✅ 앱 초기화 완료');
-    
+
   } catch (error) {
     console.error('❌ 앱 초기화 실패:', error);
-    
+
     // 실패 시 사용자 정보 정리하고 로그인 화면으로 폴백
     clearUserInfo();
     if (typeof renderLogin === 'function') {
@@ -92,20 +91,20 @@ function initializeApp() {
 // 사용자 로그인 처리
 function setUserInfo(userInfo) {
   console.log('👤 사용자 정보 설정:', userInfo?.name || userInfo?.id);
-  
+
   window.userInfo = userInfo;
-  
+
   try {
     // localStorage에 저장
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
     console.log('💾 사용자 정보 localStorage 저장 완료');
-    
+
     // 쿠키에도 저장 (7일 만료)
     const expires = new Date();
     expires.setDate(expires.getDate() + 7);
     document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(userInfo))}; expires=${expires.toUTCString()}; path=/`;
     console.log('🍪 사용자 정보 쿠키 저장 완료');
-    
+
   } catch (error) {
     console.error('❌ 사용자 정보 저장 실패:', error);
   }
@@ -113,17 +112,18 @@ function setUserInfo(userInfo) {
 
 // 사용자 로그아웃 처리
 function clearUserInfo() {
-  console.log('🚪 사용자 로그아웃 처리');
-  
+  console.log('🪚 사용자 정보 정리');
+
   window.userInfo = null;
-  
+
   try {
-    localStorage.removeItem('userInfo');
-    console.log('🗑️ localStorage 사용자 정보 삭제 완료');
+    // localStorage 완전 초기화 (모든 데이터 삭제)
+    localStorage.clear();
+    console.log('🗑️ localStorage 완전 초기화 완료');
   } catch (error) {
     console.error('❌ localStorage 정리 실패:', error);
   }
-  
+
   try {
     // 쿠키 삭제 (만료일을 과거로 설정)
     document.cookie = 'userInfo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
@@ -144,16 +144,16 @@ window.addEventListener('message', function(event) {
   if (event.origin !== window.location.origin) {
     return;
   }
-  
+
   console.log('📨 메시지 수신:', event.data);
-  
+
   if (event.data.type === 'PAYMENT_SUCCESS_REDIRECT' || 
       event.data.type === 'PAYMENT_FAILURE_REDIRECT' || 
       event.data.type === 'PAYMENT_REDIRECT') {
-    
+
     if (event.data.action === 'navigate' && event.data.url) {
       console.log('🔄 결제 완료 후 리다이렉트:', event.data.url);
-      
+
       if (event.data.url === '/mypage') {
         // 마이페이지로 이동
         if (typeof renderMyPage === 'function') {
