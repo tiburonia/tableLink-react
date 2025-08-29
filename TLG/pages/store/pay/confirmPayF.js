@@ -92,7 +92,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
     sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
-    
+
     // 결제 방법도 별도 저장
     sessionStorage.setItem('paymentMethod', paymentMethod);
 

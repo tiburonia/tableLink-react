@@ -1,16 +1,15 @@
-
 function goToMain() {
     try {
         // 부모 창이 있고 같은 도메인인 경우
         if (window.opener && !window.opener.closed) {
             try {
                 // 같은 도메인인지 확인
-                window.opener.postMessage({ 
-                    type: 'PAYMENT_SUCCESS_REDIRECT', 
-                    action: 'navigate', 
-                    url: '/' 
+                window.opener.postMessage({
+                    type: 'PAYMENT_SUCCESS_REDIRECT',
+                    action: 'navigate',
+                    url: '/'
                 }, '*');
-                
+
                 // 창 닫기 시도
                 setTimeout(() => {
                     window.close();
@@ -20,7 +19,7 @@ function goToMain() {
                 console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
             }
         }
-        
+
         // 최상위 창에서 리디렉트 시도 (iframe인 경우)
         if (window.top && window.top !== window) {
             window.top.location.href = '/';
@@ -29,8 +28,8 @@ function goToMain() {
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
-    
-    // 기본적으로 현재 창에서 리다이렉트
+
+    // 기본적으로 현재 창에서 리디렉트
     window.location.href = '/';
 }
 
@@ -39,12 +38,12 @@ function goToMyPage() {
         // 부모 창이 있고 같은 도메인인 경우
         if (window.opener && !window.opener.closed) {
             try {
-                window.opener.postMessage({ 
-                    type: 'PAYMENT_SUCCESS_REDIRECT', 
-                    action: 'navigate', 
-                    url: '/mypage' 
+                window.opener.postMessage({
+                    type: 'PAYMENT_SUCCESS_REDIRECT',
+                    action: 'navigate',
+                    url: '/mypage'
                 }, '*');
-                
+
                 setTimeout(() => {
                     window.close();
                 }, 300);
@@ -53,7 +52,7 @@ function goToMyPage() {
                 console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
             }
         }
-        
+
         // 최상위 창에서 리디렉트 시도
         if (window.top && window.top !== window) {
             window.top.location.href = '/mypage';
@@ -62,7 +61,7 @@ function goToMyPage() {
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
-    
+
     window.location.href = '/mypage';
 }
 
@@ -86,7 +85,7 @@ function displaySuccess(result, orderData) {
                 ${orderData.items ? `
                     <div class="items-list">
                         <h4>주문 메뉴</h4>
-                        ${orderData.items.map(item => 
+                        ${orderData.items.map(item =>
                             `<div class="item-row">
                                 <span>${item.name} × ${item.quantity || item.qty || 1}</span>
                                 <span>${(item.price * (item.quantity || item.qty || 1)).toLocaleString()}원</span>
@@ -126,7 +125,7 @@ function displayExistingOrderSuccess(existingOrder, paymentKey, orderId) {
                 ${orderData?.items ? `
                     <div class="items-list">
                         <h4>주문 메뉴</h4>
-                        ${orderData.items.map(item => 
+                        ${orderData.items.map(item =>
                             `<div class="item-row">
                                 <span>${item.name} × ${item.quantity || item.qty || 1}</span>
                                 <span>${(item.price * (item.quantity || item.qty || 1)).toLocaleString()}원</span>
@@ -286,12 +285,12 @@ function goBack() {
         // 부모 창이 있고 같은 도메인인 경우
         if (window.opener && !window.opener.closed) {
             try {
-                window.opener.postMessage({ 
-                    type: 'PAYMENT_REDIRECT', 
-                    action: 'navigate', 
-                    url: '/' 
+                window.opener.postMessage({
+                    type: 'PAYMENT_REDIRECT',
+                    action: 'navigate',
+                    url: '/'
                 }, '*');
-                
+
                 setTimeout(() => {
                     window.close();
                 }, 300);
@@ -300,7 +299,7 @@ function goBack() {
                 console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
             }
         }
-        
+
         // 최상위 창에서 리디렉트 시도
         if (window.top && window.top !== window) {
             window.top.location.href = '/';
@@ -309,7 +308,7 @@ function goBack() {
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
-    
+
     window.location.href = '/';
 }
 
