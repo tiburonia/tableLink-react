@@ -87,11 +87,20 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       usedPoint: pointsUsed || 0,
       finalTotal: finalAmount,
       selectedCouponId: couponId,
-      couponDiscount: couponDiscount || 0
+      couponDiscount: couponDiscount || 0,
+      paymentMethod: paymentMethod
     };
 
     console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
-    sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
+    
+    try {
+      sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
+      console.log('✅ sessionStorage 저장 성공');
+    } catch (storageError) {
+      console.error('❌ sessionStorage 저장 실패:', storageError);
+      // sessionStorage 실패 시 대안으로 window 객체에 저장
+      window.pendingOrderData = pendingOrderData;
+    }
 
     // 토스페이먼츠 결제창 호출
     const paymentResult = await window.requestTossPayment({
@@ -106,6 +115,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     if (!paymentResult.success) {
       // 결제 실패 시 저장된 주문 데이터 삭제
       sessionStorage.removeItem('pendingOrderData');
+      delete window.pendingOrderData;
       throw new Error(paymentResult.message || '결제가 취소되었습니다.');
     }
 
@@ -513,28 +523,52 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       </style>
     `;
 
-    // 버튼 이벤트 리스너
-    document.getElementById('goToMain').addEventListener('click', () => {
-      renderMap();
-    });
+    // 버튼 이벤트 리스너 (안전성 개선)
+    const goToMainBtn = document.getElementById('goToMain');
+    const goToMyPageBtn = document.getElementById('goToMyPage');
+    
+    if (goToMainBtn) {
+      goToMainBtn.addEventListener('click', () => {
+        if (typeof renderMap === 'function') {
+          renderMap();
+        } else {
+          window.location.href = '/?redirect=map';
+        }
+      });
+    }
 
-    document.getElementById('goToMyPage').addEventListener('click', () => {
-      renderMyPage();
-    });
+    if (goToMyPageBtn) {
+      goToMyPageBtn.addEventListener('click', () => {
+        if (typeof renderMyPage === 'function') {
+          renderMyPage();
+        } else {
+          window.location.href = '/?redirect=mypage';
+        }
+      });
+    }
 
     // 자동 리다이렉트 타이머 설정
     let countdown = 3;
     const timerElement = document.getElementById('redirectTimer');
-    timerElement.textContent = countdown;
-
-    const redirectInterval = setInterval(() => {
-      countdown--;
+    if (timerElement) {
       timerElement.textContent = countdown;
-      if (countdown <= 0) {
-        clearInterval(redirectInterval);
-        renderMap(); // 로그인 정보 유지한 상태로 renderMap 호출
-      }
-    }, 1000);
+
+      const redirectInterval = setInterval(() => {
+        countdown--;
+        if (timerElement) {
+          timerElement.textContent = countdown;
+        }
+        if (countdown <= 0) {
+          clearInterval(redirectInterval);
+          // 로그인 정보 유지한 상태로 renderMap 호출
+          if (typeof renderMap === 'function') {
+            renderMap();
+          } else {
+            window.location.href = '/?redirect=map';
+          }
+        }
+      }, 1000);
+    }
 
 
     console.log('✅ 결제 성공 페이지 렌더링 완료');

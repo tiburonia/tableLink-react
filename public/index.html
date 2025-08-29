@@ -93,6 +93,29 @@
       renderLogin()
     });
   </script>
+  <script>
+    // 로그인 상태 체크
+    checkLoginStatus();
+
+    // URL 파라미터 확인하여 리다이렉션 처리
+    const urlParams = new URLSearchParams(window.location.search);
+    const redirect = urlParams.get('redirect');
+
+    if (redirect && window.userInfo) {
+      console.log('🔗 URL 파라미터 리다이렉션:', redirect);
+
+      // URL에서 파라미터 제거
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      setTimeout(() => {
+        if (redirect === 'map' && typeof renderMap === 'function') {
+          renderMap();
+        } else if (redirect === 'mypage' && typeof renderMyPage === 'function') {
+          renderMyPage();
+        }
+      }, 500);
+    }
+  </script>
 </body>
 
 </html>
