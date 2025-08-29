@@ -5,37 +5,72 @@ console.log('🔧 AuthManager 로드 시작');
 // 전역 사용자 정보
 window.userInfo = null;
 
+// 쿠키에서 사용자 정보 가져오기
+function getCookieUserInfo() {
+  try {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'userInfo') {
+        return JSON.parse(decodeURIComponent(value));
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ 쿠키 파싱 실패:', error);
+    return null;
+  }
+}
+
 // 앱 초기화 함수
 function initializeApp() {
   console.log('🚀 앱 초기화 시작');
   
   try {
-    // 1. 로컬 스토리지에서 사용자 정보 확인
-    const savedUserInfo = localStorage.getItem('userInfo');
+    // 1. 쿠키에서 사용자 정보 확인 (우선순위)
+    let savedUserInfo = getCookieUserInfo();
     
-    if (savedUserInfo) {
+    // 2. 쿠키에 없으면 localStorage에서 확인 (백업)
+    if (!savedUserInfo) {
       try {
-        window.userInfo = JSON.parse(savedUserInfo);
-        console.log('✅ 저장된 사용자 정보 복원:', window.userInfo?.name || window.userInfo?.id);
-        
-        // 사용자가 로그인되어 있으면 메인 화면으로
-        if (typeof renderMap === 'function') {
-          renderMap();
-        } else {
-          console.warn('⚠️ renderMap 함수를 찾을 수 없음 - 로그인 화면으로');
-          if (typeof renderLogin === 'function') {
-            renderLogin();
-          }
+        const localStorageUserInfo = localStorage.getItem('userInfo');
+        if (localStorageUserInfo) {
+          savedUserInfo = JSON.parse(localStorageUserInfo);
+          console.log('📦 localStorage에서 사용자 정보 복원');
         }
-      } catch (parseError) {
-        console.error('❌ 사용자 정보 파싱 실패:', parseError);
+      } catch (error) {
+        console.warn('⚠️ localStorage 사용자 정보 파싱 실패:', error);
         localStorage.removeItem('userInfo');
+      }
+    }
+    
+    if (savedUserInfo && savedUserInfo.id) {
+      window.userInfo = savedUserInfo;
+      console.log('✅ 저장된 사용자 정보 복원:', savedUserInfo.name || savedUserInfo.id);
+      
+      // localStorage와 쿠키 동기화
+      try {
+        localStorage.setItem('userInfo', JSON.stringify(savedUserInfo));
+        console.log('🔄 localStorage 동기화 완료');
+      } catch (error) {
+        console.warn('⚠️ localStorage 동기화 실패:', error);
+      }
+      
+      // 사용자가 로그인되어 있으면 메인 화면으로
+      console.log('🏠 로그인 상태 확인됨 - 메인 화면으로 이동');
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        console.warn('⚠️ renderMap 함수를 찾을 수 없음 - 로그인 화면으로');
         if (typeof renderLogin === 'function') {
           renderLogin();
         }
       }
     } else {
       console.log('ℹ️ 저장된 사용자 정보 없음 - 로그인 화면 표시');
+      // 기존 잘못된 데이터 정리
+      clearUserInfo();
+      
       if (typeof renderLogin === 'function') {
         renderLogin();
       }
@@ -46,7 +81,8 @@ function initializeApp() {
   } catch (error) {
     console.error('❌ 앱 초기화 실패:', error);
     
-    // 실패 시 로그인 화면으로 폴백
+    // 실패 시 사용자 정보 정리하고 로그인 화면으로 폴백
+    clearUserInfo();
     if (typeof renderLogin === 'function') {
       renderLogin();
     }
@@ -60,8 +96,16 @@ function setUserInfo(userInfo) {
   window.userInfo = userInfo;
   
   try {
+    // localStorage에 저장
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
-    console.log('💾 사용자 정보 로컬 스토리지 저장 완료');
+    console.log('💾 사용자 정보 localStorage 저장 완료');
+    
+    // 쿠키에도 저장 (7일 만료)
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 7);
+    document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(userInfo))}; expires=${expires.toUTCString()}; path=/`;
+    console.log('🍪 사용자 정보 쿠키 저장 완료');
+    
   } catch (error) {
     console.error('❌ 사용자 정보 저장 실패:', error);
   }
@@ -75,9 +119,17 @@ function clearUserInfo() {
   
   try {
     localStorage.removeItem('userInfo');
-    console.log('🗑️ 로컬 스토리지 사용자 정보 삭제 완료');
+    console.log('🗑️ localStorage 사용자 정보 삭제 완료');
   } catch (error) {
-    console.error('❌ 로컬 스토리지 정리 실패:', error);
+    console.error('❌ localStorage 정리 실패:', error);
+  }
+  
+  try {
+    // 쿠키 삭제 (만료일을 과거로 설정)
+    document.cookie = 'userInfo=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+    console.log('🗑️ 쿠키 사용자 정보 삭제 완료');
+  } catch (error) {
+    console.error('❌ 쿠키 정리 실패:', error);
   }
 }
 
