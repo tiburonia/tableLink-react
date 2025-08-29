@@ -228,18 +228,7 @@
         function goToMain() {
             // 로그인 상태 유지하며 메인으로 이동
             try {
-                // 부모 창이 있는지 확인 (결제창에서 호출된 경우)
-                if (window.opener && !window.opener.closed) {
-                    // 부모 창에 메시지 전송
-                    window.opener.postMessage({
-                        type: 'PAYMENT_SUCCESS',
-                        action: 'GO_TO_MAIN'
-                    }, '*');
-                    window.close();
-                } else {
-                    // 직접 접근한 경우 현재 창에서 이동
-                    window.location.href = '/';
-                }
+                window.location.href = '/';
             } catch (error) {
                 console.error('메인 이동 실패:', error);
                 window.location.href = '/';
@@ -249,15 +238,7 @@
         function goToMyPage() {
             // 로그인 상태 유지하며 마이페이지로 이동
             try {
-                if (window.opener && !window.opener.closed) {
-                    window.opener.postMessage({
-                        type: 'PAYMENT_SUCCESS',
-                        action: 'GO_TO_MYPAGE'
-                    }, '*');
-                    window.close();
-                } else {
-                    window.location.href = '/mypage';
-                }
+                window.location.href = '/mypage';
             } catch (error) {
                 console.error('마이페이지 이동 실패:', error);
                 window.location.href = '/mypage';
