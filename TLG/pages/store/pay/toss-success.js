@@ -1,69 +1,66 @@
 function goToMain() {
-    console.log('🔄 메인으로 이동 시도');
-    
-    // postMessage 우선 시도
-    const message = {
-        type: 'PAYMENT_COMPLETE',
-        action: 'navigate',
+    console.log('🔄 결제 완료 후 iframe 닫기 및 리다이렉션');
+
+    // 1. 먼저 iframe 닫기 시도
+    setTimeout(() => {
+        try {
+            console.log('🔒 결제 완료 - iframe 닫기 시도');
+            window.close();
+        } catch (e) {
+            console.log('iframe 닫기 실패:', e);
+        }
+    }, 500);
+
+    // 2. 부모 창에 리다이렉션 메시지 전송
+    const redirectMessage = {
+        type: 'PAYMENT_COMPLETE_REDIRECT',
+        action: 'redirect',
         url: '/',
         timestamp: Date.now()
     };
 
-    let messageSent = false;
-
     try {
         if (window.opener && !window.opener.closed) {
-            console.log('📨 opener에게 메시지 전송');
-            window.opener.postMessage(message, '*');
-            messageSent = true;
+            console.log('📨 opener에게 리다이렉션 메시지 전송');
+            window.opener.postMessage(redirectMessage, '*');
+            window.opener.location.href = '/';
         }
     } catch (e) {
-        console.log('opener 메시지 실패:', e);
+        console.log('opener 리다이렉션 실패:', e);
     }
 
     try {
         if (window.parent && window.parent !== window) {
-            console.log('📨 parent에게 메시지 전송');
-            window.parent.postMessage(message, '*');
-            messageSent = true;
+            console.log('📨 parent에게 리다이렉션 메시지 전송');
+            window.parent.postMessage(redirectMessage, '*');
+            window.parent.location.href = '/';
         }
     } catch (e) {
-        console.log('parent 메시지 실패:', e);
+        console.log('parent 리다이렉션 실패:', e);
     }
 
-    // postMessage가 실패한 경우에만 안전한 방법으로 이동
-    if (!messageSent) {
-        console.log('📨 postMessage 실패, 안전한 방법으로 이동');
-        try {
-            // 현재 창이 독립적인 창인지 확인
-            if (window === window.top) {
-                // 독립적인 창이면 직접 이동 가능
-                window.location.replace('/');
-            } else {
-                // iframe 등에 포함된 경우 부모에 알림
-                window.top.location.replace('/');
-            }
-        } catch (e) {
-            console.log('안전한 이동도 실패:', e);
-            // 마지막 수단으로 history 사용
-            history.replaceState(null, '', '/');
-            location.reload();
+    try {
+        if (window.top && window.top !== window) {
+            console.log('📨 top에게 리다이렉션 메시지 전송');
+            window.top.postMessage(redirectMessage, '*');
+            window.top.location.href = '/';
         }
+    } catch (e) {
+        console.log('top 리다이렉션 실패:', e);
     }
 
-    // 메시지 전송 후 잠시 기다린 후 창 닫기
-    setTimeout(() => {
-        try {
-            window.close();
-        } catch (e) {
-            console.log('창 닫기 실패:', e);
-        }
-    }, 1000);
+    // 3. 독립적인 창인 경우 직접 리다이렉션
+    if (window === window.top) {
+        console.log('🔄 독립적인 창 - 직접 리다이렉션');
+        setTimeout(() => {
+            window.location.replace('/');
+        }, 1000);
+    }
 }
 
 function goToMyPage() {
     console.log('🔄 마이페이지로 이동 시도 - postMessage 전용');
-    
+
     const message = {
         type: 'PAYMENT_COMPLETE',
         action: 'navigate',
@@ -328,7 +325,7 @@ async function processPayment() {
 
 function goBack() {
     console.log('🔄 뒤로가기 시도 - postMessage 전용');
-    
+
     const message = {
         type: 'PAYMENT_CANCEL',
         action: 'navigate',
