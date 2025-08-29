@@ -10,30 +10,33 @@ if (message) {
 
 function goBack() {
     try {
-        // postMessage로 부모 창에 메시지 전송 시도
+        // 부모 창이 있고 같은 도메인인 경우
         if (window.opener && !window.opener.closed) {
-            window.opener.postMessage({ 
-                type: 'PAYMENT_FAILURE_REDIRECT', 
-                action: 'navigate', 
-                url: '/' 
-            }, window.location.origin);
-            
-            // 잠시 대기 후 창 닫기
-            setTimeout(() => {
-                try {
+            try {
+                window.opener.postMessage({ 
+                    type: 'PAYMENT_FAILURE_REDIRECT', 
+                    action: 'navigate', 
+                    url: '/' 
+                }, '*');
+                
+                setTimeout(() => {
                     window.close();
-                } catch (e) {
-                    // 창 닫기 실패시 현재 창에서 리다이렉트
-                    window.location.href = '/';
-                }
-            }, 500);
+                }, 300);
+                return;
+            } catch (crossOriginError) {
+                console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
+            }
+        }
+        
+        // 최상위 창에서 리디렉트 시도
+        if (window.top && window.top !== window) {
+            window.top.location.href = '/';
             return;
         }
     } catch (error) {
         console.warn('부모 창 통신 실패:', error);
     }
     
-    // 기본적으로 현재 창에서 리다이렉트
     window.location.href = '/';
 }
 

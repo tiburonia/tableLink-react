@@ -169,12 +169,21 @@ router.get('/success', async (req, res) => {
 
     console.log('✅ 토스페이먼츠 결제 성공 콜백:', { paymentKey, orderId, amount });
 
-    // 성공 페이지로 리다이렉트
-    res.redirect(`/toss-success.html?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`);
+    // 파라미터 검증
+    if (!paymentKey || !orderId || !amount) {
+      console.error('❌ 필수 파라미터 누락:', { paymentKey, orderId, amount });
+      return res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 정보가 올바르지 않습니다.')}`);
+    }
+
+    // 서버에서 직접 성공 페이지로 리디렉트 (브라우저 보안 문제 해결)
+    const successUrl = `/toss-success.html?paymentKey=${encodeURIComponent(paymentKey)}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(amount)}`;
+    
+    console.log('🔄 서버에서 성공 페이지로 리디렉트:', successUrl);
+    res.redirect(successUrl);
 
   } catch (error) {
-    console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
-    res.redirect(`/toss-fail.html?message=${encodeURIComponent(error.message)}`);
+    console.error('❌ 토스페이먼츠 성공 콜백 처리 실패:', error);
+    res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 처리 중 오류가 발생했습니다.')}`);
   }
 });
 
@@ -185,7 +194,11 @@ router.get('/fail', async (req, res) => {
 
     console.log('❌ 토스페이먼츠 결제 실패:', { code, message, orderId });
 
-    res.redirect(`/toss-fail.html?code=${code}&message=${encodeURIComponent(message)}&orderId=${orderId}`);
+    // 서버에서 직접 실패 페이지로 리디렉트
+    const failUrl = `/toss-fail.html?code=${encodeURIComponent(code || '')}&message=${encodeURIComponent(message || '결제가 실패했습니다.')}&orderId=${encodeURIComponent(orderId || '')}`;
+    
+    console.log('🔄 서버에서 실패 페이지로 리디렉트:', failUrl);
+    res.redirect(failUrl);
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 실패 콜백 처리 실패:', error);
