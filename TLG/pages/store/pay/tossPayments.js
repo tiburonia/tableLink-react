@@ -42,101 +42,78 @@ async function initTossPayments() {
 }
 
 /**
- * 토스페이먼츠 결제 요청
+ * 토스페이먼츠 결제 요청 (Popup 방식)
  * @param {Object} paymentData - 결제 정보
  * @param {string} paymentMethod - 결제 수단 ('카드', '계좌이체', '가상계좌')
  * @returns {Promise<Object>} 결제 결과
  */
 async function requestTossPayment(paymentData, paymentMethod = '카드') {
   try {
-    console.log('💳 토스페이먼츠 결제 요청:', paymentData, '결제수단:', paymentMethod);
+    console.log('💳 토스페이먼츠 결제 요청 (Popup 방식):', paymentData, '결제수단:', paymentMethod);
 
     const toss = await initTossPayments();
-
-    // 새로운 접근: 콜백 URL을 현재 창의 postMessage 핸들러로 설정
     const baseUrl = window.location.origin;
-    
-    // 현재 창의 고유 ID 생성
-    const windowId = 'toss_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    
-    // postMessage 리스너 등록
-    const messageHandler = async (event) => {
-      if (event.data.type === 'TOSS_PAYMENT_SUCCESS' && event.data.windowId === windowId) {
-        window.removeEventListener('message', messageHandler);
-        
-        try {
-          console.log('💳 토스페이먼츠 결제 성공 감지:', event.data);
-          
-          // 즉시 결제 승인 및 주문 처리
-          await processPaymentAndOrder(event.data.paymentKey, event.data.orderId, event.data.amount);
-          
-        } catch (error) {
-          console.error('❌ 결제 후 처리 실패:', error);
-          notifyPaymentResult(false, error.message);
-        }
+
+    // Payment 객체 생성 (customerKey 사용)
+    const payment = toss.payment({
+      customerKey: paymentData.customerKey || paymentData.orderId // orderId를 customerKey로 사용
+    });
+
+    // 결제 성공 후 처리할 콜백 함수 미리 등록
+    const handlePaymentComplete = async (result) => {
+      try {
+        console.log('✅ 결제 완료 콜백 실행:', result);
+        await processPaymentAndOrder(result.paymentKey, result.orderId, result.amount);
+      } catch (error) {
+        console.error('❌ 결제 후 처리 실패:', error);
+        notifyPaymentResult(false, error.message);
       }
     };
-    
-    window.addEventListener('message', messageHandler);
 
-    const successUrl = `${baseUrl}/api/toss/success?windowId=${windowId}`;
-    const failUrl = `${baseUrl}/api/toss/fail?windowId=${windowId}`;
+    // 전역에 콜백 등록 (popup에서 접근 가능하도록)
+    window.handleTossPaymentComplete = handlePaymentComplete;
 
-    // 결제 공통 옵션
+    // 결제 요청 옵션
     const paymentOptions = {
-      amount: paymentData.amount,
+      method: paymentMethod === '카드' ? 'CARD' : paymentMethod.toUpperCase(),
+      amount: {
+        currency: 'KRW',
+        value: paymentData.amount
+      },
       orderId: paymentData.orderId,
       orderName: paymentData.orderName,
-      customerName: paymentData.customerName,
+      successUrl: `${baseUrl}/toss-success.html`,
+      failUrl: `${baseUrl}/toss-fail.html`,
       customerEmail: paymentData.customerEmail,
-      customerMobilePhone: paymentData.customerMobilePhone,
-      successUrl: successUrl,
-      failUrl: failUrl,
+      customerName: paymentData.customerName,
+      customerMobilePhone: paymentData.customerMobilePhone
     };
 
-    let result;
-
-    // 결제 수단별 처리
-    switch (paymentMethod) {
-      case '카드':
-        result = await toss.requestPayment('카드', paymentOptions);
-        break;
-
-      case '계좌이체':
-        result = await toss.requestPayment('계좌이체', paymentOptions);
-        break;
-
-      case '가상계좌':
-        const virtualAccountOptions = {
-          ...paymentOptions,
-          validHours: 24
-        };
-        result = await toss.requestPayment('가상계좌', virtualAccountOptions);
-        break;
-
-      case '휴대폰':
-        result = await toss.requestPayment('휴대폰', paymentOptions);
-        break;
-
-      case '간편결제':
-        result = await toss.requestPayment('간편결제', paymentOptions);
-        break;
-
-      case '문화상품권':
-        result = await toss.requestPayment('문화상품권', paymentOptions);
-        break;
-
-      case '도서문화상품권':
-        result = await toss.requestPayment('도서문화상품권', paymentOptions);
-        break;
-
-      case '게임문화상품권':
-        result = await toss.requestPayment('게임문화상품권', paymentOptions);
-        break;
-
-      default:
-        throw new Error(`지원하지 않는 결제 수단입니다: ${paymentMethod}`);
+    // 결제 수단별 추가 옵션
+    if (paymentMethod === '카드') {
+      paymentOptions.card = {
+        flowMode: 'DEFAULT', // popup으로 열림
+        useEscrow: false
+      };
+    } else if (paymentMethod === '계좌이체') {
+      paymentOptions.transfer = {
+        cashReceipt: {
+          type: '소득공제'
+        }
+      };
+    } else if (paymentMethod === '가상계좌') {
+      paymentOptions.virtualAccount = {
+        validHours: 24,
+        cashReceipt: {
+          type: '소득공제'
+        }
+      };
     }
+
+    console.log('💳 토스페이먼츠 요청 옵션:', paymentOptions);
+
+    // 결제 요청 실행
+    const result = await payment.requestPayment(paymentOptions);
 
     console.log(`✅ 토스페이먼츠 ${paymentMethod} 결제 요청 성공:`, result);
 
@@ -151,16 +128,20 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
   } catch (error) {
     console.error(`❌ 토스페이먼츠 ${paymentMethod} 결제 실패:`, error);
 
-    if (error.code === 'USER_CANCEL') {
+    // 사용자 취소인 경우
+    if (error.code === 'USER_CANCEL' || error.message?.includes('사용자가 취소')) {
       return {
         success: false,
-        message: '결제를 취소했습니다.'
+        message: '결제를 취소했습니다.',
+        code: 'USER_CANCEL'
       };
     }
 
+    // 기타 에러
     return {
       success: false,
-      message: error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`
+      message: error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`,
+      code: error.code || 'PAYMENT_ERROR'
     };
   }
 }

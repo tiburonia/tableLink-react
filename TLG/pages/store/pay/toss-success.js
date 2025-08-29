@@ -299,22 +299,51 @@ async function processPayment() {
         const paymentKey = urlParams.get('paymentKey');
         const orderId = urlParams.get('orderId');
         const amount = urlParams.get('amount');
-        const confirmed = urlParams.get('confirmed'); // 서버에서 이미 승인 처리했는지 확인
 
-        console.log('📄 결제 성공 페이지 로드:', { paymentKey, orderId, amount, confirmed });
+        console.log('📄 결제 성공 페이지 로드 (Popup 모드):', { paymentKey, orderId, amount });
 
         if (!paymentKey || !orderId || !amount) {
             console.error('❌ 필수 파라미터 누락:', { paymentKey, orderId, amount });
             displayError('결제 정보가 올바르지 않습니다.');
-        } else {
-            if (confirmed === 'true') {
-                // 서버에서 이미 승인 처리된 경우, 바로 주문 처리로 넘어감
-                console.log('✅ 서버에서 이미 결제 승인 완료됨, 주문 처리 시작');
-                processOrderAfterPayment(paymentKey, orderId, amount);
+            return;
+        }
+
+        // popup 환경에서 부모 창의 콜백 함수 호출
+        try {
+            if (window.opener && window.opener.handleTossPaymentComplete) {
+                console.log('🔄 부모 창의 결제 완료 콜백 호출');
+                
+                // 부모 창에서 결제 후 처리 실행
+                await window.opener.handleTossPaymentComplete({
+                    paymentKey,
+                    orderId,
+                    amount: parseInt(amount)
+                });
+
+                // 성공 메시지 표시 후 창 닫기
+                displayStatus('결제가 완료되었습니다. 잠시 후 창이 닫힙니다.');
+                
+                setTimeout(() => {
+                    try {
+                        window.close();
+                    } catch (e) {
+                        console.log('창 닫기 실패:', e);
+                        // 창이 닫히지 않으면 부모 창으로 포커스 이동
+                        if (window.opener) {
+                            window.opener.focus();
+                        }
+                    }
+                }, 2000);
+
             } else {
-                // 클라이언트에서 승인 처리 필요한 경우
-                confirmPaymentResult(paymentKey, orderId, amount);
+                // fallback: 일반적인 결제 승인 처리
+                console.log('🔄 Fallback: 일반 결제 승인 처리');
+                await confirmPaymentResult(paymentKey, orderId, amount);
             }
+        } catch (error) {
+            console.error('❌ Popup 콜백 처리 실패:', error);
+            // fallback으로 일반 처리
+            await confirmPaymentResult(paymentKey, orderId, amount);
         }
 
     } catch (error) {

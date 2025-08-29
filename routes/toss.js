@@ -162,12 +162,12 @@ router.post('/fail', (req, res) => {
   });
 });
 
-// GET 방식 성공 콜백 (리다이렉트용)
+// GET 방식 성공 콜백 (리다이렉트용) - Popup 방식
 router.get('/success', async (req, res) => {
   try {
-    const { paymentKey, orderId, amount, windowId } = req.query;
+    const { paymentKey, orderId, amount } = req.query;
 
-    console.log('✅ 토스페이먼츠 결제 성공 콜백:', { paymentKey, orderId, amount, windowId });
+    console.log('✅ 토스페이먼츠 결제 성공 콜백 (Popup 방식):', { paymentKey, orderId, amount });
 
     // 파라미터 검증
     if (!paymentKey || !orderId || !amount) {
@@ -175,104 +175,12 @@ router.get('/success', async (req, res) => {
       return res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 정보가 올바르지 않습니다.')}`);
     }
 
-    // windowId가 있으면 postMessage 방식으로 처리
-    if (windowId) {
-      console.log('🔄 postMessage 방식으로 결제 성공 처리');
-      
-      // postMessage를 전송하는 간단한 HTML 페이지 반환
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>결제 완료</title>
-        </head>
-        <body>
-          <script>
-            try {
-              const message = {
-                type: 'TOSS_PAYMENT_SUCCESS',
-                windowId: '${windowId}',
-                paymentKey: '${paymentKey}',
-                orderId: '${orderId}',
-                amount: '${amount}'
-              };
-              
-              console.log('📨 부모 창에 결제 성공 메시지 전송:', message);
-              
-              // 모든 가능한 부모에게 메시지 전송
-              if (window.opener && !window.opener.closed) {
-                window.opener.postMessage(message, '*');
-              }
-              if (window.parent && window.parent !== window) {
-                window.parent.postMessage(message, '*');
-              }
-              if (window.top && window.top !== window) {
-                window.top.postMessage(message, '*');
-              }
-              
-              // 메시지 전송 후 창 닫기
-              setTimeout(() => {
-                try {
-                  window.close();
-                } catch (e) {
-                  console.log('창 닫기 실패:', e);
-                }
-              }, 1000);
-              
-            } catch (error) {
-              console.error('postMessage 전송 실패:', error);
-              alert('결제는 완료되었지만 페이지 이동에 문제가 발생했습니다.');
-            }
-          </script>
-          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
-            <h2>결제 완료</h2>
-            <p>결제가 성공적으로 완료되었습니다.</p>
-            <p>잠시 후 자동으로 창이 닫힙니다.</p>
-          </div>
-        </body>
-        </html>
-      `;
-      
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.send(htmlContent);
-      return;
-    }
-
-    // 기존 방식 (fallback)
-    try {
-      console.log('🔄 서버에서 토스페이먼츠 결제 승인 처리 시작');
-
-      const response = await fetch(`${TOSS_API_URL}/confirm`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${Buffer.from(TOSS_SECRET_KEY + ':').toString('base64')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          paymentKey,
-          orderId,
-          amount: parseInt(amount)
-        })
-      });
-
-      const paymentData = await response.json();
-
-      if (response.ok) {
-        console.log('✅ 서버에서 토스페이먼츠 결제 승인 성공:', paymentData.paymentKey);
-        
-        const redirectUrl = `/toss-success.html?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}&confirmed=true`;
-        console.log('🔄 서버에서 직접 리디렉션:', redirectUrl);
-        
-        res.redirect(redirectUrl);
-      } else {
-        console.error('❌ 서버에서 토스페이먼츠 결제 승인 실패:', paymentData);
-        res.redirect(`/toss-fail.html?message=${encodeURIComponent(paymentData.message || '결제 승인에 실패했습니다.')}`);
-      }
-    } catch (confirmError) {
-      console.error('❌ 서버에서 결제 승인 처리 실패:', confirmError);
-      res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 승인 처리 중 오류가 발생했습니다.')}`);
-    }
+    // Popup 방식에서는 단순히 성공 페이지로 리다이렉트
+    // 실제 결제 승인은 클라이언트에서 처리
+    console.log('🔄 Popup 성공 페이지로 리다이렉트');
+    
+    const redirectUrl = `/toss-success.html?paymentKey=${encodeURIComponent(paymentKey)}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(amount)}`;
+    res.redirect(redirectUrl);
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 성공 콜백 처리 실패:', error);
@@ -280,19 +188,16 @@ router.get('/success', async (req, res) => {
   }
 });
 
-// GET 방식 실패 콜백 (리다이렉트용)
+// GET 방식 실패 콜백 (리다이렉트용) - Popup 방식
 router.get('/fail', async (req, res) => {
   try {
     const { code, message, orderId } = req.query;
 
-    console.log('❌ 토스페이먼츠 결제 실패:', { code, message, orderId });
-
-    // 서버에서 직접 리디렉션 - iframe 문제 해결
-    console.log('❌ 토스페이먼츠 결제 실패, 직접 리디렉션:', { code, message, orderId });
+    console.log('❌ 토스페이먼츠 결제 실패 (Popup 방식):', { code, message, orderId });
     
-    // 실패 페이지로 직접 리디렉션
+    // Popup 방식에서는 단순히 실패 페이지로 리다이렉트
     const failureUrl = `/toss-fail.html?code=${encodeURIComponent(code || '')}&message=${encodeURIComponent(message || '결제가 실패했습니다.')}&orderId=${encodeURIComponent(orderId || '')}`;
-    console.log('🔄 서버에서 실패 페이지로 직접 리디렉션:', failureUrl);
+    console.log('🔄 Popup 실패 페이지로 리다이렉트:', failureUrl);
     
     res.redirect(failureUrl);
 
