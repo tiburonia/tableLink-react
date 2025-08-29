@@ -1,362 +1,129 @@
-function goToMain() {
-    console.log('🔄 결제 완료 후 iframe 닫기 및 리다이렉션');
+/**
+ * 토스페이먼츠 결제 성공 페이지 처리
+ */
 
-    // 1. 먼저 iframe 닫기 시도
-    setTimeout(() => {
-        try {
-            console.log('🔒 결제 완료 - iframe 닫기 시도');
-            window.close();
-        } catch (e) {
-            console.log('iframe 닫기 실패:', e);
-        }
-    }, 500);
+// URL 파라미터 파싱
+function getUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    paymentKey: params.get('paymentKey'),
+    orderId: params.get('orderId'),
+    amount: params.get('amount')
+  };
+}
 
-    // 2. 부모 창에 리다이렉션 메시지 전송
-    const redirectMessage = {
-        type: 'PAYMENT_COMPLETE_REDIRECT',
-        action: 'redirect',
-        url: '/',
-        timestamp: Date.now()
-    };
+// 상태 표시
+function showStatus(message, isLoading = true) {
+  const container = document.querySelector('.container');
+  container.innerHTML = `
+    <div class="status-icon">${isLoading ? '⏳' : '✅'}</div>
+    <h1>${message}</h1>
+    ${isLoading ? '<p class="loading">처리 중입니다...</p>' : ''}
+    <button class="btn" id="backBtn" onclick="goBack()">TableLink로 돌아가기</button>
+  `;
+}
 
-    try {
-        if (window.opener && !window.opener.closed) {
-            console.log('📨 opener에게 리다이렉션 메시지 전송');
-            window.opener.postMessage(redirectMessage, '*');
-            window.opener.location.href = '/';
-        }
-    } catch (e) {
-        console.log('opener 리다이렉션 실패:', e);
+// 에러 표시
+function showError(message) {
+  const container = document.querySelector('.container');
+  container.innerHTML = `
+    <div class="status-icon">❌</div>
+    <h1>결제 실패</h1>
+    <p class="error">${message}</p>
+    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+  `;
+}
+
+// 성공 표시
+function showSuccess(orderData) {
+  const container = document.querySelector('.container');
+  container.innerHTML = `
+    <div class="status-icon">✅</div>
+    <h1>결제 완료!</h1>
+    <div class="order-info">
+      <h3>주문 정보</h3>
+      <p><strong>매장:</strong> ${orderData.storeName}</p>
+      <p><strong>테이블:</strong> ${orderData.tableNumber}</p>
+      <p><strong>주문번호:</strong> ${orderData.orderId}</p>
+      <p><strong>결제금액:</strong> ${parseInt(orderData.finalTotal).toLocaleString()}원</p>
+    </div>
+    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+  `;
+}
+
+// 메인 처리 함수
+async function handlePaymentSuccess() {
+  try {
+    const { paymentKey, orderId, amount } = getUrlParams();
+
+    if (!paymentKey || !orderId || !amount) {
+      throw new Error('결제 정보가 올바르지 않습니다.');
     }
 
-    try {
-        if (window.parent && window.parent !== window) {
-            console.log('📨 parent에게 리다이렉션 메시지 전송');
-            window.parent.postMessage(redirectMessage, '*');
-            window.parent.location.href = '/';
-        }
-    } catch (e) {
-        console.log('parent 리다이렉션 실패:', e);
+    console.log('🔄 결제 성공 처리 시작:', { paymentKey, orderId, amount });
+    showStatus('결제 승인 처리 중');
+
+    // confirmPayF.js의 processPaymentSuccess 함수 사용
+    if (typeof window.processPaymentSuccess === 'function') {
+      const result = await window.processPaymentSuccess(paymentKey, orderId, amount);
+
+      if (result.success) {
+        console.log('✅ 결제 처리 완료');
+        showSuccess(result.data.pendingOrderData);
+      } else {
+        throw new Error(result.error);
+      }
+    } else {
+      // 직접 처리
+      const confirmResponse = await fetch('/api/toss/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) })
+      });
+
+      if (!confirmResponse.ok) {
+        const errorData = await confirmResponse.json();
+        throw new Error(errorData.error || '결제 승인 실패');
+      }
+
+      console.log('✅ 결제 승인 완료');
+      showStatus('결제가 완료되었습니다!', false);
     }
 
-    try {
-        if (window.top && window.top !== window) {
-            console.log('📨 top에게 리다이렉션 메시지 전송');
-            window.top.postMessage(redirectMessage, '*');
-            window.top.location.href = '/';
-        }
-    } catch (e) {
-        console.log('top 리다이렉션 실패:', e);
-    }
-
-    // 3. 독립적인 창인 경우 직접 리다이렉션
-    if (window === window.top) {
-        console.log('🔄 독립적인 창 - 직접 리다이렉션');
-        setTimeout(() => {
-            window.location.replace('/');
-        }, 1000);
-    }
+  } catch (error) {
+    console.error('❌ 결제 처리 실패:', error);
+    showError(error.message);
+  }
 }
 
-function goToMyPage() {
-    console.log('🔄 마이페이지로 이동 시도 - postMessage 전용');
-
-    const message = {
-        type: 'PAYMENT_COMPLETE',
-        action: 'navigate',
-        url: '/mypage',
-        timestamp: Date.now()
-    };
-
-    // 모든 가능한 부모에게 메시지 전송
-    try {
-        if (window.opener && !window.opener.closed) {
-            window.opener.postMessage(message, '*');
-        }
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage(message, '*');
-        }
-        if (window.top && window.top !== window) {
-            window.top.postMessage(message, '*');
-        }
-    } catch (e) {
-        console.log('메시지 전송 실패:', e);
-    }
-
-    setTimeout(() => {
-        try {
-            window.close();
-        } catch (e) {
-            window.location.href = '/mypage';
-        }
-    }, 3000);
-}
-
-function displaySuccess(result, orderData) {
-    // 안전한 데이터 처리
-    const safeAmount = orderData?.totalAmount || orderData?.total || result?.amount || result?.totalAmount || 0;
-    const safeOrderId = orderData?.orderId || result?.orderId || 'N/A';
-    const safeStoreName = orderData?.storeName || orderData?.store || 'N/A';
-    const safePaymentKey = result?.paymentKey || 'N/A';
-    const safePaidAt = result?.paidAt || result?.approvedAt || new Date().toISOString();
-
-    console.log('💳 결제 성공 정보 표시:', {
-        result,
-        orderData,
-        safeAmount,
-        safeOrderId,
-        safeStoreName,
-        safePaymentKey,
-        safePaidAt
-    });
-
-    document.getElementById('content').innerHTML = `
-        <div class="success-container">
-            <div class="success-icon">✅</div>
-            <h1>결제 및 주문 완료!</h1>
-            <p>토스페이먼츠를 통한 결제가 완료되고 주문이 접수되었습니다.</p>
-
-            <div class="order-summary">
-                <h3>주문 정보</h3>
-                <div class="order-details">
-                    <p><span class="label">결제 금액:</span> <span class="value">${parseInt(safeAmount).toLocaleString()}원</span></p>
-                    <p><span class="label">주문 번호:</span> <span class="value">${safeOrderId}</span></p>
-                    <p><span class="label">매장:</span> <span class="value">${safeStoreName}</span></p>
-                    <p><span class="label">결제 키:</span> <span class="value">${safePaymentKey}</span></p>
-                    <p><span class="label">결제 일시:</span> <span class="value">${new Date(safePaidAt).toLocaleString()}</span></p>
-                </div>
-
-                ${orderData.items ? `
-                    <div class="items-list">
-                        <h4>주문 메뉴</h4>
-                        ${orderData.items.map(item =>
-                            `<div class="item-row">
-                                <span>${item.name} × ${item.quantity || item.qty || 1}</span>
-                                <span>${(item.price * (item.quantity || item.qty || 1)).toLocaleString()}원</span>
-                            </div>`
-                        ).join('')}
-                    </div>
-                ` : ''}
-            </div>
-
-            <div class="actions">
-                <button onclick="goToMain()" class="btn primary">메인으로</button>
-                <button onclick="goToMyPage()" class="btn secondary">주문내역 보기</button>
-            </div>
-        </div>
-    `;
-}
-
-function displayExistingOrderSuccess(existingOrder, paymentKey, orderId) {
-    const orderData = existingOrder.orderData;
-
-    document.getElementById('content').innerHTML = `
-        <div class="success-container">
-            <div class="success-icon">✅</div>
-            <h1>결제 완료!</h1>
-            <p>이미 처리된 주문입니다.</p>
-
-            <div class="order-summary">
-                <h3>주문 정보</h3>
-                <div class="order-details">
-                    <p><span class="label">매장:</span> <span class="value">${existingOrder.storeName || 'N/A'}</span></p>
-                    <p><span class="label">결제 금액:</span> <span class="value">${existingOrder.finalAmount.toLocaleString()}원</span></p>
-                    <p><span class="label">결제 키:</span> <span class="value">${paymentKey}</span></p>
-                    <p><span class="label">주문 ID:</span> <span class="value">${orderId}</span></p>
-                    <p><span class="label">결제 일시:</span> <span class="value">${new Date(existingOrder.paymentDate).toLocaleString()}</span></p>
-                </div>
-
-                ${orderData?.items ? `
-                    <div class="items-list">
-                        <h4>주문 메뉴</h4>
-                        ${orderData.items.map(item =>
-                            `<div class="item-row">
-                                <span>${item.name} × ${item.quantity || item.qty || 1}</span>
-                                <span>${(item.price * (item.quantity || item.qty || 1)).toLocaleString()}원</span>
-                            </div>`
-                        ).join('')}
-                    </div>
-                ` : ''}
-            </div>
-
-            <div class="action-buttons">
-                <button onclick="goBack()" class="btn primary">메인으로 돌아가기</button>
-            </div>
-        </div>
-    `;
-}
-
-function showErrorPage(error) {
-    document.getElementById('content').innerHTML = `
-        <div style="font-size: 64px; margin-bottom: 20px;">❌</div>
-        <h1>결제 실패</h1>
-        <div class="error-container">
-            <h2>오류 발생</h2>
-            <p>${error.message || '결제 처리 중 오류가 발생했습니다.'}</p>
-        </div>
-        <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-    `;
-}
-
-function displayStatus(message) {
-    document.querySelector('.container').innerHTML = `
-        <div class="success-icon">⏳</div>
-        <h1>${message}</h1>
-        <p class="loading">잠시만 기다려 주세요<span class="spinner"></span></p>
-        <button class="btn" id="backBtn" style="display: none;" onclick="goBack()">TableLink로 돌아가기</button>
-    `;
-}
-
-function displayError(message) {
-    document.querySelector('.container').innerHTML = `
-        <div class="success-icon">❌</div>
-        <h1>결제 실패</h1>
-        <p class="loading">${message}</p>
-        <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-    `;
-}
-
-async function confirmPaymentResult(paymentKey, orderId, amount) {
-    try {
-        displayStatus('결제 승인 처리 중...');
-
-        console.log('🔄 결제 승인 시작:', { paymentKey, orderId, amount });
-
-        // 1. 토스페이먼츠 결제 승인
-        const confirmResult = await window.tossPaymentUtils.confirmPayment(paymentKey, orderId, amount);
-
-        if (!confirmResult.success) {
-            throw new Error(confirmResult.message || '결제 승인에 실패했습니다.');
-        }
-
-        console.log('✅ 토스페이먼츠 결제 승인 성공');
-
-        // 2. 주문 처리로 이동
-        await processOrderAfterPayment(paymentKey, orderId, amount);
-
-    } catch (error) {
-        console.error('❌ 결제 승인 실패:', error);
-        displayError(error.message || '결제 승인 처리 중 오류가 발생했습니다.');
-    }
-}
-
-async function processOrderAfterPayment(paymentKey, orderId, amount) {
-    try {
-        displayStatus('주문 정보 처리 중...');
-
-        const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
-
-        if (!pendingOrderData.userId) {
-            throw new Error('주문 정보를 찾을 수 없습니다.');
-        }
-
-        console.log('📦 주문 처리 시작:', pendingOrderData);
-
-        const orderResponse = await fetch('/api/orders/pay', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                ...pendingOrderData,
-                pgPaymentKey: paymentKey,
-                pgOrderId: orderId,
-                pgPaymentMethod: 'TOSS'
-            })
-        });
-
-        if (!orderResponse.ok) {
-            const errorData = await orderResponse.json();
-            throw new Error(errorData.error || '주문 처리에 실패했습니다.');
-        }
-
-        const orderResult = await orderResponse.json();
-        console.log('✅ 주문 처리 성공:', orderResult);
-
-        // 성공 페이지 표시
-        displaySuccessPage(orderResult, pendingOrderData);
-
-        // 저장된 데이터 정리
-        sessionStorage.removeItem('pendingOrderData');
-        sessionStorage.removeItem('paymentMethod');
-
-    } catch (error) {
-        console.error('❌ 주문 처리 실패:', error);
-        displayError(error.message || '주문 처리 중 오류가 발생했습니다.');
-    }
-}
-
-// displaySuccessPage 함수는 원본 코드에 없으므로,
-// processOrderAfterPayment 내부에서 displaySuccess 함수를 사용하도록 수정합니다.
-// 만약 displaySuccessPage가 별도로 정의되어 있어야 한다면, 해당 함수 정의를 추가해야 합니다.
-// 여기서는 displaySuccess 함수를 호출하는 것으로 가정하고 코드를 유지합니다.
-// displaySuccessPage(orderResult, pendingOrderData); // 이 부분을 displaySuccess로 변경
-
-
-async function processPayment() {
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const paymentKey = urlParams.get('paymentKey');
-        const orderId = urlParams.get('orderId');
-        const amount = urlParams.get('amount');
-        const confirmed = urlParams.get('confirmed'); // 서버에서 이미 승인 처리했는지 확인
-
-        console.log('📄 결제 성공 페이지 로드:', { paymentKey, orderId, amount, confirmed });
-
-        if (!paymentKey || !orderId || !amount) {
-            console.error('❌ 필수 파라미터 누락:', { paymentKey, orderId, amount });
-            displayError('결제 정보가 올바르지 않습니다.');
-        } else {
-            if (confirmed === 'true') {
-                // 서버에서 이미 승인 처리된 경우, 바로 주문 처리로 넘어감
-                console.log('✅ 서버에서 이미 결제 승인 완료됨, 주문 처리 시작');
-                processOrderAfterPayment(paymentKey, orderId, amount);
-            } else {
-                // 클라이언트에서 승인 처리 필요한 경우
-                confirmPaymentResult(paymentKey, orderId, amount);
-            }
-        }
-
-    } catch (error) {
-        console.error('❌ 결제 처리 실패:', error);
-        showErrorPage(error);
-    }
-}
-
+// TableLink로 돌아가기
 function goBack() {
-    console.log('🔄 뒤로가기 시도 - postMessage 전용');
-
-    const message = {
-        type: 'PAYMENT_CANCEL',
-        action: 'navigate',
-        url: '/',
-        timestamp: Date.now()
-    };
-
-    // 모든 가능한 부모에게 메시지 전송
-    try {
-        if (window.opener && !window.opener.closed) {
-            window.opener.postMessage(message, '*');
-        }
-        if (window.parent && window.parent !== window) {
-            window.parent.postMessage(message, '*');
-        }
-        if (window.top && window.top !== window) {
-            window.top.postMessage(message, '*');
-        }
-    } catch (e) {
-        console.log('메시지 전송 실패:', e);
+  try {
+    if (window.opener && !window.opener.closed) {
+      window.opener.location.href = '/';
+      window.close();
+    } else {
+      window.location.href = '/';
     }
-
-    setTimeout(() => {
-        try {
-            window.close();
-        } catch (e) {
-            window.location.href = '/';
-        }
-    }, 3000);
+  } catch (e) {
+    window.location.href = '/';
+  }
 }
 
-window.addEventListener('load', () => {
-    setTimeout(processPayment, 500);
+// 페이지 로드 시 실행
+document.addEventListener('DOMContentLoaded', () => {
+  // confirmPayF.js 로드
+  const script = document.createElement('script');
+  script.src = '/TLG/pages/store/pay/confirmPayF.js';
+  script.onload = () => {
+    console.log('✅ confirmPayF.js 로드 완료');
+    handlePaymentSuccess();
+  };
+  script.onerror = () => {
+    console.warn('⚠️ confirmPayF.js 로드 실패, 직접 처리');
+    handlePaymentSuccess();
+  };
+  document.head.appendChild(script);
 });
+
+console.log('✅ 토스페이먼츠 성공 페이지 로드 완료');
