@@ -90,7 +90,30 @@
   <script>
     //초기 진입 렌더링 함수
     document.addEventListener('DOMContentLoaded', () => {
-      renderLogin()
+      // URL 파라미터 확인
+      const urlParams = new URLSearchParams(window.location.search);
+      const redirect = urlParams.get('redirect');
+      
+      if (redirect === 'map') {
+        console.log('💳 결제 성공 후 지도 화면으로 리다이렉트');
+        // URL 파라미터 제거
+        window.history.replaceState({}, document.title, '/');
+        // 지도 화면 렌더링
+        if (typeof renderMap === 'function') {
+          renderMap();
+        } else {
+          // renderMap이 아직 로드되지 않은 경우 잠시 후 재시도
+          setTimeout(() => {
+            if (typeof renderMap === 'function') {
+              renderMap();
+            } else {
+              renderLogin();
+            }
+          }, 100);
+        }
+      } else {
+        renderLogin();
+      }
     });
   </script>
 </body>

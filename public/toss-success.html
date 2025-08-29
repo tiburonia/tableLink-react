@@ -226,12 +226,13 @@
 
     <script>
         function goToMain() {
-            // 로그인 상태 유지하며 메인으로 이동
+            // 로그인 상태 유지하며 지도 화면으로 이동
             try {
-                window.location.href = '/';
+                // 현재 창에서 메인 페이지로 이동 후 renderMap 호출
+                window.location.href = '/?redirect=map';
             } catch (error) {
                 console.error('메인 이동 실패:', error);
-                window.location.href = '/';
+                window.location.replace('/');
             }
         }
 
@@ -296,12 +297,19 @@
                         <button onclick="goToMain()" class="btn primary">메인으로</button>
                         <button onclick="goToMyPage()" class="btn secondary">주문내역 보기</button>
                     </div>
-                    
+
                     <script>
-                        // 결제 성공 후 3초 뒤 자동으로 메인으로 이동
+                        // 결제 성공 후 3초 뒤 자동으로 지도 화면으로 이동
                         setTimeout(() => {
-                            console.log('💳 결제 성공 - 자동으로 메인 화면으로 이동');
-                            goToMain();
+                            console.log('💳 결제 성공 - 자동으로 지도 화면으로 이동');
+                            try {
+                                // 지도 화면으로 리다이렉트
+                                window.location.href = '/?redirect=map';
+                            } catch (error) {
+                                console.error('자동 리다이렉트 실패:', error);
+                                // 수동 버튼 클릭 유도
+                                document.querySelector('.actions').style.display = 'block';
+                            }
                         }, 3000);
                     </script>
                 </div>
@@ -384,7 +392,7 @@
 
                     // 주문 생성 API 호출
                     console.log('📝 주문 생성 요청 데이터:', finalOrderData);
-                    
+
                     const orderResponse = await fetch('/api/orders/pay', {
                         method: 'POST',
                         headers: {
@@ -422,8 +430,13 @@
         }
 
         function goBack() {
-            // 현재 창에서 직접 메인으로 이동
-            window.location.href = '/';
+            // 현재 창에서 안전하게 지도 화면으로 이동
+            try {
+                window.location.href = '/?redirect=map';
+            } catch (error) {
+                console.error('goBack 실패:', error);
+                window.location.replace('/');
+            }
         }
 
         // 페이지 로드 시 결제 처리
