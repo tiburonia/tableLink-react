@@ -329,6 +329,15 @@
         }
 
         async function processPayment() {
+            console.log('🚀 결제 처리 프로세스 시작');
+
+            // 로딩 상태 업데이트
+            const container = document.querySelector('.container');
+            if (container) {
+                container.querySelector('h1').textContent = '결제 승인 처리 중';
+                container.querySelector('.loading').textContent = '토스페이먼츠 결제를 확인하고 있습니다...';
+            }
+
             try {
                 // URL 파라미터에서 결제 정보 가져오기
                 const urlParams = new URLSearchParams(window.location.search);
@@ -425,7 +434,17 @@
 
             } catch (error) {
                 console.error('❌ 결제 처리 실패:', error);
-                showErrorPage(error);
+
+                // 에러 타입에 따른 처리
+                let errorMessage = '결제 처리 중 오류가 발생했습니다.';
+
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = '네트워크 연결에 문제가 있습니다. 잠시 후 다시 시도해주세요.';
+                }
+
+                showErrorPage({ message: errorMessage });
             }
         }
 
