@@ -1,14 +1,13 @@
 function goToMain() {
     try {
-        // 부모 창이 있고 같은 도메인인 경우
+        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
             try {
-                // 같은 도메인인지 확인
                 window.opener.postMessage({
                     type: 'PAYMENT_SUCCESS_REDIRECT',
                     action: 'navigate',
                     url: '/'
-                }, '*');
+                }, window.location.origin);
 
                 // 창 닫기 시도
                 setTimeout(() => {
@@ -16,17 +15,25 @@ function goToMain() {
                 }, 300);
                 return;
             } catch (crossOriginError) {
-                console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
+                console.warn('부모 창 통신 실패:', crossOriginError);
             }
         }
 
-        // 최상위 창에서 리디렉트 시도 (iframe인 경우)
-        if (window.top && window.top !== window) {
-            window.top.location.href = '/';
-            return;
+        // iframe인 경우 부모로 메시지 전달
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'PAYMENT_SUCCESS_REDIRECT',
+                    action: 'navigate',
+                    url: '/'
+                }, window.location.origin);
+                return;
+            } catch (error) {
+                console.warn('iframe 부모 통신 실패:', error);
+            }
         }
     } catch (error) {
-        console.warn('부모 창 통신 실패:', error);
+        console.warn('리디렉션 실패:', error);
     }
 
     // 기본적으로 현재 창에서 리디렉트
@@ -35,31 +42,39 @@ function goToMain() {
 
 function goToMyPage() {
     try {
-        // 부모 창이 있고 같은 도메인인 경우
+        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
             try {
                 window.opener.postMessage({
                     type: 'PAYMENT_SUCCESS_REDIRECT',
                     action: 'navigate',
                     url: '/mypage'
-                }, '*');
+                }, window.location.origin);
 
                 setTimeout(() => {
                     window.close();
                 }, 300);
                 return;
             } catch (crossOriginError) {
-                console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
+                console.warn('부모 창 통신 실패:', crossOriginError);
             }
         }
 
-        // 최상위 창에서 리디렉트 시도
-        if (window.top && window.top !== window) {
-            window.top.location.href = '/mypage';
-            return;
+        // iframe인 경우 부모로 메시지 전달
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'PAYMENT_SUCCESS_REDIRECT',
+                    action: 'navigate',
+                    url: '/mypage'
+                }, window.location.origin);
+                return;
+            } catch (error) {
+                console.warn('iframe 부모 통신 실패:', error);
+            }
         }
     } catch (error) {
-        console.warn('부모 창 통신 실패:', error);
+        console.warn('리디렉션 실패:', error);
     }
 
     window.location.href = '/mypage';
@@ -333,31 +348,39 @@ async function processPayment() {
 
 function goBack() {
     try {
-        // 부모 창이 있고 같은 도메인인 경우
+        // 부모 창이 있는 경우 메시지 전달
         if (window.opener && !window.opener.closed) {
             try {
                 window.opener.postMessage({
                     type: 'PAYMENT_REDIRECT',
                     action: 'navigate',
                     url: '/'
-                }, '*');
+                }, window.location.origin);
 
                 setTimeout(() => {
                     window.close();
                 }, 300);
                 return;
             } catch (crossOriginError) {
-                console.warn('Cross-origin 제한으로 부모 창 통신 실패:', crossOriginError);
+                console.warn('부모 창 통신 실패:', crossOriginError);
             }
         }
 
-        // 최상위 창에서 리디렉트 시도
-        if (window.top && window.top !== window) {
-            window.top.location.href = '/';
-            return;
+        // iframe인 경우 부모로 메시지 전달
+        if (window.parent && window.parent !== window) {
+            try {
+                window.parent.postMessage({
+                    type: 'PAYMENT_REDIRECT',
+                    action: 'navigate',
+                    url: '/'
+                }, window.location.origin);
+                return;
+            } catch (error) {
+                console.warn('iframe 부모 통신 실패:', error);
+            }
         }
     } catch (error) {
-        console.warn('부모 창 통신 실패:', error);
+        console.warn('리디렉션 실패:', error);
     }
 
     window.location.href = '/';

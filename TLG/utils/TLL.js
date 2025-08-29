@@ -1,4 +1,3 @@
-
 window.TLL = async function TLL(preselectedStore = null) {
   // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
@@ -588,7 +587,7 @@ window.TLL = async function TLL(preselectedStore = null) {
         // 점유중이지 않은 테이블만 선택 가능하도록 필터링
         const availableTables = tables.filter(table => !table.isOccupied);
         const occupiedTables = tables.filter(table => table.isOccupied);
-        
+
         const tableOptions = [
           ...availableTables.map(table => 
             `<option value="${table.tableNumber}">${table.tableName}</option>`
@@ -599,7 +598,7 @@ window.TLL = async function TLL(preselectedStore = null) {
         ].join('');
 
         tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
-        
+
         console.log(`🏪 ${storeName}: 전체 ${tables.length}개 (사용가능: ${availableTables.length}개, 사용중: ${occupiedTables.length}개)`);
       } else {
         // 테이블이 없는 경우 기본값 사용
@@ -655,7 +654,7 @@ window.TLL = async function TLL(preselectedStore = null) {
 
       const selectedTableNumber = tableSelect.value;
       const selectedOption = tableSelect.options[tableSelect.selectedIndex];
-      
+
       // 사용중인 테이블인지 확인 (disabled 옵션인지 체크)
       if (selectedOption.disabled) {
         alert('선택하신 테이블은 현재 사용중입니다. 다른 테이블을 선택해주세요.');
@@ -674,3 +673,43 @@ window.TLL = async function TLL(preselectedStore = null) {
     console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');
   }
 };
+
+// 앱 초기화 함수
+async function initApp() {
+  console.log('🚀 앱 초기화 시작');
+
+  // postMessage 리스너 추가 (결제 완료 후 리디렉션 처리)
+  window.addEventListener('message', (event) => {
+    if (event.origin !== window.location.origin) return;
+
+    if (event.data.type === 'PAYMENT_SUCCESS_REDIRECT' || event.data.type === 'PAYMENT_REDIRECT') {
+      console.log('💳 결제 완료 후 리디렉션 요청:', event.data);
+
+      if (event.data.action === 'navigate') {
+        if (event.data.url === '/') {
+          renderMap();
+        } else if (event.data.url === '/mypage') {
+          if (typeof renderMyPage === 'function') {
+            renderMyPage();
+          } else {
+            renderMap();
+          }
+        }
+      }
+    }
+  });
+
+  // 사용자 정보 확인
+  const userInfo = getUserInfo();
+
+  if (userInfo && userInfo.id) {
+    console.log('✅ 기존 사용자 정보 발견:', userInfo.id);
+    window.userInfo = userInfo;
+    renderMap();
+  } else {
+    console.log('ℹ️ 저장된 사용자 정보 없음 - 로그인 화면 표시');
+    renderLogin();
+  }
+
+  console.log('✅ 앱 초기화 완료');
+}
