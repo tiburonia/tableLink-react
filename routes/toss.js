@@ -165,9 +165,9 @@ router.post('/fail', (req, res) => {
 // GET 방식 성공 콜백 (리다이렉트용)
 router.get('/success', async (req, res) => {
   try {
-    const { paymentKey, orderId, amount } = req.query;
+    const { paymentKey, orderId, amount, windowId } = req.query;
 
-    console.log('✅ 토스페이먼츠 결제 성공 콜백:', { paymentKey, orderId, amount });
+    console.log('✅ 토스페이먼츠 결제 성공 콜백:', { paymentKey, orderId, amount, windowId });
 
     // 파라미터 검증
     if (!paymentKey || !orderId || !amount) {
@@ -175,7 +175,71 @@ router.get('/success', async (req, res) => {
       return res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 정보가 올바르지 않습니다.')}`);
     }
 
-    // 토스페이먼츠 결제 승인 처리
+    // windowId가 있으면 postMessage 방식으로 처리
+    if (windowId) {
+      console.log('🔄 postMessage 방식으로 결제 성공 처리');
+      
+      // postMessage를 전송하는 간단한 HTML 페이지 반환
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>결제 완료</title>
+        </head>
+        <body>
+          <script>
+            try {
+              const message = {
+                type: 'TOSS_PAYMENT_SUCCESS',
+                windowId: '${windowId}',
+                paymentKey: '${paymentKey}',
+                orderId: '${orderId}',
+                amount: '${amount}'
+              };
+              
+              console.log('📨 부모 창에 결제 성공 메시지 전송:', message);
+              
+              // 모든 가능한 부모에게 메시지 전송
+              if (window.opener && !window.opener.closed) {
+                window.opener.postMessage(message, '*');
+              }
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage(message, '*');
+              }
+              if (window.top && window.top !== window) {
+                window.top.postMessage(message, '*');
+              }
+              
+              // 메시지 전송 후 창 닫기
+              setTimeout(() => {
+                try {
+                  window.close();
+                } catch (e) {
+                  console.log('창 닫기 실패:', e);
+                }
+              }, 1000);
+              
+            } catch (error) {
+              console.error('postMessage 전송 실패:', error);
+              alert('결제는 완료되었지만 페이지 이동에 문제가 발생했습니다.');
+            }
+          </script>
+          <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+            <h2>결제 완료</h2>
+            <p>결제가 성공적으로 완료되었습니다.</p>
+            <p>잠시 후 자동으로 창이 닫힙니다.</p>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.send(htmlContent);
+      return;
+    }
+
+    // 기존 방식 (fallback)
     try {
       console.log('🔄 서버에서 토스페이먼츠 결제 승인 처리 시작');
 
@@ -196,11 +260,7 @@ router.get('/success', async (req, res) => {
 
       if (response.ok) {
         console.log('✅ 서버에서 토스페이먼츠 결제 승인 성공:', paymentData.paymentKey);
-
-        // 서버에서 직접 리디렉션 - iframe 문제 해결
-        console.log('✅ 서버에서 토스페이먼츠 결제 승인 성공, 직접 리디렉션:', paymentData.paymentKey);
         
-        // 쿼리 파라미터로 결제 정보를 전달하면서 리디렉션
         const redirectUrl = `/toss-success.html?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}&confirmed=true`;
         console.log('🔄 서버에서 직접 리디렉션:', redirectUrl);
         
