@@ -428,33 +428,82 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
   }
 });
 
-// 테이블의 TLL 주문 정보 조회
+// 테이블의 TLL 주문 정보 조회 (토스페이먼츠 정보 포함)
 router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
   try {
     const { storeId, tableNumber } = req.params;
 
     console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 정보 조회 (매장 ${storeId})`);
 
-    // 해당 테이블의 최근 24시간 내 활성 TLL 주문 조회 (아카이브되지 않은 것만)
-    const response = await pool.query(`
-      SELECT DISTINCT p.user_id, p.guest_phone, u.name as user_name, p.payment_date
+    // TL회원 주문과 비회원 주문을 통합 조회 (토스페이먼츠 정보 포함)
+    const memberOrdersQuery = `
+      SELECT 
+        upo.user_id, 
+        NULL as guest_phone, 
+        u.name as user_name, 
+        upo.payment_date,
+        upo.final_amount,
+        upo.payment_method,
+        upo.payment_reference,
+        'TL_MEMBER' as order_type
+      FROM user_paid_orders upo
+      LEFT JOIN users u ON upo.user_id = u.id
+      LEFT JOIN orders o ON upo.id = o.user_paid_order_id
+      WHERE upo.store_id = $1 AND upo.table_number = $2 
+      AND upo.order_source = 'TLL'
+      AND upo.payment_status = 'completed'
+      AND upo.payment_date >= NOW() - INTERVAL '24 hours'
+      AND (
+        o.id IS NULL OR 
+        (o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED', 'CLOSED') AND o.is_visible = true)
+      )
+    `;
+
+    const guestOrdersQuery = `
+      SELECT 
+        NULL as user_id,
+        p.guest_phone, 
+        '게스트' as user_name, 
+        p.payment_date,
+        p.final_amount,
+        p.payment_method,
+        NULL as payment_reference,
+        'GUEST' as order_type
       FROM paid_orders p
-      LEFT JOIN users u ON p.user_id = u.id
       LEFT JOIN orders o ON p.id = o.paid_order_id
       WHERE p.store_id = $1 AND p.table_number = $2 
       AND p.order_source = 'TLL'
       AND p.payment_status = 'completed'
       AND p.payment_date >= NOW() - INTERVAL '24 hours'
+      AND p.user_id IS NULL AND p.guest_phone IS NOT NULL
       AND (
         o.id IS NULL OR 
         (o.cooking_status NOT IN ('ARCHIVED', 'TABLE_RELEASED', 'CLOSED') AND o.is_visible = true)
       )
-      ORDER BY p.payment_date DESC
+    `;
+
+    const response = await pool.query(`
+      (${memberOrdersQuery})
+      UNION ALL
+      (${guestOrdersQuery})
+      ORDER BY payment_date DESC
       LIMIT 1
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    `, [parseInt(storeId), parseInt(tableNumber), parseInt(storeId), parseInt(tableNumber)]);
 
     if (response.rows.length > 0) {
       const tllOrder = response.rows[0];
+      
+      // 토스페이먼츠 결제 정보 파싱
+      let paymentInfo = null;
+      if (tllOrder.payment_reference) {
+        try {
+          paymentInfo = typeof tllOrder.payment_reference === 'string' 
+            ? JSON.parse(tllOrder.payment_reference) 
+            : tllOrder.payment_reference;
+        } catch (parseError) {
+          console.warn('⚠️ 결제 정보 파싱 실패:', parseError);
+        }
+      }
 
       res.json({
         success: true,
@@ -463,7 +512,18 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
           guestPhone: tllOrder.guest_phone,
           customerName: tllOrder.user_name || '게스트',
           isGuest: !tllOrder.user_id,
-          phone: tllOrder.guest_phone || null
+          phone: tllOrder.guest_phone || null,
+          orderType: tllOrder.order_type,
+          paymentDate: tllOrder.payment_date,
+          finalAmount: tllOrder.final_amount,
+          paymentMethod: tllOrder.payment_method,
+          // 토스페이먼츠 결제 정보
+          tossPaymentInfo: paymentInfo ? {
+            paymentKey: paymentInfo.pgPaymentKey,
+            orderId: paymentInfo.pgOrderId,
+            method: paymentInfo.pgPaymentMethod,
+            provider: paymentInfo.provider
+          } : null
         }
       });
     } else {

@@ -845,6 +845,8 @@ router.get('/kds/:storeId', async (req, res) => {
         p.guest_phone,
         COALESCE(upo.payment_date, p.payment_date) as payment_date,
         COALESCE(upo.order_source, p.order_source) as order_source,
+        COALESCE(upo.payment_method, p.payment_method) as payment_method,
+        upo.payment_reference as toss_payment_info,
         s.name as store_name
       FROM orders o
       LEFT JOIN paid_orders p ON o.paid_order_id = p.id
@@ -889,6 +891,18 @@ router.get('/kds/:storeId', async (req, res) => {
       const displayStatus = row.cooking_status === 'OPEN' ? 'PENDING' : row.cooking_status;
       const isPOSOrder = !row.paid_order_id || row.order_source === 'POS';
 
+      // 토스페이먼츠 결제 정보 파싱
+      let tossPaymentInfo = null;
+      if (row.toss_payment_info) {
+        try {
+          tossPaymentInfo = typeof row.toss_payment_info === 'string' 
+            ? JSON.parse(row.toss_payment_info) 
+            : row.toss_payment_info;
+        } catch (parseError) {
+          console.warn('⚠️ KDS - 토스페이먼츠 정보 파싱 실패:', parseError);
+        }
+      }
+
       orders.push({
         id: row.order_id,
         paidOrderId: row.paid_order_id,
@@ -902,6 +916,7 @@ router.get('/kds/:storeId', async (req, res) => {
         totalAmount: row.total_amount,
         cookingStatus: displayStatus,
         paymentDate: row.payment_date || row.created_at,
+        paymentMethod: row.payment_method,
         createdAt: row.created_at,
         orderDate: row.created_at, // KDS 호환성을 위해 추가
         waitingMinutes: waitingMinutes,
@@ -911,7 +926,14 @@ router.get('/kds/:storeId', async (req, res) => {
         completedCount: completedItems.length,
         isUrgent: waitingMinutes > 15,
         orderSource: row.order_source || (isPOSOrder ? 'POS' : 'TLL'),
-        isPOSOrder: isPOSOrder
+        isPOSOrder: isPOSOrder,
+        // 토스페이먼츠 결제 정보 (TLL 주문인 경우에만)
+        tossPaymentInfo: tossPaymentInfo && !isPOSOrder ? {
+          paymentKey: tossPaymentInfo.pgPaymentKey,
+          orderId: tossPaymentInfo.pgOrderId,
+          method: tossPaymentInfo.pgPaymentMethod,
+          provider: tossPaymentInfo.provider
+        } : null
       });
     }
 
@@ -1339,10 +1361,65 @@ router.post('/paid-orders', async (req, res) => {
   }
 });
 
-// TL회원 결제 내역 조회 (user_paid_orders)
+// TL회원 결제 내역 조회 (user_paid_orders) - 토스페이먼츠 키 기반
 router.post('/user-paid-orders', async (req, res) => {
-  // This route is for fetching user_paid_orders, which is not modified in this change.
-  // If you need to modify this as well, please provide specific instructions.
+  const client = await pool.connect();
+
+  try {
+    const { paymentKey, orderId, amount } = req.body;
+
+    console.log('💰 user_paid_orders에서 토스페이먼츠 결제 정보 조회:', { paymentKey, orderId, amount });
+
+    // payment_reference에서 토스페이먼츠 정보로 주문 조회
+    const orderResult = await client.query(`
+      SELECT upo.*, s.name as store_name, u.name as user_name
+      FROM user_paid_orders upo
+      JOIN stores s ON upo.store_id = s.id
+      LEFT JOIN users u ON upo.user_id = u.id
+      WHERE upo.payment_reference->>'pgPaymentKey' = $1
+      AND upo.payment_reference->>'pgOrderId' = $2
+      ORDER BY upo.created_at DESC
+      LIMIT 1
+    `, [paymentKey, orderId]);
+
+    if (orderResult.rows.length === 0) {
+      console.warn('⚠️ 토스페이먼츠 키로 user_paid_orders에서 결제 정보를 찾을 수 없음:', { paymentKey, orderId });
+      return res.status(404).json({
+        success: false,
+        error: '결제 정보를 찾을 수 없습니다.'
+      });
+    }
+
+    const order = orderResult.rows[0];
+    console.log('✅ user_paid_orders 결제 정보 조회 성공:', order.id);
+
+    res.json({
+      success: true,
+      order: {
+        id: order.id,
+        storeName: order.store_name,
+        userName: order.user_name,
+        orderData: order.order_data,
+        originalAmount: order.original_amount,
+        usedPoint: order.used_point,
+        couponDiscount: order.coupon_discount,
+        finalAmount: order.final_amount,
+        paymentDate: order.created_at,
+        paymentMethod: order.payment_method,
+        paymentReference: order.payment_reference,
+        tableNumber: order.table_number
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ user_paid_orders 토스페이먼츠 키 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '결제 정보 조회 중 오류가 발생했습니다.'
+    });
+  } finally {
+    client.release();
+  }
 });
 
 module.exports = router;
