@@ -175,11 +175,41 @@ router.get('/success', async (req, res) => {
       return res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 정보가 올바르지 않습니다.')}`);
     }
 
-    // 서버에서 직접 성공 페이지로 리디렉트 (브라우저 보안 문제 해결)
-    const successUrl = `/toss-success.html?paymentKey=${encodeURIComponent(paymentKey)}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(amount)}`;
-    
-    console.log('🔄 서버에서 성공 페이지로 리디렉트:', successUrl);
-    res.redirect(successUrl);
+    // 토스페이먼츠 결제 승인 처리
+    try {
+      console.log('🔄 서버에서 토스페이먼츠 결제 승인 처리 시작');
+
+      const response = await fetch(`${TOSS_API_URL}/confirm`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(TOSS_SECRET_KEY + ':').toString('base64')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentKey,
+          orderId,
+          amount: parseInt(amount)
+        })
+      });
+
+      const paymentData = await response.json();
+
+      if (response.ok) {
+        console.log('✅ 서버에서 토스페이먼츠 결제 승인 성공:', paymentData.paymentKey);
+
+        // 결제 승인 성공 시 성공 페이지로 리디렉트
+        const successUrl = `/toss-success.html?paymentKey=${encodeURIComponent(paymentKey)}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(amount)}&confirmed=true`;
+        
+        console.log('🔄 서버에서 성공 페이지로 리디렉트:', successUrl);
+        res.redirect(successUrl);
+      } else {
+        console.error('❌ 서버에서 토스페이먼츠 결제 승인 실패:', paymentData);
+        res.redirect(`/toss-fail.html?message=${encodeURIComponent(paymentData.message || '결제 승인에 실패했습니다.')}`);
+      }
+    } catch (confirmError) {
+      console.error('❌ 서버에서 결제 승인 처리 실패:', confirmError);
+      res.redirect(`/toss-fail.html?message=${encodeURIComponent('결제 승인 처리 중 오류가 발생했습니다.')}`);
+    }
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 성공 콜백 처리 실패:', error);
