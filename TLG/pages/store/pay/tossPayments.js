@@ -12,40 +12,8 @@ async function initTossPayments() {
     return tossPayments;
   }
 
-  // 토스페이먼츠 SDK 동적 로드
-  if (!window.TossPayments) {
-    console.log('🔄 토스페이먼츠 SDK 로드 시작');
-    
-    const script = document.createElement('script');
-    script.src = 'https://js.tosspayments.com/v1/payment-widget';
-    script.async = true;
-    document.head.appendChild(script);
-
-    await new Promise((resolve, reject) => {
-      script.onload = () => {
-        console.log('✅ 토스페이먼츠 SDK 스크립트 로드 완료');
-        resolve();
-      };
-      script.onerror = () => {
-        console.error('❌ 토스페이먼츠 SDK 스크립트 로드 실패');
-        reject(new Error('토스페이먼츠 SDK 로드 실패'));
-      };
-    });
-
-    // SDK 로드 후 잠시 대기
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-
-  // TossPayments 객체 검증
-  if (!window.TossPayments || typeof window.TossPayments !== 'function') {
-    console.error('❌ window.TossPayments가 함수가 아님:', typeof window.TossPayments);
-    throw new Error('토스페이먼츠 SDK가 올바르게 로드되지 않았습니다.');
-  }
-
-  console.log('✅ window.TossPayments 검증 완료');
-
-  // 클라이언트 키로 초기화
   try {
+    // 클라이언트 키 먼저 가져오기
     console.log('🔑 토스페이먼츠 클라이언트 키 요청');
     
     const response = await fetch('/api/toss/client-key');
@@ -60,6 +28,58 @@ async function initTossPayments() {
       throw new Error('토스페이먼츠 클라이언트 키를 가져올 수 없습니다.');
     }
 
+    // 토스페이먼츠 SDK 동적 로드
+    if (!window.TossPayments) {
+      console.log('🔄 토스페이먼츠 SDK 로드 시작');
+      
+      const script = document.createElement('script');
+      script.src = 'https://js.tosspayments.com/v1/payment-widget';
+      script.async = true;
+      
+      // 기존 스크립트가 있다면 제거
+      const existingScript = document.querySelector('script[src*="tosspayments.com"]');
+      if (existingScript) {
+        existingScript.remove();
+        console.log('🧹 기존 토스페이먼츠 스크립트 제거');
+      }
+      
+      document.head.appendChild(script);
+
+      await new Promise((resolve, reject) => {
+        script.onload = () => {
+          console.log('✅ 토스페이먼츠 SDK 스크립트 로드 완료');
+          resolve();
+        };
+        script.onerror = () => {
+          console.error('❌ 토스페이먼츠 SDK 스크립트 로드 실패');
+          reject(new Error('토스페이먼츠 SDK 로드 실패'));
+        };
+      });
+
+      // SDK 로드 후 충분한 시간 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // TossPayments 객체 검증 (최대 5초 대기)
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (attempts < maxAttempts) {
+      if (window.TossPayments && typeof window.TossPayments === 'function') {
+        console.log('✅ window.TossPayments 검증 완료');
+        break;
+      }
+      
+      console.log(`🔄 토스페이먼츠 SDK 로드 대기 중... (${attempts + 1}/${maxAttempts})`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      attempts++;
+    }
+
+    if (!window.TossPayments || typeof window.TossPayments !== 'function') {
+      console.error('❌ window.TossPayments가 함수가 아님:', typeof window.TossPayments);
+      throw new Error('토스페이먼츠 SDK가 올바르게 로드되지 않았습니다.');
+    }
+
     console.log('🔄 토스페이먼츠 인스턴스 생성 중...');
     tossPayments = window.TossPayments(data.clientKey);
     
@@ -67,9 +87,12 @@ async function initTossPayments() {
       throw new Error('토스페이먼츠 인스턴스 생성 실패');
     }
     
-    // payment 메서드 검증
+    // payment 메서드 검증 (약간의 지연 후)
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
     if (typeof tossPayments.payment !== 'function') {
       console.error('❌ tossPayments.payment가 함수가 아님:', typeof tossPayments.payment);
+      console.error('🔍 tossPayments 객체 내용:', Object.keys(tossPayments || {}));
       throw new Error('토스페이먼츠 payment 메서드를 찾을 수 없습니다.');
     }
 
@@ -97,9 +120,15 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     const baseUrl = window.location.origin;
 
     // 토스페이먼츠 객체 검증
-    if (!toss || typeof toss.payment !== 'function') {
-      console.error('❌ 토스페이먼츠 객체가 올바르게 초기화되지 않음:', toss);
+    if (!toss) {
+      console.error('❌ 토스페이먼츠 객체가 null 또는 undefined:', toss);
       throw new Error('토스페이먼츠 SDK 초기화 실패');
+    }
+
+    if (typeof toss.payment !== 'function') {
+      console.error('❌ toss.payment가 함수가 아님:', typeof toss.payment);
+      console.error('🔍 toss 객체 구조:', Object.keys(toss));
+      throw new Error('토스페이먼츠 payment 메서드를 찾을 수 없습니다.');
     }
 
     console.log('✅ 토스페이먼츠 객체 검증 완료');
@@ -107,12 +136,19 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     // Payment 객체 생성 (customerKey 사용)
     let payment;
     try {
+      console.log('🔄 Payment 객체 생성 시도...');
       payment = toss.payment({
         customerKey: paymentData.customerKey || paymentData.orderId // orderId를 customerKey로 사용
       });
       
-      if (!payment || typeof payment.requestPayment !== 'function') {
-        throw new Error('Payment 객체 생성 실패');
+      if (!payment) {
+        throw new Error('Payment 객체가 null입니다.');
+      }
+      
+      if (typeof payment.requestPayment !== 'function') {
+        console.error('❌ payment.requestPayment가 함수가 아님:', typeof payment.requestPayment);
+        console.error('🔍 payment 객체 구조:', Object.keys(payment));
+        throw new Error('Payment 객체의 requestPayment 메서드를 찾을 수 없습니다.');
       }
       
       console.log('✅ Payment 객체 생성 완료');
