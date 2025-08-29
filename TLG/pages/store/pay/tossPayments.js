@@ -70,10 +70,23 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
         console.log('🔄 토스페이먼츠 결제 시작:', tossPaymentMethod);
 
+        // amount 값 유효성 검사 및 정수 변환
+        const validatedAmount = parseInt(paymentData.amount);
+        if (!validatedAmount || validatedAmount <= 0) {
+          throw new Error(`유효하지 않은 결제 금액입니다: ${paymentData.amount}`);
+        }
+
+        console.log('💳 토스페이먼츠 결제 요청 파라미터:', {
+          method: tossPaymentMethod,
+          amount: validatedAmount,
+          orderId: paymentData.orderId,
+          orderName: paymentData.orderName
+        });
+
         // 토스페이먼츠 결제 요청
         widget.requestPayment({
           method: tossPaymentMethod,
-          amount: paymentData.amount,
+          amount: validatedAmount,
           orderId: paymentData.orderId,
           orderName: paymentData.orderName,
           customerName: paymentData.customerName,
@@ -137,7 +150,12 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
  */
 async function confirmPaymentInSPA(paymentKey, orderId, amount) {
   try {
-    console.log('🔄 SPA 결제 승인 처리:', { paymentKey, orderId, amount });
+    const validatedAmount = parseInt(amount);
+    if (!validatedAmount || validatedAmount <= 0) {
+      throw new Error(`유효하지 않은 승인 금액입니다: ${amount}`);
+    }
+
+    console.log('🔄 SPA 결제 승인 처리:', { paymentKey, orderId, amount: validatedAmount });
 
     const confirmResponse = await fetch('/api/toss/success', {
       method: 'POST',
@@ -147,7 +165,7 @@ async function confirmPaymentInSPA(paymentKey, orderId, amount) {
       body: JSON.stringify({
         paymentKey,
         orderId,
-        amount: parseInt(amount) || 0
+        amount: validatedAmount
       })
     });
 

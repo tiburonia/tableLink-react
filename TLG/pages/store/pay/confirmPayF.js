@@ -109,9 +109,21 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       window.pendingOrderData = pendingOrderData;
     }
 
+    // 결제 금액 유효성 검사
+    if (!finalAmount || finalAmount <= 0) {
+      throw new Error(`유효하지 않은 결제 금액입니다: ${finalAmount}`);
+    }
+
+    console.log('💳 토스페이먼츠 결제 요청 데이터 검증:', {
+      finalAmount: finalAmount,
+      orderId: orderId,
+      paymentMethod: paymentMethod,
+      userInfo: userInfo.name
+    });
+
     // 토스페이먼츠 결제 (SPA 방식)
     const paymentResult = await window.requestTossPayment({
-      amount: finalAmount,
+      amount: parseInt(finalAmount),
       orderId: orderId,
       orderName: `${orderData.store} 주문`,
       customerName: userInfo.name || '고객',

@@ -32,7 +32,23 @@ router.post('/success', async (req, res) => {
   try {
     const { paymentKey, orderId, amount } = req.body;
 
-    console.log('✅ 토스페이먼츠 결제 승인 요청:', { paymentKey, orderId, amount });
+    // 파라미터 유효성 검사
+    if (!paymentKey || !orderId || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다: paymentKey, orderId, amount'
+      });
+    }
+
+    const validatedAmount = parseInt(amount);
+    if (!validatedAmount || validatedAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 결제 금액입니다: ${amount}`
+      });
+    }
+
+    console.log('✅ 토스페이먼츠 결제 승인 요청:', { paymentKey, orderId, amount: validatedAmount });
 
     // 키 검증
     if (!TOSS_SECRET_KEY) {
@@ -55,7 +71,7 @@ router.post('/success', async (req, res) => {
       body: JSON.stringify({
         paymentKey,
         orderId,
-        amount
+        amount: validatedAmount
       })
     });
 
