@@ -172,6 +172,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     const result = await response.json();
     console.log('✅ 결제 성공:', result);
 
+    // 저장된 주문 데이터 정리
+    sessionStorage.removeItem('pendingOrderData');
+    delete window.pendingOrderData;
+
     // 결제 성공 UI 모듈 동적 로드 및 렌더링
     if (!window.renderPaymentSuccess) {
       console.log('🔄 결제 성공 UI 모듈 로드 중...');
@@ -213,11 +217,18 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
       console.log('🔄 결제 실패 UI 모듈 로드 중...');
 
       try {
-        await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+        await import('/TLG/pages/store/pay/paymentFailureUI.js');
         console.log('✅ 결제 실패 UI 모듈 import 완료');
       } catch (importError) {
         console.error('❌ 결제 실패 UI 모듈 import 실패:', importError);
-        throw new Error('결제 실패 UI를 불러올 수 없습니다.');
+        // 폴백으로 paymentSuccessUI에서 실패 함수 로드 시도
+        try {
+          await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+          console.log('✅ 결제 실패 UI 모듈 폴백 import 완료');
+        } catch (fallbackError) {
+          console.error('❌ 결제 실패 UI 모듈 폴백 import도 실패:', fallbackError);
+          throw new Error('결제 실패 UI를 불러올 수 없습니다.');
+        }
       }
     }
 

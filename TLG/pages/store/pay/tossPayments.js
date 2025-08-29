@@ -1,4 +1,3 @@
-
 /**
  * 토스페이먼츠 Payment Widget 통합 모듈 (SPA 최적화)
  */
@@ -32,7 +31,7 @@ async function initTossPaymentWidget() {
 
     // Payment Widget 초기화 (페이지 리다이렉트 없이 현재 창에서 처리)
     paymentWidget = window.TossPayments(data.clientKey);
-    
+
     console.log('✅ 토스페이먼츠 Payment Widget 초기화 완료');
     return paymentWidget;
 
@@ -54,80 +53,82 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     // Payment Widget은 자체적으로 결제 성공/실패를 처리하므로
     // 콜백 함수를 통해 SPA에서 직접 처리
     const result = await new Promise((resolve, reject) => {
-      const paymentOptions = {
-        amount: paymentData.amount,
-        orderId: paymentData.orderId,
-        orderName: paymentData.orderName,
-        customerName: paymentData.customerName,
-        customerEmail: paymentData.customerEmail,
-        customerMobilePhone: paymentData.customerMobilePhone,
-        // SPA 방식: 성공/실패 시 현재 창에서 콜백 처리
-        successCallback: async (result) => {
-          console.log('✅ Payment Widget 결제 성공:', result);
-          
-          // 결제 승인 처리
-          const confirmResult = await confirmPaymentInSPA(
-            result.paymentKey, 
-            result.orderId, 
-            paymentData.amount
-          );
-          
-          if (confirmResult.success) {
-            resolve({
-              success: true,
-              paymentKey: result.paymentKey,
-              orderId: result.orderId,
-              method: paymentMethod,
-              confirmResult: confirmResult
-            });
-          } else {
-            reject(new Error(confirmResult.error || '결제 승인에 실패했습니다.'));
-          }
-        },
-        failCallback: (error) => {
-          console.error('❌ Payment Widget 결제 실패:', error);
-          
-          if (error.code === 'USER_CANCEL') {
-            resolve({
-              success: false,
-              message: '결제를 취소했습니다.',
-              cancelled: true
-            });
-          } else {
-            reject(new Error(error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`));
-          }
-        }
-      };
+      try {
+        // 결제 수단에 따른 요청
+        const paymentMethodMap = {
+          '카드': 'CARD',
+          '계좌이체': 'TRANSFER',
+          '가상계좌': 'VIRTUAL_ACCOUNT',
+          '휴대폰': 'MOBILE_PHONE',
+          '간편결제': 'EASY_PAY',
+          '문화상품권': 'CULTURE_GIFT_CERTIFICATE',
+          '도서문화상품권': 'BOOK_CULTURE_GIFT_CERTIFICATE',
+          '게임문화상품권': 'GAME_CULTURE_GIFT_CERTIFICATE'
+        };
 
-      // 결제 수단별 처리
-      switch (paymentMethod) {
-        case '카드':
-          widget.requestPayment('카드', paymentOptions);
-          break;
-        case '계좌이체':
-          widget.requestPayment('계좌이체', paymentOptions);
-          break;
-        case '가상계좌':
-          paymentOptions.validHours = 24;
-          widget.requestPayment('가상계좌', paymentOptions);
-          break;
-        case '휴대폰':
-          widget.requestPayment('휴대폰', paymentOptions);
-          break;
-        default:
-          reject(new Error(`지원하지 않는 결제 수단입니다: ${paymentMethod}`));
+        const tossPaymentMethod = paymentMethodMap[paymentMethod] || 'CARD';
+
+        console.log('🔄 토스페이먼츠 결제 시작:', tossPaymentMethod);
+
+        // 토스페이먼츠 결제 요청
+        widget.requestPayment({
+          method: tossPaymentMethod,
+          amount: paymentData.amount,
+          orderId: paymentData.orderId,
+          orderName: paymentData.orderName,
+          customerName: paymentData.customerName,
+          customerEmail: paymentData.customerEmail,
+          customerMobilePhone: paymentData.customerMobilePhone,
+          successUrl: window.location.origin + '/?payment=success',
+          failUrl: window.location.origin + '/?payment=fail'
+        }).then(async (paymentResult) => {
+          console.log('✅ 토스페이먼츠 결제 성공:', paymentResult);
+
+          // 결제 승인 처리
+          try {
+            const confirmResult = await confirmPaymentInSPA(
+              paymentResult.paymentKey, 
+              paymentResult.orderId, 
+              paymentData.amount
+            );
+
+            if (confirmResult.success) {
+              resolve({
+                success: true,
+                paymentKey: paymentResult.paymentKey,
+                orderId: paymentResult.orderId,
+                method: paymentMethod,
+                confirmResult: confirmResult
+              });
+            } else {
+              reject(new Error(confirmResult.message || '결제 승인 처리 실패'));
+            }
+          } catch (confirmError) {
+            console.error('❌ 결제 승인 처리 중 오류:', confirmError);
+            reject(confirmError);
+          }
+
+        }).catch((error) => {
+          console.error('❌ 토스페이먼츠 결제 실패:', error);
+
+          if (error.code === 'USER_CANCEL') {
+            reject(new Error('결제가 취소되었습니다.'));
+          } else {
+            reject(new Error(error.message || '결제 처리 중 오류가 발생했습니다.'));
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ 결제 요청 중 오류:', error);
+        reject(error);
       }
     });
 
     return result;
 
   } catch (error) {
-    console.error(`❌ 토스페이먼츠 Payment Widget ${paymentMethod} 결제 실패:`, error);
-    
-    return {
-      success: false,
-      message: error.message || `${paymentMethod} 결제 처리 중 오류가 발생했습니다.`
-    };
+    console.error('❌ 토스페이먼츠 결제 처리 실패:', error);
+    throw error;
   }
 }
 
