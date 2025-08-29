@@ -197,11 +197,90 @@ router.get('/success', async (req, res) => {
       if (response.ok) {
         console.log('✅ 서버에서 토스페이먼츠 결제 승인 성공:', paymentData.paymentKey);
 
-        // 결제 승인 성공 시 성공 페이지로 리디렉트
-        const successUrl = `/toss-success.html?paymentKey=${encodeURIComponent(paymentKey)}&orderId=${encodeURIComponent(orderId)}&amount=${encodeURIComponent(amount)}&confirmed=true`;
-        
-        console.log('🔄 서버에서 성공 페이지로 리디렉트:', successUrl);
-        res.redirect(successUrl);
+        // postMessage 기반 결제 완료 처리 페이지
+        const postMessagePageHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>결제 완료</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                .success { color: #4CAF50; font-size: 24px; margin-bottom: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="success">✅ 결제가 완료되었습니다</div>
+            <p>잠시 후 자동으로 처리됩니다...</p>
+            <script>
+                // 결제 완료 데이터
+                const paymentData = {
+                    type: 'TOSS_PAYMENT_SUCCESS',
+                    paymentKey: '${paymentKey}',
+                    orderId: '${orderId}',
+                    amount: ${amount},
+                    confirmed: true,
+                    timestamp: Date.now()
+                };
+
+                console.log('📨 결제 완료 postMessage 전송:', paymentData);
+
+                // 모든 가능한 부모에게 메시지 전송
+                function sendToParent() {
+                    try {
+                        if (window.opener && !window.opener.closed) {
+                            window.opener.postMessage(paymentData, '*');
+                            console.log('📨 opener에게 전송 완료');
+                        }
+                    } catch (e) {
+                        console.log('opener 전송 실패:', e);
+                    }
+
+                    try {
+                        if (window.parent && window.parent !== window) {
+                            window.parent.postMessage(paymentData, '*');
+                            console.log('📨 parent에게 전송 완료');
+                        }
+                    } catch (e) {
+                        console.log('parent 전송 실패:', e);
+                    }
+
+                    try {
+                        if (window.top && window.top !== window) {
+                            window.top.postMessage(paymentData, '*');
+                            console.log('📨 top에게 전송 완료');
+                        }
+                    } catch (e) {
+                        console.log('top 전송 실패:', e);
+                    }
+                }
+
+                // 즉시 전송 및 반복 전송
+                sendToParent();
+                
+                // 1초마다 3번 더 전송 (확실히 받도록)
+                let sendCount = 0;
+                const sendInterval = setInterval(() => {
+                    sendToParent();
+                    sendCount++;
+                    if (sendCount >= 3) {
+                        clearInterval(sendInterval);
+                        // 5초 후 창 닫기 시도
+                        setTimeout(() => {
+                            try {
+                                window.close();
+                            } catch (e) {
+                                console.log('창 닫기 실패:', e);
+                            }
+                        }, 2000);
+                    }
+                }, 1000);
+            </script>
+        </body>
+        </html>
+        `;
+
+        console.log('🔄 서버에서 postMessage 기반 성공 페이지 응답');
+        res.send(postMessagePageHtml);
       } else {
         console.error('❌ 서버에서 토스페이먼츠 결제 승인 실패:', paymentData);
         res.redirect(`/toss-fail.html?message=${encodeURIComponent(paymentData.message || '결제 승인에 실패했습니다.')}`);
@@ -224,11 +303,84 @@ router.get('/fail', async (req, res) => {
 
     console.log('❌ 토스페이먼츠 결제 실패:', { code, message, orderId });
 
-    // 서버에서 직접 실패 페이지로 리디렉트
-    const failUrl = `/toss-fail.html?code=${encodeURIComponent(code || '')}&message=${encodeURIComponent(message || '결제가 실패했습니다.')}&orderId=${encodeURIComponent(orderId || '')}`;
-    
-    console.log('🔄 서버에서 실패 페이지로 리디렉트:', failUrl);
-    res.redirect(failUrl);
+    // postMessage 기반 결제 실패 처리 페이지
+    const postMessagePageHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>결제 실패</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+            .error { color: #f44336; font-size: 24px; margin-bottom: 20px; }
+        </style>
+    </head>
+    <body>
+        <div class="error">❌ 결제가 실패했습니다</div>
+        <p>${message || '결제 처리 중 오류가 발생했습니다.'}</p>
+        <script>
+            // 결제 실패 데이터
+            const failureData = {
+                type: 'TOSS_PAYMENT_FAILURE',
+                code: '${code || ''}',
+                message: '${message || '결제가 실패했습니다.'}',
+                orderId: '${orderId || ''}',
+                timestamp: Date.now()
+            };
+
+            console.log('📨 결제 실패 postMessage 전송:', failureData);
+
+            // 모든 가능한 부모에게 메시지 전송
+            function sendToParent() {
+                try {
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage(failureData, '*');
+                    }
+                } catch (e) {
+                    console.log('opener 전송 실패:', e);
+                }
+
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage(failureData, '*');
+                    }
+                } catch (e) {
+                    console.log('parent 전송 실패:', e);
+                }
+
+                try {
+                    if (window.top && window.top !== window) {
+                        window.top.postMessage(failureData, '*');
+                    }
+                } catch (e) {
+                    console.log('top 전송 실패:', e);
+                }
+            }
+
+            // 즉시 전송 및 반복 전송
+            sendToParent();
+            
+            let sendCount = 0;
+            const sendInterval = setInterval(() => {
+                sendToParent();
+                sendCount++;
+                if (sendCount >= 3) {
+                    clearInterval(sendInterval);
+                    setTimeout(() => {
+                        try {
+                            window.close();
+                        } catch (e) {
+                            console.log('창 닫기 실패:', e);
+                        }
+                    }, 2000);
+                }
+            }, 1000);
+        </script>
+    </body>
+    </html>
+    `;
+
+    console.log('🔄 서버에서 postMessage 기반 실패 페이지 응답');
+    res.send(postMessagePageHtml);
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 실패 콜백 처리 실패:', error);

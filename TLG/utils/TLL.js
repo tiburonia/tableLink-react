@@ -497,6 +497,83 @@ window.TLL = async function TLL(preselectedStore = null) {
         }
       });
 
+
+// 토스페이먼츠 결제 성공 처리 함수
+async function handleTossPaymentSuccess(data) {
+  try {
+    console.log('🔄 토스페이먼츠 결제 성공 처리 시작:', data);
+
+    const { paymentKey, orderId, amount } = data;
+    
+    // sessionStorage에서 주문 데이터 가져오기
+    const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
+    
+    if (!pendingOrderData.userId) {
+      throw new Error('주문 정보를 찾을 수 없습니다.');
+    }
+
+    console.log('📦 주문 처리 시작:', pendingOrderData);
+
+    // 주문 처리 API 호출
+    const orderResponse = await fetch('/api/orders/pay', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...pendingOrderData,
+        pgPaymentKey: paymentKey,
+        pgOrderId: orderId,
+        pgPaymentMethod: 'TOSS'
+      })
+    });
+
+    if (!orderResponse.ok) {
+      const errorData = await orderResponse.json();
+      throw new Error(errorData.error || '주문 처리에 실패했습니다.');
+    }
+
+    const orderResult = await orderResponse.json();
+    console.log('✅ 주문 처리 성공:', orderResult);
+
+    // 성공 메시지 표시
+    if (typeof renderPaymentSuccess === 'function') {
+      renderPaymentSuccess(orderResult, pendingOrderData);
+    } else {
+      alert('주문이 성공적으로 완료되었습니다!');
+      renderMap();
+    }
+
+    // 저장된 데이터 정리
+    sessionStorage.removeItem('pendingOrderData');
+    sessionStorage.removeItem('paymentMethod');
+
+  } catch (error) {
+    console.error('❌ 토스페이먼츠 결제 처리 실패:', error);
+    
+    if (typeof renderPaymentFailure === 'function') {
+      renderPaymentFailure(error, {});
+    } else {
+      alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+      renderMap();
+    }
+  }
+}
+
+// 토스페이먼츠 결제 실패 처리 함수
+function handleTossPaymentFailure(data) {
+  console.log('❌ 토스페이먼츠 결제 실패 처리:', data);
+  
+  const { message } = data;
+  
+  if (typeof renderPaymentFailure === 'function') {
+    renderPaymentFailure({ message }, {});
+  } else {
+    alert('결제가 실패했습니다: ' + message);
+    renderMap();
+  }
+}
+
       if (!response.ok) {
         throw new Error('검색 실패');
       }
@@ -680,8 +757,27 @@ async function initApp() {
 
   // postMessage 리스너 추가 (결제 완료 후 리디렉션 처리)
   window.addEventListener('message', (event) => {
-    if (event.origin !== window.location.origin) return;
+    console.log('📨 postMessage 수신:', event.data);
 
+    // 토스페이먼츠 결제 완료 처리
+    if (event.data.type === 'TOSS_PAYMENT_SUCCESS') {
+      console.log('✅ 토스페이먼츠 결제 성공 postMessage 수신:', event.data);
+      
+      // 결제 승인 및 주문 처리
+      handleTossPaymentSuccess(event.data);
+      return;
+    }
+
+    // 토스페이먼츠 결제 실패 처리
+    if (event.data.type === 'TOSS_PAYMENT_FAILURE') {
+      console.log('❌ 토스페이먼츠 결제 실패 postMessage 수신:', event.data);
+      
+      // 결제 실패 처리
+      handleTossPaymentFailure(event.data);
+      return;
+    }
+
+    // 기존 결제 완료 후 리디렉션 처리
     if (event.data.type === 'PAYMENT_SUCCESS_REDIRECT' || event.data.type === 'PAYMENT_REDIRECT') {
       console.log('💳 결제 완료 후 리디렉션 요청:', event.data);
 

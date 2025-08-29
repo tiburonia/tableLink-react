@@ -55,8 +55,8 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     // postMessage 기반 안전한 리디렉션을 위한 설정
     const baseUrl = window.location.origin;
-    const successUrl = `${baseUrl}/toss-success.html`;
-    const failUrl = `${baseUrl}/toss-fail.html`;
+    const successUrl = `${baseUrl}/api/toss/success`;
+    const failUrl = `${baseUrl}/api/toss/fail`;
 
     // 결제 공통 옵션
     const paymentOptions = {
