@@ -53,7 +53,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 토스페이먼츠 모듈 동적 로드
     if (!window.requestTossPayment) {
       console.log('🔄 토스페이먼츠 모듈 로드 중...');
-      await import('/TLG/pages/store/pay/tossPayments.js');
+
+      try {
+        await import('/TLG/pages/store/pay/tossPayments.js');
+        console.log('✅ 토스페이먼츠 모듈 import 완료');
+      } catch (importError) {
+        console.error('❌ 토스페이먼츠 모듈 import 실패:', importError);
+        throw new Error('토스페이먼츠 모듈을 불러올 수 없습니다.');
+      }
 
       // 모듈 로드 후 잠시 대기
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -92,7 +99,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     };
 
     console.log('💾 주문 데이터 sessionStorage 저장:', pendingOrderData);
-    
+
     try {
       sessionStorage.setItem('pendingOrderData', JSON.stringify(pendingOrderData));
       console.log('✅ sessionStorage 저장 성공');
@@ -116,7 +123,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       // 결제 실패/취소 시 저장된 주문 데이터 삭제
       sessionStorage.removeItem('pendingOrderData');
       delete window.pendingOrderData;
-      
+
       if (paymentResult.cancelled) {
         throw new Error('결제가 취소되었습니다.');
       } else {
@@ -168,11 +175,23 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 결제 성공 UI 모듈 동적 로드 및 렌더링
     if (!window.renderPaymentSuccess) {
       console.log('🔄 결제 성공 UI 모듈 로드 중...');
-      await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+
+      try {
+        await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+        console.log('✅ 결제 성공 UI 모듈 import 완료');
+      } catch (importError) {
+        console.error('❌ 결제 성공 UI 모듈 import 실패:', importError);
+        throw new Error('결제 성공 UI를 불러올 수 없습니다.');
+      }
     }
 
     // 결제 성공 UI 렌더링
-    window.renderPaymentSuccess(orderData, paymentResult, userInfo);
+    if (typeof window.renderPaymentSuccess === 'function') {
+      window.renderPaymentSuccess(orderData, paymentResult, userInfo);
+    } else {
+      console.error('❌ renderPaymentSuccess 함수를 찾을 수 없습니다');
+      throw new Error('결제 성공 화면을 표시할 수 없습니다.');
+    }
 
     // 기존 성공 페이지 코드 제거
     /*
@@ -541,7 +560,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 버튼 이벤트 리스너 (안전성 개선)
     const goToMainBtn = document.getElementById('goToMain');
     const goToMyPageBtn = document.getElementById('goToMyPage');
-    
+
     if (goToMainBtn) {
       goToMainBtn.addEventListener('click', () => {
         if (typeof renderMap === 'function') {
@@ -598,18 +617,27 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
 // 결제 실패 처리 함수
 async function handlePaymentFailure(error, orderData, currentOrder, store) {
+  console.log('❌ 결제 실패 처리 시작:', error.message);
+
   try {
     // 결제 실패 UI 모듈 동적 로드
     if (!window.renderPaymentFailure) {
       console.log('🔄 결제 실패 UI 모듈 로드 중...');
-      await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+
+      try {
+        await import('/TLG/pages/store/pay/paymentSuccessUI.js');
+        console.log('✅ 결제 실패 UI 모듈 import 완료');
+      } catch (importError) {
+        console.error('❌ 결제 실패 UI 모듈 import 실패:', importError);
+        throw new Error('결제 실패 UI를 불러올 수 없습니다.');
+      }
     }
 
     // 결제 실패 UI 렌더링
     if (typeof window.renderPaymentFailure === 'function') {
       window.renderPaymentFailure(error, orderData);
     } else {
-      throw new Error('결제 실패 UI 모듈을 로드할 수 없습니다');
+      throw new Error('결제 실패 UI 함수를 찾을 수 없습니다');
     }
   } catch (loadError) {
     console.error('❌ 결제 실패 UI 로드 실패:', loadError);
@@ -618,10 +646,17 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
     alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
 
     // 주문 화면으로 돌아가기
-    if (typeof renderOrderScreen === 'function') {
-      renderOrderScreen(store, orderData.tableNum);
-    } else if (typeof renderMap === 'function') {
-      renderMap();
+    try {
+      if (typeof renderOrderScreen === 'function') {
+        renderOrderScreen(store, orderData.tableNum);
+      } else if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        window.location.href = '/';
+      }
+    } catch (redirectError) {
+      console.error('❌ 화면 리다이렉트 실패:', redirectError);
+      window.location.href = '/';
     }
   }
 }
@@ -630,7 +665,7 @@ async function handlePaymentFailure(error, orderData, currentOrder, store) {
 window.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'PAYMENT_SUCCESS') {
     console.log('💳 결제 성공 메시지 수신:', event.data);
-    
+
     if (event.data.action === 'GO_TO_MAIN') {
       // 로그인 정보 유지하며 메인으로 이동
       if (typeof renderMap === 'function') {
