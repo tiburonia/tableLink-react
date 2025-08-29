@@ -16,7 +16,33 @@ const io = new Server(server, {
 const PORT = 5000;
 
 // CORS, JSON 파싱
-app.use(cors());
+app.use(cors({
+  origin: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'Pragma', 'X-Requested-With'],
+  credentials: true
+}));
+
+// iframe 및 토스페이먼츠 호환성을 위한 헤더 설정
+app.use((req, res, next) => {
+  // iframe 허용 설정
+  res.header('X-Frame-Options', 'SAMEORIGIN');
+  res.header('Content-Security-Policy', "frame-ancestors 'self' *.replit.dev *.replit.co");
+  
+  // CORS 헤더 강화
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Preflight 요청 처리
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 app.use(express.json());
 
 // 정적 파일 서빙 설정
