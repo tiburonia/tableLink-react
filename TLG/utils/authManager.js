@@ -76,23 +76,12 @@ function initializeApp() {
     return; // 결제 성공 처리 중이면 다른 로직 실행 안함
   }
 
-  // 일반적인 로그인 상태 확인 후 적절한 화면 렌더링
-  if (checkLoginStatus()) {
-    // 로그인 상태면 서브메인 화면으로
-    if (typeof renderSubMain === 'function') {
-      renderSubMain();
-    } else if (typeof renderMap === 'function') {
-      renderMap();
-    } else {
-      console.error('❌ renderSubMain, renderMap 함수를 찾을 수 없음');
-    }
+  // 초기 진입 시 항상 로그인 화면으로 이동
+  console.log('🚪 앱 초기화: 로그인 화면으로 이동');
+  if (typeof renderLogin === 'function') {
+    renderLogin();
   } else {
-    // 로그인하지 않은 상태면 로그인 화면으로
-    if (typeof renderLogin === 'function') {
-      renderLogin();
-    } else {
-      console.error('❌ renderLogin 함수를 찾을 수 없음');
-    }
+    console.error('❌ renderLogin 함수를 찾을 수 없음');
   }
 }
 
