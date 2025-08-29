@@ -66,6 +66,23 @@ function goToMyPage() {
 }
 
 function displaySuccess(result, orderData) {
+    // 안전한 데이터 처리
+    const safeAmount = orderData?.totalAmount || orderData?.total || result?.amount || result?.totalAmount || 0;
+    const safeOrderId = orderData?.orderId || result?.orderId || 'N/A';
+    const safeStoreName = orderData?.storeName || orderData?.store || 'N/A';
+    const safePaymentKey = result?.paymentKey || 'N/A';
+    const safePaidAt = result?.paidAt || result?.approvedAt || new Date().toISOString();
+    
+    console.log('💳 결제 성공 정보 표시:', {
+        result,
+        orderData,
+        safeAmount,
+        safeOrderId,
+        safeStoreName,
+        safePaymentKey,
+        safePaidAt
+    });
+
     document.getElementById('content').innerHTML = `
         <div class="success-container">
             <div class="success-icon">✅</div>
@@ -75,11 +92,11 @@ function displaySuccess(result, orderData) {
             <div class="order-summary">
                 <h3>주문 정보</h3>
                 <div class="order-details">
-                    <p><span class="label">결제 금액:</span> <span class="value">${parseInt(orderData.totalAmount || result.amount).toLocaleString()}원</span></p>
-                    <p><span class="label">주문 번호:</span> <span class="value">${orderData.orderId || 'N/A'}</span></p>
-                    <p><span class="label">매장:</span> <span class="value">${orderData.storeName || 'N/A'}</span></p>
-                    <p><span class="label">결제 키:</span> <span class="value">${result.paymentKey}</span></p>
-                    <p><span class="label">결제 일시:</span> <span class="value">${new Date(result.paidAt).toLocaleString()}</span></p>
+                    <p><span class="label">결제 금액:</span> <span class="value">${parseInt(safeAmount).toLocaleString()}원</span></p>
+                    <p><span class="label">주문 번호:</span> <span class="value">${safeOrderId}</span></p>
+                    <p><span class="label">매장:</span> <span class="value">${safeStoreName}</span></p>
+                    <p><span class="label">결제 키:</span> <span class="value">${safePaymentKey}</span></p>
+                    <p><span class="label">결제 일시:</span> <span class="value">${new Date(safePaidAt).toLocaleString()}</span></p>
                 </div>
 
                 ${orderData.items ? `
@@ -176,12 +193,16 @@ async function confirmPaymentResult(paymentKey, orderId, amount) {
     try {
         displayStatus('결제 승인 처리 중...');
 
+        console.log('🔄 결제 승인 시작:', { paymentKey, orderId, amount });
+
         // 1. 토스페이먼츠 결제 승인
         const confirmResult = await window.tossPaymentUtils.confirmPayment(paymentKey, orderId, amount);
 
         if (!confirmResult.success) {
             throw new Error(confirmResult.error || '결제 승인에 실패했습니다.');
         }
+
+        console.log('✅ 토스페이먼츠 결제 승인 완료:', confirmResult.data);
 
         displayStatus('주문 정보 조회 중...');
 
@@ -222,6 +243,7 @@ async function confirmPaymentResult(paymentKey, orderId, amount) {
             }
 
             const orderData = JSON.parse(pendingOrderData);
+            console.log('📦 sessionStorage 주문 데이터:', orderData);
 
             // 새 주문 처리 API 호출
             const response = await fetch('/api/orders/pay', {
@@ -243,12 +265,23 @@ async function confirmPaymentResult(paymentKey, orderId, amount) {
             }
 
             const result = await response.json();
+            console.log('✅ 주문 처리 완료:', result);
 
             // sessionStorage 정리
             sessionStorage.removeItem('pendingOrderData');
             sessionStorage.removeItem('paymentMethod');
 
-            displaySuccess(result, orderData);
+            // 결제 정보와 주문 데이터를 합쳐서 전달
+            const combinedData = {
+                ...confirmResult.data,
+                amount: amount,
+                totalAmount: orderData.finalTotal || orderData.orderData?.total || amount,
+                orderId: orderId,
+                storeName: orderData.storeName || orderData.orderData?.store,
+                items: orderData.orderData?.items || []
+            };
+
+            displaySuccess(combinedData, orderData);
         }
 
     } catch (error) {
@@ -267,12 +300,30 @@ async function processPayment() {
         console.log('📋 URL 파라미터:', { paymentKey, orderId, amount });
         console.log('🔗 전체 URL:', window.location.href);
 
-        if (!paymentKey || !orderId || !amount) {
-            console.error('❌ 누락된 파라미터:', { paymentKey, orderId, amount });
-            throw new Error('결제 정보가 올바르지 않습니다.');
+        // 파라미터 검증
+        if (!paymentKey || paymentKey === 'undefined') {
+            throw new Error('결제 키가 누락되었습니다.');
+        }
+        if (!orderId || orderId === 'undefined') {
+            throw new Error('주문 ID가 누락되었습니다.');
+        }
+        if (!amount || amount === 'undefined' || isNaN(parseInt(amount))) {
+            throw new Error('결제 금액 정보가 올바르지 않습니다.');
         }
 
-        await confirmPaymentResult(paymentKey, orderId, amount);
+        // 숫자로 변환하여 검증
+        const numericAmount = parseInt(amount);
+        if (numericAmount <= 0) {
+            throw new Error('결제 금액이 유효하지 않습니다.');
+        }
+
+        console.log('✅ 파라미터 검증 완료:', { 
+            paymentKey, 
+            orderId, 
+            amount: numericAmount 
+        });
+
+        await confirmPaymentResult(paymentKey, orderId, numericAmount);
 
     } catch (error) {
         console.error('❌ 결제 처리 실패:', error);

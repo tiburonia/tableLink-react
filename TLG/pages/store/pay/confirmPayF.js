@@ -101,6 +101,36 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       amount: finalAmount,
       orderId: orderId,
       orderName: `${orderData.store} 주문`,
+      customerName: userInfo.name || '게스트',
+      customerEmail: userInfo.email || 'guest@tablelink.com'
+    }, paymentMethod);
+
+    console.log('✅ 토스페이먼츠 결제 결과:', paymentResult);
+
+    if (paymentResult.success) {
+      console.log('🎉 결제 성공! 성공 페이지로 이동');
+      // 결제 성공은 토스페이먼츠에서 자동으로 성공 페이지로 리다이렉트됨
+    } else {
+      console.error('❌ 결제 실패:', paymentResult.message);
+      showPaymentFailure(paymentResult.message || '결제에 실패했습니다.');
+    }
+
+  } catch (error) {
+    console.error('❌ 결제 처리 중 오류:', error);
+    showPaymentFailure(error.message || '결제 처리 중 오류가 발생했습니다.');
+  }
+}
+
+// 결제 실패 처리 함수
+function showPaymentFailure(message) {
+  // 기존 결제 실패 UI 표시 로직
+  if (typeof window.showPaymentFailureUI === 'function') {
+    window.showPaymentFailureUI(message);
+  } else {
+    alert(`결제 실패: ${message}`);
+  }nalAmount,
+      orderId: orderId,
+      orderName: `${orderData.store} 주문`,
       customerName: userInfo.name || '고객',
       customerEmail: userInfo.email || 'guest@tablelink.com',
       customerMobilePhone: userInfo.phone || undefined
