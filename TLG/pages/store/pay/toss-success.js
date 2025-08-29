@@ -1,7 +1,7 @@
 function goToMain() {
-    console.log('🔄 메인으로 이동 시도 - postMessage 전용');
+    console.log('🔄 메인으로 이동 시도');
     
-    // 무조건 postMessage로 부모에게 알림
+    // postMessage 우선 시도
     const message = {
         type: 'PAYMENT_COMPLETE',
         action: 'navigate',
@@ -9,11 +9,13 @@ function goToMain() {
         timestamp: Date.now()
     };
 
-    // 모든 가능한 부모에게 메시지 전송
+    let messageSent = false;
+
     try {
         if (window.opener && !window.opener.closed) {
             console.log('📨 opener에게 메시지 전송');
             window.opener.postMessage(message, '*');
+            messageSent = true;
         }
     } catch (e) {
         console.log('opener 메시지 실패:', e);
@@ -23,30 +25,40 @@ function goToMain() {
         if (window.parent && window.parent !== window) {
             console.log('📨 parent에게 메시지 전송');
             window.parent.postMessage(message, '*');
+            messageSent = true;
         }
     } catch (e) {
         console.log('parent 메시지 실패:', e);
     }
 
-    try {
-        if (window.top && window.top !== window) {
-            console.log('📨 top에게 메시지 전송');
-            window.top.postMessage(message, '*');
+    // postMessage가 실패한 경우에만 안전한 방법으로 이동
+    if (!messageSent) {
+        console.log('📨 postMessage 실패, 안전한 방법으로 이동');
+        try {
+            // 현재 창이 독립적인 창인지 확인
+            if (window === window.top) {
+                // 독립적인 창이면 직접 이동 가능
+                window.location.replace('/');
+            } else {
+                // iframe 등에 포함된 경우 부모에 알림
+                window.top.location.replace('/');
+            }
+        } catch (e) {
+            console.log('안전한 이동도 실패:', e);
+            // 마지막 수단으로 history 사용
+            history.replaceState(null, '', '/');
+            location.reload();
         }
-    } catch (e) {
-        console.log('top 메시지 실패:', e);
     }
 
-    // 3초 후 창 닫기 시도
+    // 메시지 전송 후 잠시 기다린 후 창 닫기
     setTimeout(() => {
         try {
-            console.log('🔒 창 닫기 시도');
             window.close();
         } catch (e) {
-            console.log('창 닫기 실패, 직접 이동:', e);
-            window.location.href = '/';
+            console.log('창 닫기 실패:', e);
         }
-    }, 3000);
+    }, 1000);
 }
 
 function goToMyPage() {
