@@ -89,7 +89,7 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
             const confirmResult = await confirmPaymentInSPA(
               paymentResult.paymentKey, 
               paymentResult.orderId, 
-              paymentData.amount
+              parseInt(paymentData.amount)
             );
 
             if (confirmResult.success) {
@@ -147,7 +147,7 @@ async function confirmPaymentInSPA(paymentKey, orderId, amount) {
       body: JSON.stringify({
         paymentKey,
         orderId,
-        amount: parseInt(amount)
+        amount: parseInt(amount) || 0
       })
     });
 
