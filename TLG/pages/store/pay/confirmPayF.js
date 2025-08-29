@@ -36,26 +36,34 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   console.log('쿠폰 ID:', couponId);
   console.log('쿠폰 할인:', couponDiscount);
 
-  // userInfo 안전하게 가져오기 (쿠키 우선)
-  const userInfo = getUserInfoFromCookie();
+  // userInfo 안전하게 가져오기 (다중 소스 체크)
+  let userInfo = getUserInfoFromCookie();
+  
+  // 쿠키에서 실패시 다른 소스들 확인
   if (!userInfo || !userInfo.id) {
-    console.error('❌ 사용자 정보 없음:', {
-      cookies: document.cookie ? '존재함' : '없음',
-      localStorage: localStorage.getItem('userInfo') ? '존재함' : '없음',
-      windowUserInfo: window.userInfo ? '존재함' : '없음'
-    });
-    
-    // 사용자에게 친화적인 메시지와 함께 로그인 유도
-    alert('로그인 정보가 만료되었습니다. 다시 로그인해주세요.');
-    
-    // 로그인 페이지로 이동 또는 로그인 모달 표시
-    if (typeof renderLogin === 'function') {
-      renderLogin();
+    // window.userInfo 확인
+    if (window.userInfo && window.userInfo.id) {
+      userInfo = window.userInfo;
+      console.log('✅ window.userInfo에서 사용자 정보 복구');
     } else {
-      window.location.reload();
+      console.error('❌ 모든 소스에서 사용자 정보 없음:', {
+        cookies: document.cookie ? '존재함' : '없음',
+        localStorage: localStorage.getItem('userInfo') ? '존재함' : '없음',
+        windowUserInfo: window.userInfo ? '존재함' : '없음'
+      });
+      
+      // 사용자에게 친화적인 메시지와 함께 로그인 유도
+      alert('로그인 정보가 만료되었습니다. 다시 로그인해주세요.');
+      
+      // 로그인 페이지로 이동
+      if (typeof renderLogin === 'function') {
+        renderLogin();
+      } else {
+        window.location.reload();
+      }
+      
+      throw new Error('로그인 정보를 찾을 수 없습니다.');
     }
-    
-    throw new Error('로그인 정보를 찾을 수 없습니다.');
   }
 
   console.log('✅ 사용자 정보 확인:', userInfo.id);

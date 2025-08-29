@@ -113,17 +113,15 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     let result;
 
-    // 결제 수단별 처리 (현재 창에서 직접 리다이렉트)
+    // 결제 수단별 처리 (팝업창에서 처리)
     switch (paymentMethod) {
       case '카드':
-        // requestPayment는 현재 창에서 리다이렉트되므로 await 불가
-        toss.requestPayment('카드', paymentOptions);
-        return { success: true, redirecting: true };
+        // 팝업창에서 결제 처리
+        return await processPaymentInPopup('카드', paymentOptions, toss);
 
       case '계좌이체':
-        // 퀵계좌이체 (간편결제)
-        toss.requestPayment('계좌이체', paymentOptions);
-        return { success: true, redirecting: true };
+        // 팝업창에서 결제 처리
+        return await processPaymentInPopup('계좌이체', paymentOptions, toss);
 
       case '가상계좌':
         // 가상계좌는 입금 기한 설정 가능
@@ -208,6 +206,81 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
       message: errorMessage
     };
   }
+}
+
+/**
+ * 팝업창에서 결제 처리
+ */
+async function processPaymentInPopup(method, options, tossInstance) {
+  return new Promise((resolve, reject) => {
+    try {
+      // 결제 정보를 localStorage에 임시 저장
+      const paymentInfo = {
+        method: method,
+        options: options,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('pendingTossPayment', JSON.stringify(paymentInfo));
+
+      // 팝업창 열기
+      const popup = window.open('about:blank', 'tossPayment', 
+        'width=500,height=700,scrollbars=yes,resizable=yes');
+
+      if (!popup) {
+        throw new Error('팝업이 차단되었습니다. 팝업 차단을 해제해주세요.');
+      }
+
+      // 팝업창에서 결제 처리
+      popup.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>토스페이먼츠 결제</title>
+          <script src="https://js.tosspayments.com/v1/payment-widget"></script>
+        </head>
+        <body>
+          <div style="padding: 20px; text-align: center;">
+            <h3>결제 처리 중...</h3>
+            <p>잠시만 기다려주세요.</p>
+          </div>
+          <script>
+            const toss = TossPayments('${tossInstance.clientKey || 'test_ck_XYYkKL4MrjOZ7aZv4w0W80zJwlEWo'}');
+            const paymentInfo = JSON.parse(localStorage.getItem('pendingTossPayment'));
+            
+            if (paymentInfo) {
+              toss.requestPayment(paymentInfo.method, paymentInfo.options);
+            }
+          </script>
+        </body>
+        </html>
+      `);
+
+      // 팝업창 메시지 리스너
+      const messageHandler = (event) => {
+        if (event.data && event.data.type === 'PAYMENT_SUCCESS') {
+          window.removeEventListener('message', messageHandler);
+          popup.close();
+          localStorage.removeItem('pendingTossPayment');
+          resolve({ success: true, completed: true });
+        }
+      };
+
+      window.addEventListener('message', messageHandler);
+
+      // 팝업창 닫힘 감지
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', messageHandler);
+          localStorage.removeItem('pendingTossPayment');
+          reject(new Error('결제창이 닫혔습니다.'));
+        }
+      }, 1000);
+
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 // 전역 함수로 등록
