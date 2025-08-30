@@ -1,4 +1,3 @@
-
 // POS 시스템 상태 (OKPOS 구조 기반)
 let currentStore = null;
 let currentTable = null;
@@ -16,7 +15,7 @@ let currentInput = '';
 // 카테고리별 색상 코드 (실제 POS 서비스 기준)
 const CATEGORY_COLORS = {
   '커피': '#8B4513',
-  '디저트': '#FF69B4', 
+  '디저트': '#FF69B4',
   '치킨': '#FFA500',
   '피자': '#DC143C',
   '버거': '#228B22',
@@ -171,7 +170,7 @@ async function renderTableMap() {
       try {
         const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${table.tableNumber}/all-orders`);
         const data = await response.json();
-        
+
         if (data.success && data.currentSession) {
           return {
             ...table,
@@ -282,7 +281,7 @@ async function selectTableFromMap(tableNumber) {
 async function loadTableSession(tableNumber) {
   try {
     console.log(`🔄 테이블 ${tableNumber} 세션 로드 시작`);
-    
+
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
     const data = await response.json();
 
@@ -329,14 +328,14 @@ function updateOrderStatus(statusText, statusType) {
 
   if (statusIndicator && statusTextElement) {
     statusTextElement.textContent = statusText;
-    
+
     // 상태별 색상
     const colors = {
       'available': '#10b981',
       'ordering': '#f59e0b',
       'payment': '#ef4444'
     };
-    
+
     statusIndicator.style.background = colors[statusType] || '#6b7280';
   }
 }
@@ -352,7 +351,7 @@ function renderMenuCategories() {
     const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.default;
 
     return `
-      <button class="category-tab ${isActive ? 'active' : ''}" 
+      <button class="category-tab ${isActive ? 'active' : ''}"
               onclick="selectCategory('${categoryKey}')"
               style="${isActive ? `background: ${color}; color: white; border-color: ${color};` : `border-color: ${color}; color: ${color};`}">
         ${category}
@@ -487,7 +486,7 @@ function renderOrderItems() {
     const isSelected = window.selectedItems.includes(item.id);
     const orderType = item.isTLLOrder ? 'TLL' : 'POS';
     const typeClass = item.isTLLOrder ? 'type-tll' : 'type-pos';
-    
+
     return `
       <div class="order-item-row ${isSelected ? 'selected' : ''} ${item.isTLLOrder ? 'tll-item' : 'pos-item'}" onclick="toggleItemSelection(${item.id})">
         <div class="item-type">
@@ -542,7 +541,7 @@ function deleteSelectedItems() {
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
-    
+
     if (window.currentOrder.length === 0) {
       updateOrderStatus('새 주문', 'available');
     }
@@ -564,7 +563,7 @@ function applyDiscount() {
         item.discount = discount;
       }
     });
-    
+
     renderOrderItems();
     renderPaymentSummary();
     showPOSNotification(`₩${discount.toLocaleString()} 할인이 적용되었습니다.`);
@@ -614,7 +613,7 @@ function renderPaymentSummary() {
 async function loadMixedTableOrders(tableNumber) {
   try {
     console.log(`🔄 테이블 ${tableNumber} POS+TLL 주문 통합 로드`);
-    
+
     // 기존 POS 세션 로드
     const posResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
     const posData = await posResponse.json();
@@ -645,7 +644,7 @@ async function loadMixedTableOrders(tableNumber) {
       const tllItems = tllData.tllOrders.flatMap((order, orderIndex) => {
         const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
         const items = orderData?.items || [];
-        
+
         return items.map((item, itemIndex) => ({
           id: `tll-${orderIndex}-${itemIndex}`,
           name: item.name,
@@ -664,7 +663,7 @@ async function loadMixedTableOrders(tableNumber) {
     }
 
     console.log(`✅ 테이블 ${tableNumber} 통합 주문 로드 완료: POS ${posData.currentSession?.items?.length || 0}개, TLL ${tllData.tllOrders?.length || 0}개`);
-    
+
   } catch (error) {
     console.error('❌ 통합 주문 로드 실패:', error);
     window.currentOrder = [];
@@ -679,9 +678,11 @@ function updateButtonStates() {
   // 주문 액션 버튼들
   const holdBtn = document.querySelector('.hold-btn');
   const clearBtn = document.querySelector('.clear-btn');
+  const orderBtn = document.querySelector('.primary-order-btn');
 
   if (holdBtn) holdBtn.disabled = !hasItems;
   if (clearBtn) clearBtn.disabled = !hasItems;
+  if (orderBtn) orderBtn.disabled = !hasItems;
 
   // 결제 버튼들
   const paymentButtons = document.querySelectorAll('.payment-btn');
@@ -753,7 +754,7 @@ async function processPayment(paymentMethod) {
     // 성공 처리
     const totalAmount = orderData.totalAmount;
     const methodName = getPaymentMethodName(paymentMethod);
-    
+
     showPOSNotification(`💳 ${methodName} 결제 완료: ₩${totalAmount.toLocaleString()}`);
 
     // 2초 후 테이블맵으로 자동 복귀
@@ -769,6 +770,68 @@ async function processPayment(paymentMethod) {
     isOrderProcessing = false;
   }
 }
+
+// 주문을 주방으로 저장 (새로 추가된 함수)
+async function saveOrderToKitchen() {
+  if (isOrderProcessing) return;
+  if (window.currentOrder.length === 0) {
+    showPOSNotification('주문할 항목이 없습니다.', 'warning');
+    return;
+  }
+  if (!window.currentTable) {
+    showPOSNotification('테이블을 선택해야 합니다.', 'warning');
+    return;
+  }
+
+  isOrderProcessing = true;
+  updateOrderStatus('주문 저장 중', 'ordering');
+
+  try {
+    console.log(`📋 테이블 ${window.currentTable} 주문 저장 시작`);
+
+    // 주문 데이터 구성
+    const orderData = {
+      storeId: window.currentStore.id,
+      storeName: window.currentStore.name,
+      tableNumber: window.currentTable,
+      items: window.currentOrder.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        note: item.note
+      })),
+      isTLLOrder: false // 이 함수는 OKPOS 주문만 처리
+    };
+
+    // API 호출: 주문 저장
+    const response = await fetch('/api/pos/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      showPOSNotification('주문이 성공적으로 저장되었습니다.');
+      updateOrderStatus('주문 완료', 'available'); // 주문 완료 후 상태 변경
+      // 주문이 저장되면 테이블맵으로 돌아감
+      setTimeout(() => {
+        returnToTableMap();
+      }, 1500);
+    } else {
+      throw new Error(result.error || '주문 저장 실패');
+    }
+
+  } catch (error) {
+    console.error('❌ 주문 저장 실패:', error);
+    showPOSNotification(`주문 저장 실패: ${error.message}`, 'error');
+    updateOrderStatus('주문 실패', 'ordering'); // 주문 실패 시 상태 업데이트
+  } finally {
+    isOrderProcessing = false;
+  }
+}
+
 
 // 결제 방법 이름 변환
 function getPaymentMethodName(method) {
@@ -932,3 +995,4 @@ window.showDeliveryOrders = showDeliveryOrders;
 window.showDailyStats = showDailyStats;
 window.showKitchenStatus = showKitchenStatus;
 window.showPOSSettings = showPOSSettings;
+window.saveOrderToKitchen = saveOrderToKitchen; // saveOrderToKitchen 함수 전역으로 노출

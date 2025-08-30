@@ -1,4 +1,3 @@
-
 // POS 레이아웃 관리 모듈 (OKPOS 구조 기반 상용 서비스)
 function renderPOSLayout() {
   const main = document.getElementById('main');
@@ -53,7 +52,7 @@ function renderPOSLayout() {
                 </div>
               </div>
             </div>
-            
+
             <div class="table-map-grid" id="tableMapGrid">
               <!-- 테이블 배치도가 여기에 표시 -->
             </div>
@@ -130,7 +129,7 @@ function renderPOSLayout() {
                     </button>
                   </div>
                 </div>
-                
+
                 <div class="order-items-container">
                   <div class="order-items-header">
                     <div class="header-col item-type">구분</div>
@@ -140,7 +139,7 @@ function renderPOSLayout() {
                     <div class="header-col item-discount">할인</div>
                     <div class="header-col item-total">금액</div>
                   </div>
-                  
+
                   <div class="order-items-list" id="orderItemsList">
                     <div class="empty-order">
                       <div class="empty-icon">📝</div>
@@ -203,10 +202,15 @@ function renderPOSLayout() {
                   <button class="payment-btn mobile-btn" onclick="processPayment('MOBILE')" disabled>
                     📱 간편결제
                   </button>
-                  <button class="payment-btn tl-btn" onclick="processPayment('TL_PAY')" disabled>
-                    🔵 TL Pay
-                  </button>
+                  <!-- TL Pay 버튼 삭제 -->
                 </div>
+              </div>
+
+              <!-- 주문 저장 및 테이블맵 이동 버튼 -->
+              <div class="order-action-section">
+                <button class="order-btn primary-order-btn" onclick="saveOrderAndGoToMap()">
+                  ✅ 주문 저장 및 테이블맵 이동
+                </button>
               </div>
 
               <!-- 보조 기능 버튼 -->
@@ -1027,8 +1031,11 @@ function renderPOSLayout() {
       }
 
       .payment-btn:disabled {
-        opacity: 0.5;
+        background: #f1f5f9;
+        color: #94a3b8;
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
 
       .card-btn {
@@ -1058,13 +1065,43 @@ function renderPOSLayout() {
         transform: translateY(-2px);
       }
 
-      .tl-btn {
-        background: #1e40af;
+      /* 주문 버튼 스타일 추가 */
+      .order-action-section {
+        margin-bottom: 20px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
       }
 
-      .tl-btn:not(:disabled):hover {
-        background: #1e3a8a;
+      .order-btn {
+        width: 100%;
+        padding: 16px 24px;
+        border: none;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: none;
+      }
+
+      .primary-order-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+      }
+
+      .primary-order-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669, #047857);
         transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+      }
+
+      .order-btn:disabled {
+        background: #f1f5f9;
+        color: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
       }
 
       /* 보조 기능 패널 */
@@ -1118,7 +1155,7 @@ function renderPOSLayout() {
         .table-map-view {
           grid-template-columns: 1fr 280px;
         }
-        
+
         .table-map-grid {
           grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
           gap: 16px;
@@ -1138,14 +1175,14 @@ function renderPOSLayout() {
           grid-template-columns: 1fr;
           grid-template-rows: 1fr auto;
         }
-        
+
         .side-panel {
           max-height: 200px;
           flex-direction: row;
           gap: 16px;
           overflow-x: auto;
         }
-        
+
         .panel-section {
           min-width: 200px;
         }
@@ -1166,7 +1203,7 @@ function renderPOSLayout() {
           gap: 12px;
           align-items: flex-start;
         }
-        
+
         .header-center {
           display: none;
         }
@@ -1199,7 +1236,7 @@ function updateCurrentTime() {
   const timeElement = document.getElementById('currentTime');
   if (timeElement) {
     const now = new Date();
-    const timeString = now.toLocaleTimeString('ko-KR', { 
+    const timeString = now.toLocaleTimeString('ko-KR', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
@@ -1216,8 +1253,18 @@ function logoutPOS() {
   }
 }
 
+// 주문 저장 및 테이블맵으로 이동하는 함수
+function saveOrderAndGoToMap() {
+  // TODO: 실제 주문 저장 로직 구현 (API 호출 등)
+  console.log('주문이 저장되었습니다.');
+  // 테이블맵 화면으로 전환
+  document.getElementById('orderView').classList.add('hidden');
+  document.getElementById('tableMapView').classList.remove('hidden');
+}
+
 // 전역 함수로 노출
 window.renderPOSLayout = renderPOSLayout;
 window.logoutPOS = logoutPOS;
+window.saveOrderAndGoToMap = saveOrderAndGoToMap;
 
 module.exports = { renderPOSLayout };
