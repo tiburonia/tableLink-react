@@ -1587,3 +1587,5 @@ window.processComboPayment = processComboPayment;
 window.toggleAdvancedPanel = toggleAdvancedPanel;
 window.holdCurrentOrder = holdCurrentOrder;
 window.voidOrder = voidOrder;
+
+console.log('✅ renderPOS.js 모듈 로드 완료');
