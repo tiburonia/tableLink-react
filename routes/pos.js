@@ -376,7 +376,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       LIMIT 5
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    // 응답 데이터 구성
+    // 응답 데이터 구성 (TLL 주문은 별도 처리)
     const currentSession = openSessionResponse.rows.length > 0 ? {
       orderId: openSessionResponse.rows[0].order_id,
       customerName: openSessionResponse.rows[0].customer_name,
@@ -390,7 +390,8 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
         quantity: item.quantity,
         price: item.price,
         cookingStatus: item.cooking_status,
-        addedAt: item.created_at
+        addedAt: item.created_at,
+        source: 'POS'
       }))
     } : null;
 
