@@ -1,4 +1,4 @@
-// POS 시스템 상태 (OKPOS 구조 기반)
+// POS 시스템 상태 (임시 세션 로직 포함)
 let currentStore = null;
 let currentTable = null;
 let allMenus = [];
@@ -498,17 +498,6 @@ function addMenuToOrder(menuName, price) {
     renderPaymentSummary();
     updateButtonStates();
     updateSessionStatusUI();
-
-    // 시각적 피드백
-    if (event && event.target) {
-      const button = event.target.closest('.menu-item-btn');
-      if (button) {
-        button.classList.add('menu-added-animation');
-        setTimeout(() => {
-          button.classList.remove('menu-added-animation');
-        }, 600);
-      }
-    }
 
     console.log(`✅ 임시 세션 상태 (테이블 ${window.currentTable}):`, window.tempSessionOrder);
     

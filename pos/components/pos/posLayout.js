@@ -1850,5 +1850,3 @@ window.renderPOSLayout = renderPOSLayout;
 window.logoutPOS = logoutPOS;
 window.saveOrderAndGoToMap = saveOrderAndGoToMap;
 window.handlePrimaryAction = handlePrimaryAction;
-
-module.exports = { renderPOSLayout };
