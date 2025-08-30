@@ -492,39 +492,82 @@ router.post('/stores/:storeId/table/:tableNumber/card-payment', async (req, res)
   }
 });
 
-// VAN사 샌드박스 결제 시뮬레이션
+// VAN사 샌드박스 결제 시뮬레이션 (확장 버전)
 function simulateVANPayment({ amount, cardNumber, expiryDate, cvc }) {
   console.log('🏦 VAN사 샌드박스 결제 시뮬레이션 시작:', {
     amount: `₩${amount.toLocaleString()}`,
-    cardNumber: `****-****-****-${cardNumber.slice(-4)}`
+    cardNumber: `****-****-****-${cardNumber.slice(-4)}`,
+    expiryDate: expiryDate,
+    cvc: '***'
   });
+
+  // 카드 번호 유효성 검사
+  if (!cardNumber || cardNumber.length < 13) {
+    return {
+      success: false,
+      error: '유효하지 않은 카드 번호',
+      errorCode: 'INVALID_CARD_NUMBER'
+    };
+  }
+
+  // 만료일 검사 (MM/YY 형식)
+  if (!expiryDate || !/^\d{2}\/\d{2}$/.test(expiryDate)) {
+    return {
+      success: false,
+      error: '유효하지 않은 만료일 형식',
+      errorCode: 'INVALID_EXPIRY_DATE'
+    };
+  }
+
+  // CVC 검사
+  if (!cvc || cvc.length < 3) {
+    return {
+      success: false,
+      error: '유효하지 않은 CVC',
+      errorCode: 'INVALID_CVC'
+    };
+  }
 
   // 테스트 카드 번호별 결과 시뮬레이션
   const testCards = {
     '4111111111111111': { company: 'VISA', success: true },
+    '4000111111111115': { company: 'VISA', success: true },
     '5555555555554444': { company: 'MASTERCARD', success: true },
+    '5105105105105100': { company: 'MASTERCARD', success: true },
+    '374245455400001': { company: 'AMEX', success: true },
     '4000000000000002': { company: 'VISA', success: false, error: '카드 거절됨', code: 'CARD_DECLINED' },
-    '4000000000000119': { company: 'VISA', success: false, error: '잔액 부족', code: 'INSUFFICIENT_FUNDS' }
+    '4000000000000119': { company: 'VISA', success: false, error: '잔액 부족', code: 'INSUFFICIENT_FUNDS' },
+    '4000000000000127': { company: 'VISA', success: false, error: '승인 거절', code: 'AUTHORIZATION_DECLINED' },
+    '4000000000000069': { company: 'VISA', success: false, error: '만료된 카드', code: 'EXPIRED_CARD' }
   };
 
   const cardInfo = testCards[cardNumber] || { company: 'UNKNOWN', success: true };
+
+  // 처리 지연 시뮬레이션 (실제 VAN사 응답 시간 모방)
+  const processingDelay = Math.random() * 1000 + 500; // 0.5~1.5초
 
   if (!cardInfo.success) {
     return {
       success: false,
       error: cardInfo.error,
-      errorCode: cardInfo.code
+      errorCode: cardInfo.code,
+      processingTime: Math.round(processingDelay)
     };
   }
 
   // 성공 응답 생성
-  const approvalNumber = `TEST${Date.now().toString().slice(-6)}`;
+  const approvalNumber = `VAN${Date.now().toString().slice(-6)}`;
+  const transactionId = `TXN${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
   
   return {
     success: true,
     approvalNumber: approvalNumber,
+    transactionId: transactionId,
     cardCompany: cardInfo.company,
-    acquirer: 'TEST_ACQUIRER',
+    acquirer: 'SANDBOX_ACQUIRER',
+    merchantId: 'TLINK_MERCHANT',
+    terminalId: `POS_${storeId}`,
+    processingTime: Math.round(processingDelay),
     timestamp: new Date().toISOString()
   };
 }
@@ -636,6 +679,189 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       success: false,
       error: '테이블 주문 조회 실패'
     });
+  }
+});
+
+// POS VAN사 샌드박스 카드 결제 처리 (프론트엔드용)
+router.post('/stores/:storeId/table/:tableNumber/van-card-payment', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { storeId, tableNumber } = req.params;
+    const { amount, cardNumber, expiryDate, cvc } = req.body;
+
+    console.log(`💳 POS VAN사 샌드박스 카드 결제 UI (테이블 ${tableNumber}):`, {
+      amount: `₩${amount.toLocaleString()}`,
+      cardNumber: `****-****-****-${cardNumber.slice(-4)}`,
+      test: true
+    });
+
+    await client.query('BEGIN');
+
+    // 1. 현재 OPEN 상태인 테이블 세션 확인
+    const sessionResult = await client.query(`
+      SELECT id, total_amount, customer_name, session_started_at
+      FROM orders
+      WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '결제할 활성 주문 세션이 없습니다'
+      });
+    }
+
+    const session = sessionResult.rows[0];
+
+    // 금액 검증
+    if (Math.abs(amount - session.total_amount) > 1) {
+      return res.status(400).json({
+        success: false,
+        error: `결제 금액 불일치 (세션: ₩${session.total_amount.toLocaleString()}, 요청: ₩${amount.toLocaleString()})`
+      });
+    }
+
+    // 2. VAN사 샌드박스 결제 시뮬레이션
+    const vanResponse = simulateVANPayment({
+      amount: amount,
+      cardNumber: cardNumber,
+      expiryDate: expiryDate,
+      cvc: cvc
+    });
+
+    if (!vanResponse.success) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        error: `카드 결제 실패: ${vanResponse.error}`,
+        errorCode: vanResponse.errorCode,
+        vanResponse: vanResponse
+      });
+    }
+
+    console.log(`✅ VAN사 샌드박스 결제 승인: ${vanResponse.approvalNumber}`);
+
+    // 3. 주문/결제 완료 처리 (기존 로직 사용)
+    const orderId = session.id;
+    const totalAmount = session.total_amount;
+
+    const itemsResult = await client.query(`
+      SELECT menu_name, quantity, price
+      FROM order_items
+      WHERE order_id = $1
+    `, [orderId]);
+
+    const orderItems = itemsResult.rows.map(item => ({
+      name: item.menu_name,
+      quantity: item.quantity,
+      price: item.price
+    }));
+
+    const paidOrderResult = await client.query(`
+      INSERT INTO paid_orders (
+        user_id, guest_phone, store_id, table_number, 
+        order_data, original_amount, final_amount, order_source,
+        payment_status, payment_method, payment_date, payment_reference
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, $11)
+      RETURNING id
+    `, [
+      'pos-user',
+      null,
+      parseInt(storeId),
+      parseInt(tableNumber),
+      JSON.stringify({
+        items: orderItems,
+        sessionId: orderId,
+        customerName: session.customer_name,
+        sessionStarted: session.session_started_at
+      }),
+      totalAmount,
+      totalAmount,
+      'POS',
+      'completed',
+      'CARD',
+      JSON.stringify({
+        provider: 'VAN_SANDBOX',
+        approvalNumber: vanResponse.approvalNumber,
+        cardCompany: vanResponse.cardCompany,
+        cardNumber: `****-****-****-${cardNumber.slice(-4)}`,
+        installment: 0,
+        acquirer: 'TEST_ACQUIRER',
+        transactionId: vanResponse.transactionId
+      })
+    ]);
+
+    const paidOrderId = paidOrderResult.rows[0].id;
+
+    // 세션 완료 처리
+    await client.query(`
+      UPDATE orders 
+      SET cooking_status = 'CLOSED',
+          paid_order_id = $1,
+          completed_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [paidOrderId, orderId]);
+
+    await client.query(`
+      UPDATE order_items 
+      SET cooking_status = 'COMPLETED',
+          completed_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1
+    `, [orderId]);
+
+    // 테이블 해제
+    await client.query(`
+      UPDATE store_tables 
+      SET is_occupied = false, 
+          occupied_since = NULL,
+          auto_release_source = NULL
+      WHERE store_id = $1 AND table_number = $2
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    await client.query('COMMIT');
+
+    // 실시간 업데이트
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcast(storeId, 'van-card-payment-completed', {
+        orderId: orderId,
+        paidOrderId: paidOrderId,
+        tableNumber: parseInt(tableNumber),
+        vanResponse: vanResponse,
+        totalAmount: totalAmount,
+        timestamp: new Date().toISOString()
+      });
+
+      global.posWebSocket.broadcastTableUpdate(storeId, {
+        tableNumber: parseInt(tableNumber),
+        isOccupied: false,
+        source: 'VAN_CARD_PAYMENT'
+      });
+    }
+
+    res.json({
+      success: true,
+      sessionId: orderId,
+      paidOrderId: paidOrderId,
+      paymentMethod: 'CARD',
+      totalAmount: totalAmount,
+      vanResponse: {
+        approvalNumber: vanResponse.approvalNumber,
+        cardCompany: vanResponse.cardCompany,
+        cardNumber: `****-****-****-${cardNumber.slice(-4)}`,
+        transactionId: vanResponse.transactionId
+      },
+      message: `테이블 ${tableNumber} VAN 카드 결제가 성공적으로 완료되었습니다`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS VAN 카드 결제 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS VAN 카드 결제 처리 실패: ' + error.message
+    });
+  } finally {
+    client.release();
   }
 });
 
