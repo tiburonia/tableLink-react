@@ -979,15 +979,32 @@ function renderPOSLayout() {
         max-height: 100%;
       }
 
+      .right-column::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .right-column::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+      }
+
+      .right-column::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      .right-column::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+
       /* 메뉴 선택 패널 */
       .menu-selection-panel {
         background: white;
-        flex: 1;
+        flex: none;
         display: flex;
         flex-direction: column;
-        min-height: 450px;
         border-radius: 8px;
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
 
@@ -1087,9 +1104,8 @@ function renderPOSLayout() {
       }
 
       .menu-grid-container {
-        flex: 1;
         padding: 20px;
-        overflow-y: auto;
+        overflow: visible;
       }
 
       .menu-grid {
