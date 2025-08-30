@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../shared/config/database');
@@ -119,6 +118,46 @@ router.get('/stores/:storeId/tables', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '테이블 조회 실패'
+    });
+  }
+});
+
+// 테이블의 TLL 주문 조회 (POS용)
+router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    console.log(`🔍 POS - 테이블 ${tableNumber} TLL 주문 조회 (매장 ${storeId})`);
+
+    // 최근 2시간 내 완료된 TLL 주문 조회
+    const result = await pool.query(`
+      SELECT 
+        o.id,
+        o.order_date,
+        o.customer_name,
+        o.order_data,
+        o.total_amount
+      FROM orders o
+      WHERE o.store_id = $1 
+        AND o.table_number = $2 
+        AND o.is_tll_order = true
+        AND o.payment_status = 'COMPLETED'
+        AND o.order_date >= NOW() - INTERVAL '2 hours'
+      ORDER BY o.order_date DESC
+      LIMIT 10
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    console.log(`✅ 테이블 ${tableNumber} TLL 주문 조회 완료: ${result.rows.length}개`);
+
+    res.json({
+      success: true,
+      tllOrders: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 주문 조회 실패'
     });
   }
 });
@@ -558,7 +597,7 @@ function simulateVANPayment({ amount, cardNumber, expiryDate, cvc }) {
   // 성공 응답 생성
   const approvalNumber = `VAN${Date.now().toString().slice(-6)}`;
   const transactionId = `TXN${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-  
+
   return {
     success: true,
     approvalNumber: approvalNumber,
@@ -920,7 +959,7 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
 
     const memberResult = await pool.query(memberOrdersQuery, [parseInt(storeId), parseInt(tableNumber)]);
     const guestResult = await pool.query(guestOrdersQuery, [parseInt(storeId), parseInt(tableNumber)]);
-    
+
     const allResults = [...memberResult.rows, ...guestResult.rows]
       .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date))
       .slice(0, 1);
@@ -1024,7 +1063,7 @@ router.get('/stores/:storeId/stats', async (req, res) => {
 router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res) => {
   try {
     const { storeId, tableNumber } = req.params;
-    
+
     console.log(`🔍 테이블 ${tableNumber} 세션 상태 검증 (매장 ${storeId})`);
 
     // 1. 현재 활성 세션 조회
@@ -1060,7 +1099,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
     // 3. 세션 분석
     const hasActiveSession = activeSessionResult.rows.length > 0;
     const hasMultipleSessions = recentSessionsResult.rows.length > 1;
-    
+
     let sessionInfo = null;
     let conflictingSessions = [];
 
@@ -1079,7 +1118,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
       const maxDuration = 4 * 60 * 60 * 1000; // 4시간
       if (sessionInfo.duration > maxDuration) {
         console.log(`⏰ 테이블 ${tableNumber} 세션 만료 감지`);
-        
+
         // 만료된 세션 자동 종료
         await pool.query(`
           UPDATE orders 
@@ -1177,7 +1216,7 @@ router.post('/stores/:storeId/table/:tableNumber/sync-session', async (req, res)
       // 2. 충돌 감지 및 해결
       if (serverUpdateTime > clientSyncTime) {
         console.log(`⚠️ 세션 충돌 감지 - 서버: ${serverUpdateTime}, 클라이언트: ${clientSyncTime}`);
-        
+
         // 서버 데이터 우선 (Last Write Wins)
         syncResult.action = 'server_wins';
         syncResult.serverSession = {
@@ -1664,7 +1703,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment-partial', async (req, r
     await client.query('BEGIN');
 
     // 1. 세션 확인
-    const sessionResult = await client.query(`
+    const sessionResult = await pool.query(`
       SELECT id, total_amount, customer_name, order_data
       FROM orders
       WHERE id = $1 AND store_id = $2 AND table_number = $3 AND cooking_status = 'OPEN'

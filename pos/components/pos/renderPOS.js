@@ -26,6 +26,11 @@ let soundSettings = {
 }; // 사운드 설정
 let autoRefreshInterval = null; // 자동 새로고침 인터벌
 
+// 고유 주문 아이템 ID 생성 함수
+function generateOrderItemId() {
+  return `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 // 카테고리별 색상 코드 (실제 POS 서비스 기준)
 const CATEGORY_COLORS = {
   '커피': '#8B4513',
@@ -55,10 +60,13 @@ async function renderPOS() {
     window.allMenus = [];
     window.allTables = [];
     window.currentOrder = [];
+    window.pendingOrder = [];
+    window.confirmedOrder = [];
     window.selectedItems = [];
     window.currentView = 'table-map';
     window.inputMode = 'quantity';
     window.currentInput = '';
+    window.hasUnconfirmedChanges = false;
 
     // 기본 UI 렌더링
     renderPOSLayout();
@@ -429,9 +437,15 @@ function addMenuToOrder(menuName, price) {
     return;
   }
 
-  // 전역 변수 초기화 확인
-  if (!window.pendingOrder) {
+  // 전역 변수 안전성 초기화
+  if (!window.pendingOrder || !Array.isArray(window.pendingOrder)) {
     window.pendingOrder = [];
+  }
+  if (!window.confirmedOrder || !Array.isArray(window.confirmedOrder)) {
+    window.confirmedOrder = [];
+  }
+  if (!window.currentOrder || !Array.isArray(window.currentOrder)) {
+    window.currentOrder = [];
   }
 
   try {
@@ -946,10 +960,13 @@ function returnToTableMap() {
 
   window.currentView = 'table-map';
   window.currentTable = null;
+  
+  // 배열 안전 초기화
   window.currentOrder = [];
   window.pendingOrder = [];
   window.confirmedOrder = [];
   window.selectedItems = [];
+  
   window.hasUnconfirmedChanges = false;
   selectedCategory = 'all';
   window.currentInput = '';
@@ -1223,6 +1240,23 @@ function updateButtonStates() {
   }
 }
 
+// Primary Action 버튼 클릭 핸들러
+function handlePrimaryAction() {
+  const hasUnconfirmed = window.hasUnconfirmedChanges || (window.pendingOrder && window.pendingOrder.length > 0);
+  const hasConfirmedItems = window.confirmedOrder && window.confirmedOrder.length > 0;
+
+  if (hasUnconfirmed) {
+    // 미확정 주문이 있는 경우 - 주문 확정 처리
+    confirmPendingOrder();
+  } else if (hasConfirmedItems) {
+    // 확정된 주문만 있는 경우 - 테이블맵으로 이동
+    returnToTableMap();
+  } else {
+    // 주문이 없는 경우
+    showPOSNotification('주문할 메뉴를 선택해주세요.', 'warning');
+  }
+}
+
 // 전역 함수로 노출
 window.renderPOS = renderPOS;
 window.selectTableFromMap = selectTableFromMap;
@@ -1251,6 +1285,7 @@ window.showKitchenStatus = showKitchenStatus;
 window.showPOSSettings = showPOSSettings;
 window.saveOrderToKitchen = saveOrderToKitchen;
 window.confirmPendingOrder = confirmPendingOrder;
+window.handlePrimaryAction = handlePrimaryAction;
 
 // 새로 추가된 함수들
 window.searchMenus = searchMenus;

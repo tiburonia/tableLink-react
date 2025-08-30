@@ -188,13 +188,13 @@ function renderPOSLayout() {
                     <div class="search-icon">🔍</div>
                   </div>
                 </div>
-                
+
                 <div class="category-tabs-container">
                   <div class="category-tabs" id="categoryTabs">
                     <!-- 카테고리 탭들 -->
                   </div>
                 </div>
-                
+
                 <div class="menu-grid-container">
                   <div class="menu-grid" id="menuGrid">
                     <!-- 메뉴 버튼들 -->
@@ -204,10 +204,10 @@ function renderPOSLayout() {
 
               <!-- 액션 버튼들 그룹 -->
               <div class="action-panels-container">
-                
+
                 <!-- 주문 확정 버튼 (가장 중요한 액션) -->
                 <div class="primary-action-panel">
-                  <button class="primary-action-btn" onclick="handlePrimaryAction()" disabled>
+                  <button class="primary-action-btn" onclick="handlePrimaryAction()">
                     <div class="btn-icon">📋</div>
                     <div class="btn-content">
                       <div class="btn-title">주문 확정</div>
@@ -230,7 +230,7 @@ function renderPOSLayout() {
                         <span class="payment-desc">IC/MS</span>
                       </div>
                     </button>
-                    
+
                     <button class="payment-btn cash-payment" onclick="processPayment('CASH')" disabled>
                       <div class="payment-icon">💵</div>
                       <div class="payment-text">
@@ -238,7 +238,7 @@ function renderPOSLayout() {
                         <span class="payment-desc">직접결제</span>
                       </div>
                     </button>
-                    
+
                     <button class="payment-btn mobile-payment" onclick="processPayment('MOBILE')" disabled>
                       <div class="payment-icon">📱</div>
                       <div class="payment-text">
@@ -246,7 +246,7 @@ function renderPOSLayout() {
                         <span class="payment-desc">QR/NFC</span>
                       </div>
                     </button>
-                    
+
                     <button class="payment-btn combo-payment" onclick="processComboPayment()" disabled>
                       <div class="payment-icon">🔄</div>
                       <div class="payment-text">
@@ -270,37 +270,37 @@ function renderPOSLayout() {
                       <div class="advanced-icon">🎫</div>
                       <span>쿠폰</span>
                     </button>
-                    
+
                     <button class="advanced-btn points-btn" onclick="applyTLPoints()">
                       <div class="advanced-icon">⭐</div>
                       <span>포인트</span>
                     </button>
-                    
+
                     <button class="advanced-btn tll-btn" onclick="checkTLLOrder()">
                       <div class="advanced-icon">📱</div>
                       <span>TLL연동</span>
                     </button>
-                    
+
                     <button class="advanced-btn kitchen-btn" onclick="sendToKitchen()">
                       <div class="advanced-icon">🍳</div>
                       <span>주방전송</span>
                     </button>
-                    
+
                     <button class="advanced-btn receipt-btn" onclick="printReceipt()">
                       <div class="advanced-icon">🖨️</div>
                       <span>영수증</span>
                     </button>
-                    
+
                     <button class="advanced-btn sales-btn" onclick="showDailySales()">
                       <div class="advanced-icon">📊</div>
                       <span>정산</span>
                     </button>
-                    
+
                     <button class="advanced-btn hold-btn" onclick="holdCurrentOrder()">
                       <div class="advanced-icon">⏸️</div>
                       <span>보류</span>
                     </button>
-                    
+
                     <button class="advanced-btn void-btn" onclick="voidOrder()">
                       <div class="advanced-icon">❌</div>
                       <span>취소</span>
@@ -1589,7 +1589,6 @@ function renderPOSLayout() {
         font-weight: 600;
         z-index: 1000;
         display: none;
-        animation: pulse 2s infinite;
       }
 
       .realtime-indicator.active {
