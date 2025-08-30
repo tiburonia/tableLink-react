@@ -928,6 +928,9 @@ async function confirmPendingOrder() {
       return;
     }
 
+    // 총 금액 계산
+    const totalAmount = window.pendingOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
     // 주문 데이터 구성 (임시 주문만)
     const orderData = {
       storeId: window.currentStore.id,
@@ -939,6 +942,7 @@ async function confirmPendingOrder() {
         quantity: item.quantity,
         note: item.note
       })),
+      totalAmount: totalAmount,
       isTLLOrder: false
     };
 
