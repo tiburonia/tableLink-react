@@ -1,11 +1,11 @@
 
-// POS 레이아웃 관리 모듈
+// POS 레이아웃 관리 모듈 (상용 서비스 기준 리팩토링)
 function renderPOSLayout() {
   const main = document.getElementById('main');
 
   main.innerHTML = `
     <div class="pos-container">
-      <!-- 상단 헤더 바 -->
+      <!-- 상단 간소화된 헤더 -->
       <header class="pos-header">
         <div class="header-left">
           <h1 class="pos-logo">🍽️ TableLink POS</h1>
@@ -15,128 +15,119 @@ function renderPOSLayout() {
         </div>
 
         <div class="header-center">
-          <div class="search-bar">
-            <input type="text" placeholder="테이블/주문번호 검색..." id="searchInput" />
-            <button class="search-btn">🔍</button>
+          <div class="table-selector">
+            <button class="table-btn" onclick="showTableSelector()">
+              📍 테이블 <span id="currentTableNumber">선택</span>
+            </button>
           </div>
         </div>
 
         <div class="header-right">
-          <button class="header-btn notification-btn" title="알림">
-            🔔
-            <span class="notification-badge">3</span>
-          </button>
           <div class="sync-status">
-            <span class="sync-time" id="syncTime">연결 중...</span>
-            <div class="sync-indicator" id="syncIndicator"></div>
+            <span class="sync-indicator" id="syncIndicator"></span>
+            <span class="sync-text" id="syncTime">연결 중...</span>
           </div>
-          <div class="home-mode-toggle">
-            <button class="mode-btn ${window.homeMode === 'table_map' ? 'active' : ''}" onclick="switchHomeMode('table_map')">
-              🗺️ 테이블 맵
-            </button>
-            <button class="mode-btn ${window.homeMode === 'order_list' ? 'active' : ''}" onclick="switchHomeMode('order_list')">
-              📋 주문 리스트
-            </button>
-          </div>
+          <button class="header-btn stats-btn" onclick="showDailySummary()">
+            📊 오늘매출
+          </button>
         </div>
       </header>
 
-      <!-- 메인 컨텐츠 영역 -->
-      <div class="pos-main">
-        <!-- 테이블 맵 모드 -->
-        <div id="tableMapMode" class="home-mode ${window.homeMode === 'table_map' ? 'active' : ''}">
-          <main class="table-map-container">
-            <div class="table-map" id="tableMap">
-              <div class="map-grid" id="mapGrid">
-                <!-- 테이블들이 여기에 동적으로 생성됩니다 -->
-              </div>
-            </div>
-          </main>
+      <!-- 메인 POS 작업 영역 (3분할) -->
+      <div class="pos-workspace">
+        <!-- 좌측: 메뉴 카테고리 & 상품 -->
+        <section class="menu-section">
+          <div class="category-tabs" id="categoryTabs">
+            <!-- 카테고리 탭들이 여기에 표시 -->
+          </div>
+          <div class="menu-grid" id="menuGrid">
+            <!-- 메뉴 버튼들이 여기에 표시 -->
+          </div>
+        </section>
 
-          <!-- 우측 세부 패널 -->
-          <aside class="detail-panel" id="detailPanel">
-            <div class="panel-header">
-              <h3 id="panelTitle">테이블을 선택하세요</h3>
-              <button class="panel-close" onclick="closeDetailPanel()">✕</button>
+        <!-- 중앙: 주문 내역 패널 -->
+        <section class="order-panel">
+          <div class="order-header">
+            <h3>📦 주문 내역</h3>
+            <div class="order-controls">
+              <button class="control-btn hold-btn" onclick="holdCurrentOrder()" disabled>
+                ⏸️ 보류
+              </button>
+              <button class="control-btn clear-btn" onclick="clearCurrentOrder()" disabled>
+                🗑️ 전체삭제
+              </button>
             </div>
-            <div class="panel-content" id="panelContent">
-              <div class="select-table-message">
-                테이블을 클릭하여 주문 관리를 시작하세요
-              </div>
+          </div>
+          
+          <div class="order-items" id="orderItems">
+            <div class="empty-order">
+              <div class="empty-icon">📝</div>
+              <p>메뉴를 선택해주세요</p>
             </div>
-          </aside>
-        </div>
+          </div>
 
-        <!-- 주문 리스트 모드 -->
-        <div id="orderListMode" class="home-mode ${window.homeMode === 'order_list' ? 'active' : ''}">
-          <aside class="order-filter-panel">
-            <div class="filter-section">
-              <h3>주문 상태</h3>
-              <div class="order-status-filters">
-                <button class="order-filter-btn active" data-status="all" onclick="filterOrders('all')">
-                  전체 <span class="count">0</span>
-                </button>
-                <button class="order-filter-btn" data-status="new" onclick="filterOrders('new')">
-                  신규 <span class="count">0</span>
-                </button>
-                <button class="order-filter-btn" data-status="cooking" onclick="filterOrders('cooking')">
-                  조리중 <span class="count">0</span>
-                </button>
-                <button class="order-filter-btn" data-status="ready" onclick="filterOrders('ready')">
-                  완료 <span class="count">0</span>
-                </button>
-                <button class="order-filter-btn" data-status="payment" onclick="filterOrders('payment')">
-                  결제대기 <span class="count">0</span>
-                </button>
-              </div>
+          <div class="order-summary">
+            <div class="total-amount">
+              <span class="label">합계</span>
+              <span class="amount" id="totalAmount">₩0</span>
             </div>
-          </aside>
+            <div class="item-count">
+              총 <span id="itemCount">0</span>개
+            </div>
+          </div>
+        </section>
 
-          <main class="order-timeline-container">
-            <div class="order-timeline" id="orderTimeline">
-              <!-- 주문 카드들이 여기에 표시됩니다 -->
+        <!-- 우측: 결제 & 테이블 관리 -->
+        <section class="payment-section">
+          <div class="table-status" id="tableStatus">
+            <div class="status-header">
+              <h4>테이블 현황</h4>
             </div>
-          </main>
+            <div class="table-grid" id="tableGrid">
+              <!-- 테이블 상태가 여기에 표시 -->
+            </div>
+          </div>
 
-          <aside class="order-detail-panel" id="orderDetailPanel">
-            <div class="panel-header">
-              <h3>주문 세부정보</h3>
-            </div>
-            <div class="panel-content">
-              <div class="select-order-message">
-                주문을 선택하여 세부정보를 확인하세요
-              </div>
-            </div>
-          </aside>
-        </div>
+          <div class="payment-buttons">
+            <button class="payment-btn card-btn" onclick="processPayment('CARD')" disabled>
+              💳 카드결제
+            </button>
+            <button class="payment-btn cash-btn" onclick="processPayment('CASH')" disabled>
+              💵 현금결제
+            </button>
+            <button class="payment-btn mobile-btn" onclick="processPayment('MOBILE')" disabled>
+              📱 간편결제
+            </button>
+          </div>
+
+          <div class="quick-actions">
+            <button class="action-btn" onclick="showTableMoveModal()">
+              🔄 테이블이동
+            </button>
+            <button class="action-btn" onclick="showSplitPayment()">
+              ✂️ 분할결제
+            </button>
+            <button class="action-btn" onclick="showOrderHistory()">
+              📋 주문내역
+            </button>
+          </div>
+        </section>
       </div>
 
-      <!-- 하단 액션바 -->
+      <!-- 하단 액션바 (간소화) -->
       <footer class="pos-footer">
-        <div class="action-bar">
-          <button class="action-btn primary" onclick="createNewOrder()">
-            📦 새 포장 주문
-          </button>
-          <button class="action-btn" onclick="showPickupQueue()">
-            🛍️ 픽업 대기함 <span class="queue-count">2</span>
-          </button>
-          <button class="action-btn warning" onclick="showUnassignedOrders()">
-            ❓ 미지정 주문함 <span class="unassigned-count">1</span>
-          </button>
-          <button class="action-btn" onclick="openQuickMenu()">
-            ⚡ 빠른 메뉴
-          </button>
+        <div class="status-bar">
+          <div class="server-status">
+            <span class="status-dot" id="serverStatus"></span>
+            <span>서버 연결됨</span>
+          </div>
+          <div class="today-summary" id="todaySummary">
+            오늘 매출: ₩0 | 주문: 0건
+          </div>
         </div>
       </footer>
     </div>
 
-    ${getPOSLayoutStyles()}
-  `;
-}
-
-// POS 레이아웃 스타일
-function getPOSLayoutStyles() {
-  return `
     <style>
       * {
         margin: 0;
@@ -148,101 +139,66 @@ function getPOSLayoutStyles() {
         height: 100vh;
         display: flex;
         flex-direction: column;
-        background: #f8fafc;
+        background: #f5f5f5;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
 
-      /* 헤더 스타일 */
+      /* 상단 헤더 - 간소화 */
       .pos-header {
-        background: white;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 12px 20px;
+        height: 60px;
+        background: #1f2937;
+        color: white;
         display: flex;
         align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        z-index: 1000;
+        padding: 0 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
       .header-left {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-      }
-
-      .pos-logo {
-        font-size: 20px;
-        font-weight: 700;
-        color: #1e293b;
-      }
-
-      .store-info {
-        display: flex;
-        align-items: center;
-        color: #1e293b;
-        font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 0px;
-      }
-
-      .header-center {
         flex: 1;
-        max-width: 400px;
-        margin: 0 20px;
-      }
-
-      .search-bar {
-        display: flex;
-        background: #f1f5f9;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      .search-bar input {
-        flex: 1;
-        padding: 10px 16px;
-        border: none;
-        background: transparent;
-        outline: none;
-      }
-
-      .search-btn {
-        padding: 10px 16px;
-        background: #64748b;
-        color: white;
-        border: none;
-        cursor: pointer;
-      }
-
-      .header-right {
         display: flex;
         align-items: center;
         gap: 15px;
       }
 
-      .header-btn {
-        position: relative;
-        padding: 8px 12px;
-        background: #f1f5f9;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 16px;
+      .pos-logo {
+        font-size: 18px;
+        font-weight: 700;
       }
 
-      .notification-badge {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: #ef4444;
+      .store-info {
+        font-size: 14px;
+        color: #9ca3af;
+      }
+
+      .header-center {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+      }
+
+      .table-btn {
+        background: #3b82f6;
         color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 11px;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .table-btn:hover {
+        background: #2563eb;
+      }
+
+      .header-right {
+        flex: 1;
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-end;
+        gap: 15px;
       }
 
       .sync-status {
@@ -250,7 +206,6 @@ function getPOSLayoutStyles() {
         align-items: center;
         gap: 8px;
         font-size: 12px;
-        color: #64748b;
       }
 
       .sync-indicator {
@@ -258,260 +213,461 @@ function getPOSLayoutStyles() {
         height: 8px;
         border-radius: 50%;
         background: #10b981;
-        transition: background-color 0.3s ease;
+        animation: pulse 2s infinite;
       }
 
-      .sync-indicator.inactive {
-        background: #ef4444;
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
       }
 
-      .home-mode-toggle {
-        display: flex;
-        background: #f1f5f9;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      .mode-btn {
-        padding: 8px 16px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.2s;
-      }
-
-      .mode-btn.active {
-        background: #3b82f6;
+      .stats-btn {
+        background: #059669;
         color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
       }
 
-      /* 메인 컨텐츠 */
-      .pos-main {
+      /* 메인 작업 영역 - 3분할 */
+      .pos-workspace {
         flex: 1;
-        display: flex;
-        position: relative;
-        overflow: hidden;
-      }
-
-      .home-mode {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        display: flex;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-
-      .home-mode.active {
-        opacity: 1;
-        pointer-events: all;
-      }
-
-      /* 테이블 맵 */
-      .table-map-container {
-        flex: 1;
-        padding: 20px;
-        overflow: auto;
-      }
-
-      .table-map {
-        height: 100%;
-        background: white;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        position: relative;
-      }
-
-      .map-grid {
-        padding: 20px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 16px;
-        height: 100%;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 1px;
+        background: #e5e7eb;
+        min-height: 0;
       }
 
-      /* 세부 패널 */
-      .detail-panel {
-        width: 350px;
+      /* 좌측: 메뉴 섹션 */
+      .menu-section {
         background: white;
-        border-left: 1px solid #e2e8f0;
         display: flex;
         flex-direction: column;
       }
 
-      .panel-header {
-        padding: 20px;
-        border-bottom: 1px solid #e2e8f0;
+      .category-tabs {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        background: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 8px;
+        gap: 4px;
       }
 
-      .panel-header h3 {
+      .category-tab {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+
+      .category-tab.active {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .category-tab:not(.active) {
+        background: white;
+        color: #374151;
+        border: 1px solid #d1d5db;
+      }
+
+      .category-tab:not(.active):hover {
+        background: #f3f4f6;
+      }
+
+      .menu-grid {
+        flex: 1;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 8px;
+        overflow-y: auto;
+      }
+
+      .menu-item {
+        aspect-ratio: 1;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 12px;
+        transition: all 0.2s;
+        min-height: 120px;
+      }
+
+      .menu-item:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      }
+
+      .menu-item-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      .menu-item-price {
+        font-size: 13px;
+        color: #059669;
+        font-weight: 700;
+      }
+
+      /* 중앙: 주문 패널 */
+      .order-panel {
+        background: white;
+        display: flex;
+        flex-direction: column;
+        border-left: 1px solid #e5e7eb;
+        border-right: 1px solid #e5e7eb;
+      }
+
+      .order-header {
+        padding: 16px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9fafb;
+      }
+
+      .order-header h3 {
         font-size: 16px;
+        color: #1f2937;
+      }
+
+      .order-controls {
+        display: flex;
+        gap: 8px;
+      }
+
+      .control-btn {
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: white;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .control-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .hold-btn:not(:disabled):hover {
+        background: #fef3c7;
+        border-color: #f59e0b;
+      }
+
+      .clear-btn:not(:disabled):hover {
+        background: #fecaca;
+        border-color: #ef4444;
+      }
+
+      .order-items {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .empty-order {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #6b7280;
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.5;
+      }
+
+      .order-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        background: white;
+      }
+
+      .order-item-info {
+        flex: 1;
+      }
+
+      .order-item-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 2px;
+      }
+
+      .order-item-price {
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .qty-btn {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-weight: 600;
       }
 
-      .panel-close {
-        background: none;
-        border: none;
-        font-size: 18px;
-        cursor: pointer;
-        color: #64748b;
+      .qty-btn:hover {
+        background: #f3f4f6;
       }
 
-      .panel-content {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        min-height: 0;
-        height: 100%;
-      }
-
-      .select-table-message {
+      .qty-display {
+        min-width: 32px;
         text-align: center;
-        color: #64748b;
-        margin-top: 100px;
+        font-weight: 600;
+        font-size: 14px;
       }
 
-      /* 주문 리스트 모드 */
-      .order-filter-panel {
-        width: 250px;
+      .order-summary {
+        padding: 16px;
+        border-top: 2px solid #e5e7eb;
+        background: #f9fafb;
+      }
+
+      .total-amount {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .total-amount .label {
+        font-size: 16px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .total-amount .amount {
+        font-size: 20px;
+        font-weight: 700;
+        color: #059669;
+      }
+
+      .item-count {
+        text-align: center;
+        font-size: 12px;
+        color: #6b7280;
+      }
+
+      /* 우측: 결제 섹션 */
+      .payment-section {
         background: white;
-        border-right: 1px solid #e2e8f0;
-        padding: 20px;
+        display: flex;
+        flex-direction: column;
       }
 
-      .order-status-filters {
+      .table-status {
+        flex: 1;
+        padding: 16px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .status-header {
+        margin-bottom: 12px;
+      }
+
+      .status-header h4 {
+        font-size: 14px;
+        color: #374151;
+        font-weight: 600;
+      }
+
+      .table-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .table-card {
+        aspect-ratio: 1;
+        border: 2px solid #e5e7eb;
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        font-weight: 600;
+        transition: all 0.2s;
+      }
+
+      .table-card.available {
+        border-color: #10b981;
+        color: #059669;
+        background: #f0fdf4;
+      }
+
+      .table-card.occupied {
+        border-color: #f59e0b;
+        color: #d97706;
+        background: #fffbeb;
+      }
+
+      .table-card.selected {
+        border-color: #3b82f6;
+        color: #2563eb;
+        background: #eff6ff;
+      }
+
+      .payment-buttons {
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .payment-btn {
+        height: 56px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .payment-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .card-btn {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .card-btn:not(:disabled):hover {
+        background: #2563eb;
+      }
+
+      .cash-btn {
+        background: #059669;
+        color: white;
+      }
+
+      .cash-btn:not(:disabled):hover {
+        background: #047857;
+      }
+
+      .mobile-btn {
+        background: #7c3aed;
+        color: white;
+      }
+
+      .mobile-btn:not(:disabled):hover {
+        background: #6d28d9;
+      }
+
+      .quick-actions {
+        padding: 16px;
         display: flex;
         flex-direction: column;
         gap: 8px;
       }
 
-      .order-filter-btn {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+      .action-btn {
         padding: 12px;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #d1d5db;
         border-radius: 6px;
         background: white;
-        cursor: pointer;
-        text-align: left;
-        transition: all 0.2s;
-      }
-
-      .order-filter-btn.active {
-        background: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-      }
-
-      .count {
-        background: #f1f5f9;
-        color: #64748b;
-        padding: 2px 6px;
-        border-radius: 12px;
         font-size: 12px;
-      }
-
-      .order-filter-btn.active .count {
-        background: rgba(255,255,255,0.2);
-        color: white;
-      }
-
-      .order-timeline-container {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-      }
-
-      .order-detail-panel {
-        width: 350px;
-        background: white;
-        border-left: 1px solid #e2e8f0;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-      }
-
-      .order-detail-panel .panel-content {
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0;
-        padding: 20px;
-      }
-
-      .select-order-message {
-        text-align: center;
-        color: #64748b;
-        margin-top: 100px;
-      }
-
-      /* 하단 액션바 */
-      .pos-footer {
-        background: white;
-        border-top: 1px solid #e2e8f0;
-        padding: 16px 20px;
-      }
-
-      .action-bar {
-        display: flex;
-        gap: 12px;
-        justify-content: center;
-      }
-
-      .action-btn {
-        position: relative;
-        padding: 12px 20px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: white;
         cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
         transition: all 0.2s;
       }
 
       .action-btn:hover {
-        background: #f8fafc;
+        background: #f3f4f6;
+        border-color: #9ca3af;
       }
 
-      .action-btn.primary {
-        background: #3b82f6;
+      /* 하단 상태바 */
+      .pos-footer {
+        height: 40px;
+        background: #374151;
         color: white;
-        border-color: #3b82f6;
-      }
-
-      .action-btn.warning {
-        background: #f59e0b;
-        color: white;
-        border-color: #f59e0b;
-      }
-
-      .queue-count, .unassigned-count {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background: #ef4444;
-        color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 11px;
         display: flex;
         align-items: center;
-        justify-content: center;
+      }
+
+      .status-bar {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        font-size: 12px;
+      }
+
+      .server-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+      }
+
+      .today-summary {
+        color: #9ca3af;
       }
 
       /* 반응형 */
       @media (max-width: 1200px) {
-        .detail-panel {
-          width: 300px;
+        .pos-workspace {
+          grid-template-columns: 1.5fr 1fr 1fr;
+        }
+        
+        .menu-grid {
+          grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         }
       }
 
@@ -519,49 +675,24 @@ function getPOSLayoutStyles() {
         .header-center {
           display: none;
         }
+        
+        .pos-workspace {
+          grid-template-columns: 1fr;
+          grid-template-rows: 2fr 1fr 1fr;
+        }
       }
     </style>
   `;
 }
 
-// 홈 모드 전환
+// 홈 모드 전환 (단순화)
 function switchHomeMode(mode) {
-  window.homeMode = mode;
-  document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelector(`[onclick="switchHomeMode('${mode}')"]`).classList.add('active');
-
-  document.querySelectorAll('.home-mode').forEach(el => el.classList.remove('active'));
-  document.getElementById(mode === 'table_map' ? 'tableMapMode' : 'orderListMode').classList.add('active');
-
-  if (mode === 'table_map') {
-    renderTableMap();
-  } else {
-    renderOrderList();
-  }
+  // 더 이상 필요 없음 - 단일 POS 인터페이스로 통합
 }
 
-// 주문 리스트 렌더링
+// 주문 리스트 렌더링 (제거)
 function renderOrderList() {
-  const orderTimeline = document.getElementById('orderTimeline');
-  orderTimeline.innerHTML = `
-    <div style="text-align: center; color: #64748b; margin-top: 50px;">
-      주문 데이터를 불러오는 중...
-    </div>
-  `;
+  // 새로운 구조에서는 항상 주문 패널이 표시됨
 }
 
-// 주문 필터링
-function filterOrders(status) {
-  window.orderFilter = status;
-  document.querySelectorAll('.order-filter-btn').forEach(btn => {
-    btn.classList.remove('active');
-  });
-  document.querySelector(`[onclick="filterOrders('${status}')"]`).classList.add('active');
-  renderOrderList();
-}
-
-// 전역 함수 등록
-window.renderPOSLayout = renderPOSLayout;
-window.switchHomeMode = switchHomeMode;
-window.filterOrders = filterOrders;
-window.renderOrderList = renderOrderList;
+module.exports = { renderPOSLayout };
