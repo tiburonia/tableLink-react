@@ -969,6 +969,129 @@ function showPOSSettings() {
   showPOSNotification('POS 설정 기능은 향후 구현 예정입니다.', 'info');
 }
 
+// 메뉴 검색 기능
+function searchMenus(query) {
+  const menuGrid = document.getElementById('menuGrid');
+  if (!menuGrid) return;
+
+  let filteredMenus = window.allMenus;
+
+  // 카테고리 필터링
+  if (selectedCategory !== 'all') {
+    filteredMenus = window.allMenus.filter(item => item.category === selectedCategory);
+  }
+
+  // 검색어 필터링
+  if (query && query.trim()) {
+    const searchTerm = query.trim().toLowerCase();
+    filteredMenus = filteredMenus.filter(item => 
+      item.name.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  // 결과 렌더링
+  if (filteredMenus.length === 0) {
+    menuGrid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+        <p>${query ? `"${query}"에 대한 검색 결과가 없습니다.` : '해당 카테고리에 메뉴가 없습니다.'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  const menusHTML = filteredMenus.map(item => `
+    <button class="menu-item-btn" onclick="addMenuToOrder('${item.name}', ${item.price})">
+      <div class="menu-item-name">${item.name}</div>
+      <div class="menu-item-price">₩${item.price.toLocaleString()}</div>
+    </button>
+  `).join('');
+
+  menuGrid.innerHTML = menusHTML;
+}
+
+// 복합 결제 처리
+function processComboPayment() {
+  showPOSNotification('복합 결제 기능은 향후 구현 예정입니다.', 'info');
+}
+
+// 고급 패널 토글
+function toggleAdvancedPanel() {
+  const grid = document.getElementById('advancedFunctionsGrid');
+  const toggleBtn = document.getElementById('advancedToggle');
+  
+  if (grid && toggleBtn) {
+    const isCollapsed = grid.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      grid.classList.remove('collapsed');
+      toggleBtn.innerHTML = '<span>▼</span>';
+      toggleBtn.classList.remove('collapsed');
+    } else {
+      grid.classList.add('collapsed');
+      toggleBtn.innerHTML = '<span>▶</span>';
+      toggleBtn.classList.add('collapsed');
+    }
+  }
+}
+
+// 현재 주문 보류
+function holdCurrentOrder() {
+  if (window.currentOrder.length === 0) {
+    showPOSNotification('보류할 주문이 없습니다.', 'warning');
+    return;
+  }
+  
+  showPOSNotification('주문 보류 기능은 향후 구현 예정입니다.', 'info');
+}
+
+// 주문 취소
+function voidOrder() {
+  if (window.currentOrder.length === 0) {
+    showPOSNotification('취소할 주문이 없습니다.', 'warning');
+    return;
+  }
+  
+  if (confirm('현재 주문을 완전히 취소하시겠습니까?')) {
+    clearOrder();
+  }
+}
+
+// 버튼 상태 업데이트 (기존 함수 개선)
+function updateButtonStates() {
+  const hasItems = window.currentOrder.length > 0;
+  const hasSelection = window.selectedItems.length > 0;
+
+  // 주문 액션 버튼들
+  const holdBtn = document.querySelector('.hold-btn');
+  const clearBtn = document.querySelector('.clear-btn');
+  const saveOrderBtn = document.querySelector('.save-order-btn');
+
+  if (holdBtn) holdBtn.disabled = !hasItems;
+  if (clearBtn) clearBtn.disabled = !hasItems;
+  if (saveOrderBtn) saveOrderBtn.disabled = !hasItems;
+
+  // 결제 버튼들
+  const paymentButtons = document.querySelectorAll('.payment-btn');
+  paymentButtons.forEach(btn => {
+    btn.disabled = !hasItems;
+  });
+
+  // 결제 상태 표시 업데이트
+  const paymentIndicator = document.getElementById('paymentIndicator');
+  if (paymentIndicator) {
+    if (hasItems) {
+      paymentIndicator.textContent = '결제 가능';
+      paymentIndicator.style.background = '#10b981';
+      paymentIndicator.style.color = 'white';
+    } else {
+      paymentIndicator.textContent = '대기중';
+      paymentIndicator.style.background = '#f3f4f6';
+      paymentIndicator.style.color = '#6b7280';
+    }
+  }
+}
+
 // 전역 함수로 노출
 window.renderPOS = renderPOS;
 window.selectTableFromMap = selectTableFromMap;
@@ -995,4 +1118,11 @@ window.showDeliveryOrders = showDeliveryOrders;
 window.showDailyStats = showDailyStats;
 window.showKitchenStatus = showKitchenStatus;
 window.showPOSSettings = showPOSSettings;
-window.saveOrderToKitchen = saveOrderToKitchen; // saveOrderToKitchen 함수 전역으로 노출
+window.saveOrderToKitchen = saveOrderToKitchen;
+
+// 새로 추가된 함수들
+window.searchMenus = searchMenus;
+window.processComboPayment = processComboPayment;
+window.toggleAdvancedPanel = toggleAdvancedPanel;
+window.holdCurrentOrder = holdCurrentOrder;
+window.voidOrder = voidOrder;

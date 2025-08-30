@@ -181,60 +181,131 @@ function renderPOSLayout() {
             <section class="right-column">
               <!-- 메뉴 선택 패널 -->
               <div class="menu-selection-panel">
-                <div class="category-tabs" id="categoryTabs">
-                  <!-- 카테고리 탭들 -->
+                <div class="menu-panel-header">
+                  <h3>🍽️ 메뉴 선택</h3>
+                  <div class="menu-search-box">
+                    <input type="text" id="menuSearch" placeholder="메뉴 검색..." onkeyup="searchMenus(this.value)">
+                    <div class="search-icon">🔍</div>
+                  </div>
                 </div>
-                <div class="menu-grid" id="menuGrid">
-                  <!-- 메뉴 버튼들 -->
+                
+                <div class="category-tabs-container">
+                  <div class="category-tabs" id="categoryTabs">
+                    <!-- 카테고리 탭들 -->
+                  </div>
                 </div>
-              </div>
-
-              <!-- 결제 수단 버튼 -->
-              <div class="payment-methods-panel">
-                <div class="payment-title">💳 결제 수단</div>
-                <div class="payment-buttons">
-                  <button class="payment-btn card-btn" onclick="processPayment('CARD')" disabled>
-                    💳 신용카드
-                  </button>
-                  <button class="payment-btn cash-btn" onclick="processPayment('CASH')" disabled>
-                    💵 현금결제
-                  </button>
-                  <button class="payment-btn mobile-btn" onclick="processPayment('MOBILE')" disabled>
-                    📱 간편결제
-                  </button>
-                  <!-- TL Pay 버튼 삭제 -->
+                
+                <div class="menu-grid-container">
+                  <div class="menu-grid" id="menuGrid">
+                    <!-- 메뉴 버튼들 -->
+                  </div>
                 </div>
               </div>
 
-              <!-- 주문 저장 및 테이블맵 이동 버튼 -->
-              <div class="order-action-section">
-                <button class="order-btn primary-order-btn" onclick="saveOrderAndGoToMap()">
-                  ✅ 주문 저장 및 테이블맵 이동
-                </button>
-              </div>
+              <!-- 액션 버튼들 그룹 -->
+              <div class="action-panels-container">
+                
+                <!-- 주문 저장 버튼 (가장 중요한 액션) -->
+                <div class="primary-action-panel">
+                  <button class="primary-action-btn save-order-btn" onclick="saveOrderAndGoToMap()" disabled>
+                    <div class="btn-icon">📋</div>
+                    <div class="btn-content">
+                      <div class="btn-title">주문 저장</div>
+                      <div class="btn-subtitle">테이블맵으로 이동</div>
+                    </div>
+                  </button>
+                </div>
 
-              <!-- 보조 기능 버튼 -->
-              <div class="assistant-functions-panel">
-                <div class="function-title">⚙️ 관리 기능</div>
-                <div class="function-buttons">
-                  <button class="func-btn" onclick="applyTLCoupon()">
-                    🎫 TL 쿠폰
-                  </button>
-                  <button class="func-btn" onclick="applyTLPoints()">
-                    ⭐ TL 포인트
-                  </button>
-                  <button class="func-btn" onclick="checkTLLOrder()">
-                    📱 TLL 주문
-                  </button>
-                  <button class="func-btn" onclick="sendToKitchen()">
-                    🍳 주방전송
-                  </button>
-                  <button class="func-btn" onclick="printReceipt()">
-                    🖨️ 영수증
-                  </button>
-                  <button class="func-btn" onclick="showDailySales()">
-                    📊 일일정산
-                  </button>
+                <!-- 결제 수단 패널 -->
+                <div class="payment-panel">
+                  <div class="panel-header">
+                    <h4>💳 결제 처리</h4>
+                    <div class="panel-indicator" id="paymentIndicator">대기중</div>
+                  </div>
+                  <div class="payment-grid">
+                    <button class="payment-btn card-payment" onclick="processPayment('CARD')" disabled>
+                      <div class="payment-icon">💳</div>
+                      <div class="payment-text">
+                        <span class="payment-title">신용카드</span>
+                        <span class="payment-desc">IC/MS</span>
+                      </div>
+                    </button>
+                    
+                    <button class="payment-btn cash-payment" onclick="processPayment('CASH')" disabled>
+                      <div class="payment-icon">💵</div>
+                      <div class="payment-text">
+                        <span class="payment-title">현금</span>
+                        <span class="payment-desc">직접결제</span>
+                      </div>
+                    </button>
+                    
+                    <button class="payment-btn mobile-payment" onclick="processPayment('MOBILE')" disabled>
+                      <div class="payment-icon">📱</div>
+                      <div class="payment-text">
+                        <span class="payment-title">간편결제</span>
+                        <span class="payment-desc">QR/NFC</span>
+                      </div>
+                    </button>
+                    
+                    <button class="payment-btn combo-payment" onclick="processComboPayment()" disabled>
+                      <div class="payment-icon">🔄</div>
+                      <div class="payment-text">
+                        <span class="payment-title">복합결제</span>
+                        <span class="payment-desc">분할</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 고급 기능 패널 -->
+                <div class="advanced-functions-panel">
+                  <div class="panel-header">
+                    <h4>⚙️ 고급 기능</h4>
+                    <button class="expand-btn" onclick="toggleAdvancedPanel()" id="advancedToggle">
+                      <span>▼</span>
+                    </button>
+                  </div>
+                  <div class="advanced-functions-grid" id="advancedFunctionsGrid">
+                    <button class="advanced-btn coupon-btn" onclick="applyTLCoupon()">
+                      <div class="advanced-icon">🎫</div>
+                      <span>쿠폰</span>
+                    </button>
+                    
+                    <button class="advanced-btn points-btn" onclick="applyTLPoints()">
+                      <div class="advanced-icon">⭐</div>
+                      <span>포인트</span>
+                    </button>
+                    
+                    <button class="advanced-btn tll-btn" onclick="checkTLLOrder()">
+                      <div class="advanced-icon">📱</div>
+                      <span>TLL연동</span>
+                    </button>
+                    
+                    <button class="advanced-btn kitchen-btn" onclick="sendToKitchen()">
+                      <div class="advanced-icon">🍳</div>
+                      <span>주방전송</span>
+                    </button>
+                    
+                    <button class="advanced-btn receipt-btn" onclick="printReceipt()">
+                      <div class="advanced-icon">🖨️</div>
+                      <span>영수증</span>
+                    </button>
+                    
+                    <button class="advanced-btn sales-btn" onclick="showDailySales()">
+                      <div class="advanced-icon">📊</div>
+                      <span>정산</span>
+                    </button>
+                    
+                    <button class="advanced-btn hold-btn" onclick="holdCurrentOrder()">
+                      <div class="advanced-icon">⏸️</div>
+                      <span>보류</span>
+                    </button>
+                    
+                    <button class="advanced-btn void-btn" onclick="voidOrder()">
+                      <div class="advanced-icon">❌</div>
+                      <span>취소</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -903,7 +974,7 @@ function renderPOSLayout() {
       .right-column {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 3px;
       }
 
       /* 메뉴 선택 패널 */
@@ -912,55 +983,123 @@ function renderPOSLayout() {
         flex: 1;
         display: flex;
         flex-direction: column;
-        min-height: 400px;
+        min-height: 450px;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      .menu-panel-header {
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .menu-panel-header h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+      }
+
+      .menu-search-box {
+        position: relative;
+        width: 200px;
+      }
+
+      .menu-search-box input {
+        width: 100%;
+        padding: 8px 12px 8px 36px;
+        border: 2px solid #e2e8f0;
+        border-radius: 20px;
+        font-size: 13px;
+        background: white;
+        transition: all 0.2s;
+      }
+
+      .menu-search-box input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        font-size: 14px;
+      }
+
+      .category-tabs-container {
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 12px 20px 16px;
       }
 
       .category-tabs {
         display: flex;
-        background: #f8fafc;
-        border-bottom: 2px solid #e2e8f0;
-        padding: 12px;
-        gap: 6px;
+        gap: 8px;
         overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .category-tabs::-webkit-scrollbar {
+        display: none;
       }
 
       .category-tab {
-        padding: 12px 20px;
+        padding: 10px 20px;
         border: 2px solid #d1d5db;
-        border-radius: 8px;
+        border-radius: 25px;
         background: white;
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
         white-space: nowrap;
         min-width: 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
       }
 
       .category-tab.active {
-        background: #3b82f6;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: white;
         border-color: #3b82f6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
       }
 
       .category-tab:not(.active):hover {
         background: #f1f5f9;
         border-color: #94a3b8;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      .menu-grid-container {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
       }
 
       .menu-grid {
-        flex: 1;
-        padding: 16px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 12px;
-        overflow-y: auto;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 16px;
       }
 
       .menu-item-btn {
         aspect-ratio: 1;
         border: 2px solid #e2e8f0;
-        border-radius: 12px;
+        border-radius: 16px;
         background: white;
         cursor: pointer;
         display: flex;
@@ -968,19 +1107,36 @@ function renderPOSLayout() {
         justify-content: center;
         align-items: center;
         text-align: center;
-        padding: 12px;
-        transition: all 0.2s;
-        min-height: 100px;
+        padding: 16px;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .menu-item-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+        transition: left 0.5s;
+      }
+
+      .menu-item-btn:hover::before {
+        left: 100%;
       }
 
       .menu-item-btn:hover {
         border-color: #3b82f6;
-        transform: translateY(-3px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
       }
 
       .menu-item-btn:active {
-        transform: translateY(-1px) scale(0.98);
+        transform: translateY(-2px) scale(0.98);
       }
 
       .menu-item-name {
@@ -988,115 +1144,49 @@ function renderPOSLayout() {
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 8px;
-        line-height: 1.2;
+        line-height: 1.3;
       }
 
       .menu-item-price {
         font-size: 13px;
         color: #059669;
         font-weight: 700;
+        background: #ecfdf5;
+        padding: 4px 8px;
+        border-radius: 8px;
       }
 
-      /* 결제 수단 패널 */
-      .payment-methods-panel {
+      /* 액션 패널들 컨테이너 */
+      .action-panels-container {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      /* 주요 액션 버튼 (주문 저장) */
+      .primary-action-panel {
         background: white;
         padding: 16px;
-        min-height: 120px;
-      }
-
-      .payment-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 12px;
-        text-align: center;
-      }
-
-      .payment-buttons {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-
-      .payment-btn {
-        padding: 16px 8px;
-        border: none;
         border-radius: 8px;
-        font-size: 13px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: white;
-        min-height: 48px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       }
 
-      .payment-btn:disabled {
-        background: #f1f5f9;
-        color: #94a3b8;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .card-btn {
-        background: #3b82f6;
-      }
-
-      .card-btn:not(:disabled):hover {
-        background: #2563eb;
-        transform: translateY(-2px);
-      }
-
-      .cash-btn {
-        background: #059669;
-      }
-
-      .cash-btn:not(:disabled):hover {
-        background: #047857;
-        transform: translateY(-2px);
-      }
-
-      .mobile-btn {
-        background: #7c3aed;
-      }
-
-      .mobile-btn:not(:disabled):hover {
-        background: #6d28d9;
-        transform: translateY(-2px);
-      }
-
-      /* 주문 버튼 스타일 추가 */
-      .order-action-section {
-        margin-bottom: 20px;
-        padding-bottom: 20px;
-        border-bottom: 2px solid #e2e8f0;
-      }
-
-      .order-btn {
+      .primary-action-btn {
         width: 100%;
-        padding: 16px 24px;
+        padding: 20px;
         border: none;
         border-radius: 12px;
-        font-size: 18px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-transform: none;
-      }
-
-      .primary-order-btn {
         background: linear-gradient(135deg, #10b981, #059669);
         color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 16px;
         box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
       }
 
-      .primary-order-btn:hover:not(:disabled) {
-        background: linear-gradient(135deg, #059669, #047857);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
-      }
-
-      .order-btn:disabled {
+      .primary-action-btn:disabled {
         background: #f1f5f9;
         color: #94a3b8;
         cursor: not-allowed;
@@ -1104,45 +1194,247 @@ function renderPOSLayout() {
         box-shadow: none;
       }
 
-      /* 보조 기능 패널 */
-      .assistant-functions-panel {
-        background: white;
-        padding: 16px;
-        min-height: 140px;
+      .primary-action-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #059669, #047857);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
       }
 
-      .function-title {
+      .btn-icon {
+        font-size: 24px;
+        background: rgba(255,255,255,0.2);
+        padding: 8px;
+        border-radius: 8px;
+      }
+
+      .btn-content {
+        flex: 1;
+        text-align: left;
+      }
+
+      .btn-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .btn-subtitle {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      /* 결제 패널 */
+      .payment-panel {
+        background: white;
+        padding: 16px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .panel-header h4 {
         font-size: 14px;
         font-weight: 700;
         color: #1e293b;
-        margin-bottom: 12px;
-        text-align: center;
+        margin: 0;
       }
 
-      .function-buttons {
+      .panel-indicator {
+        font-size: 11px;
+        padding: 4px 8px;
+        background: #f3f4f6;
+        color: #6b7280;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+
+      .payment-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 6px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
       }
 
-      .func-btn {
-        padding: 12px 6px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
+      .payment-btn {
+        padding: 16px 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
         background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 60px;
+      }
+
+      .payment-btn:disabled {
+        background: #f9fafb;
+        border-color: #f3f4f6;
+        color: #d1d5db;
+        cursor: not-allowed;
+      }
+
+      .payment-btn:not(:disabled):hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+
+      .card-payment:not(:disabled) {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #dbeafe, #f0f9ff);
+      }
+
+      .card-payment:not(:disabled):hover {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+      }
+
+      .cash-payment:not(:disabled) {
+        border-color: #059669;
+        background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+      }
+
+      .cash-payment:not(:disabled):hover {
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white;
+      }
+
+      .mobile-payment:not(:disabled) {
+        border-color: #7c3aed;
+        background: linear-gradient(135deg, #ede9fe, #f3f0ff);
+      }
+
+      .mobile-payment:not(:disabled):hover {
+        background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        color: white;
+      }
+
+      .combo-payment:not(:disabled) {
+        border-color: #f59e0b;
+        background: linear-gradient(135deg, #fef3c7, #fffbeb);
+      }
+
+      .combo-payment:not(:disabled):hover {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+      }
+
+      .payment-icon {
+        font-size: 20px;
+        opacity: 0.8;
+      }
+
+      .payment-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .payment-title {
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .payment-desc {
+        font-size: 10px;
+        opacity: 0.7;
+      }
+
+      /* 고급 기능 패널 */
+      .advanced-functions-panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+
+      .expand-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+        color: #6b7280;
+        font-size: 12px;
+      }
+
+      .expand-btn:hover {
+        background: #f3f4f6;
+      }
+
+      .expand-btn.collapsed span {
+        transform: rotate(-90deg);
+      }
+
+      .advanced-functions-grid {
+        padding: 16px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        transition: all 0.3s ease;
+        max-height: 200px;
+        overflow: hidden;
+      }
+
+      .advanced-functions-grid.collapsed {
+        max-height: 0;
+        padding: 0 16px;
+      }
+
+      .advanced-btn {
+        padding: 12px 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-height: 60px;
         font-size: 11px;
         font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
         color: #374151;
-        min-height: 40px;
-        text-align: center;
       }
 
-      .func-btn:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
+      .advanced-btn:hover {
+        background: #f8fafc;
+        border-color: #cbd5e1;
         transform: translateY(-1px);
+      }
+
+      .advanced-icon {
+        font-size: 16px;
+        opacity: 0.8;
+      }
+
+      /* 특정 고급 버튼 색상 */
+      .coupon-btn:hover {
+        background: #fef3c7;
+        border-color: #f59e0b;
+        color: #92400e;
+      }
+
+      .points-btn:hover {
+        background: #fef3c7;
+        border-color: #eab308;
+        color: #a16207;
+      }
+
+      .kitchen-btn:hover {
+        background: #fee2e2;
+        border-color: #ef4444;
+        color: #dc2626;
       }
 
       /* 숨김 클래스 */
