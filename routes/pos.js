@@ -1020,6 +1020,320 @@ router.get('/stores/:storeId/stats', async (req, res) => {
   }
 });
 
+// 테이블 세션 상태 검증 API
+router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    
+    console.log(`🔍 테이블 ${tableNumber} 세션 상태 검증 (매장 ${storeId})`);
+
+    // 1. 현재 활성 세션 조회
+    const activeSessionResult = await pool.query(`
+      SELECT 
+        id, 
+        customer_name,
+        total_amount,
+        session_started_at,
+        created_at,
+        cooking_status
+      FROM orders 
+      WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
+      ORDER BY created_at DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    // 2. 충돌 가능한 세션들 확인 (동시 접근)
+    const recentSessionsResult = await pool.query(`
+      SELECT 
+        id,
+        session_started_at,
+        total_amount,
+        COUNT(oi.id) as item_count
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.store_id = $1 AND o.table_number = $2 
+      AND o.session_started_at >= NOW() - INTERVAL '30 minutes'
+      AND o.cooking_status = 'OPEN'
+      GROUP BY o.id, o.session_started_at, o.total_amount
+      ORDER BY o.session_started_at DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    // 3. 세션 분석
+    const hasActiveSession = activeSessionResult.rows.length > 0;
+    const hasMultipleSessions = recentSessionsResult.rows.length > 1;
+    
+    let sessionInfo = null;
+    let conflictingSessions = [];
+
+    if (hasActiveSession) {
+      const session = activeSessionResult.rows[0];
+      sessionInfo = {
+        id: session.id,
+        customerName: session.customer_name,
+        totalAmount: session.total_amount,
+        startTime: session.session_started_at,
+        duration: new Date() - new Date(session.session_started_at),
+        status: session.cooking_status
+      };
+
+      // 세션 만료 검사 (4시간)
+      const maxDuration = 4 * 60 * 60 * 1000; // 4시간
+      if (sessionInfo.duration > maxDuration) {
+        console.log(`⏰ 테이블 ${tableNumber} 세션 만료 감지`);
+        
+        // 만료된 세션 자동 종료
+        await pool.query(`
+          UPDATE orders 
+          SET cooking_status = 'EXPIRED',
+              completed_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `, [session.id]);
+
+        return res.json({
+          success: true,
+          hasActiveSession: false,
+          sessionExpired: true,
+          message: '세션이 만료되어 자동 종료되었습니다.'
+        });
+      }
+    }
+
+    if (hasMultipleSessions) {
+      conflictingSessions = recentSessionsResult.rows.map(session => ({
+        id: session.id,
+        startTime: session.session_started_at,
+        totalAmount: session.total_amount,
+        itemCount: session.item_count,
+        lastActivity: session.session_started_at,
+        deviceInfo: `POS 터미널` // 실제로는 세션 정보에서 가져와야 함
+      }));
+    }
+
+    // 4. 테이블 점유 상태 확인
+    const tableStatusResult = await pool.query(`
+      SELECT is_occupied, occupied_since, auto_release_source
+      FROM store_tables
+      WHERE store_id = $1 AND table_number = $2
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    const tableStatus = tableStatusResult.rows[0] || { is_occupied: false };
+
+    res.json({
+      success: true,
+      hasActiveSession: hasActiveSession,
+      sessionInfo: sessionInfo,
+      conflictingSessions: hasMultipleSessions ? conflictingSessions : [],
+      tableStatus: {
+        isOccupied: tableStatus.is_occupied,
+        occupiedSince: tableStatus.occupied_since,
+        source: tableStatus.auto_release_source
+      },
+      canAddItems: true, // 기본적으로 추가 가능
+      message: hasActiveSession ? '기존 세션에 아이템을 추가할 수 있습니다.' : '새 세션을 시작할 수 있습니다.'
+    });
+
+  } catch (error) {
+    console.error('❌ 세션 상태 검증 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 상태 검증 실패: ' + error.message
+    });
+  }
+});
+
+// 세션 실시간 동기화 API
+router.post('/stores/:storeId/table/:tableNumber/sync-session', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    const { sessionData, lastSyncTime, deviceId } = req.body;
+
+    console.log(`🔄 테이블 ${tableNumber} 세션 실시간 동기화 요청`);
+
+    // 1. 현재 서버 세션 상태 조회
+    const serverSessionResult = await pool.query(`
+      SELECT 
+        id,
+        order_data,
+        session_started_at,
+        created_at,
+        updated_at
+      FROM orders 
+      WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    let syncResult = {
+      success: true,
+      action: 'no_change',
+      serverSession: null,
+      conflictResolution: null
+    };
+
+    if (serverSessionResult.rows.length > 0) {
+      const serverSession = serverSessionResult.rows[0];
+      const serverUpdateTime = new Date(serverSession.updated_at);
+      const clientSyncTime = new Date(lastSyncTime);
+
+      // 2. 충돌 감지 및 해결
+      if (serverUpdateTime > clientSyncTime) {
+        console.log(`⚠️ 세션 충돌 감지 - 서버: ${serverUpdateTime}, 클라이언트: ${clientSyncTime}`);
+        
+        // 서버 데이터 우선 (Last Write Wins)
+        syncResult.action = 'server_wins';
+        syncResult.serverSession = {
+          id: serverSession.id,
+          orderData: serverSession.order_data,
+          lastModified: serverSession.updated_at
+        };
+        syncResult.conflictResolution = 'server_priority';
+      } else {
+        // 클라이언트 데이터로 서버 업데이트
+        await pool.query(`
+          UPDATE orders 
+          SET order_data = $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `, [JSON.stringify(sessionData), serverSession.id]);
+
+        syncResult.action = 'client_updated';
+      }
+    } else {
+      // 새 세션 생성 필요
+      syncResult.action = 'create_new_session';
+    }
+
+    // 3. 실시간 업데이트 브로드캐스트
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcast(storeId, 'session-sync', {
+        tableNumber: parseInt(tableNumber),
+        action: syncResult.action,
+        timestamp: new Date().toISOString(),
+        deviceId: deviceId
+      });
+    }
+
+    res.json(syncResult);
+
+  } catch (error) {
+    console.error('❌ 세션 동기화 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 동기화 실패: ' + error.message
+    });
+  }
+});
+
+// 세션 강제 종료 API
+router.delete('/stores/:storeId/table/:tableNumber/session/:sessionId', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { storeId, tableNumber, sessionId } = req.params;
+    const { reason = 'manual_termination' } = req.body;
+
+    console.log(`🛑 테이블 ${tableNumber} 세션 ${sessionId} 강제 종료 요청 (사유: ${reason})`);
+
+    await client.query('BEGIN');
+
+    // 1. 세션 상태 확인
+    const sessionResult = await client.query(`
+      SELECT id, cooking_status, total_amount, customer_name
+      FROM orders
+      WHERE id = $1 AND store_id = $2 AND table_number = $3
+    `, [sessionId, parseInt(storeId), parseInt(tableNumber)]);
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '세션을 찾을 수 없습니다.'
+      });
+    }
+
+    const session = sessionResult.rows[0];
+
+    if (session.cooking_status !== 'OPEN') {
+      return res.status(400).json({
+        success: false,
+        error: '이미 종료된 세션입니다.'
+      });
+    }
+
+    // 2. 세션 강제 종료 처리
+    await client.query(`
+      UPDATE orders 
+      SET cooking_status = 'FORCE_CLOSED',
+          completed_at = CURRENT_TIMESTAMP,
+          order_data = jsonb_set(
+            COALESCE(order_data, '{}'), 
+            '{termination}', 
+            $1
+          )
+      WHERE id = $2
+    `, [JSON.stringify({
+      reason: reason,
+      terminatedAt: new Date().toISOString(),
+      terminatedBy: 'pos-user'
+    }), sessionId]);
+
+    // 3. 관련 order_items 상태 업데이트
+    await client.query(`
+      UPDATE order_items 
+      SET cooking_status = 'CANCELLED',
+          completed_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1
+    `, [sessionId]);
+
+    // 4. 테이블 자동 해제 (필요한 경우)
+    if (reason === 'manual_termination' || reason === 'session_expired') {
+      await client.query(`
+        UPDATE store_tables 
+        SET is_occupied = false,
+            occupied_since = NULL,
+            auto_release_source = NULL
+        WHERE store_id = $1 AND table_number = $2
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+    }
+
+    await client.query('COMMIT');
+
+    // 5. 실시간 업데이트
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcast(storeId, 'session-terminated', {
+        sessionId: sessionId,
+        tableNumber: parseInt(tableNumber),
+        reason: reason,
+        timestamp: new Date().toISOString()
+      });
+
+      if (reason === 'manual_termination' || reason === 'session_expired') {
+        global.posWebSocket.broadcastTableUpdate(storeId, {
+          tableNumber: parseInt(tableNumber),
+          isOccupied: false,
+          source: 'SESSION_TERMINATION'
+        });
+      }
+    }
+
+    console.log(`✅ 테이블 ${tableNumber} 세션 ${sessionId} 강제 종료 완료`);
+
+    res.json({
+      success: true,
+      sessionId: sessionId,
+      reason: reason,
+      message: `세션이 성공적으로 종료되었습니다.`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 세션 강제 종료 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 강제 종료 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // POS 테이블 세션 결제 처리 API (기본 현금/간편결제)
 router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
   const client = await pool.connect();
@@ -1333,5 +1647,180 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     client.release();
   }
 });
+
+// 부분 결제 처리 API
+router.post('/stores/:storeId/table/:tableNumber/payment-partial', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const { storeId, tableNumber } = req.params;
+    const { paymentMethod, amount, sessionId, isPartialPayment } = req.body;
+
+    console.log(`💳 부분 결제 처리 (테이블 ${tableNumber}):`, {
+      method: paymentMethod,
+      amount: `₩${amount.toLocaleString()}`,
+      sessionId: sessionId
+    });
+
+    await client.query('BEGIN');
+
+    // 1. 세션 확인
+    const sessionResult = await client.query(`
+      SELECT id, total_amount, customer_name, order_data
+      FROM orders
+      WHERE id = $1 AND store_id = $2 AND table_number = $3 AND cooking_status = 'OPEN'
+    `, [sessionId, parseInt(storeId), parseInt(tableNumber)]);
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '활성 세션을 찾을 수 없습니다.'
+      });
+    }
+
+    const session = sessionResult.rows[0];
+
+    // 2. 부분 결제 기록 저장
+    const partialPaymentResult = await client.query(`
+      INSERT INTO partial_payments (
+        order_id, payment_method, amount, payment_status, payment_date
+      ) VALUES ($1, $2, $3, 'completed', CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [sessionId, paymentMethod, amount]);
+
+    const partialPaymentId = partialPaymentResult.rows[0].id;
+
+    // 3. 세션의 결제 누적 금액 계산
+    const totalPaidResult = await client.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_paid
+      FROM partial_payments
+      WHERE order_id = $1 AND payment_status = 'completed'
+    `, [sessionId]);
+
+    const totalPaid = parseInt(totalPaidResult.rows[0].total_paid);
+    const remainingAmount = session.total_amount - totalPaid;
+
+    // 4. 세션 완료 여부 확인
+    if (remainingAmount <= 0) {
+      // 전체 결제 완료 - paid_orders로 이관
+      const orderItems = await client.query(`
+        SELECT menu_name, quantity, price
+        FROM order_items
+        WHERE order_id = $1
+      `, [sessionId]);
+
+      const paidOrderResult = await client.query(`
+        INSERT INTO paid_orders (
+          user_id, store_id, table_number, order_data,
+          original_amount, final_amount, order_source,
+          payment_status, payment_method, payment_date
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+        RETURNING id
+      `, [
+        'pos-user',
+        parseInt(storeId),
+        parseInt(tableNumber),
+        JSON.stringify({
+          items: orderItems.rows,
+          sessionId: sessionId,
+          partialPayments: await this.getPartialPayments(sessionId, client)
+        }),
+        session.total_amount,
+        session.total_amount,
+        'POS',
+        'completed',
+        'COMBO' // 복합 결제 표시
+      ]);
+
+      // 세션 종료
+      await client.query(`
+        UPDATE orders 
+        SET cooking_status = 'CLOSED',
+            paid_order_id = $1,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [paidOrderResult.rows[0].id, sessionId]);
+
+      // 테이블 해제
+      await client.query(`
+        UPDATE store_tables 
+        SET is_occupied = false,
+            occupied_since = NULL,
+            auto_release_source = NULL
+        WHERE store_id = $1 AND table_number = $2
+      `, [parseInt(storeId), parseInt(tableNumber)]);
+    } else {
+      // 부분 결제 진행 중 상태 업데이트
+      await client.query(`
+        UPDATE orders 
+        SET order_data = jsonb_set(
+          COALESCE(order_data, '{}'),
+          '{partialPayments}',
+          $1
+        ),
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [JSON.stringify({
+        totalPaid: totalPaid,
+        remainingAmount: remainingAmount,
+        lastPayment: {
+          method: paymentMethod,
+          amount: amount,
+          timestamp: new Date().toISOString()
+        }
+      }), sessionId]);
+    }
+
+    await client.query('COMMIT');
+
+    // 5. 실시간 업데이트
+    if (global.posWebSocket) {
+      global.posWebSocket.broadcast(storeId, 'partial-payment-completed', {
+        sessionId: sessionId,
+        tableNumber: parseInt(tableNumber),
+        paymentMethod: paymentMethod,
+        amount: amount,
+        totalPaid: totalPaid,
+        remainingAmount: remainingAmount,
+        isSessionComplete: remainingAmount <= 0,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    res.json({
+      success: true,
+      partialPaymentId: partialPaymentId,
+      paymentMethod: paymentMethod,
+      amount: amount,
+      totalPaid: totalPaid,
+      remainingAmount: remainingAmount,
+      isSessionComplete: remainingAmount <= 0,
+      message: remainingAmount <= 0 ? 
+        '전체 결제가 완료되었습니다.' : 
+        `부분 결제 완료. 잔여 금액: ₩${remainingAmount.toLocaleString()}`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 부분 결제 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '부분 결제 처리 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 부분 결제 내역 조회 헬퍼
+async function getPartialPayments(orderId, client) {
+  const result = await client.query(`
+    SELECT payment_method, amount, payment_date, payment_status
+    FROM partial_payments
+    WHERE order_id = $1
+    ORDER BY payment_date ASC
+  `, [orderId]);
+
+  return result.rows;
+}
 
 module.exports = router;

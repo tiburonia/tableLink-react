@@ -1462,6 +1462,102 @@ function renderPOSLayout() {
         display: none !important;
       }
 
+      /* 메뉴 추가 애니메이션 */
+      .menu-added-animation {
+        animation: menuAddedPulse 0.6s ease-out;
+        transform: scale(1.05);
+      }
+
+      @keyframes menuAddedPulse {
+        0% { 
+          background: #10b981;
+          color: white;
+          transform: scale(1);
+        }
+        50% { 
+          background: #059669;
+          color: white;
+          transform: scale(1.05);
+        }
+        100% { 
+          background: white;
+          color: inherit;
+          transform: scale(1);
+        }
+      }
+
+      /* 결제 처리 중 로딩 스피너 */
+      .payment-processing {
+        position: relative;
+        pointer-events: none;
+      }
+
+      .payment-processing::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid transparent;
+        border-top: 2px solid #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      /* 세션 상태 표시 */
+      .session-status-indicator {
+        position: fixed;
+        top: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1000;
+        display: none;
+      }
+
+      .session-status-indicator.active {
+        display: block;
+        animation: slideDown 0.3s ease-out;
+      }
+
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -20px);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, 0);
+        }
+      }
+
+      /* 실시간 업데이트 표시 */
+      .realtime-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #10b981;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        z-index: 1000;
+        display: none;
+        animation: pulse 2s infinite;
+      }
+
+      .realtime-indicator.active {
+        display: block;
+      }
+
       /* 반응형 */
       @media (max-width: 1400px) {
         .table-map-view {

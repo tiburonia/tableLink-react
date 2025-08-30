@@ -12,6 +12,17 @@ let currentView = 'table-map'; // 'table-map' 또는 'order'
 let inputMode = 'quantity'; // 'quantity', 'amount', 'received'
 let currentInput = '';
 
+// 추가된 상태 관리 변수들
+let orderSession = null; // 현재 주문 세션 정보
+let realTimeOrderUpdates = new Map(); // 실시간 주문 업데이트 관리
+let tableTimers = new Map(); // 테이블별 타이머 관리
+let soundSettings = {
+  newOrder: true,
+  paymentComplete: true,
+  errorAlert: true
+}; // 사운드 설정
+let autoRefreshInterval = null; // 자동 새로고침 인터벌
+
 // 카테고리별 색상 코드 (실제 POS 서비스 기준)
 const CATEGORY_COLORS = {
   '커피': '#8B4513',
@@ -401,10 +412,23 @@ function renderMenuGrid() {
   menuGrid.innerHTML = menusHTML;
 }
 
-// 메뉴를 주문에 추가 (OKPOS 방식)
-function addMenuToOrder(menuName, price) {
+// 메뉴를 주문에 추가 (OKPOS 방식 - 세션 기반 검증 강화)
+async function addMenuToOrder(menuName, price) {
   if (!window.currentTable) {
     showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
+    return;
+  }
+
+  // 메뉴 유효성 검증
+  const menuItem = window.allMenus.find(menu => menu.name === menuName && menu.price === price);
+  if (!menuItem) {
+    showPOSNotification('유효하지 않은 메뉴입니다.', 'error');
+    return;
+  }
+
+  // 세션 상태 검증
+  if (isOrderProcessing) {
+    showPOSNotification('주문 처리 중입니다. 잠시 후 다시 시도해주세요.', 'warning');
     return;
   }
 
@@ -413,46 +437,93 @@ function addMenuToOrder(menuName, price) {
     window.currentOrder = [];
   }
 
-  // 기존 아이템 확인
-  const existingItemIndex = window.currentOrder.findIndex(item => item.name === menuName);
-
-  if (existingItemIndex !== -1) {
-    window.currentOrder[existingItemIndex].quantity += 1;
-    console.log(`📦 메뉴 수량 증가: ${menuName} (${window.currentOrder[existingItemIndex].quantity}개)`);
-  } else {
-    const newItem = {
-      id: Date.now(), // 고유 ID
-      name: menuName,
-      price: parseInt(price),
-      quantity: 1,
-      discount: 0,
-      note: ''
-    };
-    window.currentOrder.push(newItem);
-    console.log(`📦 새 메뉴 추가: ${menuName} - ₩${price.toLocaleString()}`);
-  }
-
-  // UI 업데이트
-  renderOrderItems();
-  renderPaymentSummary();
-  updateButtonStates();
-  updateOrderStatus('주문 작성 중', 'ordering');
-
-  // 시각적 피드백
-  if (event && event.target) {
-    const button = event.target.closest('.menu-item-btn');
-    if (button) {
-      button.style.transform = 'scale(0.95)';
-      button.style.background = '#e0f2fe';
-      setTimeout(() => {
-        button.style.transform = '';
-        button.style.background = '';
-      }, 200);
+  try {
+    // 현재 테이블의 세션 상태 확인
+    const sessionCheck = await validateTableSession(window.currentTable);
+    if (!sessionCheck.canAddItems) {
+      showPOSNotification(sessionCheck.message, 'warning');
+      return;
     }
-  }
 
-  console.log(`✅ 현재 주문 상태 (테이블 ${window.currentTable}):`, window.currentOrder);
-  showPOSNotification(`${menuName} 추가됨 (${window.currentOrder.reduce((sum, item) => sum + item.quantity, 0)}개)`, 'success');
+    // 기존 아이템 확인 및 추가
+    const existingItemIndex = window.currentOrder.findIndex(item => item.name === menuName);
+
+    if (existingItemIndex !== -1) {
+      // 수량 제한 검증 (최대 99개)
+      if (window.currentOrder[existingItemIndex].quantity >= 99) {
+        showPOSNotification('메뉴 수량은 최대 99개까지 가능합니다.', 'warning');
+        return;
+      }
+
+      window.currentOrder[existingItemIndex].quantity += 1;
+      console.log(`📦 메뉴 수량 증가: ${menuName} (${window.currentOrder[existingItemIndex].quantity}개)`);
+      
+      // 실시간 업데이트 전송
+      broadcastOrderUpdate('item_quantity_changed', {
+        itemName: menuName,
+        newQuantity: window.currentOrder[existingItemIndex].quantity
+      });
+    } else {
+      const newItem = {
+        id: generateOrderItemId(), // 고유 ID 생성
+        name: menuName,
+        price: parseInt(price),
+        quantity: 1,
+        discount: 0,
+        note: '',
+        addedAt: new Date().toISOString(),
+        sessionId: orderSession?.id || null
+      };
+      window.currentOrder.push(newItem);
+      console.log(`📦 새 메뉴 추가: ${menuName} - ₩${price.toLocaleString()}`);
+      
+      // 실시간 업데이트 전송
+      broadcastOrderUpdate('item_added', {
+        itemName: menuName,
+        itemPrice: price,
+        quantity: 1
+      });
+    }
+
+    // UI 업데이트
+    await renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    updateOrderStatus('주문 작성 중', 'ordering');
+
+    // 세션 자동 저장 (임시저장)
+    await autoSaveSession();
+
+    // 시각적 피드백 (개선된 애니메이션)
+    if (event && event.target) {
+      const button = event.target.closest('.menu-item-btn');
+      if (button) {
+        // 추가 성공 애니메이션
+        button.classList.add('menu-added-animation');
+        setTimeout(() => {
+          button.classList.remove('menu-added-animation');
+        }, 600);
+      }
+    }
+
+    // 통계 업데이트
+    updateOrderStatistics();
+
+    console.log(`✅ 현재 주문 상태 (테이블 ${window.currentTable}):`, window.currentOrder);
+    
+    // 성공 알림 (수량 정보 포함)
+    const totalItems = window.currentOrder.reduce((sum, item) => sum + item.quantity, 0);
+    const totalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    showPOSNotification(
+      `${menuName} 추가됨 (총 ${totalItems}개, ₩${totalAmount.toLocaleString()})`, 
+      'success'
+    );
+
+  } catch (error) {
+    console.error('❌ 메뉴 추가 실패:', error);
+    showPOSNotification('메뉴 추가 중 오류가 발생했습니다.', 'error');
+  }
 }
 
 // 주문 아이템 렌더링 (OKPOS 테이블 형태)
