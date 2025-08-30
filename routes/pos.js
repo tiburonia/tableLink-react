@@ -178,12 +178,19 @@ router.post('/orders', async (req, res) => {
       customerName
     } = req.body;
 
+    // totalAmount 검증 및 계산
+    let calculatedTotalAmount = totalAmount;
+    if (!calculatedTotalAmount || calculatedTotalAmount === undefined || calculatedTotalAmount === null) {
+      calculatedTotalAmount = items?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+      console.log('⚠️ totalAmount가 없어서 계산함:', calculatedTotalAmount);
+    }
+
     console.log('📦 POS 주문 추가 요청 (테이블 세션 단위):', {
       storeId,
       storeName,
       tableNumber,
       itemCount: items?.length || 0,
-      totalAmount,
+      totalAmount: calculatedTotalAmount,
       isTLLOrder
     });
 
@@ -220,9 +227,9 @@ router.post('/orders', async (req, res) => {
         SET total_amount = total_amount + $1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-      `, [totalAmount, orderId]);
+      `, [calculatedTotalAmount, orderId]);
 
-      console.log(`✅ 기존 주문 세션 ${orderId}에 추가 주문 (기존: ₩${existingOrder.total_amount.toLocaleString()} + 추가: ₩${totalAmount.toLocaleString()})`);
+      console.log(`✅ 기존 주문 세션 ${orderId}에 추가 주문 (기존: ₩${existingOrder.total_amount.toLocaleString()} + 추가: ₩${calculatedTotalAmount.toLocaleString()})`);
 
     } else {
       const newOrderResult = await client.query(`
@@ -235,7 +242,7 @@ router.post('/orders', async (req, res) => {
         parseInt(storeId), 
         parseInt(tableNumber), 
         finalCustomerName,
-        totalAmount,
+        calculatedTotalAmount,
         'OPEN',
         JSON.stringify({
           sessionType: 'POS',
@@ -250,7 +257,7 @@ router.post('/orders', async (req, res) => {
       ]);
 
       orderId = newOrderResult.rows[0].id;
-      console.log(`✅ 새로운 테이블 세션 ${orderId} 시작 (총액: ₩${totalAmount.toLocaleString()})`);
+      console.log(`✅ 새로운 테이블 세션 ${orderId} 시작 (총액: ₩${calculatedTotalAmount.toLocaleString()})`);
 
       try {
         console.log(`🔒 POS 주문 세션 시작으로 인한 테이블 ${tableNumber} 자동 점유 처리`);
@@ -294,7 +301,7 @@ router.post('/orders', async (req, res) => {
         orderId: orderId,
         action: existingOrderResult.rows.length > 0 ? 'items-added' : 'session-started',
         itemCount: items.length,
-        addedAmount: totalAmount
+        addedAmount: calculatedTotalAmount
       });
 
       if (existingOrderResult.rows.length === 0) {
@@ -316,7 +323,7 @@ router.post('/orders', async (req, res) => {
         tableNumber: parseInt(tableNumber),
         customerName: finalCustomerName,
         itemCount: items.length,
-        totalAmount: totalAmount,
+        totalAmount: calculatedTotalAmount,
         source: 'POS'
       });
     }
@@ -331,7 +338,7 @@ router.post('/orders', async (req, res) => {
       orderData: {
         tableNumber: parseInt(tableNumber),
         itemCount: items.length,
-        addedAmount: totalAmount,
+        addedAmount: calculatedTotalAmount,
         items: items
       }
     });
