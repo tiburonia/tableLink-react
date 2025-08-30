@@ -263,8 +263,8 @@ async function selectTableFromMap(tableNumber) {
     // 주문 화면 헤더 업데이트
     document.getElementById('orderTableTitle').textContent = `테이블 ${tableNumber} - 주문/결제`;
 
-    // 기존 주문 세션 로드
-    await loadTableSession(tableNumber);
+    // POS + TLL 통합 주문 로드
+    await loadMixedTableOrders(tableNumber);
 
     // 메뉴 카테고리 및 그리드 렌더링
     renderMenuCategories();
@@ -485,15 +485,19 @@ function renderOrderItems() {
     const discount = parseInt(item.discount) || 0;
     const total = (price * quantity) - discount;
     const isSelected = window.selectedItems.includes(item.id);
+    const orderType = item.isTLLOrder ? 'TLL' : 'POS';
+    const typeClass = item.isTLLOrder ? 'type-tll' : 'type-pos';
     
     return `
-      <div class="order-item-row ${isSelected ? 'selected' : ''}" onclick="toggleItemSelection(${item.id})">
+      <div class="order-item-row ${isSelected ? 'selected' : ''} ${item.isTLLOrder ? 'tll-item' : 'pos-item'}" onclick="toggleItemSelection(${item.id})">
+        <div class="item-type">
+          <span class="order-type-badge ${typeClass}">${orderType}</span>
+        </div>
         <div class="item-name">${item.name || '메뉴명 없음'}</div>
         <div class="item-price">₩${price.toLocaleString()}</div>
         <div class="item-qty">${quantity}개</div>
         <div class="item-discount">₩${discount.toLocaleString()}</div>
         <div class="item-total">₩${total.toLocaleString()}</div>
-        <div class="item-note">${item.note || ''}</div>
       </div>
     `;
   }).join('');
@@ -606,46 +610,65 @@ function renderPaymentSummary() {
   }
 }
 
-// 숫자 입력 처리
-function inputNumber(digit) {
-  window.currentInput += digit;
-  console.log(`🔢 숫자 입력: ${digit}, 현재 입력: ${window.currentInput}`);
-  
-  // 받은 금액 업데이트
-  const receivedAmountElement = document.getElementById('receivedAmount');
-  const changeAmountElement = document.getElementById('changeAmount');
-  
-  if (receivedAmountElement) {
-    const received = parseInt(window.currentInput) || 0;
-    receivedAmountElement.textContent = `₩${received.toLocaleString()}`;
+// TLL 주문과 POS 주문 통합 로드
+async function loadMixedTableOrders(tableNumber) {
+  try {
+    console.log(`🔄 테이블 ${tableNumber} POS+TLL 주문 통합 로드`);
     
-    const finalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity) - item.discount, 0);
-    const change = Math.max(0, received - finalAmount);
-    
-    if (changeAmountElement) {
-      changeAmountElement.textContent = `₩${change.toLocaleString()}`;
+    // 기존 POS 세션 로드
+    const posResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
+    const posData = await posResponse.json();
+
+    // TLL 주문 로드
+    const tllResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/tll-orders`);
+    const tllData = await tllResponse.json();
+
+    // 주문 배열 초기화
+    window.currentOrder = [];
+
+    // POS 주문 추가
+    if (posData.success && posData.currentSession && posData.currentSession.items) {
+      const posItems = posData.currentSession.items.map((item, index) => ({
+        id: `pos-${index}`,
+        name: item.menuName,
+        price: parseInt(item.price),
+        quantity: parseInt(item.quantity),
+        discount: 0,
+        note: '',
+        isTLLOrder: false
+      }));
+      window.currentOrder.push(...posItems);
     }
-  }
-}
 
-// 입력 지우기
-function clearInput() {
-  window.currentInput = '';
-  const receivedAmountElement = document.getElementById('receivedAmount');
-  const changeAmountElement = document.getElementById('changeAmount');
-  
-  if (receivedAmountElement) {
-    receivedAmountElement.textContent = '₩0';
-  }
-  if (changeAmountElement) {
-    changeAmountElement.textContent = '₩0';
-  }
-}
+    // TLL 주문 추가 (최근 2시간 내 완료된 주문)
+    if (tllData.success && tllData.tllOrders) {
+      const tllItems = tllData.tllOrders.flatMap((order, orderIndex) => {
+        const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
+        const items = orderData?.items || [];
+        
+        return items.map((item, itemIndex) => ({
+          id: `tll-${orderIndex}-${itemIndex}`,
+          name: item.name,
+          price: parseInt(item.price),
+          quantity: parseInt(item.quantity),
+          discount: 0,
+          note: `${order.customerName}님 주문`,
+          isTLLOrder: true,
+          tllOrderInfo: {
+            customerName: order.customerName,
+            paymentDate: order.paymentDate
+          }
+        }));
+      });
+      window.currentOrder.push(...tllItems);
+    }
 
-// 한 글자 삭제
-function deleteInput() {
-  window.currentInput = window.currentInput.slice(0, -1);
-  inputNumber(''); // 업데이트 트리거
+    console.log(`✅ 테이블 ${tableNumber} 통합 주문 로드 완료: POS ${posData.currentSession?.items?.length || 0}개, TLL ${tllData.tllOrders?.length || 0}개`);
+    
+  } catch (error) {
+    console.error('❌ 통합 주문 로드 실패:', error);
+    window.currentOrder = [];
+  }
 }
 
 // 버튼 상태 업데이트
@@ -894,9 +917,7 @@ window.selectAllItems = selectAllItems;
 window.deleteSelectedItems = deleteSelectedItems;
 window.applyDiscount = applyDiscount;
 window.changeQuantity = changeQuantity;
-window.inputNumber = inputNumber;
-window.clearInput = clearInput;
-window.deleteInput = deleteInput;
+
 window.processPayment = processPayment;
 window.clearOrder = clearOrder;
 window.holdOrder = holdOrder;

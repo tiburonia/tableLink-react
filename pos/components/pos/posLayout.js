@@ -133,12 +133,12 @@ function renderPOSLayout() {
                 
                 <div class="order-items-container">
                   <div class="order-items-header">
+                    <div class="header-col item-type">구분</div>
                     <div class="header-col item-name">메뉴명</div>
                     <div class="header-col item-price">단가</div>
                     <div class="header-col item-qty">수량</div>
                     <div class="header-col item-discount">할인</div>
                     <div class="header-col item-total">금액</div>
-                    <div class="header-col item-note">비고</div>
                   </div>
                   
                   <div class="order-items-list" id="orderItemsList">
@@ -173,40 +173,6 @@ function renderPOSLayout() {
                   <div class="summary-row final">
                     <span class="label">결제 금액</span>
                     <span class="value" id="finalAmount">₩0</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="label">받은 금액</span>
-                    <span class="value" id="receivedAmount">₩0</span>
-                  </div>
-                  <div class="summary-row">
-                    <span class="label">거스름돈</span>
-                    <span class="value change" id="changeAmount">₩0</span>
-                  </div>
-                </div>
-
-                <!-- 숫자 키패드 -->
-                <div class="number-keypad">
-                  <div class="keypad-row">
-                    <button class="key-btn" onclick="inputNumber('7')">7</button>
-                    <button class="key-btn" onclick="inputNumber('8')">8</button>
-                    <button class="key-btn" onclick="inputNumber('9')">9</button>
-                    <button class="key-btn special" onclick="clearInput()">C</button>
-                  </div>
-                  <div class="keypad-row">
-                    <button class="key-btn" onclick="inputNumber('4')">4</button>
-                    <button class="key-btn" onclick="inputNumber('5')">5</button>
-                    <button class="key-btn" onclick="inputNumber('6')">6</button>
-                    <button class="key-btn special" onclick="deleteInput()">⌫</button>
-                  </div>
-                  <div class="keypad-row">
-                    <button class="key-btn" onclick="inputNumber('1')">1</button>
-                    <button class="key-btn" onclick="inputNumber('2')">2</button>
-                    <button class="key-btn" onclick="inputNumber('3')">3</button>
-                    <button class="key-btn special double-height" onclick="inputNumber('00')">00</button>
-                  </div>
-                  <div class="keypad-row">
-                    <button class="key-btn double-width" onclick="inputNumber('0')">0</button>
-                    <button class="key-btn" onclick="inputNumber('.')">.</button>
                   </div>
                 </div>
               </div>
@@ -670,7 +636,7 @@ function renderPOSLayout() {
         flex: 1;
         display: flex;
         flex-direction: column;
-        min-height: 400px;
+        min-height: 500px;
       }
 
       .panel-header {
@@ -731,7 +697,7 @@ function renderPOSLayout() {
 
       .order-items-header {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+        grid-template-columns: 0.8fr 2fr 1fr 1fr 1fr 1fr;
         gap: 8px;
         padding: 12px 16px;
         background: #f1f5f9;
@@ -765,7 +731,7 @@ function renderPOSLayout() {
 
       .order-item-row {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+        grid-template-columns: 0.8fr 2fr 1fr 1fr 1fr 1fr;
         gap: 8px;
         padding: 12px 8px;
         border: 1px solid #e2e8f0;
@@ -786,6 +752,16 @@ function renderPOSLayout() {
       .order-item-row.selected {
         background: #dbeafe;
         border-color: #3b82f6;
+      }
+
+      .order-item-row.tll-item {
+        background: #fffbeb;
+        border-left: 4px solid #f59e0b;
+      }
+
+      .order-item-row.pos-item {
+        background: #f0f9ff;
+        border-left: 4px solid #0ea5e9;
       }
 
       .item-name {
@@ -853,7 +829,7 @@ function renderPOSLayout() {
       /* 결제 정보 패널 */
       .payment-info-panel {
         background: white;
-        min-height: 300px;
+        min-height: 150px;
         display: flex;
         flex-direction: column;
       }
@@ -899,61 +875,24 @@ function renderPOSLayout() {
         color: #059669;
       }
 
-      /* 숫자 키패드 */
-      .number-keypad {
-        flex: 1;
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .keypad-row {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
-        flex: 1;
-      }
-
-      .key-btn {
-        background: #f1f5f9;
-        border: 2px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 18px;
+      /* 주문 타입 배지 */
+      .order-type-badge {
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 10px;
         font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #1e293b;
-        min-height: 48px;
+        text-transform: uppercase;
+        text-align: center;
       }
 
-      .key-btn:hover {
-        background: #e2e8f0;
-        border-color: #94a3b8;
-        transform: translateY(-2px);
+      .type-pos {
+        background: #dbeafe;
+        color: #1e40af;
       }
 
-      .key-btn:active {
-        transform: translateY(0);
-      }
-
-      .key-btn.special {
-        background: #3b82f6;
-        color: white;
-        border-color: #2563eb;
-      }
-
-      .key-btn.special:hover {
-        background: #2563eb;
-        border-color: #1d4ed8;
-      }
-
-      .key-btn.double-width {
-        grid-column: span 2;
-      }
-
-      .key-btn.double-height {
-        grid-row: span 2;
+      .type-tll {
+        background: #fef3c7;
+        color: #92400e;
       }
 
       /* 우측 컬럼 */
@@ -1233,17 +1172,17 @@ function renderPOSLayout() {
         }
 
         .order-items-header {
-          grid-template-columns: 2fr 1fr 1fr 1fr;
+          grid-template-columns: 0.6fr 2fr 1fr 1fr;
         }
 
         .order-item-row {
-          grid-template-columns: 2fr 1fr 1fr 1fr;
+          grid-template-columns: 0.6fr 2fr 1fr 1fr;
         }
 
         .order-items-header .item-discount,
-        .order-items-header .item-note,
+        .order-items-header .item-total,
         .order-item-row .item-discount,
-        .order-item-row .item-note {
+        .order-item-row .item-total {
           display: none;
         }
       }
