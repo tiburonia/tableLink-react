@@ -85,30 +85,30 @@
   <!-- 서브 메인 화면 렌더링 함수 추가 -->
   <script src="TLG/pages/main/renderSubMain.js"></script>
 
-  <script>
-    //초기 진입 렌더링 함수
-    document.addEventListener('DOMContentLoaded', () => {
-      renderLogin()
-    });
-  </script>
-
-  <!-- 앱 초기화 스크립트 -->
+  <!-- 앱 초기화 스크립트를 모든 다른 스크립트보다 먼저 로드 -->
   <script src="/TLG/utils/authManager.js"></script>
+  
   <script>
-    // DOM이 완전히 로드된 후 앱 초기화
+    // DOM이 완전히 로드된 후 앱 초기화 (단일 이벤트 리스너)
     document.addEventListener('DOMContentLoaded', () => {
       console.log('🔄 DOM 로드 완료, 앱 초기화 시작');
 
+      // authManager.js가 로드되었는지 확인
       if (typeof initializeApp === 'function') {
         console.log('✅ initializeApp 함수 발견, 실행 중...');
         initializeApp();
-      } else if (typeof renderLogin === 'function') {
-        console.log('✅ renderLogin 함수 발견, 실행 중...');
-        renderLogin();
       } else {
-        console.error('❌ 초기화 함수들을 찾을 수 없습니다');
-        // 기본적으로 로그인 화면 표시
-        document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">로딩 중...</div>';
+        console.error('❌ initializeApp 함수를 찾을 수 없습니다');
+        // 폴백으로 직접 로그인 화면 렌더링
+        setTimeout(() => {
+          if (typeof renderLogin === 'function') {
+            console.log('🔄 폴백: renderLogin 함수 실행');
+            renderLogin();
+          } else {
+            console.error('❌ renderLogin 함수도 찾을 수 없습니다');
+            document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">앱을 로딩하는 중...</div>';
+          }
+        }, 100);
       }
     });
 
