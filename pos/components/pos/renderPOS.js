@@ -54,7 +54,7 @@ async function renderPOS() {
   try {
     console.log('📟 TableLink POS 시스템 초기화 중... (OKPOS 구조 기반)');
 
-    // 전역 변수 초기화
+    // 전역 변수 안전 초기화
     window.currentStore = null;
     window.currentTable = null;
     window.allMenus = [];
@@ -67,6 +67,12 @@ async function renderPOS() {
     window.inputMode = 'quantity';
     window.currentInput = '';
     window.hasUnconfirmedChanges = false;
+
+    // 안전성 검사 및 기본값 설정
+    if (!Array.isArray(window.currentOrder)) window.currentOrder = [];
+    if (!Array.isArray(window.pendingOrder)) window.pendingOrder = [];
+    if (!Array.isArray(window.confirmedOrder)) window.confirmedOrder = [];
+    if (!Array.isArray(window.selectedItems)) window.selectedItems = [];
 
     // 기본 UI 렌더링
     renderPOSLayout();
@@ -437,15 +443,22 @@ function addMenuToOrder(menuName, price) {
     return;
   }
 
-  // 전역 변수 안전성 초기화
+  // 전역 변수 안전성 초기화 (강화된 버전)
   if (!window.pendingOrder || !Array.isArray(window.pendingOrder)) {
+    console.log('🔧 pendingOrder 배열 초기화');
     window.pendingOrder = [];
   }
   if (!window.confirmedOrder || !Array.isArray(window.confirmedOrder)) {
+    console.log('🔧 confirmedOrder 배열 초기화');
     window.confirmedOrder = [];
   }
   if (!window.currentOrder || !Array.isArray(window.currentOrder)) {
+    console.log('🔧 currentOrder 배열 초기화');
     window.currentOrder = [];
+  }
+  if (!window.selectedItems || !Array.isArray(window.selectedItems)) {
+    console.log('🔧 selectedItems 배열 초기화');
+    window.selectedItems = [];
   }
 
   try {
@@ -690,59 +703,99 @@ async function loadMixedTableOrders(tableNumber) {
   try {
     console.log(`🔄 테이블 ${tableNumber} POS+TLL 주문 통합 로드`);
 
+    // 전역 변수 안전 초기화
+    window.currentOrder = [];
+    window.confirmedOrder = [];
+    window.pendingOrder = [];
+
     // 기존 POS 세션 로드
     const posResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
-    const posData = await posResponse.json();
+    
+    if (!posResponse.ok) {
+      console.warn(`⚠️ POS 주문 로드 실패: ${posResponse.status}`);
+    } else {
+      const posData = await posResponse.json();
 
-    // TLL 주문 로드
-    const tllResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/tll-orders`);
-    const tllData = await tllResponse.json();
-
-    // 주문 배열 초기화
-    window.currentOrder = [];
-
-    // POS 주문 추가
-    if (posData.success && posData.currentSession && posData.currentSession.items) {
-      const posItems = posData.currentSession.items.map((item, index) => ({
-        id: `pos-${index}`,
-        name: item.menuName,
-        price: parseInt(item.price),
-        quantity: parseInt(item.quantity),
-        discount: 0,
-        note: '',
-        isTLLOrder: false
-      }));
-      window.currentOrder.push(...posItems);
-    }
-
-    // TLL 주문 추가 (최근 2시간 내 완료된 주문)
-    if (tllData.success && tllData.tllOrders) {
-      const tllItems = tllData.tllOrders.flatMap((order, orderIndex) => {
-        const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
-        const items = orderData?.items || [];
-
-        return items.map((item, itemIndex) => ({
-          id: `tll-${orderIndex}-${itemIndex}`,
-          name: item.name,
+      // POS 확정 주문 추가
+      if (posData.success && posData.currentSession && posData.currentSession.items) {
+        const posItems = posData.currentSession.items.map((item, index) => ({
+          id: `pos-${index}`,
+          name: item.menuName,
           price: parseInt(item.price),
           quantity: parseInt(item.quantity),
           discount: 0,
-          note: `${order.customerName}님 주문`,
-          isTLLOrder: true,
-          tllOrderInfo: {
-            customerName: order.customerName,
-            paymentDate: order.paymentDate
-          }
+          note: '',
+          isTLLOrder: false,
+          isConfirmed: true // POS 주문은 기본적으로 확정됨
         }));
-      });
-      window.currentOrder.push(...tllItems);
+        window.confirmedOrder.push(...posItems);
+        console.log(`✅ POS 확정 주문 ${posItems.length}개 로드`);
+      }
     }
 
-    console.log(`✅ 테이블 ${tableNumber} 통합 주문 로드 완료: POS ${posData.currentSession?.items?.length || 0}개, TLL ${tllData.tllOrders?.length || 0}개`);
+    // TLL 주문 로드 (올바른 엔드포인트 사용)
+    try {
+      const tllResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/orders`);
+      
+      if (tllResponse.ok) {
+        const tllData = await tllResponse.json();
+
+        if (tllData.success && tllData.tllOrder) {
+          // TLL 주문이 있는 경우 표시용으로만 사용 (POS에서는 수정 불가)
+          const orderData = typeof tllData.tllOrder.orderData === 'string' ? 
+            JSON.parse(tllData.tllOrder.orderData) : tllData.tllOrder.orderData;
+          
+          if (orderData && orderData.items) {
+            const tllItems = orderData.items.map((item, itemIndex) => ({
+              id: `tll-${itemIndex}`,
+              name: item.name,
+              price: parseInt(item.price),
+              quantity: parseInt(item.quantity),
+              discount: 0,
+              note: `${tllData.tllOrder.customerName}님 TLL 주문`,
+              isTLLOrder: true,
+              isConfirmed: true, // TLL 주문은 이미 확정됨
+              tllOrderInfo: {
+                customerName: tllData.tllOrder.customerName,
+                paymentDate: tllData.tllOrder.paymentDate
+              }
+            }));
+            window.confirmedOrder.push(...tllItems);
+            console.log(`✅ TLL 확정 주문 ${tllItems.length}개 로드`);
+          }
+        }
+      }
+    } catch (tllError) {
+      console.warn('⚠️ TLL 주문 로드 실패:', tllError);
+    }
+
+    // 통합된 주문 목록 생성
+    window.currentOrder = [...window.confirmedOrder, ...window.pendingOrder];
+
+    console.log(`✅ 테이블 ${tableNumber} 통합 주문 로드 완료: 확정 ${window.confirmedOrder.length}개, 대기 ${window.pendingOrder.length}개`);
+
+    // UI 업데이트
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+
+    if (window.confirmedOrder.length > 0) {
+      updateOrderStatus(`기존 주문 (${window.confirmedOrder.length}개)`, 'ordering');
+    } else {
+      updateOrderStatus('새 주문', 'available');
+    }
 
   } catch (error) {
     console.error('❌ 통합 주문 로드 실패:', error);
+    // 안전한 초기화
     window.currentOrder = [];
+    window.confirmedOrder = [];
+    window.pendingOrder = [];
+    
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    updateOrderStatus('로드 실패', 'available');
   }
 }
 
