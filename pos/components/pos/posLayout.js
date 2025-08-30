@@ -975,6 +975,8 @@ function renderPOSLayout() {
         display: flex;
         flex-direction: column;
         gap: 3px;
+        overflow-y: auto;
+        max-height: 100%;
       }
 
       /* 메뉴 선택 패널 */
@@ -1161,6 +1163,8 @@ function renderPOSLayout() {
         display: flex;
         flex-direction: column;
         gap: 3px;
+        overflow-y: auto;
+        flex-shrink: 0;
       }
 
       /* 주요 액션 버튼 (주문 저장) */
