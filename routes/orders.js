@@ -456,12 +456,21 @@ router.post('/pay', async (req, res) => {
     `;
 
     const userPaidOrderResult = await client.query(insertQuery, [
-      userId, storeId, actualTableNumber,
+      userId,
+      storeId,
+      actualTableNumber,
       JSON.stringify({
         ...orderData,
         storeId: storeId,
         storeName: storeName,
-        tableNumber: tableNumber
+        tableNumber: actualTableNumber,
+        actualTableNumber: actualTableNumber,
+        paymentInfo: {
+          paymentKey: pgPaymentKey,
+          orderId: pgOrderId,
+          amount: finalTotal,
+          method: pgPaymentMethod
+        }
       }),
       originalAmount,
       appliedPoint,
@@ -474,29 +483,66 @@ router.post('/pay', async (req, res) => {
     ]);
 
     const userPaidOrderId = userPaidOrderResult.rows[0].id;
+    console.log(`✅ TL회원 결제 완료 - user_paid_orders ID: ${userPaidOrderId}`);
 
-    console.log(`✅ TL회원 결제 정보 ID ${userPaidOrderId} user_paid_orders 테이블에 저장 완료`);
+    // ✅ TL회원도 paid_orders에 저장 (POS 연동을 위해)
+    console.log(`💾 TL회원 결제 - paid_orders에도 저장: ${userId}`);
 
-    // orders 테이블에 KDS용 제조 정보 저장 (user_paid_order_id 참조)
-    const orderResult = await client.query(`
-      INSERT INTO orders (
-        user_paid_order_id, store_id, table_number, customer_name,
-        order_data, total_amount, cooking_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    const paidOrderResult = await client.query(`
+      INSERT INTO paid_orders (
+        user_id, store_id, table_number, order_data, original_amount,
+        final_amount, payment_method, payment_status, payment_date, order_source
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, $9)
       RETURNING id
     `, [
-      userPaidOrderId,       // user_paid_order_id 참조
+      userId,                    // TL회원 ID
+      storeId,
+      actualTableNumber,
+      JSON.stringify({
+        ...orderData,
+        storeId: storeId,
+        storeName: storeName,
+        tableNumber: actualTableNumber,
+        actualTableNumber: actualTableNumber,
+        paymentInfo: {
+          paymentKey: pgPaymentKey,
+          orderId: pgOrderId,
+          amount: finalTotal,
+          method: pgPaymentMethod
+        }
+      }),
+      originalAmount,
+      finalTotal,
+      'TOSS',
+      'completed',
+      'TLL'
+    ]);
+
+    const paidOrderId = paidOrderResult.rows[0].id;
+    console.log(`✅ TL회원 결제 - paid_orders에도 저장 완료: ID ${paidOrderId}`);
+
+
+    // 3. orders 테이블에 제조 정보 저장 (KDS용) - TL회원은 둘 다 저장
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        user_paid_order_id, paid_order_id, store_id, table_number, customer_name,
+        total_amount, cooking_status, created_at, order_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, $8)
+      RETURNING id
+    `, [
+      userPaidOrderId,           // TL회원 결제 ID
+      paidOrderId,               // 일반 결제 ID (POS 연동용)
       storeId,
       actualTableNumber,
       user.name || '손님',
+      orderData.total,
+      'PENDING',
       JSON.stringify({
         items: orderData.items,
-        storeId: storeId,
-        storeName: storeName,
-        tableNumber: tableNumber
-      }),
-      orderData.total,
-      'PENDING'
+        userId: userId,
+        sessionId: `tll-${Date.now()}`,
+        source: 'TLL'
+      })
     ]);
 
     const orderId = orderResult.rows[0].id;
@@ -604,6 +650,7 @@ router.post('/pay', async (req, res) => {
         global.kdsWebSocket.broadcast(storeId, 'new-order', {
           orderId: orderId,
           userPaidOrderId: userPaidOrderId,
+          paidOrderId: paidOrderId,        // POS 연동을 위해 추가
           storeName: storeName,
           tableNumber: actualTableNumber,
           customerName: user.name || '손님',
@@ -619,7 +666,7 @@ router.post('/pay', async (req, res) => {
     // POS 실시간 새 주문 알림
     try {
       if (global.posWebSocket) {
-        console.log(`📡 TL회원 주문 ${userPaidOrderId} POS 실시간 알림 전송`);
+        console.log(`📡 TL회원 주문 ${paidOrderId} POS 실시간 알림 전송`);
         global.posWebSocket.broadcastNewOrder(storeId, {
           orderId: orderId,
           userPaidOrderId: userPaidOrderId,
@@ -637,18 +684,19 @@ router.post('/pay', async (req, res) => {
 
     res.json({
       success: true,
-      message: '결제가 완료되었습니다',
-      result: {
-        orderId: orderId,
-        userPaidOrderId: userPaidOrderId,
-        appliedPoint: appliedPoint,
-        earnedPoint: earnedPoint,
-        finalTotal: finalTotal,
-        totalDiscount: appliedPoint + (couponDiscount || 0),
-        welcomeCoupon: welcomeCoupon,
-        storeId: storeId,
-        storeName: storeName,
-        tableOccupied: tableUniqueId ? true : false
+      message: '주문이 성공적으로 완료되었습니다',
+      userPaidOrderId: userPaidOrderId,
+      paidOrderId: paidOrderId,           // POS 연동을 위해 추가
+      orderId: orderId,
+      finalTotal: finalTotal,
+      usedPoint: usedPoint,
+      couponDiscount: couponDiscount,
+      storeName: storeName,
+      tableNumber: actualTableNumber,
+      paymentInfo: {
+        paymentKey: pgPaymentKey,
+        orderId: pgOrderId,
+        method: pgPaymentMethod
       }
     });
 
@@ -895,8 +943,8 @@ router.get('/kds/:storeId', async (req, res) => {
       let tossPaymentInfo = null;
       if (row.toss_payment_info) {
         try {
-          tossPaymentInfo = typeof row.toss_payment_info === 'string' 
-            ? JSON.parse(row.toss_payment_info) 
+          tossPaymentInfo = typeof row.toss_payment_info === 'string'
+            ? JSON.parse(row.toss_payment_info)
             : row.toss_payment_info;
         } catch (parseError) {
           console.warn('⚠️ KDS - 토스페이먼츠 정보 파싱 실패:', parseError);
@@ -1201,7 +1249,7 @@ router.get('/:paidOrderId/review-status', async (req, res) => {
 
     // orders 테이블을 통해서 리뷰 확인 (user_paid_order_id 대신 paid_order_id 사용)
     const result = await pool.query(`
-      SELECT COUNT(r.*) as review_count 
+      SELECT COUNT(r.*) as review_count
       FROM reviews r
       JOIN orders o ON r.order_id = o.id
       WHERE o.user_paid_order_id = $1
@@ -1434,7 +1482,7 @@ router.get('/toss-payment/:paymentKey', async (req, res) => {
 
     // user_paid_orders와 paid_orders에서 통합 검색
     const memberOrderQuery = `
-      SELECT 
+      SELECT
         'TL_MEMBER' as order_type,
         upo.id, upo.user_id, upo.store_id, upo.table_number,
         upo.order_data, upo.final_amount, upo.payment_status,
@@ -1447,7 +1495,7 @@ router.get('/toss-payment/:paymentKey', async (req, res) => {
     `;
 
     const guestOrderQuery = `
-      SELECT 
+      SELECT
         'GUEST' as order_type,
         p.id, NULL as user_id, p.store_id, p.table_number,
         p.order_data, p.final_amount, p.payment_status,
@@ -1477,13 +1525,13 @@ router.get('/toss-payment/:paymentKey', async (req, res) => {
     }
 
     const order = result.rows[0];
-    
+
     // 토스페이먼츠 정보 파싱
     let tossInfo = null;
     if (order.payment_reference) {
       try {
-        tossInfo = typeof order.payment_reference === 'string' 
-          ? JSON.parse(order.payment_reference) 
+        tossInfo = typeof order.payment_reference === 'string'
+          ? JSON.parse(order.payment_reference)
           : order.payment_reference;
       } catch (parseError) {
         console.warn('⚠️ 토스 정보 파싱 실패:', parseError);
