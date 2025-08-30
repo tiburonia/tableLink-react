@@ -96,7 +96,6 @@ function renderTableContent(tableNumber, data) {
   panelContent.innerHTML = `
     ${TableStatusUI.render(tableNumber, table, isOccupied)}
     ${TableActionsUI.render(tableNumber, isOccupied, hasActiveSession, hasCompletedOrders)}
-    ${TLLInfoUI.render(tllOrder)}
     ${CurrentSessionUI.render(currentSession, tllOrder)}
     ${CompletedOrdersUI.render(completedTLLOrders)}
     ${getTableDetailStyles()}
@@ -260,20 +259,24 @@ const TLLInfoUI = {
   }
 };
 
-// 현재 세션 UI 모듈 (TLL 주문 아이템 포함)
+// 현재 세션 UI 모듈 (개선된 버전)
 const CurrentSessionUI = {
   render(currentSession, tllOrder = null) {
-    // TLL 주문이 있으면 현재 세션에 통합하여 표시
+    // POS 세션과 TLL 주문 상태 확인
     const hasPOSSession = currentSession && currentSession.items && currentSession.items.length > 0;
-    const hasTLLItems = tllOrder && tllOrder.orderData && tllOrder.orderData.items;
+    const hasTLLOrder = tllOrder && tllOrder.finalAmount;
 
-    if (!hasPOSSession && !hasTLLItems) {
+    // 둘 다 없으면 빈 상태 표시
+    if (!hasPOSSession && !hasTLLOrder) {
       return `
         <div class="session-section">
-          <h4>📦 현재 세션</h4>
+          <div class="section-header">
+            <h4>📦 현재 세션</h4>
+          </div>
           <div class="empty-session">
             <div class="empty-icon">📭</div>
-            <p>진행 중인 주문이 없습니다</p>
+            <p class="empty-text">진행 중인 주문이 없습니다</p>
+            <p class="empty-hint">주문 추가 버튼을 눌러 새 주문을 시작하세요</p>
           </div>
         </div>
       `;
@@ -281,7 +284,7 @@ const CurrentSessionUI = {
 
     // TLL 주문 아이템 파싱
     let tllItems = [];
-    if (hasTLLItems) {
+    if (hasTLLOrder && tllOrder.orderData) {
       try {
         const orderData = typeof tllOrder.orderData === 'string' 
           ? JSON.parse(tllOrder.orderData) 
@@ -293,82 +296,115 @@ const CurrentSessionUI = {
       }
     }
 
-    // 전체 아이템 수와 총액 계산
+    // 통계 계산
     const posItemCount = hasPOSSession ? currentSession.itemCount : 0;
     const tllItemCount = tllItems.length;
     const totalItemCount = posItemCount + tllItemCount;
 
     const posAmount = hasPOSSession ? currentSession.totalAmount : 0;
-    const tllAmount = tllOrder ? tllOrder.finalAmount : 0;
+    const tllAmount = hasTLLOrder ? tllOrder.finalAmount : 0;
     const totalAmount = posAmount + tllAmount;
 
     return `
       <div class="session-section">
-        <h4>📦 현재 세션 (${totalItemCount}개 아이템)</h4>
-        <div class="session-card unified">
-          <div class="session-header">
-            <div class="session-info">
-              <span class="session-id">통합 세션</span>
-              <span class="session-status status-active">활성</span>
-            </div>
-            <div class="session-amount">₩${totalAmount.toLocaleString()}</div>
+        <div class="section-header">
+          <h4>📦 현재 세션</h4>
+          <div class="session-summary">
+            <span class="item-count">${totalItemCount}개</span>
+            <span class="total-amount">₩${totalAmount.toLocaleString()}</span>
           </div>
+        </div>
 
-          <div class="session-items">
-            ${hasPOSSession ? `
-              <div class="item-group pos-items">
-                <div class="group-header">
-                  <span class="group-title">🏪 POS 주문 (${posItemCount}개)</span>
-                  <span class="group-amount">₩${posAmount.toLocaleString()}</span>
-                </div>
-                ${currentSession.items.map(item => `
-                  <div class="session-item pos-item">
-                    <div class="item-info">
-                      <span class="item-name">${item.menuName}</span>
-                      <span class="item-qty">x${item.quantity}</span>
-                    </div>
-                    <div class="item-status status-${item.cookingStatus.toLowerCase()}">
-                      ${this.getStatusIcon(item.cookingStatus)} ${this.getStatusText(item.cookingStatus)}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
-
-            ${hasTLLItems ? `
-              <div class="item-group tll-items">
-                <div class="group-header">
-                  <span class="group-title">📱 TLL 주문 (${tllItemCount}개)</span>
-                  <span class="group-amount">₩${tllAmount.toLocaleString()}</span>
-                  <span class="payment-badge completed">결제완료</span>
-                </div>
-                ${tllItems.map(item => `
-                  <div class="session-item tll-item">
-                    <div class="item-info">
-                      <span class="item-name">${item.name}</span>
-                      <span class="item-qty">x${item.quantity || item.qty}</span>
-                    </div>
-                    <div class="item-status status-completed">
-                      ✅ 결제완료
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
-          </div>
+        <div class="session-container">
+          ${hasPOSSession ? this.renderPOSSession(currentSession) : ''}
+          ${hasTLLOrder ? this.renderTLLSession(tllOrder, tllItems) : ''}
         </div>
       </div>
     `;
   },
 
+  renderPOSSession(session) {
+    return `
+      <div class="session-card pos-session">
+        <div class="session-card-header">
+          <div class="session-info">
+            <span class="session-type">🏪 POS 주문</span>
+            <span class="session-status active">진행중</span>
+          </div>
+          <div class="session-amount">₩${session.totalAmount.toLocaleString()}</div>
+        </div>
+
+        <div class="session-items">
+          ${session.items.map(item => `
+            <div class="session-item">
+              <div class="item-details">
+                <span class="item-name">${item.menuName}</span>
+                <span class="item-quantity">×${item.quantity}</span>
+              </div>
+              <div class="item-status">
+                <span class="status-indicator ${item.cookingStatus.toLowerCase()}">
+                  ${this.getStatusIcon(item.cookingStatus)}
+                </span>
+                <span class="status-text">${this.getStatusText(item.cookingStatus)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  renderTLLSession(tllOrder, items) {
+    const customerInfo = tllOrder.isGuest 
+      ? `👤 ${tllOrder.customerName}` 
+      : `👨‍💼 ${tllOrder.customerName}`;
+
+    return `
+      <div class="session-card tll-session">
+        <div class="session-card-header">
+          <div class="session-info">
+            <span class="session-type">📱 TLL 주문</span>
+            <span class="session-status completed">결제완료</span>
+          </div>
+          <div class="session-amount">₩${tllOrder.finalAmount.toLocaleString()}</div>
+        </div>
+
+        <div class="customer-info">
+          <span class="customer-name">${customerInfo}</span>
+          ${tllOrder.phone ? `<span class="customer-phone">📞 ${this.formatPhone(tllOrder.phone)}</span>` : ''}
+        </div>
+
+        <div class="session-items">
+          ${items.map(item => `
+            <div class="session-item">
+              <div class="item-details">
+                <span class="item-name">${item.name}</span>
+                <span class="item-quantity">×${item.quantity || 1}</span>
+              </div>
+              <div class="item-status">
+                <span class="status-indicator completed">✅</span>
+                <span class="status-text">결제완료</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  formatPhone(phone) {
+    if (!phone) return '';
+    return phone.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  },
+
   getStatusIcon(status) {
-    switch(status) {
-      case 'PENDING': return '⏳';
-      case 'COOKING': return '🍳';
-      case 'COMPLETED': return '✅';
-      case 'SERVED': return '🍽️';
-      default: return '';
-    }
+    const icons = {
+      'PENDING': '⏳',
+      'COOKING': '🍳',
+      'COMPLETED': '✅',
+      'SERVED': '🍽️'
+    };
+    return icons[status] || '⏳';
   },
 
   getStatusText(status) {
@@ -1474,47 +1510,216 @@ function getTableDetailStyles() {
         color: white;
       }
 
-      /* 현재 세션 스타일 */
-      .current-session-section {
+      /* 현재 세션 스타일 (개선된 버전) */
+      .session-section {
         margin-bottom: 20px;
-        background: #f0f9ff;
-        border: 2px solid #0ea5e9;
+        padding: 16px;
+        background: #f8fafc;
         border-radius: 12px;
-        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
       }
 
-      .session-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
+      .session-summary {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .item-count {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
         font-size: 11px;
+        font-weight: 700;
+      }
+
+      .total-amount {
+        background: #10b981;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .session-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .session-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      }
+
+      .session-card.pos-session {
+        border-left: 4px solid #f59e0b;
+      }
+
+      .session-card.tll-session {
+        border-left: 4px solid #3b82f6;
+      }
+
+      .session-card-header {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .session-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .session-type {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .session-status {
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
       }
 
-      .session-badge.active {
-        background: #10b981;
-        color: white;
+      .session-status.active {
+        background: #fef3c7;
+        color: #92400e;
       }
 
-      .no-active-session {
-        padding: 40px 20px;
+      .session-status.completed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .session-amount {
+        font-size: 16px;
+        font-weight: 700;
+        color: #059669;
+      }
+
+      .customer-info {
+        padding: 12px 16px;
+        background: #f8fafc;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .customer-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .customer-phone {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .session-items {
+        padding: 16px;
+      }
+
+      .session-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .session-item:last-child {
+        border-bottom: none;
+      }
+
+      .item-details {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+      }
+
+      .item-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .item-quantity {
+        background: #e2e8f0;
+        color: #64748b;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .item-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .status-indicator {
+        font-size: 14px;
+      }
+
+      .status-indicator.pending {
+        color: #f59e0b;
+      }
+
+      .status-indicator.cooking {
+        color: #8b5cf6;
+      }
+
+      .status-indicator.completed {
+        color: #10b981;
+      }
+
+      .status-text {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      .empty-session {
         text-align: center;
+        padding: 40px 20px;
+        background: white;
+        border-radius: 12px;
+        border: 2px dashed #cbd5e1;
       }
 
-      .no-session-icon {
+      .empty-icon {
         font-size: 48px;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
         opacity: 0.6;
       }
 
-      .no-session-text {
+      .empty-text {
         font-size: 16px;
         font-weight: 600;
         color: #64748b;
         margin-bottom: 8px;
       }
 
-      .no-session-hint {
+      .empty-hint {
         font-size: 14px;
         color: #94a3b8;
       }
