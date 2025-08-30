@@ -205,12 +205,12 @@ function renderPOSLayout() {
               <!-- 액션 버튼들 그룹 -->
               <div class="action-panels-container">
                 
-                <!-- 주문 저장 버튼 (가장 중요한 액션) -->
+                <!-- 주문 확정 버튼 (가장 중요한 액션) -->
                 <div class="primary-action-panel">
-                  <button class="primary-action-btn save-order-btn" onclick="saveOrderAndGoToMap()" disabled>
+                  <button class="primary-action-btn" onclick="handlePrimaryAction()" disabled>
                     <div class="btn-icon">📋</div>
                     <div class="btn-content">
-                      <div class="btn-title">주문 저장</div>
+                      <div class="btn-title">주문 확정</div>
                       <div class="btn-subtitle">테이블맵으로 이동</div>
                     </div>
                   </button>
@@ -839,9 +839,47 @@ function renderPOSLayout() {
         border-left: 4px solid #0ea5e9;
       }
 
+      /* 확정/미확정 상태 스타일 */
+      .order-item-row.pending-item {
+        background: #fef3c7;
+        border: 2px dashed #f59e0b;
+        opacity: 0.8;
+      }
+
+      .order-item-row.confirmed-item {
+        background: #ecfdf5;
+        border-left: 4px solid #10b981;
+      }
+
+      .status-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 700;
+        margin-left: 4px;
+      }
+
+      .status-badge.confirmed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .status-badge.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .pending-indicator {
+        font-size: 12px;
+        margin-left: 4px;
+        opacity: 0.7;
+      }
+
       .item-name {
         font-weight: 600;
         color: #1e293b;
+        display: flex;
+        align-items: center;
       }
 
       .item-price, .item-total {
@@ -1661,18 +1699,25 @@ function logoutPOS() {
   }
 }
 
-// 주문 저장 및 테이블맵으로 이동하는 함수
+// Primary Action 핸들러 함수
+function handlePrimaryAction() {
+  // 미확정 주문이 있으면 확정, 없으면 테이블맵으로 이동
+  if (window.hasUnconfirmedChanges || (window.pendingOrder && window.pendingOrder.length > 0)) {
+    confirmPendingOrder();
+  } else {
+    returnToTableMap();
+  }
+}
+
+// 주문 저장 및 테이블맵으로 이동하는 함수 (레거시)
 function saveOrderAndGoToMap() {
-  // TODO: 실제 주문 저장 로직 구현 (API 호출 등)
-  console.log('주문이 저장되었습니다.');
-  // 테이블맵 화면으로 전환
-  document.getElementById('orderView').classList.add('hidden');
-  document.getElementById('tableMapView').classList.remove('hidden');
+  return handlePrimaryAction();
 }
 
 // 전역 함수로 노출
 window.renderPOSLayout = renderPOSLayout;
 window.logoutPOS = logoutPOS;
 window.saveOrderAndGoToMap = saveOrderAndGoToMap;
+window.handlePrimaryAction = handlePrimaryAction;
 
 module.exports = { renderPOSLayout };
