@@ -111,14 +111,7 @@ function renderPOSLayout() {
               <span class="status-indicator" id="statusIndicator"></span>
               <span id="statusText">주문 준비</span>
             </div>
-
-          <!-- 세션 상태 배너 -->
-          <div id="sessionStatusBanner" class="session-banner" style="display: none;">
-            <div class="session-warning">
-              세션 상태가 여기에 표시됩니다
-            </div>
           </div>
-        </div>
 
           <div class="okpos-workspace">
             <!-- 좌측 컬럼: 주문 내역 + 결제 정보 -->
@@ -1312,138 +1305,13 @@ function renderPOSLayout() {
         margin: 0;
       }
 
-      .payment-indicator {
+      .panel-indicator {
+        font-size: 11px;
+        padding: 4px 8px;
         background: #f3f4f6;
         color: #6b7280;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 500;
-      }
-
-      /* 세션 상태 배너 스타일 */
-      .session-banner {
-        margin: 12px 0;
-        border-radius: 8px;
-        overflow: hidden;
-        animation: slideDown 0.3s ease-out;
-      }
-
-      .session-banner.temporary {
-        background: #fef3c7;
-        border: 2px solid #f59e0b;
-      }
-
-      .session-banner.editing {
-        background: #dbeafe;
-        border: 2px solid #3b82f6;
-      }
-
-      .session-warning {
-        padding: 12px 16px;
-        color: #92400e;
+        border-radius: 12px;
         font-weight: 600;
-        text-align: center;
-        font-size: 14px;
-      }
-
-      .session-banner.editing .session-warning {
-        color: #1e40af;
-      }
-
-      .session-info {
-        padding: 12px 16px;
-        color: #1e40af;
-        font-weight: 500;
-        text-align: center;
-        font-size: 14px;
-      }
-
-      @keyframes slideDown {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      /* 주문 아이템 섹션 헤더 */
-      .order-section-header {
-        padding: 12px 16px;
-        margin: 16px 0 8px 0;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-      }
-
-      .order-section-header.confirmed-section {
-        background: #dcfce7;
-        color: #166534;
-        border-left: 4px solid #16a34a;
-      }
-
-      .order-section-header.temp-section {
-        background: #fef3c7;
-        color: #92400e;
-        border-left: 4px solid #f59e0b;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .temp-warning {
-        font-size: 12px;
-        background: #f59e0b;
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-      }
-
-      /* 임시 아이템 스타일 */
-      .temporary-item {
-        background: #fffbeb;
-        border-left: 3px solid #f59e0b;
-      }
-
-      .temp-indicator {
-        color: #f59e0b;
-        font-size: 12px;
-        margin-left: 4px;
-      }
-
-      .status-badge.temporary {
-        background: #f59e0b;
-        color: white;
-      }
-
-      .order-type-badge.type-temp {
-        background: #fbbf24;
-        color: white;
-      }
-
-      /* 결제 요약 스타일 개선 */
-      .amount-breakdown {
-        text-align: right;
-      }
-
-      .confirmed-amount {
-        color: #16a34a;
-        font-size: 12px;
-        margin-bottom: 2px;
-      }
-
-      .temp-amount {
-        color: #f59e0b;
-        font-size: 12px;
-        margin-bottom: 2px;
-      }
-
-      .total-amount {
-        font-weight: 600;
-        font-size: 14px;
       }
 
       .payment-grid {
@@ -1639,17 +1507,17 @@ function renderPOSLayout() {
       }
 
       @keyframes menuAddedPulse {
-        0% {
+        0% { 
           background: #10b981;
           color: white;
           transform: scale(1);
         }
-        50% {
+        50% { 
           background: #059669;
           color: white;
           transform: scale(1.05);
         }
-        100% {
+        100% { 
           background: white;
           color: inherit;
           transform: scale(1);
@@ -1850,3 +1718,5 @@ window.renderPOSLayout = renderPOSLayout;
 window.logoutPOS = logoutPOS;
 window.saveOrderAndGoToMap = saveOrderAndGoToMap;
 window.handlePrimaryAction = handlePrimaryAction;
+
+module.exports = { renderPOSLayout };
