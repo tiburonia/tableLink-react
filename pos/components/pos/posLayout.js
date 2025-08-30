@@ -115,17 +115,7 @@ function renderPOSLayout() {
           </div>
 
           <div class="order-workspace">
-            <!-- 좌측: 메뉴 패널 -->
-            <section class="menu-panel">
-              <div class="category-tabs" id="orderCategoryTabs">
-                <!-- 카테고리 탭들 -->
-              </div>
-              <div class="menu-items-grid" id="orderMenuGrid">
-                <!-- 메뉴 아이템들 -->
-              </div>
-            </section>
-
-            <!-- 우측: 주문 내역 & 결제 패널 -->
+            <!-- 좌측: 주문 내역 & 결제 패널 -->
             <section class="checkout-panel">
               <div class="current-order-section">
                 <div class="section-header">
@@ -181,6 +171,16 @@ function renderPOSLayout() {
                     🍳 주방 전송
                   </button>
                 </div>
+              </div>
+            </section>
+
+            <!-- 우측: 메뉴 패널 -->
+            <section class="menu-panel">
+              <div class="category-tabs" id="orderCategoryTabs">
+                <!-- 카테고리 탭들 -->
+              </div>
+              <div class="menu-items-grid" id="orderMenuGrid">
+                <!-- 메뉴 아이템들 -->
               </div>
             </section>
           </div>
@@ -565,7 +565,7 @@ function renderPOSLayout() {
       .order-workspace {
         flex: 1;
         display: grid;
-        grid-template-columns: 2fr 1fr;
+        grid-template-columns: 1fr 2fr;
         gap: 1px;
         background: #e2e8f0;
         min-height: 0;

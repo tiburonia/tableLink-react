@@ -272,22 +272,27 @@ async function selectTableFromMap(tableNumber) {
 // 테이블 세션 로드
 async function loadTableSession(tableNumber) {
   try {
+    console.log(`🔄 테이블 ${tableNumber} 세션 로드 시작`);
+    
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
     const data = await response.json();
 
-    if (data.success && data.currentSession) {
+    // 주문 배열 초기화
+    window.currentOrder = [];
+
+    if (data.success && data.currentSession && data.currentSession.items) {
       // 기존 세션이 있는 경우 주문 내역 로드
       window.currentOrder = data.currentSession.items.map(item => ({
         name: item.menuName,
-        price: item.price,
-        quantity: item.quantity
+        price: parseInt(item.price),
+        quantity: parseInt(item.quantity)
       }));
 
-      console.log(`✅ 테이블 ${tableNumber} 기존 세션 로드: ${window.currentOrder.length}개 아이템`);
-      updateOrderStatus('기존 세션', 'ordering');
+      console.log(`✅ 테이블 ${tableNumber} 기존 세션 로드: ${window.currentOrder.length}개 아이템`, window.currentOrder);
+      updateOrderStatus(`기존 세션 (${window.currentOrder.length}개)`, 'ordering');
     } else {
       // 새 세션
-      window.currentOrder = [];
+      console.log(`🆕 테이블 ${tableNumber} 새 주문 세션 시작`);
       updateOrderStatus('새 주문', 'available');
     }
 
@@ -299,6 +304,7 @@ async function loadTableSession(tableNumber) {
     window.currentOrder = [];
     renderCurrentOrder();
     updateOrderButtons();
+    updateOrderStatus('로드 실패', 'available');
   }
 }
 
@@ -389,39 +395,62 @@ function addMenuToOrder(menuName, price) {
     return;
   }
 
+  // 전역 변수 초기화 확인
+  if (!window.currentOrder) {
+    window.currentOrder = [];
+  }
+
   // 기존 아이템 확인
   const existingItem = window.currentOrder.find(item => item.name === menuName);
 
   if (existingItem) {
     existingItem.quantity += 1;
+    console.log(`📦 메뉴 수량 증가: ${menuName} (${existingItem.quantity}개)`);
   } else {
-    window.currentOrder.push({
+    const newItem = {
       name: menuName,
-      price: price,
+      price: parseInt(price),
       quantity: 1
-    });
+    };
+    window.currentOrder.push(newItem);
+    console.log(`📦 새 메뉴 추가: ${menuName} - ₩${price.toLocaleString()}`);
   }
 
+  // UI 업데이트
   renderCurrentOrder();
   updateOrderButtons();
   updateOrderStatus('주문 작성 중', 'ordering');
 
   // 시각적 피드백
-  const button = event.target.closest('.menu-item');
-  if (button) {
-    button.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      button.style.transform = '';
-    }, 150);
+  if (event && event.target) {
+    const button = event.target.closest('.menu-item');
+    if (button) {
+      button.style.transform = 'scale(0.95)';
+      button.style.background = '#e0f2fe';
+      setTimeout(() => {
+        button.style.transform = '';
+        button.style.background = '';
+      }, 200);
+    }
   }
 
-  console.log(`📦 메뉴 추가: ${menuName} x1 (테이블 ${window.currentTable})`);
+  // 디버깅용 로그
+  console.log(`✅ 현재 주문 상태 (테이블 ${window.currentTable}):`, window.currentOrder);
+  showPOSNotification(`${menuName} 추가됨 (${window.currentOrder.reduce((sum, item) => sum + item.quantity, 0)}개)`, 'success');
 }
 
 // 현재 주문 내역 렌더링
 function renderCurrentOrder() {
   const orderList = document.getElementById('currentOrderList');
-  if (!orderList) return;
+  if (!orderList) {
+    console.warn('⚠️ currentOrderList 엘리먼트를 찾을 수 없습니다');
+    return;
+  }
+
+  // 안전성 검사
+  if (!window.currentOrder || !Array.isArray(window.currentOrder)) {
+    window.currentOrder = [];
+  }
 
   if (window.currentOrder.length === 0) {
     orderList.innerHTML = `
@@ -431,24 +460,31 @@ function renderCurrentOrder() {
       </div>
     `;
   } else {
-    const itemsHTML = window.currentOrder.map((item, index) => `
-      <div class="order-item">
-        <div class="order-item-info">
-          <div class="order-item-name">${item.name}</div>
-          <div class="order-item-price">₩${(item.price * item.quantity).toLocaleString()}</div>
+    const itemsHTML = window.currentOrder.map((item, index) => {
+      const price = parseInt(item.price) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      const total = price * quantity;
+      
+      return `
+        <div class="order-item">
+          <div class="order-item-info">
+            <div class="order-item-name">${item.name || '메뉴명 없음'}</div>
+            <div class="order-item-price">₩${total.toLocaleString()}</div>
+          </div>
+          <div class="quantity-controls">
+            <button class="qty-btn" onclick="changeOrderQuantity(${index}, -1)">-</button>
+            <span class="qty-display">${quantity}</span>
+            <button class="qty-btn" onclick="changeOrderQuantity(${index}, 1)">+</button>
+          </div>
         </div>
-        <div class="quantity-controls">
-          <button class="qty-btn" onclick="changeOrderQuantity(${index}, -1)">-</button>
-          <span class="qty-display">${item.quantity}</span>
-          <button class="qty-btn" onclick="changeOrderQuantity(${index}, 1)">+</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     orderList.innerHTML = itemsHTML;
   }
 
   updateOrderTotals();
+  console.log(`🔄 주문 내역 렌더링 완료: ${window.currentOrder.length}개 아이템`);
 }
 
 // 주문 수량 변경
