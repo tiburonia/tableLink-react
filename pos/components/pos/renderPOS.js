@@ -1,5 +1,5 @@
 
-// POS 시스템 상태 (테이블맵 중심)
+// POS 시스템 상태 (OKPOS 구조 기반)
 let currentStore = null;
 let currentTable = null;
 let allMenus = [];
@@ -7,8 +7,11 @@ let categories = [];
 let selectedCategory = 'all';
 let allTables = [];
 let currentOrder = []; // 현재 테이블 주문 내역
+let selectedItems = []; // 선택된 주문 아이템들
 let isOrderProcessing = false;
 let currentView = 'table-map'; // 'table-map' 또는 'order'
+let inputMode = 'quantity'; // 'quantity', 'amount', 'received'
+let currentInput = '';
 
 // 카테고리별 색상 코드 (실제 POS 서비스 기준)
 const CATEGORY_COLORS = {
@@ -28,10 +31,10 @@ const CATEGORY_COLORS = {
   'default': '#6B7280'
 };
 
-// POS 시스템 초기화 (테이블맵 중심)
+// POS 시스템 초기화 (OKPOS 구조 기반)
 async function renderPOS() {
   try {
-    console.log('📟 TableLink POS 시스템 초기화 중... (테이블맵 중심)');
+    console.log('📟 TableLink POS 시스템 초기화 중... (OKPOS 구조 기반)');
 
     // 전역 변수 초기화
     window.currentStore = null;
@@ -39,7 +42,10 @@ async function renderPOS() {
     window.allMenus = [];
     window.allTables = [];
     window.currentOrder = [];
+    window.selectedItems = [];
     window.currentView = 'table-map';
+    window.inputMode = 'quantity';
+    window.currentInput = '';
 
     // 기본 UI 렌더링
     renderPOSLayout();
@@ -58,7 +64,7 @@ async function renderPOS() {
       return;
     }
 
-    console.log('✅ TableLink POS 시스템 초기화 완료 (테이블맵 모드)');
+    console.log('✅ TableLink POS 시스템 초기화 완료 (OKPOS 구조 모드)');
   } catch (error) {
     console.error('❌ POS 시스템 초기화 실패:', error);
     showPOSNotification('POS 시스템 초기화에 실패했습니다.', 'error');
@@ -242,10 +248,13 @@ async function renderTableMap() {
 // 테이블맵에서 테이블 선택 → 주문 화면 전환
 async function selectTableFromMap(tableNumber) {
   try {
-    console.log(`🪑 테이블 ${tableNumber} 선택 - 주문 화면으로 전환`);
+    console.log(`🪑 테이블 ${tableNumber} 선택 - OKPOS 주문 화면으로 전환`);
 
     window.currentTable = tableNumber;
     window.currentView = 'order';
+    window.selectedItems = [];
+    window.inputMode = 'quantity';
+    window.currentInput = '';
 
     // 화면 전환
     document.getElementById('tableMapView').classList.add('hidden');
@@ -258,10 +267,10 @@ async function selectTableFromMap(tableNumber) {
     await loadTableSession(tableNumber);
 
     // 메뉴 카테고리 및 그리드 렌더링
-    renderOrderCategories();
-    renderOrderMenus();
+    renderMenuCategories();
+    renderMenuGrid();
 
-    showPOSNotification(`테이블 ${tableNumber} 주문 화면으로 전환됨`);
+    showPOSNotification(`테이블 ${tableNumber} OKPOS 주문 화면으로 전환됨`);
 
   } catch (error) {
     console.error('❌ 테이블 선택 실패:', error);
@@ -282,10 +291,13 @@ async function loadTableSession(tableNumber) {
 
     if (data.success && data.currentSession && data.currentSession.items) {
       // 기존 세션이 있는 경우 주문 내역 로드
-      window.currentOrder = data.currentSession.items.map(item => ({
+      window.currentOrder = data.currentSession.items.map((item, index) => ({
+        id: index,
         name: item.menuName,
         price: parseInt(item.price),
-        quantity: parseInt(item.quantity)
+        quantity: parseInt(item.quantity),
+        discount: 0,
+        note: ''
       }));
 
       console.log(`✅ 테이블 ${tableNumber} 기존 세션 로드: ${window.currentOrder.length}개 아이템`, window.currentOrder);
@@ -296,14 +308,16 @@ async function loadTableSession(tableNumber) {
       updateOrderStatus('새 주문', 'available');
     }
 
-    renderCurrentOrder();
-    updateOrderButtons();
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
 
   } catch (error) {
     console.error('❌ 테이블 세션 로드 실패:', error);
     window.currentOrder = [];
-    renderCurrentOrder();
-    updateOrderButtons();
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
     updateOrderStatus('로드 실패', 'available');
   }
 }
@@ -327,9 +341,9 @@ function updateOrderStatus(statusText, statusType) {
   }
 }
 
-// 주문 화면 카테고리 렌더링
-function renderOrderCategories() {
-  const categoryTabs = document.getElementById('orderCategoryTabs');
+// 메뉴 카테고리 렌더링
+function renderMenuCategories() {
+  const categoryTabs = document.getElementById('categoryTabs');
   if (!categoryTabs) return;
 
   const tabsHTML = window.categories.map(category => {
@@ -339,7 +353,7 @@ function renderOrderCategories() {
 
     return `
       <button class="category-tab ${isActive ? 'active' : ''}" 
-              onclick="selectOrderCategory('${categoryKey}')"
+              onclick="selectCategory('${categoryKey}')"
               style="${isActive ? `background: ${color}; color: white; border-color: ${color};` : `border-color: ${color}; color: ${color};`}">
         ${category}
       </button>
@@ -349,16 +363,16 @@ function renderOrderCategories() {
   categoryTabs.innerHTML = tabsHTML;
 }
 
-// 주문 화면 카테고리 선택
-function selectOrderCategory(category) {
+// 카테고리 선택
+function selectCategory(category) {
   selectedCategory = category;
-  renderOrderCategories();
-  renderOrderMenus();
+  renderMenuCategories();
+  renderMenuGrid();
 }
 
-// 주문 화면 메뉴 렌더링
-function renderOrderMenus() {
-  const menuGrid = document.getElementById('orderMenuGrid');
+// 메뉴 그리드 렌더링
+function renderMenuGrid() {
+  const menuGrid = document.getElementById('menuGrid');
   if (!menuGrid) return;
 
   let filteredMenus = window.allMenus;
@@ -379,7 +393,7 @@ function renderOrderMenus() {
   }
 
   const menusHTML = filteredMenus.map(item => `
-    <button class="menu-item" onclick="addMenuToOrder('${item.name}', ${item.price})">
+    <button class="menu-item-btn" onclick="addMenuToOrder('${item.name}', ${item.price})">
       <div class="menu-item-name">${item.name}</div>
       <div class="menu-item-price">₩${item.price.toLocaleString()}</div>
     </button>
@@ -388,7 +402,7 @@ function renderOrderMenus() {
   menuGrid.innerHTML = menusHTML;
 }
 
-// 메뉴를 주문에 추가
+// 메뉴를 주문에 추가 (OKPOS 방식)
 function addMenuToOrder(menuName, price) {
   if (!window.currentTable) {
     showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
@@ -401,29 +415,33 @@ function addMenuToOrder(menuName, price) {
   }
 
   // 기존 아이템 확인
-  const existingItem = window.currentOrder.find(item => item.name === menuName);
+  const existingItemIndex = window.currentOrder.findIndex(item => item.name === menuName);
 
-  if (existingItem) {
-    existingItem.quantity += 1;
-    console.log(`📦 메뉴 수량 증가: ${menuName} (${existingItem.quantity}개)`);
+  if (existingItemIndex !== -1) {
+    window.currentOrder[existingItemIndex].quantity += 1;
+    console.log(`📦 메뉴 수량 증가: ${menuName} (${window.currentOrder[existingItemIndex].quantity}개)`);
   } else {
     const newItem = {
+      id: Date.now(), // 고유 ID
       name: menuName,
       price: parseInt(price),
-      quantity: 1
+      quantity: 1,
+      discount: 0,
+      note: ''
     };
     window.currentOrder.push(newItem);
     console.log(`📦 새 메뉴 추가: ${menuName} - ₩${price.toLocaleString()}`);
   }
 
   // UI 업데이트
-  renderCurrentOrder();
-  updateOrderButtons();
+  renderOrderItems();
+  renderPaymentSummary();
+  updateButtonStates();
   updateOrderStatus('주문 작성 중', 'ordering');
 
   // 시각적 피드백
   if (event && event.target) {
-    const button = event.target.closest('.menu-item');
+    const button = event.target.closest('.menu-item-btn');
     if (button) {
       button.style.transform = 'scale(0.95)';
       button.style.background = '#e0f2fe';
@@ -434,16 +452,15 @@ function addMenuToOrder(menuName, price) {
     }
   }
 
-  // 디버깅용 로그
   console.log(`✅ 현재 주문 상태 (테이블 ${window.currentTable}):`, window.currentOrder);
   showPOSNotification(`${menuName} 추가됨 (${window.currentOrder.reduce((sum, item) => sum + item.quantity, 0)}개)`, 'success');
 }
 
-// 현재 주문 내역 렌더링
-function renderCurrentOrder() {
-  const orderList = document.getElementById('currentOrderList');
-  if (!orderList) {
-    console.warn('⚠️ currentOrderList 엘리먼트를 찾을 수 없습니다');
+// 주문 아이템 렌더링 (OKPOS 테이블 형태)
+function renderOrderItems() {
+  const orderItemsList = document.getElementById('orderItemsList');
+  if (!orderItemsList) {
+    console.warn('⚠️ orderItemsList 엘리먼트를 찾을 수 없습니다');
     return;
   }
 
@@ -453,87 +470,195 @@ function renderCurrentOrder() {
   }
 
   if (window.currentOrder.length === 0) {
-    orderList.innerHTML = `
+    orderItemsList.innerHTML = `
       <div class="empty-order">
         <div class="empty-icon">📝</div>
         <p>메뉴를 선택해주세요</p>
       </div>
     `;
-  } else {
-    const itemsHTML = window.currentOrder.map((item, index) => {
-      const price = parseInt(item.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      const total = price * quantity;
-      
-      return `
-        <div class="order-item">
-          <div class="order-item-info">
-            <div class="order-item-name">${item.name || '메뉴명 없음'}</div>
-            <div class="order-item-price">₩${total.toLocaleString()}</div>
-          </div>
-          <div class="quantity-controls">
-            <button class="qty-btn" onclick="changeOrderQuantity(${index}, -1)">-</button>
-            <span class="qty-display">${quantity}</span>
-            <button class="qty-btn" onclick="changeOrderQuantity(${index}, 1)">+</button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    orderList.innerHTML = itemsHTML;
+    return;
   }
 
-  updateOrderTotals();
+  const itemsHTML = window.currentOrder.map((item, index) => {
+    const price = parseInt(item.price) || 0;
+    const quantity = parseInt(item.quantity) || 0;
+    const discount = parseInt(item.discount) || 0;
+    const total = (price * quantity) - discount;
+    const isSelected = window.selectedItems.includes(item.id);
+    
+    return `
+      <div class="order-item-row ${isSelected ? 'selected' : ''}" onclick="toggleItemSelection(${item.id})">
+        <div class="item-name">${item.name || '메뉴명 없음'}</div>
+        <div class="item-price">₩${price.toLocaleString()}</div>
+        <div class="item-qty">${quantity}개</div>
+        <div class="item-discount">₩${discount.toLocaleString()}</div>
+        <div class="item-total">₩${total.toLocaleString()}</div>
+        <div class="item-note">${item.note || ''}</div>
+      </div>
+    `;
+  }).join('');
+
+  orderItemsList.innerHTML = itemsHTML;
   console.log(`🔄 주문 내역 렌더링 완료: ${window.currentOrder.length}개 아이템`);
 }
 
-// 주문 수량 변경
-function changeOrderQuantity(index, change) {
-  const item = window.currentOrder[index];
-  if (!item) return;
+// 아이템 선택/해제
+function toggleItemSelection(itemId) {
+  const index = window.selectedItems.indexOf(itemId);
+  if (index === -1) {
+    window.selectedItems.push(itemId);
+  } else {
+    window.selectedItems.splice(index, 1);
+  }
+  renderOrderItems();
+  updateButtonStates();
+}
 
-  item.quantity += change;
+// 전체 선택
+function selectAllItems() {
+  if (window.selectedItems.length === window.currentOrder.length) {
+    window.selectedItems = [];
+  } else {
+    window.selectedItems = window.currentOrder.map(item => item.id);
+  }
+  renderOrderItems();
+  updateButtonStates();
+}
 
-  if (item.quantity <= 0) {
-    window.currentOrder.splice(index, 1);
+// 선택된 아이템 삭제
+function deleteSelectedItems() {
+  if (window.selectedItems.length === 0) {
+    showPOSNotification('삭제할 아이템을 선택해주세요.', 'warning');
+    return;
   }
 
-  renderCurrentOrder();
-  updateOrderButtons();
-
-  if (window.currentOrder.length === 0) {
-    updateOrderStatus('새 주문', 'available');
+  if (confirm(`선택된 ${window.selectedItems.length}개 아이템을 삭제하시겠습니까?`)) {
+    window.currentOrder = window.currentOrder.filter(item => !window.selectedItems.includes(item.id));
+    window.selectedItems = [];
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    
+    if (window.currentOrder.length === 0) {
+      updateOrderStatus('새 주문', 'available');
+    }
   }
 }
 
-// 주문 합계 업데이트
-function updateOrderTotals() {
-  const totalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const totalQuantity = window.currentOrder.reduce((sum, item) => sum + item.quantity, 0);
+// 할인 적용
+function applyDiscount() {
+  if (window.selectedItems.length === 0) {
+    showPOSNotification('할인 적용할 아이템을 선택해주세요.', 'warning');
+    return;
+  }
 
-  const totalAmountElement = document.getElementById('orderTotalAmount');
-  const totalQuantityElement = document.getElementById('totalQuantity');
+  const discountAmount = prompt('할인 금액을 입력하세요:');
+  if (discountAmount && !isNaN(discountAmount)) {
+    const discount = parseInt(discountAmount);
+    window.currentOrder.forEach(item => {
+      if (window.selectedItems.includes(item.id)) {
+        item.discount = discount;
+      }
+    });
+    
+    renderOrderItems();
+    renderPaymentSummary();
+    showPOSNotification(`₩${discount.toLocaleString()} 할인이 적용되었습니다.`);
+  }
+}
+
+// 수량 변경
+function changeQuantity(delta) {
+  if (window.selectedItems.length === 0) {
+    showPOSNotification('수량을 변경할 아이템을 선택해주세요.', 'warning');
+    return;
+  }
+
+  window.currentOrder.forEach(item => {
+    if (window.selectedItems.includes(item.id)) {
+      item.quantity = Math.max(1, item.quantity + delta);
+    }
+  });
+
+  renderOrderItems();
+  renderPaymentSummary();
+}
+
+// 결제 요약 렌더링
+function renderPaymentSummary() {
+  const totalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalDiscount = window.currentOrder.reduce((sum, item) => sum + item.discount, 0);
+  const finalAmount = totalAmount - totalDiscount;
+
+  // 요소 업데이트
+  const totalAmountElement = document.getElementById('totalAmount');
+  const discountAmountElement = document.getElementById('discountAmount');
+  const finalAmountElement = document.getElementById('finalAmount');
 
   if (totalAmountElement) {
     totalAmountElement.textContent = `₩${totalAmount.toLocaleString()}`;
   }
-  if (totalQuantityElement) {
-    totalQuantityElement.textContent = `${totalQuantity}개`;
+  if (discountAmountElement) {
+    discountAmountElement.textContent = `₩${totalDiscount.toLocaleString()}`;
+  }
+  if (finalAmountElement) {
+    finalAmountElement.textContent = `₩${finalAmount.toLocaleString()}`;
   }
 }
 
-// 주문 관련 버튼 상태 업데이트
-function updateOrderButtons() {
+// 숫자 입력 처리
+function inputNumber(digit) {
+  window.currentInput += digit;
+  console.log(`🔢 숫자 입력: ${digit}, 현재 입력: ${window.currentInput}`);
+  
+  // 받은 금액 업데이트
+  const receivedAmountElement = document.getElementById('receivedAmount');
+  const changeAmountElement = document.getElementById('changeAmount');
+  
+  if (receivedAmountElement) {
+    const received = parseInt(window.currentInput) || 0;
+    receivedAmountElement.textContent = `₩${received.toLocaleString()}`;
+    
+    const finalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity) - item.discount, 0);
+    const change = Math.max(0, received - finalAmount);
+    
+    if (changeAmountElement) {
+      changeAmountElement.textContent = `₩${change.toLocaleString()}`;
+    }
+  }
+}
+
+// 입력 지우기
+function clearInput() {
+  window.currentInput = '';
+  const receivedAmountElement = document.getElementById('receivedAmount');
+  const changeAmountElement = document.getElementById('changeAmount');
+  
+  if (receivedAmountElement) {
+    receivedAmountElement.textContent = '₩0';
+  }
+  if (changeAmountElement) {
+    changeAmountElement.textContent = '₩0';
+  }
+}
+
+// 한 글자 삭제
+function deleteInput() {
+  window.currentInput = window.currentInput.slice(0, -1);
+  inputNumber(''); // 업데이트 트리거
+}
+
+// 버튼 상태 업데이트
+function updateButtonStates() {
   const hasItems = window.currentOrder.length > 0;
+  const hasSelection = window.selectedItems.length > 0;
 
   // 주문 액션 버튼들
   const holdBtn = document.querySelector('.hold-btn');
   const clearBtn = document.querySelector('.clear-btn');
-  const sendKitchenBtn = document.querySelector('.send-kitchen');
 
   if (holdBtn) holdBtn.disabled = !hasItems;
   if (clearBtn) clearBtn.disabled = !hasItems;
-  if (sendKitchenBtn) sendKitchenBtn.disabled = !hasItems;
 
   // 결제 버튼들
   const paymentButtons = document.querySelectorAll('.payment-btn');
@@ -542,50 +667,8 @@ function updateOrderButtons() {
   });
 }
 
-// 테이블맵으로 돌아가기
-function returnToTableMap() {
-  console.log('🔄 테이블맵으로 복귀');
-
-  window.currentView = 'table-map';
-  window.currentTable = null;
-  window.currentOrder = [];
-  selectedCategory = 'all';
-
-  // 화면 전환
-  document.getElementById('orderView').classList.add('hidden');
-  document.getElementById('tableMapView').classList.remove('hidden');
-
-  // 테이블맵 새로고침
-  renderTableMap();
-}
-
-// 전체 주문 삭제
-function clearOrder() {
-  if (window.currentOrder.length === 0) return;
-
-  if (confirm('현재 주문 내역을 모두 삭제하시겠습니까?')) {
-    window.currentOrder = [];
-    renderCurrentOrder();
-    updateOrderButtons();
-    updateOrderStatus('새 주문', 'available');
-    showPOSNotification('주문 내역이 삭제되었습니다.');
-  }
-}
-
-// 주문 보류
-function holdOrder() {
-  if (window.currentOrder.length === 0) return;
-  showPOSNotification('주문 보류 기능은 향후 구현 예정입니다.', 'info');
-}
-
-// 주방으로 전송
-function sendToKitchen() {
-  if (window.currentOrder.length === 0) return;
-  showPOSNotification('주방 전송 기능은 향후 구현 예정입니다.', 'info');
-}
-
-// 테이블 결제 처리
-async function processTablePayment(paymentMethod) {
+// 결제 처리 (OKPOS 방식)
+async function processPayment(paymentMethod) {
   if (isOrderProcessing) return;
   if (window.currentOrder.length === 0) {
     showPOSNotification('결제할 주문이 없습니다.', 'warning');
@@ -602,13 +685,20 @@ async function processTablePayment(paymentMethod) {
   try {
     console.log(`💳 테이블 ${window.currentTable} ${paymentMethod} 결제 시작`);
 
+    // 주문 데이터 변환
+    const orderItems = window.currentOrder.map(item => ({
+      name: item.name,
+      price: item.price,
+      quantity: item.quantity
+    }));
+
     // 1. 주문 추가
     const orderData = {
       storeId: window.currentStore.id,
       storeName: window.currentStore.name,
       tableNumber: window.currentTable,
-      items: window.currentOrder,
-      totalAmount: window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+      items: orderItems,
+      totalAmount: window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity) - item.discount, 0),
       isTLLOrder: false
     };
 
@@ -660,11 +750,79 @@ async function processTablePayment(paymentMethod) {
 // 결제 방법 이름 변환
 function getPaymentMethodName(method) {
   const names = {
-    'CARD': '카드',
+    'CARD': '신용카드',
     'CASH': '현금',
-    'MOBILE': '간편결제'
+    'MOBILE': '간편결제',
+    'TL_PAY': 'TL Pay'
   };
   return names[method] || method;
+}
+
+// 테이블맵으로 돌아가기
+function returnToTableMap() {
+  console.log('🔄 테이블맵으로 복귀');
+
+  window.currentView = 'table-map';
+  window.currentTable = null;
+  window.currentOrder = [];
+  window.selectedItems = [];
+  selectedCategory = 'all';
+  window.currentInput = '';
+
+  // 화면 전환
+  document.getElementById('orderView').classList.add('hidden');
+  document.getElementById('tableMapView').classList.remove('hidden');
+
+  // 테이블맵 새로고침
+  renderTableMap();
+}
+
+// 전체 주문 삭제
+function clearOrder() {
+  if (window.currentOrder.length === 0) return;
+
+  if (confirm('현재 주문 내역을 모두 삭제하시겠습니까?')) {
+    window.currentOrder = [];
+    window.selectedItems = [];
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    updateOrderStatus('새 주문', 'available');
+    showPOSNotification('주문 내역이 삭제되었습니다.');
+  }
+}
+
+// 주문 보류
+function holdOrder() {
+  if (window.currentOrder.length === 0) return;
+  showPOSNotification('주문 보류 기능은 향후 구현 예정입니다.', 'info');
+}
+
+// 주방으로 전송
+function sendToKitchen() {
+  if (window.currentOrder.length === 0) return;
+  showPOSNotification('주방 전송 기능은 향후 구현 예정입니다.', 'info');
+}
+
+// TL 특화 기능들
+function applyTLCoupon() {
+  showPOSNotification('TL 쿠폰 기능은 향후 구현 예정입니다.', 'info');
+}
+
+function applyTLPoints() {
+  showPOSNotification('TL 포인트 기능은 향후 구현 예정입니다.', 'info');
+}
+
+function checkTLLOrder() {
+  showPOSNotification('TLL 주문 연동 기능은 향후 구현 예정입니다.', 'info');
+}
+
+function printReceipt() {
+  showPOSNotification('영수증 출력 기능은 향후 구현 예정입니다.', 'info');
+}
+
+function showDailySales() {
+  showPOSNotification('일일정산 기능은 향후 구현 예정입니다.', 'info');
 }
 
 // 오늘 매출 요약 업데이트
@@ -729,13 +887,25 @@ function showPOSSettings() {
 window.renderPOS = renderPOS;
 window.selectTableFromMap = selectTableFromMap;
 window.returnToTableMap = returnToTableMap;
-window.selectOrderCategory = selectOrderCategory;
+window.selectCategory = selectCategory;
 window.addMenuToOrder = addMenuToOrder;
-window.changeOrderQuantity = changeOrderQuantity;
+window.toggleItemSelection = toggleItemSelection;
+window.selectAllItems = selectAllItems;
+window.deleteSelectedItems = deleteSelectedItems;
+window.applyDiscount = applyDiscount;
+window.changeQuantity = changeQuantity;
+window.inputNumber = inputNumber;
+window.clearInput = clearInput;
+window.deleteInput = deleteInput;
+window.processPayment = processPayment;
 window.clearOrder = clearOrder;
 window.holdOrder = holdOrder;
 window.sendToKitchen = sendToKitchen;
-window.processTablePayment = processTablePayment;
+window.applyTLCoupon = applyTLCoupon;
+window.applyTLPoints = applyTLPoints;
+window.checkTLLOrder = checkTLLOrder;
+window.printReceipt = printReceipt;
+window.showDailySales = showDailySales;
 window.showReservations = showReservations;
 window.showDeliveryOrders = showDeliveryOrders;
 window.showDailyStats = showDailyStats;

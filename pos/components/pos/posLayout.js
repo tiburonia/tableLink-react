@@ -1,5 +1,5 @@
 
-// POS 레이아웃 관리 모듈 (테이블맵 중심 상용 서비스 구조)
+// POS 레이아웃 관리 모듈 (OKPOS 구조 기반 상용 서비스)
 function renderPOSLayout() {
   const main = document.getElementById('main');
 
@@ -101,7 +101,7 @@ function renderPOSLayout() {
           </div>
         </div>
 
-        <!-- 주문/결제 화면 (테이블 선택 시) -->
+        <!-- 주문/결제 화면 (OKPOS 구조 기반) -->
         <div class="order-view hidden" id="orderView">
           <div class="order-header">
             <button class="back-btn" onclick="returnToTableMap()">
@@ -114,11 +114,12 @@ function renderPOSLayout() {
             </div>
           </div>
 
-          <div class="order-workspace">
-            <!-- 좌측: 주문 내역 & 결제 패널 -->
-            <section class="checkout-panel">
-              <div class="current-order-section">
-                <div class="section-header">
+          <div class="okpos-workspace">
+            <!-- 좌측 컬럼: 주문 내역 + 결제 정보 -->
+            <section class="left-column">
+              <!-- 상단: 주문 내역 패널 -->
+              <div class="order-list-panel">
+                <div class="panel-header">
                   <h3>📦 주문 내역</h3>
                   <div class="order-actions">
                     <button class="action-btn hold-btn" onclick="holdOrder()" disabled>
@@ -130,57 +131,141 @@ function renderPOSLayout() {
                   </div>
                 </div>
                 
-                <div class="order-list" id="currentOrderList">
-                  <div class="empty-order">
-                    <div class="empty-icon">📝</div>
-                    <p>메뉴를 선택해주세요</p>
+                <div class="order-items-container">
+                  <div class="order-items-header">
+                    <div class="header-col item-name">메뉴명</div>
+                    <div class="header-col item-price">단가</div>
+                    <div class="header-col item-qty">수량</div>
+                    <div class="header-col item-discount">할인</div>
+                    <div class="header-col item-total">금액</div>
+                    <div class="header-col item-note">비고</div>
+                  </div>
+                  
+                  <div class="order-items-list" id="orderItemsList">
+                    <div class="empty-order">
+                      <div class="empty-icon">📝</div>
+                      <p>메뉴를 선택해주세요</p>
+                    </div>
                   </div>
                 </div>
 
-                <div class="order-total">
-                  <div class="total-line">
-                    <span class="total-label">총 수량</span>
-                    <span class="total-value" id="totalQuantity">0개</span>
-                  </div>
-                  <div class="total-line main-total">
-                    <span class="total-label">합계</span>
-                    <span class="total-value" id="orderTotalAmount">₩0</span>
-                  </div>
+                <!-- 수량/항목 조작 영역 -->
+                <div class="order-controls">
+                  <button class="control-btn" onclick="selectAllItems()">전체선택</button>
+                  <button class="control-btn danger" onclick="deleteSelectedItems()">선택삭제</button>
+                  <button class="control-btn" onclick="applyDiscount()">할인적용</button>
+                  <button class="control-btn" onclick="changeQuantity(-1)">수량 -</button>
+                  <button class="control-btn" onclick="changeQuantity(1)">수량 +</button>
                 </div>
               </div>
 
-              <div class="payment-section">
-                <div class="section-header">
-                  <h3>💳 결제</h3>
-                </div>
-                
-                <div class="payment-buttons">
-                  <button class="payment-btn cash-payment" onclick="processTablePayment('CASH')" disabled>
-                    💵 현금결제
-                  </button>
-                  <button class="payment-btn card-payment" onclick="processTablePayment('CARD')" disabled>
-                    💳 카드결제
-                  </button>
-                  <button class="payment-btn mobile-payment" onclick="processTablePayment('MOBILE')" disabled>
-                    📱 간편결제
-                  </button>
+              <!-- 하단: 결제 정보 패널 -->
+              <div class="payment-info-panel">
+                <div class="payment-summary">
+                  <div class="summary-row">
+                    <span class="label">총 금액</span>
+                    <span class="value" id="totalAmount">₩0</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="label">할인 금액</span>
+                    <span class="value discount" id="discountAmount">₩0</span>
+                  </div>
+                  <div class="summary-row final">
+                    <span class="label">결제 금액</span>
+                    <span class="value" id="finalAmount">₩0</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="label">받은 금액</span>
+                    <span class="value" id="receivedAmount">₩0</span>
+                  </div>
+                  <div class="summary-row">
+                    <span class="label">거스름돈</span>
+                    <span class="value change" id="changeAmount">₩0</span>
+                  </div>
                 </div>
 
-                <div class="kitchen-actions">
-                  <button class="kitchen-btn send-kitchen" onclick="sendToKitchen()" disabled>
-                    🍳 주방 전송
-                  </button>
+                <!-- 숫자 키패드 -->
+                <div class="number-keypad">
+                  <div class="keypad-row">
+                    <button class="key-btn" onclick="inputNumber('7')">7</button>
+                    <button class="key-btn" onclick="inputNumber('8')">8</button>
+                    <button class="key-btn" onclick="inputNumber('9')">9</button>
+                    <button class="key-btn special" onclick="clearInput()">C</button>
+                  </div>
+                  <div class="keypad-row">
+                    <button class="key-btn" onclick="inputNumber('4')">4</button>
+                    <button class="key-btn" onclick="inputNumber('5')">5</button>
+                    <button class="key-btn" onclick="inputNumber('6')">6</button>
+                    <button class="key-btn special" onclick="deleteInput()">⌫</button>
+                  </div>
+                  <div class="keypad-row">
+                    <button class="key-btn" onclick="inputNumber('1')">1</button>
+                    <button class="key-btn" onclick="inputNumber('2')">2</button>
+                    <button class="key-btn" onclick="inputNumber('3')">3</button>
+                    <button class="key-btn special double-height" onclick="inputNumber('00')">00</button>
+                  </div>
+                  <div class="keypad-row">
+                    <button class="key-btn double-width" onclick="inputNumber('0')">0</button>
+                    <button class="key-btn" onclick="inputNumber('.')">.</button>
+                  </div>
                 </div>
               </div>
             </section>
 
-            <!-- 우측: 메뉴 패널 -->
-            <section class="menu-panel">
-              <div class="category-tabs" id="orderCategoryTabs">
-                <!-- 카테고리 탭들 -->
+            <!-- 우측 컬럼: 메뉴 선택 + 결제/관리 버튼 -->
+            <section class="right-column">
+              <!-- 메뉴 선택 패널 -->
+              <div class="menu-selection-panel">
+                <div class="category-tabs" id="categoryTabs">
+                  <!-- 카테고리 탭들 -->
+                </div>
+                <div class="menu-grid" id="menuGrid">
+                  <!-- 메뉴 버튼들 -->
+                </div>
               </div>
-              <div class="menu-items-grid" id="orderMenuGrid">
-                <!-- 메뉴 아이템들 -->
+
+              <!-- 결제 수단 버튼 -->
+              <div class="payment-methods-panel">
+                <div class="payment-title">💳 결제 수단</div>
+                <div class="payment-buttons">
+                  <button class="payment-btn card-btn" onclick="processPayment('CARD')" disabled>
+                    💳 신용카드
+                  </button>
+                  <button class="payment-btn cash-btn" onclick="processPayment('CASH')" disabled>
+                    💵 현금결제
+                  </button>
+                  <button class="payment-btn mobile-btn" onclick="processPayment('MOBILE')" disabled>
+                    📱 간편결제
+                  </button>
+                  <button class="payment-btn tl-btn" onclick="processPayment('TL_PAY')" disabled>
+                    🔵 TL Pay
+                  </button>
+                </div>
+              </div>
+
+              <!-- 보조 기능 버튼 -->
+              <div class="assistant-functions-panel">
+                <div class="function-title">⚙️ 관리 기능</div>
+                <div class="function-buttons">
+                  <button class="func-btn" onclick="applyTLCoupon()">
+                    🎫 TL 쿠폰
+                  </button>
+                  <button class="func-btn" onclick="applyTLPoints()">
+                    ⭐ TL 포인트
+                  </button>
+                  <button class="func-btn" onclick="checkTLLOrder()">
+                    📱 TLL 주문
+                  </button>
+                  <button class="func-btn" onclick="sendToKitchen()">
+                    🍳 주방전송
+                  </button>
+                  <button class="func-btn" onclick="printReceipt()">
+                    🖨️ 영수증
+                  </button>
+                  <button class="func-btn" onclick="showDailySales()">
+                    📊 일일정산
+                  </button>
+                </div>
               </div>
             </section>
           </div>
@@ -199,7 +284,7 @@ function renderPOSLayout() {
         height: 100vh;
         display: flex;
         flex-direction: column;
-        background: #f8fafc;
+        background: #f1f5f9;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
 
@@ -303,7 +388,7 @@ function renderPOSLayout() {
         position: relative;
       }
 
-      /* 테이블맵 화면 */
+      /* 테이블맵 화면 (기존 유지) */
       .table-map-view {
         height: 100%;
         display: grid;
@@ -429,7 +514,7 @@ function renderPOSLayout() {
         opacity: 0.7;
       }
 
-      /* 사이드 패널 */
+      /* 사이드 패널 (기존 유지) */
       .side-panel {
         background: white;
         display: flex;
@@ -505,7 +590,7 @@ function renderPOSLayout() {
         color: #1e293b;
       }
 
-      /* 주문/결제 화면 */
+      /* OKPOS 구조 기반 주문 화면 */
       .order-view {
         height: 100%;
         display: flex;
@@ -562,33 +647,342 @@ function renderPOSLayout() {
         background: #10b981;
       }
 
-      .order-workspace {
+      /* OKPOS 워크스페이스 */
+      .okpos-workspace {
         flex: 1;
         display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 1px;
-        background: #e2e8f0;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px;
+        background: #cbd5e1;
         min-height: 0;
       }
 
-      /* 메뉴 패널 */
-      .menu-panel {
-        background: white;
+      /* 좌측 컬럼 */
+      .left-column {
         display: flex;
         flex-direction: column;
+        gap: 2px;
+      }
+
+      /* 주문 내역 패널 */
+      .order-list-panel {
+        background: white;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
+      }
+
+      .panel-header {
+        padding: 16px;
+        border-bottom: 2px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+      }
+
+      .panel-header h3 {
+        font-size: 16px;
+        color: #1e293b;
+        font-weight: 700;
+      }
+
+      .order-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .action-btn {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .hold-btn:not(:disabled):hover {
+        background: #fef3c7;
+        border-color: #f59e0b;
+        color: #d97706;
+      }
+
+      .clear-btn:not(:disabled):hover {
+        background: #fecaca;
+        border-color: #ef4444;
+        color: #dc2626;
+      }
+
+      /* 주문 아이템 컨테이너 */
+      .order-items-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 300px;
+      }
+
+      .order-items-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+        gap: 8px;
+        padding: 12px 16px;
+        background: #f1f5f9;
+        border-bottom: 1px solid #e2e8f0;
+        font-weight: 700;
+        font-size: 12px;
+        color: #374151;
+      }
+
+      .order-items-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .empty-order {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #94a3b8;
+        min-height: 200px;
+      }
+
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+        opacity: 0.7;
+      }
+
+      .order-item-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+        gap: 8px;
+        padding: 12px 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        background: white;
+        align-items: center;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .order-item-row:hover {
+        background: #f8fafc;
+        border-color: #3b82f6;
+      }
+
+      .order-item-row.selected {
+        background: #dbeafe;
+        border-color: #3b82f6;
+      }
+
+      .item-name {
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      .item-price, .item-total {
+        font-weight: 600;
+        color: #059669;
+        text-align: right;
+      }
+
+      .item-qty {
+        text-align: center;
+        font-weight: 600;
+      }
+
+      .item-discount {
+        text-align: right;
+        color: #dc2626;
+        font-weight: 600;
+      }
+
+      .item-note {
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      /* 주문 조작 버튼 */
+      .order-controls {
+        padding: 12px 16px;
+        border-top: 1px solid #e2e8f0;
+        background: #f8fafc;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .control-btn {
+        padding: 10px 16px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        flex: 1;
+        min-width: 80px;
+      }
+
+      .control-btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+      }
+
+      .control-btn.danger:hover {
+        background: #fecaca;
+        border-color: #ef4444;
+        color: #dc2626;
+      }
+
+      /* 결제 정보 패널 */
+      .payment-info-panel {
+        background: white;
+        min-height: 300px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .payment-summary {
+        padding: 20px;
+        border-bottom: 2px solid #e2e8f0;
+        background: #f8fafc;
+      }
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+      }
+
+      .summary-row.final {
+        border-top: 2px solid #e2e8f0;
+        border-bottom: 2px solid #e2e8f0;
+        margin: 8px 0;
+        padding: 12px 0;
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .summary-row .label {
+        color: #374151;
+        font-weight: 600;
+      }
+
+      .summary-row .value {
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .summary-row .value.discount {
+        color: #dc2626;
+      }
+
+      .summary-row .value.change {
+        color: #059669;
+      }
+
+      /* 숫자 키패드 */
+      .number-keypad {
+        flex: 1;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .keypad-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        flex: 1;
+      }
+
+      .key-btn {
+        background: #f1f5f9;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #1e293b;
+        min-height: 48px;
+      }
+
+      .key-btn:hover {
+        background: #e2e8f0;
+        border-color: #94a3b8;
+        transform: translateY(-2px);
+      }
+
+      .key-btn:active {
+        transform: translateY(0);
+      }
+
+      .key-btn.special {
+        background: #3b82f6;
+        color: white;
+        border-color: #2563eb;
+      }
+
+      .key-btn.special:hover {
+        background: #2563eb;
+        border-color: #1d4ed8;
+      }
+
+      .key-btn.double-width {
+        grid-column: span 2;
+      }
+
+      .key-btn.double-height {
+        grid-row: span 2;
+      }
+
+      /* 우측 컬럼 */
+      .right-column {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      /* 메뉴 선택 패널 */
+      .menu-selection-panel {
+        background: white;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 400px;
       }
 
       .category-tabs {
         display: flex;
         background: #f8fafc;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 2px solid #e2e8f0;
         padding: 12px;
         gap: 6px;
         overflow-x: auto;
       }
 
       .category-tab {
-        padding: 12px 24px;
+        padding: 12px 20px;
         border: 2px solid #d1d5db;
         border-radius: 8px;
         background: white;
@@ -611,17 +1005,17 @@ function renderPOSLayout() {
         border-color: #94a3b8;
       }
 
-      .menu-items-grid {
+      .menu-grid {
         flex: 1;
         padding: 16px;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 12px;
         overflow-y: auto;
       }
 
-      .menu-item {
-        aspect-ratio: 1.2;
+      .menu-item-btn {
+        aspect-ratio: 1;
         border: 2px solid #e2e8f0;
         border-radius: 12px;
         background: white;
@@ -631,23 +1025,23 @@ function renderPOSLayout() {
         justify-content: center;
         align-items: center;
         text-align: center;
-        padding: 16px;
+        padding: 12px;
         transition: all 0.2s;
-        min-height: 120px;
+        min-height: 100px;
       }
 
-      .menu-item:hover {
+      .menu-item-btn:hover {
         border-color: #3b82f6;
         transform: translateY(-3px);
         box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
       }
 
-      .menu-item:active {
+      .menu-item-btn:active {
         transform: translateY(-1px) scale(0.98);
       }
 
       .menu-item-name {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 700;
         color: #1e293b;
         margin-bottom: 8px;
@@ -655,228 +1049,42 @@ function renderPOSLayout() {
       }
 
       .menu-item-price {
-        font-size: 14px;
+        font-size: 13px;
         color: #059669;
         font-weight: 700;
       }
 
-      /* 체크아웃 패널 */
-      .checkout-panel {
+      /* 결제 수단 패널 */
+      .payment-methods-panel {
         background: white;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .current-order-section {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-      }
-
-      .section-header {
         padding: 16px;
-        border-bottom: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #f8fafc;
+        min-height: 120px;
       }
 
-      .section-header h3 {
-        font-size: 16px;
-        color: #374151;
+      .payment-title {
+        font-size: 14px;
         font-weight: 700;
-      }
-
-      .order-actions, .kitchen-actions {
-        display: flex;
-        gap: 8px;
-      }
-
-      .action-btn, .kitchen-btn {
-        padding: 8px 12px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: white;
-        font-size: 11px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .action-btn:disabled, .kitchen-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .hold-btn:not(:disabled):hover {
-        background: #fef3c7;
-        border-color: #f59e0b;
-        color: #d97706;
-      }
-
-      .clear-btn:not(:disabled):hover {
-        background: #fecaca;
-        border-color: #ef4444;
-        color: #dc2626;
-      }
-
-      .send-kitchen:not(:disabled):hover {
-        background: #dcfce7;
-        border-color: #22c55e;
-        color: #16a34a;
-      }
-
-      .order-list {
-        flex: 1;
-        padding: 12px;
-        overflow-y: auto;
-        min-height: 200px;
-      }
-
-      .empty-order {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        color: #94a3b8;
-      }
-
-      .empty-icon {
-        font-size: 48px;
+        color: #1e293b;
         margin-bottom: 12px;
-        opacity: 0.7;
-      }
-
-      .order-item {
-        display: flex;
-        align-items: center;
-        padding: 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        background: white;
-        transition: all 0.2s;
-      }
-
-      .order-item:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      }
-
-      .order-item-info {
-        flex: 1;
-      }
-
-      .order-item-name {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1e293b;
-        margin-bottom: 4px;
-      }
-
-      .order-item-price {
-        font-size: 12px;
-        color: #64748b;
-      }
-
-      .quantity-controls {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .qty-btn {
-        width: 36px;
-        height: 36px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        background: white;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 700;
-        font-size: 16px;
-        transition: all 0.2s;
-      }
-
-      .qty-btn:hover {
-        background: #f1f5f9;
-        border-color: #94a3b8;
-      }
-
-      .qty-display {
-        min-width: 40px;
         text-align: center;
-        font-weight: 700;
-        font-size: 16px;
-        color: #1e293b;
-      }
-
-      .order-total {
-        padding: 20px;
-        border-top: 2px solid #e2e8f0;
-        background: #f8fafc;
-      }
-
-      .total-line {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-        font-size: 14px;
-      }
-
-      .total-line:last-child {
-        margin-bottom: 0;
-      }
-
-      .total-line.main-total {
-        padding-top: 8px;
-        border-top: 1px solid #e2e8f0;
-        margin-top: 8px;
-      }
-
-      .total-label {
-        color: #64748b;
-        font-weight: 600;
-      }
-
-      .total-value {
-        font-weight: 700;
-        color: #1e293b;
-      }
-
-      .main-total .total-value {
-        font-size: 18px;
-        color: #059669;
-      }
-
-      /* 결제 섹션 */
-      .payment-section {
-        border-top: 1px solid #e2e8f0;
       }
 
       .payment-buttons {
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
       }
 
       .payment-btn {
-        height: 56px;
+        padding: 16px 8px;
         border: none;
-        border-radius: 12px;
-        font-size: 16px;
+        border-radius: 8px;
+        font-size: 13px;
         font-weight: 700;
         cursor: pointer;
         transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
+        color: white;
+        min-height: 48px;
       }
 
       .payment-btn:disabled {
@@ -884,55 +1092,80 @@ function renderPOSLayout() {
         cursor: not-allowed;
       }
 
-      .cash-payment {
-        background: #059669;
-        color: white;
-      }
-
-      .cash-payment:not(:disabled):hover {
-        background: #047857;
-        transform: translateY(-2px);
-      }
-
-      .card-payment {
+      .card-btn {
         background: #3b82f6;
-        color: white;
       }
 
-      .card-payment:not(:disabled):hover {
+      .card-btn:not(:disabled):hover {
         background: #2563eb;
         transform: translateY(-2px);
       }
 
-      .mobile-payment {
-        background: #7c3aed;
-        color: white;
+      .cash-btn {
+        background: #059669;
       }
 
-      .mobile-payment:not(:disabled):hover {
+      .cash-btn:not(:disabled):hover {
+        background: #047857;
+        transform: translateY(-2px);
+      }
+
+      .mobile-btn {
+        background: #7c3aed;
+      }
+
+      .mobile-btn:not(:disabled):hover {
         background: #6d28d9;
         transform: translateY(-2px);
       }
 
-      .kitchen-actions {
-        padding: 0 20px 20px 20px;
+      .tl-btn {
+        background: #1e40af;
       }
 
-      .kitchen-btn {
-        width: 100%;
-        height: 48px;
-        border: 2px solid #22c55e;
-        border-radius: 8px;
+      .tl-btn:not(:disabled):hover {
+        background: #1e3a8a;
+        transform: translateY(-2px);
+      }
+
+      /* 보조 기능 패널 */
+      .assistant-functions-panel {
         background: white;
-        color: #16a34a;
+        padding: 16px;
+        min-height: 140px;
+      }
+
+      .function-title {
         font-size: 14px;
         font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
+        color: #1e293b;
+        margin-bottom: 12px;
+        text-align: center;
       }
 
-      .kitchen-btn:not(:disabled):hover {
-        background: #dcfce7;
+      .function-buttons {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+
+      .func-btn {
+        padding: 12px 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #374151;
+        min-height: 40px;
+        text-align: center;
+      }
+
+      .func-btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
         transform: translateY(-1px);
       }
 
@@ -950,6 +1183,14 @@ function renderPOSLayout() {
         .table-map-grid {
           grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
           gap: 16px;
+        }
+
+        .okpos-workspace {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .function-buttons {
+          grid-template-columns: repeat(2, 1fr);
         }
       }
 
@@ -969,14 +1210,18 @@ function renderPOSLayout() {
         .panel-section {
           min-width: 200px;
         }
-      }
 
-      @media (max-width: 768px) {
-        .order-workspace {
+        .okpos-workspace {
           grid-template-columns: 1fr;
           grid-template-rows: 1fr auto;
         }
-        
+
+        .payment-buttons {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
         .map-header {
           flex-direction: column;
           gap: 12px;
@@ -984,6 +1229,21 @@ function renderPOSLayout() {
         }
         
         .header-center {
+          display: none;
+        }
+
+        .order-items-header {
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+        }
+
+        .order-item-row {
+          grid-template-columns: 2fr 1fr 1fr 1fr;
+        }
+
+        .order-items-header .item-discount,
+        .order-items-header .item-note,
+        .order-item-row .item-discount,
+        .order-item-row .item-note {
           display: none;
         }
       }
