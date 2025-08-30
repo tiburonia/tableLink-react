@@ -946,8 +946,6 @@ async function confirmPendingOrder() {
       isTLLOrder: false
     };
 
-    console.log('📋 주문 데이터 전송:', orderData);
-
     // API 호출: 주문 저장
     const response = await fetch('/api/pos/orders', {
       method: 'POST',
