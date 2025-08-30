@@ -482,16 +482,15 @@ router.get('/stores/:storeId/table/:tableNumber/orders', async (req, res) => {
       )
     `;
 
-    const response = await pool.query(`
-      (${memberOrdersQuery})
-      UNION ALL
-      (${guestOrdersQuery})
-      ORDER BY payment_date DESC
-      LIMIT 1
-    `, [parseInt(storeId), parseInt(tableNumber), parseInt(storeId), parseInt(tableNumber)]);
+    const memberResult = await pool.query(memberOrdersQuery, [parseInt(storeId), parseInt(tableNumber)]);
+    const guestResult = await pool.query(guestOrdersQuery, [parseInt(storeId), parseInt(tableNumber)]);
+    
+    const allResults = [...memberResult.rows, ...guestResult.rows]
+      .sort((a, b) => new Date(b.payment_date) - new Date(a.payment_date))
+      .slice(0, 1);
 
-    if (response.rows.length > 0) {
-      const tllOrder = response.rows[0];
+    if (allResults.length > 0) {
+      const tllOrder = allResults[0];
 
       // 토스페이먼츠 결제 정보 파싱
       let paymentInfo = null;

@@ -19,12 +19,20 @@ window.tossPaymentUtils = {
         })
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '결제 승인 요청 실패');
+        // 이미 처리된 결제인 경우 성공으로 처리
+        if (result.error && result.error.includes('이미 처리된 결제')) {
+          console.log('⚠️ 이미 처리된 결제 - 성공으로 처리');
+          return { 
+            success: true, 
+            data: { paymentKey, orderId, amount, alreadyProcessed: true }
+          };
+        }
+        throw new Error(result.error || '결제 승인 요청 실패');
       }
 
-      const result = await response.json();
       console.log('✅ 토스페이먼츠 결제 승인 성공:', result);
       
       return { success: true, data: result };

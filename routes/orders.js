@@ -485,41 +485,55 @@ router.post('/pay', async (req, res) => {
     const userPaidOrderId = userPaidOrderResult.rows[0].id;
     console.log(`✅ TL회원 결제 완료 - user_paid_orders ID: ${userPaidOrderId}`);
 
-    // ✅ TL회원도 paid_orders에 저장 (POS 연동을 위해)
-    console.log(`💾 TL회원 결제 - paid_orders에도 저장: ${userId}`);
+    // ✅ TL회원도 paid_orders에 저장 (POS 연동을 위해) - 중복 체크 추가
+    console.log(`💾 TL회원 결제 - paid_orders에도 저장 (중복 체크): ${userId}`);
 
-    const paidOrderResult = await client.query(`
-      INSERT INTO paid_orders (
-        user_id, store_id, table_number, order_data, original_amount,
-        final_amount, payment_method, payment_status, payment_date, order_source
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, $9)
-      RETURNING id
-    `, [
-      userId,                    // TL회원 ID
-      storeId,
-      actualTableNumber,
-      JSON.stringify({
-        ...orderData,
-        storeId: storeId,
-        storeName: storeName,
-        tableNumber: actualTableNumber,
-        actualTableNumber: actualTableNumber,
-        paymentInfo: {
-          paymentKey: pgPaymentKey,
-          orderId: pgOrderId,
-          amount: finalTotal,
-          method: pgPaymentMethod
-        }
-      }),
-      originalAmount,
-      finalTotal,
-      'TOSS',
-      'completed',
-      'TLL'
-    ]);
+    // 이미 동일한 주문이 paid_orders에 있는지 확인
+    const existingPaidOrder = await client.query(`
+      SELECT id FROM paid_orders 
+      WHERE user_id = $1 AND store_id = $2 AND table_number = $3 
+      AND payment_date >= NOW() - INTERVAL '5 minutes'
+      ORDER BY payment_date DESC LIMIT 1
+    `, [userId, storeId, actualTableNumber]);
 
-    const paidOrderId = paidOrderResult.rows[0].id;
-    console.log(`✅ TL회원 결제 - paid_orders에도 저장 완료: ID ${paidOrderId}`);
+    let paidOrderId;
+    if (existingPaidOrder.rows.length > 0) {
+      paidOrderId = existingPaidOrder.rows[0].id;
+      console.log(`♻️ 기존 paid_orders 사용: ID ${paidOrderId}`);
+    } else {
+      const paidOrderResult = await client.query(`
+        INSERT INTO paid_orders (
+          user_id, store_id, table_number, order_data, original_amount,
+          final_amount, payment_method, payment_status, payment_date, order_source
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, $9)
+        RETURNING id
+      `, [
+        userId,                    // TL회원 ID
+        storeId,
+        actualTableNumber,
+        JSON.stringify({
+          ...orderData,
+          storeId: storeId,
+          storeName: storeName,
+          tableNumber: actualTableNumber,
+          actualTableNumber: actualTableNumber,
+          paymentInfo: {
+            paymentKey: pgPaymentKey,
+            orderId: pgOrderId,
+            amount: finalTotal,
+            method: pgPaymentMethod
+          }
+        }),
+        originalAmount,
+        finalTotal,
+        pgPaymentMethod || 'TOSS',
+        'completed',
+        'TLL'
+      ]);
+
+      paidOrderId = paidOrderResult.rows[0].id;
+      console.log(`✅ TL회원 결제 - paid_orders에 새로 저장 완료: ID ${paidOrderId}`);
+    }
 
 
     // 3. orders 테이블에 제조 정보 저장 (KDS용) - TL회원은 둘 다 저장
