@@ -93,134 +93,177 @@ function renderKDSInterface(store) {
   console.log(isDevMode ? '🔧 개발 모드 활성화' : '📺 풀스크린 모드');
 
   main.innerHTML = `
-    <div class="kds-container ${isDevMode ? 'dev-mode' : ''}">
-      <!-- KDS 헤더 -->
-      <div class="kds-header">
+    <div class="professional-kds ${isDevMode ? 'dev-mode' : ''}">
+      <!-- 상단 헤더 -->
+      <header class="kds-header">
         <div class="header-left">
-          <div class="date-time">
-            <div class="date">2024년 1월 27일</div>
-            <div class="time" id="currentTime">오후 10:31:35</div>
+          <div class="store-info">
+            <h1 class="store-name">${store.name}</h1>
+            <div class="current-time" id="currentTime">2024.01.27 22:31:45</div>
           </div>
         </div>
-        ${!isDevMode ? `
+
         <div class="header-center">
-          <div class="pagination">
-            <button class="nav-btn">◀</button>
-            <span class="page-info">페이지 1 / 1</span>
-            <button class="nav-btn">▶</button>
+          <div class="queue-summary">
+            <div class="queue-item pending">
+              <div class="queue-count" id="pendingCount">0</div>
+              <div class="queue-label">대기</div>
+            </div>
+            <div class="queue-item cooking">
+              <div class="queue-count" id="cookingCount">0</div>
+              <div class="queue-label">조리중</div>
+            </div>
+            <div class="queue-item ready">
+              <div class="queue-count" id="readyCount">0</div>
+              <div class="queue-label">완료</div>
+            </div>
           </div>
         </div>
-        ` : ''}
+
         <div class="header-right">
-          <div class="control-buttons">
-            <button class="ctrl-btn orders-btn">주문</button>
-            ${!isDevMode ? '<button class="ctrl-btn functions-btn">기능</button>' : ''}
-            <button class="ctrl-btn settings-btn">⚙</button>
-            <button class="ctrl-btn exit-btn">✖</button>
-          </div>
-          ${!isDevMode ? `
-          <div class="summary-info">
-            <div class="summary-row">치킨: 1163</div>
-            <div class="summary-row">판매완료: 1</div>
-            <div class="summary-row">콤보: 1474</div>
-            <div class="summary-row">세트 메뉴: 8</div>
-            <div class="summary-row">8</div>
-          </div>
-          ` : ''}
-        </div>
-      </div>
-
-      <!-- 주문 그리드 -->
-      <div class="orders-grid ${isDevMode ? 'dev-mode' : ''}" id="ordersGrid">
-        <!-- 주문 카드들이 동적으로 생성됩니다 -->
-
-        <!-- 다기능 카드 (10번 위치) -->
-        <div class="multifunction-card">
-          <div class="multifunction-header">
-            <div class="multifunction-title">📊 주방 상태</div>
-          </div>
-
-          <div class="queue-info">
-            <div class="queue-item">
-              <div class="queue-label">대기 중</div>
-              <div class="queue-count" id="waitingCount">+3</div>
+          <div class="connection-status">
+            <div class="status-indicator" id="connectionStatus">
+              <div class="status-dot online"></div>
+              <span>실시간 연결</span>
             </div>
-            <div class="queue-item">
-              <div class="queue-label">조리 중</div>
-              <div class="queue-count cooking" id="cookingCount">3</div>
-            </div>
-          </div>
-
-          <div class="quick-stats">
-            <div class="stat-item">
-              <div class="stat-label">오늘 완료</div>
-              <div class="stat-value">27건</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">평균 시간</div>
-              <div class="stat-value">8분</div>
-            </div>
-          </div>
-
-          <div class="multifunction-actions">
-            <button class="multi-btn settings-btn" onclick="showKDSSettings()">
-              ⚙️ 설정
-            </button>
-            <button class="multi-btn history-btn" onclick="showOrderHistory()">
-              📋 내역
-            </button>
-            <button class="multi-btn refresh-btn" onclick="refreshKDS()">
-              🔄 새로고침
-            </button>
-            <button class="multi-btn alert-btn" onclick="toggleAlerts()">
-              🔔 알림
-            </button>
-          </div>
-
-          <div class="system-status">
-            <div class="status-indicator online">● 온라인</div>
             <div class="last-update" id="lastUpdate">최종 업데이트: 방금 전</div>
           </div>
+
+          <div class="control-panel">
+            <button class="control-btn refresh-btn" onclick="refreshKDS()" title="새로고침">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+              </svg>
+            </button>
+            <button class="control-btn settings-btn" onclick="showKDSSettings()" title="설정">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+              </svg>
+            </button>
+            <button class="control-btn fullscreen-btn" onclick="toggleFullscreen()" title="전체화면">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M7,14H5v5h5v-2H7V14z M5,10h2V7h3V5H5V10z M17,17h-3v2h5v-5h-2V17z M14,5v2h3v3h2V5H14z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 메인 컨텐츠 영역 -->
+      <main class="kds-main">
+        <!-- 주문 필터 및 검색 -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>주문 유형:</label>
+            <select id="orderTypeFilter" onchange="updateFilter('type', this.value)">
+              <option value="all">전체</option>
+              <option value="TLL">앱 주문</option>
+              <option value="POS">포스 주문</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>상태:</label>
+            <select id="statusFilter" onchange="updateFilter('status', this.value)">
+              <option value="all">전체</option>
+              <option value="PENDING">대기중</option>
+              <option value="COOKING">조리중</option>
+              <option value="READY">완료</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>정렬:</label>
+            <select id="sortFilter" onchange="updateFilter('sort', this.value)">
+              <option value="time_asc">오래된 순</option>
+              <option value="time_desc">최신 순</option>
+              <option value="priority">우선순위</option>
+            </select>
+          </div>
+
+          <div class="search-group">
+            <input type="text" id="orderSearch" placeholder="주문번호, 고객명 검색..." onkeyup="searchOrders(this.value)">
+            <button class="search-btn" onclick="clearSearch()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <!-- 로딩 스켈레톤 카드들 (초기 로딩 시) -->
-        ${Array.from({length: 9}, (_, i) => `
-          <div class="skeleton-order-card" id="skeleton-card-${i + 1}">
-            <div class="skeleton-header">
-              <div class="skeleton-order-number"></div>
-              <div class="skeleton-order-type"></div>
-            </div>
-            <div class="skeleton-time"></div>
-            <div class="skeleton-customer"></div>
-            <div class="skeleton-items">
-              <div class="skeleton-item"></div>
-              <div class="skeleton-item"></div>
-              <div class="skeleton-item short"></div>
-            </div>
-            <div class="skeleton-actions">
-              <div class="skeleton-btn"></div>
-              <div class="skeleton-btn"></div>
-            </div>
+        <!-- 주문 컨테이너 -->
+        <div class="orders-container" id="ordersContainer">
+          <div class="orders-grid ${isDevMode ? 'dev-mode' : ''}" id="ordersGrid">
+            <!-- 주문 카드들이 동적으로 생성됩니다 -->
           </div>
-        `).join('')}
-      </div>
+
+          <!-- 빈 상태 -->
+          <div class="empty-state" id="emptyState" style="display: none;">
+            <div class="empty-icon">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"/>
+              </svg>
+            </div>
+            <h3>처리할 주문이 없습니다</h3>
+            <p>새로운 주문이 들어오면 여기에 표시됩니다.</p>
+          </div>
+          
+          <!-- 로딩 오버레이 -->
+          <div class="loading-overlay" style="display: none;">
+              <div class="loading-spinner"></div>
+              <div class="loading-text">주문 데이터 로딩 중...</div>
+          </div>
+        </div>
+      </main>
 
       <!-- 하단 상태바 -->
-      <div class="status-bar">
-        <div class="status-left">
-          <button class="status-btn">필터 - 전체 주문</button>
+      <footer class="kds-footer">
+        <div class="footer-left">
+          <div class="today-stats">
+            <span class="stat-item">오늘 완료: <strong id="todayCompleted">0</strong>건</span>
+            <span class="stat-item">평균 조리시간: <strong id="avgTime">-</strong>분</span>
+          </div>
         </div>
-        <div class="status-center">
-          <button class="status-btn">보기 기준 : 그릴</button>
+
+        <div class="footer-center">
+          <div class="system-info">
+            <span>KDS v2.0</span>
+            <span class="separator">•</span>
+            <span id="systemStatus">정상 운영</span>
+          </div>
         </div>
-        <div class="status-right">
-          <button class="status-btn">기록</button>
-          <div class="version">버전 6.4.36</div>
+
+        <div class="footer-right">
+          <button class="footer-btn" onclick="showStatistics()">📊 통계</button>
+          <button class="footer-btn" onclick="showHistory()">📋 내역</button>
+          <button class="footer-btn alert-toggle" onclick="toggleAlerts()" id="alertToggle">🔔 알림</button>
         </div>
-      </div>
+      </footer>
     </div>
 
     <style>
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+
       * {
         margin: 0;
         padding: 0;
@@ -228,873 +271,776 @@ function renderKDSInterface(store) {
       }
 
       body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #ffffff;
-        color: #333;
+        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+        background: #0f1419;
+        color: #e2e8f0;
         overflow: hidden;
+        user-select: none;
       }
 
-      /* 개발 모드일 때 body 스타일 조정 */
-      body.dev-mode {
-        overflow: visible;
-      }
-
-      .kds-container {
-        width: 1200px;
-        height: 700px;
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      .professional-kds {
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%);
         display: flex;
         flex-direction: column;
-        margin: 20px auto;
-        border: 2px solid #444;
-        border-radius: 20px;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
-        overflow: hidden;
+        position: relative;
       }
 
-      /* 개발 모드 스타일 */
-      .kds-container.dev-mode {
-        width: 500px;
-        height: 800px;
-        margin: 10px;
+      .professional-kds.dev-mode {
+        width: 600px;
+        height: 900px;
+        margin: 20px;
+        border-radius: 12px;
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
         position: fixed;
-        top: 10px;
-        right: 10px;
+        top: 20px;
+        right: 20px;
         z-index: 1000;
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+        border: 1px solid #2d3748;
       }
 
       /* 헤더 스타일 */
       .kds-header {
-        height: 60px;
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        height: 80px;
+        background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+        border-bottom: 2px solid #2d3748;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 24px;
-        border-radius: 18px 18px 0 0;
+        padding: 0 32px;
         backdrop-filter: blur(10px);
-      }
-
-      .dev-mode .kds-header {
-        height: 50px;
-        padding: 0 20px;
-      }
-
-      .header-left .date-time {
-        text-align: left;
-      }
-
-      .date {
-        font-size: 12px;
-        color: rgba(255, 255, 255, 0.8);
-        margin-bottom: 2px;
-      }
-
-      .time {
-        font-size: 14px;
-        font-weight: bold;
-        color: #fff;
-        font-family: 'Courier New', monospace;
-      }
-
-      .header-center .pagination {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.15);
-        padding: 8px 15px;
-        border-radius: 8px;
-        backdrop-filter: blur(10px);
-      }
-
-      .nav-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s ease;
-      }
-
-      .nav-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
-
-      .page-info {
-        color: white;
-        font-weight: bold;
-        font-size: 12px;
-        min-width: 80px;
-        text-align: center;
-      }
-
-      .header-right {
-        display: flex;
-        gap: 15px;
-        align-items: center;
-      }
-
-      .control-buttons {
-        display: flex;
-        gap: 8px;
-      }
-
-      .ctrl-btn {
-        background: rgba(255, 255, 255, 0.15);
-        border: none;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        backdrop-filter: blur(10px);
-      }
-
-      .dev-mode .ctrl-btn {
-        padding: 6px 8px;
-        font-size: 10px;
-      }
-
-      .ctrl-btn:hover {
-        background: #777;
-      }
-
-      .orders-btn { background: #4a90e2; }
-      .functions-btn { background: #7b68ee; }
-      .settings-btn { background: #666; }
-      .exit-btn { background: #e74c3c; }
-
-      .summary-info {
-        font-size: 10px;
-        color: #ccc;
-        text-align: right;
-      }
-
-      .summary-row {
-        margin-bottom: 1px;
-      }
-
-      /* 주문 그리드 */
-      .orders-grid {
-        flex: 1;
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        grid-template-rows: repeat(2, 1fr);
-        gap: 8px;
-        padding: 12px;
+        position: relative;
         overflow: hidden;
       }
 
-      /* 개발 모드 그리드 - 리스트 형태 */
-      .orders-grid.dev-mode {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding: 8px;
-        overflow-y: auto;
-        overflow-x: hidden;
-      }
-
-      /* 주문 카드 */
-      .order-card {
-        background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-        border: 1px solid #6b7280;
-        border-radius: 12px;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        font-size: 12px;
-        color: #f9fafb;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        backdrop-filter: blur(5px);
-        height: 280px;
-      }
-
-      /* 개발 모드 카드 - 리스트 아이템 형태 */
-      .dev-mode .order-card {
-        min-height: auto;
-        height: auto;
-        flex-shrink: 0;
-        padding: 16px;
-        margin-bottom: 0;
-        font-size: 11px;
-      }
-
-      .order-card:hover {
-        border-color: #9ca3af;
-        transform: translateY(-4px);
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-        background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
-      }
-
-      .order-card.pending {
-        border-color: #f59e0b;
-        background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-      }
-
-      .order-card.cooking {
-        border-color: #ef4444;
-        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-        animation: cooking-pulse 2s infinite;
-      }
-
-      @keyframes cooking-pulse {
-        0%, 100% {
-          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
-        }
-        50% {
-          box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-        }
-      }
-
-      .order-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .order-number {
-        font-size: 14px;
-        font-weight: 800;
-        color: #60a5fa;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      }
-
-      .order-type {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 8px;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-      }
-
-      .order-type.pos-type {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
-      }
-
-      .pos-badge {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 7px;
-        font-weight: 700;
+      .kds-header::before {
+        content: '';
         position: absolute;
-        top: -4px;
-        right: 20px;
-        animation: pos-pulse 2s infinite;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent 0%, rgba(99, 179, 237, 0.1) 50%, transparent 100%);
+        animation: header-shine 3s ease-in-out infinite;
       }
 
-      @keyframes pos-pulse {
-        0%, 100% {
-          opacity: 1;
-        }
-        50% {
-          opacity: 0.7;
-        }
+      @keyframes header-shine {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
       }
 
-      .order-card.pos-order {
-        border-left: 4px solid #f59e0b;
-        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.1) 100%);
-      }
-
-      .order-time {
-        color: #d1d5db;
-        font-size: 9px;
-        font-family: 'Courier New', monospace;
-        margin-bottom: 6px;
-        font-weight: 500;
-      }
-
-      .order-status {
-        font-size: 9px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        padding: 4px 6px;
-        border-radius: 6px;
-        text-align: center;
-        word-wrap: break-word;
-        line-height: 1.2;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-      }
-
-      .order-status.pending {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
-      }
-
-      .order-status.cooking {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
-      }
-
-      .order-items {
-        flex: 1;
-        margin-bottom: 8px;
-        overflow-y: auto;
-      }
-
-      .dev-mode .order-items {
-        flex: none;
-        max-height: 100px;
-        overflow-y: auto;
-      }
-
-      .item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 3px 0;
-        border-bottom: 1px solid rgba(107, 114, 128, 0.3);
-        color: #e5e7eb;
-        font-size: 9px;
-        transition: all 0.2s ease;
-      }
-
-      .item:last-child {
-        border-bottom: none;
-      }
-
-      .item:hover {
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 6px;
-        padding-left: 8px;
-        padding-right: 8px;
-      }
-
-      .item-name {
-        flex: 1;
-        margin-right: 12px;
-        word-wrap: break-word;
-        font-weight: 500;
-      }
-
-      .qty {
-        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-        color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 8px;
-        font-weight: 700;
-        min-width: 18px;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-      }
-
-      .order-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: 8px;
-      }
-
-      .action-btn {
-        flex: 1;
-        padding: 6px 10px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 8px;
-        font-weight: 700;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-      }
-
-      .start-btn {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-      }
-
-      .start-btn:hover {
-        background: linear-gradient(135deg, #059669 0%, #047857 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-      }
-
-      .cancel-btn {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-      }
-
-      .cancel-btn:hover {
-        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-      }
-
-      .order-timer {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        background: #e74c3c;
-        color: white;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-family: 'Courier New', monospace;
-        font-weight: bold;
-      }
-
-      .timer-display {
-        font-size: 9px;
-        animation: pulse 1s infinite;
-      }
-
-      @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.6; }
-        100% { opacity: 1; }
-      }
-
-      /* 하단 상태바 */
-      .status-bar {
-        height: 50px;
-        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-        border-top: 1px solid rgba(107, 114, 128, 0.3);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 24px;
-        border-radius: 0 0 18px 18px;
-      }
-
-      .dev-mode .status-bar {
-        height: 40px;
+      .dev-mode .kds-header {
+        height: 60px;
         padding: 0 20px;
       }
 
-      .dev-mode .status-btn {
-        padding: 6px 12px;
-        font-size: 10px;
-      }
-
-      .dev-mode .version {
-        font-size: 9px;
-      }
-
-      .status-btn {
-        background: linear-gradient(135deg, rgba(75, 85, 99, 0.8) 0%, rgba(55, 65, 81, 0.8) 100%);
-        border: 1px solid rgba(156, 163, 175, 0.3);
-        color: #f3f4f6;
-        padding: 8px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(5px);
-      }
-
-      .status-btn:hover {
-        background: linear-gradient(135deg, rgba(107, 114, 128, 0.9) 0%, rgba(75, 85, 99, 0.9) 100%);
-        border-color: rgba(156, 163, 175, 0.5);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-      }
-
-      .status-right {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-      }
-
-      .version {
-        color: rgba(209, 213, 219, 0.8);
-        font-size: 10px;
-        font-family: 'Courier New', monospace;
-        font-weight: 500;
-      }
-
-      /* 조리중인 카드는 완료 버튼만 표시 */
-      .order-card.cooking .start-all-btn {
-        display: none;
-      }
-
-      /* 스켈레톤 로딩 카드 스타일 */
-      .skeleton-order-card {
-        background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
-        border: 1px solid #6b7280;
-        border-radius: 12px;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
+      .header-left .store-info {
         position: relative;
-        height: 280px;
-        animation: skeleton-pulse 1.5s ease-in-out infinite alternate;
-        pointer-events: none;
+        z-index: 1;
       }
 
-      .dev-mode .skeleton-order-card {
-        height: auto;
-        flex-shrink: 0;
-        padding: 16px;
-        margin-bottom: 0;
-      }
-
-      @keyframes skeleton-pulse {
-        0% {
-          opacity: 0.6;
-        }
-        100% {
-          opacity: 0.8;
-        }
-      }
-
-      .skeleton-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-      }
-
-      .skeleton-order-number {
-        height: 16px;
-        width: 60px;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 4px;
-      }
-
-      .skeleton-order-type {
-        height: 14px;
-        width: 40px;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 6px;
-      }
-
-      .skeleton-time {
-        height: 12px;
-        width: 80px;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 4px;
-        margin-bottom: 8px;
-      }
-
-      .skeleton-customer {
-        height: 14px;
-        width: 100px;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 4px;
-        margin-bottom: 12px;
-      }
-
-      .skeleton-items {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        margin-bottom: 12px;
-      }
-
-      .skeleton-item {
-        height: 12px;
-        width: 100%;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 4px;
-      }
-
-      .skeleton-item.short {
-        width: 70%;
-      }
-
-      .skeleton-actions {
-        display: flex;
-        gap: 8px;
-        margin-top: auto;
-      }
-
-      .skeleton-btn {
-        flex: 1;
-        height: 24px;
-        background: linear-gradient(90deg, #6b7280 25%, #9ca3af 50%, #6b7280 75%);
-        background-size: 200% 100%;
-        animation: skeleton-shimmer 2s infinite;
-        border-radius: 6px;
-      }
-
-      @keyframes skeleton-shimmer {
-        0% {
-          background-position: -200% 0;
-        }
-        100% {
-          background-position: 200% 0;
-        }
-      }
-
-      /* 빈 카드 슬롯 스타일 (실제 데이터 로딩 후) */
-      .empty-card-slot {
-        background: linear-gradient(135deg, rgba(55, 65, 81, 0.3) 0%, rgba(75, 85, 99, 0.3) 100%);
-        border: 2px dashed rgba(156, 163, 175, 0.4);
-        border-radius: 12px;
-        padding: 12px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-        color: rgba(156, 163, 175, 0.6);
-        height: 280px;
-        text-align: center;
-        transition: all 0.3s ease;
-      }
-
-      .dev-mode .empty-card-slot {
-        height: 120px;
-        flex-shrink: 0;
-        padding: 16px;
-        margin-bottom: 0;
-      }
-
-      .empty-card-slot:hover {
-        border-color: rgba(156, 163, 175, 0.6);
-        background: linear-gradient(135deg, rgba(55, 65, 81, 0.4) 0%, rgba(75, 85, 99, 0.4) 100%);
-      }
-
-      .slot-number {
+      .store-name {
         font-size: 24px;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 4px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .dev-mode .store-name {
+        font-size: 18px;
+      }
+
+      .current-time {
+        font-size: 14px;
+        color: #a0aec0;
+        font-family: 'Courier New', monospace;
+        font-weight: 500;
+      }
+
+      .dev-mode .current-time {
+        font-size: 12px;
+      }
+
+      /* 중앙 큐 요약 */
+      .header-center {
+        position: relative;
+        z-index: 1;
+      }
+
+      .queue-summary {
+        display: flex;
+        gap: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 16px 24px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .dev-mode .queue-summary {
+        gap: 16px;
+        padding: 12px 16px;
+      }
+
+      .queue-item {
+        text-align: center;
+        min-width: 60px;
+      }
+
+      .queue-count {
+        font-size: 28px;
         font-weight: 800;
-        color: rgba(156, 163, 175, 0.4);
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         font-family: 'Courier New', monospace;
       }
 
-      .slot-placeholder {
+      .dev-mode .queue-count {
+        font-size: 20px;
+      }
+
+      .queue-item.pending .queue-count {
+        color: #f6ad55;
+      }
+
+      .queue-item.cooking .queue-count {
+        color: #fc8181;
+        animation: cooking-pulse 2s infinite;
+      }
+
+      .queue-item.ready .queue-count {
+        color: #68d391;
+      }
+
+      .queue-label {
         font-size: 12px;
-        font-weight: 500;
-        color: rgba(156, 163, 175, 0.5);
+        color: #a0aec0;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
-      /* 다기능 카드 스타일 */
-      .multifunction-card {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-        border: 2px solid #4a90e2;
-        border-radius: 12px;
-        padding: 12px;
+      @keyframes cooking-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+
+      /* 헤더 오른쪽 */
+      .header-right {
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        gap: 24px;
         position: relative;
-        color: #f9fafb;
-        box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
-        backdrop-filter: blur(5px);
-        height: 280px;
-        overflow: hidden;
+        z-index: 1;
       }
 
-      .dev-mode .multifunction-card {
-        height: auto;
-        flex-shrink: 0;
-        padding: 16px;
-        margin-bottom: 0;
-      }
-
-      .multifunction-card:hover {
-        border-color: #63b3ed;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(74, 144, 226, 0.3);
-      }
-
-      .multifunction-header {
-        margin-bottom: 12px;
-        text-align: center;
-      }
-
-      .multifunction-title {
-        font-size: 11px;
-        font-weight: 700;
-        color: #4a90e2;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-      }
-
-      .queue-info {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        margin-bottom: 10px;
-      }
-
-      .queue-item {
-        background: rgba(0, 0, 0, 0.2);
-        padding: 6px 8px;
-        border-radius: 8px;
-        text-align: center;
-      }
-
-      .queue-label {
-        font-size: 8px;
-        color: #cbd5e0;
-        margin-bottom: 2px;
-      }
-
-      .queue-count {
-        font-size: 14px;
-        font-weight: 800;
-        color: #f59e0b;
-      }
-
-      .queue-count.cooking {
-        color: #ef4444;
-      }
-
-      .quick-stats {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 6px;
-        margin-bottom: 10px;
-      }
-
-      .stat-item {
-        background: rgba(0, 0, 0, 0.15);
-        padding: 4px 6px;
-        border-radius: 6px;
-        text-align: center;
-      }
-
-      .stat-label {
-        font-size: 7px;
-        color: #a0aec0;
-        margin-bottom: 1px;
-      }
-
-      .stat-value {
-        font-size: 9px;
-        font-weight: 600;
-        color: #e2e8f0;
-      }
-
-      .multifunction-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 4px;
-        margin-bottom: 8px;
-      }
-
-      .multi-btn {
-        background: linear-gradient(135deg, rgba(74, 144, 226, 0.8) 0%, rgba(99, 179, 237, 0.8) 100%);
-        border: none;
-        color: white;
-        padding: 4px 6px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 7px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        text-align: center;
-      }
-
-      .dev-mode .multi-btn {
-        padding: 6px 8px;
-        font-size: 8px;
-      }
-
-      .multi-btn:hover {
-        background: linear-gradient(135deg, rgba(74, 144, 226, 1) 0%, rgba(99, 179, 237, 1) 100%);
-        transform: translateY(-1px);
-        box-shadow: 0 2px 6px rgba(74, 144, 226, 0.3);
-      }
-
-      .system-status {
-        margin-top: auto;
-        text-align: center;
-        padding-top: 6px;
-        border-top: 1px solid rgba(160, 174, 192, 0.2);
+      .connection-status {
+        text-align: right;
       }
 
       .status-indicator {
-        font-size: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
         font-weight: 600;
-        margin-bottom: 2px;
+        font-size: 14px;
       }
 
-      .status-indicator.online {
-        color: #10b981;
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #68d391;
+        animation: status-pulse 2s infinite;
       }
-      .status-indicator.offline {
-        color: #ef4444;
+
+      .status-dot.offline {
+        background: #fc8181;
+        animation: none;
+      }
+
+      @keyframes status-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.1); }
       }
 
       .last-update {
-        font-size: 6px;
+        font-size: 11px;
         color: #718096;
         font-family: 'Courier New', monospace;
       }
 
-      /* 에러 카드 스타일 */
-      .error-card {
-        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
-        border: 1px solid #f87171;
-        border-radius: 12px;
-        padding: 20px;
+      .control-panel {
         display: flex;
-        justify-content: center;
+        gap: 8px;
+      }
+
+      .control-btn {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: #e2e8f0;
+        cursor: pointer;
+        display: flex;
         align-items: center;
-        height: 280px;
-        color: white;
-        text-align: center;
-        grid-column: span 2;
+        justify-content: center;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(5px);
       }
 
-      .dev-mode .error-card {
-        height: auto;
-        flex-shrink: 0;
-        padding: 16px;
-        margin-bottom: 0;
-        grid-column: span 1;
+      .dev-mode .control-btn {
+        width: 36px;
+        height: 36px;
       }
 
-      .error-content {
+      .control-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+
+      .control-btn:active {
+        transform: translateY(0);
+      }
+
+      /* 메인 컨텐츠 */
+      .kds-main {
+        flex: 1;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* 필터 바 */
+      .filter-bar {
+        background: #1a202c;
+        border-bottom: 1px solid #2d3748;
+        padding: 16px 32px;
+        display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 24px;
+        flex-wrap: wrap;
       }
 
-      .error-icon {
-        font-size: 32px;
-        margin-bottom: 8px;
+      .dev-mode .filter-bar {
+        padding: 12px 20px;
+        gap: 16px;
       }
 
-      .error-message {
+      .filter-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .filter-group label {
         font-size: 14px;
         font-weight: 600;
+        color: #a0aec0;
+        min-width: 60px;
+      }
+
+      .filter-group select {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #e2e8f0;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        min-width: 120px;
+        cursor: pointer;
+      }
+
+      .filter-group select:focus {
+        outline: none;
+        border-color: #63b3ed;
+        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
+      }
+
+      .search-group {
+        display: flex;
+        align-items: center;
+        margin-left: auto;
+        position: relative;
+      }
+
+      .search-group input {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #e2e8f0;
+        padding: 8px 40px 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        width: 250px;
+      }
+
+      .search-group input:focus {
+        outline: none;
+        border-color: #63b3ed;
+        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
+      }
+
+      .search-btn {
+        position: absolute;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #a0aec0;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .search-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #e2e8f0;
+      }
+
+      /* 주문 컨테이너 */
+      .orders-container {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .orders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 20px;
+        padding: 24px 32px;
+        height: 100%;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+      }
+
+      .dev-mode .orders-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 16px 20px;
+      }
+
+      /* 빈 상태 */
+      .empty-state {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: #718096;
+      }
+
+      .empty-icon {
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      .empty-state h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+        color: #a0aec0;
+      }
+
+      .empty-state p {
+        font-size: 14px;
+      }
+
+      /* 주문 카드 스타일 */
+      .order-card {
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        border: 2px solid transparent;
+        border-radius: 16px;
+        padding: 20px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(10px);
+        min-height: 280px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .dev-mode .order-card {
+        min-height: 200px;
+        padding: 16px;
+      }
+
+      .order-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+        border-color: rgba(99, 179, 237, 0.5);
+      }
+
+      .order-card.pending {
+        border-color: #f6ad55;
+        background: linear-gradient(135deg, rgba(246, 173, 85, 0.1) 0%, #1a202c 100%);
+      }
+
+      .order-card.cooking {
+        border-color: #fc8181;
+        background: linear-gradient(135deg, rgba(252, 129, 129, 0.15) 0%, #1a202c 100%);
+        animation: order-cooking-pulse 3s infinite;
+      }
+
+      .order-card.ready {
+        border-color: #68d391;
+        background: linear-gradient(135deg, rgba(104, 211, 145, 0.1) 0%, #1a202c 100%);
+      }
+
+      @keyframes order-cooking-pulse {
+        0%, 100% { 
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        50% { 
+          box-shadow: 0 8px 25px rgba(252, 129, 129, 0.3);
+        }
+      }
+
+      /* 주문 헤더 */
+      .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
         margin-bottom: 16px;
       }
 
-      .retry-btn {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        color: white;
+      .order-info {
+        flex: 1;
+      }
+
+      .order-number {
+        font-size: 24px;
+        font-weight: 800;
+        color: #63b3ed;
+        margin-bottom: 4px;
+        font-family: 'Courier New', monospace;
+      }
+
+      .dev-mode .order-number {
+        font-size: 20px;
+      }
+
+      .order-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .table-number {
+        background: rgba(99, 179, 237, 0.2);
+        color: #63b3ed;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .order-time {
+        color: #a0aec0;
+        font-size: 12px;
+        font-family: 'Courier New', monospace;
+      }
+
+      .order-source {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .order-source.tll {
+        background: rgba(104, 211, 145, 0.2);
+        color: #68d391;
+      }
+
+      .order-source.pos {
+        background: rgba(246, 173, 85, 0.2);
+        color: #f6ad55;
+      }
+
+      /* 상태 배지 */
+      .status-badge {
+        position: absolute;
+        top: -8px;
+        right: 16px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .status-badge.pending {
+        background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+        color: #ffffff;
+      }
+
+      .status-badge.cooking {
+        background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+        color: #ffffff;
+        animation: badge-pulse 2s infinite;
+      }
+
+      .status-badge.ready {
+        background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
+        color: #ffffff;
+      }
+
+      @keyframes badge-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+
+      /* 고객 정보 */
+      .customer-info {
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid rgba(74, 85, 104, 0.3);
+      }
+
+      .customer-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 4px;
+        display: block;
+      }
+
+      .customer-phone {
+        font-size: 13px;
+        color: #a0aec0;
+        font-family: 'Courier New', monospace;
+      }
+
+      /* 주문 아이템 */
+      .order-items {
+        flex: 1;
+        margin-bottom: 16px;
+      }
+
+      .item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: rgba(45, 55, 72, 0.5);
+        border-radius: 8px;
+        border-left: 4px solid transparent;
+        transition: all 0.2s ease;
+      }
+
+      .item:hover {
+        background: rgba(45, 55, 72, 0.8);
+      }
+
+      .item.pending {
+        border-left-color: #f6ad55;
+      }
+
+      .item.cooking {
+        border-left-color: #fc8181;
+        background: rgba(252, 129, 129, 0.1);
+      }
+
+      .item.completed {
+        border-left-color: #68d391;
+        opacity: 0.7;
+      }
+
+      .item-info {
+        flex: 1;
+      }
+
+      .item-name {
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 2px;
+      }
+
+      .item-options {
+        font-size: 12px;
+        color: #a0aec0;
+      }
+
+      .item-quantity {
+        background: rgba(99, 179, 237, 0.2);
+        color: #63b3ed;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 24px;
+        text-align: center;
+      }
+
+      /* 조리 타이머 */
+      .cooking-timer {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: rgba(252, 129, 129, 0.9);
+        color: #ffffff;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        font-size: 12px;
+        animation: timer-pulse 1s infinite;
+      }
+
+      @keyframes timer-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.8; }
+      }
+
+      /* 액션 버튼 */
+      .order-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: auto;
+      }
+
+      .action-btn {
+        flex: 1;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .dev-mode .action-btn {
+        padding: 10px 12px;
+        font-size: 11px;
+      }
+
+      .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      .action-btn:active {
+        transform: translateY(0);
+      }
+
+      .start-cooking-btn {
+        background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
+        color: #ffffff;
+      }
+
+      .complete-cooking-btn {
+        background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%);
+        color: #ffffff;
+      }
+
+      .serve-btn {
+        background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
+        color: #ffffff;
+      }
+
+      .detail-btn {
+        background: rgba(74, 85, 104, 0.6);
+        color: #e2e8f0;
+        border: 1px solid rgba(160, 174, 192, 0.3);
+      }
+
+      .detail-btn:hover {
+        background: rgba(74, 85, 104, 0.8);
+        border-color: rgba(160, 174, 192, 0.5);
+      }
+
+      /* 우선순위 배지 */
+      .priority-badge {
+        position: absolute;
+        top: -4px;
+        left: 16px;
+        background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        color: #ffffff;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        animation: priority-pulse 2s infinite;
+      }
+
+      @keyframes priority-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.8; transform: scale(1.05); }
+      }
+
+      /* 하단 상태바 */
+      .kds-footer {
+        height: 60px;
+        background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        border-top: 1px solid #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 32px;
+      }
+
+      .dev-mode .kds-footer {
+        height: 50px;
+        padding: 0 20px;
+      }
+
+      .footer-left .today-stats {
+        display: flex;
+        gap: 24px;
+      }
+
+      .stat-item {
+        font-size: 14px;
+        color: #a0aec0;
+      }
+
+      .stat-item strong {
+        color: #e2e8f0;
+        font-weight: 700;
+      }
+
+      .footer-center .system-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: #718096;
+      }
+
+      .separator {
+        opacity: 0.5;
+      }
+
+      .footer-right {
+        display: flex;
+        gap: 12px;
+      }
+
+      .footer-btn {
+        background: rgba(74, 85, 104, 0.6);
+        border: 1px solid rgba(160, 174, 192, 0.3);
+        color: #e2e8f0;
         padding: 8px 16px;
         border-radius: 6px;
         cursor: pointer;
@@ -1103,140 +1049,128 @@ function renderKDSInterface(store) {
         transition: all 0.2s ease;
       }
 
-      .retry-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
-        border-color: rgba(255, 255, 255, 0.5);
+      .footer-btn:hover {
+        background: rgba(74, 85, 104, 0.8);
+        border-color: rgba(160, 174, 192, 0.5);
+        transform: translateY(-1px);
       }
 
-      /* 아이템별 조리 상태 스타일 */
-      .item {
-        position: relative;
+      .alert-toggle.active {
+        background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
+        border-color: #68d391;
       }
 
-      .item.pending {
-        background: rgba(245, 158, 11, 0.1);
-        border-left: 3px solid #f59e0b;
-      }
-
-      .item.cooking {
-        background: rgba(239, 68, 68, 0.1);
-        border-left: 3px solid #ef4444;
-        animation: cooking-item-pulse 2s infinite;
-      }
-
-      .item.completed {
-        background: rgba(16, 185, 129, 0.1);
-        border-left: 3px solid #10b981;
-        opacity: 0.7;
-      }
-
-      @keyframes cooking-item-pulse {
-        0%, 100% {
-          background: rgba(239, 68, 68, 0.1);
-        }
-        50% {
-          background: rgba(239, 68, 68, 0.2);
-        }
-      }
-
-      .item-actions {
+      /* 로딩 상태 */
+      .loading-overlay {
         position: absolute;
-        right: 4px;
-        top: 50%;
-        transform: translateY(-50%);
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 20, 25, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(4px);
+        z-index: 100;
       }
 
-      .item-btn {
-        padding: 2px 6px;
-        border: none;
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(99, 179, 237, 0.3);
+        border-top: 3px solid #63b3ed;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        margin-left: 16px;
+        font-size: 16px;
+        color: #e2e8f0;
+      }
+
+      /* 반응형 디자인 */
+      @media (max-width: 768px) {
+        .professional-kds:not(.dev-mode) {
+          width: 100vw;
+          height: 100vh;
+        }
+
+        .kds-header {
+          height: 70px;
+          padding: 0 16px;
+          flex-wrap: wrap;
+        }
+
+        .store-name {
+          font-size: 18px;
+        }
+
+        .queue-summary {
+          gap: 16px;
+          padding: 12px 16px;
+        }
+
+        .filter-bar {
+          padding: 12px 16px;
+          gap: 12px;
+        }
+
+        .orders-grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+          padding: 16px;
+        }
+
+        .kds-footer {
+          height: 50px;
+          padding: 0 16px;
+        }
+
+        .today-stats {
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .stat-item {
+          font-size: 12px;
+        }
+      }
+
+      /* 스크롤바 스타일 */
+      .orders-grid::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .orders-grid::-webkit-scrollbar-track {
+        background: rgba(45, 55, 72, 0.3);
         border-radius: 4px;
-        font-size: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
       }
 
-      .item-btn.start-btn {
-        background: #10b981;
-        color: white;
+      .orders-grid::-webkit-scrollbar-thumb {
+        background: rgba(99, 179, 237, 0.5);
+        border-radius: 4px;
       }
 
-      .item-btn.complete-btn {
-        background: #6366f1;
-        color: white;
+      .orders-grid::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 179, 237, 0.7);
       }
 
-      .item-btn:hover {
-        transform: scale(1.1);
+      /* 접근성 */
+      .order-card:focus {
+        outline: 2px solid #63b3ed;
+        outline-offset: 2px;
       }
 
-      .urgent-badge {
-        position: absolute;
-        top: -8px;
-        right: -8px;
-        background: #ef4444;
-        color: white;
-        font-size: 8px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-weight: 700;
-        animation: urgent-pulse 1s infinite;
-      }
-
-      @keyframes urgent-pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
-      }
-
-      .order-summary {
-        font-size: 8px;
-        color: #9ca3af;
-        text-align: center;
-        padding: 4px 0;
-        border-top: 1px solid rgba(156, 163, 175, 0.2);
-        margin: 8px 0;
-      }
-
-      .order-customer {
-        font-size: 9px;
-        color: #d1d5db;
-        font-weight: 500;
-        text-align: center;
-        margin-bottom: 4px;
-      }
-
-      .table-info {
-        font-size: 8px;
-        color: #60a5fa;
-        text-align: center;
-        margin-bottom: 6px;
-        font-weight: 600;
-      }
-
-      .start-all-btn {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-      }
-
-      .detail-btn {
-        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-      }
-
-      .complete-btn {
-        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      }
-
-      .complete-btn:hover {
-        background: linear-gradient(135deg, #5b21b6 0%, #7c3aed 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-      }
-
-      .dev-mode .item-actions {
-        position: static;
-        margin-left: auto;
-        margin-top: 4px;
+      .action-btn:focus {
+        outline: 2px solid #63b3ed;
+        outline-offset: 2px;
       }
     </style>
   `;
@@ -1267,22 +1201,12 @@ function renderKDSInterface(store) {
 // KDS 이벤트 리스너 설정
 function setupKDSEventListeners(store) {
   // 주문 카드 클릭 이벤트
-  document.querySelectorAll('.order-card').forEach(card => {
-    card.addEventListener('click', function(e) {
-      if (!e.target.classList.contains('action-btn') && !e.target.classList.contains('start-btn') && !e.target.classList.contains('cancel-btn')) {
-        const orderId = this.dataset.orderId;
-        showOrderDetail(orderId);
-      }
-    });
-  });
-
-  // 헤더 버튼 이벤트
-  document.querySelector('.exit-btn')?.addEventListener('click', () => {
-    window.location.href = '/';
-  });
-
-  document.querySelector('.settings-btn')?.addEventListener('click', () => {
-    alert('설정 기능은 곧 추가될 예정입니다.');
+  document.addEventListener('click', function(e) {
+    const orderCard = e.target.closest('.order-card');
+    if (orderCard && !e.target.closest('.action-btn')) {
+      const orderId = orderCard.dataset.orderId;
+      showOrderDetail(orderId);
+    }
   });
 }
 
@@ -1291,23 +1215,24 @@ function updateCurrentTime() {
   const timeElement = document.getElementById('currentTime');
   if (timeElement) {
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
-    const ampm = hours >= 12 ? '오후' : '오전';
-    const hour12 = hours % 12 || 12;
-
-    const timeString = `${ampm} ${hour12}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    timeElement.textContent = timeString;
+    const timeString = now.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    timeElement.textContent = timeString.replace(/\. /g, '.').replace(/\.$/, '');
   }
 }
 
-// 주문 데이터 로딩 (폴링 또는 WebSocket 호출 시 사용)
+// 주문 데이터 로딩
 async function loadKDSOrders(storeId) {
   try {
     console.log(`📟 KDS - 매장 ${storeId} 주문 데이터 로딩 시작`);
 
-    // 로딩 상태 표시
     showLoadingState();
 
     const response = await fetch(`/api/orders/kds/${storeId}`, {
@@ -1327,6 +1252,7 @@ async function loadKDSOrders(storeId) {
       updateKDSOrderCards(data.orders);
       updateOrderCounts();
       updateLastUpdateTime();
+      hideLoadingState();
       console.log(`✅ KDS 주문 데이터 로딩 완료 (${data.orders.length}개)`);
     } else {
       throw new Error(data.error || '데이터 조회 실패');
@@ -1334,86 +1260,240 @@ async function loadKDSOrders(storeId) {
 
   } catch (error) {
     console.error('❌ KDS 주문 데이터 로딩 실패:', error);
+    hideLoadingState();
     showErrorState();
   }
 }
 
 // 로딩 상태 표시
 function showLoadingState() {
-  const ordersGrid = document.getElementById('ordersGrid');
-  if (!ordersGrid) return;
+  const container = document.getElementById('ordersContainer');
+  if (!container) return;
 
-  // 기존 주문 카드들 제거하고 스켈레톤 표시
-  const existingCards = ordersGrid.querySelectorAll('.order-card, .empty-card-slot');
-  existingCards.forEach(card => card.remove());
-
-  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
-  
-  // 스켈레톤 카드들 생성 (9개)
-  for (let i = 0; i < 9; i++) {
-    const skeletonCard = document.createElement('div');
-    skeletonCard.className = 'skeleton-order-card';
-    skeletonCard.id = `skeleton-card-${i + 1}`;
-    skeletonCard.innerHTML = `
-      <div class="skeleton-header">
-        <div class="skeleton-order-number"></div>
-        <div class="skeleton-order-type"></div>
-      </div>
-      <div class="skeleton-time"></div>
-      <div class="skeleton-customer"></div>
-      <div class="skeleton-items">
-        <div class="skeleton-item"></div>
-        <div class="skeleton-item"></div>
-        <div class="skeleton-item short"></div>
-      </div>
-      <div class="skeleton-actions">
-        <div class="skeleton-btn"></div>
-        <div class="skeleton-btn"></div>
-      </div>
+  let loadingOverlay = container.querySelector('.loading-overlay');
+  if (!loadingOverlay) {
+    loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'loading-overlay';
+    loadingOverlay.innerHTML = `
+      <div class="loading-spinner"></div>
+      <div class="loading-text">주문 데이터 로딩 중...</div>
     `;
+    container.appendChild(loadingOverlay);
+  }
+  loadingOverlay.style.display = 'flex';
+}
 
-    if (multifunctionCard) {
-      ordersGrid.insertBefore(skeletonCard, multifunctionCard);
-    } else {
-      ordersGrid.appendChild(skeletonCard);
-    }
+// 로딩 상태 숨김
+function hideLoadingState() {
+  const loadingOverlay = document.querySelector('.loading-overlay');
+  if (loadingOverlay) {
+    loadingOverlay.style.display = 'none';
   }
 }
 
 // 에러 상태 표시
 function showErrorState() {
   const ordersGrid = document.getElementById('ordersGrid');
-  if (!ordersGrid) return;
+  const emptyState = document.getElementById('emptyState');
 
-  // 스켈레톤 카드들 제거
-  const skeletonCards = ordersGrid.querySelectorAll('.skeleton-order-card');
-  skeletonCards.forEach(card => card.remove());
+  if (ordersGrid) {
+    ordersGrid.innerHTML = '';
+  }
 
-  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
-  
-  // 에러 카드 표시
-  const errorCard = document.createElement('div');
-  errorCard.className = 'error-card';
-  errorCard.innerHTML = `
-    <div class="error-content">
-      <div class="error-icon">⚠️</div>
-      <div class="error-message">주문 데이터를 불러올 수 없습니다</div>
-      <button class="retry-btn" onclick="refreshKDS()">다시 시도</button>
-    </div>
-  `;
-
-  if (multifunctionCard) {
-    ordersGrid.insertBefore(errorCard, multifunctionCard);
-  } else {
-    ordersGrid.appendChild(errorCard);
+  if (emptyState) {
+    emptyState.innerHTML = `
+      <div class="empty-icon">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="color: #fc8181;">
+          <path d="M12,2L13.09,8.26L22,9L13.09,9.74L12,16L10.91,9.74L2,9L10.91,8.26L12,2M12,21L10.09,15.74L2,15L10.09,14.26L12,8L13.91,14.26L22,15L13.91,15.74L12,21Z"/>
+        </svg>
+      </div>
+      <h3>데이터를 불러올 수 없습니다</h3>
+      <p>네트워크 연결을 확인하고 다시 시도해주세요.</p>
+      <button class="action-btn start-cooking-btn" onclick="refreshKDS()" style="margin-top: 16px; max-width: 200px;">
+        다시 시도
+      </button>
+    `;
+    emptyState.style.display = 'block';
   }
 }
 
-// KDS WebSocket 연결 설정 (실시간 업데이트)
+// KDS 주문 카드 업데이트
+function updateKDSOrderCards(orders) {
+  const ordersGrid = document.getElementById('ordersGrid');
+  const emptyState = document.getElementById('emptyState');
+
+  if (!ordersGrid) return;
+
+  // 활성 주문만 필터링
+  const activeOrders = orders.filter(order => {
+    const hasActiveItems = order.items?.some(item =>
+      item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
+    );
+    return hasActiveItems;
+  });
+
+  // 기존 카드들 제거
+  ordersGrid.innerHTML = '';
+
+  if (activeOrders.length === 0) {
+    emptyState.style.display = 'block';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+
+  // 주문 카드들 생성
+  activeOrders.forEach(order => {
+    const orderCard = createProfessionalOrderCard(order);
+    ordersGrid.appendChild(orderCard);
+  });
+
+  console.log(`📟 KDS 카드 업데이트 완료: ${activeOrders.length}개 주문`);
+}
+
+// 전문적인 주문 카드 생성
+function createProfessionalOrderCard(order) {
+  const orderTime = new Date(order.createdAt || order.paymentDate);
+  const timeString = orderTime.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+
+  const statusClass = order.cookingStatus?.toLowerCase() || 'pending';
+  const sourceClass = order.isPOSOrder ? 'pos' : 'tll';
+
+  // 조리 시간 계산
+  const cookingTime = calculateCookingTime(order);
+  const isUrgent = cookingTime && cookingTime > 15; // 15분 이상이면 긴급
+
+  const card = document.createElement('div');
+  card.className = `order-card ${statusClass}`;
+  card.dataset.orderId = order.id;
+
+  const itemsHTML = order.items?.map(item => {
+    const itemStatusClass = item.cooking_status?.toLowerCase() || 'pending';
+    return `
+      <div class="item ${itemStatusClass}">
+        <div class="item-info">
+          <div class="item-name">${item.menu_name}</div>
+          ${item.options ? `<div class="item-options">${item.options}</div>` : ''}
+        </div>
+        <div class="item-quantity">×${item.quantity}</div>
+      </div>
+    `;
+  }).join('') || '';
+
+  const statusTexts = {
+    'pending': '대기중',
+    'cooking': '조리중', 
+    'ready': '완료',
+    'completed': '서빙완료'
+  };
+
+  card.innerHTML = `
+    ${isUrgent ? '<div class="priority-badge">긴급</div>' : ''}
+
+    <div class="status-badge ${statusClass}">
+      ${statusTexts[statusClass] || '대기중'}
+    </div>
+
+    ${statusClass === 'cooking' && cookingTime ? 
+      `<div class="cooking-timer">${Math.floor(cookingTime / 60)}:${(cookingTime % 60).toString().padStart(2, '0')}</div>` : ''}
+
+    <div class="order-header">
+      <div class="order-info">
+        <div class="order-number">#${order.id}</div>
+        <div class="order-meta">
+          ${order.tableNumber ? `<span class="table-number">테이블 ${order.tableNumber}</span>` : ''}
+          <span class="order-time">${timeString}</span>
+          <span class="order-source ${sourceClass}">
+            ${order.isPOSOrder ? '🔴 POS' : '📱 앱'}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="customer-info">
+      <span class="customer-name">${order.customerName || '손님'}</span>
+      ${order.customerPhone ? `<span class="customer-phone">${order.customerPhone}</span>` : ''}
+    </div>
+
+    <div class="order-items">
+      ${itemsHTML}
+    </div>
+
+    <div class="order-actions">
+      ${generateActionButtons(order)}
+    </div>
+  `;
+
+  return card;
+}
+
+// 액션 버튼 생성
+function generateActionButtons(order) {
+  const status = order.cookingStatus;
+
+  if (status === 'COMPLETED') {
+    return '<div style="text-align: center; color: #68d391; font-weight: 600;">서빙 완료</div>';
+  }
+
+  let buttons = [];
+
+  if (status === 'PENDING' || !status) {
+    buttons.push(`
+      <button class="action-btn start-cooking-btn" onclick="startCookingOrder(${order.id})">
+        🔥 조리 시작
+      </button>
+    `);
+  }
+
+  if (status === 'COOKING') {
+    buttons.push(`
+      <button class="action-btn complete-cooking-btn" onclick="completeOrder(${order.id})">
+        ✅ 조리 완료
+      </button>
+    `);
+  }
+
+  if (status === 'READY') {
+    buttons.push(`
+      <button class="action-btn serve-btn" onclick="serveOrder(${order.id})">
+        🍽️ 서빙 완료
+      </button>
+    `);
+  }
+
+  buttons.push(`
+    <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">
+      상세보기
+    </button>
+  `);
+
+  return buttons.join('');
+}
+
+// 조리 시간 계산
+function calculateCookingTime(order) {
+  const cookingItems = order.items?.filter(item => item.cooking_status === 'COOKING');
+  if (!cookingItems || cookingItems.length === 0) return null;
+
+  const earliestStart = cookingItems.reduce((earliest, item) => {
+    const startTime = new Date(item.started_at);
+    return !earliest || startTime < earliest ? startTime : earliest;
+  }, null);
+
+  if (!earliestStart) return null;
+
+  const now = new Date();
+  return Math.floor((now - earliestStart) / 1000); // 초 단위 반환
+}
+
+// WebSocket 연결 설정
 function setupKDSWebSocket(storeId) {
   console.log(`🔌 KDS WebSocket 연결 시작... (매장 ID: ${storeId})`);
 
-  // Socket.IO 클라이언트 연결
   const socket = io({
     transports: ['websocket', 'polling'],
     timeout: 20000,
@@ -1423,201 +1503,118 @@ function setupKDSWebSocket(storeId) {
   window.kdsSocket = socket;
   window.currentStoreId = storeId;
 
-  // 연결 성공
   socket.on('connect', () => {
     console.log('✅ KDS WebSocket 연결 성공:', socket.id);
-
-    // KDS 룸 참여
     socket.emit('join-kds-room', parseInt(storeId));
-    console.log(`📟 매장 ${storeId} KDS 룸 참여 요청 전송`);
-
-    // 연결 상태 표시 업데이트
     updateConnectionStatus(true);
-
-    // 연결 확인 메시지
-    showRealTimeUpdateNotification('connection', { message: 'KDS 실시간 연결됨' });
+    showNotification('실시간 연결됨', 'success');
   });
 
-  // 연결 해제
   socket.on('disconnect', (reason) => {
     console.log('❌ KDS WebSocket 연결 해제:', reason);
     updateConnectionStatus(false);
-    showRealTimeUpdateNotification('disconnection', { message: '연결 끊김' });
+    showNotification('연결 끊김', 'error');
   });
 
-  // 재연결 시도
   socket.on('reconnect', (attemptNumber) => {
     console.log('🔄 KDS WebSocket 재연결 성공:', attemptNumber);
     socket.emit('join-kds-room', parseInt(storeId));
     updateConnectionStatus(true);
-    showRealTimeUpdateNotification('reconnection', { message: '재연결됨' });
+    showNotification('재연결됨', 'success');
   });
 
-  // 재연결 시도 중
-  socket.on('reconnect_attempt', (attemptNumber) => {
-    console.log(`🔄 KDS WebSocket 재연결 시도 ${attemptNumber}번째`);
-  });
-
-  // KDS 실시간 업데이트 수신
   socket.on('kds-update', (updateData) => {
     console.log('📡 KDS 실시간 업데이트 수신:', updateData);
-
-    // 데이터 유효성 검증
     if (updateData && updateData.storeId == storeId) {
       handleKDSRealTimeUpdate(updateData);
-    } else {
-      console.log('⚠️ KDS 업데이트 데이터 불일치 또는 무효:', updateData);
     }
   });
 
-  // 연결 오류
-  socket.on('connect_error', (error) => {
-    console.error('❌ KDS WebSocket 연결 오류:', error);
-    updateConnectionStatus(false);
-  });
-
-  // 연결 타임아웃
-  socket.on('connect_timeout', () => {
-    console.error('⏰ KDS WebSocket 연결 타임아웃');
-    updateConnectionStatus(false);
-  });
-
-  // 백업용 폴링 (WebSocket 실패 시)
-  const backupPolling = setInterval(() => {
-    if (!socket.connected) {
-      console.log('🔄 WebSocket 연결 끊김 - 백업 폴링 실행');
-      loadKDSOrders(storeId);
-    }
-  }, 10000); // 10초마다 백업 체크
-
-  window.kdsBackupPolling = backupPolling;
-
-  // 연결 상태 주기적 확인
-  const statusCheck = setInterval(() => {
-    console.log(`📊 KDS WebSocket 상태 체크 - 연결됨: ${socket.connected}, ID: ${socket.id}`);
-    updateConnectionStatus(socket.connected);
-  }, 30000); // 30초마다 상태 체크
-
-  window.kdsStatusCheck = statusCheck;
-
-  console.log('✅ KDS WebSocket 시스템 초기화 완료');
+  window.kdsSocket = socket;
 }
 
-// KDS 실시간 업데이트 처리
+// 실시간 업데이트 처리
 function handleKDSRealTimeUpdate(updateData) {
-  const { type, storeId, data, timestamp } = updateData;
-
-  console.log(`📡 실시간 업데이트 처리: ${type}`, data);
+  const { type, data } = updateData;
 
   switch (type) {
     case 'new-order':
-      handleNewOrderUpdate(data);
+      showNotification(`새 주문 #${data?.orderId || ''}`, 'info');
+      playNotificationSound();
       break;
     case 'cooking-started':
-      handleCookingStartedUpdate(data);
+      showNotification(`조리 시작: ${data?.menuName || '메뉴'}`, 'info');
       break;
     case 'cooking-completed':
-      handleCookingCompletedUpdate(data);
+      showNotification(`조리 완료: ${data?.menuName || '메뉴'}`, 'success');
       break;
-    case 'order-cooking-started':
-      handleOrderCookingStartedUpdate(data);
-      break;
-    case 'order-update':
     default:
-      // 전체 데이터 새로고침
-      refreshKDSData();
       break;
   }
 
-  // 업데이트 시간 갱신
-  updateLastUpdateTime();
-
-  // 실시간 업데이트 알림 표시
-  showRealTimeUpdateNotification(type, data);
-}
-
-// 새 주문 실시간 업데이트 처리
-function handleNewOrderUpdate(data) {
-  console.log('🆕 새 주문 실시간 업데이트:', data);
-
-  // 전체 데이터 새로고침 (새 주문이므로)
-  refreshKDSData();
-
-  // 새 주문 알림음 (옵션)
-  playNewOrderSound();
-}
-
-// 조리 시작 실시간 업데이트 처리
-function handleCookingStartedUpdate(data) {
-  console.log('🍳 조리 시작 실시간 업데이트:', data);
-
-  // 해당 아이템의 상태만 업데이트
-  updateItemStatus(data.itemId, 'COOKING');
-
-  // 전체 데이터 새로고침
+  // 데이터 새로고침
   refreshKDSData();
 }
 
-// 조리 완료 실시간 업데이트 처리
-function handleCookingCompletedUpdate(data) {
-  console.log('✅ 조리 완료 실시간 업데이트:', data);
+// 연결 상태 업데이트
+function updateConnectionStatus(isConnected) {
+  const statusDot = document.querySelector('.status-dot');
+  const statusText = document.querySelector('.status-indicator span');
 
-  // 해당 아이템의 상태만 업데이트
-  updateItemStatus(data.itemId, 'COMPLETED');
-
-  // 전체 데이터 새로고침 (완료된 주문은 화면에서 제거될 수 있음)
-  refreshKDSData();
-}
-
-// 주문 전체 조리 시작 실시간 업데이트 처리
-function handleOrderCookingStartedUpdate(data) {
-  console.log('🍳🍳 주문 전체 조리 시작 실시간 업데이트:', data);
-
-  // 전체 데이터 새로고침
-  refreshKDSData();
-}
-
-// 개별 아이템 상태 업데이트
-function updateItemStatus(itemId, newStatus) {
-  const itemElement = document.querySelector(`[data-item-id="${itemId}"]`);
-  if (itemElement) {
-    // 기존 상태 클래스 제거
-    itemElement.classList.remove('pending', 'cooking', 'completed');
-
-    // 새 상태 클래스 추가
-    itemElement.classList.add(newStatus.toLowerCase());
-
-    // 상태 아이콘 업데이트
-    const statusIcon = {
-      'PENDING': '⏳',
-      'COOKING': '🔥',
-      'COMPLETED': '✅'
-    }[newStatus] || '';
-
-    const nameElement = itemElement.querySelector('.item-name');
-    if (nameElement) {
-      const text = nameElement.textContent.replace(/(⏳|🔥|✅)/g, '').trim();
-      nameElement.textContent = `${text} ${statusIcon}`;
+  if (statusDot && statusText) {
+    if (isConnected) {
+      statusDot.className = 'status-dot online';
+      statusText.textContent = '실시간 연결';
+    } else {
+      statusDot.className = 'status-dot offline';
+      statusText.textContent = '연결 끊김';
     }
-
-    console.log(`🔄 아이템 ${itemId} 상태 업데이트: ${newStatus}`);
   }
 }
 
-// KDS 데이터 새로고침
-function refreshKDSData() {
-  if (window.currentStoreId) {
-    loadKDSOrders(window.currentStoreId);
-  }
+// 알림 표시
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  const typeColors = {
+    'success': '#68d391',
+    'error': '#fc8181', 
+    'info': '#63b3ed',
+    'warning': '#f6ad55'
+  };
+
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${typeColors[type] || typeColors.info};
+    color: #ffffff;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+    max-width: 300px;
+  `;
+
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.3s ease-in';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
 }
 
-// 새 주문 알림음 재생
-function playNewOrderSound() {
+// 알림음 재생
+function playNotificationSound() {
   try {
-    // 알림 설정이 활성화된 경우에만 재생
     const alertsEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
     if (alertsEnabled) {
-      // 간단한 비프음 (Web Audio API 사용)
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -1637,405 +1634,243 @@ function playNewOrderSound() {
   }
 }
 
+// 주문 카운트 업데이트
+function updateOrderCounts() {
+  const pendingCards = document.querySelectorAll('.order-card.pending').length;
+  const cookingCards = document.querySelectorAll('.order-card.cooking').length;
+  const readyCards = document.querySelectorAll('.order-card.ready').length;
 
-// KDS 주문 카드 업데이트
-function updateKDSOrderCards(orders) {
-  const ordersGrid = document.getElementById('ordersGrid');
-  if (!ordersGrid) return;
+  const pendingCount = document.getElementById('pendingCount');
+  const cookingCount = document.getElementById('cookingCount');
+  const readyCount = document.getElementById('readyCount');
 
-  // 스켈레톤 카드들 제거 (첫 로딩 완료 시)
-  const skeletonCards = ordersGrid.querySelectorAll('.skeleton-order-card');
-  skeletonCards.forEach(card => card.remove());
+  if (pendingCount) pendingCount.textContent = pendingCards;
+  if (cookingCount) cookingCount.textContent = cookingCards;
+  if (readyCount) readyCount.textContent = readyCards;
+}
 
-  // 기존 주문 카드들과 빈 슬롯 제거 (다기능 카드 제외)
-  const existingCards = ordersGrid.querySelectorAll('.order-card');
-  const existingSlots = ordersGrid.querySelectorAll('.empty-card-slot');
-  existingCards.forEach(card => card.remove());
-  existingSlots.forEach(slot => slot.remove());
+// 마지막 업데이트 시간 갱신
+function updateLastUpdateTime() {
+  const lastUpdateElement = document.getElementById('lastUpdate');
+  if (lastUpdateElement) {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    lastUpdateElement.textContent = `최종 업데이트: ${timeString}`;
+  }
+}
 
-  const multifunctionCard = ordersGrid.querySelector('.multifunction-card');
-  const maxCards = 9; // 다기능 카드(10번)를 위해 9개까지
+// 필터 업데이트
+function updateFilter(type, value) {
+  console.log(`필터 업데이트: ${type} = ${value}`);
+  // 여기에 필터링 로직 구현
+  // 현재는 모든 주문을 다시 로드
+  if (window.currentStoreId) {
+    loadKDSOrders(window.currentStoreId);
+  }
+}
 
-  // 조리 완료된 주문만 필터링 (완료된 주문은 화면에서 제거)
-  const activeOrders = orders.filter(order => {
-    const hasActiveItems = order.items.some(item =>
-      item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
-    );
-    return hasActiveItems;
+// 주문 검색
+function searchOrders(query) {
+  const cards = document.querySelectorAll('.order-card');
+  cards.forEach(card => {
+    const orderNumber = card.querySelector('.order-number').textContent;
+    const customerName = card.querySelector('.customer-name').textContent;
+
+    const isMatch = orderNumber.toLowerCase().includes(query.toLowerCase()) ||
+                   customerName.toLowerCase().includes(query.toLowerCase());
+
+    card.style.display = isMatch ? 'flex' : 'none';
   });
+}
 
-  // 주문 카드들을 1번부터 순서대로 생성
-  let cardCount = 0;
-  activeOrders.forEach(order => {
-    if (cardCount >= maxCards) return;
+// 검색 초기화
+function clearSearch() {
+  const searchInput = document.getElementById('orderSearch');
+  if (searchInput) {
+    searchInput.value = '';
+    searchOrders('');
+  }
+}
 
-    const orderCard = createOrderCard(order);
-    if (multifunctionCard) {
-      ordersGrid.insertBefore(orderCard, multifunctionCard);
+// 데이터 새로고침
+function refreshKDSData() {
+  if (window.currentStoreId) {
+    loadKDSOrders(window.currentStoreId);
+  }
+}
+
+// 수동 새로고침
+function refreshKDS() {
+  console.log('🔄 KDS 수동 새로고침');
+  refreshKDSData();
+}
+
+// 전체화면 토글
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// 설정 표시
+function showKDSSettings() {
+  showNotification('설정 기능은 곧 추가될 예정입니다', 'info');
+}
+
+// 통계 표시
+function showStatistics() {
+  showNotification('통계 기능은 곧 추가될 예정입니다', 'info');
+}
+
+// 내역 표시
+function showHistory() {
+  showNotification('내역 기능은 곧 추가될 예정입니다', 'info');
+}
+
+// 알림 토글
+function toggleAlerts() {
+  const isEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
+  localStorage.setItem('kdsAlertsEnabled', (!isEnabled).toString());
+
+  const alertButton = document.getElementById('alertToggle');
+  if (alertButton) {
+    if (isEnabled) {
+      alertButton.classList.remove('active');
+      showNotification('알림이 비활성화되었습니다', 'warning');
     } else {
-      ordersGrid.appendChild(orderCard);
-    }
-    cardCount++;
-  });
-
-  // 빈 슬롯 생성 (9개 미만일 때)
-  for (let i = cardCount; i < maxCards; i++) {
-    const emptySlot = createEmptySlot(i + 1);
-    if (multifunctionCard) {
-      ordersGrid.insertBefore(emptySlot, multifunctionCard);
-    } else {
-      ordersGrid.appendChild(emptySlot);
+      alertButton.classList.add('active');
+      showNotification('알림이 활성화되었습니다', 'success');
     }
   }
-
-  console.log(`📟 KDS 카드 업데이트 완료: ${cardCount}개 주문, ${maxCards - cardCount}개 빈 슬롯`);
-}
-
-// 주문 카드 생성
-function createOrderCard(order) {
-  const orderTime = new Date(order.createdAt || order.paymentDate);
-  const timeString = orderTime.toLocaleTimeString('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-
-  const urgentClass = order.isUrgent ? ' urgent' : '';
-  const statusClass = order.cookingStatus.toLowerCase();
-  const posClass = order.isPOSOrder ? ' pos-order' : '';
-
-  const card = document.createElement('div');
-  card.className = `order-card ${statusClass}${urgentClass}${posClass}`;
-  card.dataset.orderId = order.id;
-
-  const itemsHTML = order.items.map(item => {
-    const itemStatusClass = item.cooking_status.toLowerCase();
-    const statusIcon = {
-      'pending': '⏳',
-      'cooking': '🔥',
-      'completed': '✅'
-    }[item.cooking_status.toLowerCase()] || '';
-
-    return `
-      <div class="item ${itemStatusClass}" data-item-id="${item.id}">
-        <span class="item-name">${item.menu_name} ${statusIcon}</span>
-        <span class="qty">${item.quantity}</span>
-        <div class="item-actions">
-          ${item.cooking_status === 'PENDING' ?
-            `<button class="item-btn start-btn" onclick="startCookingItem(${item.id})">시작</button>` : ''}
-          ${item.cooking_status === 'COOKING' ?
-            `<button class="item-btn complete-btn" onclick="completeCookingItem(${item.id})">완료</button>` : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  card.innerHTML = `
-    <div class="order-header">
-      <div class="order-number">#${order.id}</div>
-      <div class="order-type ${order.isPOSOrder ? 'pos-type' : ''}">${order.isPOSOrder ? 'POS' : (order.tableNumber ? '매장' : '배달')}</div>
-      ${order.isUrgent ? '<div class="urgent-badge">긴급</div>' : ''}
-      ${order.isPOSOrder ? '<div class="pos-badge">미결제</div>' : ''}
-    </div>
-    <div class="order-time">${timeString}</div>
-    <div class="order-customer">${order.customerName}</div>
-    ${order.tableNumber ? `<div class="table-info">테이블 ${order.tableNumber}</div>` : ''}
-    <div class="order-items">${itemsHTML}</div>
-    <div class="order-summary">
-      대기: ${order.pendingCount} | 조리중: ${order.cookingCount} | 완료: ${order.completedCount}
-      ${order.isPOSOrder ? ' | 💳 결제대기' : ''}
-    </div>
-    <div class="order-actions">
-      ${order.pendingCount > 0 ?
-        `<button class="action-btn start-all-btn" onclick="startCookingOrder(${order.id})">전체 조리시작</button>` : ''}
-      ${order.cookingCount > 0 && order.pendingCount === 0 ?
-        `<button class="action-btn complete-btn" onclick="completeOrder(${order.id})">주문 완료</button>` : ''}
-      <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">상세보기</button>
-    </div>
-    ${order.cookingCount > 0 ? `
-      <div class="order-timer">
-        <div class="timer-display" id="timer-${order.id}">
-          ${calculateCookingTime(order)}
-        </div>
-      </div>
-    ` : ''}
-  `;
-
-  return card;
-}
-
-// 빈 슬롯 생성
-function createEmptySlot(slotNumber) {
-  const slot = document.createElement('div');
-  slot.className = 'empty-card-slot';
-  slot.innerHTML = `
-    <div class="slot-number">${slotNumber}</div>
-    <div class="slot-placeholder">주문 대기 중</div>
-  `;
-  return slot;
-}
-
-// 조리 시간 계산
-function calculateCookingTime(order) {
-  const cookingItems = order.items.filter(item => item.cooking_status === 'COOKING');
-  if (cookingItems.length === 0) return '00:00';
-
-  const earliestStart = cookingItems.reduce((earliest, item) => {
-    const startTime = new Date(item.started_at);
-    return !earliest || startTime < earliest ? startTime : earliest;
-  }, null);
-
-  if (!earliestStart) return '00:00';
-
-  const now = new Date();
-  const diffMinutes = Math.floor((now - earliestStart) / (1000 * 60));
-  const diffSeconds = Math.floor(((now - earliestStart) % (1000 * 60)) / 1000);
-
-  return `${diffMinutes.toString().padStart(2, '0')}:${diffSeconds.toString().padStart(2, '0')}`;
 }
 
 // 개별 메뉴 조리 시작
 async function startCookingItem(itemId) {
   try {
-    console.log('🍳 메뉴 아이템 조리 시작:', itemId);
-
     const response = await fetch(`/api/orders/items/${itemId}/start-cooking`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
     const result = await response.json();
-
     if (result.success) {
-      console.log('✅ 메뉴 조리 시작 완료:', result.message);
-      // 즉시 데이터 새로고침
-      if (window.currentStoreId) {
-        await loadKDSOrders(window.currentStoreId);
-      }
+      showNotification('조리를 시작했습니다', 'success');
+      refreshKDSData();
     } else {
-      alert('조리 시작 실패: ' + result.error);
+      showNotification('조리 시작 실패: ' + result.error, 'error');
     }
   } catch (error) {
     console.error('❌ 메뉴 조리 시작 실패:', error);
-    alert('조리 시작 중 오류가 발생했습니다.');
+    showNotification('조리 시작 중 오류가 발생했습니다', 'error');
   }
 }
 
 // 개별 메뉴 조리 완료
 async function completeCookingItem(itemId) {
   try {
-    console.log('✅ 메뉴 아이템 조리 완료:', itemId);
-
     const response = await fetch(`/api/orders/items/${itemId}/complete-cooking`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
     const result = await response.json();
-
     if (result.success) {
-      console.log('✅ 메뉴 조리 완료:', result.message);
-      // 즉시 데이터 새로고침
-      if (window.currentStoreId) {
-        await loadKDSOrders(window.currentStoreId);
-      }
+      showNotification('조리가 완료되었습니다', 'success');
+      refreshKDSData();
     } else {
-      alert('조리 완료 실패: ' + result.error);
+      showNotification('조리 완료 실패: ' + result.error, 'error');
     }
   } catch (error) {
     console.error('❌ 메뉴 조리 완료 실패:', error);
-    alert('조리 완료 중 오류가 발생했습니다.');
+    showNotification('조리 완료 중 오류가 발생했습니다', 'error');
   }
 }
 
 // 주문 전체 조리 시작
 async function startCookingOrder(orderId) {
   try {
-    console.log('🍳 주문 전체 조리 시작:', orderId);
-
     const response = await fetch(`/api/orders/${orderId}/start-cooking`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
     const result = await response.json();
-
     if (result.success) {
-      console.log('✅ 주문 전체 조리 시작 완료:', result.message);
-      // 즉시 데이터 새로고침
-      if (window.currentStoreId) {
-        await loadKDSOrders(window.currentStoreId);
-      }
+      showNotification('주문 조리를 시작했습니다', 'success');
+      refreshKDSData();
     } else {
-      alert('조리 시작 실패: ' + result.error);
+      showNotification('조리 시작 실패: ' + result.error, 'error');
     }
   } catch (error) {
     console.error('❌ 주문 조리 시작 실패:', error);
-    alert('조리 시작 중 오류가 발생했습니다.');
-  }
-}
-
-// 조리 시작 (레거시 - 호환성 유지)
-function startCooking(orderId) {
-  startCookingOrder(orderId);
-}
-
-// 주문 취소
-function cancelOrder(orderId) {
-  console.log('❌주문 취소:', orderId);
-  if (confirm('이 주문을 취소하시겠습니까?')) {
-    const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
-    if (orderCard) {
-      orderCard.style.opacity = '0.5';
-      orderCard.style.filter = 'grayscale(100%)';
-
-      const status = orderCard.querySelector('.order-status');
-      if (status) {
-        status.textContent = '취소됨';
-        status.style.background = '#95a5a6';
-      }
-
-      const actions = orderCard.querySelector('.order-actions');
-      if (actions) {
-        actions.style.display = 'none';
-      }
-    }
-  }
-}
-
-// 타이머 시작 (현재 사용되지 않음, calculateCookingTime이 사용됨)
-function startTimer(orderId) {
-  const orderCard = document.querySelector(`[data-order-id="${orderId}"]`);
-  const timerDisplay = orderCard?.querySelector('.timer-display');
-
-  if (!timerDisplay) return;
-
-  let seconds = 0;
-  const interval = setInterval(() => {
-    seconds++;
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }, 1000);
-
-  if (orderCard) {
-    orderCard.dataset.timerId = interval;
+    showNotification('조리 시작 중 오류가 발생했습니다', 'error');
   }
 }
 
 // 주문 완료
 async function completeOrder(orderId) {
   try {
-    console.log('✅ 주문 완료:', orderId);
-
     const response = await fetch(`/api/orders/${orderId}/complete`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      }
+      headers: { 'Content-Type': 'application/json' }
     });
 
     const result = await response.json();
-
     if (result.success) {
-      console.log('✅ 주문 완료 처리:', result.message);
-      // 즉시 데이터 새로고침
-      if (window.currentStoreId) {
-        await loadKDSOrders(window.currentStoreId);
-      }
+      showNotification('주문이 완료되었습니다', 'success');
+      refreshKDSData();
     } else {
-      alert('주문 완료 실패: ' + result.error);
+      showNotification('주문 완료 실패: ' + result.error, 'error');
     }
   } catch (error) {
     console.error('❌ 주문 완료 실패:', error);
-    alert('주문 완료 중 오류가 발생했습니다.');
+    showNotification('주문 완료 중 오류가 발생했습니다', 'error');
+  }
+}
+
+// 서빙 완료
+async function serveOrder(orderId) {
+  try {
+    // 서빙 완료 API가 없다면 complete와 동일하게 처리
+    const response = await fetch(`/api/orders/${orderId}/complete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      showNotification('서빙이 완료되었습니다', 'success');
+      refreshKDSData();
+    } else {
+      showNotification('서빙 완료 실패: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('❌ 서빙 완료 실패:', error);
+    showNotification('서빙 완료 중 오류가 발생했습니다', 'error');
   }
 }
 
 // 주문 상세 보기
 function showOrderDetail(orderId) {
   console.log('📋 주문 상세 보기:', orderId);
-  alert(`주문 #${orderId} 상세 정보\n(상세 화면은 곧 구현될 예정입니다)`);
+  showNotification('상세 화면은 곧 구현될 예정입니다', 'info');
 }
-
-// 연결 상태 업데이트
-function updateConnectionStatus(isConnected) {
-  const statusIndicator = document.querySelector('.status-indicator');
-  if (statusIndicator) {
-    if (isConnected) {
-      statusIndicator.textContent = '● 실시간 연결됨';
-      statusIndicator.className = 'status-indicator online';
-    } else {
-      statusIndicator.textContent = '● 연결 끊김';
-      statusIndicator.className = 'status-indicator offline';
-    }
-  }
-}
-
-// 실시간 업데이트 알림 표시
-function showRealTimeUpdateNotification(type, data) {
-  const messages = {
-    'new-order': `🆕 새 주문 #${data?.orderId || ''}`,
-    'cooking-started': `🍳 ${data?.menuName || '메뉴'} 조리 시작`,
-    'cooking-completed': `✅ ${data?.menuName || '메뉴'} 조리 완료`,
-    'order-cooking-started': `🍳 주문 #${data?.orderId || ''} 전체 조리 시작`,
-    'order-update': '🔄 주문 정보 업데이트'
-  };
-
-  const message = messages[type] || '📡 실시간 업데이트';
-
-  const notification = document.createElement('div');
-  notification.innerHTML = message;
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    z-index: 10000;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    animation: slideInRight 0.3s ease-out;
-    border-left: 4px solid #fbbf24;
-  `;
-
-  document.body.appendChild(notification);
-
-  // 2초 후 자동 제거
-  setTimeout(() => {
-    notification.style.animation = 'slideOutRight 0.3s ease-in';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 2000);
-}
-
-// 업데이트 알림 표시 (기존 함수 - 호환성 유지)
-function showUpdateNotification() {
-  showRealTimeUpdateNotification('order-update');
-}
-
 
 // 매장 선택 화면 렌더링
 function renderKDSStoreSelection() {
   const main = document.getElementById('main');
-
   main.innerHTML = `
-    <div style="padding: 40px; text-align: center; background: #1a1a1a; color: white; min-height: 100vh;">
-      <h1>📟 KDS - 매장을 선택하세요</h1>
-      <p style="margin: 20px 0; color: #aaa;">올바른 매장 ID가 필요합니다.</p>
-      <button onclick="window.location.href='/'" style="background: #4fc3f7; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #63b3ed;">📟 KDS</h1>
+      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장을 선택하세요</p>
+      <p style="margin: 20px 0; color: #718096;">올바른 매장 ID가 필요합니다.</p>
+      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
         로그인 화면으로 돌아가기
       </button>
     </div>
@@ -2045,108 +1880,69 @@ function renderKDSStoreSelection() {
 // 에러 화면 렌더링
 function renderKDSError() {
   const main = document.getElementById('main');
-
   main.innerHTML = `
-    <div style="padding: 40px; text-align: center; background: #1a1a1a; color: white; min-height: 100vh;">
-      <h1>❌ KDS 로딩 실패</h1>
-      <p style="margin: 20px 0; color: #aaa;">매장 정보를 불러올 수 없습니다.</p>
-      <button onclick="window.location.href='/'" style="background: #f44336; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px;">
+    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fc8181;">❌ KDS 로딩 실패</h1>
+      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장 정보를 불러올 수 없습니다.</p>
+      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
         로그인 화면으로 돌아가기
       </button>
     </div>
   `;
 }
 
-// 다기능 카드 기능들
-function showKDSSettings() {
-  alert('KDS 설정 메뉴:\n• 화면 밝기 조절\n• 알림음 설정\n• 자동 새로고침 간격\n• 카드 표시 옵션');
-}
-
-function showOrderHistory() {
-  alert('주문 내역:\n• 오늘 완료: 27건\n• 취소: 2건\n• 평균 조리시간: 8분\n• 최고 주문량 시간: 12-13시');
-}
-
-function refreshKDS() {
-  console.log('🔄 KDS 수동 새로고침');
-  if (window.currentStoreId) {
-    loadKDSOrders(window.currentStoreId);
-  }
-}
-
-function toggleAlerts() {
-  const isEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
-  localStorage.setItem('kdsAlertsEnabled', (!isEnabled).toString());
-  alert(isEnabled ? '🔔 알림이 비활성화되었습니다' : '🔔 알림이 활성화되었습니다');
-}
-
-function updateLastUpdateTime() {
-  const lastUpdateElement = document.getElementById('lastUpdate');
-  if (lastUpdateElement) {
-    const now = new Date();
-    const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    lastUpdateElement.textContent = `최종 업데이트: ${timeString}`;
-  }
-}
-
-// 카운트 업데이트 함수
-function updateOrderCounts() {
-  const waitingCards = document.querySelectorAll('.order-card.pending').length;
-  const cookingCards = document.querySelectorAll('.order-card.cooking').length;
-
-  const waitingCount = document.getElementById('waitingCount');
-  const cookingCountElement = document.getElementById('cookingCount');
-
-  if (waitingCount) {
-    waitingCount.textContent = waitingCards > 9 ? `+${waitingCards - 9}` : '0';
+// CSS 애니메이션 추가
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
 
-  if (cookingCountElement) {
-    cookingCountElement.textContent = cookingCards.toString();
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
   }
-}
+`;
+document.head.appendChild(style);
 
-// 페이지 언로드 시 WebSocket 정리
+// 페이지 언로드 시 정리
 window.addEventListener('beforeunload', () => {
   if (window.kdsSocket) {
     window.kdsSocket.emit('leave-kds-room', window.currentStoreId);
     window.kdsSocket.disconnect();
     console.log('🔌 KDS WebSocket 연결 정리 완료');
   }
-
-  if (window.kdsBackupPolling) {
-    clearInterval(window.kdsBackupPolling);
-    console.log('🔄 KDS 백업 폴링 정리 완료');
-  }
-
-  if (window.kdsStatusCheck) {
-    clearInterval(window.kdsStatusCheck);
-    console.log('📊 KDS 상태 체크 정리 완료');
-  }
-});
-
-// 페이지 포커스 시 연결 상태 확인
-window.addEventListener('focus', () => {
-  if (window.kdsSocket && window.currentStoreId) {
-    console.log('👁️ KDS 페이지 포커스 - 연결 상태 확인');
-    if (!window.kdsSocket.connected) {
-      console.log('🔄 KDS 페이지 포커스 시 재연결 시도');
-      window.kdsSocket.connect();
-    }
-  }
 });
 
 // 전역 함수로 노출
 window.renderKDS = renderKDS;
 window.showOrderDetail = showOrderDetail;
-window.startCooking = startCooking;
 window.startCookingOrder = startCookingOrder;
 window.startCookingItem = startCookingItem;
 window.completeCookingItem = completeCookingItem;
 window.completeOrder = completeOrder;
-window.cancelOrder = cancelOrder;
-window.showKDSSettings = showKDSSettings;
-window.showOrderHistory = showOrderHistory;
+window.serveOrder = serveOrder;
 window.refreshKDS = refreshKDS;
+window.toggleFullscreen = toggleFullscreen;
+window.showKDSSettings = showKDSSettings;
+window.showStatistics = showStatistics;
+window.showHistory = showHistory;
 window.toggleAlerts = toggleAlerts;
+window.updateFilter = updateFilter;
+window.searchOrders = searchOrders;
+window.clearSearch = clearSearch;
 
-console.log('✅ KDS 시스템 로드 완료');
+console.log('✅ Professional KDS 시스템 로드 완료');
