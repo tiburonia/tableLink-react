@@ -259,15 +259,14 @@ const TLLInfoUI = {
   }
 };
 
-// 현재 세션 UI 모듈 (개선된 버전)
+// 현재 세션 UI 모듈 (POS 주문만 표시)
 const CurrentSessionUI = {
   render(currentSession, tllOrder = null) {
-    // POS 세션과 TLL 주문 상태 확인
+    // POS 세션 상태만 확인
     const hasPOSSession = currentSession && currentSession.items && currentSession.items.length > 0;
-    const hasTLLOrder = tllOrder && tllOrder.finalAmount;
 
-    // 둘 다 없으면 빈 상태 표시
-    if (!hasPOSSession && !hasTLLOrder) {
+    // POS 세션이 없으면 빈 상태 표시
+    if (!hasPOSSession) {
       return `
         <div class="session-section">
           <div class="section-header">
@@ -275,49 +274,29 @@ const CurrentSessionUI = {
           </div>
           <div class="empty-session">
             <div class="empty-icon">📭</div>
-            <p class="empty-text">진행 중인 주문이 없습니다</p>
+            <p class="empty-text">진행 중인 POS 주문이 없습니다</p>
             <p class="empty-hint">주문 추가 버튼을 눌러 새 주문을 시작하세요</p>
           </div>
         </div>
       `;
     }
 
-    // TLL 주문 아이템 파싱
-    let tllItems = [];
-    if (hasTLLOrder && tllOrder.orderData) {
-      try {
-        const orderData = typeof tllOrder.orderData === 'string' 
-          ? JSON.parse(tllOrder.orderData) 
-          : tllOrder.orderData;
-        tllItems = orderData.items || [];
-      } catch (error) {
-        console.error('TLL 주문 데이터 파싱 실패:', error);
-        tllItems = [];
-      }
-    }
-
-    // 통계 계산
-    const posItemCount = hasPOSSession ? currentSession.itemCount : 0;
-    const tllItemCount = tllItems.length;
-    const totalItemCount = posItemCount + tllItemCount;
-
-    const posAmount = hasPOSSession ? currentSession.totalAmount : 0;
-    const tllAmount = hasTLLOrder ? tllOrder.finalAmount : 0;
-    const totalAmount = posAmount + tllAmount;
+    // POS 세션 통계 계산
+    const posItemCount = currentSession.itemCount;
+    const posAmount = currentSession.totalAmount;
 
     return `
       <div class="session-section">
         <div class="section-header">
           <h4>📦 현재 세션</h4>
           <div class="session-summary">
-            <span class="item-count">${totalItemCount}개</span>
-            <span class="total-amount">₩${totalAmount.toLocaleString()}</span>
+            <span class="item-count">${posItemCount}개</span>
+            <span class="total-amount">₩${posAmount.toLocaleString()}</span>
           </div>
         </div>
 
         <div class="session-container">
-          ${hasPOSSession ? this.renderPOSSession(currentSession) : ''}
-          ${hasTLLOrder ? this.renderTLLSession(tllOrder, tllItems) : ''}
+          ${this.renderPOSSession(currentSession)}
         </div>
       </div>
     `;
@@ -354,43 +333,7 @@ const CurrentSessionUI = {
     `;
   },
 
-  renderTLLSession(tllOrder, items) {
-    const customerInfo = tllOrder.isGuest 
-      ? `👤 ${tllOrder.customerName}` 
-      : `👨‍💼 ${tllOrder.customerName}`;
-
-    return `
-      <div class="session-card tll-session">
-        <div class="session-card-header">
-          <div class="session-info">
-            <span class="session-type">📱 TLL 주문</span>
-            <span class="session-status completed">결제완료</span>
-          </div>
-          <div class="session-amount">₩${tllOrder.finalAmount.toLocaleString()}</div>
-        </div>
-
-        <div class="customer-info">
-          <span class="customer-name">${customerInfo}</span>
-          ${tllOrder.phone ? `<span class="customer-phone">📞 ${this.formatPhone(tllOrder.phone)}</span>` : ''}
-        </div>
-
-        <div class="session-items">
-          ${items.map(item => `
-            <div class="session-item">
-              <div class="item-details">
-                <span class="item-name">${item.name}</span>
-                <span class="item-quantity">×${item.quantity || 1}</span>
-              </div>
-              <div class="item-status">
-                <span class="status-indicator completed">✅</span>
-                <span class="status-text">결제완료</span>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  },
+  
 
   formatPhone(phone) {
     if (!phone) return '';
