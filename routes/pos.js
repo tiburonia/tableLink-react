@@ -1083,9 +1083,9 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
     // 2. 충돌 가능한 세션들 확인 (동시 접근)
     const recentSessionsResult = await pool.query(`
       SELECT 
-        id,
-        session_started_at,
-        total_amount,
+        o.id,
+        o.session_started_at,
+        o.total_amount,
         COUNT(oi.id) as item_count
       FROM orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
