@@ -96,11 +96,21 @@
   <script src="/TLG/utils/authManager.js"></script>
   <script>
     // DOM이 완전히 로드된 후 앱 초기화
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeApp);
-    } else {
-      initializeApp();
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🔄 DOM 로드 완료, 앱 초기화 시작');
+
+      if (typeof initializeApp === 'function') {
+        console.log('✅ initializeApp 함수 발견, 실행 중...');
+        initializeApp();
+      } else if (typeof renderLogin === 'function') {
+        console.log('✅ renderLogin 함수 발견, 실행 중...');
+        renderLogin();
+      } else {
+        console.error('❌ 초기화 함수들을 찾을 수 없습니다');
+        // 기본적으로 로그인 화면 표시
+        document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">로딩 중...</div>';
+      }
+    });
 
     // 토스페이먼츠 팝업창으로부터 메시지 수신
     window.addEventListener('message', function(event) {
