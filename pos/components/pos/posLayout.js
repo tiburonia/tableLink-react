@@ -150,12 +150,30 @@ function renderPOSLayout() {
 
                 <!-- 수량/항목 조작 영역 -->
                 <div class="order-controls">
-                  <button class="control-btn" onclick="selectAllItems()">전체선택</button>
-                  <button class="control-btn danger" onclick="deleteSelectedItems()">선택삭제</button>
-                  <button class="control-btn" onclick="applyDiscount()">할인적용</button>
-                  <button class="control-btn" onclick="changeQuantity(-1)">수량 -</button>
-                  <button class="control-btn" onclick="changeQuantity(1)">수량 +</button>
-                </div>
+                <button class="control-btn secondary-action-btn cancel-changes-btn" onclick="cancelOrderChanges()" style="display: none;">
+                  <span class="btn-icon">↶</span>
+                  <div class="btn-content">
+                    <div class="btn-title">변경 취소</div>
+                    <div class="btn-subtitle">수정사항 되돌리기</div>
+                  </div>
+                </button>
+
+                <button class="control-btn danger-action-btn cancel-pending-btn" onclick="cancelAllPendingOrders()" style="display: none;">
+                  <span class="btn-icon">🗑️</span>
+                  <div class="btn-content">
+                    <div class="btn-title">임시주문 취소</div>
+                    <div class="btn-subtitle">미저장 주문 삭제</div>
+                  </div>
+                </button>
+
+                <button class="control-btn primary-action-btn" id="primaryAction-btn" onclick="handlePrimaryAction()">
+                  <span class="btn-icon">✓</span>
+                  <div class="btn-content">
+                    <div class="btn-title">주문 확정</div>
+                    <div class="btn-subtitle">DB 저장 및 주방전송</div>
+                  </div>
+                </button>
+              </div>
               </div>
 
               <!-- 하단: 결제 정보 패널 -->
