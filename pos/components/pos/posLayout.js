@@ -1123,6 +1123,36 @@ function renderPOSLayout() {
         background: #fef3c7;
         color: #92400e;
       }
+      .order-type-badge.type-pos {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+      }
+
+      .order-type-badge.type-temp {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+        animation: pulse 2s infinite;
+      }
+
+      .order-type-badge.type-db {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      .order-item-row.pending {
+        background: linear-gradient(90deg, transparent 0%, #f3e8ff 100%);
+        border-left: 3px solid #8b5cf6;
+      }
+
+      .order-item-row.confirmed {
+        background: linear-gradient(90deg, transparent 0%, #ecfdf5 100%);
+        border-left: 3px solid #10b981;
+      }
 
       /* 우측 컬럼 */
       .right-column {
