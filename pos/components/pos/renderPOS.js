@@ -1311,7 +1311,7 @@ async function processBasicPayment(paymentMethod) {
   }
 }
 
-// 미확정 주문을 확정하여 DB에 저장하는 함수 - 단순화된 버전
+// 주문 확정 함수 - 단순화된 핵심 로직
 async function confirmPendingOrder() {
   if (!window.pendingOrder || window.pendingOrder.length === 0) {
     showPOSNotification('확정할 주문이 없습니다.', 'warning');
@@ -1324,10 +1324,9 @@ async function confirmPendingOrder() {
   }
 
   try {
-    console.log('📝 주문 확정 처리 시작 - 단순화된 로직');
-    updateOrderStatus('주문 확정 중...', 'processing');
+    console.log('📝 주문 확정 시작');
 
-    // 대부분의 케이스는 새로운 아이템 추가이므로 단순화
+    // 1. DB에 주문 저장
     const orderData = {
       storeId: window.currentStore.id,
       storeName: window.currentStore.name,
@@ -1335,17 +1334,13 @@ async function confirmPendingOrder() {
       items: window.pendingOrder.map(item => ({
         name: item.name,
         price: item.price,
-        quantity: item.quantity,
-        discount: item.discount || 0,
-        note: item.note || ''
+        quantity: item.quantity
       })),
       totalAmount: window.pendingOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       isTLLOrder: false,
       userId: 'pos-user',
       customerName: '포스 주문'
     };
-
-    console.log('💾 주문 데이터 DB 저장 중:', orderData);
 
     const response = await fetch('/api/pos/orders', {
       method: 'POST',
@@ -1355,65 +1350,36 @@ async function confirmPendingOrder() {
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error('주문 DB 저장 실패: ' + result.error);
+      throw new Error(result.error || '주문 저장 실패');
     }
 
-    console.log(`✅ 주문 확정 완료 - Order ID: ${result.orderId}`);
+    console.log(`✅ 주문 DB 저장 완료 - ID: ${result.orderId}`);
 
-    // 📡 KDS 실시간 전송
-    if (global.kdsWebSocket) {
-      global.kdsWebSocket.broadcast(window.currentStore.id, 'new-order', {
-        orderId: result.orderId,
-        storeName: window.currentStore.name,
-        tableNumber: window.currentTable,
-        customerName: '포스 주문',
-        itemCount: window.pendingOrder.length,
-        totalAmount: orderData.totalAmount,
-        source: 'POS'
-      });
-    }
-
-    // 로컬 상태 업데이트 - 단순화
+    // 2. 상태 업데이트
     window.pendingOrder.forEach(item => {
       item.isConfirmed = true;
       item.isPending = false;
-      item.confirmedAt = new Date().toISOString();
       window.confirmedOrder.push(item);
     });
 
-    // 임시 상태 초기화
     window.pendingOrder = [];
     window.hasUnconfirmedChanges = false;
     window.currentOrder = [...window.confirmedOrder];
 
-    // 세션 정리
+    // 3. 임시저장 세션 정리
     clearTemporaryOrderFromSession();
 
-    // UI 업데이트
+    // 4. UI 업데이트
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
-    updateOrderStatus(`주문 확정 완료 (${window.confirmedOrder.length}개)`, 'ordering');
 
-    showPOSNotification(`${window.confirmedOrder.length}개 주문이 확정되어 주방으로 전송되었습니다!`, 'success');
-
-    // 성공 시 사운드 재생
-    if (typeof playNotificationSound === 'function') {
-      playNotificationSound('newOrder');
-    }
-
+    showPOSNotification(`주문이 확정되었습니다! (총 ${window.confirmedOrder.length}개)`, 'success');
     return true;
 
   } catch (error) {
     console.error('❌ 주문 확정 실패:', error);
-    updateOrderStatus('주문 확정 실패', 'error');
-    showPOSNotification('주문 확정 중 오류가 발생했습니다: ' + error.message, 'error');
-    
-    // 실패 시 사운드 재생
-    if (typeof playNotificationSound === 'function') {
-      playNotificationSound('errorAlert');
-    }
-
+    showPOSNotification('주문 확정 실패: ' + error.message, 'error');
     return false;
   }
 }
