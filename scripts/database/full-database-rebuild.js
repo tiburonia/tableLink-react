@@ -1032,7 +1032,7 @@ async function insertBasicData(client) {
       ($1, $3, '콜라', 2000, true),
       ($1, $3, '사이다', 2000, true),
       ($1, $4, '김치', 3000, true)
-  `, [storeId, groupIds[0], storeId, groupIds[1], storeId, groupIds[2]]);
+  `, [storeId, groupIds[0], groupIds[1], groupIds[2]]);
 
   // 테스트 사용자
   await client.query(`
