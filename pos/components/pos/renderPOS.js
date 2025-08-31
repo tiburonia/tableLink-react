@@ -26,6 +26,10 @@ let soundSettings = {
 }; // 사운드 설정
 let autoRefreshInterval = null; // 자동 새로고침 인터벌
 
+// 주문 수정 관리 상태 초기화
+let originalOrder = []; // 원본 주문 상태
+let pendingOrder = []; // 미확정 수정사항
+
 // 고유 주문 아이템 ID 생성 함수
 function generateOrderItemId() {
   return `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -101,9 +105,6 @@ async function renderPOS() {
 // 매장 정보 로드 (테이블맵 용)
 async function loadStoreForTableMap(storeId) {
   try {
-    console.log(`📍 매장 ID ${storeId} 테이블맵 데이터 로드`);
-
-    // 매장 정보 로드
     const storeResponse = await fetch(`/api/stores/${storeId}`);
     const storeData = await storeResponse.json();
 
@@ -111,17 +112,14 @@ async function loadStoreForTableMap(storeId) {
       throw new Error('매장 정보를 불러올 수 없습니다.');
     }
 
-    // 매장 설정
     window.currentStore = storeData.store;
     document.getElementById('storeName').textContent = `${storeData.store.name}`;
 
-    // 메뉴와 테이블 로드
     await Promise.all([
       loadStoreMenus(storeId),
       loadStoreTables(storeId)
     ]);
 
-    // 테이블맵 렌더링
     await renderTableMap();
     await updateTodaySummary();
 
@@ -143,7 +141,6 @@ async function loadStoreMenus(storeId) {
     if (data.success) {
       window.allMenus = data.menu || [];
 
-      // 카테고리 추출
       const categorySet = new Set(['전체']);
       window.allMenus.forEach(item => {
         if (item.category) {
@@ -192,7 +189,6 @@ async function renderTableMap() {
     return;
   }
 
-  // 각 테이블의 현재 상태 조회
   const tableStatuses = await Promise.all(
     window.allTables.map(async (table) => {
       try {
@@ -264,7 +260,6 @@ async function renderTableMap() {
 
   tableMapGrid.innerHTML = tablesHTML;
 
-  // 활성 테이블 수 업데이트
   const activeTables = tableStatuses.filter(t => t.status !== 'available').length;
   const activeTablesElement = document.getElementById('activeTables');
   if (activeTablesElement) {
@@ -272,28 +267,31 @@ async function renderTableMap() {
   }
 }
 
-// 테이블맵에서 테이블 선택 → 주문 화면 전환
+// 테이블 선택 함수
 async function selectTableFromMap(tableNumber) {
+  window.currentTable = tableNumber;
+
+  await loadMixedTableOrders(tableNumber);
+
+  // 원본 주문 상태 저장
+  window.saveOriginalOrder();
+
+  updateTableInfo();
+  updatePrimaryActionButton();
+
   try {
     console.log(`🪑 테이블 ${tableNumber} 선택 - OKPOS 주문 화면으로 전환`);
 
-    window.currentTable = tableNumber;
     window.currentView = 'order';
     window.selectedItems = [];
     window.inputMode = 'quantity';
     window.currentInput = '';
 
-    // 화면 전환
     document.getElementById('tableMapView').classList.add('hidden');
     document.getElementById('orderView').classList.remove('hidden');
 
-    // 주문 화면 헤더 업데이트
     document.getElementById('orderTableTitle').textContent = `테이블 ${tableNumber} - 주문/결제`;
 
-    // POS + TLL 통합 주문 로드
-    await loadMixedTableOrders(tableNumber);
-
-    // 메뉴 카테고리 및 그리드 렌더링
     renderMenuCategories();
     renderMenuGrid();
 
@@ -313,11 +311,9 @@ async function loadTableSession(tableNumber) {
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
     const data = await response.json();
 
-    // 주문 배열 초기화
     window.currentOrder = [];
 
     if (data.success && data.currentSession && data.currentSession.items) {
-      // 기존 세션이 있는 경우 주문 내역 로드
       window.currentOrder = data.currentSession.items.map((item, index) => ({
         id: index,
         name: item.menuName,
@@ -330,7 +326,6 @@ async function loadTableSession(tableNumber) {
       console.log(`✅ 테이블 ${tableNumber} 기존 세션 로드: ${window.currentOrder.length}개 아이템`, window.currentOrder);
       updateOrderStatus(`기존 세션 (${window.currentOrder.length}개)`, 'ordering');
     } else {
-      // 새 세션
       console.log(`🆕 테이블 ${tableNumber} 새 주문 세션 시작`);
       updateOrderStatus('새 주문', 'available');
     }
@@ -357,7 +352,6 @@ function updateOrderStatus(statusText, statusType) {
   if (statusIndicator && statusTextElement) {
     statusTextElement.textContent = statusText;
 
-    // 상태별 색상
     const colors = {
       'available': '#10b981',
       'ordering': '#f59e0b',
@@ -405,7 +399,6 @@ function renderMenuGrid() {
 
   let filteredMenus = window.allMenus;
 
-  // 카테고리 필터링
   if (selectedCategory !== 'all') {
     filteredMenus = window.allMenus.filter(item => item.category === selectedCategory);
   }
@@ -437,14 +430,12 @@ function addMenuToOrder(menuName, price) {
     return;
   }
 
-  // 메뉴 유효성 검증
   const menuItem = window.allMenus.find(menu => menu.name === menuName && menu.price === price);
   if (!menuItem) {
     showPOSNotification('유효하지 않은 메뉴입니다.', 'error');
     return;
   }
 
-  // 전역 변수 안전성 초기화 (강화된 버전)
   if (!window.pendingOrder || !Array.isArray(window.pendingOrder)) {
     console.log('🔧 pendingOrder 배열 초기화');
     window.pendingOrder = [];
@@ -463,11 +454,9 @@ function addMenuToOrder(menuName, price) {
   }
 
   try {
-    // 기존 아이템 확인 및 추가 (임시 주문에서)
     const existingItemIndex = window.pendingOrder.findIndex(item => item.name === menuName);
 
     if (existingItemIndex !== -1) {
-      // 수량 제한 검증 (최대 99개)
       if (window.pendingOrder[existingItemIndex].quantity >= 99) {
         showPOSNotification('메뉴 수량은 최대 99개까지 가능합니다.', 'warning');
         return;
@@ -477,36 +466,31 @@ function addMenuToOrder(menuName, price) {
       console.log(`📦 임시 메뉴 수량 증가: ${menuName} (${window.pendingOrder[existingItemIndex].quantity}개)`);
     } else {
       const newItem = {
-        id: generateOrderItemId(), // 고유 ID 생성
+        id: generateOrderItemId(),
         name: menuName,
         price: parseInt(price),
         quantity: 1,
         discount: 0,
         note: '',
         addedAt: new Date().toISOString(),
-        isConfirmed: false // 미확정 상태
+        isConfirmed: false
       };
       window.pendingOrder.push(newItem);
       console.log(`📦 새 임시 메뉴 추가: ${menuName} - ₩${price.toLocaleString()}`);
     }
 
-    // 변경사항 플래그 설정
     window.hasUnconfirmedChanges = true;
 
-    // 통합된 주문 목록 생성 (확정 + 미확정)
     window.currentOrder = [...window.confirmedOrder, ...window.pendingOrder];
 
-    // UI 업데이트
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
     updateOrderStatus('주문 작성 중 (미확정)', 'ordering');
 
-    // 시각적 피드백 (개선된 애니메이션)
     if (event && event.target) {
       const button = event.target.closest('.menu-item-btn');
       if (button) {
-        // 추가 성공 애니메이션
         button.classList.add('menu-added-animation');
         setTimeout(() => {
           button.classList.remove('menu-added-animation');
@@ -514,17 +498,15 @@ function addMenuToOrder(menuName, price) {
       }
     }
 
-    // 통계 업데이트
     updateOrderStatistics();
 
     console.log(`✅ 현재 임시 주문 상태 (테이블 ${window.currentTable}):`, window.pendingOrder);
 
-    // 성공 알림 (수량 정보 포함)
     const totalItems = window.currentOrder.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = window.currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     showPOSNotification(
-      `${menuName} 임시 추가됨 (총 ${totalItems}개, ₩${totalAmount.toLocaleString()})`, 
+      `${menuName} 임시 추가됨 (총 ${totalItems}개, ₩${totalAmount.toLocaleString()})`,
       'info'
     );
 
@@ -542,7 +524,6 @@ function renderOrderItems() {
     return;
   }
 
-  // 안전성 검사
   if (!window.currentOrder || !Array.isArray(window.currentOrder)) {
     window.currentOrder = [];
   }
@@ -566,14 +547,12 @@ function renderOrderItems() {
     const orderType = item.isTLLOrder ? 'TLL' : 'POS';
     const typeClass = item.isTLLOrder ? 'type-tll' : 'type-pos';
 
-    // 확정/미확정 상태 확인
     const isConfirmed = item.isConfirmed !== false;
     const statusClass = isConfirmed ? 'confirmed-item' : 'pending-item';
-    const statusBadge = isConfirmed ? 
-      '<span class="status-badge confirmed">확정</span>' : 
+    const statusBadge = isConfirmed ?
+      '<span class="status-badge confirmed">확정</span>' :
       '<span class="status-badge pending">대기</span>';
 
-    // 수정 상태 표시
     let modificationIndicator = '';
     if (item.isModified && item.originalId) {
       modificationIndicator = '<span class="modification-indicator" title="수정됨">✏️</span>';
@@ -640,13 +619,11 @@ function deleteSelectedItems() {
     let hasConfirmedChanges = false;
     let hasPendingChanges = false;
 
-    // 선택된 아이템들 분류 및 삭제
     window.selectedItems.forEach(itemId => {
       const confirmedIndex = window.confirmedOrder.findIndex(item => item.id === itemId);
       const pendingIndex = window.pendingOrder.findIndex(item => item.id === itemId);
 
       if (confirmedIndex !== -1) {
-        // 확정된 주문에서 삭제된 경우 - pendingOrder에 삭제 표시 추가
         const deletedItem = { ...window.confirmedOrder[confirmedIndex] };
         deletedItem.isDeleted = true;
         deletedItem.isConfirmed = false;
@@ -655,16 +632,13 @@ function deleteSelectedItems() {
         window.pendingOrder.push(deletedItem);
         hasConfirmedChanges = true;
       } else if (pendingIndex !== -1) {
-        // 미확정 주문에서 삭제
         window.pendingOrder.splice(pendingIndex, 1);
         hasPendingChanges = true;
       }
     });
 
-    // 통합 주문 목록 재구성
     window.currentOrder = [...window.confirmedOrder, ...window.pendingOrder].filter(item => !item.isDeleted);
 
-    // 변경사항 플래그 설정
     if (hasConfirmedChanges || hasPendingChanges) {
       window.hasUnconfirmedChanges = true;
     }
@@ -701,12 +675,10 @@ function applyDiscount() {
       const pendingIndex = window.pendingOrder.findIndex(item => item.id === itemId);
 
       if (confirmedIndex !== -1) {
-        // 확정된 주문의 할인 변경 - pendingOrder에 수정 버전 추가
         const originalItem = window.confirmedOrder[confirmedIndex];
         let pendingItem = window.pendingOrder.find(item => item.originalId === originalItem.id);
 
         if (!pendingItem) {
-          // 새로운 수정 아이템 생성
           pendingItem = {
             ...originalItem,
             id: generateOrderItemId(),
@@ -722,7 +694,6 @@ function applyDiscount() {
         pendingItem.modifiedAt = new Date().toISOString();
         hasChanges = true;
       } else if (pendingIndex !== -1) {
-        // 미확정 주문의 할인 변경
         window.pendingOrder[pendingIndex].discount = discount;
         window.pendingOrder[pendingIndex].modifiedAt = new Date().toISOString();
         hasChanges = true;
@@ -732,7 +703,6 @@ function applyDiscount() {
     if (hasChanges) {
       window.hasUnconfirmedChanges = true;
 
-      // 통합 주문 목록 재구성
       window.currentOrder = [...window.confirmedOrder];
       window.pendingOrder.forEach(pendingItem => {
         if (pendingItem.originalId) {
@@ -769,12 +739,10 @@ function changeQuantity(delta) {
     const pendingIndex = window.pendingOrder.findIndex(item => item.id === itemId);
 
     if (confirmedIndex !== -1) {
-      // 확정된 주문의 수량 변경 - pendingOrder에 수정 버전 추가
       const originalItem = window.confirmedOrder[confirmedIndex];
       let pendingItem = window.pendingOrder.find(item => item.originalId === originalItem.id);
 
       if (!pendingItem) {
-        // 새로운 수정 아이템 생성
         pendingItem = {
           ...originalItem,
           id: generateOrderItemId(),
@@ -793,7 +761,6 @@ function changeQuantity(delta) {
         hasChanges = true;
       }
     } else if (pendingIndex !== -1) {
-      // 미확정 주문의 수량 변경
       const newQuantity = Math.max(1, window.pendingOrder[pendingIndex].quantity + delta);
       if (newQuantity !== window.pendingOrder[pendingIndex].quantity) {
         window.pendingOrder[pendingIndex].quantity = newQuantity;
@@ -806,19 +773,15 @@ function changeQuantity(delta) {
   if (hasChanges) {
     window.hasUnconfirmedChanges = true;
 
-    // 통합 주문 목록 재구성 (수정된 아이템은 pendingOrder 우선)
     window.currentOrder = [...window.confirmedOrder];
 
-    // pendingOrder의 아이템들로 교체/추가
     window.pendingOrder.forEach(pendingItem => {
       if (pendingItem.originalId) {
-        // 기존 아이템 수정인 경우
         const originalIndex = window.currentOrder.findIndex(item => item.id === pendingItem.originalId);
         if (originalIndex !== -1) {
           window.currentOrder[originalIndex] = pendingItem;
         }
       } else {
-        // 새 아이템인 경우
         window.currentOrder.push(pendingItem);
       }
     });
@@ -838,7 +801,6 @@ function renderPaymentSummary() {
   const totalDiscount = window.currentOrder.reduce((sum, item) => sum + item.discount, 0);
   const finalAmount = totalAmount - totalDiscount;
 
-  // 요소 업데이트
   const totalAmountElement = document.getElementById('totalAmount');
   const discountAmountElement = document.getElementById('discountAmount');
   const finalAmountElement = document.getElementById('finalAmount');
@@ -859,12 +821,10 @@ async function loadMixedTableOrders(tableNumber) {
   try {
     console.log(`🔄 테이블 ${tableNumber} POS+TLL 주문 통합 로드`);
 
-    // 전역 변수 안전 초기화
     window.currentOrder = [];
     window.confirmedOrder = [];
     window.pendingOrder = [];
 
-    // 기존 POS 세션 로드
     const posResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
 
     if (!posResponse.ok) {
@@ -872,7 +832,6 @@ async function loadMixedTableOrders(tableNumber) {
     } else {
       const posData = await posResponse.json();
 
-      // POS 확정 주문 추가
       if (posData.success && posData.currentSession && posData.currentSession.items) {
         const posItems = posData.currentSession.items.map((item, index) => ({
           id: `pos-${index}`,
@@ -882,14 +841,13 @@ async function loadMixedTableOrders(tableNumber) {
           discount: 0,
           note: '',
           isTLLOrder: false,
-          isConfirmed: true // POS 주문은 기본적으로 확정됨
+          isConfirmed: true
         }));
         window.confirmedOrder.push(...posItems);
         console.log(`✅ POS 확정 주문 ${posItems.length}개 로드`);
       }
     }
 
-    // TLL 주문 로드 (올바른 엔드포인트 사용)
     try {
       const tllResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/orders`);
 
@@ -897,8 +855,7 @@ async function loadMixedTableOrders(tableNumber) {
         const tllData = await tllResponse.json();
 
         if (tllData.success && tllData.tllOrder) {
-          // TLL 주문이 있는 경우 표시용으로만 사용 (POS에서는 수정 불가)
-          const orderData = typeof tllData.tllOrder.orderData === 'string' ? 
+          const orderData = typeof tllData.tllOrder.orderData === 'string' ?
             JSON.parse(tllData.tllOrder.orderData) : tllData.tllOrder.orderData;
 
           if (orderData && orderData.items) {
@@ -910,7 +867,7 @@ async function loadMixedTableOrders(tableNumber) {
               discount: 0,
               note: `${tllData.tllOrder.customerName}님 TLL 주문`,
               isTLLOrder: true,
-              isConfirmed: true, // TLL 주문은 이미 확정됨
+              isConfirmed: true,
               tllOrderInfo: {
                 customerName: tllData.tllOrder.customerName,
                 paymentDate: tllData.tllOrder.paymentDate
@@ -925,12 +882,10 @@ async function loadMixedTableOrders(tableNumber) {
       console.warn('⚠️ TLL 주문 로드 실패:', tllError);
     }
 
-    // 통합된 주문 목록 생성
     window.currentOrder = [...window.confirmedOrder, ...window.pendingOrder];
 
     console.log(`✅ 테이블 ${tableNumber} 통합 주문 로드 완료: 확정 ${window.confirmedOrder.length}개, 대기 ${window.pendingOrder.length}개`);
 
-    // UI 업데이트
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
@@ -943,7 +898,6 @@ async function loadMixedTableOrders(tableNumber) {
 
   } catch (error) {
     console.error('❌ 통합 주문 로드 실패:', error);
-    // 안전한 초기화
     window.currentOrder = [];
     window.confirmedOrder = [];
     window.pendingOrder = [];
@@ -960,7 +914,6 @@ function updateButtonStates() {
   const hasItems = window.currentOrder.length > 0;
   const hasSelection = window.selectedItems.length > 0;
 
-  // 주문 액션 버튼들
   const holdBtn = document.querySelector('.hold-btn');
   const clearBtn = document.querySelector('.clear-btn');
   const orderBtn = document.querySelector('.primary-order-btn');
@@ -969,7 +922,6 @@ function updateButtonStates() {
   if (clearBtn) clearBtn.disabled = !hasItems;
   if (orderBtn) orderBtn.disabled = !hasItems;
 
-  // 결제 버튼들
   const paymentButtons = document.querySelectorAll('.payment-btn');
   paymentButtons.forEach(btn => {
     btn.disabled = !hasItems;
@@ -994,7 +946,6 @@ async function processPayment(paymentMethod) {
   try {
     console.log(`💳 테이블 ${window.currentTable} ${paymentMethod} 결제 시작`);
 
-    // 주문 데이터 검증 및 변환
     const orderItems = window.currentOrder.map(item => ({
       name: item.name,
       price: parseInt(item.price),
@@ -1007,7 +958,6 @@ async function processPayment(paymentMethod) {
       throw new Error('결제 금액이 올바르지 않습니다.');
     }
 
-    // 1. 주문 세션 상태 확인
     const sessionCheckResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/session-status`);
     const sessionCheck = await sessionCheckResponse.json();
 
@@ -1015,7 +965,6 @@ async function processPayment(paymentMethod) {
       throw new Error('세션 상태 확인 실패');
     }
 
-    // 2. 주문 추가 (기존 세션이 있으면 추가, 없으면 새로 생성)
     const orderData = {
       storeId: window.currentStore.id,
       storeName: window.currentStore.name,
@@ -1042,14 +991,11 @@ async function processPayment(paymentMethod) {
 
     console.log('✅ 주문 등록 완료:', orderResult);
 
-    // 3. 결제 방법에 따른 분기 처리
     let paymentResult;
 
     if (paymentMethod === 'CARD') {
-      // VAN 카드 결제 처리
       paymentResult = await processVANCardPayment(totalAmount);
     } else {
-      // 기본 결제 처리 (현금, 간편결제 등)
       paymentResult = await processBasicPayment(paymentMethod);
     }
 
@@ -1057,11 +1003,9 @@ async function processPayment(paymentMethod) {
       throw new Error(paymentResult.error || '결제 처리 실패');
     }
 
-    // 성공 처리
     const methodName = getPaymentMethodName(paymentMethod);
     showPOSNotification(`💳 ${methodName} 결제 완료!\n총 금액: ₩${totalAmount.toLocaleString()}`, 'success');
 
-    // 주문 초기화
     window.currentOrder = [];
     window.pendingOrder = [];
     window.confirmedOrder = [];
@@ -1073,7 +1017,6 @@ async function processPayment(paymentMethod) {
     renderPaymentSummary();
     updateButtonStates();
 
-    // 2초 후 테이블맵으로 자동 이동
     setTimeout(() => {
       returnToTableMap();
     }, 2000);
@@ -1092,9 +1035,8 @@ async function processVANCardPayment(amount) {
   try {
     console.log('💳 VAN 카드 결제 시뮬레이션');
 
-    // 테스트 카드 정보 (샌드박스)
     const testCardData = {
-      cardNumber: '4111111111111111', // 테스트 비자카드
+      cardNumber: '4111111111111111',
       expiryDate: '12/25',
       cvc: '123'
     };
@@ -1141,7 +1083,7 @@ async function processBasicPayment(paymentMethod) {
     const paymentResponse = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         paymentMethod: paymentMethod,
         guestPhone: null
       })
@@ -1179,7 +1121,6 @@ async function confirmPendingOrder() {
   try {
     console.log('📝 주문 확정 처리 시작');
 
-    // 수정/삭제/추가된 아이템들 분류
     const newItems = [];
     const modifiedItems = [];
     const deletedItems = [];
@@ -1194,11 +1135,9 @@ async function confirmPendingOrder() {
       }
     });
 
-    // DB 업데이트 처리
     if (newItems.length > 0 || modifiedItems.length > 0 || deletedItems.length > 0) {
       console.log(`📦 DB 업데이트: 신규 ${newItems.length}개, 수정 ${modifiedItems.length}개, 삭제 ${deletedItems.length}개`);
 
-      // 신규 아이템 추가
       if (newItems.length > 0) {
         const orderData = {
           storeId: window.currentStore.id,
@@ -1227,7 +1166,6 @@ async function confirmPendingOrder() {
         }
       }
 
-      // 수정된 아이템 처리 (기존 아이템 업데이트)
       if (modifiedItems.length > 0) {
         for (const modifiedItem of modifiedItems) {
           const updateResponse = await fetch(`/api/pos/orders/items/${modifiedItem.originalId}`, {
@@ -1246,7 +1184,6 @@ async function confirmPendingOrder() {
         }
       }
 
-      // 삭제된 아이템 처리
       if (deletedItems.length > 0) {
         for (const deletedItem of deletedItems) {
           const deleteResponse = await fetch(`/api/pos/orders/items/${deletedItem.originalId}`, {
@@ -1260,8 +1197,6 @@ async function confirmPendingOrder() {
       }
     }
 
-    // 확정 주문 목록 업데이트
-    // 1. 삭제된 아이템들을 confirmedOrder에서 제거
     deletedItems.forEach(deletedItem => {
       const confirmedIndex = window.confirmedOrder.findIndex(item => item.id === deletedItem.originalId);
       if (confirmedIndex !== -1) {
@@ -1269,14 +1204,12 @@ async function confirmPendingOrder() {
       }
     });
 
-    // 2. 수정된 아이템들을 confirmedOrder에서 업데이트
     modifiedItems.forEach(modifiedItem => {
       const confirmedIndex = window.confirmedOrder.findIndex(item => item.id === modifiedItem.originalId);
       if (confirmedIndex !== -1) {
-        // 수정된 내용으로 업데이트
         window.confirmedOrder[confirmedIndex] = {
           ...modifiedItem,
-          id: modifiedItem.originalId, // 원래 ID 유지
+          id: modifiedItem.originalId,
           isConfirmed: true,
           isModified: false,
           confirmedAt: new Date().toISOString()
@@ -1284,23 +1217,17 @@ async function confirmPendingOrder() {
       }
     });
 
-    // 3. 새 아이템들을 confirmedOrder에 추가
     newItems.forEach(item => {
       item.isConfirmed = true;
       item.confirmedAt = new Date().toISOString();
       window.confirmedOrder.push(item);
     });
 
-    // 미확정 주문 목록 비우기
     window.pendingOrder = [];
-
-    // 변경사항 플래그 해제
     window.hasUnconfirmedChanges = false;
 
-    // 통합 주문 목록 업데이트
     window.currentOrder = [...window.confirmedOrder];
 
-    // UI 업데이트
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
@@ -1343,7 +1270,6 @@ function returnToTableMap() {
   window.currentView = 'table-map';
   window.currentTable = null;
 
-  // 배열 안전 초기화
   window.currentOrder = [];
   window.pendingOrder = [];
   window.confirmedOrder = [];
@@ -1353,11 +1279,9 @@ function returnToTableMap() {
   selectedCategory = 'all';
   window.currentInput = '';
 
-  // 화면 전환
   document.getElementById('orderView').classList.add('hidden');
   document.getElementById('tableMapView').classList.remove('hidden');
 
-  // 테이블맵 새로고침
   renderTableMap();
 }
 
@@ -1433,14 +1357,12 @@ async function updateTodaySummary() {
 
 // 주기적 업데이트 시작
 function startPeriodicUpdates() {
-  // 테이블맵 5초마다 업데이트
   setInterval(() => {
     if (window.currentView === 'table-map') {
       renderTableMap();
     }
   }, 5000);
 
-  // 매출 요약 30초마다 업데이트
   setInterval(() => {
     updateTodaySummary();
   }, 30000);
@@ -1474,20 +1396,17 @@ function searchMenus(query) {
 
   let filteredMenus = window.allMenus;
 
-  // 카테고리 필터링
   if (selectedCategory !== 'all') {
     filteredMenus = window.allMenus.filter(item => item.category === selectedCategory);
   }
 
-  // 검색어 필터링
   if (query && query.trim()) {
     const searchTerm = query.trim().toLowerCase();
-    filteredMenus = filteredMenus.filter(item => 
+    filteredMenus = filteredMenus.filter(item =>
       item.name.toLowerCase().includes(searchTerm)
     );
   }
 
-  // 결과 렌더링
   if (filteredMenus.length === 0) {
     menuGrid.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">
@@ -1563,7 +1482,6 @@ function updateButtonStates() {
   const hasSelection = window.selectedItems && window.selectedItems.length > 0;
   const hasUnconfirmed = window.hasUnconfirmedChanges || hasPendingItems;
 
-  // 주문 액션 버튼들
   const holdBtn = document.querySelector('.hold-btn');
   const clearBtn = document.querySelector('.clear-btn');
   const primaryActionBtn = document.querySelector('.primary-action-btn');
@@ -1571,25 +1489,21 @@ function updateButtonStates() {
   if (holdBtn) holdBtn.disabled = !hasItems;
   if (clearBtn) clearBtn.disabled = !hasItems;
 
-  // Primary Action 버튼 상태 및 텍스트 업데이트
   if (primaryActionBtn) {
     const btnTitle = primaryActionBtn.querySelector('.btn-title');
     const btnSubtitle = primaryActionBtn.querySelector('.btn-subtitle');
 
     if (hasUnconfirmed) {
-      // 미확정 주문이 있는 경우
       primaryActionBtn.disabled = !hasPendingItems;
       if (btnTitle) btnTitle.textContent = '주문 확정';
       if (btnSubtitle) btnSubtitle.textContent = '변경사항 적용';
       primaryActionBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
     } else if (hasConfirmedItems) {
-      // 확정된 주문만 있는 경우
       primaryActionBtn.disabled = false;
       if (btnTitle) btnTitle.textContent = '테이블맵 이동';
       if (btnSubtitle) btnSubtitle.textContent = '현재 화면 종료';
       primaryActionBtn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
     } else {
-      // 주문이 없는 경우
       primaryActionBtn.disabled = true;
       if (btnTitle) btnTitle.textContent = '주문 없음';
       if (btnSubtitle) btnSubtitle.textContent = '메뉴를 선택하세요';
@@ -1597,7 +1511,6 @@ function updateButtonStates() {
     }
   }
 
-  // 취소 버튼 표시/숨김
   const cancelBtn = document.querySelector('.cancel-changes-btn');
   if (cancelBtn) {
     if (hasUnconfirmed) {
@@ -1608,13 +1521,11 @@ function updateButtonStates() {
     }
   }
 
-  // 결제 버튼들 (확정된 주문이 있어야 활성화)
   const paymentButtons = document.querySelectorAll('.payment-btn');
   paymentButtons.forEach(btn => {
     btn.disabled = !hasConfirmedItems;
   });
 
-  // 결제 상태 표시 업데이트
   const paymentIndicator = document.getElementById('paymentIndicator');
   if (paymentIndicator) {
     if (hasUnconfirmed) {
@@ -1643,19 +1554,12 @@ function cancelOrderChanges() {
   if (confirm('모든 수정사항을 취소하고 이전 상태로 되돌리시겠습니까?')) {
     console.log('🔄 주문 수정사항 취소 처리');
 
-    // 미확정 주문 목록 비우기
     window.pendingOrder = [];
-
-    // 변경사항 플래그 해제
     window.hasUnconfirmedChanges = false;
-
-    // 선택된 아이템 초기화
     window.selectedItems = [];
 
-    // 통합 주문 목록을 확정된 주문만으로 복원
     window.currentOrder = [...window.confirmedOrder];
 
-    // UI 업데이트
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
@@ -1671,22 +1575,817 @@ function cancelOrderChanges() {
   }
 }
 
-// Primary Action 버튼 클릭 핸들러
+// Primary Action 핸들러
 function handlePrimaryAction() {
-  const hasUnconfirmed = window.hasUnconfirmedChanges || (window.pendingOrder && window.pendingOrder.length > 0);
-  const hasConfirmedItems = window.confirmedOrder && window.confirmedOrder.length > 0;
+  const primaryBtn = document.getElementById('primaryAction-btn');
+  if (!primaryBtn || primaryBtn.disabled) return;
 
-  if (hasUnconfirmed) {
-    // 미확정 주문이 있는 경우 - 주문 확정 처리
-    confirmPendingOrder();
-  } else if (hasConfirmedItems) {
-    // 확정된 주문만 있는 경우 - 테이블맵으로 이동
-    returnToTableMap();
-  } else {
-    // 주문이 없는 경우
-    showPOSNotification('주문할 메뉴를 선택해주세요.', 'warning');
+  if (primaryBtn.className.includes('payment')) {
+    window.processPOSPayment();
+  } else if (primaryBtn.className.includes('modify-confirm')) {
+    window.confirmPendingOrder();
+  } else if (primaryBtn.className.includes('confirm')) {
+    window.confirmOrder();
   }
 }
+
+// 테이블 선택 함수
+async function selectTableFromMap(tableNumber) {
+  window.currentTable = tableNumber;
+
+  await loadMixedTableOrders(tableNumber);
+
+  // 원본 주문 상태 저장
+  window.saveOriginalOrder();
+
+  updateTableInfo();
+  updatePrimaryActionButton();
+
+  try {
+    console.log(`🪑 테이블 ${tableNumber} 선택 - OKPOS 주문 화면으로 전환`);
+
+    window.currentView = 'order';
+    window.selectedItems = [];
+    window.inputMode = 'quantity';
+    window.currentInput = '';
+
+    document.getElementById('tableMapView').classList.add('hidden');
+    document.getElementById('orderView').classList.remove('hidden');
+
+    document.getElementById('orderTableTitle').textContent = `테이블 ${tableNumber} - 주문/결제`;
+
+    renderMenuCategories();
+    renderMenuGrid();
+
+    showPOSNotification(`테이블 ${tableNumber} OKPOS 주문 화면으로 전환됨`);
+
+  } catch (error) {
+    console.error('❌ 테이블 선택 실패:', error);
+    showPOSNotification('테이블 선택에 실패했습니다.', 'error');
+  }
+}
+
+// 주문 확정 함수
+window.confirmOrder = async function() {
+  if (!window.currentOrder || window.currentOrder.length === 0) {
+    showPOSNotification('확정할 주문이 없습니다.', 'warning');
+    return;
+  }
+
+  // 미확정 수정사항이 있으면 confirmPendingOrder 호출
+  if (window.hasUnconfirmedChanges && window.pendingOrder && window.pendingOrder.length > 0) {
+    return await window.confirmPendingOrder();
+  }
+
+  try {
+    const response = await fetch(`/api/pos/stores/${storeId}/confirm-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableNumber: window.currentTable,
+        items: window.currentOrder
+      })
+    });
+
+    if (response.ok) {
+      showPOSNotification('주문이 확정되었습니다.', 'success');
+      await loadMixedTableOrders(window.currentTable);
+      updatePrimaryActionButton();
+    }
+  } catch (error) {
+    console.error('주문 확정 실패:', error);
+    showPOSNotification('주문 확정에 실패했습니다.', 'error');
+  }
+};
+
+// 주문 수정 관리 상태 초기화
+window.originalOrder = []; // 원본 주문 상태
+window.hasUnconfirmedChanges = false;
+window.pendingOrder = []; // 미확정 수정사항
+
+// 원본 주문 상태 저장
+window.saveOriginalOrder = function() {
+  window.originalOrder = JSON.parse(JSON.stringify(window.confirmedOrder || []));
+};
+
+// 수정사항 복원 (초기화)
+window.revertChanges = function() {
+  window.currentOrder = JSON.parse(JSON.stringify(window.originalOrder));
+  window.confirmedOrder = JSON.parse(JSON.stringify(window.originalOrder));
+  window.pendingOrder = [];
+  window.hasUnconfirmedChanges = false;
+
+  // UI 업데이트
+  updateOrderDisplay();
+  updatePrimaryActionButton();
+  showPOSNotification('수정사항이 초기화되었습니다.', 'info');
+};
+
+// 미확정 주문 확정 함수
+window.confirmPendingOrder = async function() {
+  if (!window.pendingOrder || window.pendingOrder.length === 0) {
+    showPOSNotification('확정할 수정사항이 없습니다.', 'warning');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/pos/stores/${storeId}/confirm-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableNumber: window.currentTable,
+        items: window.currentOrder,
+        modifications: window.pendingOrder
+      })
+    });
+
+    if (response.ok) {
+      // 확정된 주문에 미확정 수정사항 반영
+      window.pendingOrder.forEach(item => {
+        item.isConfirmed = true;
+        item.confirmedAt = new Date().toISOString();
+      });
+
+      window.confirmedOrder = [...window.currentOrder];
+      window.pendingOrder = [];
+      window.hasUnconfirmedChanges = false;
+
+      // 원본 주문 상태 업데이트
+      window.saveOriginalOrder();
+
+      showPOSNotification('주문 수정사항이 확정되었습니다.', 'success');
+      await loadMixedTableOrders(window.currentTable);
+      updatePrimaryActionButton();
+    }
+  } catch (error) {
+    console.error('주문 확정 실패:', error);
+    showPOSNotification('주문 확정에 실패했습니다.', 'error');
+  }
+};
+
+// 주문 수정사항 추적 함수
+window.trackOrderModification = function(item, action, originalQty = null) {
+  if (!window.pendingOrder) window.pendingOrder = [];
+
+  const existingModIndex = window.pendingOrder.findIndex(mod =>
+    mod.menu_name === item.menu_name && mod.originalIndex === item.originalIndex
+  );
+
+  if (existingModIndex >= 0) {
+    window.pendingOrder[existingModIndex] = {
+      ...item,
+      action: action,
+      isModification: true,
+      modifiedAt: new Date().toISOString()
+    };
+  } else {
+    window.pendingOrder.push({
+      ...item,
+      action: action,
+      originalQty: originalQty,
+      isModification: true,
+      modifiedAt: new Date().toISOString()
+    });
+  }
+
+  window.hasUnconfirmedChanges = true;
+  updatePrimaryActionButton();
+};
+
+// 수량 변경 함수들
+window.increaseQuantity = function(index) {
+  if (window.currentOrder[index]) {
+    const originalQty = window.currentOrder[index].qty;
+    window.currentOrder[index].qty += 1;
+    window.currentOrder[index].amount = window.currentOrder[index].qty * window.currentOrder[index].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[index],
+      originalIndex: index
+    }, 'quantity_increase', originalQty);
+
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+window.decreaseQuantity = function(index) {
+  if (window.currentOrder[index] && window.currentOrder[index].qty > 1) {
+    const originalQty = window.currentOrder[index].qty;
+    window.currentOrder[index].qty -= 1;
+    window.currentOrder[index].amount = window.currentOrder[index].qty * window.currentOrder[index].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[index],
+      originalIndex: index
+    }, 'quantity_decrease', originalQty);
+
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+window.removeItem = function(index) {
+  if (window.currentOrder[index]) {
+    const removedItem = { ...window.currentOrder[index] };
+
+    window.trackOrderModification({
+      ...removedItem,
+      originalIndex: index
+    }, 'remove');
+
+    window.currentOrder.splice(index, 1);
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+// 메뉴 추가 함수
+window.addToOrder = function(menu) {
+  if (!window.currentOrder) window.currentOrder = [];
+
+  const existingItemIndex = window.currentOrder.findIndex(item => item.menu_name === menu.name);
+
+  if (existingItemIndex >= 0) {
+    const originalQty = window.currentOrder[existingItemIndex].qty;
+    window.currentOrder[existingItemIndex].qty += 1;
+    window.currentOrder[existingItemIndex].amount = window.currentOrder[existingItemIndex].qty * window.currentOrder[existingItemIndex].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[existingItemIndex],
+      originalIndex: existingItemIndex
+    }, 'add_existing', originalQty);
+  } else {
+    const newItem = {
+      menu_name: menu.name,
+      qty: 1,
+      price: menu.price,
+      amount: menu.price,
+      isConfirmed: false,
+      isNewItem: true
+    };
+
+    window.currentOrder.push(newItem);
+
+    window.trackOrderModification({
+      ...newItem,
+      originalIndex: window.currentOrder.length - 1
+    }, 'add_new');
+  }
+
+  updateOrderDisplay();
+  updateTotal();
+  updatePrimaryActionButton();
+};
+
+// 주문 표시 업데이트
+function updateOrderDisplay() {
+  const orderList = document.getElementById('current-order-list');
+  if (!orderList || !window.currentOrder) return;
+
+  let orderHTML = '';
+
+  window.currentOrder.forEach((item, index) => {
+    const isConfirmed = item.isConfirmed || false;
+    const isModified = window.pendingOrder && window.pendingOrder.some(mod =>
+      mod.menu_name === item.menu_name && mod.originalIndex === index
+    );
+
+    let statusClass = 'pending';
+    let statusText = '미확정';
+    let modificationIndicator = '';
+
+    if (isConfirmed && !isModified) {
+      statusClass = 'confirmed';
+      statusText = '확정';
+    } else if (isConfirmed && isModified) {
+      statusClass = 'modified';
+      statusText = '수정됨';
+      modificationIndicator = '<span class="modification-indicator">📝</span>';
+    } else if (item.isNewItem) {
+      statusClass = 'new-item';
+      statusText = '신규';
+      modificationIndicator = '<span class="new-indicator">✨</span>';
+    }
+
+    orderHTML += `
+      <div class="order-item ${statusClass}" data-index="${index}">
+        <div class="item-info">
+          <span class="item-name">${item.menu_name}</span>
+          <span class="item-status ${statusClass}">
+            ${modificationIndicator}${statusText}
+          </span>
+        </div>
+        <div class="item-controls">
+          <button onclick="decreaseQuantity(${index})" class="qty-btn">-</button>
+          <span class="qty">${item.qty}</span>
+          <button onclick="increaseQuantity(${index})" class="qty-btn">+</button>
+          <span class="price">${item.amount?.toLocaleString() || 0}원</span>
+          <button onclick="removeItem(${index})" class="remove-btn">×</button>
+        </div>
+      </div>
+    `;
+  });
+
+  orderList.innerHTML = orderHTML;
+}
+
+// Primary Action 버튼 업데이트
+function updatePrimaryActionButton() {
+  const primaryBtn = document.getElementById('primaryAction-btn');
+  if (!primaryBtn) return;
+
+  if (!window.currentOrder || window.currentOrder.length === 0) {
+    primaryBtn.textContent = '주문하기';
+    primaryBtn.disabled = true;
+    primaryBtn.className = 'primary-action-btn disabled';
+    return;
+  }
+
+  // 미확정 수정사항이 있는 경우
+  if (window.hasUnconfirmedChanges && window.pendingOrder && window.pendingOrder.length > 0) {
+    primaryBtn.textContent = '수정사항 확정';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn modify-confirm';
+
+    // 수정사항 취소 버튼 추가/표시
+    let cancelBtn = document.getElementById('cancel-changes-btn');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'cancel-changes-btn';
+      cancelBtn.className = 'secondary-action-btn cancel';
+      cancelBtn.textContent = '수정 취소';
+      cancelBtn.onclick = window.revertChanges;
+      primaryBtn.parentNode.insertBefore(cancelBtn, primaryBtn.nextSibling);
+    }
+    cancelBtn.style.display = 'inline-block';
+    return;
+  }
+
+  // 수정사항 취소 버튼 숨기기
+  const cancelBtn = document.getElementById('cancel-changes-btn');
+  if (cancelBtn) {
+    cancelBtn.style.display = 'none';
+  }
+
+  const hasUnconfirmed = window.currentOrder.some(item => !item.isConfirmed);
+
+  if (hasUnconfirmed) {
+    primaryBtn.textContent = '주문 확정';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn confirm';
+  } else {
+    primaryBtn.textContent = '결제하기';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn payment';
+  }
+}
+
+// Primary Action 핸들러
+function handlePrimaryAction() {
+  const primaryBtn = document.getElementById('primaryAction-btn');
+  if (!primaryBtn || primaryBtn.disabled) return;
+
+  if (primaryBtn.className.includes('payment')) {
+    window.processPOSPayment();
+  } else if (primaryBtn.className.includes('modify-confirm')) {
+    window.confirmPendingOrder();
+  } else if (primaryBtn.className.includes('confirm')) {
+    window.confirmOrder();
+  }
+}
+
+// 테이블 선택 함수
+async function selectTableFromMap(tableNumber) {
+  window.currentTable = tableNumber;
+
+  await loadMixedTableOrders(tableNumber);
+
+  // 원본 주문 상태 저장
+  window.saveOriginalOrder();
+
+  updateTableInfo();
+  updatePrimaryActionButton();
+
+  try {
+    console.log(`🪑 테이블 ${tableNumber} 선택 - OKPOS 주문 화면으로 전환`);
+
+    window.currentView = 'order';
+    window.selectedItems = [];
+    window.inputMode = 'quantity';
+    window.currentInput = '';
+
+    document.getElementById('tableMapView').classList.add('hidden');
+    document.getElementById('orderView').classList.remove('hidden');
+
+    document.getElementById('orderTableTitle').textContent = `테이블 ${tableNumber} - 주문/결제`;
+
+    renderMenuCategories();
+    renderMenuGrid();
+
+    showPOSNotification(`테이블 ${tableNumber} OKPOS 주문 화면으로 전환됨`);
+
+  } catch (error) {
+    console.error('❌ 테이블 선택 실패:', error);
+    showPOSNotification('테이블 선택에 실패했습니다.', 'error');
+  }
+}
+
+// 주문 확정 함수
+window.confirmOrder = async function() {
+  if (!window.currentOrder || window.currentOrder.length === 0) {
+    showPOSNotification('확정할 주문이 없습니다.', 'warning');
+    return;
+  }
+
+  // 미확정 수정사항이 있으면 confirmPendingOrder 호출
+  if (window.hasUnconfirmedChanges && window.pendingOrder && window.pendingOrder.length > 0) {
+    return await window.confirmPendingOrder();
+  }
+
+  try {
+    const response = await fetch(`/api/pos/stores/${storeId}/confirm-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableNumber: window.currentTable,
+        items: window.currentOrder
+      })
+    });
+
+    if (response.ok) {
+      showPOSNotification('주문이 확정되었습니다.', 'success');
+      await loadMixedTableOrders(window.currentTable);
+      updatePrimaryActionButton();
+    }
+  } catch (error) {
+    console.error('주문 확정 실패:', error);
+    showPOSNotification('주문 확정에 실패했습니다.', 'error');
+  }
+};
+
+// 주문 수정 관리 상태 초기화
+window.originalOrder = []; // 원본 주문 상태
+window.hasUnconfirmedChanges = false;
+window.pendingOrder = []; // 미확정 수정사항
+
+// 원본 주문 상태 저장
+window.saveOriginalOrder = function() {
+  window.originalOrder = JSON.parse(JSON.stringify(window.confirmedOrder || []));
+};
+
+// 수정사항 복원 (초기화)
+window.revertChanges = function() {
+  window.currentOrder = JSON.parse(JSON.stringify(window.originalOrder));
+  window.confirmedOrder = JSON.parse(JSON.stringify(window.originalOrder));
+  window.pendingOrder = [];
+  window.hasUnconfirmedChanges = false;
+
+  // UI 업데이트
+  updateOrderDisplay();
+  updatePrimaryActionButton();
+  showPOSNotification('수정사항이 초기화되었습니다.', 'info');
+};
+
+// 미확정 주문 확정 함수
+window.confirmPendingOrder = async function() {
+  if (!window.pendingOrder || window.pendingOrder.length === 0) {
+    showPOSNotification('확정할 수정사항이 없습니다.', 'warning');
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/pos/stores/${storeId}/confirm-order`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        tableNumber: window.currentTable,
+        items: window.currentOrder,
+        modifications: window.pendingOrder
+      })
+    });
+
+    if (response.ok) {
+      // 확정된 주문에 미확정 수정사항 반영
+      window.pendingOrder.forEach(item => {
+        item.isConfirmed = true;
+        item.confirmedAt = new Date().toISOString();
+      });
+
+      window.confirmedOrder = [...window.currentOrder];
+      window.pendingOrder = [];
+      window.hasUnconfirmedChanges = false;
+
+      // 원본 주문 상태 업데이트
+      window.saveOriginalOrder();
+
+      showPOSNotification('주문 수정사항이 확정되었습니다.', 'success');
+      await loadMixedTableOrders(window.currentTable);
+      updatePrimaryActionButton();
+    }
+  } catch (error) {
+    console.error('주문 확정 실패:', error);
+    showPOSNotification('주문 확정에 실패했습니다.', 'error');
+  }
+};
+
+// 주문 수정사항 추적 함수
+window.trackOrderModification = function(item, action, originalQty = null) {
+  if (!window.pendingOrder) window.pendingOrder = [];
+
+  const existingModIndex = window.pendingOrder.findIndex(mod =>
+    mod.menu_name === item.menu_name && mod.originalIndex === item.originalIndex
+  );
+
+  if (existingModIndex >= 0) {
+    window.pendingOrder[existingModIndex] = {
+      ...item,
+      action: action,
+      isModification: true,
+      modifiedAt: new Date().toISOString()
+    };
+  } else {
+    window.pendingOrder.push({
+      ...item,
+      action: action,
+      originalQty: originalQty,
+      isModification: true,
+      modifiedAt: new Date().toISOString()
+    });
+  }
+
+  window.hasUnconfirmedChanges = true;
+  updatePrimaryActionButton();
+};
+
+// 수량 변경 함수들
+window.increaseQuantity = function(index) {
+  if (window.currentOrder[index]) {
+    const originalQty = window.currentOrder[index].qty;
+    window.currentOrder[index].qty += 1;
+    window.currentOrder[index].amount = window.currentOrder[index].qty * window.currentOrder[index].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[index],
+      originalIndex: index
+    }, 'quantity_increase', originalQty);
+
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+window.decreaseQuantity = function(index) {
+  if (window.currentOrder[index] && window.currentOrder[index].qty > 1) {
+    const originalQty = window.currentOrder[index].qty;
+    window.currentOrder[index].qty -= 1;
+    window.currentOrder[index].amount = window.currentOrder[index].qty * window.currentOrder[index].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[index],
+      originalIndex: index
+    }, 'quantity_decrease', originalQty);
+
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+window.removeItem = function(index) {
+  if (window.currentOrder[index]) {
+    const removedItem = { ...window.currentOrder[index] };
+
+    window.trackOrderModification({
+      ...removedItem,
+      originalIndex: index
+    }, 'remove');
+
+    window.currentOrder.splice(index, 1);
+    updateOrderDisplay();
+    updateTotal();
+  }
+};
+
+// 메뉴 추가 함수
+window.addToOrder = function(menu) {
+  if (!window.currentOrder) window.currentOrder = [];
+
+  const existingItemIndex = window.currentOrder.findIndex(item => item.menu_name === menu.name);
+
+  if (existingItemIndex >= 0) {
+    const originalQty = window.currentOrder[existingItemIndex].qty;
+    window.currentOrder[existingItemIndex].qty += 1;
+    window.currentOrder[existingItemIndex].amount = window.currentOrder[existingItemIndex].qty * window.currentOrder[existingItemIndex].price;
+
+    window.trackOrderModification({
+      ...window.currentOrder[existingItemIndex],
+      originalIndex: existingItemIndex
+    }, 'add_existing', originalQty);
+  } else {
+    const newItem = {
+      menu_name: menu.name,
+      qty: 1,
+      price: menu.price,
+      amount: menu.price,
+      isConfirmed: false,
+      isNewItem: true
+    };
+
+    window.currentOrder.push(newItem);
+
+    window.trackOrderModification({
+      ...newItem,
+      originalIndex: window.currentOrder.length - 1
+    }, 'add_new');
+  }
+
+  updateOrderDisplay();
+  updateTotal();
+  updatePrimaryActionButton();
+};
+
+// 주문 표시 업데이트
+function updateOrderDisplay() {
+  const orderList = document.getElementById('current-order-list');
+  if (!orderList || !window.currentOrder) return;
+
+  let orderHTML = '';
+
+  window.currentOrder.forEach((item, index) => {
+    const isConfirmed = item.isConfirmed || false;
+    const isModified = window.pendingOrder && window.pendingOrder.some(mod =>
+      mod.menu_name === item.menu_name && mod.originalIndex === index
+    );
+
+    let statusClass = 'pending';
+    let statusText = '미확정';
+    let modificationIndicator = '';
+
+    if (isConfirmed && !isModified) {
+      statusClass = 'confirmed';
+      statusText = '확정';
+    } else if (isConfirmed && isModified) {
+      statusClass = 'modified';
+      statusText = '수정됨';
+      modificationIndicator = '<span class="modification-indicator">📝</span>';
+    } else if (item.isNewItem) {
+      statusClass = 'new-item';
+      statusText = '신규';
+      modificationIndicator = '<span class="new-indicator">✨</span>';
+    }
+
+    orderHTML += `
+      <div class="order-item ${statusClass}" data-index="${index}">
+        <div class="item-info">
+          <span class="item-name">${item.menu_name}</span>
+          <span class="item-status ${statusClass}">
+            ${modificationIndicator}${statusText}
+          </span>
+        </div>
+        <div class="item-controls">
+          <button onclick="decreaseQuantity(${index})" class="qty-btn">-</button>
+          <span class="qty">${item.qty}</span>
+          <button onclick="increaseQuantity(${index})" class="qty-btn">+</button>
+          <span class="price">${item.amount?.toLocaleString() || 0}원</span>
+          <button onclick="removeItem(${index})" class="remove-btn">×</button>
+        </div>
+      </div>
+    `;
+  });
+
+  orderList.innerHTML = orderHTML;
+}
+
+// Primary Action 버튼 업데이트
+function updatePrimaryActionButton() {
+  const primaryBtn = document.getElementById('primaryAction-btn');
+  if (!primaryBtn) return;
+
+  if (!window.currentOrder || window.currentOrder.length === 0) {
+    primaryBtn.textContent = '주문하기';
+    primaryBtn.disabled = true;
+    primaryBtn.className = 'primary-action-btn disabled';
+    return;
+  }
+
+  // 미확정 수정사항이 있는 경우
+  if (window.hasUnconfirmedChanges && window.pendingOrder && window.pendingOrder.length > 0) {
+    primaryBtn.textContent = '수정사항 확정';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn modify-confirm';
+
+    // 수정사항 취소 버튼 추가/표시
+    let cancelBtn = document.getElementById('cancel-changes-btn');
+    if (!cancelBtn) {
+      cancelBtn = document.createElement('button');
+      cancelBtn.id = 'cancel-changes-btn';
+      cancelBtn.className = 'secondary-action-btn cancel';
+      cancelBtn.textContent = '수정 취소';
+      cancelBtn.onclick = window.revertChanges;
+      primaryBtn.parentNode.insertBefore(cancelBtn, primaryBtn.nextSibling);
+    }
+    cancelBtn.style.display = 'inline-block';
+    return;
+  }
+
+  // 수정사항 취소 버튼 숨기기
+  const cancelBtn = document.getElementById('cancel-changes-btn');
+  if (cancelBtn) {
+    cancelBtn.style.display = 'none';
+  }
+
+  const hasUnconfirmed = window.currentOrder.some(item => !item.isConfirmed);
+
+  if (hasUnconfirmed) {
+    primaryBtn.textContent = '주문 확정';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn confirm';
+  } else {
+    primaryBtn.textContent = '결제하기';
+    primaryBtn.disabled = false;
+    primaryBtn.className = 'primary-action-btn payment';
+  }
+}
+
+// Primary Action 핸들러
+function handlePrimaryAction() {
+  const primaryBtn = document.getElementById('primaryAction-btn');
+  if (!primaryBtn || primaryBtn.disabled) return;
+
+  if (primaryBtn.className.includes('payment')) {
+    window.processPOSPayment();
+  } else if (primaryBtn.className.includes('modify-confirm')) {
+    window.confirmPendingOrder();
+  } else if (primaryBtn.className.includes('confirm')) {
+    window.confirmOrder();
+  }
+}
+
+
+// 미확정 주문 상태 표시 CSS 추가
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = `
+.order-item.confirmed {
+          background-color: #f0f9ff;
+          border-left: 4px solid #3b82f6;
+        }
+
+        .order-item.pending {
+          background-color: #fef3c7;
+          border-left: 4px solid #f59e0b;
+        }
+
+        .order-item.modified {
+          background-color: #fef2f2;
+          border-left: 4px solid #ef4444;
+          animation: pulse 2s infinite;
+        }
+
+        .order-item.new-item {
+          background-color: #f0fdf4;
+          border-left: 4px solid #22c55e;
+        }
+
+        .modification-indicator, .new-indicator {
+          margin-right: 4px;
+          font-size: 12px;
+        }
+
+        .secondary-action-btn {
+          padding: 12px 24px;
+          border: 2px solid #6b7280;
+          background: white;
+          color: #374151;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 600;
+          margin-left: 8px;
+          transition: all 0.2s;
+        }
+
+        .secondary-action-btn:hover {
+          background-color: #f9fafb;
+          border-color: #4b5563;
+        }
+
+        .secondary-action-btn.cancel:hover {
+          background-color: #fef2f2;
+          border-color: #dc2626;
+          color: #dc2626;
+        }
+
+        .primary-action-btn.modify-confirm {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+`;
+document.head.appendChild(styleSheet);
+
 
 // 전역 함수로 노출
 window.renderPOS = renderPOS;
@@ -1712,7 +2411,7 @@ window.showDailySales = showDailySales;
 window.showReservations = showReservations;
 window.showDeliveryOrders = showDeliveryOrders;
 window.showDailyStats = showDailyStats;
-window.showKitchenStatus = showKitchenStatus;
+window.showKitchenStatus = showPOSSettings;
 window.showPOSSettings = showPOSSettings;
 window.saveOrderToKitchen = saveOrderToKitchen;
 window.confirmPendingOrder = confirmPendingOrder;
@@ -1725,3 +2424,11 @@ window.toggleAdvancedPanel = toggleAdvancedPanel;
 window.holdCurrentOrder = holdCurrentOrder;
 window.voidOrder = voidOrder;
 window.cancelOrderChanges = cancelOrderChanges;
+
+// 주문 수정 관련 함수
+window.confirmOrder = confirmOrder;
+window.saveOriginalOrder = saveOriginalOrder;
+window.revertChanges = revertChanges;
+window.trackOrderModification = trackOrderModification;
+window.updateOrderDisplay = updateOrderDisplay;
+window.updatePrimaryActionButton = updatePrimaryActionButton;
