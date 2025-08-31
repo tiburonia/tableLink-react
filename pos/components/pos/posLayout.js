@@ -2116,12 +2116,14 @@ function saveOrderAndGoToMap() {
   return handlePrimaryAction();
 }
 
-// 전역 함수로 노출
-window.renderPOSLayout = renderPOSLayout;
-window.logoutPOS = logoutPOS;
-window.saveOrderAndGoToMap = saveOrderAndGoToMap;
-window.handlePrimaryAction = handlePrimaryAction;
-window.openPaymentModal = openPaymentModal;
-window.closePaymentModal = closePaymentModal;
-window.confirmPayment = confirmPayment;
-window.processFinalPayment = processFinalPayment;
+// 전역 함수로 노출 (하위 호환성)
+if (typeof window !== 'undefined') {
+  window.renderPOSLayout = renderPOSLayout;
+  window.logoutPOS = logoutPOS;
+  window.saveOrderAndGoToMap = saveOrderAndGoToMap;
+  window.handlePrimaryAction = handlePrimaryAction;
+  window.openPaymentModal = openPaymentModal;
+  window.closePaymentModal = closePaymentModal;
+  window.confirmPayment = confirmPayment;
+  window.processFinalPayment = processFinalPayment;
+}

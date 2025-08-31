@@ -1,6 +1,6 @@
 
-// POS 알림 시스템
-function showPOSNotification(message, type = 'info') {
+// POS 알림 시스템 (ES6 모듈)
+export function showPOSNotification(message, type = 'info') {
   // 기존 알림 제거
   const existingNotification = document.querySelector('.pos-notification');
   if (existingNotification) {
@@ -96,9 +96,6 @@ function showPOSNotification(message, type = 'info') {
     }
   }, 5000);
 }
-
-// ES6 모듈 export
-export { showPOSNotification };
 
 // 전역 함수 등록 (하위 호환성)
 window.showPOSNotification = showPOSNotification;

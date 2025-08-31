@@ -8,7 +8,7 @@ import { POSPaymentManager } from './modules/posPaymentManager.js';
 import { POSTempStorage } from './modules/posTempStorage.js';
 import { POSUIRenderer } from './modules/posUIRenderer.js';
 import { showPOSNotification } from '../../utils/posNotification.js';
-import { renderPOSLayout } from './modules/posLayout.js'; // renderPOSLayout 함수 import
+import { renderPOSLayout } from './posLayout.js'; // renderPOSLayout 함수 import
 
 // POS 시스템 초기화
 async function renderPOS() {
