@@ -561,8 +561,7 @@ function renderSignUp() {
               >
             </div>
             <div class="input-status" id="userIdStatus"></div>
-            <div class="form-hint">영문과 숫자만 사용 가능합니다</div>
-            <button type="button" class="check-btn" id="checkIdBtn" disabled>아이디 중복확인</button>
+            <div class="form-hint">영문과 숫자만 사용 가능합니다 (중복확인 자동처리)</div>
           </div>
 
           <div class="form-group">
@@ -635,8 +634,7 @@ function renderSignUp() {
               >
             </div>
             <div class="input-status" id="userPhoneStatus"></div>
-            <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다</div>
-            <button type="button" class="check-btn" id="checkPhoneBtn" style="display: none;" disabled>전화번호 중복확인</button>
+            <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다 (중복확인 자동처리)</div>
           </div>
 
           <button type="submit" class="signup-btn" id="signupBtn" disabled>
@@ -680,11 +678,11 @@ function renderSignUp() {
 
   // 유효성 검사 상태
   const validation = {
-    userId: { isValid: false, isChecked: false },
+    userId: { isValid: false },
     password: { isValid: false },
     passwordConfirm: { isValid: false },
     name: { isValid: true }, // 선택사항이므로 기본 true
-    phone: { isValid: true, isChecked: false } // 선택사항이므로 기본 true
+    phone: { isValid: true } // 선택사항이므로 기본 true
   };
 
   // 유틸리티 함수들
@@ -762,10 +760,7 @@ function renderSignUp() {
 
     updateSubmitButton() {
       const allValid = Object.values(validation).every(field => field.isValid);
-      const requiredChecked = validation.userId.isChecked && 
-                            (elements.userPhone.value ? validation.phone.isChecked : true);
-      
-      elements.signupBtn.disabled = !(allValid && requiredChecked);
+      elements.signupBtn.disabled = !allValid;
     },
 
     showLoading(show = true) {

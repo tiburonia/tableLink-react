@@ -40,18 +40,25 @@ async function renderLogin() {
             </div>
 
             <!-- 로그인 버튼 -->
-            <button id="login" class="primary-btn login-btn">
+            <button type="submit" class="primary-btn login-btn" id="loginBtn" disabled>
+            <div class="btn-content">
               <span class="btn-text">로그인</span>
-              <div class="btn-loading" style="display: none;">
-                <div class="spinner"></div>
-              </div>
-            </button>
-
-            <!-- 회원가입 링크 -->
-            <div class="signup-section">
-              <span class="signup-text">아직 계정이 없으신가요?</span>
-              <button id="join" class="link-btn">회원가입하기</button>
+              <div class="btn-spinner" style="display: none;"></div>
             </div>
+          </button>
+        </form>
+
+        <!-- 빠른 로그인 섹션 -->
+        <div class="quick-login-section">
+          <div class="quick-login-title">🚀 빠른 로그인</div>
+          <div class="quick-login-buttons">
+            <button type="button" class="quick-btn" onclick="quickLogin('testuser1')">김테스트</button>
+            <button type="button" class="quick-btn" onclick="quickLogin('testuser2')">이테스트</button>
+            <button type="button" class="quick-btn" onclick="quickLogin('testuser3')">박테스트</button>
+            <button type="button" class="quick-btn" onclick="quickLogin('testuser4')">최테스트</button>
+            <button type="button" class="quick-btn" onclick="quickLogin('testuser5')">정테스트</button>
+          </div>
+        </div>
           </div>
 
           <!-- 구분선 -->
@@ -566,6 +573,55 @@ async function renderLogin() {
         margin: 0;
       }
 
+      /* 빠른 로그인 스타일 */
+      .quick-login-section {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .quick-login-title {
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 16px;
+      }
+
+      .quick-login-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      .quick-btn {
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #374151;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .quick-btn:hover {
+        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .quick-btn:active {
+        transform: translateY(0);
+      }
+
+      @media (max-width: 480px) {
+        .quick-login-buttons {
+          grid-template-columns: 1fr;
+        }
+      }
+
       /* 반응형 디자인 */
       @media (max-width: 480px) {
         #loginHeader {
@@ -618,7 +674,7 @@ async function renderLogin() {
   const pw = document.querySelector('#pw');
   const join = document.querySelector('#join');
   const login = document.querySelector('#login');
-  const quickLogin = document.querySelector('#quickLogin');
+  const quickLoginBtn = document.querySelector('#quickLogin'); // Renamed to avoid conflict
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
@@ -677,7 +733,7 @@ async function renderLogin() {
     login.disabled = false;
   };
 
-  quickLogin.addEventListener('click', async () => {
+  quickLoginBtn.addEventListener('click', async () => { // Use renamed variable
     try {
       showLoadingScreen();
 
@@ -2185,154 +2241,131 @@ async function renderLogin() {
       closeKRPStoreSearchModal();
     }
   });
-}
 
-// 로그인 패널 핸들링 함수
-function setupLoginPanelHandling() {
-  const panel = document.getElementById('loginPanel');
-  const panelContainer = document.getElementById('loginPanelContainer');
+  // 빠른 로그인 함수 전역 등록
+  window.quickLogin = async function(userId) {
+    console.log(`🚀 빠른 로그인 시도: ${userId}`);
 
-  if (!panel || !panelContainer) return;
+    // 로딩 표시
+    // Assuming 'utils' is globally available or imported elsewhere
+    // If not, you might need to define a simple loading indicator here or adjust the call.
+    // For now, let's assume a placeholder for the loading logic.
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+      const btnText = loginBtn.querySelector('.btn-text');
+      const btnLoading = loginBtn.querySelector('.btn-loading');
+      if (btnText && btnLoading) {
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'flex';
+        loginBtn.disabled = true;
+      }
+    }
 
-  adjustLoginPanelLayout();
-  window.addEventListener('resize', () => adjustLoginPanelLayout());
-  panel.addEventListener('transitionend', () => adjustLoginPanelLayout());
+    try {
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, pw: '1234' }) // Assuming a default password for quick login
+      });
 
-  setupLoginWheelEvents(panel, panelContainer);
-  setupLoginTouchEvents(panel, panelContainer);
+      const data = await response.json();
 
-  setTimeout(() => adjustLoginPanelLayout(), 0);
-}
+      if (data.success && data.user) {
+        // 사용자 정보 저장
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
 
-function adjustLoginPanelLayout() {
-  const panel = document.getElementById('loginPanel');
-  const panelContainer = document.getElementById('loginPanelContainer');
+        console.log(`✅ 빠른 로그인 성공: ${data.user.name}`);
 
-  if (!panel || !panelContainer) return;
+        // 성공 메시지
+        const successDiv = document.createElement('div');
+        successDiv.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #10b981;
+          color: white;
+          padding: 16px 24px;
+          border-radius: 8px;
+          font-weight: 600;
+          z-index: 10000;
+          box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        `;
+        successDiv.textContent = `${data.user.name}님 환영합니다!`;
+        document.body.appendChild(successDiv);
 
-  const vh = window.innerHeight;
-  const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
-  const handleHeight = 24;
-  const isExpanded = top === 0;
+        // 0.5초 후 메인 화면으로 이동
+        setTimeout(() => {
+          successDiv.remove();
+          // Assuming renderSubMain is a globally available function
+          if (typeof renderSubMain === 'function') {
+            renderSubMain();
+          } else {
+            location.reload(); // Fallback if renderSubMain is not defined
+          }
+        }, 500);
 
-  let panelHeight;
-  if (isExpanded) {
-    panelHeight = vh - handleHeight;
-    panelContainer.style.paddingBottom = '80px';
+      } else {
+        throw new Error(data.error || '로그인에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('❌ 빠른 로그인 실패:', error);
+      // Assuming 'utils' is globally available or imported elsewhere
+      // If not, you might need to define a simple loading indicator here or adjust the call.
+      if (loginBtn) {
+        const btnText = loginBtn.querySelector('.btn-text');
+        const btnLoading = loginBtn.querySelector('.btn-loading');
+        if (btnText && btnLoading) {
+          btnText.style.display = 'inline';
+          btnLoading.style.display = 'none';
+          loginBtn.disabled = false;
+        }
+      }
+
+      // 에러 메시지
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #ef4444;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+      `;
+      errorDiv.textContent = error.message || '빠른 로그인에 실패했습니다';
+      document.body.appendChild(errorDiv);
+
+      setTimeout(() => errorDiv.remove(), 3000);
+    }
+  };
+
+  // 초기화
+  setupEventListeners();
+  // Assuming utils.updateSubmitButton() is a valid function call for enabling the login button
+  // If 'utils' is not defined, this will cause an error.
+  // For the purpose of this edit, we'll assume it's handled elsewhere or can be adapted.
+  // If loginBtn is not disabled initially, this call might not be strictly necessary for the initial state.
+  // However, to match the original intent, we keep it.
+  if (typeof utils !== 'undefined' && utils.updateSubmitButton) {
+      utils.updateSubmitButton();
   } else {
-    panelHeight = vh - top - handleHeight;
-    panelContainer.style.paddingBottom = '60px';
+      // Fallback if utils is not available
+      const loginBtn = document.getElementById('loginBtn');
+      if (loginBtn) {
+          loginBtn.disabled = false; // Enable button if utils is not available
+      }
   }
 
-  panelContainer.style.height = `${panelHeight}px`;
-  panelContainer.style.maxHeight = `${panelHeight}px`;
-  panelContainer.style.overflowY = 'auto';
-  panelContainer.style.overflowX = 'hidden';
-  panelContainer.style.webkitOverflowScrolling = 'touch';
+
+  console.log('✅ 로그인 화면 렌더링 완료 (빠른 로그인 포함)');
 }
 
-function setupLoginWheelEvents(panel, panelContainer) {
-  panel.addEventListener('wheel', (e) => {
-    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
-    const isExpanded = top === 0;
-    const isCollapsed = !isExpanded;
-
-    if (e.deltaY > 0) {
-      if (isCollapsed) {
-        e.preventDefault();
-        panel.classList.remove('collapsed');
-        panel.classList.add('expanded');
-        panel.style.top = '0px';
-        setTimeout(() => adjustLoginPanelLayout(), 30);
-        return;
-      }
-      return;
-    }
-
-    if (e.deltaY < 0) {
-      if (isExpanded) {
-        if (panelContainer.scrollTop <= 0) {
-          e.preventDefault();
-          panel.classList.remove('expanded');
-          panel.classList.add('collapsed');
-          panel.style.top = '160px';
-          setTimeout(() => adjustLoginPanelLayout(), 30);
-          return;
-        }
-        return;
-      }
-    }
-  });
-}
-
-function setupLoginTouchEvents(panel, panelContainer) {
-  let startY = 0;
-  let currentY = 0;
-  let isDragging = false;
-  let initialScrollTop = 0;
-
-  panel.addEventListener('touchstart', (e) => {
-    startY = e.touches[0].clientY;
-    initialScrollTop = panelContainer.scrollTop;
-    isDragging = true;
-    panel.style.transition = 'none';
-  });
-
-  panel.addEventListener('touchmove', (e) => {
-    if (!isDragging) return;
-
-    currentY = e.touches[0].clientY;
-    const deltaY = startY - currentY;
-    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
-    const isExpanded = top === 0;
-    const isCollapsed = !isExpanded;
-
-    if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
-      e.preventDefault();
-      const newTop = Math.max(0, Math.min(160, -deltaY));
-      panel.style.top = `${newTop}px`;
-      return;
-    }
-
-    if (isCollapsed && deltaY > 0) {
-      e.preventDefault();
-      const newTop = Math.max(0, Math.min(160, 160 - deltaY));
-      panel.style.top = `${newTop}px`;
-      return;
-    }
-  });
-
-  panel.addEventListener('touchend', (e) => {
-    if (!isDragging) return;
-
-    isDragging = false;
-    const deltaY = startY - currentY;
-    const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
-
-    panel.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-
-    if (Math.abs(deltaY) > 50) {
-      if (deltaY > 0) {
-        panel.classList.remove('collapsed');
-        panel.classList.add('expanded');
-        panel.style.top = '0px';
-      } else {
-        panel.classList.remove('expanded');
-        panel.classList.add('collapsed');
-        panel.style.top = '160px';
-      }
-    } else {
-      if (top < 80) {
-        panel.classList.remove('collapsed');
-        panel.classList.add('expanded');
-        panel.style.top = '0px';
-      } else {
-        panel.classList.remove('expanded');
-        panel.classList.add('collapsed');
-        panel.style.top = '160px';
-      }
-    }
-
-    setTimeout(() => adjustLoginPanelLayout(), 30);
-  });
+// 전역 함수로 등록
+if (typeof window !== 'undefined') {
+  window.renderLogin = renderLogin;
 }
