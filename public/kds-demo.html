@@ -1,461 +1,269 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KDS Demo - TableLink</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background: #1a1a1a;
-            color: #fff;
-            padding: 20px;
-        }
-
-        .kds-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #2a2a2a;
-            border-radius: 10px;
-        }
-
-        .kds-title {
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #ff4444;
-        }
-
-        .status-indicator.connected {
-            background: #44ff44;
-        }
-
-        .kds-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .kds-btn {
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .kds-btn:hover {
-            background: #0056b3;
-        }
-
-        .orders-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .order-card {
-            background: #2a2a2a;
-            border-radius: 10px;
-            padding: 20px;
-            border-left: 5px solid #666;
-        }
-
-        .order-card.queued {
-            border-left-color: #ffc107;
-        }
-
-        .order-card.cooking {
-            border-left-color: #ff6b35;
-        }
-
-        .order-card.ready {
-            border-left-color: #28a745;
-        }
-
-        .order-card.served {
-            border-left-color: #6c757d;
-        }
-
-        .order-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-        }
-
-        .order-info {
-            font-size: 14px;
-            color: #ccc;
-        }
-
-        .order-status {
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status-queued {
-            background: #ffc107;
-            color: #000;
-        }
-
-        .status-cooking {
-            background: #ff6b35;
-            color: #fff;
-        }
-
-        .status-ready {
-            background: #28a745;
-            color: #fff;
-        }
-
-        .status-served {
-            background: #6c757d;
-            color: #fff;
-        }
-
-        .order-items {
-            margin: 15px 0;
-        }
-
-        .order-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            border-bottom: 1px solid #444;
-        }
-
-        .order-actions {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .start-btn {
-            background: #ff6b35;
-            color: white;
-        }
-
-        .complete-btn {
-            background: #28a745;
-            color: white;
-        }
-
-        .serve-btn {
-            background: #007bff;
-            color: white;
-        }
-
-        .log-panel {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 300px;
-            height: 400px;
-            background: #1e1e1e;
-            border: 1px solid #444;
-            border-radius: 10px;
-            padding: 15px;
-            overflow-y: auto;
-            font-size: 12px;
-            z-index: 1000;
-        }
-
-        .log-entry {
-            margin-bottom: 10px;
-            padding: 5px;
-            background: #2a2a2a;
-            border-radius: 3px;
-        }
-
-        .log-time {
-            color: #888;
-            font-size: 10px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KDS Demo - Kitchen Display System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      color: #2c3e50;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .status.connected { background: #d4edda; color: #155724; }
+    .status.disconnected { background: #f8d7da; color: #721c24; }
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .input-group label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+    input, select, button {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      min-width: 80px;
+    }
+    button:hover { background: #0056b3; }
+    button:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    .events-container {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .event-item {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      border-left: 4px solid #007bff;
+      background: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .event-item.heartbeat {
+      border-left-color: #28a745;
+      opacity: 0.7;
+    }
+    .event-item.line_update {
+      border-left-color: #ffc107;
+    }
+    .event-timestamp {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    .event-data {
+      font-family: 'Courier New', monospace;
+      background: #f8f9fa;
+      padding: 8px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+    .clear-btn {
+      background: #dc3545;
+      float: right;
+    }
+    .clear-btn:hover { background: #c82333; }
+  </style>
 </head>
 <body>
-    <div class="kds-header">
-        <div class="kds-title">🍳 Kitchen Display System</div>
-        <div class="connection-status">
-            <div class="status-indicator" id="connectionStatus"></div>
-            <span id="connectionText">연결 중...</span>
+  <div class="container">
+    <div class="header">
+      <h1>
+        🍳 KDS Demo
+        <span id="connectionStatus" class="status disconnected">연결 안됨</span>
+      </h1>
+      <p>Kitchen Display System 실시간 이벤트 모니터링</p>
+    </div>
+
+    <div class="controls">
+      <div class="input-group">
+        <label>매장 ID:</label>
+        <input type="number" id="storeId" placeholder="1" value="1" min="1">
+      </div>
+
+      <div class="input-group">
+        <label>스테이션 필터:</label>
+        <input type="text" id="stationsFilter" placeholder="FRY,GRILL,DRINK" value="">
+      </div>
+
+      <button id="connectBtn" onclick="connectSSE()">연결</button>
+      <button id="disconnectBtn" onclick="disconnectSSE()" disabled>연결 해제</button>
+      <button class="clear-btn" onclick="clearEvents()">이벤트 지우기</button>
+    </div>
+
+    <div class="events-container" id="eventsContainer">
+      <p style="text-align: center; color: #666; margin-top: 100px;">
+        매장 ID를 입력하고 연결 버튼을 눌러주세요
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let eventSource = null;
+    let eventCount = 0;
+
+    function updateConnectionStatus(connected) {
+      const statusEl = document.getElementById('connectionStatus');
+      const connectBtn = document.getElementById('connectBtn');
+      const disconnectBtn = document.getElementById('disconnectBtn');
+
+      if (connected) {
+        statusEl.textContent = '연결됨';
+        statusEl.className = 'status connected';
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+      } else {
+        statusEl.textContent = '연결 안됨';
+        statusEl.className = 'status disconnected';
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+      }
+    }
+
+    function connectSSE() {
+      const storeId = document.getElementById('storeId').value;
+      const stations = document.getElementById('stationsFilter').value;
+
+      if (!storeId) {
+        alert('매장 ID를 입력해주세요');
+        return;
+      }
+
+      disconnectSSE(); // 기존 연결 해제
+
+      let url = `/api/kds/stream`;
+      if (stations) {
+        url += `?stations=${encodeURIComponent(stations)}`;
+      }
+
+      // SSE에서 헤더를 직접 설정하는 것은 표준 API에서 지원하지 않습니다.
+      // 대신, URL 쿼리 매개변수 또는 다른 방법을 사용해야 합니다.
+      // 여기서는 storeId를 URL에 추가하는 것으로 가정합니다.
+      url += (url.includes('?') ? '&' : '?') + `storeId=${storeId}`;
+
+      eventSource = new EventSource(url);
+
+      eventSource.onopen = function() {
+        updateConnectionStatus(true);
+        addEvent('연결', { type: 'connection', message: `매장 ${storeId} KDS 스트림 연결됨` });
+      };
+
+      eventSource.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          addEvent('이벤트', data);
+        } catch (error) {
+          addEvent('오류', { type: 'parse_error', data: event.data });
+        }
+      };
+
+      eventSource.onerror = function(error) {
+        console.error('SSE 오류:', error);
+        updateConnectionStatus(false);
+        addEvent('오류', { type: 'connection_error', message: 'SSE 연결 오류' });
+      };
+    }
+
+    function disconnectSSE() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+        updateConnectionStatus(false);
+        addEvent('연결', { type: 'disconnection', message: 'SSE 연결 해제됨' });
+      }
+    }
+
+    function addEvent(type, data) {
+      const container = document.getElementById('eventsContainer');
+      const eventEl = document.createElement('div');
+
+      eventCount++;
+
+      const eventClass = data.type === 'heartbeat' ? 'event-item heartbeat' : 
+                        data.type === 'line_update' ? 'event-item line_update' : 'event-item';
+
+      eventEl.className = eventClass;
+      eventEl.innerHTML = `
+        <div class="event-timestamp">
+          #${eventCount} - ${new Date().toLocaleTimeString('ko-KR')} [${type}]
         </div>
-    </div>
+        <div class="event-data">${JSON.stringify(data, null, 2)}</div>
+      `;
 
-    <div class="kds-controls">
-        <button class="kds-btn" onclick="connectSSE()">SSE 연결</button>
-        <button class="kds-btn" onclick="refreshOrders()">주문 새로고침</button>
-        <button class="kds-btn" onclick="toggleLog()">로그 토글</button>
-        <input type="number" id="storeIdInput" placeholder="매장 ID" value="1" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #333; color: white;">
-    </div>
+      container.appendChild(eventEl);
+      container.scrollTop = container.scrollHeight;
 
-    <div class="orders-grid" id="ordersGrid">
-        <!-- 주문 카드들이 여기에 표시됩니다 -->
-    </div>
+      // 하트비트 이벤트는 5초 후 자동 삭제
+      if (data.type === 'heartbeat') {
+        setTimeout(() => {
+          if (eventEl.parentNode) {
+            eventEl.remove();
+          }
+        }, 5000);
+      }
+    }
 
-    <div class="log-panel" id="logPanel" style="display: none;">
-        <h4>이벤트 로그</h4>
-        <div id="logContent"></div>
-    </div>
+    function clearEvents() {
+      const container = document.getElementById('eventsContainer');
+      container.innerHTML = '<p style="text-align: center; color: #666; margin-top: 100px;">이벤트가 지워졌습니다</p>';
+      eventCount = 0;
+    }
 
-    <script>
-        let eventSource = null;
-        let orders = new Map();
-        let storeId = 1;
-
-        function log(message) {
-            const logContent = document.getElementById('logContent');
-            const entry = document.createElement('div');
-            entry.className = 'log-entry';
-            entry.innerHTML = `
-                <div class="log-time">${new Date().toLocaleTimeString()}</div>
-                <div>${message}</div>
-            `;
-            logContent.insertBefore(entry, logContent.firstChild);
-            
-            // 최대 50개 로그만 유지
-            while (logContent.children.length > 50) {
-                logContent.removeChild(logContent.lastChild);
-            }
-        }
-
-        function updateConnectionStatus(connected) {
-            const indicator = document.getElementById('connectionStatus');
-            const text = document.getElementById('connectionText');
-            
-            if (connected) {
-                indicator.classList.add('connected');
-                text.textContent = '연결됨';
-            } else {
-                indicator.classList.remove('connected');
-                text.textContent = '연결 끊김';
-            }
-        }
-
-        function connectSSE() {
-            storeId = document.getElementById('storeIdInput').value || 1;
-            
-            if (eventSource) {
-                eventSource.close();
-            }
-
-            log(`SSE 연결 시도: 매장 ${storeId}`);
-            
-            eventSource = new EventSource(`/api/kds/stream?stations=FRY,GRILL`, {
-                headers: {
-                    'X-Store-Id': storeId
-                }
-            });
-
-            eventSource.onopen = () => {
-                log('SSE 연결 성공');
-                updateConnectionStatus(true);
-            };
-
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    log(`수신: ${data.type} - ${JSON.stringify(data).substring(0, 100)}...`);
-                    
-                    if (data.type === 'line_update') {
-                        // 실시간 라인 업데이트 처리
-                        refreshOrders();
-                    }
-                } catch (error) {
-                    log(`메시지 파싱 오류: ${error.message}`);
-                }
-            };
-
-            eventSource.onerror = (error) => {
-                log('SSE 연결 오류');
-                updateConnectionStatus(false);
-            };
-        }
-
-        async function refreshOrders() {
-            try {
-                const response = await fetch(`/api/kds/poll?status=queued,cooking,ready`, {
-                    headers: {
-                        'X-Store-Id': storeId
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    log(`주문 데이터 로드: ${data.lines.length}건`);
-                    renderOrders(data.lines);
-                } else {
-                    log(`주문 로드 실패: ${data.error}`);
-                }
-            } catch (error) {
-                log(`주문 로드 오류: ${error.message}`);
-            }
-        }
-
-        function renderOrders(lines) {
-            const grid = document.getElementById('ordersGrid');
-            
-            // 라인을 주문별로 그룹화
-            const orderGroups = new Map();
-            
-            lines.forEach(line => {
-                const key = `${line.order_id}-${line.table_number}`;
-                if (!orderGroups.has(key)) {
-                    orderGroups.set(key, {
-                        orderId: line.order_id,
-                        tableNumber: line.table_number,
-                        customerName: line.customer_name || '손님',
-                        source: line.source,
-                        lines: []
-                    });
-                }
-                orderGroups.get(key).lines.push(line);
-            });
-
-            grid.innerHTML = '';
-            
-            orderGroups.forEach((order, key) => {
-                const card = document.createElement('div');
-                card.className = `order-card ${getOrderStatus(order.lines)}`;
-                card.innerHTML = `
-                    <div class="order-header">
-                        <div class="order-info">
-                            <div>주문 #${order.orderId}</div>
-                            <div>테이블 ${order.tableNumber}</div>
-                            <div>${order.customerName}</div>
-                        </div>
-                        <div class="order-status status-${getOrderStatus(order.lines)}">
-                            ${getStatusText(getOrderStatus(order.lines))}
-                        </div>
-                    </div>
-                    
-                    <div class="order-items">
-                        ${order.lines.map(line => `
-                            <div class="order-item">
-                                <span>${line.menu_name} x${line.quantity}</span>
-                                <span class="status-${line.status}">${getStatusText(line.status)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <div class="order-actions">
-                        ${renderOrderActions(order.lines)}
-                    </div>
-                `;
-                
-                grid.appendChild(card);
-            });
-        }
-
-        function getOrderStatus(lines) {
-            if (lines.every(l => l.status === 'served')) return 'served';
-            if (lines.some(l => l.status === 'ready')) return 'ready';
-            if (lines.some(l => l.status === 'cooking')) return 'cooking';
-            return 'queued';
-        }
-
-        function getStatusText(status) {
-            const statusMap = {
-                'queued': '대기중',
-                'cooking': '조리중',
-                'ready': '완료',
-                'served': '서빙완료'
-            };
-            return statusMap[status] || status;
-        }
-
-        function renderOrderActions(lines) {
-            const queuedLines = lines.filter(l => l.status === 'queued');
-            const cookingLines = lines.filter(l => l.status === 'cooking');
-            const readyLines = lines.filter(l => l.status === 'ready');
-
-            let actions = '';
-
-            if (queuedLines.length > 0) {
-                actions += `<button class="action-btn start-btn" onclick="updateLineStatus(${queuedLines[0].line_id}, 'cooking')">🔥 조리 시작</button>`;
-            }
-
-            if (cookingLines.length > 0) {
-                actions += `<button class="action-btn complete-btn" onclick="updateLineStatus(${cookingLines[0].line_id}, 'ready')">✅ 조리 완료</button>`;
-            }
-
-            if (readyLines.length > 0) {
-                actions += `<button class="action-btn serve-btn" onclick="updateLineStatus(${readyLines[0].line_id}, 'served')">🍽️ 서빙 완료</button>`;
-            }
-
-            return actions;
-        }
-
-        async function updateLineStatus(lineId, status) {
-            try {
-                log(`라인 ${lineId} 상태 변경: ${status}`);
-                
-                const response = await fetch(`/api/kds/lines/${lineId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Store-Id': storeId
-                    },
-                    body: JSON.stringify({ status })
-                });
-
-                const data = await response.json();
-                
-                if (data.success) {
-                    log(`라인 상태 변경 성공: ${lineId} → ${status}`);
-                    refreshOrders();
-                } else {
-                    log(`라인 상태 변경 실패: ${data.error}`);
-                }
-            } catch (error) {
-                log(`라인 상태 변경 오류: ${error.message}`);
-            }
-        }
-
-        function toggleLog() {
-            const panel = document.getElementById('logPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        }
-
-        // 초기화
-        document.addEventListener('DOMContentLoaded', () => {
-            log('KDS 데모 시작');
-            refreshOrders();
-        });
-    </script>
+    // 페이지 언로드 시 연결 해제
+    window.addEventListener('beforeunload', disconnectSSE);
+  </script>
 </body>
 </html>

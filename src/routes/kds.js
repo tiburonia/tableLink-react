@@ -2,11 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db/pool');
-const auth = require('../mw/auth');
+const { storeAuth } = require('../mw/auth');
 const sse = require('../services/sse');
 
 // KDS 실시간 스트림
-router.get('/stream', auth, (req, res) => {
+router.get('/stream', storeAuth, (req, res) => {
   const storeId = req.storeId;
   const { stations } = req.query; // 스테이션 필터 (예: FRY,GRILL)
   
@@ -52,7 +52,7 @@ router.get('/stream', auth, (req, res) => {
 });
 
 // KDS 폴링 엔드포인트
-router.get('/poll', auth, async (req, res) => {
+router.get('/poll', storeAuth, async (req, res) => {
   try {
     const storeId = req.storeId;
     const { since, status } = req.query;
@@ -114,7 +114,7 @@ router.get('/poll', auth, async (req, res) => {
 });
 
 // 라인 상태 업데이트
-router.patch('/lines/:id', auth, async (req, res) => {
+router.patch('/lines/:id', storeAuth, async (req, res) => {
   try {
     const lineId = req.params.id;
     const { status } = req.body;

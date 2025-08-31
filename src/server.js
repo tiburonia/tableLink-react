@@ -1,14 +1,16 @@
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const { Pool } = require('pg');
 const { notFound, errorHandler } = require('./mw/errors');
-const { Pool } = require('pg'); // Import Pool for managing database connections
+const sse = require('./services/sse');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Global pool for database operations
+// Database pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
@@ -33,17 +35,26 @@ app.use('/api/', limiter);
 // Static file serving
 app.use(express.static('public'));
 
-// Router connection
+// Health Check
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0'
+  });
+});
+
+// Router mounting
 try {
   const posRoutes = require('./routes/pos');
-  const kdsRoutes = require('./routes/kds'); // KDS routes
-  const tllRoutes = require('./routes/tll'); // TLL routes
+  const kdsRoutes = require('./routes/kds');
+  const tllRoutes = require('./routes/tll');
   const krpRoutes = require('./routes/krp');
 
   app.use('/api/pos', posRoutes);
+  app.use('/api/kds', kdsRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
-  app.use('/api/kds', kdsRoutes); // Mount KDS routes
 
   console.log('✅ 라우터 로드 완료');
 } catch (error) {
@@ -51,33 +62,22 @@ try {
   process.exit(1);
 }
 
-// Health Check
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    version: process.env.npm_package_version || '1.0.0'
-  });
-});
-
 // Error Handling
 app.use(notFound);
 app.use(errorHandler);
 
-// PostgreSQL LISTEN setting (KDS Real-time Notifications)
-const sse = require('./services/sse');
-
+// PostgreSQL LISTEN setup (KDS Real-time Notifications)
 async function setupKDSListener() {
-  const client = new Pool({ // Use Pool for client management
+  const client = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   });
 
   try {
-    await client.connect();
-    await client.query('LISTEN kds_line_events');
+    const listenerClient = await client.connect();
+    await listenerClient.query('LISTEN kds_line_events');
 
-    client.on('notification', async (msg) => {
+    listenerClient.on('notification', async (msg) => {
       try {
         const payload = JSON.parse(msg.payload);
         console.log('📡 KDS 이벤트 수신:', payload);
@@ -116,9 +116,6 @@ async function setupKDSListener() {
     console.log('👂 PostgreSQL LISTEN kds_line_events 준비완료');
   } catch (error) {
     console.error('❌ PostgreSQL LISTEN 설정 실패:', error);
-  } finally {
-    // In a real application, you might want to handle client disconnection and reconnection more robustly.
-    // For this example, we'll rely on the Pool to manage connections.
   }
 }
 
