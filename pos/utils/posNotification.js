@@ -97,5 +97,8 @@ function showPOSNotification(message, type = 'info') {
   }, 5000);
 }
 
-// 전역 함수 등록
+// ES6 모듈 export
+export { showPOSNotification };
+
+// 전역 함수 등록 (하위 호환성)
 window.showPOSNotification = showPOSNotification;
