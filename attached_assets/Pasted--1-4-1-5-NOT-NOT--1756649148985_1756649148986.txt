@@ -1,0 +1,71 @@
+
+1️⃣4️⃣ 함수/뷰/트리거 생성...
+  ✅ 함수/뷰/트리거 생성 완료
+
+1️⃣5️⃣ 인덱스 생성...
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+  ✅ 인덱스 생성: NOT
+
+1️⃣6️⃣ 기본 데이터 삽입...
+❌ 데이터베이스 재구축 실패: error: bind message supplies 3 parameters, but prepared statement "" requires 1
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async insertBasicData (/home/runner/workspace/scripts/database/full-database-rebuild.js:1006:3)
+    at async fullDatabaseRebuild (/home/runner/workspace/scripts/database/full-database-rebuild.js:75:5) {
+  length: 137,
+  severity: 'ERROR',
+  code: '08P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1735',
+  routine: 'exec_bind_message'
+}
+
+❌ TableLink 데이터베이스 재구축 실패: error: bind message supplies 3 parameters, but prepared statement "" requires 1
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async insertBasicData (/home/runner/workspace/scripts/database/full-database-rebuild.js:1006:3)
+    at async fullDatabaseRebuild (/home/runner/workspace/scripts/database/full-database-rebuild.js:75:5) {
+  length: 137,
+  severity: 'ERROR',
+  code: '08P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1735',
+  routine: 'exec_bind_message'
+}
+~/workspace$ 
