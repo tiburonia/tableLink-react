@@ -37,7 +37,7 @@ try {
   app.use('/api/pos', posRoutes);
   // app.use('/api/tll', tllRoutes);
   // app.use('/api/kds', kdsRoutes);
-  // app.use('/api/krp', krpRoutes);
+  app.use('/api/payments', require('./routes/krp'));
 
   console.log('✅ 라우터 로드 완료');
 } catch (error) {
