@@ -601,7 +601,7 @@ async function createLoyaltyAndPromotionTables(client) {
       id          BIGSERIAL PRIMARY KEY,
       code        VARCHAR(50) UNIQUE,
       name        VARCHAR(100) NOT NULL,
-      desc        TEXT,
+      description TEXT,
       scope       VARCHAR(10) NOT NULL DEFAULT 'CHECK',
       value_type  value_type NOT NULL,
       value       NUMERIC(10,2) NOT NULL,
