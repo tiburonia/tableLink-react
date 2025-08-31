@@ -1957,7 +1957,7 @@ window.updatePrimaryActionButton = updatePrimaryActionButton;
 window.originalOrder = [];
 
 // 테이블 정보 업데이트 함수 (전역 스코프로 이동)
-window.updateTableInfo = function() {
+function updateTableInfo() {
   const tableInfoElement = document.getElementById('currentTableInfo');
   const tableNumberElement = document.getElementById('currentTableNumber');
 
@@ -1993,12 +1993,10 @@ window.updateTableInfo = function() {
     tableStatusElement.textContent = statusText;
     tableStatusElement.className = `table-status ${statusClass}`;
   }
-};
-
-// 로컬 함수 alias
-function updateTableInfo() {
-  window.updateTableInfo();
 }
+
+// 전역으로 노출
+window.updateTableInfo = updateTableInfo;
 
 // 임시 주문 전체 취소 함수
 function cancelAllPendingOrders() {
