@@ -1902,6 +1902,7 @@ window.selectAllItems = selectAllItems;
 window.deleteSelectedItems = deleteSelectedItems;
 window.applyDiscount = applyDiscount;
 window.changeQuantity = changeQuantity;
+window.updateTableInfo = updateTableInfo;
 
 window.processPayment = processPayment;
 window.clearOrder = clearOrder;
@@ -1977,10 +1978,74 @@ window.updateTableInfo = function() {
   }
 };
 
-// 로컬 함수 alias
+// 테이블 정보 업데이트 함수 정의
 function updateTableInfo() {
-  window.updateTableInfo();
+  if (typeof window.updateTableInfo === 'function') {
+    window.updateTableInfo();
+  } else {
+    // 기본 테이블 정보 업데이트 로직
+    const tableInfoElement = document.getElementById('currentTableInfo');
+    const tableNumberElement = document.getElementById('currentTableNumber');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+
+    if (tableInfoElement && window.currentTable) {
+      tableInfoElement.textContent = `테이블 ${window.currentTable}`;
+    }
+
+    if (tableNumberElement && window.currentTable) {
+      tableNumberElement.textContent = window.currentTable;
+    }
+
+    // 테이블 상태 정보 업데이트
+    if (statusIndicator && statusText) {
+      const hasOrders = window.currentOrder && window.currentOrder.length > 0;
+      const hasConfirmed = window.confirmedOrder && window.confirmedOrder.length > 0;
+      const hasPending = window.pendingOrder && window.pendingOrder.length > 0;
+
+      let statusMessage = '빈 테이블';
+      let statusColor = '#10b981';
+
+      if (hasConfirmed && hasPending) {
+        statusMessage = '주문 수정 중';
+        statusColor = '#f59e0b';
+      } else if (hasConfirmed) {
+        statusMessage = '주문 확정됨';
+        statusColor = '#3b82f6';
+      } else if (hasPending) {
+        statusMessage = '주문 작성 중';
+        statusColor = '#f59e0b';
+      }
+
+      statusText.textContent = statusMessage;
+      statusIndicator.style.background = statusColor;
+    }
+  }
 }
+
+// showPaymentModal 함수 정의 (paymentModal.js 로드 전 대비)
+window.showPaymentModal = function() {
+  if (typeof window.openPaymentModal === 'function') {
+    window.openPaymentModal();
+  } else {
+    // 기본 결제 처리
+    if (!window.confirmedOrder || window.confirmedOrder.length === 0) {
+      showPOSNotification('결제할 확정된 주문이 없습니다.', 'warning');
+      return;
+    }
+
+    if (window.hasUnconfirmedChanges || (window.pendingOrder && window.pendingOrder.length > 0)) {
+      showPOSNotification('미확정 주문이 있습니다. 먼저 주문을 확정해주세요.', 'warning');
+      return;
+    }
+
+    // 간단한 결제 확인 다이얼로그
+    const totalAmount = window.confirmedOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    if (confirm(`₩${totalAmount.toLocaleString()} 결제를 진행하시겠습니까?`)) {
+      processPayment('CARD');
+    }
+  }
+};
 
 // 결제 모달 스크립트 동적 로드
 if (!document.querySelector('script[src*="paymentModal.js"]')) {
@@ -1988,6 +2053,15 @@ if (!document.querySelector('script[src*="paymentModal.js"]')) {
   script.src = '/pos/components/pos/paymentModal.js';
   script.onload = () => {
     console.log('✅ 결제 모달 스크립트 로드 완료');
+    // 결제 모달이 로드된 후 함수 재정의
+    if (typeof window.openPaymentModal === 'function') {
+      window.showPaymentModal = function() {
+        window.openPaymentModal();
+      };
+    }
+  };
+  script.onerror = () => {
+    console.warn('⚠️ 결제 모달 스크립트 로드 실패 - 기본 결제 방식 사용');
   };
   document.head.appendChild(script);
 }

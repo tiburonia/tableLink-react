@@ -2,6 +2,13 @@
 // POS 레이아웃 관리 모듈 (OKPOS 구조 기반 상용 서비스)
 function renderPOSLayout() {
   const main = document.getElementById('main');
+  
+  if (!main) {
+    console.error('❌ main 엘리먼트를 찾을 수 없습니다.');
+    return;
+  }
+
+  console.log('🎨 POS 레이아웃 렌더링 시작');
 
   main.innerHTML = `
     <div class="pos-container">
@@ -1263,6 +1270,17 @@ function renderPOSLayout() {
   // 시간 업데이트 시작
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
+
+  // 필수 엘리먼트 존재 확인
+  const essentialElements = [
+    'tableMapView', 'orderView', 'tableMapGrid', 
+    'orderItemsList', 'totalAmount', 'finalAmount'
+  ];
+
+  const missingElements = essentialElements.filter(id => !document.getElementById(id));
+  if (missingElements.length > 0) {
+    console.warn('⚠️ 일부 필수 엘리먼트가 누락되었습니다:', missingElements);
+  }
 
   console.log('✅ POS 레이아웃 렌더링 완료 (OKPOS 구조)');
 }
