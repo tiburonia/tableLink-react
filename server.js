@@ -45,15 +45,22 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// 정적 파일 서빙 설정
-app.use('/shared', express.static(path.join(__dirname, 'shared')));
-app.use('/TLG', express.static(path.join(__dirname, 'TLG')));
-app.use('/admin', express.static(path.join(__dirname, 'admin')));
-app.use('/kds', express.static(path.join(__dirname, 'kds')));
-app.use('/pos', express.static(path.join(__dirname, 'pos')));
-app.use('/krp', express.static(path.join(__dirname, 'krp')));
-app.use('/tlm-components', express.static(path.join(__dirname, 'tlm-components')));
-app.use(express.static(path.join(__dirname, 'public')));
+// 정적 파일 서빙 설정 (올바른 MIME 타입 지원)
+const serveStatic = express.static;
+app.use('/shared', serveStatic(path.join(__dirname, 'shared'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.css')) {
+      res.setHeader('Content-Type', 'text/css');
+    }
+  }
+}));
+app.use('/TLG', serveStatic(path.join(__dirname, 'TLG')));
+app.use('/admin', serveStatic(path.join(__dirname, 'admin')));
+app.use('/kds', serveStatic(path.join(__dirname, 'kds')));
+app.use('/pos', serveStatic(path.join(__dirname, 'pos')));
+app.use('/krp', serveStatic(path.join(__dirname, 'krp')));
+app.use('/tlm-components', serveStatic(path.join(__dirname, 'tlm-components')));
+app.use(serveStatic(path.join(__dirname, 'public')));
 
 // 라우트 모듈 import
 const authRoutes = require('./routes/auth');

@@ -1014,6 +1014,55 @@ async function processBasicPayment(paymentMethod) {
   }
 }
 
+// 미확정 주문을 확정하는 함수
+async function confirmPendingOrder() {
+  if (!window.pendingOrder || window.pendingOrder.length === 0) {
+    showPOSNotification('확정할 주문이 없습니다.', 'warning');
+    return false;
+  }
+
+  try {
+    console.log('📝 주문 확정 처리 시작');
+
+    // 미확정 주문을 확정 주문으로 이동
+    const itemsToConfirm = [...window.pendingOrder];
+    
+    // 각 아이템을 확정 상태로 변경
+    itemsToConfirm.forEach(item => {
+      item.isConfirmed = true;
+      item.confirmedAt = new Date().toISOString();
+    });
+
+    // 확정 주문에 추가
+    window.confirmedOrder.push(...itemsToConfirm);
+    
+    // 미확정 주문 목록 비우기
+    window.pendingOrder = [];
+    
+    // 변경사항 플래그 해제
+    window.hasUnconfirmedChanges = false;
+
+    // 통합 주문 목록 업데이트
+    window.currentOrder = [...window.confirmedOrder, ...window.pendingOrder];
+
+    // UI 업데이트
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    updateOrderStatus(`주문 확정 완료 (${window.confirmedOrder.length}개)`, 'ordering');
+
+    console.log(`✅ 주문 확정 완료: ${itemsToConfirm.length}개 아이템`);
+    showPOSNotification(`${itemsToConfirm.length}개 주문이 확정되었습니다.`, 'success');
+
+    return true;
+
+  } catch (error) {
+    console.error('❌ 주문 확정 실패:', error);
+    showPOSNotification('주문 확정 중 오류가 발생했습니다.', 'error');
+    return false;
+  }
+}
+
 // 주문을 주방으로 저장 (레거시 함수 - 하위 호환성)
 async function saveOrderToKitchen() {
   return await confirmPendingOrder();
