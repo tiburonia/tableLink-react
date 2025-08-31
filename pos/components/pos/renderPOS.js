@@ -32,7 +32,7 @@ let originalOrder = []; // 원본 주문 상태 저장
 // 📦 임시 주문 세션 관리 함수들 (최상단으로 이동)
 function saveTemporaryOrderToSession() {
   if (!window.currentTable || !window.currentStore) return;
-  
+
   try {
     const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
     const tempData = {
@@ -42,7 +42,7 @@ function saveTemporaryOrderToSession() {
       lastModified: new Date().toISOString(),
       hasUnconfirmedChanges: window.hasUnconfirmedChanges
     };
-    
+
     sessionStorage.setItem(sessionKey, JSON.stringify(tempData));
     console.log(`💾 임시 주문 세션 저장: 테이블 ${window.currentTable}, ${window.pendingOrder?.length || 0}개 아이템`);
   } catch (error) {
@@ -52,40 +52,40 @@ function saveTemporaryOrderToSession() {
 
 function loadTemporaryOrderFromSession() {
   if (!window.currentTable || !window.currentStore) return false;
-  
+
   try {
     const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
     const tempDataString = sessionStorage.getItem(sessionKey);
-    
+
     if (!tempDataString) {
       console.log('📭 저장된 임시 주문 없음');
       return false;
     }
-    
+
     const tempData = JSON.parse(tempDataString);
-    
+
     // 세션이 5분 이내인 경우에만 복원
     const lastModified = new Date(tempData.lastModified);
     const now = new Date();
     const diffMinutes = (now - lastModified) / (1000 * 60);
-    
+
     if (diffMinutes > 5) {
       console.log('⏰ 임시 주문 세션 만료 (5분 초과)');
       clearTemporaryOrderFromSession();
       return false;
     }
-    
+
     if (tempData.pendingOrder && tempData.pendingOrder.length > 0) {
       window.pendingOrder = tempData.pendingOrder;
       window.hasUnconfirmedChanges = tempData.hasUnconfirmedChanges;
       window.currentOrder = [...(window.confirmedOrder || []), ...window.pendingOrder];
-      
+
       console.log(`🔄 임시 주문 세션 복원: ${window.pendingOrder.length}개 아이템`);
       showPOSNotification(`임시 저장된 주문 ${window.pendingOrder.length}개를 복원했습니다.`, 'info');
-      
+
       return true;
     }
-    
+
     return false;
   } catch (error) {
     console.error('❌ 임시 주문 세션 로드 실패:', error);
@@ -95,7 +95,7 @@ function loadTemporaryOrderFromSession() {
 
 function clearTemporaryOrderFromSession() {
   if (!window.currentTable || !window.currentStore) return;
-  
+
   try {
     const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
     sessionStorage.removeItem(sessionKey);
@@ -127,11 +127,11 @@ function revertChanges() {
     window.pendingOrder = [];
     window.hasUnconfirmedChanges = false;
     window.currentOrder = [...window.confirmedOrder];
-    
+
     renderOrderItems();
     renderPaymentSummary();
     updateButtonStates();
-    
+
     console.log('🔄 변경사항 되돌리기 완료');
     showPOSNotification('변경사항이 되돌려졌습니다.', 'info');
   }
@@ -160,7 +160,7 @@ function updatePrimaryActionButton() {
 
   const btnTitle = primaryBtn.querySelector('.btn-title');
   const btnSubtitle = primaryBtn.querySelector('.btn-subtitle');
-  
+
   const hasConfirmed = window.confirmedOrder && window.confirmedOrder.length > 0;
   const hasPending = window.pendingOrder && window.pendingOrder.length > 0;
   const hasUnconfirmed = window.hasUnconfirmedChanges || hasPending;
@@ -183,7 +183,7 @@ function updatePrimaryActionButton() {
     primaryBtn.style.color = 'white';
     primaryBtn.style.cursor = 'pointer';
     primaryBtn.onclick = handlePrimaryAction;
-    
+
   } else if (hasConfirmed && !hasUnconfirmed) {
     // 확정된 주문만 있는 경우
     primaryBtn.disabled = false;
@@ -193,7 +193,7 @@ function updatePrimaryActionButton() {
     primaryBtn.style.color = 'white';
     primaryBtn.style.cursor = 'pointer';
     primaryBtn.onclick = handlePrimaryAction;
-    
+
   } else {
     // 주문이 없는 경우
     primaryBtn.disabled = true;
@@ -1415,11 +1415,11 @@ function returnToTableMap() {
       `나가면 임시 주문은 자동 저장되며, 같은 테이블 재선택 시 복원됩니다.\n\n` +
       `정말 나가시겠습니까?`
     );
-    
+
     if (!confirmLeave) {
       return; // 사용자가 취소하면 나가지 않음
     }
-    
+
     // 임시 주문 세션에 저장
     saveTemporaryOrderToSession();
     showPOSNotification('임시 주문이 자동 저장되었습니다.', 'info');
@@ -1444,7 +1444,7 @@ function returnToTableMap() {
   document.getElementById('tableMapView').classList.remove('hidden');
 
   renderTableMap();
-  
+
   console.log(`✅ 테이블 ${previousTable}에서 테이블맵으로 복귀 완료`);
 }
 
@@ -1719,33 +1719,12 @@ function updateButtonStates() {
 
 // 주문 수정사항 취소 함수
 function cancelOrderChanges() {
-  if (!window.hasUnconfirmedChanges && (!window.pendingOrder || window.pendingOrder.length === 0)) {
-    showPOSNotification('취소할 변경사항이 없습니다.', 'info');
-    return;
-  }
+  OrderManager.cancelTemp();
+}
 
-  if (confirm('모든 수정사항을 취소하고 이전 상태로 되돌리시겠습니까?')) {
-    console.log('🔄 주문 수정사항 취소 처리');
-
-    window.pendingOrder = [];
-    window.hasUnconfirmedChanges = false;
-    window.selectedItems = [];
-
-    window.currentOrder = [...window.confirmedOrder];
-
-    renderOrderItems();
-    renderPaymentSummary();
-    updateButtonStates();
-
-    if (window.confirmedOrder.length > 0) {
-      updateOrderStatus(`기존 주문 (${window.confirmedOrder.length}개)`, 'ordering');
-    } else {
-      updateOrderStatus('새 주문', 'available');
-    }
-
-    showPOSNotification('모든 수정사항이 취소되었습니다.', 'success');
-    console.log('✅ 주문 수정사항 취소 완료');
-  }
+// 임시 주문 전체 취소 함수
+function cancelAllPendingOrders() {
+  OrderManager.cancelTemp();
 }
 
 // Primary Action 핸들러 - 개선된 버전
@@ -1942,38 +1921,5 @@ window.updateTableInfo = updateTableInfo;
 
 // 임시 주문 전체 취소 함수
 function cancelAllPendingOrders() {
-  if (!window.pendingOrder || window.pendingOrder.length === 0) {
-    showPOSNotification('취소할 임시 주문이 없습니다.', 'info');
-    return;
-  }
-
-  const pendingCount = window.pendingOrder.length;
-  
-  if (confirm(`임시 저장된 주문 ${pendingCount}개를 모두 취소하시겠습니까?\n(확정된 주문은 취소되지 않습니다)`)) {
-    console.log(`🗑️ 임시 주문 ${pendingCount}개 전체 취소`);
-    
-    // 임시 주문만 제거
-    window.pendingOrder = [];
-    window.hasUnconfirmedChanges = false;
-    window.selectedItems = [];
-    
-    // 현재 주문을 확정된 주문만으로 설정
-    window.currentOrder = [...(window.confirmedOrder || [])];
-    
-    // 세션에서도 제거
-    clearTemporaryOrderFromSession();
-    
-    // UI 업데이트
-    renderOrderItems();
-    renderPaymentSummary();
-    updateButtonStates();
-    
-    if (window.confirmedOrder && window.confirmedOrder.length > 0) {
-      updateOrderStatus(`확정된 주문 ${window.confirmedOrder.length}개만 유지`, 'ordering');
-    } else {
-      updateOrderStatus('주문 없음', 'available');
-    }
-    
-    showPOSNotification(`임시 주문 ${pendingCount}개가 취소되었습니다.`, 'success');
-  }
+  OrderManager.cancelTemp();
 }
