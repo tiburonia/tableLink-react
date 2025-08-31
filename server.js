@@ -51,6 +51,7 @@ app.use('/TLG', express.static(path.join(__dirname, 'TLG')));
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.use('/kds', express.static(path.join(__dirname, 'kds')));
 app.use('/pos', express.static(path.join(__dirname, 'pos')));
+app.use('/krp', express.static(path.join(__dirname, 'krp')));
 app.use('/tlm-components', express.static(path.join(__dirname, 'tlm-components')));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -66,6 +67,7 @@ const cacheRoutes = require('./routes/cache');
 const posRoutes = require('./routes/pos');
 const regularLevelsRoutes = require('./routes/regular-levels');
 const tossRouter = require('./routes/toss');
+const krpRoutes = require('./routes/krp');
 
 // 라우트 연결
 app.use('/api/auth', authRoutes);
@@ -80,6 +82,7 @@ app.use('/api/pos', posRoutes);
 app.use('/api/regular-levels', regularLevelsRoutes);
 app.use('/api/guests', require('./routes/guests'));
 app.use('/api/toss', tossRouter);
+app.use('/api/krp', krpRoutes);
 
 // 플레이스홀더 이미지 API
 app.get('/api/placeholder/:width/:height', (req, res) => {
@@ -138,6 +141,15 @@ app.get('/tlm/:storeId', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tlm.html'));
 });
 
+app.get('/KRP', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'krp.html'));
+});
+
+// 매장별 KRP 라우트
+app.get('/krp', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'krp.html'));
+});
+
 
 // 만료된 TLL 주문 테이블들만 자동 해제 체크
 async function checkAndReleaseExpiredTables() {
@@ -183,6 +195,7 @@ async function checkAndReleaseExpiredTables() {
 // WebSocket 연결 관리
 const kdsClients = new Map(); // storeId -> Set of socket IDs
 const posClients = new Map(); // storeId -> Set of socket IDs
+const krpClients = new Map(); // storeId -> Set of socket IDs
 
 io.on('connection', (socket) => {
   console.log('🔌 클라이언트 연결:', socket.id);
@@ -250,6 +263,41 @@ io.on('connection', (socket) => {
     console.log(`💳 POS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
   });
 
+  // KRP 룸 참여
+  socket.on('join-krp-room', (storeId) => {
+    const roomName = `krp-store-${storeId}`;
+    socket.join(roomName);
+
+    if (!krpClients.has(storeId)) {
+      krpClients.set(storeId, new Set());
+    }
+    krpClients.get(storeId).add(socket.id);
+
+    const clientCount = krpClients.get(storeId).size;
+    console.log(`🖨️ KRP 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여 (총 ${clientCount}개 클라이언트)`);
+
+    // 참여 확인 응답
+    socket.emit('join-krp-room-success', {
+      storeId: parseInt(storeId),
+      clientCount: clientCount
+    });
+  });
+
+  // KRP 룸 나가기
+  socket.on('leave-krp-room', (storeId) => {
+    const roomName = `krp-store-${storeId}`;
+    socket.leave(roomName);
+
+    if (krpClients.has(storeId)) {
+      krpClients.get(storeId).delete(socket.id);
+      if (krpClients.get(storeId).size === 0) {
+        krpClients.delete(storeId);
+      }
+    }
+
+    console.log(`🖨️ KRP 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
+  });
+
   // 연결 해제
   socket.on('disconnect', () => {
     console.log('🔌 클라이언트 연결 해제:', socket.id);
@@ -270,6 +318,16 @@ io.on('connection', (socket) => {
         clientSet.delete(socket.id);
         if (clientSet.size === 0) {
           posClients.delete(storeId);
+        }
+      }
+    }
+
+    // 모든 KRP 룸에서 제거
+    for (const [storeId, clientSet] of krpClients.entries()) {
+      if (clientSet.has(socket.id)) {
+        clientSet.delete(socket.id);
+        if (clientSet.size === 0) {
+          krpClients.delete(storeId);
         }
       }
     }
@@ -349,11 +407,29 @@ function broadcastPOSTableUpdate(storeId, tableData) {
   }
 }
 
+// KRP 실시간 출력 브로드캐스트
+function broadcastKRPPrint(storeId, printData) {
+  const krpRoomName = `krp-store-${storeId}`;
+  const krpClientCount = krpClients.get(storeId)?.size || 0;
+
+  if (krpClientCount > 0) {
+    console.log(`🖨️ KRP 출력 브로드캐스트 전송 - 매장 ${storeId}`, printData);
+    io.to(krpRoomName).emit('krp-print', printData);
+  } else {
+    console.log(`⚠️ KRP 클라이언트 없음 - 매장 ${storeId}에 연결된 KRP가 없습니다`);
+  }
+}
+
 // POS WebSocket 글로벌 객체
 global.posWebSocket = {
   broadcast: broadcastPOSUpdate,
   broadcastNewOrder: broadcastPOSNewOrder,
   broadcastTableUpdate: broadcastPOSTableUpdate
+};
+
+// KRP WebSocket 글로벌 객체
+global.krpWebSocket = {
+  broadcastPrint: broadcastKRPPrint
 };
 
 // 전역으로 WebSocket 인스턴스 노출

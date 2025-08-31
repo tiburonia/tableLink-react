@@ -1,0 +1,57 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TableLink KRP - 주방 프린터</title>
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+</head>
+
+<body>
+  <!-- 화면을 렌더링할 메인 영역 -->
+  <div id='main'></div>
+
+  <!-- KRP 렌더링 함수 -->
+  <script src="/krp/components/renderKRP.js"></script>
+
+  <script>
+    // KRP 페이지 초기 진입
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🖨️ KRP 페이지 DOM 로드 완료');
+
+      // URL에서 storeId 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeId = urlParams.get('storeId');
+
+      if (!storeId) {
+        console.error('❌ storeId가 없습니다');
+        document.getElementById('main').innerHTML = `
+          <div style="padding: 40px; text-align: center; color: red;">
+            <h2>❌ 오류</h2>
+            <p>매장 ID가 필요합니다.</p>
+            <button onclick="history.back()">돌아가기</button>
+          </div>
+        `;
+        return;
+      }
+
+      // KRP 렌더링 함수 실행
+      if (typeof renderKRP === 'function') {
+        renderKRP(storeId);
+      } else {
+        console.error('❌ renderKRP 함수를 찾을 수 없습니다');
+        document.getElementById('main').innerHTML = `
+          <div style="padding: 40px; text-align: center; color: red;">
+            <h2>❌ 오류</h2>
+            <p>KRP 시스템을 로드할 수 없습니다.</p>
+            <button onclick="history.back()">돌아가기</button>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+
+</html>

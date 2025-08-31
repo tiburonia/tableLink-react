@@ -98,6 +98,14 @@ async function renderLogin() {
                 </div>
               </button>
 
+              <button id="goKRP" class="system-btn krp-btn">
+                <div class="system-btn-icon">🖨️</div>
+                <div class="system-btn-content">
+                  <span class="system-btn-title">KRP</span>
+                  <span class="system-btn-desc">주방 프린터</span>
+                </div>
+              </button>
+
               <button id="goTLM" class="system-btn tlm-btn">
                 <div class="system-btn-icon">🏪</div>
                 <div class="system-btn-content">
@@ -492,7 +500,7 @@ async function renderLogin() {
 
       .system-buttons-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 10px;
         margin: 16px 0 20px 0;
       }
@@ -592,7 +600,7 @@ async function renderLogin() {
         }
 
         .system-buttons-grid {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(2, 1fr);
           gap: 8px;
         }
       }
@@ -614,6 +622,7 @@ async function renderLogin() {
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
+  const goKRP = document.querySelector('#goKRP');
   const goTLM = document.querySelector('#goTLM');
 
   // 패널 핸들링 설정
@@ -831,6 +840,10 @@ async function renderLogin() {
 
   goPOS.addEventListener('click', () => {
     showPOSStoreSearchModal();
+  });
+
+  goKRP.addEventListener('click', () => {
+    showKRPStoreSearchModal();
   });
 
   goTLM.addEventListener('click', () => {
@@ -1493,6 +1506,334 @@ async function renderLogin() {
     }
   };
 
+  // KRP 매장 검색 모달 표시
+  function showKRPStoreSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'krpStoreSearchModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>🖨️ KRP 진입</h2>
+            <button class="close-btn" onclick="closeKRPStoreSearchModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-section">
+              <div class="search-input-wrapper">
+                <input 
+                  id="krpStoreNameInput" 
+                  type="text" 
+                  placeholder="매장 이름을 입력하세요..." 
+                  class="search-input"
+                  autocomplete="off"
+                />
+                <div class="search-icon">🔍</div>
+              </div>
+              <div id="krpStoreSearchResults" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+          color: white;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .search-section {
+          position: relative;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          margin-bottom: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 20px;
+          padding-right: 50px;
+          font-size: 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #e67e22;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1);
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .search-results {
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          display: none;
+        }
+
+        .store-result-item {
+          padding: 16px 20px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+
+        .store-result-item:hover {
+          background: #f8fafc;
+        }
+
+        .store-result-item:last-child {
+          border-bottom: none;
+        }
+
+        .store-result-name {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .store-result-info {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .no-results {
+          padding: 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-results {
+          padding: 20px;
+          text-align: center;
+          color: #e67e22;
+          font-size: 14px;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top: 2px solid #e67e22;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+    setupKRPStoreSearch();
+
+    setTimeout(() => {
+      const input = document.getElementById('krpStoreNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // KRP 매장 검색 기능 설정
+  function setupKRPStoreSearch() {
+    const input = document.getElementById('krpStoreNameInput');
+    const results = document.getElementById('krpStoreSearchResults');
+    let searchTimeout = null;
+
+    if (!input || !results) return;
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        searchStoresForKRP(query);
+      }, 200);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const firstResult = results.querySelector('.store-result-item');
+        if (firstResult) {
+          firstResult.click();
+        }
+      }
+    });
+  }
+
+  // KRP용 매장 검색 함수
+  async function searchStoresForKRP(query) {
+    const results = document.getElementById('krpStoreSearchResults');
+    if (!results) return;
+
+    try {
+      console.log(`🔍 KRP 매장 검색: "${query}"`);
+
+      results.innerHTML = `
+        <div class="loading-results">
+          <div class="loading-spinner"></div>
+          검색 중...
+        </div>
+      `;
+      results.style.display = 'block';
+
+      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('검색 실패');
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stores && data.stores.length > 0) {
+        displayKRPSearchResults(data.stores);
+      } else {
+        results.innerHTML = `
+          <div class="no-results">
+            "${query}"에 대한 검색 결과가 없습니다
+          </div>
+        `;
+        results.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('KRP 매장 검색 실패:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 중 오류가 발생했습니다
+        </div>
+      `;
+      results.style.display = 'block';
+    }
+  }
+
+  // KRP 검색 결과 표시
+  function displayKRPSearchResults(stores) {
+    const results = document.getElementById('krpStoreSearchResults');
+    if (!results) return;
+
+    const resultsHTML = stores.map(store => `
+      <div class="store-result-item" onclick="selectStoreForKRP(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
+        <div class="store-result-name">${store.name}</div>
+        <div class="store-result-info">
+          ${store.category || '기타'} • ${store.address || '주소 정보 없음'}
+        </div>
+      </div>
+    `).join('');
+
+    results.innerHTML = resultsHTML;
+    results.style.display = 'block';
+  }
+
+  // KRP 매장 선택
+  window.selectStoreForKRP = function(storeId, storeName) {
+    console.log(`✅ KRP 매장 선택: ${storeName} (ID: ${storeId})`);
+    closeKRPStoreSearchModal();
+
+    setTimeout(() => {
+      window.location.href = `/krp?storeId=${storeId}`;
+    }, 200);
+  };
+
+  // KRP 매장 검색 모달 닫기
+  window.closeKRPStoreSearchModal = function() {
+    const modal = document.getElementById('krpStoreSearchModal');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
   // 매장 검색 모달 표시
   function showStoreSearchModal() {
     const modal = document.createElement('div');
@@ -1826,6 +2167,7 @@ async function renderLogin() {
     const tlmModal = document.getElementById('storeSearchModal');
     const kdsModal = document.getElementById('kdsStoreSearchModal');
     const posModal = document.getElementById('posStoreSearchModal');
+    const krpModal = document.getElementById('krpStoreSearchModal');
 
     if (tlmModal && e.target.classList.contains('modal-overlay')) {
       closeStoreSearchModal();
@@ -1837,6 +2179,10 @@ async function renderLogin() {
 
     if (posModal && e.target.classList.contains('modal-overlay')) {
       closePOSStoreSearchModal();
+    }
+
+    if (krpModal && e.target.classList.contains('modal-overlay')) {
+      closeKRPStoreSearchModal();
     }
   });
 }
