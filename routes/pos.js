@@ -243,7 +243,7 @@ router.post('/orders', async (req, res) => {
         parseInt(tableNumber), 
         finalCustomerName,
         calculatedTotalAmount,
-        'OPEN',
+        'OPEN',  // ← 확정 후에도 OPEN 상태 유지
         JSON.stringify({
           sessionType: 'POS',
           items: items,
@@ -628,7 +628,7 @@ function simulateVANPayment({ amount, cardNumber, expiryDate, cvc }) {
     cardCompany: cardInfo.company,
     acquirer: 'SANDBOX_ACQUIRER',
     merchantId: 'TLINK_MERCHANT',
-    terminalId: `POS_${storeId}`,
+    terminalId: 'POS_UNDEFINED', // storeId가 없을 수 있으므로 기본값
     processingTime: Math.round(processingDelay),
     timestamp: new Date().toISOString()
   };
