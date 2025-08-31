@@ -1,3 +1,4 @@
+
 // 결제 모달 관리 모듈
 
 // 결제 처리 기능 (세션 기반)
@@ -35,7 +36,7 @@ async function processPayment() {
   }
 }
 
-// 결제 모달 표시 (세션 기반)
+// 결제 모달 표시 (TLL 연동 전화번호 입력 포함)
 function showPaymentModal(currentSession) {
   // 기존 모달이 있다면 제거
   const existingModal = document.getElementById('paymentModal');
@@ -51,11 +52,12 @@ function showPaymentModal(currentSession) {
     <div class="modal-overlay" onclick="closePaymentModal(event)">
       <div class="modal-content payment-modal">
         <div class="modal-header">
-          <h2>💳 세션 결제 처리 - 테이블 ${window.currentTable}</h2>
+          <h2>💳 결제 처리 - 테이블 ${window.currentTable}</h2>
           <button class="close-btn" onclick="closePaymentModal()">✕</button>
         </div>
 
         <div class="modal-body">
+          <!-- 세션 요약 정보 -->
           <div class="session-summary">
             <div class="section-title">결제할 세션 정보</div>
             
@@ -94,33 +96,53 @@ function showPaymentModal(currentSession) {
             </div>
           </div>
 
-          <div class="payment-summary">
+          <!-- 결제 정보 입력 -->
+          <div class="payment-section">
             <div class="section-title">결제 정보</div>
+
+            <!-- TLL 연동을 위한 전화번호 입력 -->
+            <div class="tll-connection-section">
+              <div class="section-subtitle">
+                <span class="tll-icon">📱</span>
+                TLL 연동 (선택사항)
+              </div>
+              <div class="phone-input-wrapper">
+                <input 
+                  type="tel" 
+                  id="paymentGuestPhone" 
+                  placeholder="010-0000-0000" 
+                  maxlength="13"
+                  class="phone-input"
+                >
+                <button id="phoneVerifyBtn" class="verify-btn" onclick="verifyPhoneNumber()">
+                  확인
+                </button>
+              </div>
+              <div class="phone-input-hint">
+                전화번호를 입력하면 TLL 회원/게스트로 연동되어 포인트 적립 및 주문 이력 관리가 됩니다.
+              </div>
+              <div id="phoneVerificationResult" class="verification-result"></div>
+            </div>
 
             <!-- 결제 방법 선택 -->
             <div class="payment-method-section">
+              <div class="section-subtitle">결제 방법</div>
               <div class="payment-methods">
                 <label class="payment-method-option">
                   <input type="radio" name="paymentMethod" value="CARD" checked>
-                  <span>💳 카드</span>
+                  <span class="method-icon">💳</span>
+                  <span>카드결제</span>
                 </label>
                 <label class="payment-method-option">
                   <input type="radio" name="paymentMethod" value="CASH">
-                  <span>💵 현금</span>
+                  <span class="method-icon">💵</span>
+                  <span>현금결제</span>
                 </label>
                 <label class="payment-method-option">
-                  <input type="radio" name="paymentMethod" value="POS">
-                  <span>📟 POS 통합</span>
+                  <input type="radio" name="paymentMethod" value="TRANSFER">
+                  <span class="method-icon">🏦</span>
+                  <span>계좌이체</span>
                 </label>
-              </div>
-            </div>
-
-            <!-- 고객 전화번호 입력 (선택사항) -->
-            <div class="guest-phone-section">
-              <div class="section-subtitle">👤 고객 전화번호 (선택사항)</div>
-              <input type="tel" id="paymentGuestPhone" placeholder="010-1234-5678" maxlength="13">
-              <div class="input-hint">
-                전화번호를 입력하면 게스트 고객으로 관리되며, 다음 방문시 고객 정보를 확인할 수 있습니다.
               </div>
             </div>
 
@@ -129,6 +151,14 @@ function showPaymentModal(currentSession) {
               <div class="total-line">
                 <span>세션 항목:</span>
                 <span id="sessionItemCount">${sessionItems.length}개</span>
+              </div>
+              <div class="total-line">
+                <span>기본 금액:</span>
+                <span id="baseAmount">₩${currentSession.totalAmount.toLocaleString()}</span>
+              </div>
+              <div class="total-line discount-line" id="discountLine" style="display: none;">
+                <span>TLL 회원 할인:</span>
+                <span id="discountAmount">₩0</span>
               </div>
               <div class="total-line final">
                 <span>총 결제 금액:</span>
@@ -164,14 +194,15 @@ function showPaymentModal(currentSession) {
 
       .payment-modal {
         width: 90%;
-        max-width: 700px;
+        max-width: 800px;
         height: 90%;
-        max-height: 800px;
+        max-height: 900px;
         background: white;
         border-radius: 12px;
         display: flex;
         flex-direction: column;
         animation: slideUp 0.3s ease;
+        overflow: hidden;
       }
 
       .modal-header {
@@ -180,6 +211,7 @@ function showPaymentModal(currentSession) {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        background: #f8fafc;
       }
 
       .modal-header h2 {
@@ -201,6 +233,12 @@ function showPaymentModal(currentSession) {
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+      }
+
+      .close-btn:hover {
+        background: #e2e8f0;
       }
 
       .modal-body {
@@ -209,7 +247,7 @@ function showPaymentModal(currentSession) {
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 24px;
       }
 
       .section-title {
@@ -218,171 +256,176 @@ function showPaymentModal(currentSession) {
         color: #374151;
         margin-bottom: 12px;
         padding-bottom: 8px;
-        border-bottom: 1px solid #f1f5f9;
+        border-bottom: 2px solid #f1f5f9;
       }
 
       .section-subtitle {
         font-size: 14px;
         font-weight: 600;
         color: #374151;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
-      .orders-container {
-        max-height: 300px;
-        overflow-y: auto;
-      }
-
-      .payment-order-item {
+      .session-info-card {
         background: #f8fafc;
-        border: 2px solid #e2e8f0;
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
         padding: 16px;
-        margin-bottom: 12px;
-        transition: all 0.2s ease;
       }
 
-      .payment-order-item.selected {
-        border-color: #3b82f6;
-        background: #eff6ff;
-      }
-
-      .order-header {
+      .session-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
+        align-items: center;
+        margin-bottom: 16px;
       }
 
-      .order-info {
-        flex: 1;
+      .customer-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .customer-name {
         font-size: 16px;
-        font-weight: 700;
+        font-weight: 600;
         color: #1e293b;
-        margin-right: 8px;
       }
 
-      .order-time {
-        font-size: 12px;
-        color: #64748b;
-        margin-right: 8px;
-      }
-
-      .source-badge {
+      .session-badge {
         font-size: 10px;
         padding: 2px 6px;
         border-radius: 12px;
         font-weight: 600;
         text-transform: uppercase;
-      }
-
-      .source-badge.tll {
         background: #3b82f6;
         color: white;
       }
 
-      .source-badge.pos {
-        background: #10b981;
-        color: white;
+      .session-time {
+        font-size: 12px;
+        color: #64748b;
       }
 
-      .order-amount {
-        font-size: 18px;
-        font-weight: 800;
-        color: #059669;
-        background: #ecfdf5;
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid #bbf7d0;
-      }
-
-      .order-items {
-        background: #f1f5f9;
-        border-radius: 8px;
-        padding: 12px;
+      .items-header {
         margin-bottom: 12px;
       }
 
-      .menu-item {
+      .items-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      .items-list {
+        background: white;
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .session-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 0;
-        font-size: 14px;
+        padding: 8px 0;
+        border-bottom: 1px solid #f1f5f9;
       }
 
-      .menu-name {
+      .session-item:last-child {
+        border-bottom: none;
+      }
+
+      .item-name {
         flex: 1;
         color: #374151;
         font-weight: 600;
       }
 
-      .menu-quantity {
+      .item-quantity {
         color: #6b7280;
         background: #e2e8f0;
-        padding: 2px 6px;
+        padding: 2px 8px;
         border-radius: 4px;
         font-size: 12px;
         font-weight: 700;
         margin: 0 8px;
       }
 
-      .menu-price {
+      .item-price {
         color: #059669;
         font-weight: 700;
         font-size: 14px;
+        margin-right: 12px;
       }
 
-      .payment-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        font-size: 14px;
+      .cooking-status {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
         font-weight: 600;
+        text-transform: uppercase;
       }
 
-      .payment-checkbox input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
-        accent-color: #3b82f6;
+      .status-pending {
+        background: #fef3c7;
+        color: #92400e;
       }
 
-      .payment-summary {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 20px;
+      .status-cooking {
+        background: #dbeafe;
+        color: #1e40af;
       }
 
-      .payment-methods {
+      .status-completed {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .session-total {
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 2px solid #e2e8f0;
         display: flex;
-        gap: 16px;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-      }
-
-      .payment-method-option {
-        display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 500;
       }
 
-      .payment-method-option input[type="radio"] {
-        accent-color: #3b82f6;
+      .total-label {
+        font-size: 16px;
+        font-weight: 600;
+        color: #374151;
       }
 
-      .guest-phone-section {
+      .total-amount {
+        font-size: 20px;
+        font-weight: 800;
+        color: #059669;
+      }
+
+      .tll-connection-section {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 12px;
+        padding: 16px;
         margin-bottom: 20px;
       }
 
-      #paymentGuestPhone {
-        width: 100%;
+      .tll-icon {
+        font-size: 16px;
+      }
+
+      .phone-input-wrapper {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .phone-input {
+        flex: 1;
         padding: 10px 12px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
@@ -391,20 +434,123 @@ function showPaymentModal(currentSession) {
         transition: border-color 0.2s;
       }
 
-      #paymentGuestPhone:focus {
+      .phone-input:focus {
         border-color: #3b82f6;
       }
 
-      .input-hint {
+      .verify-btn {
+        padding: 10px 16px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
         font-size: 12px;
-        color: #6b7280;
-        margin-top: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .verify-btn:hover {
+        background: #2563eb;
+      }
+
+      .verify-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      .phone-input-hint {
+        font-size: 12px;
+        color: #475569;
         line-height: 1.4;
       }
 
+      .verification-result {
+        margin-top: 8px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        display: none;
+      }
+
+      .verification-result.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #bbf7d0;
+        display: block;
+      }
+
+      .verification-result.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+        display: block;
+      }
+
+      .verification-result.member {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fed7aa;
+        display: block;
+      }
+
+      .payment-method-section {
+        margin-bottom: 20px;
+      }
+
+      .payment-methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+
+      .payment-method-option {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+      }
+
+      .payment-method-option:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .payment-method-option input[type="radio"] {
+        display: none;
+      }
+
+      .payment-method-option input[type="radio"]:checked + .method-icon + span {
+        color: #3b82f6;
+        font-weight: 700;
+      }
+
+      .payment-method-option input[type="radio"]:checked ~ * {
+        color: #3b82f6;
+      }
+
+      .payment-method-option:has(input[type="radio"]:checked) {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .method-icon {
+        font-size: 24px;
+        margin-bottom: 4px;
+      }
+
       .payment-total {
-        border-top: 2px solid #e2e8f0;
-        padding-top: 16px;
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid #e2e8f0;
       }
 
       .total-line {
@@ -413,6 +559,11 @@ function showPaymentModal(currentSession) {
         margin-bottom: 8px;
         font-size: 14px;
         color: #475569;
+      }
+
+      .total-line.discount-line {
+        color: #dc2626;
+        font-weight: 600;
       }
 
       .total-line.final {
@@ -427,6 +578,7 @@ function showPaymentModal(currentSession) {
       .total-line.final span:last-child {
         color: #059669;
         font-weight: 800;
+        font-size: 18px;
       }
 
       .modal-footer {
@@ -435,14 +587,15 @@ function showPaymentModal(currentSession) {
         display: flex;
         gap: 12px;
         justify-content: flex-end;
+        background: #f8fafc;
       }
 
       .btn {
-        padding: 10px 20px;
+        padding: 12px 24px;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         font-size: 14px;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
       }
@@ -458,23 +611,22 @@ function showPaymentModal(currentSession) {
       }
 
       .btn-primary {
-        background: #3b82f6;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
         color: white;
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
       }
 
       .btn-primary:hover {
-        background: #2563eb;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
       }
 
       .btn-primary:disabled {
         background: #9ca3af;
         cursor: not-allowed;
-      }
-
-      .no-items {
-        text-align: center;
-        color: #9ca3af;
-        padding: 12px;
+        transform: none;
+        box-shadow: none;
       }
 
       @keyframes fadeIn {
@@ -486,6 +638,26 @@ function showPaymentModal(currentSession) {
         from { transform: translateY(20px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
       }
+
+      @media (max-width: 768px) {
+        .payment-modal {
+          width: 95%;
+          height: 95%;
+        }
+
+        .payment-methods {
+          grid-template-columns: 1fr;
+        }
+
+        .session-item {
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+
+        .phone-input-wrapper {
+          flex-direction: column;
+        }
+      }
     </style>
   `;
 
@@ -494,9 +666,81 @@ function showPaymentModal(currentSession) {
   // 전화번호 입력 포맷팅 설정
   setupPhoneInputFormatting();
 
-  // 세션 기반 결제이므로 결제 버튼 활성화
-  updatePaymentSummary();
   console.log('💳 결제 모달 표시 완료');
+}
+
+// 전화번호 확인 함수
+async function verifyPhoneNumber() {
+  const phoneInput = document.getElementById('paymentGuestPhone');
+  const verifyBtn = document.getElementById('phoneVerifyBtn');
+  const resultDiv = document.getElementById('phoneVerificationResult');
+  
+  const phone = phoneInput.value.trim();
+  
+  if (!phone) {
+    showPhoneVerificationResult('전화번호를 입력해주세요.', 'error');
+    return;
+  }
+
+  if (!/^010-\d{4}-\d{4}$/.test(phone)) {
+    showPhoneVerificationResult('올바른 전화번호 형식이 아닙니다. (010-0000-0000)', 'error');
+    return;
+  }
+
+  verifyBtn.disabled = true;
+  verifyBtn.textContent = '확인 중...';
+
+  try {
+    // 전화번호로 사용자 확인
+    const response = await fetch('/api/auth/users/check-phone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      if (!data.available) {
+        // 기존 회원
+        showPhoneVerificationResult('🎉 TLL 회원으로 확인되었습니다! 포인트 적립이 가능합니다.', 'member');
+        applyMemberDiscount();
+      } else {
+        // 신규 게스트
+        showPhoneVerificationResult('✅ 게스트로 등록됩니다. 다음 방문 시 주문 이력을 확인할 수 있습니다.', 'success');
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ 전화번호 확인 실패:', error);
+    showPhoneVerificationResult('전화번호 확인 중 오류가 발생했습니다.', 'error');
+  } finally {
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = '확인';
+  }
+}
+
+// 전화번호 확인 결과 표시
+function showPhoneVerificationResult(message, type) {
+  const resultDiv = document.getElementById('phoneVerificationResult');
+  resultDiv.textContent = message;
+  resultDiv.className = `verification-result ${type}`;
+}
+
+// 회원 할인 적용
+function applyMemberDiscount() {
+  const baseAmountElement = document.getElementById('baseAmount');
+  const discountLineElement = document.getElementById('discountLine');
+  const discountAmountElement = document.getElementById('discountAmount');
+  const totalAmountElement = document.getElementById('totalPaymentAmount');
+
+  const baseAmount = parseInt(baseAmountElement.textContent.replace(/[₩,]/g, ''));
+  const discount = Math.floor(baseAmount * 0.05); // 5% 할인
+  const finalAmount = baseAmount - discount;
+
+  discountAmountElement.textContent = `₩${discount.toLocaleString()}`;
+  totalAmountElement.textContent = `₩${finalAmount.toLocaleString()}`;
+  discountLineElement.style.display = 'flex';
 }
 
 // 전화번호 형식 자동 변환
@@ -504,6 +748,10 @@ function formatPhoneNumber(input) {
   const value = input.value.replace(/[^0-9]/g, '');
   if (value.length >= 11) {
     input.value = value.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+  } else if (value.length >= 7) {
+    input.value = value.replace(/(\d{3})(\d{4})/, '$1-$2');
+  } else if (value.length >= 3) {
+    input.value = value.replace(/(\d{3})/, '$1-');
   }
 }
 
@@ -514,18 +762,12 @@ function setupPhoneInputFormatting() {
     phoneInput.addEventListener('input', function() {
       formatPhoneNumber(this);
     });
-  }
-}
 
-// 결제 요약 정보 업데이트 (세션 기반)
-function updatePaymentSummary() {
-  console.log('🔄 updatePaymentSummary 호출됨');
-  // 세션 기반 결제에서는 별도의 업데이트가 필요하지 않음
-  // 결제 버튼은 항상 활성화 상태 (세션이 있는 경우)
-  const processBtn = document.getElementById('processPaymentBtn');
-  if (processBtn) {
-    processBtn.disabled = false;
-    console.log('✅ 결제 버튼 활성화됨');
+    phoneInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        verifyPhoneNumber();
+      }
+    });
   }
 }
 
@@ -540,19 +782,18 @@ async function processSelectedPayments() {
 
   const processBtn = document.getElementById('processPaymentBtn');
   processBtn.disabled = true;
-  processBtn.textContent = '처리 중...';
+  processBtn.textContent = '결제 처리 중...';
 
   const paymentData = {
     paymentMethod: paymentMethod
   };
 
   // 전화번호가 입력된 경우 추가
-  if (guestPhone) {
+  if (guestPhone && /^010-\d{4}-\d{4}$/.test(guestPhone)) {
     paymentData.guestPhone = guestPhone;
   }
 
   console.log('💳 세션 결제 처리 요청:', paymentData);
-  console.log('🔗 요청 URL:', `/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`);
 
   try {
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${window.currentTable}/payment`, {
@@ -563,9 +804,7 @@ async function processSelectedPayments() {
       body: JSON.stringify(paymentData)
     });
 
-    console.log('📡 결제 API 응답 상태:', response.status);
     const result = await response.json();
-    console.log('📊 결제 API 응답 데이터:', result);
 
     if (result.success) {
       console.log('✅ 결제 성공 - UI 업데이트 시작');
@@ -579,11 +818,11 @@ async function processSelectedPayments() {
       // 모달 닫기
       closePaymentModal();
 
-      // 테이블 정보 새로고침 (결제 완료로 인한 자동 해제 반영)
+      // 테이블 정보 새로고침
       await window.loadTables();
       window.renderTableMap();
 
-      // 현재 선택된 테이블 정보 업데이트 (점유 상태 해제 반영)
+      // 현재 선택된 테이블 정보 업데이트
       if (window.currentTable && typeof window.renderTableDetailPanel === 'function') {
         window.renderTableDetailPanel(window.currentTable);
       }
@@ -598,12 +837,8 @@ async function processSelectedPayments() {
     console.error('❌ 결제 처리 중 오류:', error);
     window.showPOSNotification('결제 처리 중 오류가 발생했습니다.', 'error');
   } finally {
-    // Re-enable button and reset text
-    console.log('🔄 결제 버튼 상태 복원');
-    if (processBtn) {
-      processBtn.disabled = false;
-      processBtn.textContent = '결제 처리';
-    }
+    processBtn.disabled = false;
+    processBtn.textContent = '결제 처리';
   }
 }
 
@@ -617,21 +852,6 @@ function closePaymentModal(event) {
   }
 }
 
-// 시간 포맷팅 함수
-function formatOrderTime(orderDate) {
-  const date = new Date(orderDate);
-  const now = new Date();
-  const diffMinutes = Math.floor((now - date) / (1000 * 60));
-
-  if (diffMinutes < 1) return '방금 전';
-  if (diffMinutes < 60) return `${diffMinutes}분 전`;
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}시간 전`;
-
-  return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5);
-}
-
 // 조리 상태 텍스트 변환
 function getCookingStatusText(status) {
   const statusMap = {
@@ -643,19 +863,9 @@ function getCookingStatusText(status) {
   return statusMap[status] || status;
 }
 
-// 주문 소스 텍스트 변환
-function getOrderSourceText(source) {
-  const sourceMap = {
-    'TLL': 'TLL 주문',
-    'POS': 'POS 주문',
-    'POS_TLL': 'POS+TLL'
-  };
-  return sourceMap[source] || source;
-}
-
 // 전역 함수 등록
 window.processPayment = processPayment;
 window.showPaymentModal = showPaymentModal;
 window.closePaymentModal = closePaymentModal;
-window.updatePaymentSummary = updatePaymentSummary;
 window.processSelectedPayments = processSelectedPayments;
+window.verifyPhoneNumber = verifyPhoneNumber;

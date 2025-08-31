@@ -344,6 +344,36 @@ function renderPOSLayout() {
       </main>
     </div>
 
+    <!-- 결제 모달 -->
+    <div id="paymentModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>결제하기</h2>
+          <button class="close-modal-btn" onclick="closePaymentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="payment-form">
+            <div class="form-group">
+              <label for="phoneNumber">전화번호 (TLL 연동)</label>
+              <input type="tel" id="phoneNumber" placeholder="010-1234-5678" />
+            </div>
+            <div class="form-group">
+              <label>결제 수단</label>
+              <div class="payment-options">
+                <button class="payment-modal-btn card-btn" onclick="confirmPayment('CARD')">카드 결제</button>
+                <button class="payment-modal-btn cash-btn" onclick="confirmPayment('CASH')">현금 결제</button>
+                <button class="payment-modal-btn" onclick="confirmPayment('TLL_LINK')">TLL 연동</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-btn" onclick="closePaymentModal()">취소</button>
+          <button class="confirm-btn" onclick="processFinalPayment()">결제 완료</button>
+        </div>
+      </div>
+    </div>
+
     <style>
       * {
         margin: 0;
@@ -1814,12 +1844,238 @@ function renderPOSLayout() {
           display: none;
         }
       }
+
+      /* 결제 모달 스타일 */
+      .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal.hidden {
+        display: none;
+      }
+
+      .modal-content {
+        background-color: #fefefe;
+        margin: auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {opacity: 0; transform: scale(0.9);}
+        to {opacity: 1; transform: scale(1);}
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 20px;
+      }
+
+      .modal-header h2 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .close-modal-btn {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: #aaa;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .close-modal-btn:hover {
+        color: #333;
+      }
+
+      .modal-body {
+        margin-bottom: 20px;
+      }
+
+      .payment-form .form-group {
+        margin-bottom: 15px;
+      }
+
+      .payment-form label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .payment-form input[type="tel"] {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      .payment-form input[type="tel"]:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .payment-options {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .payment-modal-btn {
+        padding: 12px 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 50px;
+      }
+
+      .payment-modal-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
+
+      .payment-modal-btn.card-btn {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+      }
+      .payment-modal-btn.card-btn:hover {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      }
+
+      .payment-modal-btn.cash-btn {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+      }
+      .payment-modal-btn.cash-btn:hover {
+        background: linear-gradient(135deg, #059669, #047857);
+      }
+
+      .payment-modal-btn.tll-link-btn {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        grid-column: 1 / -1; /* Span across all columns */
+      }
+      .payment-modal-btn.tll-link-btn:hover {
+        background: linear-gradient(135deg, #d97706, #b45309);
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
+        margin-top: 20px;
+      }
+
+      .cancel-btn, .confirm-btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 700;
+        transition: background 0.2s, transform 0.2s;
+      }
+
+      .cancel-btn {
+        background: #f3f4f6;
+        color: #374151;
+      }
+      .cancel-btn:hover {
+        background: #e5e7eb;
+        transform: translateY(-1px);
+      }
+
+      .confirm-btn {
+        background: #3b82f6;
+        color: white;
+      }
+      .confirm-btn:hover {
+        background: #2563eb;
+        transform: translateY(-1px);
+      }
     </style>
   `;
 
   // 시계 업데이트 시작
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
+
+  // 결제 버튼 이벤트 리스너 추가
+  document.querySelectorAll('.payment-btn').forEach(button => {
+    button.addEventListener('click', openPaymentModal);
+  });
+}
+
+// 결제 모달 열기
+function openPaymentModal() {
+  const paymentModal = document.getElementById('paymentModal');
+  if (paymentModal) {
+    paymentModal.classList.remove('hidden');
+  }
+}
+
+// 결제 모달 닫기
+function closePaymentModal() {
+  const paymentModal = document.getElementById('paymentModal');
+  if (paymentModal) {
+    paymentModal.classList.add('hidden');
+  }
+}
+
+// 각 결제 수단에 대한 최종 확인 로직
+function confirmPayment(paymentMethod) {
+  const phoneNumber = document.getElementById('phoneNumber').value;
+  console.log(`Payment method: ${paymentMethod}, Phone Number: ${phoneNumber}`);
+  // 여기에 실제 결제 로직 구현 (TLL 연동, 카드/현금 처리 등)
+  alert(`결제 시도: ${paymentMethod}, 전화번호: ${phoneNumber}`);
+  closePaymentModal(); // 모달 닫기
+}
+
+// 최종 결제 처리 함수 (모달 외부 버튼 클릭 시)
+function processFinalPayment() {
+  const selectedPaymentMethod = document.querySelector('.payment-options .payment-modal-btn:not([style*="display: none"])'); // Simplified selection
+  if (selectedPaymentMethod) {
+    let method = '';
+    if (selectedPaymentMethod.classList.contains('card-btn')) method = 'CARD';
+    else if (selectedPaymentMethod.classList.contains('cash-btn')) method = 'CASH';
+    else method = 'TLL_LINK'; // Assuming the default TLL button
+
+    confirmPayment(method);
+  } else {
+    alert('결제 수단을 선택해주세요.');
+  }
 }
 
 // 현재 시간 업데이트
@@ -1864,3 +2120,7 @@ window.renderPOSLayout = renderPOSLayout;
 window.logoutPOS = logoutPOS;
 window.saveOrderAndGoToMap = saveOrderAndGoToMap;
 window.handlePrimaryAction = handlePrimaryAction;
+window.openPaymentModal = openPaymentModal;
+window.closePaymentModal = closePaymentModal;
+window.confirmPayment = confirmPayment;
+window.processFinalPayment = processFinalPayment;
