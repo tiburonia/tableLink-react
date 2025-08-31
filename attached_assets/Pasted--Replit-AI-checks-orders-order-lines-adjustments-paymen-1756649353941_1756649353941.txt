@@ -1,0 +1,262 @@
+오케이. 아래 프롬프트 세트를 Replit AI에 순서대로 붙이면, 너가 만든 스키마(checks / orders / order_lines / adjustments / payments …) 기반으로 POS · KDS · TLL · KRP 로직이 한 방에 뼈대 완성돼.
+(전제: Node.js + Express + PostgreSQL + pg. 스키마/함수/트리거는 이미 만들어져 있다고 가정.)
+
+프롬프트 0 — 공통 컨텍스트 고정
+프로젝트는 Node.js(18+) + Express + PostgreSQL(pg)로 구성되어 있고, DB에는 다음 코어 테이블/함수/트리거가 이미 존재한다:
+- checks, orders, order_lines, line_options, adjustments, payments, payment_allocations, order_events
+- ENUM: check_status, order_status, item_status, pay_status, channel_type, source_type, adj_scope, adj_type, value_type
+- 합계 함수: calc_check_total(check_id BIGINT) RETURNS INT
+- KDS 실시간: order_lines INSERT/UPDATE 시 pg_notify('kds_line_events', <json>) 트리거
+- 뷰: paid_orders_view, user_paid_orders_view
+
+아래 요구사항에 맞춰 src/ 디렉토리에 코드를 추가/수정해줘.
+기본 의존성: express, cors, pg, dotenv, uuid, express-rate-limit, jsonwebtoken
+폴더 구조(없으면 생성):
+- src/server.js
+- src/db/pool.js
+- src/utils/total.js
+- src/mw/errors.js
+- src/mw/auth.js
+- src/services/krp.js
+- src/services/sse.js
+- src/routes/{pos.js,tll.js,kds.js,krp.js}
+- public/{kds-demo.html,pos-demo.html}
+
+규칙:
+- 모든 DB 쓰기는 트랜잭션 사용.
+- 결제/주문 중복 방지: Idempotency-Key 헤더 혹은 ext_key UNIQUE.
+- 체크 잠금: 결제 직전에 SELECT ... FOR UPDATE.
+- 에러는 공통 에러미들웨어로 처리.
+- 응답 JSON은 식별자(check_id, order_id, line_ids 등) 명확히 포함.
+
+프롬프트 1 — 공용 유틸/미들웨어
+다음 파일들을 구현해줘.
+
+1) src/db/pool.js
+- dotenv 로드, new pg.Pool({ connectionString: process.env.DATABASE_URL })
+- module.exports = { pool, query:(text,params)=>pool.query(text,params) }
+
+2) src/mw/errors.js
+- notFound 핸들러(404), error 핸들러(스택 숨김, {message, code} 응답)
+
+3) src/mw/auth.js
+- 간단한 매장 스코프 인증 미들웨어:
+  - X-Store-Id 헤더를 읽어 req.storeId 로 세팅(숫자 변환)
+  - 없으면 400
+  - (추후 JWT 검증 자리 남겨둠)
+
+4) src/utils/total.js
+- async calcCheckTotal(client, checkId): SELECT calc_check_total($1)
+- async sumPayments(client, checkId): SELECT COALESCE(SUM(CASE WHEN status IN ('paid','refunded') THEN amount ELSE 0 END),0) FROM payments WHERE check_id=$1
+- module.exports = { calcCheckTotal, sumPayments }
+
+프롬프트 2 — POS 라우터 (체크/주문/라인/조정/요약)
+src/routes/pos.js 라우터를 구현해줘. mount 경로는 /api/pos.
+
+엔드포인트:
+
+[POST] /checks
+Body: { table_number?, user_id?, guest_phone?, channel, source }
+- req.storeId는 헤더 X-Store-Id에서 받음.
+- checks row 생성(status='open'), order_events 기록(event_type='CHECK_CREATED').
+- 201 { check_id, status }
+
+[GET] /checks/:id/summary
+- calc_check_total 호출로 final_total 계산
+- 라인 카운트(상태별), adjustments 요약, payments 합계(sumPayments)
+- 200 { check_id, final_total, paid_total, due, lines: {queued,cooking,ready,served,canceled}, adjustments:[...], payments:[{id,amount,status,method,paid_at}] }
+
+[POST] /orders
+Headers: { Idempotency-Key }
+Body: { check_id, source, ext_key? }
+- ext_key 또는 Idempotency-Key로 중복 방지(UNIQUE 충돌 시 기존 id 반환)
+- orders 생성 → status 'confirmed'로 세팅
+- 201 { order_id }
+
+[POST] /order-lines/bulk
+Body: { order_id, items:[{menu_id?, menu_name, unit_price, count, cook_station?, notes?, options?: [{option_id?, name, price_delta}] }] }
+- count 개수만큼 order_lines 여러 row 생성(quantity=1)
+- 각 라인에 옵션 있으면 line_options insert
+- 트랜잭션 처리
+- 201 { line_ids: [...], created: n }
+
+[PATCH] /order-lines/:id
+Body: { status, notes? }
+- status 전환(queued|cooking|ready|served|canceled)
+- order_events 기록(event_type='LINE_STATUS_CHANGED' or 'LINE_CANCELED')
+- 200 { line_id, status }
+
+[POST] /adjustments
+Body: { scope:'CHECK'|'LINE', check_id, line_id?, adj_type, value_type:'amount'|'percent', value }
+- adjustments insert
+- 201 { adjustment_id }
+
+서버 유효성:
+- storeId 스코프 확인: checks.store_id == req.storeId 아니면 403
+- LINE PATCH 시, 이미 served면 canceled 불가(409)
+
+프롬프트 3 — 결제(KRP) 라우터 + 트랜잭션
+src/services/krp.js: 결제 모듈 인터페이스와 모의 구현 작성
+- async authorize({amount, method}) => { ok:true, provider:'MOCK', txn_id: uuid }
+- async capture({txn_id}) => { ok:true }
+- async refund({txn_id, amount}) => { ok:true }
+- 실제 PG 연동 시 이 인터페이스만 교체 가능하게
+
+src/routes/krp.js 라우터를 구현. mount: /api/payments
+
+[POST] /
+Headers: { Idempotency-Key }
+Body: { check_id, method, amount, krp_provider? }
+로직:
+- BEGIN
+- checks 행 SELECT ... FOR UPDATE
+- calc_check_total 재계산, sumPayments로 현재 누적 확인
+- amount>0이면 krp.authorize+capture 호출(모의)
+- payments insert(status='paid', idempotency_key UNIQUE)
+- 결제 누적 >= final_total 이면 checks.status='closed', closed_at=now()
+- COMMIT
+- 201 { payment_id, status:'paid', check_status }
+
+[POST] /:id/refund
+Body: { amount, allocations?: [{ line_id, amount }] }
+로직:
+- BEGIN
+- 기존 payment 존재 확인(또는 check_id로 신규 환불 행 만들기)
+- krp.refund 모의 호출
+- payments insert(amount=-abs(amount), status='refunded')
+- allocations 있으면 payment_allocations 다건 insert
+- COMMIT
+- 201 { payment_id, status:'refunded' }
+
+[POST] /webhook
+Body: { krp_provider, krp_txn_id, status, amount, check_id }
+- (샌드박스) 서명검증 생략, (실서비스) HMAC 자리 남김
+- (krp_provider, krp_txn_id) UNIQUE로 upsert 처리
+- 상태 반영 후, 필요시 checks 닫기
+- 200 { ok:true }
+
+프롬프트 4 — KDS 실시간(SSE) + 폴백 + 상태변경
+src/services/sse.js: 간단 SSE 허브
+- subscribers: Map<topic, Set<res>>
+- add(topic, res), remove(res), broadcast(topic, data)
+
+src/routes/kds.js 라우터를 구현. mount: /api/kds
+전제: DB는 kds_line_events 채널로 NOTIFY를 쏨.
+
+서버 준비:
+- app 스타트 시 pg.Client 하나를 LISTEN 'kds_line_events'에 붙임
+- notification 수신 시 payload 파싱 → store_id를 조인해서 알아낸 후 주제에 브로드캐스트
+  (store_id 얻기: NEW.order_id → orders → checks.store_id 조인 쿼리 캐싱)
+
+엔드포인트:
+[GET] /stream?stations=FRY,GRILL
+- 헤더 X-Store-Id 필수
+- SSE 연결, 주제(topic): `store:{storeId}` (필요 시 스테이션 필터는 메시지 레벨에서 처리)
+- DB NOTIFY 수신 시, 해당 storeId 이벤트만 push
+- 하트비트 20s
+
+[GET] /poll?since=ISO8601&status=queued,cooking
+- 최근 변경 라인 리스트 반환(orders/checks 조인해서 table_number, menu_name 포함)
+
+[PATCH] /lines/:id
+Body: { status }
+- 상태 전환(queued→cooking→ready→served)
+- 정책: served 이후로는 canceled 불가(409)
+- 200 { line_id, status }
+
+프롬프트 5 — TLL(손님) 주문 라우터 (QR/아이템/정책)
+src/routes/tll.js 라우터 구현. mount: /api/tll
+
+엔드포인트:
+
+[POST] /checks/from-qr
+Body: { qr_code, user_id?, guest_phone? }
+- qr_codes에서 code로 조회 → store_id, table_number 획득
+- 기존 open 체크가 있으면 그대로 반환, 없으면 새 checks 생성(source='TLL', channel='DINE_IN')
+- 201 { check_id, store_id, table_number }
+
+[POST] /orders
+Headers: { Idempotency-Key }
+Body: { check_id, ext_key? }
+- orders insert(source='TLL', status='confirmed'), idempotency 보장
+- 201 { order_id }
+
+[POST] /order-lines/bulk
+Body: { order_id, items:[{menu_id?, menu_name, unit_price, count, cook_station?, notes?, options?}] }
+- POS와 동일 로직: 라인 여러 개 생성 + 옵션 삽입
+- 조리 전 취소 정책:
+  - [DELETE] /order-lines/:id → queued 상태에서만 허용, cooking 이상이면 409
+- 201 { line_ids:[...] }
+
+제약:
+- store 스코프 검증(해당 check의 store_id == req.storeId)
+- 가격 신뢰성: unit_price는 서버에서 menu_items.price로 검증(다르면 서버 가격으로 대체)
+
+프롬프트 6 — 서버 초기화/마운트/정적 데모
+src/server.js 를 완성해줘.
+
+기능:
+- dotenv, cors, express.json(), rate-limit 기본 설정
+- 공통 mw: auth(X-Store-Id), 라우터 mount
+  - /api/pos -> pos.js
+  - /api/kds -> kds.js
+  - /api/tll -> tll.js
+  - /api/payments -> krp.js
+- health check: GET /health -> {ok:true}
+- 정적: express.static('public')
+
+public/kds-demo.html, public/pos-demo.html:
+- kds-demo: X-Store-Id 입력 → /api/kds/stream SSE 연결, 수신 이벤트 리스트 표출
+- pos-demo: 순서 버튼(체크→오더→라인→요약→결제), 응답 JSON 화면에 렌더
+
+프롬프트 7 — 수락 기준(AC) + 단위 테스트용 cURL
+다음 AC를 모두 만족하도록 구현을 마무리해줘.
+
+AC-1: TLL에서 후라이드 2개 주문시 order_lines 두 줄 생성, 그 중 1개만 취소 가능.
+AC-2: POS summary에서 calc_check_total 값이 취소 라인 제외 + 옵션/조정 반영.
+AC-3: 결제 POST 시 Idempotency-Key로 중복 결제 방지, 결제 누적이 총액 이상이면 checks.status='closed'.
+AC-4: KDS SSE에 order_lines INSERT/UPDATE가 실시간으로 반영되며, X-Store-Id가 다르면 수신되지 않음.
+AC-5: served 상태인 라인은 취소 시 409 반환.
+
+테스트 cURL 세트도 함께 제공해줘(로컬 5000 기준):
+
+# 1) 체크 생성(TLL)
+curl -X POST http://localhost:5000/api/tll/checks/from-qr \
+  -H "Content-Type: application/json" -H "X-Store-Id: 1" \
+  -d '{"qr_code":"TABLE_3","user_id":"u1"}'
+
+# 2) 주문 생성(TLL)
+curl -X POST http://localhost:5000/api/tll/orders \
+  -H "Content-Type: application/json" -H "X-Store-Id: 1" -H "Idempotency-Key: idem-001" \
+  -d '{"check_id":1,"ext_key":"ord-001"}'
+
+# 3) 라인 추가(2개)
+curl -X POST http://localhost:5000/api/tll/order-lines/bulk \
+  -H "Content-Type: application/json" -H "X-Store-Id: 1" \
+  -d '{"order_id":1,"items":[{"menu_name":"후라이드","unit_price":18000,"count":2,"cook_station":"FRY"}]}'
+
+# 4) 한 개만 취소
+curl -X PATCH http://localhost:5000/api/pos/order-lines/2 \
+  -H "Content-Type: application/json" -H "X-Store-Id: 1" \
+  -d '{"status":"canceled"}'
+
+# 5) 요약
+curl http://localhost:5000/api/pos/checks/1/summary -H "X-Store-Id: 1"
+
+# 6) 결제
+curl -X POST http://localhost:5000/api/payments \
+  -H "Content-Type: application/json" -H "X-Store-Id: 1" -H "Idempotency-Key: idem-pay-001" \
+  -d '{"check_id":1,"method":"card","amount":18000}'
+
+# 7) KDS 스트림(브라우저에서)
+#  http://localhost:5000/public/kds-demo.html 열고 X-Store-Id: 1 입력
+
+프롬프트 8 — 견고성(에러/보안/성능) 마감
+마지막으로 다음을 보강해줘.
+
+- 에러메시지 표준화: { error: { code, message, details? } }
+- 입력 검증: celebrate/Joi 없이도 최소한의 수동 검증(필수값, 타입)
+- SQL 인덱스 힌트: 빈번 쿼리에 적절한 WHERE 인덱스 사용 확인
+- SSE 연결 수 제한 및 타임아웃/하트비트
+- TODO 주석: 실제 PG 연동 시 서명검증(HMAC), 메뉴가격 서버신뢰, RBAC/JWT 확장 포인트
+- README 섹션: 실행법, ENV, 라우팅 표, 흐름도 한 장(ASCII)
