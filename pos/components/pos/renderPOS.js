@@ -27,6 +27,85 @@ let soundSettings = {
 let autoRefreshInterval = null; // 자동 새로고침 인터벌
 
 // 주문 수정 관리 상태 초기화 (전역 변수는 이미 선언됨)
+let originalOrder = []; // 원본 주문 상태 저장
+
+// 원본 주문 상태 저장 함수
+function saveOriginalOrder() {
+  if (window.confirmedOrder && Array.isArray(window.confirmedOrder)) {
+    window.originalOrder = JSON.parse(JSON.stringify(window.confirmedOrder));
+    console.log('💾 원본 주문 상태 저장 완료:', window.originalOrder.length, '개 아이템');
+  } else {
+    window.originalOrder = [];
+  }
+}
+
+// 주문 확정 함수
+function confirmOrder() {
+  return confirmPendingOrder();
+}
+
+// 변경사항 되돌리기 함수
+function revertChanges() {
+  if (window.originalOrder && Array.isArray(window.originalOrder)) {
+    window.confirmedOrder = JSON.parse(JSON.stringify(window.originalOrder));
+    window.pendingOrder = [];
+    window.hasUnconfirmedChanges = false;
+    window.currentOrder = [...window.confirmedOrder];
+    
+    renderOrderItems();
+    renderPaymentSummary();
+    updateButtonStates();
+    
+    console.log('🔄 변경사항 되돌리기 완료');
+    showPOSNotification('변경사항이 되돌려졌습니다.', 'info');
+  }
+}
+
+// 주문 수정 추적 함수
+function trackOrderModification(itemId, modificationType) {
+  console.log(`📝 주문 수정 추적: ${itemId} - ${modificationType}`);
+  window.hasUnconfirmedChanges = true;
+}
+
+// 주문 화면 업데이트 함수
+function updateOrderDisplay() {
+  renderOrderItems();
+  renderPaymentSummary();
+  updateButtonStates();
+}
+
+// Primary Action 버튼 업데이트 함수
+function updatePrimaryActionButton() {
+  const primaryBtn = document.querySelector('.primary-action-btn');
+  if (!primaryBtn) return;
+
+  const btnTitle = primaryBtn.querySelector('.btn-title');
+  const btnSubtitle = primaryBtn.querySelector('.btn-subtitle');
+  
+  const hasConfirmed = window.confirmedOrder && window.confirmedOrder.length > 0;
+  const hasPending = window.pendingOrder && window.pendingOrder.length > 0;
+  const hasUnconfirmed = window.hasUnconfirmedChanges || hasPending;
+
+  if (hasUnconfirmed) {
+    primaryBtn.disabled = !hasPending;
+    if (btnTitle) btnTitle.textContent = '주문 확정';
+    if (btnSubtitle) btnSubtitle.textContent = '변경사항 적용';
+    primaryBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    primaryBtn.onclick = () => confirmPendingOrder();
+  } else if (hasConfirmed) {
+    primaryBtn.disabled = false;
+    if (btnTitle) btnTitle.textContent = '테이블맵 이동';
+    if (btnSubtitle) btnSubtitle.textContent = '현재 화면 종료';
+    primaryBtn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+    primaryBtn.onclick = () => returnToTableMap();
+  } else {
+    primaryBtn.disabled = true;
+    if (btnTitle) btnTitle.textContent = '주문 없음';
+    if (btnSubtitle) btnSubtitle.textContent = '메뉴를 선택하세요';
+    primaryBtn.style.background = '#f1f5f9';
+    primaryBtn.onclick = null;
+  }
+}
 
 // 고유 주문 아이템 ID 생성 함수
 function generateOrderItemId() {
@@ -1691,13 +1770,14 @@ window.holdCurrentOrder = holdCurrentOrder;
 window.voidOrder = voidOrder;
 window.cancelOrderChanges = cancelOrderChanges;
 
-// 주문 수정 관련 함수
+// 주문 수정 관련 함수들을 전역으로 노출
 window.confirmOrder = confirmOrder;
 window.saveOriginalOrder = saveOriginalOrder;
 window.revertChanges = revertChanges;
 window.trackOrderModification = trackOrderModification;
 window.updateOrderDisplay = updateOrderDisplay;
 window.updatePrimaryActionButton = updatePrimaryActionButton;
+window.originalOrder = [];
 
 // 테이블 정보 업데이트 함수 (전역 스코프로 이동)
 window.updateTableInfo = function() {
