@@ -8,6 +8,7 @@ import { POSPaymentManager } from './modules/posPaymentManager.js';
 import { POSTempStorage } from './modules/posTempStorage.js';
 import { POSUIRenderer } from './modules/posUIRenderer.js';
 import { showPOSNotification } from '../../utils/posNotification.js';
+import { renderPOSLayout } from './modules/posLayout.js'; // renderPOSLayout 함수 import
 
 // POS 시스템 초기화
 async function renderPOS() {
@@ -116,6 +117,9 @@ function startPeriodicUpdates() {
     }
   }, 5000);
 }
+
+// ES6 모듈 export
+export { renderPOS };
 
 // 전역 함수 노출
 window.renderPOS = renderPOS;

@@ -1,5 +1,6 @@
-// POS 레이아웃 관리 모듈 (OKPOS 구조 기반 상용 서비스)
-function renderPOSLayout() {
+// TableLink POS 시스템 레이아웃 구성
+// (v4.0 - 2024.12.11 - 단일화된 POS 구조 기반 상용 서비스)
+export function renderPOSLayout() {
   const main = document.getElementById('main');
 
   main.innerHTML = `
@@ -362,7 +363,7 @@ function renderPOSLayout() {
               <div class="payment-options">
                 <button class="payment-modal-btn card-btn" onclick="confirmPayment('CARD')">카드 결제</button>
                 <button class="payment-modal-btn cash-btn" onclick="confirmPayment('CASH')">현금 결제</button>
-                <button class="payment-modal-btn" onclick="confirmPayment('TLL_LINK')">TLL 연동</button>
+                <button class="payment-modal-btn tll-link-btn" onclick="confirmPayment('TLL_LINK')">TLL 연동</button>
               </div>
             </div>
           </div>
@@ -1683,17 +1684,17 @@ function renderPOSLayout() {
       }
 
       @keyframes menuAddedPulse {
-        0% { 
+        0% {
           background: #10b981;
           color: white;
           transform: scale(1);
         }
-        50% { 
+        50% {
           background: #059669;
           color: white;
           transform: scale(1.05);
         }
-        100% { 
+        100% {
           background: white;
           color: inherit;
           transform: scale(1);
