@@ -1234,7 +1234,7 @@ router.post('/stores/:storeId/table/:tableNumber/sync-session', async (req, res)
         syncResult.conflictResolution = 'server_priority';
       } else {
         // 클라이언트 데이터로 서버 업데이트
-        await pool.query(`
+        await client.query(`
           UPDATE orders 
           SET order_data = $1,
               updated_at = CURRENT_TIMESTAMP
@@ -1281,7 +1281,7 @@ router.delete('/stores/:storeId/table/:tableNumber/session/:sessionId', async (r
     await client.query('BEGIN');
 
     // 1. 세션 상태 확인
-    const sessionResult = await client.query(`
+    const sessionResult = await pool.query(`
       SELECT id, cooking_status, total_amount, customer_name
       FROM orders
       WHERE id = $1 AND store_id = $2 AND table_number = $3
@@ -1766,7 +1766,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment-partial', async (req, r
         parseInt(storeId),
         parseInt(tableNumber),
         JSON.stringify({
-          items: orderItems.rows,
+          items: orderItems,
           sessionId: sessionId,
           partialPayments: await this.getPartialPayments(sessionId, client)
         }),
@@ -1868,5 +1868,245 @@ async function getPartialPayments(orderId, client) {
 
   return result.rows;
 }
+
+// 기존 세션에 아이템 추가 API
+router.post('/orders/add-to-session', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const {
+      sessionId,
+      storeId,
+      storeName,
+      tableNumber,
+      items,
+      totalAmount,
+      isTLLOrder = false
+    } = req.body;
+
+    console.log(`➕ 세션 ${sessionId}에 아이템 추가:`, {
+      storeId,
+      tableNumber,
+      itemCount: items?.length,
+      totalAmount,
+      isTLLOrder
+    });
+
+    await client.query('BEGIN');
+
+    // 세션 존재 확인
+    const sessionCheck = await client.query(`
+      SELECT id, order_data, total_amount 
+      FROM orders 
+      WHERE id = $1 AND store_id = $2 AND cooking_status = 'OPEN'
+    `, [sessionId, storeId]);
+
+    if (sessionCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '유효한 세션을 찾을 수 없습니다'
+      });
+    }
+
+    const session = sessionCheck.rows[0];
+    const currentOrderData = session.order_data || { items: [] };
+    const currentTotal = session.total_amount || 0;
+
+    // 새 아이템들을 기존 주문 데이터에 추가
+    const updatedItems = [...(currentOrderData.items || []), ...items];
+    const updatedTotal = currentTotal + totalAmount;
+
+    // 세션 업데이트
+    const updateResult = await client.query(`
+      UPDATE orders 
+      SET 
+        order_data = $1,
+        total_amount = $2,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `, [
+      JSON.stringify({
+        ...currentOrderData,
+        items: updatedItems,
+        storeId,
+        storeName,
+        tableNumber,
+        sessionId,
+        lastUpdated: new Date().toISOString()
+      }),
+      updatedTotal,
+      sessionId
+    ]);
+
+    // 각 아이템을 order_items 테이블에도 추가
+    for (const item of items) {
+      await client.query(`
+        INSERT INTO order_items (
+          order_id, menu_name, quantity, price, cooking_status
+        ) VALUES ($1, $2, $3, $4, $5)
+      `, [sessionId, item.name, item.quantity, item.price, 'PENDING']);
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ 세션 ${sessionId} 업데이트 완료 (기존: ₩${currentTotal.toLocaleString()} + 추가: ₩${totalAmount.toLocaleString()})`);
+
+    res.json({
+      success: true,
+      sessionId: sessionId,
+      updatedOrder: updateResult.rows[0],
+      addedItems: items.length,
+      newTotal: updatedTotal,
+      message: `세션에 ${items.length}개 아이템이 추가되었습니다`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 세션 아이템 추가 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 아이템 추가 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 🆕 스마트 세션 아이템 추가 API (같은 메뉴 통합)
+router.post('/orders/add-to-session-smart', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const {
+      sessionId,
+      storeId,
+      storeName,
+      tableNumber,
+      item,
+      isTLLOrder = false
+    } = req.body;
+
+    console.log(`🧠 스마트 세션 ${sessionId}에 아이템 추가:`, {
+      storeId,
+      tableNumber,
+      itemName: item.name,
+      itemPrice: item.price,
+      isTLLOrder
+    });
+
+    await client.query('BEGIN');
+
+    // 세션 존재 확인
+    const sessionCheck = await client.query(`
+      SELECT id, order_data, total_amount 
+      FROM orders 
+      WHERE id = $1 AND store_id = $2 AND cooking_status = 'OPEN'
+    `, [sessionId, storeId]);
+
+    if (sessionCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '유효한 세션을 찾을 수 없습니다'
+      });
+    }
+
+    const session = sessionCheck.rows[0];
+    const currentOrderData = session.order_data || { items: [] };
+    const currentItems = currentOrderData.items || [];
+    const currentTotal = session.total_amount || 0;
+
+    // 같은 메뉴(이름과 가격이 동일)가 있는지 확인
+    const existingItemIndex = currentItems.findIndex(
+      existing => existing.name === item.name && existing.price === item.price
+    );
+
+    let updatedItems;
+    let action;
+    let updatedTotal = currentTotal + item.price;
+
+    if (existingItemIndex !== -1) {
+      // 같은 메뉴가 있으면 수량 증가
+      updatedItems = [...currentItems];
+      updatedItems[existingItemIndex] = {
+        ...updatedItems[existingItemIndex],
+        quantity: (updatedItems[existingItemIndex].quantity || 1) + (item.quantity || 1)
+      };
+      action = 'quantity_increased';
+
+      // order_items 테이블에서도 수량 증가
+      await client.query(`
+        UPDATE order_items 
+        SET quantity = quantity + $1
+        WHERE order_id = $2 AND menu_name = $3 AND price = $4
+      `, [item.quantity || 1, sessionId, item.name, item.price]);
+
+      console.log(`🔄 같은 메뉴 발견 - 수량 증가: ${item.name} (${updatedItems[existingItemIndex].quantity}개)`);
+    } else {
+      // 새로운 메뉴면 추가
+      updatedItems = [...currentItems, item];
+      action = 'new_item_added';
+
+      // order_items 테이블에도 새 아이템 추가
+      await client.query(`
+        INSERT INTO order_items (
+          order_id, menu_name, quantity, price, cooking_status
+        ) VALUES ($1, $2, $3, $4, $5)
+      `, [sessionId, item.name, item.quantity || 1, item.price, 'PENDING']);
+
+      console.log(`➕ 새 메뉴 추가: ${item.name}`);
+    }
+
+    // 세션 업데이트
+    const updateResult = await client.query(`
+      UPDATE orders 
+      SET 
+        order_data = $1,
+        total_amount = $2,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `, [
+      JSON.stringify({
+        ...currentOrderData,
+        items: updatedItems,
+        storeId,
+        storeName,
+        tableNumber,
+        sessionId,
+        lastUpdated: new Date().toISOString()
+      }),
+      updatedTotal,
+      sessionId
+    ]);
+
+    await client.query('COMMIT');
+
+    console.log(`✅ 스마트 세션 ${sessionId} 업데이트 완료 (${action}) - 총액: ₩${updatedTotal.toLocaleString()}`);
+
+    res.json({
+      success: true,
+      sessionId: sessionId,
+      action: action,
+      updatedOrder: updateResult.rows[0],
+      newTotal: updatedTotal,
+      message: action === 'quantity_increased' 
+        ? `${item.name} 수량이 증가되었습니다`
+        : `${item.name}이 추가되었습니다`
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 스마트 세션 아이템 추가 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '스마트 세션 아이템 추가 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
 
 module.exports = router;

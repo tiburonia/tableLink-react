@@ -257,7 +257,7 @@ async function loadTableOrders(tableNumber) {
         sessionId: data.currentSession.orderId,
         cookingStatus: item.cookingStatus || 'PENDING'
       }));
-      
+
       window.currentOrder = [...sessionOrders];
       console.log(`✅ 테이블 ${tableNumber} 세션 주문 ${sessionOrders.length}개 로드 (세션 ID: ${data.currentSession.orderId})`);
     }
@@ -350,7 +350,7 @@ function addMenuToOrder(menuName, price) {
     // 세션 중인 아이템과 임시 아이템을 구분하여 처리
     const sessionItems = window.currentOrder.filter(item => item.isConfirmed);
     const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
-    
+
     const existingPendingIndex = pendingItems.findIndex(item => item.name === menuName);
     const existingSessionIndex = sessionItems.findIndex(item => item.name === menuName);
 
@@ -425,11 +425,11 @@ function renderOrderItems() {
     const discount = parseInt(item.discount) || 0;
     const total = (price * quantity) - discount;
     const isSelected = window.selectedItems.includes(item.id);
-    
+
     // 세션 상태 및 수정 상태 표시
     let statusClass = '';
     let statusBadge = '';
-    
+
     if (item.isDeleted) {
       statusClass = 'deleted';
       statusBadge = 'DELETE';
@@ -492,7 +492,7 @@ function updatePrimaryActionButton() {
 
   const btnTitle = primaryBtn.querySelector('.btn-title');
   const btnSubtitle = primaryBtn.querySelector('.btn-subtitle');
-  
+
   const pendingItems = window.currentOrder ? window.currentOrder.filter(item => item.isPending && !item.isConfirmed) : [];
   const confirmedItems = window.currentOrder ? window.currentOrder.filter(item => item.isConfirmed) : [];
   const modifiedItems = pendingItems.filter(item => item.isModified || item.isDeleted);
@@ -501,7 +501,7 @@ function updatePrimaryActionButton() {
 
   if (hasPendingItems) {
     primaryBtn.disabled = false;
-    
+
     let subtitleText = '';
     if (newItems.length > 0 && modifiedItems.length > 0) {
       subtitleText = `신규 ${newItems.length}개, 수정 ${modifiedItems.length}개`;
@@ -510,7 +510,7 @@ function updatePrimaryActionButton() {
     } else if (modifiedItems.length > 0) {
       subtitleText = `${modifiedItems.length}개 수정사항`;
     }
-    
+
     if (btnTitle) btnTitle.textContent = '세션에 확정';
     if (btnSubtitle) btnSubtitle.textContent = subtitleText;
     primaryBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
@@ -559,7 +559,7 @@ async function confirmOrder() {
   const newItems = pendingItems.filter(item => !item.isModified && !item.isDeleted);
   const modifiedItems = pendingItems.filter(item => item.isModified);
   const deletedItems = pendingItems.filter(item => item.isDeleted);
-  
+
   if (pendingItems.length === 0) {
     showPOSNotification('확정할 새로운 주문이 없습니다.', 'warning');
     return;
@@ -617,7 +617,7 @@ async function confirmOrder() {
           item.sessionId !== modifiedItem.originalSessionId || 
           item.name !== modifiedItem.name
         );
-        
+
         // 수정된 아이템을 확정 상태로 변경
         modifiedItem.isConfirmed = true;
         modifiedItem.isPending = false;
@@ -635,7 +635,7 @@ async function confirmOrder() {
           item.name !== deletedItem.name
         );
       });
-      
+
       // 삭제 표시 아이템들도 제거
       window.currentOrder = window.currentOrder.filter(item => !item.isDeleted);
     }
@@ -774,7 +774,7 @@ function applyDiscount() {
     renderOrderItems();
     renderPaymentSummary();
     updatePrimaryActionButton();
-    
+
     showPOSNotification(`₩${discount.toLocaleString()} 할인 적용 (확정 필요)`, 'warning');
   }
 }
@@ -790,7 +790,7 @@ function changeQuantity(delta) {
     const item = window.currentOrder.find(item => item.id === itemId);
     if (item) {
       const newQuantity = Math.max(1, item.quantity + delta);
-      
+
       if (item.isConfirmed) {
         // 확정된 아이템이면 수정용 임시 아이템 생성
         const modifiedItem = {
@@ -816,7 +816,7 @@ function changeQuantity(delta) {
   renderOrderItems();
   renderPaymentSummary();
   updatePrimaryActionButton();
-  
+
   showPOSNotification('수량 변경 (확정 필요)', 'warning');
 }
 
@@ -865,7 +865,7 @@ function returnToTableMap() {
   // 임시저장된 데이터 완전 삭제
   if (window.currentOrder && window.currentOrder.length > 0) {
     const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
-    
+
     if (pendingItems.length > 0) {
       console.log(`🗑️ 테이블맵 복귀 - 미확정 주문 ${pendingItems.length}개 삭제`);
       clearTempOrder();
@@ -901,13 +901,13 @@ function clearOrder() {
 
 // 임시저장 함수 (세션과 별도 관리)
 function saveTempOrder() {
-  if (!window.currentTable || !window.currentOrder) return;
+  if (!window.currentTable || !window.currentStore || !window.currentOrder) return;
 
   try {
     const tempOrderKey = `temp_order_${window.currentStore.id}_${window.currentTable}`;
     const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
     const sessionItems = window.currentOrder.filter(item => item.isConfirmed);
-    
+
     const tempOrderData = {
       tableNumber: window.currentTable,
       storeId: window.currentStore.id,
@@ -930,7 +930,7 @@ function saveTempOrder() {
 
 // 임시저장 데이터 로드 (세션 정보 포함)
 function loadTempOrder() {
-  if (!window.currentTable) return [];
+  if (!window.currentTable || !window.currentStore) return [];
 
   try {
     const tempOrderKey = `temp_order_${window.currentStore.id}_${window.currentTable}`;
@@ -963,7 +963,7 @@ function loadTempOrder() {
 
 // 임시저장 데이터 삭제
 function clearTempOrder() {
-  if (!window.currentTable) return;
+  if (!window.currentTable || !window.currentStore) return;
 
   try {
     const tempOrderKey = `temp_order_${window.currentStore.id}_${window.currentTable}`;
