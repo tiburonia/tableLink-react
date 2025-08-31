@@ -37,11 +37,13 @@ app.use(express.static('public'));
 try {
   const posRoutes = require('./routes/pos');
   const kdsRoutes = require('./routes/kds'); // KDS routes
+  const tllRoutes = require('./routes/tll'); // TLL routes
   const krpRoutes = require('./routes/krp');
 
   app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRoutes); // Mount KDS routes
+  app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
+  app.use('/api/kds', kdsRoutes); // Mount KDS routes
 
   console.log('✅ 라우터 로드 완료');
 } catch (error) {
