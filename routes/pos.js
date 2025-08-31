@@ -276,22 +276,30 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    // 2. order_items 테이블에 개별 메뉴 아이템 추가
-    for (const item of items) {
+    // 주문 아이템들을 메뉴별로 통합해서 저장
+    const consolidatedItems = {};
+    items.forEach(item => {
+      const key = `${item.name}_${item.price}`;
+      if (consolidatedItems[key]) {
+        consolidatedItems[key].quantity += item.quantity;
+      } else {
+        consolidatedItems[key] = {
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        };
+      }
+    });
+
+    // 통합된 아이템들을 order_items 테이블에 저장
+    for (const item of Object.values(consolidatedItems)) {
       await client.query(`
-        INSERT INTO order_items (
-          order_id, menu_name, quantity, price, cooking_status
-        ) VALUES ($1, $2, $3, $4, $5)
-      `, [
-        orderId,
-        item.name,
-        item.quantity || 1,
-        item.price,
-        'PENDING'
-      ]);
+        INSERT INTO order_items (order_id, menu_name, price, quantity)
+        VALUES ($1, $2, $3, $4)
+      `, [orderId, item.name, item.price, item.quantity]);
     }
 
-    console.log(`✅ 주문 세션 ${orderId}에 메뉴 아이템 ${items.length}개 추가 완료`);
+    console.log(`✅ 주문 세션 ${orderId}에 메뉴 아이템 ${Object.values(consolidatedItems).length}개 추가 완료`);
 
     await client.query('COMMIT');
 
@@ -300,7 +308,7 @@ router.post('/orders', async (req, res) => {
         tableNumber: parseInt(tableNumber),
         orderId: orderId,
         action: existingOrderResult.rows.length > 0 ? 'items-added' : 'session-started',
-        itemCount: items.length,
+        itemCount: Object.values(consolidatedItems).length,
         addedAmount: calculatedTotalAmount
       });
 
@@ -322,7 +330,7 @@ router.post('/orders', async (req, res) => {
         storeName: storeName,
         tableNumber: parseInt(tableNumber),
         customerName: finalCustomerName,
-        itemCount: items.length,
+        itemCount: Object.values(consolidatedItems).length,
         totalAmount: calculatedTotalAmount,
         source: 'POS'
       });
@@ -337,9 +345,9 @@ router.post('/orders', async (req, res) => {
         `새로운 테이블 세션이 시작되었습니다`,
       orderData: {
         tableNumber: parseInt(tableNumber),
-        itemCount: items.length,
+        itemCount: Object.values(consolidatedItems).length,
         addedAmount: calculatedTotalAmount,
-        items: items
+        items: Object.values(consolidatedItems)
       }
     });
 
@@ -744,7 +752,7 @@ router.post('/stores/:storeId/table/:tableNumber/van-card-payment', async (req, 
     await client.query('BEGIN');
 
     // 1. 현재 OPEN 상태인 테이블 세션 확인
-    const sessionResult = await client.query(`
+    const sessionResult = await pool.query(`
       SELECT id, total_amount, customer_name, session_started_at
       FROM orders
       WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
@@ -1188,6 +1196,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
 
 // 세션 실시간 동기화 API
 router.post('/stores/:storeId/table/:tableNumber/sync-session', async (req, res) => {
+  const client = await pool.connect();
   try {
     const { storeId, tableNumber } = req.params;
     const { sessionData, lastSyncTime, deviceId } = req.body;
@@ -1266,6 +1275,8 @@ router.post('/stores/:storeId/table/:tableNumber/sync-session', async (req, res)
       success: false,
       error: '세션 동기화 실패: ' + error.message
     });
+  } finally {
+    client.release();
   }
 });
 
@@ -1397,7 +1408,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     await client.query('BEGIN');
 
-    const sessionResult = await client.query(`
+    const sessionResult = await pool.query(`
       SELECT id, total_amount, customer_name, session_started_at
       FROM orders
       WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'

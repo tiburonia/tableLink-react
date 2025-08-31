@@ -347,33 +347,16 @@ function addMenuToOrder(menuName, price) {
   }
 
   try {
-    // 세션 중인 아이템과 임시 아이템을 구분하여 처리
-    const sessionItems = window.currentOrder.filter(item => item.isConfirmed);
-    const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
+    // 임시 아이템 중에서 같은 메뉴가 있는지 확인 (isDeleted가 아닌 것만)
+    const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed && !item.isDeleted);
+    const existingPendingItem = pendingItems.find(item => item.name === menuName);
 
-    const existingPendingIndex = pendingItems.findIndex(item => item.name === menuName);
-    const existingSessionIndex = sessionItems.findIndex(item => item.name === menuName);
-
-    if (existingPendingIndex !== -1) {
-      // 임시 아이템이 이미 있으면 수량 증가
-      window.currentOrder.find(item => item.id === pendingItems[existingPendingIndex].id).quantity += 1;
-      showPOSNotification(`${menuName} 임시 수량 +1 (세션 확정 필요)`, 'info');
-    } else if (existingSessionIndex !== -1) {
-      // 세션에 이미 있는 메뉴면 새로운 임시 아이템으로 추가
-      const newItem = {
-        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        name: menuName,
-        price: parseInt(price),
-        quantity: 1,
-        discount: 0,
-        note: '',
-        isConfirmed: false,
-        isPending: true
-      };
-      window.currentOrder.push(newItem);
-      showPOSNotification(`${menuName} 임시 추가 (세션에 이미 존재)`, 'warning');
+    if (existingPendingItem) {
+      // 같은 메뉴가 임시 상태에 이미 있으면 수량만 증가
+      existingPendingItem.quantity += 1;
+      showPOSNotification(`${menuName} 수량 +1 (총 ${existingPendingItem.quantity}개)`, 'info');
     } else {
-      // 완전히 새로운 메뉴 임시 추가
+      // 새로운 메뉴 임시 추가
       const newItem = {
         id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: menuName,
@@ -385,7 +368,7 @@ function addMenuToOrder(menuName, price) {
         isPending: true
       };
       window.currentOrder.push(newItem);
-      showPOSNotification(`${menuName} 임시 추가됨 (확정 필요)`, 'success');
+      showPOSNotification(`${menuName} 추가됨 (확정 필요)`, 'success');
     }
 
     // 임시저장 (메모리와 localStorage에만 저장)
@@ -572,18 +555,31 @@ async function confirmOrder() {
       deleted: deletedItems.length
     });
 
-    // 1. 새로운 아이템들만 세션에 추가
+    // 1. 새로운 아이템들을 메뉴별로 통합
     if (newItems.length > 0) {
+      // 같은 메뉴끼리 통합
+      const consolidatedItems = {};
+      newItems.forEach(item => {
+        const key = `${item.name}_${item.price}`;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += item.quantity;
+        } else {
+          consolidatedItems[key] = {
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          };
+        }
+      });
+
+      const finalItems = Object.values(consolidatedItems);
+      
       const sessionOrderData = {
         storeId: window.currentStore.id,
         storeName: window.currentStore.name,
         tableNumber: window.currentTable,
-        items: newItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        })),
-        totalAmount: newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        items: finalItems,
+        totalAmount: finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
         isTLLOrder: false,
         userId: null,
         guestPhone: null,
