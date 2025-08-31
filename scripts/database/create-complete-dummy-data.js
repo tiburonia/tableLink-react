@@ -43,75 +43,80 @@ async function createCompleteDummyData() {
     // 2️⃣ 서울 매장 20개 생성 (기존 100개 대신 관리 가능한 수)
     console.log('\n🏪 2. 매장 더미데이터 생성...');
 
-    const categories = ['한식', '중식', '일식', '양식', '카페', '치킨', '분식'];
-    const seoulAreas = ['강남구', '서초구', '송파구', '마포구', '용산구'];
+    const seoulDistricts = [
+      '강남구', '강동구', '강북구', '강서구', '관악구',
+      '광진구', '구로구', '금천구', '노원구', '도봉구',
+      '동대문구', '동작구', '마포구', '서대문구', '서초구',
+      '성동구', '성북구', '송파구', '양천구', '영등포구'
+    ];
 
-    const maxIdResult = await client.query('SELECT COALESCE(MAX(id), 0) as max_id FROM stores');
-    let storeId = parseInt(maxIdResult.rows[0].max_id) + 1;
+    const categories = ['한식', '중식', '일식', '양식', '분식', '치킨', '피자', '카페'];
+    const storeNames = ['맛있는집', '행복한식당', '즐거운카페', '신나는치킨', '따뜻한국밥'];
 
-    const createdStoreIds = [];
-
-    for (let i = 0; i < 20; i++) {
+    for (let i = 1; i <= 20; i++) {
+      const district = seoulDistricts[Math.floor(Math.random() * seoulDistricts.length)];
       const category = categories[Math.floor(Math.random() * categories.length)];
-      const area = seoulAreas[Math.floor(Math.random() * seoulAreas.length)];
-      const storeName = `${category} 전문점 ${area}${i + 1}호점`;
+      const baseName = storeNames[Math.floor(Math.random() * storeNames.length)];
+      const name = `${baseName} ${district}점`;
 
-      // 매장 생성
-      await client.query(`
+      // 서울 좌표 범위 내 랜덤 좌표
+      const latitude = 37.4500 + (Math.random() * 0.1800); // 37.45 ~ 37.63
+      const longitude = 126.8000 + (Math.random() * 0.4000); // 126.80 ~ 127.20
+
+      // stores 테이블에 기본 매장 정보 삽입
+      const storeResult = await client.query(`
         INSERT INTO stores (
-          id, name, category, phone, is_open, 
-          rating_average, review_count, favorite_count,
-          menu, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          name, category, description, rating_average, review_count, 
+          favorite_count, is_open
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
       `, [
-        storeId, storeName, category, `02-${1000 + i}-${1000 + i}`, true,
-        (3.5 + Math.random() * 1.5).toFixed(1), // 3.5-5.0 평점
-        Math.floor(Math.random() * 50), // 0-50 리뷰수
-        Math.floor(Math.random() * 20), // 0-20 즐겨찾기
-        JSON.stringify([
-          { name: `${category}1`, price: 8000 + Math.floor(Math.random() * 7000), description: `맛있는 ${category}1입니다.` },
-          { name: `${category}2`, price: 10000 + Math.floor(Math.random() * 10000), description: `특별한 ${category}2입니다.` },
-          { name: `${category}3`, price: 12000 + Math.floor(Math.random() * 8000), description: `인기있는 ${category}3입니다.` }
-        ]),
-        new Date(), new Date()
+        name,
+        category,
+        `맛있는 ${category} 전문점입니다.`,
+        3.5 + (Math.random() * 1.5), // 3.5 ~ 5.0
+        Math.floor(Math.random() * 200) + 10, // 10 ~ 209
+        Math.floor(Math.random() * 50), // 0 ~ 49
+        true
       ]);
 
-      // 매장 주소 생성
-      const lat = 37.5 + Math.random() * 0.1;
-      const lng = 126.9 + Math.random() * 0.1;
+      const storeId = storeResult.rows[0].id;
 
-      await client.query(`
-        INSERT INTO store_address (
-          store_id, address_full, sido, sigungu, dong,
-          latitude, longitude, coord
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [
-        storeId, `서울특별시 ${area} 테스트동 ${i + 1}번지`,
-        '서울특별시', area, '테스트동',
-        lat, lng, JSON.stringify({ lat, lng })
-      ]);
-
-      // 매장 테이블 3-6개 생성
-      const tableCount = Math.floor(Math.random() * 4) + 3;
-      for (let tableNum = 1; tableNum <= tableCount; tableNum++) {
+      // store_address 테이블에 주소 정보 삽입 (존재하는 경우)
+      try {
         await client.query(`
-          INSERT INTO store_tables (
-            store_id, table_number, table_name, seats, is_occupied
-          ) VALUES ($1, $2, $3, $4, $5)
-        `, [storeId, tableNum, `테이블 ${tableNum}`, [2, 4, 6][Math.floor(Math.random() * 3)], false]);
+          INSERT INTO store_address (
+            store_id, address_full, sido, sigungu, latitude, longitude, coord
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [
+          storeId,
+          `서울특별시 ${district} 테스트로 ${i}번길 ${Math.floor(Math.random() * 100) + 1}`,
+          '서울특별시',
+          district,
+          latitude,
+          longitude,
+          JSON.stringify({ lat: latitude, lng: longitude })
+        ]);
+      } catch (addressError) {
+        // store_address 테이블이 없는 경우 무시
+        console.log(`⚠️ store_address 테이블이 없어 주소 정보 생략: ${name}`);
       }
 
-      createdStoreIds.push(storeId);
-      console.log(`✅ 매장 생성: ${storeName} (ID: ${storeId})`);
-      storeId++;
+      console.log(`✅ 매장 생성: ${name} (${category}, ${district})`);
     }
 
     // 3️⃣ 즐겨찾기 데이터 생성
     console.log('\n⭐ 3. 즐겨찾기 데이터 생성...');
 
+    // Retrieve created store IDs first
+    const allStoresResult = await client.query('SELECT id FROM stores');
+    const createdStoreIds = allStoresResult.rows.map(row => row.id);
+
     for (const user of users) {
       const favoriteCount = Math.floor(Math.random() * 5) + 2; // 2-6개
-      const shuffledStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, favoriteCount);
+      // Ensure we don't try to pick more favorite stores than available
+      const actualFavoriteCount = Math.min(favoriteCount, createdStoreIds.length);
+      const shuffledStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, actualFavoriteCount);
 
       for (const storeId of shuffledStores) {
         try {
@@ -124,7 +129,7 @@ async function createCompleteDummyData() {
           // 중복 무시
         }
       }
-      console.log(`✅ ${user.name} 즐겨찾기 ${favoriteCount}개 생성`);
+      console.log(`✅ ${user.name} 즐겨찾기 ${shuffledStores.length}개 생성`);
     }
 
     // 4️⃣ 리뷰 데이터 생성
@@ -143,7 +148,9 @@ async function createCompleteDummyData() {
 
     for (const user of users) {
       const reviewCount = Math.floor(Math.random() * 4) + 1; // 1-4개
-      const reviewStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, reviewCount);
+      // Ensure we don't try to pick more review stores than available
+      const actualReviewCount = Math.min(reviewCount, createdStoreIds.length);
+      const reviewStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, actualReviewCount);
 
       for (const storeId of reviewStores) {
         const rating = Math.floor(Math.random() * 3) + 3; // 3-5점
@@ -159,7 +166,7 @@ async function createCompleteDummyData() {
           // 중복 무시
         }
       }
-      console.log(`✅ ${user.name} 리뷰 ${reviewCount}개 생성`);
+      console.log(`✅ ${user.name} 리뷰 ${reviewStores.length}개 생성`);
     }
 
     // 5️⃣ 단골 통계 데이터 생성
@@ -167,7 +174,9 @@ async function createCompleteDummyData() {
 
     for (const user of users) {
       const statsCount = Math.floor(Math.random() * 6) + 3; // 3-8개 매장
-      const statsStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, statsCount);
+      // Ensure we don't try to pick more stats stores than available
+      const actualStatsCount = Math.min(statsCount, createdStoreIds.length);
+      const statsStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, actualStatsCount);
 
       for (const storeId of statsStores) {
         const visitCount = Math.floor(Math.random() * 15) + 5; // 5-20회 방문
@@ -191,7 +200,7 @@ async function createCompleteDummyData() {
           // 중복 무시
         }
       }
-      console.log(`✅ ${user.name} 단골 통계 ${statsCount}개 매장 생성`);
+      console.log(`✅ ${user.name} 단골 통계 ${statsStores.length}개 매장 생성`);
     }
 
     // 6️⃣ 체크(주문) 데이터 생성
