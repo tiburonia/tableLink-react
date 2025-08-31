@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db/pool');
-const { calcCheckTotal, getPaymentStatus } = require('../utils/total');
+const { calcCheckTotal, sumPayments, getPaymentStatus } = require('../utils/total');
 const { storeAuth, checkIdempotency } = require('../mw/auth');
 
 // 모든 라우트에 매장 인증 적용
@@ -42,9 +42,7 @@ router.post('/checks', async (req, res, next) => {
 
     res.status(201).json({
       check_id: check.id,
-      status: check.status,
-      store_id: storeId,
-      created_at: check.created_at
+      status: check.status
     });
 
   } catch (error) {
@@ -65,13 +63,12 @@ router.get('/checks/:id/summary', async (req, res, next) => {
     const checkId = parseInt(req.params.id);
     const { storeId } = req;
 
-    // 체크 기본 정보
+    // 체크 존재 및 매장 스코프 확인
     const checkResult = await client.query(`
-      SELECT id, store_id, table_number, user_id, guest_phone, 
-             status, channel, source, created_at, final_amount
+      SELECT id, store_id, status 
       FROM checks 
-      WHERE id = $1 AND store_id = $2
-    `, [checkId, storeId]);
+      WHERE id = $1
+    `, [checkId]);
 
     if (checkResult.rows.length === 0) {
       return res.status(404).json({
@@ -80,33 +77,70 @@ router.get('/checks/:id/summary', async (req, res, next) => {
       });
     }
 
-    const check = checkResult.rows[0];
+    if (checkResult.rows[0].store_id !== storeId) {
+      return res.status(403).json({
+        message: '접근 권한이 없습니다',
+        code: 'STORE_SCOPE_VIOLATION'
+      });
+    }
 
     // 합계 계산
     const finalTotal = await calcCheckTotal(client, checkId);
-    const paymentStatus = await getPaymentStatus(client, checkId);
+    const paidTotal = await sumPayments(client, checkId);
 
-    // 주문 라인 수
-    const lineCountResult = await client.query(`
-      SELECT COUNT(*) as line_count
+    // 라인 상태별 카운트
+    const lineStatsResult = await client.query(`
+      SELECT status, COUNT(*) as count
       FROM order_lines ol
       JOIN orders o ON ol.order_id = o.id
       WHERE o.check_id = $1
+      GROUP BY status
     `, [checkId]);
 
+    const lines = {
+      queued: 0,
+      cooking: 0, 
+      ready: 0,
+      served: 0,
+      canceled: 0
+    };
+
+    lineStatsResult.rows.forEach(row => {
+      lines[row.status] = parseInt(row.count);
+    });
+
+    // 조정 내역
+    const adjustmentsResult = await client.query(`
+      SELECT id, adj_type, value_type, value, created_at
+      FROM adjustments
+      WHERE check_id = $1
+      ORDER BY created_at DESC
+    `, [checkId]);
+
+    // 결제 내역
+    const paymentsResult = await client.query(`
+      SELECT id, amount, status, payment_method, created_at
+      FROM payments
+      WHERE check_id = $1
+      ORDER BY created_at DESC
+    `, [checkId]);
+
+    const payments = paymentsResult.rows.map(p => ({
+      id: p.id,
+      amount: p.amount,
+      status: p.status,
+      method: p.payment_method,
+      paid_at: p.created_at
+    }));
+
     res.json({
-      check_id: check.id,
-      store_id: check.store_id,
-      table_number: check.table_number,
-      user_id: check.user_id,
-      guest_phone: check.guest_phone,
-      status: check.status,
-      channel: check.channel,
-      source: check.source,
-      created_at: check.created_at,
+      check_id: checkId,
       final_total: finalTotal,
-      line_count: parseInt(lineCountResult.rows[0].line_count),
-      payment_status: paymentStatus
+      paid_total: paidTotal,
+      due: Math.max(0, finalTotal - paidTotal),
+      lines: lines,
+      adjustments: adjustmentsResult.rows,
+      payments: payments
     });
 
   } catch (error) {
@@ -117,78 +151,76 @@ router.get('/checks/:id/summary', async (req, res, next) => {
 });
 
 /**
- * [POST] /checks/:id/orders - 체크에 주문 추가
+ * [POST] /orders - 주문 생성
  */
-router.post('/checks/:id/orders', async (req, res, next) => {
+router.post('/orders', checkIdempotency, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
-    const checkId = parseInt(req.params.id);
-    const { storeId } = req;
-    const { items = [], notes = '' } = req.body;
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        message: '주문 아이템이 필요합니다',
-        code: 'MISSING_ORDER_ITEMS'
-      });
-    }
+    const { check_id, source = 'POS', ext_key } = req.body;
+    const { storeId, idempotencyKey } = req;
+    const finalExtKey = ext_key || idempotencyKey;
 
     await client.query('BEGIN');
 
-    // 체크 존재 확인
+    // 체크 존재 및 매장 스코프 확인
     const checkResult = await client.query(`
-      SELECT id, status FROM checks 
-      WHERE id = $1 AND store_id = $2
-    `, [checkId, storeId]);
+      SELECT id, store_id, status
+      FROM checks 
+      WHERE id = $1
+    `, [check_id]);
 
     if (checkResult.rows.length === 0) {
       throw new Error('체크를 찾을 수 없습니다');
+    }
+
+    if (checkResult.rows[0].store_id !== storeId) {
+      return res.status(403).json({
+        message: '접근 권한이 없습니다',
+        code: 'STORE_SCOPE_VIOLATION'
+      });
     }
 
     if (checkResult.rows[0].status === 'closed') {
       throw new Error('이미 종료된 체크입니다');
     }
 
+    // 중복 주문 확인
+    if (finalExtKey) {
+      const duplicateResult = await client.query(`
+        SELECT id FROM orders 
+        WHERE ext_key = $1 AND check_id = $2
+      `, [finalExtKey, check_id]);
+
+      if (duplicateResult.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(201).json({
+          order_id: duplicateResult.rows[0].id
+        });
+      }
+    }
+
     // 주문 생성
     const orderResult = await client.query(`
-      INSERT INTO orders (check_id, status, notes)
-      VALUES ($1, 'pending', $2)
+      INSERT INTO orders (check_id, status, source, ext_key)
+      VALUES ($1, 'confirmed', $2, $3)
       RETURNING id, status, created_at
-    `, [checkId, notes]);
+    `, [check_id, source, finalExtKey]);
 
     const order = orderResult.rows[0];
-    const lineIds = [];
-
-    // 주문 라인 생성
-    for (const item of items) {
-      const { menu_item_id, quantity = 1, unit_price, special_instructions } = item;
-
-      const lineResult = await client.query(`
-        INSERT INTO order_lines (order_id, menu_item_id, quantity, unit_price, special_instructions, status)
-        VALUES ($1, $2, $3, $4, $5, 'ordered')
-        RETURNING id
-      `, [order.id, menu_item_id, quantity, unit_price, special_instructions]);
-
-      lineIds.push(lineResult.rows[0].id);
-    }
 
     // 이벤트 기록
     await client.query(`
       INSERT INTO order_events (check_id, order_id, event_type, details)
-      VALUES ($1, $2, 'ORDER_PLACED', $3)
-    `, [checkId, order.id, JSON.stringify({ line_count: items.length, notes })]);
+      VALUES ($1, $2, 'ORDER_CREATED', $3)
+    `, [check_id, order.id, JSON.stringify({ source, ext_key: finalExtKey })]);
 
     await client.query('COMMIT');
 
-    console.log(`✅ 주문 추가: ${order.id} (체크 ${checkId}, 라인 ${lineIds.length}개)`);
+    console.log(`✅ 주문 생성: ${order.id} (체크 ${check_id})`);
 
     res.status(201).json({
-      order_id: order.id,
-      check_id: checkId,
-      status: order.status,
-      line_ids: lineIds,
-      created_at: order.created_at
+      order_id: order.id
     });
 
   } catch (error) {
@@ -200,104 +232,258 @@ router.post('/checks/:id/orders', async (req, res, next) => {
 });
 
 /**
- * [POST] /checks/:id/payments - 결제 처리
+ * [POST] /order-lines/bulk - 주문 라인 대량 생성
  */
-router.post('/checks/:id/payments', checkIdempotency, async (req, res, next) => {
+router.post('/order-lines/bulk', async (req, res, next) => {
   const client = await pool.connect();
   
   try {
-    const checkId = parseInt(req.params.id);
-    const { storeId, idempotencyKey } = req;
-    const { 
-      amount, 
-      payment_method = 'CASH', 
-      reference = '', 
-      ext_key = idempotencyKey 
-    } = req.body;
+    const { order_id, items = [] } = req.body;
+    const { storeId } = req;
 
-    if (!amount || amount <= 0) {
+    if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
-        message: '유효한 결제 금액이 필요합니다',
-        code: 'INVALID_PAYMENT_AMOUNT'
+        message: '주문 아이템이 필요합니다',
+        code: 'MISSING_ORDER_ITEMS'
       });
     }
 
     await client.query('BEGIN');
 
-    // 체크 잠금 및 확인
+    // 주문 존재 및 매장 스코프 확인
+    const orderResult = await client.query(`
+      SELECT o.id, o.check_id, c.store_id
+      FROM orders o
+      JOIN checks c ON o.check_id = c.id
+      WHERE o.id = $1
+    `, [order_id]);
+
+    if (orderResult.rows.length === 0) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    if (orderResult.rows[0].store_id !== storeId) {
+      return res.status(403).json({
+        message: '접근 권한이 없습니다',
+        code: 'STORE_SCOPE_VIOLATION'
+      });
+    }
+
+    const lineIds = [];
+    let createdCount = 0;
+
+    // 각 아이템에 대해 count만큼 라인 생성
+    for (const item of items) {
+      const { 
+        menu_id, 
+        menu_name, 
+        unit_price, 
+        count = 1, 
+        cook_station, 
+        notes, 
+        options = [] 
+      } = item;
+
+      // count만큼 개별 라인 생성
+      for (let i = 0; i < count; i++) {
+        const lineResult = await client.query(`
+          INSERT INTO order_lines (
+            order_id, menu_item_id, menu_name, unit_price, 
+            quantity, cook_station, special_instructions, status
+          )
+          VALUES ($1, $2, $3, $4, 1, $5, $6, 'queued')
+          RETURNING id
+        `, [order_id, menu_id, menu_name, unit_price, cook_station, notes]);
+
+        const lineId = lineResult.rows[0].id;
+        lineIds.push(lineId);
+        createdCount++;
+
+        // 옵션 추가
+        for (const option of options) {
+          await client.query(`
+            INSERT INTO line_options (line_id, option_id, option_name, price_delta)
+            VALUES ($1, $2, $3, $4)
+          `, [lineId, option.option_id, option.name, option.price_delta || 0]);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ 주문 라인 대량 생성: ${createdCount}개 (주문 ${order_id})`);
+
+    res.status(201).json({
+      line_ids: lineIds,
+      created: createdCount
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * [PATCH] /order-lines/:id - 주문 라인 상태 변경
+ */
+router.patch('/order-lines/:id', async (req, res, next) => {
+  const client = await pool.connect();
+  
+  try {
+    const lineId = parseInt(req.params.id);
+    const { status, notes } = req.body;
+    const { storeId } = req;
+
+    if (!['queued', 'cooking', 'ready', 'served', 'canceled'].includes(status)) {
+      return res.status(400).json({
+        message: '유효하지 않은 상태입니다',
+        code: 'INVALID_STATUS'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 라인 존재 및 매장 스코프 확인
+    const lineResult = await client.query(`
+      SELECT ol.id, ol.status, ol.order_id, c.store_id
+      FROM order_lines ol
+      JOIN orders o ON ol.order_id = o.id
+      JOIN checks c ON o.check_id = c.id
+      WHERE ol.id = $1
+    `, [lineId]);
+
+    if (lineResult.rows.length === 0) {
+      throw new Error('주문 라인을 찾을 수 없습니다');
+    }
+
+    const line = lineResult.rows[0];
+
+    if (line.store_id !== storeId) {
+      return res.status(403).json({
+        message: '접근 권한이 없습니다',
+        code: 'STORE_SCOPE_VIOLATION'
+      });
+    }
+
+    // 이미 served된 항목은 canceled로 변경 불가
+    if (line.status === 'served' && status === 'canceled') {
+      return res.status(409).json({
+        message: '이미 서빙된 항목은 취소할 수 없습니다',
+        code: 'CANNOT_CANCEL_SERVED'
+      });
+    }
+
+    // 상태 업데이트
+    await client.query(`
+      UPDATE order_lines 
+      SET status = $1, special_instructions = COALESCE($2, special_instructions)
+      WHERE id = $3
+    `, [status, notes, lineId]);
+
+    // 이벤트 기록
+    const eventType = status === 'canceled' ? 'LINE_CANCELED' : 'LINE_STATUS_CHANGED';
+    await client.query(`
+      INSERT INTO order_events (check_id, order_id, line_id, event_type, details)
+      SELECT c.id, o.id, $1, $2, $3
+      FROM order_lines ol
+      JOIN orders o ON ol.order_id = o.id
+      JOIN checks c ON o.check_id = c.id
+      WHERE ol.id = $1
+    `, [lineId, eventType, JSON.stringify({ old_status: line.status, new_status: status, notes })]);
+
+    await client.query('COMMIT');
+
+    console.log(`✅ 라인 상태 변경: ${lineId} (${line.status} → ${status})`);
+
+    res.json({
+      line_id: lineId,
+      status: status
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    next(error);
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * [POST] /adjustments - 조정 추가
+ */
+router.post('/adjustments', async (req, res, next) => {
+  const client = await pool.connect();
+  
+  try {
+    const { scope, check_id, line_id, adj_type, value_type, value } = req.body;
+    const { storeId } = req;
+
+    if (!['CHECK', 'LINE'].includes(scope)) {
+      return res.status(400).json({
+        message: '유효하지 않은 스코프입니다',
+        code: 'INVALID_SCOPE'
+      });
+    }
+
+    if (!['amount', 'percent'].includes(value_type)) {
+      return res.status(400).json({
+        message: '유효하지 않은 값 타입입니다',
+        code: 'INVALID_VALUE_TYPE'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 체크 존재 및 매장 스코프 확인
     const checkResult = await client.query(`
-      SELECT id, status, final_amount 
+      SELECT id, store_id 
       FROM checks 
-      WHERE id = $1 AND store_id = $2
-      FOR UPDATE
-    `, [checkId, storeId]);
+      WHERE id = $1
+    `, [check_id]);
 
     if (checkResult.rows.length === 0) {
       throw new Error('체크를 찾을 수 없습니다');
     }
 
-    if (checkResult.rows[0].status === 'closed') {
-      throw new Error('이미 종료된 체크입니다');
-    }
-
-    // 중복 결제 확인
-    const duplicateResult = await client.query(`
-      SELECT id FROM payments 
-      WHERE ext_key = $1 AND check_id = $2
-    `, [ext_key, checkId]);
-
-    if (duplicateResult.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({
-        message: '이미 처리된 결제입니다',
-        code: 'DUPLICATE_PAYMENT',
-        payment_id: duplicateResult.rows[0].id
+    if (checkResult.rows[0].store_id !== storeId) {
+      return res.status(403).json({
+        message: '접근 권한이 없습니다',
+        code: 'STORE_SCOPE_VIOLATION'
       });
     }
 
-    // 결제 생성
-    const paymentResult = await client.query(`
-      INSERT INTO payments (check_id, amount, payment_method, reference, ext_key, status)
-      VALUES ($1, $2, $3, $4, $5, 'paid')
-      RETURNING id, status, created_at
-    `, [checkId, amount, payment_method, reference, ext_key]);
+    // LINE 스코프인 경우 라인 존재 확인
+    if (scope === 'LINE' && line_id) {
+      const lineResult = await client.query(`
+        SELECT ol.id
+        FROM order_lines ol
+        JOIN orders o ON ol.order_id = o.id
+        WHERE ol.id = $1 AND o.check_id = $2
+      `, [line_id, check_id]);
 
-    const payment = paymentResult.rows[0];
-
-    // 결제 상태 확인 후 체크 상태 업데이트
-    const paymentStatus = await getPaymentStatus(client, checkId);
-    
-    if (paymentStatus.is_fully_paid) {
-      await client.query(`
-        UPDATE checks 
-        SET status = 'closed', final_amount = $1, closed_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-      `, [paymentStatus.total_amount, checkId]);
+      if (lineResult.rows.length === 0) {
+        throw new Error('해당 체크에 속한 라인을 찾을 수 없습니다');
+      }
     }
 
-    // 이벤트 기록
-    await client.query(`
-      INSERT INTO order_events (check_id, event_type, details)
-      VALUES ($1, 'PAYMENT_PROCESSED', $2)
-    `, [checkId, JSON.stringify({ 
-      payment_id: payment.id, 
-      amount, 
-      payment_method,
-      is_fully_paid: paymentStatus.is_fully_paid 
-    })]);
+    // 조정 생성
+    const adjustmentResult = await client.query(`
+      INSERT INTO adjustments (check_id, line_id, adj_scope, adj_type, value_type, value)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, created_at
+    `, [check_id, scope === 'LINE' ? line_id : null, scope, adj_type, value_type, value]);
+
+    const adjustment = adjustmentResult.rows[0];
 
     await client.query('COMMIT');
 
-    console.log(`💳 결제 처리: ${payment.id} (체크 ${checkId}, ${amount}원)`);
+    console.log(`✅ 조정 추가: ${adjustment.id} (체크 ${check_id}, ${scope})`);
 
     res.status(201).json({
-      payment_id: payment.id,
-      check_id: checkId,
-      amount: amount,
-      payment_method: payment_method,
-      status: payment.status,
-      payment_status: paymentStatus,
-      created_at: payment.created_at
+      adjustment_id: adjustment.id
     });
 
   } catch (error) {
