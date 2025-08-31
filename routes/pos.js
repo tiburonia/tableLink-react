@@ -294,7 +294,7 @@ router.post('/orders', async (req, res) => {
               updated_at = CURRENT_TIMESTAMP
           WHERE id = $2
         `, [newItem.quantity, existingItem.id]);
-        
+
         console.log(`🔄 기존 메뉴 수량 증가: ${newItem.name} (+${newItem.quantity}개)`);
       } else {
         // 새로운 메뉴면 추가
@@ -302,12 +302,12 @@ router.post('/orders', async (req, res) => {
           INSERT INTO order_items (order_id, menu_name, price, quantity)
           VALUES ($1, $2, $3, $4)
         `, [orderId, newItem.name, newItem.price, newItem.quantity]);
-        
+
         console.log(`➕ 새 메뉴 추가: ${newItem.name} (${newItem.quantity}개)`);
       }
     }
 
-    console.log(`✅ 주문 세션 ${orderId}에 메뉴 아이템 ${Object.values(consolidatedItems).length}개 추가 완료`);
+    console.log(`✅ 주문 세션 ${orderId}에 메뉴 아이템 ${items.length}개 추가 완료`);
 
     await client.query('COMMIT');
 
@@ -316,7 +316,7 @@ router.post('/orders', async (req, res) => {
         tableNumber: parseInt(tableNumber),
         orderId: orderId,
         action: existingOrderResult.rows.length > 0 ? 'items-added' : 'session-started',
-        itemCount: Object.values(consolidatedItems).length,
+        itemCount: items.length,
         addedAmount: calculatedTotalAmount
       });
 
@@ -338,7 +338,7 @@ router.post('/orders', async (req, res) => {
         storeName: storeName,
         tableNumber: parseInt(tableNumber),
         customerName: finalCustomerName,
-        itemCount: Object.values(consolidatedItems).length,
+        itemCount: items.length,
         totalAmount: calculatedTotalAmount,
         source: 'POS'
       });
@@ -353,9 +353,9 @@ router.post('/orders', async (req, res) => {
         `새로운 테이블 세션이 시작되었습니다`,
       orderData: {
         tableNumber: parseInt(tableNumber),
-        itemCount: Object.values(consolidatedItems).length,
+        itemCount: items.length,
         addedAmount: calculatedTotalAmount,
-        items: Object.values(consolidatedItems)
+        items: items
       }
     });
 
@@ -387,7 +387,7 @@ router.post('/stores/:storeId/table/:tableNumber/card-payment', async (req, res)
     await client.query('BEGIN');
 
     // 1. 현재 OPEN 상태인 테이블 세션 확인
-    const sessionResult = await client.query(`
+    const sessionResult = await pool.query(`
       SELECT id, total_amount, customer_name, session_started_at
       FROM orders
       WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
@@ -823,8 +823,8 @@ router.post('/stores/:storeId/table/:tableNumber/van-card-payment', async (req, 
       INSERT INTO paid_orders (
         user_id, guest_phone, store_id, table_number, 
         order_data, original_amount, final_amount, order_source,
-        payment_status, payment_method, payment_date, payment_reference
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, $11)
+        payment_status, payment_method, payment_date
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
       RETURNING id
     `, [
       'pos-user',
