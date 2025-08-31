@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
 const { notFound, errorHandler } = require('./mw/errors');
@@ -37,6 +38,17 @@ app.use(express.static('public'));
 app.use('/kds', express.static('kds'));
 app.use('/pos', express.static('pos'));
 
+// 레거시 TLG 시스템 정적 파일 서빙
+app.use('/TLG', express.static('TLG'));
+app.use('/shared', express.static('shared'));
+app.use('/tlm-components', express.static('tlm-components'));
+app.use('/admin', express.static('admin'));
+
+// 루트 경로를 레거시 index.html로 리다이렉트
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
 // Health Check
 app.get('/health', (req, res) => {
   res.json({
@@ -48,20 +60,49 @@ app.get('/health', (req, res) => {
 
 // Router mounting
 try {
+  // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
   const kdsRoutes = require('./routes/kds');
   const tllRoutes = require('./routes/tll');
   const krpRoutes = require('./routes/krp');
 
+  // 레거시 시스템 라우터 (기존 TLG/TLM/Admin 지원)
+  const authRoutes = require('../routes/auth');
+  const storesRoutes = require('../routes/stores');
+  const ordersRoutes = require('../routes/orders');
+  const reviewsRoutes = require('../routes/reviews');
+  const tablesRoutes = require('../routes/tables');
+  const cartRoutes = require('../routes/cart');
+  const adminRoutes = require('../routes/admin');
+  const cacheRoutes = require('../routes/cache');
+  const guestsRoutes = require('../routes/guests');
+  const regularLevelsRoutes = require('../routes/regular-levels');
+  const tossRoutes = require('../routes/toss');
+
+  // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/kds', kdsRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
 
-  console.log('✅ 라우터 로드 완료');
+  // 레거시 시스템 API (기존 경로 유지)
+  app.use('/api', authRoutes);
+  app.use('/api/stores', storesRoutes);
+  app.use('/api/orders', ordersRoutes);
+  app.use('/api/reviews', reviewsRoutes);
+  app.use('/api/tables', tablesRoutes);
+  app.use('/api/cart', cartRoutes);
+  app.use('/api/admin', adminRoutes);
+  app.use('/api/cache', cacheRoutes);
+  app.use('/api/guests', guestsRoutes);
+  app.use('/api/regular-levels', regularLevelsRoutes);
+  app.use('/api/toss', tossRoutes);
+
+  console.log('✅ 통합 라우터 로드 완료 (POS + 레거시)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
-  process.exit(1);
+  console.error('세부 내용:', error.message);
+  // 일부 라우터 로드 실패해도 서버는 계속 실행
 }
 
 // Error Handling
