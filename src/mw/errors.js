@@ -34,16 +34,23 @@ function errorHandler(error, req, res, next) {
     }
   }
 
-  // 개발 환경에서만 스택 트레이스 포함
+  // 표준화된 에러 응답 구조
   const response = {
-    message: error.message,
-    code: error.code || 'INTERNAL_ERROR',
-    timestamp: new Date().toISOString()
+    error: {
+      code: error.code || 'INTERNAL_ERROR',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    }
   };
 
+  // 개발 환경에서만 추가 정보 포함
   if (process.env.NODE_ENV === 'development') {
-    response.stack = error.stack;
-    response.details = error.detail;
+    response.error.details = {
+      stack: error.stack,
+      detail: error.detail,
+      url: req.originalUrl,
+      method: req.method
+    };
   }
 
   console.error('❌ 에러 발생:', {

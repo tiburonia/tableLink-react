@@ -348,3 +348,201 @@ node server.js
 ---
 
 **TableLink** - 스마트한 레스토랑 관리의 새로운 기준
+# TableLink POS 통합 시스템
+
+POS, KDS, TLL(TableLink), KRP(결제) 통합 시스템
+
+## 🚀 실행 방법
+
+### 1. 환경 설정
+```bash
+cp .env.example .env
+# DATABASE_URL 등 환경변수 설정
+```
+
+### 2. 의존성 설치
+```bash
+npm install
+```
+
+### 3. 데이터베이스 설정
+```bash
+# PostgreSQL 데이터베이스 생성 후 스키마 적용
+node scripts/database/create-integrated-pos-schema.js
+```
+
+### 4. 서버 실행
+```bash
+npm start
+# 또는
+node src/server.js
+```
+
+서버가 http://localhost:5000 에서 실행됩니다.
+
+## 🌍 환경 변수
+
+| 변수명 | 설명 | 예시 |
+|--------|------|------|
+| `DATABASE_URL` | PostgreSQL 연결 URL | `postgresql://user:pass@host:5432/tablelink` |
+| `PORT` | 서버 포트 | `5000` |
+| `NODE_ENV` | 실행 환경 | `development` / `production` |
+| `JWT_SECRET` | JWT 서명 키 (향후 사용) | `your-secret-key` |
+| `KRP_SECRET` | PG사 웹훅 서명 키 (향후 사용) | `krp-webhook-secret` |
+
+## 📋 API 라우팅 표
+
+### POS 시스템 (`/api/pos`)
+| Method | Path | 설명 | 헤더 |
+|--------|------|------|------|
+| POST | `/checks` | 체크 생성 | `X-Store-Id` |
+| GET | `/checks/:id/summary` | 체크 요약 | `X-Store-Id` |
+| POST | `/orders` | 주문 생성 | `X-Store-Id`, `Idempotency-Key` |
+| POST | `/order-lines/bulk` | 주문 라인 일괄 생성 | `X-Store-Id` |
+| PATCH | `/order-lines/:id` | 주문 라인 상태 변경 | `X-Store-Id` |
+
+### KDS 시스템 (`/api/kds`)
+| Method | Path | 설명 | 헤더 |
+|--------|------|------|------|
+| GET | `/stream` | SSE 실시간 스트림 | `X-Store-Id` |
+| GET | `/poll` | 폴링 방식 조회 | `X-Store-Id` |
+| PATCH | `/lines/:id` | 라인 상태 업데이트 | `X-Store-Id` |
+
+### TLL 시스템 (`/api/tll`)
+| Method | Path | 설명 | 헤더 |
+|--------|------|------|------|
+| POST | `/checks/from-qr` | QR코드로 체크 생성 | `X-Store-Id` |
+| POST | `/orders` | 주문 생성 | `X-Store-Id`, `Idempotency-Key` |
+| POST | `/order-lines/bulk` | 주문 라인 일괄 생성 | `X-Store-Id` |
+| DELETE | `/order-lines/:id` | 주문 라인 취소 | `X-Store-Id` |
+
+### 결제 시스템 (`/api/payments`)
+| Method | Path | 설명 | 헤더 |
+|--------|------|------|------|
+| POST | `/` | 결제 처리 | `X-Store-Id`, `Idempotency-Key` |
+| POST | `/:id/refund` | 환불 처리 | `X-Store-Id` |
+| POST | `/webhook` | PG사 웹훅 | - |
+
+## 📊 시스템 흐름도
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│    POS      │    │    TLL      │    │    KDS      │
+│   (매장)    │    │   (고객)    │    │   (주방)    │
+└──────┬──────┘    └──────┬──────┘    └──────┬──────┘
+       │                  │                  │
+       ├──────────────────┼──────────────────┤
+       │                  │                  │
+       ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────┐
+│              TableLink 통합 서버                     │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  │   POS   │ │   TLL   │ │   KDS   │ │   KRP   │   │
+│  │ Routes  │ │ Routes  │ │ Routes  │ │ Routes  │   │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘   │
+│         │         │         │         │           │
+│         └─────────┼─────────┼─────────┘           │
+│                   │         │                     │
+│  ┌────────────────┼─────────┼─────────────────┐   │
+│  │           PostgreSQL DB                   │   │
+│  │  ┌─────┐ ┌─────────┐ ┌─────────┐ ┌─────┐  │   │
+│  │  │체크 │ │  주문   │ │주문라인│ │결제 │  │   │
+│  │  └─────┘ └─────────┘ └─────────┘ └─────┘  │   │
+│  └─────────────────────────────────────────────┘   │
+│                   │                                 │
+│  ┌────────────────┼─────────────────────────────┐   │
+│  │           SSE Hub (실시간 알림)             │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────┐
+│                  외부 PG사                           │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐              │
+│  │ 카드결제 │ │ 계좌이체 │ │ 간편결제 │              │
+│  └─────────┘ └─────────┘ └─────────┘              │
+└─────────────────────────────────────────────────────┘
+```
+
+## 🔧 주요 기능
+
+### 1. POS (Point of Sale)
+- 매장 직원용 주문 관리
+- 테이블별 주문 추적
+- 실시간 주문 상태 확인
+
+### 2. TLL (TableLink)
+- 고객용 QR코드 주문
+- 메뉴 선택 및 주문
+- 주문 취소 (조리 전)
+
+### 3. KDS (Kitchen Display System)
+- 주방용 주문 표시
+- 실시간 주문 알림 (SSE)
+- 조리 상태 관리
+
+### 4. KRP (Korea Payment)
+- 통합 결제 처리
+- PG사 연동 (모의 구현)
+- 환불 처리
+
+## 📝 개발 가이드
+
+### 데이터베이스 인덱스 최적화
+```sql
+-- 자주 사용되는 쿼리 최적화
+CREATE INDEX idx_checks_store_status ON checks(store_id, status);
+CREATE INDEX idx_order_lines_order_status ON order_lines(order_id, status);
+CREATE INDEX idx_payments_check_status ON payments(check_id, status);
+```
+
+### SSE 연결 제한
+- 토픽별 최대 100개 연결
+- 5분 비활성 타임아웃
+- 20초 주기 하트비트
+
+### 에러 응답 표준
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable message",
+    "timestamp": "2025-01-21T12:00:00.000Z",
+    "details": {} // 개발 환경에서만
+  }
+}
+```
+
+## 🔮 향후 확장 계획
+
+### 1. 인증/권한 (TODO)
+- JWT 기반 인증 구현
+- RBAC (역할 기반 접근 제어)
+- 매장별 권한 스코프
+
+### 2. 결제 시스템 (TODO)
+- 실제 PG사 연동
+- HMAC 서명 검증
+- 결제 실패 처리 강화
+
+### 3. 메뉴 관리 (TODO)
+- 메뉴 가격 서버 검증
+- 재고 관리 연동
+- 할인/쿠폰 시스템
+
+### 4. 모니터링
+- 성능 메트릭 수집
+- 에러 추적 시스템
+- 실시간 대시보드
+
+## 🛠️ 기술 스택
+
+- **Backend**: Node.js, Express.js
+- **Database**: PostgreSQL
+- **Real-time**: Server-Sent Events (SSE)
+- **Payment**: 모의 PG 구현 (향후 실제 연동)
+- **Validation**: 커스텀 검증 유틸리티
+
+## 📞 지원
+
+문제 발생 시 GitHub Issues를 통해 문의해주세요.

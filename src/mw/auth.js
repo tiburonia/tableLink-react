@@ -29,14 +29,21 @@ function storeAuth(req, res, next) {
 
 /**
  * JWT 토큰 검증 (향후 확장용)
+ * TODO: 실제 JWT 구현 시 다음 기능들 추가 예정:
+ * - 토큰 만료 시간 검증
+ * - 리프레시 토큰 지원
+ * - 역할 기반 접근 제어 (RBAC)
+ * - 매장별 권한 범위 제한
  */
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({
-      message: '인증 토큰이 필요합니다',
-      code: 'MISSING_TOKEN'
+      error: {
+        code: 'MISSING_TOKEN',
+        message: '인증 토큰이 필요합니다'
+      }
     });
   }
 
@@ -44,11 +51,18 @@ function verifyToken(req, res, next) {
     // TODO: JWT 검증 로직 구현
     // const decoded = jwt.verify(token, process.env.JWT_SECRET);
     // req.user = decoded;
+    // 
+    // RBAC 예시:
+    // if (!hasPermission(decoded.role, req.route.path, req.method)) {
+    //   return res.status(403).json({ error: { code: 'INSUFFICIENT_PERMISSIONS' } });
+    // }
     next();
   } catch (error) {
     return res.status(401).json({
-      message: '유효하지 않은 토큰입니다',
-      code: 'INVALID_TOKEN'
+      error: {
+        code: 'INVALID_TOKEN',
+        message: '유효하지 않은 토큰입니다'
+      }
     });
   }
 }
