@@ -1009,7 +1009,7 @@ async function insertBasicData(client) {
       ($1, 'KITCHEN', '주방'),
       ($1, 'BAR', '음료'),
       ($1, 'GRILL', '구이')
-  `, [storeId, storeId, storeId]);
+  `, [storeId]);
 
   // 메뉴 그룹
   const groupResult = await client.query(`
@@ -1019,7 +1019,7 @@ async function insertBasicData(client) {
       ($1, '음료', 2),
       ($1, '사이드', 3)
     RETURNING id
-  `, [storeId, storeId, storeId]);
+  `, [storeId]);
 
   const groupIds = groupResult.rows.map(row => row.id);
 
