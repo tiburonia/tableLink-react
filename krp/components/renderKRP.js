@@ -1,4 +1,3 @@
-
 // KRP 주방 프린터 시뮬레이터
 let krpSocket = null;
 let currentStoreId = null;
@@ -8,9 +7,9 @@ let currentOrders = [];
 async function renderKRP(storeId) {
   try {
     console.log(`🖨️ KRP 시스템 초기화 - 매장 ID: ${storeId}`);
-    
+
     currentStoreId = storeId;
-    
+
     // 매장 정보 조회
     const storeResponse = await fetch(`/api/stores/${storeId}`, {
       headers: {
@@ -45,6 +44,47 @@ async function renderKRP(storeId) {
     console.error('❌ KRP 시스템 초기화 실패:', error);
     renderKRPError();
   }
+}
+
+// KRP 컴포넌트 렌더링
+function renderKRPComponent() {
+  console.log('🖨️ KRP 컴포넌트 렌더링 시작');
+
+  return `
+    <div class="krp-container">
+      <div class="krp-header">
+        <h1>🍳 주방 주문서 출력기 (Kitchen Receipt Printer)</h1>
+        <div class="store-info">
+          <span class="store-name">매장: ${window.currentStore?.name || '선택된 매장 없음'}</span>
+          <span class="store-id">ID: ${window.selectedStoreId || '?'}</span>
+          <div class="connection-status">
+            <span id="krpConnectionStatus" class="connection-indicator offline">연결 대기중</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="krp-controls">
+        <button onclick="loadRecentOrders()" class="load-orders-btn">📋 최근 주문 불러오기</button>
+        <button onclick="printSampleReceipt()" class="sample-print-btn">🖨️ 샘플 출력</button>
+        <button onclick="clearAllReceipts()" class="clear-btn">🗑️ 전체 삭제</button>
+        <button onclick="toggleAutoMode()" id="autoModeBtn" class="auto-mode-btn">🔄 자동모드 OFF</button>
+      </div>
+
+      <div class="orders-section">
+        <h3>📋 최근 주문 목록</h3>
+        <div id="ordersListContainer">
+          <p class="no-orders">주문을 불러오려면 '최근 주문 불러오기' 버튼을 클릭하세요.</p>
+        </div>
+      </div>
+
+      <div class="receipts-section">
+        <h3>🖨️ 출력된 주문서</h3>
+        <div id="kitchenReceipts" class="receipts-container">
+          <!-- 출력된 영수증들이 여기에 표시됩니다 -->
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // KRP 인터페이스 렌더링
@@ -488,7 +528,7 @@ function renderKRPInterface(store) {
   setInterval(updateCurrentTime, 1000);
 }
 
-// 현재 시간 업데이트
+// 시간 업데이트
 function updateCurrentTime() {
   const timeElement = document.getElementById('currentTime');
   if (timeElement) {
@@ -509,7 +549,7 @@ function updateCurrentTime() {
 async function loadKRPOrders(storeId) {
   try {
     console.log(`📋 KRP - 매장 ${storeId} 주문 데이터 로딩`);
-    
+
     showLoading(true);
 
     const response = await fetch(`/api/krp?storeId=${storeId}`, {
@@ -613,12 +653,12 @@ async function printOrder(orderId) {
     if (result.success) {
       // 로컬에서도 바로 영수증 출력
       displayReceipt(result.order);
-      
+
       // 주문 목록에서 제거
       currentOrders = currentOrders.filter(order => order.id !== orderId);
       renderOrderCards();
       updateOrderCounts();
-      
+
       showNotification(`주문 #${orderId} 출력 완료`, 'success');
     } else {
       throw new Error(result.error || '출력 실패');
@@ -652,17 +692,17 @@ function displayReceipt(order) {
       <div class="receipt-title">🍴 주방 주문서</div>
       <div>TableLink KRP</div>
     </div>
-    
+
     <div style="margin: 8px 0;">
       <strong>주문번호: #${order.id}</strong><br>
       <strong>테이블: ${order.table_number}</strong><br>
       고객: ${order.customer_name || '손님'}
     </div>
-    
+
     <div style="border-top: 1px dashed #666; margin: 8px 0; padding-top: 8px;">
       ${itemsHTML}
     </div>
-    
+
     <div class="receipt-footer">
       ${timeString}<br>
       주방에서 조리 시작하세요
@@ -705,11 +745,11 @@ function clearReceipts() {
 function updateOrderCounts() {
   const pendingCount = document.getElementById('pendingCount');
   const printedCount = document.getElementById('printedCount');
-  
+
   if (pendingCount) {
     pendingCount.textContent = currentOrders.length;
   }
-  
+
   if (printedCount) {
     const receipts = document.querySelectorAll('.receipt');
     printedCount.textContent = receipts.length;
@@ -747,15 +787,15 @@ function setupKRPWebSocket(storeId) {
     // 실시간 출력 이벤트 수신
     krpSocket.on('krp-print', (printData) => {
       console.log('🖨️ 실시간 출력 이벤트 수신:', printData);
-      
+
       if (printData.type === 'print-receipt' && printData.order) {
         displayReceipt(printData.order);
-        
+
         // 주문 목록에서 제거
         currentOrders = currentOrders.filter(order => order.id !== printData.order.id);
         renderOrderCards();
         updateOrderCounts();
-        
+
         showNotification(`새 주문서가 출력되었습니다: #${printData.order.id}`, 'info');
       }
     });
@@ -884,10 +924,224 @@ function renderKRPError() {
   `;
 }
 
+// KRP 초기화 (WebSocket 연동 포함)
+function initializeKRP(storeId) {
+  console.log(`🖨️ KRP 시스템 초기화 - 매장 ID: ${storeId}`);
+
+  window.selectedStoreId = storeId;
+  window.currentStore = { id: storeId };
+  window.autoMode = false;
+  window.krpOrders = [];
+  window.krpSocket = null;
+
+  // WebSocket 연결 초기화
+  initializeKRPWebSocket(storeId);
+
+  // 자동 새로고침 시작
+  startAutoRefresh();
+}
+
+// KRP WebSocket 초기화
+function initializeKRPWebSocket(storeId) {
+  try {
+    console.log(`🔌 KRP WebSocket 연결 시작... (매장 ID: ${storeId})`);
+
+    if (window.krpSocket) {
+      window.krpSocket.disconnect();
+    }
+
+    window.krpSocket = io({
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
+    });
+
+    // 연결 성공
+    window.krpSocket.on('connect', () => {
+      console.log('✅ KRP WebSocket 연결 성공:', window.krpSocket.id);
+      window.krpSocket.emit('join-krp-room', parseInt(storeId));
+      updateKRPConnectionStatus(true);
+    });
+
+    // 연결 해제
+    window.krpSocket.on('disconnect', (reason) => {
+      console.log('❌ KRP WebSocket 연결 해제:', reason);
+      updateKRPConnectionStatus(false);
+    });
+
+    // 재연결
+    window.krpSocket.on('reconnect', () => {
+      console.log('🔄 KRP WebSocket 재연결 성공');
+      window.krpSocket.emit('join-krp-room', parseInt(storeId));
+      updateKRPConnectionStatus(true);
+    });
+
+    // 새 주문 수신
+    window.krpSocket.on('new-order', handleNewKRPOrder);
+
+    // 주문 상태 변경 수신
+    window.krpSocket.on('order-update', handleKRPOrderUpdate);
+
+  } catch (error) {
+    console.error('❌ KRP WebSocket 초기화 실패:', error);
+    updateKRPConnectionStatus(false);
+  }
+}
+
+// KRP 연결 상태 업데이트
+function updateKRPConnectionStatus(isConnected) {
+  const statusElement = document.getElementById('krpConnectionStatus');
+  if (statusElement) {
+    if (isConnected) {
+      statusElement.textContent = '실시간 연결됨';
+      statusElement.className = 'connection-indicator online';
+    } else {
+      statusElement.textContent = '연결 끊김';
+      statusElement.className = 'connection-indicator offline';
+    }
+  }
+}
+
+// 새 주문 실시간 처리
+function handleNewKRPOrder(data) {
+  const { orderId, storeName, tableNumber, customerName, itemCount, totalAmount, source } = data;
+  console.log(`🆕 KRP 새 주문 수신 - 주문 ${orderId}, 테이블 ${tableNumber}`);
+
+  // 자동 모드인 경우 즉시 출력
+  if (window.autoMode) {
+    console.log('🔄 자동 모드 - 즉시 주문서 출력');
+    printOrderReceipt({
+      id: orderId,
+      table_number: tableNumber,
+      customer_name: customerName,
+      total_amount: totalAmount,
+      source: source,
+      auto_printed: true
+    });
+  }
+
+  // 주문 목록 새로고침
+  loadRecentOrders();
+
+  // 알림 표시
+  showKRPNotification(`🆕 새 주문 접수!\n테이블 ${tableNumber} | ${customerName}\n₩${totalAmount.toLocaleString()}`, 'success');
+}
+
+// 주문 상태 업데이트 처리
+function handleKRPOrderUpdate(data) {
+  const { orderId, action, tableNumber } = data;
+  console.log(`🔄 KRP 주문 업데이트 - 주문 ${orderId}, 액션: ${action}`);
+
+  if (action === 'cooking-completed' || action === 'session-closed') {
+    // 주문 목록에서 해당 주문 제거 또는 상태 업데이트
+    loadRecentOrders();
+  }
+}
+
+// 자동 모드 토글
+function toggleAutoMode() {
+  window.autoMode = !window.autoMode;
+  const btn = document.getElementById('autoModeBtn');
+
+  if (btn) {
+    btn.textContent = window.autoMode ? '🔄 자동모드 ON' : '🔄 자동모드 OFF';
+    btn.classList.toggle('active', window.autoMode);
+  }
+
+  const statusText = window.autoMode ? '활성화' : '비활성화';
+  showKRPNotification(`🔄 자동 출력 모드 ${statusText}`, 'info');
+  console.log(`🔄 KRP 자동 모드: ${window.autoMode ? 'ON' : 'OFF'}`);
+}
+
+// KRP 알림 시스템
+function showKRPNotification(message, type = 'info') {
+  const existingNotification = document.querySelector('.krp-notification');
+  if (existingNotification) {
+    existingNotification.remove();
+  }
+
+  const notification = document.createElement('div');
+  notification.className = `krp-notification ${type}`;
+  notification.innerHTML = `
+    <div class="notification-content">
+      <span class="notification-message">${message}</span>
+      <button class="notification-close" onclick="this.parentElement.parentElement.remove()">✕</button>
+    </div>
+  `;
+
+  // 스타일 추가
+  if (!document.getElementById('krp-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'krp-notification-styles';
+    style.textContent = `
+      .krp-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        max-width: 350px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        border-left: 4px solid #3b82f6;
+        animation: slideInFromRight 0.3s ease-out;
+      }
+      .krp-notification.success { border-left-color: #10b981; }
+      .krp-notification.warning { border-left-color: #f59e0b; }
+      .krp-notification.error { border-left-color: #ef4444; }
+      .notification-content {
+        padding: 12px 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .notification-message {
+        flex: 1;
+        font-size: 13px;
+        line-height: 1.4;
+        color: #374151;
+        white-space: pre-line;
+      }
+      .notification-close {
+        background: none;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+        color: #9ca3af;
+        padding: 0;
+      }
+      @keyframes slideInFromRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(notification);
+
+  // 4초 후 자동 제거
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 4000);
+}
+
+
 // 전역 함수 등록
-window.renderKRP = renderKRP;
-window.refreshKRPData = refreshKRPData;
-window.showKRPSettings = showKRPSettings;
-window.testPrint = testPrint;
-window.clearReceipts = clearReceipts;
-window.printOrder = printOrder;
+window.renderKRPComponent = renderKRPComponent;
+window.initializeKRP = initializeKRP;
+window.loadRecentOrders = loadRecentOrders;
+window.printOrderReceipt = printOrderReceipt;
+window.printSampleReceipt = printSampleReceipt;
+window.clearAllReceipts = clearAllReceipts;
+window.startAutoRefresh = startAutoRefresh;
+window.showKRPNotification = showKRPNotification;
+window.toggleAutoMode = toggleAutoMode;
+window.initializeKRPWebSocket = initializeKRPWebSocket;
+window.handleNewKRPOrder = handleNewKRPOrder;
+window.handleKRPOrderUpdate = handleKRPOrderUpdate;
+window.updateKRPConnectionStatus = updateKRPConnectionStatus;
+
+console.log('✅ KRP 컴포넌트 로드 완료 - WebSocket 실시간 연동 포함');

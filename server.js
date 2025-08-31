@@ -28,18 +28,18 @@ app.use((req, res, next) => {
   // iframe 허용 설정
   res.header('X-Frame-Options', 'SAMEORIGIN');
   res.header('Content-Security-Policy', "frame-ancestors 'self' *.replit.dev *.replit.co");
-  
+
   // CORS 헤더 강화
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, Pragma');
   res.header('Access-Control-Allow-Credentials', 'true');
-  
+
   // Preflight 요청 처리
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
-  
+
   next();
 });
 
@@ -202,20 +202,19 @@ io.on('connection', (socket) => {
 
   // KDS 룸 참여
   socket.on('join-kds-room', (storeId) => {
-    const roomName = `kds-store-${storeId}`;
+    const roomName = `kds-${storeId}`;
     socket.join(roomName);
+    console.log(`📟 클라이언트 ${socket.id}가 KDS 룸 ${roomName}에 참여`);
 
-    if (!kdsClients.has(storeId)) {
-      kdsClients.set(storeId, new Set());
-    }
-    kdsClients.get(storeId).add(socket.id);
-
-    console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여`);
+    socket.emit('join-kds-room-success', {
+      storeId,
+      clientCount: io.sockets.adapter.rooms.get(roomName)?.size || 1
+    });
   });
 
   // KDS 룸 나가기
   socket.on('leave-kds-room', (storeId) => {
-    const roomName = `kds-store-${storeId}`;
+    const roomName = `kds-${storeId}`;
     socket.leave(roomName);
 
     if (kdsClients.has(storeId)) {
@@ -225,7 +224,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    console.log(`📟 KDS 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
+    console.log(`📟 클라이언트 ${socket.id}가 KDS 룸 ${roomName}에서 나감`);
   });
 
   // POS 룸 참여
@@ -265,27 +264,19 @@ io.on('connection', (socket) => {
 
   // KRP 룸 참여
   socket.on('join-krp-room', (storeId) => {
-    const roomName = `krp-store-${storeId}`;
+    const roomName = `krp-${storeId}`;
     socket.join(roomName);
+    console.log(`🖨️ 클라이언트 ${socket.id}가 KRP 룸 ${roomName}에 참여`);
 
-    if (!krpClients.has(storeId)) {
-      krpClients.set(storeId, new Set());
-    }
-    krpClients.get(storeId).add(socket.id);
-
-    const clientCount = krpClients.get(storeId).size;
-    console.log(`🖨️ KRP 클라이언트 ${socket.id}가 매장 ${storeId} 룸에 참여 (총 ${clientCount}개 클라이언트)`);
-
-    // 참여 확인 응답
     socket.emit('join-krp-room-success', {
-      storeId: parseInt(storeId),
-      clientCount: clientCount
+      storeId,
+      clientCount: io.sockets.adapter.rooms.get(roomName)?.size || 1
     });
   });
 
   // KRP 룸 나가기
   socket.on('leave-krp-room', (storeId) => {
-    const roomName = `krp-store-${storeId}`;
+    const roomName = `krp-${storeId}`;
     socket.leave(roomName);
 
     if (krpClients.has(storeId)) {
@@ -295,7 +286,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    console.log(`🖨️ KRP 클라이언트 ${socket.id}가 매장 ${storeId} 룸에서 나감`);
+    console.log(`🖨️ 클라이언트 ${socket.id}가 KRP 룸 ${roomName}에서 나감`);
   });
 
   // 연결 해제
@@ -336,7 +327,7 @@ io.on('connection', (socket) => {
 
 // KDS 주문 데이터 실시간 업데이트 함수
 function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
-  const roomName = `kds-store-${storeId}`;
+  const roomName = `kds-${storeId}`;
   const clientCount = kdsClients.get(storeId)?.size || 0;
 
   console.log(`📡 KDS 브로드캐스트 시도 - 매장 ${storeId}, 타입: ${updateType}, 연결된 클라이언트: ${clientCount}개`);
@@ -357,7 +348,7 @@ function broadcastKDSUpdate(storeId, updateType = 'order-update', data = null) {
   }
 
   // 연결된 모든 클라이언트 로깅
-  console.log(`📊 현재 KDS 연결 상태:`, Array.from(kdsClients.entries()).map(([id, clients]) => 
+  console.log(`📊 현재 KDS 연결 상태:`, Array.from(kdsClients.entries()).map(([id, clients]) =>
     `매장 ${id}: ${clients.size}개 클라이언트`
   ));
 }
@@ -409,7 +400,7 @@ function broadcastPOSTableUpdate(storeId, tableData) {
 
 // KRP 실시간 출력 브로드캐스트
 function broadcastKRPPrint(storeId, printData) {
-  const krpRoomName = `krp-store-${storeId}`;
+  const krpRoomName = `krp-${storeId}`;
   const krpClientCount = krpClients.get(storeId)?.size || 0;
 
   if (krpClientCount > 0) {
