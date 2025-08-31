@@ -452,14 +452,70 @@ async function createIntegratedPOSSchema() {
     // 6. 샘플 데이터 생성
     console.log('🎯 샘플 데이터 생성...');
 
-    // 매장 1, 테이블 1번에 샘플 체크 생성
+    // 먼저 매장 1이 존재하는지 확인
+    const storeCheck = await client.query('SELECT id FROM stores WHERE id = 1');
+    
+    let sampleStoreId = 1;
+    if (storeCheck.rows.length === 0) {
+      console.log('🏪 매장 1이 없어서 샘플 매장 생성 중...');
+      
+      // 샘플 매장 생성
+      const storeResult = await client.query(`
+        INSERT INTO stores (
+          name, category, phone, is_open, 
+          rating_average, review_count, favorite_count
+        ) VALUES (
+          '테스트 매장', '한식', '02-1234-5678', true,
+          4.5, 10, 5
+        ) RETURNING id
+      `);
+      
+      sampleStoreId = storeResult.rows[0].id;
+      console.log(`✅ 샘플 매장 생성 완료: ID ${sampleStoreId}`);
+      
+      // 매장 주소 생성
+      await client.query(`
+        INSERT INTO store_address (
+          store_id, sido, sigungu, eupmyeondong, 
+          detail_address, latitude, longitude
+        ) VALUES (
+          $1, '서울특별시', '중구', '명동', 
+          '테스트 주소 123', 37.5665, 126.9780
+        )
+      `, [sampleStoreId]);
+      
+      // 매장 테이블 생성
+      for (let i = 1; i <= 5; i++) {
+        await client.query(`
+          INSERT INTO store_tables (store_id, table_number, is_occupied) 
+          VALUES ($1, $2, false)
+        `, [sampleStoreId, i]);
+      }
+      
+      console.log(`✅ 샘플 매장의 테이블 1-5번 생성 완료`);
+    } else {
+      console.log('✅ 기존 매장 1 사용');
+    }
+
+    // 사용자 확인 및 생성
+    const userCheck = await client.query('SELECT id FROM users WHERE id = $1', ['user1']);
+    if (userCheck.rows.length === 0) {
+      console.log('👤 사용자 user1 생성 중...');
+      await client.query(`
+        INSERT INTO users (id, pw, name, phone) 
+        VALUES ('user1', '1234', '테스트사용자', '010-1234-5678')
+      `);
+      console.log('✅ 샘플 사용자 생성 완료');
+    }
+
+    // 샘플 체크 생성
     const sampleCheckResult = await client.query(`
       INSERT INTO checks (
         store_id, table_number, user_id, customer_name, 
         status, final_amount, source_system
-      ) VALUES (1, 1, 'user1', '김테스트', 'open', 0, 'POS')
+      ) VALUES ($1, 1, 'user1', '김테스트', 'open', 0, 'POS')
       RETURNING id
-    `);
+    `, [sampleStoreId]);
 
     const sampleCheckId = sampleCheckResult.rows[0].id;
 
