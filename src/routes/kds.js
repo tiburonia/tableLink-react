@@ -4,10 +4,18 @@ const router = express.Router();
 const { query } = require('../db/pool');
 const { storeAuth } = require('../mw/auth');
 const sse = require('../services/sse');
+const { query } = require('../db/pool');
 
 // KDS 실시간 스트림
-router.get('/stream', storeAuth, (req, res) => {
-  const storeId = req.storeId;
+router.get('/stream', (req, res) => {
+  const storeId = parseInt(req.query.store_id);
+  
+  if (!storeId) {
+    return res.status(400).json({
+      message: 'store_id 쿼리 매개변수가 필요합니다',
+      code: 'MISSING_STORE_ID'
+    });
+  }
   const { stations } = req.query; // 스테이션 필터 (예: FRY,GRILL)
   
   // SSE 헤더 설정

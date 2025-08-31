@@ -1,4 +1,3 @@
-
 const jwt = require('jsonwebtoken');
 
 /**
@@ -7,7 +6,7 @@ const jwt = require('jsonwebtoken');
  */
 function storeAuth(req, res, next) {
   const storeIdHeader = req.headers['x-store-id'];
-  
+
   if (!storeIdHeader) {
     return res.status(400).json({
       message: 'X-Store-Id 헤더가 필요합니다',
@@ -16,7 +15,7 @@ function storeAuth(req, res, next) {
   }
 
   const storeId = parseInt(storeIdHeader, 10);
-  
+
   if (isNaN(storeId) || storeId <= 0) {
     return res.status(400).json({
       message: '유효한 매장 ID가 필요합니다',
@@ -33,7 +32,7 @@ function storeAuth(req, res, next) {
  */
 function verifyToken(req, res, next) {
   const token = req.headers.authorization?.split(' ')[1];
-  
+
   if (!token) {
     return res.status(401).json({
       message: '인증 토큰이 필요합니다',
@@ -59,7 +58,7 @@ function verifyToken(req, res, next) {
  */
 function checkIdempotency(req, res, next) {
   const idempotencyKey = req.headers['idempotency-key'];
-  
+
   if (!idempotencyKey) {
     return res.status(400).json({
       message: 'Idempotency-Key 헤더가 필요합니다',
@@ -71,8 +70,7 @@ function checkIdempotency(req, res, next) {
   next();
 }
 
-module.exports = { 
-  storeAuth, 
-  verifyToken, 
-  checkIdempotency 
+module.exports = {
+  storeAuth,
+  checkIdempotency
 };

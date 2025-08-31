@@ -34,6 +34,8 @@ app.use('/api/', limiter);
 
 // Static file serving
 app.use(express.static('public'));
+app.use('/kds', express.static('kds'));
+app.use('/pos', express.static('pos'));
 
 // Health Check
 app.get('/health', (req, res) => {

@@ -1,153 +1,153 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KDS Demo - Kitchen Display System</title>
+  <title>KDS 데모</title>
   <style>
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Arial', sans-serif;
       margin: 0;
       padding: 20px;
       background-color: #f5f5f5;
-      color: #333;
     }
+    
     .container {
       max-width: 1200px;
       margin: 0 auto;
       background: white;
-      border-radius: 8px;
       padding: 20px;
+      border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    
     .header {
-      border-bottom: 2px solid #e0e0e0;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
-    }
-    .header h1 {
-      margin: 0;
-      color: #2c3e50;
       display: flex;
+      gap: 20px;
       align-items: center;
-      gap: 10px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #eee;
     }
+    
     .status {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
+      padding: 8px 16px;
+      border-radius: 4px;
       font-weight: bold;
     }
-    .status.connected { background: #d4edda; color: #155724; }
-    .status.disconnected { background: #f8d7da; color: #721c24; }
+    
+    .status.connected {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .status.disconnected {
+      background: #f44336;
+      color: white;
+    }
+    
     .controls {
-      margin-bottom: 20px;
       display: flex;
       gap: 10px;
-      flex-wrap: wrap;
       align-items: center;
     }
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-    }
-    .input-group label {
-      font-weight: bold;
-      font-size: 14px;
-    }
-    input, select, button {
+    
+    input {
       padding: 8px 12px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 14px;
     }
+    
     button {
-      background: #007bff;
-      color: white;
+      padding: 8px 16px;
       border: none;
+      border-radius: 4px;
       cursor: pointer;
-      min-width: 80px;
+      font-weight: bold;
     }
-    button:hover { background: #0056b3; }
+    
     button:disabled {
-      background: #6c757d;
+      opacity: 0.5;
       cursor: not-allowed;
     }
+    
+    .connect-btn {
+      background: #2196F3;
+      color: white;
+    }
+    
+    .disconnect-btn {
+      background: #f44336;
+      color: white;
+    }
+    
     .events-container {
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      height: 400px;
+      height: 500px;
       overflow-y: auto;
-      padding: 10px;
-      background: #fafafa;
-    }
-    .event-item {
-      margin-bottom: 10px;
-      padding: 10px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      background: #f9f9f9;
       border-radius: 4px;
-      border-left: 4px solid #007bff;
+    }
+    
+    .event-item {
+      margin-bottom: 15px;
+      padding: 12px;
       background: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      border-radius: 4px;
+      border-left: 4px solid #2196F3;
     }
-    .event-item.heartbeat {
-      border-left-color: #28a745;
-      opacity: 0.7;
-    }
-    .event-item.line_update {
-      border-left-color: #ffc107;
-    }
-    .event-timestamp {
-      font-size: 12px;
-      color: #666;
+    
+    .event-header {
+      font-weight: bold;
+      color: #333;
       margin-bottom: 5px;
     }
+    
     .event-data {
       font-family: 'Courier New', monospace;
-      background: #f8f9fa;
-      padding: 8px;
-      border-radius: 4px;
-      white-space: pre-wrap;
       font-size: 12px;
+      color: #666;
+      background: #f5f5f5;
+      padding: 8px;
+      border-radius: 3px;
+      white-space: pre-wrap;
     }
-    .clear-btn {
-      background: #dc3545;
-      float: right;
+    
+    .timestamp {
+      color: #999;
+      font-size: 11px;
     }
-    .clear-btn:hover { background: #c82333; }
   </style>
 </head>
 <body>
   <div class="container">
+    <h1>🍳 KDS 실시간 스트림 데모</h1>
+    
     <div class="header">
-      <h1>
-        🍳 KDS Demo
-        <span id="connectionStatus" class="status disconnected">연결 안됨</span>
-      </h1>
-      <p>Kitchen Display System 실시간 이벤트 모니터링</p>
-    </div>
-
-    <div class="controls">
-      <div class="input-group">
+      <div class="status" id="connectionStatus">연결 안됨</div>
+      
+      <div class="controls">
         <label>매장 ID:</label>
-        <input type="number" id="storeId" placeholder="1" value="1" min="1">
-      </div>
-
-      <div class="input-group">
+        <input type="number" id="storeId" value="1" placeholder="1">
+        
         <label>스테이션 필터:</label>
-        <input type="text" id="stationsFilter" placeholder="FRY,GRILL,DRINK" value="">
+        <input type="text" id="stationsFilter" placeholder="FRY,GRILL" value="">
+        
+        <button class="connect-btn" id="connectBtn" onclick="connectSSE()">연결</button>
+        <button class="disconnect-btn" id="disconnectBtn" onclick="disconnectSSE()" disabled>연결 해제</button>
+        <button onclick="clearEvents()">이벤트 지우기</button>
       </div>
-
-      <button id="connectBtn" onclick="connectSSE()">연결</button>
-      <button id="disconnectBtn" onclick="disconnectSSE()" disabled>연결 해제</button>
-      <button class="clear-btn" onclick="clearEvents()">이벤트 지우기</button>
     </div>
-
-    <div class="events-container" id="eventsContainer">
-      <p style="text-align: center; color: #666; margin-top: 100px;">
-        매장 ID를 입력하고 연결 버튼을 눌러주세요
-      </p>
+    
+    <div>
+      <h3>실시간 이벤트 <span id="eventCount">(0)</span></h3>
+      <div class="events-container" id="eventsContainer">
+        <p style="color: #666; text-align: center; margin-top: 100px;">
+          매장 ID를 입력하고 연결 버튼을 눌러주세요
+        </p>
+      </div>
     </div>
   </div>
 
@@ -182,38 +182,43 @@
         return;
       }
 
-      disconnectSSE(); // 기존 연결 해제
+      disconnectSSE();
 
-      let url = `/api/kds/stream`;
+      let url = `/api/kds/stream?store_id=${storeId}`;
       if (stations) {
-        url += `?stations=${encodeURIComponent(stations)}`;
+        url += `&stations=${encodeURIComponent(stations)}`;
       }
 
-      // SSE에서 헤더를 직접 설정하는 것은 표준 API에서 지원하지 않습니다.
-      // 대신, URL 쿼리 매개변수 또는 다른 방법을 사용해야 합니다.
-      // 여기서는 storeId를 URL에 추가하는 것으로 가정합니다.
-      url += (url.includes('?') ? '&' : '?') + `storeId=${storeId}`;
-
+      console.log('🔌 KDS SSE 연결 시도:', url);
+      
       eventSource = new EventSource(url);
 
-      eventSource.onopen = function() {
+      eventSource.onopen = function(event) {
+        console.log('✅ KDS SSE 연결 성공');
         updateConnectionStatus(true);
-        addEvent('연결', { type: 'connection', message: `매장 ${storeId} KDS 스트림 연결됨` });
+        addEvent('연결 성공', { storeId, stations }, 'system');
       };
 
       eventSource.onmessage = function(event) {
         try {
           const data = JSON.parse(event.data);
-          addEvent('이벤트', data);
+          console.log('📡 KDS 이벤트 수신:', data);
+          
+          if (data.type === 'heartbeat') {
+            return; // 하트비트는 화면에 표시하지 않음
+          }
+          
+          addEvent(data.type || 'message', data, 'event');
         } catch (error) {
-          addEvent('오류', { type: 'parse_error', data: event.data });
+          console.error('❌ 이벤트 파싱 실패:', error);
+          addEvent('파싱 오류', { raw: event.data }, 'error');
         }
       };
 
-      eventSource.onerror = function(error) {
-        console.error('SSE 오류:', error);
+      eventSource.onerror = function(event) {
+        console.error('❌ KDS SSE 연결 오류:', event);
         updateConnectionStatus(false);
-        addEvent('오류', { type: 'connection_error', message: 'SSE 연결 오류' });
+        addEvent('연결 오류', { error: event }, 'error');
       };
     }
 
@@ -222,48 +227,58 @@
         eventSource.close();
         eventSource = null;
         updateConnectionStatus(false);
-        addEvent('연결', { type: 'disconnection', message: 'SSE 연결 해제됨' });
+        console.log('🔌 KDS SSE 연결 해제');
       }
     }
 
-    function addEvent(type, data) {
+    function addEvent(type, data, category = 'event') {
       const container = document.getElementById('eventsContainer');
-      const eventEl = document.createElement('div');
-
+      
+      if (eventCount === 0) {
+        container.innerHTML = '';
+      }
+      
       eventCount++;
+      document.getElementById('eventCount').textContent = `(${eventCount})`;
 
-      const eventClass = data.type === 'heartbeat' ? 'event-item heartbeat' : 
-                        data.type === 'line_update' ? 'event-item line_update' : 'event-item';
+      const eventDiv = document.createElement('div');
+      eventDiv.className = 'event-item';
+      
+      let headerColor = '#333';
+      if (category === 'system') headerColor = '#2196F3';
+      else if (category === 'error') headerColor = '#f44336';
+      else if (type === 'line_update') headerColor = '#FF9800';
 
-      eventEl.className = eventClass;
-      eventEl.innerHTML = `
-        <div class="event-timestamp">
-          #${eventCount} - ${new Date().toLocaleTimeString('ko-KR')} [${type}]
+      eventDiv.innerHTML = `
+        <div class="event-header" style="color: ${headerColor};">
+          ${type.toUpperCase()} 
+          <span class="timestamp">${new Date().toLocaleTimeString()}</span>
         </div>
         <div class="event-data">${JSON.stringify(data, null, 2)}</div>
       `;
 
-      container.appendChild(eventEl);
-      container.scrollTop = container.scrollHeight;
-
-      // 하트비트 이벤트는 5초 후 자동 삭제
-      if (data.type === 'heartbeat') {
-        setTimeout(() => {
-          if (eventEl.parentNode) {
-            eventEl.remove();
-          }
-        }, 5000);
+      container.insertBefore(eventDiv, container.firstChild);
+      
+      // 최대 50개 이벤트만 유지
+      while (container.children.length > 50) {
+        container.removeChild(container.lastChild);
       }
     }
 
     function clearEvents() {
-      const container = document.getElementById('eventsContainer');
-      container.innerHTML = '<p style="text-align: center; color: #666; margin-top: 100px;">이벤트가 지워졌습니다</p>';
       eventCount = 0;
+      document.getElementById('eventCount').textContent = '(0)';
+      document.getElementById('eventsContainer').innerHTML = `
+        <p style="color: #666; text-align: center; margin-top: 100px;">
+          이벤트가 지워졌습니다
+        </p>
+      `;
     }
 
     // 페이지 언로드 시 연결 해제
-    window.addEventListener('beforeunload', disconnectSSE);
+    window.addEventListener('beforeunload', () => {
+      disconnectSSE();
+    });
   </script>
 </body>
 </html>
