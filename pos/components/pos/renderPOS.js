@@ -234,30 +234,32 @@ async function selectTableFromMap(tableNumber) {
   }
 }
 
-// 테이블 주문 로드 (확정된 주문 + 임시주문 복구)
+// 테이블 주문 로드 (세션 기반 + 임시주문)
 async function loadTableOrders(tableNumber) {
   try {
     window.currentOrder = [];
 
-    // 1. DB에서 확정된 주문 로드
+    // 1. DB에서 세션 단위 주문 로드 (orders 테이블)
     const response = await fetch(`/api/pos/stores/${window.currentStore.id}/table/${tableNumber}/all-orders`);
     const data = await response.json();
 
     if (data.success && data.currentSession && data.currentSession.items) {
-      // 확정된 주문들 (DB에 저장된 것들)
-      const confirmedOrders = data.currentSession.items.map((item, index) => ({
-        id: `confirmed_${item.id || index}`,
+      // 세션에 저장된 주문들 (OPEN 상태)
+      const sessionOrders = data.currentSession.items.map((item, index) => ({
+        id: `session_${item.id || index}`,
         name: item.menuName,
         price: parseInt(item.price),
         quantity: parseInt(item.quantity),
         discount: 0,
         note: '',
         isConfirmed: true,
-        isPending: false
+        isPending: false,
+        sessionId: data.currentSession.orderId,
+        cookingStatus: item.cookingStatus || 'PENDING'
       }));
       
-      window.currentOrder = [...confirmedOrders];
-      console.log(`✅ 테이블 ${tableNumber} 확정된 주문 ${confirmedOrders.length}개 로드`);
+      window.currentOrder = [...sessionOrders];
+      console.log(`✅ 테이블 ${tableNumber} 세션 주문 ${sessionOrders.length}개 로드 (세션 ID: ${data.currentSession.orderId})`);
     }
 
     // 2. 임시저장 데이터 복구 (아직 확정되지 않은 주문들)
@@ -345,11 +347,19 @@ function addMenuToOrder(menuName, price) {
   }
 
   try {
-    const existingItemIndex = window.currentOrder.findIndex(item => item.name === menuName);
+    // 세션 중인 아이템과 임시 아이템을 구분하여 처리
+    const sessionItems = window.currentOrder.filter(item => item.isConfirmed);
+    const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
+    
+    const existingPendingIndex = pendingItems.findIndex(item => item.name === menuName);
+    const existingSessionIndex = sessionItems.findIndex(item => item.name === menuName);
 
-    if (existingItemIndex !== -1) {
-      window.currentOrder[existingItemIndex].quantity += 1;
-    } else {
+    if (existingPendingIndex !== -1) {
+      // 임시 아이템이 이미 있으면 수량 증가
+      window.currentOrder.find(item => item.id === pendingItems[existingPendingIndex].id).quantity += 1;
+      showPOSNotification(`${menuName} 임시 수량 +1 (세션 확정 필요)`, 'info');
+    } else if (existingSessionIndex !== -1) {
+      // 세션에 이미 있는 메뉴면 새로운 임시 아이템으로 추가
       const newItem = {
         id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: menuName,
@@ -357,10 +367,25 @@ function addMenuToOrder(menuName, price) {
         quantity: 1,
         discount: 0,
         note: '',
-        isConfirmed: false, // 임시상태 표시
+        isConfirmed: false,
         isPending: true
       };
       window.currentOrder.push(newItem);
+      showPOSNotification(`${menuName} 임시 추가 (세션에 이미 존재)`, 'warning');
+    } else {
+      // 완전히 새로운 메뉴 임시 추가
+      const newItem = {
+        id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: menuName,
+        price: parseInt(price),
+        quantity: 1,
+        discount: 0,
+        note: '',
+        isConfirmed: false,
+        isPending: true
+      };
+      window.currentOrder.push(newItem);
+      showPOSNotification(`${menuName} 임시 추가됨 (확정 필요)`, 'success');
     }
 
     // 임시저장 (메모리와 localStorage에만 저장)
@@ -369,8 +394,6 @@ function addMenuToOrder(menuName, price) {
     renderOrderItems();
     renderPaymentSummary();
     updatePrimaryActionButton();
-
-    showPOSNotification(`${menuName} 임시 추가됨`, 'success');
 
   } catch (error) {
     console.error('❌ 메뉴 추가 실패:', error);
@@ -403,9 +426,9 @@ function renderOrderItems() {
     const total = (price * quantity) - discount;
     const isSelected = window.selectedItems.includes(item.id);
     
-    // 임시상태 또는 확정상태 표시
+    // 세션 상태 표시
     const statusClass = item.isPending ? 'pending' : item.isConfirmed ? 'confirmed' : '';
-    const statusBadge = item.isPending ? 'TEMP' : item.isConfirmed ? 'DB' : 'POS';
+    const statusBadge = item.isPending ? 'TEMP' : item.isConfirmed ? (item.sessionId ? 'SESSION' : 'DB') : 'POS';
 
     return `
       <div class="order-item-row ${isSelected ? 'selected' : ''} ${statusClass}" onclick="toggleItemSelection('${item.id}')">
@@ -455,20 +478,20 @@ function updatePrimaryActionButton() {
 
   if (hasPendingItems) {
     primaryBtn.disabled = false;
-    if (btnTitle) btnTitle.textContent = '주문 확정';
-    if (btnSubtitle) btnSubtitle.textContent = `${pendingItems.length}개 임시 아이템 확정`;
+    if (btnTitle) btnTitle.textContent = '세션에 추가';
+    if (btnSubtitle) btnSubtitle.textContent = `${pendingItems.length}개 임시 → 세션 저장`;
     primaryBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
     primaryBtn.style.color = 'white';
     primaryBtn.style.cursor = 'pointer';
     primaryBtn.onclick = handlePrimaryAction;
   } else if (confirmedItems.length > 0) {
-    primaryBtn.disabled = true;
-    if (btnTitle) btnTitle.textContent = '확정 완료';
-    if (btnSubtitle) btnSubtitle.textContent = `${confirmedItems.length}개 확정된 주문`;
+    primaryBtn.disabled = false;
+    if (btnTitle) btnTitle.textContent = '추가 주문';
+    if (btnSubtitle) btnSubtitle.textContent = `${confirmedItems.length}개 세션 진행중`;
     primaryBtn.style.background = '#10b981';
     primaryBtn.style.color = 'white';
-    primaryBtn.style.cursor = 'not-allowed';
-    primaryBtn.onclick = null;
+    primaryBtn.style.cursor = 'pointer';
+    primaryBtn.onclick = () => showPOSNotification('새 메뉴를 추가하고 확정하세요', 'info');
   } else {
     primaryBtn.disabled = true;
     if (btnTitle) btnTitle.textContent = '주문 없음';
@@ -491,7 +514,7 @@ function handlePrimaryAction() {
   }
 }
 
-// 주문 확정 (DB에 실제 저장)
+// 주문 확정 (세션 단위 DB 저장)
 async function confirmOrder() {
   if (!window.currentOrder || window.currentOrder.length === 0) {
     showPOSNotification('확정할 주문이 없습니다.', 'warning');
@@ -507,9 +530,10 @@ async function confirmOrder() {
   }
 
   try {
-    console.log('📦 주문 확정 시작 - DB에 실제 저장:', pendingItems);
+    console.log('📦 주문 확정 시작 - 세션 단위 DB 저장:', pendingItems);
 
-    const orderData = {
+    // 세션 단위 주문 데이터 구성
+    const sessionOrderData = {
       storeId: window.currentStore.id,
       storeName: window.currentStore.name,
       tableNumber: window.currentTable,
@@ -520,39 +544,44 @@ async function confirmOrder() {
       })),
       totalAmount: pendingItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
       isTLLOrder: false,
-      userId: 'pos-user',
+      userId: null,
+      guestPhone: null,
       customerName: '포스 주문'
     };
 
+    // POS 세션 단위 저장 API 호출
     const response = await fetch('/api/pos/orders', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
+      body: JSON.stringify(sessionOrderData)
     });
 
     const result = await response.json();
     if (!result.success) {
-      throw new Error(result.error || '주문 저장 실패');
+      throw new Error(result.error || '세션 저장 실패');
     }
 
-    // 확정된 아이템들을 isConfirmed: true로 변경
+    // 확정된 아이템들을 DB 상태로 변경
     pendingItems.forEach(item => {
       item.isConfirmed = true;
       item.isPending = false;
+      item.sessionId = result.orderId; // 세션 ID 추가
     });
 
     // 임시저장 데이터 삭제 (확정되었으므로)
     clearTempOrder();
 
-    showPOSNotification(`${pendingItems.length}개 메뉴가 주문 확정되었습니다!`, 'success');
+    // UI 업데이트
+    renderOrderItems();
+    renderPaymentSummary();
+    updatePrimaryActionButton();
 
-    // 확정 후 테이블맵으로 이동
-    setTimeout(() => {
-      returnToTableMap();
-    }, 1500);
+    showPOSNotification(`${pendingItems.length}개 메뉴가 세션에 확정되었습니다! (세션 ID: ${result.orderId})`, 'success');
+
+    console.log(`✅ 세션 단위 주문 확정 완료 - 세션 ID: ${result.orderId}, 아이템: ${pendingItems.length}개`);
 
   } catch (error) {
-    console.error('❌ 주문 확정 실패:', error);
+    console.error('❌ 세션 단위 주문 확정 실패:', error);
     showPOSNotification('주문 확정 실패: ' + error.message, 'error');
   }
 }
@@ -719,30 +748,38 @@ function clearOrder() {
   }
 }
 
-// 임시저장 함수
+// 임시저장 함수 (세션과 별도 관리)
 function saveTempOrder() {
   if (!window.currentTable || !window.currentOrder) return;
 
   try {
     const tempOrderKey = `temp_order_${window.currentStore.id}_${window.currentTable}`;
+    const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
+    const sessionItems = window.currentOrder.filter(item => item.isConfirmed);
+    
     const tempOrderData = {
       tableNumber: window.currentTable,
       storeId: window.currentStore.id,
-      items: window.currentOrder.filter(item => item.isPending && !item.isConfirmed),
+      pendingItems: pendingItems,
+      sessionStatus: {
+        hasActiveSession: sessionItems.length > 0,
+        sessionItemCount: sessionItems.length,
+        sessionId: sessionItems[0]?.sessionId || null
+      },
       lastModified: new Date().toISOString()
     };
 
     localStorage.setItem(tempOrderKey, JSON.stringify(tempOrderData));
-    console.log(`💾 임시 주문 저장: 테이블 ${window.currentTable}, ${tempOrderData.items.length}개 아이템`);
+    console.log(`💾 임시 주문 세션 저장: 테이블 ${window.currentTable}, 임시: ${pendingItems.length}개, 세션: ${sessionItems.length}개`);
 
   } catch (error) {
     console.error('❌ 임시 주문 저장 실패:', error);
   }
 }
 
-// 임시저장 데이터 로드
+// 임시저장 데이터 로드 (세션 정보 포함)
 function loadTempOrder() {
-  if (!window.currentTable) return;
+  if (!window.currentTable) return [];
 
   try {
     const tempOrderKey = `temp_order_${window.currentStore.id}_${window.currentTable}`;
@@ -754,8 +791,9 @@ function loadTempOrder() {
 
       // 1시간 이내 데이터만 복구
       if (timeDiff < 60 * 60 * 1000) {
-        console.log(`🔄 임시 주문 복구: 테이블 ${window.currentTable}`);
-        return tempOrderData.items || [];
+        const pendingItems = tempOrderData.pendingItems || tempOrderData.items || [];
+        console.log(`🔄 임시 주문 복구: 테이블 ${window.currentTable}, 세션 상태:`, tempOrderData.sessionStatus);
+        return pendingItems;
       } else {
         // 오래된 데이터 삭제
         localStorage.removeItem(tempOrderKey);
