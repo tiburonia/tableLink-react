@@ -314,10 +314,9 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    // 📡 POS 주문 확정 → KDS 실시간 업데이트 전송
     if (global.kdsWebSocket) {
-      console.log(`📡 POS 주문 확정 ${orderId} → KDS 실시간 전송 - 매장 ${storeId}`);
-      global.kdsWebSocket.broadcast(storeId, 'pos-order-confirmed', {
+      console.log(`📡 POS 주문 ${orderId} KDS 실시간 업데이트 전송 - 매장 ${storeId}`);
+      global.kdsWebSocket.broadcast(storeId, 'new-order', {
         orderId: orderId,
         paidOrderId: null,
         storeName: storeName,
@@ -325,9 +324,7 @@ router.post('/orders', async (req, res) => {
         customerName: finalCustomerName,
         itemCount: items.length,
         totalAmount: calculatedTotalAmount,
-        source: 'POS_CONFIRMED',
-        confirmTime: new Date().toISOString(),
-        orderType: req.headers['x-order-type'] || 'STANDARD'
+        source: 'POS'
       });
     }
 
@@ -747,7 +744,7 @@ router.post('/stores/:storeId/table/:tableNumber/van-card-payment', async (req, 
     await client.query('BEGIN');
 
     // 1. 현재 OPEN 상태인 테이블 세션 확인
-    const sessionResult = await pool.query(`
+    const sessionResult = await client.query(`
       SELECT id, total_amount, customer_name, session_started_at
       FROM orders
       WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
@@ -794,7 +791,7 @@ router.post('/stores/:storeId/table/:tableNumber/van-card-payment', async (req, 
     const orderId = session.id;
     const totalAmount = session.total_amount;
 
-    const itemsResult = await pool.query(`
+    const itemsResult = await client.query(`
       SELECT menu_name, quantity, price
       FROM order_items
       WHERE order_id = $1
@@ -1284,7 +1281,7 @@ router.delete('/stores/:storeId/table/:tableNumber/session/:sessionId', async (r
     await client.query('BEGIN');
 
     // 1. 세션 상태 확인
-    const sessionResult = await pool.query(`
+    const sessionResult = await client.query(`
       SELECT id, cooking_status, total_amount, customer_name
       FROM orders
       WHERE id = $1 AND store_id = $2 AND table_number = $3
@@ -1400,7 +1397,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     await client.query('BEGIN');
 
-    const sessionResult = await pool.query(`
+    const sessionResult = await client.query(`
       SELECT id, total_amount, customer_name, session_started_at
       FROM orders
       WHERE store_id = $1 AND table_number = $2 AND cooking_status = 'OPEN'
@@ -1419,7 +1416,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
 
     console.log(`💳 테이블 ${tableNumber} 세션 ${orderId} 결제 처리 시작 (총액: ₩${totalAmount.toLocaleString()})`);
 
-    const itemsResult = await pool.query(`
+    const itemsResult = await client.query(`
       SELECT menu_name, quantity, price
       FROM order_items
       WHERE order_id = $1
@@ -1598,7 +1595,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res) => {
     try {
       console.log(`🗄️ 테이블 ${tableNumber}의 모든 TLL 주문 아카이브 처리`);
 
-      const tllArchiveResult = await pool.query(`
+      const tllArchiveResult = await client.query(`
         UPDATE orders 
         SET cooking_status = 'ARCHIVED',
             is_visible = false,

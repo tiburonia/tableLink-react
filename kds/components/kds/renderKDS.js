@@ -207,7 +207,7 @@ function renderKDSInterface(store) {
             <h3>처리할 주문이 없습니다</h3>
             <p>새로운 주문이 들어오면 여기에 표시됩니다.</p>
           </div>
-
+          
           <!-- 로딩 오버레이 -->
           <div class="loading-overlay" style="display: none;">
               <div class="loading-spinner"></div>
@@ -686,7 +686,7 @@ function renderKDSInterface(store) {
       .order-card.cooking {
         border-color: #fc8181;
         background: linear-gradient(135deg, rgba(252, 129, 129, 0.15) 0%, #1a202c 100%);
-        animation: order-cooking-pulse 2s infinite;
+        animation: order-cooking-pulse 3s infinite;
       }
 
       .order-card.ready {
@@ -897,7 +897,7 @@ function renderKDSInterface(store) {
         font-family: 'Courier New', monospace;
         font-weight: 700;
         font-size: 12px;
-        animation: timer-pulse 2s infinite;
+        animation: timer-pulse 1s infinite;
       }
 
       @keyframes timer-pulse {
@@ -1530,37 +1530,6 @@ function setupKDSWebSocket(storeId) {
     }
   });
 
-  // KDS에서 POS 확정 주문 실시간 수신 처리
-  socket.on('new-order', (data) => {
-        console.log('📺 KDS - 새 주문 수신:', data);
-
-        if (data.storeId && parseInt(data.storeId) === currentStoreId) {
-          showKDSNotification(`🔔 새 주문: 테이블 ${data.tableNumber} (${data.customerName})`, 'new-order');
-
-          // 주문 목록 새로고침
-          setTimeout(() => {
-            loadKDSOrders();
-          }, 500);
-        }
-      });
-
-      // 🆕 POS 주문 확정 실시간 수신
-      socket.on('pos-order-confirmed', (data) => {
-        console.log('📺 KDS - POS 주문 확정 수신:', data);
-
-        if (data.storeId && parseInt(data.storeId) === currentStoreId) {
-          showNotification(
-            `🍳 POS 주문 확정: 테이블 ${data.tableNumber} - ${data.itemCount}개 메뉴`,
-            'pos-confirmed'
-          );
-
-          // 확정된 주문 즉시 KDS에 표시
-          setTimeout(() => {
-            loadKDSOrders();
-          }, 300);
-        }
-      });
-
   window.kdsSocket = socket;
 }
 
@@ -1608,7 +1577,7 @@ function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
   const typeColors = {
     'success': '#68d391',
-    'error': '#fc8181',
+    'error': '#fc8181', 
     'info': '#63b3ed',
     'warning': '#f6ad55'
   };
