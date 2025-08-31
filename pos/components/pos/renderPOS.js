@@ -234,7 +234,7 @@ async function selectTableFromMap(tableNumber) {
   }
 }
 
-// 테이블 주문 로드 (세션 기반 + 임시주문)
+// 테이블 주문 로드 (세션 기반 + 임시주문) - 메뉴별 통합
 async function loadTableOrders(tableNumber) {
   try {
     window.currentOrder = [];
@@ -244,22 +244,34 @@ async function loadTableOrders(tableNumber) {
     const data = await response.json();
 
     if (data.success && data.currentSession && data.currentSession.items) {
-      // 세션에 저장된 주문들 (OPEN 상태)
-      const sessionOrders = data.currentSession.items.map((item, index) => ({
-        id: `session_${item.id || index}`,
-        name: item.menuName,
-        price: parseInt(item.price),
-        quantity: parseInt(item.quantity),
-        discount: 0,
-        note: '',
-        isConfirmed: true,
-        isPending: false,
-        sessionId: data.currentSession.orderId,
-        cookingStatus: item.cookingStatus || 'PENDING'
-      }));
+      // 세션에 저장된 주문들을 메뉴별로 통합
+      const consolidatedItems = {};
+      
+      data.currentSession.items.forEach(item => {
+        const key = `${item.menuName}_${item.price}`;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += parseInt(item.quantity);
+        } else {
+          consolidatedItems[key] = {
+            id: `session_${item.id}`,
+            name: item.menuName,
+            price: parseInt(item.price),
+            quantity: parseInt(item.quantity),
+            discount: 0,
+            note: '',
+            isConfirmed: true,
+            isPending: false,
+            sessionId: data.currentSession.orderId,
+            cookingStatus: item.cookingStatus || 'PENDING'
+          };
+        }
+      });
 
+      // 통합된 아이템들을 배열로 변환
+      const sessionOrders = Object.values(consolidatedItems);
       window.currentOrder = [...sessionOrders];
-      console.log(`✅ 테이블 ${tableNumber} 세션 주문 ${sessionOrders.length}개 로드 (세션 ID: ${data.currentSession.orderId})`);
+      
+      console.log(`✅ 테이블 ${tableNumber} 세션 주문 ${sessionOrders.length}개 통합 로드 (원본: ${data.currentSession.items.length}개, 세션 ID: ${data.currentSession.orderId})`);
     }
 
     // 2. 임시저장 데이터 복구 (아직 확정되지 않은 주문들)

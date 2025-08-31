@@ -276,27 +276,35 @@ router.post('/orders', async (req, res) => {
       }
     }
 
-    // 주문 아이템들을 메뉴별로 통합해서 저장
-    const consolidatedItems = {};
-    items.forEach(item => {
-      const key = `${item.name}_${item.price}`;
-      if (consolidatedItems[key]) {
-        consolidatedItems[key].quantity += item.quantity;
-      } else {
-        consolidatedItems[key] = {
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity
-        };
-      }
-    });
+    // 새로 추가된 아이템들을 기존 order_items와 통합
+    for (const newItem of items) {
+      // 기존에 같은 메뉴가 있는지 확인
+      const existingItemResult = await client.query(`
+        SELECT id, quantity FROM order_items 
+        WHERE order_id = $1 AND menu_name = $2 AND price = $3
+        LIMIT 1
+      `, [orderId, newItem.name, newItem.price]);
 
-    // 통합된 아이템들을 order_items 테이블에 저장
-    for (const item of Object.values(consolidatedItems)) {
-      await client.query(`
-        INSERT INTO order_items (order_id, menu_name, price, quantity)
-        VALUES ($1, $2, $3, $4)
-      `, [orderId, item.name, item.price, item.quantity]);
+      if (existingItemResult.rows.length > 0) {
+        // 기존 아이템이 있으면 수량만 증가
+        const existingItem = existingItemResult.rows[0];
+        await client.query(`
+          UPDATE order_items 
+          SET quantity = quantity + $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `, [newItem.quantity, existingItem.id]);
+        
+        console.log(`🔄 기존 메뉴 수량 증가: ${newItem.name} (+${newItem.quantity}개)`);
+      } else {
+        // 새로운 메뉴면 추가
+        await client.query(`
+          INSERT INTO order_items (order_id, menu_name, price, quantity)
+          VALUES ($1, $2, $3, $4)
+        `, [orderId, newItem.name, newItem.price, newItem.quantity]);
+        
+        console.log(`➕ 새 메뉴 추가: ${newItem.name} (${newItem.quantity}개)`);
+      }
     }
 
     console.log(`✅ 주문 세션 ${orderId}에 메뉴 아이템 ${Object.values(consolidatedItems).length}개 추가 완료`);
