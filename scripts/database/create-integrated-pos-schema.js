@@ -9,12 +9,13 @@ async function createIntegratedPOSSchema() {
 
     await client.query('BEGIN');
 
-    // 1. 기존 테이블 백업 및 삭제
-    console.log('🗑️ 기존 테이블 정리...');
+    // 1. 기존 테이블 완전 삭제
+    console.log('🗑️ 기존 테이블 완전 정리...');
     
     const tablesToDrop = [
       'payment_allocations', 'partial_payments', 'user_paid_orders', 
-      'paid_orders', 'order_items', 'orders', 'guests'
+      'paid_orders', 'order_items', 'orders', 'guests',
+      'checks', 'check_items', 'payments', 'daily_stats'
     ];
 
     for (const table of tablesToDrop) {
@@ -24,6 +25,28 @@ async function createIntegratedPOSSchema() {
       } catch (error) {
         console.log(`⚠️ ${table} 삭제 실패: ${error.message}`);
       }
+    }
+
+    // 뷰들도 삭제
+    const viewsToDrop = ['orders', 'order_items', 'paid_orders', 'user_paid_orders'];
+    for (const view of viewsToDrop) {
+      try {
+        await client.query(`DROP VIEW IF EXISTS ${view} CASCADE`);
+        console.log(`✅ ${view} 뷰 삭제 완료`);
+      } catch (error) {
+        console.log(`⚠️ ${view} 뷰 삭제 실패: ${error.message}`);
+      }
+    }
+
+    // 트리거와 함수들도 삭제
+    try {
+      await client.query(`DROP TRIGGER IF EXISTS trigger_update_check_totals ON check_items CASCADE`);
+      await client.query(`DROP TRIGGER IF EXISTS trigger_update_daily_stats ON checks CASCADE`);
+      await client.query(`DROP FUNCTION IF EXISTS update_check_totals() CASCADE`);
+      await client.query(`DROP FUNCTION IF EXISTS update_daily_stats() CASCADE`);
+      console.log('✅ 기존 트리거 및 함수 삭제 완료');
+    } catch (error) {
+      console.log(`⚠️ 트리거/함수 삭제 실패: ${error.message}`);
     }
 
     // 2. 핵심 POS 통합 테이블들 생성
