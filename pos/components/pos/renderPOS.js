@@ -493,6 +493,10 @@ function updatePrimaryActionButton() {
   const modifiedItems = pendingItems.filter(item => item.isModified || item.isDeleted);
   const newItems = pendingItems.filter(item => !item.isModified && !item.isDeleted);
   const hasPendingItems = pendingItems.length > 0;
+  const hasAnyItems = pendingItems.length > 0 || confirmedItems.length > 0;
+
+  // 결제 버튼들 활성화/비활성화 처리
+  updatePaymentButtons(hasAnyItems);
 
   if (hasPendingItems) {
     primaryBtn.disabled = false;
@@ -528,6 +532,28 @@ function updatePrimaryActionButton() {
     primaryBtn.style.color = '#64748b';
     primaryBtn.style.cursor = 'not-allowed';
     primaryBtn.onclick = null;
+  }
+}
+
+// 결제 버튼들 활성화/비활성화 처리 함수
+function updatePaymentButtons(hasItems) {
+  const paymentButtons = document.querySelectorAll('.payment-btn');
+  const paymentIndicator = document.getElementById('paymentIndicator');
+
+  paymentButtons.forEach(btn => {
+    btn.disabled = !hasItems;
+  });
+
+  if (paymentIndicator) {
+    if (hasItems) {
+      paymentIndicator.textContent = '결제 가능';
+      paymentIndicator.style.background = '#10b981';
+      paymentIndicator.style.color = 'white';
+    } else {
+      paymentIndicator.textContent = '대기중';
+      paymentIndicator.style.background = '#f3f4f6';
+      paymentIndicator.style.color = '#6b7280';
+    }
   }
 }
 
@@ -832,13 +858,49 @@ function changeQuantity(delta) {
 function processPayment(paymentMethod) {
   console.log('💳 결제 버튼 클릭:', paymentMethod);
   
-  // paymentModal.js의 processPayment 함수 호출
-  if (typeof window.processPayment === 'function' && paymentMethod === undefined) {
-    // payment-panel의 기본 결제 처리 함수 호출
-    window.processPayment();
+  // 주문이 있는지 확인 (임시 주문 포함)
+  if (!window.currentOrder || window.currentOrder.length === 0) {
+    showPOSNotification('결제할 주문이 없습니다.', 'warning');
+    return;
+  }
+
+  // 임시 주문이 있으면 먼저 확정하고 결제 진행
+  const pendingItems = window.currentOrder.filter(item => item.isPending && !item.isConfirmed);
+  
+  if (pendingItems.length > 0) {
+    if (confirm('임시 주문을 먼저 확정하고 결제를 진행하시겠습니까?')) {
+      confirmOrderAndPay(paymentMethod);
+    }
   } else {
-    // 특정 결제 수단이 지정된 경우 직접 처리
-    handleDirectPayment(paymentMethod);
+    // paymentModal.js의 processPayment 함수 호출
+    if (typeof window.processPayment === 'function' && paymentMethod === undefined) {
+      // payment-panel의 기본 결제 처리 함수 호출
+      window.processPayment();
+    } else {
+      // 특정 결제 수단이 지정된 경우 직접 처리
+      handleDirectPayment(paymentMethod);
+    }
+  }
+}
+
+// 주문 확정 후 결제 진행
+async function confirmOrderAndPay(paymentMethod) {
+  try {
+    // 먼저 주문 확정
+    await confirmOrder();
+    
+    // 약간의 지연 후 결제 진행
+    setTimeout(() => {
+      if (paymentMethod) {
+        handleDirectPayment(paymentMethod);
+      } else if (typeof window.processPayment === 'function') {
+        window.processPayment();
+      }
+    }, 500);
+    
+  } catch (error) {
+    console.error('❌ 주문 확정 후 결제 진행 실패:', error);
+    showPOSNotification('주문 확정 실패: ' + error.message, 'error');
   }
 }
 
@@ -1105,6 +1167,8 @@ window.applyDiscount = applyDiscount;
 window.changeQuantity = changeQuantity;
 window.processPayment = processPayment;
 window.handleDirectPayment = handleDirectPayment;
+window.confirmOrderAndPay = confirmOrderAndPay;
+window.updatePaymentButtons = updatePaymentButtons;
 window.clearOrder = clearOrder;
 window.holdOrder = holdOrder;
 window.sendToKitchen = sendToKitchen;
