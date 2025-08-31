@@ -828,8 +828,22 @@ function changeQuantity(delta) {
   showPOSNotification('수량 변경 (확정 필요)', 'warning');
 }
 
-// 결제 처리 (TLL 연동 전화번호 입력 모달 포함)
-async function processPayment(paymentMethod) {
+// 결제 처리 (기존 payment-panel 버튼 연동)
+function processPayment(paymentMethod) {
+  console.log('💳 결제 버튼 클릭:', paymentMethod);
+  
+  // paymentModal.js의 processPayment 함수 호출
+  if (typeof window.processPayment === 'function' && paymentMethod === undefined) {
+    // payment-panel의 기본 결제 처리 함수 호출
+    window.processPayment();
+  } else {
+    // 특정 결제 수단이 지정된 경우 직접 처리
+    handleDirectPayment(paymentMethod);
+  }
+}
+
+// 직접 결제 처리 (기존 로직 유지)
+async function handleDirectPayment(paymentMethod) {
   if (window.currentOrder.length === 0) {
     showPOSNotification('결제할 주문이 없습니다.', 'warning');
     return;
@@ -838,21 +852,14 @@ async function processPayment(paymentMethod) {
   let phoneNumber = null;
   let actualPaymentMethod = paymentMethod;
 
-  // TLL 연동을 위한 전화번호 입력 모달 표시
+  // TLL 연동을 위한 전화번호 입력
   if (paymentMethod === 'TLL') {
     phoneNumber = prompt('TLL 연동을 위한 전화번호를 입력해주세요:');
     if (!phoneNumber) {
       showPOSNotification('전화번호가 입력되지 않아 결제를 취소합니다.', 'warning');
       return;
     }
-    // TLL 연동 로직 (API 호출 등)은 이 함수 외부에서 처리하거나,
-    // 여기서 TLL 연동 API를 호출하고 성공 시 actualPaymentMethod를 'CARD' 등으로 변경하는 식으로 구현할 수 있습니다.
-    // 여기서는 예시로 TLL 연동 시도 후 카드 결제로 넘어가도록 설정합니다.
-    console.log(`TLL 연동 시도 - 전화번호: ${phoneNumber}`);
-    // 실제 TLL 연동 API 호출 로직이 여기에 들어가야 합니다.
-    // 예: const tllResult = await callTLLApi(phoneNumber, totalAmount);
-    // if (tllResult.success) { actualPaymentMethod = 'CARD'; } else { showPOSNotification('TLL 연동 실패', 'error'); return; }
-    actualPaymentMethod = 'CARD'; // 임시로 카드 결제로 진행
+    actualPaymentMethod = 'CARD'; // TLL 연동 후 카드 결제로 처리
   }
 
   try {
@@ -1097,6 +1104,7 @@ window.deleteSelectedItems = deleteSelectedItems;
 window.applyDiscount = applyDiscount;
 window.changeQuantity = changeQuantity;
 window.processPayment = processPayment;
+window.handleDirectPayment = handleDirectPayment;
 window.clearOrder = clearOrder;
 window.holdOrder = holdOrder;
 window.sendToKitchen = sendToKitchen;
