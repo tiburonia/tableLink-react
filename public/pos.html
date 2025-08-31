@@ -28,10 +28,20 @@
   <script src="/pos/components/pos/detailPanel.js"></script>
   <script src="/pos/components/pos/orderModal.js"></script>
   <script src="/pos/components/pos/paymentModal.js"></script>
-  <script src="/pos/components/pos/renderPOS.js"></script>
+  
+  <!-- POS ES6 모듈들 -->
+  <script type="module" src="/pos/components/pos/modules/posStateManager.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posDataLoader.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posTableManager.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posMenuManager.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posOrderManager.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posPaymentManager.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posTempStorage.js"></script>
+  <script type="module" src="/pos/components/pos/modules/posUIRenderer.js"></script>
+  <script type="module" src="/pos/components/pos/renderPOS.js"></script>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
+  <script type="module">
+    document.addEventListener('DOMContentLoaded', async () => {
       console.log('🚀 TableLink POS 시스템 시작');
       
       // 전역 상태 초기화
@@ -43,10 +53,16 @@
       window.currentOrderItems = [];
       window.currentTLLOrder = null;
       
-      if (typeof renderPOS === 'function') {
-        renderPOS();
-      } else {
-        console.error('❌ renderPOS 함수를 찾을 수 없습니다');
+      try {
+        // ES6 모듈에서 renderPOS 함수 import
+        const { renderPOS } = await import('/pos/components/pos/renderPOS.js');
+        if (typeof renderPOS === 'function') {
+          renderPOS();
+        } else {
+          console.error('❌ renderPOS 함수를 찾을 수 없습니다');
+        }
+      } catch (error) {
+        console.error('❌ POS 모듈 로드 실패:', error);
       }
     });
   </script>
