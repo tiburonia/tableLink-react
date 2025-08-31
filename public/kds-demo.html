@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS Demo - TableLink</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+        }
+
+        .kds-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+
+        .kds-title {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff4444;
+        }
+
+        .status-indicator.connected {
+            background: #44ff44;
+        }
+
+        .kds-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .kds-btn {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .kds-btn:hover {
+            background: #0056b3;
+        }
+
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .order-card {
+            background: #2a2a2a;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 5px solid #666;
+        }
+
+        .order-card.queued {
+            border-left-color: #ffc107;
+        }
+
+        .order-card.cooking {
+            border-left-color: #ff6b35;
+        }
+
+        .order-card.ready {
+            border-left-color: #28a745;
+        }
+
+        .order-card.served {
+            border-left-color: #6c757d;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .order-info {
+            font-size: 14px;
+            color: #ccc;
+        }
+
+        .order-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-queued {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .status-cooking {
+            background: #ff6b35;
+            color: #fff;
+        }
+
+        .status-ready {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .status-served {
+            background: #6c757d;
+            color: #fff;
+        }
+
+        .order-items {
+            margin: 15px 0;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #444;
+        }
+
+        .order-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .start-btn {
+            background: #ff6b35;
+            color: white;
+        }
+
+        .complete-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .serve-btn {
+            background: #007bff;
+            color: white;
+        }
+
+        .log-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 400px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .log-entry {
+            margin-bottom: 10px;
+            padding: 5px;
+            background: #2a2a2a;
+            border-radius: 3px;
+        }
+
+        .log-time {
+            color: #888;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="kds-header">
+        <div class="kds-title">🍳 Kitchen Display System</div>
+        <div class="connection-status">
+            <div class="status-indicator" id="connectionStatus"></div>
+            <span id="connectionText">연결 중...</span>
+        </div>
+    </div>
+
+    <div class="kds-controls">
+        <button class="kds-btn" onclick="connectSSE()">SSE 연결</button>
+        <button class="kds-btn" onclick="refreshOrders()">주문 새로고침</button>
+        <button class="kds-btn" onclick="toggleLog()">로그 토글</button>
+        <input type="number" id="storeIdInput" placeholder="매장 ID" value="1" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #333; color: white;">
+    </div>
+
+    <div class="orders-grid" id="ordersGrid">
+        <!-- 주문 카드들이 여기에 표시됩니다 -->
+    </div>
+
+    <div class="log-panel" id="logPanel" style="display: none;">
+        <h4>이벤트 로그</h4>
+        <div id="logContent"></div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let orders = new Map();
+        let storeId = 1;
+
+        function log(message) {
+            const logContent = document.getElementById('logContent');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <div class="log-time">${new Date().toLocaleTimeString()}</div>
+                <div>${message}</div>
+            `;
+            logContent.insertBefore(entry, logContent.firstChild);
+            
+            // 최대 50개 로그만 유지
+            while (logContent.children.length > 50) {
+                logContent.removeChild(logContent.lastChild);
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('connectionStatus');
+            const text = document.getElementById('connectionText');
+            
+            if (connected) {
+                indicator.classList.add('connected');
+                text.textContent = '연결됨';
+            } else {
+                indicator.classList.remove('connected');
+                text.textContent = '연결 끊김';
+            }
+        }
+
+        function connectSSE() {
+            storeId = document.getElementById('storeIdInput').value || 1;
+            
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            log(`SSE 연결 시도: 매장 ${storeId}`);
+            
+            eventSource = new EventSource(`/api/kds/stream?stations=FRY,GRILL`, {
+                headers: {
+                    'X-Store-Id': storeId
+                }
+            });
+
+            eventSource.onopen = () => {
+                log('SSE 연결 성공');
+                updateConnectionStatus(true);
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`수신: ${data.type} - ${JSON.stringify(data).substring(0, 100)}...`);
+                    
+                    if (data.type === 'line_update') {
+                        // 실시간 라인 업데이트 처리
+                        refreshOrders();
+                    }
+                } catch (error) {
+                    log(`메시지 파싱 오류: ${error.message}`);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                log('SSE 연결 오류');
+                updateConnectionStatus(false);
+            };
+        }
+
+        async function refreshOrders() {
+            try {
+                const response = await fetch(`/api/kds/poll?status=queued,cooking,ready`, {
+                    headers: {
+                        'X-Store-Id': storeId
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`주문 데이터 로드: ${data.lines.length}건`);
+                    renderOrders(data.lines);
+                } else {
+                    log(`주문 로드 실패: ${data.error}`);
+                }
+            } catch (error) {
+                log(`주문 로드 오류: ${error.message}`);
+            }
+        }
+
+        function renderOrders(lines) {
+            const grid = document.getElementById('ordersGrid');
+            
+            // 라인을 주문별로 그룹화
+            const orderGroups = new Map();
+            
+            lines.forEach(line => {
+                const key = `${line.order_id}-${line.table_number}`;
+                if (!orderGroups.has(key)) {
+                    orderGroups.set(key, {
+                        orderId: line.order_id,
+                        tableNumber: line.table_number,
+                        customerName: line.customer_name || '손님',
+                        source: line.source,
+                        lines: []
+                    });
+                }
+                orderGroups.get(key).lines.push(line);
+            });
+
+            grid.innerHTML = '';
+            
+            orderGroups.forEach((order, key) => {
+                const card = document.createElement('div');
+                card.className = `order-card ${getOrderStatus(order.lines)}`;
+                card.innerHTML = `
+                    <div class="order-header">
+                        <div class="order-info">
+                            <div>주문 #${order.orderId}</div>
+                            <div>테이블 ${order.tableNumber}</div>
+                            <div>${order.customerName}</div>
+                        </div>
+                        <div class="order-status status-${getOrderStatus(order.lines)}">
+                            ${getStatusText(getOrderStatus(order.lines))}
+                        </div>
+                    </div>
+                    
+                    <div class="order-items">
+                        ${order.lines.map(line => `
+                            <div class="order-item">
+                                <span>${line.menu_name} x${line.quantity}</span>
+                                <span class="status-${line.status}">${getStatusText(line.status)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                    <div class="order-actions">
+                        ${renderOrderActions(order.lines)}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function getOrderStatus(lines) {
+            if (lines.every(l => l.status === 'served')) return 'served';
+            if (lines.some(l => l.status === 'ready')) return 'ready';
+            if (lines.some(l => l.status === 'cooking')) return 'cooking';
+            return 'queued';
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'queued': '대기중',
+                'cooking': '조리중',
+                'ready': '완료',
+                'served': '서빙완료'
+            };
+            return statusMap[status] || status;
+        }
+
+        function renderOrderActions(lines) {
+            const queuedLines = lines.filter(l => l.status === 'queued');
+            const cookingLines = lines.filter(l => l.status === 'cooking');
+            const readyLines = lines.filter(l => l.status === 'ready');
+
+            let actions = '';
+
+            if (queuedLines.length > 0) {
+                actions += `<button class="action-btn start-btn" onclick="updateLineStatus(${queuedLines[0].line_id}, 'cooking')">🔥 조리 시작</button>`;
+            }
+
+            if (cookingLines.length > 0) {
+                actions += `<button class="action-btn complete-btn" onclick="updateLineStatus(${cookingLines[0].line_id}, 'ready')">✅ 조리 완료</button>`;
+            }
+
+            if (readyLines.length > 0) {
+                actions += `<button class="action-btn serve-btn" onclick="updateLineStatus(${readyLines[0].line_id}, 'served')">🍽️ 서빙 완료</button>`;
+            }
+
+            return actions;
+        }
+
+        async function updateLineStatus(lineId, status) {
+            try {
+                log(`라인 ${lineId} 상태 변경: ${status}`);
+                
+                const response = await fetch(`/api/kds/lines/${lineId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Store-Id': storeId
+                    },
+                    body: JSON.stringify({ status })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`라인 상태 변경 성공: ${lineId} → ${status}`);
+                    refreshOrders();
+                } else {
+                    log(`라인 상태 변경 실패: ${data.error}`);
+                }
+            } catch (error) {
+                log(`라인 상태 변경 오류: ${error.message}`);
+            }
+        }
+
+        function toggleLog() {
+            const panel = document.getElementById('logPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            log('KDS 데모 시작');
+            refreshOrders();
+        });
+    </script>
+</body>
+</html>
