@@ -148,32 +148,63 @@ function renderPOSLayout() {
                   </div>
                 </div>
 
-                <!-- 수량/항목 조작 영역 -->
+                <!-- 주문 내역 수정 컨트롤 영역 -->
                 <div class="order-controls">
-                <button class="control-btn secondary-action-btn cancel-changes-btn" onclick="cancelOrderChanges()" style="display: none;">
-                  <span class="btn-icon">↶</span>
-                  <div class="btn-content">
-                    <div class="btn-title">변경 취소</div>
-                    <div class="btn-subtitle">수정사항 되돌리기</div>
-                  </div>
-                </button>
+                  <div class="order-modification-bar">
+                    <div class="modification-section">
+                      <h4>📝 주문 수정</h4>
+                      <div class="modification-buttons">
+                        <button class="mod-btn select-all-btn" onclick="selectAllItems()">
+                          <span class="mod-icon">☑️</span>
+                          <span>전체선택</span>
+                        </button>
+                        
+                        <button class="mod-btn delete-btn" onclick="deleteSelectedItems()">
+                          <span class="mod-icon">🗑️</span>
+                          <span>삭제</span>
+                        </button>
+                        
+                        <button class="mod-btn discount-btn" onclick="applyDiscount()">
+                          <span class="mod-icon">💰</span>
+                          <span>할인</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <button class="control-btn danger-action-btn cancel-pending-btn" onclick="cancelAllPendingOrders()" style="display: none;">
-                  <span class="btn-icon">🗑️</span>
-                  <div class="btn-content">
-                    <div class="btn-title">임시주문 취소</div>
-                    <div class="btn-subtitle">미저장 주문 삭제</div>
-                  </div>
-                </button>
+                    <div class="quantity-section">
+                      <h4>🔢 수량 조절</h4>
+                      <div class="quantity-buttons">
+                        <button class="qty-btn minus-btn" onclick="changeQuantity(-1)">
+                          <span class="qty-icon">➖</span>
+                          <span>-1</span>
+                        </button>
+                        
+                        <button class="qty-btn plus-btn" onclick="changeQuantity(1)">
+                          <span class="qty-icon">➕</span>
+                          <span>+1</span>
+                        </button>
+                      </div>
+                    </div>
 
-                <button class="control-btn primary-action-btn" id="primaryAction-btn" onclick="handlePrimaryAction()">
-                  <span class="btn-icon">✓</span>
-                  <div class="btn-content">
-                    <div class="btn-title">주문 확정</div>
-                    <div class="btn-subtitle">DB 저장 및 주방전송</div>
+                    <div class="action-section">
+                      <button class="control-btn secondary-action-btn cancel-changes-btn" onclick="cancelOrderChanges()" style="display: none;">
+                        <span class="btn-icon">↶</span>
+                        <div class="btn-content">
+                          <div class="btn-title">변경 취소</div>
+                          <div class="btn-subtitle">수정사항 되돌리기</div>
+                        </div>
+                      </button>
+
+                      <button class="control-btn danger-action-btn cancel-pending-btn" onclick="cancelAllPendingOrders()" style="display: none;">
+                        <span class="btn-icon">🗑️</span>
+                        <div class="btn-content">
+                          <div class="btn-title">임시주문 취소</div>
+                          <div class="btn-subtitle">미저장 주문 삭제</div>
+                        </div>
+                      </button>
+                    </div>
                   </div>
-                </button>
-              </div>
+                </div>
               </div>
 
               <!-- 하단: 결제 정보 패널 -->
@@ -924,12 +955,113 @@ function renderPOSLayout() {
 
       /* 주문 조작 버튼 */
       .order-controls {
-        padding: 12px 16px;
+        padding: 16px;
         border-top: 1px solid #e2e8f0;
         background: #f8fafc;
+      }
+
+      .order-modification-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .modification-section,
+      .quantity-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .modification-section h4,
+      .quantity-section h4 {
+        font-size: 12px;
+        color: #374151;
+        margin: 0;
+        font-weight: 700;
+      }
+
+      .modification-buttons,
+      .quantity-buttons {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .mod-btn,
+      .qty-btn {
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+        min-width: 80px;
+        justify-content: center;
+      }
+
+      .mod-btn:hover,
+      .qty-btn:hover {
+        background: #f1f5f9;
+        border-color: #94a3b8;
+        transform: translateY(-1px);
+      }
+
+      .mod-btn:disabled,
+      .qty-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .select-all-btn:hover {
+        background: #dbeafe;
+        border-color: #3b82f6;
+        color: #1e40af;
+      }
+
+      .delete-btn:hover {
+        background: #fecaca;
+        border-color: #ef4444;
+        color: #dc2626;
+      }
+
+      .discount-btn:hover {
+        background: #fef3c7;
+        border-color: #f59e0b;
+        color: #d97706;
+      }
+
+      .plus-btn:hover {
+        background: #dcfce7;
+        border-color: #22c55e;
+        color: #16a34a;
+      }
+
+      .minus-btn:hover {
+        background: #fee2e2;
+        border-color: #ef4444;
+        color: #dc2626;
+      }
+
+      .mod-icon,
+      .qty-icon {
+        font-size: 12px;
+      }
+
+      .action-section {
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+        margin-top: 8px;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
       }
 
       .control-btn {
