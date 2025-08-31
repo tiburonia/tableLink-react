@@ -1,13 +1,12 @@
-
 const pool = require('../../shared/config/database');
 
 async function createCompleteDummyData() {
   const client = await pool.connect();
-  
+
   try {
     console.log('🏗️ 완전한 더미데이터 생성 시작...');
     console.log('📋 참조 관계를 고려한 순차적 데이터 생성');
-    
+
     await client.query('BEGIN');
 
     // 1️⃣ 기본 사용자 5명 생성
@@ -43,20 +42,20 @@ async function createCompleteDummyData() {
 
     // 2️⃣ 서울 매장 20개 생성 (기존 100개 대신 관리 가능한 수)
     console.log('\n🏪 2. 매장 더미데이터 생성...');
-    
+
     const categories = ['한식', '중식', '일식', '양식', '카페', '치킨', '분식'];
     const seoulAreas = ['강남구', '서초구', '송파구', '마포구', '용산구'];
-    
+
     const maxIdResult = await client.query('SELECT COALESCE(MAX(id), 0) as max_id FROM stores');
     let storeId = parseInt(maxIdResult.rows[0].max_id) + 1;
-    
+
     const createdStoreIds = [];
 
     for (let i = 0; i < 20; i++) {
       const category = categories[Math.floor(Math.random() * categories.length)];
       const area = seoulAreas[Math.floor(Math.random() * seoulAreas.length)];
       const storeName = `${category} 전문점 ${area}${i + 1}호점`;
-      
+
       // 매장 생성
       await client.query(`
         INSERT INTO stores (
@@ -80,7 +79,7 @@ async function createCompleteDummyData() {
       // 매장 주소 생성
       const lat = 37.5 + Math.random() * 0.1;
       const lng = 126.9 + Math.random() * 0.1;
-      
+
       await client.query(`
         INSERT INTO store_address (
           store_id, address_full, sido, sigungu, dong,
@@ -109,11 +108,11 @@ async function createCompleteDummyData() {
 
     // 3️⃣ 즐겨찾기 데이터 생성
     console.log('\n⭐ 3. 즐겨찾기 데이터 생성...');
-    
+
     for (const user of users) {
       const favoriteCount = Math.floor(Math.random() * 5) + 2; // 2-6개
       const shuffledStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, favoriteCount);
-      
+
       for (const storeId of shuffledStores) {
         try {
           await client.query(`
@@ -130,7 +129,7 @@ async function createCompleteDummyData() {
 
     // 4️⃣ 리뷰 데이터 생성
     console.log('\n📝 4. 리뷰 데이터 생성...');
-    
+
     const reviewTexts = [
       '정말 맛있어요! 강력 추천합니다.',
       '음식이 깔끔하고 서비스도 좋아요.',
@@ -145,11 +144,11 @@ async function createCompleteDummyData() {
     for (const user of users) {
       const reviewCount = Math.floor(Math.random() * 4) + 1; // 1-4개
       const reviewStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, reviewCount);
-      
+
       for (const storeId of reviewStores) {
         const rating = Math.floor(Math.random() * 3) + 3; // 3-5점
         const comment = reviewTexts[Math.floor(Math.random() * reviewTexts.length)];
-        
+
         try {
           await client.query(`
             INSERT INTO reviews (
@@ -165,16 +164,16 @@ async function createCompleteDummyData() {
 
     // 5️⃣ 단골 통계 데이터 생성
     console.log('\n📊 5. 단골 통계 데이터 생성...');
-    
+
     for (const user of users) {
       const statsCount = Math.floor(Math.random() * 6) + 3; // 3-8개 매장
       const statsStores = [...createdStoreIds].sort(() => Math.random() - 0.5).slice(0, statsCount);
-      
+
       for (const storeId of statsStores) {
         const visitCount = Math.floor(Math.random() * 15) + 5; // 5-20회 방문
         const totalSpent = visitCount * (8000 + Math.floor(Math.random() * 12000)); // 방문당 8-20k
         const points = Math.floor(totalSpent * 0.01); // 1% 포인트
-        
+
         try {
           await client.query(`
             INSERT INTO user_store_stats (
@@ -197,15 +196,15 @@ async function createCompleteDummyData() {
 
     // 6️⃣ 체크(주문) 데이터 생성
     console.log('\n🛒 6. 체크/주문 데이터 생성...');
-    
+
     for (const user of users) {
       const checkCount = Math.floor(Math.random() * 5) + 2; // 2-6개 주문
-      
+
       for (let i = 0; i < checkCount; i++) {
         const storeId = createdStoreIds[Math.floor(Math.random() * createdStoreIds.length)];
         const tableId = Math.floor(Math.random() * 5) + 1; // 1-5번 테이블
         const totalAmount = Math.floor(Math.random() * 50000) + 10000; // 10-60k
-        
+
         try {
           const checkResult = await client.query(`
             INSERT INTO checks (
@@ -217,7 +216,7 @@ async function createCompleteDummyData() {
             storeId, user.id, tableId, totalAmount, totalAmount,
             'closed', 'card', new Date(), new Date()
           ]);
-          
+
           const checkId = checkResult.rows[0].id;
 
           // 주문 아이템 2-4개 생성
@@ -225,7 +224,7 @@ async function createCompleteDummyData() {
           for (let j = 0; j < itemCount; j++) {
             const itemPrice = Math.floor(Math.random() * 15000) + 5000;
             const quantity = Math.floor(Math.random() * 3) + 1;
-            
+
             await client.query(`
               INSERT INTO orders (
                 check_id, item_name, quantity, unit_price, 
@@ -236,7 +235,7 @@ async function createCompleteDummyData() {
               itemPrice * quantity, 'completed', new Date()
             ]);
           }
-          
+
         } catch (error) {
           console.error(`❌ 주문 생성 실패: ${user.id}`, error.message);
         }
@@ -246,7 +245,7 @@ async function createCompleteDummyData() {
 
     // 7️⃣ 게스트 데이터 생성
     console.log('\n👥 7. 게스트 데이터 생성...');
-    
+
     const guests = [
       { phone: '010-7777-7777', name: '김게스트' },
       { phone: '010-8888-8888', name: '이게스트' },
@@ -260,14 +259,14 @@ async function createCompleteDummyData() {
           VALUES ($1, $2, $3, $4)
           ON CONFLICT (phone) DO NOTHING
         `, [guest.phone, guest.name, Math.floor(Math.random() * 5) + 1, new Date()]);
-        
+
         // 게스트 주문 1-2개 생성
         const guestOrderCount = Math.floor(Math.random() * 2) + 1;
         for (let i = 0; i < guestOrderCount; i++) {
           const storeId = createdStoreIds[Math.floor(Math.random() * createdStoreIds.length)];
           const tableId = Math.floor(Math.random() * 5) + 1;
           const totalAmount = Math.floor(Math.random() * 30000) + 8000;
-          
+
           await client.query(`
             INSERT INTO checks (
               store_id, guest_phone, table_id, total_amount, final_amount,
@@ -286,7 +285,7 @@ async function createCompleteDummyData() {
 
     // 8️⃣ 정규 레벨 혜택 데이터 생성
     console.log('\n🎁 8. 정규 레벨 혜택 데이터 생성...');
-    
+
     for (const storeId of createdStoreIds) {
       try {
         await client.query(`
@@ -316,7 +315,7 @@ async function createCompleteDummyData() {
 
     // 📊 최종 결과 확인
     console.log('\n📊 더미데이터 생성 완료 - 최종 통계:');
-    
+
     const finalStats = await client.query(`
       SELECT 
         (SELECT COUNT(*) FROM users) as user_count,
@@ -342,7 +341,7 @@ async function createCompleteDummyData() {
     console.log(`🎁 정규 레벨: ${stats.level_count}개`);
 
     console.log('\n🎉 모든 참조 관계를 포함한 완전한 더미데이터 생성 완료!');
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ 더미데이터 생성 실패:', error);
