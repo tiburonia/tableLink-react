@@ -135,6 +135,13 @@ async function renderPOS() {
   try {
     console.log('📟 TableLink POS 시스템 초기화 중... (OKPOS 구조 기반)');
 
+    // 의존성 체크
+    if (typeof renderPOSLayout !== 'function') {
+      console.error('❌ renderPOSLayout 함수가 로드되지 않았습니다. posLayout.js를 확인하세요.');
+      setTimeout(() => renderPOS(), 500); // 500ms 후 재시도
+      return;
+    }
+
     // 전역 변수 안전 초기화
     window.currentStore = null;
     window.currentTable = null;
