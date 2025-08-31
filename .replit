@@ -11,7 +11,7 @@ deploymentTarget = "static"
 run = ["sh", "-c", "npx live-server --port=5000 --host=0.0.0.0"]
 
 [workflows]
-runButton = "Node.js Server"
+runButton = "TableLink POS Server"
 
 [[workflows.workflow]]
 name = "Serve static"
@@ -52,6 +52,15 @@ mode = "sequential"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node server.js"
+
+[[workflows.workflow]]
+name = "TableLink POS Server"
+author = 41585131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node src/server.js"
 
 [[ports]]
 localPort = 80

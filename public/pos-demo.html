@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableLink POS Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        input, select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏪 TableLink POS Demo</h1>
+            <p>POS 시스템 API 테스트 도구</p>
+            <div>
+                <label>매장 ID:</label>
+                <input type="number" id="storeId" value="1" min="1">
+                <button onclick="setStoreId()">설정</button>
+                <span id="currentStore">현재 매장: 미설정</span>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="section">
+                <h3>📋 체크 관리</h3>
+                <div>
+                    <input type="number" id="tableNumber" placeholder="테이블 번호" min="1">
+                    <input type="text" id="guestPhone" placeholder="게스트 전화번호 (선택)">
+                    <br>
+                    <button onclick="createCheck()">새 체크 생성</button>
+                </div>
+                <div>
+                    <input type="number" id="checkId" placeholder="체크 ID">
+                    <button onclick="getCheckSummary()">체크 요약</button>
+                </div>
+                <div id="checkResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h3>🍽️ 주문 관리</h3>
+                <div>
+                    <input type="number" id="orderCheckId" placeholder="체크 ID">
+                    <br>
+                    <input type="number" id="menuItemId" placeholder="메뉴 아이템 ID" value="1">
+                    <input type="number" id="quantity" placeholder="수량" value="1" min="1">
+                    <input type="number" id="unitPrice" placeholder="단가" value="10000">
+                    <br>
+                    <input type="text" id="specialInstructions" placeholder="특별 요청사항">
+                    <br>
+                    <button onclick="addOrder()">주문 추가</button>
+                </div>
+                <div id="orderResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h3>💳 결제 관리</h3>
+                <div>
+                    <input type="number" id="paymentCheckId" placeholder="체크 ID">
+                    <input type="number" id="paymentAmount" placeholder="결제 금액">
+                    <br>
+                    <select id="paymentMethod">
+                        <option value="CASH">현금</option>
+                        <option value="CARD">카드</option>
+                        <option value="DIGITAL">디지털</option>
+                    </select>
+                    <input type="text" id="paymentReference" placeholder="결제 참조 (선택)">
+                    <br>
+                    <button onclick="processPayment()">결제 처리</button>
+                </div>
+                <div id="paymentResult" class="result"></div>
+            </div>
+
+            <div class="section">
+                <h3>📊 시스템 상태</h3>
+                <button onclick="checkHealth()">헬스 체크</button>
+                <button onclick="clearResults()">결과 초기화</button>
+                <div id="systemResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStoreId = null;
+        const API_BASE = '/api';
+
+        function setStoreId() {
+            const storeId = document.getElementById('storeId').value;
+            if (storeId && parseInt(storeId) > 0) {
+                currentStoreId = parseInt(storeId);
+                document.getElementById('currentStore').textContent = `현재 매장: ${currentStoreId}`;
+            } else {
+                alert('유효한 매장 ID를 입력해주세요');
+            }
+        }
+
+        function getHeaders() {
+            if (!currentStoreId) {
+                alert('먼저 매장 ID를 설정해주세요');
+                return null;
+            }
+            return {
+                'Content-Type': 'application/json',
+                'X-Store-Id': currentStoreId.toString(),
+                'Idempotency-Key': 'demo-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9)
+            };
+        }
+
+        async function apiCall(url, options = {}) {
+            const headers = getHeaders();
+            if (!headers) return;
+
+            try {
+                const response = await fetch(API_BASE + url, {
+                    ...options,
+                    headers: { ...headers, ...options.headers }
+                });
+                
+                const data = await response.json();
+                return { status: response.status, data };
+            } catch (error) {
+                return { status: 0, error: error.message };
+            }
+        }
+
+        async function createCheck() {
+            const tableNumber = document.getElementById('tableNumber').value;
+            const guestPhone = document.getElementById('guestPhone').value;
+
+            const body = { 
+                table_number: tableNumber ? parseInt(tableNumber) : null,
+                guest_phone: guestPhone || null,
+                channel: 'POS',
+                source: 'DEMO'
+            };
+
+            const result = await apiCall('/pos/checks', {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            document.getElementById('checkResult').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function getCheckSummary() {
+            const checkId = document.getElementById('checkId').value;
+            if (!checkId) {
+                alert('체크 ID를 입력해주세요');
+                return;
+            }
+
+            const result = await apiCall(`/pos/checks/${checkId}/summary`);
+            document.getElementById('checkResult').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function addOrder() {
+            const checkId = document.getElementById('orderCheckId').value;
+            const menuItemId = document.getElementById('menuItemId').value;
+            const quantity = document.getElementById('quantity').value;
+            const unitPrice = document.getElementById('unitPrice').value;
+            const specialInstructions = document.getElementById('specialInstructions').value;
+
+            if (!checkId || !menuItemId || !quantity || !unitPrice) {
+                alert('모든 필수 필드를 입력해주세요');
+                return;
+            }
+
+            const body = {
+                items: [{
+                    menu_item_id: parseInt(menuItemId),
+                    quantity: parseInt(quantity),
+                    unit_price: parseInt(unitPrice),
+                    special_instructions: specialInstructions || null
+                }],
+                notes: 'Demo 주문'
+            };
+
+            const result = await apiCall(`/pos/checks/${checkId}/orders`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            document.getElementById('orderResult').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function processPayment() {
+            const checkId = document.getElementById('paymentCheckId').value;
+            const amount = document.getElementById('paymentAmount').value;
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const reference = document.getElementById('paymentReference').value;
+
+            if (!checkId || !amount) {
+                alert('체크 ID와 결제 금액을 입력해주세요');
+                return;
+            }
+
+            const body = {
+                amount: parseInt(amount),
+                payment_method: paymentMethod,
+                reference: reference || 'DEMO-' + Date.now()
+            };
+
+            const result = await apiCall(`/pos/checks/${checkId}/payments`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            document.getElementById('paymentResult').textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                document.getElementById('systemResult').textContent = JSON.stringify({ status: response.status, data }, null, 2);
+            } catch (error) {
+                document.getElementById('systemResult').textContent = JSON.stringify({ error: error.message }, null, 2);
+            }
+        }
+
+        function clearResults() {
+            document.querySelectorAll('.result').forEach(el => el.textContent = '');
+        }
+
+        // 페이지 로드 시 기본 매장 설정
+        window.onload = function() {
+            setStoreId();
+        };
+    </script>
+</body>
+</html>
