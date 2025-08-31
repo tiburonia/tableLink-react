@@ -29,6 +29,82 @@ let autoRefreshInterval = null; // 자동 새로고침 인터벌
 // 주문 수정 관리 상태 초기화 (전역 변수는 이미 선언됨)
 let originalOrder = []; // 원본 주문 상태 저장
 
+// 📦 임시 주문 세션 관리 함수들 (최상단으로 이동)
+function saveTemporaryOrderToSession() {
+  if (!window.currentTable || !window.currentStore) return;
+  
+  try {
+    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
+    const tempData = {
+      pendingOrder: window.pendingOrder || [],
+      tableNumber: window.currentTable,
+      storeId: window.currentStore.id,
+      lastModified: new Date().toISOString(),
+      hasUnconfirmedChanges: window.hasUnconfirmedChanges
+    };
+    
+    sessionStorage.setItem(sessionKey, JSON.stringify(tempData));
+    console.log(`💾 임시 주문 세션 저장: 테이블 ${window.currentTable}, ${window.pendingOrder?.length || 0}개 아이템`);
+  } catch (error) {
+    console.error('❌ 임시 주문 세션 저장 실패:', error);
+  }
+}
+
+function loadTemporaryOrderFromSession() {
+  if (!window.currentTable || !window.currentStore) return false;
+  
+  try {
+    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
+    const tempDataString = sessionStorage.getItem(sessionKey);
+    
+    if (!tempDataString) {
+      console.log('📭 저장된 임시 주문 없음');
+      return false;
+    }
+    
+    const tempData = JSON.parse(tempDataString);
+    
+    // 세션이 5분 이내인 경우에만 복원
+    const lastModified = new Date(tempData.lastModified);
+    const now = new Date();
+    const diffMinutes = (now - lastModified) / (1000 * 60);
+    
+    if (diffMinutes > 5) {
+      console.log('⏰ 임시 주문 세션 만료 (5분 초과)');
+      clearTemporaryOrderFromSession();
+      return false;
+    }
+    
+    if (tempData.pendingOrder && tempData.pendingOrder.length > 0) {
+      window.pendingOrder = tempData.pendingOrder;
+      window.hasUnconfirmedChanges = tempData.hasUnconfirmedChanges;
+      window.currentOrder = [...(window.confirmedOrder || []), ...window.pendingOrder];
+      
+      console.log(`🔄 임시 주문 세션 복원: ${window.pendingOrder.length}개 아이템`);
+      showPOSNotification(`임시 저장된 주문 ${window.pendingOrder.length}개를 복원했습니다.`, 'info');
+      
+      return true;
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('❌ 임시 주문 세션 로드 실패:', error);
+    return false;
+  }
+}
+
+function clearTemporaryOrderFromSession() {
+  if (!window.currentTable || !window.currentStore) return;
+  
+  try {
+    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
+    sessionStorage.removeItem(sessionKey);
+    console.log(`🗑️ 임시 주문 세션 삭제: 테이블 ${window.currentTable}`);
+  } catch (error) {
+    console.error('❌ 임시 주문 세션 삭제 실패:', error);
+  }
+}
+
 // 원본 주문 상태 저장 함수
 function saveOriginalOrder() {
   if (window.confirmedOrder && Array.isArray(window.confirmedOrder)) {
@@ -198,81 +274,7 @@ async function loadStoreForTableMap(storeId) {
     ]);
 
 
-// 📦 임시 주문 세션 관리 함수들
-function saveTemporaryOrderToSession() {
-  if (!window.currentTable || !window.currentStore) return;
-  
-  try {
-    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
-    const tempData = {
-      pendingOrder: window.pendingOrder || [],
-      tableNumber: window.currentTable,
-      storeId: window.currentStore.id,
-      lastModified: new Date().toISOString(),
-      hasUnconfirmedChanges: window.hasUnconfirmedChanges
-    };
-    
-    sessionStorage.setItem(sessionKey, JSON.stringify(tempData));
-    console.log(`💾 임시 주문 세션 저장: 테이블 ${window.currentTable}, ${window.pendingOrder?.length || 0}개 아이템`);
-  } catch (error) {
-    console.error('❌ 임시 주문 세션 저장 실패:', error);
-  }
-}
 
-function loadTemporaryOrderFromSession() {
-  if (!window.currentTable || !window.currentStore) return false;
-  
-  try {
-    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
-    const tempDataString = sessionStorage.getItem(sessionKey);
-    
-    if (!tempDataString) {
-      console.log('📭 저장된 임시 주문 없음');
-      return false;
-    }
-    
-    const tempData = JSON.parse(tempDataString);
-    
-    // 세션이 5분 이내인 경우에만 복원
-    const lastModified = new Date(tempData.lastModified);
-    const now = new Date();
-    const diffMinutes = (now - lastModified) / (1000 * 60);
-    
-    if (diffMinutes > 5) {
-      console.log('⏰ 임시 주문 세션 만료 (5분 초과)');
-      clearTemporaryOrderFromSession();
-      return false;
-    }
-    
-    if (tempData.pendingOrder && tempData.pendingOrder.length > 0) {
-      window.pendingOrder = tempData.pendingOrder;
-      window.hasUnconfirmedChanges = tempData.hasUnconfirmedChanges;
-      window.currentOrder = [...(window.confirmedOrder || []), ...window.pendingOrder];
-      
-      console.log(`🔄 임시 주문 세션 복원: ${window.pendingOrder.length}개 아이템`);
-      showPOSNotification(`임시 저장된 주문 ${window.pendingOrder.length}개를 복원했습니다.`, 'info');
-      
-      return true;
-    }
-    
-    return false;
-  } catch (error) {
-    console.error('❌ 임시 주문 세션 로드 실패:', error);
-    return false;
-  }
-}
-
-function clearTemporaryOrderFromSession() {
-  if (!window.currentTable || !window.currentStore) return;
-  
-  try {
-    const sessionKey = `pos_temp_order_${window.currentStore.id}_${window.currentTable}`;
-    sessionStorage.removeItem(sessionKey);
-    console.log(`🗑️ 임시 주문 세션 삭제: 테이블 ${window.currentTable}`);
-  } catch (error) {
-    console.error('❌ 임시 주문 세션 삭제 실패:', error);
-  }
-}
 
     await renderTableMap();
     await updateTodaySummary();
