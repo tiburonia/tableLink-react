@@ -158,12 +158,12 @@ function renderPOSLayout() {
                           <span class="nav-icon">☑️</span>
                           <span>전체선택</span>
                         </button>
-                        
+
                         <button class="nav-btn delete-btn" onclick="deleteSelectedItems()">
                           <span class="nav-icon">🗑️</span>
                           <span>선택삭제</span>
                         </button>
-                        
+
                         <button class="nav-btn discount-btn" onclick="applyDiscount()">
                           <span class="nav-icon">💰</span>
                           <span>할인적용</span>
@@ -173,7 +173,7 @@ function renderPOSLayout() {
                           <span class="nav-icon">➖</span>
                           <span>수량-1</span>
                         </button>
-                        
+
                         <button class="nav-btn qty-plus-btn" onclick="changeQuantity(1)">
                           <span class="nav-icon">➕</span>
                           <span>수량+1</span>
@@ -238,11 +238,10 @@ function renderPOSLayout() {
 
                 <!-- 주문 확정 버튼 (가장 중요한 액션) -->
                 <div class="primary-action-panel">
-                  <button class="primary-action-btn" onclick="handlePrimaryAction()">
-                    <div class="btn-icon">📋</div>
+                  <button class="primary-action-btn" id="primaryActionBtn" onclick="handlePrimaryAction()" disabled>
                     <div class="btn-content">
-                      <div class="btn-title">주문 확정</div>
-                      <div class="btn-subtitle">테이블맵으로 이동</div>
+                      <span class="btn-title">주문 없음</span>
+                      <span class="btn-subtitle">메뉴를 선택하세요</span>
                     </div>
                   </button>
                 </div>

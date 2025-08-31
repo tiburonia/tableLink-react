@@ -181,7 +181,8 @@ function updatePrimaryActionButton() {
     if (btnSubtitle) btnSubtitle.textContent = `${hasPending ? window.pendingOrder.length : 0}개 아이템 저장`;
     primaryBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
     primaryBtn.style.color = 'white';
-    primaryBtn.onclick = () => handlePrimaryAction();
+    primaryBtn.style.cursor = 'pointer';
+    primaryBtn.onclick = handlePrimaryAction;
     
   } else if (hasConfirmed && !hasUnconfirmed) {
     // 확정된 주문만 있는 경우
@@ -190,7 +191,8 @@ function updatePrimaryActionButton() {
     if (btnSubtitle) btnSubtitle.textContent = '주문 화면 종료';
     primaryBtn.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
     primaryBtn.style.color = 'white';
-    primaryBtn.onclick = () => handlePrimaryAction();
+    primaryBtn.style.cursor = 'pointer';
+    primaryBtn.onclick = handlePrimaryAction;
     
   } else {
     // 주문이 없는 경우
@@ -199,6 +201,7 @@ function updatePrimaryActionButton() {
     if (btnSubtitle) btnSubtitle.textContent = '메뉴를 선택하세요';
     primaryBtn.style.background = '#e2e8f0';
     primaryBtn.style.color = '#64748b';
+    primaryBtn.style.cursor = 'not-allowed';
     primaryBtn.onclick = null;
   }
 
