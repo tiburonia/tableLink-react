@@ -67,6 +67,16 @@ export class POSStateManager {
 
   static setCategories(categories) {
     this.state.categories = categories;
+  }
+
+  static setAllTables(tables) {
+    this.state.allTables = tables;
+    window.allTables = tables;
+  }
+
+  static getAllTables() {
+    return this.state.allTables;
+  }
     window.categories = categories;
   }
 

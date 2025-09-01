@@ -1,6 +1,104 @@
 
 // POS 데이터 로더 모듈 - 새 스키마 적용
 export class POSDataLoader {
+  // 매장 정보 로드 (새 스키마)
+  static async loadStore(storeId) {
+    try {
+      console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
+
+      const response = await fetch(`/api/stores/${storeId}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '매장 정보 조회 실패');
+      }
+
+      console.log(`✅ 매장 ${storeId} 정보 로드 완료: ${data.store.name}`);
+      return { store: data.store };
+
+    } catch (error) {
+      console.error('❌ 매장 정보 로드 실패:', error);
+      throw error;
+    }
+  }
+
+  // 매장 메뉴 전체 로드 (상태 관리용)
+  static async loadStoreMenus(storeId) {
+    try {
+      console.log(`📋 매장 ${storeId} 전체 메뉴 로드 시작`);
+
+      const response = await fetch(`/api/pos/stores/${storeId}/menu`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '메뉴 조회 실패');
+      }
+
+      // 상태 관리자에 메뉴 저장
+      const { POSStateManager } = await import('./posStateManager.js');
+      POSStateManager.setAllMenus(data.menu);
+
+      // 카테고리 추출
+      const categories = ['전체', ...new Set(data.menu.map(m => m.category).filter(Boolean))];
+      POSStateManager.setCategories(categories);
+
+      console.log(`✅ 매장 ${storeId} 메뉴 ${data.menu.length}개, 카테고리 ${categories.length}개 로드 완료`);
+      return data.menu;
+
+    } catch (error) {
+      console.error('❌ 매장 메뉴 로드 실패:', error);
+      return [];
+    }
+  }
+
+  // 매장 테이블 정보 로드 (새 스키마)
+  static async loadStoreTables(storeId) {
+    try {
+      console.log(`🪑 매장 ${storeId} 테이블 정보 로드 시작`);
+
+      const response = await fetch(`/api/stores/${storeId}/tables`);
+      const data = await response.json();
+
+      if (!data.success) {
+        console.warn(`⚠️ 매장 ${storeId} 테이블 정보 없음, 기본 테이블 생성`);
+        // 기본 테이블 생성 (1-20번)
+        const defaultTables = Array.from({ length: 20 }, (_, i) => ({
+          table_number: i + 1,
+          is_occupied: false,
+          occupied_by: null,
+          occupied_at: null
+        }));
+        
+        const { POSStateManager } = await import('./posStateManager.js');
+        POSStateManager.setAllTables(defaultTables);
+        
+        return defaultTables;
+      }
+
+      // 상태 관리자에 테이블 저장
+      const { POSStateManager } = await import('./posStateManager.js');
+      POSStateManager.setAllTables(data.tables);
+
+      console.log(`✅ 매장 ${storeId} 테이블 ${data.tables.length}개 로드 완료`);
+      return data.tables;
+
+    } catch (error) {
+      console.error('❌ 매장 테이블 로드 실패:', error);
+      
+      // 오류 시 기본 테이블 반환
+      const defaultTables = Array.from({ length: 20 }, (_, i) => ({
+        table_number: i + 1,
+        is_occupied: false,
+        occupied_by: null,
+        occupied_at: null
+      }));
+      
+      const { POSStateManager } = await import('./posStateManager.js');
+      POSStateManager.setAllTables(defaultTables);
+      
+      return defaultTables;
+    }
+  }
   // 테이블 주문 로드 (새 스키마)
   static async loadTableOrders(tableNumber, storeId) {
     try {
