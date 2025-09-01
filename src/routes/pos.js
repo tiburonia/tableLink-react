@@ -415,8 +415,8 @@ router.post('/orders', async (req, res, next) => {
       `, [checkId, name, price, quantity]);
     }
 
-    // 체크 총액 업데이트
-    await client.query(`
+    // 체크 총액 업데이트 및 확인
+    const updateResult = await client.query(`
       UPDATE checks 
       SET 
         subtotal_amount = (
@@ -428,9 +428,14 @@ router.post('/orders', async (req, res, next) => {
           SELECT COALESCE(SUM(unit_price * quantity), 0) 
           FROM check_items 
           WHERE check_id = $1 AND status != 'canceled'
-        )
+        ),
+        updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
+      RETURNING final_amount
     `, [checkId]);
+
+    const finalCheckAmount = updateResult.rows[0]?.final_amount || 0;
+    console.log(`📊 체크 ${checkId} 총액 업데이트 완료: ₩${finalCheckAmount.toLocaleString()}`);
 
     await client.query('COMMIT');
 
@@ -522,8 +527,18 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
     `, [session.id]);
 
     const alreadyPaid = parseInt(paymentsResult.rows[0].paid_amount) || 0;
-    const totalAmount = session.final_amount || 0;
+    
+    // 체크의 최신 총액 계산 (실시간)
+    const amountResult = await client.query(`
+      SELECT COALESCE(SUM(unit_price * quantity), 0) as current_total
+      FROM check_items 
+      WHERE check_id = $1 AND status != 'canceled'
+    `, [session.id]);
+    
+    const totalAmount = parseInt(amountResult.rows[0].current_total) || 0;
     const remainingAmount = totalAmount - alreadyPaid;
+
+    console.log(`💰 결제 금액 계산: 총액 ₩${totalAmount.toLocaleString()}, 기결제 ₩${alreadyPaid.toLocaleString()}, 잔액 ₩${remainingAmount.toLocaleString()}`);
 
     // 결제 금액 결정
     let paymentAmount;

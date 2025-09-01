@@ -156,11 +156,19 @@ export class POSOrderManager {
         batchType: 'POS_ORDER'
       };
 
-      // API 호출
-      const response = await fetch('/api/pos/orders', {
+      // API 호출 (올바른 경로 사용)
+      const response = await fetch('/api/orders/create-or-add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify({
+          storeId: orderData.storeId,
+          tableNumber: orderData.tableNumber,
+          items: orderData.items,
+          userId: null, // POS는 기본적으로 게스트
+          guestPhone: null,
+          customerName: orderData.customerName,
+          sourceSystem: 'POS'
+        })
       });
 
       const result = await response.json();
@@ -460,6 +468,46 @@ export class POSOrderManager {
       showPOSNotification(`${appliedCount}개 아이템에 할인 적용`, 'success');
     } else {
       showPOSNotification('임시 주문에만 할인 적용 가능합니다', 'warning');
+    }
+  }
+
+  // 🔄 세션 데이터 새로고침
+  static async refreshSessionData() {
+    try {
+      const currentTable = POSStateManager.getCurrentTable();
+      const currentStore = POSStateManager.getCurrentStore();
+      
+      if (!currentTable || !currentStore) {
+        console.log('❌ 테이블 또는 매장 정보 없음');
+        return;
+      }
+
+      console.log('🔄 세션 데이터 새로고침 시작');
+
+      // 최신 주문 정보 다시 로드
+      const ordersResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${currentTable}/all-orders`);
+      const ordersData = await ordersResponse.json();
+
+      if (ordersData.success && ordersData.currentSession) {
+        // 세션 정보 업데이트
+        POSStateManager.setCurrentSession({
+          checkId: ordersData.currentSession.checkId,
+          status: ordersData.currentSession.status,
+          customerName: ordersData.currentSession.customerName,
+          totalAmount: ordersData.currentSession.totalAmount,
+          remainingAmount: ordersData.currentSession.totalAmount // 초기에는 전액 미결제
+        });
+
+        // 확정된 아이템 업데이트
+        const confirmedItems = ordersData.currentSession.items || [];
+        POSStateManager.setConfirmedItems(confirmedItems);
+
+        this.updateCombinedOrder();
+        console.log('✅ 세션 데이터 새로고침 완료');
+      }
+
+    } catch (error) {
+      console.error('❌ 세션 데이터 새로고침 실패:', error);
     }
   }
 
