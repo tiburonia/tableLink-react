@@ -143,16 +143,29 @@ async function restoreStoresRelationships() {
           }
         } catch (error) {
           console.log(`  ⚠️ ${tableName}: 정리 실패 - ${error.message}`);
+          // 트랜잭션 오류가 발생하면 롤백하고 다시 시작
+          await client.query('ROLLBACK');
+          await client.query('BEGIN');
+          console.log(`  🔄 트랜잭션 재시작 후 계속 진행`);
         }
       } else if (existingTables[tableName]) {
         console.log(`  ⚠️ ${tableName}: store_id 컬럼 없음 - 건너뜀`);
       }
     }
 
-    // orders 테이블 특별 처리
+    // orders 테이블 특별 처리 - 컬럼 존재 여부를 더 정확히 확인
     if (existingTables['orders']) {
       console.log('🔍 orders 테이블 특별 처리...');
-      if (tableColumns['orders'].includes('store_id')) {
+      
+      // orders 테이블의 컬럼을 다시 정확히 확인
+      const ordersColumnsCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'orders' 
+        AND column_name = 'store_id'
+      `);
+      
+      if (ordersColumnsCheck.rows.length > 0) {
         try {
           const result = await client.query(`
             DELETE FROM orders WHERE store_id NOT IN (SELECT id FROM stores)
@@ -160,16 +173,28 @@ async function restoreStoresRelationships() {
           console.log(`  ✅ orders: ${result.rowCount}개 고아 레코드 삭제`);
         } catch (error) {
           console.log(`  ⚠️ orders: 정리 실패 - ${error.message}`);
+          await client.query('ROLLBACK');
+          await client.query('BEGIN');
+          console.log(`  🔄 트랜잭션 재시작 후 계속 진행`);
         }
       } else {
         console.log('  ℹ️ orders 테이블에 store_id 컬럼이 없음 - 건너뜀');
       }
     }
 
-    // checks 테이블 특별 처리 
+    // checks 테이블 특별 처리 - 컬럼 존재 여부를 더 정확히 확인
     if (existingTables['checks']) {
       console.log('🔍 checks 테이블 특별 처리...');
-      if (tableColumns['checks'].includes('store_id')) {
+      
+      // checks 테이블의 컬럼을 다시 정확히 확인
+      const checksColumnsCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'checks' 
+        AND column_name = 'store_id'
+      `);
+      
+      if (checksColumnsCheck.rows.length > 0) {
         try {
           const result = await client.query(`
             DELETE FROM checks WHERE store_id NOT IN (SELECT id FROM stores)
@@ -177,6 +202,9 @@ async function restoreStoresRelationships() {
           console.log(`  ✅ checks: ${result.rowCount}개 고아 레코드 삭제`);
         } catch (error) {
           console.log(`  ⚠️ checks: 정리 실패 - ${error.message}`);
+          await client.query('ROLLBACK');
+          await client.query('BEGIN');
+          console.log(`  🔄 트랜잭션 재시작 후 계속 진행`);
         }
       } else {
         console.log('  ℹ️ checks 테이블에 store_id 컬럼이 없음 - 건너뜀');

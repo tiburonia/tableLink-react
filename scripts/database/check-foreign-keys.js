@@ -80,7 +80,7 @@ async function checkForeignKeys() {
       console.log('ℹ️ stores가 참조하는 외래 키가 없습니다.');
     }
     
-    // 4. 관련 테이블들 존재 확인
+    // 4. 관련 테이블들 존재 확인 및 컬럼 구조 상세 분석
     console.log('\n4️⃣ 관련 테이블들 존재 확인:');
     const relatedTables = [
       'store_address', 'store_tables', 'store_promotions', 
@@ -102,6 +102,46 @@ async function checkForeignKeys() {
         // 해당 테이블의 레코드 수 확인
         const count = await client.query(`SELECT COUNT(*) as count FROM ${tableName}`);
         console.log(`      레코드 수: ${count.rows[0].count}개`);
+        
+        // 해당 테이블의 컬럼 구조 확인 (특히 store_id 컬럼)
+        const columns = await client.query(`
+          SELECT column_name, data_type, is_nullable
+          FROM information_schema.columns 
+          WHERE table_name = $1
+          ORDER BY ordinal_position
+        `, [tableName]);
+        
+        const hasStoreId = columns.rows.find(col => col.column_name === 'store_id');
+        if (hasStoreId) {
+          console.log(`      📍 store_id 컬럼: ${hasStoreId.data_type} (${hasStoreId.is_nullable === 'YES' ? 'NULL 허용' : 'NOT NULL'})`);
+        } else {
+          console.log(`      ⚠️ store_id 컬럼 없음`);
+        }
+        
+        // 해당 테이블의 외래키 제약조건 확인
+        const tableForeignKeys = await client.query(`
+          SELECT 
+            tc.constraint_name,
+            kcu.column_name,
+            ccu.table_name AS foreign_table_name,
+            ccu.column_name AS foreign_column_name
+          FROM information_schema.table_constraints tc
+          JOIN information_schema.key_column_usage kcu 
+            ON tc.constraint_name = kcu.constraint_name
+          JOIN information_schema.constraint_column_usage ccu 
+            ON tc.constraint_name = ccu.constraint_name
+          WHERE tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_name = $1
+        `, [tableName]);
+        
+        if (tableForeignKeys.rows.length > 0) {
+          console.log(`      🔗 외래키 제약조건:`);
+          tableForeignKeys.rows.forEach(fk => {
+            console.log(`        - ${fk.column_name} → ${fk.foreign_table_name}.${fk.foreign_column_name} (${fk.constraint_name})`);
+          });
+        } else {
+          console.log(`      ⚠️ 외래키 제약조건 없음`);
+        }
       }
     }
     
