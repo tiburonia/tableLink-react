@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
@@ -48,7 +47,7 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
       menu = menuResult.rows;
     } catch (menuError) {
       console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
-      
+
       // menu_items 테이블이 없으면 기본 메뉴 사용
       console.log(`⚠️ menu_items 테이블이 없어서 기본 메뉴 사용 (매장 ${storeId})`);
       menu = [];
@@ -111,7 +110,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
 
     // 가장 최근 체크의 아이템들 조회 (새 스키마)
     const currentCheck = checksResult.rows[0];
-    
+
     const itemsResult = await pool.query(`
       SELECT 
         ci.id,
@@ -220,7 +219,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
  */
 router.post('/orders', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const { 
       storeId, 
@@ -257,15 +256,15 @@ router.post('/orders', async (req, res, next) => {
       checkId = existingCheckResult.rows[0].id;
       console.log(`📝 기존 체크 ${checkId}에 아이템 추가`);
     } else {
-      // 새 체크 생성
-      const checkResult = await client.query(`
-        INSERT INTO checks (
-          store_id, table_number, user_id, guest_phone, 
-          status, source_system, subtotal_amount
-        )
-        VALUES ($1, $2, $3, $4, 'open', 'POS', $5)
-        RETURNING id, opened_at
-      `, [storeId, tableNumber, userId, guestPhone, totalAmount]);
+      // 새 체크 생성 (제약조건 준수)
+    const checkResult = await client.query(`
+      INSERT INTO checks (
+        store_id, table_number, user_id, guest_phone, customer_name,
+        status, source_system, subtotal_amount
+      )
+      VALUES ($1, $2, $3, $4, $5, 'open', 'POS', $6)
+      RETURNING id, opened_at
+    `, [storeId, tableNumber, userId, guestPhone, customerName || '포스 주문', totalAmount]);
 
       checkId = checkResult.rows[0].id;
       console.log(`✅ 새 체크 ${checkId} 생성`);
@@ -274,7 +273,7 @@ router.post('/orders', async (req, res, next) => {
     // 체크 아이템들 생성 (새 스키마)
     for (const item of items) {
       const { name, price, quantity } = item;
-      
+
       await client.query(`
         INSERT INTO check_items (
           check_id, menu_name, unit_price, quantity, status
@@ -328,7 +327,7 @@ router.post('/orders', async (req, res, next) => {
  */
 router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const { storeId, tableNumber } = req.params;
     const { 
@@ -441,7 +440,7 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
  */
 router.get('/checks/:id/summary', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const checkId = parseInt(req.params.id);
 
@@ -563,7 +562,7 @@ router.get('/checks/:id/summary', async (req, res, next) => {
  */
 router.patch('/check-items/:id', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const itemId = parseInt(req.params.id);
     const { status, notes } = req.body;
@@ -607,7 +606,7 @@ router.patch('/check-items/:id', async (req, res, next) => {
     // 상태 업데이트 (새 스키마)
     const updateFields = [`status = $1`];
     const updateValues = [status];
-    
+
     if (status === 'preparing') {
       updateFields.push(`preparing_at = CURRENT_TIMESTAMP`);
     } else if (status === 'ready') {
@@ -678,7 +677,7 @@ router.patch('/check-items/:id', async (req, res, next) => {
  */
 router.post('/payments', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const { 
       check_id, 
@@ -863,7 +862,7 @@ router.get('/stores/:storeId/orders/active', async (req, res, next) => {
  */
 router.delete('/check-items/:id', async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const itemId = parseInt(req.params.id);
     const { reason = 'POS 취소' } = req.body;
