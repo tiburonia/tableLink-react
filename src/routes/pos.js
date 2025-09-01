@@ -10,6 +10,84 @@ const { storeAuth, checkIdempotency } = require('../mw/auth');
 router.use(storeAuth);
 
 /**
+ * [GET] /stores/:storeId/menu - 매장 메뉴 조회
+ */
+router.get('/stores/:storeId/menu', async (req, res, next) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청`);
+
+    // 매장 존재 확인
+    const storeResult = await pool.query(`
+      SELECT id, name, category FROM stores WHERE id = $1
+    `, [storeId]);
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다'
+      });
+    }
+
+    const store = storeResult.rows[0];
+
+    // 카테고리별 기본 메뉴 생성
+    const defaultMenus = getDefaultMenusByCategory(store.category);
+
+    console.log(`✅ POS 매장 ${storeId} 메뉴 ${defaultMenus.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      menu: defaultMenus
+    });
+
+  } catch (error) {
+    console.error('❌ POS 메뉴 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 메뉴 조회 실패'
+    });
+  }
+});
+
+// 기본 메뉴 생성 함수 (카테고리별)
+function getDefaultMenusByCategory(category) {
+  const menusByCategory = {
+    '치킨': [
+      { id: 1, name: '양념치킨', price: 18000, description: '매콤달콤한 양념치킨', category: '메인메뉴' },
+      { id: 2, name: '후라이드치킨', price: 16000, description: '바삭한 후라이드치킨', category: '메인메뉴' },
+      { id: 3, name: '순살치킨', price: 19000, description: '뼈없는 순살치킨', category: '메인메뉴' },
+      { id: 4, name: '간장치킨', price: 18000, description: '담백한 간장치킨', category: '메인메뉴' },
+      { id: 5, name: '치킨무', price: 3000, description: '시원한 치킨무', category: '사이드' },
+      { id: 6, name: '콜라', price: 2000, description: '시원한 콜라', category: '음료' }
+    ],
+    '양식': [
+      { id: 1, name: '마르게리타 피자', price: 15000, description: '클래식 마르게리타', category: '피자' },
+      { id: 2, name: '페퍼로니 피자', price: 18000, description: '매콤한 페퍼로니', category: '피자' },
+      { id: 3, name: '파스타', price: 12000, description: '크림 파스타', category: '파스타' },
+      { id: 4, name: '리조또', price: 14000, description: '버섯 리조또', category: '리조또' },
+      { id: 5, name: '샐러드', price: 8000, description: '신선한 샐러드', category: '사이드' },
+      { id: 6, name: '콜라', price: 2500, description: '시원한 콜라', category: '음료' }
+    ],
+    '한식': [
+      { id: 1, name: '김치찌개', price: 8000, description: '얼큰한 김치찌개', category: '찌개' },
+      { id: 2, name: '된장찌개', price: 7000, description: '구수한 된장찌개', category: '찌개' },
+      { id: 3, name: '불고기', price: 15000, description: '달콤한 불고기', category: '메인메뉴' },
+      { id: 4, name: '비빔밥', price: 9000, description: '영양만점 비빔밥', category: '메인메뉴' },
+      { id: 5, name: '공기밥', price: 1000, description: '갓지은 밥', category: '사이드' },
+      { id: 6, name: '음료수', price: 2000, description: '시원한 음료', category: '음료' }
+    ]
+  };
+
+  return menusByCategory[category] || [
+    { id: 1, name: '기본메뉴1', price: 10000, description: '기본 메뉴', category: '메인메뉴' },
+    { id: 2, name: '기본메뉴2', price: 12000, description: '기본 메뉴', category: '메인메뉴' },
+    { id: 3, name: '음료', price: 2000, description: '시원한 음료', category: '음료' }
+  ];
+}
+
+/**
  * [POST] /checks - 새 체크 생성
  */
 router.post('/checks', async (req, res, next) => {

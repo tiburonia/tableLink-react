@@ -13,14 +13,8 @@ router.get('/stores/:storeId', async (req, res) => {
         id,
         table_number as "tableNumber",
         seats,
-        CASE 
-          WHEN status = 'occupied' THEN true 
-          ELSE false 
-        END as "isOccupied",
-        CASE 
-          WHEN status = 'occupied' THEN created_at 
-          ELSE NULL 
-        END as "occupiedSince"
+        is_occupied as "isOccupied",
+        occupied_since as "occupiedSince"
       FROM store_tables 
       WHERE store_id = $1 
       ORDER BY table_number ASC
@@ -46,10 +40,10 @@ router.post('/update', async (req, res) => {
 
     const result = await pool.query(`
       UPDATE store_tables 
-      SET status = $1, updated_at = NOW()
+      SET is_occupied = $1, updated_at = NOW()
       WHERE store_id = $2 AND table_number = $3
       RETURNING *
-    `, [isOccupied ? 'occupied' : 'available', storeId, tableNumber]);
+    `, [isOccupied, storeId, tableNumber]);
 
     res.json({
       success: true,
@@ -74,7 +68,7 @@ router.post('/occupy-manual', async (req, res) => {
 
     const result = await pool.query(`
       UPDATE store_tables 
-      SET status = 'occupied', updated_at = NOW()
+      SET is_occupied = true, updated_at = NOW()
       WHERE store_id = $1 AND table_number = $2
       RETURNING *
     `, [storeId, tableNumber]);

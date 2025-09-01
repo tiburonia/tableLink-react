@@ -10,6 +10,10 @@ const { notFound, errorHandler } = require('./mw/errors');
 const sse = require('./services/sse');
 
 const app = express();
+
+// Trust proxy for rate limiting in cloud environments
+app.set('trust proxy', true);
+
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
