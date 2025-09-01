@@ -1,4 +1,3 @@
-
 // POS 상태 관리 모듈
 export class POSStateManager {
   static state = {
@@ -169,7 +168,7 @@ export class POSStateManager {
       lockedAt: null,
       lockExpires: null
     };
-    
+
     window.currentTable = null;
     window.currentOrder = [];
     window.selectedItems = [];
@@ -211,13 +210,47 @@ export class POSStateManager {
   static isSessionLocked() {
     const lock = this.state.sessionLock;
     if (!lock.isLocked) return false;
-    
+
     // 락 만료 확인
     if (lock.lockExpires && new Date() > new Date(lock.lockExpires)) {
       this.setSessionLock({ isLocked: false, lockedBy: null, lockedAt: null, lockExpires: null });
       return false;
     }
-    
+
     return true;
+  }
+
+  // 상태 초기화
+  static reset() {
+    this.currentState = { ...this.defaultState };
+    this.saveState();
+    console.log('🔄 POS 상태 완전 초기화');
+  }
+
+  // 임시 주문 아이템 초기화
+  static clearTempOrderItems() {
+    this.currentState.tempOrder.items = [];
+    this.currentState.tempOrder.totalAmount = 0;
+    this.saveState();
+    console.log('🗑️ 임시 주문 아이템 초기화');
+  }
+
+  // 세션 초기화
+  static clearSession() {
+    this.currentState.session = {
+      checkId: null,
+      isActive: false,
+      tableNumber: null,
+      customerName: null
+    };
+    this.saveState();
+    console.log('🗑️ 세션 초기화');
+  }
+
+  // 주문 목록 초기화
+  static clearOrderItems() {
+    this.currentState.orderItems = [];
+    this.saveState();
+    console.log('🗑️ 주문 목록 초기화');
   }
 }

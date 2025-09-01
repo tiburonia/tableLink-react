@@ -11,8 +11,8 @@ const sse = require('./services/sse');
 
 const app = express();
 
-// Trust proxy for rate limiting in cloud environments
-app.set('trust proxy', true);
+// Trust proxy for rate limiting in cloud environments (Replit 환경)
+app.set('trust proxy', 1);
 
 const server = createServer(app);
 const io = new Server(server, {

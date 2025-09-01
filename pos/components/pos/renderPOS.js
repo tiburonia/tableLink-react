@@ -79,7 +79,7 @@ async function selectTableFromMap(tableElementOrNumber) {
   else if (tableElementOrNumber && typeof tableElementOrNumber === 'object') {
     // 이벤트 객체인 경우 target을 확인
     const element = tableElementOrNumber.target || tableElementOrNumber;
-    
+
     tableNumber = element.dataset?.tableNumber || 
                  element.getAttribute?.('data-table-number') ||
                  element.closest?.('[data-table-number]')?.dataset?.tableNumber ||
