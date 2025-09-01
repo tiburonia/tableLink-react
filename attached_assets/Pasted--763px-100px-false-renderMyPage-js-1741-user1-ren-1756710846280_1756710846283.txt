@@ -1,0 +1,72 @@
+📐 마이페이지 패널 레이아웃 조정: 높이 763px, 상단 100px, 확장됨: false
+renderMyPage.js:1741 📖 사용자 데이터 로드 시작: user1
+renderMyPage.js:1503 📐 마이페이지 패널 레이아웃 조정: 높이 763px, 상단 100px, 확장됨: false
+renderMyPage.js:1756  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/orders/users/user1?limit=3 404 (Not Found)
+loadUserData @ renderMyPage.js:1756
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+11renderMyPage.js:1503 📐 마이페이지 패널 레이아웃 조정: 높이 763px, 상단 100px, 확장됨: false
+renderMyPage.js:1888 📝 리뷰 내역 조회 시작: user1
+7renderMyPage.js:1503 📐 마이페이지 패널 레이아웃 조정: 높이 763px, 상단 100px, 확장됨: false
+renderMyPage.js:1682  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/orders/users/user1?limit=1000 404 (Not Found)
+updateProfileSection @ renderMyPage.js:1682
+loadUserData @ renderMyPage.js:1766
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:1889  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/reviews/users/user1 404 (Not Found)
+updateReviewList @ renderMyPage.js:1889
+loadUserData @ renderMyPage.js:1770
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:1891 ❌ 리뷰 API 응답 실패: 404
+updateReviewList @ renderMyPage.js:1891
+await in updateReviewList
+loadUserData @ renderMyPage.js:1770
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:1925 리뷰 조회 실패: Error: 리뷰 조회 실패
+    at updateReviewList (renderMyPage.js:1892:13)
+    at async loadUserData (renderMyPage.js:1770:5)
+updateReviewList @ renderMyPage.js:1925
+await in updateReviewList
+loadUserData @ renderMyPage.js:1770
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:1981 🏆 사용자 user1 단골 레벨 조회 (비정규화 컬럼 사용)
+renderMyPage.js:1696  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/reviews/users/user1 404 (Not Found)
+updateProfileSection @ renderMyPage.js:1696
+await in updateProfileSection
+loadUserData @ renderMyPage.js:1766
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:1718 ✅ 프로필 섹션 업데이트 완료: {name: '테스트사용자', level: '브론즈', orders: '0', reviews: '0', favorites: '0'}
+renderMyPage.js:1984  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/regular-levels/user/user1 404 (Not Found)
+updateRegularLevelsList @ renderMyPage.js:1984
+loadUserData @ renderMyPage.js:1772
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:2059 ❌ 단골 레벨 조회 실패: Error: 단골 레벨 조회 실패
+    at updateRegularLevelsList (renderMyPage.js:1985:29)
+    at async loadUserData (renderMyPage.js:1772:5)
+updateRegularLevelsList @ renderMyPage.js:2059
+await in updateRegularLevelsList
+loadUserData @ renderMyPage.js:1772
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:2078  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/regular-levels/user/user1/all-points 404 (Not Found)
+updateStorePointsList @ renderMyPage.js:2078
+loadUserData @ renderMyPage.js:1773
+await in loadUserData
+renderMyPage @ renderMyPage.js:1441
+onclick @ (index):139Understand this error
+renderMyPage.js:2124 포인트 조회 실패: Error: 포인트 조회 실패
+    at updateStorePointsList (renderMyPage.js:2079:29)
+    at async loadUserData (renderMyPage.js:1773:5)
