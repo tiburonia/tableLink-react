@@ -84,43 +84,6 @@ router.get('/user/:userId/all-points', async (req, res) => {
   }
 });
 
-// 사용자별 단골 레벨 조회 API
-router.get('/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
 
-    console.log(`🏆 사용자 ${userId} 단골 레벨 조회`);
-
-    const result = await pool.query(`
-      SELECT 
-        rl.id,
-        rl.store_id,
-        s.name as store_name,
-        rl.level_name,
-        rl.current_visits,
-        rl.required_visits,
-        rl.progress_percentage,
-        rl.benefits,
-        rl.last_visit_date,
-        rl.updated_at
-      FROM regular_levels rl
-      JOIN stores s ON rl.store_id = s.id
-      WHERE rl.user_id = $1
-      ORDER BY rl.progress_percentage DESC, rl.last_visit_date DESC
-    `, [userId]);
-
-    res.json({
-      success: true,
-      regularLevels: result.rows
-    });
-
-  } catch (error) {
-    console.error('❌ 단골 레벨 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '단골 레벨 조회 실패'
-    });
-  }
-});
 
 module.exports = router;

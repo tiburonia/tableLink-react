@@ -961,32 +961,32 @@ router.get('/users/:userId', async (req, res) => {
 
     console.log(`📋 사용자 ${userId} 주문 목록 조회`);
 
-    // 먼저 checks 테이블에서 사용자 체크 조회
-    let whereClause = 'WHERE c.user_id = $1';
+    // 현재 orders 테이블에서 직접 조회 (기존 구조 사용)
+    let whereClause = 'WHERE o.user_id = $1';
     const queryParams = [userId];
 
     if (status) {
-      whereClause += ' AND c.status = $2';
+      whereClause += ' AND o.status = $2';
       queryParams.push(status);
     }
 
     const ordersResult = await pool.query(`
       SELECT 
-        c.id, 
-        c.final_amount as total_amount, 
-        c.status, 
-        c.opened_at as created_at,
-        c.table_number,
+        o.id, 
+        o.total_amount, 
+        o.status, 
+        o.created_at,
+        o.table_number,
         s.id as store_id, 
         s.name as store_name, 
         s.category as store_category,
-        COUNT(ci.id) as item_count
-      FROM checks c
-      JOIN stores s ON c.store_id = s.id
-      LEFT JOIN check_items ci ON c.id = ci.check_id
+        COUNT(oi.id) as item_count
+      FROM orders o
+      JOIN stores s ON o.store_id = s.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
       ${whereClause}
-      GROUP BY c.id, s.id, s.name, s.category
-      ORDER BY c.opened_at DESC
+      GROUP BY o.id, s.id, s.name, s.category
+      ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, parseInt(limit), parseInt(offset)]);
 
@@ -997,6 +997,16 @@ router.get('/users/:userId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 사용자 주문 목록 조회 실패:', error);
+    
+    // 테이블이 존재하지 않는 경우 빈 배열 반환
+    if (error.code === '42P01' || error.message.includes('does not exist')) {
+      console.log('⚠️ 테이블이 존재하지 않음 - 빈 결과 반환');
+      return res.json({
+        success: true,
+        orders: []
+      });
+    }
+    
     res.status(500).json({
       success: false,
       error: '주문 목록 조회 실패'

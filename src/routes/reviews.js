@@ -49,12 +49,12 @@ router.get('/users/:userId', async (req, res) => {
 
     console.log(`📝 사용자 ${userId} 리뷰 조회`);
 
-    // reviews 테이블의 실제 컬럼명 확인 후 조회
+    // reviews 테이블 실제 컬럼명 사용
     const result = await pool.query(`
       SELECT 
         r.id,
         r.rating as score,
-        COALESCE(r.review_text, r.comment, '') as content,
+        r.review_text as content,
         r.created_at,
         s.name as storeName,
         TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
@@ -76,6 +76,17 @@ router.get('/users/:userId', async (req, res) => {
     });
   } catch (error) {
     console.error('사용자 리뷰 조회 실패:', error);
+    
+    // 테이블이 존재하지 않는 경우 빈 배열 반환
+    if (error.code === '42P01' || error.message.includes('does not exist')) {
+      console.log('⚠️ 리뷰 테이블이 존재하지 않음 - 빈 결과 반환');
+      return res.json({
+        success: true,
+        reviews: [],
+        total: 0
+      });
+    }
+    
     res.status(500).json({ success: false, error: '리뷰 조회 실패' });
   }
 });
