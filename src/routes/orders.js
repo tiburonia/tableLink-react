@@ -954,7 +954,7 @@ router.get('/order/:orderId', async (req, res) => {
 });
 
 // 사용자 주문 목록 조회 API
-router.get('/user/:userId', async (req, res) => {
+router.get('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { limit = 20, offset = 0, status } = req.query;
@@ -1111,4 +1111,32 @@ router.delete('/order/:orderId', async (req, res) => {
     client.release();
   }
 });
+// 주문별 리뷰 상태 확인 API  
+router.get('/:orderId/review-status', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const result = await pool.query(`
+      SELECT COUNT(*) as count
+      FROM reviews r
+      JOIN orders o ON r.store_id = o.store_id AND r.user_id = o.user_id
+      WHERE o.id = $1
+    `, [parseInt(orderId)]);
+
+    const hasReview = parseInt(result.rows[0].count) > 0;
+
+    res.json({
+      success: true,
+      hasReview: hasReview
+    });
+
+  } catch (error) {
+    console.error('❌ 리뷰 상태 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '리뷰 상태 확인 실패'
+    });
+  }
+});
+
 module.exports = router;

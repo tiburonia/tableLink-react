@@ -81,6 +81,14 @@ router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
+    // 특수 경로들 처리
+    if (storeId === 'get-location-info') {
+      return handleLocationInfo(req, res);
+    }
+    if (storeId === 'viewport') {
+      return handleViewport(req, res);
+    }
+
     console.log(`🏪 매장 ${storeId} 상세 정보 조회 요청`);
 
     // 1. 매장 기본 정보
@@ -350,5 +358,79 @@ router.get('/get-location-info', async (req, res) => {
     });
   }
 });
+
+// 위치 정보 핸들러
+async function handleLocationInfo(req, res) {
+  const { lat, lng } = req.query;
+
+  try {
+    console.log(`📍 위치 정보 조회: lat=${lat}, lng=${lng}`);
+
+    const locationInfo = {
+      address: '서울특별시 중구',
+      district: '중구', 
+      city: '서울특별시'
+    };
+
+    res.json({
+      success: true,
+      location: locationInfo
+    });
+  } catch (error) {
+    console.error('❌ 위치 정보 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '위치 정보 조회 실패'
+    });
+  }
+}
+
+// 뷰포트 핸들러
+async function handleViewport(req, res) {
+  const { swLat, swLng, neLat, neLng, level } = req.query;
+
+  try {
+    console.log('🏪 뷰포트 매장 조회:', { swLat, swLng, neLat, neLng, level });
+
+    const result = await pool.query(`
+      SELECT 
+        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
+        sa.address_full as address, sa.latitude, sa.longitude
+      FROM stores s
+      LEFT JOIN store_address sa ON s.id = sa.store_id
+      WHERE sa.latitude BETWEEN $1 AND $3
+        AND sa.longitude BETWEEN $2 AND $4
+        AND s.is_open = true
+      ORDER BY s.rating_average DESC, s.id ASC
+      LIMIT 50
+    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
+
+    const stores = result.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category,
+      address: store.address || '주소 정보 없음',
+      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      reviewCount: store.review_count || 0,
+      isOpen: store.is_open !== false,
+      coord: store.latitude && store.longitude 
+        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
+        : null
+    }));
+
+    console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개`);
+
+    res.json({
+      success: true,
+      stores: stores
+    });
+  } catch (error) {
+    console.error('❌ 뷰포트 매장 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '뷰포트 매장 조회 중 오류가 발생했습니다.'
+    });
+  }
+}
 
 module.exports = router;

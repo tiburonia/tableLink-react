@@ -80,6 +80,7 @@ try {
   const reviewsRoutes = require('./routes/reviews');
   const tablesRoutes = require('./routes/tables');
   const cartRoutes = require('./routes/cart');
+  const regularLevelsRoutes = require('./routes/regular-levels');
 
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
@@ -87,8 +88,9 @@ try {
   app.use('/api/reviews', reviewsRoutes);
   app.use('/api/tables', tablesRoutes);
   app.use('/api/cart', cartRoutes);
+  app.use('/api/regular-levels', regularLevelsRoutes);
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
