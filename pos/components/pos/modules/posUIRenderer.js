@@ -72,19 +72,38 @@ export class POSUIRenderer {
       html += '</div></div>';
     }
 
-    // ✅ 확정된 주문 섹션
+    // ✅ 확정된 주문 섹션 (같은 메뉴 통합 표시)
     if (confirmedItems.length > 0) {
+      // 같은 메뉴명과 가격의 아이템들을 통합
+      const consolidatedConfirmed = {};
+      confirmedItems.forEach(item => {
+        const key = `${item.name}_${item.price}`;
+        
+        if (consolidatedConfirmed[key]) {
+          consolidatedConfirmed[key].quantity += item.quantity;
+          consolidatedConfirmed[key].ids.push(item.id);
+        } else {
+          consolidatedConfirmed[key] = {
+            ...item,
+            ids: [item.id],
+            originalCount: 1
+          };
+        }
+      });
+
+      const consolidatedArray = Object.values(consolidatedConfirmed);
+
       html += `
         <div class="order-section confirmed-section">
           <div class="section-header">
-            <h4>✅ 확정된 주문 (${confirmedItems.length}개)</h4>
+            <h4>✅ 확정된 주문 (${consolidatedArray.length}개 메뉴)</h4>
             <span class="status-badge confirmed">주방 전송됨</span>
           </div>
           <div class="items-list">
       `;
 
-      confirmedItems.forEach(item => {
-        const isSelected = selectedItems.includes(item.id);
+      consolidatedArray.forEach(item => {
+        const isSelected = item.ids.some(id => selectedItems.includes(id));
         const finalPrice = item.price - (item.discount || 0);
 
         html += `
@@ -93,7 +112,11 @@ export class POSUIRenderer {
                onclick="toggleItemSelection('${item.id}')">
             <div class="item-main">
               <div class="item-name">${item.name}</div>
-              <div class="item-price">₩${finalPrice.toLocaleString()}</div>
+              <div class="item-price">
+                ₩${item.price.toLocaleString()}
+                ${item.discount > 0 ? `<span class="discount">-₩${item.discount.toLocaleString()}</span>` : ''}
+                <span class="final-price">₩${finalPrice.toLocaleString()}</span>
+              </div>
             </div>
             <div class="item-controls">
               <div class="quantity-display">${item.quantity}개</div>
@@ -119,6 +142,68 @@ export class POSUIRenderer {
     if (!container) return;
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+    const confirmedItems = POSStateManager.getConfirmedItems();
+
+    // 임시 주문 총액 계산
+    const pendingTotal = pendingItems.reduce((sum, item) => {
+      const finalPrice = item.price - (item.discount || 0);
+      return sum + (finalPrice * item.quantity);
+    }, 0);
+
+    // 확정된 주문 총액 계산 (통합된 수량 반영)
+    const consolidatedConfirmed = {};
+    confirmedItems.forEach(item => {
+      const key = `${item.name}_${item.price}`;
+      if (consolidatedConfirmed[key]) {
+        consolidatedConfirmed[key].quantity += item.quantity;
+      } else {
+        consolidatedConfirmed[key] = { ...item };
+      }
+    });
+
+    const confirmedTotal = Object.values(consolidatedConfirmed).reduce((sum, item) => {
+      const finalPrice = item.price - (item.discount || 0);
+      return sum + (finalPrice * item.quantity);
+    }, 0);
+
+    const totalAmount = pendingTotal + confirmedTotal;
+    const totalItems = pendingItems.length + Object.keys(consolidatedConfirmed).length;
+
+    let html = `
+      <div class="payment-summary">
+        <div class="summary-section">
+          <h4>💰 주문 요약</h4>
+          <div class="summary-line">
+            <span>총 ${totalItems}개 메뉴</span>
+            <span>₩${totalAmount.toLocaleString()}</span>
+          </div>
+    `;
+
+    if (pendingItems.length > 0) {
+      html += `
+          <div class="summary-line pending">
+            <span>임시 주문 (${pendingItems.length}개)</span>
+            <span>₩${pendingTotal.toLocaleString()}</span>
+          </div>
+      `;
+    }
+
+    if (confirmedItems.length > 0) {
+      html += `
+          <div class="summary-line confirmed">
+            <span>확정 주문 (${Object.keys(consolidatedConfirmed).length}개)</span>
+            <span>₩${confirmedTotal.toLocaleString()}</span>
+          </div>
+      `;
+    }
+
+    html += `
+        </div>
+      </div>
+    `;
+
+    container.innerHTML = html;
+  }dingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
     const confirmedItems = POSStateManager.getConfirmedItems();
     const session = POSStateManager.getCurrentSession();
 

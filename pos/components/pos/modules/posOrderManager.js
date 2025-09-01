@@ -75,7 +75,13 @@ export class POSOrderManager {
       }
 
       const pendingItems = [...POSStateManager.getPendingItems()]; // 배열 복사
-      const existingItem = pendingItems.find(item => item.name === menuName && !item.isDeleted);
+      
+      // 같은 메뉴명과 가격의 기존 아이템 찾기 (삭제되지 않은 것만)
+      const existingItem = pendingItems.find(item => 
+        item.name === menuName && 
+        item.price === numericPrice && 
+        !item.isDeleted
+      );
 
       if (existingItem) {
         existingItem.quantity += 1;
@@ -137,19 +143,45 @@ export class POSOrderManager {
       const currentStore = POSStateManager.getCurrentStore();
       const currentTable = POSStateManager.getCurrentTable();
 
+      // 같은 메뉴는 수량을 합쳐서 통합
+      const consolidatedItems = {};
+      pendingItems.forEach(item => {
+        const key = `${item.name}_${item.price}`; // 메뉴명과 가격으로 키 생성
+        
+        if (consolidatedItems[key]) {
+          // 기존 아이템이 있으면 수량 합산
+          consolidatedItems[key].quantity += item.quantity;
+          consolidatedItems[key].totalDiscount += (item.discount || 0) * item.quantity;
+        } else {
+          // 새 아이템 추가
+          consolidatedItems[key] = {
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            totalDiscount: (item.discount || 0) * item.quantity,
+            notes: item.notes || ''
+          };
+        }
+      });
+
+      // 통합된 아이템 배열로 변환
+      const consolidatedItemsArray = Object.values(consolidatedItems).map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        discount: Math.floor(item.totalDiscount / item.quantity), // 평균 할인액
+        notes: item.notes
+      }));
+
+      console.log(`🔄 주문 통합: ${pendingItems.length}개 → ${consolidatedItemsArray.length}개 아이템`);
+
       // 주문 데이터 구성
       const orderData = {
         storeId: currentStore.id,
         storeName: currentStore.name,
         tableNumber: currentTable,
-        items: pendingItems.map(item => ({
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          discount: item.discount || 0,
-          notes: item.notes || ''
-        })),
-        totalAmount: pendingItems.reduce((sum, item) => 
+        items: consolidatedItemsArray,
+        totalAmount: consolidatedItemsArray.reduce((sum, item) => 
           sum + ((item.price - (item.discount || 0)) * item.quantity), 0
         ),
         customerName: '포스 주문',
@@ -176,10 +208,14 @@ export class POSOrderManager {
         throw new Error(result.error);
       }
 
-      // 임시 → 확정 전환
-      const confirmedItems = pendingItems.map((item, index) => ({
-        ...item,
+      // 임시 → 확정 전환 (통합된 아이템 기준)
+      const confirmedItems = consolidatedItemsArray.map((item, index) => ({
         id: result.itemIds ? result.itemIds[index] : `confirmed_${Date.now()}_${index}`,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        discount: item.discount || 0,
+        notes: item.notes || '',
         status: 'ordered',
         isConfirmed: true,
         isPending: false,
