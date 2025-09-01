@@ -1,5 +1,4 @@
-
-// POS 주문 관리 모듈
+// POS 주문 관리 모듈 - 새 스키마 적용
 import { POSStateManager } from './posStateManager.js';
 import { POSDataLoader } from './posDataLoader.js';
 import { POSTempStorage } from './posTempStorage.js';
@@ -7,15 +6,15 @@ import { POSUIRenderer } from './posUIRenderer.js';
 import { showPOSNotification } from '../../../utils/posNotification.js';
 
 export class POSOrderManager {
-  // 테이블 주문 로드
+  // 테이블 주문 로드 (새 스키마)
   static async loadTableOrders(tableNumber) {
     try {
       const currentStore = POSStateManager.getCurrentStore();
       const sessionOrders = await POSDataLoader.loadTableOrders(tableNumber, currentStore.id);
-      
+
       // 임시저장 데이터 복구
       const tempItems = POSTempStorage.loadTempOrder();
-      
+
       const allOrders = [...sessionOrders, ...tempItems];
       POSStateManager.setCurrentOrder(allOrders);
 
@@ -79,13 +78,13 @@ export class POSOrderManager {
   static toggleItemSelection(itemId) {
     const selectedItems = POSStateManager.getSelectedItems();
     const index = selectedItems.indexOf(itemId);
-    
+
     if (index === -1) {
       selectedItems.push(itemId);
     } else {
       selectedItems.splice(index, 1);
     }
-    
+
     POSStateManager.setSelectedItems(selectedItems);
     POSUIRenderer.renderOrderItems();
   }
@@ -94,21 +93,21 @@ export class POSOrderManager {
   static selectAllItems() {
     const currentOrder = POSStateManager.getCurrentOrder();
     const selectedItems = POSStateManager.getSelectedItems();
-    
+
     if (selectedItems.length === currentOrder.length) {
       POSStateManager.setSelectedItems([]);
     } else {
       POSStateManager.setSelectedItems(currentOrder.map(item => item.id));
     }
-    
+
     POSUIRenderer.renderOrderItems();
   }
 
-  // 선택된 아이템 삭제
-  static deleteSelectedItems() {
+  // 선택된 아이템 삭제/취소 (새 스키마)
+  static async deleteSelectedItems() {
     const selectedItems = POSStateManager.getSelectedItems();
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (selectedItems.length === 0) {
       showPOSNotification('삭제할 아이템을 선택해주세요.', 'warning');
       return;
@@ -125,29 +124,24 @@ export class POSOrderManager {
       if (!confirm(`확정된 세션 아이템 ${confirmedItems.length}개와 임시 아이템 ${pendingItems.length}개를 삭제하시겠습니까?`)) {
         return;
       }
+
+      // 확정된 아이템들을 실제 DB에서 취소 처리 (새 스키마)
+      for (const item of confirmedItems) {
+        try {
+          await POSDataLoader.cancelItem(item.id, 'POS에서 취소');
+        } catch (error) {
+          console.error(`❌ 아이템 ${item.id} 취소 실패:`, error);
+          showPOSNotification(`${item.name} 취소 실패: ${error.message}`, 'error');
+          return;
+        }
+      }
     } else if (pendingItems.length > 0) {
       if (!confirm(`선택된 ${pendingItems.length}개 임시 아이템을 삭제하시겠습니까?`)) {
         return;
       }
     }
 
-    // 확정된 아이템들을 삭제 상태로 임시저장
-    confirmedItems.forEach(item => {
-      if (item.isConfirmed) {
-        const deleteItem = {
-          ...item,
-          id: `delete_${item.id}_${Date.now()}`,
-          quantity: 0,
-          isConfirmed: false,
-          isPending: true,
-          isDeleted: true,
-          originalSessionId: item.sessionId
-        };
-        currentOrder.push(deleteItem);
-      }
-    });
-
-    // 기존 선택된 아이템들 제거
+    // 선택된 아이템들 제거
     const filteredOrder = currentOrder.filter(item => !selectedItems.includes(item.id));
     POSStateManager.setCurrentOrder(filteredOrder);
     POSStateManager.setSelectedItems([]);
@@ -157,14 +151,14 @@ export class POSOrderManager {
     POSUIRenderer.renderPaymentSummary();
     POSUIRenderer.updatePrimaryActionButton();
 
-    showPOSNotification(`${selectedItemsData.length}개 아이템 삭제 (확정 필요)`, 'warning');
+    showPOSNotification(`${selectedItemsData.length}개 아이템 삭제 완료`, 'success');
   }
 
   // 할인 적용
   static applyDiscount() {
     const selectedItems = POSStateManager.getSelectedItems();
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (selectedItems.length === 0) {
       showPOSNotification('할인 적용할 아이템을 선택해주세요.', 'warning');
       return;
@@ -209,7 +203,7 @@ export class POSOrderManager {
   static changeQuantity(delta) {
     const selectedItems = POSStateManager.getSelectedItems();
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (selectedItems.length === 0) {
       showPOSNotification('수량을 변경할 아이템을 선택해주세요.', 'warning');
       return;
@@ -259,10 +253,10 @@ export class POSOrderManager {
     }
   }
 
-  // 주문 확정
+  // 주문 확정 (새 스키마)
   static async confirmOrder() {
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (!currentOrder || currentOrder.length === 0) {
       showPOSNotification('확정할 주문이 없습니다.', 'warning');
       return;
@@ -270,74 +264,64 @@ export class POSOrderManager {
 
     const pendingItems = currentOrder.filter(item => item.isPending && !item.isConfirmed);
     const newItems = pendingItems.filter(item => !item.isModified && !item.isDeleted);
-    const modifiedItems = pendingItems.filter(item => item.isModified);
-    const deletedItems = pendingItems.filter(item => item.isDeleted);
 
-    if (pendingItems.length === 0) {
+    if (newItems.length === 0) {
       showPOSNotification('확정할 새로운 주문이 없습니다.', 'warning');
       return;
     }
 
     try {
-      console.log('📦 주문 확정 시작 - 세션 단위 DB 저장:', {
-        new: newItems.length,
-        modified: modifiedItems.length,
-        deleted: deletedItems.length
+      console.log('📦 주문 확정 시작 - 새 스키마 사용:', {
+        new: newItems.length
       });
 
-      // 새로운 아이템들을 메뉴별로 통합하여 서버로 전송
-      if (newItems.length > 0) {
-        const consolidatedItems = {};
-        newItems.forEach(item => {
-          const key = `${item.name}_${item.price}`;
-          if (consolidatedItems[key]) {
-            consolidatedItems[key].quantity += item.quantity;
-          } else {
-            consolidatedItems[key] = {
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity
-            };
-          }
-        });
-
-        const finalItems = Object.values(consolidatedItems);
-        const currentStore = POSStateManager.getCurrentStore();
-        const currentTable = POSStateManager.getCurrentTable();
-
-        const sessionOrderData = {
-          storeId: currentStore.id,
-          storeName: currentStore.name,
-          tableNumber: currentTable,
-          items: finalItems,
-          totalAmount: finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-          isTLLOrder: false,
-          userId: null,
-          guestPhone: null,
-          customerName: '포스 주문'
-        };
-
-        const response = await fetch('/api/pos/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sessionOrderData)
-        });
-
-        const result = await response.json();
-        if (!result.success) {
-          throw new Error(result.error || '세션 저장 실패');
+      // 새로운 아이템들을 메뉴별로 통합하여 서버로 전송 (새 스키마)
+      const consolidatedItems = {};
+      newItems.forEach(item => {
+        const key = `${item.name}_${item.price}`;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += item.quantity;
+        } else {
+          consolidatedItems[key] = {
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+          };
         }
+      });
 
-        // 새로 추가된 아이템들을 확정 상태로 변경
-        newItems.forEach(item => {
-          item.isConfirmed = true;
-          item.isPending = false;
-          item.sessionId = result.orderId;
-        });
+      const finalItems = Object.values(consolidatedItems);
+      const currentStore = POSStateManager.getCurrentStore();
+      const currentTable = POSStateManager.getCurrentTable();
+
+      const sessionOrderData = {
+        storeId: currentStore.id,
+        storeName: currentStore.name,
+        tableNumber: currentTable,
+        items: finalItems,
+        totalAmount: finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        userId: null,
+        guestPhone: null,
+        customerName: '포스 주문'
+      };
+
+      const response = await fetch('/api/pos/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sessionOrderData)
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || '주문 저장 실패');
       }
 
-      // 수정/삭제된 아이템들 처리
-      this._handleModifiedAndDeletedItems(modifiedItems, deletedItems, currentOrder);
+      // 새로 추가된 아이템들을 확정 상태로 변경
+      newItems.forEach(item => {
+        item.isConfirmed = true;
+        item.isPending = false;
+        item.sessionId = result.checkId;
+      });
 
       POSStateManager.setCurrentOrder(currentOrder);
       POSTempStorage.clearTempOrder();
@@ -346,65 +330,31 @@ export class POSOrderManager {
       POSUIRenderer.renderPaymentSummary();
       POSUIRenderer.updatePrimaryActionButton();
 
-      const totalChanges = newItems.length + modifiedItems.length + deletedItems.length;
-      showPOSNotification(`${totalChanges}개 변경사항이 세션에 확정되었습니다!`, 'success');
+      showPOSNotification(`${newItems.length}개 아이템이 세션에 확정되었습니다!`, 'success');
 
-      console.log(`✅ 세션 단위 주문 확정 완료 - 신규: ${newItems.length}개, 수정: ${modifiedItems.length}개, 삭제: ${deletedItems.length}개`);
+      console.log(`✅ 새 스키마 주문 확정 완료 - 체크 ID: ${result.checkId}, 신규: ${newItems.length}개`);
 
     } catch (error) {
-      console.error('❌ 세션 단위 주문 확정 실패:', error);
+      console.error('❌ 주문 확정 실패:', error);
       showPOSNotification('주문 확정 실패: ' + error.message, 'error');
-    }
-  }
-
-  // 수정/삭제된 아이템들 처리
-  static _handleModifiedAndDeletedItems(modifiedItems, deletedItems, currentOrder) {
-    // 수정된 아이템들 처리
-    if (modifiedItems.length > 0) {
-      modifiedItems.forEach(modifiedItem => {
-        // 원본 확정 아이템 제거
-        const filteredOrder = currentOrder.filter(item => 
-          item.sessionId !== modifiedItem.originalSessionId || 
-          item.name !== modifiedItem.name
-        );
-        POSStateManager.setCurrentOrder(filteredOrder);
-
-        // 수정된 아이템을 확정 상태로 변경
-        modifiedItem.isConfirmed = true;
-        modifiedItem.isPending = false;
-        modifiedItem.isModified = false;
-        delete modifiedItem.originalSessionId;
-      });
-    }
-
-    // 삭제된 아이템들 처리
-    if (deletedItems.length > 0) {
-      deletedItems.forEach(deletedItem => {
-        // 원본 확정 아이템과 삭제 표시 아이템 모두 제거
-        const filteredOrder = currentOrder.filter(item => 
-          (item.sessionId !== deletedItem.originalSessionId || item.name !== deletedItem.name) &&
-          !item.isDeleted
-        );
-        POSStateManager.setCurrentOrder(filteredOrder);
-      });
     }
   }
 
   // 전체 주문 삭제
   static clearOrder() {
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (currentOrder.length === 0) return;
 
     if (confirm('현재 주문 내역을 모두 삭제하시겠습니까?')) {
       POSStateManager.setCurrentOrder([]);
       POSStateManager.setSelectedItems([]);
       POSTempStorage.clearTempOrder();
-      
+
       POSUIRenderer.renderOrderItems();
       POSUIRenderer.renderPaymentSummary();
       POSUIRenderer.updatePrimaryActionButton();
-      
+
       showPOSNotification('주문 내역이 삭제되었습니다.', 'success');
     }
   }
@@ -412,7 +362,7 @@ export class POSOrderManager {
   // 임시 주문 정리
   static clearTempOrder() {
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     if (currentOrder && currentOrder.length > 0) {
       const pendingItems = currentOrder.filter(item => item.isPending && !item.isConfirmed);
 

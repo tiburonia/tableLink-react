@@ -130,46 +130,56 @@ async function setupKDSListener() {
         const payload = JSON.parse(msg.payload);
         console.log('📡 KDS 이벤트 수신:', payload);
 
-        // Get store_id from order_id
-        if (payload.order_id) {
+        // Get store_id from check_item_id (새 스키마)
+        if (payload.check_item_id || payload.item_id) {
+          const itemId = payload.check_item_id || payload.item_id;
           const storeResult = await pool.query(`
-            SELECT c.store_id, c.table_number, c.customer_name
-            FROM orders o
-            JOIN checks c ON o.check_id = c.id
-            WHERE o.id = $1
-          `, [payload.order_id]);
+            SELECT c.store_id, c.table_number, c.customer_name, ci.menu_name, ci.status
+            FROM check_items ci
+            JOIN checks c ON ci.check_id = c.id
+            WHERE ci.id = $1
+          `, [itemId]);
 
           if (storeResult.rows.length > 0) {
-            const { store_id, table_number, customer_name } = storeResult.rows[0];
+            const { store_id, table_number, customer_name, menu_name, status } = storeResult.rows[0];
             const topic = `store:${store_id}`;
 
             // Broadcast to subscribers of the specific storeId
             sse.broadcast(topic, {
-              type: 'line_update',
+              type: 'item_status_update',
               data: {
                 ...payload,
                 store_id,
                 table_number,
-                customer_name
+                customer_name,
+                menu_name,
+                status
               },
               timestamp: new Date().toISOString()
             });
 
             // Socket.IO로도 실시간 브로드캐스트
             io.to(`store:${store_id}`).emit('pos-update', {
-              type: 'order-update',
-              storeId: store_id,
-              data: payload,
-              timestamp: new Date().toISOString()
-            });
-
-            io.to(`kds:${store_id}`).emit('kds-update', {
-              type: 'line_update',
+              type: 'item-status-update',
               storeId: store_id,
               data: {
                 ...payload,
                 table_number,
-                customer_name
+                menu_name,
+                status
+              },
+              timestamp: new Date().toISOString()
+            });
+
+            io.to(`kds:${store_id}`).emit('kds-update', {
+              type: 'item_status_update',
+              storeId: store_id,
+              data: {
+                ...payload,
+                table_number,
+                customer_name,
+                menu_name,
+                status
               },
               timestamp: new Date().toISOString()
             });

@@ -1,11 +1,11 @@
 
-// POS 결제 관리 모듈
+// POS 결제 관리 모듈 - 새 스키마 적용
 import { POSStateManager } from './posStateManager.js';
 import { POSOrderManager } from './posOrderManager.js';
 import { showPOSNotification } from '../../../utils/posNotification.js';
 
 export class POSPaymentManager {
-  // 결제 처리
+  // 결제 처리 (새 스키마)
   static processPayment(paymentMethod) {
     console.log('💳 결제 버튼 클릭:', paymentMethod);
     
@@ -51,7 +51,7 @@ export class POSPaymentManager {
     }
   }
 
-  // 직접 결제 처리
+  // 직접 결제 처리 (새 스키마)
   static async handleDirectPayment(paymentMethod) {
     const currentOrder = POSStateManager.getCurrentOrder();
     
@@ -78,10 +78,14 @@ export class POSPaymentManager {
       const currentTable = POSStateManager.getCurrentTable();
       const totalAmount = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+      // 새 스키마 결제 API 호출
       const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${currentTable}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod: actualPaymentMethod, guestPhone: phoneNumber })
+        body: JSON.stringify({ 
+          paymentMethod: actualPaymentMethod, 
+          guestPhone: phoneNumber 
+        })
       });
 
       const result = await response.json();
@@ -106,9 +110,28 @@ export class POSPaymentManager {
         }
       }, 2000);
 
+      console.log(`✅ 새 스키마 결제 완료: 체크 ${result.check_id}, 결제 ${result.payment_id}`);
+
     } catch (error) {
       console.error('❌ 결제 처리 실패:', error);
       showPOSNotification(`결제 실패: ${error.message}`, 'error');
+    }
+  }
+
+  // 체크 상태 확인 (새 스키마)
+  static async getCheckStatus(checkId) {
+    try {
+      const response = await fetch(`/api/pos/checks/${checkId}/summary`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || '체크 상태 조회 실패');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('❌ 체크 상태 조회 실패:', error);
+      return null;
     }
   }
 }
