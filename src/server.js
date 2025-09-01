@@ -66,10 +66,12 @@ try {
   const tllRoutes = require('./routes/tll');
   const krpRoutes = require('./routes/krp');
 
-  // 레거시 시스템 라우터 (기존 TLG/TLM/Admin 지원)
-  const authRoutes = require('../routes/auth');
-  const storesRoutes = require('../routes/stores');
-  const ordersRoutes = require('../routes/orders');
+  // 통합된 새 시스템 라우터
+  const authRoutes = require('./routes/auth');
+  const storesRoutes = require('./routes/stores');
+  const ordersRoutes = require('./routes/orders');
+
+  // 남은 레거시 라우터 (아직 미이전)
   const reviewsRoutes = require('../routes/reviews');
   const tablesRoutes = require('../routes/tables');
   const cartRoutes = require('../routes/cart');
@@ -85,10 +87,12 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
 
-  // 레거시 시스템 API (기존 경로 유지)
+  // 통합된 새 시스템 API
   app.use('/api', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/orders', ordersRoutes);
+
+  // 아직 미이전된 레거시 API
   app.use('/api/reviews', reviewsRoutes);
   app.use('/api/tables', tablesRoutes);
   app.use('/api/cart', cartRoutes);
@@ -98,7 +102,7 @@ try {
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/toss', tossRoutes);
 
-  console.log('✅ 통합 라우터 로드 완료 (POS + 레거시)');
+  console.log('✅ 1단계 완료: auth, stores, orders 라우터 새 시스템으로 통합');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
