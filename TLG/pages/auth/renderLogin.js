@@ -1,3 +1,129 @@
+// 빠른 로그인 함수 먼저 정의 (전역으로)
+window.quickLogin = async function(userId) {
+  console.log(`🚀 빠른 로그인 시도: ${userId}`);
+
+  try {
+    // 로딩 표시
+    const quickBtn = document.querySelector('#quickLogin');
+    if (quickBtn) {
+      quickBtn.disabled = true;
+      quickBtn.innerHTML = `
+        <div class="quick-btn-icon">⏳</div>
+        <div class="quick-btn-content">
+          <span class="quick-btn-title">로그인 중...</span>
+          <span class="quick-btn-desc">잠시만 기다리세요</span>
+        </div>
+      `;
+    }
+
+    const response = await fetch('/api/auth/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: userId, pw: '1234' })
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.user) {
+      // 사용자 정보 설정
+      if (!window.userInfo) {
+        window.userInfo = {};
+      }
+
+      window.userInfo = {
+        id: data.user.id,
+        pw: data.user.pw || '',
+        name: data.user.name,
+        phone: data.user.phone,
+        email: '',
+        address: '',
+        birth: '',
+        gender: '',
+        point: data.user.point || 0,
+        orderList: data.user.orderList || [],
+        totalCost: 0,
+        realCost: 0,
+        reservationList: data.user.reservationList || [],
+        coupons: data.user.coupons || { unused: [], used: [] },
+        favorites: data.user.favoriteStores || []
+      };
+
+      // 쿠키 저장
+      const expires = new Date();
+      expires.setDate(expires.getDate() + 7);
+      document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+
+      console.log(`✅ 빠른 로그인 성공: ${data.user.name}`);
+
+      // 성공 메시지
+      const successDiv = document.createElement('div');
+      successDiv.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: #10b981;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        z-index: 10000;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+      `;
+      successDiv.textContent = `${data.user.name}님 환영합니다!`;
+      document.body.appendChild(successDiv);
+
+      setTimeout(() => {
+        successDiv.remove();
+        if (typeof renderMap === 'function') {
+          renderMap();
+        } else {
+          window.location.href = '/';
+        }
+      }, 500);
+
+    } else {
+      throw new Error(data.error || '로그인에 실패했습니다');
+    }
+  } catch (error) {
+    console.error('❌ 빠른 로그인 실패:', error);
+
+    // 버튼 복원
+    const quickBtn = document.querySelector('#quickLogin');
+    if (quickBtn) {
+      quickBtn.disabled = false;
+      quickBtn.innerHTML = `
+        <div class="quick-btn-icon">⚡</div>
+        <div class="quick-btn-content">
+          <span class="quick-btn-title">빠른 로그인</span>
+          <span class="quick-btn-desc">user1 계정</span>
+        </div>
+      `;
+    }
+
+    // 에러 메시지
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ef4444;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      z-index: 10000;
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+    `;
+    errorDiv.textContent = error.message || '빠른 로그인에 실패했습니다';
+    document.body.appendChild(errorDiv);
+
+    setTimeout(() => errorDiv.remove(), 3000);
+  }
+};
+
+// 로그인 렌더링 함수
 async function renderLogin() {
   const main = document.getElementById('main');
 
@@ -43,12 +169,12 @@ async function renderLogin() {
             <button type="submit" class="primary-btn login-btn" id="loginBtn" disabled>
             <div class="btn-content">
               <span class="btn-text">로그인</span>
-              <div class="btn-spinner" style="display: none;"></div>
+              <div class="btn-loading" style="display: none;"></div>
             </div>
           </button>
         </form>
 
-        
+
           </div>
 
           <!-- 구분선 -->
@@ -361,7 +487,7 @@ async function renderLogin() {
         transform: none;
       }
 
-      .btn-loading .spinner {
+      .btn-loading .btn-loading {
         width: 20px;
         height: 20px;
         border: 2px solid rgba(255, 255, 255, 0.3);
@@ -563,7 +689,7 @@ async function renderLogin() {
         margin: 0;
       }
 
-      
+
 
       /* 반응형 디자인 */
       @media (max-width: 480px) {
@@ -826,7 +952,7 @@ async function renderLogin() {
     }
   });
 
-  
+
 
   adminLogin.addEventListener('click', () => {
     window.location.href = '/ADMIN';
@@ -2209,7 +2335,7 @@ async function renderLogin() {
         }
         return;
       }
-      
+
       // 위로(올림) - 패널 축소 또는 스크롤
       if (e.deltaY < 0) {
         if (isExpanded) {
@@ -2299,108 +2425,6 @@ async function renderLogin() {
     });
   }
 
-  // 빠른 로그인 함수 전역 등록
-  window.quickLogin = async function(userId) {
-    console.log(`🚀 빠른 로그인 시도: ${userId}`);
-
-    // 로딩 표시
-    // Assuming 'utils' is globally available or imported elsewhere
-    // If not, you might need to define a simple loading indicator here or adjust the call.
-    // For now, let's assume a placeholder for the loading logic.
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) {
-      const btnText = loginBtn.querySelector('.btn-text');
-      const btnLoading = loginBtn.querySelector('.btn-loading');
-      if (btnText && btnLoading) {
-        btnText.style.display = 'none';
-        btnLoading.style.display = 'flex';
-        loginBtn.disabled = true;
-      }
-    }
-
-    try {
-      const response = await fetch('/api/auth/users/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, pw: '1234' })
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.user) {
-        // 사용자 정보 저장
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
-
-        console.log(`✅ 빠른 로그인 성공: ${data.user.name}`);
-
-        // 성공 메시지
-        const successDiv = document.createElement('div');
-        successDiv.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: #10b981;
-          color: white;
-          padding: 16px 24px;
-          border-radius: 8px;
-          font-weight: 600;
-          z-index: 10000;
-          box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-        `;
-        successDiv.textContent = `${data.user.name}님 환영합니다!`;
-        document.body.appendChild(successDiv);
-
-        // 0.5초 후 메인 화면으로 이동
-        setTimeout(() => {
-          successDiv.remove();
-          // Assuming renderSubMain is a globally available function
-          if (typeof renderSubMain === 'function') {
-            renderSubMain();
-          } else {
-            location.reload(); // Fallback if renderSubMain is not defined
-          }
-        }, 500);
-
-      } else {
-        throw new Error(data.error || '로그인에 실패했습니다');
-      }
-    } catch (error) {
-      console.error('❌ 빠른 로그인 실패:', error);
-      // Assuming 'utils' is globally available or imported elsewhere
-      // If not, you might need to define a simple loading indicator here or adjust the call.
-      if (loginBtn) {
-        const btnText = loginBtn.querySelector('.btn-text');
-        const btnLoading = loginBtn.querySelector('.btn-loading');
-        if (btnText && btnLoading) {
-          btnText.style.display = 'inline';
-          btnLoading.style.display = 'none';
-          loginBtn.disabled = false;
-        }
-      }
-
-      // 에러 메시지
-      const errorDiv = document.createElement('div');
-      errorDiv.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #ef4444;
-        color: white;
-        padding: 16px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
-      `;
-      errorDiv.textContent = error.message || '빠른 로그인에 실패했습니다';
-      document.body.appendChild(errorDiv);
-
-      setTimeout(() => errorDiv.remove(), 3000);
-    }
-  };
-
   // 이벤트 리스너 설정 함수
   function setupEventListeners() {
     // Enter 키 이벤트
@@ -2417,9 +2441,11 @@ async function renderLogin() {
     document.removeEventListener('keydown', handleEnterKey);
     document.addEventListener('keydown', handleEnterKey);
 
-    join.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') join.click();
-    });
+    if (join) {
+      join.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') join.click();
+      });
+    }
   }
 
   // 초기화
