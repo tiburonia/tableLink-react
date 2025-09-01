@@ -60,18 +60,6 @@ export class POSDataLoader {
       POSStateManager.setAllTables([]);
     }
   }
-      const response = await fetch(`/api/pos/stores/${storeId}/tables`);
-      const data = await response.json();
-
-      if (data.success) {
-        POSStateManager.setAllTables(data.tables || []);
-        console.log(`🪑 테이블 ${data.tables?.length || 0}개 로드`);
-      }
-    } catch (error) {
-      console.error('❌ 테이블 로드 실패:', error);
-      POSStateManager.setAllTables([]);
-    }
-  }
 
   // 테이블 주문 로드
   static async loadTableOrders(tableNumber, storeId) {
