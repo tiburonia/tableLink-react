@@ -1,4 +1,3 @@
-
 // POS 주문 관리 모듈 - 세션 기반 임시/확정 분리 시스템
 import { POSStateManager } from './posStateManager.js';
 import { POSDataLoader } from './posDataLoader.js';
@@ -7,12 +6,12 @@ import { POSUIRenderer } from './posUIRenderer.js';
 import { showPOSNotification } from '../../../utils/posNotification.js';
 
 export class POSOrderManager {
-  
+
   // 🏆 세션 초기화 및 기존 데이터 로드
   static async initializeSession(tableNumber) {
     try {
       const currentStore = POSStateManager.getCurrentStore();
-      
+
       console.log(`🚀 테이블 ${tableNumber} 세션 초기화 시작`);
 
       // 세션 락 확인
@@ -31,7 +30,7 @@ export class POSOrderManager {
 
       // 확정된 주문 조회
       const confirmedOrders = await POSDataLoader.loadTableOrders(tableNumber, currentStore.id);
-      
+
       // 임시 주문 복구
       const pendingItems = POSTempStorage.loadTempOrder();
 
@@ -51,7 +50,7 @@ export class POSOrderManager {
       // 상태 분리 설정
       POSStateManager.setConfirmedItems(confirmedOrders);
       POSStateManager.setPendingItems(pendingItems);
-      
+
       // 전체 주문 목록 (UI 표시용)
       const allItems = [...confirmedOrders, ...pendingItems];
       POSStateManager.setCurrentOrder(allItems);
@@ -156,7 +155,7 @@ export class POSOrderManager {
   static updateCombinedOrder() {
     const confirmedItems = POSStateManager.getConfirmedItems();
     const pendingItems = POSStateManager.getPendingItems();
-    
+
     const allItems = [
       ...confirmedItems.map(item => ({ ...item, isConfirmed: true, isPending: false })),
       ...pendingItems.map(item => ({ ...item, isConfirmed: false, isPending: true }))
@@ -384,7 +383,7 @@ export class POSOrderManager {
         const confirmFirst = confirm(
           `임시 주문 ${pendingItems.length}개가 있습니다. 먼저 확정하고 결제하시겠습니까?`
         );
-        
+
         if (confirmFirst) {
           await this.confirmPendingOrder();
           // 잠시 대기 후 결제 진행
@@ -510,17 +509,82 @@ export class POSOrderManager {
   }
 
   static async confirmOrder() {
-    await this.confirmPendingOrder();
+    try {
+      const currentTable = POSStateManager.getCurrentTable();
+      const currentStore = POSStateManager.getCurrentStore();
+      const tempItems = POSStateManager.getTempOrderItems();
+
+      if (!tempItems || tempItems.length === 0) {
+        showPOSNotification('주문할 메뉴가 없습니다.', 'warning');
+        return false;
+      }
+
+      showPOSNotification('주문을 처리하고 있습니다...', 'info');
+
+      // 서버에 주문 전송
+      const response = await fetch('/api/pos/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          store_id: currentStore.id,
+          table_number: currentTable,
+          items: tempItems,
+          order_type: 'pos',
+          status: 'confirmed'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`주문 처리 실패: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 주문 확정 완료:', result);
+
+      // 임시 주문 초기화
+      POSStateManager.clearTempOrderItems();
+      POSTempStorage.clearTempOrder();
+
+      // UI 업데이트
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      POSUIRenderer.updatePrimaryActionButton();
+
+      // 테이블 주문 다시 로드
+      await this.loadTableOrders(currentTable);
+
+      showPOSNotification('주문이 확정되었습니다!', 'success');
+      return true;
+
+    } catch (error) {
+      console.error('❌ 주문 확정 실패:', error);
+      showPOSNotification('주문 확정에 실패했습니다.', 'error');
+      return false;
+    }
   }
 
-  static handlePrimaryAction() {
-    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-    
-    if (pendingItems.length > 0) {
-      this.confirmPendingOrder();
-    } else {
-      showPOSNotification('확정할 임시 주문이 없습니다.', 'warning');
+  // 주문 초기화
+  static clearOrder() {
+    try {
+      POSStateManager.clearTempOrderItems();
+      POSTempStorage.clearTempOrder();
+
+      // UI 업데이트
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      POSUIRenderer.updatePrimaryActionButton();
+
+      showPOSNotification('주문이 초기화되었습니다.', 'info');
+      console.log('✅ 주문 초기화 완료');
+    } catch (error) {
+      console.error('❌ 주문 초기화 실패:', error);
+      showPOSNotification('주문 초기화에 실패했습니다.', 'error');
     }
+  }
+
+  // 임시 주문 초기화
+  static clearTempOrder() {
+    this.clearOrder();
   }
 
   // 아이템 선택/해제
@@ -601,43 +665,5 @@ export class POSOrderManager {
     POSUIRenderer.updatePrimaryActionButton();
 
     showPOSNotification(`${selectedItemsData.length}개 아이템 삭제 완료`, 'success');
-  }
-
-  // 전체 주문 삭제
-  static clearOrder() {
-    const pendingItems = POSStateManager.getPendingItems();
-    const confirmedItems = POSStateManager.getConfirmedItems();
-
-    if (pendingItems.length === 0 && confirmedItems.length === 0) return;
-
-    if (confirm('모든 주문 내역을 삭제하시겠습니까? (확정된 주문은 취소 처리됩니다)')) {
-      // 임시 주문 삭제
-      POSStateManager.setPendingItems([]);
-      POSStateManager.setSelectedItems([]);
-      POSTempStorage.clearTempOrder();
-
-      // 확정된 주문들 취소 처리는 별도 확인 필요
-      if (confirmedItems.length > 0) {
-        showPOSNotification('확정된 주문이 있습니다. 개별 취소해주세요.', 'warning');
-      }
-
-      this.updateCombinedOrder();
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
-
-      showPOSNotification('임시 주문이 삭제되었습니다.', 'success');
-    }
-  }
-
-  // 임시 주문 정리
-  static clearTempOrder() {
-    const pendingItems = POSStateManager.getPendingItems();
-
-    if (pendingItems.length > 0) {
-      console.log(`🗑️ 테이블맵 복귀 - 미확정 주문 ${pendingItems.length}개 삭제`);
-      POSStateManager.setPendingItems([]);
-      POSTempStorage.clearTempOrder();
-    }
   }
 }

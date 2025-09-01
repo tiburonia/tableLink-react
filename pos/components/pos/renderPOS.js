@@ -193,7 +193,13 @@ const unimplementedFeatures = {
   processComboPayment: () => showPOSNotification('복합 결제 기능은 향후 구현 예정입니다.', 'info'),
   toggleAdvancedPanel: () => showPOSNotification('고급 기능 패널은 향후 구현 예정입니다.', 'info'),
   holdCurrentOrder: () => showPOSNotification('주문 보류 기능은 향후 구현 예정입니다.', 'info'),
-  voidOrder: POSOrderManager.clearOrder.bind(POSOrderManager)
+  voidOrder: () => {
+    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.clearOrder) {
+      POSOrderManager.clearOrder();
+    } else {
+      showPOSNotification('주문 취소 기능을 로드할 수 없습니다.', 'error');
+    }
+  }
 };
 
 // 미구현 기능들을 전역으로 노출
