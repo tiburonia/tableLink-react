@@ -1,12 +1,8 @@
-
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// Pool은 shared/config/database.js에서 가져옴
 
 // 사용자별 매장 단골 레벨 조회
 router.get('/user/:userId/store/:storeId', async (req, res) => {
@@ -76,10 +72,10 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
   }
 });
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// const pool = new Pool({
+//   connectionString: process.env.DATABASE_URL,
+//   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+// });
 
 // 사용자별 단골 레벨 조회
 router.get('/user/:userId', async (req, res) => {
