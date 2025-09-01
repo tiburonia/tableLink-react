@@ -6,9 +6,6 @@ const { pool } = require('../db/pool');
 const { calcCheckTotal, sumPayments, getPaymentStatus } = require('../utils/total');
 const { storeAuth, checkIdempotency } = require('../mw/auth');
 
-// 모든 라우트에 매장 인증 적용
-router.use(storeAuth);
-
 /**
  * [GET] /stores/:storeId/menu - 매장 메뉴 조회
  */
@@ -166,7 +163,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
 /**
  * [POST] /checks - 새 체크 생성
  */
-router.post('/checks', async (req, res, next) => {
+router.post('/checks', storeAuth, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
@@ -210,7 +207,7 @@ router.post('/checks', async (req, res, next) => {
 /**
  * [GET] /checks/:id/summary - 체크 요약 정보
  */
-router.get('/checks/:id/summary', async (req, res, next) => {
+router.get('/checks/:id/summary', storeAuth, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
@@ -307,7 +304,7 @@ router.get('/checks/:id/summary', async (req, res, next) => {
 /**
  * [POST] /orders - 주문 생성
  */
-router.post('/orders', checkIdempotency, async (req, res, next) => {
+router.post('/orders', storeAuth, checkIdempotency, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
@@ -388,7 +385,7 @@ router.post('/orders', checkIdempotency, async (req, res, next) => {
 /**
  * [POST] /order-lines/bulk - 주문 라인 대량 생성
  */
-router.post('/order-lines/bulk', async (req, res, next) => {
+router.post('/order-lines/bulk', storeAuth, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
@@ -483,7 +480,7 @@ router.post('/order-lines/bulk', async (req, res, next) => {
 /**
  * [PATCH] /order-lines/:id - 주문 라인 상태 변경
  */
-router.patch('/order-lines/:id', async (req, res, next) => {
+router.patch('/order-lines/:id', storeAuth, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
@@ -568,7 +565,7 @@ router.patch('/order-lines/:id', async (req, res, next) => {
 /**
  * [POST] /adjustments - 조정 추가
  */
-router.post('/adjustments', async (req, res, next) => {
+router.post('/adjustments', storeAuth, async (req, res, next) => {
   const client = await pool.connect();
   
   try {
