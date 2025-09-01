@@ -143,6 +143,7 @@ export class POSUIRenderer {
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
     const confirmedItems = POSStateManager.getConfirmedItems();
+    const session = POSStateManager.getCurrentSession();
 
     // 임시 주문 총액 계산
     const pendingTotal = pendingItems.reduce((sum, item) => {
@@ -166,60 +167,18 @@ export class POSUIRenderer {
       return sum + (finalPrice * item.quantity);
     }, 0);
 
-    const totalAmount = pendingTotal + confirmedTotal;
+    const grandTotal = pendingTotal + confirmedTotal;
+    const paidAmount = session.paidAmount || 0;
+    const remainingAmount = grandTotal - paidAmount;
     const totalItems = pendingItems.length + Object.keys(consolidatedConfirmed).length;
 
     let html = `
       <div class="payment-summary">
-        <div class="summary-section">
-          <h4>💰 주문 요약</h4>
-          <div class="summary-line">
-            <span>총 ${totalItems}개 메뉴</span>
-            <span>₩${totalAmount.toLocaleString()}</span>
-          </div>
-    `;
-
-    if (pendingItems.length > 0) {
-      html += `
-          <div class="summary-line pending">
-            <span>임시 주문 (${pendingItems.length}개)</span>
-            <span>₩${pendingTotal.toLocaleString()}</span>
-          </div>
-      `;
-    }
-
-    if (confirmedItems.length > 0) {
-      html += `
-          <div class="summary-line confirmed">
-            <span>확정 주문 (${Object.keys(consolidatedConfirmed).length}개)</span>
-            <span>₩${confirmedTotal.toLocaleString()}</span>
-          </div>
-      `;
-    }
-
-    html += `
-        </div>
-      </div>
-    `;
-
-    container.innerHTML = html;
-  }dingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-    const confirmedItems = POSStateManager.getConfirmedItems();
-    const session = POSStateManager.getCurrentSession();
-
-    const pendingTotal = pendingItems.reduce((sum, item) => 
-      sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
-
-    const confirmedTotal = confirmedItems.reduce((sum, item) => 
-      sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
-
-    const grandTotal = pendingTotal + confirmedTotal;
-    const paidAmount = session.paidAmount || 0;
-    const remainingAmount = grandTotal - paidAmount;
-
-    let html = `
-      <div class="payment-summary">
         <h4>💰 결제 요약</h4>
+        <div class="summary-line">
+          <span>총 ${totalItems}개 메뉴</span>
+          <span>₩${grandTotal.toLocaleString()}</span>
+        </div>
 
         ${pendingItems.length > 0 ? `
           <div class="summary-line pending">
@@ -230,15 +189,10 @@ export class POSUIRenderer {
 
         ${confirmedItems.length > 0 ? `
           <div class="summary-line confirmed">
-            <span>확정 주문 (${confirmedItems.length}개)</span>
+            <span>확정 주문 (${Object.keys(consolidatedConfirmed).length}개)</span>
             <span>₩${confirmedTotal.toLocaleString()}</span>
           </div>
         ` : ''}
-
-        <div class="summary-line total">
-          <span><strong>총 금액</strong></span>
-          <span><strong>₩${grandTotal.toLocaleString()}</strong></span>
-        </div>
 
         ${paidAmount > 0 ? `
           <div class="summary-line paid">

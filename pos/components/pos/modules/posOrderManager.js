@@ -49,81 +49,68 @@ export class POSOrderManager {
     }
   }
 
-  // 🍽️ 메뉴를 임시 주문에 추가
+  // 📝 임시 주문에 메뉴 추가 (같은 메뉴는 수량 증가)
   static addMenuToPending(menuName, price, notes = '') {
     try {
-      const currentTable = POSStateManager.getCurrentTable();
-      if (!currentTable) {
-        showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
-        return false;
-      }
-
-      console.log(`🍽️ 새 시스템: 메뉴 추가 시작 - ${menuName} (₩${price})`);
-
-      // 유효성 검사
-      if (!menuName || !price) {
-        console.error('❌ 메뉴명 또는 가격이 없습니다');
-        showPOSNotification('메뉴 정보가 올바르지 않습니다', 'error');
-        return false;
-      }
+      console.log(`🍽️ 임시 주문 추가: ${menuName} (₩${price})`);
 
       const numericPrice = parseInt(price);
-      if (isNaN(numericPrice) || numericPrice < 0) {
-        console.error('❌ 잘못된 가격:', price);
-        showPOSNotification('올바른 가격을 입력해주세요', 'error');
-        return false;
+      if (isNaN(numericPrice) || numericPrice <= 0) {
+        throw new Error('가격이 유효하지 않습니다');
       }
 
-      const pendingItems = [...POSStateManager.getPendingItems()]; // 배열 복사
-      
-      // 같은 메뉴명과 가격의 기존 아이템 찾기 (삭제되지 않은 것만)
-      const existingItem = pendingItems.find(item => 
+      const pendingItems = [...POSStateManager.getPendingItems()];
+
+      // 같은 메뉴명과 가격, 메모의 기존 아이템 찾기
+      const existingItemIndex = pendingItems.findIndex(item => 
+        !item.isDeleted && 
         item.name === menuName && 
-        item.price === numericPrice && 
-        !item.isDeleted
+        item.price === numericPrice &&
+        item.notes === notes
       );
 
-      if (existingItem) {
-        existingItem.quantity += 1;
-        existingItem.updatedAt = new Date().toISOString();
-        console.log(`📈 기존 아이템 수량 증가: ${menuName} -> ${existingItem.quantity}개`);
-        showPOSNotification(`${menuName} 수량 +1 (총 ${existingItem.quantity}개)`, 'info');
+      if (existingItemIndex !== -1) {
+        // 기존 아이템의 수량 증가
+        pendingItems[existingItemIndex].quantity += 1;
+        pendingItems[existingItemIndex].updatedAt = new Date().toISOString(); // 업데이트 시간 갱신
+        console.log(`🔄 기존 메뉴 수량 증가: ${menuName} (${pendingItems[existingItemIndex].quantity}개)`);
+        showPOSNotification(`${menuName} 수량이 ${pendingItems[existingItemIndex].quantity}개로 증가했습니다`, 'success');
       } else {
+        // 새로운 아이템 추가
         const newItem = {
           id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           name: menuName,
           price: numericPrice,
           quantity: 1,
           discount: 0,
-          notes: notes || '',
+          notes: notes,
           status: 'pending',
           isPending: true,
           isConfirmed: false,
-          isDeleted: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+          isDeleted: false, // isDeleted 속성 추가
+          createdAt: new Date().toISOString(), // createdAt 추가
+          updatedAt: new Date().toISOString() // updatedAt 추가
         };
+
         pendingItems.push(newItem);
-        console.log(`➕ 새 아이템 추가:`, newItem);
-        showPOSNotification(`${menuName} 임시 주문 추가`, 'success');
+        console.log('✅ 새 임시 주문 추가:', newItem);
+        showPOSNotification(`${menuName} 주문에 추가되었습니다`, 'success');
       }
 
-      // 상태 업데이트
       POSStateManager.setPendingItems(pendingItems);
-      this.updateCombinedOrder();
-      POSTempStorage.saveTempOrder();
+      this.updateCombinedOrder(); // 통합 주문 업데이트
+      POSTempStorage.saveTempOrder(); // 임시 저장
 
+      // UI 업데이트
+      this.forceUIUpdate(); // forceUIUpdate 사용
       console.log(`📊 현재 임시 주문: ${pendingItems.length}개 아이템`);
-
-      // UI 강제 업데이트
-      this.forceUIUpdate();
 
       console.log(`✅ 새 시스템: 메뉴 추가 완료`);
       return true;
 
     } catch (error) {
-      console.error('❌ 메뉴 추가 중 오류:', error);
-      showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+      console.error('❌ 임시 주문 추가 실패:', error);
+      showPOSNotification('주문 추가 실패: ' + error.message, 'error');
       return false;
     }
   }
@@ -147,7 +134,7 @@ export class POSOrderManager {
       const consolidatedItems = {};
       pendingItems.forEach(item => {
         const key = `${item.name}_${item.price}`; // 메뉴명과 가격으로 키 생성
-        
+
         if (consolidatedItems[key]) {
           // 기존 아이템이 있으면 수량 합산
           consolidatedItems[key].quantity += item.quantity;
@@ -219,6 +206,7 @@ export class POSOrderManager {
         status: 'ordered',
         isConfirmed: true,
         isPending: false,
+        isDeleted: false,
         checkId: result.checkId,
         confirmedAt: new Date().toISOString()
       }));
@@ -393,6 +381,7 @@ export class POSOrderManager {
     }
 
     item.quantity += change;
+    item.updatedAt = new Date().toISOString(); // 업데이트 시간 갱신
 
     if (item.quantity <= 0) {
       const index = pendingItems.indexOf(item);
@@ -492,6 +481,7 @@ export class POSOrderManager {
         } else {
           item.discount = Math.min(discountValue, item.price);
         }
+        item.updatedAt = new Date().toISOString(); // 업데이트 시간 갱신
         appliedCount++;
       }
     });
@@ -512,7 +502,7 @@ export class POSOrderManager {
     try {
       const currentTable = POSStateManager.getCurrentTable();
       const currentStore = POSStateManager.getCurrentStore();
-      
+
       if (!currentTable || !currentStore) {
         console.log('❌ 테이블 또는 매장 정보 없음');
         return;
@@ -531,7 +521,7 @@ export class POSOrderManager {
           status: ordersData.currentSession.status,
           customerName: ordersData.currentSession.customerName,
           totalAmount: ordersData.currentSession.totalAmount,
-          remainingAmount: ordersData.currentSession.totalAmount // 초기에는 전액 미결제
+          remainingAmount: ordersData.currentSession.remainingAmount || ordersData.currentSession.totalAmount // 잔액이 없으면 totalAmount로 초기화
         });
 
         // 확정된 아이템 업데이트

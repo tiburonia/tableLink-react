@@ -76,21 +76,38 @@ router.post('/create-or-add', async (req, res) => {
       `, [parseInt(storeId), parseInt(tableNumber), sourceSystem]);
     }
 
-    // 2. 아이템들 추가
+    // 2. 아이템들 추가 (같은 메뉴는 수량 통합)
     for (const item of items) {
-      await client.query(`
-        INSERT INTO check_items (
-          check_id, menu_name, menu_category, unit_price, quantity,
-          options, status
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'ordered')
-      `, [
-        checkId,
-        item.name,
-        item.category || null,
-        item.price,
-        item.quantity || 1,
-        item.options ? JSON.stringify(item.options) : null
-      ]);
+      // 같은 체크에서 동일한 메뉴 찾기
+      const existingItemResult = await client.query(`
+        SELECT id, quantity FROM check_items 
+        WHERE check_id = $1 AND menu_name = $2 AND unit_price = $3 
+        AND status NOT IN ('canceled') AND options = $4
+        LIMIT 1
+      `, [checkId, item.name, item.price, item.options || {}]);
+
+      if (existingItemResult.rows.length > 0) {
+        // 기존 아이템 수량 증가
+        const existingItem = existingItemResult.rows[0];
+        await client.query(`
+          UPDATE check_items 
+          SET quantity = quantity + $1, 
+              ordered_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `, [item.quantity, existingItem.id]);
+
+        console.log(`🔄 기존 메뉴 수량 증가: ${item.name} (+${item.quantity}개)`);
+      } else {
+        // 새 아이템 추가
+        await client.query(`
+          INSERT INTO check_items (
+            check_id, menu_name, menu_category, unit_price, quantity,
+            options, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'ordered')
+        `, [checkId, item.name, item.category, item.price, item.quantity, item.options]);
+
+        console.log(`➕ 새 메뉴 추가: ${item.name} (${item.quantity}개)`);
+      }
     }
 
     // 3. 게스트 정보 업데이트 (필요한 경우)
@@ -997,7 +1014,7 @@ router.get('/users/:userId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 사용자 주문 목록 조회 실패:', error);
-    
+
     // 테이블이 존재하지 않는 경우 빈 배열 반환
     if (error.code === '42P01' || error.message.includes('does not exist')) {
       console.log('⚠️ 테이블이 존재하지 않음 - 빈 결과 반환');
@@ -1006,7 +1023,7 @@ router.get('/users/:userId', async (req, res) => {
         orders: []
       });
     }
-    
+
     res.status(500).json({
       success: false,
       error: '주문 목록 조회 실패'
