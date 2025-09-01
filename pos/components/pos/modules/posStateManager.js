@@ -307,4 +307,65 @@ export class POSStateManager {
     window.selectedItems = [];
     console.log('🔄 현재 세션 리셋 완료');
   }
+
+  // 임시 주문 아이템 추가
+  static addPendingItem(item) {
+    this.state.pendingItems.push(item);
+    console.log('📝 임시 주문 아이템 추가:', item);
+  }
+
+  // 임시 주문 아이템 조회 (하위 호환성)
+  static getTempOrderItems() {
+    return this.state.pendingItems;
+  }
+
+  // 선택된 아이템 초기화
+  static clearSelectedItems() {
+    this.state.selectedItems = [];
+    window.selectedItems = [];
+  }
+
+  // 아이템 수량 변경
+  static changeItemQuantity(itemId, change) {
+    let updated = false;
+
+    // 임시 주문 아이템 수량 변경
+    const pendingItems = this.state.pendingItems;
+    const pendingItem = pendingItems.find(item => item.id === itemId);
+    if (pendingItem) {
+      pendingItem.quantity += change;
+      if (pendingItem.quantity <= 0) {
+        const index = pendingItems.indexOf(pendingItem);
+        pendingItems.splice(index, 1);
+      }
+      updated = true;
+    }
+
+    // 확정된 주문 아이템 수량 변경 (취소 처리해야 함)
+    const confirmedItems = this.state.confirmedItems;
+    const confirmedItem = confirmedItems.find(item => item.id === itemId);
+    if (confirmedItem && !updated) {
+      console.warn('⚠️ 확정된 주문의 수량 변경은 취소 후 재주문이 필요합니다');
+      return false;
+    }
+
+    if (updated) {
+      this.updateCombinedOrder();
+    }
+
+    return updated;
+  }
+
+  // 통합 주문 업데이트
+  static updateCombinedOrder() {
+    const confirmedItems = this.state.confirmedItems;
+    const pendingItems = this.state.pendingItems;
+
+    const allItems = [
+      ...confirmedItems.map(item => ({ ...item, isConfirmed: true, isPending: false })),
+      ...pendingItems.map(item => ({ ...item, isConfirmed: false, isPending: true }))
+    ];
+
+    this.setCurrentOrder(allItems);
+  }
 }
