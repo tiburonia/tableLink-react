@@ -616,7 +616,7 @@ async function renderLogin() {
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
   const join = document.querySelector('#join');
-  const login = document.querySelector('#login');
+  const login = document.querySelector('#loginBtn'); // 올바른 ID 사용
   const quickLoginBtn = document.querySelector('#quickLogin'); // Renamed to avoid conflict
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
@@ -626,6 +626,20 @@ async function renderLogin() {
 
   // 패널 핸들링 설정
   setupLoginPanelHandling();
+
+  // 입력 필드 변화 감지 및 버튼 활성화
+  const updateLoginButton = () => {
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn) {
+      const idValue = id.value.trim();
+      const pwValue = pw.value.trim();
+      loginBtn.disabled = !(idValue && pwValue);
+    }
+  };
+
+  id.addEventListener('input', updateLoginButton);
+  pw.addEventListener('input', updateLoginButton);
+  updateLoginButton(); // 초기 상태 설정
 
   // 기존 이벤트 리스너들...
   join.addEventListener('click', async () => {
@@ -812,22 +826,7 @@ async function renderLogin() {
     }
   });
 
-  const handleEnterKey = (event) => {
-    if (!document.querySelector('#loginPanelContainer')) {
-      return;
-    }
-
-    if (event.key === 'Enter' && event.target.id !== 'join') {
-      login.click();
-    }
-  };
-
-  document.removeEventListener('keydown', handleEnterKey);
-  document.addEventListener('keydown', handleEnterKey);
-
-  join.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') join.click();
-  });
+  
 
   adminLogin.addEventListener('click', () => {
     window.location.href = '/ADMIN';
@@ -2185,6 +2184,121 @@ async function renderLogin() {
     }
   });
 
+  // 패널 핸들링 함수 정의
+  function setupLoginPanelHandling() {
+    const panel = document.getElementById('loginPanel');
+    const panelContainer = document.getElementById('loginPanelContainer');
+    const handle = document.getElementById('loginPanelHandle');
+
+    if (!panel || !panelContainer || !handle) return;
+
+    // 마우스 휠 이벤트
+    panel.addEventListener('wheel', (e) => {
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+      const isCollapsed = !isExpanded;
+
+      // 아래로(내림) - 패널 확장
+      if (e.deltaY > 0) {
+        if (isCollapsed) {
+          e.preventDefault();
+          panel.classList.remove('collapsed');
+          panel.classList.add('expanded');
+          panel.style.top = '0px';
+          return;
+        }
+        return;
+      }
+      
+      // 위로(올림) - 패널 축소 또는 스크롤
+      if (e.deltaY < 0) {
+        if (isExpanded) {
+          if (panelContainer.scrollTop <= 0) {
+            e.preventDefault();
+            panel.classList.remove('expanded');
+            panel.classList.add('collapsed');
+            panel.style.top = '160px';
+            return;
+          }
+          return;
+        }
+      }
+    });
+
+    // 터치 이벤트
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let initialScrollTop = 0;
+
+    handle.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      initialScrollTop = panelContainer.scrollTop;
+      isDragging = true;
+      panel.style.transition = 'none';
+    });
+
+    handle.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+
+      currentY = e.touches[0].clientY;
+      const deltaY = startY - currentY;
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+      const isCollapsed = !isExpanded;
+
+      if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
+        e.preventDefault();
+        const newTop = Math.max(0, Math.min(160, -deltaY));
+        panel.style.top = `${newTop}px`;
+        return;
+      }
+
+      if (isCollapsed && deltaY > 30) {
+        e.preventDefault();
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+        return;
+      }
+    });
+
+    handle.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      panel.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      const deltaY = startY - currentY;
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+
+      if (top > 80) {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      } else {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      }
+    });
+
+    // 핸들 클릭 이벤트
+    handle.addEventListener('click', () => {
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+
+      if (isExpanded) {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      } else {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      }
+    });
+  }
+
   // 빠른 로그인 함수 전역 등록
   window.quickLogin = async function(userId) {
     console.log(`🚀 빠른 로그인 시도: ${userId}`);
@@ -2287,22 +2401,29 @@ async function renderLogin() {
     }
   };
 
+  // 이벤트 리스너 설정 함수
+  function setupEventListeners() {
+    // Enter 키 이벤트
+    const handleEnterKey = (event) => {
+      if (!document.querySelector('#loginPanelContainer')) {
+        return;
+      }
+
+      if (event.key === 'Enter' && event.target.id !== 'join') {
+        login.click();
+      }
+    };
+
+    document.removeEventListener('keydown', handleEnterKey);
+    document.addEventListener('keydown', handleEnterKey);
+
+    join.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') join.click();
+    });
+  }
+
   // 초기화
   setupEventListeners();
-  // Assuming utils.updateSubmitButton() is a valid function call for enabling the login button
-  // If 'utils' is not defined, this will cause an error.
-  // For the purpose of this edit, we'll assume it's handled elsewhere or can be adapted.
-  // If loginBtn is not disabled initially, this call might not be strictly necessary for the initial state.
-  // However, to match the original intent, we keep it.
-  if (typeof utils !== 'undefined' && utils.updateSubmitButton) {
-      utils.updateSubmitButton();
-  } else {
-      // Fallback if utils is not available
-      const loginBtn = document.getElementById('loginBtn');
-      if (loginBtn) {
-          loginBtn.disabled = false; // Enable button if utils is not available
-      }
-  }
 
 
   console.log('✅ 로그인 화면 렌더링 완료 (빠른 로그인 포함)');
