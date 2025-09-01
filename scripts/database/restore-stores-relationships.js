@@ -1,9 +1,8 @@
-
 const pool = require('../../shared/config/database');
 
 async function restoreStoresRelationships() {
   const client = await pool.connect();
-  
+
   try {
     console.log('🔄 stores 테이블 참조관계 복원 시작...');
     console.log('✅ PostgreSQL 데이터베이스 연결');
@@ -13,7 +12,7 @@ async function restoreStoresRelationships() {
 
     // 1. 스키마 차이 확인 및 조정
     console.log('🔍 1단계: 스키마 차이 확인 및 조정...');
-    
+
     // stores 테이블 스키마 확인
     const storesColumns = await client.query(`
       SELECT column_name 
@@ -21,7 +20,7 @@ async function restoreStoresRelationships() {
       WHERE table_name = 'stores' 
       ORDER BY ordinal_position
     `);
-    
+
     const storesColumnNames = storesColumns.rows.map(row => row.column_name);
     console.log(`✅ 현재 stores 컬럼: ${storesColumnNames.join(', ')}`);
 
@@ -43,7 +42,7 @@ async function restoreStoresRelationships() {
       WHERE table_name = 'stores_backup' 
       ORDER BY ordinal_position
     `);
-    
+
     const backupColumnNames = backupColumns.rows.map(row => row.column_name);
     console.log(`✅ 백업 stores 컬럼: ${backupColumnNames.join(', ')}`);
 
@@ -58,7 +57,7 @@ async function restoreStoresRelationships() {
 
     // 3. 백업 데이터를 공통 컬럼만으로 복원
     console.log('📥 3단계: 백업 데이터 복원...');
-    
+
     const columnsList = commonColumns.join(', ');
     const insertQuery = `
       INSERT INTO stores (${columnsList})
@@ -66,7 +65,7 @@ async function restoreStoresRelationships() {
       FROM stores_backup
       ORDER BY id
     `;
-    
+
     console.log(`🔧 복원 쿼리: ${insertQuery}`);
     await client.query(insertQuery);
 
@@ -78,9 +77,9 @@ async function restoreStoresRelationships() {
     const restoredCount = await client.query('SELECT COUNT(*) as count FROM stores');
     console.log(`✅ stores 데이터 복원 완료: ${restoredCount.rows[0].count}개 매장`);
 
-    // 4. 관련 테이블들 확인 및 복원 준비
+    // 4. 관련 테이블들 확인 및 각 테이블의 컬럼 구조 확인
     console.log('🔗 4단계: 관련 테이블들 확인...');
-    
+
     const relatedTables = [
       'store_address', 'store_tables', 'store_hours', 'store_holidays', 
       'store_promotions', 'menu_groups', 'menu_items', 'prep_stations',
@@ -89,6 +88,8 @@ async function restoreStoresRelationships() {
     ];
 
     const existingTables = {};
+    const tableColumns = {};
+
     for (const tableName of relatedTables) {
       const exists = await client.query(`
         SELECT EXISTS (
@@ -96,13 +97,22 @@ async function restoreStoresRelationships() {
           WHERE table_name = $1
         )
       `, [tableName]);
-      
+
       existingTables[tableName] = exists.rows[0].exists;
-      
+
       if (exists.rows[0].exists) {
+        // 각 테이블의 컬럼 구조 확인
+        const columnsResult = await client.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = $1
+        `, [tableName]);
+
+        tableColumns[tableName] = columnsResult.rows.map(row => row.column_name);
+
         try {
           const count = await client.query(`SELECT COUNT(*) as count FROM ${tableName}`);
-          console.log(`  ✅ ${tableName}: ${count.rows[0].count}개 레코드`);
+          console.log(`  ✅ ${tableName}: ${count.rows[0].count}개 레코드 (컬럼: ${tableColumns[tableName].join(', ')})`);
         } catch (error) {
           console.log(`  ⚠️ ${tableName}: 카운트 실패 - ${error.message}`);
         }
@@ -111,84 +121,65 @@ async function restoreStoresRelationships() {
       }
     }
 
-    // 5. 고아 레코드 정리
+    // 5. 안전한 고아 레코드 정리 (store_id 컬럼이 있는 테이블만)
     console.log('🧹 5단계: 고아 레코드 정리...');
-    
-    const cleanupQueries = [
-      {
-        table: 'store_address',
-        query: `DELETE FROM store_address WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'store_tables',
-        query: `DELETE FROM store_tables WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'store_hours',
-        query: `DELETE FROM store_hours WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'store_holidays',
-        query: `DELETE FROM store_holidays WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'store_promotions',
-        query: `DELETE FROM store_promotions WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'menu_groups',
-        query: `DELETE FROM menu_groups WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'menu_items',
-        query: `DELETE FROM menu_items WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'prep_stations',
-        query: `DELETE FROM prep_stations WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'reviews',
-        query: `DELETE FROM reviews WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'favorites',
-        query: `DELETE FROM favorites WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'orders',
-        query: `DELETE FROM orders WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'reservations',
-        query: `DELETE FROM reservations WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'waitlists',
-        query: `DELETE FROM waitlists WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'carts',
-        query: `DELETE FROM carts WHERE store_id NOT IN (SELECT id FROM stores)`
-      },
-      {
-        table: 'checks',
-        query: `DELETE FROM checks WHERE store_id NOT IN (SELECT id FROM stores)`
-      }
+
+    const safeTablesToClean = [
+      'store_address', 'store_tables', 'store_hours', 'store_holidays',
+      'store_promotions', 'menu_groups', 'menu_items', 'prep_stations',
+      'reviews', 'favorites', 'reservations', 'waitlists', 'carts'
     ];
 
-    for (const cleanup of cleanupQueries) {
-      if (existingTables[cleanup.table]) {
+    for (const tableName of safeTablesToClean) {
+      if (existingTables[tableName] && tableColumns[tableName] && tableColumns[tableName].includes('store_id')) {
         try {
-          const result = await client.query(cleanup.query);
+          const result = await client.query(`
+            DELETE FROM ${tableName} WHERE store_id NOT IN (SELECT id FROM stores)
+          `);
           if (result.rowCount > 0) {
-            console.log(`  🗑️ ${cleanup.table}: ${result.rowCount}개 고아 레코드 삭제`);
+            console.log(`  🗑️ ${tableName}: ${result.rowCount}개 고아 레코드 삭제`);
           } else {
-            console.log(`  ✅ ${cleanup.table}: 고아 레코드 없음`);
+            console.log(`  ✅ ${tableName}: 고아 레코드 없음`);
           }
         } catch (error) {
-          console.log(`  ⚠️ ${cleanup.table}: 정리 실패 - ${error.message}`);
+          console.log(`  ⚠️ ${tableName}: 정리 실패 - ${error.message}`);
         }
+      } else if (existingTables[tableName]) {
+        console.log(`  ⚠️ ${tableName}: store_id 컬럼 없음 - 건너뜀`);
+      }
+    }
+
+    // orders 테이블 특별 처리
+    if (existingTables['orders']) {
+      console.log('🔍 orders 테이블 특별 처리...');
+      if (tableColumns['orders'].includes('store_id')) {
+        try {
+          const result = await client.query(`
+            DELETE FROM orders WHERE store_id NOT IN (SELECT id FROM stores)
+          `);
+          console.log(`  ✅ orders: ${result.rowCount}개 고아 레코드 삭제`);
+        } catch (error) {
+          console.log(`  ⚠️ orders: 정리 실패 - ${error.message}`);
+        }
+      } else {
+        console.log('  ℹ️ orders 테이블에 store_id 컬럼이 없음 - 건너뜀');
+      }
+    }
+
+    // checks 테이블 특별 처리 
+    if (existingTables['checks']) {
+      console.log('🔍 checks 테이블 특별 처리...');
+      if (tableColumns['checks'].includes('store_id')) {
+        try {
+          const result = await client.query(`
+            DELETE FROM checks WHERE store_id NOT IN (SELECT id FROM stores)
+          `);
+          console.log(`  ✅ checks: ${result.rowCount}개 고아 레코드 삭제`);
+        } catch (error) {
+          console.log(`  ⚠️ checks: 정리 실패 - ${error.message}`);
+        }
+      } else {
+        console.log('  ℹ️ checks 테이블에 store_id 컬럼이 없음 - 건너뜀');
       }
     }
 
@@ -206,7 +197,7 @@ async function restoreStoresRelationships() {
 
       if (missingAddresses.rows.length > 0) {
         console.log(`🏠 ${missingAddresses.rows.length}개 매장에 기본 주소 생성...`);
-        
+
         for (const store of missingAddresses.rows) {
           await client.query(`
             INSERT INTO store_address (store_id, address_full, sido, sigungu, eupmyeondong, latitude, longitude)
@@ -217,119 +208,29 @@ async function restoreStoresRelationships() {
       }
     }
 
-    // 7. 외래키 제약조건 재생성
+    // 7. 외래키 제약조건 재생성 (store_id 컬럼이 있는 테이블만)
     console.log('🔗 7단계: 외래키 제약조건 재생성...');
-    
+
     const foreignKeyConstraints = [
-      {
-        table: 'store_address',
-        constraint: 'store_address_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'store_tables',
-        constraint: 'store_tables_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'store_hours',
-        constraint: 'store_hours_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'store_holidays',
-        constraint: 'store_holidays_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'store_promotions',
-        constraint: 'store_promotions_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'menu_groups',
-        constraint: 'menu_groups_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'menu_items',
-        constraint: 'menu_items_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'prep_stations',
-        constraint: 'prep_stations_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'reviews',
-        constraint: 'reviews_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'favorites',
-        constraint: 'favorites_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'orders',
-        constraint: 'orders_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'reservations',
-        constraint: 'reservations_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'waitlists',
-        constraint: 'waitlists_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'carts',
-        constraint: 'carts_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      },
-      {
-        table: 'checks',
-        constraint: 'checks_store_id_fkey',
-        column: 'store_id',
-        references: 'stores(id)',
-        onDelete: 'CASCADE'
-      }
+      { table: 'store_address', constraint: 'store_address_store_id_fkey', column: 'store_id' },
+      { table: 'store_tables', constraint: 'store_tables_store_id_fkey', column: 'store_id' },
+      { table: 'store_hours', constraint: 'store_hours_store_id_fkey', column: 'store_id' },
+      { table: 'store_holidays', constraint: 'store_holidays_store_id_fkey', column: 'store_id' },
+      { table: 'store_promotions', constraint: 'store_promotions_store_id_fkey', column: 'store_id' },
+      { table: 'menu_groups', constraint: 'menu_groups_store_id_fkey', column: 'store_id' },
+      { table: 'menu_items', constraint: 'menu_items_store_id_fkey', column: 'store_id' },
+      { table: 'prep_stations', constraint: 'prep_stations_store_id_fkey', column: 'store_id' },
+      { table: 'reviews', constraint: 'reviews_store_id_fkey', column: 'store_id' },
+      { table: 'favorites', constraint: 'favorites_store_id_fkey', column: 'store_id' },
+      { table: 'orders', constraint: 'orders_store_id_fkey', column: 'store_id' },
+      { table: 'reservations', constraint: 'reservations_store_id_fkey', column: 'store_id' },
+      { table: 'waitlists', constraint: 'waitlists_store_id_fkey', column: 'store_id' },
+      { table: 'carts', constraint: 'carts_store_id_fkey', column: 'store_id' },
+      { table: 'checks', constraint: 'checks_store_id_fkey', column: 'store_id' }
     ];
 
     for (const fk of foreignKeyConstraints) {
-      if (existingTables[fk.table]) {
+      if (existingTables[fk.table] && tableColumns[fk.table] && tableColumns[fk.table].includes(fk.column)) {
         try {
           // 기존 제약조건 삭제 (있을 경우)
           await client.query(`
@@ -341,19 +242,21 @@ async function restoreStoresRelationships() {
           await client.query(`
             ALTER TABLE ${fk.table} 
             ADD CONSTRAINT ${fk.constraint} 
-            FOREIGN KEY (${fk.column}) REFERENCES ${fk.references} ON DELETE ${fk.onDelete}
+            FOREIGN KEY (${fk.column}) REFERENCES stores(id) ON DELETE CASCADE
           `);
-          
+
           console.log(`  ✅ ${fk.table} 외래키 제약조건 복원`);
         } catch (error) {
           console.log(`  ⚠️ ${fk.table} 외래키 제약조건 복원 실패: ${error.message}`);
         }
+      } else if (existingTables[fk.table]) {
+        console.log(`  ⚠️ ${fk.table}: ${fk.column} 컬럼 없음 - 외래키 건너뜀`);
       }
     }
 
     // 8. stores 테이블 통계 업데이트
     console.log('📊 8단계: stores 테이블 통계 업데이트...');
-    
+
     // review_count와 rating_average가 컬럼에 있는지 확인
     const hasReviewStats = storesColumnNames.includes('review_count') && storesColumnNames.includes('rating_average');
     const hasFavoriteCount = storesColumnNames.includes('favorite_count');
@@ -397,24 +300,23 @@ async function restoreStoresRelationships() {
 
     // 9. 최종 검증
     console.log('🔍 9단계: 참조관계 무결성 최종 검증...');
-    
-    const finalChecks = [
-      { name: 'store_address', query: `SELECT COUNT(*) as count FROM store_address sa JOIN stores s ON sa.store_id = s.id` },
-      { name: 'store_tables', query: `SELECT COUNT(*) as count FROM store_tables st JOIN stores s ON st.store_id = s.id` },
-      { name: 'store_hours', query: `SELECT COUNT(*) as count FROM store_hours sh JOIN stores s ON sh.store_id = s.id` },
-      { name: 'menu_items', query: `SELECT COUNT(*) as count FROM menu_items mi JOIN stores s ON mi.store_id = s.id` },
-      { name: 'reviews', query: `SELECT COUNT(*) as count FROM reviews r JOIN stores s ON r.store_id = s.id` },
-      { name: 'favorites', query: `SELECT COUNT(*) as count FROM favorites f JOIN stores s ON f.store_id = s.id` },
-      { name: 'orders', query: `SELECT COUNT(*) as count FROM orders o JOIN stores s ON o.store_id = s.id` }
+
+    const validationTables = [
+      'store_address', 'store_tables', 'store_hours', 'menu_items', 
+      'reviews', 'favorites', 'orders'
     ];
 
-    for (const check of finalChecks) {
-      if (existingTables[check.name]) {
+    for (const tableName of validationTables) {
+      if (existingTables[tableName] && tableColumns[tableName] && tableColumns[tableName].includes('store_id')) {
         try {
-          const result = await client.query(check.query);
-          console.log(`  ✅ ${check.name}: ${result.rows[0].count}개 유효한 참조`);
+          const result = await client.query(`
+            SELECT COUNT(*) as count 
+            FROM ${tableName} t 
+            JOIN stores s ON t.store_id = s.id
+          `);
+          console.log(`  ✅ ${tableName}: ${result.rows[0].count}개 유효한 참조`);
         } catch (error) {
-          console.log(`  ❌ ${check.name}: 참조관계 검증 실패 - ${error.message}`);
+          console.log(`  ❌ ${tableName}: 참조관계 검증 실패 - ${error.message}`);
         }
       }
     }
@@ -424,16 +326,20 @@ async function restoreStoresRelationships() {
 
     // 10. 최종 결과 확인
     console.log('🎯 10단계: 최종 결과 확인...');
-    
+
     const finalStoreCount = await client.query('SELECT COUNT(*) as count FROM stores');
     console.log(`\n📊 최종 복원 결과:`);
     console.log(`✅ stores: ${finalStoreCount.rows[0].count}개 매장`);
 
-    // 각 관련 테이블 카운트
+    // 각 관련 테이블 카운트 (store_id가 있는 테이블만)
     for (const tableName of Object.keys(existingTables)) {
-      if (existingTables[tableName]) {
+      if (existingTables[tableName] && tableColumns[tableName] && tableColumns[tableName].includes('store_id')) {
         try {
-          const count = await client.query(`SELECT COUNT(*) as count FROM ${tableName} WHERE store_id IN (SELECT id FROM stores)`);
+          const count = await client.query(`
+            SELECT COUNT(*) as count 
+            FROM ${tableName} 
+            WHERE store_id IN (SELECT id FROM stores)
+          `);
           console.log(`✅ ${tableName}: ${count.rows[0].count}개 레코드`);
         } catch (error) {
           console.log(`⚠️ ${tableName}: 카운트 실패`);
@@ -467,20 +373,20 @@ async function restoreStoresRelationships() {
 
     console.log('\n🎉 stores 테이블 참조관계 복원 완료!');
     console.log('💡 이제 Replit Database 패널에서 stores 테이블의 외래키 관계를 확인할 수 있습니다.');
-    
+
   } catch (error) {
     console.error('❌ 참조관계 복원 실패:', error);
     console.log('🔄 롤백 중...');
-    
+
     try {
       await client.query('ROLLBACK');
       console.log('✅ 롤백 완료 - 변경사항이 취소되었습니다.');
     } catch (rollbackError) {
       console.error('❌ 롤백 실패:', rollbackError);
     }
-    
+
     throw error;
-    
+
   } finally {
     client.release();
     await pool.end();
