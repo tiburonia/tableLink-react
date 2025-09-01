@@ -253,4 +253,20 @@ export class POSStateManager {
     this.saveState();
     console.log('🗑️ 주문 목록 초기화');
   }
+
+  // 현재 세션 리셋
+  static resetCurrentSession() {
+    this.state.currentSession = {
+      checkId: null,
+      status: 'idle',
+      tableNumber: null,
+      customerName: null,
+      totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0,
+      openedAt: null
+    };
+    this.saveState();
+    console.log('🔄 현재 세션 리셋 완료');
+  }
 }

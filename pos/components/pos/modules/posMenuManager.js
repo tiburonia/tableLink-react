@@ -20,7 +20,7 @@ const CATEGORY_COLORS = {
   'default': '#6B7280'
 };
 
-export class POSMenuManager {
+export export class POSMenuManager {
   // 메뉴 카테고리 렌더링
   static renderMenuCategories() {
     const categoryTabs = document.getElementById('categoryTabs');

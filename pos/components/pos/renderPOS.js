@@ -125,8 +125,19 @@ async function switchToOrderView() {
 
 // 테이블맵으로 돌아가기
 function returnToTableMap() {
-  POSOrderManager.clearTempOrder();
-  POSStateManager.resetCurrentSession();
+  try {
+    if (POSOrderManager && typeof POSOrderManager.clearTempOrder === 'function') {
+      POSOrderManager.clearTempOrder();
+    } else {
+      console.warn('⚠️ POSOrderManager.clearTempOrder 메서드를 찾을 수 없음');
+    }
+    
+    if (POSStateManager && typeof POSStateManager.reset === 'function') {
+      POSStateManager.reset();
+    }
+  } catch (error) {
+    console.error('❌ returnToTableMap 오류:', error);
+  }
 
   document.getElementById('tableMapView').classList.remove('hidden');
   document.getElementById('orderView').classList.add('hidden');

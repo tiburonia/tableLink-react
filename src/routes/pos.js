@@ -69,7 +69,8 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
     console.error('❌ POS 메뉴 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'POS 메뉴 조회 실패'
+      error: 'POS 메뉴 조회 실패',
+      details: error.message
     });
   }
 });
@@ -216,7 +217,7 @@ router.post('/stores/:storeId/table/:tableNumber/acquire-lock', async (req, res,
     const { lockBy = 'POS', lockDuration = 300000 } = req.body;
 
     const lockKey = `table_${storeId}_${tableNumber}`;
-    
+
     // 전역 락 저장소 초기화
     if (!global.tableLocks) {
       global.tableLocks = {};
@@ -266,7 +267,7 @@ router.delete('/stores/:storeId/table/:tableNumber/release-lock', async (req, re
     const { storeId, tableNumber } = req.params;
 
     const lockKey = `table_${storeId}_${tableNumber}`;
-    
+
     if (global.tableLocks && global.tableLocks[lockKey]) {
       delete global.tableLocks[lockKey];
       console.log(`🔓 테이블 ${tableNumber} 락 해제`);

@@ -29,6 +29,11 @@ export class POSDataLoader {
       const response = await fetch(`/api/pos/stores/${storeId}/menu`);
       const data = await response.json();
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`메뉴 조회 HTTP 오류: ${response.status} - ${errorText}`);
+      }
+
       if (!data.success) {
         throw new Error(data.error || '메뉴 조회 실패');
       }
@@ -145,6 +150,11 @@ export class POSDataLoader {
 
       const response = await fetch(`/api/pos/stores/${storeId}/menu`);
       const data = await response.json();
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`메뉴 조회 HTTP 오류: ${response.status} - ${errorText}`);
+      }
 
       if (!data.success) {
         throw new Error(data.error || '메뉴 조회 실패');
