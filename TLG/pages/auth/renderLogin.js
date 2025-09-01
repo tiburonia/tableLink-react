@@ -146,50 +146,58 @@ async function renderLogin() {
             <span class="divider-text">또는</span>
           </div>
 
-          <!-- 매장 검색 섹션 -->
-          <div class="store-search-section">
-            <h3 class="section-title">매장 선택</h3>
-            <div class="input-wrapper">
-              <input id="storeSearchInput" type="text" placeholder="매장 이름으로 검색" class="form-input" autocomplete="off" />
-              <div class="input-icon">🔍</div>
-            </div>
-            <div id="storeSearchResults" class="search-results"></div>
-          </div>
-
           <!-- 빠른 액세스 섹션 -->
           <div class="quick-access-section">
-            <h3 class="section-title">시스템 접근</h3>
+            <h3 class="section-title">빠른 접근</h3>
 
-            <div class="system-buttons-grid">
-              <button id="posBtn" class="system-btn pos-btn" disabled>
-                <div class="system-btn-icon">💳</div>
-                <div class="system-btn-content">
-                  <span class="system-btn-title">POS</span>
-                  <span class="system-btn-desc">매장 선택 필요</span>
+            <div class="quick-buttons-grid">
+              <button id="quickLogin" class="quick-btn user-btn">
+                <div class="quick-btn-icon">⚡</div>
+                <div class="quick-btn-content">
+                  <span class="quick-btn-title">빠른 로그인</span>
+                  <span class="quick-btn-desc">user1 계정</span>
                 </div>
               </button>
 
-              <button id="kdsBtn" class="system-btn kds-btn" disabled>
+              <button id="adminLogin" class="quick-btn admin-btn">
+                <div class="quick-btn-icon">🛠️</div>
+                <div class="quick-btn-content">
+                  <span class="quick-btn-title">관리자</span>
+                  <span class="quick-btn-desc">Admin Panel</span>
+                </div>
+              </button>
+            </div>
+
+            <div class="system-buttons-grid">
+              <button id="goKDS" class="system-btn kds-btn">
                 <div class="system-btn-icon">📟</div>
                 <div class="system-btn-content">
                   <span class="system-btn-title">KDS</span>
-                  <span class="system-btn-desc">매장 선택 필요</span>
+                  <span class="system-btn-desc">주방 디스플레이</span>
                 </div>
               </button>
 
-              <button id="krpBtn" class="system-btn krp-btn" disabled>
+              <button id="goPOS" class="system-btn pos-btn">
+                <div class="system-btn-icon">💳</div>
+                <div class="system-btn-content">
+                  <span class="system-btn-title">POS</span>
+                  <span class="system-btn-desc">포스 시스템</span>
+                </div>
+              </button>
+
+              <button id="goKRP" class="system-btn krp-btn">
                 <div class="system-btn-icon">🖨️</div>
                 <div class="system-btn-content">
                   <span class="system-btn-title">KRP</span>
-                  <span class="system-btn-desc">매장 선택 필요</span>
+                  <span class="system-btn-desc">주방 프린터</span>
                 </div>
               </button>
 
-              <button id="tlmBtn" class="system-btn tlm-btn" disabled>
+              <button id="goTLM" class="system-btn tlm-btn">
                 <div class="system-btn-icon">🏪</div>
                 <div class="system-btn-content">
                   <span class="system-btn-title">사장님 앱</span>
-                  <span class="system-btn-desc">매장 선택 필요</span>
+                  <span class="system-btn-desc">매장 관리</span>
                 </div>
               </button>
             </div>
@@ -383,15 +391,12 @@ async function renderLogin() {
         box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
       }
 
-      .form-input::placeholder {
-        color: transparent;
-      }
-
-      .form-input:focus + .form-label,
-      .form-input:not(:placeholder-shown) + .form-label {
+      .form-input:not(:placeholder-shown) + .form-label,
+      .form-input:focus + .form-label {
         transform: translateY(-28px) scale(0.85);
         color: #667eea;
         font-weight: 600;
+        opacity: 0;
       }
 
       .form-label {
@@ -512,8 +517,8 @@ async function renderLogin() {
         font-weight: 600;
       }
 
-      .store-search-section {
-        margin: 32px 0;
+      .quick-access-section {
+        margin-bottom: 24px;
       }
 
       .section-title {
@@ -524,73 +529,60 @@ async function renderLogin() {
         text-align: center;
       }
 
-      .search-results {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #e5e7eb;
+      .quick-buttons-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin: 20px 0 16px 0;
+      }
+
+      .quick-btn {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border: 1px solid #e2e8f0;
         border-radius: 12px;
-        background: white;
-        display: none;
-      }
-
-      .store-search-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px;
-        border-bottom: 1px solid #eee;
+        padding: 16px 12px;
+        color: #1f2937;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+        min-height: 60px;
       }
 
-      .store-search-item:hover {
-        background-color: #f8f9fa;
-        transform: translateX(2px);
+      .quick-btn:hover {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        border-color: #cbd5e1;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
       }
 
-      .store-search-item.first-result {
-        background-color: #f0f8ff;
-        border-left: 3px solid #007bff;
+      .quick-btn-icon {
+        font-size: 24px;
+        min-width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .store-search-item:last-child {
-        border-bottom: none;
-      }
-
-      .store-info {
+      .quick-btn-content {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
       }
 
-      .store-name {
-        font-weight: bold;
+      .quick-btn-title {
         font-size: 14px;
-        color: #333;
-        margin-bottom: 4px;
+        font-weight: 600;
+        line-height: 1.2;
       }
 
-      .store-details {
-        font-size: 12px;
-        color: #666;
-        margin-bottom: 2px;
-      }
-
-      .store-rating {
+      .quick-btn-desc {
         font-size: 11px;
-        color: #ff6b35;
-        font-weight: 500;
-      }
-
-      .store-id {
-        font-size: 12px;
-        color: #999;
-        background: #f5f5f5;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-weight: 500;
-      }
-
-      .quick-access-section {
-        margin-bottom: 24px;
+        opacity: 0.8;
+        line-height: 1.2;
       }
 
       .system-buttons-grid {
@@ -622,12 +614,6 @@ async function renderLogin() {
         background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
         border-color: #cbd5e1;
         transform: translateY(-1px);
-      }
-
-      .system-btn[disabled] {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
       }
 
       .system-btn-icon {
@@ -720,8 +706,12 @@ async function renderLogin() {
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
   const login = document.querySelector('#loginBtn');
-  const storeSearchInput = document.getElementById('storeSearchInput');
-  const storeSearchResults = document.getElementById('storeSearchResults');
+  const quickLoginBtn = document.querySelector('#quickLogin');
+  const adminLogin = document.querySelector('#adminLogin');
+  const goKDS = document.querySelector('#goKDS');
+  const goPOS = document.querySelector('#goPOS');
+  const goKRP = document.querySelector('#goKRP');
+  const goTLM = document.querySelector('#goTLM');
 
   // 패널 핸들링 설정
   setupLoginPanelHandling();
@@ -742,7 +732,9 @@ async function renderLogin() {
     updateLoginButton(); // 초기 상태 설정
   }
 
-  // 로딩 스크린 관리 함수들
+  // 회원가입 버튼 이벤트 (HTML에 없으므로 제거)
+  // join.addEventListener('click', async () => {
+    // 로딩 스크린 관리 함수들
   const showLoadingScreen = () => {
     if (login) {
       const btnText = login.querySelector('.btn-text');
@@ -766,7 +758,6 @@ async function renderLogin() {
   };
 
   // 빠른 로그인 버튼 이벤트 리스너
-  const quickLoginBtn = document.querySelector('#quickLogin');
   if (quickLoginBtn) {
     quickLoginBtn.addEventListener('click', async () => {
       try {
@@ -872,82 +863,274 @@ async function renderLogin() {
     });
   }
 
-  // POS/KDS/TLM 버튼 이벤트
-  const posBtn = document.getElementById('posBtn');
-  if (posBtn) {
-    posBtn.addEventListener('click', async () => {
-      if (typeof window.selectedStoreId === 'undefined') {
-        alert('먼저 매장을 선택해주세요.');
-        return;
-      }
-      window.location.href = `/pos/${window.selectedStoreId}`;
+
+
+  // 기타 버튼 이벤트 리스너들
+  if (adminLogin) {
+    adminLogin.addEventListener('click', () => {
+      window.location.href = '/ADMIN';
     });
   }
 
-  // KDS 버튼 이벤트  
-  const kdsBtn = document.getElementById('kdsBtn');
-  if (kdsBtn) {
-    kdsBtn.addEventListener('click', async () => {
-      if (typeof window.selectedStoreId === 'undefined') {
-        alert('먼저 매장을 선택해주세요.');
-        return;
-      }
-      window.location.href = `/kds/${window.selectedStoreId}`;
+  if (goKDS) {
+    goKDS.addEventListener('click', () => {
+      showKDSStoreSearchModal();
     });
   }
 
-  // TLM 버튼 이벤트
-  const tlmBtn = document.getElementById('tlmBtn');
-  if (tlmBtn) {
-    tlmBtn.addEventListener('click', async () => {
-      if (typeof window.selectedStoreId === 'undefined') {
-        alert('먼저 매장을 선택해주세요.');
-        return;
-      }
-      window.location.href = `/tlm/${window.selectedStoreId}`;
+  if (goPOS) {
+    goPOS.addEventListener('click', () => {
+      showPOSStoreSearchModal();
     });
   }
 
-  // 매장 검색 기능
-  let searchTimeout;
+  if (goKRP) {
+    goKRP.addEventListener('click', () => {
+      showKRPStoreSearchModal();
+    });
+  }
 
-  if (storeSearchInput && storeSearchResults) {
-    storeSearchInput.addEventListener('input', () => {
-      clearTimeout(searchTimeout);
-      const keyword = storeSearchInput.value.trim();
+  if (goTLM) {
+    goTLM.addEventListener('click', () => {
+      showStoreSearchModal();
+    });
+  }
 
-      if (keyword.length < 2) {
-        storeSearchResults.style.display = 'none';
-        return;
-      }
+  // POS 매장 검색 모달 표시
+  function showPOSStoreSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'posStoreSearchModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>💳 POS 진입</h2>
+            <button class="close-btn" onclick="closePOSStoreSearchModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-section">
+              <div class="search-input-wrapper">
+                <input 
+                  id="posStoreNameInput" 
+                  type="text" 
+                  placeholder="매장 이름을 입력하세요..." 
+                  class="search-input"
+                  autocomplete="off"
+                />
+                <div class="search-icon">🔍</div>
+              </div>
+              <div id="posStoreSearchResults" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      searchTimeout = setTimeout(async () => {
-        try {
-          const response = await fetch(`/api/stores/search/${encodeURIComponent(keyword)}`);
-          if (response.ok) {
-            const data = await response.json();
-            displaySearchResults(data.stores || []);
-          }
-        } catch (error) {
-          console.error('매장 검색 실패:', error);
-          storeSearchResults.innerHTML = '<div style="padding:10px;color:#ff6b6b;text-align:center;">검색 중 오류가 발생했습니다</div>';
-          storeSearchResults.style.display = 'block';
+      <style>
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
         }
-      }, 300);
-    });
 
-    // 검색 결과 외부 클릭 시 숨기기
-    document.addEventListener('click', (e) => {
-      if (!storeSearchInput.contains(e.target) && !storeSearchResults.contains(e.target)) {
-        storeSearchResults.style.display = 'none';
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #666666 0%, #333333 100%);
+          color: white;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .search-section {
+          position: relative;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          margin-bottom: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 20px;
+          padding-right: 50px;
+          font-size: 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #666666;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(102, 102, 102, 0.1);
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .search-results {
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          display: none;
+        }
+
+        .store-result-item {
+          padding: 16px 20px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+
+        .store-result-item:hover {
+          background: #f8fafc;
+        }
+
+        .store-result-item:last-child {
+          border-bottom: none;
+        }
+
+        .store-result-name {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .store-result-info {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .no-results {
+          padding: 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-results {
+          padding: 20px;
+          text-align: center;
+          color: #666666;
+          font-size: 14px;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top: 2px solid #666666;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+    setupPOSStoreSearch();
+
+    setTimeout(() => {
+      const input = document.getElementById('posStoreNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // POS 매장 검색 기능 설정
+  function setupPOSStoreSearch() {
+    const input = document.getElementById('posStoreNameInput');
+    const results = document.getElementById('posStoreSearchResults');
+    let searchTimeout = null;
+
+    if (!input || !results) return;
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
       }
+
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        searchStoresForPOS(query);
+      }, 200);
     });
 
-    // Enter 키로 첫 번째 검색 결과 선택
-    storeSearchInput.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        e.preventDefault();
-        const firstResult = storeSearchResults.querySelector('.store-search-item');
+        const firstResult = results.querySelector('.store-result-item');
         if (firstResult) {
           firstResult.click();
         }
@@ -955,90 +1138,1237 @@ async function renderLogin() {
     });
   }
 
-  function displaySearchResults(stores) {
-    if (!storeSearchResults) return;
+  // POS용 매장 검색 함수
+  async function searchStoresForPOS(query) {
+    const results = document.getElementById('posStoreSearchResults');
+    if (!results) return;
 
-    if (stores.length === 0) {
-      storeSearchResults.innerHTML = '<div style="padding:10px;color:#666;text-align:center;">검색 결과가 없습니다</div>';
-      storeSearchResults.style.display = 'block';
-      return;
-    }
+    try {
+      console.log(`🔍 POS 매장 검색: "${query}"`);
 
-    const resultsHTML = stores.map((store, index) => `
-      <div class="store-search-item ${index === 0 ? 'first-result' : ''}" onclick="selectStoreFromSearch(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
-        <div class="store-info">
-          <div class="store-name">${store.name}</div>
-          <div class="store-details">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
-          <div class="store-rating">⭐ ${store.ratingAverage?.toFixed(1) || '0.0'} (${store.reviewCount || 0})</div>
+      results.innerHTML = `
+        <div class="loading-results">
+          <div class="loading-spinner"></div>
+          검색 중...
         </div>
-        <div class="store-id">#${store.id}</div>
+      `;
+      results.style.display = 'block';
+
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stores && data.stores.length > 0) {
+        displayPOSSearchResults(data.stores);
+      } else {
+        results.innerHTML = `
+          <div class="no-results">
+            "${query}"에 대한 검색 결과가 없습니다
+          </div>
+        `;
+        results.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('POS 매장 검색 실패:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 중 오류가 발생했습니다: ${error.message}
+        </div>
+      `;
+      results.style.display = 'block';
+    }
+  }
+
+  // POS 검색 결과 표시
+  function displayPOSSearchResults(stores) {
+    const results = document.getElementById('posStoreSearchResults');
+    if (!results) return;
+
+    try {
+      const resultsHTML = stores.map(store => {
+        const storeName = (store.name || '').replace(/'/g, "\\'");
+        const storeCategory = store.category || '기타';
+        const storeAddress = store.address || '주소 정보 없음';
+        
+        return `
+          <div class="store-result-item" onclick="selectStoreForPOS(${store.id}, '${storeName}')">
+            <div class="store-result-name">${store.name || 'Unknown Store'}</div>
+            <div class="store-result-info">
+              ${storeCategory} • ${storeAddress}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      results.innerHTML = resultsHTML;
+      results.style.display = 'block';
+    } catch (error) {
+      console.error('POS 검색 결과 표시 오류:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 결과 표시 중 오류가 발생했습니다
+        </div>
+      `;
+    }
+  }
+
+  // POS 매장 선택
+  window.selectStoreForPOS = function(storeId, storeName) {
+    console.log(`✅ POS 매장 선택: ${storeName} (ID: ${storeId})`);
+    closePOSStoreSearchModal();
+
+    setTimeout(() => {
+      window.location.href = `/pos.html?storeId=${storeId}`;
+    }, 200);
+  };
+
+  // POS 매장 검색 모달 닫기
+  window.closePOSStoreSearchModal = function() {
+    const modal = document.getElementById('posStoreSearchModal');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  // KDS 매장 검색 모달 표시
+  function showKDSStoreSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'kdsStoreSearchModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>📟 KDS 진입</h2>
+            <button class="close-btn" onclick="closeKDSStoreSearchModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-section">
+              <div class="search-input-wrapper">
+                <input 
+                  id="kdsStoreNameInput" 
+                  type="text" 
+                  placeholder="매장 이름을 입력하세요..." 
+                  class="search-input"
+                  autocomplete="off"
+                />
+                <div class="search-icon">🔍</div>
+              </div>
+              <div id="kdsStoreSearchResults" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+          color: white;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .search-section {
+          position: relative;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          margin-bottom: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 20px;
+          padding-right: 50px;
+          font-size: 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #2c3e50;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(44, 62, 80, 0.1);
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .search-results {
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          display: none;
+        }
+
+        .store-result-item {
+          padding: 16px 20px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+
+        .store-result-item:hover {
+          background: #f8fafc;
+        }
+
+        .store-result-item:last-child {
+          border-bottom: none;
+        }
+
+        .store-result-name {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .store-result-info {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .no-results {
+          padding: 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-results {
+          padding: 20px;
+          text-align: center;
+          color: #2c3e50;
+          font-size: 14px;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top: 2px solid #2c3e50;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+    setupKDSStoreSearch();
+
+    setTimeout(() => {
+      const input = document.getElementById('kdsStoreNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // KDS 매장 검색 기능 설정
+  function setupKDSStoreSearch() {
+    const input = document.getElementById('kdsStoreNameInput');
+    const results = document.getElementById('kdsStoreSearchResults');
+    let searchTimeout = null;
+
+    if (!input || !results) return;
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        searchStoresForKDS(query);
+      }, 200);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const firstResult = results.querySelector('.store-result-item');
+        if (firstResult) {
+          firstResult.click();
+        }
+      }
+    });
+  }
+
+  // KDS용 매장 검색 함수
+  async function searchStoresForKDS(query) {
+    const results = document.getElementById('kdsStoreSearchResults');
+    if (!results) return;
+
+    try {
+      console.log(`🔍 KDS 매장 검색: "${query}"`);
+
+      results.innerHTML = `
+        <div class="loading-results">
+          <div class="loading-spinner"></div>
+          검색 중...
+        </div>
+      `;
+      results.style.display = 'block';
+
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stores && data.stores.length > 0) {
+        displayKDSSearchResults(data.stores);
+      } else {
+        results.innerHTML = `
+          <div class="no-results">
+            "${query}"에 대한 검색 결과가 없습니다
+          </div>
+        `;
+        results.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('KDS 매장 검색 실패:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 중 오류가 발생했습니다: ${error.message}
+        </div>
+      `;
+      results.style.display = 'block';
+    }
+  }
+
+  // KDS 검색 결과 표시
+  function displayKDSSearchResults(stores) {
+    const results = document.getElementById('kdsStoreSearchResults');
+    if (!results) return;
+
+    const resultsHTML = stores.map(store => `
+      <div class="store-result-item" onclick="selectStoreForKDS(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
+        <div class="store-result-name">${store.name}</div>
+        <div class="store-result-info">
+          ${store.category || '기타'} • ${store.address || '주소 정보 없음'}
+        </div>
       </div>
     `).join('');
 
-    storeSearchResults.innerHTML = resultsHTML;
-    storeSearchResults.style.display = 'block';
+    results.innerHTML = resultsHTML;
+    results.style.display = 'block';
   }
 
-  // 매장 선택 함수 (전역으로 등록)
-  window.selectStoreFromSearch = function(storeId, storeName) {
-    console.log(`🏪 매장 선택: ${storeName} (ID: ${storeId})`);
+  // KDS 매장 선택
+  window.selectStoreForKDS = function(storeId, storeName) {
+    console.log(`✅ KDS 매장 선택: ${storeName} (ID: ${storeId})`);
+    closeKDSStoreSearchModal();
 
-    // 검색 입력창에 선택한 매장 표시
-    if (storeSearchInput) {
-      storeSearchInput.value = `${storeName} (#${storeId})`;
-    }
-
-    // 검색 결과 숨기기
-    if (storeSearchResults) {
-      storeSearchResults.style.display = 'none';
-    }
-
-    // 선택된 매장 ID를 전역 변수에 저장
-    window.selectedStoreId = storeId;
-    window.selectedStoreName = storeName;
-
-    // 시스템 선택 버튼들 활성화
-    activateSystemButtons(storeId, storeName);
+    setTimeout(() => {
+      window.location.href = `/kds.html?storeId=${storeId}`;
+    }, 200);
   };
 
-  // 시스템 버튼들 활성화
-  function activateSystemButtons(storeId, storeName) {
-    const systemButtons = document.querySelectorAll('.system-btn');
+  // KDS 매장 검색 모달 닫기
+  window.closeKDSStoreSearchModal = function() {
+    const modal = document.getElementById('kdsStoreSearchModal');
+    if (modal) {
+      modal.remove();
+    }
+  };
 
-    systemButtons.forEach(btn => {
-      btn.disabled = false;
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = 'auto';
+  // KRP 매장 검색 모달 표시
+  function showKRPStoreSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'krpStoreSearchModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>🖨️ KRP 진입</h2>
+            <button class="close-btn" onclick="closeKRPStoreSearchModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-section">
+              <div class="search-input-wrapper">
+                <input 
+                  id="krpStoreNameInput" 
+                  type="text" 
+                  placeholder="매장 이름을 입력하세요..." 
+                  class="search-input"
+                  autocomplete="off"
+                />
+                <div class="search-icon">🔍</div>
+              </div>
+              <div id="krpStoreSearchResults" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      // 기존 이벤트 리스너 제거 후 새로 등록
-      const newBtn = btn.cloneNode(true);
-      btn.parentNode.replaceChild(newBtn, btn);
+      <style>
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
+        }
 
-      newBtn.addEventListener('click', () => {
-        const systemType = newBtn.id.replace('Btn', ''); // pos, kds, tlm
-        window.location.href = `/${systemType}/${storeId}`;
-      });
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+          color: white;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .search-section {
+          position: relative;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          margin-bottom: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 20px;
+          padding-right: 50px;
+          font-size: 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #e67e22;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(230, 126, 34, 0.1);
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .search-results {
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          display: none;
+        }
+
+        .store-result-item {
+          padding: 16px 20px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+
+        .store-result-item:hover {
+          background: #f8fafc;
+        }
+
+        .store-result-item:last-child {
+          border-bottom: none;
+        }
+
+        .store-result-name {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .store-result-info {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .no-results {
+          padding: 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-results {
+          padding: 20px;
+          text-align: center;
+          color: #e67e22;
+          font-size: 14px;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top: 2px solid #e67e22;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+    setupKRPStoreSearch();
+
+    setTimeout(() => {
+      const input = document.getElementById('krpStoreNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // KRP 매장 검색 기능 설정
+  function setupKRPStoreSearch() {
+    const input = document.getElementById('krpStoreNameInput');
+    const results = document.getElementById('krpStoreSearchResults');
+    let searchTimeout = null;
+
+    if (!input || !results) return;
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        searchStoresForKRP(query);
+      }, 200);
     });
 
-    // 버튼 텍스트 업데이트
-    const posButton = document.getElementById('posBtn');
-    if (posButton) {
-      posButton.innerHTML = `<div class="system-btn-icon">💳</div><div class="system-btn-content"><span class="system-btn-title">POS</span><span class="system-btn-desc">${storeName}</span></div>`;
-    }
-    const kdsButton = document.getElementById('kdsBtn');
-    if (kdsButton) {
-      kdsButton.innerHTML = `<div class="system-btn-icon">📟</div><div class="system-btn-content"><span class="system-btn-title">KDS</span><span class="system-btn-desc">${storeName}</span></div>`;
-    }
-    const krpButton = document.getElementById('krpBtn');
-    if (krpButton) {
-      krpButton.innerHTML = `<div class="system-btn-icon">🖨️</div><div class="system-btn-content"><span class="system-btn-title">KRP</span><span class="system-btn-desc">${storeName}</span></div>`;
-    }
-    const tlmButton = document.getElementById('tlmBtn');
-    if (tlmButton) {
-      tlmButton.innerHTML = `<div class="system-btn-icon">🏪</div><div class="system-btn-content"><span class="system-btn-title">사장님 앱</span><span class="system-btn-desc">${storeName}</span></div>`;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const firstResult = results.querySelector('.store-result-item');
+        if (firstResult) {
+          firstResult.click();
+        }
+      }
+    });
+  }
+
+  // KRP용 매장 검색 함수
+  async function searchStoresForKRP(query) {
+    const results = document.getElementById('krpStoreSearchResults');
+    if (!results) return;
+
+    try {
+      console.log(`🔍 KRP 매장 검색: "${query}"`);
+
+      results.innerHTML = `
+        <div class="loading-results">
+          <div class="loading-spinner"></div>
+          검색 중...
+        </div>
+      `;
+      results.style.display = 'block';
+
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stores && data.stores.length > 0) {
+        displayKRPSearchResults(data.stores);
+      } else {
+        results.innerHTML = `
+          <div class="no-results">
+            "${query}"에 대한 검색 결과가 없습니다
+          </div>
+        `;
+        results.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('KRP 매장 검색 실패:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 중 오류가 발생했습니다: ${error.message}
+        </div>
+      `;
+      results.style.display = 'block';
     }
   }
 
+  // KRP 검색 결과 표시
+  function displayKRPSearchResults(stores) {
+    const results = document.getElementById('krpStoreSearchResults');
+    if (!results) return;
+
+    const resultsHTML = stores.map(store => `
+      <div class="store-result-item" onclick="selectStoreForKRP(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
+        <div class="store-result-name">${store.name}</div>
+        <div class="store-result-info">
+          ${store.category || '기타'} • ${store.address || '주소 정보 없음'}
+        </div>
+      </div>
+    `).join('');
+
+    results.innerHTML = resultsHTML;
+    results.style.display = 'block';
+  }
+
+  // KRP 매장 선택
+  window.selectStoreForKRP = function(storeId, storeName) {
+    console.log(`✅ KRP 매장 선택: ${storeName} (ID: ${storeId})`);
+    closeKRPStoreSearchModal();
+
+    setTimeout(() => {
+      window.location.href = `/krp.html?storeId=${storeId}`;
+    }, 200);
+  };
+
+  // KRP 매장 검색 모달 닫기
+  window.closeKRPStoreSearchModal = function() {
+    const modal = document.getElementById('krpStoreSearchModal');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  // 매장 검색 모달 표시
+  function showStoreSearchModal() {
+    const modal = document.createElement('div');
+    modal.id = 'storeSearchModal';
+    modal.innerHTML = `
+      <div class="modal-overlay">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2>🏪 사장님 앱 진입</h2>
+            <button class="close-btn" onclick="closeStoreSearchModal()">×</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-section">
+              <div class="search-input-wrapper">
+                <input 
+                  id="storeNameInput" 
+                  type="text" 
+                  placeholder="매장 이름을 입력하세요..." 
+                  class="search-input"
+                  autocomplete="off"
+                />
+                <div class="search-icon">🔍</div>
+              </div>
+              <div id="storeSearchResults" class="search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 16px;
+          width: 90%;
+          max-width: 500px;
+          max-height: 80vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 20px 24px;
+          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+        }
+
+        .modal-header h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+        }
+
+        .close-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          font-size: 24px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+
+        .close-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-body {
+          padding: 24px;
+        }
+
+        .search-section {
+          position: relative;
+        }
+
+        .search-input-wrapper {
+          position: relative;
+          margin-bottom: 16px;
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 16px 20px;
+          padding-right: 50px;
+          font-size: 16px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: #f9fafb;
+          transition: all 0.3s ease;
+          box-sizing: border-box;
+        }
+
+        .search-input:focus {
+          outline: none;
+          border-color: #667eea;
+          background: white;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #9ca3af;
+          font-size: 18px;
+          pointer-events: none;
+        }
+
+        .search-results {
+          max-height: 300px;
+          overflow-y: auto;
+          border: 1px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          display: none;
+        }
+
+        .store-result-item {
+          padding: 16px 20px;
+          cursor: pointer;
+          border-bottom: 1px solid #f3f4f6;
+          transition: all 0.2s ease;
+        }
+
+        .store-result-item:hover {
+          background: #f8fafc;
+        }
+
+        .store-result-item:last-child {
+          border-bottom: none;
+        }
+
+        .store-result-name {
+          font-weight: 600;
+          color: #1f2937;
+          margin-bottom: 4px;
+        }
+
+        .store-result-info {
+          font-size: 14px;
+          color: #6b7280;
+        }
+
+        .no-results {
+          padding: 20px;
+          text-align: center;
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .loading-results {
+          padding: 20px;
+          text-align: center;
+          color: #667eea;
+          font-size: 14px;
+        }
+
+        .loading-spinner {
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          border: 2px solid #e0e0e0;
+          border-top: 2px solid #667eea;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-right: 8px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    `;
+
+    document.body.appendChild(modal);
+    setupStoreSearch();
+
+    setTimeout(() => {
+      const input = document.getElementById('storeNameInput');
+      if (input) input.focus();
+    }, 100);
+  }
+
+  // 매장 검색 기능 설정
+  function setupStoreSearch() {
+    const input = document.getElementById('storeNameInput');
+    const results = document.getElementById('storeSearchResults');
+    let searchTimeout = null;
+
+    if (!input || !results) return;
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+
+      if (query.length < 2) {
+        results.style.display = 'none';
+        return;
+      }
+
+      searchTimeout = setTimeout(() => {
+        searchStoresForTLM(query);
+      }, 200);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const firstResult = results.querySelector('.store-result-item');
+        if (firstResult) {
+          firstResult.click();
+        }
+      }
+    });
+  }
+
+  // TLM용 매장 검색 함수
+  async function searchStoresForTLM(query) {
+    const results = document.getElementById('storeSearchResults');
+    if (!results) return;
+
+    try {
+      console.log(`🔍 TLM 매장 검색: "${query}"`);
+
+      results.innerHTML = `
+        <div class="loading-results">
+          <div class="loading-spinner"></div>
+          검색 중...
+        </div>
+      `;
+      results.style.display = 'block';
+
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.stores && data.stores.length > 0) {
+        displayTLMSearchResults(data.stores);
+      } else {
+        results.innerHTML = `
+          <div class="no-results">
+            "${query}"에 대한 검색 결과가 없습니다
+          </div>
+        `;
+        results.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('TLM 매장 검색 실패:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 중 오류가 발생했습니다: ${error.message}
+        </div>
+      `;
+      results.style.display = 'block';
+    }
+  }
+
+  // TLM 검색 결과 표시
+  function displayTLMSearchResults(stores) {
+    const results = document.getElementById('storeSearchResults');
+    if (!results) return;
+
+    const resultsHTML = stores.map(store => `
+      <div class="store-result-item" onclick="selectStoreForTLM(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
+        <div class="store-result-name">${store.name}</div>
+        <div class="store-result-info">
+          ${store.category || '기타'} • ${store.address || '주소 정보 없음'}
+        </div>
+      </div>
+    `).join('');
+
+    results.innerHTML = resultsHTML;
+    results.style.display = 'block';
+  }
+
+  // TLM 매장 선택
+  window.selectStoreForTLM = function(storeId, storeName) {
+    console.log(`✅ TLM 매장 선택: ${storeName} (ID: ${storeId})`);
+    closeStoreSearchModal();
+
+    setTimeout(() => {
+      window.location.href = `/tlm.html?storeId=${storeId}`;
+    }, 200);
+  };
+
+  // 매장 검색 모달 닫기
+  window.closeStoreSearchModal = function() {
+    const modal = document.getElementById('storeSearchModal');
+    if (modal) {
+      modal.remove();
+    }
+  };
+
+  // 모달 외부 클릭시 닫기
+  document.addEventListener('click', (e) => {
+    const tlmModal = document.getElementById('storeSearchModal');
+    const kdsModal = document.getElementById('kdsStoreSearchModal');
+    const posModal = document.getElementById('posStoreSearchModal');
+    const krpModal = document.getElementById('krpStoreSearchModal');
+
+    if (tlmModal && e.target.classList.contains('modal-overlay')) {
+      closeStoreSearchModal();
+    }
+
+    if (kdsModal && e.target.classList.contains('modal-overlay')) {
+      closeKDSStoreSearchModal();
+    }
+
+    if (posModal && e.target.classList.contains('modal-overlay')) {
+      closePOSStoreSearchModal();
+    }
+
+    if (krpModal && e.target.classList.contains('modal-overlay')) {
+      closeKRPStoreSearchModal();
+    }
+  });
+
+  // 패널 핸들링 함수 정의
+  function setupLoginPanelHandling() {
+    const panel = document.getElementById('loginPanel');
+    const panelContainer = document.getElementById('loginPanelContainer');
+    const handle = document.getElementById('loginPanelHandle');
+
+    if (!panel || !panelContainer || !handle) return;
+
+    // 마우스 휠 이벤트
+    panel.addEventListener('wheel', (e) => {
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+      const isCollapsed = !isExpanded;
+
+      // 아래로(내림) - 패널 확장
+      if (e.deltaY > 0) {
+        if (isCollapsed) {
+          e.preventDefault();
+          panel.classList.remove('collapsed');
+          panel.classList.add('expanded');
+          panel.style.top = '0px';
+          return;
+        }
+        return;
+      }
+
+      // 위로(올림) - 패널 축소 또는 스크롤
+      if (e.deltaY < 0) {
+        if (isExpanded) {
+          if (panelContainer.scrollTop <= 0) {
+            e.preventDefault();
+            panel.classList.remove('expanded');
+            panel.classList.add('collapsed');
+            panel.style.top = '160px';
+            return;
+          }
+          return;
+        }
+      }
+    });
+
+    // 터치 이벤트
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    let initialScrollTop = 0;
+
+    handle.addEventListener('touchstart', (e) => {
+      startY = e.touches[0].clientY;
+      initialScrollTop = panelContainer.scrollTop;
+      isDragging = true;
+      panel.style.transition = 'none';
+    });
+
+    handle.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+
+      currentY = e.touches[0].clientY;
+      const deltaY = startY - currentY;
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+      const isCollapsed = !isExpanded;
+
+      if (isExpanded && initialScrollTop <= 0 && deltaY < 0) {
+        e.preventDefault();
+        const newTop = Math.max(0, Math.min(160, -deltaY));
+        panel.style.top = `${newTop}px`;
+        return;
+      }
+
+      if (isCollapsed && deltaY > 30) {
+        e.preventDefault();
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+        return;
+      }
+    });
+
+    handle.addEventListener('touchend', () => {
+      if (!isDragging) return;
+      isDragging = false;
+      panel.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+
+      const deltaY = startY - currentY;
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+
+      if (top > 80) {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      } else {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      }
+    });
+
+    // 핸들 클릭 이벤트
+    handle.addEventListener('click', () => {
+      const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
+      const isExpanded = top === 0;
+
+      if (isExpanded) {
+        panel.classList.remove('expanded');
+        panel.classList.add('collapsed');
+        panel.style.top = '160px';
+      } else {
+        panel.classList.remove('collapsed');
+        panel.classList.add('expanded');
+        panel.style.top = '0px';
+      }
+    });
+  }
 
   // Enter 키 이벤트 리스너 설정
   function setupEventListeners() {
@@ -1047,7 +2377,7 @@ async function renderLogin() {
         return;
       }
 
-      if (event.key === 'Enter' && login && !login.disabled) {
+      if (event.key === 'Enter' && login) {
         login.click();
       }
     };
@@ -1059,7 +2389,8 @@ async function renderLogin() {
   // 초기화
   setupEventListeners();
 
-  console.log('✅ 로그인 화면 렌더링 완료 (매장 선택 및 시스템 접근 포함)');
+
+  console.log('✅ 로그인 화면 렌더링 완료 (빠른 로그인 포함)');
 }
 
 // 전역 함수로 등록
