@@ -806,7 +806,7 @@ async function renderLogin() {
           },
           body: JSON.stringify({
             id: 'user1',
-            pw: '11'
+            pw: '1234'
           })
         });
 
