@@ -1,3 +1,4 @@
+
 // POS 테이블 관리 모듈
 import { POSStateManager } from './posStateManager.js';
 import { POSDataLoader } from './posDataLoader.js';
@@ -6,10 +7,15 @@ export class POSTableManager {
   // 테이블맵 렌더링
   static async renderTableMap() {
     const tableMapGrid = document.getElementById('tableMapGrid');
-    if (!tableMapGrid) return;
+    if (!tableMapGrid) {
+      console.warn('❌ tableMapGrid 요소를 찾을 수 없습니다.');
+      return;
+    }
 
     const allTables = POSStateManager.getAllTables();
     const currentStore = POSStateManager.getCurrentStore();
+
+    console.log(`🪑 테이블맵 렌더링: ${allTables.length}개 테이블`);
 
     if (allTables.length === 0) {
       tableMapGrid.innerHTML = `
@@ -41,6 +47,9 @@ export class POSTableManager {
       let timeText = '';
 
       switch (table.status) {
+        case 'occupied':
+          statusText = '사용 중';
+          break;
         case 'ordering':
           statusText = '주문 중';
           break;
@@ -50,7 +59,9 @@ export class POSTableManager {
       }
 
       return `
-        <button class="table-item ${table.status}" onclick="selectTableFromMap(${table.tableNumber})" data-table-number="${table.tableNumber}">
+        <button class="table-item ${table.status}" 
+                onclick="window.selectTableFromMap('${table.tableNumber}')" 
+                data-table-number="${table.tableNumber}">
           <div class="table-number">T${table.tableNumber}</div>
           <div class="table-status">${statusText}</div>
           ${timeText ? `<div class="table-time">${timeText}</div>` : ''}
@@ -65,28 +76,49 @@ export class POSTableManager {
     if (activeTablesElement) {
       activeTablesElement.textContent = `${activeTables}/${allTables.length}`;
     }
+
+    console.log(`✅ 테이블맵 렌더링 완료: ${allTables.length}개 테이블, ${activeTables}개 사용중`);
   }
 
   // 테이블 선택
   static async selectTable(tableNumber) {
+    console.log(`🪑 POSTableManager.selectTable 호출: ${tableNumber}`);
+    
     POSStateManager.setCurrentTable(tableNumber);
     POSStateManager.setSelectedItems([]);
-    console.log(`🪑 테이블 ${tableNumber} 선택`);
+    
+    console.log(`✅ 테이블 ${tableNumber} 선택 완료`);
+  }
+
+  // 테이블 상태 업데이트
+  static async updateTableStatus(tableNumber, status) {
+    try {
+      const currentStore = POSStateManager.getCurrentStore();
+      if (!currentStore) {
+        throw new Error('현재 매장 정보가 없습니다.');
+      }
+
+      const response = await fetch('/api/tables/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: currentStore.id,
+          tableNumber: tableNumber,
+          isOccupied: status === 'occupied'
+        })
+      });
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error);
+      }
+
+      console.log(`✅ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
+      return data;
+
+    } catch (error) {
+      console.error('❌ 테이블 상태 업데이트 실패:', error);
+      throw error;
+    }
   }
 }
-
-// Helper function to be called from HTML onclick attribute
-window.selectTableFromMap = function(tableElementOrNumber) {
-  let tableNumber;
-  
-  if (typeof tableElementOrNumber === 'number' || typeof tableElementOrNumber === 'string') {
-    tableNumber = tableElementOrNumber.toString();
-  } else if (tableElementOrNumber && typeof tableElementOrNumber === 'object' && tableElementOrNumber.dataset) {
-    tableNumber = tableElementOrNumber.dataset.tableNumber;
-  } else {
-    tableNumber = tableElementOrNumber;
-  }
-  
-  console.log(`🪑 테이블 ${tableNumber} 선택`);
-  POSTableManager.selectTable(tableNumber);
-};

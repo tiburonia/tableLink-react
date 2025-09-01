@@ -69,15 +69,21 @@ async function loadStoreForTableMap(storeId) {
 async function selectTableFromMap(tableElementOrNumber) {
   let tableNumber;
 
+  console.log('🔍 selectTableFromMap 호출됨:', tableElementOrNumber);
+
   // 파라미터가 숫자인 경우 (직접 테이블 번호 전달)
   if (typeof tableElementOrNumber === 'number' || typeof tableElementOrNumber === 'string') {
     tableNumber = tableElementOrNumber.toString();
   } 
   // 파라미터가 DOM 엘리먼트인 경우
-  else if (tableElementOrNumber && typeof tableElementOrNumber === 'object' && tableElementOrNumber.dataset) {
-    tableNumber = tableElementOrNumber.dataset.tableNumber;eElementOrNumber.dataset?.tableNumber || 
-                 tableElementOrNumber.getAttribute?.('data-table-number') ||
-                 tableElementOrNumber.textContent?.match(/\d+/)?.[0];
+  else if (tableElementOrNumber && typeof tableElementOrNumber === 'object') {
+    // 이벤트 객체인 경우 target을 확인
+    const element = tableElementOrNumber.target || tableElementOrNumber;
+    
+    tableNumber = element.dataset?.tableNumber || 
+                 element.getAttribute?.('data-table-number') ||
+                 element.closest?.('[data-table-number]')?.dataset?.tableNumber ||
+                 element.textContent?.match(/T?(\d+)/)?.[1];
   }
 
   if (!tableNumber) {

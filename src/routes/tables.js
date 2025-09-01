@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db/pool');
+const pool = require('../db/pool');
 
 // 매장별 테이블 조회 API
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    const result = await pool.query(`
+    let result = await pool.query(`
       SELECT 
         id,
         table_number as "tableNumber",
@@ -31,6 +31,35 @@ router.get('/stores/:storeId', async (req, res) => {
       WHERE st.store_id = $1 
       ORDER BY st.table_number ASC
     `, [storeId]);
+
+    // 테이블이 없으면 기본 테이블 생성
+    if (result.rows.length === 0) {
+      console.log(`📝 매장 ${storeId}에 기본 테이블 20개 생성 중...`);
+      
+      // 기본 테이블 20개 생성
+      for (let i = 1; i <= 20; i++) {
+        await pool.query(`
+          INSERT INTO store_tables (store_id, table_number, seats)
+          VALUES ($1, $2, 4)
+          ON CONFLICT (store_id, table_number) DO NOTHING
+        `, [storeId, i]);
+      }
+
+      // 다시 조회
+      result = await pool.query(`
+        SELECT 
+          id,
+          table_number as "tableNumber",
+          COALESCE(seats, 4) as seats,
+          false as "isOccupied",
+          null as "occupiedSince"
+        FROM store_tables st
+        WHERE st.store_id = $1 
+        ORDER BY st.table_number ASC
+      `, [storeId]);
+
+      console.log(`✅ 매장 ${storeId} 기본 테이블 ${result.rows.length}개 생성 완료`);
+    }
 
     res.json({
       success: true,
