@@ -188,58 +188,40 @@ router.post('/users/signup', async (req, res) => {
   }
 });
 
-// 사용자 로그인 API
-router.post('/users/login', async (req, res) => {
+// 통합 로그인 함수
+async function handleLogin(req, res) {
   const { id, pw } = req.body;
+  
+  console.log('🔍 로그인 요청:', { id });
 
-  try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
-    }
-
-    const user = result.rows[0];
-    if (user.pw !== pw) {
-      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
-    }
-
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        point: user.point || 0,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || ''
-      }
+  if (!id || !pw) {
+    return res.status(400).json({ 
+      success: false, 
+      error: '아이디와 비밀번호를 입력해주세요' 
     });
-  } catch (error) {
-    console.error('로그인 실패:', error);
-    res.status(500).json({ error: '로그인 실패' });
   }
-});
-
-// 로그인 (호환성)
-router.post('/login', async (req, res) => {
-  const { id, pw } = req.body;
-
-  console.log('🔍 호환성 로그인 요청:', { id });
 
   try {
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
+      console.log(`❌ 존재하지 않는 아이디: ${id}`);
+      return res.status(401).json({ 
+        success: false, 
+        error: '존재하지 않는 아이디입니다' 
+      });
     }
 
     const user = result.rows[0];
     if (user.pw !== pw) {
-      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
+      console.log(`❌ 비밀번호 불일치: ${id}`);
+      return res.status(401).json({ 
+        success: false, 
+        error: '비밀번호가 일치하지 않습니다' 
+      });
     }
+
+    console.log(`✅ 로그인 성공: ${user.name} (${user.id})`);
 
     res.json({
       success: true,
@@ -252,14 +234,27 @@ router.post('/login', async (req, res) => {
         email: user.email || '',
         address: user.address || '',
         birth: user.birth || '',
-        gender: user.gender || ''
+        gender: user.gender || '',
+        orderList: [],
+        reservationList: [],
+        coupons: { unused: [], used: [] },
+        favoriteStores: []
       }
     });
   } catch (error) {
-    console.error('로그인 실패:', error);
-    res.status(500).json({ error: '로그인 실패' });
+    console.error('❌ 로그인 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '로그인 처리 중 오류가 발생했습니다' 
+    });
   }
-});
+}
+
+// 레거시 경로 호환성: /users/login
+router.post('/users/login', handleLogin);
+
+// 새 시스템 경로: /login
+router.post('/login', handleLogin);
 
 // 사용자 정보 조회 API
 router.get('/user/:userId', async (req, res) => {

@@ -70,38 +70,25 @@ try {
   const storesRoutes = require('./routes/stores');
   const ordersRoutes = require('./routes/orders');
 
-  // 남은 레거시 라우터 (아직 미이전)
-  const reviewsRoutes = require('../routes/reviews');
-  const tablesRoutes = require('../routes/tables');
-  const cartRoutes = require('../routes/cart');
-  const adminRoutes = require('../routes/admin');
-  const cacheRoutes = require('../routes/cache');
-  const guestsRoutes = require('../routes/guests');
-  const regularLevelsRoutes = require('../routes/regular-levels');
-  const tossRoutes = require('../routes/toss');
-
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/kds', kdsRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
 
-  // 새 시스템 API 라우터
+  // 새 시스템 API 라우터  
+  const reviewsRoutes = require('./routes/reviews');
+  const tablesRoutes = require('./routes/tables');
+  const cartRoutes = require('./routes/cart');
+
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/orders', ordersRoutes);
-
-  // 아직 미이전된 레거시 API
   app.use('/api/reviews', reviewsRoutes);
   app.use('/api/tables', tablesRoutes);
   app.use('/api/cart', cartRoutes);
-  app.use('/api/admin', adminRoutes);
-  app.use('/api/cache', cacheRoutes);
-  app.use('/api/guests', guestsRoutes);
-  app.use('/api/regular-levels', regularLevelsRoutes);
-  app.use('/api/toss', tossRoutes);
 
-  console.log('✅ 1단계 완료: auth, stores, orders 라우터 새 시스템으로 통합');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
