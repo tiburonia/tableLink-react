@@ -22,69 +22,33 @@ window.quickLogin = async function(userId) {
       body: JSON.stringify({ id: userId, pw: '1234' })
     });
 
-    const data = await response.json();
-
-    if (response.ok && data.user) {
-      // 사용자 정보 설정
-      if (!window.userInfo) {
-        window.userInfo = {};
-      }
-
-      window.userInfo = {
-        id: data.user.id,
-        pw: data.user.pw || '',
-        name: data.user.name,
-        phone: data.user.phone,
-        email: '',
-        address: '',
-        birth: '',
-        gender: '',
-        point: data.user.point || 0,
-        orderList: data.user.orderList || [],
-        totalCost: 0,
-        realCost: 0,
-        reservationList: data.user.reservationList || [],
-        coupons: data.user.coupons || { unused: [], used: [] },
-        favorites: data.user.favoriteStores || []
-      };
-
-      // 쿠키 저장
-      const expires = new Date();
-      expires.setDate(expires.getDate() + 7);
-      document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-
-      console.log(`✅ 빠른 로그인 성공: ${data.user.name}`);
-
-      // 성공 메시지
-      const successDiv = document.createElement('div');
-      successDiv.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #10b981;
-        color: white;
-        padding: 16px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        z-index: 10000;
-        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-      `;
-      successDiv.textContent = `${data.user.name}님 환영합니다!`;
-      document.body.appendChild(successDiv);
-
-      setTimeout(() => {
-        successDiv.remove();
-        if (typeof renderMap === 'function') {
-          renderMap();
-        } else {
-          window.location.href = '/';
+    if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
-      }, 500);
 
-    } else {
-      throw new Error(data.error || '로그인에 실패했습니다');
-    }
+        const data = await response.json();
+        console.log('🔍 로그인 응답 데이터:', data);
+
+        if (data.success && data.user) {
+          console.log('✅ 빠른 로그인 성공:', data.user.name);
+
+          // 전역 사용자 정보 설정
+          setUserInfo(data.user);
+
+          // 성공 알림
+          alert(`${data.user.name}님, 환영합니다!`);
+
+          // 메인 화면으로 이동
+          if (typeof renderMap === 'function') {
+            renderMap();
+          } else {
+            console.error('❌ renderMap 함수를 찾을 수 없음');
+            window.location.href = '/';
+          }
+
+        } else {
+          throw new Error(data.error || data.message || '로그인에 실패했습니다');
+        }
   } catch (error) {
     console.error('❌ 빠른 로그인 실패:', error);
 
@@ -810,46 +774,32 @@ async function renderLogin() {
           })
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
         const data = await response.json();
+        console.log('🔍 로그인 응답 데이터:', data);
 
-        if (response.ok) {
-          if (!window.userInfo) {
-            window.userInfo = {};
-          }
-
-          window.userInfo = {
-            id: data.user.id,
-            pw: data.user.pw || '',
-            name: data.user.name,
-            phone: data.user.phone,
-            email: '',
-            address: '',
-            birth: '',
-            gender: '',
-            point: data.user.point || 0,
-            orderList: data.user.orderList || [],
-            totalCost: 0,
-            realCost: 0,
-            reservationList: data.user.reservationList || [],
-            coupons: data.user.coupons || { unused: [], used: [] },
-            favorites: data.user.favoriteStores || []
-          };
-
-          const expires = new Date();
-          expires.setDate(expires.getDate() + 7);
-          document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-
+        if (data.success && data.user) {
           console.log('✅ 빠른 로그인 성공:', data.user.name);
 
-          setTimeout(async () => {
-            if (typeof renderMap === 'function') {
-              await renderMap();
-            } else {
-              window.location.href = '/';
-            }
-          }, 100);
+          // 전역 사용자 정보 설정
+          setUserInfo(data.user);
+
+          // 성공 알림
+          alert(`${data.user.name}님, 환영합니다!`);
+
+          // 메인 화면으로 이동
+          if (typeof renderMap === 'function') {
+            renderMap();
+          } else {
+            console.error('❌ renderMap 함수를 찾을 수 없음');
+            window.location.href = '/';
+          }
+
         } else {
-          alert(data.error || '빠른 로그인 실패');
+          throw new Error(data.error || data.message || '로그인에 실패했습니다');
         }
       } catch (error) {
         console.error('❌ 빠른 로그인 오류:', error);
@@ -880,48 +830,31 @@ async function renderLogin() {
           })
         });
 
-        const data = await response.json();
+        if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
-        if (response.ok) {
-          if (!window.userInfo) {
-            window.userInfo = {};
-          }
+      const data = await response.json();
+      console.log('🔍 로그인 응답 데이터:', data);
 
-          window.userInfo = {
-            id: data.user.id,
-            pw: data.user.pw || '',
-            name: data.user.name,
-            phone: data.user.phone,
-            email: '',
-            address: '',
-            birth: '',
-            gender: '',
-            point: data.user.point || 0,
-            orderList: data.user.orderList || [],
-            totalCost: 0,
-            realCost: 0,
-            reservationList: data.user.reservationList || [],
-            coupons: data.user.coupons || { unused: [], used: [] },
-            favorites: data.user.favoriteStores || []
-          };
+      if (data.success && data.user) {
+        console.log('✅ 로그인 성공:', data.user.name);
 
-          const expires = new Date();
-          expires.setDate(expires.getDate() + 7);
-          document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+        setUserInfo(data.user);
 
-          console.log('✅ 로그인 성공:', data.user.name);
+        // 성공 알림
+        alert(`${data.user.name}님, 환영합니다!`);
 
-          setTimeout(async () => {
-            if (typeof renderMap === 'function') {
-              await renderMap();
-            } else {
-              window.location.href = '/';
-            }
-          }, 100);
+        if (typeof renderMap === 'function') {
+          renderMap();
         } else {
-          hideLoadingScreen();
-          alert(data.error || '로그인 실패');
+          console.error('❌ renderMap 함수를 찾을 수 없음');
+          window.location.href = '/';
         }
+      } else {
+        hideLoadingScreen();
+        throw new Error(data.error || data.message || '로그인에 실패했습니다');
+      }
       } catch (error) {
         console.error('❌ 로그인 오류:', error);
         hideLoadingScreen();
