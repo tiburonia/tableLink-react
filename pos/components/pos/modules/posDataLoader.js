@@ -1,4 +1,3 @@
-
 // POS 데이터 로더 모듈 - 새 스키마 적용
 export class POSDataLoader {
   // 매장 정보 로드 (새 스키마)
@@ -27,7 +26,7 @@ export class POSDataLoader {
     try {
       console.log(`📋 매장 ${storeId} 전체 메뉴 로드 시작`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/menu`);
+      const response = await fetch(`/api/stores/${storeId}/menu`);
       const data = await response.json();
 
       if (!data.success) {
@@ -68,10 +67,10 @@ export class POSDataLoader {
           occupied_by: null,
           occupied_at: null
         }));
-        
+
         const { POSStateManager } = await import('./posStateManager.js');
         POSStateManager.setAllTables(defaultTables);
-        
+
         return defaultTables;
       }
 
@@ -84,7 +83,7 @@ export class POSDataLoader {
 
     } catch (error) {
       console.error('❌ 매장 테이블 로드 실패:', error);
-      
+
       // 오류 시 기본 테이블 반환
       const defaultTables = Array.from({ length: 20 }, (_, i) => ({
         table_number: i + 1,
@@ -92,10 +91,10 @@ export class POSDataLoader {
         occupied_by: null,
         occupied_at: null
       }));
-      
+
       const { POSStateManager } = await import('./posStateManager.js');
       POSStateManager.setAllTables(defaultTables);
-      
+
       return defaultTables;
     }
   }
@@ -104,7 +103,7 @@ export class POSDataLoader {
     try {
       console.log(`📊 테이블 ${tableNumber} 주문 로드 시작 (새 스키마)`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/all-orders`);
+      const response = await fetch(`/api/stores/${storeId}/table/${tableNumber}/all-orders`);
       const data = await response.json();
 
       if (!data.success) {
@@ -144,7 +143,7 @@ export class POSDataLoader {
     try {
       console.log(`📋 매장 ${storeId} 메뉴 로드 시작`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/menu`);
+      const response = await fetch(`/api/stores/${storeId}/menu`);
       const data = await response.json();
 
       if (!data.success) {
@@ -186,7 +185,7 @@ export class POSDataLoader {
     try {
       console.log(`🔍 테이블 ${tableNumber} 세션 검증 시작`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/session-status`);
+      const response = await fetch(`/api/stores/${storeId}/table/${tableNumber}/session-status`);
       const data = await response.json();
 
       if (!data.success) {
@@ -194,7 +193,7 @@ export class POSDataLoader {
       }
 
       console.log(`✅ 테이블 ${tableNumber} 세션 검증 완료:`, data.hasActiveSession ? '활성 세션 있음' : '세션 없음');
-      
+
       return {
         canAddItems: true,
         hasActiveSession: data.hasActiveSession,

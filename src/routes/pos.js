@@ -35,11 +35,11 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
         mi.name,
         mi.price,
         mi.description,
-        mg.name as category
+        COALESCE(mg.name, '기본메뉴') as category
       FROM menu_items mi
       LEFT JOIN menu_groups mg ON mi.group_id = mg.id
-      WHERE mi.store_id = $1 AND mi.is_available = true
-      ORDER BY mg.display_order ASC, mi.display_order ASC
+      WHERE mi.store_id = $1
+      ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
     `, [storeId]);
 
     let menu = menuResult.rows;
@@ -82,10 +82,11 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
         c.opened_at as created_at,
         c.user_id,
         c.guest_phone,
-        c.customer_name,
+        COALESCE(u.name, '포스고객') as customer_name,
         c.final_amount,
         c.subtotal_amount
       FROM checks c
+      LEFT JOIN users u ON c.user_id = u.id
       WHERE c.store_id = $1 AND c.table_number = $2 AND c.status = 'open'
       ORDER BY c.opened_at DESC
     `, [storeId, tableNumber]);
@@ -167,13 +168,14 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
         c.id,
         c.status,
         c.opened_at,
-        c.customer_name,
+        COALESCE(u.name, '포스고객') as customer_name,
         c.source_system,
         COUNT(ci.id) as item_count
       FROM checks c
+      LEFT JOIN users u ON c.user_id = u.id
       LEFT JOIN check_items ci ON c.id = ci.check_id
       WHERE c.store_id = $1 AND c.table_number = $2 AND c.status = 'open'
-      GROUP BY c.id, c.status, c.opened_at, c.customer_name, c.source_system
+      GROUP BY c.id, c.status, c.opened_at, u.name, c.source_system
       ORDER BY c.opened_at DESC
     `, [storeId, tableNumber]);
 
@@ -248,12 +250,12 @@ router.post('/orders', async (req, res, next) => {
       // 새 체크 생성
       const checkResult = await client.query(`
         INSERT INTO checks (
-          store_id, table_number, user_id, guest_phone, customer_name, 
+          store_id, table_number, user_id, guest_phone, 
           status, source_system, subtotal_amount
         )
-        VALUES ($1, $2, $3, $4, $5, 'open', 'POS', $6)
+        VALUES ($1, $2, $3, $4, 'open', 'POS', $5)
         RETURNING id, opened_at
-      `, [storeId, tableNumber, userId, guestPhone, customerName, totalAmount]);
+      `, [storeId, tableNumber, userId, guestPhone, totalAmount]);
 
       checkId = checkResult.rows[0].id;
       console.log(`✅ 새 체크 ${checkId} 생성`);
@@ -442,12 +444,13 @@ router.get('/checks/:id/summary', async (req, res, next) => {
         c.status, 
         c.final_amount, 
         c.subtotal_amount,
-        c.customer_name,
+        COALESCE(u.name, '포스고객') as customer_name,
         c.opened_at,
         c.closed_at,
         s.name as store_name
       FROM checks c
       LEFT JOIN stores s ON c.store_id = s.id
+      LEFT JOIN users u ON c.user_id = u.id
       WHERE c.id = $1
     `, [checkId]);
 
@@ -790,7 +793,7 @@ router.get('/stores/:storeId/orders/active', async (req, res, next) => {
       SELECT 
         c.id as check_id,
         c.table_number,
-        c.customer_name,
+        COALESCE(u.name, '포스고객') as customer_name,
         c.user_id,
         c.guest_phone,
         c.final_amount,
@@ -801,9 +804,10 @@ router.get('/stores/:storeId/orders/active', async (req, res, next) => {
         COUNT(CASE WHEN ci.status = 'ready' THEN 1 END) as ready_items,
         COUNT(CASE WHEN ci.status = 'preparing' THEN 1 END) as preparing_items
       FROM checks c
+      LEFT JOIN users u ON c.user_id = u.id
       LEFT JOIN check_items ci ON c.id = ci.check_id AND ci.status != 'canceled'
       WHERE c.store_id = $1 AND c.status = 'open'
-      GROUP BY c.id, c.table_number, c.customer_name, c.user_id, 
+      GROUP BY c.id, c.table_number, u.name, c.user_id, 
                c.guest_phone, c.final_amount, c.status, c.opened_at, c.source_system
       ORDER BY c.opened_at ASC
     `, [storeId]);
