@@ -499,6 +499,35 @@ export class POSOrderManager {
     // await fetch('/api/audit/log', { method: 'POST', body: JSON.stringify(auditLog) });
   }
 
+  // 🎯 주요 액션 핸들러 (UI에서 호출)
+  static async handlePrimaryAction() {
+    try {
+      const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+      const session = POSStateManager.getCurrentSession();
+
+      // 임시 주문이 있으면 확정
+      if (pendingItems.length > 0) {
+        await this.confirmPendingOrder();
+        return;
+      }
+
+      // 확정된 주문이 있고 세션이 활성화되어 있으면 결제 진행
+      if (session.checkId && session.status !== 'closed') {
+        const confirmedItems = POSStateManager.getConfirmedItems();
+        if (confirmedItems.length > 0) {
+          showPOSNotification('결제 모달을 열어주세요.', 'info');
+          return;
+        }
+      }
+
+      showPOSNotification('주문할 메뉴를 추가해주세요.', 'warning');
+
+    } catch (error) {
+      console.error('❌ 주요 액션 처리 실패:', error);
+      showPOSNotification('작업 처리 중 오류가 발생했습니다.', 'error');
+    }
+  }
+
   // 기존 메서드들 유지 (하위 호환성)
   static async loadTableOrders(tableNumber) {
     await this.initializeSession(tableNumber);
@@ -665,5 +694,98 @@ export class POSOrderManager {
     POSUIRenderer.updatePrimaryActionButton();
 
     showPOSNotification(`${selectedItemsData.length}개 아이템 삭제 완료`, 'success');
+  }
+
+  // 수량 변경
+  static changeQuantity(itemId, change) {
+    try {
+      const pendingItems = POSStateManager.getPendingItems();
+      const confirmedItems = POSStateManager.getConfirmedItems();
+      
+      // 임시 주문에서 찾기
+      const pendingItem = pendingItems.find(item => item.id === itemId);
+      if (pendingItem) {
+        pendingItem.quantity += change;
+        
+        if (pendingItem.quantity <= 0) {
+          const filteredPending = pendingItems.filter(item => item.id !== itemId);
+          POSStateManager.setPendingItems(filteredPending);
+        } else {
+          POSStateManager.setPendingItems(pendingItems);
+        }
+        
+        this.updateCombinedOrder();
+        POSTempStorage.saveTempOrder();
+        
+        POSUIRenderer.renderOrderItems();
+        POSUIRenderer.renderPaymentSummary();
+        POSUIRenderer.updatePrimaryActionButton();
+        
+        showPOSNotification(
+          pendingItem.quantity <= 0 ? 
+            `${pendingItem.name} 제거됨` : 
+            `${pendingItem.name} 수량: ${pendingItem.quantity}개`, 
+          'info'
+        );
+        return;
+      }
+
+      // 확정된 주문은 수정 불가 알림
+      const confirmedItem = confirmedItems.find(item => item.id === itemId);
+      if (confirmedItem) {
+        showPOSNotification('확정된 주문은 직접 수량 변경이 불가능합니다. 취소 후 재주문하세요.', 'warning');
+      }
+
+    } catch (error) {
+      console.error('❌ 수량 변경 실패:', error);
+      showPOSNotification('수량 변경 중 오류가 발생했습니다.', 'error');
+    }
+  }
+
+  // 전체 아이템 선택
+  static selectAllItems() {
+    const currentOrder = POSStateManager.getCurrentOrder();
+    const allItemIds = currentOrder.map(item => item.id);
+    POSStateManager.setSelectedItems(allItemIds);
+    POSUIRenderer.renderOrderItems();
+    showPOSNotification(`${allItemIds.length}개 아이템 전체 선택`, 'info');
+  }
+
+  // 할인 적용
+  static applyDiscount(discountType, discountValue) {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const currentOrder = POSStateManager.getCurrentOrder();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('할인을 적용할 아이템을 선택해주세요.', 'warning');
+      return;
+    }
+
+    let appliedCount = 0;
+    selectedItems.forEach(itemId => {
+      const item = currentOrder.find(i => i.id === itemId);
+      if (item && item.isPending) {
+        if (discountType === 'percent') {
+          item.discount = Math.floor(item.price * (discountValue / 100));
+        } else if (discountType === 'amount') {
+          item.discount = Math.min(discountValue, item.price);
+        }
+        appliedCount++;
+      }
+    });
+
+    if (appliedCount > 0) {
+      this.updateCombinedOrder();
+      POSTempStorage.saveTempOrder();
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      
+      showPOSNotification(
+        `${appliedCount}개 아이템에 할인 적용 (${discountType === 'percent' ? discountValue + '%' : '₩' + discountValue.toLocaleString()})`, 
+        'success'
+      );
+    } else {
+      showPOSNotification('임시 주문에만 할인을 적용할 수 있습니다.', 'warning');
+    }
   }
 }
