@@ -4,9 +4,10 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  max: 5, // 연결 수 감소로 Database 패널과 충돌 방지
+  idleTimeoutMillis: 10000, // idle 시간 단축
+  connectionTimeoutMillis: 5000, // 연결 타임아웃 증가
+  allowExitOnIdle: true // idle 시 연결 종료 허용
 });
 
 // 연결 테스트
@@ -16,6 +17,21 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ PostgreSQL 연결 오류:', err);
+  if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND') {
+    console.log('🔄 연결 재시도 준비 중...');
+  }
+});
+
+// 연결 종료 시 정리
+process.on('SIGINT', async () => {
+  console.log('🛑 서버 종료 중...');
+  try {
+    await pool.end();
+    console.log('✅ PostgreSQL 풀 정리 완료');
+  } catch (err) {
+    console.error('❌ 풀 정리 중 오류:', err);
+  }
+  process.exit(0);
 });
 
 // 쿼리 헬퍼 함수
