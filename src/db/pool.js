@@ -4,10 +4,11 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 5, // 연결 수 감소로 Database 패널과 충돌 방지
-  idleTimeoutMillis: 10000, // idle 시간 단축
-  connectionTimeoutMillis: 5000, // 연결 타임아웃 증가
-  allowExitOnIdle: true // idle 시 연결 종료 허용
+  max: 3, // 더 보수적인 연결 수
+  idleTimeoutMillis: 5000, // 더 빠른 idle 시간
+  connectionTimeoutMillis: 3000, // 짧은 연결 타임아웃
+  allowExitOnIdle: true, // idle 시 연결 종료 허용
+  application_name: 'tablelink_app' // 앱 식별
 });
 
 // 연결 테스트
