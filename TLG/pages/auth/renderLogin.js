@@ -16,7 +16,7 @@ window.quickLogin = async function(userId) {
       `;
     }
 
-    const response = await fetch('/api/auth/users/login', {
+    const response = await fetch('/api/users/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: userId, pw: '1234' })
@@ -799,7 +799,7 @@ async function renderLogin() {
       try {
         console.log('🚀 빠른 로그인 시작: user1');
 
-        const response = await fetch('/api/auth/users/login', {
+        const response = await fetch('/api/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -869,7 +869,7 @@ async function renderLogin() {
       try {
         showLoadingScreen();
 
-        const response = await fetch('/api/auth/users/login', {
+        const response = await fetch('/api/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
