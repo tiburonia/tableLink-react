@@ -208,39 +208,6 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
     return false;
   }
 };
-
-// 💳 결제 관리 (새 시스템)
-window.processPayment = (paymentMethod = null) => {
-  console.log('💳 전역 결제 함수 호출 - 새 시스템');
-  if (typeof POSPaymentManager !== 'undefined') {
-    POSPaymentManager.processPayment(paymentMethod);
-  } else {
-    console.error('❌ POSPaymentManager를 찾을 수 없습니다');
-    showPOSNotification('결제 시스템을 찾을 수 없습니다', 'error');
-  }
-};ice || isNaN(parseInt(price))) {
-      console.error('❌ 올바르지 않은 가격:', price);
-      showPOSNotification('올바른 가격이 필요합니다', 'warning');
-      return false;
-    }
-
-    // OrderManager 호출
-    const result = POSOrderManager.addMenuToPending(menuName, price, notes);
-    
-    if (result) {
-      console.log(`✅ 전역 함수: 메뉴 추가 성공 - ${menuName}`);
-    } else {
-      console.error(`❌ 전역 함수: 메뉴 추가 실패 - ${menuName}`);
-    }
-    
-    return result;
-    
-  } catch (error) {
-    console.error('❌ 전역 함수 오류:', error);
-    showPOSNotification('메뉴 추가 중 오류 발생', 'error');
-    return false;
-  }
-};
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 📋 주문 관리
@@ -253,8 +220,16 @@ window.confirmOrder = () => POSOrderManager.confirmOrder();
 window.handlePrimaryAction = () => POSOrderManager.handlePrimaryAction();
 window.applyDiscount = (type, value) => POSOrderManager.applyDiscount(type, value);
 
-// 💳 결제 관리
-window.processPayment = (method) => POSOrderManager.processPayment(method);
+// 💳 결제 관리 (새 시스템)
+window.processPayment = (paymentMethod = null) => {
+  console.log('💳 전역 결제 함수 호출 - 새 시스템');
+  if (typeof POSPaymentManager !== 'undefined') {
+    POSPaymentManager.processPayment(paymentMethod);
+  } else {
+    console.error('❌ POSPaymentManager를 찾을 수 없습니다');
+    showPOSNotification('결제 시스템을 찾을 수 없습니다', 'error');
+  }
+};
 
 // 🔧 UI 업데이트
 window.updatePrimaryActionButton = () => POSUIRenderer.updatePrimaryActionButton();
