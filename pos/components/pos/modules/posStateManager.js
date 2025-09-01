@@ -1,37 +1,34 @@
-// POS 상태 관리 모듈
+
+// POS 상태 관리 모듈 - 새 시스템 전용
 export class POSStateManager {
   static state = {
+    // 기본 정보
     currentStore: null,
     currentTable: null,
     allMenus: [],
     categories: [],
     selectedCategory: 'all',
     allTables: [],
-    currentOrder: [],
-    selectedItems: [],
-    isOrderProcessing: false,
     currentView: 'table-map',
-    // 세션 관리 개선
+    
+    // 새 시스템: 임시/확정 분리
+    pendingItems: [],    // 임시 주문 (미확정)
+    confirmedItems: [],  // 확정된 주문
+    selectedItems: [],   // UI에서 선택된 아이템들
+    
+    // 세션 관리
     currentSession: {
       checkId: null,
-      status: null, // 'open', 'ordering', 'kitchen_processing', 'payment_processing', 'closed'
+      status: null,
       openedAt: null,
       customerName: null,
       totalAmount: 0,
       paidAmount: 0,
       remainingAmount: 0
-    },
-    // 임시/확정 분리
-    pendingItems: [], // 임시 (미확정) 주문
-    confirmedItems: [], // 확정된 주문 (DB 반영됨)
-    sessionLock: {
-      isLocked: false,
-      lockedBy: null,
-      lockedAt: null,
-      lockExpires: null
     }
   };
 
+  // 🚀 초기화
   static initialize() {
     this.state = {
       currentStore: null,
@@ -40,44 +37,45 @@ export class POSStateManager {
       categories: [],
       selectedCategory: 'all',
       allTables: [],
-      currentOrder: [],
+      currentView: 'table-map',
+      pendingItems: [],
+      confirmedItems: [],
       selectedItems: [],
-      isOrderProcessing: false,
-      currentView: 'table-map'
+      currentSession: {
+        checkId: null,
+        status: null,
+        openedAt: null,
+        customerName: null,
+        totalAmount: 0,
+        paidAmount: 0,
+        remainingAmount: 0
+      }
     };
 
-    // 전역 변수로도 노출 (하위 호환성)
-    window.currentStore = null;
-    window.currentTable = null;
-    window.allMenus = [];
-    window.allTables = [];
-    window.currentOrder = [];
-    window.selectedItems = [];
-    window.currentView = 'table-map';
-    window.categories = [];
+    console.log('🚀 새 시스템: 상태 초기화 완료');
   }
 
+  // 매장 관리
   static setCurrentStore(store) {
     this.state.currentStore = store;
-    window.currentStore = store;
   }
 
   static getCurrentStore() {
     return this.state.currentStore;
   }
 
+  // 테이블 관리
   static setCurrentTable(table) {
     this.state.currentTable = table;
-    window.currentTable = table;
   }
 
   static getCurrentTable() {
     return this.state.currentTable;
   }
 
+  // 메뉴 관리
   static setAllMenus(menus) {
     this.state.allMenus = menus;
-    window.allMenus = menus;
   }
 
   static getAllMenus() {
@@ -86,7 +84,6 @@ export class POSStateManager {
 
   static setCategories(categories) {
     this.state.categories = categories;
-    window.categories = categories;
   }
 
   static getCategories() {
@@ -95,86 +92,73 @@ export class POSStateManager {
 
   static setSelectedCategory(category) {
     this.state.selectedCategory = category;
-    window.selectedCategory = category;
   }
 
   static getSelectedCategory() {
     return this.state.selectedCategory;
   }
 
+  // 테이블 관리
   static setAllTables(tables) {
     this.state.allTables = tables;
-    window.allTables = tables;
   }
 
   static getAllTables() {
     return this.state.allTables;
   }
 
-  static setCurrentOrder(order) {
-    this.state.currentOrder = order;
-    window.currentOrder = order;
-  }
-
-  static getCurrentOrder() {
-    return this.state.currentOrder;
-  }
-
-  static setSelectedItems(items) {
-    this.state.selectedItems = items;
-    window.selectedItems = items;
-  }
-
-  static getSelectedItems() {
-    return this.state.selectedItems;
-  }
-
+  // 뷰 관리
   static setCurrentView(view) {
     this.state.currentView = view;
-    window.currentView = view;
   }
 
   static getCurrentView() {
     return this.state.currentView;
   }
 
-  static setOrderProcessing(processing) {
-    this.state.isOrderProcessing = processing;
-    window.isOrderProcessing = processing;
+  // 🆕 새 시스템: 임시 주문 관리
+  static setPendingItems(items) {
+    this.state.pendingItems = items;
+    console.log(`📝 새 시스템: 임시 주문 설정 - ${items.length}개`);
   }
 
-  static isOrderProcessing() {
-    return this.state.isOrderProcessing;
+  static getPendingItems() {
+    return this.state.pendingItems;
   }
 
-  static resetCurrentSession() {
-    this.state.currentTable = null;
-    this.state.currentOrder = [];
+  // 🆕 새 시스템: 확정 주문 관리
+  static setConfirmedItems(items) {
+    this.state.confirmedItems = items;
+    console.log(`✅ 새 시스템: 확정 주문 설정 - ${items.length}개`);
+  }
+
+  static getConfirmedItems() {
+    return this.state.confirmedItems;
+  }
+
+  // 🆕 새 시스템: 통합 주문 관리 (UI 표시용)
+  static setCurrentOrder(order) {
+    this.state.currentOrder = order;
+  }
+
+  static getCurrentOrder() {
+    return this.state.currentOrder || [];
+  }
+
+  // 🆕 새 시스템: 선택된 아이템 관리
+  static setSelectedItems(items) {
+    this.state.selectedItems = items;
+  }
+
+  static getSelectedItems() {
+    return this.state.selectedItems;
+  }
+
+  static clearSelectedItems() {
     this.state.selectedItems = [];
-    this.state.currentSession = {
-      checkId: null,
-      status: null,
-      openedAt: null,
-      customerName: null,
-      totalAmount: 0,
-      paidAmount: 0,
-      remainingAmount: 0
-    };
-    this.state.pendingItems = [];
-    this.state.confirmedItems = [];
-    this.state.sessionLock = {
-      isLocked: false,
-      lockedBy: null,
-      lockedAt: null,
-      lockExpires: null
-    };
-
-    window.currentTable = null;
-    window.currentOrder = [];
-    window.selectedItems = [];
   }
 
-  // 세션 관련 getter/setter
+  // 🆕 새 시스템: 세션 관리
   static setCurrentSession(sessionData) {
     this.state.currentSession = { ...this.state.currentSession, ...sessionData };
   }
@@ -183,106 +167,34 @@ export class POSStateManager {
     return this.state.currentSession;
   }
 
-  static setPendingItems(items) {
-    this.state.pendingItems = items;
-  }
-
-  static getPendingItems() {
-    return this.state.pendingItems;
-  }
-
-  static setConfirmedItems(items) {
-    this.state.confirmedItems = items;
-  }
-
-  static getConfirmedItems() {
-    return this.state.confirmedItems;
-  }
-
-  static setSessionLock(lockData) {
-    this.state.sessionLock = { ...this.state.sessionLock, ...lockData };
-  }
-
-  static getSessionLock() {
-    return this.state.sessionLock;
-  }
-
-  static isSessionLocked() {
-    const lock = this.state.sessionLock;
-    if (!lock.isLocked) return false;
-
-    // 락 만료 확인
-    if (lock.lockExpires && new Date() > new Date(lock.lockExpires)) {
-      this.setSessionLock({ isLocked: false, lockedBy: null, lockedAt: null, lockExpires: null });
+  // 🆕 새 시스템: 수량 변경 (임시 주문만)
+  static changeItemQuantity(itemId, change) {
+    const pendingItems = this.state.pendingItems;
+    const item = pendingItems.find(item => item.id === itemId);
+    
+    if (!item) {
+      console.warn('⚠️ 새 시스템: 임시 주문에서만 수량 변경 가능');
       return false;
     }
 
+    const oldQuantity = item.quantity;
+    item.quantity += change;
+    
+    if (item.quantity <= 0) {
+      const index = pendingItems.indexOf(item);
+      pendingItems.splice(index, 1);
+      console.log(`🗑️ 새 시스템: 수량 0으로 아이템 제거 - ${item.name}`);
+    }
+    
+    console.log(`📝 새 시스템: 수량 변경 - ${item.name} ${oldQuantity} → ${item.quantity}`);
     return true;
   }
 
-  // 상태 초기화
+  // 🔄 완전 리셋
   static reset() {
     this.state.currentTable = null;
-    this.state.currentOrder = [];
-    this.state.selectedItems = [];
     this.state.pendingItems = [];
     this.state.confirmedItems = [];
-    this.state.currentSession = {
-      checkId: null,
-      status: null,
-      openedAt: null,
-      customerName: null,
-      totalAmount: 0,
-      paidAmount: 0,
-      remainingAmount: 0
-    };
-    this.state.sessionLock = {
-      isLocked: false,
-      lockedBy: null,
-      lockedAt: null,
-      lockExpires: null
-    };
-
-    // 전역 변수 동기화
-    window.currentTable = null;
-    window.currentOrder = [];
-    window.selectedItems = [];
-
-    console.log('🔄 POS 상태 완전 초기화');
-  }
-
-  // 임시 주문 아이템 초기화
-  static clearTempOrderItems() {
-    this.state.pendingItems = [];
-    console.log('🗑️ 임시 주문 아이템 초기화');
-  }
-
-  // 세션 초기화
-  static clearSession() {
-    this.state.currentSession = {
-      checkId: null,
-      status: null,
-      openedAt: null,
-      customerName: null,
-      totalAmount: 0,
-      paidAmount: 0,
-      remainingAmount: 0
-    };
-    console.log('🗑️ 세션 초기화');
-  }
-
-  // 주문 목록 초기화
-  static clearOrderItems() {
-    this.state.currentOrder = [];
-    this.state.confirmedItems = [];
-    window.currentOrder = [];
-    console.log('🗑️ 주문 목록 초기화');
-  }
-
-  // 현재 세션 리셋
-  static resetCurrentSession() {
-    this.state.currentTable = null;
-    this.state.currentOrder = [];
     this.state.selectedItems = [];
     this.state.currentSession = {
       checkId: null,
@@ -293,84 +205,7 @@ export class POSStateManager {
       paidAmount: 0,
       remainingAmount: 0
     };
-    this.state.pendingItems = [];
-    this.state.confirmedItems = [];
-    this.state.sessionLock = {
-      isLocked: false,
-      lockedBy: null,
-      lockedAt: null,
-      lockExpires: null
-    };
 
-    window.currentTable = null;
-    window.currentOrder = [];
-    window.selectedItems = [];
-    console.log('🔄 현재 세션 리셋 완료');
-  }
-
-  // 임시 주문 아이템 추가
-  static addPendingItem(item) {
-    this.state.pendingItems.push(item);
-    console.log('📝 임시 주문 아이템 추가:', item);
-  }
-
-  // ✅ 새 시스템: 임시 주문 아이템 조회
-  static getTempOrderItems() {
-    return this.state.pendingItems;
-  }
-
-  // ✅ 새 시스템: 선택된 아이템 초기화
-  static clearSelectedItems() {
-    this.state.selectedItems = [];
-    window.selectedItems = [];
-    console.log('🗑️ 새 시스템: 선택된 아이템 초기화');
-  }
-
-  // ✅ 새 시스템: 아이템 수량 변경 (임시 주문만)
-  static changeItemQuantity(itemId, change) {
-    console.log(`📝 새 시스템: 수량 변경 시도 - ${itemId}, 변경량: ${change}`);
-    
-    // 임시 주문 아이템만 수량 변경 가능
-    const pendingItems = this.state.pendingItems;
-    const pendingItem = pendingItems.find(item => item.id === itemId);
-    
-    if (pendingItem) {
-      const oldQuantity = pendingItem.quantity;
-      pendingItem.quantity += change;
-      
-      if (pendingItem.quantity <= 0) {
-        const index = pendingItems.indexOf(pendingItem);
-        pendingItems.splice(index, 1);
-        console.log(`🗑️ 수량 0이하로 아이템 제거: ${pendingItem.name}`);
-      }
-      
-      console.log(`✅ 수량 변경: ${pendingItem.name} ${oldQuantity} → ${pendingItem.quantity}`);
-      this.updateCombinedOrder();
-      return true;
-    }
-
-    // 확정된 주문은 수량 변경 불가
-    const confirmedItem = this.state.confirmedItems.find(item => item.id === itemId);
-    if (confirmedItem) {
-      console.warn('⚠️ 새 시스템: 확정된 주문은 수량 변경 불가');
-      return false;
-    }
-
-    console.warn('⚠️ 새 시스템: 해당 아이템을 찾을 수 없음:', itemId);
-    return false;
-  }
-
-  // ✅ 새 시스템: 통합 주문 업데이트
-  static updateCombinedOrder() {
-    const confirmedItems = this.state.confirmedItems;
-    const pendingItems = this.state.pendingItems;
-
-    const allItems = [
-      ...confirmedItems.map(item => ({ ...item, isConfirmed: true, isPending: false })),
-      ...pendingItems.map(item => ({ ...item, isConfirmed: false, isPending: true }))
-    ];
-
-    this.setCurrentOrder(allItems);
-    console.log(`🔄 새 시스템: 통합 주문 업데이트 - 총 ${allItems.length}개 (확정: ${confirmedItems.length}, 임시: ${pendingItems.length})`);
+    console.log('🔄 새 시스템: 상태 완전 리셋');
   }
 }
