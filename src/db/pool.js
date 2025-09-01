@@ -3,49 +3,73 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 3, // 더 보수적인 연결 수
-  idleTimeoutMillis: 5000, // 더 빠른 idle 시간
-  connectionTimeoutMillis: 3000, // 짧은 연결 타임아웃
-  allowExitOnIdle: true, // idle 시 연결 종료 허용
-  application_name: 'tablelink_app' // 앱 식별
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 20, // 최대 연결 수
+  idleTimeoutMillis: 30000, // 유휴 연결 타임아웃 (30초)
+  connectionTimeoutMillis: 5000, // 연결 타임아웃 (5초)
+  statement_timeout: 10000, // 쿼리 실행 타임아웃 (10초)
+  query_timeout: 10000, // 쿼리 타임아웃 (10초)
 });
 
-// 연결 테스트
-pool.on('connect', () => {
-  console.log('✅ PostgreSQL 연결 성공');
-});
-
+// 연결 오류 처리
 pool.on('error', (err) => {
-  console.error('❌ PostgreSQL 연결 오류:', err);
-  if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND') {
-    console.log('🔄 연결 재시도 준비 중...');
-  }
+  console.error('❌ PostgreSQL 풀 오류:', err);
 });
 
-// 연결 종료 시 정리
-process.on('SIGINT', async () => {
-  console.log('🛑 서버 종료 중...');
+// 연결 성공 로그
+pool.on('connect', () => {
+  console.log('🔌 새 PostgreSQL 연결 생성됨');
+});
+
+// 연결 테스트 함수
+async function testConnection() {
   try {
-    await pool.end();
-    console.log('✅ PostgreSQL 풀 정리 완료');
+    const client = await pool.connect();
+    console.log('✅ PostgreSQL 연결 테스트 성공');
+    client.release();
   } catch (err) {
-    console.error('❌ 풀 정리 중 오류:', err);
+    console.error('❌ PostgreSQL 연결 테스트 실패:', err);
   }
-  process.exit(0);
-});
+}
 
-// 쿼리 헬퍼 함수
-const query = async (text, params) => {
-  const start = Date.now();
-  try {
-    const res = await pool.query(text, params);
-    const duration = Date.now() - start;
-    console.log('🔍 쿼리 실행:', { text: text.substring(0, 100), duration, rows: res.rowCount });
-    return res;
-  } catch (error) {
-    console.error('❌ 쿼리 실행 실패:', { text: text.substring(0, 100), error: error.message });
-    throw error;
+// 재시도 가능한 쿼리 실행 함수
+async function queryWithRetry(text, params, maxRetries = 3) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await pool.query(text, params);
+      return result;
+    } catch (error) {
+      lastError = error;
+
+      // 연결 관련 오류인 경우에만 재시도
+      if (error.code === 'ECONNRESET' || 
+          error.code === 'ENOTFOUND' || 
+          error.code === 'ETIMEDOUT' ||
+          error.message.includes('Connection terminated') ||
+          error.message.includes('timeout')) {
+
+        console.warn(`⚠️ PostgreSQL 쿼리 실패 (시도 ${attempt}/${maxRetries}):`, error.message);
+
+        if (attempt < maxRetries) {
+          // 지수 백오프로 재시도 대기
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+      }
+
+      // 재시도하지 않을 오류이거나 최대 재시도 횟수 도달
+      throw error;
+    }
   }
-};
+
+  throw lastError;
+}
+
+// 초기 연결 테스트
+testConnection();
 
 module.exports = pool;
+module.exports.queryWithRetry = queryWithRetry;

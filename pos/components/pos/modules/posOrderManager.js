@@ -20,12 +20,35 @@ export class POSOrderManager {
         throw new Error(`테이블이 다른 시스템(${lockStatus.lockedBy})에서 사용 중입니다.`);
       }
 
-      // 기존 활성 세션 조회
-      const sessionResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/session-status`);
-      const sessionData = await sessionResponse.json();
+      // 기존 활성 세션 조회 (재시도 로직 포함)
+      let sessionData = null;
+      let sessionResponse = null;
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          sessionResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/session-status`);
+          
+          if (sessionResponse.ok) {
+            sessionData = await sessionResponse.json();
+            break;
+          } else {
+            throw new Error(`HTTP ${sessionResponse.status}: ${sessionResponse.statusText}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ 세션 상태 조회 실패 (시도 ${attempt}/3):`, error.message);
+          
+          if (attempt < 3) {
+            // 재시도 전 1초 대기
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            continue;
+          }
+          
+          throw new Error(`세션 상태 조회 실패: ${error.message}`);
+        }
+      }
 
-      if (!sessionData.success) {
-        throw new Error('세션 상태 조회 실패');
+      if (!sessionData || !sessionData.success) {
+        throw new Error('세션 상태 조회 실패: ' + (sessionData?.error || '알 수 없는 오류'));
       }
 
       // 확정된 주문 조회

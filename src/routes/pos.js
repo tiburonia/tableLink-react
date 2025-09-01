@@ -84,8 +84,11 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
 
     console.log(`📋 테이블 ${tableNumber} 주문 조회 요청 (매장 ${storeId})`);
 
+    // 재시도 가능한 쿼리 함수 사용
+    const { queryWithRetry } = require('../db/pool');
+
     // 해당 테이블의 열린 체크들 조회 (새 스키마)
-    const checksResult = await pool.query(`
+    const checksResult = await queryWithRetry(`
       SELECT 
         c.id as check_id,
         c.status,
@@ -102,6 +105,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
     `, [storeId, tableNumber]);
 
     if (checksResult.rows.length === 0) {
+      console.log(`ℹ️ 테이블 ${tableNumber}에 활성 세션 없음`);
       return res.json({
         success: true,
         currentSession: null,
@@ -112,7 +116,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
     // 가장 최근 체크의 아이템들 조회 (새 스키마)
     const currentCheck = checksResult.rows[0];
 
-    const itemsResult = await pool.query(`
+    const itemsResult = await queryWithRetry(`
       SELECT 
         ci.id,
         ci.menu_name as "menuName",
@@ -159,7 +163,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
     console.error('❌ 테이블 주문 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '테이블 주문 조회 실패'
+      error: '테이블 주문 조회 실패: ' + error.message
     });
   }
 });
@@ -296,7 +300,10 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
 
     console.log(`🔍 테이블 ${tableNumber} 세션 상태 확인 (매장 ${storeId})`);
 
-    const result = await pool.query(`
+    // 재시도 가능한 쿼리 함수 사용
+    const { queryWithRetry } = require('../db/pool');
+    
+    const result = await queryWithRetry(`
       SELECT 
         c.id,
         c.status,
@@ -322,6 +329,8 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
       itemCount: parseInt(result.rows[0].item_count)
     } : null;
 
+    console.log(`✅ 테이블 ${tableNumber} 세션 상태 확인 완료 - 활성 세션: ${hasActiveSession}`);
+
     res.json({
       success: true,
       hasActiveSession,
@@ -333,7 +342,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
     console.error('❌ 세션 상태 확인 실패:', error);
     res.status(500).json({
       success: false,
-      error: '세션 상태 확인 실패'
+      error: '세션 상태 확인 실패: ' + error.message
     });
   }
 });
