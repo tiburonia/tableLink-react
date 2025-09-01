@@ -1154,15 +1154,17 @@ async function renderLogin() {
       `;
       results.style.display = 'block';
 
-      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error('검색 실패');
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
       }
 
       const data = await response.json();
@@ -1181,7 +1183,7 @@ async function renderLogin() {
       console.error('POS 매장 검색 실패:', error);
       results.innerHTML = `
         <div class="no-results">
-          검색 중 오류가 발생했습니다
+          검색 중 오류가 발생했습니다: ${error.message}
         </div>
       `;
       results.style.display = 'block';
@@ -1193,17 +1195,32 @@ async function renderLogin() {
     const results = document.getElementById('posStoreSearchResults');
     if (!results) return;
 
-    const resultsHTML = stores.map(store => `
-      <div class="store-result-item" onclick="selectStoreForPOS(${store.id}, '${store.name.replace(/'/g, "\\'")}')">
-        <div class="store-result-name">${store.name}</div>
-        <div class="store-result-info">
-          ${store.category || '기타'} • ${store.address || '주소 정보 없음'}
-        </div>
-      </div>
-    `).join('');
+    try {
+      const resultsHTML = stores.map(store => {
+        const storeName = (store.name || '').replace(/'/g, "\\'");
+        const storeCategory = store.category || '기타';
+        const storeAddress = store.address || '주소 정보 없음';
+        
+        return `
+          <div class="store-result-item" onclick="selectStoreForPOS(${store.id}, '${storeName}')">
+            <div class="store-result-name">${store.name || 'Unknown Store'}</div>
+            <div class="store-result-info">
+              ${storeCategory} • ${storeAddress}
+            </div>
+          </div>
+        `;
+      }).join('');
 
-    results.innerHTML = resultsHTML;
-    results.style.display = 'block';
+      results.innerHTML = resultsHTML;
+      results.style.display = 'block';
+    } catch (error) {
+      console.error('POS 검색 결과 표시 오류:', error);
+      results.innerHTML = `
+        <div class="no-results">
+          검색 결과 표시 중 오류가 발생했습니다
+        </div>
+      `;
+    }
   }
 
   // POS 매장 선택
@@ -1212,7 +1229,7 @@ async function renderLogin() {
     closePOSStoreSearchModal();
 
     setTimeout(() => {
-      window.location.href = `/pos/${storeId}`;
+      window.location.href = `/pos.html?storeId=${storeId}`;
     }, 200);
   };
 
@@ -1482,15 +1499,17 @@ async function renderLogin() {
       `;
       results.style.display = 'block';
 
-      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error('검색 실패');
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
       }
 
       const data = await response.json();
@@ -1509,7 +1528,7 @@ async function renderLogin() {
       console.error('KDS 매장 검색 실패:', error);
       results.innerHTML = `
         <div class="no-results">
-          검색 중 오류가 발생했습니다
+          검색 중 오류가 발생했습니다: ${error.message}
         </div>
       `;
       results.style.display = 'block';
@@ -1540,7 +1559,7 @@ async function renderLogin() {
     closeKDSStoreSearchModal();
 
     setTimeout(() => {
-      window.location.href = `/kds/${storeId}`;
+      window.location.href = `/kds.html?storeId=${storeId}`;
     }, 200);
   };
 
@@ -1810,15 +1829,17 @@ async function renderLogin() {
       `;
       results.style.display = 'block';
 
-      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error('검색 실패');
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
       }
 
       const data = await response.json();
@@ -1837,7 +1858,7 @@ async function renderLogin() {
       console.error('KRP 매장 검색 실패:', error);
       results.innerHTML = `
         <div class="no-results">
-          검색 중 오류가 발생했습니다
+          검색 중 오류가 발생했습니다: ${error.message}
         </div>
       `;
       results.style.display = 'block';
@@ -1868,7 +1889,7 @@ async function renderLogin() {
     closeKRPStoreSearchModal();
 
     setTimeout(() => {
-      window.location.href = `/krp?storeId=${storeId}`;
+      window.location.href = `/krp.html?storeId=${storeId}`;
     }, 200);
   };
 
@@ -2138,15 +2159,17 @@ async function renderLogin() {
       `;
       results.style.display = 'block';
 
-      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
+        method: 'GET',
         headers: {
+          'Content-Type': 'application/json',
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       });
 
       if (!response.ok) {
-        throw new Error('검색 실패');
+        throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
       }
 
       const data = await response.json();
@@ -2165,7 +2188,7 @@ async function renderLogin() {
       console.error('TLM 매장 검색 실패:', error);
       results.innerHTML = `
         <div class="no-results">
-          검색 중 오류가 발생했습니다
+          검색 중 오류가 발생했습니다: ${error.message}
         </div>
       `;
       results.style.display = 'block';
@@ -2196,7 +2219,7 @@ async function renderLogin() {
     closeStoreSearchModal();
 
     setTimeout(() => {
-      window.location.href = `/tlm/${storeId}`;
+      window.location.href = `/tlm.html?storeId=${storeId}`;
     }, 200);
   };
 
