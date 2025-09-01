@@ -53,6 +53,40 @@ async function checkStoreTables() {
     } else {
       console.log('✅ store_tables 테이블 존재함');
       
+      // 필요한 컬럼들이 있는지 확인하고 없으면 추가
+      const requiredColumns = ['occupied_by', 'occupied_at', 'occupied_since'];
+      
+      for (const columnName of requiredColumns) {
+        const columnExists = await client.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_name = 'store_tables' AND column_name = $1
+          )
+        `, [columnName]);
+        
+        if (!columnExists.rows[0].exists) {
+          console.log(`➕ ${columnName} 컬럼 추가 중...`);
+          
+          let columnDef;
+          switch (columnName) {
+            case 'occupied_by':
+              columnDef = 'VARCHAR(100)';
+              break;
+            case 'occupied_at':
+            case 'occupied_since':
+              columnDef = 'TIMESTAMP';
+              break;
+          }
+          
+          await client.query(`
+            ALTER TABLE store_tables 
+            ADD COLUMN ${columnName} ${columnDef}
+          `);
+          
+          console.log(`✅ ${columnName} 컬럼 추가 완료`);
+        }
+      }
+      
       // 매장 1번의 테이블 현황 확인
       const storeTablesResult = await client.query(`
         SELECT COUNT(*) as table_count
