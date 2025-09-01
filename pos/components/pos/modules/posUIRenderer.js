@@ -31,6 +31,207 @@ export class POSUIRenderer {
 
       pendingItems.forEach(item => {
         const isSelected = selectedItems.includes(item.id);
+        const finalPrice = item.price - (item.discount || 0);
+        
+        html += `
+          <div class="order-item pending-item ${isSelected ? 'selected' : ''}" 
+               data-item-id="${item.id}" 
+               onclick="toggleItemSelection('${item.id}')">
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-details">
+                <span class="item-price">₩${item.price.toLocaleString()}</span>
+                ${item.discount > 0 ? `<span class="discount">-₩${item.discount.toLocaleString()}</span>` : ''}
+                <span class="final-price">₩${finalPrice.toLocaleString()}</span>
+              </div>
+              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
+            </div>
+            <div class="item-controls">
+              <div class="quantity-controls">
+                <button onclick="event.stopPropagation(); changeQuantity('${item.id}', -1)" class="qty-btn minus">-</button>
+                <span class="quantity">${item.quantity}</span>
+                <button onclick="event.stopPropagation(); changeQuantity('${item.id}', 1)" class="qty-btn plus">+</button>
+              </div>
+              <div class="item-status pending-status">임시</div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    // 🟢 확정된 주문 섹션
+    if (confirmedItems.length > 0) {
+      html += `
+        <div class="order-section confirmed-section">
+          <div class="section-header confirmed-header">
+            <h4>✅ 확정된 주문</h4>
+            <span class="confirmed-badge">주방 전송됨</span>
+          </div>
+          <div class="order-items confirmed-items">
+      `;
+
+      confirmedItems.forEach(item => {
+        const isSelected = selectedItems.includes(item.id);
+        const finalPrice = item.price - (item.discount || 0);
+        const statusText = {
+          'ordered': '주문됨',
+          'cooking': '조리중',
+          'ready': '완료',
+          'served': '서빙됨'
+        }[item.status] || item.status;
+
+        html += `
+          <div class="order-item confirmed-item ${isSelected ? 'selected' : ''}" 
+               data-item-id="${item.id}" 
+               onclick="toggleItemSelection('${item.id}')">
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-details">
+                <span class="item-price">₩${item.price.toLocaleString()}</span>
+                ${item.discount > 0 ? `<span class="discount">-₩${item.discount.toLocaleString()}</span>` : ''}
+                <span class="final-price">₩${finalPrice.toLocaleString()}</span>
+              </div>
+              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
+              ${item.confirmedAt ? `<div class="confirmed-time">확정: ${new Date(item.confirmedAt).toLocaleTimeString()}</div>` : ''}
+            </div>
+            <div class="item-controls">
+              <div class="quantity-display">
+                <span class="quantity">${item.quantity}개</span>
+              </div>
+              <div class="item-status confirmed-status">${statusText}</div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    orderItemsContainer.innerHTML = html;
+    console.log(`🎨 주문 목록 렌더링 완료 - 임시: ${pendingItems.length}개, 확정: ${confirmedItems.length}개`);
+  }
+
+  // 결제 요약 렌더링
+  static renderPaymentSummary() {
+    const paymentSummaryContainer = document.getElementById('paymentSummary');
+    if (!paymentSummaryContainer) return;
+
+    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    const session = POSStateManager.getCurrentSession();
+
+    // 임시 주문 총액 계산
+    const pendingTotal = pendingItems.reduce((sum, item) => {
+      return sum + ((item.price - (item.discount || 0)) * item.quantity);
+    }, 0);
+
+    // 확정 주문 총액 계산
+    const confirmedTotal = confirmedItems.reduce((sum, item) => {
+      return sum + ((item.price - (item.discount || 0)) * item.quantity);
+    }, 0);
+
+    const grandTotal = pendingTotal + confirmedTotal;
+    const paidAmount = session.paidAmount || 0;
+    const remainingAmount = grandTotal - paidAmount;
+
+    let html = `
+      <div class="payment-summary">
+        <div class="summary-section">
+          <h4>💰 결제 요약</h4>
+          
+          ${pendingItems.length > 0 ? `
+            <div class="summary-line pending-line">
+              <span>임시 주문 (${pendingItems.length}개)</span>
+              <span>₩${pendingTotal.toLocaleString()}</span>
+            </div>
+          ` : ''}
+          
+          ${confirmedItems.length > 0 ? `
+            <div class="summary-line confirmed-line">
+              <span>확정 주문 (${confirmedItems.length}개)</span>
+              <span>₩${confirmedTotal.toLocaleString()}</span>
+            </div>
+          ` : ''}
+          
+          <div class="summary-line total-line">
+            <span><strong>총 금액</strong></span>
+            <span><strong>₩${grandTotal.toLocaleString()}</strong></span>
+          </div>
+          
+          ${paidAmount > 0 ? `
+            <div class="summary-line paid-line">
+              <span>결제 완료</span>
+              <span>-₩${paidAmount.toLocaleString()}</span>
+            </div>
+            <div class="summary-line remaining-line">
+              <span><strong>잔액</strong></span>
+              <span><strong>₩${remainingAmount.toLocaleString()}</strong></span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    paymentSummaryContainer.innerHTML = html;
+    console.log(`💰 결제 요약 렌더링 완료 - 총액: ₩${grandTotal.toLocaleString()}, 잔액: ₩${remainingAmount.toLocaleString()}`);
+  }
+
+  // 기본 액션 버튼 업데이트
+  static updatePrimaryActionButton() {
+    const primaryActionBtn = document.getElementById('primaryActionBtn');
+    if (!primaryActionBtn) return;
+
+    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    const session = POSStateManager.getCurrentSession();
+
+    let buttonText = '메뉴를 선택하세요';
+    let buttonClass = 'disabled';
+    let isDisabled = true;
+
+    if (pendingItems.length > 0) {
+      buttonText = `임시 주문 확정 (${pendingItems.length}개)`;
+      buttonClass = 'confirm';
+      isDisabled = false;
+    } else if (confirmedItems.length > 0 && session.checkId) {
+      if (session.status === 'closed') {
+        buttonText = '결제 완료됨';
+        buttonClass = 'completed';
+        isDisabled = true;
+      } else {
+        buttonText = '결제하기';
+        buttonClass = 'payment';
+        isDisabled = false;
+      }
+    }
+
+    primaryActionBtn.textContent = buttonText;
+    primaryActionBtn.className = `primary-action-btn ${buttonClass}`;
+    primaryActionBtn.disabled = isDisabled;
+
+    console.log(`🔘 기본 액션 버튼 업데이트: ${buttonText}`);
+  }
+
+  // 테이블 정보 업데이트
+  static updateTableInfo() {
+    const currentTable = POSStateManager.getCurrentTable();
+    const currentStore = POSStateManager.getCurrentStore();
+    
+    if (currentTable && currentStore) {
+      const tableTitle = document.getElementById('orderTableTitle');
+      if (tableTitle) {
+        tableTitle.textContent = `${currentStore.name} - 테이블 ${currentTable}`;
+      }
+    }
+  }cludes(item.id);
         const totalPrice = (item.price - (item.discount || 0)) * item.quantity;
 
         html += `

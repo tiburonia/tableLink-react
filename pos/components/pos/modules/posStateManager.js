@@ -222,51 +222,89 @@ export class POSStateManager {
 
   // 상태 초기화
   static reset() {
-    this.currentState = { ...this.defaultState };
-    this.saveState();
+    this.state.currentTable = null;
+    this.state.currentOrder = [];
+    this.state.selectedItems = [];
+    this.state.pendingItems = [];
+    this.state.confirmedItems = [];
+    this.state.currentSession = {
+      checkId: null,
+      status: null,
+      openedAt: null,
+      customerName: null,
+      totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0
+    };
+    this.state.sessionLock = {
+      isLocked: false,
+      lockedBy: null,
+      lockedAt: null,
+      lockExpires: null
+    };
+
+    // 전역 변수 동기화
+    window.currentTable = null;
+    window.currentOrder = [];
+    window.selectedItems = [];
+    
     console.log('🔄 POS 상태 완전 초기화');
   }
 
   // 임시 주문 아이템 초기화
   static clearTempOrderItems() {
-    this.currentState.tempOrder.items = [];
-    this.currentState.tempOrder.totalAmount = 0;
-    this.saveState();
+    this.state.pendingItems = [];
     console.log('🗑️ 임시 주문 아이템 초기화');
   }
 
   // 세션 초기화
   static clearSession() {
-    this.currentState.session = {
+    this.state.currentSession = {
       checkId: null,
-      isActive: false,
-      tableNumber: null,
-      customerName: null
+      status: null,
+      openedAt: null,
+      customerName: null,
+      totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0
     };
-    this.saveState();
     console.log('🗑️ 세션 초기화');
   }
 
   // 주문 목록 초기화
   static clearOrderItems() {
-    this.currentState.orderItems = [];
-    this.saveState();
+    this.state.currentOrder = [];
+    this.state.confirmedItems = [];
+    window.currentOrder = [];
     console.log('🗑️ 주문 목록 초기화');
   }
 
   // 현재 세션 리셋
   static resetCurrentSession() {
+    this.state.currentTable = null;
+    this.state.currentOrder = [];
+    this.state.selectedItems = [];
     this.state.currentSession = {
       checkId: null,
-      status: 'idle',
-      tableNumber: null,
+      status: null,
+      openedAt: null,
       customerName: null,
       totalAmount: 0,
       paidAmount: 0,
-      remainingAmount: 0,
-      openedAt: null
+      remainingAmount: 0
     };
-    this.saveState();
+    this.state.pendingItems = [];
+    this.state.confirmedItems = [];
+    this.state.sessionLock = {
+      isLocked: false,
+      lockedBy: null,
+      lockedAt: null,
+      lockExpires: null
+    };
+
+    window.currentTable = null;
+    window.currentOrder = [];
+    window.selectedItems = [];
     console.log('🔄 현재 세션 리셋 완료');
   }
 }

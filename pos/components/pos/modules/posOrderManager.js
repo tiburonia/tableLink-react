@@ -618,7 +618,10 @@ export class POSOrderManager {
   // 주문 초기화
   static clearOrder() {
     try {
-      POSStateManager.clearTempOrderItems();
+      // 상태 초기화
+      POSStateManager.setPendingItems([]);
+      POSStateManager.setCurrentOrder([]);
+      POSStateManager.setSelectedItems([]);
       POSTempStorage.clearTempOrder();
 
       // UI 업데이트
@@ -636,7 +639,19 @@ export class POSOrderManager {
 
   // 임시 주문 초기화
   static clearTempOrder() {
-    this.clearOrder();
+    try {
+      POSStateManager.setPendingItems([]);
+      this.updateCombinedOrder();
+      POSTempStorage.clearTempOrder();
+
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      POSUIRenderer.updatePrimaryActionButton();
+
+      console.log('✅ 임시 주문 초기화 완료');
+    } catch (error) {
+      console.error('❌ 임시 주문 초기화 실패:', error);
+    }
   }
 
   // 아이템 선택/해제
