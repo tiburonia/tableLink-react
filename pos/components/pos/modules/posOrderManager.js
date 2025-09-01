@@ -409,15 +409,12 @@ export class POSOrderManager {
     showPOSNotification(`${selectedItems.length - confirmedToDelete.length}개 아이템 삭제됨`, 'success');
   }
 
-  // 🎯 주요 액션 핸들러
+  // 🎯 주요 액션 핸들러 (주문 확정 전용)
   static async handlePrimaryAction() {
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-    const session = POSStateManager.getCurrentSession();
 
     if (pendingItems.length > 0) {
       await this.confirmPendingOrder();
-    } else if (session.checkId && session.status !== 'closed') {
-      showPOSNotification('결제 버튼을 클릭해주세요', 'info');
     } else {
       showPOSNotification('주문할 메뉴를 추가해주세요', 'warning');
     }

@@ -1056,14 +1056,14 @@ export function renderPOSLayout() {
 
       /* 확정/미확정 상태 스타일 */
       .order-item-row.pending-item {
-        background: #fef3c7;
-        border: 2px dashed #f59e0b;
+        background: linear-gradient(90deg, transparent 0%, #f3e8ff 100%);
+        border-left: 3px solid #8b5cf6;
         opacity: 0.8;
       }
 
       .order-item-row.confirmed-item {
-        background: #ecfdf5;
-        border-left: 4px solid #10b981;
+        background: linear-gradient(90deg, transparent 0%, #ecfdf5 100%);
+        border-left: 3px solid #10b981;
       }
 
       .status-badge {
@@ -1614,10 +1614,11 @@ export function renderPOSLayout() {
 
       /* 결제 패널 */
       .payment-panel {
-        background: white;
-        padding: 16px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
       }
 
       .panel-header {
@@ -1625,24 +1626,39 @@ export function renderPOSLayout() {
         justify-content: space-between;
         align-items: center;
         margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #e2e8f0;
       }
 
       .panel-header h4 {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1e293b;
         margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #374151;
       }
 
       .panel-indicator {
-        font-size: 11px;
-        padding: 4px 8px;
-        background: #f3f4f6;
+        padding: 4px 12px;
+        background: #e5e7eb;
         color: #6b7280;
         border-radius: 12px;
+        font-size: 12px;
         font-weight: 600;
+        transition: all 0.2s ease;
+      }
+
+      .panel-indicator.ready {
+        background: #059669;
+        color: white;
+        animation: pulse 2s infinite;
+      }
+
+      .panel-indicator.pending {
+        background: #f59e0b;
+        color: white;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
       }
 
       .payment-grid {

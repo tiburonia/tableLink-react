@@ -1,21 +1,20 @@
-
 // POS UI 렌더링 모듈 - 새 시스템 전용
 import { POSStateManager } from './posStateManager.js';
 
 export class POSUIRenderer {
-  
+
   // 🎨 주문 목록 렌더링
   static renderOrderItems() {
     console.log('🎨 새 시스템: 주문 목록 렌더링 시작');
-    
+
     // DOM 요소 확인
     const container = document.getElementById('orderItems');
-    
+
     if (!container) {
       console.error('❌ orderItems 컨테이너를 찾을 수 없습니다');
       return;
     }
-    
+
     console.log('✅ orderItems 컨테이너 확인됨');
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
@@ -45,7 +44,7 @@ export class POSUIRenderer {
       pendingItems.forEach(item => {
         const isSelected = selectedItems.includes(item.id);
         const finalPrice = item.price - (item.discount || 0);
-        
+
         html += `
           <div class="order-item pending ${isSelected ? 'selected' : ''}" 
                data-item-id="${item.id}" 
@@ -87,7 +86,7 @@ export class POSUIRenderer {
       confirmedItems.forEach(item => {
         const isSelected = selectedItems.includes(item.id);
         const finalPrice = item.price - (item.discount || 0);
-        
+
         html += `
           <div class="order-item confirmed ${isSelected ? 'selected' : ''}" 
                data-item-id="${item.id}" 
@@ -110,7 +109,7 @@ export class POSUIRenderer {
     // DOM 업데이트
     container.innerHTML = html;
     container.offsetHeight; // 강제 리플로우
-    
+
     console.log(`✅ 새 시스템: 주문 목록 렌더링 완료 (DOM 요소: ${container.children.length}개)`);
   }
 
@@ -125,7 +124,7 @@ export class POSUIRenderer {
 
     const pendingTotal = pendingItems.reduce((sum, item) => 
       sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
-    
+
     const confirmedTotal = confirmedItems.reduce((sum, item) => 
       sum + ((item.price - (item.discount || 0)) * item.quantity), 0);
 
@@ -136,26 +135,26 @@ export class POSUIRenderer {
     let html = `
       <div class="payment-summary">
         <h4>💰 결제 요약</h4>
-        
+
         ${pendingItems.length > 0 ? `
           <div class="summary-line pending">
             <span>임시 주문 (${pendingItems.length}개)</span>
             <span>₩${pendingTotal.toLocaleString()}</span>
           </div>
         ` : ''}
-        
+
         ${confirmedItems.length > 0 ? `
           <div class="summary-line confirmed">
             <span>확정 주문 (${confirmedItems.length}개)</span>
             <span>₩${confirmedTotal.toLocaleString()}</span>
           </div>
         ` : ''}
-        
+
         <div class="summary-line total">
           <span><strong>총 금액</strong></span>
           <span><strong>₩${grandTotal.toLocaleString()}</strong></span>
         </div>
-        
+
         ${paidAmount > 0 ? `
           <div class="summary-line paid">
             <span>결제 완료</span>
@@ -173,40 +172,98 @@ export class POSUIRenderer {
     console.log(`💰 새 시스템: 결제 요약 렌더링 완료 - 총액: ₩${grandTotal.toLocaleString()}`);
   }
 
-  // 🔘 기본 액션 버튼 업데이트
+  // 🔘 기본 액션 버튼 업데이트 (주문 확정 전용)
   static updatePrimaryActionButton() {
-    const button = document.getElementById('primaryActionBtn');
-    if (!button) return;
+    const primaryBtn = document.getElementById('primaryActionBtn');
+    if (!primaryBtn) return;
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-    const session = POSStateManager.getCurrentSession();
-
-    let buttonText = '메뉴를 선택하세요';
-    let buttonClass = 'disabled';
-    let isDisabled = true;
 
     if (pendingItems.length > 0) {
-      buttonText = `임시 주문 확정 (${pendingItems.length}개)`;
-      buttonClass = 'confirm';
-      isDisabled = false;
-    } else if (session.checkId && session.status !== 'closed') {
-      buttonText = '결제하기';
-      buttonClass = 'payment';
-      isDisabled = false;
+      // 임시 주문이 있을 때만 활성화
+      const totalAmount = pendingItems.reduce((sum, item) => 
+        sum + ((item.price - (item.discount || 0)) * item.quantity), 0
+      );
+
+      primaryBtn.disabled = false;
+      primaryBtn.innerHTML = `
+        <div class="btn-content">
+          <span class="btn-title">주문 확정</span>
+          <span class="btn-subtitle">${pendingItems.length}개 아이템 • ₩${totalAmount.toLocaleString()}</span>
+        </div>
+      `;
+      primaryBtn.className = 'primary-action-btn confirm-order';
+
+    } else {
+      // 임시 주문 없음
+      primaryBtn.disabled = true;
+      primaryBtn.innerHTML = `
+        <div class="btn-content">
+          <span class="btn-title">주문 없음</span>
+          <span class="btn-subtitle">메뉴를 선택하세요</span>
+        </div>
+      `;
+      primaryBtn.className = 'primary-action-btn';
     }
 
-    button.textContent = buttonText;
-    button.className = `primary-action-btn ${buttonClass}`;
-    button.disabled = isDisabled;
+    // Payment panel 업데이트
+    this.updatePaymentPanel();
 
-    console.log(`🔘 새 시스템: 액션 버튼 업데이트 - ${buttonText}`);
+    console.log('🎯 Primary action button 업데이트 완료 (주문 확정 전용)');
+  }
+
+  // 💳 결제 패널 상태 업데이트
+  static updatePaymentPanel() {
+    const session = POSStateManager.getCurrentSession();
+    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+
+    // 결제 버튼들
+    const paymentButtons = document.querySelectorAll('.payment-btn');
+    const paymentIndicator = document.getElementById('paymentIndicator');
+
+    if (session.checkId && session.status !== 'closed') {
+      // 활성 세션이 있을 때 결제 가능
+      paymentButtons.forEach(btn => {
+        btn.disabled = false;
+      });
+
+      if (paymentIndicator) {
+        const remainingAmount = session.remainingAmount || session.totalAmount || 0;
+        paymentIndicator.textContent = `₩${remainingAmount.toLocaleString()}`;
+        paymentIndicator.className = 'panel-indicator ready';
+      }
+
+    } else if (pendingItems.length > 0) {
+      // 임시 주문만 있을 때 - 확정 후 결제 안내
+      paymentButtons.forEach(btn => {
+        btn.disabled = true;
+      });
+
+      if (paymentIndicator) {
+        paymentIndicator.textContent = '주문 확정 후 가능';
+        paymentIndicator.className = 'panel-indicator pending';
+      }
+
+    } else {
+      // 아무것도 없을 때
+      paymentButtons.forEach(btn => {
+        btn.disabled = true;
+      });
+
+      if (paymentIndicator) {
+        paymentIndicator.textContent = '대기중';
+        paymentIndicator.className = 'panel-indicator';
+      }
+    }
+
+    console.log('💳 Payment panel 상태 업데이트 완료');
   }
 
   // 📋 테이블 정보 업데이트
   static updateTableInfo() {
     const currentTable = POSStateManager.getCurrentTable();
     const currentStore = POSStateManager.getCurrentStore();
-    
+
     if (currentTable && currentStore) {
       const titleElement = document.getElementById('orderTableTitle');
       if (titleElement) {
