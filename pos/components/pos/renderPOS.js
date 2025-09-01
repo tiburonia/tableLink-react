@@ -192,7 +192,33 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
       return false;
     }
 
-    if (!price || isNaN(parseInt(price))) {
+    if (!price || isNaN(price) || price <= 0) {
+      console.error('❌ 가격이 유효하지 않습니다');
+      showPOSNotification('유효한 가격이 필요합니다', 'warning');
+      return false;
+    }
+
+    // 새 시스템 메뉴 추가
+    POSOrderManager.addMenuToPending(menuName, price, notes);
+    return true;
+
+  } catch (error) {
+    console.error('❌ 메뉴 추가 실패:', error);
+    showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    return false;
+  }
+};
+
+// 💳 결제 관리 (새 시스템)
+window.processPayment = (paymentMethod = null) => {
+  console.log('💳 전역 결제 함수 호출 - 새 시스템');
+  if (typeof POSPaymentManager !== 'undefined') {
+    POSPaymentManager.processPayment(paymentMethod);
+  } else {
+    console.error('❌ POSPaymentManager를 찾을 수 없습니다');
+    showPOSNotification('결제 시스템을 찾을 수 없습니다', 'error');
+  }
+};ice || isNaN(parseInt(price))) {
       console.error('❌ 올바르지 않은 가격:', price);
       showPOSNotification('올바른 가격이 필요합니다', 'warning');
       return false;

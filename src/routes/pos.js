@@ -456,7 +456,7 @@ router.post('/orders', async (req, res, next) => {
 });
 
 /**
- * [POST] /stores/:storeId/table/:tableNumber/payment - 세션 종료 및 결제 처리
+ * [POST] /stores/:storeId/table/:tableNumber/payment - 세션 결제 처리 (개선됨)
  */
 router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next) => {
   const client = await pool.connect();
@@ -466,10 +466,13 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
     const { 
       paymentMethod = 'CASH', 
       guestPhone = null,
-      partialAmount = null // 부분 결제 지원
+      partialAmount = null
     } = req.body;
 
-    if (!['CASH', 'CARD', 'MIXED'].includes(paymentMethod)) {
+    console.log(`💳 결제 요청: 매장 ${storeId}, 테이블 ${tableNumber}, 방법: ${paymentMethod}, 금액: ${partialAmount || '전액'}`);
+
+    // 결제 방법 유효성 검증
+    if (!['CASH', 'CARD', 'TRANSFER', 'MIXED'].includes(paymentMethod)) {
       return res.status(400).json({
         success: false,
         error: '유효하지 않은 결제 방법입니다'
@@ -478,132 +481,165 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
 
     await client.query('BEGIN');
 
-    // 🏆 세션 기반 로직: 해당 테이블의 활성 세션 조회
+    // 활성 세션 조회
     const sessionResult = await client.query(`
       SELECT 
         c.id, 
         c.final_amount, 
         c.subtotal_amount,
         c.user_id,
+        c.guest_phone,
         c.opened_at,
         c.customer_name,
         c.source_system,
         COUNT(ci.id) as total_items,
-        COUNT(CASE WHEN ci.status = 'served' THEN 1 END) as served_items
+        COUNT(CASE WHEN ci.status IN ('served', 'completed') THEN 1 END) as completed_items
       FROM checks c
       LEFT JOIN check_items ci ON c.id = ci.check_id AND ci.status != 'canceled'
       WHERE c.store_id = $1 AND c.table_number = $2 AND c.status = 'open'
-      GROUP BY c.id, c.final_amount, c.subtotal_amount, c.user_id, 
+      GROUP BY c.id, c.final_amount, c.subtotal_amount, c.user_id, c.guest_phone,
                c.opened_at, c.customer_name, c.source_system
       ORDER BY c.opened_at DESC
       LIMIT 1
     `, [storeId, tableNumber]);
 
     if (sessionResult.rows.length === 0) {
-      throw new Error('활성 세션이 없습니다. 결제할 주문이 없습니다.');
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '활성 세션이 없습니다'
+      });
     }
 
     const session = sessionResult.rows[0];
-    const sessionDuration = new Date() - new Date(session.opened_at);
-    const finalAmount = partialAmount || session.final_amount || 0;
+    const sessionDuration = Date.now() - new Date(session.opened_at).getTime();
 
-    if (finalAmount <= 0) {
-      throw new Error('결제 금액이 유효하지 않습니다');
-    }
-
-    console.log(`💳 세션 ${session.id} 결제 시작 - 지속시간: ${Math.floor(sessionDuration / 60000)}분, 총 아이템: ${session.total_items}개`);
-
-    // 📊 결제 전 기존 결제 내역 확인 (부분 결제 지원)
-    const existingPaymentsResult = await client.query(`
+    // 기존 결제 내역 확인
+    const paymentsResult = await client.query(`
       SELECT COALESCE(SUM(amount), 0) as paid_amount
       FROM payments 
       WHERE check_id = $1 AND status = 'completed'
     `, [session.id]);
 
-    const alreadyPaid = parseInt(existingPaymentsResult.rows[0].paid_amount);
-    const remainingAmount = session.final_amount - alreadyPaid;
+    const alreadyPaid = parseInt(paymentsResult.rows[0].paid_amount) || 0;
+    const totalAmount = session.final_amount || 0;
+    const remainingAmount = totalAmount - alreadyPaid;
 
-    if (finalAmount > remainingAmount) {
-      throw new Error(`결제 금액이 잔액(₩${remainingAmount.toLocaleString()})을 초과합니다`);
+    // 결제 금액 결정
+    let paymentAmount;
+    if (partialAmount && partialAmount > 0) {
+      if (partialAmount > remainingAmount) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          success: false,
+          error: `결제 금액이 잔액(₩${remainingAmount.toLocaleString()})을 초과합니다`
+        });
+      }
+      paymentAmount = partialAmount;
+    } else {
+      paymentAmount = remainingAmount;
     }
 
-    // 💳 결제 처리
+    if (paymentAmount <= 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        error: '결제할 금액이 없습니다'
+      });
+    }
+
+    console.log(`💰 결제 처리: 세션 ${session.id}, 금액 ₩${paymentAmount.toLocaleString()}`);
+
+    // 결제 기록 생성
     const paymentResult = await client.query(`
       INSERT INTO payments (
-        check_id, payment_method, amount, status, completed_at
+        check_id, payment_method, amount, status, 
+        completed_at, payment_data
       )
-      VALUES ($1, $2, $3, 'completed', CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, 'completed', CURRENT_TIMESTAMP, $4)
       RETURNING id, completed_at
-    `, [session.id, paymentMethod, finalAmount]);
+    `, [
+      session.id, 
+      paymentMethod, 
+      paymentAmount,
+      JSON.stringify({ 
+        guestPhone: guestPhone || session.guest_phone,
+        tableNumber: tableNumber,
+        storeId: storeId
+      })
+    ]);
 
     const paymentId = paymentResult.rows[0].id;
-    const newPaidTotal = alreadyPaid + finalAmount;
-    const isFullyPaid = newPaidTotal >= session.final_amount;
+    const newPaidTotal = alreadyPaid + paymentAmount;
+    const newRemainingAmount = totalAmount - newPaidTotal;
+    const isFullyPaid = newRemainingAmount <= 0;
 
-    // 🏁 세션 종료 여부 결정
+    // 완전 결제 시 세션 종료
     if (isFullyPaid) {
-      // 완전 결제 시 세션 종료
       await client.query(`
         UPDATE checks 
         SET 
           status = 'closed', 
-          closed_at = CURRENT_TIMESTAMP
+          closed_at = CURRENT_TIMESTAMP,
+          final_amount = $2
         WHERE id = $1
-      `, [session.id]);
+      `, [session.id, totalAmount]);
 
-      // 모든 미서빙 아이템을 served 상태로 변경
+      // 모든 아이템을 완료 상태로 변경
       await client.query(`
         UPDATE check_items 
         SET 
           status = 'served',
           served_at = CURRENT_TIMESTAMP
-        WHERE check_id = $1 AND status IN ('ordered', 'preparing', 'ready')
+        WHERE check_id = $1 AND status NOT IN ('canceled', 'served')
       `, [session.id]);
 
-      console.log(`🏁 세션 ${session.id} 완전 종료 - 총 결제액: ₩${newPaidTotal.toLocaleString()}`);
-    } else {
-      console.log(`💰 세션 ${session.id} 부분 결제 - 결제액: ₩${finalAmount.toLocaleString()}, 잔액: ₩${(session.final_amount - newPaidTotal).toLocaleString()}`);
+      console.log(`🏁 세션 ${session.id} 완전 종료`);
     }
 
-    // 🎁 TLL 회원 포인트 적립 (완전 결제 시에만)
+    // TLL 회원 포인트 적립
     if (session.user_id && isFullyPaid) {
-      const points = Math.floor(session.final_amount * 0.01); // 1% 적립
-      await client.query(`
-        UPDATE users 
-        SET points = COALESCE(points, 0) + $1
-        WHERE id = $2
-      `, [points, session.user_id]);
-
-      console.log(`🎉 회원 ${session.user_id} 포인트 적립: ${points}원 (세션 총액 기준)`);
+      const points = Math.floor(totalAmount * 0.01); // 1% 적립
+      if (points > 0) {
+        await client.query(`
+          UPDATE users 
+          SET points = COALESCE(points, 0) + $1
+          WHERE id = $2
+        `, [points, session.user_id]);
+        console.log(`🎉 포인트 적립: ${points}원 (사용자 ${session.user_id})`);
+      }
     }
 
     await client.query('COMMIT');
 
-    const sessionStatus = isFullyPaid ? 'closed' : 'open';
-
-    res.json({
+    // 응답 데이터 구성
+    const responseData = {
       success: true,
       sessionId: session.id,
       checkId: session.id,
       paymentId: paymentId,
-      amount: finalAmount,
+      amount: paymentAmount,
       method: paymentMethod,
-      status: sessionStatus,
+      status: isFullyPaid ? 'closed' : 'open',
       sessionSummary: {
-        totalAmount: session.final_amount,
+        totalAmount: totalAmount,
         paidAmount: newPaidTotal,
-        remainingAmount: session.final_amount - newPaidTotal,
+        remainingAmount: newRemainingAmount,
         isFullyPaid: isFullyPaid,
-        sessionDuration: Math.floor(sessionDuration / 60000) // 분 단위
+        sessionDuration: Math.floor(sessionDuration / 60000), // 분 단위
+        paymentHistory: alreadyPaid > 0 ? '부분결제이력있음' : '첫결제'
       }
-    });
+    };
+
+    console.log(`✅ 결제 완료: ${paymentMethod} ₩${paymentAmount.toLocaleString()}`);
+    res.json(responseData);
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ 세션 결제 실패:', error);
+    console.error('❌ 결제 처리 실패:', error);
     res.status(500).json({
       success: false,
-      error: '세션 결제 실패: ' + error.message
+      error: error.message || '결제 처리 중 오류가 발생했습니다'
     });
   } finally {
     client.release();

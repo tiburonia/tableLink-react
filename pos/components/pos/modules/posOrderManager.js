@@ -111,7 +111,7 @@ export class POSOrderManager {
 
       // UI 강제 업데이트
       this.forceUIUpdate();
-      
+
       console.log(`✅ 새 시스템: 메뉴 추가 완료`);
       return true;
 
@@ -227,13 +227,13 @@ export class POSOrderManager {
         POSUIRenderer.renderOrderItems();
         POSUIRenderer.renderPaymentSummary();
         POSUIRenderer.updatePrimaryActionButton();
-        
+
         // 추가 안전 업데이트 (비동기)
         setTimeout(() => {
           POSUIRenderer.renderOrderItems();
           console.log('✅ 새 시스템: UI 강제 업데이트 완료');
         }, 10);
-        
+
         // 최종 안전 업데이트
         setTimeout(() => {
           POSUIRenderer.renderOrderItems();
@@ -251,8 +251,8 @@ export class POSOrderManager {
     this.forceUIUpdate();
   }
 
-  // 💳 결제 처리
-  static async processPayment(paymentMethod) {
+  // 💳 세션 결제 처리 (완전 재작성)
+  static async processSessionPayment(paymentMethod, partialAmount = null) {
     try {
       const session = POSStateManager.getCurrentSession();
       const currentStore = POSStateManager.getCurrentStore();
@@ -262,49 +262,61 @@ export class POSOrderManager {
         throw new Error('활성 세션이 없습니다');
       }
 
-      // 임시 주문이 있으면 먼저 확정 요청
-      const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-      if (pendingItems.length > 0) {
-        const confirmFirst = confirm(`임시 주문 ${pendingItems.length}개가 있습니다. 먼저 확정하고 결제하시겠습니까?`);
-        if (confirmFirst) {
-          await this.confirmPendingOrder();
-          setTimeout(() => this.processPayment(paymentMethod), 1000);
-          return;
-        }
-      }
+      console.log(`💳 세션 결제 시작: ${paymentMethod}, 금액: ${partialAmount || '전액'}`);
 
-      console.log(`💳 새 시스템: 세션 ${session.checkId} 결제 - ${paymentMethod}`);
+      const paymentData = {
+        paymentMethod: paymentMethod
+      };
+
+      if (partialAmount && partialAmount > 0) {
+        paymentData.partialAmount = partialAmount;
+      }
 
       const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${currentTable}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentMethod })
+        body: JSON.stringify(paymentData)
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
 
       const result = await response.json();
+
       if (!result.success) {
-        throw new Error(result.error);
+        throw new Error(result.error || '결제 처리 실패');
       }
+
+      console.log('✅ 결제 성공:', result);
 
       // 세션 상태 업데이트
-      POSStateManager.setCurrentSession({
-        status: result.sessionSummary.isFullyPaid ? 'closed' : 'payment_processing',
-        paidAmount: result.sessionSummary.paidAmount,
-        remainingAmount: result.sessionSummary.remainingAmount
-      });
+      const updatedSession = {
+        ...session,
+        status: result.sessionSummary?.isFullyPaid ? 'closed' : 'open',
+        paidAmount: result.sessionSummary?.paidAmount || 0,
+        remainingAmount: result.sessionSummary?.remainingAmount || 0,
+        totalAmount: result.sessionSummary?.totalAmount || session.totalAmount
+      };
 
-      this.refreshUI();
+      POSStateManager.setCurrentSession(updatedSession);
 
-      if (result.sessionSummary.isFullyPaid) {
-        showPOSNotification('결제 완료! 세션 종료됨', 'success');
+      // 완전 결제 시 세션 종료 처리
+      if (result.sessionSummary?.isFullyPaid) {
         this.handleSessionClosure();
+        showPOSNotification(`${paymentMethod} 결제 완료! 세션이 종료되었습니다.`, 'success');
       } else {
-        showPOSNotification(`부분 결제 완료 (잔액: ₩${result.sessionSummary.remainingAmount.toLocaleString()})`, 'info');
+        const remaining = result.sessionSummary?.remainingAmount || 0;
+        showPOSNotification(`${paymentMethod} 부분 결제 완료! 잔액: ₩${remaining.toLocaleString()}`, 'info');
       }
 
+      return { success: true, result };
+
     } catch (error) {
-      console.error('❌ 새 시스템: 결제 실패:', error);
-      showPOSNotification('결제 실패: ' + error.message, 'error');
+      console.error('❌ 세션 결제 실패:', error);
+      showPOSNotification(`${paymentMethod} 결제 실패: ${error.message}`, 'error');
+      throw error;
     }
   }
 
