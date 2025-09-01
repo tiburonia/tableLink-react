@@ -385,6 +385,167 @@ async function handleLocationInfo(req, res) {
   }
 }
 
+// 매장 별점 조회 API
+router.get('/:storeId/rating', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        COALESCE(AVG(rating), 0) as rating_average,
+        COUNT(*) as review_count
+      FROM reviews
+      WHERE store_id = $1
+    `, [storeId]);
+
+    const ratingData = result.rows[0];
+
+    res.json({
+      success: true,
+      ratingAverage: parseFloat(ratingData.rating_average).toFixed(1),
+      reviewCount: parseInt(ratingData.review_count)
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 별점 조회 실패:', error);
+    res.json({
+      success: true,
+      ratingAverage: 0.0,
+      reviewCount: 0
+    });
+  }
+});
+
+// 매장 프로모션 조회 API
+router.get('/:storeId/promotions', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT * FROM store_promotions
+      WHERE store_id = $1 AND is_active = true
+      ORDER BY created_at DESC
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      promotions: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 프로모션 조회 실패:', error);
+    res.json({
+      success: true,
+      promotions: []
+    });
+  }
+});
+
+// 매장 상위 사용자 조회 API
+router.get('/:storeId/top-users', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        u.id as user_id,
+        u.name as user_name,
+        rl.level_name,
+        rl.visit_count,
+        rl.total_spent
+      FROM regular_levels rl
+      JOIN users u ON rl.user_id = u.id
+      WHERE rl.store_id = $1
+      ORDER BY rl.total_spent DESC, rl.visit_count DESC
+      LIMIT 10
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      users: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 상위 사용자 조회 실패:', error);
+    res.json({
+      success: true,
+      users: []
+    });
+  }
+});
+
+// 매장 테이블 조회 API
+router.get('/:storeId/tables', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        table_number,
+        table_name,
+        seats,
+        is_occupied,
+        occupied_since,
+        CASE WHEN is_occupied THEN true ELSE false END as isOccupied,
+        table_name as tableName,
+        table_number as tableNumber
+      FROM store_tables
+      WHERE store_id = $1
+      ORDER BY table_number
+    `, [storeId]);
+
+    res.json({
+      success: true,
+      tables: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 테이블 조회 실패:', error);
+    res.json({
+      success: true,
+      tables: []
+    });
+  }
+});
+
+// 매장 리뷰 조회 API
+router.get('/:storeId/reviews', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { limit = 10 } = req.query;
+
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        r.rating as score,
+        r.review_text as content,
+        r.created_at,
+        u.name as user,
+        TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1
+      ORDER BY r.created_at DESC
+      LIMIT $2
+    `, [storeId, limit]);
+
+    res.json({
+      success: true,
+      reviews: result.rows,
+      total: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 리뷰 조회 실패:', error);
+    res.json({
+      success: true,
+      reviews: [],
+      total: 0
+    });
+  }
+});
+
 // 뷰포트 핸들러
 async function handleViewport(req, res) {
   const { swLat, swLng, neLat, neLng, level } = req.query;

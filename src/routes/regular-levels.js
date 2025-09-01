@@ -8,6 +8,79 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
+// 사용자별 매장 단골 레벨 조회
+router.get('/user/:userId/store/:storeId', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        rl.*,
+        ll.name as level_name,
+        ll.rank,
+        ll.required_visit_count,
+        ll.required_total_spent,
+        ll.required_points,
+        ll.eval_policy
+      FROM regular_levels rl
+      LEFT JOIN loyalty_levels ll ON rl.level_id = ll.id
+      WHERE rl.user_id = $1 AND rl.store_id = $2
+    `, [userId, storeId]);
+
+    if (result.rows.length === 0) {
+      res.json({
+        success: true,
+        level: null,
+        stats: { points: 0, visitCount: 0, totalSpent: 0 },
+        nextLevel: { name: '단골 고객', requiredVisitCount: 5 },
+        progress: { percentage: 0, visits_needed: 5 }
+      });
+      return;
+    }
+
+    const levelData = result.rows[0];
+
+    res.json({
+      success: true,
+      level: {
+        name: levelData.level_name || '신규 고객',
+        rank: levelData.rank || 0
+      },
+      stats: {
+        points: levelData.points || 0,
+        visitCount: levelData.visit_count || 0,
+        totalSpent: levelData.total_spent || 0
+      },
+      nextLevel: {
+        name: '다음 단계',
+        requiredVisitCount: levelData.required_visit_count || 5,
+        requiredTotalSpent: levelData.required_total_spent || 50000,
+        requiredPoints: levelData.required_points || 100,
+        evalPolicy: levelData.eval_policy || 'OR'
+      },
+      progress: {
+        percentage: Math.min(100, ((levelData.visit_count || 0) / (levelData.required_visit_count || 5)) * 100),
+        visits_needed: Math.max(0, (levelData.required_visit_count || 5) - (levelData.visit_count || 0))
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 단골 레벨 조회 실패:', error);
+    res.json({
+      success: true,
+      level: null,
+      stats: { points: 0, visitCount: 0, totalSpent: 0 },
+      nextLevel: { name: '단골 고객', requiredVisitCount: 5 },
+      progress: { percentage: 0, visits_needed: 5 }
+    });
+  }
+});
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
 // 사용자별 단골 레벨 조회
 router.get('/user/:userId', async (req, res) => {
   try {
