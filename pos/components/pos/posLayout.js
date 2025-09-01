@@ -488,15 +488,17 @@ export function renderPOSLayout() {
         flex: 1;
         overflow: hidden;
         position: relative;
+        min-height: 0; /* flex 아이템 크기 제한 */
       }
 
-      /* 테이블맵 화면 (기존 유지) */
+      /* 테이블맵 화면 */
       .table-map-view {
-        height: 100%;
+        height: calc(100vh - 60px); /* 헤더 높이 제외 */
         display: grid;
         grid-template-columns: 1fr 300px;
         gap: 1px;
         background: #e2e8f0;
+        overflow: hidden;
       }
 
       .map-container {
@@ -757,6 +759,7 @@ export function renderPOSLayout() {
         gap: 2px;
         background: #cbd5e1;
         min-height: 0;
+        height: calc(100vh - 120px); /* 헤더 제외한 전체 높이 */
       }
 
       /* 좌측 컬럼 */
@@ -1772,7 +1775,7 @@ export function renderPOSLayout() {
         display: block;
       }
 
-      /* 반응형 */
+      /* 반응형 - POS는 주로 데스크톱/태블릿 환경 */
       @media (max-width: 1400px) {
         .table-map-view {
           grid-template-columns: 1fr 280px;
@@ -1787,12 +1790,37 @@ export function renderPOSLayout() {
           grid-template-columns: 1fr 1fr;
         }
 
-        .function-buttons {
-          grid-template-columns: repeat(2, 1fr);
+        .advanced-functions-grid {
+          grid-template-columns: repeat(3, 1fr);
         }
       }
 
-      @media (max-width: 1000px) {
+      @media (max-width: 1200px) {
+        .okpos-workspace {
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr auto;
+          height: calc(100vh - 120px);
+        }
+
+        .right-column {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        .menu-grid {
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+
+        .payment-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+
+        .advanced-functions-grid {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      @media (max-width: 900px) {
         .table-map-view {
           grid-template-columns: 1fr;
           grid-template-rows: 1fr auto;
@@ -1809,39 +1837,47 @@ export function renderPOSLayout() {
           min-width: 200px;
         }
 
-        .okpos-workspace {
-          grid-template-columns: 1fr;
-          grid-template-rows: 1fr auto;
-        }
-
-        .payment-buttons {
-          grid-template-columns: repeat(4, 1fr);
-        }
-      }
-
-      @media (max-width: 768px) {
-        .map-header {
-          flex-direction: column;
-          gap: 12px;
-          align-items: flex-start;
-        }
-
-        .header-center {
-          display: none;
-        }
-
         .order-items-header {
-          grid-template-columns: 0.6fr 2fr 1fr 1fr;
+          grid-template-columns: 0.8fr 2fr 1fr 1fr;
         }
 
         .order-item-row {
-          grid-template-columns: 0.6fr 2fr 1fr 1fr;
+          grid-template-columns: 0.8fr 2fr 1fr 1fr;
         }
 
         .order-items-header .item-discount,
         .order-items-header .item-total,
         .order-item-row .item-discount,
         .order-item-row .item-total {
+          display: none;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .pos-header {
+          padding: 0 12px;
+        }
+
+        .header-center {
+          display: none;
+        }
+
+        .map-header {
+          flex-direction: column;
+          gap: 12px;
+          align-items: flex-start;
+        }
+
+        .order-items-header {
+          grid-template-columns: 0.6fr 2fr 1fr;
+        }
+
+        .order-item-row {
+          grid-template-columns: 0.6fr 2fr 1fr;
+        }
+
+        .order-items-header .item-qty,
+        .order-item-row .item-qty {
           display: none;
         }
       }

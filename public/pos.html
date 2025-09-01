@@ -1,22 +1,75 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TableLink POS - 포스기</title>
-  <link rel="stylesheet" href="shared/css/globalBody.css" />
+  <style>
+    /* POS 전용 전체 화면 스타일 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      background: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    #main {
+      width: 100vw;
+      height: 100vh;
+      position: fixed;
+      top: 0;
+      left: 0;
+      background: #f1f5f9;
+      overflow: hidden;
+      transform: none;
+      box-shadow: none;
+      border: none;
+    }
+
+    /* POS 전용 스크롤바 스타일 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 카트 위젯 숨김 (POS에서는 불필요) */
+    #cartWidget {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
   <div id="main"></div>
 
   <!-- 외부 라이브러리 -->
   <script src="/socket.io/socket.io.js"></script>
-  
+
   <!-- 공통 유틸리티 -->
   <script src="/shared/utils/logOut.js"></script>
   <script src="/shared/utils/localStorage.js"></script>
-  
+
   <!-- POS 기본 스크립트들 -->
   <script src="/pos/utils/posSocket.js"></script>
   <script src="/pos/components/pos/sessionManager.js"></script>
@@ -26,7 +79,7 @@
   <script src="/pos/components/pos/detailPanel.js"></script>
   <script src="/pos/components/pos/orderModal.js"></script>
   <script src="/pos/components/pos/paymentModal.js"></script>
-  
+
   <!-- POS ES6 모듈들 -->
   <script type="module" src="/pos/components/pos/modules/posStateManager.js"></script>
   <script type="module" src="/pos/components/pos/modules/posDataLoader.js"></script>
@@ -41,7 +94,7 @@
   <script type="module">
     document.addEventListener('DOMContentLoaded', async () => {
       console.log('🚀 TableLink POS 시스템 시작');
-      
+
       // 전역 상태 초기화
       window.currentStore = null;
       window.currentTable = null;
@@ -50,7 +103,7 @@
       window.homeMode = 'table_map';
       window.currentOrderItems = [];
       window.currentTLLOrder = null;
-      
+
       try {
         // ES6 모듈에서 renderPOS 함수 import
         const { renderPOS } = await import('/pos/components/pos/renderPOS.js');
