@@ -48,17 +48,7 @@ async function renderLogin() {
           </button>
         </form>
 
-        <!-- 빠른 로그인 섹션 -->
-        <div class="quick-login-section">
-          <div class="quick-login-title">🚀 빠른 로그인</div>
-          <div class="quick-login-buttons">
-            <button type="button" class="quick-btn" onclick="quickLogin('testuser1')">김테스트</button>
-            <button type="button" class="quick-btn" onclick="quickLogin('testuser2')">이테스트</button>
-            <button type="button" class="quick-btn" onclick="quickLogin('testuser3')">박테스트</button>
-            <button type="button" class="quick-btn" onclick="quickLogin('testuser4')">최테스트</button>
-            <button type="button" class="quick-btn" onclick="quickLogin('testuser5')">정테스트</button>
-          </div>
-        </div>
+        
           </div>
 
           <!-- 구분선 -->
@@ -573,54 +563,7 @@ async function renderLogin() {
         margin: 0;
       }
 
-      /* 빠른 로그인 스타일 */
-      .quick-login-section {
-        margin-top: 32px;
-        padding-top: 24px;
-        border-top: 1px solid #e5e7eb;
-      }
-
-      .quick-login-title {
-        text-align: center;
-        font-size: 16px;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 16px;
-      }
-
-      .quick-login-buttons {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-      }
-
-      .quick-btn {
-        padding: 12px 16px;
-        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        font-size: 14px;
-        font-weight: 500;
-        color: #374151;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .quick-btn:hover {
-        background: linear-gradient(135deg, #e5e7eb, #d1d5db);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-      }
-
-      .quick-btn:active {
-        transform: translateY(0);
-      }
-
-      @media (max-width: 480px) {
-        .quick-login-buttons {
-          grid-template-columns: 1fr;
-        }
-      }
+      
 
       /* 반응형 디자인 */
       @media (max-width: 480px) {
@@ -2262,10 +2205,10 @@ async function renderLogin() {
     }
 
     try {
-      const response = await fetch('/api/users/login', {
+      const response = await fetch('/api/auth/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: userId, pw: '1234' }) // Assuming a default password for quick login
+        body: JSON.stringify({ id: userId, pw: '1234' })
       });
 
       const data = await response.json();
