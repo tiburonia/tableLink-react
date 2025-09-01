@@ -49,27 +49,9 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
     } catch (menuError) {
       console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
       
-      // menu_items 테이블이 없거나 에러가 발생하면 stores.menu에서 조회
-      try {
-        const legacyMenuResult = await pool.query(`
-          SELECT menu FROM stores WHERE id = $1
-        `, [storeId]);
-
-        if (legacyMenuResult.rows.length > 0 && legacyMenuResult.rows[0].menu) {
-          const legacyMenu = legacyMenuResult.rows[0].menu;
-          if (Array.isArray(legacyMenu) && legacyMenu.length > 0) {
-            menu = legacyMenu.map((item, index) => ({
-              id: index + 1,
-              name: item.name,
-              price: item.price,
-              description: item.description || '',
-              category: item.category || '기본메뉴'
-            }));
-          }
-        }
-      } catch (legacyError) {
-        console.warn(`⚠️ 레거시 메뉴 조회도 실패 (매장 ${storeId}):`, legacyError.message);
-      }
+      // menu_items 테이블이 없으면 기본 메뉴 사용
+      console.log(`⚠️ menu_items 테이블이 없어서 기본 메뉴 사용 (매장 ${storeId})`);
+      menu = [];
     }
 
     // 메뉴가 없으면 카테고리별 기본 메뉴 생성
