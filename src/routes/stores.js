@@ -276,3 +276,205 @@ router.get('/search/:keyword', async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const pool = require('../db/pool');
+
+// 전체 매장 조회
+router.get('/', async (req, res) => {
+  try {
+    console.log('🏪 전체 매장 조회 요청');
+
+    const result = await pool.query(`
+      SELECT 
+        id, name, category, address, sigungu, 
+        rating, status, coordinates_lat, coordinates_lng,
+        created_at, updated_at
+      FROM stores 
+      ORDER BY id ASC
+    `);
+
+    console.log(`✅ 매장 조회 완료: ${result.rows.length}개`);
+
+    res.json({
+      success: true,
+      stores: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 특정 매장 상세 조회
+router.get('/:storeId', async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    console.log(`🏪 매장 ${storeId} 상세 정보 조회 요청`);
+
+    const result = await pool.query(`
+      SELECT 
+        id, name, category, address, sigungu, 
+        rating, status, coordinates_lat, coordinates_lng,
+        created_at, updated_at
+      FROM stores 
+      WHERE id = $1
+    `, [storeId]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 매장 ${storeId}을 찾을 수 없음`);
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다.'
+      });
+    }
+
+    console.log(`✅ 매장 ${storeId} 상세 정보 조회 완료`);
+
+    res.json({
+      success: true,
+      store: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 상세 정보 조회 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '매장 상세 정보 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 뷰포트 기반 매장 조회
+router.get('/viewport/:bounds', async (req, res) => {
+  const { bounds } = req.params;
+  const { swLat, swLng, neLat, neLng, level } = req.query;
+
+  try {
+    console.log('🏪 뷰포트 매장 조회:', { swLat, swLng, neLat, neLng, level });
+
+    const result = await pool.query(`
+      SELECT 
+        id, name, category, address, sigungu, 
+        rating, status, coordinates_lat, coordinates_lng
+      FROM stores 
+      WHERE coordinates_lat BETWEEN $1 AND $3
+        AND coordinates_lng BETWEEN $2 AND $4
+        AND status = 'open'
+      ORDER BY rating DESC, id ASC
+      LIMIT 50
+    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
+
+    console.log(`✅ 뷰포트 매장 조회 완료: ${result.rows.length}개`);
+
+    res.json({
+      success: true,
+      stores: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 뷰포트 매장 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '뷰포트 매장 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 매장 운영 상태 토글
+router.post('/:storeId/toggle-status', async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    console.log(`🏪 매장 ${storeId} 운영 상태 토글 요청`);
+
+    // 현재 상태 조회
+    const currentResult = await pool.query(
+      'SELECT status FROM stores WHERE id = $1',
+      [storeId]
+    );
+
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다.'
+      });
+    }
+
+    const currentStatus = currentResult.rows[0].status;
+    const newStatus = currentStatus === 'open' ? 'closed' : 'open';
+
+    // 상태 업데이트
+    await pool.query(
+      'UPDATE stores SET status = $1, updated_at = NOW() WHERE id = $2',
+      [newStatus, storeId]
+    );
+
+    console.log(`✅ 매장 ${storeId} 상태 변경: ${currentStatus} → ${newStatus}`);
+
+    res.json({
+      success: true,
+      message: `매장 운영 상태가 ${newStatus === 'open' ? '운영중' : '운영중지'}으로 변경되었습니다.`,
+      status: newStatus
+    });
+
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 상태 토글 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '매장 상태 변경 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 매장 통계 조회
+router.get('/:storeId/stats', async (req, res) => {
+  const { storeId } = req.params;
+
+  try {
+    console.log(`🏪 매장 ${storeId} 통계 조회 요청`);
+
+    // 주문 통계
+    const orderStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_orders,
+        COALESCE(SUM(total_amount), 0) as total_revenue,
+        COALESCE(AVG(total_amount), 0) as avg_order_amount
+      FROM orders 
+      WHERE store_id = $1 AND status = 'completed'
+    `, [storeId]);
+
+    // 리뷰 통계
+    const reviewStats = await pool.query(`
+      SELECT 
+        COUNT(*) as total_reviews,
+        COALESCE(AVG(rating), 0) as avg_rating
+      FROM reviews 
+      WHERE store_id = $1
+    `, [storeId]);
+
+    console.log(`✅ 매장 ${storeId} 통계 조회 완료`);
+
+    res.json({
+      success: true,
+      stats: {
+        orders: orderStats.rows[0],
+        reviews: reviewStats.rows[0]
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 통계 조회 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '매장 통계 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+module.exports = router;

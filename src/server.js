@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -66,7 +65,7 @@ try {
   const tllRoutes = require('./routes/tll');
   const krpRoutes = require('./routes/krp');
 
-  // 통합된 새 시스템 라우터
+  // 새 시스템 라우터
   const authRoutes = require('./routes/auth');
   const storesRoutes = require('./routes/stores');
   const ordersRoutes = require('./routes/orders');
@@ -87,8 +86,8 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/payments', krpRoutes);
 
-  // 통합된 새 시스템 API
-  app.use('/api', authRoutes);
+  // 새 시스템 API 라우터
+  app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/orders', ordersRoutes);
 

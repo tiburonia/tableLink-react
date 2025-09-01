@@ -55,7 +55,7 @@ window.MapPanelUI = {
     const storeName = store?.name || '이름 없음';
     const storeCategory = store?.category || '기타';
     const isOpen = store?.isOpen !== false; // null, undefined는 true로 처리
-    
+
     // JSON 안전 처리
     const safeStoreData = JSON.stringify(store || {}).replace(/"/g, '&quot;');
 
@@ -788,7 +788,8 @@ window.MapPanelUI = {
 
       console.log(`📱 패널 매장 데이터 요청: ${params.toString()}`);
 
-      const response = await fetch(`/api/stores/viewport?${params}`);
+      // API 경로 변경: /api/stores/viewport -> /api/stores/viewport/bounds
+      const response = await fetch(`/api/stores/viewport/bounds?${params}`);
       const data = await response.json();
 
       if (!data.success) {
@@ -860,7 +861,7 @@ window.MapPanelUI = {
             ratingAverage: store.ratingAverage || 0.0,
             reviewCount: store.reviewCount || 0
           };
-          
+
           try {
             return this.renderStoreCard(store, ratingData);
           } catch (error) {
@@ -919,7 +920,7 @@ window.MapPanelUI = {
     // 뷰포트 기반 패널 완전 재구성 함수
     const rebuildPanelForViewport = () => {
       console.log('🔄 뷰포트 변경 - 패널 완전 재구성 시작');
-      
+
       // 기존 타이머 정리
       if (updateTimer) {
         clearTimeout(updateTimer);

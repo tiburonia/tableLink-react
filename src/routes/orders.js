@@ -625,3 +625,234 @@ router.get('/check/:checkId', async (req, res) => {
 });
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const pool = require('../db/pool');
+
+// 주문 생성 (결제 처리)
+router.post('/pay', async (req, res) => {
+  const {
+    userId,
+    storeId,
+    storeName,
+    tableNumber,
+    orderItems,
+    totalAmount,
+    realCost,
+    discountAmount = 0,
+    pointsUsed = 0,
+    couponUsed = 0,
+    pointsEarned = 0
+  } = req.body;
+
+  console.log('🔍 주문 결제 요청:', {
+    userId,
+    storeId,
+    storeName,
+    tableNumber,
+    totalAmount,
+    realCost,
+    itemCount: orderItems?.length
+  });
+
+  if (!userId || !storeId || !orderItems || orderItems.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: '필수 주문 정보가 누락되었습니다.'
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    // 주문 생성
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        user_id, store_id, store_name, table_number,
+        order_data, total_amount, real_cost, discount_amount,
+        points_used, coupon_used, points_earned,
+        status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'completed', NOW())
+      RETURNING id, created_at
+    `, [
+      userId, storeId, storeName, tableNumber,
+      JSON.stringify(orderItems), totalAmount, realCost, discountAmount,
+      pointsUsed, couponUsed, pointsEarned
+    ]);
+
+    const orderId = orderResult.rows[0].id;
+
+    // 사용자 포인트 업데이트
+    if (pointsUsed > 0 || pointsEarned > 0) {
+      await client.query(`
+        UPDATE users 
+        SET point = point - $1 + $2
+        WHERE id = $3
+      `, [pointsUsed, pointsEarned, userId]);
+    }
+
+    // 쿠폰 사용 처리
+    if (couponUsed > 0) {
+      await client.query(`
+        UPDATE users 
+        SET coupon = coupon - $1
+        WHERE id = $2
+      `, [couponUsed, userId]);
+    }
+
+    await client.query('COMMIT');
+
+    console.log('✅ 주문 결제 완료:', { orderId, userId, storeId });
+
+    res.json({
+      success: true,
+      message: '주문이 성공적으로 처리되었습니다.',
+      orderId: orderId,
+      pointsEarned: pointsEarned
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 주문 결제 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 처리 중 오류가 발생했습니다.'
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 매장별 주문 조회
+router.get('/stores/:storeId', async (req, res) => {
+  const { storeId } = req.params;
+  const { status, limit = 50 } = req.query;
+
+  try {
+    console.log(`🔍 매장 ${storeId} 주문 조회:`, { status, limit });
+
+    let query = `
+      SELECT 
+        id, user_id, store_name, table_number,
+        order_data, total_amount, real_cost, discount_amount,
+        points_used, coupon_used, points_earned,
+        status, created_at
+      FROM orders 
+      WHERE store_id = $1
+    `;
+
+    const params = [storeId];
+
+    if (status) {
+      query += ' AND status = $2';
+      params.push(status);
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT $' + (params.length + 1);
+    params.push(parseInt(limit));
+
+    const result = await pool.query(query, params);
+
+    console.log(`✅ 매장 ${storeId} 주문 조회 완료: ${result.rows.length}개`);
+
+    res.json({
+      success: true,
+      orders: result.rows
+    });
+
+  } catch (error) {
+    console.error(`❌ 매장 ${storeId} 주문 조회 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '주문 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 사용자별 주문 조회
+router.get('/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { limit = 20 } = req.query;
+
+  try {
+    console.log(`🔍 사용자 ${userId} 주문 조회`);
+
+    const result = await pool.query(`
+      SELECT 
+        id, store_id, store_name, table_number,
+        order_data, total_amount, real_cost, discount_amount,
+        points_used, coupon_used, points_earned,
+        status, created_at
+      FROM orders 
+      WHERE user_id = $1
+      ORDER BY created_at DESC 
+      LIMIT $2
+    `, [userId, parseInt(limit)]);
+
+    console.log(`✅ 사용자 ${userId} 주문 조회 완료: ${result.rows.length}개`);
+
+    res.json({
+      success: true,
+      orders: result.rows
+    });
+
+  } catch (error) {
+    console.error(`❌ 사용자 ${userId} 주문 조회 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '주문 조회 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+// 주문 상태 변경
+router.put('/:orderId/status', async (req, res) => {
+  const { orderId } = req.params;
+  const { status } = req.body;
+
+  const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled'];
+
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      error: '유효하지 않은 주문 상태입니다.'
+    });
+  }
+
+  try {
+    console.log(`🔍 주문 ${orderId} 상태 변경: ${status}`);
+
+    const result = await pool.query(`
+      UPDATE orders 
+      SET status = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, status
+    `, [status, orderId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다.'
+      });
+    }
+
+    console.log(`✅ 주문 ${orderId} 상태 변경 완료: ${status}`);
+
+    res.json({
+      success: true,
+      message: '주문 상태가 변경되었습니다.',
+      order: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error(`❌ 주문 ${orderId} 상태 변경 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '주문 상태 변경 중 오류가 발생했습니다.'
+    });
+  }
+});
+
+module.exports = router;
