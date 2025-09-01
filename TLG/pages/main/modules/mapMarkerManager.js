@@ -126,7 +126,7 @@ window.MapMarkerManager = {
     console.log(`📍 뷰포트 매장 데이터 요청: ${params.toString()}`);
 
     // 매장 조회 API 엔드포인트를 새 시스템 경로로 변경
-    const response = await fetch(`/api/stores?limit=50&offset=0`);
+    const response = await fetch(`/api/stores/viewport?${params}`);
     const data = await response.json();
 
     if (!data.success) {

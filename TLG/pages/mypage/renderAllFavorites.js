@@ -1,11 +1,10 @@
-
 // 즐겨찾기 매장 전체보기 렌더링 함수
 async function renderAllFavorites(userInfo) {
   try {
     console.log('💖 즐겨찾기 매장 전체보기 화면 렌더링');
 
     const main = document.getElementById('main');
-    
+
     // 스켈레톤 UI 먼저 표시
     main.innerHTML = `
       <div class="favorites-container">
@@ -42,7 +41,7 @@ async function renderAllFavorites(userInfo) {
               <h2>즐겨찾기 목록</h2>
               <div class="favorites-count skeleton-badge">로딩중...</div>
             </div>
-            
+
             <div id="favoritesList" class="favorites-list">
               ${generateFavoritesSkeletonCards(5)}
             </div>
@@ -84,7 +83,8 @@ function generateFavoritesSkeletonCards(count) {
 // 실제 즐겨찾기 데이터 로드
 async function loadFavoritesData(userInfo) {
   try {
-    const response = await fetch(`/api/users/favorites/${userInfo.id}`);
+    const userId = userInfo.id;
+    const response = await fetch(`/api/auth/users/favorites/${userId}`);
     if (!response.ok) throw new Error('즐겨찾기 매장 조회 실패');
 
     const data = await response.json();
@@ -168,7 +168,7 @@ function updateFavoritesList(favoritesData) {
               <span class="review-count">(${store.reviewCount || 0}개)</span>
             </div>
           </div>
-          
+
           <div class="favorite-card-footer">
             <div class="store-status ${store.isOpen ? 'open' : 'closed'}">
               ${store.isOpen ? '영업중' : '영업종료'}

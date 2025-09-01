@@ -51,7 +51,7 @@ async function toggleFavorite(store) {
     console.log(`📋 현재 즐겨찾기 상태: ${currentStatus ? '등록됨' : '등록안됨'}`);
 
     // 서버에 즐겨찾기 토글 요청
-    const response = await fetch('/api/users/favorite/toggle', {
+    const response = await fetch('/api/auth/users/favorite/toggle', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

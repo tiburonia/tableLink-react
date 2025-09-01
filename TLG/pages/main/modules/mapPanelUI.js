@@ -789,7 +789,7 @@ window.MapPanelUI = {
       console.log(`📱 패널 매장 데이터 요청: ${params.toString()}`);
 
       // API 경로 변경: /api/stores/viewport -> /api/stores/viewport/bounds
-      const response = await fetch(`/api/stores/viewport/bounds?${params}`);
+      const response = await fetch(`/api/stores/viewport?${params}`);
       const data = await response.json();
 
       if (!data.success) {

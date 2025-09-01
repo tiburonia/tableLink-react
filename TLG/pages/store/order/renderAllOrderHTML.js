@@ -1,11 +1,10 @@
-
 // 전체 주문내역을 전체 화면으로 표시하는 함수
 async function renderAllOrderHTML(userInfo) {
   try {
     console.log('📋 전체 주문내역 화면 렌더링');
 
     const main = document.getElementById('main');
-    
+
     // 스켈레톤 UI 먼저 표시
     main.innerHTML = `
       <div class="order-history-container">
@@ -42,7 +41,7 @@ async function renderAllOrderHTML(userInfo) {
               <h2>주문 목록</h2>
               <div class="order-count skeleton-badge">로딩중...</div>
             </div>
-            
+
             <div id="ordersList" class="orders-list">
               ${generateSkeletonCards(5)}
             </div>
@@ -177,13 +176,13 @@ function updateOrdersList(ordersData) {
           <div class="order-items">
             <p class="items-text">${items}</p>
           </div>
-          
+
           <div class="order-card-footer">
             <div class="order-amount">
               <span class="amount-label">결제금액</span>
               <span class="amount-value">${(order.final_amount || order.total_amount || 0).toLocaleString()}원</span>
             </div>
-            
+
             <div class="order-actions">
               ${hasReview ? 
                 `<span class="review-completed">✅ 리뷰 완료</span>` :
@@ -212,13 +211,13 @@ function updateOrdersList(ordersData) {
       const orderId = e.target.closest('.review-btn').getAttribute('data-order-id');
       const order = ordersData[orderIndex];
       console.log('🔍 선택된 주문 정보:', order);
-      
+
       // 리뷰 작성 스크립트 로드
       await loadReviewWriteScript();
-      
+
       // 이전 화면 정보 저장
       window.previousScreen = 'renderAllOrderHTML';
-      
+
       // 리뷰 작성 화면으로 이동
       if (typeof renderReviewWrite === 'function') {
         renderReviewWrite(order);
@@ -731,7 +730,7 @@ async function loadReviewWriteScript() {
     console.log('🔄 renderReviewWrite 스크립트 로드 시작');
     const script = document.createElement('script');
     script.src = '/TLG/pages/store/review/renderReviewWrite.js';
-    
+
     await new Promise((resolve, reject) => {
       script.onload = () => {
         console.log('✅ renderReviewWrite 스크립트 로드 완료');

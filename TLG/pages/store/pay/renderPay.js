@@ -865,10 +865,10 @@ async function renderPay(currentOrder, store, tableNum) {
         document.querySelectorAll('.payment-method-item').forEach(item => {
           item.classList.remove('active');
         });
-        
+
         // 선택된 결제 수단 활성화
         methodItem.classList.add('active');
-        
+
         const selectedMethod = methodItem.dataset.method;
         console.log('💳 결제 수단 선택:', selectedMethod);
       }
