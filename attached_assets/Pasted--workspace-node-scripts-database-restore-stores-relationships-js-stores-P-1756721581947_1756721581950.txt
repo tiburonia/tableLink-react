@@ -1,0 +1,104 @@
+~/workspace$ node scripts/database/restore-stores-relationships.js
+🔄 stores 테이블 참조관계 복원 시작...
+✅ PostgreSQL 데이터베이스 연결
+🔍 1단계: 스키마 차이 확인 및 조정...
+✅ 현재 stores 컬럼: id, name, category, is_open, rating_average, review_count, favorite_count, description, created_at, updated_at
+✅ PostgreSQL 데이터베이스 연결 
+✅ 백업 stores 컬럼: id, name, category, is_open, rating_average, review_count, favorite_count, created_at, description
+🔗 공통 컬럼: id, name, category, is_open, rating_average, review_count, favorite_count, description, created_at
+🗑️ 2단계: 현재 stores 테이블 데이터 초기화...
+✅ 기존 stores 데이터 삭제 완료
+📥 3단계: 백업 데이터 복원...
+🔧 복원 쿼리: 
+      INSERT INTO stores (id, name, category, is_open, rating_average, review_count, favorite_count, description, created_at)
+      SELECT id, name, category, is_open, rating_average, review_count, favorite_count, description, created_at
+      FROM stores_backup
+      ORDER BY id
+    
+✅ stores 데이터 복원 완료: 101개 매장
+🔗 4단계: 관련 테이블들 확인...
+  ✅ store_address: 5개 레코드
+  ✅ store_tables: 25개 레코드
+  ✅ store_hours: 0개 레코드
+  ✅ store_holidays: 0개 레코드
+  ✅ store_promotions: 50개 레코드
+  ✅ menu_groups: 0개 레코드
+  ✅ menu_items: 0개 레코드
+  ✅ prep_stations: 0개 레코드
+  ✅ reviews: 0개 레코드
+  ✅ favorites: 0개 레코드
+  ✅ orders: 0개 레코드
+  ✅ reservations: 0개 레코드
+  ✅ waitlists: 0개 레코드
+  ❌ user_paid_orders: 테이블 없음
+  ✅ carts: 0개 레코드
+  ✅ checks: 0개 레코드
+🧹 5단계: 고아 레코드 정리...
+  ✅ store_address: 고아 레코드 없음
+  ✅ store_tables: 고아 레코드 없음
+  ✅ store_hours: 고아 레코드 없음
+  ✅ store_holidays: 고아 레코드 없음
+  ✅ store_promotions: 고아 레코드 없음
+  ✅ menu_groups: 고아 레코드 없음
+  ✅ menu_items: 고아 레코드 없음
+  ✅ prep_stations: 고아 레코드 없음
+  ✅ reviews: 고아 레코드 없음
+  ✅ favorites: 고아 레코드 없음
+  ⚠️ orders: 정리 실패 - column "store_id" does not exist
+  ⚠️ reservations: 정리 실패 - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ waitlists: 정리 실패 - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ carts: 정리 실패 - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ checks: 정리 실패 - current transaction is aborted, commands ignored until end of transaction block
+🏗️ 6단계: 필수 테이블 데이터 보장...
+❌ 참조관계 복원 실패: error: current transaction is aborted, commands ignored until end of transaction block
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async restoreStoresRelationships (/home/runner/workspace/scripts/database/restore-stores-relationships.js:200:32) {
+  length: 144,
+  severity: 'ERROR',
+  code: '25P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1142',
+  routine: 'exec_simple_query'
+}
+🔄 롤백 중...
+✅ 롤백 완료 - 변경사항이 취소되었습니다.
+node:internal/process/promises:391
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+error: current transaction is aborted, commands ignored until end of transaction block
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async restoreStoresRelationships (/home/runner/workspace/scripts/database/restore-stores-relationships.js:200:32) {
+  length: 144,
+  severity: 'ERROR',
+  code: '25P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1142',
+  routine: 'exec_simple_query'
+}
+
+Node.js v20.19.3
