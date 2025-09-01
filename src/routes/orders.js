@@ -959,26 +959,34 @@ router.get('/users/:userId', async (req, res) => {
     const { userId } = req.params;
     const { limit = 20, offset = 0, status } = req.query;
 
-    let whereClause = 'WHERE o.user_id = $1';
+    console.log(`📋 사용자 ${userId} 주문 목록 조회`);
+
+    // 먼저 checks 테이블에서 사용자 체크 조회
+    let whereClause = 'WHERE c.user_id = $1';
     const queryParams = [userId];
 
     if (status) {
-      whereClause += ' AND o.status = $2';
+      whereClause += ' AND c.status = $2';
       queryParams.push(status);
     }
 
     const ordersResult = await pool.query(`
       SELECT 
-        o.id, o.total_amount, o.status, o.cooking_status, o.created_at,
-        o.table_number, o.is_delivery,
-        s.id as store_id, s.name as store_name, s.category as store_category,
-        COUNT(oi.id) as item_count
-      FROM orders o
-      JOIN stores s ON o.store_id = s.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id
+        c.id, 
+        c.final_amount as total_amount, 
+        c.status, 
+        c.opened_at as created_at,
+        c.table_number,
+        s.id as store_id, 
+        s.name as store_name, 
+        s.category as store_category,
+        COUNT(ci.id) as item_count
+      FROM checks c
+      JOIN stores s ON c.store_id = s.id
+      LEFT JOIN check_items ci ON c.id = ci.check_id
       ${whereClause}
-      GROUP BY o.id, s.id, s.name, s.category
-      ORDER BY o.created_at DESC
+      GROUP BY c.id, s.id, s.name, s.category
+      ORDER BY c.opened_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, parseInt(limit), parseInt(offset)]);
 

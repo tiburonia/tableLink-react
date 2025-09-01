@@ -49,11 +49,12 @@ router.get('/users/:userId', async (req, res) => {
 
     console.log(`📝 사용자 ${userId} 리뷰 조회`);
 
+    // reviews 테이블의 실제 컬럼명 확인 후 조회
     const result = await pool.query(`
       SELECT 
         r.id,
         r.rating as score,
-        r.content,
+        COALESCE(r.review_text, r.comment, '') as content,
         r.created_at,
         s.name as storeName,
         TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
