@@ -122,10 +122,24 @@ export class POSUIRenderer {
       `;
     }
 
+    // DOM 업데이트 강제 적용
     orderItemsContainer.innerHTML = html;
-    console.log(`🎨 주문 목록 렌더링 완료 - 임시: ${pendingItems.length}개, 확정: ${confirmedItems.length}개`);
+    
+    // DOM 변경 강제 적용 (브라우저 렌더링 엔진 트리거)
+    orderItemsContainer.offsetHeight;
+    
+    console.log(`🎨 새 시스템: 주문 목록 렌더링 완료 - 임시: ${pendingItems.length}개, 확정: ${confirmedItems.length}개`);
     console.log('📄 렌더링된 HTML 길이:', html.length);
-    console.log('🔍 실제 DOM 내용:', orderItemsContainer.innerHTML.substring(0, 200) + '...');
+    console.log('🔍 실제 DOM 내용 확인:', orderItemsContainer.children.length, '개 요소');
+    
+    // DOM 업데이트 검증
+    if (orderItemsContainer.children.length === 0 && (pendingItems.length > 0 || confirmedItems.length > 0)) {
+      console.error('❌ DOM 업데이트 실패 감지 - 재시도');
+      setTimeout(() => {
+        orderItemsContainer.innerHTML = html;
+        orderItemsContainer.offsetHeight;
+      }, 50);
+    }
   }
 
   // 결제 요약 렌더링

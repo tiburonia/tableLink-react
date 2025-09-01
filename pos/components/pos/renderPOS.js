@@ -163,27 +163,28 @@ window.renderPOS = renderPOS;
 window.selectTableFromMap = selectTableFromMap;
 window.returnToTableMap = returnToTableMap;
 
-// 메뉴 관련 전역 함수
+// ✅ 새 시스템: 메뉴 관련 전역 함수
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
-window.addMenuToOrder = (menuName, price) => {
-  console.log(`🍽️ 전역 addMenuToOrder 호출: ${menuName} - ₩${price}`);
+window.addMenuToOrder = (menuName, price, notes = '') => {
+  console.log(`🍽️ 새 시스템: 전역 addMenuToOrder 호출 - ${menuName} (₩${price})`);
   try {
-    POSOrderManager.addMenuToOrder(menuName, price);
-    console.log(`✅ addMenuToOrder 성공`);
+    POSOrderManager.addMenuToPending(menuName, price, notes);
+    console.log(`✅ 새 시스템: addMenuToPending 성공`);
   } catch (error) {
-    console.error(`❌ addMenuToOrder 실패:`, error);
+    console.error(`❌ 새 시스템: addMenuToPending 실패:`, error);
+    showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
   }
 };
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
-// 주문 관리 전역 함수
+// ✅ 새 시스템: 주문 관리 전역 함수
 window.toggleItemSelection = (itemId) => POSOrderManager.toggleItemSelection(itemId);
 window.selectAllItems = () => POSOrderManager.selectAllItems();
 window.deleteSelectedItems = () => POSOrderManager.deleteSelectedItems();
 window.applyDiscount = (discountType, discountValue) => POSOrderManager.applyDiscount(discountType, discountValue);
 window.changeQuantity = (itemId, change) => POSOrderManager.changeQuantity(itemId, change);
 window.clearOrder = () => POSOrderManager.clearOrder();
-window.confirmOrder = () => POSOrderManager.confirmOrder();
+window.confirmOrder = () => POSOrderManager.confirmPendingOrder();
 window.handlePrimaryAction = () => POSOrderManager.handlePrimaryAction();
 
 // 결제 관련 전역 함수

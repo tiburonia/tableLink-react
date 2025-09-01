@@ -314,49 +314,53 @@ export class POSStateManager {
     console.log('📝 임시 주문 아이템 추가:', item);
   }
 
-  // 임시 주문 아이템 조회 (하위 호환성)
+  // ✅ 새 시스템: 임시 주문 아이템 조회
   static getTempOrderItems() {
     return this.state.pendingItems;
   }
 
-  // 선택된 아이템 초기화
+  // ✅ 새 시스템: 선택된 아이템 초기화
   static clearSelectedItems() {
     this.state.selectedItems = [];
     window.selectedItems = [];
+    console.log('🗑️ 새 시스템: 선택된 아이템 초기화');
   }
 
-  // 아이템 수량 변경
+  // ✅ 새 시스템: 아이템 수량 변경 (임시 주문만)
   static changeItemQuantity(itemId, change) {
-    let updated = false;
-
-    // 임시 주문 아이템 수량 변경
+    console.log(`📝 새 시스템: 수량 변경 시도 - ${itemId}, 변경량: ${change}`);
+    
+    // 임시 주문 아이템만 수량 변경 가능
     const pendingItems = this.state.pendingItems;
     const pendingItem = pendingItems.find(item => item.id === itemId);
+    
     if (pendingItem) {
+      const oldQuantity = pendingItem.quantity;
       pendingItem.quantity += change;
+      
       if (pendingItem.quantity <= 0) {
         const index = pendingItems.indexOf(pendingItem);
         pendingItems.splice(index, 1);
+        console.log(`🗑️ 수량 0이하로 아이템 제거: ${pendingItem.name}`);
       }
-      updated = true;
+      
+      console.log(`✅ 수량 변경: ${pendingItem.name} ${oldQuantity} → ${pendingItem.quantity}`);
+      this.updateCombinedOrder();
+      return true;
     }
 
-    // 확정된 주문 아이템 수량 변경 (취소 처리해야 함)
-    const confirmedItems = this.state.confirmedItems;
-    const confirmedItem = confirmedItems.find(item => item.id === itemId);
-    if (confirmedItem && !updated) {
-      console.warn('⚠️ 확정된 주문의 수량 변경은 취소 후 재주문이 필요합니다');
+    // 확정된 주문은 수량 변경 불가
+    const confirmedItem = this.state.confirmedItems.find(item => item.id === itemId);
+    if (confirmedItem) {
+      console.warn('⚠️ 새 시스템: 확정된 주문은 수량 변경 불가');
       return false;
     }
 
-    if (updated) {
-      this.updateCombinedOrder();
-    }
-
-    return updated;
+    console.warn('⚠️ 새 시스템: 해당 아이템을 찾을 수 없음:', itemId);
+    return false;
   }
 
-  // 통합 주문 업데이트
+  // ✅ 새 시스템: 통합 주문 업데이트
   static updateCombinedOrder() {
     const confirmedItems = this.state.confirmedItems;
     const pendingItems = this.state.pendingItems;
@@ -367,5 +371,6 @@ export class POSStateManager {
     ];
 
     this.setCurrentOrder(allItems);
+    console.log(`🔄 새 시스템: 통합 주문 업데이트 - 총 ${allItems.length}개 (확정: ${confirmedItems.length}, 임시: ${pendingItems.length})`);
   }
 }

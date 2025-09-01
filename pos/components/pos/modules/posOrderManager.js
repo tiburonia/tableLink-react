@@ -128,8 +128,8 @@ export class POSOrderManager {
     }
   }
 
-  // 📝 임시 주문에 메뉴 추가
-  static addMenuToPending(menuName, price) {
+  // ✅ 새 시스템: 임시 주문에 메뉴 추가 (UI 업데이트 보장)
+  static addMenuToPending(menuName, price, notes = '') {
     const currentTable = POSStateManager.getCurrentTable();
     if (!currentTable) {
       showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
@@ -137,11 +137,14 @@ export class POSOrderManager {
     }
 
     try {
+      console.log(`🍽️ 새 시스템: 메뉴 추가 시작 - ${menuName} (₩${price})`);
+
       const pendingItems = POSStateManager.getPendingItems();
       const existingItem = pendingItems.find(item => item.name === menuName && !item.isDeleted);
 
       if (existingItem) {
         existingItem.quantity += 1;
+        console.log(`📈 기존 메뉴 수량 증가: ${existingItem.quantity}개`);
         showPOSNotification(`${menuName} 수량 +1 (총 ${existingItem.quantity}개) [임시]`, 'info');
       } else {
         const newItem = {
@@ -150,26 +153,31 @@ export class POSOrderManager {
           price: parseInt(price),
           quantity: 1,
           discount: 0,
-          notes: '',
+          notes: notes,
           status: 'pending',
           createdAt: new Date().toISOString(),
           isConfirmed: false,
           isPending: true
         };
         pendingItems.push(newItem);
+        console.log(`➕ 새 메뉴 아이템 생성:`, newItem);
         showPOSNotification(`${menuName} 임시 주문에 추가됨`, 'success');
       }
 
+      // 상태 업데이트
       POSStateManager.setPendingItems(pendingItems);
       this.updateCombinedOrder();
       POSTempStorage.saveTempOrder();
 
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
+      console.log(`📝 새 시스템: 임시 주문 상태 업데이트 완료 - ${pendingItems.length}개 아이템`);
+
+      // UI 강제 업데이트 (확실한 렌더링 보장)
+      this.forceUIUpdate();
+
+      console.log('✅ 새 시스템: 메뉴 추가 완료');
 
     } catch (error) {
-      console.error('❌ 임시 주문 추가 실패:', error);
+      console.error('❌ 새 시스템: 메뉴 추가 실패:', error);
       showPOSNotification('메뉴 추가 중 오류가 발생했습니다.', 'error');
     }
   }
@@ -551,172 +559,66 @@ export class POSOrderManager {
     }
   }
 
-  // 기존 메서드들 유지 (하위 호환성)
+  // ✅ 새 시스템: 세션 초기화 (기존 loadTableOrders 대체)
   static async loadTableOrders(tableNumber) {
     await this.initializeSession(tableNumber);
   }
 
-  // 메뉴를 주문에 추가 (임시 주문)
+  // ✅ 새 시스템: 메뉴 추가 (임시 주문)
   static addMenuToOrder(menuName, price, notes = '') {
-    const currentTable = POSStateManager.getCurrentTable();
-    if (!currentTable) {
-      showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
-      return;
-    }
-
-    try {
-      console.log(`🍽️ 메뉴 추가: ${menuName} (₩${price})`);
-
-      const pendingItems = POSStateManager.getPendingItems();
-      const existingItem = pendingItems.find(item => item.name === menuName && !item.isDeleted);
-
-      if (existingItem) {
-        existingItem.quantity += 1;
-        showPOSNotification(`${menuName} 수량 +1 (총 ${existingItem.quantity}개) [임시]`, 'info');
-      } else {
-        const newItem = {
-          id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          name: menuName,
-          price: parseInt(price),
-          quantity: 1,
-          discount: 0,
-          notes: notes,
-          status: 'pending',
-          createdAt: new Date().toISOString(),
-          isConfirmed: false,
-          isPending: true
-        };
-        pendingItems.push(newItem);
-        showPOSNotification(`${menuName} 임시 주문에 추가됨`, 'success');
-      }
-
-      // 상태 즉시 업데이트
-      POSStateManager.setPendingItems(pendingItems);
-      this.updateCombinedOrder();
-      POSTempStorage.saveTempOrder();
-
-      console.log(`📝 현재 임시 주문 상태:`, pendingItems);
-
-      // UI 강제 업데이트 (비동기 처리로 확실히 실행)
-      setTimeout(() => {
-        if (typeof POSUIRenderer !== 'undefined') {
-          console.log(`🎨 UI 업데이트 시작 - 임시 아이템: ${pendingItems.length}개`);
-          POSUIRenderer.renderOrderItems();
-          POSUIRenderer.renderPaymentSummary();
-          POSUIRenderer.updatePrimaryActionButton();
-          console.log(`✅ UI 업데이트 완료`);
-        } else {
-          console.error('❌ POSUIRenderer를 찾을 수 없습니다');
-        }
-      }, 50);
-
-      console.log('✅ 메뉴 추가 완료');
-
-    } catch (error) {
-      console.error('❌ 메뉴 추가 실패:', error);
-      showPOSNotification('메뉴 추가 중 오류가 발생했습니다.', 'error');
-    }
+    console.log(`🍽️ addMenuToOrder 호출: ${menuName} (₩${price})`);
+    this.addMenuToPending(menuName, price, notes);
   }
 
+  // ✅ 새 시스템: 주문 확정 
   static async confirmOrder() {
-    try {
-      const currentTable = POSStateManager.getCurrentTable();
-      const currentStore = POSStateManager.getCurrentStore();
-      const tempItems = POSStateManager.getTempOrderItems();
-
-      if (!tempItems || tempItems.length === 0) {
-        showPOSNotification('주문할 메뉴가 없습니다.', 'warning');
-        return false;
-      }
-
-      showPOSNotification('주문을 처리하고 있습니다...', 'info');
-
-      // 서버에 주문 전송
-      const response = await fetch('/api/pos/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          store_id: currentStore.id,
-          table_number: currentTable,
-          items: tempItems,
-          order_type: 'pos',
-          status: 'confirmed'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`주문 처리 실패: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      // 성공 시 상태 업데이트
-      POSStateManager.setCurrentSession({
-        checkId: result.checkId,
-        status: 'active',
-        items: result.items || [],
-        orderCount: result.items ? result.items.length : 0
-      });
-
-      // 임시 주문 정리
-      POSStateManager.clearTempOrderItems();
-      POSTempStorage.clearTempOrder();
-
-      // UI 즉시 업데이트
-      if (typeof POSUIRenderer !== 'undefined') {
-        POSUIRenderer.renderOrderItems();
-        POSUIRenderer.renderPaymentSummary();
-        POSUIRenderer.updatePrimaryActionButton();
-      }
-
-      showPOSNotification(
-        `주문 확정 완료! 체크 ID: ${result.checkId}`, 
-        'success'
-      );
-
-      console.log('✅ 주문 확정 완료:', result);
-      return true;
-
-    } catch (error) {
-      console.error('❌ 주문 확정 실패:', error);
-      showPOSNotification('주문 확정에 실패했습니다.', 'error');
-      return false;
-    }
+    await this.confirmPendingOrder();
   }
 
-  // 주문 초기화
+  // ✅ 새 시스템: 주문 초기화
   static clearOrder() {
     try {
-      // 상태 초기화
-      POSStateManager.clearTempOrderItems();
+      POSStateManager.setPendingItems([]);
       POSStateManager.clearSelectedItems();
-
-      // 임시저장소 초기화
       POSTempStorage.clearTempOrder();
+      this.updateCombinedOrder();
 
-      // UI 즉시 업데이트
-      if (typeof POSUIRenderer !== 'undefined') {
-        POSUIRenderer.renderOrderItems();
-        POSUIRenderer.renderPaymentSummary();
-        POSUIRenderer.updatePrimaryActionButton();
-      }
-
+      // 즉시 UI 업데이트
+      this.forceUIUpdate();
+      
       showPOSNotification('임시 주문이 초기화되었습니다', 'info');
-      console.log('🧹 주문 초기화 완료');
+      console.log('🧹 새 시스템: 주문 초기화 완료');
     } catch (error) {
       console.error('❌ 주문 초기화 실패:', error);
       showPOSNotification('주문 초기화 실패: ' + error.message, 'error');
     }
   }
 
-  // 임시 주문 초기화
+  // ✅ 새 시스템: 임시 주문 초기화
   static clearTempOrder() {
-    try {
-      this.clearOrder();
-      console.log('🧹 임시 주문 초기화 완료');
-    } catch (error) {
-      console.error('❌ 임시 주문 초기화 실패:', error);
+    this.clearOrder();
+  }
+
+  // ✅ 새 시스템: UI 강제 업데이트 (확실한 렌더링 보장)
+  static forceUIUpdate() {
+    console.log('🎨 새 시스템: UI 강제 업데이트 시작');
+    
+    // 즉시 실행
+    if (typeof POSUIRenderer !== 'undefined') {
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      POSUIRenderer.updatePrimaryActionButton();
     }
+
+    // 추가 보장 (DOM 업데이트 지연 대응)
+    setTimeout(() => {
+      if (typeof POSUIRenderer !== 'undefined') {
+        POSUIRenderer.renderOrderItems();
+        POSUIRenderer.renderPaymentSummary();
+        POSUIRenderer.updatePrimaryActionButton();
+        console.log('🎨 새 시스템: UI 강제 업데이트 완료');
+      }
+    }, 100);
   }
 
   // 아이템 선택/해제
