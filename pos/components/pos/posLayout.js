@@ -141,7 +141,7 @@ export function renderPOSLayout() {
                     <div class="header-col item-total">금액</div>
                   </div>
 
-                  <div class="order-items-list" id="orderItemsList">
+                  <div class="order-items-list" id="orderItems">
                     <div class="empty-order">
                       <div class="empty-icon">📝</div>
                       <p>메뉴를 선택해주세요</p>
@@ -192,7 +192,7 @@ export function renderPOSLayout() {
 
               <!-- 하단: 결제 정보 패널 -->
               <div class="payment-info-panel">
-                <div class="payment-summary">
+                <div class="payment-summary" id="paymentSummary">
                   <div class="summary-row">
                     <span class="label">총 금액</span>
                     <span class="value" id="totalAmount">₩0</span>
@@ -852,6 +852,51 @@ export function renderPOSLayout() {
         padding: 8px;
       }
 
+      /* 주문 섹션 스타일 */
+      .order-section {
+        margin-bottom: 20px;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px 8px 0 0;
+        margin-bottom: 8px;
+      }
+
+      .section-header h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .status-badge {
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .status-badge.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .status-badge.confirmed {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .items-list {
+        padding: 0 8px;
+      }
+
       .empty-order {
         display: flex;
         flex-direction: column;
@@ -860,6 +905,8 @@ export function renderPOSLayout() {
         height: 100%;
         color: #94a3b8;
         min-height: 200px;
+        padding: 40px 20px;
+        text-align: center;
       }
 
       .empty-icon {
@@ -868,39 +915,143 @@ export function renderPOSLayout() {
         opacity: 0.7;
       }
 
-      .order-item-row {
-        display: grid;
-        grid-template-columns: 0.8fr 2fr 1fr 1fr 1fr 1fr;
-        gap: 8px;
-        padding: 12px 8px;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        margin-bottom: 4px;
-        background: white;
+      /* 새로운 주문 아이템 스타일 */
+      .order-item {
+        display: flex;
         align-items: center;
-        font-size: 13px;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
         cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .order-item:hover {
+        border-color: #3b82f6;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+
+      .order-item.selected {
+        border-color: #3b82f6;
+        background: #dbeafe;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .order-item.pending {
+        border-color: #f59e0b;
+        background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        border-style: dashed;
+      }
+
+      .order-item.confirmed {
+        border-color: #10b981;
+        background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+      }
+
+      .item-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .item-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .item-price {
+        font-size: 12px;
+        color: #059669;
+        font-weight: 600;
+      }
+
+      .item-price .discount {
+        color: #dc2626;
+        text-decoration: line-through;
+        margin-right: 8px;
+      }
+
+      .item-price .final-price {
+        color: #059669;
+        font-weight: 700;
+      }
+
+      .item-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #f8fafc;
+        padding: 4px 8px;
+        border-radius: 20px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .quantity-controls button {
+        width: 24px;
+        height: 24px;
+        border: none;
+        background: #3b82f6;
+        color: white;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         transition: all 0.2s;
       }
 
-      .order-item-row:hover {
-        background: #f8fafc;
-        border-color: #3b82f6;
+      .quantity-controls button:hover {
+        background: #2563eb;
+        transform: scale(1.1);
       }
 
-      .order-item-row.selected {
-        background: #dbeafe;
-        border-color: #3b82f6;
+      .quantity-controls span {
+        font-size: 14px;
+        font-weight: 700;
+        color: #1e293b;
+        min-width: 20px;
+        text-align: center;
       }
 
-      .order-item-row.tll-item {
-        background: #fffbeb;
-        border-left: 4px solid #f59e0b;
+      .quantity-display {
+        background: #f1f5f9;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #475569;
       }
 
-      .order-item-row.pos-item {
-        background: #f0f9ff;
-        border-left: 4px solid #0ea5e9;
+      .item-status {
+        background: #10b981;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .order-item.pending .item-status {
+        background: #f59e0b;
+      }
+
+      .order-item.confirmed .item-status {
+        background: #10b981;
       }
 
       /* 확정/미확정 상태 스타일 */

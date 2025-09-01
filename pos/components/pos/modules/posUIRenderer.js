@@ -8,40 +8,15 @@ export class POSUIRenderer {
   static renderOrderItems() {
     console.log('🎨 새 시스템: 주문 목록 렌더링 시작');
     
-    // DOM 요소 안전 확인
-    let container = document.getElementById('orderItems');
+    // DOM 요소 확인
+    const container = document.getElementById('orderItems');
     
-    // 첫 번째 시도 실패 시 대체 ID 확인
     if (!container) {
-      container = document.getElementById('orderItemsList');
-      if (container) {
-        console.log('⚠️ orderItemsList 컨테이너 사용 (orderItems 없음)');
-      }
+      console.error('❌ orderItems 컨테이너를 찾을 수 없습니다');
+      return;
     }
     
-    // 여전히 없으면 동적 생성 시도
-    if (!container) {
-      console.error('❌ 주문 컨테이너 없음 - 동적 생성 시도');
-      const orderSummary = document.querySelector('.order-summary');
-      if (orderSummary) {
-        const newContainer = document.createElement('div');
-        newContainer.id = 'orderItems';
-        newContainer.className = 'order-items';
-        
-        // 기존 order-actions 앞에 삽입
-        const orderActions = orderSummary.querySelector('.order-actions');
-        if (orderActions) {
-          orderSummary.insertBefore(newContainer, orderActions);
-        } else {
-          orderSummary.appendChild(newContainer);
-        }
-        container = newContainer;
-        console.log('✅ orderItems 컨테이너 동적 생성됨');
-      } else {
-        console.error('❌ order-summary 섹션도 없음 - 렌더링 중단');
-        return;
-      }
-    }
+    console.log('✅ orderItems 컨테이너 확인됨');
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
     const confirmedItems = POSStateManager.getConfirmedItems();
