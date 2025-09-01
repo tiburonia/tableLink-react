@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
@@ -224,6 +223,44 @@ router.post('/users/login', async (req, res) => {
   }
 });
 
+// 로그인 (호환성)
+router.post('/login', async (req, res) => {
+  const { id, pw } = req.body;
+
+  console.log('🔍 호환성 로그인 요청:', { id });
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: '존재하지 않는 아이디입니다' });
+    }
+
+    const user = result.rows[0];
+    if (user.pw !== pw) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
+    }
+
+    res.json({
+      success: true,
+      message: '로그인 성공',
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        point: user.point || 0,
+        email: user.email || '',
+        address: user.address || '',
+        birth: user.birth || '',
+        gender: user.gender || ''
+      }
+    });
+  } catch (error) {
+    console.error('로그인 실패:', error);
+    res.status(500).json({ error: '로그인 실패' });
+  }
+});
+
 // 사용자 정보 조회 API
 router.get('/user/:userId', async (req, res) => {
   const { userId } = req.params;
@@ -242,7 +279,7 @@ router.get('/user/:userId', async (req, res) => {
     }
 
     const user = result.rows[0];
-    
+
     console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id})`);
 
     res.json({
@@ -563,185 +600,6 @@ router.put('/users/update', async (req, res) => {
     });
   } finally {
     client.release();
-  }
-});
-
-module.exports = router;
-const express = require('express');
-const router = express.Router();
-const pool = require('../db/pool');
-const bcrypt = require('bcrypt');
-
-// 회원가입
-router.post('/signup', async (req, res) => {
-  const { 
-    id, 
-    pw, 
-    name, 
-    email, 
-    phone, 
-    address = '', 
-    point = 0,
-    coupon = 0,
-    discountCost = 0
-  } = req.body;
-
-  console.log('🔍 회원가입 요청:', { id, name, email, phone });
-
-  if (!id || !pw || !name) {
-    return res.status(400).json({ 
-      success: false, 
-      error: 'ID, 비밀번호, 이름은 필수 항목입니다.' 
-    });
-  }
-
-  try {
-    // 중복 체크
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE id = $1 OR email = $2 OR phone = $3',
-      [id, email, phone]
-    );
-
-    if (existingUser.rows.length > 0) {
-      const existing = existingUser.rows[0];
-      if (existing.id === id) {
-        return res.status(400).json({ success: false, error: 'ID가 이미 존재합니다.' });
-      }
-      if (existing.email === email) {
-        return res.status(400).json({ success: false, error: '이메일이 이미 존재합니다.' });
-      }
-      if (existing.phone === phone) {
-        return res.status(400).json({ success: false, error: '전화번호가 이미 존재합니다.' });
-      }
-    }
-
-    // 비밀번호 해시화
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(pw, saltRounds);
-
-    // 사용자 생성
-    const newUser = await pool.query(
-      `INSERT INTO users (id, pw, name, email, phone, address, point, coupon, discount_cost, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) 
-       RETURNING id, name, email, phone, point, coupon, discount_cost`,
-      [id, hashedPassword, name, email, phone, address, point, coupon, discountCost]
-    );
-
-    console.log('✅ 회원가입 성공:', newUser.rows[0]);
-
-    res.json({
-      success: true,
-      message: '회원가입이 완료되었습니다.',
-      user: newUser.rows[0]
-    });
-
-  } catch (error) {
-    console.error('❌ 회원가입 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '회원가입 중 오류가 발생했습니다.'
-    });
-  }
-});
-
-// 로그인
-router.post('/login', async (req, res) => {
-  const { id, pw } = req.body;
-
-  console.log('🔍 로그인 요청:', { id });
-
-  if (!id || !pw) {
-    return res.status(400).json({
-      success: false,
-      error: 'ID와 비밀번호를 입력해주세요.'
-    });
-  }
-
-  try {
-    // 사용자 조회
-    const userResult = await pool.query(
-      'SELECT * FROM users WHERE id = $1',
-      [id]
-    );
-
-    if (userResult.rows.length === 0) {
-      console.log('❌ 사용자를 찾을 수 없음:', id);
-      return res.status(401).json({
-        success: false,
-        error: '아이디 또는 비밀번호가 올바르지 않습니다.'
-      });
-    }
-
-    const user = userResult.rows[0];
-
-    // 비밀번호 확인
-    const isPasswordValid = await bcrypt.compare(pw, user.pw);
-
-    if (!isPasswordValid) {
-      console.log('❌ 비밀번호 불일치:', id);
-      return res.status(401).json({
-        success: false,
-        error: '아이디 또는 비밀번호가 올바르지 않습니다.'
-      });
-    }
-
-    // 비밀번호 제외하고 사용자 정보 반환
-    const { pw: password, ...userInfo } = user;
-
-    console.log('✅ 로그인 성공:', { id: user.id, name: user.name });
-
-    res.json({
-      success: true,
-      message: '로그인 성공',
-      user: userInfo
-    });
-
-  } catch (error) {
-    console.error('❌ 로그인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '로그인 중 오류가 발생했습니다.'
-    });
-  }
-});
-
-// 로그아웃
-router.post('/logout', (req, res) => {
-  console.log('🔍 로그아웃 요청');
-  res.json({
-    success: true,
-    message: '로그아웃 되었습니다.'
-  });
-});
-
-// 사용자 정보 조회
-router.get('/profile/:userId', async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    const userResult = await pool.query(
-      'SELECT id, name, email, phone, address, point, coupon, discount_cost, created_at FROM users WHERE id = $1',
-      [userId]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '사용자를 찾을 수 없습니다.'
-      });
-    }
-
-    res.json({
-      success: true,
-      user: userResult.rows[0]
-    });
-
-  } catch (error) {
-    console.error('❌ 사용자 정보 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '사용자 정보 조회 중 오류가 발생했습니다.'
-    });
   }
 });
 

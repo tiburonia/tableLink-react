@@ -869,7 +869,7 @@ async function renderLogin() {
       try {
         showLoadingScreen();
 
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/auth/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

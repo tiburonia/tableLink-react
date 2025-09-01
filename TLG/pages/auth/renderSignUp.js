@@ -1,4 +1,3 @@
-
 function renderSignUp() {
   const main = document.getElementById('main');
   main.innerHTML = `
@@ -690,10 +689,10 @@ function renderSignUp() {
     showStatus(fieldId, message, type, icon = '') {
       const statusEl = document.getElementById(`${fieldId}Status`);
       const inputEl = document.getElementById(fieldId);
-      
+
       statusEl.innerHTML = icon ? `<span class="status-icon">${icon}</span>${message}` : message;
       statusEl.className = `input-status ${type}`;
-      
+
       if (inputEl) {
         inputEl.className = `form-input ${type}`;
       }
@@ -710,13 +709,13 @@ function renderSignUp() {
     validatePassword(password) {
       if (!password) return { isValid: false, message: '', strength: 0 };
       if (password.length < 4) return { isValid: false, message: '비밀번호는 최소 4자 이상이어야 합니다', strength: 0 };
-      
+
       let strength = 0;
       if (password.length >= 4) strength++;
       if (password.length >= 8) strength++;
       if (/[A-Za-z]/.test(password) && /[0-9]/.test(password)) strength++;
       if (/[^A-Za-z0-9]/.test(password)) strength++;
-      
+
       return { isValid: true, message: '사용 가능한 비밀번호입니다', strength };
     },
 
@@ -744,17 +743,17 @@ function renderSignUp() {
     updatePasswordStrength(strength) {
       const segments = document.querySelectorAll('.strength-segment');
       const strengthText = document.getElementById('strengthText');
-      
+
       const levels = ['', 'weak', 'fair', 'good', 'strong'];
       const texts = ['비밀번호를 입력해주세요', '약함', '보통', '좋음', '매우 강함'];
-      
+
       segments.forEach((segment, index) => {
         segment.className = 'strength-segment';
         if (index < strength) {
           segment.classList.add('active', levels[strength] || '');
         }
       });
-      
+
       strengthText.textContent = `보안 강도: ${texts[strength]}`;
     },
 
@@ -766,7 +765,7 @@ function renderSignUp() {
     showLoading(show = true) {
       const btnText = elements.signupBtn.querySelector('.btn-text');
       const btnSpinner = elements.signupBtn.querySelector('.btn-spinner');
-      
+
       if (show) {
         btnText.style.display = 'none';
         btnSpinner.style.display = 'block';
@@ -787,18 +786,18 @@ function renderSignUp() {
     elements.userId.addEventListener('input', () => {
       const userId = elements.userId.value.trim();
       const result = utils.validateUserId(userId);
-      
+
       validation.userId.isValid = result.isValid;
       validation.userId.isChecked = false;
       elements.checkIdBtn.disabled = !result.isValid;
-      
+
       if (result.message) {
         utils.showStatus('userId', result.message, result.isValid ? 'info' : 'error', 
                         result.isValid ? '⏳' : '❌');
       } else {
         utils.showStatus('userId', '', '');
       }
-      
+
       utils.updateSubmitButton();
     });
 
@@ -806,7 +805,7 @@ function renderSignUp() {
     elements.checkIdBtn.addEventListener('click', async () => {
       const userId = elements.userId.value.trim();
       const result = utils.validateUserId(userId);
-      
+
       if (!result.isValid) {
         utils.showStatus('userId', result.message, 'error', '❌');
         return;
@@ -823,7 +822,7 @@ function renderSignUp() {
         });
 
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
           if (data.available) {
             utils.showStatus('userId', '사용 가능한 아이디입니다', 'success', '✅');
@@ -850,10 +849,10 @@ function renderSignUp() {
     elements.userPassword.addEventListener('input', () => {
       const password = elements.userPassword.value;
       const result = utils.validatePassword(password);
-      
+
       validation.password.isValid = result.isValid;
       utils.updatePasswordStrength(result.strength);
-      
+
       if (result.message) {
         utils.showStatus('userPassword', result.message, result.isValid ? 'success' : 'error',
                         result.isValid ? '✅' : '❌');
@@ -872,7 +871,7 @@ function renderSignUp() {
           validation.passwordConfirm.isValid = true;
         }
       }
-      
+
       utils.updateSubmitButton();
     });
 
@@ -880,7 +879,7 @@ function renderSignUp() {
     elements.userPasswordConfirm.addEventListener('input', () => {
       const password = elements.userPassword.value;
       const confirmPassword = elements.userPasswordConfirm.value;
-      
+
       if (!confirmPassword) {
         utils.showStatus('userPasswordConfirm', '', '');
         validation.passwordConfirm.isValid = false;
@@ -891,7 +890,7 @@ function renderSignUp() {
         utils.showStatus('userPasswordConfirm', '비밀번호가 일치합니다', 'success', '✅');
         validation.passwordConfirm.isValid = true;
       }
-      
+
       utils.updateSubmitButton();
     });
 
@@ -899,16 +898,16 @@ function renderSignUp() {
     elements.userName.addEventListener('input', () => {
       const name = elements.userName.value.trim();
       const result = utils.validateName(name);
-      
+
       validation.name.isValid = result.isValid;
-      
+
       if (result.message) {
         utils.showStatus('userName', result.message, result.isValid ? 'success' : 'error',
                         result.isValid ? '✅' : '❌');
       } else {
         utils.showStatus('userName', '', '');
       }
-      
+
       utils.updateSubmitButton();
     });
 
@@ -916,21 +915,21 @@ function renderSignUp() {
     elements.userPhone.addEventListener('input', (e) => {
       const formatted = utils.formatPhone(e.target.value);
       e.target.value = formatted;
-      
+
       const result = utils.validatePhone(formatted);
       validation.phone.isValid = result.isValid;
       validation.phone.isChecked = false;
-      
+
       elements.checkPhoneBtn.style.display = formatted ? 'block' : 'none';
       elements.checkPhoneBtn.disabled = !result.isValid;
-      
+
       if (result.message) {
         utils.showStatus('userPhone', result.message, result.isValid ? 'info' : 'error',
                         result.isValid ? '⏳' : '❌');
       } else {
         utils.showStatus('userPhone', '', '');
       }
-      
+
       utils.updateSubmitButton();
     });
 
@@ -938,7 +937,7 @@ function renderSignUp() {
     elements.checkPhoneBtn.addEventListener('click', async () => {
       const phone = elements.userPhone.value.trim();
       const result = utils.validatePhone(phone);
-      
+
       if (!result.isValid) {
         utils.showStatus('userPhone', result.message, 'error', '❌');
         return;
@@ -955,7 +954,7 @@ function renderSignUp() {
         });
 
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
           if (data.available) {
             utils.showStatus('userPhone', '사용 가능한 전화번호입니다', 'success', '✅');
@@ -981,7 +980,7 @@ function renderSignUp() {
     // 폼 제출
     elements.form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const formData = {
         id: elements.userId.value.trim(),
         pw: elements.userPassword.value,
@@ -1056,7 +1055,7 @@ function renderSignUp() {
   // 초기화
   setupEventListeners();
   utils.updateSubmitButton();
-  
+
   console.log('✅ 새로운 회원가입 화면 렌더링 완료');
 }
 
