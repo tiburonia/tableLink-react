@@ -1,4 +1,3 @@
-
 // POS 상태 관리 모듈 - 새 시스템 전용
 export class POSStateManager {
   static state = {
@@ -10,12 +9,12 @@ export class POSStateManager {
     selectedCategory: 'all',
     allTables: [],
     currentView: 'table-map',
-    
+
     // 새 시스템: 임시/확정 분리
     pendingItems: [],    // 임시 주문 (미확정)
     confirmedItems: [],  // 확정된 주문
     selectedItems: [],   // UI에서 선택된 아이템들
-    
+
     // 세션 관리
     currentSession: {
       checkId: null,
@@ -116,14 +115,38 @@ export class POSStateManager {
     return this.state.currentView;
   }
 
-  // 🆕 새 시스템: 임시 주문 관리
-  static setPendingItems(items) {
-    this.state.pendingItems = items;
-    console.log(`📝 새 시스템: 임시 주문 설정 - ${items.length}개`);
+  // 📦 임시 주문 아이템 관리
+  static getPendingItems() {
+    if (!this.state.pendingItems || !Array.isArray(this.state.pendingItems)) {
+      this.state.pendingItems = [];
+      console.log('🔧 임시 아이템 배열 초기화됨');
+    }
+    return [...this.state.pendingItems]; // 배열 복사 반환
   }
 
-  static getPendingItems() {
-    return this.state.pendingItems;
+  static setPendingItems(items) {
+    if (!Array.isArray(items)) {
+      console.error('❌ setPendingItems: 배열이 아닌 값 전달됨:', typeof items);
+      this.state.pendingItems = [];
+      return;
+    }
+
+    // 유효성 검사
+    const validItems = items.filter(item => {
+      return item &&
+             typeof item === 'object' &&
+             item.id &&
+             item.name &&
+             typeof item.price === 'number' &&
+             typeof item.quantity === 'number';
+    });
+
+    if (validItems.length !== items.length) {
+      console.warn(`⚠️ ${items.length - validItems.length}개의 잘못된 아이템 제거됨`);
+    }
+
+    this.state.pendingItems = validItems;
+    console.log(`📦 새 시스템: 임시 아이템 설정 - ${this.state.pendingItems.length}개`);
   }
 
   // 🆕 새 시스템: 확정 주문 관리
@@ -171,7 +194,7 @@ export class POSStateManager {
   static changeItemQuantity(itemId, change) {
     const pendingItems = this.state.pendingItems;
     const item = pendingItems.find(item => item.id === itemId);
-    
+
     if (!item) {
       console.warn('⚠️ 새 시스템: 임시 주문에서만 수량 변경 가능');
       return false;
@@ -179,13 +202,13 @@ export class POSStateManager {
 
     const oldQuantity = item.quantity;
     item.quantity += change;
-    
+
     if (item.quantity <= 0) {
       const index = pendingItems.indexOf(item);
       pendingItems.splice(index, 1);
       console.log(`🗑️ 새 시스템: 수량 0으로 아이템 제거 - ${item.name}`);
     }
-    
+
     console.log(`📝 새 시스템: 수량 변경 - ${item.name} ${oldQuantity} → ${item.quantity}`);
     return true;
   }

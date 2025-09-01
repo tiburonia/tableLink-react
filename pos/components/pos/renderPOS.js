@@ -103,12 +103,51 @@ async function switchToOrderView() {
 
   await POSOrderManager.loadTableOrders(currentTable);
 
-  POSUIRenderer.updateTableInfo();
-  POSMenuManager.renderMenuCategories();
-  POSMenuManager.renderMenuGrid();
-  POSUIRenderer.renderOrderItems();
-  POSUIRenderer.renderPaymentSummary();
-  POSUIRenderer.updatePrimaryActionButton();
+  // DOM 준비 확인 후 UI 렌더링
+  await ensureDOMReady();
+  
+  try {
+    POSUIRenderer.updateTableInfo();
+    POSMenuManager.renderMenuCategories();
+    POSMenuManager.renderMenuGrid();
+    
+    // 주문 항목 렌더링 다중 시도
+    for (let i = 0; i < 3; i++) {
+      await new Promise(resolve => setTimeout(resolve, 50 * i));
+      POSUIRenderer.renderOrderItems();
+      
+      const orderContainer = document.getElementById('orderItems') || document.getElementById('orderItemsList');
+      if (orderContainer) {
+        console.log(`✅ ${i + 1}번째 시도에서 주문 렌더링 성공`);
+        break;
+      }
+    }
+    
+    POSUIRenderer.renderPaymentSummary();
+    POSUIRenderer.updatePrimaryActionButton();
+    
+    console.log('✅ 주문 화면 전환 완료');
+  } catch (error) {
+    console.error('❌ 주문 화면 UI 렌더링 실패:', error);
+  }
+}
+
+// DOM 준비 확인 함수
+async function ensureDOMReady() {
+  return new Promise((resolve) => {
+    if (document.readyState === 'complete') {
+      resolve();
+    } else {
+      const checkReady = () => {
+        if (document.readyState === 'complete') {
+          resolve();
+        } else {
+          setTimeout(checkReady, 10);
+        }
+      };
+      checkReady();
+    }
+  });
 }
 
 // 🔙 테이블맵 복귀
@@ -143,8 +182,38 @@ window.returnToTableMap = returnToTableMap;
 // 📝 메뉴 관리
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
 window.addMenuToOrder = (menuName, price, notes = '') => {
-  console.log(`🍽️ 새 시스템: 메뉴 추가 - ${menuName}`);
-  POSOrderManager.addMenuToPending(menuName, price, notes);
+  console.log(`🍽️ 전역 함수 호출: 메뉴 추가 - ${menuName} (₩${price})`);
+  
+  try {
+    // 입력 검증
+    if (!menuName || menuName.trim() === '') {
+      console.error('❌ 메뉴명이 비어있습니다');
+      showPOSNotification('메뉴명이 필요합니다', 'warning');
+      return false;
+    }
+
+    if (!price || isNaN(parseInt(price))) {
+      console.error('❌ 올바르지 않은 가격:', price);
+      showPOSNotification('올바른 가격이 필요합니다', 'warning');
+      return false;
+    }
+
+    // OrderManager 호출
+    const result = POSOrderManager.addMenuToPending(menuName, price, notes);
+    
+    if (result) {
+      console.log(`✅ 전역 함수: 메뉴 추가 성공 - ${menuName}`);
+    } else {
+      console.error(`❌ 전역 함수: 메뉴 추가 실패 - ${menuName}`);
+    }
+    
+    return result;
+    
+  } catch (error) {
+    console.error('❌ 전역 함수 오류:', error);
+    showPOSNotification('메뉴 추가 중 오류 발생', 'error');
+    return false;
+  }
 };
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
