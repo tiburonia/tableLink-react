@@ -36,6 +36,7 @@ export class POSStateManager {
     window.currentOrder = [];
     window.selectedItems = [];
     window.currentView = 'table-map';
+    window.categories = [];
   }
 
   static setCurrentStore(store) {
@@ -67,16 +68,6 @@ export class POSStateManager {
 
   static setCategories(categories) {
     this.state.categories = categories;
-  }
-
-  static setAllTables(tables) {
-    this.state.allTables = tables;
-    window.allTables = tables;
-  }
-
-  static getAllTables() {
-    return this.state.allTables;
-  }
     window.categories = categories;
   }
 
