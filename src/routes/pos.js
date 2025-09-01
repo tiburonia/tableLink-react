@@ -88,6 +88,82 @@ function getDefaultMenusByCategory(category) {
 }
 
 /**
+ * [GET] /stores/:storeId/table/:tableNumber/all-orders - 테이블별 주문 조회
+ */
+router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, next) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`📋 테이블 ${tableNumber} 주문 조회 요청 (매장 ${storeId})`);
+
+    // 해당 테이블의 열린 체크들 조회
+    const checksResult = await pool.query(`
+      SELECT 
+        c.id as check_id,
+        c.status,
+        c.created_at,
+        c.user_id,
+        c.guest_phone
+      FROM checks c
+      WHERE c.store_id = $1 AND c.table_number = $2 AND c.status = 'open'
+      ORDER BY c.created_at DESC
+    `, [storeId, tableNumber]);
+
+    if (checksResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        currentSession: null,
+        items: []
+      });
+    }
+
+    // 가장 최근 체크의 주문 라인들 조회
+    const currentCheck = checksResult.rows[0];
+    
+    const itemsResult = await pool.query(`
+      SELECT 
+        ol.id,
+        ol.menu_name as "menuName",
+        ol.unit_price as price,
+        ol.quantity,
+        ol.status as "cookingStatus",
+        ol.created_at
+      FROM order_lines ol
+      JOIN orders o ON ol.order_id = o.id
+      WHERE o.check_id = $1
+      ORDER BY ol.created_at ASC
+    `, [currentCheck.check_id]);
+
+    const items = itemsResult.rows.map(item => ({
+      id: item.id,
+      menuName: item.menuName,
+      price: item.price,
+      quantity: item.quantity,
+      cookingStatus: item.cookingStatus.toUpperCase(),
+      created_at: item.created_at
+    }));
+
+    console.log(`✅ 테이블 ${tableNumber} 주문 ${items.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      currentSession: {
+        orderId: currentCheck.check_id,
+        status: currentCheck.status,
+        items: items
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 테이블 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '테이블 주문 조회 실패'
+    });
+  }
+});
+
+/**
  * [POST] /checks - 새 체크 생성
  */
 router.post('/checks', async (req, res, next) => {
