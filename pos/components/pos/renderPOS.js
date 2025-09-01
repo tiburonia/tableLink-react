@@ -66,7 +66,16 @@ async function loadStoreForTableMap(storeId) {
 }
 
 // 테이블 선택
-async function selectTableFromMap(tableNumber) {
+async function selectTableFromMap(tableElement) {
+  const tableNumber = tableElement.dataset.tableNumber || tableElement.getAttribute('data-table-number');
+
+  if (!tableNumber) {
+    console.error('❌ 테이블 번호를 찾을 수 없습니다:', tableElement);
+    showPOSNotification('테이블 번호를 찾을 수 없습니다.', 'error');
+    return;
+  }
+
+  console.log(`🪑 테이블 ${tableNumber} 선택됨`);
   try {
     await POSTableManager.selectTable(tableNumber);
     await switchToOrderView();

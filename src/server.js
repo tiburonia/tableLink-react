@@ -206,14 +206,14 @@ io.on('connection', (socket) => {
   socket.on('join-pos-room', (storeId) => {
     const roomName = `store:${storeId}`;
     socket.join(roomName);
-    
+
     if (!storeRooms.has(storeId)) {
       storeRooms.set(storeId, new Set());
     }
     storeRooms.get(storeId).add(socket.id);
-    
+
     console.log(`📡 POS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
-    
+
     socket.emit('join-pos-room-success', {
       storeId,
       clientCount: storeRooms.get(storeId).size
@@ -225,14 +225,14 @@ io.on('connection', (socket) => {
     const roomName = `kds:${storeId}`;
     socket.join(roomName);
     console.log(`🖥️ KDS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
-    
+
     socket.emit('join-kds-room-success', { storeId });
   });
 
   // 연결 해제 처리
   socket.on('disconnect', () => {
     console.log(`❌ 클라이언트 연결 해제: ${socket.id}`);
-    
+
     // 모든 매장 룸에서 제거
     for (const [storeId, clients] of storeRooms.entries()) {
       if (clients.has(socket.id)) {
