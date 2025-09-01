@@ -253,7 +253,7 @@ export class POSOrderManager {
     }
   }
 
-  // 주문 확정 (새 스키마)
+  // 세션 단위 주문 확정
   static async confirmOrder() {
     const currentOrder = POSStateManager.getCurrentOrder();
 
@@ -271,11 +271,12 @@ export class POSOrderManager {
     }
 
     try {
-      console.log('📦 주문 확정 시작 - 새 스키마 사용:', {
-        new: newItems.length
+      console.log('🏆 세션 단위 주문 확정 시작:', {
+        신규아이템: newItems.length,
+        테이블: POSStateManager.getCurrentTable()
       });
 
-      // 새로운 아이템들을 메뉴별로 통합하여 서버로 전송 (새 스키마)
+      // 🍽️ 메뉴별로 통합 (같은 메뉴는 수량 합산)
       const consolidatedItems = {};
       newItems.forEach(item => {
         const key = `${item.name}_${item.price}`;
@@ -294,17 +295,21 @@ export class POSOrderManager {
       const currentStore = POSStateManager.getCurrentStore();
       const currentTable = POSStateManager.getCurrentTable();
 
+      // 🏆 세션 단위 주문 데이터 구성
       const sessionOrderData = {
         storeId: currentStore.id,
         storeName: currentStore.name,
         tableNumber: currentTable,
         items: finalItems,
         totalAmount: finalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        userId: null,
+        userId: null, // 향후 TLL 연동 시 사용
         guestPhone: null,
         customerName: '포스 주문'
       };
 
+      console.log(`📦 세션에 주문 추가: ${finalItems.length}개 메뉴, 총 ₩${sessionOrderData.totalAmount.toLocaleString()}`);
+
+      // 🚀 세션 기반 주문 API 호출
       const response = await fetch('/api/pos/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -313,14 +318,15 @@ export class POSOrderManager {
 
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error || '주문 저장 실패');
+        throw new Error(result.error || '세션 주문 추가 실패');
       }
 
-      // 새로 추가된 아이템들을 확정 상태로 변경
+      // ✅ 확정된 아이템들을 세션 상태로 변경
       newItems.forEach(item => {
         item.isConfirmed = true;
         item.isPending = false;
-        item.sessionId = result.checkId;
+        item.sessionId = result.sessionId;
+        item.sessionStartTime = result.sessionStartTime;
       });
 
       POSStateManager.setCurrentOrder(currentOrder);
@@ -330,13 +336,17 @@ export class POSOrderManager {
       POSUIRenderer.renderPaymentSummary();
       POSUIRenderer.updatePrimaryActionButton();
 
-      showPOSNotification(`${newItems.length}개 아이템이 세션에 확정되었습니다!`, 'success');
+      const sessionTotals = result.sessionTotals;
+      showPOSNotification(
+        `세션에 ${newItems.length}개 아이템 추가! 세션 총액: ₩${sessionTotals.finalAmount.toLocaleString()}`, 
+        'success'
+      );
 
-      console.log(`✅ 새 스키마 주문 확정 완료 - 체크 ID: ${result.checkId}, 신규: ${newItems.length}개`);
+      console.log(`✅ 세션 주문 확정 완료 - 세션 ID: ${result.sessionId}, 추가 아이템: ${newItems.length}개`);
 
     } catch (error) {
-      console.error('❌ 주문 확정 실패:', error);
-      showPOSNotification('주문 확정 실패: ' + error.message, 'error');
+      console.error('❌ 세션 주문 확정 실패:', error);
+      showPOSNotification('세션 주문 확정 실패: ' + error.message, 'error');
     }
   }
 
