@@ -11,7 +11,26 @@ export class POSStateManager {
     currentOrder: [],
     selectedItems: [],
     isOrderProcessing: false,
-    currentView: 'table-map'
+    currentView: 'table-map',
+    // 세션 관리 개선
+    currentSession: {
+      checkId: null,
+      status: null, // 'open', 'ordering', 'kitchen_processing', 'payment_processing', 'closed'
+      openedAt: null,
+      customerName: null,
+      totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0
+    },
+    // 임시/확정 분리
+    pendingItems: [], // 임시 (미확정) 주문
+    confirmedItems: [], // 확정된 주문 (DB 반영됨)
+    sessionLock: {
+      isLocked: false,
+      lockedBy: null,
+      lockedAt: null,
+      lockExpires: null
+    }
   };
 
   static initialize() {
@@ -133,9 +152,72 @@ export class POSStateManager {
     this.state.currentTable = null;
     this.state.currentOrder = [];
     this.state.selectedItems = [];
+    this.state.currentSession = {
+      checkId: null,
+      status: null,
+      openedAt: null,
+      customerName: null,
+      totalAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0
+    };
+    this.state.pendingItems = [];
+    this.state.confirmedItems = [];
+    this.state.sessionLock = {
+      isLocked: false,
+      lockedBy: null,
+      lockedAt: null,
+      lockExpires: null
+    };
     
     window.currentTable = null;
     window.currentOrder = [];
     window.selectedItems = [];
+  }
+
+  // 세션 관련 getter/setter
+  static setCurrentSession(sessionData) {
+    this.state.currentSession = { ...this.state.currentSession, ...sessionData };
+  }
+
+  static getCurrentSession() {
+    return this.state.currentSession;
+  }
+
+  static setPendingItems(items) {
+    this.state.pendingItems = items;
+  }
+
+  static getPendingItems() {
+    return this.state.pendingItems;
+  }
+
+  static setConfirmedItems(items) {
+    this.state.confirmedItems = items;
+  }
+
+  static getConfirmedItems() {
+    return this.state.confirmedItems;
+  }
+
+  static setSessionLock(lockData) {
+    this.state.sessionLock = { ...this.state.sessionLock, ...lockData };
+  }
+
+  static getSessionLock() {
+    return this.state.sessionLock;
+  }
+
+  static isSessionLocked() {
+    const lock = this.state.sessionLock;
+    if (!lock.isLocked) return false;
+    
+    // 락 만료 확인
+    if (lock.lockExpires && new Date() > new Date(lock.lockExpires)) {
+      this.setSessionLock({ isLocked: false, lockedBy: null, lockedAt: null, lockExpires: null });
+      return false;
+    }
+    
+    return true;
   }
 }

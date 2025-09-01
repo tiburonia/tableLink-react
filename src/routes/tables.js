@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db/pool');
@@ -12,13 +11,25 @@ router.get('/stores/:storeId', async (req, res) => {
       SELECT 
         id,
         table_number as "tableNumber",
-        table_name as "tableName",
-        4 as seats,
-        is_occupied as "isOccupied",
-        COALESCE(occupied_at, created_at) as "occupiedSince"
-      FROM store_tables 
-      WHERE store_id = $1 
-      ORDER BY table_number ASC
+        COALESCE(seats, 4) as seats,
+        CASE 
+          WHEN EXISTS (
+            SELECT 1 FROM checks 
+            WHERE store_id = st.store_id 
+            AND table_number = st.table_number 
+            AND status = 'open'
+          ) THEN true 
+          ELSE false 
+        END as "isOccupied",
+        (
+          SELECT MIN(opened_at) FROM checks 
+          WHERE store_id = st.store_id 
+          AND table_number = st.table_number 
+          AND status = 'open'
+        ) as "occupiedSince"
+      FROM store_tables st
+      WHERE st.store_id = $1 
+      ORDER BY st.table_number ASC
     `, [storeId]);
 
     res.json({
@@ -27,9 +38,9 @@ router.get('/stores/:storeId', async (req, res) => {
     });
   } catch (error) {
     console.error('테이블 조회 실패:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: '테이블 조회 실패' 
+      error: '테이블 조회 실패'
     });
   }
 });
@@ -40,7 +51,7 @@ router.post('/update', async (req, res) => {
     const { storeId, tableNumber, isOccupied } = req.body;
 
     const result = await pool.query(`
-      UPDATE store_tables 
+      UPDATE store_tables
       SET is_occupied = $1, updated_at = NOW()
       WHERE store_id = $2 AND table_number = $3
       RETURNING *
@@ -52,9 +63,9 @@ router.post('/update', async (req, res) => {
     });
   } catch (error) {
     console.error('테이블 상태 업데이트 실패:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: '테이블 상태 업데이트 실패' 
+      error: '테이블 상태 업데이트 실패'
     });
   }
 });
@@ -63,12 +74,12 @@ router.post('/update', async (req, res) => {
 router.post('/occupy-manual', async (req, res) => {
   try {
     const { storeId, tableName, duration } = req.body;
-    
+
     // tableName에서 테이블 번호 추출 (예: "테이블 1" -> 1)
     const tableNumber = tableName.replace(/[^0-9]/g, '');
 
     const result = await pool.query(`
-      UPDATE store_tables 
+      UPDATE store_tables
       SET is_occupied = true, updated_at = NOW()
       WHERE store_id = $1 AND table_number = $2
       RETURNING *
@@ -87,9 +98,9 @@ router.post('/occupy-manual', async (req, res) => {
     });
   } catch (error) {
     console.error('테이블 점유 실패:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: '테이블 점유 실패' 
+      error: '테이블 점유 실패'
     });
   }
 });

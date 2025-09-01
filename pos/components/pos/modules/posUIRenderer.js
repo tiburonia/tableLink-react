@@ -1,82 +1,126 @@
-
 // POS UI 렌더링 모듈
 import { POSStateManager } from './posStateManager.js';
 
 export class POSUIRenderer {
-  // 주문 아이템 렌더링
+  // 주문 목록 렌더링 (임시/확정 구분)
   static renderOrderItems() {
-    const orderItemsList = document.getElementById('orderItemsList');
-    if (!orderItemsList) return;
+    const orderItemsContainer = document.getElementById('orderItems');
+    if (!orderItemsContainer) return;
 
-    const currentOrder = POSStateManager.getCurrentOrder();
+    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+    const confirmedItems = POSStateManager.getConfirmedItems();
     const selectedItems = POSStateManager.getSelectedItems();
 
-    if (!currentOrder || currentOrder.length === 0) {
-      orderItemsList.innerHTML = `
-        <div class="empty-order">
-          <div class="empty-icon">📝</div>
-          <p>메뉴를 선택해주세요</p>
-        </div>
-      `;
+    if (pendingItems.length === 0 && confirmedItems.length === 0) {
+      orderItemsContainer.innerHTML = '<div class="empty-order">주문된 메뉴가 없습니다</div>';
       return;
     }
 
-    const confirmedItems = currentOrder.filter(item => item.isConfirmed);
-    const pendingItems = currentOrder.filter(item => item.isPending && !item.isConfirmed);
+    let html = '';
 
-    const itemsHTML = currentOrder.map((item) => {
-      const price = parseInt(item.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      const discount = parseInt(item.discount) || 0;
-      const total = (price * quantity) - discount;
-      const isSelected = selectedItems.includes(item.id);
-
-      let statusClass = '';
-      let statusBadge = '';
-
-      if (item.isDeleted) {
-        statusClass = 'deleted';
-        statusBadge = 'DELETE';
-      } else if (item.isModified) {
-        statusClass = 'modified';
-        statusBadge = 'MODIFY';
-      } else if (item.isPending) {
-        statusClass = 'pending';
-        statusBadge = 'TEMP';
-      } else if (item.isConfirmed) {
-        statusClass = 'confirmed';
-        statusBadge = item.sessionId ? 'SESSION' : 'DB';
-      } else {
-        statusBadge = 'POS';
-      }
-
-      const itemStyle = item.isDeleted ? 'opacity: 0.5; text-decoration: line-through;' : '';
-
-      return `
-        <div class="order-item-row ${isSelected ? 'selected' : ''} ${statusClass}" 
-             onclick="toggleItemSelection('${item.id}')" 
-             style="${itemStyle}">
-          <div class="item-type">
-            <span class="order-type-badge type-${statusBadge.toLowerCase()}">${statusBadge}</span>
+    // 🟡 임시 주문 섹션
+    if (pendingItems.length > 0) {
+      html += `
+        <div class="order-section pending-section">
+          <div class="section-header pending-header">
+            <h4>📝 임시 주문 (미확정)</h4>
+            <span class="pending-badge">확정 필요</span>
           </div>
-          <div class="item-name">${item.name || '메뉴명 없음'}</div>
-          <div class="item-price">₩${price.toLocaleString()}</div>
-          <div class="item-qty">${quantity}개</div>
-          <div class="item-discount">₩${discount.toLocaleString()}</div>
-          <div class="item-total">₩${total.toLocaleString()}</div>
+          <div class="order-items pending-items">
+      `;
+
+      pendingItems.forEach(item => {
+        const isSelected = selectedItems.includes(item.id);
+        const totalPrice = (item.price - (item.discount || 0)) * item.quantity;
+
+        html += `
+          <div class="order-item pending-item ${isSelected ? 'selected' : ''}" 
+               onclick="toggleItemSelection('${item.id}')">
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-details">
+                ₩${item.price.toLocaleString()} × ${item.quantity}
+                ${item.discount > 0 ? ` (할인: -₩${item.discount.toLocaleString()})` : ''}
+              </div>
+              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
+            </div>
+            <div class="item-total pending-total">₩${totalPrice.toLocaleString()}</div>
+            <div class="item-status pending-status">임시</div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
         </div>
       `;
-    }).join('');
+    }
 
-    orderItemsList.innerHTML = itemsHTML;
+    // ✅ 확정 주문 섹션
+    if (confirmedItems.length > 0) {
+      html += `
+        <div class="order-section confirmed-section">
+          <div class="section-header confirmed-header">
+            <h4>✅ 확정 주문 (세션 진행중)</h4>
+            <span class="session-badge">세션 ${POSStateManager.getCurrentSession().checkId || 'N/A'}</span>
+          </div>
+          <div class="order-items confirmed-items">
+      `;
 
-    console.log(`🔄 주문 내역 렌더링 완료: ${currentOrder.length}개 아이템 (확정: ${confirmedItems.length}개, 대기: ${pendingItems.length}개)`);
+      confirmedItems.forEach(item => {
+        const isSelected = selectedItems.includes(item.id);
+        const totalPrice = (item.price - (item.discount || 0)) * item.quantity;
+        const statusText = this.getStatusDisplayText(item.status || item.cookingStatus);
+
+        html += `
+          <div class="order-item confirmed-item ${isSelected ? 'selected' : ''}" 
+               onclick="toggleItemSelection('${item.id}')">
+            <div class="item-info">
+              <div class="item-name">${item.name}</div>
+              <div class="item-details">
+                ₩${item.price.toLocaleString()} × ${item.quantity}
+                ${item.discount > 0 ? ` (할인: -₩${item.discount.toLocaleString()})` : ''}
+              </div>
+              ${item.notes ? `<div class="item-notes">${item.notes}</div>` : ''}
+            </div>
+            <div class="item-total confirmed-total">₩${totalPrice.toLocaleString()}</div>
+            <div class="item-status status-${item.status || 'ordered'}">${statusText}</div>
+          </div>
+        `;
+      });
+
+      html += `
+          </div>
+        </div>
+      `;
+    }
+
+    orderItemsContainer.innerHTML = html;
+  }
+
+  // 상태 표시 텍스트 변환
+  static getStatusDisplayText(status) {
+    const statusMap = {
+      'pending': '임시',
+      'ordered': '주문완료',
+      'preparing': '조리중',
+      'ready': '준비완료', 
+      'served': '서빙완료',
+      'canceled': '취소됨',
+      'ORDERED': '주문완료',
+      'PREPARING': '조리중',
+      'READY': '준비완료',
+      'SERVED': '서빙완료',
+      'CANCELED': '취소됨'
+    };
+
+    return statusMap[status] || status;
   }
 
   // 결제 요약 렌더링
   static renderPaymentSummary() {
     const currentOrder = POSStateManager.getCurrentOrder();
-    
+
     const totalAmount = currentOrder.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const totalDiscount = currentOrder.reduce((sum, item) => sum + item.discount, 0);
     const finalAmount = totalAmount - totalDiscount;

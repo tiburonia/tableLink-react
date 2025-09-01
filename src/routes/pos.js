@@ -164,6 +164,129 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res, ne
 });
 
 /**
+ * [GET] /stores/:storeId/table/:tableNumber/lock-status - 세션 락 상태 확인
+ */
+router.get('/stores/:storeId/table/:tableNumber/lock-status', async (req, res, next) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    // 간단한 메모리 기반 락 (실제로는 Redis나 DB 테이블 사용 권장)
+    const lockKey = `table_${storeId}_${tableNumber}`;
+    const lockData = global.tableLocks && global.tableLocks[lockKey];
+
+    if (!lockData) {
+      return res.json({
+        success: true,
+        isLocked: false
+      });
+    }
+
+    // 락 만료 확인
+    if (new Date() > new Date(lockData.expires)) {
+      delete global.tableLocks[lockKey];
+      return res.json({
+        success: true,
+        isLocked: false
+      });
+    }
+
+    res.json({
+      success: true,
+      isLocked: true,
+      lockedBy: lockData.lockedBy,
+      lockedAt: lockData.lockedAt,
+      expires: lockData.expires
+    });
+
+  } catch (error) {
+    console.error('❌ 세션 락 상태 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 락 상태 확인 실패'
+    });
+  }
+});
+
+/**
+ * [POST] /stores/:storeId/table/:tableNumber/acquire-lock - 세션 락 획득
+ */
+router.post('/stores/:storeId/table/:tableNumber/acquire-lock', async (req, res, next) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    const { lockBy = 'POS', lockDuration = 300000 } = req.body;
+
+    const lockKey = `table_${storeId}_${tableNumber}`;
+    
+    // 전역 락 저장소 초기화
+    if (!global.tableLocks) {
+      global.tableLocks = {};
+    }
+
+    // 기존 락 확인
+    const existingLock = global.tableLocks[lockKey];
+    if (existingLock && new Date() < new Date(existingLock.expires)) {
+      return res.status(409).json({
+        success: false,
+        error: `테이블이 ${existingLock.lockedBy}에서 사용 중입니다`,
+        lockedBy: existingLock.lockedBy,
+        expires: existingLock.expires
+      });
+    }
+
+    // 새 락 설정
+    const lockData = {
+      lockedBy: lockBy,
+      lockedAt: new Date().toISOString(),
+      expires: new Date(Date.now() + lockDuration).toISOString()
+    };
+
+    global.tableLocks[lockKey] = lockData;
+
+    console.log(`🔒 테이블 ${tableNumber} 락 획득: ${lockBy} (${lockDuration/1000}초)`);
+
+    res.json({
+      success: true,
+      lockData: lockData
+    });
+
+  } catch (error) {
+    console.error('❌ 세션 락 획득 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 락 획득 실패'
+    });
+  }
+});
+
+/**
+ * [DELETE] /stores/:storeId/table/:tableNumber/release-lock - 세션 락 해제
+ */
+router.delete('/stores/:storeId/table/:tableNumber/release-lock', async (req, res, next) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    const lockKey = `table_${storeId}_${tableNumber}`;
+    
+    if (global.tableLocks && global.tableLocks[lockKey]) {
+      delete global.tableLocks[lockKey];
+      console.log(`🔓 테이블 ${tableNumber} 락 해제`);
+    }
+
+    res.json({
+      success: true,
+      message: '락 해제됨'
+    });
+
+  } catch (error) {
+    console.error('❌ 세션 락 해제 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '세션 락 해제 실패'
+    });
+  }
+});
+
+/**
  * [GET] /stores/:storeId/table/:tableNumber/session-status - 세션 상태 확인
  */
 router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res, next) => {
