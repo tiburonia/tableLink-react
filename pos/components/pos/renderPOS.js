@@ -148,33 +148,33 @@ window.returnToTableMap = returnToTableMap;
 
 // 메뉴 관련 전역 함수
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
-window.addMenuToOrder = POSOrderManager.addMenuToOrder.bind(POSOrderManager);
+window.addMenuToOrder = (menuName, price) => POSOrderManager.addMenuToOrder(menuName, price);
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 주문 관리 전역 함수
-window.toggleItemSelection = POSOrderManager.toggleItemSelection.bind(POSOrderManager);
-window.selectAllItems = POSOrderManager.selectAllItems.bind(POSOrderManager);
-window.deleteSelectedItems = POSOrderManager.deleteSelectedItems.bind(POSOrderManager);
-window.applyDiscount = POSOrderManager.applyDiscount.bind(POSOrderManager);
-window.changeQuantity = POSOrderManager.changeQuantity.bind(POSOrderManager);
-window.clearOrder = POSOrderManager.clearOrder.bind(POSOrderManager);
-window.confirmOrder = POSOrderManager.confirmOrder.bind(POSOrderManager);
-window.handlePrimaryAction = POSOrderManager.handlePrimaryAction.bind(POSOrderManager);
+window.toggleItemSelection = (itemId) => POSOrderManager.toggleItemSelection(itemId);
+window.selectAllItems = () => POSOrderManager.selectAllItems();
+window.deleteSelectedItems = () => POSOrderManager.deleteSelectedItems();
+window.applyDiscount = (discountType, discountValue) => POSOrderManager.applyDiscount(discountType, discountValue);
+window.changeQuantity = (itemId, change) => POSOrderManager.changeQuantity(itemId, change);
+window.clearOrder = () => POSOrderManager.clearOrder();
+window.confirmOrder = () => POSOrderManager.confirmOrder();
+window.handlePrimaryAction = () => POSOrderManager.handlePrimaryAction();
 
 // 결제 관련 전역 함수
-window.processPayment = POSPaymentManager.processPayment.bind(POSPaymentManager);
-window.handleDirectPayment = POSPaymentManager.handleDirectPayment.bind(POSPaymentManager);
-window.confirmOrderAndPay = POSPaymentManager.confirmOrderAndPay.bind(POSPaymentManager);
+window.processPayment = (paymentMethod) => POSPaymentManager.processPayment(paymentMethod);
+window.handleDirectPayment = (paymentMethod) => POSPaymentManager.handleDirectPayment && POSPaymentManager.handleDirectPayment(paymentMethod);
+window.confirmOrderAndPay = (paymentMethod) => POSPaymentManager.confirmOrderAndPay && POSPaymentManager.confirmOrderAndPay(paymentMethod);
 
 // UI 업데이트 전역 함수
-window.updatePrimaryActionButton = POSUIRenderer.updatePrimaryActionButton.bind(POSUIRenderer);
-window.updatePaymentButtons = POSUIRenderer.updatePaymentButtons.bind(POSUIRenderer);
-window.updateTableInfo = POSUIRenderer.updateTableInfo.bind(POSUIRenderer);
+window.updatePrimaryActionButton = () => POSUIRenderer.updatePrimaryActionButton();
+window.updatePaymentButtons = () => POSUIRenderer.updatePaymentButtons && POSUIRenderer.updatePaymentButtons();
+window.updateTableInfo = () => POSUIRenderer.updateTableInfo();
 
 // 임시저장 관련 전역 함수
-window.saveTempOrder = POSTempStorage.saveTempOrder.bind(POSTempStorage);
-window.loadTempOrder = POSTempStorage.loadTempOrder.bind(POSTempStorage);
-window.clearTempOrder = POSTempStorage.clearTempOrder.bind(POSTempStorage);
+window.saveTempOrder = () => POSTempStorage.saveTempOrder();
+window.loadTempOrder = () => POSTempStorage.loadTempOrder();
+window.clearTempOrder = () => POSTempStorage.clearTempOrder();
 
 // 미구현 기능들
 const unimplementedFeatures = {
