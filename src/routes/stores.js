@@ -89,6 +89,15 @@ router.get('/:storeId', async (req, res) => {
       return handleViewport(req, res);
     }
 
+    // storeId가 숫자인지 확인
+    const storeIdNum = parseInt(storeId);
+    if (isNaN(storeIdNum)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID입니다'
+      });
+    }
+
     console.log(`🏪 매장 ${storeId} 상세 정보 조회 요청`);
 
     // 1. 매장 기본 정보
@@ -104,7 +113,7 @@ router.get('/:storeId', async (req, res) => {
       FROM stores s
       LEFT JOIN store_address sa ON s.id = sa.store_id
       WHERE s.id = $1
-    `, [storeId]);
+    `, [storeIdNum]);
 
     if (storeResult.rows.length === 0) {
       return res.status(404).json({
@@ -122,7 +131,7 @@ router.get('/:storeId', async (req, res) => {
       FROM store_tables
       WHERE store_id = $1
       ORDER BY table_number
-    `, [storeId]);
+    `, [storeIdNum]);
 
     const occupiedCount = tablesResult.rows.filter(t => t.is_occupied).length;
     console.log(`🪑 테이블 정보: 총 ${tablesResult.rows.length}개, 사용중 ${occupiedCount}개, 빈 테이블 ${tablesResult.rows.length - occupiedCount}개`);
@@ -136,7 +145,7 @@ router.get('/:storeId', async (req, res) => {
       SELECT * FROM store_promotions
       WHERE store_id = $1 AND is_active = true
       ORDER BY created_at DESC
-    `, [storeId]);
+    `, [storeIdNum]);
 
     console.log(`✅ 매장 ${storeId} 상세 정보 조회 완료`);
 
