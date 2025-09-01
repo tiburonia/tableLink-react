@@ -28,21 +28,49 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
 
     const store = storeResult.rows[0];
 
-    // 새 스키마: menu_items 테이블에서 실제 메뉴 조회
-    const menuResult = await pool.query(`
-      SELECT 
-        mi.id,
-        mi.name,
-        mi.price,
-        mi.description,
-        COALESCE(mg.name, '기본메뉴') as category
-      FROM menu_items mi
-      LEFT JOIN menu_groups mg ON mi.group_id = mg.id
-      WHERE mi.store_id = $1
-      ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
-    `, [storeId]);
+    let menu = [];
 
-    let menu = menuResult.rows;
+    try {
+      // 새 스키마: menu_items 테이블에서 실제 메뉴 조회 시도
+      const menuResult = await pool.query(`
+        SELECT 
+          mi.id,
+          mi.name,
+          mi.price,
+          mi.description,
+          COALESCE(mg.name, '기본메뉴') as category
+        FROM menu_items mi
+        LEFT JOIN menu_groups mg ON mi.group_id = mg.id
+        WHERE mi.store_id = $1
+        ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
+      `, [storeId]);
+
+      menu = menuResult.rows;
+    } catch (menuError) {
+      console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
+      
+      // menu_items 테이블이 없거나 에러가 발생하면 stores.menu에서 조회
+      try {
+        const legacyMenuResult = await pool.query(`
+          SELECT menu FROM stores WHERE id = $1
+        `, [storeId]);
+
+        if (legacyMenuResult.rows.length > 0 && legacyMenuResult.rows[0].menu) {
+          const legacyMenu = legacyMenuResult.rows[0].menu;
+          if (Array.isArray(legacyMenu) && legacyMenu.length > 0) {
+            menu = legacyMenu.map((item, index) => ({
+              id: index + 1,
+              name: item.name,
+              price: item.price,
+              description: item.description || '',
+              category: item.category || '기본메뉴'
+            }));
+          }
+        }
+      } catch (legacyError) {
+        console.warn(`⚠️ 레거시 메뉴 조회도 실패 (매장 ${storeId}):`, legacyError.message);
+      }
+    }
 
     // 메뉴가 없으면 카테고리별 기본 메뉴 생성
     if (menu.length === 0) {

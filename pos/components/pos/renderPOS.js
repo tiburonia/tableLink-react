@@ -66,11 +66,22 @@ async function loadStoreForTableMap(storeId) {
 }
 
 // 테이블 선택
-async function selectTableFromMap(tableElement) {
-  const tableNumber = tableElement.dataset.tableNumber || tableElement.getAttribute('data-table-number');
+async function selectTableFromMap(tableElementOrNumber) {
+  let tableNumber;
+
+  // 파라미터가 숫자인 경우 (직접 테이블 번호 전달)
+  if (typeof tableElementOrNumber === 'number' || typeof tableElementOrNumber === 'string') {
+    tableNumber = tableElementOrNumber.toString();
+  } 
+  // 파라미터가 DOM 엘리먼트인 경우
+  else if (tableElementOrNumber && typeof tableElementOrNumber === 'object') {
+    tableNumber = tableElementOrNumber.dataset?.tableNumber || 
+                 tableElementOrNumber.getAttribute?.('data-table-number') ||
+                 tableElementOrNumber.textContent?.match(/\d+/)?.[0];
+  }
 
   if (!tableNumber) {
-    console.error('❌ 테이블 번호를 찾을 수 없습니다:', tableElement);
+    console.error('❌ 테이블 번호를 찾을 수 없습니다:', tableElementOrNumber);
     showPOSNotification('테이블 번호를 찾을 수 없습니다.', 'error');
     return;
   }

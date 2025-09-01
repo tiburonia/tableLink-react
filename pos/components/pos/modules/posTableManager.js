@@ -1,4 +1,3 @@
-
 // POS 테이블 관리 모듈
 import { POSStateManager } from './posStateManager.js';
 import { POSDataLoader } from './posDataLoader.js';
@@ -51,7 +50,7 @@ export class POSTableManager {
       }
 
       return `
-        <button class="table-item ${table.status}" onclick="selectTableFromMap(${table.tableNumber})">
+        <button class="table-item ${table.status}" onclick="selectTableFromMap(${table.tableNumber})" data-table-number="${table.tableNumber}">
           <div class="table-number">T${table.tableNumber}</div>
           <div class="table-status">${statusText}</div>
           ${timeText ? `<div class="table-time">${timeText}</div>` : ''}
@@ -74,4 +73,10 @@ export class POSTableManager {
     POSStateManager.setSelectedItems([]);
     console.log(`🪑 테이블 ${tableNumber} 선택`);
   }
+}
+
+// Helper function to be called from HTML onclick attribute
+function selectTableFromMap(tableElement) {
+  const tableNumber = tableElement.dataset.tableNumber || tableElement;
+  POSTableManager.selectTable(tableNumber);
 }
