@@ -12,9 +12,10 @@ router.get('/stores/:storeId', async (req, res) => {
       SELECT 
         id,
         table_number as "tableNumber",
+        table_name as "tableName",
         4 as seats,
         is_occupied as "isOccupied",
-        occupied_at as "occupiedSince"
+        COALESCE(occupied_at, created_at) as "occupiedSince"
       FROM store_tables 
       WHERE store_id = $1 
       ORDER BY table_number ASC

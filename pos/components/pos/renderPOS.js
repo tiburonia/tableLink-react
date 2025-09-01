@@ -74,8 +74,8 @@ async function selectTableFromMap(tableElementOrNumber) {
     tableNumber = tableElementOrNumber.toString();
   } 
   // 파라미터가 DOM 엘리먼트인 경우
-  else if (tableElementOrNumber && typeof tableElementOrNumber === 'object') {
-    tableNumber = tableElementOrNumber.dataset?.tableNumber || 
+  else if (tableElementOrNumber && typeof tableElementOrNumber === 'object' && tableElementOrNumber.dataset) {
+    tableNumber = tableElementOrNumber.dataset.tableNumber;eElementOrNumber.dataset?.tableNumber || 
                  tableElementOrNumber.getAttribute?.('data-table-number') ||
                  tableElementOrNumber.textContent?.match(/\d+/)?.[0];
   }

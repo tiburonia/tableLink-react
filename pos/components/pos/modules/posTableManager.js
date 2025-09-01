@@ -76,7 +76,17 @@ export class POSTableManager {
 }
 
 // Helper function to be called from HTML onclick attribute
-function selectTableFromMap(tableElement) {
-  const tableNumber = tableElement.dataset.tableNumber || tableElement;
+window.selectTableFromMap = function(tableElementOrNumber) {
+  let tableNumber;
+  
+  if (typeof tableElementOrNumber === 'number' || typeof tableElementOrNumber === 'string') {
+    tableNumber = tableElementOrNumber.toString();
+  } else if (tableElementOrNumber && typeof tableElementOrNumber === 'object' && tableElementOrNumber.dataset) {
+    tableNumber = tableElementOrNumber.dataset.tableNumber;
+  } else {
+    tableNumber = tableElementOrNumber;
+  }
+  
+  console.log(`🪑 테이블 ${tableNumber} 선택`);
   POSTableManager.selectTable(tableNumber);
-}
+};

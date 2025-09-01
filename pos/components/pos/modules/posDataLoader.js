@@ -55,7 +55,7 @@ export class POSDataLoader {
     try {
       console.log(`🪑 매장 ${storeId} 테이블 정보 로드 시작`);
 
-      const response = await fetch(`/api/stores/${storeId}/tables`);
+      const response = await fetch(`/api/tables/stores/${storeId}`);
       const data = await response.json();
 
       if (!data.success) {
