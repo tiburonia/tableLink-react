@@ -508,6 +508,49 @@ router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
   }
 });
 
+// 사용자 정보 조회 API (POST 방식 - 호환성)
+router.post('/users/info', async (req, res) => {
+  const { userId } = req.body;
+
+  console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
+      return res.status(404).json({ 
+        success: false, 
+        error: '사용자를 찾을 수 없습니다' 
+      });
+    }
+
+    const user = result.rows[0];
+
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id})`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email || '',
+        address: user.address || '',
+        birth: user.birth || '',
+        gender: user.gender || '',
+        point: user.point || 0
+      }
+    });
+  } catch (error) {
+    console.error('❌ 사용자 정보 조회 실패:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: '사용자 정보 조회 실패' 
+    });
+  }
+});
+
 // 사용자 정보 업데이트 API
 router.put('/users/update', async (req, res) => {
   const client = await pool.connect();
