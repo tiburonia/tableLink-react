@@ -4,8 +4,15 @@ import { POSStateManager } from './posStateManager.js';
 export class POSUIRenderer {
   // 주문 목록 렌더링 (임시/확정 구분)
   static renderOrderItems() {
+    console.log('🎨 renderOrderItems 호출됨');
+    
     const orderItemsContainer = document.getElementById('orderItems');
-    if (!orderItemsContainer) return;
+    if (!orderItemsContainer) {
+      console.error('❌ orderItems DOM 요소를 찾을 수 없습니다');
+      return;
+    }
+    
+    console.log('✅ orderItems DOM 요소 확인됨');
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
     const confirmedItems = POSStateManager.getConfirmedItems();
@@ -117,6 +124,8 @@ export class POSUIRenderer {
 
     orderItemsContainer.innerHTML = html;
     console.log(`🎨 주문 목록 렌더링 완료 - 임시: ${pendingItems.length}개, 확정: ${confirmedItems.length}개`);
+    console.log('📄 렌더링된 HTML 길이:', html.length);
+    console.log('🔍 실제 DOM 내용:', orderItemsContainer.innerHTML.substring(0, 200) + '...');
   }
 
   // 결제 요약 렌더링

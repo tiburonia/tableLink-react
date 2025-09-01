@@ -165,7 +165,15 @@ window.returnToTableMap = returnToTableMap;
 
 // 메뉴 관련 전역 함수
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
-window.addMenuToOrder = (menuName, price) => POSOrderManager.addMenuToOrder(menuName, price);
+window.addMenuToOrder = (menuName, price) => {
+  console.log(`🍽️ 전역 addMenuToOrder 호출: ${menuName} - ₩${price}`);
+  try {
+    POSOrderManager.addMenuToOrder(menuName, price);
+    console.log(`✅ addMenuToOrder 성공`);
+  } catch (error) {
+    console.error(`❌ addMenuToOrder 실패:`, error);
+  }
+};
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 주문 관리 전역 함수

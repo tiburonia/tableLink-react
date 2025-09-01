@@ -590,14 +590,25 @@ export class POSOrderManager {
         showPOSNotification(`${menuName} 임시 주문에 추가됨`, 'success');
       }
 
+      // 상태 즉시 업데이트
       POSStateManager.setPendingItems(pendingItems);
       this.updateCombinedOrder();
       POSTempStorage.saveTempOrder();
 
-      // UI 업데이트
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
+      console.log(`📝 현재 임시 주문 상태:`, pendingItems);
+
+      // UI 강제 업데이트 (비동기 처리로 확실히 실행)
+      setTimeout(() => {
+        if (typeof POSUIRenderer !== 'undefined') {
+          console.log(`🎨 UI 업데이트 시작 - 임시 아이템: ${pendingItems.length}개`);
+          POSUIRenderer.renderOrderItems();
+          POSUIRenderer.renderPaymentSummary();
+          POSUIRenderer.updatePrimaryActionButton();
+          console.log(`✅ UI 업데이트 완료`);
+        } else {
+          console.error('❌ POSUIRenderer를 찾을 수 없습니다');
+        }
+      }, 50);
 
       console.log('✅ 메뉴 추가 완료');
 
