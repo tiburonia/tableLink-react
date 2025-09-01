@@ -25,13 +25,9 @@ export class POSTableManager {
     const tableStatuses = await Promise.all(
       allTables.map(async (table) => {
         try {
-          const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${table.tableNumber}/all-orders`);
-          const data = await response.json();
-
-          if (data.success && data.currentSession) {
-            return { ...table, status: 'ordering', sessionInfo: data.currentSession };
-          } else if (table.isOccupied) {
-            return { ...table, status: 'payment' };
+          // 간단한 상태 체크로 변경
+          if (table.isOccupied) {
+            return { ...table, status: 'occupied' };
           } else {
             return { ...table, status: 'available' };
           }

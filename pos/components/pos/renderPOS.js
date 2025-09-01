@@ -21,9 +21,9 @@ async function renderPOS() {
     // 기본 UI 렌더링
     renderPOSLayout();
 
-    // URL에서 매장 ID 추출
-    const urlParts = window.location.pathname.split('/');
-    const storeId = urlParts[2];
+    // URL 파라미터에서 매장 ID 추출
+    const urlParams = new URLSearchParams(window.location.search);
+    const storeId = urlParams.get('storeId');
 
     if (storeId) {
       console.log(`📟 URL에서 매장 ID 감지: ${storeId}`);

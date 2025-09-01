@@ -45,6 +45,21 @@ export class POSDataLoader {
   // 매장 테이블 로드
   static async loadStoreTables(storeId) {
     try {
+      const response = await fetch(`/api/tables/stores/${storeId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        const tables = data.tables || [];
+        POSStateManager.setAllTables(tables);
+        console.log(`🪑 테이블 ${tables.length}개 로드`);
+      } else {
+        throw new Error('테이블 데이터 로드 실패');
+      }
+    } catch (error) {
+      console.error('❌ 테이블 로드 실패:', error);
+      POSStateManager.setAllTables([]);
+    }
+  }
       const response = await fetch(`/api/pos/stores/${storeId}/tables`);
       const data = await response.json();
 
