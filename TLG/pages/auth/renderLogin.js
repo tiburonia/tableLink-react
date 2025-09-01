@@ -799,7 +799,7 @@ async function renderLogin() {
       try {
         console.log('🚀 빠른 로그인 시작: user1');
 
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch('/api/auth/users/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
