@@ -4,10 +4,19 @@ const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
 const { Pool } = require('pg');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 const { notFound, errorHandler } = require('./mw/errors');
 const sse = require('./services/sse');
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT || 5000;
 
 // Database pool
@@ -141,6 +150,25 @@ async function setupKDSListener() {
               },
               timestamp: new Date().toISOString()
             });
+
+            // Socket.IO로도 실시간 브로드캐스트
+            io.to(`store:${store_id}`).emit('pos-update', {
+              type: 'order-update',
+              storeId: store_id,
+              data: payload,
+              timestamp: new Date().toISOString()
+            });
+
+            io.to(`kds:${store_id}`).emit('kds-update', {
+              type: 'line_update',
+              storeId: store_id,
+              data: {
+                ...payload,
+                table_number,
+                customer_name
+              },
+              timestamp: new Date().toISOString()
+            });
           }
         }
       } catch (error) {
@@ -154,11 +182,62 @@ async function setupKDSListener() {
   }
 }
 
+// Socket.IO 연결 관리
+const storeRooms = new Map(); // storeId -> Set of socket.id
+
+io.on('connection', (socket) => {
+  console.log(`🔌 새 클라이언트 연결: ${socket.id}`);
+
+  // POS 룸 참여
+  socket.on('join-pos-room', (storeId) => {
+    const roomName = `store:${storeId}`;
+    socket.join(roomName);
+    
+    if (!storeRooms.has(storeId)) {
+      storeRooms.set(storeId, new Set());
+    }
+    storeRooms.get(storeId).add(socket.id);
+    
+    console.log(`📡 POS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
+    
+    socket.emit('join-pos-room-success', {
+      storeId,
+      clientCount: storeRooms.get(storeId).size
+    });
+  });
+
+  // KDS 룸 참여
+  socket.on('join-kds-room', (storeId) => {
+    const roomName = `kds:${storeId}`;
+    socket.join(roomName);
+    console.log(`🖥️ KDS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
+    
+    socket.emit('join-kds-room-success', { storeId });
+  });
+
+  // 연결 해제 처리
+  socket.on('disconnect', () => {
+    console.log(`❌ 클라이언트 연결 해제: ${socket.id}`);
+    
+    // 모든 매장 룸에서 제거
+    for (const [storeId, clients] of storeRooms.entries()) {
+      if (clients.has(socket.id)) {
+        clients.delete(socket.id);
+        if (clients.size === 0) {
+          storeRooms.delete(storeId);
+        }
+        break;
+      }
+    }
+  });
+});
+
 // Start Server
-app.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 TableLink POS 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
   console.log('🏗️ POS/KDS/TLL/KRP 통합 시스템');
+  console.log('🔌 Socket.IO 실시간 통신 준비완료');
 
   // Setup KDS LISTEN
   await setupKDSListener();
@@ -167,22 +246,28 @@ app.listen(PORT, '0.0.0.0', async () => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('👋 서버 종료 중...');
-  pool.end().then(() => {
-    console.log('👋 PostgreSQL 풀 종료됨.');
-    process.exit(0);
-  }).catch(err => {
-    console.error('❌ PostgreSQL 풀 종료 오류:', err);
-    process.exit(1);
+  io.close(() => {
+    console.log('👋 Socket.IO 서버 종료됨.');
+    pool.end().then(() => {
+      console.log('👋 PostgreSQL 풀 종료됨.');
+      process.exit(0);
+    }).catch(err => {
+      console.error('❌ PostgreSQL 풀 종료 오류:', err);
+      process.exit(1);
+    });
   });
 });
 
 process.on('SIGINT', () => {
   console.log('👋 서버 종료 중...');
-  pool.end().then(() => {
-    console.log('👋 PostgreSQL 풀 종료됨.');
-    process.exit(0);
-  }).catch(err => {
-    console.error('❌ PostgreSQL 풀 종료 오류:', err);
-    process.exit(1);
+  io.close(() => {
+    console.log('👋 Socket.IO 서버 종료됨.');
+    pool.end().then(() => {
+      console.log('👋 PostgreSQL 풀 종료됨.');
+      process.exit(0);
+    }).catch(err => {
+      console.error('❌ PostgreSQL 풀 종료 오류:', err);
+      process.exit(1);
+    });
   });
 });
