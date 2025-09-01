@@ -16,7 +16,7 @@ export class POSOrderManager {
 
       // 세션 락 확인
       const lockStatus = await this.checkSessionLock(tableNumber);
-      if (lockStatus.isLocked && lockStatus.lockedBy !== 'current_pos') {
+      if (lockStatus.isLocked && lockStatus.lockedBy !== 'POS' && lockStatus.lockedBy !== 'current_pos') {
         throw new Error(`테이블이 다른 시스템(${lockStatus.lockedBy})에서 사용 중입니다.`);
       }
 
@@ -118,7 +118,7 @@ export class POSOrderManager {
       if (result.success) {
         POSStateManager.setSessionLock({
           isLocked: true,
-          lockedBy: 'current_pos',
+          lockedBy: 'POS',
           lockedAt: new Date(),
           lockExpires: new Date(Date.now() + 300000)
         });
