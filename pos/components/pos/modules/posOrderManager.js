@@ -556,43 +556,54 @@ export class POSOrderManager {
     await this.initializeSession(tableNumber);
   }
 
-  // 메뉴를 주문에 추가
-  static async addMenuToOrder(menuId, menuName, price, notes = '') {
+  // 메뉴를 주문에 추가 (임시 주문)
+  static addMenuToOrder(menuName, price, notes = '') {
+    const currentTable = POSStateManager.getCurrentTable();
+    if (!currentTable) {
+      showPOSNotification('테이블이 선택되지 않았습니다.', 'warning');
+      return;
+    }
+
     try {
       console.log(`🍽️ 메뉴 추가: ${menuName} (₩${price})`);
 
-      const newItem = {
-        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        menuId,
-        name: menuName,
-        price: price,
-        quantity: 1,
-        discount: 0,
-        notes: notes,
-        isPending: true,
-        isConfirmed: false,
-        addedAt: new Date().toISOString()
-      };
+      const pendingItems = POSStateManager.getPendingItems();
+      const existingItem = pendingItems.find(item => item.name === menuName && !item.isDeleted);
 
-      // 상태에 임시 주문 추가
-      POSStateManager.addPendingItem(newItem);
-
-      // 임시저장소에 저장
-      POSTempStorage.saveTempOrder();
-
-      // UI 즉시 업데이트
-      if (typeof POSUIRenderer !== 'undefined') {
-        POSUIRenderer.renderOrderItems();
-        POSUIRenderer.renderPaymentSummary();
-        POSUIRenderer.updatePrimaryActionButton();
+      if (existingItem) {
+        existingItem.quantity += 1;
+        showPOSNotification(`${menuName} 수량 +1 (총 ${existingItem.quantity}개) [임시]`, 'info');
+      } else {
+        const newItem = {
+          id: `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          name: menuName,
+          price: parseInt(price),
+          quantity: 1,
+          discount: 0,
+          notes: notes,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          isConfirmed: false,
+          isPending: true
+        };
+        pendingItems.push(newItem);
+        showPOSNotification(`${menuName} 임시 주문에 추가됨`, 'success');
       }
 
-      showPOSNotification(`${menuName} 추가됨`, 'success');
-      console.log('✅ 메뉴 추가 완료:', newItem);
+      POSStateManager.setPendingItems(pendingItems);
+      this.updateCombinedOrder();
+      POSTempStorage.saveTempOrder();
+
+      // UI 업데이트
+      POSUIRenderer.renderOrderItems();
+      POSUIRenderer.renderPaymentSummary();
+      POSUIRenderer.updatePrimaryActionButton();
+
+      console.log('✅ 메뉴 추가 완료');
 
     } catch (error) {
       console.error('❌ 메뉴 추가 실패:', error);
-      showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+      showPOSNotification('메뉴 추가 중 오류가 발생했습니다.', 'error');
     }
   }
 

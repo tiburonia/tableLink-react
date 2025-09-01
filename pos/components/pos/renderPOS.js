@@ -165,7 +165,7 @@ window.returnToTableMap = returnToTableMap;
 
 // 메뉴 관련 전역 함수
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
-window.addMenuToOrder = (menuName, price) => POSOrderManager.addMenuToPending(menuName, price);
+window.addMenuToOrder = (menuName, price) => POSOrderManager.addMenuToOrder(menuName, price);
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 주문 관리 전역 함수
