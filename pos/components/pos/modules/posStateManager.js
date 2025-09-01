@@ -247,7 +247,7 @@ export class POSStateManager {
     window.currentTable = null;
     window.currentOrder = [];
     window.selectedItems = [];
-    
+
     console.log('🔄 POS 상태 완전 초기화');
   }
 

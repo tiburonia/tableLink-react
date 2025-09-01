@@ -23,11 +23,11 @@ export class POSOrderManager {
       // 기존 활성 세션 조회 (재시도 로직 포함)
       let sessionData = null;
       let sessionResponse = null;
-      
+
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
           sessionResponse = await fetch(`/api/pos/stores/${currentStore.id}/table/${tableNumber}/session-status`);
-          
+
           if (sessionResponse.ok) {
             sessionData = await sessionResponse.json();
             break;
@@ -36,13 +36,13 @@ export class POSOrderManager {
           }
         } catch (error) {
           console.warn(`⚠️ 세션 상태 조회 실패 (시도 ${attempt}/3):`, error.message);
-          
+
           if (attempt < 3) {
             // 재시도 전 1초 대기
             await new Promise(resolve => setTimeout(resolve, 1000));
             continue;
           }
-          
+
           throw new Error(`세션 상태 조회 실패: ${error.message}`);
         }
       }
@@ -556,8 +556,44 @@ export class POSOrderManager {
     await this.initializeSession(tableNumber);
   }
 
-  static addMenuToOrder(menuName, price) {
-    this.addMenuToPending(menuName, price);
+  // 메뉴를 주문에 추가
+  static async addMenuToOrder(menuId, menuName, price, notes = '') {
+    try {
+      console.log(`🍽️ 메뉴 추가: ${menuName} (₩${price})`);
+
+      const newItem = {
+        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        menuId,
+        name: menuName,
+        price: price,
+        quantity: 1,
+        discount: 0,
+        notes: notes,
+        isPending: true,
+        isConfirmed: false,
+        addedAt: new Date().toISOString()
+      };
+
+      // 상태에 임시 주문 추가
+      POSStateManager.addPendingItem(newItem);
+
+      // 임시저장소에 저장
+      POSTempStorage.saveTempOrder();
+
+      // UI 즉시 업데이트
+      if (typeof POSUIRenderer !== 'undefined') {
+        POSUIRenderer.renderOrderItems();
+        POSUIRenderer.renderPaymentSummary();
+        POSUIRenderer.updatePrimaryActionButton();
+      }
+
+      showPOSNotification(`${menuName} 추가됨`, 'success');
+      console.log('✅ 메뉴 추가 완료:', newItem);
+
+    } catch (error) {
+      console.error('❌ 메뉴 추가 실패:', error);
+      showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    }
   }
 
   static async confirmOrder() {
@@ -591,21 +627,32 @@ export class POSOrderManager {
       }
 
       const result = await response.json();
-      console.log('✅ 주문 확정 완료:', result);
+      
+      // 성공 시 상태 업데이트
+      POSStateManager.setCurrentSession({
+        checkId: result.checkId,
+        status: 'active',
+        items: result.items || [],
+        orderCount: result.items ? result.items.length : 0
+      });
 
-      // 임시 주문 초기화
+      // 임시 주문 정리
       POSStateManager.clearTempOrderItems();
       POSTempStorage.clearTempOrder();
 
-      // UI 업데이트
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
+      // UI 즉시 업데이트
+      if (typeof POSUIRenderer !== 'undefined') {
+        POSUIRenderer.renderOrderItems();
+        POSUIRenderer.renderPaymentSummary();
+        POSUIRenderer.updatePrimaryActionButton();
+      }
 
-      // 테이블 주문 다시 로드
-      await this.loadTableOrders(currentTable);
+      showPOSNotification(
+        `주문 확정 완료! 체크 ID: ${result.checkId}`, 
+        'success'
+      );
 
-      showPOSNotification('주문이 확정되었습니다!', 'success');
+      console.log('✅ 주문 확정 완료:', result);
       return true;
 
     } catch (error) {
@@ -619,36 +666,32 @@ export class POSOrderManager {
   static clearOrder() {
     try {
       // 상태 초기화
-      POSStateManager.setPendingItems([]);
-      POSStateManager.setCurrentOrder([]);
-      POSStateManager.setSelectedItems([]);
+      POSStateManager.clearTempOrderItems();
+      POSStateManager.clearSelectedItems();
+
+      // 임시저장소 초기화
       POSTempStorage.clearTempOrder();
 
-      // UI 업데이트
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
+      // UI 즉시 업데이트
+      if (typeof POSUIRenderer !== 'undefined') {
+        POSUIRenderer.renderOrderItems();
+        POSUIRenderer.renderPaymentSummary();
+        POSUIRenderer.updatePrimaryActionButton();
+      }
 
-      showPOSNotification('주문이 초기화되었습니다.', 'info');
-      console.log('✅ 주문 초기화 완료');
+      showPOSNotification('임시 주문이 초기화되었습니다', 'info');
+      console.log('🧹 주문 초기화 완료');
     } catch (error) {
       console.error('❌ 주문 초기화 실패:', error);
-      showPOSNotification('주문 초기화에 실패했습니다.', 'error');
+      showPOSNotification('주문 초기화 실패: ' + error.message, 'error');
     }
   }
 
   // 임시 주문 초기화
   static clearTempOrder() {
     try {
-      POSStateManager.setPendingItems([]);
-      this.updateCombinedOrder();
-      POSTempStorage.clearTempOrder();
-
-      POSUIRenderer.renderOrderItems();
-      POSUIRenderer.renderPaymentSummary();
-      POSUIRenderer.updatePrimaryActionButton();
-
-      console.log('✅ 임시 주문 초기화 완료');
+      this.clearOrder();
+      console.log('🧹 임시 주문 초기화 완료');
     } catch (error) {
       console.error('❌ 임시 주문 초기화 실패:', error);
     }
@@ -737,46 +780,26 @@ export class POSOrderManager {
   // 수량 변경
   static changeQuantity(itemId, change) {
     try {
-      const pendingItems = POSStateManager.getPendingItems();
-      const confirmedItems = POSStateManager.getConfirmedItems();
-      
-      // 임시 주문에서 찾기
-      const pendingItem = pendingItems.find(item => item.id === itemId);
-      if (pendingItem) {
-        pendingItem.quantity += change;
-        
-        if (pendingItem.quantity <= 0) {
-          const filteredPending = pendingItems.filter(item => item.id !== itemId);
-          POSStateManager.setPendingItems(filteredPending);
-        } else {
-          POSStateManager.setPendingItems(pendingItems);
-        }
-        
-        this.updateCombinedOrder();
+      const updated = POSStateManager.changeItemQuantity(itemId, change);
+      if (updated) {
         POSTempStorage.saveTempOrder();
-        
-        POSUIRenderer.renderOrderItems();
-        POSUIRenderer.renderPaymentSummary();
-        POSUIRenderer.updatePrimaryActionButton();
-        
+
+        // UI 즉시 업데이트
+        if (typeof POSUIRenderer !== 'undefined') {
+          POSUIRenderer.renderOrderItems();
+          POSUIRenderer.renderPaymentSummary();
+          POSUIRenderer.updatePrimaryActionButton();
+        }
+
         showPOSNotification(
-          pendingItem.quantity <= 0 ? 
-            `${pendingItem.name} 제거됨` : 
-            `${pendingItem.name} 수량: ${pendingItem.quantity}개`, 
+          change > 0 ? '수량이 증가했습니다' : '수량이 감소했습니다', 
           'info'
         );
-        return;
+        console.log(`📝 수량 변경: ${itemId}, 변경량: ${change}`);
       }
-
-      // 확정된 주문은 수정 불가 알림
-      const confirmedItem = confirmedItems.find(item => item.id === itemId);
-      if (confirmedItem) {
-        showPOSNotification('확정된 주문은 직접 수량 변경이 불가능합니다. 취소 후 재주문하세요.', 'warning');
-      }
-
     } catch (error) {
       console.error('❌ 수량 변경 실패:', error);
-      showPOSNotification('수량 변경 중 오류가 발생했습니다.', 'error');
+      showPOSNotification('수량 변경 실패: ' + error.message, 'error');
     }
   }
 
@@ -817,7 +840,7 @@ export class POSOrderManager {
       POSTempStorage.saveTempOrder();
       POSUIRenderer.renderOrderItems();
       POSUIRenderer.renderPaymentSummary();
-      
+
       showPOSNotification(
         `${appliedCount}개 아이템에 할인 적용 (${discountType === 'percent' ? discountValue + '%' : '₩' + discountValue.toLocaleString()})`, 
         'success'
