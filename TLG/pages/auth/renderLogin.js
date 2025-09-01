@@ -741,9 +741,8 @@ async function renderLogin() {
   // DOM 요소 가져오기
   const id = document.querySelector('#id');
   const pw = document.querySelector('#pw');
-  const join = document.querySelector('#join');
-  const login = document.querySelector('#loginBtn'); // 올바른 ID 사용
-  const quickLoginBtn = document.querySelector('#quickLogin'); // Renamed to avoid conflict
+  const login = document.querySelector('#loginBtn');
+  const quickLoginBtn = document.querySelector('#quickLogin');
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
@@ -755,224 +754,214 @@ async function renderLogin() {
 
   // 입력 필드 변화 감지 및 버튼 활성화
   const updateLoginButton = () => {
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) {
+    if (login && id && pw) {
       const idValue = id.value.trim();
       const pwValue = pw.value.trim();
-      loginBtn.disabled = !(idValue && pwValue);
+      login.disabled = !(idValue && pwValue);
     }
   };
 
-  id.addEventListener('input', updateLoginButton);
-  pw.addEventListener('input', updateLoginButton);
-  updateLoginButton(); // 초기 상태 설정
+  // 입력 필드 이벤트 리스너
+  if (id && pw) {
+    id.addEventListener('input', updateLoginButton);
+    pw.addEventListener('input', updateLoginButton);
+    updateLoginButton(); // 초기 상태 설정
+  }
 
-  // 기존 이벤트 리스너들...
-  join.addEventListener('click', async () => {
-    try {
-      if (typeof renderSignUp !== 'function' && typeof window.renderSignUp !== 'function') {
-        console.log('🔄 renderSignUp 함수 동적 로드 시도');
-
-        const script = document.createElement('script');
-        script.src = '/TLG/pages/auth/renderSignUp.js';
-        script.onload = () => {
-          console.log('✅ renderSignUp 스크립트 로드 완료');
-          if (typeof window.renderSignUp === 'function') {
-            window.renderSignUp();
-          } else {
-            alert('회원가입 기능 로드에 실패했습니다.');
-          }
-        };
-        script.onerror = () => {
-          console.error('❌ renderSignUp 스크립트 로드 실패');
-          alert('회원가입 기능 로드에 실패했습니다.');
-        };
-        document.head.appendChild(script);
-      } else {
-        const signUpFunc = window.renderSignUp || renderSignUp;
-        signUpFunc();
-      }
-    } catch (error) {
-      console.error('❌ renderSignUp 실행 오류:', error);
-      alert('회원가입 화면으로 이동할 수 없습니다.');
-    }
-  });
-
+  // 회원가입 버튼 이벤트 (HTML에 없으므로 제거)
+  // join.addEventListener('click', async () => {
+    // 로딩 스크린 관리 함수들
   const showLoadingScreen = () => {
-    const btnText = login.querySelector('.btn-text');
-    const btnLoading = login.querySelector('.btn-loading');
+    if (login) {
+      const btnText = login.querySelector('.btn-text');
+      const btnLoading = login.querySelector('.btn-loading');
 
-    btnText.style.display = 'none';
-    btnLoading.style.display = 'flex';
-    login.disabled = true;
+      if (btnText) btnText.style.display = 'none';
+      if (btnLoading) btnLoading.style.display = 'flex';
+      login.disabled = true;
+    }
   };
 
   const hideLoadingScreen = () => {
-    const btnText = login.querySelector('.btn-text');
-    const btnLoading = login.querySelector('.btn-loading');
+    if (login) {
+      const btnText = login.querySelector('.btn-text');
+      const btnLoading = login.querySelector('.btn-loading');
 
-    btnText.style.display = 'inline';
-    btnLoading.style.display = 'none';
-    login.disabled = false;
+      if (btnText) btnText.style.display = 'inline';
+      if (btnLoading) btnLoading.style.display = 'none';
+      login.disabled = false;
+    }
   };
 
-  quickLoginBtn.addEventListener('click', async () => { // Use renamed variable
-    try {
-      showLoadingScreen();
+  // 빠른 로그인 버튼 이벤트 리스너
+  if (quickLoginBtn) {
+    quickLoginBtn.addEventListener('click', async () => {
+      try {
+        console.log('🚀 빠른 로그인 시작: user1');
 
-      const response = await fetch('/api/auth/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: 'user1',
-          pw: '11'
-        })
-      });
+        const response = await fetch('/api/auth/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: 'user1',
+            pw: '11'
+          })
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (response.ok) {
-        if (!window.userInfo) {
-          window.userInfo = {};
-        }
-
-        window.userInfo = {
-          id: data.user.id,
-          pw: data.user.pw || '',
-          name: data.user.name,
-          phone: data.user.phone,
-          email: '',
-          address: '',
-          birth: '',
-          gender: '',
-          point: data.user.point || 0,
-          orderList: data.user.orderList || [],
-          totalCost: 0,
-          realCost: 0,
-          reservationList: data.user.reservationList || [],
-          coupons: data.user.coupons || { unused: [], used: [] },
-          favorites: data.user.favoriteStores || []
-        };
-
-        const expires = new Date();
-        expires.setDate(expires.getDate() + 7);
-        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-
-        if (typeof cacheManager !== 'undefined' && cacheManager.setUserInfo) {
-          cacheManager.setUserInfo(window.userInfo);
-        }
-
-        setTimeout(async () => {
-          if (typeof renderMap === 'function') {
-            await renderMap();
-          } else {
-            window.location.href = '/';
+        if (response.ok) {
+          if (!window.userInfo) {
+            window.userInfo = {};
           }
-        }, 100);
-      } else {
-        hideLoadingScreen();
-        await renderLogin();
-        alert(data.error || '빠른 로그인 실패');
+
+          window.userInfo = {
+            id: data.user.id,
+            pw: data.user.pw || '',
+            name: data.user.name,
+            phone: data.user.phone,
+            email: '',
+            address: '',
+            birth: '',
+            gender: '',
+            point: data.user.point || 0,
+            orderList: data.user.orderList || [],
+            totalCost: 0,
+            realCost: 0,
+            reservationList: data.user.reservationList || [],
+            coupons: data.user.coupons || { unused: [], used: [] },
+            favorites: data.user.favoriteStores || []
+          };
+
+          const expires = new Date();
+          expires.setDate(expires.getDate() + 7);
+          document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+
+          console.log('✅ 빠른 로그인 성공:', data.user.name);
+
+          setTimeout(async () => {
+            if (typeof renderMap === 'function') {
+              await renderMap();
+            } else {
+              window.location.href = '/';
+            }
+          }, 100);
+        } else {
+          alert(data.error || '빠른 로그인 실패');
+        }
+      } catch (error) {
+        console.error('❌ 빠른 로그인 오류:', error);
+        alert('서버 연결에 실패했습니다');
       }
-    } catch (error) {
-      console.error('빠른 로그인 오류:', error);
-      hideLoadingScreen();
-      await renderLogin();
-      alert('서버 연결에 실패했습니다');
-    }
-  });
+    });
+  }
 
-  login.addEventListener('click', async () => {
-    try {
-      showLoadingScreen();
+  // 로그인 버튼 이벤트 리스너
+  if (login) {
+    login.addEventListener('click', async () => {
+      if (!id || !pw) {
+        alert('아이디와 비밀번호를 입력해주세요.');
+        return;
+      }
 
-      const response = await fetch('/api/auth/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: id.value,
-          pw: pw.value
-        })
-      });
+      try {
+        showLoadingScreen();
 
-      const data = await response.json();
+        const response = await fetch('/api/auth/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: id.value,
+            pw: pw.value
+          })
+        });
 
-      if (response.ok) {
-        if (!window.userInfo) {
-          window.userInfo = {};
-        }
+        const data = await response.json();
 
-        window.userInfo = {
-          id: data.user.id,
-          pw: data.user.pw || '',
-          name: data.user.name,
-          phone: data.user.phone,
-          email: '',
-          address: '',
-          birth: '',
-          gender: '',
-          point: data.user.point || 0,
-          orderList: data.user.orderList || [],
-          totalCost: 0,
-          realCost: 0,
-          reservationList: data.user.reservationList || [],
-          coupons: data.user.coupons || { unused: [], used: [] },
-          favorites: data.user.favoriteStores || []
-        };
-
-        const expires = new Date();
-        expires.setDate(expires.getDate() + 7);
-        document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
-
-        if (typeof cacheManager !== 'undefined' && cacheManager.setUserInfo) {
-          cacheManager.setUserInfo(window.userInfo);
-        }
-
-        setTimeout(async () => {
-          if (typeof renderMap === 'function') {
-            await renderMap();
-          } else {
-            window.location.href = '/';
+        if (response.ok) {
+          if (!window.userInfo) {
+            window.userInfo = {};
           }
-        }, 100);
-      } else {
+
+          window.userInfo = {
+            id: data.user.id,
+            pw: data.user.pw || '',
+            name: data.user.name,
+            phone: data.user.phone,
+            email: '',
+            address: '',
+            birth: '',
+            gender: '',
+            point: data.user.point || 0,
+            orderList: data.user.orderList || [],
+            totalCost: 0,
+            realCost: 0,
+            reservationList: data.user.reservationList || [],
+            coupons: data.user.coupons || { unused: [], used: [] },
+            favorites: data.user.favoriteStores || []
+          };
+
+          const expires = new Date();
+          expires.setDate(expires.getDate() + 7);
+          document.cookie = `userInfo=${encodeURIComponent(JSON.stringify(window.userInfo))}; expires=${expires.toUTCString()}; path=/`;
+
+          console.log('✅ 로그인 성공:', data.user.name);
+
+          setTimeout(async () => {
+            if (typeof renderMap === 'function') {
+              await renderMap();
+            } else {
+              window.location.href = '/';
+            }
+          }, 100);
+        } else {
+          hideLoadingScreen();
+          alert(data.error || '로그인 실패');
+        }
+      } catch (error) {
+        console.error('❌ 로그인 오류:', error);
         hideLoadingScreen();
-        await renderLogin();
-        alert(data.error || '로그인 실패');
+        alert('서버 연결에 실패했습니다');
       }
-    } catch (error) {
-      console.error('로그인 오류:', error);
-      hideLoadingScreen();
-      await renderLogin();
-      alert('서버 연결에 실패했습니다');
-    }
-  });
+    });
+  }
 
 
 
-  adminLogin.addEventListener('click', () => {
-    window.location.href = '/ADMIN';
-  });
+  // 기타 버튼 이벤트 리스너들
+  if (adminLogin) {
+    adminLogin.addEventListener('click', () => {
+      window.location.href = '/ADMIN';
+    });
+  }
 
-  goKDS.addEventListener('click', () => {
-    showKDSStoreSearchModal();
-  });
+  if (goKDS) {
+    goKDS.addEventListener('click', () => {
+      showKDSStoreSearchModal();
+    });
+  }
 
-  goPOS.addEventListener('click', () => {
-    showPOSStoreSearchModal();
-  });
+  if (goPOS) {
+    goPOS.addEventListener('click', () => {
+      showPOSStoreSearchModal();
+    });
+  }
 
-  goKRP.addEventListener('click', () => {
-    showKRPStoreSearchModal();
-  });
+  if (goKRP) {
+    goKRP.addEventListener('click', () => {
+      showKRPStoreSearchModal();
+    });
+  }
 
-  goTLM.addEventListener('click', () => {
-    showStoreSearchModal();
-  });
+  if (goTLM) {
+    goTLM.addEventListener('click', () => {
+      showStoreSearchModal();
+    });
+  }
 
   // POS 매장 검색 모달 표시
   function showPOSStoreSearchModal() {
@@ -2425,27 +2414,20 @@ async function renderLogin() {
     });
   }
 
-  // 이벤트 리스너 설정 함수
+  // Enter 키 이벤트 리스너 설정
   function setupEventListeners() {
-    // Enter 키 이벤트
     const handleEnterKey = (event) => {
       if (!document.querySelector('#loginPanelContainer')) {
         return;
       }
 
-      if (event.key === 'Enter' && event.target.id !== 'join') {
+      if (event.key === 'Enter' && login) {
         login.click();
       }
     };
 
     document.removeEventListener('keydown', handleEnterKey);
     document.addEventListener('keydown', handleEnterKey);
-
-    if (join) {
-      join.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') join.click();
-      });
-    }
   }
 
   // 초기화
