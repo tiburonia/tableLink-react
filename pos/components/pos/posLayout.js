@@ -594,3 +594,57 @@ function updateTime() {
     timeElement.textContent = new Date().toLocaleTimeString('ko-KR');
   }
 }
+
+// ES6 모듈 export
+export { renderPOSLayout };
+export default renderPOSLayout;
+
+// 전역 함수 등록 - 레거시 호환성
+if (typeof window !== 'undefined') {
+  window.renderPOSLayout = renderPOSLayout;
+  console.log('✅ renderPOSLayout 전역 함수 등록 완료');
+}
+
+// 테이블맵으로 돌아가기 함수
+window.returnToTableMap = () => {
+  console.log('🔄 테이블맵으로 돌아가기');
+  const tableMapView = document.getElementById('tableMapView');
+  const orderView = document.getElementById('orderView');
+  
+  if (tableMapView && orderView) {
+    tableMapView.style.display = 'block';
+    orderView.classList.add('hidden');
+  }
+  
+  // 현재 테이블 정보 초기화
+  window.currentTable = null;
+  
+  // URL에서 테이블 파라미터 제거
+  const url = new URL(window.location);
+  url.searchParams.delete('tableId');
+  window.history.replaceState({}, '', url);
+};
+
+// 메뉴 검색 함수
+window.searchMenus = (query) => {
+  if (window.posMenuManager) {
+    window.posMenuManager.searchMenus(query);
+  }
+};
+
+// 기본 액션 핸들러
+window.handlePrimaryAction = () => {
+  if (window.posOrderManager) {
+    window.posOrderManager.confirmOrders();
+  }
+};
+
+// 결제 처리 함수
+window.processPayment = (paymentType) => {
+  if (window.posPaymentManager) {
+    window.posPaymentManager.processPayment(paymentType);
+  } else {
+    console.log(`💳 ${paymentType} 결제 처리 요청`);
+    alert(`${paymentType === 'cash' ? '현금' : '카드'} 결제가 요청되었습니다.`);
+  }
+};

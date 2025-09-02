@@ -28,8 +28,18 @@ async function renderPOS() {
       return;
     }
 
-    // POS 레이아웃 렌더링
-    await renderPOSLayout();
+    // POS 레이아웃 렌더링 - 동적 import 사용
+    console.log('🎨 POS 레이아웃 로딩 시작...');
+    const layoutModule = await import('./posLayout.js');
+    const renderPOSLayout = layoutModule.renderPOSLayout || layoutModule.default;
+
+    if (typeof renderPOSLayout === 'function') {
+      console.log('✅ renderPOSLayout 함수 발견, 실행 중...');
+      await renderPOSLayout();
+    } else {
+      console.error('❌ renderPOSLayout 함수를 찾을 수 없습니다');
+      throw new Error('POS 레이아웃 함수가 없습니다');
+    }
 
     // 매장 및 메뉴 데이터 로드
     await loadStoreData(storeId);
