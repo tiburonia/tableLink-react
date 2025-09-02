@@ -3,7 +3,7 @@ import { POSStateManager } from './posStateManager.js';
 
 export class POSUIRenderer {
 
-  // 🔘 Primary Action 버튼 업데이트 (장바구니 + 확정 주문 수정 상태 기반)
+  // 🔘 Primary Action 버튼 업데이트 (우선순위: 장바구니 > 수정사항)
   static updatePrimaryActionButton() {
     const primaryBtn = document.getElementById('primaryActionBtn');
     if (!primaryBtn) {
@@ -12,10 +12,11 @@ export class POSUIRenderer {
     }
 
     const cartItems = POSStateManager.getCartItems();
+    const selectedItems = POSStateManager.getSelectedItems();
     const hasModifications = POSOrderManager.modifiedConfirmedItems && POSOrderManager.modifiedConfirmedItems.length > 0;
 
+    // 우선순위 1: 장바구니가 있으면 항상 주문 확정 모드
     if (cartItems.length > 0) {
-      // 장바구니가 있으면 주문 확정 모드
       const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -31,8 +32,9 @@ export class POSUIRenderer {
       primaryBtn.style.color = 'white';
 
       console.log(`🔘 Primary Action 버튼: 주문 확정 모드 (장바구니 ${cartItems.length}개)`);
-    } else if (hasModifications) {
-      // 확정된 주문 수정사항이 있으면 수정 저장 모드
+    } 
+    // 우선순위 2: 확정된 주문 수정사항이 있으면 수정 저장 모드
+    else if (hasModifications) {
       primaryBtn.innerHTML = `
         <div class="btn-content">
           <span class="btn-title">💾 수정사항 저장</span>
@@ -45,12 +47,28 @@ export class POSUIRenderer {
       primaryBtn.style.color = 'white';
 
       console.log(`🔘 Primary Action 버튼: 수정 저장 모드 (${POSOrderManager.modifiedConfirmedItems.length}개 수정)`);
-    } else {
-      // 아무것도 없으면 비활성화
+    }
+    // 우선순위 3: 확정된 주문이 선택되었지만 아직 수정하지 않은 경우
+    else if (selectedItems.length > 0) {
+      primaryBtn.innerHTML = `
+        <div class="btn-content">
+          <span class="btn-title">✏️ 주문 수정 대기</span>
+          <span class="btn-subtitle">${selectedItems.length}개 주문 선택됨</span>
+        </div>
+      `;
+      primaryBtn.className = 'primary-action-btn modify-ready';
+      primaryBtn.disabled = true;
+      primaryBtn.style.background = '#6b7280';
+      primaryBtn.style.color = 'white';
+
+      console.log(`🔘 Primary Action 버튼: 수정 대기 모드 (${selectedItems.length}개 선택)`);
+    }
+    // 우선순위 4: 아무것도 없으면 비활성화
+    else {
       primaryBtn.innerHTML = `
         <div class="btn-content">
           <span class="btn-title">🛒 주문 없음</span>
-          <span class="btn-subtitle">메뉴를 선택하세요</span>
+          <span class="btn-subtitle">메뉴를 선택하거나 주문을 선택하세요</span>
         </div>
       `;
       primaryBtn.className = 'primary-action-btn disabled';
@@ -119,7 +137,16 @@ export class POSUIRenderer {
     // 확정된 주문들
     if (confirmedItems.length > 0) {
       const selectedItems = POSStateManager.getSelectedItems();
-      html += '<div class="confirmed-section"><h4>✅ 확정 주문</h4>';
+      html += `
+        <div class="confirmed-section">
+          <div class="confirmed-header">
+            <h4>✅ 확정 주문</h4>
+            <button class="select-all-btn" onclick="window.toggleAllConfirmedItems()">
+              ${selectedItems.length === confirmedItems.length ? '전체해제' : '전체선택'}
+            </button>
+          </div>
+      `;
+      
       confirmedItems.forEach(item => {
         const isSelected = selectedItems.includes(item.id);
         html += `
@@ -127,7 +154,7 @@ export class POSUIRenderer {
                onclick="window.toggleConfirmedItemSelection('${item.id}')" 
                data-item-id="${item.id}">
             <div class="item-checkbox">
-              <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()" readonly>
             </div>
             <div class="item-info">
               <span class="item-name">${item.name}</span>
@@ -137,6 +164,7 @@ export class POSUIRenderer {
               <span class="quantity">${item.quantity}개</span>
               <span class="status">${item.status || 'ordered'}</span>
             </div>
+            ${isSelected ? '<div class="selected-indicator">✓</div>' : ''}
           </div>
         `;
       });

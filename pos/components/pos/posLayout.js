@@ -903,27 +903,78 @@ export function renderPOSLayout() {
       /* 새로운 주문 아이템 스타일 */
       .order-item {
         display: flex;
+        justify-content: space-between;
         align-items: center;
         padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
         margin-bottom: 8px;
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 12px;
-        cursor: pointer;
-        transition: all 0.3s ease;
+        background: #ffffff;
+        transition: all 0.2s ease;
         position: relative;
       }
 
-      .order-item:hover {
-        border-color: #3b82f6;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      .order-item.confirmed-item {
+        cursor: pointer;
       }
 
-      .order-item.selected {
+      .order-item.confirmed-item:hover {
+        background: #f8fafc;
         border-color: #3b82f6;
-        background: #dbeafe;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .order-item.confirmed-item.selected {
+        background: #eff6ff;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+      }
+
+      .confirmed-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .select-all-btn {
+        padding: 4px 8px;
+        background: #6b7280;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .select-all-btn:hover {
+        background: #4b5563;
+      }
+
+      .item-checkbox {
+        margin-right: 8px;
+      }
+
+      .item-checkbox input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: #3b82f6;
+      }
+
+      .selected-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: #10b981;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
       }
 
       .order-item.pending {
@@ -951,49 +1002,6 @@ export function renderPOSLayout() {
         border-color: #3b82f6;
         background: linear-gradient(135deg, #dbeafe, #bfdbfe);
         box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-      }
-
-      .item-checkbox {
-        display: flex;
-        align-items: center;
-        margin-right: 12px;
-      }
-
-      .item-checkbox input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        cursor: pointer;
-        accent-color: #3b82f6;
-      }
-
-      .item-main {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .item-name {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1e293b;
-      }
-
-      .item-price {
-        font-size: 12px;
-        color: #059669;
-        font-weight: 600;
-      }
-
-      .item-price .discount {
-        color: #dc2626;
-        text-decoration: line-through;
-        margin-right: 8px;
-      }
-
-      .item-price .final-price {
-        color: #059669;
-        font-weight: 700;
       }
 
       .item-controls {

@@ -603,18 +603,28 @@ export class POSOrderManager {
       // 이미 선택된 경우 선택 해제
       selectedItems.splice(index, 1);
       console.log(`🔲 확정 주문 선택 해제: ${itemId}`);
+      
+      // 모든 선택이 해제되면 수정 모드 종료
+      if (selectedItems.length === 0) {
+        this.cancelConfirmedOrderChanges();
+      }
     } else {
       // 선택되지 않은 경우 선택 추가
       selectedItems.push(itemId);
       console.log(`☑️ 확정 주문 선택: ${itemId}`);
+      
+      // 첫 번째 선택이면 수정 모드 시작
+      if (selectedItems.length === 1) {
+        this.startModifyingConfirmedOrders();
+      }
     }
 
     POSStateManager.setSelectedItems(selectedItems);
     this.updateUI();
     
-    // 선택된 주문이 있으면 수정 모드 시작
+    // 선택 상태 알림
     if (selectedItems.length > 0) {
-      this.startModifyingConfirmedOrders();
+      showPOSNotification(`${selectedItems.length}개 주문 선택됨`, 'info');
     }
   }
 
@@ -623,15 +633,18 @@ export class POSOrderManager {
     const confirmedItems = POSStateManager.getConfirmedItems();
     const selectedItems = POSStateManager.getSelectedItems();
     
-    if (selectedItems.length === confirmedItems.length) {
-      // 전체 선택된 상태면 전체 해제
+    if (selectedItems.length === confirmedItems.length && confirmedItems.length > 0) {
+      // 전체 선택된 상태면 전체 해제 및 수정 모드 종료
       POSStateManager.setSelectedItems([]);
+      this.cancelConfirmedOrderChanges();
+      showPOSNotification('전체 선택 해제', 'info');
       console.log('🔲 전체 확정 주문 선택 해제');
     } else {
       // 일부만 선택되거나 아무것도 선택되지 않은 상태면 전체 선택
       const allIds = confirmedItems.map(item => item.id);
       POSStateManager.setSelectedItems(allIds);
       this.startModifyingConfirmedOrders();
+      showPOSNotification(`${allIds.length}개 주문 전체 선택`, 'success');
       console.log(`☑️ 전체 확정 주문 선택: ${allIds.length}개`);
     }
     

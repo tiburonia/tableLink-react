@@ -228,7 +228,7 @@ window.toggleConfirmedItemSelection = (itemId) => {
   POSOrderManager.toggleConfirmedItemSelection(itemId);
 };
 
-window.selectConfirmedItems = () => {
+window.toggleAllConfirmedItems = () => {
   POSOrderManager.toggleAllConfirmedItems();
 };
 
