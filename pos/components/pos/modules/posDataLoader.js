@@ -1,5 +1,62 @@
 // POS 데이터 로더 모듈 - 새 스키마 적용
 export class POSDataLoader {
+  // 🚀 초기 데이터 로드 (통합 함수)
+  static async loadInitialData() {
+    try {
+      console.log('🚀 POS 초기 데이터 로드 시작');
+
+      // URL에서 storeId 추출
+      const urlParams = new URLSearchParams(window.location.search);
+      const storeId = urlParams.get('storeId');
+
+      if (!storeId) {
+        throw new Error('매장 ID가 제공되지 않았습니다');
+      }
+
+      console.log(`🏪 매장 ID: ${storeId}`);
+
+      // 상태 관리자 import
+      const { POSStateManager } = await import('./posStateManager.js');
+
+      // 1. 매장 정보 로드
+      const storeData = await this.loadStore(storeId);
+      POSStateManager.setCurrentStore(storeData.store);
+
+      // 2. 매장 메뉴 로드
+      const menus = await this.loadStoreMenus(storeId);
+      console.log(`📋 로드된 메뉴 수: ${menus.length}`);
+
+      // 3. 테이블 정보 로드
+      const tables = await this.loadStoreTables(storeId);
+      console.log(`🪑 로드된 테이블 수: ${tables.length}`);
+
+      // 4. 매장 정보 표시 업데이트
+      this.updateStoreInfoDisplay(storeData.store);
+
+      console.log('✅ POS 초기 데이터 로드 완료');
+
+    } catch (error) {
+      console.error('❌ POS 초기 데이터 로드 실패:', error);
+      throw error;
+    }
+  }
+
+  // 🏪 매장 정보 표시 업데이트
+  static updateStoreInfoDisplay(store) {
+    const storeInfoElement = document.getElementById('storeInfo');
+    if (storeInfoElement) {
+      storeInfoElement.textContent = `${store.name} | ${store.region_name || '지역정보없음'}`;
+    }
+
+    // 활성 테이블 정보 업데이트
+    const activeTablesElement = document.getElementById('activeTables');
+    if (activeTablesElement) {
+      const allTables = POSStateManager.getAllTables();
+      const occupiedTables = allTables.filter(table => table.is_occupied || table.isOccupied);
+      activeTablesElement.textContent = `${occupiedTables.length}/${allTables.length}`;
+    }
+  }
+
   // 매장 정보 로드 (새 스키마)
   static async loadStore(storeId) {
     try {

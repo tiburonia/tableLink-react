@@ -132,7 +132,7 @@ function returnToTableMap() {
   POSStateManager.reset();
 
   document.getElementById('tableMapView').classList.remove('hidden');
-  document.getElementById('orderView').classList.add('hidden');
+  document.getElementById('tableDetailView').classList.add('hidden');
 
   POSTableManager.renderTableMap();
   console.log('✅ 테이블맵 복귀');
