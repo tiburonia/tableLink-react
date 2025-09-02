@@ -668,10 +668,10 @@ function handleTossPaymentFailure(data) {
 
         const tableOptions = [
           ...availableTables.map(table => 
-            `<option value="${table.tableNumber}">${table.tableName}</option>`
+            `<option value="${table.tableNumber}">${table.tableName || table.tableNumber + '번'}</option>`
           ),
           ...occupiedTables.map(table => 
-            `<option value="${table.tableNumber}" disabled>${table.tableName} (사용중)</option>`
+            `<option value="${table.tableNumber}" disabled>${table.tableName || table.tableNumber + '번'} (사용중)</option>`
           )
         ].join('');
 

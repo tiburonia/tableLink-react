@@ -527,7 +527,7 @@ router.get('/:storeId/menu', async (req, res) => {
 
     // 매장 존재 확인
     const storeResult = await pool.query(`
-      SELECT id, name, category, menu FROM stores WHERE id = $1
+      SELECT id, name, category FROM stores WHERE id = $1
     `, [storeId]);
 
     if (storeResult.rows.length === 0) {
@@ -538,20 +538,14 @@ router.get('/:storeId/menu', async (req, res) => {
     }
 
     const store = storeResult.rows[0];
-    let menu = [];
-
-    // stores 테이블의 menu 컬럼에서 메뉴 조회
-    if (store.menu && Array.isArray(store.menu) && store.menu.length > 0) {
-      menu = store.menu.map((item, index) => ({
-        id: index + 1,
-        name: item.name,
-        price: item.price,
-        description: item.description || ''
-      }));
-    } else {
-      // 메뉴가 없으면 카테고리별 기본 메뉴 생성
-      menu = getDefaultMenusByCategory(store.category);
-    }
+    
+    // 카테고리별 기본 메뉴 사용
+    const menu = getDefaultMenusByCategory(store.category).map((item, index) => ({
+      id: index + 1,
+      name: item.name,
+      price: item.price,
+      description: item.description || ''
+    }));
 
     console.log(`✅ 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
 

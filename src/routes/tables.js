@@ -11,6 +11,7 @@ router.get('/stores/:storeId', async (req, res) => {
       SELECT 
         id,
         table_number as "tableNumber",
+        COALESCE(table_name, table_number || '번') as "tableName",
         COALESCE(seats, 4) as seats,
         CASE 
           WHEN EXISTS (
@@ -39,10 +40,10 @@ router.get('/stores/:storeId', async (req, res) => {
       // 기본 테이블 20개 생성
       for (let i = 1; i <= 20; i++) {
         await pool.query(`
-          INSERT INTO store_tables (store_id, table_number, seats)
-          VALUES ($1, $2, 4)
+          INSERT INTO store_tables (store_id, table_number, table_name, seats)
+          VALUES ($1, $2, $3, 4)
           ON CONFLICT (store_id, table_number) DO NOTHING
-        `, [storeId, i]);
+        `, [storeId, i, `${i}번`]);
       }
 
       // 다시 조회
@@ -50,6 +51,7 @@ router.get('/stores/:storeId', async (req, res) => {
         SELECT 
           id,
           table_number as "tableNumber",
+          COALESCE(table_name, table_number || '번') as "tableName",
           COALESCE(seats, 4) as seats,
           false as "isOccupied",
           null as "occupiedSince"
