@@ -800,11 +800,32 @@ export class POSOrderManager {
       return;
     }
 
+    // 확인 다이얼로그
+    const totalNew = selectedPendingItems.length;
+    const totalModified = modifiedConfirmedItems.length;
+    let confirmMessage = '다음 변경사항을 확정하시겠습니까?\n\n';
+    
+    if (totalNew > 0) {
+      confirmMessage += `🆕 신규 주문: ${totalNew}개\n`;
+    }
+    if (totalModified > 0) {
+      confirmMessage += `📝 주문 변경: ${totalModified}개\n`;
+    }
+    confirmMessage += '\n확정 후에는 취소할 수 없습니다.';
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // 로딩 상태 표시
+    showPOSNotification('주문 확정 중...', 'info');
+
     try {
       console.log(`🏆 ordercontrol: ${selectedPendingItems.length}개 신규, ${modifiedConfirmedItems.length}개 변경 아이템 확정 시작`);
 
       const currentStore = POSStateManager.getCurrentStore();
       const currentTable = POSStateManager.getCurrentTable();
+      let newSessionCheckId = null;
 
       // 1. 새 임시 아이템 확정 처리
       if (selectedPendingItems.length > 0) {
@@ -813,12 +834,22 @@ export class POSOrderManager {
           const key = `${item.name}_${item.price}`;
           if (consolidatedItems[key]) {
             consolidatedItems[key].quantity += item.quantity;
+            consolidatedItems[key].totalDiscount += (item.discount || 0) * item.quantity;
           } else {
-            consolidatedItems[key] = { ...item };
+            consolidatedItems[key] = { 
+              ...item, 
+              totalDiscount: (item.discount || 0) * item.quantity 
+            };
           }
         });
 
-        const consolidatedArray = Object.values(consolidatedItems);
+        const consolidatedArray = Object.values(consolidatedItems).map(item => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          discount: Math.floor(item.totalDiscount / item.quantity),
+          notes: item.notes || ''
+        }));
 
         const response = await fetch('/api/orders/create-or-add', {
           method: 'POST',
@@ -826,13 +857,7 @@ export class POSOrderManager {
           body: JSON.stringify({
             storeId: currentStore.id,
             tableNumber: currentTable,
-            items: consolidatedArray.map(item => ({
-              name: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              discount: item.discount || 0,
-              notes: item.notes || ''
-            })),
+            items: consolidatedArray,
             userId: null,
             guestPhone: null,
             customerName: '포스 주문',
@@ -840,18 +865,29 @@ export class POSOrderManager {
           })
         });
 
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: 서버 응답 오류`);
+        }
+
         const result = await response.json();
         if (!result.success) {
-          throw new Error('새 아이템 확정 실패: ' + result.error);
+          throw new Error(result.error || '새 아이템 확정 실패');
         }
+
+        newSessionCheckId = result.checkId;
 
         // 확정된 아이템들을 상태에 추가
         const newConfirmedItems = consolidatedArray.map((item, index) => ({
-          ...item,
           id: result.itemIds ? result.itemIds[index] : `confirmed_${Date.now()}_${index}`,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          discount: item.discount,
+          notes: item.notes,
           status: 'ordered',
           isConfirmed: true,
           isPending: false,
+          isDeleted: false,
           checkId: result.checkId,
           confirmedAt: new Date().toISOString()
         }));
@@ -859,11 +895,7 @@ export class POSOrderManager {
         const existingConfirmed = POSStateManager.getConfirmedItems();
         POSStateManager.setConfirmedItems([...existingConfirmed, ...newConfirmedItems]);
 
-        // 세션 업데이트
-        POSStateManager.setCurrentSession({
-          checkId: result.checkId,
-          status: 'ordering'
-        });
+        console.log(`✅ ${consolidatedArray.length}개 신규 아이템 확정 완료`);
       }
 
       // 2. 확정된 아이템의 변경사항 처리
@@ -874,11 +906,9 @@ export class POSOrderManager {
           if (changes.isDeleted) {
             // 아이템 삭제 처리 (향후 취소 API 구현)
             console.log(`❌ 확정 아이템 삭제 요청: ${item.name} (향후 구현)`);
-            // 임시로 수량을 0으로 설정
             item.quantity = 0;
             item.status = 'cancelled';
           } else if (changes.newQuantity !== changes.originalQuantity) {
-            // 수량 변경 처리
             const quantityDiff = changes.newQuantity - changes.originalQuantity;
             
             if (quantityDiff > 0) {
@@ -903,43 +933,61 @@ export class POSOrderManager {
                 })
               });
 
-              const addResult = await addResponse.json();
-              if (addResult.success) {
-                item.quantity = changes.newQuantity;
-                console.log(`✅ 수량 증가 확정: ${item.name} +${quantityDiff}개`);
+              if (addResponse.ok) {
+                const addResult = await addResponse.json();
+                if (addResult.success) {
+                  item.quantity = changes.newQuantity;
+                  newSessionCheckId = newSessionCheckId || addResult.checkId;
+                  console.log(`✅ 수량 증가 확정: ${item.name} +${quantityDiff}개`);
+                }
               }
             } else {
-              // 수량 감소 (향후 부분 취소 API 구현)
-              console.log(`⬇️ 수량 감소 요청: ${item.name} ${quantityDiff}개 (향후 구현)`);
-              item.quantity = changes.newQuantity;
+              // 수량 감소 (임시로 직접 적용)
+              console.log(`⬇️ 수량 감소 적용: ${item.name} ${quantityDiff}개`);
+              item.quantity = Math.max(0, changes.newQuantity);
             }
           }
 
           // 변경사항 초기화
           delete item.pendingChanges;
         }
+
+        console.log(`✅ ${modifiedConfirmedItems.length}개 아이템 변경사항 적용 완료`);
       }
 
-      // 3. 임시 아이템들을 임시 주문에서 제거
+      // 3. 상태 정리
       const remainingPending = pendingItems.filter(item => 
         !selectedItems.includes(item.id)
       );
       POSStateManager.setPendingItems(remainingPending);
-
-      // 선택 해제
       POSStateManager.setSelectedItems([]);
 
+      // 4. 세션 정보 업데이트
+      if (newSessionCheckId) {
+        POSStateManager.setCurrentSession({
+          checkId: newSessionCheckId,
+          status: 'ordering'
+        });
+      }
+
+      // 5. UI 업데이트
       this.updateCombinedOrder();
       POSTempStorage.saveTempOrder();
       this.refreshUI();
 
+      // 성공 알림
       const totalProcessed = selectedPendingItems.length + modifiedConfirmedItems.length;
-      showPOSNotification(`${totalProcessed}개 변경사항 확정 완료!`, 'success');
+      showPOSNotification(`✅ ${totalProcessed}개 변경사항 확정 완료!`, 'success');
       console.log(`✅ ordercontrol: 모든 변경사항 확정 완료`);
+
+      // 세션 데이터 새로고침
+      setTimeout(() => {
+        this.refreshSessionData();
+      }, 500);
 
     } catch (error) {
       console.error('❌ ordercontrol: 변경사항 확정 실패:', error);
-      showPOSNotification('변경사항 확정 실패: ' + error.message, 'error');
+      showPOSNotification(`주문 확정 실패: ${error.message}`, 'error');
     }
   }
 

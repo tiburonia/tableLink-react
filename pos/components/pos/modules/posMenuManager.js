@@ -1,4 +1,3 @@
-
 // POS 메뉴 관리 모듈
 import { POSStateManager } from './posStateManager.js';
 
@@ -60,7 +59,7 @@ export class POSMenuManager {
 
     const allMenus = POSStateManager.getAllMenus();
     const selectedCategory = POSStateManager.getSelectedCategory();
-    
+
     let filteredMenus = allMenus;
 
     if (selectedCategory !== 'all') {
@@ -94,7 +93,7 @@ export class POSMenuManager {
 
     const allMenus = POSStateManager.getAllMenus();
     const selectedCategory = POSStateManager.getSelectedCategory();
-    
+
     let filteredMenus = allMenus;
 
     if (selectedCategory !== 'all') {
@@ -126,5 +125,39 @@ export class POSMenuManager {
     `).join('');
 
     menuGrid.innerHTML = menusHTML;
+  }
+
+  // 🍽️ 메뉴 카드 HTML 생성
+  static createMenuCardHTML(menu) {
+    const isAvailable = menu.is_available !== false;
+    const formattedPrice = parseInt(menu.price).toLocaleString();
+
+    return `
+      <div class="menu-card ${!isAvailable ? 'unavailable' : ''}" 
+           data-menu-id="${menu.id}"
+           onclick="window.addMenuWithFeedback('${menu.name.replace(/'/g, "\\'")}', ${menu.price}, '${menu.id}')">
+
+        <div class="menu-image">
+          ${menu.image_url ? 
+            `<img src="${menu.image_url}" alt="${menu.name}" loading="lazy">` :
+            `<div class="no-image">🍽️</div>`
+          }
+          ${!isAvailable ? '<div class="unavailable-overlay">일시품절</div>' : ''}
+        </div>
+
+        <div class="menu-info">
+          <h4 class="menu-name">${menu.name}</h4>
+          <p class="menu-description">${menu.description || '맛있는 메뉴입니다'}</p>
+
+          <div class="menu-footer">
+            <span class="menu-price">₩${formattedPrice}</span>
+            <button class="add-btn ${!isAvailable ? 'disabled' : ''}" 
+                    ${!isAvailable ? 'disabled' : ''}>
+              <span class="add-icon">+</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }

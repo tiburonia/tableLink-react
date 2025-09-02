@@ -165,10 +165,7 @@ export function renderPOSLayout() {
                           <span>선택삭제</span>
                         </button>
 
-                        <button class="nav-btn discount-btn" onclick="showDiscountModal()">
-                          <span class="nav-icon">💰</span>
-                          <span>할인적용</span>
-                        </button>
+                        
 
                         <button class="nav-btn qty-minus-btn" onclick="window.changeSelectedQuantity(-1)">
                           <span class="nav-icon">➖</span>

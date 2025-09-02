@@ -207,6 +207,66 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
     return false;
   }
 };
+
+// 🎨 메뉴 추가 시 UI 피드백 함수
+window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
+  console.log(`🍽️ UI 피드백 메뉴 추가: ${menuName} (₩${price})`);
+
+  try {
+    // 메뉴 카드 찾기
+    const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
+    
+    // 버튼 애니메이션
+    if (menuCard) {
+      const addBtn = menuCard.querySelector('.add-btn');
+      if (addBtn) {
+        // 추가 중 표시
+        addBtn.classList.add('adding');
+        addBtn.innerHTML = '<span class="add-icon">⏳</span>';
+        
+        // 카드 전체 애니메이션
+        menuCard.style.transform = 'scale(0.95)';
+        menuCard.style.transition = 'transform 0.15s ease';
+        
+        setTimeout(() => {
+          menuCard.style.transform = 'scale(1)';
+        }, 150);
+      }
+    }
+
+    // 실제 주문 추가
+    const success = window.addMenuToOrder(menuName, price, notes);
+    
+    // UI 복구
+    setTimeout(() => {
+      if (menuCard) {
+        const addBtn = menuCard.querySelector('.add-btn');
+        if (addBtn) {
+          addBtn.classList.remove('adding');
+          addBtn.innerHTML = '<span class="add-icon">+</span>';
+          
+          if (success) {
+            // 성공 피드백
+            addBtn.style.background = '#10b981';
+            addBtn.innerHTML = '<span class="add-icon">✓</span>';
+            
+            setTimeout(() => {
+              addBtn.style.background = '';
+              addBtn.innerHTML = '<span class="add-icon">+</span>';
+            }, 800);
+          }
+        }
+      }
+    }, 200);
+
+    return success;
+
+  } catch (error) {
+    console.error('❌ UI 피드백 메뉴 추가 실패:', error);
+    showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    return false;
+  }
+};
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 📋 주문 관리
@@ -278,28 +338,6 @@ window.clearOrderSelection = () => {
   POSOrderManager.refreshUI();
 };
 
-// 💰 할인 모달 표시
-window.showDiscountModal = () => {
-  const selectedItems = POSStateManager.getSelectedItems();
-  
-  if (selectedItems.length === 0) {
-    showPOSNotification('할인을 적용할 아이템을 선택해주세요', 'warning');
-    return;
-  }
 
-  const discountType = prompt('할인 유형을 선택하세요\n1: 정액 할인\n2: 정률 할인');
-  
-  if (discountType === '1') {
-    const amount = prompt('할인 금액을 입력하세요 (원):');
-    if (amount && !isNaN(amount)) {
-      POSOrderManager.applyDiscount('fixed', parseInt(amount));
-    }
-  } else if (discountType === '2') {
-    const percent = prompt('할인율을 입력하세요 (%):');
-    if (percent && !isNaN(percent)) {
-      POSOrderManager.applyDiscount('percent', parseFloat(percent));
-    }
-  }
-};
 
 console.log('✅ 새 시스템: 전역 함수 등록 완료 (ordercontrol nav button 포함)');
