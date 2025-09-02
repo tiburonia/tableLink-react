@@ -711,8 +711,23 @@ window.renderOrderScreen = async function(store, tableName) {
     }
 
     // QR 코드 생성 (테이블명에서 번호 추출)
-    const tableNumber = tableName.replace(/[^0-9]/g, '');
+    let tableNumber = tableName.replace(/[^0-9]/g, '');
+
+    // 테이블 번호가 없으면 테이블 이름 자체를 사용
+    if (!tableNumber) {
+      // "테이블 1", "1번 테이블" 등의 형태에서 번호 추출 시도
+      const match = tableName.match(/(\d+)/);
+      if (match) {
+        tableNumber = match[1];
+      } else {
+        // 번호가 없으면 기본값 사용 (예: "VIP" -> "1")
+        console.warn('⚠️ 테이블에서 번호를 추출할 수 없어 기본값 1 사용:', tableName);
+        tableNumber = '1';
+      }
+    }
+
     const qrCode = `TABLE_${tableNumber}`;
+    console.log(`📱 QR 코드 생성: ${qrCode} (테이블: ${tableName}, 번호: ${tableNumber})`);
 
     // TLL 체크 생성
     const checkResponse = await fetch('/api/tll/checks/from-qr', {
@@ -1013,7 +1028,7 @@ window.renderOrderScreen = async function(store, tableName) {
     // 전역 함수들 등록
     window.addToCart = function(menuItem) {
       const existingIndex = cart.findIndex(item => item.id === menuItem.id);
-      
+
       if (existingIndex >= 0) {
         cart[existingIndex].quantity += 1;
       } else {
@@ -1023,7 +1038,7 @@ window.renderOrderScreen = async function(store, tableName) {
           totalPrice: menuItem.price
         });
       }
-      
+
       updateCartDisplay();
       console.log('🛒 TLL 장바구니에 추가:', menuItem.name);
     };
@@ -1123,7 +1138,7 @@ window.renderOrderScreen = async function(store, tableName) {
 
         // 결제 화면으로 이동
         const totalAmount = orderResult.total_amount;
-        
+
         // 주문 정보 저장 (결제 완료 후 사용)
         sessionStorage.setItem('tllPendingOrder', JSON.stringify({
           checkId: checkId,

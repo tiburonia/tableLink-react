@@ -31,22 +31,33 @@ router.post('/checks/from-qr', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // QR 코드로 매장 및 테이블 정보 조회
-    const qrResult = await client.query(`
-      SELECT store_id, table_number, is_active
-      FROM qr_codes
-      WHERE code = $1
-    `, [qr_code]);
-
-    if (qrResult.rows.length === 0) {
-      throw new Error('유효하지 않은 QR 코드입니다');
+    // QR 코드에서 테이블 번호 추출 (TABLE_1, TABLE_2 형태)
+    const tableMatch = qr_code.match(/^TABLE_(\d+)$/);
+    if (!tableMatch) {
+      throw new Error('유효하지 않은 QR 코드 형식입니다');
     }
 
-    const qrData = qrResult.rows[0];
+    const tableNumber = parseInt(tableMatch[1]);
+    
+    // 현재는 매장 ID를 1로 고정 (나중에 QR 코드에서 매장 정보도 포함하도록 개선 필요)
+    const storeId = 1;
+    
+    // 해당 매장에 테이블이 존재하는지 확인
+    const tableResult = await client.query(`
+      SELECT table_number, is_occupied
+      FROM store_tables
+      WHERE store_id = $1 AND table_number = $2
+    `, [storeId, tableNumber]);
 
-    if (!qrData.is_active) {
-      throw new Error('비활성화된 QR 코드입니다');
+    if (tableResult.rows.length === 0) {
+      throw new Error(`매장에 ${tableNumber}번 테이블이 존재하지 않습니다`);
     }
+
+    const qrData = {
+      store_id: storeId,
+      table_number: tableNumber,
+      is_active: true
+    };
 
     // 기존 활성 체크 확인
     const existingCheckResult = await client.query(`
