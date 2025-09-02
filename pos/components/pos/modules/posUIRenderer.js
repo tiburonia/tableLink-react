@@ -106,12 +106,22 @@ export class POSUIRenderer {
         const isSelected = item.ids.some(id => selectedItems.includes(id));
         const finalPrice = item.price - (item.discount || 0);
 
+        // 임시 변경사항 확인
+        const originalItem = confirmedItems.find(ci => item.ids.includes(ci.id));
+        const hasPendingChanges = originalItem?.pendingChanges?.isModified;
+        const pendingQuantity = originalItem?.pendingChanges?.newQuantity;
+        const isMarkedForDeletion = originalItem?.pendingChanges?.isDeleted;
+
         html += `
-          <div class="order-item confirmed ${isSelected ? 'selected' : ''}" 
+          <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
                data-item-id="${item.id}" 
                onclick="toggleItemSelection('${item.id}')">
             <div class="item-main">
-              <div class="item-name">${item.name}</div>
+              <div class="item-name">
+                ${item.name}
+                ${hasPendingChanges ? '<span class="change-indicator">📝</span>' : ''}
+                ${isMarkedForDeletion ? '<span class="delete-indicator">🗑️</span>' : ''}
+              </div>
               <div class="item-price">
                 ₩${item.price.toLocaleString()}
                 ${item.discount > 0 ? `<span class="discount">-₩${item.discount.toLocaleString()}</span>` : ''}
@@ -119,8 +129,18 @@ export class POSUIRenderer {
               </div>
             </div>
             <div class="item-controls">
-              <div class="quantity-display">${item.quantity}개</div>
-              <div class="item-status">${item.status || '주문됨'}</div>
+              <div class="quantity-display">
+                ${isMarkedForDeletion ? 
+                  '<span class="deleted-qty">삭제예정</span>' :
+                  (hasPendingChanges ? 
+                    `<span class="original-qty">${item.quantity}</span> → <span class="pending-qty">${pendingQuantity}</span>개` :
+                    `${item.quantity}개`
+                  )
+                }
+              </div>
+              <div class="item-status">
+                ${isMarkedForDeletion ? '삭제예정' : (hasPendingChanges ? '변경예정' : (item.status || '주문됨'))}
+              </div>
             </div>
           </div>
         `;
@@ -518,6 +538,47 @@ export class POSUIRenderer {
             font-size: 20px;
           }
         }
+
+        /* 확정된 아이템의 임시 변경사항 스타일 */
+        .order-item.has-pending-changes {
+          background: linear-gradient(90deg, #f0f9ff 0%, #ffffff 100%);
+          border-left: 4px solid #3b82f6;
+        }
+
+        .order-item.marked-for-deletion {
+          background: linear-gradient(90deg, #fef2f2 0%, #ffffff 100%);
+          border-left: 4px solid #ef4444;
+          opacity: 0.7;
+        }
+
+        .change-indicator {
+          color: #3b82f6;
+          font-size: 12px;
+          margin-left: 4px;
+        }
+
+        .delete-indicator {
+          color: #ef4444;
+          font-size: 12px;
+          margin-left: 4px;
+        }
+
+        .original-qty {
+          text-decoration: line-through;
+          color: #6b7280;
+          font-size: 12px;
+        }
+
+        .pending-qty {
+          color: #3b82f6;
+          font-weight: bold;
+        }
+
+        .deleted-qty {
+          color: #ef4444;
+          font-weight: bold;
+          font-size: 12px;
+        }
       </style>
     `;
 
@@ -699,15 +760,29 @@ export class POSUIRenderer {
           ${confirmedCount > 0 ? `
             <div class="confirmed-controls">
               <h5>✅ 확정 주문 (${confirmedCount}개)</h5>
-              <p class="info-text">확정된 주문은 취소 요청만 가능합니다</p>
-              <button onclick="window.requestCancelSelectedItems()" class="cancel-btn">❌ 취소 요청</button>
+              <p class="info-text">확정된 주문도 수량 조절 및 삭제 가능합니다 (임시 변경)</p>
+              <div class="quantity-controls">
+                <button onclick="window.changeSelectedQuantity(-1)" class="qty-btn minus">-</button>
+                <span class="qty-label">수량 조절</span>
+                <button onclick="window.changeSelectedQuantity(1)" class="qty-btn plus">+</button>
+              </div>
+              <div class="action-buttons">
+                <button onclick="window.deleteSelectedPendingItems()" class="delete-btn">🗑️ 삭제 표시</button>
+                <button onclick="window.savePendingChanges()" class="save-temp-btn">💾 임시저장</button>
+              </div>
             </div>
           ` : ''}
 
-          ${pendingCount > 0 && confirmedCount === 0 ? `
+          ${(pendingCount > 0 || confirmedCount > 0) ? `
             <div class="order-actions">
               <button onclick="window.confirmSelectedPendingItems()" class="confirm-order-btn">
-                ✅ 선택 항목 주문확정
+                ✅ 변경사항 주문확정
+                ${pendingCount > 0 && confirmedCount > 0 ? 
+                  `<small>(신규 ${pendingCount}개, 변경 ${confirmedCount}개)</small>` :
+                  pendingCount > 0 ? 
+                    `<small>(신규 ${pendingCount}개)</small>` :
+                    `<small>(변경 ${confirmedCount}개)</small>`
+                }
               </button>
             </div>
           ` : ''}
