@@ -419,14 +419,49 @@ export class POSOrderManager {
     const selectedItems = POSStateManager.getSelectedItems();
     const confirmedItems = POSStateManager.getConfirmedItems();
     
-    // 선택된 아이템이 속한 통합 그룹의 모든 아이템 ID 찾기
-    const targetItem = confirmedItems.find(item => item.id === itemId);
+    console.log(`🔍 확정 아이템 목록 (${confirmedItems.length}개):`, confirmedItems.map(item => `${item.id}:${item.name}`));
+    
+    // 1차: 직접 ID 매칭으로 아이템 찾기
+    let targetItem = confirmedItems.find(item => item.id === itemId);
+    
+    // 2차: ID가 문자열인 경우 숫자로 변환해서 재시도
+    if (!targetItem && !isNaN(itemId)) {
+      targetItem = confirmedItems.find(item => item.id == itemId || item.id === parseInt(itemId));
+    }
+    
+    // 3차: 숫자 ID를 문자열로 변환해서 재시도
+    if (!targetItem && typeof itemId === 'number') {
+      targetItem = confirmedItems.find(item => item.id === itemId.toString());
+    }
+    
+    // 4차: UI에서 사용하는 통합 아이템 ID 패턴 체크 (consolidated_메뉴명_가격)
+    if (!targetItem && typeof itemId === 'string' && itemId.startsWith('consolidated_')) {
+      const parts = itemId.split('_');
+      if (parts.length >= 3) {
+        const menuName = parts.slice(1, -1).join('_'); // 메뉴명 (중간 부분들)
+        const price = parseInt(parts[parts.length - 1]); // 마지막이 가격
+        
+        console.log(`🔍 통합 ID 분석: 메뉴명="${menuName}", 가격=${price}`);
+        
+        // 같은 메뉴명과 가격의 첫 번째 아이템을 대표로 찾기
+        targetItem = confirmedItems.find(item => 
+          item.name === menuName && item.price === price
+        );
+        
+        if (targetItem) {
+          console.log(`✅ 통합 ID로 대표 아이템 찾음: ${targetItem.name}`);
+        }
+      }
+    }
+    
     if (!targetItem) {
       console.error(`❌ 확정 아이템을 찾을 수 없음: ${itemId}`);
+      console.error('📋 사용 가능한 확정 아이템 ID들:', confirmedItems.map(item => item.id));
+      showPOSNotification('선택할 수 없는 아이템입니다', 'warning');
       return;
     }
 
-    console.log(`📋 대상 아이템 찾음: ${targetItem.name} (가격: ₩${targetItem.price})`);
+    console.log(`📋 대상 아이템 찾음: ${targetItem.name} (가격: ₩${targetItem.price}, ID: ${targetItem.id})`);
 
     // 같은 메뉴명과 가격의 모든 아이템 ID 수집
     const relatedItemIds = confirmedItems
@@ -439,21 +474,32 @@ export class POSOrderManager {
     console.log(`🔗 관련 아이템 ${relatedItemIds.length}개:`, relatedItemIds);
 
     // 현재 선택 상태 확인 (관련 아이템 중 하나라도 선택되어 있는지)
-    const isAnySelected = relatedItemIds.some(id => selectedItems.includes(id));
+    const isAnySelected = relatedItemIds.some(id => 
+      selectedItems.includes(id) || 
+      selectedItems.includes(id.toString()) || 
+      selectedItems.includes(parseInt(id))
+    );
     console.log(`🔍 현재 선택 상태: ${isAnySelected ? '선택됨' : '선택안됨'}`);
 
     if (isAnySelected) {
-      // 선택 해제 - 관련된 모든 아이템 제거
-      const filteredSelected = selectedItems.filter(id => !relatedItemIds.includes(id));
+      // 선택 해제 - 관련된 모든 아이템 제거 (타입 변환 고려)
+      const filteredSelected = selectedItems.filter(selectedId => 
+        !relatedItemIds.some(relatedId => 
+          selectedId == relatedId || 
+          selectedId === relatedId.toString() || 
+          selectedId === parseInt(relatedId)
+        )
+      );
       POSStateManager.setSelectedItems(filteredSelected);
       showPOSNotification(`${targetItem.name} 선택 해제됨`, 'info');
       console.log(`✅ 선택 해제 완료: ${targetItem.name}`);
     } else {
       // 선택 - 대표 아이템만 추가 (첫 번째 아이템)
-      const newSelectedItems = [...selectedItems, relatedItemIds[0]];
+      const representativeId = relatedItemIds[0];
+      const newSelectedItems = [...selectedItems, representativeId];
       POSStateManager.setSelectedItems(newSelectedItems);
       showPOSNotification(`${targetItem.name} 선택됨 - 주문 수정 패널에서 수량 조절 가능`, 'success');
-      console.log(`✅ 선택 완료: ${targetItem.name}, 총 선택: ${newSelectedItems.length}개`);
+      console.log(`✅ 선택 완료: ${targetItem.name} (대표 ID: ${representativeId}), 총 선택: ${newSelectedItems.length}개`);
     }
 
     // UI 즉시 업데이트

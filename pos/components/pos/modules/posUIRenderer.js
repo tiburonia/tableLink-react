@@ -112,12 +112,15 @@ export class POSUIRenderer {
         const pendingQuantity = originalItem?.pendingChanges?.newQuantity;
         const isMarkedForDeletion = originalItem?.pendingChanges?.isDeleted;
 
+        // 통합된 아이템의 대표 ID를 가져옵니다.
+        const representativeId = item.ids[0];
+
         html += `
           <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
-               data-item-id="${item.ids[0]}" 
+               data-item-id="${representativeId}" 
                data-item-name="${item.name}"
                data-item-price="${item.price}"
-               onclick="window.toggleConfirmedItemSelection('${item.ids[0]}')"
+               onclick="window.toggleConfirmedItemSelection('${representativeId}')"
                style="cursor: pointer; user-select: none;"
                title="클릭하여 선택 후 주문 수정 패널에서 수량 조절 가능">
             <div class="item-main">
@@ -724,31 +727,31 @@ export class POSUIRenderer {
             <li>✅ <strong>확정 주문</strong>: 선택 후 이 패널로 수정</li>
           </ul>
         </div>
-        
+
         <style>
           .control-empty {
             text-align: center;
             padding: 30px 20px;
             color: #64748b;
           }
-          
+
           .control-empty .empty-icon {
             font-size: 32px;
             margin-bottom: 12px;
             opacity: 0.7;
           }
-          
+
           .control-empty h4 {
             margin: 0 0 8px 0;
             color: #334155;
             font-size: 16px;
           }
-          
+
           .control-empty p {
             margin: 0 0 16px 0;
             font-size: 14px;
           }
-          
+
           .help-list {
             list-style: none;
             padding: 0;
@@ -756,7 +759,7 @@ export class POSUIRenderer {
             text-align: left;
             display: inline-block;
           }
-          
+
           .help-list li {
             margin: 8px 0;
             font-size: 13px;
@@ -765,7 +768,7 @@ export class POSUIRenderer {
             border-radius: 6px;
             border-left: 3px solid #e2e8f0;
           }
-          
+
           .confirmed-status small {
             display: block;
             font-size: 10px;
@@ -844,7 +847,7 @@ export class POSUIRenderer {
                 <button onclick="event.preventDefault(); window.savePendingChanges();" class="save-temp-btn" title="임시 변경사항을 로컬에 저장">💾 임시저장</button>
               </div>
             </div>
-            
+
             <style>
               .info-box {
                 display: flex;
@@ -856,18 +859,18 @@ export class POSUIRenderer {
                 margin: 12px 0;
                 font-size: 12px;
               }
-              
+
               .info-icon {
                 font-size: 16px;
                 margin-right: 8px;
                 flex-shrink: 0;
               }
-              
+
               .info-content p {
                 margin: 0 0 4px 0;
                 line-height: 1.4;
               }
-              
+
               .info-content .highlight {
                 background: #fbbf24;
                 padding: 1px 4px;
@@ -875,11 +878,11 @@ export class POSUIRenderer {
                 font-weight: 600;
                 color: #92400e;
               }
-              
+
               .qty-btn {
                 position: relative;
               }
-              
+
               .qty-btn:hover::after {
                 content: attr(title);
                 position: absolute;
