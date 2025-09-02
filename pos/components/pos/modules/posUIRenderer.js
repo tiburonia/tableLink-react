@@ -169,5 +169,12 @@ export class POSUIRenderer {
   }
 }
 
+// ES6 모듈 export
+export { POSUIRenderer };
+
 // 전역 함수로 노출
 window.POSUIRenderer = POSUIRenderer;
+
+// 디버깅용 로그
+console.log('✅ POSUIRenderer 모듈 로드 완료');
+console.log('🔧 POSUIRenderer 전역 노출:', typeof window.POSUIRenderer);

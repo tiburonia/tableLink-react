@@ -202,16 +202,140 @@ export class POSOrderManager {
   // 🎨 UI 업데이트
   static updateUI() {
     try {
-      // Ensure POSUIRenderer is available before calling its methods
+      console.log('🎨 UI 업데이트 시작');
+
+      // POSUIRenderer 확인 및 호출
       if (typeof POSUIRenderer !== 'undefined' && POSUIRenderer) {
         POSUIRenderer.renderOrderItems();
         POSUIRenderer.renderPaymentSummary();
         POSUIRenderer.updatePrimaryActionButton();
+        console.log('✅ UI 업데이트 완료');
+      } else if (typeof window.POSUIRenderer !== 'undefined' && window.POSUIRenderer) {
+        window.POSUIRenderer.renderOrderItems();
+        window.POSUIRenderer.renderPaymentSummary();
+        window.POSUIRenderer.updatePrimaryActionButton();
+        console.log('✅ UI 업데이트 완료 (window 전역)');
       } else {
-        console.warn('POSUIRenderer is not defined or available. UI updates may not occur.');
+        console.warn('⚠️ POSUIRenderer를 찾을 수 없습니다. 직접 DOM 업데이트를 시도합니다.');
+
+        // 직접 DOM 업데이트 시도
+        this.directUIUpdate();
       }
     } catch (error) {
       console.error('❌ UI 업데이트 실패:', error);
+      // 에러 발생 시에도 직접 업데이트 시도
+      this.directUIUpdate();
+    }
+  }
+
+  // 🔧 직접 DOM 업데이트 (fallback)
+  static directUIUpdate() {
+    try {
+      console.log('🔧 직접 DOM 업데이트 시도');
+
+      const cartItems = POSStateManager.getCartItems();
+      const primaryBtn = document.getElementById('primaryActionBtn');
+
+      if (primaryBtn) {
+        if (cartItems.length > 0) {
+          const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+          primaryBtn.innerHTML = `
+            <div class="btn-content">
+              <span class="btn-title">🏆 주문 확정</span>
+              <span class="btn-subtitle">${cartItems.length}개 메뉴 • ₩${totalAmount.toLocaleString()}</span>
+            </div>
+          `;
+          primaryBtn.className = 'primary-action-btn confirm-order active';
+          primaryBtn.disabled = false;
+
+          console.log(`✅ 직접 업데이트: 주문 확정 버튼 활성화 (${cartItems.length}개)`);
+        } else {
+          primaryBtn.innerHTML = `
+            <div class="btn-content">
+              <span class="btn-title">🛒 주문 확정</span>
+              <span class="btn-subtitle">메뉴를 선택하세요</span>
+            </div>
+          `;
+          primaryBtn.className = 'primary-action-btn disabled';
+          primaryBtn.disabled = true;
+
+          console.log('⚪ 직접 업데이트: 주문 확정 버튼 비활성화');
+        }
+      }
+
+      // 주문 목록 직접 업데이트
+      this.directUpdateOrderItems();
+
+    } catch (error) {
+      console.error('❌ 직접 DOM 업데이트 실패:', error);
+    }
+  }
+
+  // 🔧 주문 목록 직접 업데이트
+  static directUpdateOrderItems() {
+    try {
+      const orderItemsContainer = document.getElementById('orderItemsContainer');
+      if (!orderItemsContainer) {
+        console.warn('⚠️ orderItemsContainer 요소를 찾을 수 없습니다');
+        return;
+      }
+
+      const cartItems = POSStateManager.getCartItems();
+      const confirmedItems = POSStateManager.getConfirmedItems();
+
+      let html = '';
+
+      // 장바구니 아이템들
+      if (cartItems.length > 0) {
+        html += '<div class="cart-section"><h4>🛒 장바구니</h4>';
+        cartItems.forEach(item => {
+          html += `
+            <div class="order-item cart-item">
+              <div class="item-info">
+                <span class="item-name">${item.name}</span>
+                <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
+              </div>
+              <div class="item-controls">
+                <button onclick="POSOrderManager.changeCartQuantity('${item.id}', -1)">-</button>
+                <span class="quantity">${item.quantity}</span>
+                <button onclick="POSOrderManager.changeCartQuantity('${item.id}', 1)">+</button>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+      }
+
+      // 확정된 주문들
+      if (confirmedItems.length > 0) {
+        html += '<div class="confirmed-section"><h4>✅ 확정 주문</h4>';
+        confirmedItems.forEach(item => {
+          html += `
+            <div class="order-item confirmed-item">
+              <div class="item-info">
+                <span class="item-name">${item.name}</span>
+                <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
+              </div>
+              <div class="item-status">
+                <span class="quantity">${item.quantity}개</span>
+                <span class="status">${item.status || 'ordered'}</span>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+      }
+
+      if (cartItems.length === 0 && confirmedItems.length === 0) {
+        html = '<div class="no-items">선택된 메뉴가 없습니다</div>';
+      }
+
+      orderItemsContainer.innerHTML = html;
+      console.log(`🔧 직접 주문 목록 업데이트: 장바구니 ${cartItems.length}개, 확정 ${confirmedItems.length}개`);
+
+    } catch (error) {
+      console.error('❌ 직접 주문 목록 업데이트 실패:', error);
     }
   }
 
@@ -234,7 +358,7 @@ export class POSOrderManager {
       }
 
       const response = await fetch(`/api/pos/orders?storeId=${currentStore.id}&tableNumber=${tableNumber}`);
-      
+
       if (!response.ok) {
         console.warn(`⚠️ 테이블 ${tableNumber} 주문 로드 실패: ${response.status}`);
         POSStateManager.setConfirmedItems([]);

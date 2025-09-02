@@ -9,6 +9,9 @@ import { POSUIRenderer } from './modules/posUIRenderer.js';
 import { showPOSNotification } from '../../utils/posNotification.js';
 import { renderPOSLayout } from './posLayout.js';
 
+// POSUIRenderer를 전역으로 노출
+window.POSUIRenderer = POSUIRenderer;
+
 // 🚀 POS 시스템 초기화
 async function renderPOS() {
   try {
@@ -176,9 +179,25 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
       return false;
     }
 
-    // 올바른 함수 호출
-    const success = POSOrderManager.addMenuToCart(menuName, price, notes);
-    return success;
+    // POSOrderManager 확인 후 호출
+    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.addMenuToCart) {
+      const success = POSOrderManager.addMenuToCart(menuName, price, notes);
+      
+      // UI 강제 업데이트
+      setTimeout(() => {
+        if (typeof POSUIRenderer !== 'undefined' && POSUIRenderer.renderAll) {
+          POSUIRenderer.renderAll();
+        } else if (typeof window.POSUIRenderer !== 'undefined' && window.POSUIRenderer.renderAll) {
+          window.POSUIRenderer.renderAll();
+        }
+      }, 100);
+      
+      return success;
+    } else {
+      console.error('❌ POSOrderManager를 찾을 수 없습니다');
+      showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
+      return false;
+    }
 
   } catch (error) {
     console.error('❌ 메뉴 추가 실패:', error);
