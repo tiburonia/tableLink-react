@@ -4,7 +4,39 @@ import { showPOSNotification } from '../../../utils/posNotification.js'; // Ensu
 
 export class POSOrderManager {
 
-  // 🛒 장바구니에 메뉴 추가
+  // 🛒 장바구니에 메뉴 추가 (이름, 가격으로)
+  static addMenuToCart(menuName, price, notes = '') {
+    console.log('🛒 장바구니에 메뉴 추가:', menuName, '₩' + price);
+
+    const cartItems = POSStateManager.getCartItems();
+    const existingItem = cartItems.find(item => item.name === menuName);
+
+    if (existingItem) {
+      // 기존 아이템 수량 증가
+      existingItem.quantity += 1;
+      showPOSNotification(`${menuName} 수량: ${existingItem.quantity}개`, 'info');
+    } else {
+      // 새 아이템 추가
+      const cartItem = {
+        id: `cart_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: menuName,
+        price: parseInt(price),
+        quantity: 1,
+        notes: notes,
+        addedAt: new Date().toISOString()
+      };
+      cartItems.push(cartItem);
+      showPOSNotification(`${menuName} 장바구니 추가`, 'success');
+    }
+
+    POSStateManager.setCartItems(cartItems);
+    this.updateUI();
+
+    console.log(`✅ 장바구니 업데이트 완료: ${cartItems.length}개 아이템`);
+    return true;
+  }
+
+  // 🛒 장바구니에 메뉴 추가 (객체로)
   static addToCart(menuItem) {
     console.log('🛒 장바구니에 메뉴 추가:', menuItem.name);
 
@@ -188,6 +220,46 @@ export class POSOrderManager {
     setTimeout(() => {
       this.updateUI();
     }, 50);
+  }
+
+  // 📋 테이블 주문 로드 (확정된 주문만)
+  static async loadTableOrders(tableNumber) {
+    console.log(`📋 테이블 ${tableNumber} 주문 로드 시작`);
+
+    try {
+      const currentStore = POSStateManager.getCurrentStore();
+      if (!currentStore) {
+        console.warn('⚠️ 현재 매장 정보 없음');
+        return;
+      }
+
+      const response = await fetch(`/api/pos/orders?storeId=${currentStore.id}&tableNumber=${tableNumber}`);
+      
+      if (!response.ok) {
+        console.warn(`⚠️ 테이블 ${tableNumber} 주문 로드 실패: ${response.status}`);
+        POSStateManager.setConfirmedItems([]);
+        return;
+      }
+
+      const data = await response.json();
+      const confirmedItems = data.orders || [];
+
+      POSStateManager.setConfirmedItems(confirmedItems);
+      console.log(`✅ 테이블 ${tableNumber} 확정 주문 ${confirmedItems.length}개 로드 완료`);
+
+    } catch (error) {
+      console.error('❌ 테이블 주문 로드 실패:', error);
+      POSStateManager.setConfirmedItems([]);
+    }
+  }
+
+  // 🚪 페이지 이탈 시 장바구니 정리
+  static handlePageUnload() {
+    const cartItems = POSStateManager.getCartItems();
+    if (cartItems.length > 0) {
+      console.log(`🗑️ 페이지 이탈: 장바구니 ${cartItems.length}개 아이템 자동 삭제`);
+      POSStateManager.setCartItems([]);
+    }
   }
 }
 

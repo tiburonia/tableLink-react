@@ -100,10 +100,10 @@ async function switchToOrderView() {
   const currentTable = POSStateManager.getCurrentTable();
   document.getElementById('orderTableTitle').textContent = `테이블 ${currentTable} - 주문/결제`;
 
+  // 기존 확정 주문 로드
   await POSOrderManager.loadTableOrders(currentTable);
 
   // UI 렌더링
-  POSUIRenderer.updateTableInfo();
   POSMenuManager.renderMenuCategories();
   POSMenuManager.renderMenuGrid();
   POSUIRenderer.renderOrderItems();
@@ -176,6 +176,7 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
       return false;
     }
 
+    // 올바른 함수 호출
     const success = POSOrderManager.addMenuToCart(menuName, price, notes);
     return success;
 
