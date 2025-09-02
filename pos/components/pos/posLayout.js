@@ -147,29 +147,22 @@ export function renderPOSLayout() {
                     <div class="nav-section">
                       <h4>📝 주문 수정</h4>
                       <div class="nav-buttons">
-                        <button class="nav-btn select-btn" onclick="window.selectAllItems()">
+                        <button class="nav-btn select-btn" onclick="window.selectConfirmedItems()">
                           <span class="nav-icon">☑️</span>
                           <span>전체선택</span>
                         </button>
 
-                        <button class="nav-btn delete-btn" onclick="window.deleteSelectedPendingItems()">
+                        <button class="nav-btn delete-btn" onclick="window.deleteSelectedConfirmedItems()">
                           <span class="nav-icon">🗑️</span>
                           <span>선택삭제</span>
                         </button>
 
-
-
-                        <button class="nav-btn qty-minus-btn" onclick="window.changeSelectedQuantity(-1)">
+                        <button class="nav-btn qty-minus-btn" onclick="window.changeConfirmedQuantity(-1)">
                           <span class="nav-icon">➖</span>
                           <span>수량-1</span>
                         </button>
 
-                        <button class="nav-btn qty-plus-btn" onclick="window.changeSelectedQuantity(1)">
-                          <span class="nav-icon">➕</span>
-                          <span>수량+1</span>
-                        </button>
-
-                        <button class="nav-btn qty-plus-btn" onclick="changeQuantity(1)">
+                        <button class="nav-btn qty-plus-btn" onclick="window.changeConfirmedQuantity(1)">
                           <span class="nav-icon">➕</span>
                           <span>수량+1</span>
                         </button>
@@ -204,16 +197,6 @@ export function renderPOSLayout() {
 
             <!-- 우측 컬럼: 메뉴 선택 + 주문 확정 버튼 + 결제/관리 버튼 -->
             <section class="right-column">
-              <!-- 주문 확정 버튼 -->
-              <div class="primary-action-container">
-                <button id="primaryActionBtn" class="primary-action-btn" onclick="window.handlePrimaryAction()">
-                  <div class="btn-content">
-                    <span class="btn-title">주문 없음</span>
-                    <span class="btn-subtitle">메뉴를 선택하세요</span>
-                  </div>
-                </button>
-              </div>
-
               <!-- 메뉴 선택 패널 -->
               <div class="menu-selection-panel">
                 <div class="menu-panel-header">
@@ -235,6 +218,16 @@ export function renderPOSLayout() {
                     <!-- 메뉴 버튼들 -->
                   </div>
                 </div>
+              </div>
+
+              <!-- 주문 확정 버튼 -->
+              <div class="primary-action-container">
+                <button id="primaryActionBtn" class="primary-action-btn" onclick="window.handlePrimaryAction()">
+                  <div class="btn-content">
+                    <span class="btn-title">주문 없음</span>
+                    <span class="btn-subtitle">메뉴를 선택하세요</span>
+                  </div>
+                </button>
               </div>
 
               <!-- 액션 버튼들 그룹 -->

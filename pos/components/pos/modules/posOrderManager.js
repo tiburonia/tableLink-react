@@ -403,12 +403,199 @@ export class POSOrderManager {
     }
   }
 
-  // 🚪 페이지 이탈 시 장바구니 정리
+  // 📝 확정된 주문 수정 관리
+  static modifiedConfirmedItems = [];
+  static originalConfirmedItems = [];
+
+  // ✏️ 확정된 주문 수정 시작
+  static startModifyingConfirmedOrders() {
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    this.originalConfirmedItems = JSON.parse(JSON.stringify(confirmedItems)); // 깊은 복사
+    this.modifiedConfirmedItems = [];
+    console.log('✏️ 확정된 주문 수정 모드 시작');
+  }
+
+  // 🔢 확정된 주문 수량 변경
+  static changeConfirmedQuantity(itemId, change) {
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    const selectedItems = POSStateManager.getSelectedItems();
+    
+    if (!selectedItems.includes(itemId)) {
+      showPOSNotification('먼저 수정할 주문을 선택해주세요', 'warning');
+      return;
+    }
+
+    const item = confirmedItems.find(item => item.id === itemId);
+    if (!item) {
+      showPOSNotification('주문 아이템을 찾을 수 없습니다', 'warning');
+      return;
+    }
+
+    // 수정된 아이템 기록
+    if (!this.modifiedConfirmedItems.find(m => m.id === itemId)) {
+      this.modifiedConfirmedItems.push({
+        id: itemId,
+        originalQuantity: item.quantity,
+        action: 'modify'
+      });
+    }
+
+    item.quantity += change;
+
+    if (item.quantity <= 0) {
+      // 삭제로 처리
+      const modifiedItem = this.modifiedConfirmedItems.find(m => m.id === itemId);
+      if (modifiedItem) {
+        modifiedItem.action = 'delete';
+      }
+      
+      const index = confirmedItems.indexOf(item);
+      confirmedItems.splice(index, 1);
+      showPOSNotification(`${item.name} 삭제 예정`, 'info');
+    } else {
+      showPOSNotification(`${item.name} 수량: ${item.quantity}개 (수정 예정)`, 'info');
+    }
+
+    POSStateManager.setConfirmedItems(confirmedItems);
+    this.updateUI();
+  }
+
+  // 🗑️ 선택된 확정 주문 삭제
+  static deleteSelectedConfirmedItems() {
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    const selectedItems = POSStateManager.getSelectedItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('삭제할 주문을 선택해주세요', 'warning');
+      return;
+    }
+
+    selectedItems.forEach(itemId => {
+      const item = confirmedItems.find(item => item.id === itemId);
+      if (item) {
+        // 수정된 아이템 기록
+        if (!this.modifiedConfirmedItems.find(m => m.id === itemId)) {
+          this.modifiedConfirmedItems.push({
+            id: itemId,
+            originalQuantity: item.quantity,
+            action: 'delete'
+          });
+        }
+        
+        const index = confirmedItems.indexOf(item);
+        confirmedItems.splice(index, 1);
+      }
+    });
+
+    POSStateManager.setConfirmedItems(confirmedItems);
+    POSStateManager.clearSelectedItems();
+    this.updateUI();
+    showPOSNotification(`${selectedItems.length}개 주문 삭제 예정`, 'info');
+  }
+
+  // 💾 확정된 주문 수정사항 DB 반영
+  static async saveConfirmedOrderChanges() {
+    if (this.modifiedConfirmedItems.length === 0) {
+      showPOSNotification('수정된 주문이 없습니다', 'warning');
+      return;
+    }
+
+    try {
+      const currentStore = POSStateManager.getCurrentStore();
+      const currentTable = POSStateManager.getCurrentTable();
+
+      const changeData = {
+        storeId: currentStore.id,
+        tableNumber: currentTable,
+        modifications: this.modifiedConfirmedItems,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('💾 확정된 주문 수정사항 DB 저장:', changeData);
+
+      const response = await fetch('/api/pos/orders/modify', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(changeData)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText || '서버 오류'}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || '주문 수정 실패');
+      }
+
+      // 수정 완료 후 초기화
+      this.modifiedConfirmedItems = [];
+      this.originalConfirmedItems = [];
+
+      showPOSNotification('주문 수정사항이 저장되었습니다', 'success');
+      console.log('✅ 확정된 주문 수정 완료');
+
+    } catch (error) {
+      console.error('❌ 확정된 주문 수정 실패:', error);
+      showPOSNotification('주문 수정 실패: ' + error.message, 'error');
+    }
+  }
+
+  // ❌ 확정된 주문 수정 취소
+  static cancelConfirmedOrderChanges() {
+    if (this.modifiedConfirmedItems.length === 0) {
+      showPOSNotification('수정된 주문이 없습니다', 'info');
+      return;
+    }
+
+    // 원본 상태로 복원
+    POSStateManager.setConfirmedItems(this.originalConfirmedItems);
+    POSStateManager.clearSelectedItems();
+    
+    this.modifiedConfirmedItems = [];
+    this.originalConfirmedItems = [];
+    
+    this.updateUI();
+    showPOSNotification('주문 수정이 취소되었습니다', 'info');
+    console.log('❌ 확정된 주문 수정 취소');
+  }
+
+  // 🎯 Primary Action 핸들러 업데이트
+  static handlePrimaryAction() {
+    console.log('🎯 Primary Action: 주문 확정 버튼 클릭');
+
+    const cartItems = POSStateManager.getCartItems();
+    const hasModifications = this.modifiedConfirmedItems.length > 0;
+
+    if (cartItems.length > 0) {
+      // 장바구니가 있으면 주문 확정
+      this.confirmCartOrder();
+    } else if (hasModifications) {
+      // 확정된 주문 수정사항이 있으면 DB 저장
+      this.saveConfirmedOrderChanges();
+    } else {
+      console.log('⚠️ 장바구니가 비어있고 수정사항도 없음');
+      showPOSNotification('주문할 메뉴를 선택하거나 수정할 주문을 선택해주세요', 'warning');
+    }
+  }
+
+  // 🚪 페이지 이탈 시 장바구니 정리 및 수정 취소
   static handlePageUnload() {
     const cartItems = POSStateManager.getCartItems();
     if (cartItems.length > 0) {
       console.log(`🗑️ 페이지 이탈: 장바구니 ${cartItems.length}개 아이템 자동 삭제`);
       POSStateManager.setCartItems([]);
+    }
+
+    // 확정된 주문 수정사항도 취소
+    if (this.modifiedConfirmedItems.length > 0) {
+      console.log(`❌ 페이지 이탈: 확정된 주문 수정사항 ${this.modifiedConfirmedItems.length}개 자동 취소`);
+      this.modifiedConfirmedItems = [];
+      this.originalConfirmedItems = [];
     }
   }
 }

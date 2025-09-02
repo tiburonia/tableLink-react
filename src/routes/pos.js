@@ -423,6 +423,83 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
   }
 });
 
+// 확정된 주문 수정
+router.put('/orders/modify', async (req, res) => {
+  try {
+    const { storeId, tableNumber, modifications } = req.body;
+
+    if (!storeId || !tableNumber || !modifications || !Array.isArray(modifications)) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    console.log(`📝 확정된 주문 수정 요청: 매장 ${storeId}, 테이블 ${tableNumber}, 수정 ${modifications.length}개`);
+
+    // 각 수정사항 처리
+    for (const mod of modifications) {
+      if (mod.action === 'delete') {
+        // 주문 아이템 삭제
+        await pool.query(
+          'DELETE FROM check_items WHERE id = $1', // check_items 테이블 사용
+          [mod.id]
+        );
+        console.log(`🗑️ 주문 아이템 삭제: ${mod.id}`);
+      } else if (mod.action === 'modify') {
+        // 주문 아이템 수량 수정
+        const currentItem = await pool.query(
+          'SELECT quantity FROM check_items WHERE id = $1', // check_items 테이블 사용
+          [mod.id]
+        );
+
+        if (currentItem.rows.length > 0) {
+          // mod.newQuantity와 mod.originalQuantity를 사용하여 증감 계산
+          // 여기서는 mod.newQuantity가 최종 수량이라고 가정하고 업데이트
+          await pool.query(
+            'UPDATE check_items SET quantity = $1, updated_at = NOW() WHERE id = $2', // check_items 테이블 사용
+            [mod.newQuantity, mod.id]
+          );
+          console.log(`📝 주문 아이템 수량 수정: ${mod.id} → ${mod.newQuantity}개`);
+        }
+      }
+    }
+    
+    // 체크 총액 업데이트 (수정 후 재계산)
+    await pool.query(`
+      UPDATE checks 
+      SET 
+        subtotal_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id IN (SELECT id FROM checks WHERE store_id = $1 AND table_number = $2 AND status = 'open') AND status != 'canceled'
+        ),
+        final_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id IN (SELECT id FROM checks WHERE store_id = $1 AND table_number = $2 AND status = 'open') AND status != 'canceled'
+        ),
+        updated_at = NOW()
+      WHERE store_id = $1 AND table_number = $2 AND status = 'open'
+    `, [storeId, tableNumber]);
+
+
+    res.json({
+      success: true,
+      message: '주문 수정이 완료되었습니다',
+      modificationCount: modifications.length
+    });
+
+  } catch (error) {
+    console.error('❌ 확정된 주문 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 수정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+
 // POS 주문 생성 (장바구니 → 확정 주문)
 router.post('/orders', async (req, res) => {
   try {

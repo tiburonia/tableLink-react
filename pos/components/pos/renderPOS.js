@@ -223,6 +223,29 @@ window.handlePrimaryAction = () => {
 // 🗑️ 장바구니 비우기
 window.clearOrder = () => POSOrderManager.clearCart();
 
+// ✏️ 확정된 주문 수정 관련 함수들
+window.selectConfirmedItems = () => {
+  const confirmedItems = POSStateManager.getConfirmedItems();
+  const allIds = confirmedItems.map(item => item.id);
+  POSStateManager.setSelectedItems(allIds);
+  POSOrderManager.startModifyingConfirmedOrders();
+  showPOSNotification(`${allIds.length}개 확정 주문 선택됨`, 'info');
+};
+
+window.deleteSelectedConfirmedItems = () => POSOrderManager.deleteSelectedConfirmedItems();
+window.changeConfirmedQuantity = (change) => {
+  const selectedItems = POSStateManager.getSelectedItems();
+  if (selectedItems.length === 0) {
+    showPOSNotification('수정할 주문을 먼저 선택해주세요', 'warning');
+    return;
+  }
+  selectedItems.forEach(itemId => {
+    POSOrderManager.changeConfirmedQuantity(itemId, change);
+  });
+};
+
+window.cancelOrderModifications = () => POSOrderManager.cancelConfirmedOrderChanges();
+
 // 💳 결제 처리
 window.processPayment = (paymentMethod = null) => {
   console.log('💳 결제 처리 시작');
