@@ -2,9 +2,12 @@
 const pool = require('../../shared/config/database');
 
 async function createKDSRebinding() {
-  const client = await pool.connect();
+  let client;
   
   try {
+    console.log('✅ PostgreSQL 데이터베이스 연결');
+    client = await pool.connect();
+    
     console.log('🔄 KDS 리바인딩을 위한 스키마 생성 시작...');
     
     await client.query('BEGIN');
@@ -209,57 +212,72 @@ async function createKDSRebinding() {
     // 10. 기존 check_items 데이터 마이그레이션
     console.log('🔄 기존 check_items 데이터 마이그레이션...');
     
-    // 기존 check_items로부터 orders 생성
-    await client.query(`
-      INSERT INTO orders (check_id, order_number, status, source, total_amount, table_number, customer_name, created_at)
-      SELECT DISTINCT 
-        c.id as check_id,
-        'ORD_' || c.id || '_' || EXTRACT(epoch FROM c.opened_at)::bigint as order_number,
-        CASE 
-          WHEN c.status = 'open' THEN 'preparing'
-          WHEN c.status = 'closed' THEN 'served'
-          ELSE 'confirmed'
-        END as status,
-        COALESCE(c.source_system, 'TLL') as source,
-        COALESCE((
-          SELECT SUM(ci.unit_price * ci.quantity) 
-          FROM check_items ci 
-          WHERE ci.check_id = c.id
-        ), 0) as total_amount,
-        c.table_number,
-        COALESCE(c.customer_name, '고객') as customer_name,
-        c.opened_at as created_at
-      FROM checks c
-      WHERE EXISTS (SELECT 1 FROM check_items ci WHERE ci.check_id = c.id)
-      ON CONFLICT (order_number) DO NOTHING
-    `);
+    // 기존 데이터 확인
+    const checkResult = await client.query('SELECT COUNT(*) FROM checks WHERE EXISTS (SELECT 1 FROM check_items WHERE check_id = checks.id)');
+    const checkCount = parseInt(checkResult.rows[0].count);
+    console.log(`📊 마이그레이션 대상: ${checkCount}개 체크`);
     
-    // 기존 check_items로부터 order_items 생성
-    await client.query(`
-      INSERT INTO order_items (
-        order_id, menu_name, unit_price, quantity, status, 
-        cook_station, cooking_notes, created_at, updated_at
-      )
-      SELECT 
-        o.id as order_id,
-        ci.menu_name,
-        ci.unit_price,
-        ci.quantity,
-        CASE 
-          WHEN ci.status = 'ordered' THEN 'queued'
-          WHEN ci.status = 'preparing' THEN 'cooking'
-          WHEN ci.status = 'ready' THEN 'ready'
-          WHEN ci.status = 'served' THEN 'served'
-          ELSE 'queued'
-        END as status,
-        'main' as cook_station,
-        ci.kitchen_notes as cooking_notes,
-        ci.ordered_at as created_at,
-        ci.ordered_at as updated_at
-      FROM check_items ci
-      JOIN orders o ON o.check_id = ci.check_id
-      WHERE o.order_number = 'ORD_' || ci.check_id || '_' || EXTRACT(epoch FROM (SELECT opened_at FROM checks WHERE id = ci.check_id))::bigint
-    `);
+    if (checkCount > 0) {
+      // 기존 check_items로부터 orders 생성
+      const orderInsertResult = await client.query(`
+        INSERT INTO orders (check_id, order_number, status, source, total_amount, table_number, customer_name, created_at)
+        SELECT DISTINCT 
+          c.id as check_id,
+          'ORD_' || c.id || '_' || EXTRACT(epoch FROM c.opened_at)::bigint as order_number,
+          CASE 
+            WHEN c.status = 'open' THEN 'preparing'
+            WHEN c.status = 'closed' THEN 'served'
+            ELSE 'confirmed'
+          END as status,
+          COALESCE(c.source_system, 'TLL') as source,
+          COALESCE((
+            SELECT SUM(ci.unit_price * ci.quantity) 
+            FROM check_items ci 
+            WHERE ci.check_id = c.id
+          ), 0) as total_amount,
+          c.table_number,
+          COALESCE(c.customer_name, '고객') as customer_name,
+          c.opened_at as created_at
+        FROM checks c
+        WHERE EXISTS (SELECT 1 FROM check_items ci WHERE ci.check_id = c.id)
+        ON CONFLICT (order_number) DO NOTHING
+        RETURNING id
+      `);
+      
+      console.log(`✅ Orders 생성: ${orderInsertResult.rows.length}개`);
+      
+      // 기존 check_items로부터 order_items 생성
+      const itemInsertResult = await client.query(`
+        INSERT INTO order_items (
+          order_id, menu_name, unit_price, quantity, status, 
+          cook_station, cooking_notes, created_at, updated_at
+        )
+        SELECT 
+          o.id as order_id,
+          ci.menu_name,
+          ci.unit_price,
+          ci.quantity,
+          CASE 
+            WHEN ci.status = 'ordered' THEN 'queued'
+            WHEN ci.status = 'preparing' THEN 'cooking'
+            WHEN ci.status = 'ready' THEN 'ready'
+            WHEN ci.status = 'served' THEN 'served'
+            ELSE 'queued'
+          END as status,
+          'main' as cook_station,
+          ci.kitchen_notes as cooking_notes,
+          ci.ordered_at as created_at,
+          ci.ordered_at as updated_at
+        FROM check_items ci
+        JOIN orders o ON o.check_id = ci.check_id
+        WHERE o.order_number = 'ORD_' || ci.check_id || '_' || EXTRACT(epoch FROM (SELECT opened_at FROM checks WHERE id = ci.check_id))::bigint
+        RETURNING id
+      `);
+      
+      console.log(`✅ Order items 생성: ${itemInsertResult.rows.length}개`);
+    } else {
+      console.log('ℹ️ 마이그레이션할 체크 데이터가 없습니다.');
+    }
     
     console.log('✅ 기존 데이터 마이그레이션 완료');
     
@@ -308,11 +326,24 @@ async function createKDSRebinding() {
     console.log('  - 조리시간 추적: started_at, ready_at 자동 기록');
     
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('❌ KDS 리바인딩 실패:', error);
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        console.error('❌ 롤백 실패:', rollbackError.message);
+      }
+    }
     throw error;
   } finally {
-    client.release();
+    if (client) {
+      try {
+        client.release();
+        console.log('🔐 데이터베이스 연결 해제');
+      } catch (releaseError) {
+        console.error('❌ 연결 해제 실패:', releaseError.message);
+      }
+    }
   }
 }
 
