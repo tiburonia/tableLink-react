@@ -138,7 +138,7 @@ router.get('/menu', async (req, res, next) => {
 
     res.json({
       success: true,
-      menus: menu  // POS 클라이언트가 기대하는 필드명
+      menu: menu  // POSDataLoader가 기대하는 필드명으로 통일
     });
 
   } catch (error) {

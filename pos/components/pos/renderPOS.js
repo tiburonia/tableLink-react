@@ -44,12 +44,18 @@ async function loadStoreForTableMap(storeId) {
 
     document.getElementById('storeName').textContent = storeData.store.name;
 
-    await Promise.all([
-      POSDataLoader.loadStoreMenus(storeId),
-      POSDataLoader.loadStoreTables(storeId)
-    ]);
+    // 메뉴와 테이블 데이터를 순차적으로 로드하여 의존성 보장
+    const menuData = await POSDataLoader.loadStoreMenus(storeId);
+    const tableData = await POSDataLoader.loadStoreTables(storeId);
+    
+    console.log(`📊 로드 완료 - 메뉴: ${menuData.length}개, 테이블: ${tableData.length}개`);
 
     await POSTableManager.renderTableMap();
+    
+    // 메뉴 카테고리와 그리드 초기 렌더링
+    POSMenuManager.renderMenuCategories();
+    POSMenuManager.renderMenuGrid();
+    
     showPOSNotification(`${storeData.store.name} POS 준비 완료`);
 
   } catch (error) {

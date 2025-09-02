@@ -38,8 +38,16 @@ export class POSDataLoader {
         throw new Error(data.error || '메뉴 조회 실패');
       }
 
-      // 메뉴 데이터 null/undefined 체크
-      const menuData = data.menu || [];
+      // 메뉴 데이터 null/undefined 체크 (menu 또는 menus 필드 모두 처리)
+      const menuData = data.menu || data.menus || [];
+      
+      console.log(`📋 메뉴 데이터 확인:`, { 
+        hasMenuField: !!data.menu, 
+        hasMenusField: !!data.menus, 
+        menuDataType: typeof menuData,
+        isArray: Array.isArray(menuData),
+        length: menuData.length 
+      });
       
       if (!Array.isArray(menuData)) {
         console.warn('⚠️ 메뉴 데이터가 배열이 아님, 빈 배열로 설정');

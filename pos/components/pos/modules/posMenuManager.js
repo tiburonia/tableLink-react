@@ -55,14 +55,24 @@ export class POSMenuManager {
   // 메뉴 그리드 렌더링
   static renderMenuGrid() {
     const menuGrid = document.getElementById('menuGrid');
-    if (!menuGrid) return;
+    if (!menuGrid) {
+      console.warn('⚠️ menuGrid 요소를 찾을 수 없음');
+      return;
+    }
 
     const allMenus = POSStateManager.getAllMenus() || [];
     const selectedCategory = POSStateManager.getSelectedCategory();
 
+    console.log(`🍽️ 메뉴 그리드 렌더링:`, {
+      totalMenus: allMenus.length,
+      selectedCategory: selectedCategory,
+      menuDataType: typeof allMenus,
+      isArray: Array.isArray(allMenus)
+    });
+
     // 메뉴 데이터 유효성 검사
     if (!Array.isArray(allMenus)) {
-      console.warn('⚠️ 메뉴 데이터가 배열이 아님');
+      console.warn('⚠️ 메뉴 데이터가 배열이 아님:', allMenus);
       menuGrid.innerHTML = '<p class="no-menu">메뉴를 불러올 수 없습니다</p>';
       return;
     }
