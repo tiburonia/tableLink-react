@@ -1,4 +1,4 @@
-async function renderPay(currentOrder, store, tableNum) {
+window.renderPay = async function(currentOrder, store, tableNum) {
   console.log('💳 결제 화면 렌더링 시작 - 매장:', store, '테이블:', tableNum);
 
   // userInfo를 안전하게 가져오기 (쿠키 우선)
@@ -893,7 +893,7 @@ async function renderPay(currentOrder, store, tableNum) {
       // 선택된 결제 수단 가져오기
       const selectedPaymentMethod = document.querySelector('.payment-method-item.active')?.dataset.method || '카드';
 
-      console.log('💳 결제 확인 버튼 클릭:', {
+      console.log('💳 TLL 결제 확인 버튼 클릭:', {
         validatedPoints,
         selectedCouponId,
         couponDiscount,
@@ -901,21 +901,115 @@ async function renderPay(currentOrder, store, tableNum) {
         paymentMethod: selectedPaymentMethod
       });
 
-      // confirmPay 함수 동적 로드 및 호출
       try {
-        if (typeof window.confirmPay !== 'function') {
-          console.log('🔄 confirmPay 함수 로드 중...');
-          const confirmPayModule = await import('/TLG/pages/store/pay/confirmPayF.js');
-          console.log('✅ confirmPay 함수 로드 완료');
+        // 1. TLL 체크 생성
+        const qrCode = `TABLE_${tableNum}`;
+        const userInfo = getUserInfoSafely();
+        
+        let requestBody = { qr_code: qrCode };
+        if (userInfo.id && userInfo.id !== 'guest') {
+          requestBody.user_id = userInfo.id;
+        } else if (userInfo.phone) {
+          requestBody.guest_phone = userInfo.phone;
+        } else {
+          requestBody.guest_phone = '010-0000-0000';
         }
 
-        if (typeof window.confirmPay === 'function') {
-          window.confirmPay(orderData, validatedPoints, store, currentOrder, finalAmount, selectedCouponId, couponDiscount, selectedPaymentMethod);
-        } else {
-          throw new Error('confirmPay 함수를 로드할 수 없습니다');
+        console.log('📝 TLL 체크 생성 요청:', requestBody);
+
+        const checkResponse = await fetch('/api/tll/checks/from-qr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+
+        if (!checkResponse.ok) {
+          const errorData = await checkResponse.json();
+          throw new Error(errorData.error || 'TLL 체크 생성 실패');
         }
+
+        const checkData = await checkResponse.json();
+        const checkId = checkData.check_id;
+        console.log('✅ TLL 체크 생성 완료:', checkId);
+
+        // 2. TLL 주문 생성
+        const orderItems = orderData.items.map(item => ({
+          menu_name: item.name,
+          unit_price: item.price,
+          quantity: item.qty,
+          options: {},
+          notes: ''
+        }));
+
+        const orderResponse = await fetch('/api/tll/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            check_id: checkId,
+            items: orderItems,
+            payment_method: 'TOSS',
+            toss_order_id: `TLL_${checkId}_${Date.now()}`
+          })
+        });
+
+        if (!orderResponse.ok) {
+          const errorData = await orderResponse.json();
+          throw new Error(errorData.error || 'TLL 주문 생성 실패');
+        }
+
+        const orderResult = await orderResponse.json();
+        console.log('✅ TLL 주문 생성 성공:', orderResult);
+
+        // 3. 토스페이먼츠 모듈 로드 및 결제 요청
+        if (!window.requestTossPayment) {
+          console.log('🔄 토스페이먼츠 모듈 로드 중...');
+          await import('/TLG/pages/store/pay/tossPayments.js');
+        }
+
+        if (!window.requestTossPayment) {
+          throw new Error('토스페이먼츠 모듈 로드 실패');
+        }
+
+        // 주문 정보 세션에 저장 (결제 성공 후 사용)
+        sessionStorage.setItem('tllPendingOrder', JSON.stringify({
+          checkId: checkId,
+          storeId: store.id,
+          storeName: store.name,
+          tableNumber: tableNum,
+          tableName: `${tableNum}번 테이블`,
+          items: orderData.items,
+          totalAmount: finalAmount,
+          usedPoints: validatedPoints,
+          usedCoupon: selectedCouponId,
+          couponDiscount: couponDiscount
+        }));
+
+        // 결제 데이터 구성
+        const paymentData = {
+          amount: finalAmount,
+          orderId: `TLL_${checkId}_${Date.now()}`,
+          orderName: `${store.name} - ${tableNum}번 테이블`,
+          customerName: userInfo.name || '고객',
+          customerEmail: userInfo.email || 'customer@tablelink.com'
+        };
+
+        console.log('💳 TLL 결제 데이터:', paymentData);
+
+        // 결제 요청 (결제창으로 리디렉션)
+        const paymentResult = await window.requestTossPayment(paymentData, selectedPaymentMethod);
+
+        if (!paymentResult.success) {
+          if (paymentResult.code === 'USER_CANCEL') {
+            showToast('결제가 취소되었습니다');
+            return;
+          }
+          throw new Error(paymentResult.error || '결제 요청 실패');
+        }
+
+        console.log('✅ TLL 결제 요청 성공 - 결제창으로 이동');
+
       } catch (error) {
-        console.error('❌ confirmPay 함수 로드/실행 실패:', error);
+        console.error('❌ TLL 결제 처리 실패:', error);
         alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
       }
     });

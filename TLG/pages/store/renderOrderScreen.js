@@ -387,110 +387,36 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       }
 
       try {
-        console.log('📝 TLL 주문 제출 시작:', cart);
+        console.log('📝 TLL 주문 준비 시작:', cart);
 
-        const orderItems = cart.map(item => ({
-          menu_name: item.name,
-          unit_price: item.price,
-          quantity: item.quantity,
-          options: {},
-          notes: ''
-        }));
-
-        const orderResponse = await fetch('/api/tll/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            check_id: checkId,
-            items: orderItems,
-            payment_method: 'TOSS',
-            toss_order_id: `TLL_${checkId}_${Date.now()}`
-          })
+        // 장바구니 데이터를 currentOrder 형태로 변환
+        const currentOrder = {};
+        cart.forEach(item => {
+          currentOrder[item.name] = item.quantity;
         });
 
-        if (!orderResponse.ok) {
-          const errorData = await orderResponse.json();
-          throw new Error(errorData.error || 'TLL 주문 생성 실패');
-        }
+        console.log('🛒 주문 데이터 변환 완료:', currentOrder);
 
-        const orderResult = await orderResponse.json();
-        console.log('✅ TLL 주문 생성 성공:', orderResult);
-
-        // 주문 정보 저장
-        sessionStorage.setItem('tllPendingOrder', JSON.stringify({
-          checkId: checkId,
-          storeId: store.id,
-          storeName: store.name,
-          tableNumber: finalTableNumber,
-          tableName: finalTableName,
-          items: cart,
-          totalAmount: orderResult.total_amount
-        }));
-
-        // 토스페이먼츠 결제 시작
-        try {
-          console.log('💳 TLL 토스페이먼츠 결제 시작...');
+        // renderPay 화면으로 전환
+        if (typeof window.renderPay === 'function') {
+          console.log('💳 결제 화면으로 전환');
+          window.renderPay(currentOrder, store, finalTableNumber);
+        } else {
+          // renderPay 함수 동적 로드
+          console.log('🔄 renderPay 함수 로드 중...');
+          await import('/TLG/pages/store/pay/renderPay.js');
           
-          // 토스페이먼츠 모듈 로드 확인 및 초기화
-          if (!window.requestTossPayment) {
-            console.log('🔄 토스페이먼츠 모듈 로드 중...');
-            await loadTossPaymentsModule();
+          if (typeof window.renderPay === 'function') {
+            console.log('💳 결제 화면으로 전환');
+            window.renderPay(currentOrder, store, finalTableNumber);
+          } else {
+            throw new Error('renderPay 함수를 로드할 수 없습니다');
           }
-
-          // 최종 함수 존재 확인
-          if (!window.requestTossPayment) {
-            throw new Error('토스페이먼츠 모듈 로드 실패');
-          }
-
-          // 주문 정보 세션에 저장 (결제 성공 후 사용)
-          sessionStorage.setItem('tllPendingOrder', JSON.stringify({
-            checkId: checkId,
-            storeId: store.id,
-            storeName: store.name,
-            tableNumber: finalTableNumber,
-            tableName: finalTableName,
-            items: cart,
-            totalAmount: orderResult.total_amount
-          }));
-
-          // 결제 데이터 구성
-          const paymentData = {
-            amount: orderResult.total_amount,
-            orderId: `TLL_${checkId}_${Date.now()}`,
-            orderName: `${store.name} - ${finalTableName}`,
-            customerName: userInfo.name || '고객',
-            customerEmail: userInfo.email || 'customer@tablelink.com'
-          };
-
-          console.log('💳 TLL 결제 데이터:', paymentData);
-
-          // 결제 요청 (결제창으로 리디렉션)
-          const paymentResult = await window.requestTossPayment(paymentData, '카드');
-
-          if (!paymentResult.success) {
-            if (paymentResult.code === 'USER_CANCEL') {
-              showToast('결제가 취소되었습니다');
-              return;
-            }
-            throw new Error(paymentResult.error || '결제 요청 실패');
-          }
-
-          console.log('✅ TLL 결제 요청 성공 - 결제창으로 이동');
-
-        } catch (paymentError) {
-          console.error('❌ TLL 결제 실패:', paymentError);
-          
-          if (paymentError.code === 'USER_CANCEL') {
-            showToast('결제가 취소되었습니다');
-            return;
-          }
-          
-          throw new Error(`결제 처리 실패: ${paymentError.message}`);
         }
 
       } catch (error) {
-        console.error('❌ TLL 주문 제출 실패:', error);
-        showToast('주문 처리 중 오류가 발생했습니다');
+        console.error('❌ 결제 화면 전환 실패:', error);
+        showToast('결제 화면으로 이동할 수 없습니다');
       }
     });
 
