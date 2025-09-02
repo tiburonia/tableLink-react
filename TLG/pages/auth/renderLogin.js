@@ -702,64 +702,384 @@ async function renderLogin() {
     </style>
   `;
 
-  // DOM 요소 가져오기
-  const id = document.querySelector('#id');
-  const pw = document.querySelector('#pw');
-  const login = document.querySelector('#loginBtn');
-  const quickLoginBtn = document.querySelector('#quickLogin');
-  const adminLogin = document.querySelector('#adminLogin');
-  const goKDS = document.querySelector('#goKDS');
-  const goPOS = document.querySelector('#goPOS');
-  const goKRP = document.querySelector('#goKRP');
-  const goTLM = document.querySelector('#goTLM');
+  // 로딩 스켈레톤 표시 함수
+  const showLoginSkeleton = () => {
+    const loginInfoContainer = document.querySelector('#loginInfoContainer');
+    if (!loginInfoContainer) return;
+
+    loginInfoContainer.innerHTML = `
+      <!-- 로딩 스켈레톤 -->
+      <div class="login-skeleton">
+        <!-- 폼 스켈레톤 -->
+        <div class="skeleton-form-section">
+          <div class="skeleton-form-group">
+            <div class="skeleton-input-wrapper">
+              <div class="skeleton-input"></div>
+            </div>
+          </div>
+          <div class="skeleton-form-group">
+            <div class="skeleton-input-wrapper">
+              <div class="skeleton-input"></div>
+            </div>
+          </div>
+          <div class="skeleton-btn"></div>
+        </div>
+
+        <!-- 구분선 스켈레톤 -->
+        <div class="skeleton-divider">
+          <div class="skeleton-divider-line"></div>
+          <div class="skeleton-divider-text"></div>
+        </div>
+
+        <!-- 빠른 액세스 스켈레톤 -->
+        <div class="skeleton-quick-section">
+          <div class="skeleton-section-title"></div>
+          <div class="skeleton-quick-grid">
+            <div class="skeleton-quick-btn"></div>
+            <div class="skeleton-quick-btn"></div>
+          </div>
+          <div class="skeleton-system-grid">
+            <div class="skeleton-system-btn"></div>
+            <div class="skeleton-system-btn"></div>
+            <div class="skeleton-system-btn"></div>
+            <div class="skeleton-system-btn"></div>
+          </div>
+        </div>
+
+        <!-- 푸터 스켈레톤 -->
+        <div class="skeleton-footer">
+          <div class="skeleton-footer-line"></div>
+          <div class="skeleton-footer-text"></div>
+        </div>
+      </div>
+
+      <style>
+        .login-skeleton {
+          animation: skeleton-fade-in 0.3s ease-out;
+        }
+
+        @keyframes skeleton-fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .skeleton-form-section {
+          margin-bottom: 32px;
+          padding-top: 20px;
+        }
+
+        .skeleton-form-group {
+          margin-bottom: 24px;
+        }
+
+        .skeleton-input-wrapper {
+          position: relative;
+        }
+
+        .skeleton-input {
+          width: 100%;
+          height: 54px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 12px;
+        }
+
+        .skeleton-btn {
+          width: 100%;
+          height: 54px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 12px;
+          margin-bottom: 20px;
+        }
+
+        .skeleton-divider {
+          position: relative;
+          margin: 32px 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .skeleton-divider-line {
+          position: absolute;
+          width: 100%;
+          height: 1px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+        }
+
+        .skeleton-divider-text {
+          width: 60px;
+          height: 16px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 8px;
+          z-index: 1;
+        }
+
+        .skeleton-quick-section {
+          margin-bottom: 24px;
+        }
+
+        .skeleton-section-title {
+          width: 120px;
+          height: 20px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 10px;
+          margin: 0 auto 16px auto;
+        }
+
+        .skeleton-quick-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          margin: 20px 0 16px 0;
+        }
+
+        .skeleton-quick-btn {
+          height: 60px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 12px;
+        }
+
+        .skeleton-system-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 10px;
+          margin: 16px 0 20px 0;
+        }
+
+        .skeleton-system-btn {
+          height: 70px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 10px;
+          margin-bottom: 8px;
+        }
+
+        .skeleton-footer {
+          padding-top: 20px;
+          margin-top: 40px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .skeleton-footer-line {
+          width: 100%;
+          height: 1px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+        }
+
+        .skeleton-footer-text {
+          width: 200px;
+          height: 14px;
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+          border-radius: 7px;
+        }
+
+        @keyframes skeleton-loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
+        /* 반응형 스켈레톤 */
+        @media (max-width: 480px) {
+          .skeleton-quick-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+          }
+        }
+      </style>
+    `;
+  };
+
+  // 실제 로그인 폼 표시 함수
+  const showLoginForm = () => {
+    const loginInfoContainer = document.querySelector('#loginInfoContainer');
+    if (!loginInfoContainer) return;
+
+    loginInfoContainer.innerHTML = `
+      <!-- 로그인 폼 -->
+      <div class="login-form-section">
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input id="id" type="text" placeholder=" " class="form-input" autocomplete="username" />
+            <label class="form-label">아이디</label>
+            <div class="input-icon">👤</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="input-wrapper">
+            <input id="pw" type="password" placeholder=" " class="form-input" autocomplete="current-password" />
+            <label class="form-label">비밀번호</label>
+            <div class="input-icon">🔒</div>
+          </div>
+        </div>
+
+        <!-- 로그인 버튼 -->
+        <button type="submit" class="primary-btn login-btn" id="loginBtn" disabled>
+          <div class="btn-content">
+            <span class="btn-text">로그인</span>
+            <div class="btn-loading" style="display: none;"></div>
+          </div>
+        </button>
+      </div>
+
+      <!-- 구분선 -->
+      <div class="divider">
+        <span class="divider-text">또는</span>
+      </div>
+
+      <!-- 빠른 액세스 섹션 -->
+      <div class="quick-access-section">
+        <h3 class="section-title">빠른 접근</h3>
+
+        <div class="quick-buttons-grid">
+          <button id="quickLogin" class="quick-btn user-btn">
+            <div class="quick-btn-icon">⚡</div>
+            <div class="quick-btn-content">
+              <span class="quick-btn-title">빠른 로그인</span>
+              <span class="quick-btn-desc">user1 계정</span>
+            </div>
+          </button>
+
+          <button id="adminLogin" class="quick-btn admin-btn">
+            <div class="quick-btn-icon">🛠️</div>
+            <div class="quick-btn-content">
+              <span class="quick-btn-title">관리자</span>
+              <span class="quick-btn-desc">Admin Panel</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="system-buttons-grid">
+          <button id="goKDS" class="system-btn kds-btn">
+            <div class="system-btn-icon">📟</div>
+            <div class="system-btn-content">
+              <span class="system-btn-title">KDS</span>
+              <span class="system-btn-desc">주방 디스플레이</span>
+            </div>
+          </button>
+
+          <button id="goPOS" class="system-btn pos-btn">
+            <div class="system-btn-icon">💳</div>
+            <div class="system-btn-content">
+              <span class="system-btn-title">POS</span>
+              <span class="system-btn-desc">포스 시스템</span>
+            </div>
+          </button>
+
+          <button id="goKRP" class="system-btn krp-btn">
+            <div class="system-btn-icon">🖨️</div>
+            <div class="system-btn-content">
+              <span class="system-btn-title">KRP</span>
+              <span class="system-btn-desc">주방 프린터</span>
+            </div>
+          </button>
+
+          <button id="goTLM" class="system-btn tlm-btn">
+            <div class="system-btn-icon">🏪</div>
+            <div class="system-btn-content">
+              <span class="system-btn-title">사장님 앱</span>
+              <span class="system-btn-desc">매장 관리</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- 푸터 -->
+      <div class="login-footer">
+        <p class="footer-text">© 2025 TableLink. 모든 권리 보유.</p>
+      </div>
+    `;
+
+    // 이벤트 리스너 재설정
+    setupLoginEventListeners();
+  };
+
+  // 스켈레톤 표시 후 실제 폼 로드
+  showLoginSkeleton();
+
+  // 0.8초 후 실제 폼 표시 (로딩 시뮬레이션)
+  setTimeout(() => {
+    showLoginForm();
+  }, 800);
 
   // 패널 핸들링 설정
   setupLoginPanelHandling();
 
+  // 이벤트 리스너 설정 함수
+  function setupLoginEventListeners() {
+    // DOM 요소 가져오기
+    const id = document.querySelector('#id');
+    const pw = document.querySelector('#pw');
+    const login = document.querySelector('#loginBtn');
+    const quickLoginBtn = document.querySelector('#quickLogin');
+    const adminLogin = document.querySelector('#adminLogin');
+    const goKDS = document.querySelector('#goKDS');
+    const goPOS = document.querySelector('#goPOS');
+    const goKRP = document.querySelector('#goKRP');
+    const goTLM = document.querySelector('#goTLM');
+
   // 입력 필드 변화 감지 및 버튼 활성화
-  const updateLoginButton = () => {
-    if (login && id && pw) {
-      const idValue = id.value.trim();
-      const pwValue = pw.value.trim();
-      login.disabled = !(idValue && pwValue);
+    const updateLoginButton = () => {
+      if (login && id && pw) {
+        const idValue = id.value.trim();
+        const pwValue = pw.value.trim();
+        login.disabled = !(idValue && pwValue);
+      }
+    };
+
+    // 입력 필드 이벤트 리스너
+    if (id && pw) {
+      id.addEventListener('input', updateLoginButton);
+      pw.addEventListener('input', updateLoginButton);
+      updateLoginButton(); // 초기 상태 설정
     }
-  };
 
-  // 입력 필드 이벤트 리스너
-  if (id && pw) {
-    id.addEventListener('input', updateLoginButton);
-    pw.addEventListener('input', updateLoginButton);
-    updateLoginButton(); // 초기 상태 설정
-  }
+  // 로딩 스크린 관리 함수들
+    const showLoadingScreen = () => {
+      if (login) {
+        const btnText = login.querySelector('.btn-text');
+        const btnLoading = login.querySelector('.btn-loading');
 
-  // 회원가입 버튼 이벤트 (HTML에 없으므로 제거)
-  // join.addEventListener('click', async () => {
-    // 로딩 스크린 관리 함수들
-  const showLoadingScreen = () => {
-    if (login) {
-      const btnText = login.querySelector('.btn-text');
-      const btnLoading = login.querySelector('.btn-loading');
+        if (btnText) btnText.style.display = 'none';
+        if (btnLoading) btnLoading.style.display = 'flex';
+        login.disabled = true;
+      }
+    };
 
-      if (btnText) btnText.style.display = 'none';
-      if (btnLoading) btnLoading.style.display = 'flex';
-      login.disabled = true;
-    }
-  };
+    const hideLoadingScreen = () => {
+      if (login) {
+        const btnText = login.querySelector('.btn-text');
+        const btnLoading = login.querySelector('.btn-loading');
 
-  const hideLoadingScreen = () => {
-    if (login) {
-      const btnText = login.querySelector('.btn-text');
-      const btnLoading = login.querySelector('.btn-loading');
-
-      if (btnText) btnText.style.display = 'inline';
-      if (btnLoading) btnLoading.style.display = 'none';
-      login.disabled = false;
-    }
-  };
+        if (btnText) btnText.style.display = 'inline';
+        if (btnLoading) btnLoading.style.display = 'none';
+        login.disabled = false;
+      }
+    };
 
   // 빠른 로그인 버튼 이벤트 리스너
-  if (quickLoginBtn) {
-    quickLoginBtn.addEventListener('click', async () => {
+    if (quickLoginBtn) {
+      quickLoginBtn.addEventListener('click', async () => {
       try {
         console.log('🚀 빠른 로그인 시작: user1');
 
@@ -806,11 +1126,11 @@ async function renderLogin() {
         alert('서버 연결에 실패했습니다');
       }
     });
-  }
+    }
 
-  // 로그인 버튼 이벤트 리스너
-  if (login) {
-    login.addEventListener('click', async () => {
+    // 로그인 버튼 이벤트 리스너
+    if (login) {
+      login.addEventListener('click', async () => {
       if (!id || !pw) {
         alert('아이디와 비밀번호를 입력해주세요.');
         return;
@@ -861,39 +1181,41 @@ async function renderLogin() {
         alert('서버 연결에 실패했습니다');
       }
     });
-  }
+    }
 
+    // 기타 버튼 이벤트 리스너들
+    if (adminLogin) {
+      adminLogin.addEventListener('click', () => {
+        window.location.href = '/ADMIN';
+      });
+    }
 
+    if (goKDS) {
+      goKDS.addEventListener('click', () => {
+        showKDSStoreSearchModal();
+      });
+    }
 
-  // 기타 버튼 이벤트 리스너들
-  if (adminLogin) {
-    adminLogin.addEventListener('click', () => {
-      window.location.href = '/ADMIN';
-    });
-  }
+    if (goPOS) {
+      goPOS.addEventListener('click', () => {
+        showPOSStoreSearchModal();
+      });
+    }
 
-  if (goKDS) {
-    goKDS.addEventListener('click', () => {
-      showKDSStoreSearchModal();
-    });
-  }
+    if (goKRP) {
+      goKRP.addEventListener('click', () => {
+        showKRPStoreSearchModal();
+      });
+    }
 
-  if (goPOS) {
-    goPOS.addEventListener('click', () => {
-      showPOSStoreSearchModal();
-    });
-  }
+    if (goTLM) {
+      goTLM.addEventListener('click', () => {
+        showStoreSearchModal();
+      });
+    }
 
-  if (goKRP) {
-    goKRP.addEventListener('click', () => {
-      showKRPStoreSearchModal();
-    });
-  }
-
-  if (goTLM) {
-    goTLM.addEventListener('click', () => {
-      showStoreSearchModal();
-    });
+    // Enter 키 이벤트 리스너 설정
+    setupEventListeners();
   }
 
   // POS 매장 검색 모달 표시
@@ -2377,17 +2699,15 @@ async function renderLogin() {
         return;
       }
 
-      if (event.key === 'Enter' && login) {
-        login.click();
+      const currentLogin = document.querySelector('#loginBtn');
+      if (event.key === 'Enter' && currentLogin) {
+        currentLogin.click();
       }
     };
 
     document.removeEventListener('keydown', handleEnterKey);
     document.addEventListener('keydown', handleEnterKey);
   }
-
-  // 초기화
-  setupEventListeners();
 
 
   console.log('✅ 로그인 화면 렌더링 완료 (빠른 로그인 포함)');
