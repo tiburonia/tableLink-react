@@ -1,0 +1,19 @@
+✅ 토스페이먼츠 유틸리티 로드 완료
+tossPayments.js:166 ✅ 토스페이먼츠 모듈 전역 등록 완료
+tossPayments.js:167 🔍 등록된 함수들: {initTossPayments: 'function', requestTossPayment: 'function', confirmTossPayment: 'function'}
+toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:129 📱 결제 성공 페이지 로드
+toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:89 🔄 TLL 결제 성공 처리 시작: {paymentKey: 'tviva2025090223132827ov7', orderId: 'TLL_13_1756822407337', amount: '2000'}
+tossPayments.js:134 🔑 토스페이먼츠 결제 승인 요청: {paymentKey: 'tviva2025090223132827ov7', orderId: 'TLL_13_1756822407337', amount: '2000'}
+tossPayments.js:136  POST https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/toss/confirm 500 (Internal Server Error)
+confirmTossPayment @ tossPayments.js:136
+processTLLPaymentSuccess @ toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:98
+(anonymous) @ toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:130Understand this error
+tossPayments.js:156 ❌ 토스페이먼츠 결제 승인 실패: Error: column "paid_at" of relation "payments" does not exist
+    at confirmTossPayment (tossPayments.js:149:13)
+    at async processTLLPaymentSuccess (toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:98:39)
+confirmTossPayment @ tossPayments.js:156
+await in confirmTossPayment
+processTLLPaymentSuccess @ toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:98
+(anonymous) @ toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:130Understand this error
+toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:122 ❌ TLL 결제 성공 처리 실패: Error: column "paid_at" of relation "payments" does not exist
+    at processTLLPaymentSuccess (toss-success.html?orderId=TLL_13_1756822407337&paymentKey=tviva2025090223132827ov7&amount=2000:105:27)
