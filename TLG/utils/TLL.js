@@ -440,6 +440,15 @@ window.TLL = async function TLL(preselectedStore = null) {
   let selectedStore = null;
   let searchTimeout = null;
 
+  // 토스페이먼츠 모듈 미리 로드
+  if (!window.requestTossPayment || !window.initTossPayments) {
+    console.log('🔄 TLL - 토스페이먼츠 모듈 미리 로드 중...');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/store/pay/tossPayments.js';
+    script.async = false;
+    document.head.appendChild(script);
+  }
+
   // 미리 선택된 매장이 있다면 초기화
   if (preselectedStore) {
     console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);

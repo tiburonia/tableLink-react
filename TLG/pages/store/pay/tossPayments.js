@@ -1,3 +1,4 @@
+
 /**
  * 토스페이먼츠 SDK 통합 모듈 (완전 재작성)
  * 단순하고 안정적인 결제 처리
@@ -7,11 +8,17 @@ let tossPayments = null;
 
 // 토스페이먼츠 SDK 초기화
 async function initTossPayments() {
-  if (tossPayments) return tossPayments;
+  if (tossPayments) {
+    console.log('✅ 토스페이먼츠 이미 초기화됨');
+    return tossPayments;
+  }
 
   try {
+    console.log('🔄 토스페이먼츠 SDK 초기화 시작...');
+
     // SDK 로드
     if (!window.TossPayments) {
+      console.log('📦 토스페이먼츠 SDK 스크립트 로드 중...');
       const script = document.createElement('script');
       script.src = 'https://js.tosspayments.com/v1/payment';
       script.async = true;
@@ -21,9 +28,11 @@ async function initTossPayments() {
         script.onload = resolve;
         script.onerror = () => reject(new Error('토스페이먼츠 SDK 로드 실패'));
       });
+      console.log('✅ 토스페이먼츠 SDK 스크립트 로드 완료');
     }
 
     // 클라이언트 키 가져오기
+    console.log('🔑 토스페이먼츠 클라이언트 키 요청 중...');
     const response = await fetch('/api/toss/client-key');
     const data = await response.json();
 
@@ -42,12 +51,13 @@ async function initTossPayments() {
 }
 
 /**
- * 토스페이먼츠 결제 요청 (간소화된 버전)
+ * 토스페이먼츠 결제 요청
  */
 async function requestTossPayment(paymentData, paymentMethod = '카드') {
   try {
-    console.log('💳 토스페이먼츠 결제 시작:', { paymentData, paymentMethod });
+    console.log('💳 토스페이먼츠 결제 요청 시작:', { paymentData, paymentMethod });
 
+    // 토스페이먼츠 초기화
     const toss = await initTossPayments();
     const baseUrl = window.location.origin;
 
@@ -80,10 +90,14 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
     
     return { success: false, error: error.message };
   }
-};
+}
 
 // 전역 함수로 등록
 window.initTossPayments = initTossPayments;
 window.requestTossPayment = requestTossPayment;
 
-console.log('✅ 토스페이먼츠 모듈 전역 등록 완료 - requestTossPayment:', typeof window.requestTossPayment);
+console.log('✅ 토스페이먼츠 모듈 전역 등록 완료');
+console.log('🔍 등록된 함수들:', {
+  initTossPayments: typeof window.initTossPayments,
+  requestTossPayment: typeof window.requestTossPayment
+});

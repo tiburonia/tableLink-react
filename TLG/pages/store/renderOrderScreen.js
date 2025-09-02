@@ -431,29 +431,60 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         try {
           console.log('💳 토스페이먼츠 결제 시작...');
           
-          // 토스페이먼츠 초기화 및 결제 요청
-          const tossPayments = await window.initTossPayments();
-          if (!tossPayments) {
-            throw new Error('토스페이먼츠 SDK 초기화 실패');
+          // 토스페이먼츠 모듈이 없으면 동적 로드
+          if (!window.requestTossPayment || !window.initTossPayments) {
+            console.log('🔄 토스페이먼츠 모듈 동적 로드 중...');
+            
+            // 모듈 스크립트 추가
+            const script = document.createElement('script');
+            script.src = '/TLG/pages/store/pay/tossPayments.js';
+            script.async = false; // 순차 로딩
+            document.head.appendChild(script);
+            
+            // 모듈 로드 완료까지 대기
+            await new Promise((resolve) => {
+              script.onload = resolve;
+              script.onerror = resolve; // 오류 시에도 계속 진행
+            });
+            
+            // 추가 대기 시간
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('🔍 모듈 로드 후 함수 확인:', {
+              initTossPayments: typeof window.initTossPayments,
+              requestTossPayment: typeof window.requestTossPayment
+            });
+          }
+
+          // 함수 존재 여부 재확인
+          if (!window.requestTossPayment) {
+            throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다');
           }
 
           console.log('🔄 토스페이먼츠 결제 요청 중...');
-          
-          const baseUrl = window.location.origin;
-          const paymentOptions = {
+
+          // 결제 데이터 구성
+          const paymentData = {
             amount: orderResult.total_amount,
             orderId: `TLL_${checkId}_${Date.now()}`,
             orderName: `${store.name} - ${finalTableName}`,
             customerName: userInfo.name || '고객',
-            customerEmail: userInfo.email || 'customer@tablelink.com',
-            successUrl: `${baseUrl}/toss-success.html`,
-            failUrl: `${baseUrl}/toss-fail.html`
+            customerEmail: userInfo.email || 'customer@tablelink.com'
           };
 
-          console.log('💳 결제 옵션:', paymentOptions);
+          console.log('💳 결제 데이터:', paymentData);
 
-          // 실제 결제 요청
-          await tossPayments.requestPayment('카드', paymentOptions);
+          // 결제 요청
+          const paymentResult = await window.requestTossPayment(paymentData, '카드');
+
+          if (!paymentResult.success) {
+            if (paymentResult.code === 'USER_CANCEL') {
+              showToast('결제가 취소되었습니다');
+              return;
+            }
+            throw new Error(paymentResult.error || '결제 요청 실패');
+          }
+
           console.log('✅ 토스페이먼츠 결제 요청 완료 - 결제창으로 이동');
 
         } catch (paymentError) {
