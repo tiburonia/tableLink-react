@@ -278,4 +278,28 @@ window.clearOrderSelection = () => {
   POSOrderManager.refreshUI();
 };
 
+// 💰 할인 모달 표시
+window.showDiscountModal = () => {
+  const selectedItems = POSStateManager.getSelectedItems();
+  
+  if (selectedItems.length === 0) {
+    showPOSNotification('할인을 적용할 아이템을 선택해주세요', 'warning');
+    return;
+  }
+
+  const discountType = prompt('할인 유형을 선택하세요\n1: 정액 할인\n2: 정률 할인');
+  
+  if (discountType === '1') {
+    const amount = prompt('할인 금액을 입력하세요 (원):');
+    if (amount && !isNaN(amount)) {
+      POSOrderManager.applyDiscount('fixed', parseInt(amount));
+    }
+  } else if (discountType === '2') {
+    const percent = prompt('할인율을 입력하세요 (%):');
+    if (percent && !isNaN(percent)) {
+      POSOrderManager.applyDiscount('percent', parseFloat(percent));
+    }
+  }
+};
+
 console.log('✅ 새 시스템: 전역 함수 등록 완료 (ordercontrol nav button 포함)');
