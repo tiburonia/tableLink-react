@@ -248,7 +248,7 @@ router.post('/orders', async (req, res) => {
       await client.query(`
         INSERT INTO payments (
           check_id, method, amount, status, 
-          payment_data, created_at
+          payment_data, requested_at
         )
         VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
       `, [
@@ -365,9 +365,9 @@ router.post('/payments/confirm', async (req, res) => {
       await client.query(`
         INSERT INTO payments (
           check_id, method, amount, status, 
-          created_at, payment_data
+          requested_at, payment_data
         )
-        VALUES ($1, 'TOSS', $2, 'paid', CURRENT_TIMESTAMP, $3)
+        VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3)
       `, [
         check_id,
         amount,
