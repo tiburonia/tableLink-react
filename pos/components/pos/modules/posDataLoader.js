@@ -38,16 +38,39 @@ export class POSDataLoader {
         throw new Error(data.error || '메뉴 조회 실패');
       }
 
+      // 메뉴 데이터 null/undefined 체크
+      const menuData = data.menu || [];
+      
+      if (!Array.isArray(menuData)) {
+        console.warn('⚠️ 메뉴 데이터가 배열이 아님, 빈 배열로 설정');
+        const emptyMenus = [];
+        
+        // 상태 관리자에 빈 메뉴 저장
+        const { POSStateManager } = await import('./posStateManager.js');
+        POSStateManager.setAllMenus(emptyMenus);
+        POSStateManager.setCategories(['전체']);
+        
+        return emptyMenus;
+      }
+
       // 상태 관리자에 메뉴 저장
       const { POSStateManager } = await import('./posStateManager.js');
-      POSStateManager.setAllMenus(data.menu);
+      POSStateManager.setAllMenus(menuData);
 
-      // 카테고리 추출
-      const categories = ['전체', ...new Set(data.menu.map(m => m.category).filter(Boolean))];
+      // 카테고리 추출 (안전한 방식)
+      const categories = ['전체'];
+      if (menuData.length > 0) {
+        const categorySet = new Set(
+          menuData
+            .map(m => m && m.category)
+            .filter(cat => cat && typeof cat === 'string' && cat.trim() !== '')
+        );
+        categories.push(...Array.from(categorySet));
+      }
       POSStateManager.setCategories(categories);
 
-      console.log(`✅ 매장 ${storeId} 메뉴 ${data.menu.length}개, 카테고리 ${categories.length}개 로드 완료`);
-      return data.menu;
+      console.log(`✅ 매장 ${storeId} 메뉴 ${menuData.length}개, 카테고리 ${categories.length}개 로드 완료`);
+      return menuData;
 
     } catch (error) {
       console.error('❌ 매장 메뉴 로드 실패:', error);
@@ -61,22 +84,18 @@ export class POSDataLoader {
       console.log(`🪑 매장 ${storeId} 테이블 정보 로드 시작`);
 
       const response = await fetch(`/api/tables/stores/${storeId}`);
+      
+      // HTTP 오류 체크
+      if (!response.ok) {
+        console.warn(`⚠️ 테이블 API HTTP 오류 (${response.status}), 기본 테이블 생성`);
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
       const data = await response.json();
 
       if (!data.success) {
         console.warn(`⚠️ 매장 ${storeId} 테이블 정보 없음, 기본 테이블 생성`);
-        // 기본 테이블 생성 (1-20번)
-        const defaultTables = Array.from({ length: 20 }, (_, i) => ({
-          table_number: i + 1,
-          is_occupied: false,
-          occupied_by: null,
-          occupied_at: null
-        }));
-
-        const { POSStateManager } = await import('./posStateManager.js');
-        POSStateManager.setAllTables(defaultTables);
-
-        return defaultTables;
+        throw new Error(data.error || '테이블 정보 없음');
       }
 
       // 상태 관리자에 테이블 저장

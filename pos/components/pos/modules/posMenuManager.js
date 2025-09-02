@@ -57,22 +57,26 @@ export class POSMenuManager {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
 
-    const allMenus = POSStateManager.getAllMenus();
+    const allMenus = POSStateManager.getAllMenus() || [];
     const selectedCategory = POSStateManager.getSelectedCategory();
 
-    let filteredMenus = allMenus;
+    // 메뉴 데이터 유효성 검사
+    if (!Array.isArray(allMenus)) {
+      console.warn('⚠️ 메뉴 데이터가 배열이 아님');
+      menuGrid.innerHTML = '<p class="no-menu">메뉴를 불러올 수 없습니다</p>';
+      return;
+    }
 
-    if (selectedCategory !== 'all') {
-      filteredMenus = allMenus.filter(item => item.category === selectedCategory);
+    let filteredMenus = allMenus;
+    if (selectedCategory && selectedCategory !== 'all') {
+      filteredMenus = allMenus.filter(menu => menu && menu.category === selectedCategory);
     }
 
     if (filteredMenus.length === 0) {
-      menuGrid.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">
-          <div style="font-size: 48px; margin-bottom: 16px;">🍽️</div>
-          <p>해당 카테고리에 메뉴가 없습니다.</p>
-        </div>
-      `;
+      const message = selectedCategory === 'all' || !selectedCategory ?
+        '등록된 메뉴가 없습니다' :
+        '선택한 카테고리에 메뉴가 없습니다';
+      menuGrid.innerHTML = `<p class="no-menu">${message}</p>`;
       return;
     }
 
@@ -133,12 +137,12 @@ export class POSMenuManager {
     const formattedPrice = parseInt(menu.price).toLocaleString();
 
     return `
-      <div class="menu-card ${!isAvailable ? 'unavailable' : ''}" 
+      <div class="menu-card ${!isAvailable ? 'unavailable' : ''}"
            data-menu-id="${menu.id}"
            onclick="window.addMenuWithFeedback('${menu.name.replace(/'/g, "\\'")}', ${menu.price}, '${menu.id}')">
 
         <div class="menu-image">
-          ${menu.image_url ? 
+          ${menu.image_url ?
             `<img src="${menu.image_url}" alt="${menu.name}" loading="lazy">` :
             `<div class="no-image">🍽️</div>`
           }
@@ -151,7 +155,7 @@ export class POSMenuManager {
 
           <div class="menu-footer">
             <span class="menu-price">₩${formattedPrice}</span>
-            <button class="add-btn ${!isAvailable ? 'disabled' : ''}" 
+            <button class="add-btn ${!isAvailable ? 'disabled' : ''}"
                     ${!isAvailable ? 'disabled' : ''}>
               <span class="add-icon">+</span>
             </button>
