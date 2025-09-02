@@ -595,15 +595,15 @@ function updateTime() {
   }
 }
 
-// ES6 모듈 export
-export { renderPOSLayout };
-export default renderPOSLayout;
-
 // 전역 함수 등록 - 레거시 호환성
 if (typeof window !== 'undefined') {
   window.renderPOSLayout = renderPOSLayout;
   console.log('✅ renderPOSLayout 전역 함수 등록 완료');
 }
+
+// ES6 모듈 export (한 번만)
+export { renderPOSLayout };
+export default renderPOSLayout;
 
 // 테이블맵으로 돌아가기 함수
 window.returnToTableMap = () => {
