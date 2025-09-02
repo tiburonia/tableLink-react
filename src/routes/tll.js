@@ -61,7 +61,16 @@ router.post('/checks/from-qr', async (req, res) => {
     `, [storeId, tableNumber]);
 
     if (tableResult.rows.length === 0) {
-      throw new Error(`매장에 ${tableNumber}번 테이블이 존재하지 않습니다`);
+      console.log(`📝 TLL - 매장 ${storeId}에 ${tableNumber}번 테이블 자동 생성`);
+      
+      // 테이블이 없으면 자동 생성
+      await client.query(`
+        INSERT INTO store_tables (store_id, table_number, table_name, seats)
+        VALUES ($1, $2, $3, 4)
+        ON CONFLICT (store_id, table_number) DO NOTHING
+      `, [storeId, tableNumber, `${tableNumber}번`]);
+      
+      console.log(`✅ TLL - ${tableNumber}번 테이블 생성 완료`);
     }
 
     const qrData = {

@@ -698,9 +698,9 @@ window.renderOrderScreen = renderOrderScreen;
 /**
  * TLL 주문 화면 렌더링 (새 스키마)
  */
-window.renderOrderScreen = async function(store, tableName) {
+window.renderOrderScreen = async function(store, tableName, tableNumber) {
   try {
-    console.log('🛒 TLL 주문 화면 로드:', { store: store.name, table: tableName });
+    console.log('🛒 TLL 주문 화면 로드:', { store: store.name, table: tableName, tableNum: tableNumber });
 
     // 사용자 정보 확인
     const userInfo = getUserInfo();
@@ -710,30 +710,33 @@ window.renderOrderScreen = async function(store, tableName) {
       return;
     }
 
-    // QR 코드 생성 (테이블명에서 번호 추출)
-    let tableNumber = tableName.replace(/[^0-9]/g, '');
+    // 테이블 정보 정규화
+    let finalTableNumber = tableNumber;
+    let finalTableName = tableName;
 
-    // 테이블명이 undefined이거나 비어있는 경우 처리
-    if (!tableName || tableName === 'undefined') {
-      tableName = '1번';
-      console.warn('⚠️ 테이블명이 유효하지 않아 기본값 사용:', tableName);
-    }
-
-    // 테이블 번호가 없으면 테이블 이름에서 번호 추출 시도
-    if (!tableNumber) {
-      // "테이블 1", "1번 테이블", "1번" 등의 형태에서 번호 추출 시도
-      const match = tableName.match(/(\d+)/);
-      if (match) {
-        tableNumber = match[1];
+    // 테이블 번호가 직접 전달된 경우 우선 사용
+    if (finalTableNumber) {
+      finalTableName = finalTableName || `${finalTableNumber}번`;
+    } else {
+      // 테이블명에서 번호 추출
+      if (!finalTableName || finalTableName === 'undefined') {
+        finalTableName = '1번';
+        finalTableNumber = 1;
+        console.warn('⚠️ 테이블 정보가 유효하지 않아 기본값 사용');
       } else {
-        // 번호가 없으면 기본값 사용 (예: "VIP" -> "1")
-        console.warn('⚠️ 테이블에서 번호를 추출할 수 없어 기본값 1 사용:', tableName);
-        tableNumber = '1';
+        const match = finalTableName.match(/(\d+)/);
+        finalTableNumber = match ? parseInt(match[1]) : 1;
       }
     }
 
-    const qrCode = `TABLE_${tableNumber}`;
-    console.log(`📱 QR 코드 생성: ${qrCode} (테이블: ${tableName}, 번호: ${tableNumber})`);
+    // 최종 검증
+    finalTableNumber = parseInt(finalTableNumber) || 1;
+    finalTableName = finalTableName || `${finalTableNumber}번`;
+
+    console.log(`🔍 TLL 최종 테이블 정보: ${finalTableName} (번호: ${finalTableNumber})`);
+
+    const qrCode = `TABLE_${finalTableNumber}`;
+    console.log(`📱 QR 코드 생성: ${qrCode} (테이블: ${finalTableName}, 번호: ${finalTableNumber})`);
 
     // 사용자 정보 검증 - 체크 제약조건 준수
     let requestBody = {
@@ -1163,8 +1166,8 @@ window.renderOrderScreen = async function(store, tableName) {
           checkId: checkId,
           storeId: store.id,
           storeName: store.name,
-          tableNumber: tableNumber,
-          tableName: tableName,
+          tableNumber: finalTableNumber,
+          tableName: finalTableName,
           items: cart,
           totalAmount: totalAmount
         }));
@@ -1174,7 +1177,7 @@ window.renderOrderScreen = async function(store, tableName) {
           window.TossPayments.requestPayment('카드', {
             amount: totalAmount,
             orderId: `TLL_${checkId}_${Date.now()}`,
-            orderName: `${store.name} - ${tableName}`,
+            orderName: `${store.name} - ${finalTableName}`,
             customerName: userInfo.name || '고객',
             customerEmail: userInfo.email || '',
             customerMobilePhone: userInfo.phone || '',

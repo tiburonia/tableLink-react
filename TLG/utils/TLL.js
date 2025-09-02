@@ -504,10 +504,10 @@ async function handleTossPaymentSuccess(data) {
     console.log('🔄 TLL 토스페이먼츠 결제 성공 처리 시작:', data);
 
     const { paymentKey, orderId, amount } = data;
-    
+
     // sessionStorage에서 주문 데이터 가져오기
     const pendingOrderData = JSON.parse(sessionStorage.getItem('tllPendingOrder') || '{}');
-    
+
     if (!pendingOrderData.checkId) {
       throw new Error('TLL 주문 정보를 찾을 수 없습니다.');
     }
@@ -551,7 +551,7 @@ async function handleTossPaymentSuccess(data) {
 
   } catch (error) {
     console.error('❌ TLL 토스페이먼츠 결제 처리 실패:', error);
-    
+
     if (typeof renderPaymentFailure === 'function') {
       renderPaymentFailure(error, {});
     } else {
@@ -564,9 +564,9 @@ async function handleTossPaymentSuccess(data) {
 // 토스페이먼츠 결제 실패 처리 함수
 function handleTossPaymentFailure(data) {
   console.log('❌ 토스페이먼츠 결제 실패 처리:', data);
-  
+
   const { message } = data;
-  
+
   if (typeof renderPaymentFailure === 'function') {
     renderPaymentFailure({ message }, {});
   } else {
@@ -745,7 +745,7 @@ function handleTossPaymentFailure(data) {
       console.log(`🏪 선택된 매장:`, selectedStore);
       console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
       console.log(`✅ TLL - 주문 화면으로 이동`);
-      
+
       // 테이블명이 유효한지 확인
       if (!tableName || tableName === '') {
         console.warn('⚠️ 테이블명이 비어있어 기본값 사용');
@@ -759,6 +759,28 @@ function handleTossPaymentFailure(data) {
   }
 };
 
+// TLL 테이블 선택 처리
+window.selectTLLTable = function(tableName, tableNumber) {
+  console.log(`🏪 선택된 테이블: ${tableName} (번호: ${tableNumber})`);
+  console.log('✅ TLL - 주문 화면으로 이동');
+
+  // 현재 선택된 매장 정보가 있는지 확인
+  if (!window.selectedStore) {
+    console.error('❌ 선택된 매장 정보가 없습니다');
+    alert('매장을 먼저 선택해주세요.');
+    return;
+  }
+
+  // 테이블 번호 검증 및 정규화
+  const validTableNumber = tableNumber || parseInt(tableName?.replace(/[^0-9]/g, '')) || 1;
+  const validTableName = tableName || `${validTableNumber}번`;
+
+  console.log(`🔍 TLL 테이블 정보 검증: ${validTableName} (번호: ${validTableNumber})`);
+
+  // TLL 주문 화면으로 이동 (올바른 테이블 정보 전달)
+  window.renderOrderScreen(window.selectedStore, validTableName, validTableNumber);
+};
+
 // 앱 초기화 함수
 async function initApp() {
   console.log('🚀 앱 초기화 시작');
@@ -770,7 +792,7 @@ async function initApp() {
     // 토스페이먼츠 결제 완료 처리
     if (event.data.type === 'TOSS_PAYMENT_SUCCESS') {
       console.log('✅ 토스페이먼츠 결제 성공 postMessage 수신:', event.data);
-      
+
       // 결제 승인 및 주문 처리
       handleTossPaymentSuccess(event.data);
       return;
@@ -779,7 +801,7 @@ async function initApp() {
     // 토스페이먼츠 결제 실패 처리
     if (event.data.type === 'TOSS_PAYMENT_FAILURE') {
       console.log('❌ 토스페이먼츠 결제 실패 postMessage 수신:', event.data);
-      
+
       // 결제 실패 처리
       handleTossPaymentFailure(event.data);
       return;
