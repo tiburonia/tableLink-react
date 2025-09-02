@@ -104,14 +104,20 @@ export class POSOrderManager {
       // UI 업데이트
       this.forceUIUpdate(); // forceUIUpdate 사용
       
-      // Primary Action 버튼 즉시 업데이트
-      setTimeout(() => {
-        if (typeof POSUIRenderer !== 'undefined') {
+      // Primary Action 버튼 즉시 업데이트 (다중 호출로 확실히)
+      if (typeof POSUIRenderer !== 'undefined') {
+        POSUIRenderer.updatePrimaryActionButton();
+        
+        setTimeout(() => {
           POSUIRenderer.updatePrimaryActionButton();
-        }
-      }, 50);
+        }, 10);
+        
+        setTimeout(() => {
+          POSUIRenderer.updatePrimaryActionButton();
+        }, 100);
+      }
 
-      console.log(`📊 현재 임시 주문: ${pendingItems.length}개 아이템`);
+      console.log(`📊 현재 임시 주문: ${pendingItems.filter(item => !item.isDeleted).length}개 아이템`);
       console.log(`✅ 새 시스템: 메뉴 추가 완료`);
       return true;
 

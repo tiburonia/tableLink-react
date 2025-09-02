@@ -47,15 +47,15 @@ async function loadStoreForTableMap(storeId) {
     // 메뉴와 테이블 데이터를 순차적으로 로드하여 의존성 보장
     const menuData = await POSDataLoader.loadStoreMenus(storeId);
     const tableData = await POSDataLoader.loadStoreTables(storeId);
-    
+
     console.log(`📊 로드 완료 - 메뉴: ${menuData.length}개, 테이블: ${tableData.length}개`);
 
     await POSTableManager.renderTableMap();
-    
+
     // 메뉴 카테고리와 그리드 초기 렌더링
     POSMenuManager.renderMenuCategories();
     POSMenuManager.renderMenuGrid();
-    
+
     showPOSNotification(`${storeData.store.name} POS 준비 완료`);
 
   } catch (error) {
@@ -186,11 +186,11 @@ window.returnToTableMap = returnToTableMap;
 
 // 📝 메뉴 관리
 window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
+// 🍽️ 메뉴 추가 함수 (전역)
 window.addMenuToOrder = (menuName, price, notes = '') => {
-  console.log(`🍽️ 전역 함수 호출: 메뉴 추가 - ${menuName} (₩${price})`);
-
   try {
-    // 입력 검증
+    console.log(`🍽️ 메뉴 추가 시도: ${menuName} (₩${price})`);
+
     if (!menuName || menuName.trim() === '') {
       console.error('❌ 메뉴명이 비어있습니다');
       showPOSNotification('메뉴명이 필요합니다', 'warning');
@@ -204,8 +204,19 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
     }
 
     // 새 시스템 메뉴 추가
-    POSOrderManager.addMenuToPending(menuName, price, notes);
-    return true;
+    const success = POSOrderManager.addMenuToPending(menuName, price, notes);
+
+    if (success) {
+      // 메뉴 추가 성공 후 Primary Action 버튼 강제 업데이트
+      setTimeout(() => {
+        if (typeof POSUIRenderer !== 'undefined') {
+          POSUIRenderer.updatePrimaryActionButton();
+          console.log('🔘 메뉴 추가 후 Primary Action 버튼 강제 업데이트');
+        }
+      }, 0);
+    }
+
+    return success;
 
   } catch (error) {
     console.error('❌ 메뉴 추가 실패:', error);
@@ -221,7 +232,7 @@ window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
   try {
     // 메뉴 카드 찾기
     const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
-    
+
     // 버튼 애니메이션
     if (menuCard) {
       const addBtn = menuCard.querySelector('.add-btn');
@@ -229,11 +240,11 @@ window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
         // 추가 중 표시
         addBtn.classList.add('adding');
         addBtn.innerHTML = '<span class="add-icon">⏳</span>';
-        
+
         // 카드 전체 애니메이션
         menuCard.style.transform = 'scale(0.95)';
         menuCard.style.transition = 'transform 0.15s ease';
-        
+
         setTimeout(() => {
           menuCard.style.transform = 'scale(1)';
         }, 150);
@@ -242,7 +253,7 @@ window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
 
     // 실제 주문 추가
     const success = window.addMenuToOrder(menuName, price, notes);
-    
+
     // UI 복구
     setTimeout(() => {
       if (menuCard) {
@@ -250,12 +261,12 @@ window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
         if (addBtn) {
           addBtn.classList.remove('adding');
           addBtn.innerHTML = '<span class="add-icon">+</span>';
-          
+
           if (success) {
             // 성공 피드백
             addBtn.style.background = '#10b981';
             addBtn.innerHTML = '<span class="add-icon">✓</span>';
-            
+
             setTimeout(() => {
               addBtn.style.background = '';
               addBtn.innerHTML = '<span class="add-icon">+</span>';
@@ -277,29 +288,21 @@ window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 📋 주문 관리
 window.toggleItemSelection = (itemId) => POSOrderManager.toggleItemSelection(itemId);
+// 🎯 확정된 아이템 선택 토글 (전역)
 window.toggleConfirmedItemSelection = (itemId) => {
-  console.log(`🌐 전역 함수 호출: toggleConfirmedItemSelection(${itemId})`);
-  
-  try {
-    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.toggleConfirmedItemSelection) {
-      POSOrderManager.toggleConfirmedItemSelection(itemId);
-    } else {
-      console.error('❌ POSOrderManager.toggleConfirmedItemSelection 함수를 찾을 수 없습니다');
-      showPOSNotification('확정 아이템 선택 기능을 사용할 수 없습니다', 'error');
-    }
-  } catch (error) {
-    console.error('❌ 확정 아이템 선택 중 오류:', error);
-    showPOSNotification('확정 아이템 선택 실패: ' + error.message, 'error');
-  }
+  POSOrderManager.toggleConfirmedItemSelection(itemId);
 };
 window.selectAllItems = () => POSOrderManager.selectAllItems();
 window.deleteSelectedItems = () => POSOrderManager.deleteSelectedItems();
-window.changeQuantity = (itemId, change) => POSOrderManager.changeQuantity(itemId, change);
+// 🔢 선택된 아이템 수량 변경 (전역)
+window.changeSelectedQuantity = (change) => {
+  POSOrderManager.changeSelectedQuantity(change);
+};
 window.clearOrder = () => POSOrderManager.clearOrder();
 window.confirmOrder = () => POSOrderManager.confirmOrder();
+// 🎯 Primary Action 버튼 핸들러 (전역)
 window.handlePrimaryAction = () => {
-  console.log('🌐 전역 handlePrimaryAction 호출');
-  return POSOrderManager.handlePrimaryAction();
+  POSOrderManager.handlePrimaryAction();
 };
 window.applyDiscount = (type, value) => POSOrderManager.applyDiscount(type, value);
 
@@ -324,29 +327,21 @@ window.loadTempOrder = () => POSTempStorage.loadTempOrder();
 window.clearTempOrder = () => POSOrderManager.clearTempOrder();
 
 // 🎯 ordercontrol 관련 함수들
-window.changeSelectedQuantity = (change) => {
-  console.log(`🌐 전역 함수 호출: changeSelectedQuantity(${change})`);
-  
-  try {
-    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.changeSelectedQuantity) {
-      POSOrderManager.changeSelectedQuantity(change);
-    } else {
-      console.error('❌ POSOrderManager.changeSelectedQuantity 함수를 찾을 수 없습니다');
-      showPOSNotification('수량 조절 기능을 사용할 수 없습니다', 'error');
-    }
-  } catch (error) {
-    console.error('❌ 수량 조절 중 오류:', error);
-    showPOSNotification('수량 조절 실패: ' + error.message, 'error');
-  }
-};
-window.deleteSelectedPendingItems = () => POSOrderManager.deleteSelectedPendingItems();
-window.savePendingChanges = () => POSOrderManager.savePendingChanges();
-window.confirmSelectedPendingItems = () => POSOrderManager.confirmSelectedPendingItems();
+// 🔄 주문 선택 해제 (전역)
 window.clearOrderSelection = () => {
   POSStateManager.setSelectedItems([]);
-  POSOrderManager.refreshUI();
+  POSOrderManager.forceUIUpdate();
 };
 
+// 🗑️ 선택된 임시 아이템 삭제 (전역)
+window.deleteSelectedPendingItems = () => {
+  POSOrderManager.deleteSelectedPendingItems();
+};
+
+// ✅ 선택된 임시 아이템 확정 (전역)
+window.confirmSelectedPendingItems = () => {
+  POSOrderManager.confirmSelectedPendingItems();
+};
 
 
 console.log('✅ 새 시스템: 전역 함수 등록 완료 (ordercontrol nav button 포함)');

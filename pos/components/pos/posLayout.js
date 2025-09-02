@@ -214,7 +214,7 @@ export function renderPOSLayout() {
                 </div>
 
                 <div class="action-buttons">
-                  <button id="primaryActionBtn" class="primary-action-btn" onclick="handlePrimaryAction()">
+                  <button id="primaryActionBtn" class="primary-action-btn" onclick="window.handlePrimaryAction()">
                     <div class="btn-content">
                       <span class="btn-title">주문 없음</span>
                       <span class="btn-subtitle">메뉴를 선택하세요</span>

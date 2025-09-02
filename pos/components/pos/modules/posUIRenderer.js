@@ -601,12 +601,16 @@ export class POSUIRenderer {
   static updatePrimaryActionButton() {
     const primaryBtn = document.getElementById('primaryActionBtn');
     if (!primaryBtn) {
-      console.warn('⚠️ primaryActionBtn 요소를 찾을 수 없습니다');
+      console.error('❌ primaryActionBtn 요소를 찾을 수 없습니다');
       return;
     }
 
-    const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
-    console.log(`🔘 Primary action 버튼 업데이트: 임시 주문 ${pendingItems.length}개`);
+    const allPendingItems = POSStateManager.getPendingItems();
+    const pendingItems = allPendingItems.filter(item => !item.isDeleted);
+    console.log(`🔘 Primary action 버튼 업데이트 시작:`);
+    console.log(`   - 전체 임시 아이템: ${allPendingItems.length}개`);
+    console.log(`   - 유효 임시 아이템: ${pendingItems.length}개`);
+    console.log(`   - 현재 버튼 상태: disabled=${primaryBtn.disabled}, className="${primaryBtn.className}"`);
 
     if (pendingItems.length > 0) {
       // 임시 주문이 있을 때만 활성화
@@ -615,6 +619,8 @@ export class POSUIRenderer {
       );
 
       primaryBtn.disabled = false;
+      primaryBtn.style.pointerEvents = 'auto';
+      primaryBtn.style.opacity = '1';
       primaryBtn.innerHTML = `
         <div class="btn-content">
           <span class="btn-title">주문 확정</span>
@@ -623,11 +629,16 @@ export class POSUIRenderer {
       `;
       primaryBtn.className = 'primary-action-btn confirm-order active';
 
-      console.log(`✅ Primary action 버튼 활성화: ${pendingItems.length}개 아이템, ₩${totalAmount.toLocaleString()}`);
+      console.log(`✅ Primary action 버튼 활성화 완료:`);
+      console.log(`   - 아이템: ${pendingItems.length}개`);
+      console.log(`   - 총액: ₩${totalAmount.toLocaleString()}`);
+      console.log(`   - 버튼 상태: disabled=${primaryBtn.disabled}, className="${primaryBtn.className}"`);
 
     } else {
       // 임시 주문 없음
       primaryBtn.disabled = true;
+      primaryBtn.style.pointerEvents = 'none';
+      primaryBtn.style.opacity = '0.6';
       primaryBtn.innerHTML = `
         <div class="btn-content">
           <span class="btn-title">주문 없음</span>
