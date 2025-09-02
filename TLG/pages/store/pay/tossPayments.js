@@ -1,4 +1,3 @@
-
 /**
  * 토스페이먼츠 SDK 통합 모듈 (완전 재작성)
  * 단순하고 안정적인 결제 처리
@@ -89,20 +88,11 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 결제 실패:', error);
-    
-    if (error.code === 'USER_CANCEL') {
-      return { success: false, message: '결제를 취소하셨습니다.' };
-    }
-    
-    return { 
-      success: false, 
-      message: error.message || '결제 처리 중 오류가 발생했습니다.' 
-    };
+    return { success: false, error: error.message };
   }
-}
+};
 
 // 전역 함수로 등록
-window.requestTossPayment = requestTossPayment;
 window.initTossPayments = initTossPayments;
 
-console.log('✅ 토스페이먼츠 모듈 로드 완료');
+console.log('✅ 토스페이먼츠 모듈 전역 등록 완료');
