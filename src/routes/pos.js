@@ -5,7 +5,82 @@ const pool = require('../db/pool');
 const { storeAuth, checkIdempotency } = require('../mw/auth');
 
 /**
- * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (새 스키마)
+ * [GET] /menu - 매장 메뉴 조회 (새 스키마)
+ */
+router.get('/menu', async (req, res, next) => {
+  try {
+    const { storeId } = req.query;
+
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '매장 ID가 필요합니다'
+      });
+    }
+
+    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청`);
+
+    // 매장 존재 확인
+    const storeResult = await pool.query(`
+      SELECT id, name, category FROM stores WHERE id = $1
+    `, [storeId]);
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다'
+      });
+    }
+
+    const store = storeResult.rows[0];
+
+    let menu = [];
+
+    try {
+      // 새 스키마: menu_items 테이블에서 실제 메뉴 조회 시도
+      const menuResult = await pool.query(`
+        SELECT 
+          mi.id,
+          mi.name,
+          mi.price,
+          mi.description,
+          COALESCE(mg.name, '기본메뉴') as category
+        FROM menu_items mi
+        LEFT JOIN menu_groups mg ON mi.group_id = mg.id
+        WHERE mi.store_id = $1
+        ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
+      `, [storeId]);
+
+      menu = menuResult.rows;
+    } catch (menuError) {
+      console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
+      menu = [];
+    }
+
+    // 메뉴가 없으면 카테고리별 기본 메뉴 생성
+    if (menu.length === 0) {
+      menu = getDefaultMenusByCategory(store.category);
+    }
+
+    console.log(`✅ POS 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      menus: menu
+    });
+
+  } catch (error) {
+    console.error('❌ POS 메뉴 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 메뉴 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (새 스키마) - 레거시 호환
  */
 router.get('/stores/:storeId/menu', async (req, res, next) => {
   try {
