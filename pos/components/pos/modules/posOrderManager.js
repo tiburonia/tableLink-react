@@ -497,6 +497,254 @@ export class POSOrderManager {
     }
   }
 
+  // 🔢 선택된 임시 아이템 수량 변경 (ordercontrol 전용)
+  static changeSelectedQuantity(change) {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const pendingItems = POSStateManager.getPendingItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('수량을 변경할 아이템을 선택해주세요', 'warning');
+      return;
+    }
+
+    let changedCount = 0;
+    let removedCount = 0;
+
+    selectedItems.forEach(itemId => {
+      const item = pendingItems.find(i => i.id === itemId);
+      if (item && !item.isConfirmed) {
+        const oldQuantity = item.quantity;
+        item.quantity += change;
+        item.updatedAt = new Date().toISOString();
+
+        if (item.quantity <= 0) {
+          item.isDeleted = true;
+          removedCount++;
+        } else {
+          changedCount++;
+        }
+
+        console.log(`📝 수량 변경: ${item.name} ${oldQuantity} → ${item.quantity}`);
+      }
+    });
+
+    if (changedCount > 0 || removedCount > 0) {
+      // 삭제된 아이템 제거
+      const filteredItems = pendingItems.filter(item => !item.isDeleted);
+      POSStateManager.setPendingItems(filteredItems);
+      
+      // 삭제된 아이템들은 선택에서도 제거
+      const remainingSelected = selectedItems.filter(itemId => 
+        !pendingItems.find(item => item.id === itemId && item.isDeleted)
+      );
+      POSStateManager.setSelectedItems(remainingSelected);
+
+      this.updateCombinedOrder();
+      this.refreshUI();
+
+      if (removedCount > 0) {
+        showPOSNotification(`${removedCount}개 아이템 제거, ${changedCount}개 수량 변경`, 'info');
+      } else {
+        showPOSNotification(`${changedCount}개 아이템 수량 변경`, 'success');
+      }
+    } else {
+      showPOSNotification('임시 주문에서만 수량 변경 가능합니다', 'warning');
+    }
+  }
+
+  // 🗑️ 선택된 임시 아이템만 삭제 (ordercontrol 전용)
+  static deleteSelectedPendingItems() {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const pendingItems = POSStateManager.getPendingItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('삭제할 아이템을 선택해주세요', 'warning');
+      return;
+    }
+
+    let deletedCount = 0;
+    selectedItems.forEach(itemId => {
+      const item = pendingItems.find(i => i.id === itemId);
+      if (item && !item.isConfirmed) {
+        item.isDeleted = true;
+        deletedCount++;
+      }
+    });
+
+    if (deletedCount > 0) {
+      const filteredItems = pendingItems.filter(item => !item.isDeleted);
+      POSStateManager.setPendingItems(filteredItems);
+      POSStateManager.setSelectedItems([]);
+
+      this.updateCombinedOrder();
+      POSTempStorage.saveTempOrder();
+      this.refreshUI();
+
+      showPOSNotification(`${deletedCount}개 임시 아이템 삭제됨`, 'success');
+    } else {
+      showPOSNotification('삭제할 임시 아이템이 없습니다', 'warning');
+    }
+  }
+
+  // 💾 임시 변경사항 저장 (ordercontrol 전용)
+  static savePendingChanges() {
+    try {
+      POSTempStorage.saveTempOrder();
+      showPOSNotification('임시 변경사항이 저장되었습니다', 'success');
+      console.log('💾 ordercontrol: 임시 변경사항 저장 완료');
+    } catch (error) {
+      console.error('❌ ordercontrol: 임시 저장 실패:', error);
+      showPOSNotification('임시 저장 실패', 'error');
+    }
+  }
+
+  // ✅ 선택된 임시 아이템만 확정 (ordercontrol 전용)
+  static async confirmSelectedPendingItems() {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const pendingItems = POSStateManager.getPendingItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('확정할 아이템을 선택해주세요', 'warning');
+      return;
+    }
+
+    // 선택된 임시 아이템만 필터링
+    const selectedPendingItems = pendingItems.filter(item => 
+      selectedItems.includes(item.id) && !item.isConfirmed && !item.isDeleted
+    );
+
+    if (selectedPendingItems.length === 0) {
+      showPOSNotification('확정할 임시 아이템이 없습니다', 'warning');
+      return;
+    }
+
+    try {
+      console.log(`🏆 ordercontrol: ${selectedPendingItems.length}개 선택 아이템 확정 시작`);
+
+      const currentStore = POSStateManager.getCurrentStore();
+      const currentTable = POSStateManager.getCurrentTable();
+
+      // 선택된 아이템들을 통합 (같은 메뉴는 수량 합산)
+      const consolidatedItems = {};
+      selectedPendingItems.forEach(item => {
+        const key = `${item.name}_${item.price}`;
+        if (consolidatedItems[key]) {
+          consolidatedItems[key].quantity += item.quantity;
+        } else {
+          consolidatedItems[key] = { ...item };
+        }
+      });
+
+      const consolidatedArray = Object.values(consolidatedItems);
+
+      // 주문 확정 API 호출
+      const response = await fetch('/api/orders/create-or-add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: currentStore.id,
+          tableNumber: currentTable,
+          items: consolidatedArray.map(item => ({
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            discount: item.discount || 0,
+            notes: item.notes || ''
+          })),
+          userId: null,
+          guestPhone: null,
+          customerName: '포스 주문',
+          sourceSystem: 'POS'
+        })
+      });
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      // 확정된 아이템들을 상태에 추가
+      const confirmedItems = consolidatedArray.map((item, index) => ({
+        ...item,
+        id: result.itemIds ? result.itemIds[index] : `confirmed_${Date.now()}_${index}`,
+        status: 'ordered',
+        isConfirmed: true,
+        isPending: false,
+        checkId: result.checkId,
+        confirmedAt: new Date().toISOString()
+      }));
+
+      const existingConfirmed = POSStateManager.getConfirmedItems();
+      POSStateManager.setConfirmedItems([...existingConfirmed, ...confirmedItems]);
+
+      // 확정된 아이템들을 임시 주문에서 제거
+      const remainingPending = pendingItems.filter(item => 
+        !selectedItems.includes(item.id)
+      );
+      POSStateManager.setPendingItems(remainingPending);
+
+      // 선택 해제
+      POSStateManager.setSelectedItems([]);
+
+      // 세션 업데이트
+      POSStateManager.setCurrentSession({
+        checkId: result.checkId,
+        status: 'ordering'
+      });
+
+      this.updateCombinedOrder();
+      POSTempStorage.saveTempOrder();
+      this.refreshUI();
+
+      showPOSNotification(`${consolidatedArray.length}개 아이템 확정 완료!`, 'success');
+      console.log(`✅ ordercontrol: 선택 아이템 확정 완료 - 배치 ID: ${result.checkId}`);
+
+    } catch (error) {
+      console.error('❌ ordercontrol: 선택 아이템 확정 실패:', error);
+      showPOSNotification('선택 아이템 확정 실패: ' + error.message, 'error');
+    }
+  }
+
+  // ❌ 확정된 아이템 취소 요청 (ordercontrol 전용)
+  static async requestCancelSelectedItems() {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const confirmedItems = POSStateManager.getConfirmedItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('취소할 아이템을 선택해주세요', 'warning');
+      return;
+    }
+
+    const selectedConfirmedItems = confirmedItems.filter(item => 
+      selectedItems.includes(item.id) && item.isConfirmed
+    );
+
+    if (selectedConfirmedItems.length === 0) {
+      showPOSNotification('취소할 확정 아이템이 없습니다', 'warning');
+      return;
+    }
+
+    // 취소 확인
+    if (!confirm(`${selectedConfirmedItems.length}개의 확정된 주문을 취소하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      console.log(`❌ ordercontrol: ${selectedConfirmedItems.length}개 확정 아이템 취소 요청`);
+
+      // 향후 취소 API 구현 예정
+      showPOSNotification('주문 취소 기능은 향후 구현 예정입니다', 'info');
+      
+      // 임시로 선택 해제
+      POSStateManager.setSelectedItems([]);
+      this.refreshUI();
+
+    } catch (error) {
+      console.error('❌ ordercontrol: 확정 아이템 취소 실패:', error);
+      showPOSNotification('주문 취소 실패: ' + error.message, 'error');
+    }
+  }
+
   // 🔄 세션 데이터 새로고침
   static async refreshSessionData() {
     try {

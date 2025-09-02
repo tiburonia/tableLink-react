@@ -240,4 +240,16 @@ window.saveTempOrder = () => POSTempStorage.saveTempOrder();
 window.loadTempOrder = () => POSTempStorage.loadTempOrder();
 window.clearTempOrder = () => POSOrderManager.clearTempOrder();
 
-console.log('✅ 새 시스템: 전역 함수 등록 완료 (레거시 제거됨)');
+// 🎯 ordercontrol nav button 전용 함수들
+window.changeSelectedQuantity = (change) => POSOrderManager.changeSelectedQuantity(change);
+window.deleteSelectedPendingItems = () => POSOrderManager.deleteSelectedPendingItems();
+window.savePendingChanges = () => POSOrderManager.savePendingChanges();
+window.confirmSelectedPendingItems = () => POSOrderManager.confirmSelectedPendingItems();
+window.requestCancelSelectedItems = () => POSOrderManager.requestCancelSelectedItems();
+window.clearOrderSelection = () => {
+  POSStateManager.setSelectedItems([]);
+  POSOrderManager.refreshUI();
+  showPOSNotification('선택 해제됨', 'info');
+};
+
+console.log('✅ 새 시스템: 전역 함수 등록 완료 (ordercontrol nav button 포함)');

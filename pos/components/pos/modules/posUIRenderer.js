@@ -78,7 +78,7 @@ export class POSUIRenderer {
       const consolidatedConfirmed = {};
       confirmedItems.forEach(item => {
         const key = `${item.name}_${item.price}`;
-        
+
         if (consolidatedConfirmed[key]) {
           consolidatedConfirmed[key].quantity += item.quantity;
           consolidatedConfirmed[key].ids.push(item.id);
@@ -628,5 +628,91 @@ export class POSUIRenderer {
         tableInfoElement.textContent = `테이블 ${currentTable}`;
       }
     }
+  }
+
+  // 📊 주문 컨트롤 패널 (수량 조절 등)
+  static renderOrderControls() {
+    const controlsContainer = document.getElementById('orderControls') || 
+                             document.getElementById('orderControlsPanel');
+
+    if (!controlsContainer) {
+      console.warn('⚠️ 주문 컨트롤 패널 컨테이너 없음');
+      return;
+    }
+
+    const selectedItems = POSStateManager.getSelectedItems();
+    const pendingItems = POSStateManager.getPendingItems();
+    const confirmedItems = POSStateManager.getConfirmedItems();
+
+    if (selectedItems.length === 0) {
+      controlsContainer.innerHTML = `
+        <div class="control-empty">
+          <p>아이템을 선택하여 수정하세요</p>
+        </div>
+      `;
+      return;
+    }
+
+    // 선택된 아이템들 분석
+    let pendingCount = 0;
+    let confirmedCount = 0;
+    let selectedItemsInfo = [];
+
+    selectedItems.forEach(itemId => {
+      const pendingItem = pendingItems.find(item => item.id === itemId);
+      const confirmedItem = confirmedItems.find(item => item.id === itemId);
+
+      if (pendingItem) {
+        pendingCount++;
+        selectedItemsInfo.push({ ...pendingItem, type: 'pending' });
+      } else if (confirmedItem) {
+        confirmedCount++;
+        selectedItemsInfo.push({ ...confirmedItem, type: 'confirmed' });
+      }
+    });
+
+    controlsContainer.innerHTML = `
+      <div class="order-controls-panel">
+        <div class="controls-header">
+          <h4>주문 수정 (${selectedItems.length}개 선택)</h4>
+          <button onclick="window.clearOrderSelection()" class="clear-selection-btn">
+            선택 해제
+          </button>
+        </div>
+
+        <div class="controls-content">
+          ${pendingCount > 0 ? `
+            <div class="pending-controls">
+              <h5>📝 임시 주문 (${pendingCount}개)</h5>
+              <div class="quantity-controls">
+                <button onclick="window.changeSelectedQuantity(-1)" class="qty-btn minus">-</button>
+                <span class="qty-label">수량 조절</span>
+                <button onclick="window.changeSelectedQuantity(1)" class="qty-btn plus">+</button>
+              </div>
+              <div class="action-buttons">
+                <button onclick="window.deleteSelectedPendingItems()" class="delete-btn">🗑️ 삭제</button>
+                <button onclick="window.savePendingChanges()" class="save-temp-btn">💾 임시저장</button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${confirmedCount > 0 ? `
+            <div class="confirmed-controls">
+              <h5>✅ 확정 주문 (${confirmedCount}개)</h5>
+              <p class="info-text">확정된 주문은 취소 요청만 가능합니다</p>
+              <button onclick="window.requestCancelSelectedItems()" class="cancel-btn">❌ 취소 요청</button>
+            </div>
+          ` : ''}
+
+          ${pendingCount > 0 && confirmedCount === 0 ? `
+            <div class="order-actions">
+              <button onclick="window.confirmSelectedPendingItems()" class="confirm-order-btn">
+                ✅ 선택 항목 주문확정
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
   }
 }
