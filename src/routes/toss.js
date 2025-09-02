@@ -94,26 +94,44 @@ router.post('/confirm', async (req, res) => {
         UPDATE payments 
         SET 
           status = 'completed',
-          completed_at = CURRENT_TIMESTAMP,
-          payment_data = payment_data || $2
+          processed_at = CURRENT_TIMESTAMP,
+          transaction_id = $2,
+          notes = $3
         WHERE check_id = $1 AND status = 'pending'
       `, [
         checkId,
+        paymentKey,
         JSON.stringify({ 
-          payment_key: paymentKey,
           toss_result: tossResult,
           confirmed_at: new Date().toISOString()
         })
       ]);
 
-      // 체크 상태 업데이트
+      // 체크 상태를 'closed'로 업데이트 (새 스키마에 맞게)
       await client.query(`
         UPDATE checks 
         SET 
-          status = 'paid',
-          updated_at = CURRENT_TIMESTAMP
+          status = 'closed',
+          closed_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [checkId]);
+
+      // 테이블 해제 처리
+      const tableResult = await client.query(`
+        SELECT store_id, table_number FROM checks WHERE id = $1
+      `, [checkId]);
+
+      if (tableResult.rows.length > 0) {
+        const { store_id, table_number } = tableResult.rows[0];
+        
+        await client.query(`
+          UPDATE store_tables 
+          SET 
+            is_occupied = false,
+            occupied_since = NULL
+          WHERE store_id = $1 AND table_number = $2
+        `, [store_id, table_number]);
+      }
 
       await client.query('COMMIT');
 
