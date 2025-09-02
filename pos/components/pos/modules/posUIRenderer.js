@@ -1,4 +1,4 @@
-// POS UI 렌더링 모듈 - 새 시스템 전용
+// POS UI 렌더링 모듈 - 단순 장바구니 방식
 import { POSStateManager } from './posStateManager.js';
 
 export class POSUIRenderer {
@@ -27,6 +27,7 @@ export class POSUIRenderer {
         </div>
       `;
       primaryBtn.className = 'primary-action-btn confirm-order active';
+      primaryBtn.disabled = false;
 
       console.log(`✅ 주문 확정 버튼 활성화: ${cartItems.length}개 메뉴, ₩${totalAmount.toLocaleString()}`);
 
@@ -39,100 +40,93 @@ export class POSUIRenderer {
         </div>
       `;
       primaryBtn.className = 'primary-action-btn disabled';
+      primaryBtn.disabled = true;
 
       console.log('⚪ 주문 확정 버튼 비활성화: 장바구니 비어있음');
     }
 
-    // 결제 패널도 업데이트
+    // Payment panel 업데이트
     this.updatePaymentPanel();
+
+    console.log('🎯 Primary action button 업데이트 완료');
   }
 
-  // 📋 주문 목록 렌더링
+  // 💳 결제 패널 상태 업데이트
+  static updatePaymentPanel() {
+    const cartItems = POSStateManager.getCartItems();
+    const confirmedItems = POSStateManager.getConfirmedItems();
+
+    // 결제 버튼들 상태 업데이트
+    const paymentButtons = document.querySelectorAll('.payment-btn');
+    const hasConfirmedOrders = confirmedItems.length > 0;
+
+    paymentButtons.forEach(btn => {
+      if (hasConfirmedOrders) {
+        btn.disabled = false;
+        btn.classList.remove('disabled');
+      } else {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+      }
+    });
+  }
+
+  // 📋 주문 아이템 렌더링 (장바구니 + 확정 주문)
   static renderOrderItems() {
-    const orderContainer = document.getElementById('orderItems');
-    if (!orderContainer) {
-      console.warn('⚠️ orderItems 컨테이너를 찾을 수 없습니다');
-      return;
-    }
+    const orderItemsContainer = document.getElementById('orderItemsContainer');
+    if (!orderItemsContainer) return;
 
     const cartItems = POSStateManager.getCartItems();
     const confirmedItems = POSStateManager.getConfirmedItems();
 
     let html = '';
 
-    // 장바구니 아이템 표시
+    // 장바구니 아이템들
     if (cartItems.length > 0) {
-      html += `
-        <div class="order-section">
-          <h3 class="section-title">🛒 장바구니 (${cartItems.length}개)</h3>
-          <div class="order-items-list">
-      `;
-
+      html += '<div class="cart-section"><h4>🛒 장바구니</h4>';
       cartItems.forEach(item => {
         html += `
-          <div class="order-item cart-item" data-item-id="${item.id}">
+          <div class="order-item cart-item">
             <div class="item-info">
               <span class="item-name">${item.name}</span>
-              <span class="item-price">₩${item.price.toLocaleString()}</span>
+              <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
             </div>
             <div class="item-controls">
-              <button class="qty-btn" onclick="POSOrderManager.changeCartQuantity('${item.id}', -1)">-</button>
+              <button onclick="POSOrderManager.changeCartQuantity('${item.id}', -1)">-</button>
               <span class="quantity">${item.quantity}</span>
-              <button class="qty-btn" onclick="POSOrderManager.changeCartQuantity('${item.id}', 1)">+</button>
+              <button onclick="POSOrderManager.changeCartQuantity('${item.id}', 1)">+</button>
             </div>
-            <div class="item-total">₩${(item.price * item.quantity).toLocaleString()}</div>
           </div>
         `;
       });
-
-      html += `
-          </div>
-        </div>
-      `;
+      html += '</div>';
     }
 
-    // 확정된 주문 표시
+    // 확정된 주문들
     if (confirmedItems.length > 0) {
-      html += `
-        <div class="order-section">
-          <h3 class="section-title">✅ 확정된 주문 (${confirmedItems.length}개)</h3>
-          <div class="order-items-list">
-      `;
-
+      html += '<div class="confirmed-section"><h4>✅ 확정 주문</h4>';
       confirmedItems.forEach(item => {
         html += `
-          <div class="order-item confirmed-item" data-item-id="${item.id}">
+          <div class="order-item confirmed-item">
             <div class="item-info">
-              <span class="item-name">${item.name || item.menuName}</span>
-              <span class="item-price">₩${item.price.toLocaleString()}</span>
+              <span class="item-name">${item.name}</span>
+              <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
             </div>
             <div class="item-status">
-              <span class="status-badge status-${item.status || 'ordered'}">${this.getStatusText(item.status || 'ordered')}</span>
-              <span class="quantity">×${item.quantity}</span>
+              <span class="quantity">${item.quantity}개</span>
+              <span class="status">${item.status || 'ordered'}</span>
             </div>
-            <div class="item-total">₩${(item.price * item.quantity).toLocaleString()}</div>
           </div>
         `;
       });
-
-      html += `
-          </div>
-        </div>
-      `;
+      html += '</div>';
     }
 
-    // 빈 상태 표시
     if (cartItems.length === 0 && confirmedItems.length === 0) {
-      html = `
-        <div class="empty-state">
-          <div class="empty-icon">🛒</div>
-          <div class="empty-text">메뉴를 선택해서 장바구니에 담아보세요</div>
-        </div>
-      `;
+      html = '<div class="no-items">선택된 메뉴가 없습니다</div>';
     }
 
-    orderContainer.innerHTML = html;
-    console.log(`📋 주문 목록 렌더링 완료: 장바구니 ${cartItems.length}개, 확정 ${confirmedItems.length}개`);
+    orderItemsContainer.innerHTML = html;
   }
 
   // 💰 결제 요약 렌더링
@@ -142,93 +136,38 @@ export class POSUIRenderer {
 
     const cartItems = POSStateManager.getCartItems();
     const confirmedItems = POSStateManager.getConfirmedItems();
-    const session = POSStateManager.getCurrentSession();
 
     const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const confirmedTotal = confirmedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const grandTotal = cartTotal + confirmedTotal;
 
     let html = `
-      <div class="payment-summary">
-        <div class="summary-section">
-          <h4>💰 주문 요약</h4>
-    `;
-
-    if (cartItems.length > 0) {
-      html += `
-        <div class="summary-row">
-          <span>🛒 장바구니 (${cartItems.length}개)</span>
+      <div class="summary-section">
+        <div class="summary-line">
+          <span>장바구니 소계</span>
           <span>₩${cartTotal.toLocaleString()}</span>
         </div>
-      `;
-    }
-
-    if (confirmedItems.length > 0) {
-      html += `
-        <div class="summary-row">
-          <span>✅ 확정 주문 (${confirmedItems.length}개)</span>
+        <div class="summary-line">
+          <span>확정 주문 소계</span>
           <span>₩${confirmedTotal.toLocaleString()}</span>
         </div>
-      `;
-    }
-
-    html += `
-        <div class="summary-total">
-          <span>총 합계</span>
+        <div class="summary-line total">
+          <span>총 금액</span>
           <span>₩${grandTotal.toLocaleString()}</span>
         </div>
       </div>
     `;
 
-    // 결제 버튼들 (확정된 주문이 있을 때만 표시)
-    if (session.checkId && confirmedTotal > 0) {
-      html += `
-        <div class="payment-buttons">
-          <button class="payment-btn cash-btn" onclick="processPayment('CASH')">💵 현금결제</button>
-          <button class="payment-btn card-btn" onclick="processPayment('CARD')">💳 카드결제</button>
-        </div>
-      `;
-    }
-
-    html += `</div>`;
     summaryContainer.innerHTML = html;
   }
 
-  // 📍 테이블 정보 업데이트
-  static updateTableInfo() {
-    const tableInfoElement = document.getElementById('tableInfo');
-    if (!tableInfoElement) return;
-
-    const currentTable = POSStateManager.getCurrentTable();
-    const currentStore = POSStateManager.getCurrentStore();
-
-    if (currentTable && currentStore) {
-      tableInfoElement.innerHTML = `
-        <div class="table-info">
-          <span class="store-name">${currentStore.name}</span>
-          <span class="table-number">테이블 ${currentTable}</span>
-        </div>
-      `;
-    }
-  }
-
-  // 💳 결제 패널 업데이트
-  static updatePaymentPanel() {
-    const session = POSStateManager.getCurrentSession();
-    const confirmedItems = POSStateManager.getConfirmedItems();
-
-    console.log(`💳 결제 패널 업데이트: 세션 ${session.checkId ? '있음' : '없음'}, 확정 주문 ${confirmedItems.length}개`);
-  }
-
-  // 상태 텍스트 변환
-  static getStatusText(status) {
-    const statusMap = {
-      'ordered': '주문완료',
-      'preparing': '조리중',
-      'ready': '준비완료',
-      'served': '서빙완료',
-      'canceled': '취소됨'
-    };
-    return statusMap[status] || status;
+  // 🔄 전체 UI 업데이트
+  static renderAll() {
+    this.renderOrderItems();
+    this.renderPaymentSummary();
+    this.updatePrimaryActionButton();
   }
 }
+
+// 전역 함수로 노출
+window.POSUIRenderer = POSUIRenderer;

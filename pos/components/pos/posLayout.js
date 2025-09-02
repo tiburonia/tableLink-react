@@ -2255,6 +2255,24 @@ export function renderPOSLayout() {
   document.querySelectorAll('.payment-btn').forEach(button => {
     button.addEventListener('click', openPaymentModal);
   });
+
+  // Primary Action 버튼 이벤트 리스너 (장바구니 → 주문 확정)
+  const primaryActionBtn = document.getElementById('primaryActionBtn');
+  if (primaryActionBtn) {
+    primaryActionBtn.addEventListener('click', function() {
+      console.log('🎯 Primary Action 버튼 클릭됨: 주문 확정');
+
+      // POSOrderManager가 로드되었는지 확인
+      if (typeof POSOrderManager !== 'undefined') {
+        POSOrderManager.handlePrimaryAction();
+      } else {
+        console.error('❌ POSOrderManager가 로드되지 않음');
+        showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
+      }
+    });
+  } else {
+    console.warn('⚠️ primaryActionBtn 요소를 찾을 수 없음');
+  }
 }
 
 // 결제 모달 열기

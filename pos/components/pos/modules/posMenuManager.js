@@ -174,4 +174,17 @@ export class POSMenuManager {
       </div>
     `;
   }
+
+  // 메뉴 선택 처리 (장바구니에 추가)
+  static selectMenu(menuItem) {
+    console.log('🍽️ 메뉴 선택:', menuItem.name);
+
+    // POSOrderManager 사용하여 장바구니에 추가
+    if (typeof POSOrderManager !== 'undefined') {
+      POSOrderManager.addToCart(menuItem);
+    } else {
+      console.error('❌ POSOrderManager가 로드되지 않음');
+      showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
+    }
+  }
 }
