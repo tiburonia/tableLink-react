@@ -5,12 +5,8 @@ import { POSTableManager } from './modules/posTableManager.js';
 import { POSMenuManager } from './modules/posMenuManager.js';
 import { POSOrderManager } from './modules/posOrderManager.js';
 import { POSPaymentManager } from './modules/posPaymentManager.js';
-import { POSUIRenderer } from './modules/posUIRenderer.js';
 import { showPOSNotification } from '../../utils/posNotification.js';
 import { renderPOSLayout } from './posLayout.js';
-
-// POSUIRenderer를 전역으로 노출
-window.POSUIRenderer = POSUIRenderer;
 
 // 🚀 POS 시스템 초기화
 async function renderPOS() {
