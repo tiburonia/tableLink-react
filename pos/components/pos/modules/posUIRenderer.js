@@ -172,39 +172,353 @@ export class POSUIRenderer {
     const remainingAmount = grandTotal - paidAmount;
     const totalItems = pendingItems.length + Object.keys(consolidatedConfirmed).length;
 
+    // 상태에 따른 스타일링
+    const hasOrders = totalItems > 0;
+    const hasPendingItems = pendingItems.length > 0;
+    const hasConfirmedItems = confirmedItems.length > 0;
+    const hasPayments = paidAmount > 0;
+
     let html = `
-      <div class="payment-summary">
-        <h4>💰 결제 요약</h4>
-        <div class="summary-line">
-          <span>총 ${totalItems}개 메뉴</span>
-          <span>₩${grandTotal.toLocaleString()}</span>
+      <div class="enhanced-payment-summary ${!hasOrders ? 'empty-state' : ''}">
+        <div class="summary-header">
+          <div class="summary-title">
+            <div class="title-icon">💰</div>
+            <h4>결제 요약</h4>
+            ${hasOrders ? `<span class="item-count">${totalItems}개</span>` : ''}
+          </div>
+          ${hasOrders ? `
+            <div class="grand-total">
+              <span class="total-label">총 금액</span>
+              <span class="total-amount">₩${grandTotal.toLocaleString()}</span>
+            </div>
+          ` : ''}
         </div>
 
-        ${pendingItems.length > 0 ? `
-          <div class="summary-line pending">
-            <span>임시 주문 (${pendingItems.length}개)</span>
-            <span>₩${pendingTotal.toLocaleString()}</span>
-          </div>
-        ` : ''}
+        <div class="summary-body">
+          ${!hasOrders ? `
+            <div class="empty-summary">
+              <div class="empty-icon">🛒</div>
+              <p>주문된 메뉴가 없습니다</p>
+              <small>메뉴를 선택해주세요</small>
+            </div>
+          ` : ''}
 
-        ${confirmedItems.length > 0 ? `
-          <div class="summary-line confirmed">
-            <span>확정 주문 (${Object.keys(consolidatedConfirmed).length}개)</span>
-            <span>₩${confirmedTotal.toLocaleString()}</span>
-          </div>
-        ` : ''}
+          ${hasPendingItems ? `
+            <div class="summary-section pending-section">
+              <div class="section-header">
+                <span class="section-icon">📝</span>
+                <span class="section-title">임시 주문</span>
+                <span class="section-count">${pendingItems.length}개</span>
+              </div>
+              <div class="section-amount">₩${pendingTotal.toLocaleString()}</div>
+            </div>
+          ` : ''}
 
-        ${paidAmount > 0 ? `
-          <div class="summary-line paid">
-            <span>결제 완료</span>
-            <span>-₩${paidAmount.toLocaleString()}</span>
-          </div>
-          <div class="summary-line remaining">
-            <span><strong>잔액</strong></span>
-            <span><strong>₩${remainingAmount.toLocaleString()}</strong></span>
+          ${hasConfirmedItems ? `
+            <div class="summary-section confirmed-section">
+              <div class="section-header">
+                <span class="section-icon">✅</span>
+                <span class="section-title">확정 주문</span>
+                <span class="section-count">${Object.keys(consolidatedConfirmed).length}개</span>
+              </div>
+              <div class="section-amount">₩${confirmedTotal.toLocaleString()}</div>
+            </div>
+          ` : ''}
+
+          ${hasPayments ? `
+            <div class="payment-section">
+              <div class="divider"></div>
+              <div class="summary-section paid-section">
+                <div class="section-header">
+                  <span class="section-icon">💳</span>
+                  <span class="section-title">결제 완료</span>
+                </div>
+                <div class="section-amount negative">-₩${paidAmount.toLocaleString()}</div>
+              </div>
+              <div class="summary-section remaining-section">
+                <div class="section-header">
+                  <span class="section-icon">🔄</span>
+                  <span class="section-title"><strong>미결제 잔액</strong></span>
+                </div>
+                <div class="section-amount remaining">₩${remainingAmount.toLocaleString()}</div>
+              </div>
+            </div>
+          ` : ''}
+
+          ${hasOrders && !hasPayments ? `
+            <div class="divider"></div>
+            <div class="final-amount-section">
+              <div class="final-amount-label">결제 예정 금액</div>
+              <div class="final-amount-value">₩${grandTotal.toLocaleString()}</div>
+            </div>
+          ` : ''}
+        </div>
+
+        ${hasOrders ? `
+          <div class="summary-footer">
+            <div class="payment-status ${hasPayments ? 'partial-paid' : 'unpaid'}">
+              ${hasPayments ? 
+                (remainingAmount > 0 ? '🟡 부분결제' : '✅ 결제완료') : 
+                '⏳ 결제대기'
+              }
+            </div>
           </div>
         ` : ''}
       </div>
+
+      <style>
+        .enhanced-payment-summary {
+          background: linear-gradient(145deg, #ffffff, #f8fafc);
+          border-radius: 16px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
+          overflow: hidden;
+          transition: all 0.3s ease;
+        }
+
+        .enhanced-payment-summary:hover {
+          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .enhanced-payment-summary.empty-state {
+          background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+          border: 2px dashed #cbd5e1;
+        }
+
+        .summary-header {
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: white;
+          padding: 16px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .summary-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .title-icon {
+          font-size: 18px;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .summary-title h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .item-count {
+          background: rgba(255, 255, 255, 0.2);
+          padding: 2px 8px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .grand-total {
+          text-align: right;
+        }
+
+        .total-label {
+          display: block;
+          font-size: 12px;
+          opacity: 0.8;
+          margin-bottom: 2px;
+        }
+
+        .total-amount {
+          font-size: 20px;
+          font-weight: 700;
+          font-family: 'Courier New', monospace;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .summary-body {
+          padding: 0;
+          min-height: 120px;
+        }
+
+        .empty-summary {
+          padding: 40px 20px;
+          text-align: center;
+          color: #64748b;
+        }
+
+        .empty-icon {
+          font-size: 32px;
+          margin-bottom: 12px;
+          opacity: 0.6;
+        }
+
+        .empty-summary p {
+          margin: 0 0 4px 0;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .empty-summary small {
+          font-size: 14px;
+          opacity: 0.8;
+        }
+
+        .summary-section {
+          padding: 16px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-bottom: 1px solid #f1f5f9;
+          transition: background 0.2s ease;
+        }
+
+        .summary-section:hover {
+          background: #f8fafc;
+        }
+
+        .summary-section:last-child {
+          border-bottom: none;
+        }
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .section-icon {
+          font-size: 14px;
+          width: 20px;
+          text-align: center;
+        }
+
+        .section-title {
+          font-size: 14px;
+          color: #475569;
+        }
+
+        .section-count {
+          background: #f1f5f9;
+          color: #64748b;
+          padding: 2px 6px;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 500;
+        }
+
+        .section-amount {
+          font-size: 16px;
+          font-weight: 600;
+          font-family: 'Courier New', monospace;
+        }
+
+        .pending-section .section-count {
+          background: #fef3c7;
+          color: #d97706;
+        }
+
+        .pending-section .section-amount {
+          color: #d97706;
+        }
+
+        .confirmed-section .section-count {
+          background: #d1fae5;
+          color: #059669;
+        }
+
+        .confirmed-section .section-amount {
+          color: #059669;
+        }
+
+        .paid-section .section-amount.negative {
+          color: #dc2626;
+        }
+
+        .remaining-section .section-amount.remaining {
+          color: #7c3aed;
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        .divider {
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #e2e8f0 20%, #e2e8f0 80%, transparent);
+          margin: 8px 20px;
+        }
+
+        .final-amount-section {
+          padding: 16px 20px;
+          background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+          border-top: 2px solid #0ea5e9;
+        }
+
+        .final-amount-label {
+          font-size: 13px;
+          color: #0369a1;
+          font-weight: 500;
+          margin-bottom: 4px;
+        }
+
+        .final-amount-value {
+          font-size: 24px;
+          font-weight: 800;
+          color: #0c4a6e;
+          font-family: 'Courier New', monospace;
+        }
+
+        .summary-footer {
+          padding: 12px 20px;
+          background: #f8fafc;
+          border-top: 1px solid #e2e8f0;
+          text-align: center;
+        }
+
+        .payment-status {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .payment-status.unpaid {
+          background: #fef3c7;
+          color: #92400e;
+        }
+
+        .payment-status.partial-paid {
+          background: #fde68a;
+          color: #b45309;
+        }
+
+        .payment-status.paid {
+          background: #d1fae5;
+          color: #065f46;
+        }
+
+        @media (max-width: 768px) {
+          .summary-header {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+          }
+
+          .grand-total {
+            text-align: center;
+          }
+
+          .section-amount {
+            font-size: 14px;
+          }
+
+          .final-amount-value {
+            font-size: 20px;
+          }
+        }
+      </style>
     `;
 
     container.innerHTML = html;
