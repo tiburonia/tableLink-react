@@ -118,10 +118,17 @@ export class POSUIRenderer {
 
     // 확정된 주문들
     if (confirmedItems.length > 0) {
+      const selectedItems = POSStateManager.getSelectedItems();
       html += '<div class="confirmed-section"><h4>✅ 확정 주문</h4>';
       confirmedItems.forEach(item => {
+        const isSelected = selectedItems.includes(item.id);
         html += `
-          <div class="order-item confirmed-item">
+          <div class="order-item confirmed-item ${isSelected ? 'selected' : ''}" 
+               onclick="window.toggleConfirmedItemSelection('${item.id}')" 
+               data-item-id="${item.id}">
+            <div class="item-checkbox">
+              <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation()">
+            </div>
             <div class="item-info">
               <span class="item-name">${item.name}</span>
               <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>

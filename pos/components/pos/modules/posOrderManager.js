@@ -415,49 +415,60 @@ export class POSOrderManager {
     console.log('✏️ 확정된 주문 수정 모드 시작');
   }
 
-  // 🔢 확정된 주문 수량 변경
-  static changeConfirmedQuantity(itemId, change) {
+  // 🔢 확정된 주문 수량 변경 (선택된 주문들 대상)
+  static changeConfirmedQuantity(change) {
     const confirmedItems = POSStateManager.getConfirmedItems();
     const selectedItems = POSStateManager.getSelectedItems();
     
-    if (!selectedItems.includes(itemId)) {
+    if (selectedItems.length === 0) {
       showPOSNotification('먼저 수정할 주문을 선택해주세요', 'warning');
       return;
     }
 
-    const item = confirmedItems.find(item => item.id === itemId);
-    if (!item) {
-      showPOSNotification('주문 아이템을 찾을 수 없습니다', 'warning');
-      return;
-    }
+    let modifiedCount = 0;
+    selectedItems.forEach(itemId => {
+      const item = confirmedItems.find(item => item.id === itemId);
+      if (!item) return;
 
-    // 수정된 아이템 기록
-    if (!this.modifiedConfirmedItems.find(m => m.id === itemId)) {
-      this.modifiedConfirmedItems.push({
-        id: itemId,
-        originalQuantity: item.quantity,
-        action: 'modify'
-      });
-    }
-
-    item.quantity += change;
-
-    if (item.quantity <= 0) {
-      // 삭제로 처리
-      const modifiedItem = this.modifiedConfirmedItems.find(m => m.id === itemId);
-      if (modifiedItem) {
-        modifiedItem.action = 'delete';
+      // 수정된 아이템 기록
+      if (!this.modifiedConfirmedItems.find(m => m.id === itemId)) {
+        this.modifiedConfirmedItems.push({
+          id: itemId,
+          originalQuantity: item.quantity,
+          action: 'modify'
+        });
       }
-      
-      const index = confirmedItems.indexOf(item);
-      confirmedItems.splice(index, 1);
-      showPOSNotification(`${item.name} 삭제 예정`, 'info');
-    } else {
-      showPOSNotification(`${item.name} 수량: ${item.quantity}개 (수정 예정)`, 'info');
-    }
+
+      item.quantity += change;
+
+      if (item.quantity <= 0) {
+        // 삭제로 처리
+        const modifiedItem = this.modifiedConfirmedItems.find(m => m.id === itemId);
+        if (modifiedItem) {
+          modifiedItem.action = 'delete';
+        }
+        
+        const index = confirmedItems.indexOf(item);
+        confirmedItems.splice(index, 1);
+        
+        // 선택된 아이템 목록에서도 제거
+        const selectedIndex = selectedItems.indexOf(itemId);
+        if (selectedIndex > -1) {
+          selectedItems.splice(selectedIndex, 1);
+        }
+      }
+      modifiedCount++;
+    });
 
     POSStateManager.setConfirmedItems(confirmedItems);
+    POSStateManager.setSelectedItems(selectedItems);
     this.updateUI();
+    
+    if (change > 0) {
+      showPOSNotification(`${modifiedCount}개 주문 수량 증가 (수정 예정)`, 'info');
+    } else {
+      showPOSNotification(`${modifiedCount}개 주문 수량 감소 (수정 예정)`, 'info');
+    }
   }
 
   // 🗑️ 선택된 확정 주문 삭제
@@ -581,6 +592,50 @@ export class POSOrderManager {
       console.log('⚠️ 장바구니가 비어있고 수정사항도 없음');
       showPOSNotification('주문할 메뉴를 선택하거나 수정할 주문을 선택해주세요', 'warning');
     }
+  }
+
+  // 🎯 확정 주문 선택 토글
+  static toggleConfirmedItemSelection(itemId) {
+    const selectedItems = POSStateManager.getSelectedItems();
+    const index = selectedItems.indexOf(itemId);
+
+    if (index > -1) {
+      // 이미 선택된 경우 선택 해제
+      selectedItems.splice(index, 1);
+      console.log(`🔲 확정 주문 선택 해제: ${itemId}`);
+    } else {
+      // 선택되지 않은 경우 선택 추가
+      selectedItems.push(itemId);
+      console.log(`☑️ 확정 주문 선택: ${itemId}`);
+    }
+
+    POSStateManager.setSelectedItems(selectedItems);
+    this.updateUI();
+    
+    // 선택된 주문이 있으면 수정 모드 시작
+    if (selectedItems.length > 0) {
+      this.startModifyingConfirmedOrders();
+    }
+  }
+
+  // 🔲 전체 확정 주문 선택/해제
+  static toggleAllConfirmedItems() {
+    const confirmedItems = POSStateManager.getConfirmedItems();
+    const selectedItems = POSStateManager.getSelectedItems();
+    
+    if (selectedItems.length === confirmedItems.length) {
+      // 전체 선택된 상태면 전체 해제
+      POSStateManager.setSelectedItems([]);
+      console.log('🔲 전체 확정 주문 선택 해제');
+    } else {
+      // 일부만 선택되거나 아무것도 선택되지 않은 상태면 전체 선택
+      const allIds = confirmedItems.map(item => item.id);
+      POSStateManager.setSelectedItems(allIds);
+      this.startModifyingConfirmedOrders();
+      console.log(`☑️ 전체 확정 주문 선택: ${allIds.length}개`);
+    }
+    
+    this.updateUI();
   }
 
   // 🚪 페이지 이탈 시 장바구니 정리 및 수정 취소

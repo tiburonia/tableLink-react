@@ -937,6 +937,35 @@ export function renderPOSLayout() {
         background: linear-gradient(135deg, #ecfdf5, #d1fae5);
       }
 
+      .order-item.confirmed-item {
+        cursor: pointer;
+        position: relative;
+      }
+
+      .order-item.confirmed-item:hover {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        transform: translateY(-1px);
+      }
+
+      .order-item.confirmed-item.selected {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+
+      .item-checkbox {
+        display: flex;
+        align-items: center;
+        margin-right: 12px;
+      }
+
+      .item-checkbox input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        accent-color: #3b82f6;
+      }
+
       .item-main {
         flex: 1;
         display: flex;
