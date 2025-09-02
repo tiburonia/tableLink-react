@@ -1,116 +1,59 @@
+
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { pool } = require('../db/pool');
-const { calcCheckTotal, sumPayments } = require('../utils/total');
-const { storeAuth, checkIdempotency } = require('../mw/auth');
-
-// Helper function for input validation
-const validateInput = (data, requiredFields, typeChecks) => {
-  const errors = [];
-  for (const field of requiredFields) {
-    if (data[field] === undefined || data[field] === null || data[field] === '') {
-      errors.push({ code: 'MISSING_REQUIRED_FIELD', message: `${field} is required.` });
-    }
-  }
-  for (const field in typeChecks) {
-    const expectedType = typeChecks[field];
-    if (data[field] !== undefined && data[field] !== null && typeof data[field] !== expectedType) {
-      errors.push({ code: 'INVALID_FIELD_TYPE', message: `${field} must be of type ${expectedType}.` });
-    }
-  }
-  return errors;
-};
-
-// SSE connection management
-const SSE_CONNECTIONS = new Map();
-const MAX_SSE_CONNECTIONS_PER_STORE = 5; // Example limit
-const SSE_HEARTBEAT_INTERVAL = 30000; // 30 seconds
-
-const sendSSEMessage = (storeId, event, data) => {
-  const connections = SSE_CONNECTIONS.get(storeId);
-  if (connections) {
-    connections.forEach(res => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    });
-  }
-};
-
-// Cleanup for SSE connections
-const cleanupSSEConnections = (storeId, res) => {
-  const connections = SSE_CONNECTIONS.get(storeId);
-  if (connections) {
-    const filtered = connections.filter(conn => conn !== res);
-    if (filtered.length === 0) {
-      SSE_CONNECTIONS.delete(storeId);
-    } else {
-      SSE_CONNECTIONS.set(storeId, filtered);
-    }
-  }
-};
-
-// Heartbeat for SSE
-setInterval(() => {
-  SSE_CONNECTIONS.forEach((connections, storeId) => {
-    connections.forEach(res => {
-      res.write(`event: heartbeat\ndata: {}\n\n`);
-    });
-  });
-}, SSE_HEARTBEAT_INTERVAL);
-
-
-// 모든 라우트에 매장 인증 적용
-router.use(storeAuth);
+const pool = require('../db/pool');
 
 /**
- * [POST] /checks/from-qr - QR 코드로 체크 생성/조회
+ * [POST] /checks/from-qr - QR 코드로 체크 생성/조회 (새 스키마)
  */
-router.post('/checks/from-qr', async (req, res, next) => {
+router.post('/checks/from-qr', async (req, res) => {
   const client = await pool.connect();
 
   try {
     const { qr_code, user_id, guest_phone } = req.body;
-    const { storeId } = req;
 
-    // Input Validation
-    const validationErrors = validateInput(req.body, ['qr_code'], { qr_code: 'string', user_id: 'string', guest_phone: 'string' });
-    if (validationErrors.length > 0) {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: validationErrors } });
+    console.log(`🎯 TLL QR 체크 생성 요청:`, { qr_code, user_id, guest_phone });
+
+    if (!qr_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'QR 코드가 필요합니다'
+      });
+    }
+
+    if (!user_id && !guest_phone) {
+      return res.status(400).json({
+        success: false,
+        error: '사용자 ID 또는 게스트 전화번호가 필요합니다'
+      });
     }
 
     await client.query('BEGIN');
 
     // QR 코드로 매장 및 테이블 정보 조회
-    // TODO: WHERE 절에 store_id 추가하여 인덱스 효율성 증대
     const qrResult = await client.query(`
       SELECT store_id, table_number, is_active
       FROM qr_codes
-      WHERE code = $1 AND store_id = $2
-    `, [qr_code, storeId]);
+      WHERE code = $1
+    `, [qr_code]);
 
     if (qrResult.rows.length === 0) {
-      // return res.status(404).json({ error: { code: 'QR_NOT_FOUND', message: 'Invalid QR code.' } });
       throw new Error('유효하지 않은 QR 코드입니다');
     }
 
     const qrData = qrResult.rows[0];
 
     if (!qrData.is_active) {
-      // return res.status(400).json({ error: { code: 'QR_INACTIVE', message: 'QR code is inactive.' } });
       throw new Error('비활성화된 QR 코드입니다');
     }
 
-    // if (qrData.store_id !== storeId) { // store_id is already filtered in the query
-    //   return res.status(403).json({ error: { code: 'STORE_SCOPE_VIOLATION', message: 'Store scope violation.' } });
-    // }
-
-    // 기존 open 체크 확인
-    // TODO: WHERE 절에 store_id, table_number, status 추가하여 인덱스 효율성 증대
+    // 기존 활성 체크 확인
     const existingCheckResult = await client.query(`
-      SELECT id, status
+      SELECT id, status, customer_name
       FROM checks
       WHERE store_id = $1 AND table_number = $2 AND status = 'open'
-      ORDER BY created_at DESC
+      ORDER BY opened_at DESC
       LIMIT 1
     `, [qrData.store_id, qrData.table_number]);
 
@@ -119,37 +62,42 @@ router.post('/checks/from-qr', async (req, res, next) => {
     if (existingCheckResult.rows.length > 0) {
       // 기존 체크 사용
       checkId = existingCheckResult.rows[0].id;
-      console.log(`✅ 기존 체크 사용: ${checkId} (테이블 ${qrData.table_number})`);
+      console.log(`✅ TLL 기존 체크 사용: ${checkId} (테이블 ${qrData.table_number})`);
     } else {
       // 새 체크 생성
       const newCheckResult = await client.query(`
         INSERT INTO checks (
-          store_id, table_number, user_id, guest_phone, 
-          source, channel, status
+          store_id, table_number, user_id, guest_phone, customer_name,
+          status, source_system, opened_at
         )
-        VALUES ($1, $2, $3, $4, 'TLL', 'DINE_IN', 'open')
-        RETURNING id, created_at
-      `, [qrData.store_id, qrData.table_number, user_id, guest_phone]);
+        VALUES ($1, $2, $3, $4, $5, 'open', 'TLL', CURRENT_TIMESTAMP)
+        RETURNING id, opened_at
+      `, [
+        qrData.store_id, 
+        qrData.table_number, 
+        user_id, 
+        guest_phone,
+        user_id ? null : '게스트'
+      ]);
 
       checkId = newCheckResult.rows[0].id;
 
-      // 이벤트 기록
+      // 테이블 점유 처리
       await client.query(`
-        INSERT INTO order_events (check_id, event_type, details)
-        VALUES ($1, 'CHECK_CREATED', $2)
-      `, [checkId, JSON.stringify({ 
-        source: 'TLL', 
-        channel: 'DINE_IN', 
-        qr_code, 
-        table_number: qrData.table_number 
-      })]);
+        UPDATE store_tables 
+        SET is_occupied = true, 
+            occupied_since = CURRENT_TIMESTAMP,
+            auto_release_source = 'TLL'
+        WHERE store_id = $1 AND table_number = $2
+      `, [qrData.store_id, qrData.table_number]);
 
-      console.log(`✅ 새 TLL 체크 생성: ${checkId} (테이블 ${qrData.table_number})`);
+      console.log(`✅ TLL 새 체크 생성: ${checkId} (테이블 ${qrData.table_number})`);
     }
 
     await client.query('COMMIT');
 
     res.status(201).json({
+      success: true,
       check_id: checkId,
       store_id: qrData.store_id,
       table_number: qrData.table_number
@@ -157,341 +105,531 @@ router.post('/checks/from-qr', async (req, res, next) => {
 
   } catch (error) {
     await client.query('ROLLBACK');
-    next({ error: { code: error.code || 'INTERNAL_ERROR', message: error.message || 'An unexpected error occurred.' } });
+    console.error('❌ TLL QR 체크 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'TLL QR 체크 생성 실패'
+    });
   } finally {
     client.release();
   }
 });
 
 /**
- * [POST] /orders - TLL 주문 생성
+ * [POST] /orders - TLL 주문 생성 (새 스키마)
  */
-router.post('/orders', checkIdempotency, async (req, res, next) => {
+router.post('/orders', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { check_id, ext_key } = req.body;
-    const { storeId, idempotencyKey } = req;
-    const finalExtKey = ext_key || idempotencyKey;
+    const { 
+      check_id, 
+      items, 
+      payment_method = 'TOSS',
+      toss_order_id = null,
+      user_notes = null
+    } = req.body;
 
-    // Input Validation
-    const validationErrors = validateInput(req.body, ['check_id'], { check_id: 'string', ext_key: 'string' });
-    if (validationErrors.length > 0) {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: validationErrors } });
+    console.log(`🛒 TLL 주문 생성:`, { 
+      check_id, 
+      itemCount: items?.length, 
+      payment_method 
+    });
+
+    if (!check_id || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '체크 ID와 주문 아이템이 필요합니다'
+      });
     }
 
     await client.query('BEGIN');
 
-    // 체크 존재 및 매장 스코프 확인
-    // TODO: WHERE 절에 id 추가하여 인덱스 효율성 증대
+    // 체크 존재 및 상태 확인
     const checkResult = await client.query(`
-      SELECT id, store_id, status
+      SELECT id, store_id, table_number, status, user_id, guest_phone
       FROM checks 
       WHERE id = $1
     `, [check_id]);
 
     if (checkResult.rows.length === 0) {
-      // return res.status(404).json({ error: { code: 'CHECK_NOT_FOUND', message: 'Check not found.' } });
       throw new Error('체크를 찾을 수 없습니다');
     }
 
-    if (checkResult.rows[0].store_id !== storeId) {
-      return res.status(403).json({ error: { code: 'STORE_SCOPE_VIOLATION', message: 'Store scope violation.' } });
-    }
+    const check = checkResult.rows[0];
 
-    if (checkResult.rows[0].status === 'closed') {
-      // return res.status(409).json({ error: { code: 'CHECK_CLOSED', message: 'Check is already closed.' } });
+    if (check.status !== 'open') {
       throw new Error('이미 종료된 체크입니다');
     }
 
-    // 중복 주문 확인
-    if (finalExtKey) {
-      // TODO: WHERE 절에 ext_key, check_id 추가하여 인덱스 효율성 증대
-      const duplicateResult = await client.query(`
-        SELECT id FROM orders 
-        WHERE ext_key = $1 AND check_id = $2
-      `, [finalExtKey, check_id]);
+    // 주문 아이템들을 check_items에 추가
+    const itemIds = [];
+    let totalAmount = 0;
 
-      if (duplicateResult.rows.length > 0) {
-        await client.query('ROLLBACK');
-        return res.status(201).json({
-          order_id: duplicateResult.rows[0].id
-        });
-      }
-    }
-
-    // TLL 주문 생성
-    const orderResult = await client.query(`
-      INSERT INTO orders (check_id, status, source, ext_key)
-      VALUES ($1, 'confirmed', 'TLL', $2)
-      RETURNING id, status, created_at
-    `, [check_id, finalExtKey]);
-
-    const order = orderResult.rows[0];
-
-    // 이벤트 기록
-    await client.query(`
-      INSERT INTO order_events (check_id, order_id, event_type, details)
-      VALUES ($1, $2, 'ORDER_CREATED', $3)
-    `, [check_id, order.id, JSON.stringify({ source: 'TLL', ext_key: finalExtKey })]);
-
-    await client.query('COMMIT');
-
-    console.log(`✅ TLL 주문 생성: ${order.id} (체크 ${check_id})`);
-
-    // Send SSE notification to KDS
-    sendSSEMessage(storeId, 'order_created', { order_id: order.id, check_id: check_id });
-
-    res.status(201).json({
-      order_id: order.id
-    });
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    next({ error: { code: error.code || 'INTERNAL_ERROR', message: error.message || 'An unexpected error occurred.' } });
-  } finally {
-    client.release();
-  }
-});
-
-/**
- * [POST] /order-lines/bulk - TLL 주문 라인 대량 생성
- */
-router.post('/order-lines/bulk', async (req, res, next) => {
-  const client = await pool.connect();
-
-  try {
-    const { order_id, items = [] } = req.body;
-    const { storeId } = req;
-
-    // Input Validation
-    const validationErrors = validateInput(req.body, ['order_id', 'items'], { order_id: 'string', items: 'object' });
-    if (validationErrors.length > 0) {
-      return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid input', details: validationErrors } });
-    }
-    if (!Array.isArray(items)) {
-      return res.status(400).json({ error: { code: 'INVALID_ITEMS_FORMAT', message: 'Items must be an array.' } });
-    }
-
-    await client.query('BEGIN');
-
-    // 주문 존재 및 매장 스코프 확인
-    // TODO: WHERE 절에 o.id 추가하여 인덱스 효율성 증대
-    const orderResult = await client.query(`
-      SELECT o.id, o.check_id, c.store_id
-      FROM orders o
-      JOIN checks c ON o.check_id = c.id
-      WHERE o.id = $1
-    `, [order_id]);
-
-    if (orderResult.rows.length === 0) {
-      // return res.status(404).json({ error: { code: 'ORDER_NOT_FOUND', message: 'Order not found.' } });
-      throw new Error('주문을 찾을 수 없습니다');
-    }
-
-    if (orderResult.rows[0].store_id !== storeId) {
-      return res.status(403).json({ error: { code: 'STORE_SCOPE_VIOLATION', message: 'Store scope violation.' } });
-    }
-
-    const lineIds = [];
-    let createdCount = 0;
-
-    // 각 아이템에 대해 가격 검증 및 라인 생성
     for (const item of items) {
-      let { 
-        menu_id, 
-        menu_name, 
-        unit_price, 
-        count = 1, 
-        cook_station, 
-        notes, 
-        options = [] 
-      } = item;
+      const { menu_name, unit_price, quantity, options = {}, notes = '' } = item;
 
-      // Input Validation for each item
-      const itemValidationErrors = validateInput(item, ['menu_name', 'unit_price'], { menu_id: 'string', menu_name: 'string', unit_price: 'number', count: 'number', cook_station: 'string', notes: 'string', options: 'object' });
-      if (itemValidationErrors.length > 0) {
-        // Handle item-specific validation error, e.g., skip item or return error
-        console.warn(`Skipping item due to validation errors: ${JSON.stringify(itemValidationErrors)}`, item);
-        continue; 
+      if (!menu_name || !unit_price || !quantity) {
+        throw new Error(`주문 아이템에 필수 정보가 누락되었습니다: ${JSON.stringify(item)}`);
       }
 
-      // TODO: 메뉴 가격 서버 신뢰성 검증 - 실제 서비스에서는 menu_items 테이블에서 가격 조회하여 검증
-      // if (menu_id) {
-      //   const menuResult = await client.query('SELECT price FROM menu_items WHERE id = $1', [menu_id]);
-      //   if (menuResult.rows.length > 0 && menuResult.rows[0].price !== unit_price) {
-      //     console.warn(`가격 불일치 감지: 클라이언트=${unit_price}, 서버=${menuResult.rows[0].price}`);
-      //     unit_price = menuResult.rows[0].price; // 서버 가격으로 대체
-      //   }
-      // }
+      const itemResult = await client.query(`
+        INSERT INTO check_items (
+          check_id, menu_name, unit_price, quantity, 
+          options, kitchen_notes, status, ordered_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, 'ordered', CURRENT_TIMESTAMP)
+        RETURNING id
+      `, [
+        check_id,
+        menu_name,
+        parseFloat(unit_price),
+        parseInt(quantity),
+        JSON.stringify(options),
+        notes
+      ]);
 
-      // 메뉴 ID가 있으면 서버에서 가격 검증
-      if (menu_id) {
-        // TODO: WHERE 절에 id, store_id 추가하여 인덱스 효율성 증대
-        const menuResult = await client.query(`
-          SELECT name, price, cook_station
-          FROM menu_items
-          WHERE id = $1 AND store_id = $2
-        `, [menu_id, storeId]);
+      itemIds.push(itemResult.rows[0].id);
+      totalAmount += parseFloat(unit_price) * parseInt(quantity);
 
-        if (menuResult.rows.length > 0) {
-          const menuData = menuResult.rows[0];
-          // 서버 가격으로 대체 (가격 신뢰성 보장)
-          unit_price = menuData.price;
-          menu_name = menu_name || menuData.name;
-          cook_station = cook_station || menuData.cook_station;
+      console.log(`  📦 TLL 아이템 추가: ${menu_name} x ${quantity} (₩${unit_price})`);
+    }
 
-          console.log(`🔍 TLL 가격 검증: ${menu_name} - 클라이언트: ₩${item.unit_price}, 서버: ₩${unit_price}`);
-        } else {
-          // 메뉴 ID가 있지만 조회되지 않는 경우, 에러 처리 또는 경고
-          console.warn(`Menu item with ID ${menu_id} not found for store ${storeId}. Using provided data.`);
-          // Decide if this should be an error or just a warning. For now, using provided data.
-        }
-      }
+    // 체크 총액 업데이트
+    await client.query(`
+      UPDATE checks 
+      SET 
+        subtotal_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id = $1 AND status != 'canceled'
+        ),
+        final_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id = $1 AND status != 'canceled'
+        ),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [check_id]);
 
-      // count만큼 개별 라인 생성
-      for (let i = 0; i < count; i++) {
-        const lineResult = await client.query(`
-          INSERT INTO order_lines (
-            order_id, menu_item_id, menu_name, unit_price, 
-            quantity, cook_station, special_instructions, status
-          )
-          VALUES ($1, $2, $3, $4, 1, $5, $6, 'queued')
-          RETURNING id
-        `, [order_id, menu_id, menu_name, unit_price, cook_station, notes]);
-
-        const lineId = lineResult.rows[0].id;
-        lineIds.push(lineId);
-        createdCount++;
-
-        // 옵션 추가
-        if (Array.isArray(options)) {
-          for (const option of options) {
-            // TODO: Validation for option fields (option_id, name, price_delta)
-            const optionValidationErrors = validateInput(option, ['option_id', 'name'], { option_id: 'string', name: 'string', price_delta: 'number' });
-            if (optionValidationErrors.length > 0) {
-              console.warn(`Skipping option due to validation errors: ${JSON.stringify(optionValidationErrors)}`, option);
-              continue;
-            }
-
-            await client.query(`
-              INSERT INTO line_options (line_id, option_id, option_name, price_delta)
-              VALUES ($1, $2, $3, $4)
-            `, [lineId, option.option_id, option.name, option.price_delta || 0]);
-          }
-        }
-      }
+    // 토스페이먼츠 결제인 경우 대기 상태 결제 생성
+    if (payment_method === 'TOSS') {
+      await client.query(`
+        INSERT INTO payments (
+          check_id, payment_method, amount, status, 
+          payment_data, created_at
+        )
+        VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
+      `, [
+        check_id,
+        payment_method,
+        totalAmount,
+        JSON.stringify({ 
+          toss_order_id,
+          user_notes,
+          created_via: 'TLL'
+        })
+      ]);
     }
 
     await client.query('COMMIT');
 
-    console.log(`✅ TLL 주문 라인 대량 생성: ${createdCount}개 (주문 ${order_id})`);
-
-    // Send SSE notification to KDS if new lines were created
-    if (createdCount > 0) {
-      sendSSEMessage(storeId, 'order_lines_added', { order_id: order_id, count: createdCount });
-    }
+    console.log(`✅ TLL 주문 생성 완료: 체크 ${check_id}, ${items.length}개 아이템, 총액 ₩${totalAmount.toLocaleString()}`);
 
     res.status(201).json({
-      line_ids: lineIds,
-      created: createdCount
+      success: true,
+      check_id: check_id,
+      item_ids: itemIds,
+      total_amount: totalAmount,
+      payment_required: payment_method === 'TOSS',
+      message: 'TLL 주문이 생성되었습니다'
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
-    next({ error: { code: error.code || 'INTERNAL_ERROR', message: error.message || 'An unexpected error occurred.' } });
+    console.error('❌ TLL 주문 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'TLL 주문 생성 실패'
+    });
   } finally {
     client.release();
   }
 });
 
 /**
- * [DELETE] /order-lines/:id - TLL 주문 라인 취소 (조리 전만)
+ * [POST] /payments/confirm - TLL 결제 확인 처리 (토스페이먼츠)
  */
-router.delete('/order-lines/:id', async (req, res, next) => {
+router.post('/payments/confirm', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const lineId = parseInt(req.params.id);
-    const { storeId } = req;
+    const {
+      check_id,
+      payment_key,
+      order_id,
+      amount
+    } = req.body;
 
-    // Input Validation for lineId
-    if (isNaN(lineId)) {
-      return res.status(400).json({ error: { code: 'INVALID_LINE_ID', message: 'Invalid order line ID format.' } });
+    console.log(`💳 TLL 결제 확인:`, { check_id, order_id, amount });
+
+    if (!check_id || !payment_key || !order_id || !amount) {
+      return res.status(400).json({
+        success: false,
+        error: '결제 확인에 필요한 정보가 누락되었습니다'
+      });
     }
 
     await client.query('BEGIN');
 
-    // 라인 존재 및 매장 스코프 확인
-    // TODO: WHERE 절에 ol.id 추가하여 인덱스 효율성 증대
-    const lineResult = await client.query(`
-      SELECT ol.id, ol.status, ol.order_id, c.store_id
-      FROM order_lines ol
-      JOIN orders o ON ol.order_id = o.id
-      JOIN checks c ON o.check_id = c.id
-      WHERE ol.id = $1
-    `, [lineId]);
+    // 체크 존재 및 상태 확인
+    const checkResult = await client.query(`
+      SELECT 
+        c.id, 
+        c.store_id, 
+        c.table_number, 
+        c.status, 
+        c.final_amount,
+        c.user_id,
+        c.guest_phone
+      FROM checks c
+      WHERE c.id = $1
+    `, [check_id]);
 
-    if (lineResult.rows.length === 0) {
-      // return res.status(404).json({ error: { code: 'ORDER_LINE_NOT_FOUND', message: 'Order line not found.' } });
-      throw new Error('주문 라인을 찾을 수 없습니다');
+    if (checkResult.rows.length === 0) {
+      throw new Error('체크를 찾을 수 없습니다');
     }
 
-    const line = lineResult.rows[0];
+    const check = checkResult.rows[0];
 
-    if (line.store_id !== storeId) {
-      return res.status(403).json({ error: { code: 'STORE_SCOPE_VIOLATION', message: 'Store scope violation.' } });
+    if (check.status !== 'open') {
+      throw new Error('이미 종료된 체크입니다');
     }
 
-    // queued 상태에서만 삭제 허용
-    if (line.status !== 'queued') {
-      // return res.status(409).json({ error: { code: 'CANNOT_CANCEL_COOKING', message: 'Cannot cancel item that is already cooking.' } });
-      throw new Error('조리가 시작된 주문은 취소할 수 없습니다');
+    // 결제 금액 검증
+    const expectedAmount = check.final_amount;
+    if (Math.abs(expectedAmount - amount) > 1) {
+      throw new Error(`결제 금액 불일치: 예상 ₩${expectedAmount}, 실제 ₩${amount}`);
     }
 
-    // 라인 삭제 (실제로는 canceled 상태로 변경)
+    // 대기 중인 결제를 완료 상태로 변경
+    const paymentUpdateResult = await client.query(`
+      UPDATE payments 
+      SET 
+        status = 'completed',
+        completed_at = CURRENT_TIMESTAMP,
+        payment_data = payment_data || $2
+      WHERE check_id = $1 AND status = 'pending'
+      RETURNING id
+    `, [
+      check_id,
+      JSON.stringify({ 
+        payment_key, 
+        toss_order_id: order_id,
+        confirmed_at: new Date().toISOString()
+      })
+    ]);
+
+    if (paymentUpdateResult.rows.length === 0) {
+      // 대기 중인 결제가 없으면 새로 생성
+      await client.query(`
+        INSERT INTO payments (
+          check_id, payment_method, amount, status, 
+          completed_at, payment_data
+        )
+        VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3)
+      `, [
+        check_id,
+        amount,
+        JSON.stringify({ payment_key, toss_order_id: order_id })
+      ]);
+    }
+
+    // 체크 종료
     await client.query(`
-      UPDATE order_lines 
-      SET status = 'canceled', updated_at = CURRENT_TIMESTAMP
+      UPDATE checks 
+      SET 
+        status = 'closed',
+        closed_at = CURRENT_TIMESTAMP,
+        final_amount = $2
       WHERE id = $1
-    `, [lineId]);
+    `, [check_id, amount]);
 
-    // 이벤트 기록
+    // 모든 아이템을 주문 상태로 변경 (주방에서 조리 시작)
     await client.query(`
-      INSERT INTO order_events (check_id, order_id, line_id, event_type, details)
-      SELECT c.id, o.id, $1, 'LINE_CANCELED', $2
-      FROM order_lines ol
-      JOIN orders o ON ol.order_id = o.id
-      JOIN checks c ON o.check_id = c.id
-      WHERE ol.id = $1
-    `, [lineId, JSON.stringify({ reason: 'TLL_CUSTOMER_CANCEL', old_status: 'queued' })]);
+      UPDATE check_items 
+      SET status = 'ordered'
+      WHERE check_id = $1 AND status = 'ordered'
+    `, [check_id]);
+
+    // 테이블 해제 (결제 완료 시)
+    await client.query(`
+      UPDATE store_tables 
+      SET is_occupied = false,
+          occupied_since = NULL,
+          auto_release_source = NULL
+      WHERE store_id = $1 AND table_number = $2
+    `, [check.store_id, check.table_number]);
+
+    // TLL 회원 포인트 적립
+    if (check.user_id) {
+      const points = Math.floor(amount * 0.01); // 1% 적립
+      if (points > 0) {
+        await client.query(`
+          UPDATE users 
+          SET point = COALESCE(point, 0) + $1
+          WHERE id = $2
+        `, [points, check.user_id]);
+
+        console.log(`🎉 TLL 회원 ${check.user_id} 포인트 적립: ${points}원`);
+      }
+    }
+
+    // 게스트 방문 기록 업데이트
+    if (check.guest_phone && !check.user_id) {
+      await client.query(`
+        INSERT INTO guests (phone, total_visits, last_visit_date)
+        VALUES ($1, 1, CURRENT_TIMESTAMP)
+        ON CONFLICT (phone) 
+        DO UPDATE SET
+          total_visits = guests.total_visits + 1,
+          last_visit_date = CURRENT_TIMESTAMP
+      `, [check.guest_phone]);
+    }
 
     await client.query('COMMIT');
 
-    console.log(`✅ TLL 라인 취소: ${lineId} (조리 전 취소)`);
-
-    // Send SSE notification to KDS
-    sendSSEMessage(storeId, 'order_line_canceled', { order_line_id: lineId, check_id: line.order_id });
+    console.log(`✅ TLL 결제 완료: 체크 ${check_id}, 금액 ₩${amount.toLocaleString()}`);
 
     res.json({
-      line_id: lineId,
-      status: 'canceled',
-      message: '주문이 취소되었습니다'
+      success: true,
+      check_id: check_id,
+      payment_amount: amount,
+      store_id: check.store_id,
+      table_number: check.table_number,
+      message: 'TLL 결제가 완료되었습니다'
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
-    next({ error: { code: error.code || 'INTERNAL_ERROR', message: error.message || 'An unexpected error occurred.' } });
+    console.error('❌ TLL 결제 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'TLL 결제 확인 실패'
+    });
   } finally {
     client.release();
   }
 });
 
+/**
+ * [GET] /checks/:checkId - TLL 체크 상태 조회
+ */
+router.get('/checks/:checkId', async (req, res) => {
+  try {
+    const { checkId } = req.params;
 
-// TODO: README 파일에 실행법, ENV, 라우팅 표, 흐름도 (ASCII) 섹션 추가
-// TODO: 실제 PG 연동 시 서명검증(HMAC) 구현
-// TODO: 메뉴 가격 서버 신뢰성 검증 (already added as TODO in /order-lines/bulk)
-// TODO: RBAC/JWT 기반 인증 확장 포인트 고려
-// TODO: KDS SSE 연결 수 제한 및 타임아웃/하트비트 구현 (partially implemented, needs more refinement)
+    console.log(`📋 TLL 체크 조회: ${checkId}`);
+
+    const result = await pool.query(`
+      SELECT 
+        c.id as check_id,
+        c.store_id,
+        c.table_number,
+        c.status,
+        c.final_amount,
+        c.subtotal_amount,
+        c.opened_at,
+        c.closed_at,
+        c.user_id,
+        c.guest_phone,
+        c.customer_name,
+        s.name as store_name,
+        s.category as store_category,
+        COUNT(ci.id) as item_count,
+        array_agg(
+          json_build_object(
+            'id', ci.id,
+            'menuName', ci.menu_name,
+            'unitPrice', ci.unit_price,
+            'quantity', ci.quantity,
+            'status', ci.status,
+            'orderedAt', ci.ordered_at,
+            'options', ci.options,
+            'notes', ci.kitchen_notes
+          ) ORDER BY ci.ordered_at
+        ) FILTER (WHERE ci.id IS NOT NULL) as items
+      FROM checks c
+      JOIN stores s ON c.store_id = s.id
+      LEFT JOIN check_items ci ON c.id = ci.check_id AND ci.status != 'canceled'
+      WHERE c.id = $1
+      GROUP BY c.id, s.name, s.category
+    `, [checkId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '체크를 찾을 수 없습니다'
+      });
+    }
+
+    const checkData = result.rows[0];
+
+    res.json({
+      success: true,
+      check: {
+        id: checkData.check_id,
+        storeId: checkData.store_id,
+        storeName: checkData.store_name,
+        storeCategory: checkData.store_category,
+        tableNumber: checkData.table_number,
+        status: checkData.status,
+        totalAmount: checkData.final_amount || 0,
+        subtotalAmount: checkData.subtotal_amount || 0,
+        openedAt: checkData.opened_at,
+        closedAt: checkData.closed_at,
+        isGuest: !checkData.user_id,
+        customerInfo: {
+          userId: checkData.user_id,
+          guestPhone: checkData.guest_phone,
+          customerName: checkData.customer_name
+        },
+        items: checkData.items || [],
+        itemCount: parseInt(checkData.item_count)
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 체크 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 체크 조회 실패'
+    });
+  }
+});
+
+/**
+ * [PUT] /check-items/:itemId - TLL 주문 아이템 수정/취소
+ */
+router.put('/check-items/:itemId', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { itemId } = req.params;
+    const { action, quantity, notes } = req.body;
+
+    console.log(`✏️ TLL 아이템 수정: ${itemId}, 액션: ${action}`);
+
+    if (!action || !['cancel', 'updateQuantity', 'updateNotes'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 액션입니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 아이템 확인
+    const itemResult = await client.query(`
+      SELECT 
+        ci.id, 
+        ci.status, 
+        ci.check_id,
+        ci.menu_name,
+        ci.quantity,
+        c.status as check_status
+      FROM check_items ci
+      JOIN checks c ON ci.check_id = c.id
+      WHERE ci.id = $1
+    `, [itemId]);
+
+    if (itemResult.rows.length === 0) {
+      throw new Error('아이템을 찾을 수 없습니다');
+    }
+
+    const item = itemResult.rows[0];
+
+    if (item.check_status !== 'open') {
+      throw new Error('종료된 체크의 아이템은 수정할 수 없습니다');
+    }
+
+    if (action === 'cancel') {
+      // 아이템 취소
+      if (item.status === 'served') {
+        throw new Error('이미 서빙된 아이템은 취소할 수 없습니다');
+      }
+
+      await client.query(`
+        UPDATE check_items 
+        SET 
+          status = 'canceled',
+          canceled_at = CURRENT_TIMESTAMP,
+          kitchen_notes = COALESCE(kitchen_notes, '') || ' [TLL 취소]'
+        WHERE id = $1
+      `, [itemId]);
+
+      console.log(`🗑️ TLL 아이템 취소: ${item.menu_name}`);
+
+    } else if (action === 'updateQuantity' && quantity > 0) {
+      // 수량 변경
+      await client.query(`
+        UPDATE check_items 
+        SET quantity = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [quantity, itemId]);
+
+      console.log(`🔢 TLL 아이템 수량 변경: ${item.menu_name} → ${quantity}개`);
+
+    } else if (action === 'updateNotes') {
+      // 주문 메모 변경
+      await client.query(`
+        UPDATE check_items 
+        SET kitchen_notes = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [notes, itemId]);
+
+      console.log(`📝 TLL 아이템 메모 변경: ${item.menu_name}`);
+    }
+
+    // 체크 총액 재계산
+    await client.query(`
+      UPDATE checks 
+      SET 
+        subtotal_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id = $1 AND status != 'canceled'
+        ),
+        final_amount = (
+          SELECT COALESCE(SUM(unit_price * quantity), 0) 
+          FROM check_items 
+          WHERE check_id = $1 AND status != 'canceled'
+        ),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [item.check_id]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      item_id: parseInt(itemId),
+      action: action,
+      check_id: item.check_id,
+      message: 'TLL 아이템 수정이 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ TLL 아이템 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'TLL 아이템 수정 실패'
+    });
+  } finally {
+    client.release();
+  }
+});
 
 module.exports = router;

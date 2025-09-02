@@ -75,37 +75,36 @@ try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
   const kdsRoutes = require('./routes/kds');
-  const tllRoutes = require('./routes/tll');
+  const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
 
   // 새 시스템 라우터
   const authRoutes = require('./routes/auth');
   const storesRoutes = require('./routes/stores');
   const ordersRoutes = require('./routes/orders');
-
-  // 새로운 POS 시스템 API
-  app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRoutes);
-  app.use('/api/tll', tllRoutes);
-  app.use('/api/payments', krpRoutes);
-
-  // 새 시스템 API 라우터
-  const reviewsRoutes = require('./routes/reviews');
-  const tablesRoutes = require('./routes/tables');
+  const reviewRoutes = require('./routes/reviews');
+  const tableRoutes = require('./routes/tables');
   const cartRoutes = require('./routes/cart');
   const regularLevelsRoutes = require('./routes/regular-levels');
   const auditRoutes = require('./routes/audit'); // 감사 로그 라우터 추가
 
+  // 새로운 POS 시스템 API
+  app.use('/api/pos', posRoutes);
+  app.use('/api/kds', kdsRoutes);
+  app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
+  app.use('/api/payments', krpRoutes);
+
+  // 새 시스템 API 라우터
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/orders', ordersRoutes);
-  app.use('/api/reviews', reviewsRoutes);
-  app.use('/api/tables', tablesRoutes);
+  app.use('/api/reviews', reviewRoutes);
+  app.use('/api/tables', tableRoutes);
   app.use('/api/cart', cartRoutes);
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes); // 감사 로그 라우터 등록
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);

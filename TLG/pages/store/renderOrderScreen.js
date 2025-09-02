@@ -695,3 +695,476 @@ async function renderOrderScreen(store, tableNum, opts = {}) {
 }
 
 window.renderOrderScreen = renderOrderScreen;
+/**
+ * TLL 주문 화면 렌더링 (새 스키마)
+ */
+window.renderOrderScreen = async function(store, tableName) {
+  try {
+    console.log('🛒 TLL 주문 화면 로드:', { store: store.name, table: tableName });
+
+    // 사용자 정보 확인
+    const userInfo = getUserInfo();
+    if (!userInfo) {
+      alert('로그인이 필요합니다.');
+      renderLogin();
+      return;
+    }
+
+    // QR 코드 생성 (테이블명에서 번호 추출)
+    const tableNumber = tableName.replace(/[^0-9]/g, '');
+    const qrCode = `TABLE_${tableNumber}`;
+
+    // TLL 체크 생성
+    const checkResponse = await fetch('/api/tll/checks/from-qr', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        qr_code: qrCode,
+        user_id: userInfo.id,
+        guest_phone: userInfo.phone
+      })
+    });
+
+    if (!checkResponse.ok) {
+      const errorData = await checkResponse.json();
+      throw new Error(errorData.error || 'TLL 체크 생성 실패');
+    }
+
+    const checkData = await checkResponse.json();
+    const checkId = checkData.check_id;
+
+    console.log('✅ TLL 체크 생성 완료:', checkId);
+
+    // 매장 메뉴 조회
+    const menuResponse = await fetch(`/api/stores/${store.id}/menu`);
+    if (!menuResponse.ok) {
+      throw new Error('메뉴 조회 실패');
+    }
+
+    const menuData = await menuResponse.json();
+    const menu = menuData.menu || menuData.menus || [];
+
+    // UI 렌더링
+    const main = document.getElementById('main');
+    main.innerHTML = `
+      <div class="tll-order-screen">
+        <div class="order-header">
+          <button class="back-btn" onclick="renderMap()">← 돌아가기</button>
+          <div class="store-info">
+            <h2>${store.name}</h2>
+            <p>${tableName} 테이블</p>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <h3>메뉴 선택</h3>
+          <div id="menuList" class="menu-list">
+            ${menu.map(item => `
+              <div class="menu-item" data-menu='${JSON.stringify(item)}'>
+                <div class="menu-info">
+                  <h4>${item.name}</h4>
+                  <p class="menu-price">₩${item.price.toLocaleString()}</p>
+                  ${item.description ? `<p class="menu-desc">${item.description}</p>` : ''}
+                </div>
+                <div class="menu-actions">
+                  <button class="add-btn" onclick="addToCart(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                    + 담기
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="cart-section">
+          <h3>주문 내역</h3>
+          <div id="cartItems" class="cart-items"></div>
+          <div class="cart-total">
+            <span>총 주문금액: </span>
+            <span id="totalAmount">₩0</span>
+          </div>
+          <button id="orderBtn" class="order-btn" disabled onclick="submitOrder()">
+            주문하기
+          </button>
+        </div>
+      </div>
+
+      <style>
+        .tll-order-screen {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .order-header {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #eee;
+        }
+
+        .back-btn {
+          padding: 10px 20px;
+          background: #f0f0f0;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 16px;
+        }
+
+        .store-info h2 {
+          margin: 0;
+          color: #333;
+        }
+
+        .store-info p {
+          margin: 5px 0 0 0;
+          color: #666;
+          font-size: 14px;
+        }
+
+        .menu-section {
+          margin-bottom: 30px;
+        }
+
+        .menu-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          gap: 15px;
+        }
+
+        .menu-item {
+          border: 1px solid #ddd;
+          border-radius: 12px;
+          padding: 20px;
+          background: white;
+          transition: all 0.2s ease;
+        }
+
+        .menu-item:hover {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transform: translateY(-2px);
+        }
+
+        .menu-info h4 {
+          margin: 0 0 8px 0;
+          font-size: 18px;
+          color: #333;
+        }
+
+        .menu-price {
+          font-size: 16px;
+          font-weight: bold;
+          color: #e91e63;
+          margin: 0 0 8px 0;
+        }
+
+        .menu-desc {
+          font-size: 14px;
+          color: #666;
+          margin: 0;
+        }
+
+        .add-btn {
+          width: 100%;
+          padding: 10px;
+          background: #2196f3;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 16px;
+          margin-top: 15px;
+          transition: background 0.2s ease;
+        }
+
+        .add-btn:hover {
+          background: #1976d2;
+        }
+
+        .cart-section {
+          position: sticky;
+          bottom: 0;
+          background: white;
+          padding: 20px;
+          border-top: 2px solid #eee;
+          border-radius: 12px 12px 0 0;
+        }
+
+        .cart-items {
+          max-height: 200px;
+          overflow-y: auto;
+          margin-bottom: 15px;
+        }
+
+        .cart-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 0;
+          border-bottom: 1px solid #f0f0f0;
+        }
+
+        .cart-item:last-child {
+          border-bottom: none;
+        }
+
+        .item-info {
+          flex: 1;
+        }
+
+        .item-name {
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+
+        .item-price {
+          color: #666;
+          font-size: 14px;
+        }
+
+        .quantity-controls {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .qty-btn {
+          width: 30px;
+          height: 30px;
+          border: 1px solid #ddd;
+          background: white;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 18px;
+        }
+
+        .qty-btn:hover {
+          background: #f0f0f0;
+        }
+
+        .quantity {
+          min-width: 30px;
+          text-align: center;
+          font-weight: bold;
+        }
+
+        .remove-btn {
+          background: #f44336;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          padding: 5px 10px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .cart-total {
+          text-align: right;
+          font-size: 18px;
+          font-weight: bold;
+          margin: 15px 0;
+          padding: 15px 0;
+          border-top: 2px solid #eee;
+        }
+
+        .order-btn {
+          width: 100%;
+          padding: 15px;
+          font-size: 18px;
+          font-weight: bold;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .order-btn:enabled {
+          background: #4caf50;
+          color: white;
+        }
+
+        .order-btn:enabled:hover {
+          background: #45a049;
+        }
+
+        .order-btn:disabled {
+          background: #ccc;
+          color: #666;
+          cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+          .menu-list {
+            grid-template-columns: 1fr;
+          }
+        }
+      </style>
+    `;
+
+    // 장바구니 상태 관리
+    let cart = [];
+
+    // 전역 함수들 등록
+    window.addToCart = function(menuItem) {
+      const existingIndex = cart.findIndex(item => item.id === menuItem.id);
+      
+      if (existingIndex >= 0) {
+        cart[existingIndex].quantity += 1;
+      } else {
+        cart.push({
+          ...menuItem,
+          quantity: 1,
+          totalPrice: menuItem.price
+        });
+      }
+      
+      updateCartDisplay();
+      console.log('🛒 TLL 장바구니에 추가:', menuItem.name);
+    };
+
+    window.updateQuantity = function(menuId, change) {
+      const itemIndex = cart.findIndex(item => item.id === menuId);
+      if (itemIndex >= 0) {
+        cart[itemIndex].quantity += change;
+        if (cart[itemIndex].quantity <= 0) {
+          cart.splice(itemIndex, 1);
+        } else {
+          cart[itemIndex].totalPrice = cart[itemIndex].price * cart[itemIndex].quantity;
+        }
+        updateCartDisplay();
+      }
+    };
+
+    window.removeFromCart = function(menuId) {
+      cart = cart.filter(item => item.id !== menuId);
+      updateCartDisplay();
+      console.log('🗑️ TLL 장바구니에서 제거:', menuId);
+    };
+
+    function updateCartDisplay() {
+      const cartItemsEl = document.getElementById('cartItems');
+      const totalAmountEl = document.getElementById('totalAmount');
+      const orderBtn = document.getElementById('orderBtn');
+
+      if (cart.length === 0) {
+        cartItemsEl.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">주문할 메뉴를 선택해주세요</p>';
+        totalAmountEl.textContent = '₩0';
+        orderBtn.disabled = true;
+        return;
+      }
+
+      const cartHTML = cart.map(item => `
+        <div class="cart-item">
+          <div class="item-info">
+            <div class="item-name">${item.name}</div>
+            <div class="item-price">₩${item.price.toLocaleString()} × ${item.quantity}</div>
+          </div>
+          <div class="quantity-controls">
+            <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">−</button>
+            <span class="quantity">${item.quantity}</span>
+            <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+            <button class="remove-btn" onclick="removeFromCart(${item.id})">삭제</button>
+          </div>
+        </div>
+      `).join('');
+
+      cartItemsEl.innerHTML = cartHTML;
+
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      totalAmountEl.textContent = `₩${total.toLocaleString()}`;
+      orderBtn.disabled = false;
+    }
+
+    window.submitOrder = async function() {
+      try {
+        if (cart.length === 0) {
+          alert('주문할 메뉴를 선택해주세요.');
+          return;
+        }
+
+        console.log('📝 TLL 주문 제출 시작:', cart);
+
+        // 주문 아이템 변환
+        const orderItems = cart.map(item => ({
+          menu_name: item.name,
+          unit_price: item.price,
+          quantity: item.quantity,
+          options: {},
+          notes: ''
+        }));
+
+        // TLL 주문 생성 API 호출
+        const orderResponse = await fetch('/api/tll/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            check_id: checkId,
+            items: orderItems,
+            payment_method: 'TOSS',
+            toss_order_id: `TLL_${checkId}_${Date.now()}`
+          })
+        });
+
+        if (!orderResponse.ok) {
+          const errorData = await orderResponse.json();
+          throw new Error(errorData.error || 'TLL 주문 생성 실패');
+        }
+
+        const orderResult = await orderResponse.json();
+        console.log('✅ TLL 주문 생성 성공:', orderResult);
+
+        // 결제 화면으로 이동
+        const totalAmount = orderResult.total_amount;
+        
+        // 주문 정보 저장 (결제 완료 후 사용)
+        sessionStorage.setItem('tllPendingOrder', JSON.stringify({
+          checkId: checkId,
+          storeId: store.id,
+          storeName: store.name,
+          tableNumber: tableNumber,
+          tableName: tableName,
+          items: cart,
+          totalAmount: totalAmount
+        }));
+
+        // 토스페이먼츠 결제 시작
+        if (typeof window.TossPayments !== 'undefined') {
+          window.TossPayments.requestPayment('카드', {
+            amount: totalAmount,
+            orderId: `TLL_${checkId}_${Date.now()}`,
+            orderName: `${store.name} - ${tableName}`,
+            customerName: userInfo.name || '고객',
+            customerEmail: userInfo.email || '',
+            customerMobilePhone: userInfo.phone || '',
+            successUrl: `${window.location.origin}/toss-success.html`,
+            failUrl: `${window.location.origin}/toss-fail.html`
+          });
+        } else {
+          throw new Error('토스페이먼츠 라이브러리가 로드되지 않았습니다');
+        }
+
+      } catch (error) {
+        console.error('❌ TLL 주문 제출 실패:', error);
+        alert('주문 처리 중 오류가 발생했습니다: ' + error.message);
+      }
+    };
+
+    // 초기 장바구니 표시 업데이트
+    updateCartDisplay();
+
+    console.log('✅ TLL 주문 화면 렌더링 완료');
+
+  } catch (error) {
+    console.error('❌ TLL 주문 화면 로드 실패:', error);
+    alert('주문 화면을 불러올 수 없습니다: ' + error.message);
+    renderMap();
+  }
+};
