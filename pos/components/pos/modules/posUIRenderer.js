@@ -116,6 +116,7 @@ export class POSUIRenderer {
           <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
                data-item-id="${item.ids[0]}" 
                onclick="toggleConfirmedItemSelection('${item.ids[0]}')"
+               title="클릭하여 선택 후 주문 수정 패널에서 수량 조절 가능">
             <div class="item-main">
               <div class="item-name">
                 ${item.name}
@@ -138,8 +139,9 @@ export class POSUIRenderer {
                   )
                 }
               </div>
-              <div class="item-status">
-                ${isMarkedForDeletion ? '삭제예정' : (hasPendingChanges ? '변경예정' : (item.status || '주문됨'))}
+              <div class="item-status confirmed-status">
+                ${isMarkedForDeletion ? '삭제예정' : (hasPendingChanges ? '변경예정' : '확정됨')}
+                <small>클릭 선택 후 수정</small>
               </div>
             </div>
           </div>
@@ -711,8 +713,64 @@ export class POSUIRenderer {
     if (selectedItems.length === 0) {
       controlsContainer.innerHTML = `
         <div class="control-empty">
-          <p>아이템을 선택하여 수정하세요</p>
+          <div class="empty-icon">🎯</div>
+          <h4>주문 수정 도구</h4>
+          <p>수정할 아이템을 먼저 선택해주세요</p>
+          <ul class="help-list">
+            <li>📝 <strong>임시 주문</strong>: 직접 수량 조절 가능</li>
+            <li>✅ <strong>확정 주문</strong>: 선택 후 이 패널로 수정</li>
+          </ul>
         </div>
+        
+        <style>
+          .control-empty {
+            text-align: center;
+            padding: 30px 20px;
+            color: #64748b;
+          }
+          
+          .control-empty .empty-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+            opacity: 0.7;
+          }
+          
+          .control-empty h4 {
+            margin: 0 0 8px 0;
+            color: #334155;
+            font-size: 16px;
+          }
+          
+          .control-empty p {
+            margin: 0 0 16px 0;
+            font-size: 14px;
+          }
+          
+          .help-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            display: inline-block;
+          }
+          
+          .help-list li {
+            margin: 8px 0;
+            font-size: 13px;
+            padding: 6px 12px;
+            background: #f8fafc;
+            border-radius: 6px;
+            border-left: 3px solid #e2e8f0;
+          }
+          
+          .confirmed-status small {
+            display: block;
+            font-size: 10px;
+            color: #64748b;
+            font-weight: normal;
+            margin-top: 2px;
+          }
+        </style>
       `;
       return;
     }
@@ -763,17 +821,75 @@ export class POSUIRenderer {
           ${confirmedCount > 0 ? `
             <div class="confirmed-controls">
               <h5>✅ 확정 주문 (${confirmedCount}개)</h5>
-              <p class="info-text">확정된 주문도 수량 조절 및 삭제 가능합니다 (임시 변경)</p>
+              <div class="info-box">
+                <div class="info-icon">ℹ️</div>
+                <div class="info-content">
+                  <p><strong>확정된 주문 수정</strong></p>
+                  <p>수량 변경 및 삭제가 가능합니다. 변경사항은 <span class="highlight">임시 저장</span> 후 <span class="highlight">주문확정</span>을 눌러야 실제 적용됩니다.</p>
+                </div>
+              </div>
               <div class="quantity-controls">
-                <button onclick="window.changeSelectedQuantity(-1)" class="qty-btn minus">-</button>
+                <button onclick="window.changeSelectedQuantity(-1)" class="qty-btn minus" title="선택된 확정 주문 수량 감소">-</button>
                 <span class="qty-label">수량 조절</span>
-                <button onclick="window.changeSelectedQuantity(1)" class="qty-btn plus">+</button>
+                <button onclick="window.changeSelectedQuantity(1)" class="qty-btn plus" title="선택된 확정 주문 수량 증가">+</button>
               </div>
               <div class="action-buttons">
-                <button onclick="window.deleteSelectedPendingItems()" class="delete-btn">🗑️ 삭제 표시</button>
-                <button onclick="window.savePendingChanges()" class="save-temp-btn">💾 임시저장</button>
+                <button onclick="window.deleteSelectedPendingItems()" class="delete-btn" title="선택된 확정 주문을 삭제 표시 (임시)">🗑️ 삭제 표시</button>
+                <button onclick="window.savePendingChanges()" class="save-temp-btn" title="임시 변경사항을 로컬에 저장">💾 임시저장</button>
               </div>
             </div>
+            
+            <style>
+              .info-box {
+                display: flex;
+                align-items: flex-start;
+                background: linear-gradient(135deg, #eff6ff, #dbeafe);
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                padding: 12px;
+                margin: 12px 0;
+                font-size: 12px;
+              }
+              
+              .info-icon {
+                font-size: 16px;
+                margin-right: 8px;
+                flex-shrink: 0;
+              }
+              
+              .info-content p {
+                margin: 0 0 4px 0;
+                line-height: 1.4;
+              }
+              
+              .info-content .highlight {
+                background: #fbbf24;
+                padding: 1px 4px;
+                border-radius: 3px;
+                font-weight: 600;
+                color: #92400e;
+              }
+              
+              .qty-btn {
+                position: relative;
+              }
+              
+              .qty-btn:hover::after {
+                content: attr(title);
+                position: absolute;
+                bottom: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1f2937;
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                white-space: nowrap;
+                z-index: 1000;
+                margin-bottom: 4px;
+              }
+            </style>
           ` : ''}
 
           ${(pendingCount > 0 || confirmedCount > 0) ? `

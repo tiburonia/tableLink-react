@@ -436,10 +436,12 @@ export class POSOrderManager {
       // 선택 해제 - 관련된 모든 아이템 제거
       const filteredSelected = selectedItems.filter(id => !relatedItemIds.includes(id));
       POSStateManager.setSelectedItems(filteredSelected);
+      showPOSNotification(`${targetItem.name} 선택 해제됨`, 'info');
     } else {
       // 선택 - 대표 아이템만 추가 (첫 번째 아이템)
       selectedItems.push(relatedItemIds[0]);
       POSStateManager.setSelectedItems(selectedItems);
+      showPOSNotification(`${targetItem.name} 선택됨 - 주문 수정 패널에서 수량 조절 가능`, 'success');
     }
 
     this.refreshUI();
