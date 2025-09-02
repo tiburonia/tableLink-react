@@ -518,6 +518,57 @@ router.get('/:storeId/tables', async (req, res) => {
   }
 });
 
+// 매장 메뉴 조회 API
+router.get('/:storeId/menu', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`🍽️ 매장 ${storeId} 메뉴 조회 요청`);
+
+    // 매장 존재 확인
+    const storeResult = await pool.query(`
+      SELECT id, name, category, menu FROM stores WHERE id = $1
+    `, [storeId]);
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다'
+      });
+    }
+
+    const store = storeResult.rows[0];
+    let menu = [];
+
+    // stores 테이블의 menu 컬럼에서 메뉴 조회
+    if (store.menu && Array.isArray(store.menu) && store.menu.length > 0) {
+      menu = store.menu.map((item, index) => ({
+        id: index + 1,
+        name: item.name,
+        price: item.price,
+        description: item.description || ''
+      }));
+    } else {
+      // 메뉴가 없으면 카테고리별 기본 메뉴 생성
+      menu = getDefaultMenusByCategory(store.category);
+    }
+
+    console.log(`✅ 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      menu: menu
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 메뉴 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장 메뉴 조회 실패'
+    });
+  }
+});
+
 // 매장 리뷰 조회 API
 router.get('/:storeId/reviews', async (req, res) => {
   try {

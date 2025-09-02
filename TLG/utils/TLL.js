@@ -739,13 +739,20 @@ function handleTossPaymentFailure(data) {
         return;
       }
 
-      const tableName = selectedOption.textContent.replace(' (사용중)', '');
+      const tableName = selectedOption.textContent.replace(' (사용중)', '').trim();
 
       // 점유 처리 없이 바로 주문 시작
       console.log(`🏪 선택된 매장:`, selectedStore);
       console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
       console.log(`✅ TLL - 주문 화면으로 이동`);
-      renderOrderScreen(selectedStore, tableName);
+      
+      // 테이블명이 유효한지 확인
+      if (!tableName || tableName === '') {
+        console.warn('⚠️ 테이블명이 비어있어 기본값 사용');
+        renderOrderScreen(selectedStore, `${selectedTableNumber}번`);
+      } else {
+        renderOrderScreen(selectedStore, tableName);
+      }
     });
   } else {
     console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');

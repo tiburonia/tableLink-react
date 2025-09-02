@@ -713,9 +713,15 @@ window.renderOrderScreen = async function(store, tableName) {
     // QR 코드 생성 (테이블명에서 번호 추출)
     let tableNumber = tableName.replace(/[^0-9]/g, '');
 
-    // 테이블 번호가 없으면 테이블 이름 자체를 사용
+    // 테이블명이 undefined이거나 비어있는 경우 처리
+    if (!tableName || tableName === 'undefined') {
+      tableName = '1번';
+      console.warn('⚠️ 테이블명이 유효하지 않아 기본값 사용:', tableName);
+    }
+
+    // 테이블 번호가 없으면 테이블 이름에서 번호 추출 시도
     if (!tableNumber) {
-      // "테이블 1", "1번 테이블" 등의 형태에서 번호 추출 시도
+      // "테이블 1", "1번 테이블", "1번" 등의 형태에서 번호 추출 시도
       const match = tableName.match(/(\d+)/);
       if (match) {
         tableNumber = match[1];
