@@ -5,82 +5,7 @@ const pool = require('../db/pool');
 const { storeAuth, checkIdempotency } = require('../mw/auth');
 
 /**
- * [GET] /menu - 매장 메뉴 조회 (새 스키마)
- */
-router.get('/menu', async (req, res, next) => {
-  try {
-    const { storeId } = req.query;
-
-    if (!storeId) {
-      return res.status(400).json({
-        success: false,
-        error: '매장 ID가 필요합니다'
-      });
-    }
-
-    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청`);
-
-    // 매장 존재 확인
-    const storeResult = await pool.query(`
-      SELECT id, name, category FROM stores WHERE id = $1
-    `, [storeId]);
-
-    if (storeResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '매장을 찾을 수 없습니다'
-      });
-    }
-
-    const store = storeResult.rows[0];
-
-    let menu = [];
-
-    try {
-      // 새 스키마: menu_items 테이블에서 실제 메뉴 조회 시도
-      const menuResult = await pool.query(`
-        SELECT 
-          mi.id,
-          mi.name,
-          mi.price,
-          mi.description,
-          COALESCE(mg.name, '기본메뉴') as category
-        FROM menu_items mi
-        LEFT JOIN menu_groups mg ON mi.group_id = mg.id
-        WHERE mi.store_id = $1
-        ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
-      `, [storeId]);
-
-      menu = menuResult.rows;
-    } catch (menuError) {
-      console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
-      menu = [];
-    }
-
-    // 메뉴가 없으면 카테고리별 기본 메뉴 생성
-    if (menu.length === 0) {
-      menu = getDefaultMenusByCategory(store.category);
-    }
-
-    console.log(`✅ POS 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      menus: menu
-    });
-
-  } catch (error) {
-    console.error('❌ POS 메뉴 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'POS 메뉴 조회 실패',
-      details: error.message
-    });
-  }
-});
-
-/**
- * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (새 스키마) - 레거시 호환
+ * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (새 스키마)
  */
 router.get('/stores/:storeId/menu', async (req, res, next) => {
   try {
@@ -377,7 +302,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
 
     // 재시도 가능한 쿼리 함수 사용
     const { queryWithRetry } = require('../db/pool');
-
+    
     const result = await queryWithRetry(`
       SELECT 
         c.id,
@@ -602,14 +527,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
     `, [session.id]);
 
     const alreadyPaid = parseInt(paymentsResult.rows[0].paid_amount) || 0;
-
+    
     // 체크의 최신 총액 계산 (실시간)
     const amountResult = await client.query(`
       SELECT COALESCE(SUM(unit_price * quantity), 0) as current_total
       FROM check_items 
       WHERE check_id = $1 AND status != 'canceled'
     `, [session.id]);
-
+    
     const totalAmount = parseInt(amountResult.rows[0].current_total) || 0;
     const remainingAmount = totalAmount - alreadyPaid;
 
@@ -1246,67 +1171,6 @@ router.delete('/check-items/:id', async (req, res, next) => {
   } finally {
     client.release();
   }
-});
-
-// 📋 확정된 주문 조회
-router.get('/orders/confirmed', async (req, res) => {
-  try {
-    const { storeId, tableId } = req.query;
-
-    if (!storeId || !tableId) {
-      return res.status(400).json({
-        success: false,
-        message: '매장 ID와 테이블 ID가 필요합니다'
-      });
-    }
-
-    // 현재 테이블의 활성 체크에서 확정된 주문들 조회 (새 스키마 사용)
-    const query = `
-      SELECT 
-        ci.id,
-        ci.menu_name,
-        ci.unit_price as price,
-        ci.quantity,
-        ci.status,
-        ci.ordered_at as created_at
-      FROM check_items ci
-      JOIN checks c ON ci.check_id = c.id
-      WHERE c.store_id = $1 
-        AND c.table_number = $2 
-        AND c.status = 'open'
-        AND ci.status != 'canceled'
-      ORDER BY ci.ordered_at ASC
-    `;
-
-    console.log(`🔍 확정된 주문 조회: 매장 ${storeId}, 테이블 ${tableId}`);
-
-    const result = await pool.query(query, [storeId, tableId]);
-
-    console.log(`✅ 확정된 주문 ${result.rows.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      orders: result.rows.map(row => ({
-        id: row.id,
-        menu_name: row.menu_name,
-        price: parseInt(row.price),
-        quantity: parseInt(row.quantity),
-        status: row.status,
-        created_at: row.created_at
-      }))
-    });
-
-  } catch (error) {
-    console.error('❌ 확정된 주문 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      message: '확정된 주문 조회에 실패했습니다'
-    });
-  }
-});
-
-// 💵 결제 처리
-router.post('/payment/:checkId', async (req, res) => {
 });
 
 // 기본 메뉴 생성 함수 (카테고리별) - 메뉴 테이블이 비어있을 때 사용

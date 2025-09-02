@@ -61,65 +61,45 @@ export class POSDataLoader {
       console.log(`🪑 매장 ${storeId} 테이블 정보 로드 시작`);
 
       const response = await fetch(`/api/tables/stores/${storeId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
       const data = await response.json();
 
       if (!data.success) {
         console.warn(`⚠️ 매장 ${storeId} 테이블 정보 없음, 기본 테이블 생성`);
         // 기본 테이블 생성 (1-20번)
         const defaultTables = Array.from({ length: 20 }, (_, i) => ({
-          tableNumber: i + 1,
-          isOccupied: false,
-          occupiedBy: null,
-          occupiedAt: null,
-          seats: 4
+          table_number: i + 1,
+          is_occupied: false,
+          occupied_by: null,
+          occupied_at: null
         }));
 
         const { POSStateManager } = await import('./posStateManager.js');
         POSStateManager.setAllTables(defaultTables);
 
-        console.log(`✅ 매장 ${storeId} 기본 테이블 ${defaultTables.length}개 생성`);
         return defaultTables;
       }
 
-      // 테이블 데이터 정규화
-      const normalizedTables = data.tables.map(table => ({
-        id: table.id,
-        tableNumber: table.tableNumber || table.table_number,
-        isOccupied: table.isOccupied || table.is_occupied || false,
-        occupiedBy: table.occupiedBy || table.occupied_by,
-        occupiedAt: table.occupiedAt || table.occupied_at,
-        occupiedSince: table.occupiedSince,
-        seats: table.seats || 4
-      }));
-
       // 상태 관리자에 테이블 저장
       const { POSStateManager } = await import('./posStateManager.js');
-      POSStateManager.setAllTables(normalizedTables);
+      POSStateManager.setAllTables(data.tables);
 
-      console.log(`✅ 매장 ${storeId} 테이블 ${normalizedTables.length}개 로드 완료`);
-      return normalizedTables;
+      console.log(`✅ 매장 ${storeId} 테이블 ${data.tables.length}개 로드 완료`);
+      return data.tables;
 
     } catch (error) {
       console.error('❌ 매장 테이블 로드 실패:', error);
 
       // 오류 시 기본 테이블 반환
       const defaultTables = Array.from({ length: 20 }, (_, i) => ({
-        tableNumber: i + 1,
-        isOccupied: false,
-        occupiedBy: null,
-        occupiedAt: null,
-        seats: 4
+        table_number: i + 1,
+        is_occupied: false,
+        occupied_by: null,
+        occupied_at: null
       }));
 
       const { POSStateManager } = await import('./posStateManager.js');
       POSStateManager.setAllTables(defaultTables);
 
-      console.log(`⚠️ 테이블 로드 실패로 기본 테이블 ${defaultTables.length}개 사용`);
       return defaultTables;
     }
   }
