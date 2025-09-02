@@ -96,7 +96,7 @@ try {
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
 
-  // 새 시스템 API 라우터
+  // 라우터 등록
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/orders', ordersRoutes);
@@ -104,9 +104,15 @@ try {
   app.use('/api/tables', tableRoutes);
   app.use('/api/cart', cartRoutes);
   app.use('/api/regular-levels', regularLevelsRoutes);
-  app.use('/api/audit', auditRoutes); // 감사 로그 라우터 등록
+  app.use('/api/audit', auditRoutes);
+  app.use('/api/tll', tllRoutes);
+  app.use('/api/toss', tossRoutes);
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss)');
+  // Enhanced KDS 라우터
+  const kdsEnhancedRoutes = require('./routes/kds-enhanced');
+  app.use('/api/kds-enhanced', kdsEnhancedRoutes);
+
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, kds-enhanced)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
