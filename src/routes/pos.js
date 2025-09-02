@@ -1185,31 +1185,40 @@ router.get('/orders/confirmed', async (req, res) => {
       });
     }
 
-    // 현재 테이블의 활성 체크에서 확정된 주문들 조회
+    // 현재 테이블의 활성 체크에서 확정된 주문들 조회 (새 스키마 사용)
     const query = `
       SELECT 
-        ol.id,
-        ol.menu_id,
-        ol.quantity,
-        ol.price,
-        ol.status,
-        ol.created_at,
-        mi.name as menu_name
-      FROM order_lines ol
-      JOIN checks c ON ol.check_id = c.id
-      LEFT JOIN menu_items mi ON ol.menu_id = mi.id
+        ci.id,
+        ci.menu_name,
+        ci.unit_price as price,
+        ci.quantity,
+        ci.status,
+        ci.ordered_at as created_at
+      FROM check_items ci
+      JOIN checks c ON ci.check_id = c.id
       WHERE c.store_id = $1 
-        AND c.table_id = $2 
-        AND c.status = 'OPEN'
-        AND ol.status != 'CANCELLED'
-      ORDER BY ol.created_at ASC
+        AND c.table_number = $2 
+        AND c.status = 'open'
+        AND ci.status != 'canceled'
+      ORDER BY ci.ordered_at ASC
     `;
+
+    console.log(`🔍 확정된 주문 조회: 매장 ${storeId}, 테이블 ${tableId}`);
 
     const result = await pool.query(query, [storeId, tableId]);
 
+    console.log(`✅ 확정된 주문 ${result.rows.length}개 조회 완료`);
+
     res.json({
       success: true,
-      orders: result.rows
+      orders: result.rows.map(row => ({
+        id: row.id,
+        menu_name: row.menu_name,
+        price: parseInt(row.price),
+        quantity: parseInt(row.quantity),
+        status: row.status,
+        created_at: row.created_at
+      }))
     });
 
   } catch (error) {

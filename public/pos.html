@@ -106,11 +106,23 @@
 
       try {
         // ES6 모듈에서 renderPOS 함수 import
-        const { renderPOS } = await import('/pos/components/pos/renderPOS.js');
+        const renderPOSModule = await import('/pos/components/pos/renderPOS.js');
+
+        // 모듈에서 함수 추출
+        let renderPOS = renderPOSModule.renderPOS || renderPOSModule.default;
+
+        // 전역 window에서도 확인
+        if (!renderPOS && window.renderPOS) {
+          renderPOS = window.renderPOS;
+        }
+
         if (typeof renderPOS === 'function') {
+          console.log('✅ renderPOS 함수 발견, 실행 중...');
           renderPOS();
         } else {
           console.error('❌ renderPOS 함수를 찾을 수 없습니다');
+          console.log('Available exports:', Object.keys(renderPOSModule));
+          console.log('Window renderPOS:', typeof window.renderPOS);
         }
       } catch (error) {
         console.error('❌ POS 모듈 로드 실패:', error);

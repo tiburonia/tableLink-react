@@ -87,8 +87,18 @@ async function loadStoreData(storeId) {
   }
 }
 
-// 전역 함수들 - 레거시 호환성
+// ES6 모듈 export
+export { renderPOS };
+export default renderPOS;
+
+// 전역 함수들 - 레거시 호환성 (즉시 등록)
 window.renderPOS = renderPOS;
+
+// DOMContentLoaded 이벤트에서도 등록 보장
+document.addEventListener('DOMContentLoaded', function() {
+  window.renderPOS = renderPOS;
+  console.log('✅ renderPOS DOM 로드 후 재등록 완료');
+});
 
 // 즉시 실행하여 전역 등록 보장
 if (typeof window !== 'undefined') {
