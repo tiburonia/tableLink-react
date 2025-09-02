@@ -22,12 +22,23 @@ router.post('/checks/from-qr', async (req, res) => {
       });
     }
 
+    // 체크 제약조건 검증: user_id 또는 guest_phone 중 하나는 반드시 필요
     if (!user_id && !guest_phone) {
       return res.status(400).json({
         success: false,
         error: '사용자 ID 또는 게스트 전화번호가 필요합니다'
       });
     }
+
+    // NULL 값을 명시적으로 처리
+    const finalUserId = user_id || null;
+    const finalGuestPhone = guest_phone || null;
+
+    console.log(`🔍 TLL 체크 생성 파라미터 검증:`, { 
+      user_id: finalUserId, 
+      guest_phone: finalGuestPhone,
+      qr_code 
+    });
 
     await client.query('BEGIN');
 
@@ -86,9 +97,9 @@ router.post('/checks/from-qr', async (req, res) => {
       `, [
         qrData.store_id, 
         qrData.table_number, 
-        user_id, 
-        guest_phone,
-        user_id ? null : '게스트'
+        finalUserId, 
+        finalGuestPhone,
+        finalUserId ? null : '게스트'
       ]);
 
       checkId = newCheckResult.rows[0].id;

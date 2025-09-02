@@ -735,17 +735,30 @@ window.renderOrderScreen = async function(store, tableName) {
     const qrCode = `TABLE_${tableNumber}`;
     console.log(`📱 QR 코드 생성: ${qrCode} (테이블: ${tableName}, 번호: ${tableNumber})`);
 
+    // 사용자 정보 검증 - 체크 제약조건 준수
+    let requestBody = {
+      qr_code: qrCode
+    };
+
+    // 회원이면 user_id 사용, 아니면 guest_phone 사용
+    if (userInfo.id && userInfo.id !== 'guest') {
+      requestBody.user_id = userInfo.id;
+    } else if (userInfo.phone) {
+      requestBody.guest_phone = userInfo.phone;
+    } else {
+      // 둘 다 없으면 기본 게스트 정보 생성
+      requestBody.guest_phone = '010-0000-0000';
+    }
+
+    console.log('📝 TLL 체크 생성 요청:', requestBody);
+
     // TLL 체크 생성
     const checkResponse = await fetch('/api/tll/checks/from-qr', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        qr_code: qrCode,
-        user_id: userInfo.id,
-        guest_phone: userInfo.phone
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!checkResponse.ok) {
