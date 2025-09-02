@@ -199,20 +199,21 @@ export function renderPOSLayout() {
                 <div id="orderControlsPanel" class="order-controls-container">
                   <!-- 주문 컨트롤 패널이 여기 렌더링됩니다 -->
                 </div>
-
-                <div class="action-buttons">
-                  <button id="primaryActionBtn" class="primary-action-btn" onclick="window.handlePrimaryAction()">
-                    <div class="btn-content">
-                      <span class="btn-title">주문 없음</span>
-                      <span class="btn-subtitle">메뉴를 선택하세요</span>
-                    </div>
-                  </button>
-                </div>
               </div>
             </section>
 
-            <!-- 우측 컬럼: 메뉴 선택 + 결제/관리 버튼 -->
+            <!-- 우측 컬럼: 메뉴 선택 + 주문 확정 버튼 + 결제/관리 버튼 -->
             <section class="right-column">
+              <!-- 주문 확정 버튼 -->
+              <div class="primary-action-container">
+                <button id="primaryActionBtn" class="primary-action-btn" onclick="window.handlePrimaryAction()">
+                  <div class="btn-content">
+                    <span class="btn-title">주문 없음</span>
+                    <span class="btn-subtitle">메뉴를 선택하세요</span>
+                  </div>
+                </button>
+              </div>
+
               <!-- 메뉴 선택 패널 -->
               <div class="menu-selection-panel">
                 <div class="menu-panel-header">
@@ -1543,12 +1544,13 @@ export function renderPOSLayout() {
         flex-shrink: 0;
       }
 
-      /* 주요 액션 버튼 (주문 저장) */
-      .primary-action-panel {
+      /* 주요 액션 버튼 컨테이너 */
+      .primary-action-container {
         background: white;
         padding: 16px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 16px;
       }
 
       .primary-action-btn {
@@ -1562,8 +1564,11 @@ export function renderPOSLayout() {
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 16px;
         box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        font-size: 16px;
+        font-weight: 700;
       }
 
       .primary-action-btn:disabled {

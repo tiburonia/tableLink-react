@@ -442,26 +442,63 @@ router.post('/orders', async (req, res) => {
     try {
       await client.query('BEGIN');
 
-      // 1. 새 주문 생성 (checks 테이블)
-      const checkResult = await client.query(`
-        INSERT INTO checks (store_id, table_number, total_amount, status, created_at, updated_at)
-        VALUES ($1, $2, $3, 'ordering', NOW(), NOW())
-        RETURNING id, created_at
-      `, [storeId, tableNumber, totalAmount]);
+      // 기존 활성 체크 확인
+      const existingCheckResult = await client.query(`
+        SELECT id FROM checks 
+        WHERE store_id = $1 AND table_number = $2 AND status = 'open'
+        ORDER BY opened_at DESC LIMIT 1
+      `, [storeId, tableNumber]);
 
-      const checkId = checkResult.rows[0].id;
+      let checkId;
 
-      // 2. 주문 아이템들 저장 (orders 테이블)
+      if (existingCheckResult.rows.length > 0) {
+        // 기존 체크 사용
+        checkId = existingCheckResult.rows[0].id;
+        console.log(`📋 기존 체크 사용: ${checkId}`);
+      } else {
+        // 새 체크 생성
+        const checkResult = await client.query(`
+          INSERT INTO checks (store_id, table_number, status, opened_at, updated_at)
+          VALUES ($1, $2, 'open', NOW(), NOW())
+          RETURNING id, opened_at
+        `, [storeId, tableNumber]);
+
+        checkId = checkResult.rows[0].id;
+        console.log(`📋 새 체크 생성: ${checkId}`);
+      }
+
+      // 주문 아이템들 저장 (check_items 테이블)
       const itemIds = [];
       for (const item of items) {
-        const orderResult = await client.query(`
-          INSERT INTO orders (check_id, store_id, table_number, menu_name, price, quantity, notes, status, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, 'ordered', NOW(), NOW())
+        const itemResult = await client.query(`
+          INSERT INTO check_items (
+            check_id, menu_name, unit_price, quantity, 
+            kitchen_notes, status, ordered_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, 'ordered', NOW(), NOW())
           RETURNING id
-        `, [checkId, storeId, tableNumber, item.name, item.price, item.quantity, item.notes || '']);
+        `, [checkId, item.name, item.price, item.quantity, item.notes || '']);
 
-        itemIds.push(orderResult.rows[0].id);
+        itemIds.push(itemResult.rows[0].id);
       }
+
+      // 체크 총액 업데이트
+      await client.query(`
+        UPDATE checks 
+        SET 
+          subtotal_amount = (
+            SELECT COALESCE(SUM(unit_price * quantity), 0) 
+            FROM check_items 
+            WHERE check_id = $1 AND status != 'canceled'
+          ),
+          final_amount = (
+            SELECT COALESCE(SUM(unit_price * quantity), 0) 
+            FROM check_items 
+            WHERE check_id = $1 AND status != 'canceled'
+          ),
+          updated_at = NOW()
+        WHERE id = $1
+      `, [checkId]);
 
       await client.query('COMMIT');
 
@@ -505,32 +542,36 @@ router.get('/orders', async (req, res) => {
     const client = await pool.connect();
 
     try {
-      // 확정된 주문만 조회 (DB에 저장된 것만)
+      // 새 스키마: checks와 check_items 테이블 조회
       const result = await client.query(`
         SELECT 
-          o.id,
-          o.id as check_id,
-          o.user_id,
-          o.guest_phone,
-          o.table_number,
-          o.total_amount,
-          o.status,
-          o.created_at,
-          oi.id as item_id,
-          oi.menu_name,
-          oi.quantity,
-          oi.unit_price,
-          oi.total_price,
-          oi.notes,
-          oi.status as item_status
-        FROM orders o
-        LEFT JOIN order_items oi ON o.id = oi.order_id
-        WHERE o.store_id = $1 AND o.table_number = $2
-          AND o.status NOT IN ('cancelled', 'completed')
-        ORDER BY o.created_at DESC, oi.id ASC
+          ci.id,
+          ci.check_id,
+          c.table_number,
+          ci.menu_name,
+          ci.unit_price as price,
+          ci.quantity,
+          ci.status,
+          ci.ordered_at as created_at,
+          ci.kitchen_notes as notes,
+          c.status as check_status
+        FROM check_items ci
+        JOIN checks c ON ci.check_id = c.id
+        WHERE c.store_id = $1 AND c.table_number = $2 AND c.status = 'open'
+          AND ci.status NOT IN ('canceled')
+        ORDER BY ci.ordered_at DESC
       `, [storeId, tableNumber]);
 
-      const orders = result.rows;
+      const orders = result.rows.map(row => ({
+        id: row.id,
+        checkId: row.check_id,
+        name: row.menu_name,
+        price: row.price,
+        quantity: row.quantity,
+        notes: row.notes,
+        status: 'ordered',
+        confirmedAt: row.created_at
+      }));
 
       console.log(`📋 테이블 ${tableNumber} 확정 주문 ${orders.length}개 조회 완료`);
 

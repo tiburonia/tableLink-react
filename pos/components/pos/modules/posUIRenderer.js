@@ -67,8 +67,11 @@ export class POSUIRenderer {
 
   // 📋 주문 아이템 렌더링 (장바구니 + 확정 주문)
   static renderOrderItems() {
-    const orderItemsContainer = document.getElementById('orderItemsContainer');
-    if (!orderItemsContainer) return;
+    const orderItemsContainer = document.getElementById('orderItemsContainer') || document.getElementById('orderItems');
+    if (!orderItemsContainer) {
+      console.warn('⚠️ orderItemsContainer/orderItems 요소를 찾을 수 없습니다');
+      return;
+    }
 
     const cartItems = POSStateManager.getCartItems();
     const confirmedItems = POSStateManager.getConfirmedItems();

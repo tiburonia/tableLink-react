@@ -282,9 +282,10 @@ export class POSOrderManager {
   // 🔧 주문 목록 직접 업데이트
   static directUpdateOrderItems() {
     try {
-      const orderItemsContainer = document.getElementById('orderItemsContainer');
+      // orderItemsContainer와 orderItems 둘 다 확인
+      let orderItemsContainer = document.getElementById('orderItemsContainer') || document.getElementById('orderItems');
       if (!orderItemsContainer) {
-        console.warn('⚠️ orderItemsContainer 요소를 찾을 수 없습니다');
+        console.warn('⚠️ orderItemsContainer/orderItems 요소를 찾을 수 없습니다');
         return;
       }
 
