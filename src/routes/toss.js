@@ -93,8 +93,7 @@ router.post('/confirm', async (req, res) => {
       await client.query(`
         UPDATE payments 
         SET 
-          status = 'paid',
-          created_at = CURRENT_TIMESTAMP,
+          status = 'completed',
           payment_data = payment_data || $2
         WHERE check_id = $1 AND status = 'pending'
       `, [

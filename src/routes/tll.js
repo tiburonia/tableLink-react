@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
@@ -49,10 +48,10 @@ router.post('/checks/from-qr', async (req, res) => {
     }
 
     const tableNumber = parseInt(tableMatch[1]);
-    
+
     // 현재는 매장 ID를 1로 고정 (나중에 QR 코드에서 매장 정보도 포함하도록 개선 필요)
     const storeId = 1;
-    
+
     // 해당 매장에 테이블이 존재하는지 확인
     const tableResult = await client.query(`
       SELECT table_number, is_occupied
@@ -62,14 +61,14 @@ router.post('/checks/from-qr', async (req, res) => {
 
     if (tableResult.rows.length === 0) {
       console.log(`📝 TLL - 매장 ${storeId}에 ${tableNumber}번 테이블 자동 생성`);
-      
+
       // 테이블이 없으면 자동 생성
       await client.query(`
         INSERT INTO store_tables (store_id, table_number, table_name, seats)
         VALUES ($1, $2, $3, 4)
         ON CONFLICT (store_id, table_number) DO NOTHING
       `, [storeId, tableNumber, `${tableNumber}번`]);
-      
+
       console.log(`✅ TLL - ${tableNumber}번 테이블 생성 완료`);
     }
 
@@ -348,8 +347,7 @@ router.post('/payments/confirm', async (req, res) => {
     const paymentUpdateResult = await client.query(`
       UPDATE payments 
       SET 
-        status = 'paid',
-        created_at = CURRENT_TIMESTAMP,
+        status = 'completed',
         payment_data = payment_data || $2
       WHERE check_id = $1 AND status = 'pending'
       RETURNING id
