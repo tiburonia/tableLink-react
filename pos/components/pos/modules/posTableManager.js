@@ -6,26 +6,58 @@ import { POSDataLoader } from './posDataLoader.js';
 export class POSTableManager {
   // 테이블맵 렌더링
   static async renderTableMap() {
-    const tableMapGrid = document.getElementById('tableMapGrid');
-    if (!tableMapGrid) {
-      console.warn('❌ tableMapGrid 요소를 찾을 수 없습니다.');
+    const tableMapContainer = document.getElementById('tableMapContainer');
+    if (!tableMapContainer) {
+      console.warn('❌ tableMapContainer 요소를 찾을 수 없습니다.');
       return;
     }
 
-    const allTables = POSStateManager.getAllTables();
-    const currentStore = POSStateManager.getCurrentStore();
+    let allTables = POSStateManager.getAllTables();
+    
+    // 전역 window.allTables도 확인
+    if (allTables.length === 0 && window.allTables) {
+      allTables = window.allTables;
+      POSStateManager.setAllTables(allTables);
+    }
 
     console.log(`🪑 테이블맵 렌더링: ${allTables.length}개 테이블`);
 
     if (allTables.length === 0) {
-      tableMapGrid.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 60px; font-size: 16px;">
+      tableMapContainer.innerHTML = `
+        <div style="text-align: center; color: #94a3b8; padding: 60px; font-size: 16px;">
           <div style="font-size: 64px; margin-bottom: 20px; opacity: 0.5;">🪑</div>
-          <p>테이블 정보가 없습니다.</p>
+          <p>테이블 정보를 불러오는 중...</p>
         </div>
       `;
+      
+      // 테이블 정보 다시 로드 시도
+      try {
+        const currentStore = POSStateManager.getCurrentStore();
+        if (currentStore) {
+          const { POSDataLoader } = await import('./posDataLoader.js');
+          allTables = await POSDataLoader.loadStoreTables(currentStore.id);
+          if (allTables.length > 0) {
+            this.renderTableMap(); // 재귀 호출
+          }
+        }
+      } catch (error) {
+        console.error('❌ 테이블 재로드 실패:', error);
+      }
       return;
     }
+
+    // 테이블맵 그리드 생성
+    tableMapContainer.innerHTML = `
+      <div class="table-map-header">
+        <h3>테이블 현황</h3>
+        <div class="table-stats">
+          <span id="activeTables">0/${allTables.length}</span>
+        </div>
+      </div>
+      <div id="tableMapGrid" class="table-map-grid"></div>
+    `;
+
+    const tableMapGrid = document.getElementById('tableMapGrid');
 
     const tableStatuses = await Promise.all(
       allTables.map(async (table) => {

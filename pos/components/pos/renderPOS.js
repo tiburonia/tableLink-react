@@ -85,6 +85,21 @@ async function loadStoreData(storeId) {
       }
     }
 
+    // 테이블 데이터 로드
+    try {
+      const { POSDataLoader } = await import('./modules/posDataLoader.js');
+      const tables = await POSDataLoader.loadStoreTables(storeId);
+      window.allTables = tables;
+      console.log('🪑 테이블 데이터 로드 완료:', tables.length, '개');
+
+      // 테이블맵 렌더링
+      if (window.posTableManager) {
+        await window.posTableManager.renderTableMap();
+      }
+    } catch (tableError) {
+      console.error('❌ 테이블 데이터 로딩 실패:', tableError);
+    }
+
     // 초기 UI 업데이트
     if (window.posUIRenderer) {
       window.posUIRenderer.updateOrderDisplay();
