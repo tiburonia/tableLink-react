@@ -57,16 +57,16 @@ export class POSMenuManager {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
 
-    const allMenus = POSStateManager.getAllMenus();
+    const allMenus = POSStateManager.getAllMenus() || [];
     const selectedCategory = POSStateManager.getSelectedCategory();
 
     let filteredMenus = allMenus;
 
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'all' && Array.isArray(allMenus)) {
       filteredMenus = allMenus.filter(item => item.category === selectedCategory);
     }
 
-    if (filteredMenus.length === 0) {
+    if (!Array.isArray(filteredMenus) || filteredMenus.length === 0) {
       menuGrid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">
           <div style="font-size: 48px; margin-bottom: 16px;">🍽️</div>
@@ -91,23 +91,23 @@ export class POSMenuManager {
     const menuGrid = document.getElementById('menuGrid');
     if (!menuGrid) return;
 
-    const allMenus = POSStateManager.getAllMenus();
+    const allMenus = POSStateManager.getAllMenus() || [];
     const selectedCategory = POSStateManager.getSelectedCategory();
 
     let filteredMenus = allMenus;
 
-    if (selectedCategory !== 'all') {
+    if (selectedCategory !== 'all' && Array.isArray(allMenus)) {
       filteredMenus = allMenus.filter(item => item.category === selectedCategory);
     }
 
-    if (query && query.trim()) {
+    if (query && query.trim() && Array.isArray(filteredMenus)) {
       const searchTerm = query.trim().toLowerCase();
       filteredMenus = filteredMenus.filter(item =>
-        item.name.toLowerCase().includes(searchTerm)
+        item.name && item.name.toLowerCase().includes(searchTerm)
       );
     }
 
-    if (filteredMenus.length === 0) {
+    if (!Array.isArray(filteredMenus) || filteredMenus.length === 0) {
       menuGrid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 40px;">
           <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>

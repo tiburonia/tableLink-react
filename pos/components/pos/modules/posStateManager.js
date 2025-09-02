@@ -74,7 +74,8 @@ export class POSStateManager {
 
   // 메뉴 관리
   static setAllMenus(menus) {
-    this.state.allMenus = menus;
+    this.state.allMenus = Array.isArray(menus) ? menus : [];
+    console.log(`📋 전체 메뉴 설정: ${this.state.allMenus.length}개`);
   }
 
   static getAllMenus() {

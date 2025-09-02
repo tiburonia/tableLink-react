@@ -26,7 +26,7 @@ export class POSDataLoader {
     try {
       console.log(`📋 매장 ${storeId} 전체 메뉴 로드 시작`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/menu`);
+      const response = await fetch(`/api/pos/menu?storeId=${storeId}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -40,17 +40,20 @@ export class POSDataLoader {
 
       // 상태 관리자에 메뉴 저장
       const { POSStateManager } = await import('./posStateManager.js');
-      POSStateManager.setAllMenus(data.menu);
+      // data.menu가 undefined인 경우 빈 배열로 처리
+      const menus = data.menu || [];
+      POSStateManager.setAllMenus(menus);
 
       // 카테고리 추출
-      const categories = ['전체', ...new Set(data.menu.map(m => m.category).filter(Boolean))];
+      const categories = ['전체', ...new Set(menus.map(m => m.category).filter(Boolean))];
       POSStateManager.setCategories(categories);
 
-      console.log(`✅ 매장 ${storeId} 메뉴 ${data.menu.length}개, 카테고리 ${categories.length}개 로드 완료`);
-      return data.menu;
+      console.log(`✅ 매장 ${storeId} 메뉴 ${menus.length}개, 카테고리 ${categories.length}개 로드 완료`);
+      return menus;
 
     } catch (error) {
       console.error('❌ 매장 메뉴 로드 실패:', error);
+      // 에러 발생 시 빈 배열 반환하여 후속 작업에 영향 없도록 함
       return [];
     }
   }
@@ -148,7 +151,7 @@ export class POSDataLoader {
     try {
       console.log(`📋 매장 ${storeId} 메뉴 로드 시작`);
 
-      const response = await fetch(`/api/pos/stores/${storeId}/menu`);
+      const response = await fetch(`/api/pos/menu?storeId=${storeId}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -159,12 +162,14 @@ export class POSDataLoader {
       if (!data.success) {
         throw new Error(data.error || '메뉴 조회 실패');
       }
-
-      console.log(`✅ 매장 ${storeId} 메뉴 ${data.menu.length}개 로드 완료`);
-      return data.menu;
+      // data.menu가 undefined인 경우 빈 배열로 처리
+      const menus = data.menu || [];
+      console.log(`✅ 매장 ${storeId} 메뉴 ${menus.length}개 로드 완료`);
+      return menus;
 
     } catch (error) {
       console.error('❌ 매장 메뉴 로드 실패:', error);
+      // 에러 발생 시 빈 배열 반환하여 후속 작업에 영향 없도록 함
       return [];
     }
   }
