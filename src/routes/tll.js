@@ -248,7 +248,7 @@ router.post('/orders', async (req, res) => {
     if (payment_method && payment_method !== 'LATER') {
       await client.query(`
         INSERT INTO payments (
-          check_id, payment_method, amount, status, 
+          check_id, method, amount, status, 
           payment_data, requested_at
         )
         VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
