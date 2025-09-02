@@ -94,14 +94,13 @@ router.post('/confirm', async (req, res) => {
         UPDATE payments 
         SET 
           status = 'completed',
-          processed_at = CURRENT_TIMESTAMP,
-          transaction_id = $2,
-          notes = $3
+          paid_at = CURRENT_TIMESTAMP,
+          payment_data = payment_data || $2
         WHERE check_id = $1 AND status = 'pending'
       `, [
         checkId,
-        paymentKey,
         JSON.stringify({ 
+          payment_key: paymentKey,
           toss_result: tossResult,
           confirmed_at: new Date().toISOString()
         })

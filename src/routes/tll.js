@@ -349,7 +349,7 @@ router.post('/payments/confirm', async (req, res) => {
       UPDATE payments 
       SET 
         status = 'completed',
-        completed_at = CURRENT_TIMESTAMP,
+        paid_at = CURRENT_TIMESTAMP,
         payment_data = payment_data || $2
       WHERE check_id = $1 AND status = 'pending'
       RETURNING id
@@ -367,7 +367,7 @@ router.post('/payments/confirm', async (req, res) => {
       await client.query(`
         INSERT INTO payments (
           check_id, payment_method, amount, status, 
-          completed_at, payment_data
+          paid_at, payment_data
         )
         VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3)
       `, [
