@@ -239,26 +239,33 @@ export class POSOrderManager {
       if (primaryBtn) {
         if (cartItems.length > 0) {
           const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+          const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
           primaryBtn.innerHTML = `
             <div class="btn-content">
               <span class="btn-title">🏆 주문 확정</span>
-              <span class="btn-subtitle">${cartItems.length}개 메뉴 • ₩${totalAmount.toLocaleString()}</span>
+              <span class="btn-subtitle">${totalQuantity}개 메뉴 • ₩${totalAmount.toLocaleString()}</span>
             </div>
           `;
           primaryBtn.className = 'primary-action-btn confirm-order active';
           primaryBtn.disabled = false;
+          primaryBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+          primaryBtn.style.color = 'white';
+          primaryBtn.style.cursor = 'pointer';
 
-          console.log(`✅ 직접 업데이트: 주문 확정 버튼 활성화 (${cartItems.length}개)`);
+          console.log(`✅ 직접 업데이트: 주문 확정 버튼 활성화 (장바구니 ${cartItems.length}개, 총 수량 ${totalQuantity}개)`);
         } else {
           primaryBtn.innerHTML = `
             <div class="btn-content">
-              <span class="btn-title">🛒 주문 확정</span>
+              <span class="btn-title">🛒 주문 없음</span>
               <span class="btn-subtitle">메뉴를 선택하세요</span>
             </div>
           `;
           primaryBtn.className = 'primary-action-btn disabled';
           primaryBtn.disabled = true;
+          primaryBtn.style.background = '#f1f5f9';
+          primaryBtn.style.color = '#94a3b8';
+          primaryBtn.style.cursor = 'not-allowed';
 
           console.log('⚪ 직접 업데이트: 주문 확정 버튼 비활성화');
         }
@@ -341,9 +348,27 @@ export class POSOrderManager {
 
   // 🔄 UI 강제 업데이트
   static forceUIUpdate() {
+    // 즉시 업데이트
+    this.updateUI();
+    
+    // 추가 업데이트 (안전장치)
     setTimeout(() => {
       this.updateUI();
-    }, 50);
+    }, 100);
+    
+    setTimeout(() => {
+      this.updateUI();
+    }, 300);
+  }
+
+  // 🎯 장바구니 추가 후 즉시 UI 업데이트
+  static addMenuAndUpdateUI(menuName, price, notes = '') {
+    const success = this.addMenuToCart(menuName, price, notes);
+    if (success) {
+      // 즉시 UI 반영
+      this.forceUIUpdate();
+    }
+    return success;
   }
 
   // 📋 테이블 주문 로드 (확정된 주문만)

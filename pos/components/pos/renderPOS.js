@@ -162,42 +162,31 @@ window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 🛒 장바구니 메뉴 추가 (전역)
 window.addMenuToOrder = (menuName, price, notes = '') => {
+  console.log(`🍽️ 메뉴 추가: ${menuName} (₩${price})`);
+
   try {
-    console.log(`🛒 메뉴 장바구니 추가: ${menuName} (₩${price})`);
-
-    if (!menuName || menuName.trim() === '') {
-      showPOSNotification('메뉴명이 필요합니다', 'warning');
-      return false;
-    }
-
-    if (!price || isNaN(price) || price <= 0) {
-      showPOSNotification('유효한 가격이 필요합니다', 'warning');
-      return false;
-    }
-
-    // POSOrderManager 확인 후 호출
-    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.addMenuToCart) {
+    // POSOrderManager를 통한 장바구니 추가
+    if (typeof POSOrderManager !== 'undefined') {
       const success = POSOrderManager.addMenuToCart(menuName, price, notes);
-      
-      // UI 강제 업데이트
-      setTimeout(() => {
-        if (typeof POSUIRenderer !== 'undefined' && POSUIRenderer.renderAll) {
-          POSUIRenderer.renderAll();
-        } else if (typeof window.POSUIRenderer !== 'undefined' && window.POSUIRenderer.renderAll) {
-          window.POSUIRenderer.renderAll();
-        }
-      }, 100);
-      
+      console.log(`✅ 장바구니 추가 ${success ? '성공' : '실패'}: ${menuName}`);
+      return success;
+    } else if (typeof window.POSOrderManager !== 'undefined') {
+      const success = window.POSOrderManager.addMenuToCart(menuName, price, notes);
+      console.log(`✅ 장바구니 추가 ${success ? '성공' : '실패'}: ${menuName}`);
       return success;
     } else {
       console.error('❌ POSOrderManager를 찾을 수 없습니다');
-      showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
+      if (typeof showPOSNotification !== 'undefined') {
+        showPOSNotification('POSOrderManager를 찾을 수 없습니다', 'error');
+      }
       return false;
     }
 
   } catch (error) {
     console.error('❌ 메뉴 추가 실패:', error);
-    showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    if (typeof showPOSNotification !== 'undefined') {
+      showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    }
     return false;
   }
 };

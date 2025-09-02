@@ -238,17 +238,6 @@ export function renderPOSLayout() {
 
               <!-- 액션 버튼들 그룹 -->
               <div class="action-panels-container">
-
-                <!-- 주문 확정 버튼 (가장 중요한 액션) -->
-              <div class="primary-action-panel">
-                <button class="primary-action-btn" id="primaryActionBtn" onclick="window.handlePrimaryAction()" disabled>
-                  <div class="btn-content">
-                    <span class="btn-title">주문 없음</span>
-                    <span class="btn-subtitle">메뉴를 선택하세요</span>
-                  </div>
-                </button>
-              </div>
-
                 <!-- 결제 수단 패널 -->
                 <div class="payment-panel">
                   <div class="panel-header">
@@ -2243,23 +2232,9 @@ export function renderPOSLayout() {
     button.addEventListener('click', openPaymentModal);
   });
 
-  // Primary Action 버튼 이벤트 리스너 (장바구니 → 주문 확정)
-  const primaryActionBtn = document.getElementById('primaryActionBtn');
-  if (primaryActionBtn) {
-    primaryActionBtn.addEventListener('click', function() {
-      console.log('🎯 Primary Action 버튼 클릭됨: 주문 확정');
-
-      // POSOrderManager가 로드되었는지 확인
-      if (typeof POSOrderManager !== 'undefined') {
-        POSOrderManager.handlePrimaryAction();
-      } else {
-        console.error('❌ POSOrderManager가 로드되지 않음');
-        showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
-      }
-    });
-  } else {
-    console.warn('⚠️ primaryActionBtn 요소를 찾을 수 없음');
-  }
+  // Primary Action 버튼 이벤트 핸들러 - window.handlePrimaryAction은 onclick에서 호출됨
+  // 이벤트 중복 방지를 위해 addEventListener 제거
+  console.log('✅ Primary Action 버튼 onClick 핸들러 준비 완료');
 }
 
 // 결제 모달 열기
@@ -2324,13 +2299,22 @@ function logoutPOS() {
   }
 }
 
-// Primary Action 핸들러 함수
+// Primary Action 핸들러 함수 - 장바구니 → 주문 확정
 function handlePrimaryAction() {
-  // 미확정 주문이 있으면 확정, 없으면 테이블맵으로 이동
-  if (window.hasUnconfirmedChanges || (window.pendingOrder && window.pendingOrder.length > 0)) {
-    confirmPendingOrder();
+  console.log('🎯 Primary Action 버튼 클릭됨: 주문 확정 처리');
+
+  // POSOrderManager가 로드되었는지 확인
+  if (typeof POSOrderManager !== 'undefined') {
+    POSOrderManager.handlePrimaryAction();
+  } else if (typeof window.POSOrderManager !== 'undefined') {
+    window.POSOrderManager.handlePrimaryAction();
   } else {
-    returnToTableMap();
+    console.error('❌ POSOrderManager가 로드되지 않음');
+    if (typeof showPOSNotification !== 'undefined') {
+      showPOSNotification('주문 관리자를 찾을 수 없습니다', 'error');
+    } else {
+      alert('주문 관리자를 찾을 수 없습니다');
+    }
   }
 }
 

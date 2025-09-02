@@ -3,52 +3,46 @@ import { POSStateManager } from './posStateManager.js';
 
 export class POSUIRenderer {
 
-  // 🔘 Primary Action 버튼 업데이트 (장바구니 → 주문 확정)
+  // 🔘 Primary Action 버튼 업데이트 (장바구니 상태 기반)
   static updatePrimaryActionButton() {
     const primaryBtn = document.getElementById('primaryActionBtn');
     if (!primaryBtn) {
-      console.warn('⚠️ primaryActionBtn 요소를 찾을 수 없습니다');
+      console.warn('⚠️ primaryActionBtn 요소 없음');
       return;
     }
 
     const cartItems = POSStateManager.getCartItems();
-    console.log(`🔘 Primary Action 버튼 업데이트: 장바구니 ${cartItems.length}개`);
 
     if (cartItems.length > 0) {
-      // 장바구니에 아이템이 있으면 주문 확정 버튼 활성화
-      const totalAmount = cartItems.reduce((sum, item) => 
-        sum + (item.price * item.quantity), 0
-      );
+      const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const totalQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
       primaryBtn.innerHTML = `
         <div class="btn-content">
           <span class="btn-title">🏆 주문 확정</span>
-          <span class="btn-subtitle">${cartItems.length}개 메뉴 • ₩${totalAmount.toLocaleString()}</span>
+          <span class="btn-subtitle">${totalQuantity}개 메뉴 • ₩${totalAmount.toLocaleString()}</span>
         </div>
       `;
       primaryBtn.className = 'primary-action-btn confirm-order active';
       primaryBtn.disabled = false;
+      primaryBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+      primaryBtn.style.color = 'white';
 
-      console.log(`✅ 주문 확정 버튼 활성화: ${cartItems.length}개 메뉴, ₩${totalAmount.toLocaleString()}`);
-
+      console.log(`🔘 Primary Action 버튼 업데이트: 활성화 (장바구니 ${cartItems.length}개, 총 수량 ${totalQuantity}개)`);
     } else {
-      // 장바구니가 비어있으면 비활성화
       primaryBtn.innerHTML = `
         <div class="btn-content">
-          <span class="btn-title">🛒 주문 확정</span>
+          <span class="btn-title">🛒 주문 없음</span>
           <span class="btn-subtitle">메뉴를 선택하세요</span>
         </div>
       `;
       primaryBtn.className = 'primary-action-btn disabled';
       primaryBtn.disabled = true;
+      primaryBtn.style.background = '#f1f5f9';
+      primaryBtn.style.color = '#94a3b8';
 
       console.log('⚪ 주문 확정 버튼 비활성화: 장바구니 비어있음');
     }
-
-    // Payment panel 업데이트
-    this.updatePaymentPanel();
-
-    console.log('🎯 Primary action button 업데이트 완료');
   }
 
   // 💳 결제 패널 상태 업데이트

@@ -509,17 +509,25 @@ router.get('/orders', async (req, res) => {
       const result = await client.query(`
         SELECT 
           o.id,
-          o.menu_name as name,
-          o.price,
-          o.quantity,
-          o.notes,
+          o.id as check_id,
+          o.user_id,
+          o.guest_phone,
+          o.table_number,
+          o.total_amount,
           o.status,
-          o.check_id,
-          o.created_at as confirmedAt
+          o.created_at,
+          oi.id as item_id,
+          oi.menu_name,
+          oi.quantity,
+          oi.unit_price,
+          oi.total_price,
+          oi.notes,
+          oi.status as item_status
         FROM orders o
-        JOIN checks c ON o.check_id = c.id
-        WHERE c.store_id = $1 AND c.table_number = $2 AND c.status IN ('ordering', 'payment_pending')
-        ORDER BY o.created_at DESC
+        LEFT JOIN order_items oi ON o.id = oi.order_id
+        WHERE o.store_id = $1 AND o.table_number = $2
+          AND o.status NOT IN ('cancelled', 'completed')
+        ORDER BY o.created_at DESC, oi.id ASC
       `, [storeId, tableNumber]);
 
       const orders = result.rows;
