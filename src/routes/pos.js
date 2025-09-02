@@ -535,13 +535,20 @@ router.post('/orders', async (req, res) => {
       } else {
         // 새 체크 생성
         const checkResult = await client.query(`
-          INSERT INTO checks (store_id, table_number, status, opened_at, updated_at)
-          VALUES ($1, $2, 'open', NOW(), NOW())
+          INSERT INTO checks (store_id, table_number, status, source_system, opened_at, updated_at)
+          VALUES ($1, $2, 'open', 'POS', NOW(), NOW())
           RETURNING id, opened_at
         `, [storeId, tableNumber]);
 
         checkId = checkResult.rows[0].id;
         console.log(`📋 새 체크 생성: ${checkId}`);
+
+        // 테이블 상태를 "사용중"으로 업데이트
+        await client.query(`
+          UPDATE store_tables 
+          SET is_occupied = true, occupied_since = NOW()
+          WHERE store_id = $1 AND table_number = $2
+        `, [storeId, tableNumber]);
       }
 
       // 주문 아이템들 저장 (check_items 테이블)
@@ -600,6 +607,157 @@ router.post('/orders', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '주문 확정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 주문 아이템 수정 (수량 변경)
+router.put('/orders/:orderItemId', async (req, res) => {
+  try {
+    const { orderItemId } = req.params;
+    const { quantity, action } = req.body;
+
+    console.log(`✏️ 주문 아이템 ${orderItemId} 수정: ${action}, 수량: ${quantity}`);
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      if (action === 'cancel') {
+        // 메뉴 취소
+        await client.query(`
+          UPDATE check_items 
+          SET status = 'canceled', canceled_at = NOW(), updated_at = NOW()
+          WHERE id = $1
+        `, [orderItemId]);
+        
+        console.log(`🗑️ 주문 아이템 ${orderItemId} 취소 완료`);
+      } else if (action === 'updateQuantity' && quantity > 0) {
+        // 수량 변경
+        await client.query(`
+          UPDATE check_items 
+          SET quantity = $1, updated_at = NOW()
+          WHERE id = $2 AND status != 'canceled'
+        `, [quantity, orderItemId]);
+        
+        console.log(`🔢 주문 아이템 ${orderItemId} 수량 변경: ${quantity}개`);
+      }
+
+      // 체크 총액 재계산
+      const checkResult = await client.query(`
+        SELECT check_id FROM check_items WHERE id = $1
+      `, [orderItemId]);
+
+      if (checkResult.rows.length > 0) {
+        const checkId = checkResult.rows[0].check_id;
+        
+        await client.query(`
+          UPDATE checks 
+          SET 
+            subtotal_amount = (
+              SELECT COALESCE(SUM(unit_price * quantity), 0) 
+              FROM check_items 
+              WHERE check_id = $1 AND status != 'canceled'
+            ),
+            final_amount = (
+              SELECT COALESCE(SUM(unit_price * quantity), 0) 
+              FROM check_items 
+              WHERE check_id = $1 AND status != 'canceled'
+            ),
+            updated_at = NOW()
+          WHERE id = $1
+        `, [checkId]);
+      }
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: '주문 수정이 완료되었습니다'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('❌ 주문 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 수정 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 신규 메뉴 추가 (기존 체크에)
+router.post('/orders/:checkId/items', async (req, res) => {
+  try {
+    const { checkId } = req.params;
+    const { items } = req.body;
+
+    console.log(`➕ 체크 ${checkId}에 신규 메뉴 ${items.length}개 추가`);
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      const itemIds = [];
+      for (const item of items) {
+        const itemResult = await client.query(`
+          INSERT INTO check_items (
+            check_id, menu_name, unit_price, quantity, 
+            kitchen_notes, status, ordered_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, 'ordered', NOW(), NOW())
+          RETURNING id
+        `, [checkId, item.name, item.price, item.quantity, item.notes || '']);
+
+        itemIds.push(itemResult.rows[0].id);
+      }
+
+      // 체크 총액 업데이트
+      await client.query(`
+        UPDATE checks 
+        SET 
+          subtotal_amount = (
+            SELECT COALESCE(SUM(unit_price * quantity), 0) 
+            FROM check_items 
+            WHERE check_id = $1 AND status != 'canceled'
+          ),
+          final_amount = (
+            SELECT COALESCE(SUM(unit_price * quantity), 0) 
+            FROM check_items 
+            WHERE check_id = $1 AND status != 'canceled'
+          ),
+          updated_at = NOW()
+        WHERE id = $1
+      `, [checkId]);
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        itemIds: itemIds,
+        message: '신규 메뉴가 추가되었습니다'
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('❌ 신규 메뉴 추가 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '신규 메뉴 추가 중 오류가 발생했습니다'
     });
   }
 });

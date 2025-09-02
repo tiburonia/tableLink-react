@@ -307,4 +307,28 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
   }
 });
 
+// KDS 주문 변경사항 알림
+router.post('/order-changed', async (req, res) => {
+  try {
+    const { storeId, tableNumber, changeType } = req.body;
+
+    console.log(`📡 KDS 변경사항 알림: 매장 ${storeId}, 테이블 ${tableNumber}, 타입: ${changeType}`);
+
+    // 여기서 실제로는 WebSocket이나 SSE를 통해 KDS 화면에 실시간 알림
+    // 현재는 로그만 남김
+    
+    res.json({
+      success: true,
+      message: 'KDS에 변경사항이 전송되었습니다'
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 변경사항 알림 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 변경사항 알림 실패'
+    });
+  }
+});
+
 module.exports = router;

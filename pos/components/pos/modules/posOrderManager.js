@@ -547,12 +547,42 @@ export class POSOrderManager {
       this.modifiedConfirmedItems = [];
       this.originalConfirmedItems = [];
 
+      // KDS에 변경사항 전송
+      await this.notifyKDSOfChanges(currentStore.id, currentTable);
+
       showPOSNotification('주문 수정사항이 저장되었습니다', 'success');
       console.log('✅ 확정된 주문 수정 완료');
 
     } catch (error) {
       console.error('❌ 확정된 주문 수정 실패:', error);
       showPOSNotification('주문 수정 실패: ' + error.message, 'error');
+    }
+  }
+
+  // 📡 KDS에 변경사항 알림
+  static async notifyKDSOfChanges(storeId, tableNumber) {
+    try {
+      console.log(`📡 KDS에 변경사항 전송: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+      const response = await fetch('/api/kds/order-changed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          storeId: storeId,
+          tableNumber: tableNumber,
+          changeType: 'ORDER_MODIFIED',
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        console.log('✅ KDS 변경사항 전송 완료');
+      } else {
+        console.warn('⚠️ KDS 변경사항 전송 실패');
+      }
+
+    } catch (error) {
+      console.warn('⚠️ KDS 변경사항 전송 실패:', error);
     }
   }
 

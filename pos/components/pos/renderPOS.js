@@ -89,27 +89,30 @@ async function selectTableFromMap(tableElementOrNumber) {
   }
 }
 
-// 📱 주문 화면 전환
+// 📱 주문 화면 전환 (새로운 테이블 상세 화면)
 async function switchToOrderView() {
-  POSStateManager.setCurrentView('order');
+  POSStateManager.setCurrentView('tableDetail');
 
   document.getElementById('tableMapView').classList.add('hidden');
-  document.getElementById('orderView').classList.remove('hidden');
+  
+  // 테이블 상세 화면이 없으면 생성
+  let tableDetailView = document.getElementById('tableDetailView');
+  if (!tableDetailView) {
+    tableDetailView = document.createElement('div');
+    tableDetailView.id = 'tableDetailView';
+    tableDetailView.className = 'view-container';
+    document.body.appendChild(tableDetailView);
+  }
+  
+  tableDetailView.classList.remove('hidden');
 
   const currentTable = POSStateManager.getCurrentTable();
-  document.getElementById('orderTableTitle').textContent = `테이블 ${currentTable} - 주문/결제`;
+  
+  // 새로운 테이블 상세 화면 초기화
+  const { POSTableDetailView } = await import('./tableDetailView.js');
+  await POSTableDetailView.initializeTableDetail(currentTable);
 
-  // 기존 확정 주문 로드
-  await POSOrderManager.loadTableOrders(currentTable);
-
-  // UI 렌더링
-  POSMenuManager.renderMenuCategories();
-  POSMenuManager.renderMenuGrid();
-  POSUIRenderer.renderOrderItems();
-  POSUIRenderer.renderPaymentSummary();
-  POSUIRenderer.updatePrimaryActionButton();
-
-  console.log('✅ 주문 화면 전환 완료');
+  console.log('✅ 테이블 상세 화면 전환 완료');
 }
 
 // 🔙 테이블맵 복귀

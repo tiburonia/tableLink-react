@@ -327,6 +327,11 @@ export function renderPOSLayout() {
             </section>
           </div>
         </div>
+
+        <!-- 테이블 상세 화면 -->
+        <div id="tableDetailView" class="view-container hidden">
+          <!-- 테이블 상세 내용이 동적으로 렌더링됩니다 -->
+        </div>
       </main>
     </div>
 
