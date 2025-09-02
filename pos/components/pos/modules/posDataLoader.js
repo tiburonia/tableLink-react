@@ -40,7 +40,7 @@ export class POSDataLoader {
 
       // 메뉴 데이터 null/undefined 체크 (menu 또는 menus 필드 모두 처리)
       const menuData = data.menu || data.menus || [];
-      
+
       console.log(`📋 메뉴 데이터 확인:`, { 
         hasMenuField: !!data.menu, 
         hasMenusField: !!data.menus, 
@@ -48,16 +48,16 @@ export class POSDataLoader {
         isArray: Array.isArray(menuData),
         length: menuData.length 
       });
-      
+
       if (!Array.isArray(menuData)) {
         console.warn('⚠️ 메뉴 데이터가 배열이 아님, 빈 배열로 설정');
         const emptyMenus = [];
-        
+
         // 상태 관리자에 빈 메뉴 저장
         const { POSStateManager } = await import('./posStateManager.js');
         POSStateManager.setAllMenus(emptyMenus);
         POSStateManager.setCategories(['전체']);
-        
+
         return emptyMenus;
       }
 
@@ -92,13 +92,13 @@ export class POSDataLoader {
       console.log(`🪑 매장 ${storeId} 테이블 정보 로드 시작`);
 
       const response = await fetch(`/api/tables/stores/${storeId}`);
-      
+
       // HTTP 오류 체크
       if (!response.ok) {
         console.warn(`⚠️ 테이블 API HTTP 오류 (${response.status}), 기본 테이블 생성`);
         throw new Error(`HTTP ${response.status}`);
       }
-      
+
       const data = await response.json();
 
       if (!data.success) {
@@ -147,18 +147,18 @@ export class POSDataLoader {
         return [];
       }
 
-      const sessionOrders = data.currentSession.items.map(item => ({
+      const sessionOrders = (data.currentSession?.items || []).map(item => ({
         id: item.id,
         name: item.menuName,
         price: item.price,
         quantity: item.quantity,
         discount: 0,
-        note: item.notes || '',
+        notes: item.notes || item.kitchen_notes || '',
+        status: item.cookingStatus || 'ordered',
         isConfirmed: true,
         isPending: false,
-        cookingStatus: item.cookingStatus,
-        sessionId: data.currentSession.checkId,
-        created_at: item.created_at
+        checkId: data.currentSession.checkId,
+        confirmedAt: item.created_at
       }));
 
       console.log(`✅ 테이블 ${tableNumber} 세션 주문 ${sessionOrders.length}개 로드 완료`);

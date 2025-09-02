@@ -176,17 +176,18 @@ export class POSOrderManager {
       };
 
       // API 호출 (에러 처리 강화)
-      const response = await fetch('/api/orders/create-or-add', {
+      const response = await fetch('/api/pos/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           storeId: orderData.storeId,
+          storeName: orderData.storeName,
           tableNumber: orderData.tableNumber,
           items: orderData.items,
-          userId: null, // POS는 기본적으로 게스트
+          totalAmount: orderData.totalAmount,
+          userId: null,
           guestPhone: null,
-          customerName: orderData.customerName,
-          sourceSystem: 'POS'
+          customerName: '포스 주문'
         })
       });
 
@@ -420,45 +421,45 @@ export class POSOrderManager {
   // 🎯 확정된 아이템 선택/해제 (통합된 아이템 처리)
   static toggleConfirmedItemSelection(itemId) {
     console.log(`🎯 확정된 아이템 선택 토글 시작: ${itemId}`);
-    
+
     const selectedItems = POSStateManager.getSelectedItems();
     const confirmedItems = POSStateManager.getConfirmedItems();
-    
+
     console.log(`🔍 확정 아이템 목록 (${confirmedItems.length}개):`, confirmedItems.map(item => `${item.id}:${item.name}`));
-    
+
     // 1차: 직접 ID 매칭으로 아이템 찾기
     let targetItem = confirmedItems.find(item => item.id === itemId);
-    
+
     // 2차: ID가 문자열인 경우 숫자로 변환해서 재시도
     if (!targetItem && !isNaN(itemId)) {
       targetItem = confirmedItems.find(item => item.id == itemId || item.id === parseInt(itemId));
     }
-    
+
     // 3차: 숫자 ID를 문자열로 변환해서 재시도
     if (!targetItem && typeof itemId === 'number') {
       targetItem = confirmedItems.find(item => item.id === itemId.toString());
     }
-    
+
     // 4차: UI에서 사용하는 통합 아이템 ID 패턴 체크 (consolidated_메뉴명_가격)
     if (!targetItem && typeof itemId === 'string' && itemId.startsWith('consolidated_')) {
       const parts = itemId.split('_');
       if (parts.length >= 3) {
         const menuName = parts.slice(1, -1).join('_'); // 메뉴명 (중간 부분들)
         const price = parseInt(parts[parts.length - 1]); // 마지막이 가격
-        
+
         console.log(`🔍 통합 ID 분석: 메뉴명="${menuName}", 가격=${price}`);
-        
+
         // 같은 메뉴명과 가격의 첫 번째 아이템을 대표로 찾기
         targetItem = confirmedItems.find(item => 
           item.name === menuName && item.price === price
         );
-        
+
         if (targetItem) {
           console.log(`✅ 통합 ID로 대표 아이템 찾음: ${targetItem.name}`);
         }
       }
     }
-    
+
     if (!targetItem) {
       console.error(`❌ 확정 아이템을 찾을 수 없음: ${itemId}`);
       console.error('📋 사용 가능한 확정 아이템 ID들:', confirmedItems.map(item => item.id));
@@ -635,7 +636,7 @@ export class POSOrderManager {
       const confirmedItem = confirmedItems.find(i => i.id === itemId);
       if (confirmedItem) {
         console.log(`📝 확정 아이템 수량 변경 시작: ${confirmedItem.name} (현재: ${confirmedItem.quantity}개)`);
-        
+
         // 같은 메뉴명과 가격의 모든 아이템 찾기 (통합 그룹)
         const relatedItems = confirmedItems.filter(item => 
           item.name === confirmedItem.name && 
@@ -644,10 +645,10 @@ export class POSOrderManager {
 
         // 통합된 총 수량 계산
         const totalOriginalQuantity = relatedItems.reduce((sum, item) => sum + item.quantity, 0);
-        
+
         // 대표 아이템(첫 번째)에 변경사항 저장
         const representativeItem = relatedItems[0];
-        
+
         if (!representativeItem.pendingChanges) {
           representativeItem.pendingChanges = {
             originalQuantity: totalOriginalQuantity,
@@ -809,7 +810,7 @@ export class POSOrderManager {
     const totalNew = selectedPendingItems.length;
     const totalModified = modifiedConfirmedItems.length;
     let confirmMessage = '다음 변경사항을 확정하시겠습니까?\n\n';
-    
+
     if (totalNew > 0) {
       confirmMessage += `🆕 신규 주문: ${totalNew}개\n`;
     }
@@ -856,17 +857,20 @@ export class POSOrderManager {
           notes: item.notes || ''
         }));
 
-        const response = await fetch('/api/orders/create-or-add', {
+        const response = await fetch('/api/pos/orders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             storeId: currentStore.id,
+            storeName: currentStore.name,
             tableNumber: currentTable,
             items: consolidatedArray,
+            totalAmount: consolidatedArray.reduce((sum, item) => 
+              sum + ((item.price - (item.discount || 0)) * item.quantity), 0
+            ),
             userId: null,
             guestPhone: null,
-            customerName: '포스 주문',
-            sourceSystem: 'POS'
+            customerName: '포스 주문'
           })
         });
 
@@ -907,7 +911,7 @@ export class POSOrderManager {
       if (modifiedConfirmedItems.length > 0) {
         for (const item of modifiedConfirmedItems) {
           const changes = item.pendingChanges;
-          
+
           if (changes.isDeleted) {
             // 아이템 삭제 처리 (향후 취소 API 구현)
             console.log(`❌ 확정 아이템 삭제 요청: ${item.name} (향후 구현)`);
@@ -915,7 +919,7 @@ export class POSOrderManager {
             item.status = 'cancelled';
           } else if (changes.newQuantity !== changes.originalQuantity) {
             const quantityDiff = changes.newQuantity - changes.originalQuantity;
-            
+
             if (quantityDiff > 0) {
               // 수량 증가 - 추가 주문
               const addResponse = await fetch('/api/orders/create-or-add', {
@@ -1025,7 +1029,7 @@ export class POSOrderManager {
 
       // 향후 취소 API 구현 예정
       showPOSNotification('주문 취소 기능은 향후 구현 예정입니다', 'info');
-      
+
       // 임시로 선택 해제
       POSStateManager.setSelectedItems([]);
       this.refreshUI();
