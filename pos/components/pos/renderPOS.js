@@ -90,6 +90,12 @@ async function loadStoreData(storeId) {
 // 전역 함수들 - 레거시 호환성
 window.renderPOS = renderPOS;
 
+// 즉시 실행하여 전역 등록 보장
+if (typeof window !== 'undefined') {
+  window.renderPOS = renderPOS;
+  console.log('✅ renderPOS 전역 함수 등록 완료');
+}
+
 // 전역 헬퍼 함수들
 window.selectOrderItem = (itemId, isConfirmed) => {
   if (window.posOrderManager) {

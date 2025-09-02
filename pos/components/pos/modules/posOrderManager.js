@@ -221,7 +221,7 @@ class POSOrderManager {
         }))
       };
 
-      const response = await fetch('/api/pos/orders/confirm', {
+      const response = await fetch('/api/pos/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -325,6 +325,9 @@ class POSOrderManager {
     }
   }
 }
+
+// 클래스 export
+export { POSOrderManager };
 
 // 전역 인스턴스 생성
 window.posOrderManager = new POSOrderManager();

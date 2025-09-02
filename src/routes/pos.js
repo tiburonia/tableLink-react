@@ -302,7 +302,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
 
     // 재시도 가능한 쿼리 함수 사용
     const { queryWithRetry } = require('../db/pool');
-    
+
     const result = await queryWithRetry(`
       SELECT 
         c.id,
@@ -527,14 +527,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
     `, [session.id]);
 
     const alreadyPaid = parseInt(paymentsResult.rows[0].paid_amount) || 0;
-    
+
     // 체크의 최신 총액 계산 (실시간)
     const amountResult = await client.query(`
       SELECT COALESCE(SUM(unit_price * quantity), 0) as current_total
       FROM check_items 
       WHERE check_id = $1 AND status != 'canceled'
     `, [session.id]);
-    
+
     const totalAmount = parseInt(amountResult.rows[0].current_total) || 0;
     const remainingAmount = totalAmount - alreadyPaid;
 
@@ -1171,6 +1171,58 @@ router.delete('/check-items/:id', async (req, res, next) => {
   } finally {
     client.release();
   }
+});
+
+// 📋 확정된 주문 조회
+router.get('/orders/confirmed', async (req, res) => {
+  try {
+    const { storeId, tableId } = req.query;
+
+    if (!storeId || !tableId) {
+      return res.status(400).json({
+        success: false,
+        message: '매장 ID와 테이블 ID가 필요합니다'
+      });
+    }
+
+    // 현재 테이블의 활성 체크에서 확정된 주문들 조회
+    const query = `
+      SELECT 
+        ol.id,
+        ol.menu_id,
+        ol.quantity,
+        ol.price,
+        ol.status,
+        ol.created_at,
+        mi.name as menu_name
+      FROM order_lines ol
+      JOIN checks c ON ol.check_id = c.id
+      LEFT JOIN menu_items mi ON ol.menu_id = mi.id
+      WHERE c.store_id = $1 
+        AND c.table_id = $2 
+        AND c.status = 'OPEN'
+        AND ol.status != 'CANCELLED'
+      ORDER BY ol.created_at ASC
+    `;
+
+    const result = await pool.query(query, [storeId, tableId]);
+
+    res.json({
+      success: true,
+      orders: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ 확정된 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '확정된 주문 조회에 실패했습니다'
+    });
+  }
+});
+
+// 💵 결제 처리
+router.post('/payment/:checkId', async (req, res) => {
 });
 
 // 기본 메뉴 생성 함수 (카테고리별) - 메뉴 테이블이 비어있을 때 사용
