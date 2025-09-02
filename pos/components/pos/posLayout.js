@@ -601,10 +601,6 @@ if (typeof window !== 'undefined') {
   console.log('✅ renderPOSLayout 전역 함수 등록 완료');
 }
 
-// ES6 모듈 export (한 번만)
-export { renderPOSLayout };
-export default renderPOSLayout;
-
 // 테이블맵으로 돌아가기 함수
 window.returnToTableMap = () => {
   console.log('🔄 테이블맵으로 돌아가기');
@@ -648,3 +644,7 @@ window.processPayment = (paymentType) => {
     alert(`${paymentType === 'cash' ? '현금' : '카드'} 결제가 요청되었습니다.`);
   }
 };
+
+// ES6 모듈 export (파일 끝에 한 번만)
+export { renderPOSLayout };
+export default renderPOSLayout;
