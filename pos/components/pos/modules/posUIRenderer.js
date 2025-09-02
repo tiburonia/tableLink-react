@@ -115,7 +115,10 @@ export class POSUIRenderer {
         html += `
           <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
                data-item-id="${item.ids[0]}" 
-               onclick="toggleConfirmedItemSelection('${item.ids[0]}')"
+               data-item-name="${item.name}"
+               data-item-price="${item.price}"
+               onclick="window.toggleConfirmedItemSelection('${item.ids[0]}')"
+               style="cursor: pointer; user-select: none;"
                title="클릭하여 선택 후 주문 수정 패널에서 수량 조절 가능">
             <div class="item-main">
               <div class="item-name">
@@ -141,7 +144,7 @@ export class POSUIRenderer {
               </div>
               <div class="item-status confirmed-status">
                 ${isMarkedForDeletion ? '삭제예정' : (hasPendingChanges ? '변경예정' : '확정됨')}
-                <small>클릭 선택 후 수정</small>
+                <small>클릭하여 수정</small>
               </div>
             </div>
           </div>
@@ -829,13 +832,16 @@ export class POSUIRenderer {
                 </div>
               </div>
               <div class="quantity-controls">
-                <button onclick="window.changeSelectedQuantity(-1)" class="qty-btn minus" title="선택된 확정 주문 수량 감소">-</button>
+                <button onclick="event.preventDefault(); window.changeSelectedQuantity(-1);" class="qty-btn minus" title="선택된 확정 주문 수량 감소">-</button>
                 <span class="qty-label">수량 조절</span>
-                <button onclick="window.changeSelectedQuantity(1)" class="qty-btn plus" title="선택된 확정 주문 수량 증가">+</button>
+                <button onclick="event.preventDefault(); window.changeSelectedQuantity(1);" class="qty-btn plus" title="선택된 확정 주문 수량 증가">+</button>
+              </div>
+              <div class="selected-info">
+                <small>확정된 주문: 변경 후 "주문확정" 버튼을 눌러야 DB에 반영됩니다</small>
               </div>
               <div class="action-buttons">
-                <button onclick="window.deleteSelectedPendingItems()" class="delete-btn" title="선택된 확정 주문을 삭제 표시 (임시)">🗑️ 삭제 표시</button>
-                <button onclick="window.savePendingChanges()" class="save-temp-btn" title="임시 변경사항을 로컬에 저장">💾 임시저장</button>
+                <button onclick="event.preventDefault(); window.deleteSelectedPendingItems();" class="delete-btn" title="선택된 확정 주문을 삭제 표시 (임시)">🗑️ 삭제 표시</button>
+                <button onclick="event.preventDefault(); window.savePendingChanges();" class="save-temp-btn" title="임시 변경사항을 로컬에 저장">💾 임시저장</button>
               </div>
             </div>
             

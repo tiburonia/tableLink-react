@@ -211,7 +211,21 @@ window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 📋 주문 관리
 window.toggleItemSelection = (itemId) => POSOrderManager.toggleItemSelection(itemId);
-window.toggleConfirmedItemSelection = (itemId) => POSOrderManager.toggleConfirmedItemSelection(itemId);
+window.toggleConfirmedItemSelection = (itemId) => {
+  console.log(`🌐 전역 함수 호출: toggleConfirmedItemSelection(${itemId})`);
+  
+  try {
+    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.toggleConfirmedItemSelection) {
+      POSOrderManager.toggleConfirmedItemSelection(itemId);
+    } else {
+      console.error('❌ POSOrderManager.toggleConfirmedItemSelection 함수를 찾을 수 없습니다');
+      showPOSNotification('확정 아이템 선택 기능을 사용할 수 없습니다', 'error');
+    }
+  } catch (error) {
+    console.error('❌ 확정 아이템 선택 중 오류:', error);
+    showPOSNotification('확정 아이템 선택 실패: ' + error.message, 'error');
+  }
+};
 window.selectAllItems = () => POSOrderManager.selectAllItems();
 window.deleteSelectedItems = () => POSOrderManager.deleteSelectedItems();
 window.changeQuantity = (itemId, change) => POSOrderManager.changeQuantity(itemId, change);
@@ -241,7 +255,21 @@ window.loadTempOrder = () => POSTempStorage.loadTempOrder();
 window.clearTempOrder = () => POSOrderManager.clearTempOrder();
 
 // 🎯 ordercontrol 관련 함수들
-window.changeSelectedQuantity = (change) => POSOrderManager.changeSelectedQuantity(change);
+window.changeSelectedQuantity = (change) => {
+  console.log(`🌐 전역 함수 호출: changeSelectedQuantity(${change})`);
+  
+  try {
+    if (typeof POSOrderManager !== 'undefined' && POSOrderManager.changeSelectedQuantity) {
+      POSOrderManager.changeSelectedQuantity(change);
+    } else {
+      console.error('❌ POSOrderManager.changeSelectedQuantity 함수를 찾을 수 없습니다');
+      showPOSNotification('수량 조절 기능을 사용할 수 없습니다', 'error');
+    }
+  } catch (error) {
+    console.error('❌ 수량 조절 중 오류:', error);
+    showPOSNotification('수량 조절 실패: ' + error.message, 'error');
+  }
+};
 window.deleteSelectedPendingItems = () => POSOrderManager.deleteSelectedPendingItems();
 window.savePendingChanges = () => POSOrderManager.savePendingChanges();
 window.confirmSelectedPendingItems = () => POSOrderManager.confirmSelectedPendingItems();

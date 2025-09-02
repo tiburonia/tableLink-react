@@ -414,12 +414,19 @@ export class POSOrderManager {
 
   // 🎯 확정된 아이템 선택/해제 (통합된 아이템 처리)
   static toggleConfirmedItemSelection(itemId) {
+    console.log(`🎯 확정된 아이템 선택 토글 시작: ${itemId}`);
+    
     const selectedItems = POSStateManager.getSelectedItems();
     const confirmedItems = POSStateManager.getConfirmedItems();
     
     // 선택된 아이템이 속한 통합 그룹의 모든 아이템 ID 찾기
     const targetItem = confirmedItems.find(item => item.id === itemId);
-    if (!targetItem) return;
+    if (!targetItem) {
+      console.error(`❌ 확정 아이템을 찾을 수 없음: ${itemId}`);
+      return;
+    }
+
+    console.log(`📋 대상 아이템 찾음: ${targetItem.name} (가격: ₩${targetItem.price})`);
 
     // 같은 메뉴명과 가격의 모든 아이템 ID 수집
     const relatedItemIds = confirmedItems
@@ -429,23 +436,29 @@ export class POSOrderManager {
       )
       .map(item => item.id);
 
+    console.log(`🔗 관련 아이템 ${relatedItemIds.length}개:`, relatedItemIds);
+
     // 현재 선택 상태 확인 (관련 아이템 중 하나라도 선택되어 있는지)
     const isAnySelected = relatedItemIds.some(id => selectedItems.includes(id));
+    console.log(`🔍 현재 선택 상태: ${isAnySelected ? '선택됨' : '선택안됨'}`);
 
     if (isAnySelected) {
       // 선택 해제 - 관련된 모든 아이템 제거
       const filteredSelected = selectedItems.filter(id => !relatedItemIds.includes(id));
       POSStateManager.setSelectedItems(filteredSelected);
       showPOSNotification(`${targetItem.name} 선택 해제됨`, 'info');
+      console.log(`✅ 선택 해제 완료: ${targetItem.name}`);
     } else {
       // 선택 - 대표 아이템만 추가 (첫 번째 아이템)
-      selectedItems.push(relatedItemIds[0]);
-      POSStateManager.setSelectedItems(selectedItems);
+      const newSelectedItems = [...selectedItems, relatedItemIds[0]];
+      POSStateManager.setSelectedItems(newSelectedItems);
       showPOSNotification(`${targetItem.name} 선택됨 - 주문 수정 패널에서 수량 조절 가능`, 'success');
+      console.log(`✅ 선택 완료: ${targetItem.name}, 총 선택: ${newSelectedItems.length}개`);
     }
 
-    this.refreshUI();
-    console.log(`🎯 확정 아이템 선택 토글: ${targetItem.name} (관련 아이템 ${relatedItemIds.length}개)`);
+    // UI 즉시 업데이트
+    this.forceUIUpdate();
+    console.log(`🎯 확정 아이템 선택 토글 완료: ${targetItem.name}`);
   }
 
   // 🗑️ 선택된 아이템 삭제
@@ -567,9 +580,11 @@ export class POSOrderManager {
         console.log(`📝 임시 수량 변경: ${pendingItem.name} ${oldQuantity} → ${pendingItem.quantity}`);
       }
 
-      // 확정된 아이템 처리 (임시 변경 상태로 저장) - 통합 그룹의 첫 번째 아이템만 처리
+      // 확정된 아이템 처리 (임시 변경 상태로 저장)
       const confirmedItem = confirmedItems.find(i => i.id === itemId);
-      if (confirmedItem && confirmedItem.isConfirmed) {
+      if (confirmedItem) {
+        console.log(`📝 확정 아이템 수량 변경 시작: ${confirmedItem.name} (현재: ${confirmedItem.quantity}개)`);
+        
         // 같은 메뉴명과 가격의 모든 아이템 찾기 (통합 그룹)
         const relatedItems = confirmedItems.filter(item => 
           item.name === confirmedItem.name && 
@@ -590,8 +605,10 @@ export class POSOrderManager {
             isGroupRepresentative: true,
             relatedItemIds: relatedItems.map(item => item.id)
           };
+          console.log(`🆕 새 임시 변경사항 초기화: ${representativeItem.name}`);
         }
 
+        const oldNewQuantity = representativeItem.pendingChanges.newQuantity;
         representativeItem.pendingChanges.newQuantity += change;
         representativeItem.pendingChanges.isModified = true;
         representativeItem.pendingChanges.updatedAt = new Date().toISOString();
@@ -599,11 +616,11 @@ export class POSOrderManager {
         if (representativeItem.pendingChanges.newQuantity <= 0) {
           representativeItem.pendingChanges.isDeleted = true;
           confirmedRemovedCount++;
+          console.log(`🗑️ 확정 아이템 삭제 표시: ${confirmedItem.name}`);
         } else {
           confirmedChangedCount++;
+          console.log(`📝 확정 아이템 수량 변경: ${confirmedItem.name} ${oldNewQuantity} → ${representativeItem.pendingChanges.newQuantity} (임시)`);
         }
-
-        console.log(`📝 확정 아이템 그룹 임시 변경: ${confirmedItem.name} ${totalOriginalQuantity} → ${representativeItem.pendingChanges.newQuantity} (임시, 그룹 ${relatedItems.length}개)`);
       }
     });
 
