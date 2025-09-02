@@ -131,6 +131,40 @@
         </div>
     </div>
 
-    <script src="/TLG/pages/store/pay/toss-fail.js"></script>
+    <script src="/TLG/utils/TLL.js"></script>
+    <script>
+        // TLL 결제 실패 처리
+        function processTLLPaymentFailure() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const message = urlParams.get('message') || '결제 처리 중 오류가 발생했습니다';
+                const code = urlParams.get('code') || 'UNKNOWN_ERROR';
+                
+                console.log('❌ TLL 결제 실패 파라미터:', { message, code });
+                
+                if (window.handleTossPaymentFailure) {
+                    window.handleTossPaymentFailure({ message, code });
+                } else {
+                    console.log('⚠️ TLL 실패 핸들러 없음, 기본 처리');
+                    alert('결제가 실패했습니다: ' + message);
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('❌ TLL 결제 실패 처리 오류:', error);
+                window.location.href = '/';
+            }
+        }
+
+        function retryPayment() {
+            window.location.href = '/';
+        }
+
+        function goBack() {
+            window.location.href = '/';
+        }
+        
+        // 페이지 로드 시 자동 실행
+        window.addEventListener('load', processTLLPaymentFailure);
+    </script src="/TLG/pages/store/pay/toss-fail.js"></script>
 </body>
 </html>

@@ -431,36 +431,40 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         try {
           console.log('💳 토스페이먼츠 결제 시작...');
           
-          // 토스페이먼츠 모듈이 없으면 동적 로드
-          if (!window.requestTossPayment) {
-            console.log('🔄 토스페이먼츠 모듈 동적 로드 중...');
-            await import('/TLG/pages/store/pay/tossPayments.js');
-            
-            // 모듈 로드 완료까지 대기
-            await new Promise(resolve => setTimeout(resolve, 500));
+          // 토스페이먼츠 초기화 및 결제 요청
+          const tossPayments = await window.initTossPayments();
+          if (!tossPayments) {
+            throw new Error('토스페이먼츠 SDK 초기화 실패');
           }
 
-          if (!window.requestTossPayment) {
-            throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다');
-          }
-
-          // 결제 요청
-          const paymentResult = await window.requestTossPayment({
+          console.log('🔄 토스페이먼츠 결제 요청 중...');
+          
+          const baseUrl = window.location.origin;
+          const paymentOptions = {
             amount: orderResult.total_amount,
             orderId: `TLL_${checkId}_${Date.now()}`,
             orderName: `${store.name} - ${finalTableName}`,
             customerName: userInfo.name || '고객',
-            customerEmail: userInfo.email || 'customer@tablelink.com'
-          }, '카드');
+            customerEmail: userInfo.email || 'customer@tablelink.com',
+            successUrl: `${baseUrl}/toss-success.html`,
+            failUrl: `${baseUrl}/toss-fail.html`
+          };
 
-          if (!paymentResult.success) {
-            throw new Error(paymentResult.message || '결제 요청 실패');
-          }
+          console.log('💳 결제 옵션:', paymentOptions);
 
-          console.log('✅ 토스페이먼츠 결제 요청 성공');
+          // 실제 결제 요청
+          await tossPayments.requestPayment('카드', paymentOptions);
+          console.log('✅ 토스페이먼츠 결제 요청 완료 - 결제창으로 이동');
 
         } catch (paymentError) {
           console.error('❌ 토스페이먼츠 결제 실패:', paymentError);
+          
+          // 사용자 취소인 경우
+          if (paymentError.code === 'USER_CANCEL') {
+            showToast('결제가 취소되었습니다');
+            return;
+          }
+          
           throw new Error(`결제 처리 실패: ${paymentError.message}`);
         }
 

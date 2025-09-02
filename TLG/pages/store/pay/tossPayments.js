@@ -42,7 +42,7 @@ async function initTossPayments() {
 }
 
 /**
- * 토스페이먼츠 결제 요청
+ * 토스페이먼츠 결제 요청 (간소화된 버전)
  */
 async function requestTossPayment(paymentData, paymentMethod = '카드') {
   try {
@@ -64,35 +64,26 @@ async function requestTossPayment(paymentData, paymentMethod = '카드') {
 
     console.log('🔄 결제 요청 옵션:', paymentOptions);
 
-    // 결제 수단별 처리
-    let result;
-    switch (paymentMethod) {
-      case '카드':
-        result = await toss.requestPayment('카드', paymentOptions);
-        break;
-      case '계좌이체':
-        result = await toss.requestPayment('계좌이체', paymentOptions);
-        break;
-      case '가상계좌':
-        result = await toss.requestPayment('가상계좌', {
-          ...paymentOptions,
-          validHours: 24
-        });
-        break;
-      default:
-        throw new Error(`지원하지 않는 결제 수단: ${paymentMethod}`);
-    }
-
+    // 결제 수단별 처리 - 토스페이먼츠 SDK 직접 호출
+    const result = await toss.requestPayment(paymentMethod, paymentOptions);
+    
     console.log('✅ 토스페이먼츠 결제 요청 성공:', result);
     return { success: true, data: result };
 
   } catch (error) {
     console.error('❌ 토스페이먼츠 결제 실패:', error);
+    
+    // 사용자 취소 처리
+    if (error.code === 'USER_CANCEL') {
+      return { success: false, error: error.message, code: 'USER_CANCEL' };
+    }
+    
     return { success: false, error: error.message };
   }
 };
 
 // 전역 함수로 등록
 window.initTossPayments = initTossPayments;
+window.requestTossPayment = requestTossPayment;
 
-console.log('✅ 토스페이먼츠 모듈 전역 등록 완료');
+console.log('✅ 토스페이먼츠 모듈 전역 등록 완료 - requestTossPayment:', typeof window.requestTossPayment);

@@ -148,6 +148,31 @@
     </div>
 
     <script src="/shared/utils/tossPaymentUtils.js"></script>
+    <script src="/TLG/utils/TLL.js"></script>
     <script src="/TLG/pages/store/pay/toss-success.js"></script>
+    <script>
+        // TLL 결제 성공 처리
+        async function processTLLPaymentSuccess() {
+            try {
+                const params = window.tossPaymentUtils.getUrlParams();
+                console.log('🔄 TLL 결제 성공 파라미터:', params);
+                
+                if (window.handleTossPaymentSuccess) {
+                    await window.handleTossPaymentSuccess(params);
+                } else {
+                    console.log('⚠️ TLL 핸들러 없음, 기본 처리');
+                    alert('결제가 완료되었습니다!');
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('❌ TLL 결제 성공 처리 실패:', error);
+                alert('결제 완료 처리 중 오류가 발생했습니다.');
+                window.location.href = '/';
+            }
+        }
+        
+        // 페이지 로드 시 자동 실행
+        window.addEventListener('load', processTLLPaymentSuccess);
+    </script>store/pay/toss-success.js"></script>
 </body>
 </html>
