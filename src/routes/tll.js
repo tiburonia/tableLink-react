@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
+const ActivityLogger = require('../utils/activity-logger');
 
 /**
  * [POST] /checks/from-qr - QR 코드로 체크 생성/조회 (새 스키마)
@@ -243,11 +244,11 @@ router.post('/orders', async (req, res) => {
       WHERE id = $1
     `, [check_id]);
 
-    // 토스페이먼츠 결제인 경우 대기 상태 결제 생성
-    if (payment_method === 'TOSS') {
+    // 결제 방법이 지정된 경우에만 결제 대기 상태 생성
+    if (payment_method && payment_method !== 'LATER') {
       await client.query(`
         INSERT INTO payments (
-          check_id, method, amount, status, 
+          check_id, payment_method, amount, status, 
           payment_data, requested_at
         )
         VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
@@ -261,6 +262,19 @@ router.post('/orders', async (req, res) => {
           created_via: 'TLL'
         })
       ]);
+    }
+
+    // 활동 로그 생성
+    try {
+      await ActivityLogger.logOrderCreated(
+        check.user_id, 
+        check.guest_phone, 
+        check.store_id, 
+        check_id, 
+        { items, totalAmount, source: 'TLL' }
+      );
+    } catch (logError) {
+      console.warn('⚠️ 활동 로그 생성 실패:', logError.message);
     }
 
     await client.query('COMMIT');
@@ -343,16 +357,19 @@ router.post('/payments/confirm', async (req, res) => {
       throw new Error(`결제 금액 불일치: 예상 ₩${expectedAmount}, 실제 ₩${amount}`);
     }
 
-    // 대기 중인 결제를 완료 상태로 변경
+    // 대기 중인 결제를 완료 상태로 변경 (표준 필드 포함)
     const paymentUpdateResult = await client.query(`
       UPDATE payments 
       SET 
         status = 'completed',
-        payment_data = payment_data || $2
+        completed_at = CURRENT_TIMESTAMP,
+        pg_transaction_id = $2,
+        payment_data = payment_data || $3
       WHERE check_id = $1 AND status = 'pending'
       RETURNING id
     `, [
       check_id,
+      payment_key, // PG 거래 ID로 사용
       JSON.stringify({ 
         payment_key, 
         toss_order_id: order_id,
@@ -425,6 +442,21 @@ router.post('/payments/confirm', async (req, res) => {
           total_visits = guests.total_visits + 1,
           last_visit_date = CURRENT_TIMESTAMP
       `, [check.guest_phone]);
+    }
+
+    // 활동 로그 생성
+    try {
+      const finalPaymentId = paymentUpdateResult.rows[0]?.id;
+      await ActivityLogger.logPaymentCompleted(
+        check.user_id,
+        check.guest_phone,
+        check.store_id,
+        check_id,
+        finalPaymentId,
+        { amount, method: 'TOSS', pgTransactionId: payment_key }
+      );
+    } catch (logError) {
+      console.warn('⚠️ 결제 활동 로그 생성 실패:', logError.message);
     }
 
     await client.query('COMMIT');

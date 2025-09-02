@@ -108,9 +108,9 @@ async function createIntegratedPOSSchema() {
         discount_amount INTEGER DEFAULT 0,
         final_price INTEGER GENERATED ALWAYS AS (unit_price * quantity - discount_amount) STORED,
         
-        -- KDS 상태 관리
-        status VARCHAR(20) DEFAULT 'ordered' CHECK (
-          status IN ('ordered', 'preparing', 'ready', 'served', 'canceled')
+        -- KDS 상태 관리 (세분화)
+        status VARCHAR(20) DEFAULT 'pending' CHECK (
+          status IN ('pending', 'ordered', 'cooking', 'ready', 'served', 'hold', 'canceled')
         ),
         
         -- 시간 추적
@@ -151,6 +151,12 @@ async function createIntegratedPOSSchema() {
         approval_number VARCHAR(100),
         transaction_id VARCHAR(100),
         
+        -- 분석용 표준 필드
+        pg_transaction_id VARCHAR(100),
+        card_brand VARCHAR(50),
+        card_last4 VARCHAR(4),
+        is_refunded BOOLEAN DEFAULT false,
+        
         -- 시간 추적
         requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP,
@@ -190,6 +196,65 @@ async function createIntegratedPOSSchema() {
       )
     `);
 
+    // 📈 user_activity_logs - 리텐션 분석용 이벤트 로그
+    await client.query(`
+      CREATE TABLE user_activity_logs (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(20),
+        guest_phone VARCHAR(20),
+        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        
+        -- 이벤트 정보
+        event_type VARCHAR(50) NOT NULL CHECK (
+          event_type IN ('order_created', 'payment_completed', 'review_submitted', 
+                        'coupon_used', 'point_earned', 'point_used', 'visit_logged')
+        ),
+        event_data JSONB,
+        
+        -- 연결 정보
+        check_id INTEGER REFERENCES checks(id) ON DELETE SET NULL,
+        payment_id INTEGER,
+        review_id INTEGER,
+        
+        -- 시간 및 메타데이터
+        occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        device_info JSONB,
+        
+        -- 제약조건: 회원 또는 게스트 중 하나는 필수
+        CHECK (user_id IS NOT NULL OR guest_phone IS NOT NULL)
+      )
+    `);
+
+    // 🏆 user_loyalty_tiers - 단골 등급 관리
+    await client.query(`
+      CREATE TABLE user_loyalty_tiers (
+        id SERIAL PRIMARY KEY,
+        user_id VARCHAR(20) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        
+        -- 등급 정보
+        current_tier VARCHAR(20) DEFAULT 'Bronze' CHECK (
+          current_tier IN ('Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond')
+        ),
+        tier_points INTEGER DEFAULT 0,
+        total_spent INTEGER DEFAULT 0,
+        visit_count INTEGER DEFAULT 0,
+        
+        -- 등급 변경 이력
+        tier_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_visit_date TIMESTAMP,
+        
+        -- 혜택 정보
+        next_tier_threshold INTEGER,
+        benefits_unlocked JSONB DEFAULT '[]',
+        
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        UNIQUE(user_id, store_id)
+      )
+    `);
+
     // 📊 daily_stats - 일일 통계 (관리자/TLM 중심)
     await client.query(`
       CREATE TABLE daily_stats (
@@ -224,6 +289,46 @@ async function createIntegratedPOSSchema() {
       )
     `);
 
+    // 💼 pos_shifts - POS 영업일/정산 관리
+    await client.query(`
+      CREATE TABLE pos_shifts (
+        id SERIAL PRIMARY KEY,
+        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        
+        -- 영업일 정보
+        shift_date DATE NOT NULL,
+        shift_number INTEGER DEFAULT 1, -- 하루에 여러 영업일 가능
+        
+        -- 담당자
+        cashier_name VARCHAR(100),
+        manager_name VARCHAR(100),
+        
+        -- 영업 시간
+        opened_at TIMESTAMP NOT NULL,
+        closed_at TIMESTAMP,
+        
+        -- 정산 정보
+        opening_cash INTEGER DEFAULT 0,
+        closing_cash INTEGER DEFAULT 0,
+        cash_sales INTEGER DEFAULT 0,
+        card_sales INTEGER DEFAULT 0,
+        toss_sales INTEGER DEFAULT 0,
+        total_sales INTEGER DEFAULT 0,
+        
+        -- 상태
+        status VARCHAR(20) DEFAULT 'open' CHECK (status IN ('open', 'closed', 'balanced')),
+        
+        -- 정산 차이
+        cash_difference INTEGER DEFAULT 0,
+        notes TEXT,
+        
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        
+        UNIQUE(store_id, shift_date, shift_number)
+      )
+    `);
+
     // 3. 인덱스 생성 (성능 최적화)
     console.log('🔍 성능 최적화 인덱스 생성...');
 
@@ -248,7 +353,18 @@ async function createIntegratedPOSSchema() {
       'CREATE INDEX idx_guests_last_visit ON guests(last_visit_date)',
       
       'CREATE INDEX idx_daily_stats_store_date ON daily_stats(store_id, date)',
-      'CREATE INDEX idx_daily_stats_date ON daily_stats(date)'
+      'CREATE INDEX idx_daily_stats_date ON daily_stats(date)',
+      
+      'CREATE INDEX idx_user_activity_logs_user_id ON user_activity_logs(user_id)',
+      'CREATE INDEX idx_user_activity_logs_guest_phone ON user_activity_logs(guest_phone)',
+      'CREATE INDEX idx_user_activity_logs_event_type ON user_activity_logs(event_type)',
+      'CREATE INDEX idx_user_activity_logs_occurred_at ON user_activity_logs(occurred_at)',
+      
+      'CREATE INDEX idx_user_loyalty_tiers_user_store ON user_loyalty_tiers(user_id, store_id)',
+      'CREATE INDEX idx_user_loyalty_tiers_tier ON user_loyalty_tiers(current_tier)',
+      
+      'CREATE INDEX idx_pos_shifts_store_date ON pos_shifts(store_id, shift_date)',
+      'CREATE INDEX idx_pos_shifts_status ON pos_shifts(status)'
     ];
 
     for (const index of indexes) {
