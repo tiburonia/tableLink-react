@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../db/pool');
 const { Pool } = require('pg');
 
 // Pool은 shared/config/database.js에서 가져옴

@@ -248,7 +248,7 @@ router.post('/orders', async (req, res) => {
     if (payment_method === 'TOSS') {
       await client.query(`
         INSERT INTO payments (
-          check_id, payment_method, amount, status, 
+          check_id, method, amount, status, 
           payment_data, created_at
         )
         VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
@@ -348,8 +348,8 @@ router.post('/payments/confirm', async (req, res) => {
     const paymentUpdateResult = await client.query(`
       UPDATE payments 
       SET 
-        status = 'completed',
-        paid_at = CURRENT_TIMESTAMP,
+        status = 'paid',
+        created_at = CURRENT_TIMESTAMP,
         payment_data = payment_data || $2
       WHERE check_id = $1 AND status = 'pending'
       RETURNING id
@@ -366,10 +366,10 @@ router.post('/payments/confirm', async (req, res) => {
       // 대기 중인 결제가 없으면 새로 생성
       await client.query(`
         INSERT INTO payments (
-          check_id, payment_method, amount, status, 
-          paid_at, payment_data
+          check_id, method, amount, status, 
+          created_at, payment_data
         )
-        VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3)
+        VALUES ($1, 'TOSS', $2, 'paid', CURRENT_TIMESTAMP, $3)
       `, [
         check_id,
         amount,

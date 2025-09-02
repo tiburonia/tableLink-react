@@ -89,12 +89,12 @@ router.post('/confirm', async (req, res) => {
       
       await client.query('BEGIN');
 
-      // TLL 결제 완료 처리
+      // TLL 결제 완료 처리 (새 스키마: method, paid_at 대신 created_at)
       await client.query(`
         UPDATE payments 
         SET 
-          status = 'completed',
-          paid_at = CURRENT_TIMESTAMP,
+          status = 'paid',
+          created_at = CURRENT_TIMESTAMP,
           payment_data = payment_data || $2
         WHERE check_id = $1 AND status = 'pending'
       `, [
