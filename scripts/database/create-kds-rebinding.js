@@ -59,7 +59,7 @@ async function createKDSRebinding() {
       )
     `);
     
-    // 4. KDS 이벤트 로그 테이블
+    // 4. KDS 이벤트 로그 테이블 (외래키 제약조건 없이 먼저 생성)
     console.log('📊 KDS 이벤트 로그 테이블 생성...');
     await client.query(`
       CREATE TABLE IF NOT EXISTS kds_events (
@@ -72,8 +72,7 @@ async function createKDSRebinding() {
         operator VARCHAR(100),
         cooking_time INTEGER,
         event_data JSONB DEFAULT '{}',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (item_id) REFERENCES order_items(id) ON DELETE CASCADE
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
     
@@ -177,7 +176,15 @@ async function createKDSRebinding() {
       CREATE INDEX IF NOT EXISTS idx_kds_events_event_type ON kds_events(event_type);
     `);
     
-    // 8. 자동 타임스탬프 업데이트 트리거
+    // 8. 외래키 제약조건 추가 (모든 테이블 생성 후)
+    console.log('🔗 외래키 제약조건 추가...');
+    await client.query(`
+      ALTER TABLE kds_events 
+      ADD CONSTRAINT fk_kds_events_item_id 
+      FOREIGN KEY (item_id) REFERENCES order_items(id) ON DELETE CASCADE
+    `);
+    
+    // 9. 자동 타임스탬프 업데이트 트리거
     console.log('⏰ 자동 타임스탬프 트리거 생성...');
     await client.query(`
       CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -199,7 +206,7 @@ async function createKDSRebinding() {
         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     `);
     
-    // 9. 기존 check_items 데이터 마이그레이션
+    // 10. 기존 check_items 데이터 마이그레이션
     console.log('🔄 기존 check_items 데이터 마이그레이션...');
     
     // 기존 check_items로부터 orders 생성
@@ -258,7 +265,7 @@ async function createKDSRebinding() {
     
     await client.query('COMMIT');
     
-    // 10. 생성된 테이블 확인
+    // 11. 생성된 테이블 확인
     console.log('\n📊 생성된 KDS 테이블 구조 확인:');
     
     const ordersResult = await client.query(`
