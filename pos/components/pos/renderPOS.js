@@ -1,165 +1,124 @@
-// POS 시스템 메인 렌더링 모듈 - 정리된 버전
-import { POSStateManager } from './modules/posStateManager.js';
-import { POSDataLoader } from './modules/posDataLoader.js';
-import { POSTableManager } from './modules/posTableManager.js';
-import { POSMenuManager } from './modules/posMenuManager.js';
-import { POSOrderManager } from './modules/posOrderManager.js';
-import { POSPaymentManager } from './modules/posPaymentManager.js';
-import { POSTempStorage } from './modules/posTempStorage.js';
-import { POSUIRenderer } from './modules/posUIRenderer.js';
-import { showPOSNotification } from '../../utils/posNotification.js';
-import { renderPOSLayout } from './posLayout.js';
+/**
+ * POS 메인 렌더링 함수
+ * - 깔끔하고 단순한 구조
+ * - 새로운 주문 관리 시스템 연동
+ */
 
-// 🚀 POS 시스템 초기화
 async function renderPOS() {
-  try {
-    console.log('📟 TableLink POS 초기화 시작');
+  console.log('🚀 새로운 POS 시스템 렌더링 시작');
 
-    POSStateManager.initialize();
-    renderPOSLayout();
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const storeId = urlParams.get('storeId');
-
-    if (storeId) {
-      await loadStoreForTableMap(storeId);
-    } else {
-      showPOSNotification('매장 ID가 필요합니다', 'error');
-      return;
-    }
-
-    console.log('✅ POS 초기화 완료');
-  } catch (error) {
-    console.error('❌ POS 초기화 실패:', error);
-    showPOSNotification('POS 초기화 실패', 'error');
-  }
-}
-
-// 🏪 매장 정보 로드
-async function loadStoreForTableMap(storeId) {
-  try {
-    const storeData = await POSDataLoader.loadStore(storeId);
-    POSStateManager.setCurrentStore(storeData.store);
-
-    document.getElementById('storeName').textContent = storeData.store.name;
-
-    await Promise.all([
-      POSDataLoader.loadStoreMenus(storeId),
-      POSDataLoader.loadStoreTables(storeId)
-    ]);
-
-    await POSTableManager.renderTableMap();
-    showPOSNotification(`${storeData.store.name} POS 준비 완료`);
-
-  } catch (error) {
-    console.error('❌ 매장 로드 실패:', error);
-    showPOSNotification('매장 정보 로드 실패', 'error');
-  }
-}
-
-// 🪑 테이블 선택
-async function selectTableFromMap(tableElementOrNumber) {
-  let tableNumber;
-
-  if (typeof tableElementOrNumber === 'number' || typeof tableElementOrNumber === 'string') {
-    tableNumber = tableElementOrNumber.toString();
-  } else if (tableElementOrNumber && typeof tableElementOrNumber === 'object') {
-    const element = tableElementOrNumber.target || tableElementOrNumber;
-    tableNumber = element.dataset?.tableNumber || 
-                 element.getAttribute?.('data-table-number') ||
-                 element.closest?.('[data-table-number]')?.dataset?.tableNumber ||
-                 element.textContent?.match(/T?(\d+)/)?.[1];
-  }
-
-  if (!tableNumber) {
-    console.error('❌ 테이블 번호 없음');
-    showPOSNotification('테이블 번호를 찾을 수 없습니다', 'error');
+  const main = document.getElementById('main');
+  if (!main) {
+    console.error('❌ main 엘리먼트를 찾을 수 없습니다');
     return;
   }
 
   try {
-    await POSTableManager.selectTable(tableNumber);
-    await switchToOrderView();
-    showPOSNotification(`테이블 ${tableNumber} 선택됨`);
+    // URL 파라미터 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const storeId = urlParams.get('storeId');
+
+    if (!storeId) {
+      main.innerHTML = `
+        <div style="padding: 40px; text-align: center;">
+          <h2>⚠️ 매장 정보가 없습니다</h2>
+          <p>올바른 URL로 접속해주세요</p>
+        </div>
+      `;
+      return;
+    }
+
+    // POS 레이아웃 렌더링
+    await renderPOSLayout();
+
+    // 매장 및 메뉴 데이터 로드
+    await loadStoreData(storeId);
+
+    console.log('✅ 새로운 POS 시스템 렌더링 완료');
+
   } catch (error) {
-    console.error('❌ 테이블 선택 실패:', error);
-    showPOSNotification('테이블 선택 실패', 'error');
+    console.error('❌ POS 렌더링 실패:', error);
+    main.innerHTML = `
+      <div style="padding: 40px; text-align: center; color: #ef4444;">
+        <h2>🚨 시스템 오류</h2>
+        <p>POS 시스템을 불러올 수 없습니다</p>
+        <p style="font-size: 14px; color: #6b7280;">${error.message}</p>
+      </div>
+    `;
   }
 }
 
-// 📱 주문 화면 전환
-async function switchToOrderView() {
-  POSStateManager.setCurrentView('order');
+async function loadStoreData(storeId) {
+  try {
+    console.log('🏪 매장 데이터 로딩 시작:', storeId);
 
-  document.getElementById('tableMapView').classList.add('hidden');
-  document.getElementById('orderView').classList.remove('hidden');
+    // 매장 정보 로드
+    const storeResponse = await fetch(`/api/stores/${storeId}/detail`);
+    const storeData = await storeResponse.json();
 
-  const currentTable = POSStateManager.getCurrentTable();
-  document.getElementById('orderTableTitle').textContent = `테이블 ${currentTable} - 주문/결제`;
+    if (storeData.success) {
+      window.currentStore = storeData.store;
+      console.log('✅ 매장 정보 로드 완료:', storeData.store.name);
+    }
 
-  await POSOrderManager.initializeSession(currentTable);
+    // 메뉴 데이터 로드
+    const menuResponse = await fetch(`/api/pos/menu?storeId=${storeId}`);
+    const menuData = await menuResponse.json();
 
-  POSUIRenderer.updateTableInfo();
-  POSMenuManager.renderMenuCategories();
-  POSMenuManager.renderMenuGrid();
-  POSUIRenderer.renderOrderItems();
-  POSUIRenderer.renderPaymentSummary();
-  POSUIRenderer.updatePrimaryActionButton();
+    if (menuData.success) {
+      window.currentMenus = menuData.menus;
+      console.log('🍽️ 메뉴 데이터 로드 완료:', menuData.menus.length, '개');
 
-  console.log('✅ 주문 화면 전환 완료');
+      // 메뉴 UI 렌더링
+      if (window.posMenuManager) {
+        window.posMenuManager.renderMenus(menuData.menus);
+      }
+    }
+
+    // 초기 UI 업데이트
+    if (window.posUIRenderer) {
+      window.posUIRenderer.updateOrderDisplay();
+      window.posUIRenderer.updateActionButton();
+    }
+
+  } catch (error) {
+    console.error('❌ 매장 데이터 로딩 실패:', error);
+    throw new Error('매장 데이터를 불러올 수 없습니다');
+  }
 }
 
-// 🔙 테이블맵 복귀
-function returnToTableMap() {
-  POSOrderManager.clearOrder();
-  POSStateManager.reset();
-
-  document.getElementById('tableMapView').classList.remove('hidden');
-  document.getElementById('orderView').classList.add('hidden');
-
-  POSTableManager.renderTableMap();
-  console.log('✅ 테이블맵 복귀');
-}
-
-// ES6 모듈 export
-export { renderPOS };
-
-// 🌐 전역 함수 등록
+// 전역 함수들 - 레거시 호환성
 window.renderPOS = renderPOS;
-window.selectTableFromMap = selectTableFromMap;
-window.returnToTableMap = returnToTableMap;
 
-// 📝 메뉴 관리
-window.selectCategory = POSMenuManager.selectCategory.bind(POSMenuManager);
-window.addMenuToOrder = (menuName, price, notes = '') => {
-  return POSOrderManager.addMenuToPending(menuName, price, notes);
-};
-window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
-
-// 📋 주문 관리
-window.clearOrder = () => POSOrderManager.clearOrder();
-window.confirmOrder = () => POSOrderManager.confirmPendingOrder();
-window.handlePrimaryAction = () => POSOrderManager.handlePrimaryAction();
-
-// 💳 결제 관리
-window.processPayment = (paymentMethod = null) => {
-  if (typeof POSPaymentManager !== 'undefined') {
-    POSPaymentManager.processPayment(paymentMethod);
-  } else {
-    showPOSNotification('결제 시스템을 찾을 수 없습니다', 'error');
+// 전역 헬퍼 함수들
+window.selectOrderItem = (itemId, isConfirmed) => {
+  if (window.posOrderManager) {
+    window.posOrderManager.selectItem(itemId, isConfirmed);
   }
 };
 
-// 🎨 UI 업데이트
-window.updatePrimaryActionButton = () => POSUIRenderer.updatePrimaryActionButton();
-window.updateTableInfo = () => POSUIRenderer.updateTableInfo();
+window.changeSelectedQuantity = (delta) => {
+  if (window.posOrderManager) {
+    window.posOrderManager.changeSelectedQuantity(delta);
+  }
+};
 
-// 💾 임시저장
-window.saveTempOrder = () => POSTempStorage.saveTempOrder();
-window.loadTempOrder = () => POSTempStorage.loadTempOrder();
+window.deleteSelectedItem = () => {
+  if (window.posOrderManager) {
+    window.posOrderManager.deleteSelectedItem();
+  }
+};
 
-// POSOrderManager를 전역에서 접근 가능하게
-window.POSOrderManager = POSOrderManager;
-window.POSStateManager = POSStateManager;
+window.confirmOrders = () => {
+  if (window.posOrderManager) {
+    window.posOrderManager.confirmOrders();
+  }
+};
 
-console.log('✅ POS 렌더링 모듈 로드 완료');
+window.clearAllOrders = () => {
+  if (window.posOrderManager) {
+    window.posOrderManager.clearAllOrders();
+  }
+};
+
+console.log('✅ 새로운 POS 렌더링 모듈 로드 완료');
