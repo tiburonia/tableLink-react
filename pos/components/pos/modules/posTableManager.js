@@ -1,4 +1,3 @@
-
 // POS 테이블 관리 모듈
 import { POSStateManager } from './posStateManager.js';
 import { POSDataLoader } from './posDataLoader.js';
@@ -83,10 +82,10 @@ export class POSTableManager {
   // 테이블 선택
   static async selectTable(tableNumber) {
     console.log(`🪑 POSTableManager.selectTable 호출: ${tableNumber}`);
-    
+
     POSStateManager.setCurrentTable(tableNumber);
     POSStateManager.setSelectedItems([]);
-    
+
     console.log(`✅ 테이블 ${tableNumber} 선택 완료`);
   }
 

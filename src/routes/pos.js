@@ -5,16 +5,19 @@ const pool = require('../db/pool');
 const { storeAuth, checkIdempotency } = require('../mw/auth');
 
 /**
- * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (새 스키마)
+ * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (경로 파라미터)
  */
 router.get('/stores/:storeId/menu', async (req, res, next) => {
   try {
     const { storeId } = req.params;
 
-    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청`);
+    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청 (경로 파라미터)`);
+
+    // DB 연결 재시도 로직
+    const { queryWithRetry } = require('../db/pool');
 
     // 매장 존재 확인
-    const storeResult = await pool.query(`
+    const storeResult = await queryWithRetry(`
       SELECT id, name, category FROM stores WHERE id = $1
     `, [storeId]);
 
@@ -26,12 +29,11 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
     }
 
     const store = storeResult.rows[0];
-
     let menu = [];
 
     try {
       // 새 스키마: menu_items 테이블에서 실제 메뉴 조회 시도
-      const menuResult = await pool.query(`
+      const menuResult = await queryWithRetry(`
         SELECT 
           mi.id,
           mi.name,
@@ -47,9 +49,6 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
       menu = menuResult.rows;
     } catch (menuError) {
       console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
-
-      // menu_items 테이블이 없으면 기본 메뉴 사용
-      console.log(`⚠️ menu_items 테이블이 없어서 기본 메뉴 사용 (매장 ${storeId})`);
       menu = [];
     }
 
@@ -62,7 +61,84 @@ router.get('/stores/:storeId/menu', async (req, res, next) => {
 
     res.json({
       success: true,
-      menu: menu
+      menus: menu  // 일관된 필드명 사용
+    });
+
+  } catch (error) {
+    console.error('❌ POS 메뉴 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 메뉴 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * [GET] /menu - 매장 메뉴 조회 (쿼리 파라미터)
+ */
+router.get('/menu', async (req, res, next) => {
+  try {
+    const { storeId } = req.query;
+
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '매장 ID가 필요합니다'
+      });
+    }
+
+    console.log(`🍽️ POS 매장 ${storeId} 메뉴 조회 요청`);
+
+    // DB 연결 재시도 로직
+    const { queryWithRetry } = require('../db/pool');
+
+    // 매장 존재 확인
+    const storeResult = await queryWithRetry(`
+      SELECT id, name, category FROM stores WHERE id = $1
+    `, [storeId]);
+
+    if (storeResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다'
+      });
+    }
+
+    const store = storeResult.rows[0];
+    let menu = [];
+
+    try {
+      // 새 스키마: menu_items 테이블에서 실제 메뉴 조회 시도
+      const menuResult = await queryWithRetry(`
+        SELECT 
+          mi.id,
+          mi.name,
+          mi.price,
+          mi.description,
+          COALESCE(mg.name, '기본메뉴') as category
+        FROM menu_items mi
+        LEFT JOIN menu_groups mg ON mi.group_id = mg.id
+        WHERE mi.store_id = $1
+        ORDER BY COALESCE(mg.display_order, 999) ASC, COALESCE(mi.display_order, 999) ASC
+      `, [storeId]);
+
+      menu = menuResult.rows;
+    } catch (menuError) {
+      console.warn(`⚠️ menu_items 테이블 조회 실패 (매장 ${storeId}), 기본 메뉴 사용:`, menuError.message);
+      menu = [];
+    }
+
+    // 메뉴가 없으면 카테고리별 기본 메뉴 생성
+    if (menu.length === 0) {
+      menu = getDefaultMenusByCategory(store.category);
+    }
+
+    console.log(`✅ POS 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      menus: menu  // POS 클라이언트가 기대하는 필드명
     });
 
   } catch (error) {
@@ -302,7 +378,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
 
     // 재시도 가능한 쿼리 함수 사용
     const { queryWithRetry } = require('../db/pool');
-    
+
     const result = await queryWithRetry(`
       SELECT 
         c.id,
@@ -527,14 +603,14 @@ router.post('/stores/:storeId/table/:tableNumber/payment', async (req, res, next
     `, [session.id]);
 
     const alreadyPaid = parseInt(paymentsResult.rows[0].paid_amount) || 0;
-    
+
     // 체크의 최신 총액 계산 (실시간)
     const amountResult = await client.query(`
       SELECT COALESCE(SUM(unit_price * quantity), 0) as current_total
       FROM check_items 
       WHERE check_id = $1 AND status != 'canceled'
     `, [session.id]);
-    
+
     const totalAmount = parseInt(amountResult.rows[0].current_total) || 0;
     const remainingAmount = totalAmount - alreadyPaid;
 

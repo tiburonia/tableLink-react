@@ -175,7 +175,7 @@ export class POSOrderManager {
         batchType: 'POS_ORDER'
       };
 
-      // API 호출 (올바른 경로 사용)
+      // API 호출 (에러 처리 강화)
       const response = await fetch('/api/orders/create-or-add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -190,9 +190,14 @@ export class POSOrderManager {
         })
       });
 
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
       const result = await response.json();
       if (!result.success) {
-        throw new Error(result.error);
+        throw new Error(result.error || '주문 확정 API 호출 실패');
       }
 
       // 임시 → 확정 전환 (통합된 아이템 기준)
