@@ -1,5 +1,6 @@
+
 // POS 레이아웃 정의 - 정리된 버전
-export function renderPOSLayout() {
+function renderPOSLayout() {
   const main = document.getElementById('main');
   if (!main) {
     console.error('❌ main 컨테이너 없음');
@@ -645,6 +646,6 @@ window.processPayment = (paymentType) => {
   }
 };
 
-// ES6 모듈 export (파일 끝에 한 번만)
+// ES6 모듈 export (파일 끝에 한 번만 - 모든 중복 제거됨)
 export { renderPOSLayout };
 export default renderPOSLayout;
