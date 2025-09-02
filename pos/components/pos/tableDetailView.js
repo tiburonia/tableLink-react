@@ -7,7 +7,7 @@ import { showPOSNotification } from '../../utils/posNotification.js';
 
 export class POSTableDetailView {
   static currentTableNumber = null;
-  static draftOrders = []; // 클라이언트 전용 장바구니
+  static draftOrders = []; // 클라이언트 전용 임시주문
   static confirmedOrders = []; // DB에 저장된 확정 주문
 
   // 🏠 테이블 상세 화면 초기화
@@ -39,16 +39,15 @@ export class POSTableDetailView {
       <button class="menu-card" onclick="POSTableDetailView.addMenuToDraft('${menu.name}', ${menu.price})">
         <div class="menu-name">${menu.name}</div>
         <div class="menu-price">₩${menu.price.toLocaleString()}</div>
-        <div class="add-icon">+</div>
       </button>
     `).join('');
 
     menuGrid.innerHTML = menusHTML;
   }
 
-  // 🛒 장바구니에 메뉴 추가 (DB 저장 없음)
+  // 🛒 임시주문에 메뉴 추가 (DB 저장 없음)
   static addMenuToDraft(menuName, price) {
-    console.log(`🛒 장바구니에 추가: ${menuName} (₩${price})`);
+    console.log(`🛒 임시주문에 추가: ${menuName} (₩${price})`);
 
     const existingItem = this.draftOrders.find(item => item.name === menuName);
     
@@ -66,7 +65,7 @@ export class POSTableDetailView {
     }
 
     this.updateOrderDisplay();
-    showPOSNotification(`${menuName} 장바구니에 추가됨`, 'success');
+    showPOSNotification(`${menuName} 추가됨`, 'success');
   }
 
   // 📋 확정된 주문 로드
@@ -99,67 +98,61 @@ export class POSTableDetailView {
 
   // 🎨 주문 표시 업데이트
   static updateOrderDisplay() {
-    this.renderDraftOrders();
-    this.renderConfirmedOrders();
+    this.renderOrderList();
     this.updateTotalAmount();
     this.updateActionButtons();
   }
 
-  // 🛒 장바구니 (임시 주문) 렌더링
-  static renderDraftOrders() {
-    const draftContainer = document.getElementById('draftOrdersContainer');
-    if (!draftContainer) return;
+  // 📋 주문내역 렌더링 (임시주문 + 확정주문)
+  static renderOrderList() {
+    const orderListContainer = document.getElementById('orderListContainer');
+    if (!orderListContainer) return;
 
-    if (this.draftOrders.length === 0) {
-      draftContainer.innerHTML = '<div class="empty-state">장바구니가 비어있습니다</div>';
+    const allItems = [
+      ...this.draftOrders.map(item => ({ ...item, isConfirmed: false })),
+      ...this.confirmedOrders.map(item => ({ ...item, isConfirmed: true }))
+    ];
+
+    if (allItems.length === 0) {
+      orderListContainer.innerHTML = `
+        <div class="empty-order-list">
+          <div class="empty-icon">📝</div>
+          <p>선택된 메뉴가 없습니다</p>
+        </div>
+      `;
       return;
     }
 
-    const html = this.draftOrders.map(item => `
-      <div class="order-item draft-item">
-        <div class="item-info">
-          <span class="item-name">${item.name}</span>
-          <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
+    const html = allItems.map(item => {
+      const itemName = item.name || item.menuName;
+      const itemTotal = item.price * item.quantity;
+      
+      return `
+        <div class="order-row ${item.isConfirmed ? 'confirmed' : 'pending'}">
+          <div class="order-item-info">
+            <span class="item-name">${itemName}</span>
+            <div class="item-meta">
+              <span class="item-price">₩${item.price.toLocaleString()}</span>
+              <span class="item-qty">${item.quantity}</span>
+              <span class="item-total">₩${itemTotal.toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="order-controls">
+            ${item.isConfirmed ? `
+              <button class="control-btn modify-btn" onclick="POSTableDetailView.modifyConfirmedItem('${item.id}', 'decrease')">-</button>
+              <button class="control-btn modify-btn" onclick="POSTableDetailView.modifyConfirmedItem('${item.id}', 'increase')">+</button>
+              <button class="control-btn cancel-btn" onclick="POSTableDetailView.cancelConfirmedItem('${item.id}')">취소</button>
+            ` : `
+              <button class="control-btn" onclick="POSTableDetailView.changeDraftQuantity('${item.id}', -1)">-</button>
+              <button class="control-btn" onclick="POSTableDetailView.changeDraftQuantity('${item.id}', 1)">+</button>
+              <button class="control-btn remove-btn" onclick="POSTableDetailView.removeDraftItem('${item.id}')">삭제</button>
+            `}
+          </div>
         </div>
-        <div class="item-controls">
-          <button class="qty-btn" onclick="POSTableDetailView.changeDraftQuantity('${item.id}', -1)">-</button>
-          <span class="quantity">${item.quantity}</span>
-          <button class="qty-btn" onclick="POSTableDetailView.changeDraftQuantity('${item.id}', 1)">+</button>
-          <button class="delete-btn" onclick="POSTableDetailView.removeDraftItem('${item.id}')">×</button>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
-    draftContainer.innerHTML = html;
-  }
-
-  // ✅ 확정된 주문 렌더링
-  static renderConfirmedOrders() {
-    const confirmedContainer = document.getElementById('confirmedOrdersContainer');
-    if (!confirmedContainer) return;
-
-    if (this.confirmedOrders.length === 0) {
-      confirmedContainer.innerHTML = '<div class="empty-state">확정된 주문이 없습니다</div>';
-      return;
-    }
-
-    const html = this.confirmedOrders.map(item => `
-      <div class="order-item confirmed-item" data-item-id="${item.id}">
-        <div class="item-info">
-          <span class="item-name">${item.menuName}</span>
-          <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
-          <span class="item-status status-${item.cookingStatus.toLowerCase()}">${this.getStatusText(item.cookingStatus)}</span>
-        </div>
-        <div class="item-controls">
-          <button class="qty-btn" onclick="POSTableDetailView.modifyConfirmedItem('${item.id}', 'decrease')">-</button>
-          <span class="quantity">${item.quantity}</span>
-          <button class="qty-btn" onclick="POSTableDetailView.modifyConfirmedItem('${item.id}', 'increase')">+</button>
-          <button class="cancel-btn" onclick="POSTableDetailView.cancelConfirmedItem('${item.id}')">취소</button>
-        </div>
-      </div>
-    `).join('');
-
-    confirmedContainer.innerHTML = html;
+    orderListContainer.innerHTML = html;
   }
 
   // 📊 총 금액 업데이트
@@ -172,26 +165,22 @@ export class POSTableDetailView {
     if (totalElement) {
       totalElement.textContent = `₩${grandTotal.toLocaleString()}`;
     }
-
-    const draftTotalElement = document.getElementById('draftTotal');
-    if (draftTotalElement) {
-      draftTotalElement.textContent = `₩${draftTotal.toLocaleString()}`;
-    }
   }
 
   // 🎯 액션 버튼 상태 업데이트
   static updateActionButtons() {
     const orderBtn = document.getElementById('confirmOrderBtn');
     const clearBtn = document.getElementById('clearDraftBtn');
+    const checkoutBtn = document.getElementById('checkoutBtn');
 
     if (orderBtn) {
       if (this.draftOrders.length > 0) {
         orderBtn.disabled = false;
-        orderBtn.textContent = `주문 확정 (${this.draftOrders.length}개)`;
-        orderBtn.className = 'action-btn primary';
+        orderBtn.textContent = `주문 (${this.draftOrders.length})`;
+        orderBtn.className = 'action-btn primary-btn';
       } else {
         orderBtn.disabled = true;
-        orderBtn.textContent = '주문할 메뉴를 선택하세요';
+        orderBtn.textContent = '주문';
         orderBtn.className = 'action-btn disabled';
       }
     }
@@ -199,9 +188,19 @@ export class POSTableDetailView {
     if (clearBtn) {
       clearBtn.disabled = this.draftOrders.length === 0;
     }
+
+    if (checkoutBtn) {
+      const hasConfirmedOrders = this.confirmedOrders.length > 0;
+      checkoutBtn.disabled = !hasConfirmedOrders;
+      if (hasConfirmedOrders) {
+        checkoutBtn.className = 'action-btn checkout-btn';
+      } else {
+        checkoutBtn.className = 'action-btn disabled';
+      }
+    }
   }
 
-  // 🔢 장바구니 수량 변경
+  // 🔢 임시주문 수량 변경
   static changeDraftQuantity(itemId, change) {
     const item = this.draftOrders.find(item => item.id === itemId);
     if (!item) return;
@@ -216,33 +215,33 @@ export class POSTableDetailView {
     }
   }
 
-  // 🗑️ 장바구니 아이템 제거
+  // 🗑️ 임시주문 아이템 제거
   static removeDraftItem(itemId) {
     const index = this.draftOrders.findIndex(item => item.id === itemId);
     if (index > -1) {
       const removedItem = this.draftOrders.splice(index, 1)[0];
       this.updateOrderDisplay();
-      showPOSNotification(`${removedItem.name} 장바구니에서 제거됨`, 'info');
+      showPOSNotification(`${removedItem.name} 제거됨`, 'info');
     }
   }
 
-  // 🗑️ 장바구니 전체 비우기
+  // 🗑️ 임시주문 전체 비우기
   static clearDraftOrders() {
     if (this.draftOrders.length === 0) {
-      showPOSNotification('장바구니가 이미 비어있습니다', 'warning');
+      showPOSNotification('임시주문이 이미 비어있습니다', 'warning');
       return;
     }
 
     const itemCount = this.draftOrders.length;
     this.draftOrders = [];
     this.updateOrderDisplay();
-    showPOSNotification(`장바구니 ${itemCount}개 아이템 삭제됨`, 'info');
+    showPOSNotification(`${itemCount}개 아이템 삭제됨`, 'info');
   }
 
-  // 🏆 주문 확정 (장바구니 → DB 저장)
+  // 🏆 주문 확정 (임시주문 → DB 저장)
   static async confirmOrders() {
     if (this.draftOrders.length === 0) {
-      showPOSNotification('장바구니가 비어있습니다', 'warning');
+      showPOSNotification('주문할 메뉴가 없습니다', 'warning');
       return;
     }
 
@@ -277,12 +276,12 @@ export class POSTableDetailView {
         throw new Error(result.error || '주문 확정 실패');
       }
 
-      // 성공 시 장바구니 비우기 및 확정 주문 다시 로드
+      // 성공 시 임시주문 비우기 및 확정 주문 다시 로드
       this.draftOrders = [];
       await this.loadConfirmedOrders();
       this.updateOrderDisplay();
 
-      showPOSNotification('주문이 확정되어 주방에 전달되었습니다!', 'success');
+      showPOSNotification('주문이 주방에 전달되었습니다!', 'success');
       
       // 3초 후 테이블맵으로 자동 복귀
       setTimeout(() => {
@@ -398,7 +397,7 @@ export class POSTableDetailView {
   // 📝 신규 메뉴 추가 (확정된 주문에)
   static async addNewMenuToConfirmed() {
     if (this.draftOrders.length === 0) {
-      showPOSNotification('추가할 메뉴를 먼저 장바구니에 담아주세요', 'warning');
+      showPOSNotification('추가할 메뉴를 먼저 선택해주세요', 'warning');
       return;
     }
 
@@ -429,7 +428,7 @@ export class POSTableDetailView {
         throw new Error(result.error || '신규 메뉴 추가 실패');
       }
 
-      // 성공 시 장바구니 비우기 및 확정 주문 다시 로드
+      // 성공 시 임시주문 비우기 및 확정 주문 다시 로드
       this.draftOrders = [];
       await this.loadConfirmedOrders();
       this.updateOrderDisplay();
@@ -444,9 +443,9 @@ export class POSTableDetailView {
 
   // 🔙 테이블맵으로 돌아가기
   static returnToTableMap() {
-    // 장바구니에 아이템이 있으면 확인
+    // 임시주문에 아이템이 있으면 확인
     if (this.draftOrders.length > 0) {
-      if (!confirm(`장바구니에 ${this.draftOrders.length}개 메뉴가 있습니다. 정말 나가시겠습니까?`)) {
+      if (!confirm(`임시주문에 ${this.draftOrders.length}개 메뉴가 있습니다. 정말 나가시겠습니까?`)) {
         return;
       }
     }
@@ -461,79 +460,6 @@ export class POSTableDetailView {
     document.getElementById('tableMapView').classList.remove('hidden');
 
     console.log('🔙 테이블맵으로 복귀');
-  }
-
-  // 🎨 테이블 상세 UI 렌더링
-  static renderTableDetailUI() {
-    const tableDetailView = document.getElementById('tableDetailView');
-    if (!tableDetailView) return;
-
-    tableDetailView.innerHTML = `
-      <div class="table-detail-container">
-        <!-- 헤더 -->
-        <div class="detail-header">
-          <button class="back-btn" onclick="POSTableDetailView.returnToTableMap()">← 테이블맵</button>
-          <h2 class="table-title">테이블 ${this.currentTableNumber}</h2>
-          <div class="table-status">사용중</div>
-        </div>
-
-        <div class="detail-content">
-          <!-- 메뉴 선택 영역 -->
-          <div class="menu-section">
-            <div class="section-header">
-              <h3>메뉴 선택</h3>
-              <input type="text" id="menuSearch" placeholder="메뉴 검색..." onkeyup="POSTableDetailView.searchMenu(this.value)">
-            </div>
-            <div class="menu-grid" id="menuGrid">
-              <!-- 메뉴 카드들이 여기에 렌더링됩니다 -->
-            </div>
-          </div>
-
-          <!-- 주문 관리 영역 -->
-          <div class="order-section">
-            <!-- 장바구니 (임시 주문) -->
-            <div class="order-panel">
-              <div class="panel-header">
-                <h3>🛒 장바구니</h3>
-                <span id="draftTotal">₩0</span>
-              </div>
-              <div class="order-items-container" id="draftOrdersContainer">
-                <!-- 장바구니 아이템들이 여기에 렌더링됩니다 -->
-              </div>
-            </div>
-
-            <!-- 확정된 주문 -->
-            <div class="order-panel">
-              <div class="panel-header">
-                <h3>✅ 확정 주문</h3>
-                <button class="add-menu-btn" onclick="POSTableDetailView.addNewMenuToConfirmed()">메뉴 추가</button>
-              </div>
-              <div class="order-items-container" id="confirmedOrdersContainer">
-                <!-- 확정된 주문들이 여기에 렌더링됩니다 -->
-              </div>
-            </div>
-
-            <!-- 총액 및 액션 버튼 -->
-            <div class="action-panel">
-              <div class="total-section">
-                <span class="total-label">총 금액</span>
-                <span class="total-amount" id="totalAmount">₩0</span>
-              </div>
-              <div class="action-buttons">
-                <button id="clearDraftBtn" class="action-btn secondary" onclick="POSTableDetailView.clearDraftOrders()">
-                  장바구니 비우기
-                </button>
-                <button id="confirmOrderBtn" class="action-btn primary" onclick="POSTableDetailView.confirmOrders()">
-                  주문 확정
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${this.getTableDetailStyles()}
-    `;
   }
 
   // 🔍 메뉴 검색
@@ -555,7 +481,6 @@ export class POSTableDetailView {
       <button class="menu-card" onclick="POSTableDetailView.addMenuToDraft('${menu.name}', ${menu.price})">
         <div class="menu-name">${menu.name}</div>
         <div class="menu-price">₩${menu.price.toLocaleString()}</div>
-        <div class="add-icon">+</div>
       </button>
     `).join('');
 
@@ -574,396 +499,476 @@ export class POSTableDetailView {
     return statusMap[status] || status;
   }
 
+  // 🎨 테이블 상세 UI 렌더링
+  static renderTableDetailUI() {
+    const tableDetailView = document.getElementById('tableDetailView');
+    if (!tableDetailView) return;
+
+    tableDetailView.innerHTML = `
+      <div class="pos-interface">
+        <!-- 좌측: 메뉴 선택 영역 -->
+        <div class="menu-section">
+          <div class="menu-header">
+            <h3>메뉴</h3>
+            <input type="text" id="menuSearch" placeholder="메뉴 검색..." onkeyup="POSTableDetailView.searchMenu(this.value)">
+          </div>
+          <div class="menu-grid" id="menuGrid">
+            <!-- 메뉴 카드들이 여기에 렌더링됩니다 -->
+          </div>
+        </div>
+
+        <!-- 우측: 주문 관리 영역 -->
+        <div class="order-section">
+          <!-- 테이블 정보 -->
+          <div class="table-header">
+            <button class="back-btn" onclick="POSTableDetailView.returnToTableMap()">← 테이블맵</button>
+            <h2>테이블 ${this.currentTableNumber}</h2>
+            <div class="table-status-badge">사용중</div>
+          </div>
+
+          <!-- 주문내역 -->
+          <div class="order-panel">
+            <div class="order-panel-header">
+              <h4>주문내역</h4>
+            </div>
+            <div class="order-list-container" id="orderListContainer">
+              <!-- 주문 아이템들이 여기에 렌더링됩니다 -->
+            </div>
+          </div>
+
+          <!-- 합계 -->
+          <div class="total-section">
+            <div class="total-row">
+              <span class="total-label">합계</span>
+              <span class="total-amount" id="totalAmount">₩0</span>
+            </div>
+          </div>
+
+          <!-- 액션 버튼들 -->
+          <div class="action-section">
+            <div class="action-row">
+              <button id="clearDraftBtn" class="action-btn clear-btn" onclick="POSTableDetailView.clearDraftOrders()">
+                정정
+              </button>
+              <button id="confirmOrderBtn" class="action-btn primary-btn" onclick="POSTableDetailView.confirmOrders()">
+                주문
+              </button>
+            </div>
+            <div class="action-row">
+              <button id="checkoutBtn" class="action-btn checkout-btn" onclick="POSTableDetailView.processCheckout()">
+                계산
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      ${this.getTableDetailStyles()}
+    `;
+  }
+
+  // 💳 계산 처리
+  static async processCheckout() {
+    if (this.confirmedOrders.length === 0) {
+      showPOSNotification('결제할 주문이 없습니다', 'warning');
+      return;
+    }
+
+    try {
+      const currentStore = POSStateManager.getCurrentStore();
+      
+      const response = await fetch(`/api/pos/stores/${currentStore.id}/table/${this.currentTableNumber}/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentMethod: 'CASH' // 기본 현금 결제
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('결제 처리 실패');
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || '결제 처리 실패');
+      }
+
+      showPOSNotification('결제가 완료되었습니다!', 'success');
+      
+      // 2초 후 테이블맵으로 복귀
+      setTimeout(() => {
+        this.returnToTableMap();
+      }, 2000);
+
+    } catch (error) {
+      console.error('❌ 결제 처리 실패:', error);
+      showPOSNotification('결제 처리 실패: ' + error.message, 'error');
+    }
+  }
+
   // 🎨 스타일 정의
   static getTableDetailStyles() {
     return `
       <style>
-        .table-detail-container {
+        .pos-interface {
           height: 100vh;
-          display: flex;
-          flex-direction: column;
-          background: #f8fafc;
-        }
-
-        .detail-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 16px 24px;
-          background: white;
-          border-bottom: 1px solid #e2e8f0;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .back-btn {
-          padding: 8px 16px;
-          background: #64748b;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: background-color 0.2s;
-        }
-
-        .back-btn:hover {
-          background: #475569;
-        }
-
-        .table-title {
-          margin: 0;
-          font-size: 20px;
-          font-weight: 700;
-          color: #1e293b;
-        }
-
-        .table-status {
-          padding: 6px 12px;
-          background: #fef3c7;
-          color: #92400e;
-          border-radius: 20px;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .detail-content {
-          flex: 1;
           display: grid;
           grid-template-columns: 1fr 400px;
-          gap: 24px;
-          padding: 24px;
-          overflow: hidden;
+          background: #f5f5f5;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
+        /* 좌측 메뉴 영역 */
         .menu-section {
+          background: white;
           display: flex;
           flex-direction: column;
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          overflow: hidden;
+          border-right: 1px solid #ddd;
         }
 
-        .section-header {
+        .menu-header {
+          padding: 16px;
+          border-bottom: 1px solid #eee;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 20px;
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
+          background: #f8f9fa;
         }
 
-        .section-header h3 {
+        .menu-header h3 {
           margin: 0;
           font-size: 16px;
-          font-weight: 600;
-          color: #374151;
+          color: #333;
         }
 
         #menuSearch {
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
+          padding: 6px 10px;
+          border: 1px solid #ddd;
+          border-radius: 4px;
           font-size: 14px;
           width: 200px;
         }
 
         .menu-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-          gap: 16px;
+          flex: 1;
           padding: 20px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          gap: 15px;
           overflow-y: auto;
         }
 
         .menu-card {
           background: white;
-          border: 1px solid #e2e8f0;
+          border: 1px solid #ddd;
           border-radius: 8px;
-          padding: 16px;
+          padding: 12px;
           cursor: pointer;
           transition: all 0.2s;
-          position: relative;
           text-align: center;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          min-height: 80px;
         }
 
         .menu-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-          border-color: #3b82f6;
+          border-color: #007bff;
+          box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+          transform: translateY(-1px);
         }
 
         .menu-name {
           font-size: 14px;
           font-weight: 600;
-          color: #374151;
-          margin-bottom: 8px;
+          color: #333;
+          margin-bottom: 6px;
         }
 
         .menu-price {
-          font-size: 16px;
-          font-weight: 700;
-          color: #059669;
-          margin-bottom: 12px;
+          font-size: 13px;
+          color: #666;
+          font-weight: 500;
         }
 
-        .add-icon {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 24px;
-          height: 24px;
-          background: #3b82f6;
-          color: white;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          font-weight: 700;
-        }
-
+        /* 우측 주문 영역 */
         .order-section {
+          background: #f8f9fa;
           display: flex;
           flex-direction: column;
-          gap: 16px;
         }
 
-        .order-panel {
+        .table-header {
           background: white;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          display: flex;
-          flex-direction: column;
-          max-height: 300px;
-        }
-
-        .panel-header {
+          padding: 12px 16px;
+          border-bottom: 1px solid #ddd;
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 16px;
-          background: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
+          gap: 12px;
         }
 
-        .panel-header h3 {
-          margin: 0;
-          font-size: 14px;
-          font-weight: 600;
-          color: #374151;
-        }
-
-        .add-menu-btn {
-          padding: 6px 12px;
-          background: #3b82f6;
+        .back-btn {
+          background: #6c757d;
           color: white;
           border: none;
-          border-radius: 6px;
+          padding: 6px 12px;
+          border-radius: 4px;
           cursor: pointer;
+          font-size: 13px;
+        }
+
+        .table-header h2 {
+          flex: 1;
+          margin: 0;
+          font-size: 18px;
+          color: #333;
+        }
+
+        .table-status-badge {
+          background: #ffc107;
+          color: #333;
+          padding: 4px 8px;
+          border-radius: 12px;
           font-size: 12px;
           font-weight: 600;
         }
 
-        .order-items-container {
+        .order-panel {
           flex: 1;
-          overflow-y: auto;
-          padding: 16px;
+          background: white;
+          margin: 8px;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+          display: flex;
+          flex-direction: column;
         }
 
-        .order-item {
+        .order-panel-header {
+          padding: 12px 16px;
+          border-bottom: 1px solid #eee;
+          background: #f8f9fa;
+        }
+
+        .order-panel-header h4 {
+          margin: 0;
+          font-size: 14px;
+          color: #333;
+        }
+
+        .order-list-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 8px;
+        }
+
+        .empty-order-list {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: space-between;
-          padding: 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
+          justify-content: center;
+          height: 200px;
+          color: #999;
+        }
+
+        .empty-icon {
+          font-size: 32px;
           margin-bottom: 8px;
         }
 
-        .draft-item {
-          background: #fef3c7;
-          border-color: #f59e0b;
-        }
-
-        .confirmed-item {
-          background: #ecfdf5;
-          border-color: #10b981;
-        }
-
-        .item-info {
-          flex: 1;
+        .order-row {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          border: 1px solid #e9ecef;
+          border-radius: 6px;
+          margin-bottom: 6px;
+          background: white;
+        }
+
+        .order-row.pending {
+          border-left: 3px solid #ffc107;
+          background: #fff8e1;
+        }
+
+        .order-row.confirmed {
+          border-left: 3px solid #28a745;
+          background: #f0fff4;
+        }
+
+        .order-item-info {
+          flex: 1;
         }
 
         .item-name {
           font-size: 14px;
           font-weight: 600;
-          color: #374151;
+          color: #333;
+          display: block;
+          margin-bottom: 4px;
         }
 
-        .item-price {
-          font-size: 12px;
-          color: #059669;
-          font-weight: 600;
-        }
-
-        .item-status {
-          font-size: 11px;
-          padding: 2px 6px;
-          border-radius: 10px;
-          font-weight: 600;
-          text-transform: uppercase;
-        }
-
-        .status-ordered {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .status-preparing {
-          background: #ddd6fe;
-          color: #7c3aed;
-        }
-
-        .status-ready {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .item-controls {
+        .item-meta {
           display: flex;
-          align-items: center;
           gap: 8px;
+          font-size: 12px;
+          color: #666;
         }
 
-        .qty-btn, .delete-btn, .cancel-btn {
+        .item-price, .item-qty, .item-total {
+          font-weight: 500;
+        }
+
+        .order-controls {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+        }
+
+        .control-btn {
           width: 28px;
           height: 28px;
-          border: none;
+          border: 1px solid #ddd;
+          background: white;
           border-radius: 4px;
           cursor: pointer;
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 12px;
+          font-weight: 600;
           display: flex;
           align-items: center;
           justify-content: center;
+          transition: all 0.2s;
         }
 
-        .qty-btn {
-          background: #e2e8f0;
-          color: #64748b;
+        .control-btn:hover {
+          background: #f8f9fa;
+          border-color: #adb5bd;
         }
 
-        .qty-btn:hover {
-          background: #cbd5e1;
+        .remove-btn, .cancel-btn {
+          background: #dc3545;
+          color: white;
+          border-color: #dc3545;
         }
 
-        .delete-btn, .cancel-btn {
-          background: #fecaca;
-          color: #dc2626;
+        .remove-btn:hover, .cancel-btn:hover {
+          background: #c82333;
         }
 
-        .delete-btn:hover, .cancel-btn:hover {
-          background: #fca5a5;
+        .modify-btn {
+          background: #007bff;
+          color: white;
+          border-color: #007bff;
         }
 
-        .quantity {
-          font-size: 14px;
-          font-weight: 600;
-          color: #374151;
-          min-width: 20px;
-          text-align: center;
+        .modify-btn:hover {
+          background: #0056b3;
         }
 
-        .action-panel {
-          background: white;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
-          padding: 20px;
-        }
-
+        /* 합계 영역 */
         .total-section {
+          background: white;
+          margin: 8px;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+        }
+
+        .total-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
-          padding-bottom: 16px;
-          border-bottom: 1px solid #e2e8f0;
         }
 
         .total-label {
           font-size: 16px;
           font-weight: 600;
-          color: #374151;
+          color: #333;
         }
 
         .total-amount {
-          font-size: 20px;
-          font-weight: 800;
-          color: #059669;
+          font-size: 18px;
+          font-weight: 700;
+          color: #28a745;
         }
 
-        .action-buttons {
+        /* 액션 버튼 영역 */
+        .action-section {
+          padding: 16px;
+          background: white;
+          margin: 8px;
+          border-radius: 8px;
+          border: 1px solid #ddd;
+        }
+
+        .action-row {
           display: flex;
-          gap: 12px;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .action-row:last-child {
+          margin-bottom: 0;
         }
 
         .action-btn {
           flex: 1;
           padding: 12px 16px;
           border: none;
-          border-radius: 8px;
+          border-radius: 6px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
-        .action-btn.primary {
-          background: #3b82f6;
+        .primary-btn {
+          background: #007bff;
           color: white;
         }
 
-        .action-btn.primary:hover:not(:disabled) {
-          background: #2563eb;
+        .primary-btn:hover:not(:disabled) {
+          background: #0056b3;
           transform: translateY(-1px);
         }
 
-        .action-btn.secondary {
-          background: #f1f5f9;
-          color: #64748b;
-          border: 1px solid #d1d5db;
+        .clear-btn {
+          background: #6c757d;
+          color: white;
         }
 
-        .action-btn.secondary:hover:not(:disabled) {
-          background: #e2e8f0;
+        .clear-btn:hover:not(:disabled) {
+          background: #545b62;
+        }
+
+        .checkout-btn {
+          background: #28a745;
+          color: white;
+        }
+
+        .checkout-btn:hover:not(:disabled) {
+          background: #1e7e34;
+          transform: translateY(-1px);
         }
 
         .action-btn.disabled, .action-btn:disabled {
-          background: #f1f5f9;
-          color: #94a3b8;
+          background: #e9ecef;
+          color: #6c757d;
           cursor: not-allowed;
-        }
-
-        .empty-state {
-          text-align: center;
-          color: #94a3b8;
-          font-style: italic;
-          padding: 40px 20px;
+          transform: none;
         }
 
         /* 반응형 */
         @media (max-width: 1024px) {
-          .detail-content {
+          .pos-interface {
             grid-template-columns: 1fr;
-            gap: 16px;
+            grid-template-rows: 1fr auto;
           }
           
-          .menu-grid {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+          .order-section {
+            max-height: 50vh;
           }
         }
       </style>

@@ -279,7 +279,7 @@ export class POSOrderManager {
     }
   }
 
-  // 🔧 주문 목록 직접 업데이트
+  // 🔧 직접 주문 목록 업데이트
   static directUpdateOrderItems() {
     try {
       // orderItemsContainer와 orderItems 둘 다 확인
@@ -294,12 +294,12 @@ export class POSOrderManager {
 
       let html = '';
 
-      // 장바구니 아이템들
+      // 임시 주문 아이템들
       if (cartItems.length > 0) {
-        html += '<div class="cart-section"><h4>🛒 장바구니</h4>';
+        html += '<div class="temp-section"><h4>📝 임시주문</h4>';
         cartItems.forEach(item => {
           html += `
-            <div class="order-item cart-item">
+            <div class="order-item temp-item">
               <div class="item-info">
                 <span class="item-name">${item.name}</span>
                 <span class="item-price">₩${(item.price * item.quantity).toLocaleString()}</span>
@@ -317,7 +317,7 @@ export class POSOrderManager {
 
       // 확정된 주문들
       if (confirmedItems.length > 0) {
-        html += '<div class="confirmed-section"><h4>✅ 확정 주문</h4>';
+        html += '<div class="confirmed-section"><h4>✅ 주문완료</h4>';
         confirmedItems.forEach(item => {
           html += `
             <div class="order-item confirmed-item">
@@ -340,7 +340,7 @@ export class POSOrderManager {
       }
 
       orderItemsContainer.innerHTML = html;
-      console.log(`🔧 직접 주문 목록 업데이트: 장바구니 ${cartItems.length}개, 확정 ${confirmedItems.length}개`);
+      console.log(`🔧 직접 주문 목록 업데이트: 임시주문 ${cartItems.length}개, 확정 ${confirmedItems.length}개`);
 
     } catch (error) {
       console.error('❌ 직접 주문 목록 업데이트 실패:', error);
@@ -351,12 +351,12 @@ export class POSOrderManager {
   static forceUIUpdate() {
     // 즉시 업데이트
     this.updateUI();
-    
+
     // 추가 업데이트 (안전장치)
     setTimeout(() => {
       this.updateUI();
     }, 100);
-    
+
     setTimeout(() => {
       this.updateUI();
     }, 300);
@@ -419,7 +419,7 @@ export class POSOrderManager {
   static changeConfirmedQuantity(change) {
     const confirmedItems = POSStateManager.getConfirmedItems();
     const selectedItems = POSStateManager.getSelectedItems();
-    
+
     if (selectedItems.length === 0) {
       showPOSNotification('먼저 수정할 주문을 선택해주세요', 'warning');
       return;
@@ -447,10 +447,10 @@ export class POSOrderManager {
         if (modifiedItem) {
           modifiedItem.action = 'delete';
         }
-        
+
         const index = confirmedItems.indexOf(item);
         confirmedItems.splice(index, 1);
-        
+
         // 선택된 아이템 목록에서도 제거
         const selectedIndex = selectedItems.indexOf(itemId);
         if (selectedIndex > -1) {
@@ -463,7 +463,7 @@ export class POSOrderManager {
     POSStateManager.setConfirmedItems(confirmedItems);
     POSStateManager.setSelectedItems(selectedItems);
     this.updateUI();
-    
+
     if (change > 0) {
       showPOSNotification(`${modifiedCount}개 주문 수량 증가 (수정 예정)`, 'info');
     } else {
@@ -492,7 +492,7 @@ export class POSOrderManager {
             action: 'delete'
           });
         }
-        
+
         const index = confirmedItems.indexOf(item);
         confirmedItems.splice(index, 1);
       }
@@ -596,10 +596,10 @@ export class POSOrderManager {
     // 원본 상태로 복원
     POSStateManager.setConfirmedItems(this.originalConfirmedItems);
     POSStateManager.clearSelectedItems();
-    
+
     this.modifiedConfirmedItems = [];
     this.originalConfirmedItems = [];
-    
+
     this.updateUI();
     showPOSNotification('주문 수정이 취소되었습니다', 'info');
     console.log('❌ 확정된 주문 수정 취소');
@@ -633,7 +633,7 @@ export class POSOrderManager {
       // 이미 선택된 경우 선택 해제
       selectedItems.splice(index, 1);
       console.log(`🔲 확정 주문 선택 해제: ${itemId}`);
-      
+
       // 모든 선택이 해제되면 수정 모드 종료
       if (selectedItems.length === 0) {
         this.cancelConfirmedOrderChanges();
@@ -642,7 +642,7 @@ export class POSOrderManager {
       // 선택되지 않은 경우 선택 추가
       selectedItems.push(itemId);
       console.log(`☑️ 확정 주문 선택: ${itemId}`);
-      
+
       // 첫 번째 선택이면 수정 모드 시작
       if (selectedItems.length === 1) {
         this.startModifyingConfirmedOrders();
@@ -651,7 +651,7 @@ export class POSOrderManager {
 
     POSStateManager.setSelectedItems(selectedItems);
     this.updateUI();
-    
+
     // 선택 상태 알림
     if (selectedItems.length > 0) {
       showPOSNotification(`${selectedItems.length}개 주문 선택됨`, 'info');
@@ -662,7 +662,7 @@ export class POSOrderManager {
   static toggleAllConfirmedItems() {
     const confirmedItems = POSStateManager.getConfirmedItems();
     const selectedItems = POSStateManager.getSelectedItems();
-    
+
     if (selectedItems.length === confirmedItems.length && confirmedItems.length > 0) {
       // 전체 선택된 상태면 전체 해제 및 수정 모드 종료
       POSStateManager.setSelectedItems([]);
@@ -677,7 +677,7 @@ export class POSOrderManager {
       showPOSNotification(`${allIds.length}개 주문 전체 선택`, 'success');
       console.log(`☑️ 전체 확정 주문 선택: ${allIds.length}개`);
     }
-    
+
     this.updateUI();
   }
 
