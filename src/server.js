@@ -77,6 +77,7 @@ try {
   const kdsRoutes = require('./routes/kds');
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
+  const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
 
   // 새 시스템 라우터
   const authRoutes = require('./routes/auth');
@@ -93,6 +94,7 @@ try {
   app.use('/api/kds', kdsRoutes);
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
+  app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
 
   // 새 시스템 API 라우터
   app.use('/api/auth', authRoutes);
@@ -104,7 +106,7 @@ try {
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes); // 감사 로그 라우터 등록
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);

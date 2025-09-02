@@ -429,39 +429,29 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
 
         // 토스페이먼츠 결제 시작
         try {
-          console.log('💳 토스페이먼츠 결제 시작...');
+          console.log('💳 TLL 토스페이먼츠 결제 시작...');
           
-          // 토스페이먼츠 모듈이 없으면 동적 로드
-          if (!window.requestTossPayment || !window.initTossPayments) {
-            console.log('🔄 토스페이먼츠 모듈 동적 로드 중...');
-            
-            // 모듈 스크립트 추가
-            const script = document.createElement('script');
-            script.src = '/TLG/pages/store/pay/tossPayments.js';
-            script.async = false; // 순차 로딩
-            document.head.appendChild(script);
-            
-            // 모듈 로드 완료까지 대기
-            await new Promise((resolve) => {
-              script.onload = resolve;
-              script.onerror = resolve; // 오류 시에도 계속 진행
-            });
-            
-            // 추가 대기 시간
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            console.log('🔍 모듈 로드 후 함수 확인:', {
-              initTossPayments: typeof window.initTossPayments,
-              requestTossPayment: typeof window.requestTossPayment
-            });
-          }
-
-          // 함수 존재 여부 재확인
+          // 토스페이먼츠 모듈 로드 확인 및 초기화
           if (!window.requestTossPayment) {
-            throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다');
+            console.log('🔄 토스페이먼츠 모듈 로드 중...');
+            await loadTossPaymentsModule();
           }
 
-          console.log('🔄 토스페이먼츠 결제 요청 중...');
+          // 최종 함수 존재 확인
+          if (!window.requestTossPayment) {
+            throw new Error('토스페이먼츠 모듈 로드 실패');
+          }
+
+          // 주문 정보 세션에 저장 (결제 성공 후 사용)
+          sessionStorage.setItem('tllPendingOrder', JSON.stringify({
+            checkId: checkId,
+            storeId: store.id,
+            storeName: store.name,
+            tableNumber: finalTableNumber,
+            tableName: finalTableName,
+            items: cart,
+            totalAmount: orderResult.total_amount
+          }));
 
           // 결제 데이터 구성
           const paymentData = {
@@ -472,9 +462,9 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
             customerEmail: userInfo.email || 'customer@tablelink.com'
           };
 
-          console.log('💳 결제 데이터:', paymentData);
+          console.log('💳 TLL 결제 데이터:', paymentData);
 
-          // 결제 요청
+          // 결제 요청 (결제창으로 리디렉션)
           const paymentResult = await window.requestTossPayment(paymentData, '카드');
 
           if (!paymentResult.success) {
@@ -485,12 +475,11 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
             throw new Error(paymentResult.error || '결제 요청 실패');
           }
 
-          console.log('✅ 토스페이먼츠 결제 요청 완료 - 결제창으로 이동');
+          console.log('✅ TLL 결제 요청 성공 - 결제창으로 이동');
 
         } catch (paymentError) {
-          console.error('❌ 토스페이먼츠 결제 실패:', paymentError);
+          console.error('❌ TLL 결제 실패:', paymentError);
           
-          // 사용자 취소인 경우
           if (paymentError.code === 'USER_CANCEL') {
             showToast('결제가 취소되었습니다');
             return;
@@ -522,6 +511,28 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         toast.classList.remove('show');
         setTimeout(() => document.body.removeChild(toast), 300);
       }, 3000);
+    }
+
+    // 토스페이먼츠 모듈 로딩 함수
+    async function loadTossPaymentsModule() {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = '/TLG/pages/store/pay/tossPayments.js';
+        script.async = false;
+        
+        script.onload = () => {
+          console.log('✅ 토스페이먼츠 모듈 로드 완료');
+          // 추가 초기화 시간 대기
+          setTimeout(resolve, 300);
+        };
+        
+        script.onerror = () => {
+          console.error('❌ 토스페이먼츠 모듈 로드 실패');
+          reject(new Error('토스페이먼츠 모듈 로드 실패'));
+        };
+        
+        document.head.appendChild(script);
+      });
     }
 
     console.log('✅ TLL 주문 화면 렌더링 완료');

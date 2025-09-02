@@ -507,55 +507,49 @@ window.TLL = async function TLL(preselectedStore = null) {
       });
 
 
-// 토스페이먼츠 결제 성공 처리 함수 (리팩토링된 구조)
+// 토스페이먼츠 결제 성공 처리 함수 (통합 개선)
 window.handleTossPaymentSuccess = async function(data) {
-  console.log('✅ TLL 토스페이먼츠 결제 성공 처리:', data);
+  console.log('✅ 토스페이먼츠 결제 성공 처리:', data);
 
   try {
     const { paymentKey, orderId, amount } = data;
 
-    // TLL 주문 데이터 복원
-    const pendingOrderData = JSON.parse(sessionStorage.getItem('tllPendingOrder') || '{}');
-
-    if (!pendingOrderData.checkId) {
-      throw new Error('TLL 주문 데이터를 찾을 수 없습니다');
+    if (!paymentKey || !orderId || !amount) {
+      throw new Error('결제 정보가 올바르지 않습니다');
     }
 
-    console.log('🔄 TLL 결제 승인 요청:', { paymentKey, orderId, amount });
+    console.log('🔄 결제 승인 처리 시작:', { paymentKey, orderId, amount });
 
-    // TLL 결제 승인 API 호출
-    const confirmResponse = await fetch('/api/tll/payments/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        payment_key: paymentKey,
-        order_id: orderId,
-        amount: parseInt(amount),
-        check_id: pendingOrderData.checkId
-      })
-    });
+    // 통합 토스페이먼츠 승인 API 호출
+    const confirmResult = await window.confirmTossPayment(paymentKey, orderId, amount);
 
-    if (!confirmResponse.ok) {
-      const errorData = await confirmResponse.json();
-      throw new Error(errorData.error || 'TLL 결제 승인 실패');
+    if (!confirmResult.success) {
+      throw new Error(confirmResult.error || '결제 승인 실패');
     }
 
-    const confirmResult = await confirmResponse.json();
-    console.log('✅ TLL 결제 승인 완료:', confirmResult);
+    console.log('✅ 결제 승인 완료:', confirmResult);
 
-    // 성공 알림 및 초기화
-    alert(`✅ 주문이 완료되었습니다!\n주문번호: ${orderId}\n결제금액: ₩${parseInt(amount).toLocaleString()}`);
+    // TLL 주문인지 확인
+    const isTLLOrder = orderId.startsWith('TLL_');
 
-    // 저장된 데이터 정리
-    sessionStorage.removeItem('tllPendingOrder');
-    sessionStorage.removeItem('tllSelectedStore');
-    sessionStorage.removeItem('tllSelectedTable');
+    if (isTLLOrder) {
+      // TLL 주문 데이터 정리
+      sessionStorage.removeItem('tllPendingOrder');
+      console.log('✅ TLL 주문 완료 처리');
+    } else {
+      // 일반 주문 데이터 정리
+      sessionStorage.removeItem('pendingOrderData');
+      console.log('✅ 일반 주문 완료 처리');
+    }
+
+    // 성공 알림
+    alert(`✅ 결제가 완료되었습니다!\n주문번호: ${orderId}\n결제금액: ₩${parseInt(amount).toLocaleString()}`);
 
     // 메인 화면으로 이동
     renderMap();
 
   } catch (error) {
-    console.error('❌ TLL 토스페이먼츠 결제 처리 실패:', error);
+    console.error('❌ 결제 처리 실패:', error);
     alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
     renderMap();
   }
