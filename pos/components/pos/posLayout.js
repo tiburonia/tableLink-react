@@ -155,24 +155,26 @@ export function renderPOSLayout() {
                     <div class="nav-section">
                       <h4>📝 주문 수정</h4>
                       <div class="nav-buttons">
-                        <button class="nav-btn select-btn" onclick="selectAllItems()">
+                        <button class="nav-btn select-btn" onclick="window.selectAllItems()">
                           <span class="nav-icon">☑️</span>
                           <span>전체선택</span>
                         </button>
 
-                        <button class="nav-btn delete-btn" onclick="deleteSelectedItems()">
+                        <button class="nav-btn delete-btn" onclick="window.deleteSelectedPendingItems()">
                           <span class="nav-icon">🗑️</span>
                           <span>선택삭제</span>
                         </button>
 
-                        <button class="nav-btn discount-btn" onclick="applyDiscount()">
-                          <span class="nav-icon">💰</span>
-                          <span>할인적용</span>
-                        </button>
 
-                        <button class="nav-btn qty-minus-btn" onclick="changeQuantity(-1)">
+
+                        <button class="nav-btn qty-minus-btn" onclick="window.changeSelectedQuantity(-1)">
                           <span class="nav-icon">➖</span>
                           <span>수량-1</span>
+                        </button>
+
+                        <button class="nav-btn qty-plus-btn" onclick="window.changeSelectedQuantity(1)">
+                          <span class="nav-icon">➕</span>
+                          <span>수량+1</span>
                         </button>
 
                         <button class="nav-btn qty-plus-btn" onclick="changeQuantity(1)">
@@ -205,6 +207,19 @@ export function renderPOSLayout() {
                     <span class="label">결제 금액</span>
                     <span class="value" id="finalAmount">₩0</span>
                   </div>
+                </div>
+
+                <div id="orderControlsPanel" class="order-controls-container">
+                  <!-- 주문 컨트롤 패널이 여기 렌더링됩니다 -->
+                </div>
+
+                <div class="action-buttons">
+                  <button id="primaryActionBtn" class="primary-action-btn" onclick="handlePrimaryAction()">
+                    <div class="btn-content">
+                      <span class="btn-title">주문 없음</span>
+                      <span class="btn-subtitle">메뉴를 선택하세요</span>
+                    </div>
+                  </button>
                 </div>
               </div>
             </section>

@@ -207,6 +207,66 @@ window.addMenuToOrder = (menuName, price, notes = '') => {
     return false;
   }
 };
+
+// 🎨 메뉴 추가 시 UI 피드백 함수
+window.addMenuWithFeedback = (menuName, price, menuId, notes = '') => {
+  console.log(`🍽️ UI 피드백 메뉴 추가: ${menuName} (₩${price})`);
+
+  try {
+    // 메뉴 카드 찾기
+    const menuCard = document.querySelector(`[data-menu-id="${menuId}"]`);
+    
+    // 버튼 애니메이션
+    if (menuCard) {
+      const addBtn = menuCard.querySelector('.add-btn');
+      if (addBtn) {
+        // 추가 중 표시
+        addBtn.classList.add('adding');
+        addBtn.innerHTML = '<span class="add-icon">⏳</span>';
+        
+        // 카드 전체 애니메이션
+        menuCard.style.transform = 'scale(0.95)';
+        menuCard.style.transition = 'transform 0.15s ease';
+        
+        setTimeout(() => {
+          menuCard.style.transform = 'scale(1)';
+        }, 150);
+      }
+    }
+
+    // 실제 주문 추가
+    const success = window.addMenuToOrder(menuName, price, notes);
+    
+    // UI 복구
+    setTimeout(() => {
+      if (menuCard) {
+        const addBtn = menuCard.querySelector('.add-btn');
+        if (addBtn) {
+          addBtn.classList.remove('adding');
+          addBtn.innerHTML = '<span class="add-icon">+</span>';
+          
+          if (success) {
+            // 성공 피드백
+            addBtn.style.background = '#10b981';
+            addBtn.innerHTML = '<span class="add-icon">✓</span>';
+            
+            setTimeout(() => {
+              addBtn.style.background = '';
+              addBtn.innerHTML = '<span class="add-icon">+</span>';
+            }, 800);
+          }
+        }
+      }
+    }, 200);
+
+    return success;
+
+  } catch (error) {
+    console.error('❌ UI 피드백 메뉴 추가 실패:', error);
+    showPOSNotification('메뉴 추가 실패: ' + error.message, 'error');
+    return false;
+  }
+};
 window.searchMenus = POSMenuManager.searchMenus.bind(POSMenuManager);
 
 // 📋 주문 관리
@@ -277,5 +337,7 @@ window.clearOrderSelection = () => {
   POSStateManager.setSelectedItems([]);
   POSOrderManager.refreshUI();
 };
+
+
 
 console.log('✅ 새 시스템: 전역 함수 등록 완료 (ordercontrol nav button 포함)');

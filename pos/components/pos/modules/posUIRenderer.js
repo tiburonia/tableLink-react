@@ -112,12 +112,15 @@ export class POSUIRenderer {
         const pendingQuantity = originalItem?.pendingChanges?.newQuantity;
         const isMarkedForDeletion = originalItem?.pendingChanges?.isDeleted;
 
+        // 통합된 아이템의 대표 ID를 가져옵니다.
+        const representativeId = item.ids[0];
+
         html += `
           <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
-               data-item-id="${item.ids[0]}" 
+               data-item-id="${representativeId}" 
                data-item-name="${item.name}"
                data-item-price="${item.price}"
-               onclick="window.toggleConfirmedItemSelection('${item.ids[0]}')"
+               onclick="window.toggleConfirmedItemSelection('${representativeId}')"
                style="cursor: pointer; user-select: none;"
                title="클릭하여 선택 후 주문 수정 패널에서 수량 조절 가능">
             <div class="item-main">
@@ -724,31 +727,31 @@ export class POSUIRenderer {
             <li>✅ <strong>확정 주문</strong>: 선택 후 이 패널로 수정</li>
           </ul>
         </div>
-        
+
         <style>
           .control-empty {
             text-align: center;
             padding: 30px 20px;
             color: #64748b;
           }
-          
+
           .control-empty .empty-icon {
             font-size: 32px;
             margin-bottom: 12px;
             opacity: 0.7;
           }
-          
+
           .control-empty h4 {
             margin: 0 0 8px 0;
             color: #334155;
             font-size: 16px;
           }
-          
+
           .control-empty p {
             margin: 0 0 16px 0;
             font-size: 14px;
           }
-          
+
           .help-list {
             list-style: none;
             padding: 0;
@@ -756,7 +759,7 @@ export class POSUIRenderer {
             text-align: left;
             display: inline-block;
           }
-          
+
           .help-list li {
             margin: 8px 0;
             font-size: 13px;
@@ -765,7 +768,7 @@ export class POSUIRenderer {
             border-radius: 6px;
             border-left: 3px solid #e2e8f0;
           }
-          
+
           .confirmed-status small {
             display: block;
             font-size: 10px;
@@ -816,7 +819,6 @@ export class POSUIRenderer {
               </div>
               <div class="action-buttons">
                 <button onclick="window.deleteSelectedPendingItems()" class="delete-btn">🗑️ 삭제</button>
-                <button onclick="window.savePendingChanges()" class="save-temp-btn">💾 임시저장</button>
               </div>
             </div>
           ` : ''}
@@ -828,7 +830,7 @@ export class POSUIRenderer {
                 <div class="info-icon">ℹ️</div>
                 <div class="info-content">
                   <p><strong>확정된 주문 수정</strong></p>
-                  <p>수량 변경 및 삭제가 가능합니다. 변경사항은 <span class="highlight">임시 저장</span> 후 <span class="highlight">주문확정</span>을 눌러야 실제 적용됩니다.</p>
+                  <p>수량 변경 및 삭제가 가능합니다. 변경사항은 <span class="highlight">주문확정</span>을 눌러야 실제 적용됩니다.</p>
                 </div>
               </div>
               <div class="quantity-controls">
@@ -836,15 +838,11 @@ export class POSUIRenderer {
                 <span class="qty-label">수량 조절</span>
                 <button onclick="event.preventDefault(); window.changeSelectedQuantity(1);" class="qty-btn plus" title="선택된 확정 주문 수량 증가">+</button>
               </div>
-              <div class="selected-info">
-                <small>확정된 주문: 변경 후 "주문확정" 버튼을 눌러야 DB에 반영됩니다</small>
-              </div>
               <div class="action-buttons">
                 <button onclick="event.preventDefault(); window.deleteSelectedPendingItems();" class="delete-btn" title="선택된 확정 주문을 삭제 표시 (임시)">🗑️ 삭제 표시</button>
-                <button onclick="event.preventDefault(); window.savePendingChanges();" class="save-temp-btn" title="임시 변경사항을 로컬에 저장">💾 임시저장</button>
               </div>
             </div>
-            
+
             <style>
               .info-box {
                 display: flex;
@@ -856,18 +854,18 @@ export class POSUIRenderer {
                 margin: 12px 0;
                 font-size: 12px;
               }
-              
+
               .info-icon {
                 font-size: 16px;
                 margin-right: 8px;
                 flex-shrink: 0;
               }
-              
+
               .info-content p {
                 margin: 0 0 4px 0;
                 line-height: 1.4;
               }
-              
+
               .info-content .highlight {
                 background: #fbbf24;
                 padding: 1px 4px;
@@ -875,11 +873,11 @@ export class POSUIRenderer {
                 font-weight: 600;
                 color: #92400e;
               }
-              
+
               .qty-btn {
                 position: relative;
               }
-              
+
               .qty-btn:hover::after {
                 content: attr(title);
                 position: absolute;
@@ -901,18 +899,191 @@ export class POSUIRenderer {
           ${(pendingCount > 0 || confirmedCount > 0) ? `
             <div class="order-actions">
               <button onclick="window.confirmSelectedPendingItems()" class="confirm-order-btn">
-                ✅ 변경사항 주문확정
+                ✅ 선택항목 주문확정
                 ${pendingCount > 0 && confirmedCount > 0 ? 
-                  `<small>(신규 ${pendingCount}개, 변경 ${confirmedCount}개)</small>` :
+                  `<small>신규 ${pendingCount}개 + 변경 ${confirmedCount}개</small>` :
                   pendingCount > 0 ? 
-                    `<small>(신규 ${pendingCount}개)</small>` :
-                    `<small>(변경 ${confirmedCount}개)</small>`
+                    `<small>신규 ${pendingCount}개 주문</small>` :
+                    `<small>변경 ${confirmedCount}개 적용</small>`
                 }
               </button>
             </div>
           ` : ''}
         </div>
       </div>
+
+      <style>
+        .order-controls-panel {
+          background: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          border: 1px solid #e5e7eb;
+          overflow: hidden;
+        }
+
+        .controls-header {
+          background: linear-gradient(135deg, #3b82f6, #1e40af);
+          color: white;
+          padding: 16px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .controls-header h4 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 600;
+        }
+
+        .clear-selection-btn {
+          background: rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          padding: 6px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .clear-selection-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        .controls-content {
+          padding: 20px;
+        }
+
+        .pending-controls, .confirmed-controls {
+          margin-bottom: 20px;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+        }
+
+        .pending-controls {
+          background: linear-gradient(135deg, #fef3c7, #fde68a);
+          border-color: #f59e0b;
+        }
+
+        .confirmed-controls {
+          background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+          border-color: #3b82f6;
+        }
+
+        .pending-controls h5 {
+          margin: 0 0 12px 0;
+          color: #92400e;
+          font-size: 14px;
+        }
+
+        .confirmed-controls h5 {
+          margin: 0 0 12px 0;
+          color: #1e40af;
+          font-size: 14px;
+        }
+
+        .quantity-controls {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin: 12px 0;
+        }
+
+        .qty-btn {
+          width: 36px;
+          height: 36px;
+          border: 2px solid #d1d5db;
+          background: white;
+          border-radius: 8px;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .qty-btn:hover {
+          border-color: #3b82f6;
+          background: #f0f9ff;
+          transform: scale(1.05);
+        }
+
+        .qty-btn.minus {
+          color: #dc2626;
+        }
+
+        .qty-btn.plus {
+          color: #059669;
+        }
+
+        .qty-label {
+          font-weight: 500;
+          color: #374151;
+          flex: 1;
+          text-align: center;
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .delete-btn {
+          background: linear-gradient(135deg, #fecaca, #fca5a5);
+          border: 1px solid #ef4444;
+          color: #dc2626;
+          padding: 8px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .delete-btn:hover {
+          background: linear-gradient(135deg, #fca5a5, #f87171);
+          transform: translateY(-1px);
+        }
+
+        .order-actions {
+          margin-top: 20px;
+          padding-top: 20px;
+          border-top: 2px solid #e5e7eb;
+        }
+
+        .confirm-order-btn {
+          width: 100%;
+          background: linear-gradient(135deg, #10b981, #059669);
+          border: none;
+          color: white;
+          padding: 16px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .confirm-order-btn:hover {
+          background: linear-gradient(135deg, #059669, #047857);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .confirm-order-btn small {
+          display: block;
+          font-size: 12px;
+          opacity: 0.9;
+          margin-top: 4px;
+          font-weight: normal;
+        }
+      </style>
     `;
   }
 }
