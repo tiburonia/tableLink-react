@@ -297,7 +297,10 @@ window.deleteSelectedItems = () => POSOrderManager.deleteSelectedItems();
 window.changeQuantity = (itemId, change) => POSOrderManager.changeQuantity(itemId, change);
 window.clearOrder = () => POSOrderManager.clearOrder();
 window.confirmOrder = () => POSOrderManager.confirmOrder();
-window.handlePrimaryAction = () => POSOrderManager.handlePrimaryAction();
+window.handlePrimaryAction = () => {
+  console.log('🌐 전역 handlePrimaryAction 호출');
+  return POSOrderManager.handlePrimaryAction();
+};
 window.applyDiscount = (type, value) => POSOrderManager.applyDiscount(type, value);
 
 // 💳 결제 관리 (새 시스템)

@@ -543,16 +543,70 @@ export class POSOrderManager {
     showPOSNotification(`${selectedItems.length - confirmedToDelete.length}개 아이템 삭제됨`, 'success');
   }
 
-  // 🎯 주요 액션 핸들러 (주문 확정 전용)
-  static async handlePrimaryAction() {
+  // 🎯 주요 액션 핸들러 (주문 확정)
+  static handlePrimaryAction() {
+    console.log('🎯 Primary Action 핸들러 호출');
+
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
 
     if (pendingItems.length > 0) {
-      await this.confirmPendingOrder();
+      // 임시 주문이 있으면 확정
+      this.confirmOrder();
     } else {
-      showPOSNotification('주문할 메뉴를 추가해주세요', 'warning');
+      console.log('⚠️ 확정할 임시 주문이 없습니다');
+      showPOSNotification('확정할 주문이 없습니다', 'warning');
     }
   }
+
+  // 🔄 선택된 아이템만 확정 (ordercontrol 패널용)
+  static confirmSelectedPendingItems() {
+    console.log('🔄 선택된 아이템만 확정 시작');
+
+    const selectedItems = POSStateManager.getSelectedItems();
+    const pendingItems = POSStateManager.getPendingItems();
+    const confirmedItems = POSStateManager.getConfirmedItems();
+
+    if (selectedItems.length === 0) {
+      showPOSNotification('선택된 아이템이 없습니다', 'warning');
+      return;
+    }
+
+    // 선택된 아이템들을 분류
+    const selectedPendingItems = [];
+    const selectedConfirmedItems = [];
+
+    selectedItems.forEach(itemId => {
+      const pendingItem = pendingItems.find(item => item.id === itemId);
+      const confirmedItem = confirmedItems.find(item => item.id === itemId);
+
+      if (pendingItem) {
+        selectedPendingItems.push(pendingItem);
+      } else if (confirmedItem) {
+        selectedConfirmedItems.push(confirmedItem);
+      }
+    });
+
+    console.log(`📊 선택된 아이템: 임시 ${selectedPendingItems.length}개, 확정 ${selectedConfirmedItems.length}개`);
+
+    // 선택된 임시 주문만 확정
+    if (selectedPendingItems.length > 0) {
+      this.confirmPendingItems(selectedPendingItems);
+    }
+
+    // 선택된 확정 주문의 변경사항 적용
+    if (selectedConfirmedItems.length > 0) {
+      this.applyConfirmedItemChanges(selectedConfirmedItems);
+    }
+
+    // UI 업데이트
+    POSUIRenderer.renderOrderItems();
+    POSUIRenderer.renderPaymentSummary();
+    POSUIRenderer.updatePrimaryActionButton();
+
+    // 선택 해제
+    POSStateManager.setSelectedItems([]);
+  }
+
 
   // 📊 전체 선택
   static selectAllItems() {

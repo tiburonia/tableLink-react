@@ -253,14 +253,14 @@ export function renderPOSLayout() {
               <div class="action-panels-container">
 
                 <!-- 주문 확정 버튼 (가장 중요한 액션) -->
-                <div class="primary-action-panel">
-                  <button class="primary-action-btn" id="primaryActionBtn" onclick="handlePrimaryAction()" disabled>
-                    <div class="btn-content">
-                      <span class="btn-title">주문 없음</span>
-                      <span class="btn-subtitle">메뉴를 선택하세요</span>
-                    </div>
-                  </button>
-                </div>
+              <div class="primary-action-panel">
+                <button class="primary-action-btn" id="primaryActionBtn" onclick="window.handlePrimaryAction()" disabled>
+                  <div class="btn-content">
+                    <span class="btn-title">주문 없음</span>
+                    <span class="btn-subtitle">메뉴를 선택하세요</span>
+                  </div>
+                </button>
+              </div>
 
                 <!-- 결제 수단 패널 -->
                 <div class="payment-panel">
