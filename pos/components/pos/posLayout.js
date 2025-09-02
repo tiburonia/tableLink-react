@@ -121,14 +121,6 @@ export function renderPOSLayout() {
               <div class="order-list-panel">
                 <div class="panel-header">
                   <h3>📦 주문 내역</h3>
-                  <div class="order-actions">
-                    <button class="action-btn hold-btn" onclick="holdOrder()" disabled>
-                      ⏸️ 보류
-                    </button>
-                    <button class="action-btn clear-btn" onclick="clearOrder()" disabled>
-                      🗑️ 전체삭제
-                    </button>
-                  </div>
                 </div>
 
                 <div class="order-items-container">
@@ -180,11 +172,6 @@ export function renderPOSLayout() {
                         <button class="nav-btn qty-plus-btn" onclick="changeQuantity(1)">
                           <span class="nav-icon">➕</span>
                           <span>수량+1</span>
-                        </button>
-
-                        <button class="nav-btn clear-btn" onclick="clearOrder()">
-                          <span class="nav-icon">🗑️</span>
-                          <span>전체삭제</span>
                         </button>
                       </div>
                     </div>
