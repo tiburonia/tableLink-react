@@ -103,8 +103,15 @@ export class POSOrderManager {
 
       // UI 업데이트
       this.forceUIUpdate(); // forceUIUpdate 사용
-      console.log(`📊 현재 임시 주문: ${pendingItems.length}개 아이템`);
+      
+      // Primary Action 버튼 즉시 업데이트
+      setTimeout(() => {
+        if (typeof POSUIRenderer !== 'undefined') {
+          POSUIRenderer.updatePrimaryActionButton();
+        }
+      }, 50);
 
+      console.log(`📊 현재 임시 주문: ${pendingItems.length}개 아이템`);
       console.log(`✅ 새 시스템: 메뉴 추가 완료`);
       return true;
 
@@ -551,7 +558,7 @@ export class POSOrderManager {
 
     if (pendingItems.length > 0) {
       // 임시 주문이 있으면 확정
-      this.confirmOrder();
+      this.confirmPendingOrder();
     } else {
       console.log('⚠️ 확정할 임시 주문이 없습니다');
       showPOSNotification('확정할 주문이 없습니다', 'warning');

@@ -600,9 +600,13 @@ export class POSUIRenderer {
   // 🔘 기본 액션 버튼 업데이트 (주문 확정 전용)
   static updatePrimaryActionButton() {
     const primaryBtn = document.getElementById('primaryActionBtn');
-    if (!primaryBtn) return;
+    if (!primaryBtn) {
+      console.warn('⚠️ primaryActionBtn 요소를 찾을 수 없습니다');
+      return;
+    }
 
     const pendingItems = POSStateManager.getPendingItems().filter(item => !item.isDeleted);
+    console.log(`🔘 Primary action 버튼 업데이트: 임시 주문 ${pendingItems.length}개`);
 
     if (pendingItems.length > 0) {
       // 임시 주문이 있을 때만 활성화
@@ -617,7 +621,9 @@ export class POSUIRenderer {
           <span class="btn-subtitle">${pendingItems.length}개 아이템 • ₩${totalAmount.toLocaleString()}</span>
         </div>
       `;
-      primaryBtn.className = 'primary-action-btn confirm-order';
+      primaryBtn.className = 'primary-action-btn confirm-order active';
+
+      console.log(`✅ Primary action 버튼 활성화: ${pendingItems.length}개 아이템, ₩${totalAmount.toLocaleString()}`);
 
     } else {
       // 임시 주문 없음
@@ -628,13 +634,15 @@ export class POSUIRenderer {
           <span class="btn-subtitle">메뉴를 선택하세요</span>
         </div>
       `;
-      primaryBtn.className = 'primary-action-btn';
+      primaryBtn.className = 'primary-action-btn disabled';
+
+      console.log('⚪ Primary action 버튼 비활성화: 임시 주문 없음');
     }
 
     // Payment panel 업데이트
     this.updatePaymentPanel();
 
-    console.log('🎯 Primary action button 업데이트 완료 (주문 확정 전용)');
+    console.log('🎯 Primary action button 업데이트 완료');
   }
 
   // 💳 결제 패널 상태 업데이트
