@@ -114,8 +114,8 @@ export class POSUIRenderer {
 
         html += `
           <div class="order-item confirmed ${isSelected ? 'selected' : ''} ${hasPendingChanges ? 'has-pending-changes' : ''} ${isMarkedForDeletion ? 'marked-for-deletion' : ''}" 
-               data-item-id="${item.id}" 
-               onclick="toggleItemSelection('${item.id}')">
+               data-item-id="${item.ids[0]}" 
+               onclick="toggleConfirmedItemSelection('${item.ids[0]}')"
             <div class="item-main">
               <div class="item-name">
                 ${item.name}
@@ -152,6 +152,9 @@ export class POSUIRenderer {
     // DOM 업데이트
     container.innerHTML = html;
     container.offsetHeight; // 강제 리플로우
+
+    // ordercontrol 패널 업데이트
+    this.renderOrderControls();
 
     console.log(`✅ 새 시스템: 주문 목록 렌더링 완료 (DOM 요소: ${container.children.length}개)`);
   }
