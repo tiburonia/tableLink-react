@@ -711,16 +711,15 @@ router.get('/users/:userId', async (req, res) => {
       SELECT 
         o.id, 
         o.total_amount, 
-        o.status, 
+        COALESCE(o.status, o.order_status, 'pending') as status,
         o.created_at,
         o.table_number,
         s.id as store_id, 
         s.name as store_name, 
         s.category as store_category,
-        COUNT(oi.id) as item_count
+        0 as item_count
       FROM orders o
       JOIN stores s ON o.store_id = s.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id
       ${whereClause}
       GROUP BY o.id, s.id, s.name, s.category
       ORDER BY o.created_at DESC
@@ -784,10 +783,9 @@ router.get('/store/:storeId', async (req, res) => {
         o.*,
         COALESCE(u.name, '게스트') as customer_name,
         COALESCE(u.phone, o.guest_phone) as customer_phone,
-        COUNT(oi.id) as item_count
+        0 as item_count
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id
       ${whereClause}
       GROUP BY o.id, u.name, u.phone
       ORDER BY o.created_at DESC
