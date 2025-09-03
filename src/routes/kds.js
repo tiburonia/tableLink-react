@@ -318,6 +318,23 @@ router.patch('/items/:id', async (req, res) => {
 
     await client.query('COMMIT');
 
+    // 웹소켓으로 실시간 알림 전송
+    try {
+      await client.query(`
+        SELECT pg_notify('kds_updates', $1)
+      `, [JSON.stringify({
+        type: 'item_status_change',
+        store_id: item.store_id,
+        ticket_id: item.ticket_id,
+        item_id: itemId,
+        old_status: item.kds_status,
+        new_status: newStatus,
+        timestamp: Date.now()
+      })]);
+    } catch (notifyError) {
+      console.warn('⚠️ KDS 웹소켓 알림 실패:', notifyError.message);
+    }
+
     res.json({
       success: true,
       message: `아이템 상태가 ${newStatus}로 변경되었습니다`,
@@ -438,6 +455,27 @@ router.patch('/tickets/:id', async (req, res) => {
 
     await client.query('COMMIT');
 
+    // 현재 티켓 정보 조회 후 웹소켓 알림
+    try {
+      const ticketInfo = await client.query(`
+        SELECT store_id FROM kds_tickets WHERE id = $1
+      `, [ticketId]);
+
+      if (ticketInfo.rows.length > 0) {
+        await client.query(`
+          SELECT pg_notify('kds_updates', $1)
+        `, [JSON.stringify({
+          type: 'ticket_action',
+          store_id: ticketInfo.rows[0].store_id,
+          ticket_id: ticketId,
+          action: action,
+          timestamp: Date.now()
+        })]);
+      }
+    } catch (notifyError) {
+      console.warn('⚠️ KDS 웹소켓 알림 실패:', notifyError.message);
+    }
+
     res.json({
       success: true,
       message: `티켓 액션 ${action} 완료`,
@@ -515,12 +553,11 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
   try {
     await client.query('BEGIN');
 
-    // 체크의 아이템들 조회
+    // 체크의 아이템들 조회 (category_id 제거)
     const itemsResult = await client.query(`
-      SELECT ci.*, m.category_id
+      SELECT ci.*
       FROM check_items ci
-      LEFT JOIN menu_items m ON ci.menu_name = m.name
-      WHERE ci.check_id = $1
+      WHERE ci.check_id = $1 AND ci.status != 'canceled'
     `, [checkId]);
 
     const items = itemsResult.rows;
@@ -529,31 +566,20 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
     const stationGroups = {};
 
     for (const item of items) {
-      // 라우팅 규칙에 따라 스테이션 결정
-      let stationResult = await client.query(`
-        SELECT station_id, prep_sec
-        FROM kds_station_routes
-        WHERE store_id = $1 AND (menu_id = $2 OR category_id = $3)
-        LIMIT 1
-      `, [storeId, item.menu_id, item.category_id]);
-
-      let stationId = 1; // 기본 주방 스테이션
+      // 기본 주방 스테이션으로 라우팅 (단순화)
+      let stationId = 1;
       let prepSec = 600;
 
-      if (stationResult.rows.length > 0) {
-        stationId = stationResult.rows[0].station_id;
-        prepSec = stationResult.rows[0].prep_sec;
-      } else {
-        // 기본 스테이션 조회
-        const defaultStation = await client.query(`
-          SELECT id FROM kds_stations 
-          WHERE store_id = $1 AND code = 'MAIN'
-          LIMIT 1
-        `, [storeId]);
+      // 매장별 기본 스테이션 조회
+      const defaultStation = await client.query(`
+        SELECT id FROM kds_stations 
+        WHERE store_id = $1 AND is_expo = false
+        ORDER BY id ASC
+        LIMIT 1
+      `, [storeId]);
 
-        if (defaultStation.rows.length > 0) {
-          stationId = defaultStation.rows[0].id;
-        }
+      if (defaultStation.rows.length > 0) {
+        stationId = defaultStation.rows[0].id;
       }
 
       if (!stationGroups[stationId]) {
@@ -582,18 +608,17 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
       for (const item of stationItems) {
         await client.query(`
           INSERT INTO kds_ticket_items (
-            ticket_id, check_item_id, menu_id, menu_name, quantity, 
+            ticket_id, check_item_id, menu_name, quantity, 
             options, est_prep_sec, cook_station
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
           ticketId,
           item.id,
-          item.menu_id,
           item.menu_name,
           item.quantity,
           item.options || {},
-          item.prep_sec,
+          prepSec,
           stationId
         ]);
 
@@ -607,6 +632,21 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
     }
 
     await client.query('COMMIT');
+
+    // 웹소켓으로 실시간 알림 전송
+    try {
+      await client.query(`
+        SELECT pg_notify('kds_updates', $1)
+      `, [JSON.stringify({
+        type: 'new_tickets',
+        store_id: storeId,
+        check_id: checkId,
+        ticket_count: Object.keys(stationGroups).length,
+        timestamp: Date.now()
+      })]);
+    } catch (notifyError) {
+      console.warn('⚠️ KDS 웹소켓 알림 실패:', notifyError.message);
+    }
 
     return {
       success: true,

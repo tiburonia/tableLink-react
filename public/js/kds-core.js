@@ -112,7 +112,18 @@ class KDSDataManager {
         this.eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                if (data.type === 'update') {
+                console.log('📡 KDS 실시간 데이터 수신:', data);
+                
+                if (data.type === 'update' || data.type === 'connected') {
+                    onUpdate(data);
+                } else if (data.type === 'new_tickets') {
+                    console.log('🎫 새 티켓 생성 알림:', data);
+                    onUpdate(data);
+                } else if (data.type === 'item_status_change') {
+                    console.log('🔄 아이템 상태 변경 알림:', data);
+                    onUpdate(data);
+                } else if (data.type === 'ticket_action') {
+                    console.log('⚡ 티켓 액션 알림:', data);
                     onUpdate(data);
                 }
             } catch (error) {

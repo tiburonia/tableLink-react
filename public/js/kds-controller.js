@@ -172,8 +172,22 @@ class KDSController {
     setupRealtime() {
         this.dataManager.setupRealtime((data) => {
             console.log('📡 실시간 업데이트:', data);
-            this.loadTickets();
-            this.loadStations(); // 카운터 업데이트
+            
+            // 데이터 타입에 따른 처리
+            if (data.type === 'new_tickets') {
+                this.uiRenderer.showToast('새 주문이 들어왔습니다! 🎯');
+                this.loadTickets();
+                this.loadStations();
+            } else if (data.type === 'item_status_change') {
+                this.loadTickets();
+            } else if (data.type === 'ticket_action') {
+                this.loadTickets();
+                this.loadStations();
+            } else {
+                // 기본 업데이트
+                this.loadTickets();
+                this.loadStations();
+            }
         });
     }
     

@@ -281,10 +281,11 @@ router.post('/orders', async (req, res) => {
     // KDS 티켓 자동 생성
     try {
       const { createKDSTicketsForOrder } = require('./kds');
-      await createKDSTicketsForOrder(check_id, store_id, 'TLL');
-      console.log('✅ KDS 티켓 자동 생성 완료');
+      const kdsResult = await createKDSTicketsForOrder(check_id, store_id, 'TLL');
+      console.log('✅ KDS 티켓 자동 생성 완료:', kdsResult);
     } catch (kdsError) {
-      console.error('⚠️ KDS 티켓 생성 실패 (주문은 정상 처리):', kdsError);
+      console.error('⚠️ KDS 티켓 생성 실패 (주문은 정상 처리):', kdsError.message);
+      // KDS 티켓 생성 실패해도 주문은 정상 진행
     }
 
     await client.query('COMMIT');
