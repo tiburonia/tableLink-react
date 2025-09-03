@@ -578,7 +578,9 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
   try {
     await client.query('BEGIN');
 
-    // 체크의 아이템들 조회 (category_id 제거)
+    console.log(`🎫 KDS 티켓 생성 시작: 체크 ${checkId}, 매장 ${storeId}`);
+
+    // 체크의 아이템들 조회
     const itemsResult = await client.query(`
       SELECT ci.*
       FROM check_items ci
@@ -586,71 +588,107 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
     `, [checkId]);
 
     const items = itemsResult.rows;
+    console.log(`📦 조회된 아이템 수: ${items.length}개`);
 
-    // 스테이션별로 아이템 그룹화
+    if (items.length === 0) {
+      console.log('⚠️ 생성할 아이템이 없음');
+      await client.query('ROLLBACK');
+      return { success: true, message: '생성할 아이템이 없습니다', ticket_count: 0 };
+    }
+
+    // 매장의 활성 스테이션들 조회
+    const stationsResult = await client.query(`
+      SELECT id, name, is_expo 
+      FROM kds_stations 
+      WHERE store_id = $1 AND is_active = true
+      ORDER BY is_expo ASC, id ASC
+    `, [storeId]);
+
+    const stations = stationsResult.rows;
+    console.log(`🏭 활성 스테이션 수: ${stations.length}개`);
+
+    // 스테이션별로 아이템 그룹화 (개선된 라우팅)
     const stationGroups = {};
 
     for (const item of items) {
-      // 기본 주방 스테이션으로 라우팅 (단순화)
-      let stationId = 1;
+      let targetStationId;
       let prepSec = 600;
 
-      // 매장별 기본 스테이션 조회
-      const defaultStation = await client.query(`
-        SELECT id FROM kds_stations 
-        WHERE store_id = $1 AND is_expo = false
-        ORDER BY id ASC
-        LIMIT 1
-      `, [storeId]);
-
-      if (defaultStation.rows.length > 0) {
-        stationId = defaultStation.rows[0].id;
+      // 메뉴명 기반 스테이션 라우팅
+      const menuName = item.menu_name.toLowerCase();
+      
+      if (menuName.includes('음료') || menuName.includes('커피') || menuName.includes('주스')) {
+        // 음료 스테이션 찾기
+        const drinkStation = stations.find(s => s.name.includes('음료') && !s.is_expo);
+        targetStationId = drinkStation ? drinkStation.id : stations.find(s => !s.is_expo)?.id || stations[0]?.id;
+        prepSec = 180;
+      } else if (menuName.includes('튀김') || menuName.includes('치킨')) {
+        // 튀김 스테이션 찾기
+        const fryStation = stations.find(s => s.name.includes('튀김') && !s.is_expo);
+        targetStationId = fryStation ? fryStation.id : stations.find(s => !s.is_expo)?.id || stations[0]?.id;
+        prepSec = 900;
+      } else {
+        // 기본 주방 스테이션
+        const mainStation = stations.find(s => (s.name.includes('주방') || s.name.includes('메인')) && !s.is_expo);
+        targetStationId = mainStation ? mainStation.id : stations.find(s => !s.is_expo)?.id || stations[0]?.id;
+        prepSec = 600;
       }
 
-      if (!stationGroups[stationId]) {
-        stationGroups[stationId] = [];
+      if (!stationGroups[targetStationId]) {
+        stationGroups[targetStationId] = [];
       }
 
-      stationGroups[stationId].push({
+      stationGroups[targetStationId].push({
         ...item,
-        station_id: stationId,
+        station_id: targetStationId,
         prep_sec: prepSec
       });
+
+      console.log(`🍽️ ${item.menu_name} → 스테이션 ${targetStationId}`);
     }
 
     // 스테이션별 티켓 생성
+    let totalTicketsCreated = 0;
+    
     for (const [stationId, stationItems] of Object.entries(stationGroups)) {
+      console.log(`🎫 스테이션 ${stationId}에 티켓 생성: ${stationItems.length}개 아이템`);
+      
       // 티켓 생성
       const ticketResult = await client.query(`
-        INSERT INTO kds_tickets (store_id, check_id, station_id, source_system, fired_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO kds_tickets (store_id, check_id, station_id, source_system, status, fired_at)
+        VALUES ($1, $2, $3, $4, 'OPEN', NOW())
         RETURNING id
       `, [storeId, checkId, stationId, sourceSystem]);
 
       const ticketId = ticketResult.rows[0].id;
+      totalTicketsCreated++;
+
+      console.log(`📝 티켓 ${ticketId} 생성 완료`);
 
       // 티켓 아이템들 생성
       for (const item of stationItems) {
         await client.query(`
           INSERT INTO kds_ticket_items (
             ticket_id, check_item_id, menu_name, quantity, 
-            options, est_prep_sec, cook_station
+            options, est_prep_sec, cook_station, kds_status
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
         `, [
           ticketId,
           item.id,
           item.menu_name,
           item.quantity,
           item.options || {},
-          prepSec,
+          item.prep_sec,
           stationId
         ]);
+
+        console.log(`📋 아이템 추가: ${item.menu_name} x${item.quantity}`);
 
         // check_items 테이블 업데이트
         await client.query(`
           UPDATE check_items 
-          SET station_id = $1, fired_at = NOW(), kds_status = 'PENDING'
+          SET station_id = $1, fired_at = NOW(), kds_status = 'PENDING', updated_at = NOW()
           WHERE id = $2
         `, [stationId, item.id]);
       }
@@ -658,25 +696,31 @@ async function createKDSTicketsForOrder(checkId, storeId, sourceSystem = 'TLL') 
 
     await client.query('COMMIT');
 
+    console.log(`✅ 총 ${totalTicketsCreated}개 KDS 티켓 생성 완료`);
+
     // 웹소켓으로 실시간 알림 전송
     try {
       await client.query(`
         SELECT pg_notify('kds_updates', $1)
       `, [JSON.stringify({
         type: 'new_tickets',
-        store_id: storeId,
-        check_id: checkId,
-        ticket_count: Object.keys(stationGroups).length,
+        store_id: parseInt(storeId),
+        check_id: parseInt(checkId),
+        ticket_count: totalTicketsCreated,
+        station_ids: Object.keys(stationGroups).map(id => parseInt(id)),
         timestamp: Date.now()
       })]);
+      
+      console.log('📡 KDS 실시간 알림 전송 완료');
     } catch (notifyError) {
       console.warn('⚠️ KDS 웹소켓 알림 실패:', notifyError.message);
     }
 
     return {
       success: true,
-      message: 'KDS 티켓이 생성되었습니다',
-      ticket_count: Object.keys(stationGroups).length
+      message: `KDS 티켓 ${totalTicketsCreated}개가 생성되었습니다`,
+      ticket_count: totalTicketsCreated,
+      created_tickets: Object.keys(stationGroups).map(id => parseInt(id))
     };
 
   } catch (error) {

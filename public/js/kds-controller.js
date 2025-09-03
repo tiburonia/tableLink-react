@@ -1,4 +1,3 @@
-
 /**
  * KDS 비즈니스 로직 컨트롤러
  * 책임: 사용자 상호작용 처리, 상태 변경 로직, 워크플로우 제어
@@ -18,26 +17,26 @@ class KDSController {
         this.uiRenderer = new KDSUIRenderer();
         this.autoRefreshInterval = null;
     }
-    
+
     async init() {
         console.log('📟 KDS 컨트롤러 초기화 시작, 매장 ID:', this.storeId);
-        
+
         try {
             console.log('🔄 스테이션 정보 로딩...');
             await this.loadStations();
-            
+
             console.log('🔄 티켓 정보 로딩...');
             await this.loadTickets();
-            
+
             console.log('🔄 실시간 연결 설정...');
             this.setupRealtime();
-            
+
             console.log('🔄 시계 시작...');
             this.uiRenderer.startClock();
-            
+
             console.log('🔄 자동 새로고침 설정...');
             this.setupAutoRefresh();
-            
+
             console.log('✅ KDS 컨트롤러 초기화 완료');
         } catch (error) {
             console.error('❌ KDS 초기화 실패:', error);
@@ -45,37 +44,37 @@ class KDSController {
             throw error; // 상위로 에러 전파
         }
     }
-    
+
     async loadStations() {
         try {
             const stations = await this.dataManager.loadStations();
             this.uiRenderer.renderStationTabs(stations, this.currentStation);
-            
+
             // 첫 번째 스테이션을 기본으로 선택
             if (stations.length > 0 && !this.currentStation) {
                 this.selectStation(stations[0].id);
             }
-            
+
             // 매장 이름 업데이트
             const storeName = stations[0]?.store_id ? `매장 ${stations[0].store_id}` : '테스트 매장';
             document.getElementById('storeName').textContent = storeName;
-            
+
         } catch (error) {
             console.error('❌ 스테이션 로딩 실패:', error);
             this.uiRenderer.showError('스테이션 정보를 불러올 수 없습니다.');
         }
     }
-    
+
     selectStation(stationId) {
         this.currentStation = stationId;
         const station = this.dataManager.stations.find(s => s.id === stationId);
         this.isExpoMode = station?.is_expo || false;
-        
+
         // UI 업데이트
         this.uiRenderer.renderStationTabs(this.dataManager.stations, this.currentStation);
         this.loadTickets();
     }
-    
+
     async loadTickets() {
         try {
             if (this.isExpoMode) {
@@ -85,23 +84,23 @@ class KDSController {
                 const tickets = await this.dataManager.loadTickets(this.currentStation, false);
                 this.uiRenderer.renderTickets(tickets);
             }
-            
+
             this.uiRenderer.updateConnectionStatus(true);
-            
+
         } catch (error) {
             console.error('❌ 티켓 로딩 실패:', error);
             this.uiRenderer.updateConnectionStatus(false);
             this.uiRenderer.showError('티켓 데이터를 불러올 수 없습니다.');
         }
     }
-    
+
     // 빠른 액션 처리
     quickAction(ticketId) {
         const ticket = this.dataManager.tickets.find(t => t.ticket_id === ticketId);
         if (!ticket) return;
-        
+
         const mainStatus = this.uiRenderer.getTicketMainStatus(ticket);
-        
+
         switch (mainStatus) {
             case 'PENDING':
                 this.ticketAction(ticketId, 'start_all');
@@ -118,12 +117,12 @@ class KDSController {
                 break;
         }
     }
-    
+
     itemQuickAction(itemId) {
         const allItems = this.dataManager.tickets.flatMap(t => t.items);
         const item = allItems.find(i => i.item_id === itemId);
         if (!item) return;
-        
+
         switch (item.kds_status) {
             case 'PENDING':
                 this.itemAction(itemId, 'start');
@@ -140,7 +139,7 @@ class KDSController {
                 break;
         }
     }
-    
+
     async itemAction(itemId, action, notes = null) {
         try {
             await this.dataManager.updateItemStatus(itemId, action, notes);
@@ -152,7 +151,7 @@ class KDSController {
             this.uiRenderer.showToast('작업을 완료할 수 없습니다', true);
         }
     }
-    
+
     async ticketAction(ticketId, action) {
         try {
             await this.dataManager.updateTicketStatus(ticketId, action);
@@ -164,7 +163,7 @@ class KDSController {
             this.uiRenderer.showToast('작업을 완료할 수 없습니다', true);
         }
     }
-    
+
     async completeOrder(checkId) {
         try {
             // 체크의 모든 아이템을 SERVED로 변경
@@ -172,52 +171,43 @@ class KDSController {
                 .filter(t => t.check_id === checkId)
                 .flatMap(t => t.items)
                 .filter(i => i.kds_status === 'DONE');
-            
+
             for (const item of orderItems) {
                 await this.itemAction(item.item_id, 'served');
             }
-            
+
             this.uiRenderer.showToast(`테이블 ${checkId} 주문이 완료되었습니다`);
         } catch (error) {
             console.error('❌ 주문 완료 처리 실패:', error);
             this.uiRenderer.showToast('주문 완료 처리에 실패했습니다', true);
         }
     }
-    
+
     setupRealtime() {
         this.dataManager.setupRealtime((data) => {
-            console.log('📡 실시간 업데이트:', data);
-            
-            // 데이터 타입에 따른 처리
-            if (data.type === 'tll_order_created') {
-                this.uiRenderer.showToast('🎯 TLL 새 주문이 들어왔습니다!');
-                // 즉시 새로고침
+            console.log('📡 실시간 데이터:', data);
+
+            // TLL 주문 생성 시 즉시 반영
+            if (data.type === 'tll_order_created' || data.type === 'new_tickets') {
+                console.log('🎯 새 주문 감지 - 즉시 티켓 로딩');
                 this.loadTickets();
-                this.loadStations();
-            } else if (data.type === 'new_tickets') {
-                this.uiRenderer.showToast('새 주문이 들어왔습니다! 🎯');
-                this.loadTickets();
-                this.loadStations();
-            } else if (data.type === 'item_status_change') {
-                // 부드러운 업데이트
-                setTimeout(() => this.loadTickets(), 200);
-            } else if (data.type === 'ticket_action') {
-                this.loadTickets();
-                this.loadStations();
-            } else if (data.urgent) {
-                // 긴급 업데이트
-                this.loadTickets();
-                this.loadStations();
-            } else {
-                // 기본 업데이트 (지연 적용)
-                setTimeout(() => {
-                    this.loadTickets();
-                    this.loadStations();
-                }, 500);
+
+                // 토스트 알림
+                if (data.type === 'tll_order_created') {
+                    this.uiRenderer.showToast(`🔔 테이블 ${data.table_number || '?'}번 새 주문!`);
+                }
             }
+
+            // 일반 업데이트
+            if (data.type === 'update' || data.type === 'item_status_change' || data.type === 'ticket_action') {
+                this.loadTickets();
+            }
+
+            // 연결 상태 업데이트
+            this.uiRenderer.updateConnectionStatus(true);
         });
     }
-    
+
     setupAutoRefresh() {
         // 3초마다 자동 새로고침
         this.autoRefreshInterval = setInterval(() => {
@@ -225,11 +215,11 @@ class KDSController {
             this.loadStations();
         }, 3000);
     }
-    
+
     destroy() {
         this.dataManager.destroy();
         this.uiRenderer.destroy();
-        
+
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
         }

@@ -284,17 +284,31 @@ router.post('/orders', async (req, res) => {
       const kdsResult = await createKDSTicketsForOrder(check_id, store_id, 'TLL');
       console.log('✅ KDS 티켓 자동 생성 완료:', kdsResult);
 
-      // 즉시 웹소켓으로 KDS에 알림
+      // 테이블 번호 조회 후 즉시 웹소켓으로 KDS에 알림
+      const tableInfo = await pool.query('SELECT table_number FROM checks WHERE id = $1', [check_id]);
+      const tableNumber = tableInfo.rows[0]?.table_number;
+
       await pool.query(`
         SELECT pg_notify('kds_updates', $1)
       `, [JSON.stringify({
         type: 'tll_order_created',
-        store_id: store_id,
-        check_id: check_id,
+        store_id: parseInt(store_id),
+        check_id: parseInt(check_id),
+        table_number: tableNumber,
+        item_count: items.length,
         source: 'TLL',
-        items: items.length,
-        timestamp: Date.now()
+        urgent: true
       })]);
+
+      console.log('📡 KDS 실시간 알림 완료 (테이블:', tableNumber, ')');
+
+      res.json({
+        success: true,
+        message: '주문이 생성되었습니다',
+        check_id,
+        total_amount: totalAmount,
+        kds_result: kdsResult
+      });
 
     } catch (kdsError) {
       console.error('⚠️ KDS 티켓 생성 실패 (주문은 정상 처리):', kdsError.message);

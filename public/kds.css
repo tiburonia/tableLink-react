@@ -139,6 +139,36 @@ body {
 .kds-main {
     height: calc(100vh - 180px);
     overflow-y: auto;
+}
+
+/* KDS 준비 상태 */
+.kds-ready-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+}
+
+.ready-message {
+    text-align: center;
+    padding: 3rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+}
+
+.ready-message h3 {
+    font-size: 1.8rem;
+    color: #10b981;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.ready-message p {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
     padding: 1.5rem;
 }
 

@@ -50,9 +50,16 @@ class KDSUIRenderer {
         
         console.log('🎫 티켓 렌더링:', tickets?.length || 0, '개');
         
-        // 티켓이 없을 때도 빈 프레임 표시
+        // 티켓이 없을 때 간단한 안내만 표시 (로딩 화면 제거)
         if (!tickets || tickets.length === 0) {
-            container.innerHTML = this.renderEmptyState();
+            container.innerHTML = `
+                <div class="kds-ready-state">
+                    <div class="ready-message">
+                        <h3>🍳 주방 준비 완료</h3>
+                        <p>새 주문이 들어오면 자동으로 티켓이 표시됩니다</p>
+                    </div>
+                </div>
+            `;
             return;
         }
         
@@ -60,28 +67,7 @@ class KDSUIRenderer {
         container.innerHTML = ticketsHTML;
     }
     
-    renderEmptyState() {
-        return `
-            <div class="empty-tickets-state">
-                <div class="empty-ticket-card">
-                    <div class="empty-ticket-header">
-                        <span class="empty-table">대기 중...</span>
-                        <span class="empty-time">--:--</span>
-                    </div>
-                    <div class="empty-ticket-body">
-                        <p class="empty-message">새 주문을 기다리고 있습니다</p>
-                        <div class="empty-animation">
-                            <div class="loading-dots">
-                                <span></span>
-                                <span></span>
-                                <span></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
+    // 빈 상태 렌더링 제거 - renderTickets에서 직접 처리
     
     renderSingleTicket(ticket) {
         const items = ticket.items || [];
