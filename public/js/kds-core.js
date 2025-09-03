@@ -114,8 +114,13 @@ class KDSDataManager {
                 const data = JSON.parse(event.data);
                 console.log('📡 KDS 실시간 데이터 수신:', data);
                 
-                if (data.type === 'update' || data.type === 'connected') {
+                // 모든 업데이트 타입에 대해 처리
+                if (data.type === 'connected') {
+                    console.log('✅ KDS 실시간 연결 확인');
                     onUpdate(data);
+                } else if (data.type === 'tll_order_created') {
+                    console.log('🎯 TLL 새 주문 알림:', data);
+                    onUpdate({...data, urgent: true});
                 } else if (data.type === 'new_tickets') {
                     console.log('🎫 새 티켓 생성 알림:', data);
                     onUpdate(data);
@@ -125,15 +130,21 @@ class KDSDataManager {
                 } else if (data.type === 'ticket_action') {
                     console.log('⚡ 티켓 액션 알림:', data);
                     onUpdate(data);
+                } else {
+                    // 기본 업데이트 처리
+                    onUpdate(data);
                 }
             } catch (error) {
                 console.error('❌ 실시간 데이터 처리 실패:', error);
             }
         };
         
-        this.eventSource.onerror = () => {
-            console.error('❌ KDS 실시간 연결 실패');
-            setTimeout(() => this.setupRealtime(onUpdate), 5000);
+        this.eventSource.onerror = (error) => {
+            console.error('❌ KDS 실시간 연결 오류:', error);
+            setTimeout(() => {
+                console.log('🔄 KDS 실시간 연결 재시도...');
+                this.setupRealtime(onUpdate);
+            }, 5000);
         };
     }
     

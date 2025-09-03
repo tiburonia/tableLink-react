@@ -174,19 +174,31 @@ class KDSController {
             console.log('📡 실시간 업데이트:', data);
             
             // 데이터 타입에 따른 처리
-            if (data.type === 'new_tickets') {
+            if (data.type === 'tll_order_created') {
+                this.uiRenderer.showToast('🎯 TLL 새 주문이 들어왔습니다!');
+                // 즉시 새로고침
+                this.loadTickets();
+                this.loadStations();
+            } else if (data.type === 'new_tickets') {
                 this.uiRenderer.showToast('새 주문이 들어왔습니다! 🎯');
                 this.loadTickets();
                 this.loadStations();
             } else if (data.type === 'item_status_change') {
-                this.loadTickets();
+                // 부드러운 업데이트
+                setTimeout(() => this.loadTickets(), 200);
             } else if (data.type === 'ticket_action') {
                 this.loadTickets();
                 this.loadStations();
-            } else {
-                // 기본 업데이트
+            } else if (data.urgent) {
+                // 긴급 업데이트
                 this.loadTickets();
                 this.loadStations();
+            } else {
+                // 기본 업데이트 (지연 적용)
+                setTimeout(() => {
+                    this.loadTickets();
+                    this.loadStations();
+                }, 500);
             }
         });
     }

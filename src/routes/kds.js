@@ -2,10 +2,19 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 
-// KDS 스테이션별 티켓 조회
+// KDS 스테이션별 티켓 조회 (TLL 주문 포함)
 router.get('/tickets', async (req, res) => {
   try {
     const { store_id, station_id, status, updated_since } = req.query;
+
+    if (!store_id) {
+      return res.status(400).json({
+        success: false,
+        message: '매장 ID가 필요합니다'
+      });
+    }
+
+    console.log(`🎫 KDS 티켓 조회: 매장 ${store_id}, 스테이션 ${station_id}`);
 
     let query = `
       SELECT 
@@ -19,11 +28,14 @@ router.get('/tickets', async (req, res) => {
         t.created_at,
         t.fired_at,
         t.ready_at,
+        t.updated_at,
         s.name as station_name,
         s.code as station_code,
         s.is_expo,
         c.table_number,
         c.customer_name,
+        c.status as check_status,
+        c.source_system as check_source,
         json_agg(
           json_build_object(
             'item_id', ti.id,
@@ -35,20 +47,22 @@ router.get('/tickets', async (req, res) => {
             'notes', ti.notes,
             'started_at', ti.started_at,
             'done_at', ti.done_at,
+            'expo_at', ti.expo_at,
+            'served_at', ti.served_at,
             'est_prep_sec', ti.est_prep_sec
           ) ORDER BY ti.id
-        ) as items
+        ) FILTER (WHERE ti.id IS NOT NULL) as items
       FROM kds_tickets t
-      JOIN kds_stations s ON t.station_id = s.id
-      JOIN checks c ON t.check_id = c.id
-      LEFT JOIN kds_ticket_items ti ON t.id = ti.ticket_id
-      WHERE t.store_id = $1
+      LEFT JOIN kds_stations s ON t.station_id = s.id
+      LEFT JOIN checks c ON t.check_id = c.id
+      LEFT JOIN kds_ticket_items ti ON t.id = ti.ticket_id AND ti.kds_status != 'CANCELED'
+      WHERE t.store_id = $1 AND t.status != 'BUMPED'
     `;
 
     const params = [store_id];
     let paramIndex = 2;
 
-    if (station_id) {
+    if (station_id && station_id !== 'null') {
       query += ` AND t.station_id = $${paramIndex}`;
       params.push(station_id);
       paramIndex++;
@@ -60,23 +74,27 @@ router.get('/tickets', async (req, res) => {
       paramIndex++;
     }
 
-    if (updated_since) {
+    if (updated_since && updated_since !== '0') {
       query += ` AND t.updated_at > $${paramIndex}`;
       params.push(new Date(parseInt(updated_since)));
       paramIndex++;
     }
 
     query += `
-      GROUP BY t.id, s.name, s.code, s.is_expo, c.table_number, c.customer_name
+      GROUP BY t.id, s.name, s.code, s.is_expo, c.table_number, c.customer_name, c.status, c.source_system
       ORDER BY t.priority DESC, t.created_at ASC
     `;
 
     const result = await pool.query(query, params);
 
+    // 빈 티켓도 프레임으로 표시하기 위해 최소 1개는 반환
+    const tickets = result.rows;
+    
     res.json({
       success: true,
-      tickets: result.rows,
-      timestamp: Date.now()
+      tickets: tickets,
+      timestamp: Date.now(),
+      total_count: tickets.length
     });
 
   } catch (error) {

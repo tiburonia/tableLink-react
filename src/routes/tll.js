@@ -283,6 +283,19 @@ router.post('/orders', async (req, res) => {
       const { createKDSTicketsForOrder } = require('./kds');
       const kdsResult = await createKDSTicketsForOrder(check_id, store_id, 'TLL');
       console.log('✅ KDS 티켓 자동 생성 완료:', kdsResult);
+
+      // 즉시 웹소켓으로 KDS에 알림
+      await pool.query(`
+        SELECT pg_notify('kds_updates', $1)
+      `, [JSON.stringify({
+        type: 'tll_order_created',
+        store_id: store_id,
+        check_id: check_id,
+        source: 'TLL',
+        items: items.length,
+        timestamp: Date.now()
+      })]);
+
     } catch (kdsError) {
       console.error('⚠️ KDS 티켓 생성 실패 (주문은 정상 처리):', kdsError.message);
       // KDS 티켓 생성 실패해도 주문은 정상 진행
