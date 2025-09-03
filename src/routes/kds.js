@@ -130,10 +130,17 @@ router.get('/stations', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 스테이션 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      message: '스테이션 조회 실패',
-      error: error.message
+    
+    // DB 연결 실패 시 기본 스테이션 제공
+    const defaultStations = [
+      { id: 1, name: '주방', code: 'KITCHEN', is_expo: false, is_active: true, active_tickets: 0 },
+      { id: 2, name: '엑스포', code: 'EXPO', is_expo: true, is_active: true, active_tickets: 0 }
+    ];
+    
+    res.json({
+      success: true,
+      stations: defaultStations,
+      fallback: true
     });
   }
 });
