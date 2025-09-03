@@ -1,13 +1,17 @@
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { Pool } = require('pg');
+
+console.log('🔍 환경변수 확인:');
+console.log('DATABASE_URL 존재:', !!process.env.DATABASE_URL);
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
 });
 
 async function createCompleteKDSSystem() {
@@ -15,16 +19,33 @@ async function createCompleteKDSSystem() {
   
   try {
     console.log('🚀 완전한 KDS/KRP 시스템 생성 시작...');
+    
+    // 연결 테스트
+    console.log('🔗 데이터베이스 연결 테스트 중...');
     client = await pool.connect();
+    console.log('✅ 데이터베이스 연결 성공');
     
     await client.query('BEGIN');
+    console.log('✅ 트랜잭션 시작');
+    
+    // 기존 테이블 존재 확인 및 삭제 (필요시)
+    console.log('🧹 기존 KDS 테이블 확인 및 정리...');
+    await client.query(`
+      DROP TABLE IF EXISTS kds_events CASCADE;
+      DROP TABLE IF EXISTS print_jobs CASCADE;
+      DROP TABLE IF EXISTS kds_ticket_items CASCADE;
+      DROP TABLE IF EXISTS kds_tickets CASCADE;
+      DROP TABLE IF EXISTS kds_station_routes CASCADE;
+      DROP TABLE IF EXISTS printers CASCADE;
+      DROP TABLE IF EXISTS kds_stations CASCADE;
+    `);
     
     // 1. 스테이션 테이블
     console.log('🏭 KDS 스테이션 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_stations (
+      CREATE TABLE kds_stations (
         id SERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL,
         name TEXT NOT NULL,
         code TEXT UNIQUE,
         is_expo BOOLEAN DEFAULT FALSE,
@@ -34,12 +55,28 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 2. 스테이션 라우팅 테이블
+    // 2. 프린터 테이블 (스테이션과 독립적으로 먼저 생성)
+    console.log('🖨️ 프린터 테이블 생성...');
+    await client.query(`
+      CREATE TABLE printers (
+        id SERIAL PRIMARY KEY,
+        store_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'ESCPOS_NET',
+        conn_uri TEXT,
+        status TEXT DEFAULT 'ONLINE',
+        last_seen TIMESTAMP,
+        CONSTRAINT chk_printer_type CHECK (type IN ('ESCPOS_NET', 'ESCPOS_USB', 'CLOUD_AGENT')),
+        CONSTRAINT chk_printer_status CHECK (status IN ('ONLINE', 'OFFLINE', 'UNKNOWN'))
+      )
+    `);
+    
+    // 3. 스테이션 라우팅 테이블
     console.log('🗺️ 스테이션 라우팅 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_station_routes (
+      CREATE TABLE kds_station_routes (
         id SERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL,
         menu_id INTEGER,
         category_id INTEGER,
         station_id INTEGER NOT NULL REFERENCES kds_stations(id) ON DELETE CASCADE,
@@ -48,13 +85,13 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 3. KDS 티켓 테이블
+    // 4. KDS 티켓 테이블
     console.log('🎫 KDS 티켓 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_tickets (
+      CREATE TABLE kds_tickets (
         id SERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-        check_id INTEGER NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL,
+        check_id INTEGER,
         station_id INTEGER NOT NULL REFERENCES kds_stations(id) ON DELETE CASCADE,
         course_no INTEGER DEFAULT 1,
         status TEXT NOT NULL DEFAULT 'OPEN',
@@ -69,13 +106,13 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 4. KDS 티켓 아이템 테이블
+    // 5. KDS 티켓 아이템 테이블
     console.log('🍽️ KDS 티켓 아이템 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_ticket_items (
+      CREATE TABLE kds_ticket_items (
         id SERIAL PRIMARY KEY,
         ticket_id INTEGER NOT NULL REFERENCES kds_tickets(id) ON DELETE CASCADE,
-        check_item_id INTEGER NOT NULL REFERENCES check_items(id) ON DELETE CASCADE,
+        check_item_id INTEGER,
         menu_id INTEGER,
         menu_name TEXT NOT NULL,
         quantity INTEGER NOT NULL DEFAULT 1,
@@ -93,12 +130,12 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 5. KDS 이벤트 테이블
+    // 6. KDS 이벤트 테이블
     console.log('📊 KDS 이벤트 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_events (
+      CREATE TABLE kds_events (
         id BIGSERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL,
         ticket_id INTEGER REFERENCES kds_tickets(id) ON DELETE CASCADE,
         ticket_item_id INTEGER REFERENCES kds_ticket_items(id) ON DELETE CASCADE,
         event_type TEXT NOT NULL,
@@ -109,28 +146,12 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 6. 프린터 테이블
-    console.log('🖨️ 프린터 테이블 생성...');
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS printers (
-        id SERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL DEFAULT 'ESCPOS_NET',
-        conn_uri TEXT,
-        status TEXT DEFAULT 'ONLINE',
-        last_seen TIMESTAMP,
-        CONSTRAINT chk_printer_type CHECK (type IN ('ESCPOS_NET', 'ESCPOS_USB', 'CLOUD_AGENT')),
-        CONSTRAINT chk_printer_status CHECK (status IN ('ONLINE', 'OFFLINE', 'UNKNOWN'))
-      )
-    `);
-    
     // 7. 프린트 잡 테이블
     console.log('📄 프린트 잡 테이블 생성...');
     await client.query(`
-      CREATE TABLE IF NOT EXISTS print_jobs (
+      CREATE TABLE print_jobs (
         id BIGSERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+        store_id INTEGER NOT NULL,
         printer_id INTEGER NOT NULL REFERENCES printers(id) ON DELETE CASCADE,
         ref_type TEXT NOT NULL,
         ref_id INTEGER NOT NULL,
@@ -149,66 +170,69 @@ async function createCompleteKDSSystem() {
       )
     `);
     
-    // 8. check_items 테이블에 KDS 컬럼 추가
-    console.log('🔧 check_items 테이블 KDS 컬럼 추가...');
-    await client.query(`
-      ALTER TABLE check_items 
-      ADD COLUMN IF NOT EXISTS kds_status TEXT DEFAULT 'PENDING',
-      ADD COLUMN IF NOT EXISTS station_id INTEGER,
-      ADD COLUMN IF NOT EXISTS course_no INTEGER DEFAULT 1,
-      ADD COLUMN IF NOT EXISTS fired_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS started_at TIMESTAMP,
-      ADD COLUMN IF NOT EXISTS done_at TIMESTAMP
-    `);
+    // 8. 기본 스테이션 데이터 생성
+    console.log('🏭 기본 스테이션 데이터 생성...');
     
-    // 9. 기본 스테이션 생성 (매장 1, 2에 대해)
-    console.log('🏭 기본 스테이션 생성...');
-    const stores = await client.query('SELECT id FROM stores LIMIT 3');
-    
-    for (const store of stores.rows) {
-      await client.query(`
-        INSERT INTO kds_stations (store_id, name, code, is_expo) VALUES
-        ($1, '주방', 'MAIN', false),
-        ($1, '음료', 'DRINK', false),
-        ($1, '튀김', 'FRY', false),
-        ($1, '엑스포', 'EXPO', true)
-        ON CONFLICT (code) DO NOTHING
-      `, [store.id]);
+    // 매장별 기본 스테이션 생성 (1~3번 매장)
+    for (let storeId = 1; storeId <= 3; storeId++) {
+      // 스테이션 생성
+      const stationInserts = [
+        [storeId, '주방', 'MAIN_' + storeId, false],
+        [storeId, '음료', 'DRINK_' + storeId, false],
+        [storeId, '튀김', 'FRY_' + storeId, false],
+        [storeId, '엑스포', 'EXPO_' + storeId, true]
+      ];
       
-      // 기본 프린터 생성
+      for (const [store_id, name, code, is_expo] of stationInserts) {
+        await client.query(`
+          INSERT INTO kds_stations (store_id, name, code, is_expo) 
+          VALUES ($1, $2, $3, $4)
+        `, [store_id, name, code, is_expo]);
+      }
+      
+      // 프린터 생성
       await client.query(`
         INSERT INTO printers (store_id, name, type, status) VALUES
         ($1, '주방프린터', 'ESCPOS_NET', 'ONLINE'),
         ($1, '엑스포프린터', 'ESCPOS_NET', 'ONLINE')
-      `, [store.id]);
+      `, [storeId]);
     }
     
-    // 10. 트리거 함수 생성
+    // 9. check_items 테이블 컬럼 추가 (있으면 무시)
+    console.log('🔧 check_items 테이블 KDS 컬럼 추가...');
+    try {
+      await client.query(`
+        ALTER TABLE check_items 
+        ADD COLUMN kds_status TEXT DEFAULT 'PENDING'
+      `);
+    } catch (e) {
+      console.log('ℹ️ kds_status 컬럼 이미 존재');
+    }
+    
+    try {
+      await client.query(`
+        ALTER TABLE check_items 
+        ADD COLUMN station_id INTEGER
+      `);
+    } catch (e) {
+      console.log('ℹ️ station_id 컬럼 이미 존재');
+    }
+    
+    try {
+      await client.query(`
+        ALTER TABLE check_items 
+        ADD COLUMN course_no INTEGER DEFAULT 1
+      `);
+    } catch (e) {
+      console.log('ℹ️ course_no 컬럼 이미 존재');
+    }
+    
+    // 10. 실시간 알림 함수 생성
     console.log('⚡ KDS 실시간 트리거 생성...');
     await client.query(`
       CREATE OR REPLACE FUNCTION kds_notify_trigger_func()
       RETURNS TRIGGER AS $$
       BEGIN
-        -- KDS 이벤트 로그 생성
-        INSERT INTO kds_events (
-          store_id, ticket_item_id, event_type, payload, actor_type
-        ) VALUES (
-          (SELECT s.id FROM stores s JOIN kds_tickets t ON s.id = t.store_id JOIN kds_ticket_items ti ON t.id = ti.ticket_id WHERE ti.id = COALESCE(NEW.id, OLD.id)),
-          COALESCE(NEW.id, OLD.id),
-          CASE TG_OP
-            WHEN 'INSERT' THEN 'ITEM_CREATED'
-            WHEN 'UPDATE' THEN 'ITEM_STATUS_CHANGED'
-            WHEN 'DELETE' THEN 'ITEM_DELETED'
-          END,
-          jsonb_build_object(
-            'old_status', COALESCE(OLD.kds_status, ''),
-            'new_status', COALESCE(NEW.kds_status, ''),
-            'timestamp', EXTRACT(epoch FROM NOW())
-          ),
-          'SYSTEM'
-        );
-        
-        -- 실시간 알림
         PERFORM pg_notify('kds_updates', 
           json_build_object(
             'type', 'item_status_change',
@@ -223,7 +247,9 @@ async function createCompleteKDSSystem() {
         RETURN COALESCE(NEW, OLD);
       END;
       $$ LANGUAGE plpgsql;
-      
+    `);
+    
+    await client.query(`
       DROP TRIGGER IF EXISTS kds_notify_trigger ON kds_ticket_items;
       CREATE TRIGGER kds_notify_trigger
         AFTER INSERT OR UPDATE OR DELETE ON kds_ticket_items
@@ -231,8 +257,9 @@ async function createCompleteKDSSystem() {
     `);
     
     await client.query('COMMIT');
+    console.log('✅ 트랜잭션 커밋 완료');
     
-    console.log('✅ 완전한 KDS/KRP 시스템 생성 완료!');
+    console.log('🎉 완전한 KDS/KRP 시스템 생성 완료!');
     console.log('📊 생성된 테이블:');
     console.log('  - kds_stations (스테이션)');
     console.log('  - kds_station_routes (라우팅)');
@@ -243,24 +270,64 @@ async function createCompleteKDSSystem() {
     console.log('  - print_jobs (프린트 잡)');
     
   } catch (error) {
-    await client.query('ROLLBACK');
+    if (client) {
+      try {
+        await client.query('ROLLBACK');
+        console.log('🔄 트랜잭션 롤백 완료');
+      } catch (rollbackError) {
+        console.error('❌ 롤백 실패:', rollbackError);
+      }
+    }
     console.error('❌ KDS/KRP 시스템 생성 실패:', error);
+    console.error('상세 오류:', error.message);
     throw error;
   } finally {
-    if (client) client.release();
+    if (client) {
+      try {
+        client.release();
+        console.log('🔌 데이터베이스 연결 해제');
+      } catch (releaseError) {
+        console.error('❌ 연결 해제 실패:', releaseError);
+      }
+    }
+  }
+}
+
+async function testConnection() {
+  try {
+    console.log('🧪 데이터베이스 연결 테스트...');
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW() as current_time');
+    console.log('✅ 연결 테스트 성공:', result.rows[0]);
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('❌ 연결 테스트 실패:', error.message);
+    return false;
+  }
+}
+
+async function main() {
+  try {
+    const isConnected = await testConnection();
+    if (!isConnected) {
+      console.error('💥 데이터베이스에 연결할 수 없습니다.');
+      process.exit(1);
+    }
+    
+    await createCompleteKDSSystem();
+    console.log('🎉 스크립트 실행 완료');
+    process.exit(0);
+  } catch (error) {
+    console.error('💥 스크립트 실행 실패:', error.message);
+    process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
 if (require.main === module) {
-  createCompleteKDSSystem()
-    .then(() => {
-      console.log('🎉 스크립트 실행 완료');
-      process.exit(0);
-    })
-    .catch(error => {
-      console.error('💥 스크립트 실행 실패:', error);
-      process.exit(1);
-    });
+  main();
 }
 
 module.exports = { createCompleteKDSSystem };
