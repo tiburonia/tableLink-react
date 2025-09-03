@@ -1,339 +1,356 @@
 
 /**
- * KDS UI 렌더링 모듈
- * 책임: 화면 렌더링, 사용자 인터페이스 관리
+ * KDS UI 렌더링 모듈 (Simple KDS v2.0)
+ * 책임: KDS 화면 렌더링, 사용자 상호작용 처리
  */
 
-// 중복 로딩 방지
-if (window.KDSUIRenderer) {
-  console.log('⚠️ KDSUIRenderer가 이미 로드됨');
-} else {
-
-/**
- * KDS UI 렌더링, 사용자 인터페이스 요소 관리
- */
-
-class KDSUIRenderer {
-    constructor() {
-        this.clockInterval = null;
-    }
-    
-    renderStationTabs(stations, currentStationId) {
-        const container = document.getElementById('stationTabs');
-        if (!container) return;
-        
-        if (!stations || stations.length === 0) {
-            container.innerHTML = '<div class="no-stations">스테이션 정보를 불러오는 중...</div>';
-            return;
-        }
-        
-        const tabsHTML = stations.map(station => `
-            <button 
-                class="station-tab ${station.id === currentStationId ? 'active' : ''}"
-                onclick="kdsController.selectStation(${station.id})"
-            >
-                <span class="station-name">${station.name}</span>
-                <span class="ticket-count">${station.active_tickets || 0}</span>
-                ${station.is_expo ? '<span class="expo-badge">EXPO</span>' : ''}
+window.KDSUIRenderer = {
+  // KDS 메인 화면 렌더링
+  renderMainScreen: function(storeId) {
+    const main = document.getElementById('main');
+    main.innerHTML = `
+      <div class="kds-container">
+        <div class="kds-header">
+          <div class="store-info">
+            <h1>🍽️ KDS - 매장 ${storeId}</h1>
+            <div class="status-info">
+              <span id="connectionStatus" class="status-connected">연결됨</span>
+              <span id="lastUpdate">마지막 업데이트: 방금 전</span>
+            </div>
+          </div>
+          <div class="controls">
+            <button onclick="window.kdsRefresh()" class="btn-refresh">
+              🔄 새로고침
             </button>
-        `).join('');
-        
-        container.innerHTML = tabsHTML;
-    }
-    
-    renderTickets(tickets) {
-        const container = document.getElementById('ticketsContainer');
-        if (!container) {
-            console.warn('⚠️ ticketsContainer 요소를 찾을 수 없습니다');
-            return;
-        }
-        
-        console.log('🎫 티켓 렌더링:', tickets?.length || 0, '개');
-        
-        // 티켓이 없을 때 간단한 안내만 표시 (로딩 화면 제거)
-        if (!tickets || tickets.length === 0) {
-            container.innerHTML = `
-                <div class="kds-ready-state">
-                    <div class="ready-message">
-                        <h3>🍳 주방 준비 완료</h3>
-                        <p>새 주문이 들어오면 자동으로 티켓이 표시됩니다</p>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        const ticketsHTML = tickets.map(ticket => this.renderSingleTicket(ticket)).join('');
-        container.innerHTML = ticketsHTML;
-    }
-    
-    // 빈 상태 렌더링 제거 - renderTickets에서 직접 처리
-    
-    renderSingleTicket(ticket) {
-        const items = ticket.items || [];
-        const hasItems = items.length > 0;
-        
-        // 티켓 메인 상태 판단
-        const mainStatus = this.getTicketMainStatus(ticket);
-        const timeLabel = this.formatTicketTime(ticket);
-        const sourceLabel = ticket.source_system === 'TLL' ? 'TLL' : 'POS';
-        
-        return `
-            <div class="ticket-card ${mainStatus.toLowerCase()} ${ticket.source_system.toLowerCase()}" 
-                 data-ticket-id="${ticket.ticket_id}">
-                
-                <div class="ticket-header">
-                    <div class="ticket-info">
-                        <span class="table-number">테이블 ${ticket.table_number || '?'}</span>
-                        <span class="source-badge ${ticket.source_system.toLowerCase()}">${sourceLabel}</span>
-                    </div>
-                    <div class="ticket-time">${timeLabel}</div>
-                </div>
-                
-                <div class="ticket-status-bar ${mainStatus.toLowerCase()}">
-                    <span class="status-text">${this.getStatusText(mainStatus)}</span>
-                    <div class="priority-indicator priority-${ticket.priority || 1}">
-                        ${'★'.repeat(ticket.priority || 1)}
-                    </div>
-                </div>
-                
-                <div class="ticket-items">
-                    ${hasItems ? items.map(item => this.renderTicketItem(item)).join('') : 
-                      '<div class="no-items">아이템 로딩 중...</div>'}
-                </div>
-                
-                <div class="ticket-actions">
-                    <button class="quick-action-btn ${mainStatus.toLowerCase()}"
-                            onclick="kdsController.quickAction(${ticket.ticket_id})">
-                        ${this.getQuickActionText(mainStatus)}
-                    </button>
-                    
-                    <div class="ticket-controls">
-                        <button onclick="kdsController.ticketAction(${ticket.ticket_id}, 'raise_priority')"
-                                class="priority-btn" title="우선순위 올리기">🔥</button>
-                        <button onclick="kdsController.ticketAction(${ticket.ticket_id}, 'hold_all')"
-                                class="hold-btn" title="보류">⏸️</button>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    renderTicketItem(item) {
-        const statusClass = item.kds_status ? item.kds_status.toLowerCase() : 'pending';
-        const options = item.options && Object.keys(item.options).length > 0 
-            ? Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(', ')
-            : '';
-        
-        return `
-            <div class="ticket-item ${statusClass}" data-item-id="${item.item_id}">
-                <div class="item-main">
-                    <span class="item-name">${item.menu_name}</span>
-                    <span class="item-quantity">×${item.quantity}</span>
-                    <span class="item-status ${statusClass}">${this.getItemStatusText(item.kds_status)}</span>
-                </div>
-                
-                ${options ? `<div class="item-options">${options}</div>` : ''}
-                ${item.notes ? `<div class="item-notes">📝 ${item.notes}</div>` : ''}
-                
-                <div class="item-actions">
-                    <button onclick="kdsController.itemQuickAction(${item.item_id})" 
-                            class="item-quick-btn ${statusClass}">
-                        ${this.getItemQuickActionText(item.kds_status)}
-                    </button>
-                </div>
-            </div>
-        `;
-    }
-    
-    renderExpoView(expoItems) {
-        const container = document.getElementById('ticketsContainer');
-        if (!container) return;
-        
-        if (!expoItems || expoItems.length === 0) {
-            container.innerHTML = this.renderEmptyExpoState();
-            return;
-        }
-        
-        const expoHTML = expoItems.map(checkGroup => `
-            <div class="expo-check-group" data-check-id="${checkGroup.check_id}">
-                <div class="expo-check-header">
-                    <span class="check-table">테이블 ${checkGroup.table_number}</span>
-                    <span class="check-customer">${checkGroup.customer_name || '고객'}</span>
-                    <button onclick="kdsController.completeOrder(${checkGroup.check_id})" 
-                            class="complete-order-btn">서빙 완료</button>
-                </div>
-                
-                <div class="expo-items">
-                    ${checkGroup.items.map(item => `
-                        <div class="expo-item ${item.kds_status?.toLowerCase() || 'done'}"
-                             data-item-id="${item.item_id}">
-                            <span class="expo-item-name">${item.menu_name}</span>
-                            <span class="expo-item-quantity">×${item.quantity}</span>
-                            <span class="expo-item-station">[${item.station_name}]</span>
-                            <button onclick="kdsController.itemAction(${item.item_id}, 'served')"
-                                    class="expo-serve-btn">서빙</button>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
-        
-        container.innerHTML = expoHTML;
-    }
-    
-    renderEmptyExpoState() {
-        return `
-            <div class="empty-expo-state">
-                <div class="empty-expo-card">
-                    <h3>🍽️ EXPO 대기 중</h3>
-                    <p>서빙 준비된 주문이 없습니다</p>
-                    <div class="loading-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-    
-    getTicketMainStatus(ticket) {
-        if (!ticket.items || ticket.items.length === 0) {
-            return 'PENDING';
-        }
-        
-        const statuses = ticket.items.map(item => item.kds_status);
-        
-        if (statuses.every(status => status === 'DONE' || status === 'EXPO')) {
-            return 'DONE';
-        } else if (statuses.some(status => status === 'COOKING')) {
-            return 'COOKING';
-        } else {
-            return 'PENDING';
-        }
-    }
-    
-    getStatusText(status) {
-        const statusMap = {
-            'PENDING': '대기 중',
-            'COOKING': '조리 중',
-            'DONE': '완료',
-            'READY': '픽업 대기',
-            'EXPO': '서빙 대기'
-        };
-        return statusMap[status] || status;
-    }
-    
-    getItemStatusText(status) {
-        const statusMap = {
-            'PENDING': '대기',
-            'COOKING': '조리중',
-            'DONE': '완료',
-            'EXPO': '서빙대기',
-            'SERVED': '서빙됨',
-            'HOLD': '보류',
-            'CANCELED': '취소'
-        };
-        return statusMap[status] || status;
-    }
-    
-    getQuickActionText(status) {
-        const actionMap = {
-            'PENDING': '조리 시작',
-            'COOKING': '조리 완료',
-            'DONE': '서빙 준비',
-            'READY': '픽업'
-        };
-        return actionMap[status] || '액션';
-    }
-    
-    getItemQuickActionText(status) {
-        const actionMap = {
-            'PENDING': '시작',
-            'COOKING': '완료',
-            'DONE': '준비',
-            'EXPO': '서빙'
-        };
-        return actionMap[status] || '액션';
-    }
-    
-    formatTicketTime(ticket) {
-        try {
-            const time = ticket.fired_at || ticket.created_at;
-            if (!time) return '--:--';
-            
-            const date = new Date(time);
-            return date.toLocaleTimeString('ko-KR', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } catch (error) {
-            return '--:--';
-        }
-    }
-    
-    startClock() {
-        this.updateClock();
-        this.clockInterval = setInterval(() => this.updateClock(), 1000);
-    }
-    
-    updateClock() {
-        const clockElement = document.getElementById('currentTime');
-        if (clockElement) {
-            const now = new Date();
-            clockElement.textContent = now.toLocaleTimeString('ko-KR');
-        }
-    }
-    
-    updateConnectionStatus(isConnected) {
-        const statusElement = document.getElementById('connectionStatus');
-        if (statusElement) {
-            statusElement.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
-            statusElement.textContent = isConnected ? '연결됨' : '연결 끊김';
-        }
-    }
-    
-    showError(message) {
-        const container = document.getElementById('ticketsContainer');
-        if (container) {
-            container.innerHTML = `
-                <div class="error-state">
-                    <div class="error-card">
-                        <h3>❌ 오류 발생</h3>
-                        <p>${message}</p>
-                        <button onclick="kdsController.loadTickets()" class="retry-btn">다시 시도</button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-    
-    showToast(message, isError = false) {
-        const toast = document.createElement('div');
-        toast.className = `toast ${isError ? 'error' : 'success'}`;
-        toast.textContent = message;
-        
-        document.body.appendChild(toast);
-        
-        // 애니메이션 효과
-        setTimeout(() => toast.classList.add('show'), 10);
-        
-        // 3초 후 제거
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => document.body.removeChild(toast), 300);
-        }, 3000);
-    }
-    
-    destroy() {
-        if (this.clockInterval) {
-            clearInterval(this.clockInterval);
-        }
-    }
-}
+            <button onclick="window.location.reload()" class="btn-reload">
+              ⚡ 완전새로고침  
+            </button>
+          </div>
+        </div>
 
-window.KDSUIRenderer = KDSUIRenderer;
-console.log('✅ KDSUIRenderer 클래스 등록 완료');
+        <div class="station-tabs" id="stationTabs">
+          <button class="station-tab active" data-station="all">
+            전체 주문
+            <span class="ticket-counter" id="counter-all">0</span>
+          </button>
+        </div>
 
-} // 중복 로딩 방지 닫기
+        <div class="kds-main" id="kdsMain">
+          <div class="kds-ready-state" id="readyState">
+            <div class="ready-icon">📋</div>
+            <h3>KDS 준비 완료</h3>
+            <p>새로운 주문을 기다리고 있습니다</p>
+          </div>
+        </div>
+      </div>
+    `;
+
+    this.loadStations(storeId);
+    this.loadItems(storeId);
+  },
+
+  // 스테이션 탭 로딩
+  loadStations: async function(storeId) {
+    try {
+      const response = await fetch(`/api/kds/stations?store_id=${storeId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        this.renderStationTabs(data.stations);
+      }
+    } catch (error) {
+      console.error('❌ 스테이션 로딩 실패:', error);
+    }
+  },
+
+  // 스테이션 탭 렌더링
+  renderStationTabs: function(stations) {
+    const tabsContainer = document.getElementById('stationTabs');
+    
+    let tabsHTML = `
+      <button class="station-tab active" data-station="all">
+        전체 주문
+        <span class="ticket-counter" id="counter-all">0</span>
+      </button>
+    `;
+
+    stations.forEach(station => {
+      const isExpo = station.is_expo ? ' expo' : '';
+      tabsHTML += `
+        <button class="station-tab${isExpo}" data-station="${station.id}">
+          ${station.name}
+          <span class="ticket-counter" id="counter-${station.id}">${station.active_items || 0}</span>
+        </button>
+      `;
+    });
+
+    tabsContainer.innerHTML = tabsHTML;
+
+    // 탭 클릭 이벤트
+    tabsContainer.addEventListener('click', (e) => {
+      if (e.target.classList.contains('station-tab')) {
+        const stationId = e.target.dataset.station;
+        this.switchStation(stationId);
+      }
+    });
+  },
+
+  // 스테이션 전환
+  switchStation: function(stationId) {
+    // 탭 활성화
+    document.querySelectorAll('.station-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+    document.querySelector(`[data-station="${stationId}"]`).classList.add('active');
+
+    // 아이템 로딩
+    const urlParams = new URLSearchParams(window.location.search);
+    const storeId = urlParams.get('storeId') || 1;
+    this.loadItems(storeId, stationId);
+  },
+
+  // KDS 아이템 로딩
+  loadItems: async function(storeId, stationId = 'all') {
+    try {
+      let url = `/api/kds/items?store_id=${storeId}`;
+      if (stationId !== 'all') {
+        url += `&station_id=${stationId}`;
+      }
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.success) {
+        this.renderKDSItems(data.checks || []);
+        this.updateItemCounts(data.checks || []);
+      }
+    } catch (error) {
+      console.error('❌ KDS 아이템 로딩 실패:', error);
+      this.showError('아이템 로딩에 실패했습니다.');
+    }
+  },
+
+  // KDS 아이템 렌더링
+  renderKDSItems: function(checks) {
+    const kdsMain = document.getElementById('kdsMain');
+    const readyState = document.getElementById('readyState');
+
+    if (checks.length === 0) {
+      readyState.style.display = 'flex';
+      kdsMain.innerHTML = `
+        <div class="kds-ready-state">
+          <div class="ready-icon">📋</div>
+          <h3>주문 대기 중</h3>
+          <p>새로운 주문이 들어오면 자동으로 표시됩니다</p>
+        </div>
+      `;
+      return;
+    }
+
+    readyState.style.display = 'none';
+
+    let itemsHTML = '<div class="kds-grid">';
+
+    checks.forEach(check => {
+      itemsHTML += this.renderCheckCard(check);
+    });
+
+    itemsHTML += '</div>';
+    kdsMain.innerHTML = itemsHTML;
+  },
+
+  // 체크 카드 렌더링
+  renderCheckCard: function(check) {
+    const sourceIcon = check.source_system === 'TLL' ? '📱' : '🖥️';
+    const sourceText = check.source_system === 'TLL' ? 'TableLink' : 'POS';
+    
+    let itemsHTML = '';
+    check.items.forEach(item => {
+      const statusClass = this.getStatusClass(item.kds_status);
+      const elapsedTime = item.elapsed_seconds ? this.formatElapsedTime(item.elapsed_seconds) : '';
+      
+      itemsHTML += `
+        <div class="kds-item ${statusClass}" data-item-id="${item.id}">
+          <div class="item-header">
+            <span class="menu-name">${item.menu_name}</span>
+            <span class="quantity">x${item.quantity}</span>
+          </div>
+          ${item.options && Object.keys(item.options).length > 0 ? 
+            `<div class="item-options">${this.renderOptions(item.options)}</div>` : ''
+          }
+          <div class="item-status">
+            <span class="status-badge">${this.getStatusText(item.kds_status)}</span>
+            ${elapsedTime ? `<span class="elapsed-time">${elapsedTime}</span>` : ''}
+          </div>
+          <div class="item-actions">
+            ${this.renderItemActions(item)}
+          </div>
+        </div>
+      `;
+    });
+
+    return `
+      <div class="kds-card" data-check-id="${check.check_id}">
+        <div class="card-header">
+          <div class="table-info">
+            <span class="table-number">테이블 ${check.table_number}</span>
+            <span class="customer-name">${check.customer_name}</span>
+          </div>
+          <div class="source-info">
+            <span class="source-badge">
+              ${sourceIcon} ${sourceText}
+            </span>
+          </div>
+        </div>
+        <div class="card-items">
+          ${itemsHTML}
+        </div>
+      </div>
+    `;
+  },
+
+  // 아이템 액션 버튼 렌더링
+  renderItemActions: function(item) {
+    switch (item.kds_status) {
+      case 'PENDING':
+        return `
+          <button onclick="window.kdsItemAction(${item.id}, 'start')" class="btn-start">
+            🔥 조리시작
+          </button>
+          <button onclick="window.kdsItemAction(${item.id}, 'cancel')" class="btn-cancel">
+            ❌ 취소
+          </button>
+        `;
+      case 'COOKING':
+        return `
+          <button onclick="window.kdsItemAction(${item.id}, 'done')" class="btn-done">
+            ✅ 완료
+          </button>
+          <button onclick="window.kdsItemAction(${item.id}, 'cancel')" class="btn-cancel">
+            ❌ 취소
+          </button>
+        `;
+      case 'DONE':
+        return `
+          <button onclick="window.kdsItemAction(${item.id}, 'serve')" class="btn-serve">
+            🍽️ 서빙
+          </button>
+        `;
+      default:
+        return '';
+    }
+  },
+
+  // 상태별 CSS 클래스
+  getStatusClass: function(status) {
+    const classes = {
+      'PENDING': 'status-pending',
+      'COOKING': 'status-cooking',
+      'DONE': 'status-done',
+      'SERVED': 'status-served',
+      'CANCELED': 'status-canceled'
+    };
+    return classes[status] || '';
+  },
+
+  // 상태별 텍스트
+  getStatusText: function(status) {
+    const texts = {
+      'PENDING': '대기중',
+      'COOKING': '조리중',
+      'DONE': '완료',
+      'SERVED': '서빙완료',
+      'CANCELED': '취소됨'
+    };
+    return texts[status] || status;
+  },
+
+  // 옵션 렌더링
+  renderOptions: function(options) {
+    if (typeof options === 'string') {
+      return options;
+    }
+    if (typeof options === 'object' && options !== null) {
+      return Object.entries(options)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+    }
+    return '';
+  },
+
+  // 경과 시간 포맷
+  formatElapsedTime: function(seconds) {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    
+    if (minutes > 0) {
+      return `${minutes}분 ${remainingSeconds}초`;
+    } else {
+      return `${remainingSeconds}초`;
+    }
+  },
+
+  // 아이템 수 업데이트
+  updateItemCounts: function(checks) {
+    // 전체 카운트 업데이트
+    const totalCount = checks.reduce((sum, check) => sum + check.items.length, 0);
+    const allCounter = document.getElementById('counter-all');
+    if (allCounter) {
+      allCounter.textContent = totalCount;
+    }
+
+    // 스테이션별 카운트 업데이트 (향후 구현)
+  },
+
+  // 에러 표시
+  showError: function(message) {
+    const kdsMain = document.getElementById('kdsMain');
+    kdsMain.innerHTML = `
+      <div class="kds-error">
+        <div class="error-icon">⚠️</div>
+        <h3>오류 발생</h3>
+        <p>${message}</p>
+        <button onclick="location.reload()" class="btn-retry">다시 시도</button>
+      </div>
+    `;
+  }
+};
+
+// 전역 함수들
+window.kdsRefresh = function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const storeId = urlParams.get('storeId') || 1;
+  const activeStation = document.querySelector('.station-tab.active')?.dataset.station || 'all';
+  
+  window.KDSUIRenderer.loadItems(storeId, activeStation);
+};
+
+window.kdsItemAction = async function(itemId, action) {
+  try {
+    const response = await fetch(`/api/kds/items/${itemId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: action,
+        actor_type: 'USER',
+        actor_id: 'kds_user'
+      })
+    });
+
+    const result = await response.json();
+    
+    if (result.success) {
+      // 성공 시 자동 새로고침
+      window.kdsRefresh();
+    } else {
+      alert('작업 실패: ' + result.message);
+    }
+  } catch (error) {
+    console.error('❌ 아이템 액션 실패:', error);
+    alert('작업 중 오류가 발생했습니다.');
+  }
+};
+
+console.log('✅ KDS UI 렌더러 v2.0 로드 완료');
