@@ -5,16 +5,28 @@ async function renderKDS() {
   try {
     console.log('📟 KDS 페이지 로딩 시작');
 
-    // URL에서 매장 ID 추출
+    // URL에서 매장 ID 추출 (경로와 쿼리 파라미터 모두 확인)
     const urlPath = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
     const pathSegments = urlPath.split('/');
     console.log('🔍 URL 경로 분석:', pathSegments);
+    console.log('🔍 URL 파라미터:', urlParams.toString());
 
     let storeId = null;
 
+    // 1. 경로에서 매장 ID 추출 시도 (/kds/1)
     if (pathSegments[1] === 'kds' && pathSegments[2]) {
       storeId = parseInt(pathSegments[2]);
       console.log('🎯 경로에서 매장 ID 추출:', storeId);
+    }
+
+    // 2. 쿼리 파라미터에서 매장 ID 추출 시도 (kds.html?storeId=1)
+    if (!storeId) {
+      const storeIdParam = urlParams.get('storeId') || urlParams.get('store');
+      if (storeIdParam) {
+        storeId = parseInt(storeIdParam);
+        console.log('🎯 쿼리 파라미터에서 매장 ID 추출:', storeId);
+      }
     }
 
     if (!storeId || isNaN(storeId)) {
@@ -1265,8 +1277,30 @@ function renderKDSStoreSelection() {
     <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
       <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #63b3ed;">📟 KDS</h1>
       <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장을 선택하세요</p>
-      <p style="margin: 20px 0; color: #718096;">올바른 매장 ID가 필요합니다.</p>
-      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
+      
+      <div style="margin: 30px 0; max-width: 400px; width: 100%;">
+        <input 
+          type="number" 
+          id="storeIdInput" 
+          placeholder="매장 ID를 입력하세요 (예: 1)" 
+          style="width: 100%; padding: 16px; font-size: 18px; border: 2px solid #4a5568; border-radius: 8px; background: #2d3748; color: #e2e8f0; text-align: center; margin-bottom: 16px;"
+          onkeypress="if(event.key === 'Enter') { enterKDSStore(); }"
+        />
+        <button 
+          onclick="enterKDSStore()" 
+          style="width: 100%; background: linear-gradient(135deg, #68d391 0%, #38a169 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-bottom: 16px;"
+        >
+          🚀 KDS 접속
+        </button>
+      </div>
+
+      <div style="margin: 20px 0; color: #718096; font-size: 14px;">
+        <p>📝 사용법:</p>
+        <p>• URL: kds.html?storeId=1</p>
+        <p>• 또는 /kds/1 형태로 접속</p>
+      </div>
+
+      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 1rem;">
         로그인 화면으로 돌아가기
       </button>
     </div>
@@ -1426,8 +1460,27 @@ function showOrderDetail(orderId) {
   showNotification('상세 화면은 곧 구현될 예정입니다', 'info');
 }
 
+// KDS 매장 접속 함수
+function enterKDSStore() {
+  const storeIdInput = document.getElementById('storeIdInput');
+  const storeId = parseInt(storeIdInput.value);
+
+  if (!storeId || isNaN(storeId) || storeId <= 0) {
+    alert('올바른 매장 ID를 입력해주세요.');
+    storeIdInput.focus();
+    return;
+  }
+
+  console.log(`🚀 매장 ${storeId} KDS 접속 시도`);
+  
+  // URL 파라미터로 매장 ID 설정하고 페이지 새로고침
+  const newUrl = `${window.location.pathname}?storeId=${storeId}`;
+  window.location.href = newUrl;
+}
+
 // 전역 함수로 노출
 window.renderKDS = renderKDS;
+window.enterKDSStore = enterKDSStore;
 window.startCookingOrder = startCookingOrder;
 window.completeOrder = completeOrder;
 window.serveOrder = serveOrder;
