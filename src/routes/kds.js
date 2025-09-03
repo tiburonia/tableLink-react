@@ -400,6 +400,36 @@ router.patch('/tickets/:id', async (req, res) => {
         `, [ticketId]);
         break;
         
+      case 'hold_all':
+        await client.query(`
+          UPDATE kds_ticket_items 
+          SET kds_status = 'HOLD', updated_at = NOW()
+          WHERE ticket_id = $1 AND kds_status IN ('PENDING', 'COOKING')
+        `, [ticketId]);
+        break;
+        
+      case 'expo_all':
+        await client.query(`
+          UPDATE kds_ticket_items 
+          SET kds_status = 'EXPO', expo_at = NOW(), updated_at = NOW()
+          WHERE ticket_id = $1 AND kds_status = 'DONE'
+        `, [ticketId]);
+        break;
+        
+      case 'cancel_all':
+        await client.query(`
+          UPDATE kds_ticket_items 
+          SET kds_status = 'CANCELED', updated_at = NOW()
+          WHERE ticket_id = $1 AND kds_status NOT IN ('SERVED', 'CANCELED')
+        `, [ticketId]);
+        
+        await client.query(`
+          UPDATE kds_tickets 
+          SET status = 'BUMPED', updated_at = NOW()
+          WHERE id = $1
+        `, [ticketId]);
+        break;
+        
       default:
         return res.status(400).json({
           success: false,
