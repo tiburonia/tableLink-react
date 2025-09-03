@@ -1,6 +1,7 @@
+
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db/pool');
+const pool = require('../db/pool');
 const { storeAuth } = require('../mw/auth');
 const sse = require('../services/sse');
 
@@ -27,24 +28,19 @@ const validateEnum = (value, allowedValues, fieldName) => {
 };
 
 // KDS 실시간 스트림
-// [GET] /stream?stations=FRY,GRILL
 router.get('/stream', storeAuth, (req, res) => {
   try {
-    const storeId = req.storeId; // storeAuth 미들웨어에서 설정
+    const storeId = req.storeId;
     const { stations } = req.query;
 
-    // TODO: 스테이션 필터링은 메시지 레벨에서 처리 (현재는 store 단위로만 필터링)
     if (stations) {
       const stationList = stations.split(',').map(s => s.trim());
-      // 향후 스테이션별 세분화된 필터링 구현 예정
       console.log(`[SSE] Store ${storeId} requesting stations: ${stationList.join(', ')}`);
     }
 
     const topic = `store:${storeId}`;
 
-    // SSE 연결 수 제한 및 타임아웃/하트비트 로직은 sse.js 서비스에서 관리
     if (!sse.add(topic, res)) {
-      // SSE 서비스에서 이미 클라이언트에게 에러 응답을 보냈을 경우, 여기서 추가 응답 없이 반환
       return;
     }
 
@@ -56,23 +52,8 @@ router.get('/stream', storeAuth, (req, res) => {
       timestamp: new Date().toISOString()
     })}\n\n`);
 
-    // 하트비트 (20초 간격) - sse.js의 Heartbeat 로직으로 대체될 예정
-    // const heartbeat = setInterval(() => {
-    //   try {
-    //     res.write(`data: ${JSON.stringify({
-    //       type: 'heartbeat',
-    //       timestamp: new Date().toISOString()
-    //     })}\n\n`);
-    //   } catch (error) {
-    //     console.error(`[SSE] Heartbeat error for store ${storeId}:`, error.message);
-    //     clearInterval(heartbeat);
-    //     sse.remove(topic, res); // 연결 종료 처리
-    //   }
-    // }, 20000);
-
     // 연결 종료 시 정리
     res.on('close', () => {
-      // clearInterval(heartbeat); // Heartbeat Interval 제거
       sse.remove(topic, res);
       console.log(`🔌 KDS SSE 연결 종료: store ${storeId}`);
     });
@@ -80,73 +61,66 @@ router.get('/stream', storeAuth, (req, res) => {
     console.log(`🔌 KDS SSE 연결: store ${storeId}, stations: ${stations || 'all'}`);
 
   } catch (error) {
-    // SSE 서비스 레벨의 에러 처리 (e.g., SSE 서비스 내부에서 연결 수 초과 등)
-    if (error.code === 'SSE_CONNECTION_LIMIT_EXCEEDED') {
-      res.status(429).json({ // Too Many Requests
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      });
-    } else {
-      // 기타 예상치 못한 에러
-      console.error('❌ KDS SSE 연결 에러:', error);
-      res.status(400).json({
-        error: {
-          code: 'INVALID_STREAM_REQUEST',
-          message: error.message || 'SSE 연결 요청 처리 중 에러가 발생했습니다.'
-        }
-      });
-    }
+    console.error('❌ KDS SSE 연결 에러:', error);
+    res.status(400).json({
+      error: {
+        code: 'INVALID_STREAM_REQUEST',
+        message: error.message || 'SSE 연결 요청 처리 중 에러가 발생했습니다.'
+      }
+    });
   }
 });
 
-// KDS 폴링 엔드포인트
-// [GET] /poll?since=<timestamp>&status=<status1,status2>
+// KDS 데이터 조회 (새 스키마 적용)
 router.get('/poll', storeAuth, async (req, res) => {
   try {
     const storeId = req.storeId;
     const { since, status } = req.query;
 
-    let whereClause = 'ol.store_id = $1'; // JOIN 후 store_id 접근
+    let whereClause = 'c.store_id = $1';
     let params = [storeId];
     let paramIndex = 2;
 
-    // 시간 필터 (SQL 인덱스 힌트: ol.updated_at에 인덱스 필요)
+    // 시간 필터
     if (since) {
-      whereClause += ` AND ol.updated_at >= $${paramIndex}`;
+      whereClause += ` AND oi.updated_at >= $${paramIndex}`;
       params.push(since);
       paramIndex++;
     }
 
-    // 상태 필터 (SQL 인덱스 힌트: ol.status에 인덱스 고려)
+    // 상태 필터
     if (status) {
       const statusList = status.split(',').map(s => s.trim());
-      // TODO: RBAC/JWT 확장 시, 사용자별 접근 가능한 상태 필터링 추가 고려
-      whereClause += ` AND ol.status = ANY($${paramIndex})`;
+      whereClause += ` AND oi.status = ANY($${paramIndex})`;
       params.push(statusList);
       paramIndex++;
     }
 
-    // TODO: 빈번 쿼리 (ol.updated_at, ol.store_id, ol.status)에 대한 WHERE 절 인덱스 사용 확인 및 최적화
-    const result = await query(`
+    const result = await pool.query(`
       SELECT
-        ol.id as line_id,
-        ol.menu_name,
-        ol.quantity,
-        ol.status,
-        ol.cook_station,
-        ol.notes,
-        ol.updated_at,
+        oi.id as line_id,
+        oi.menu_name,
+        oi.quantity,
+        oi.status,
+        oi.cook_station,
+        oi.cooking_notes as notes,
+        oi.updated_at,
         c.table_number,
         c.customer_name,
         o.id as order_id,
-        o.source
-      FROM order_lines ol
-      JOIN orders o ON ol.order_id = o.id
+        o.source,
+        o.order_number,
+        oi.started_at,
+        oi.ready_at,
+        oi.served_at,
+        oi.priority,
+        oi.estimated_time
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
       JOIN checks c ON o.check_id = c.id
       WHERE ${whereClause}
-      ORDER BY ol.updated_at DESC
+      AND oi.status NOT IN ('served', 'cancelled')
+      ORDER BY oi.priority DESC, oi.created_at ASC
       LIMIT 100
     `, params);
 
@@ -159,19 +133,17 @@ router.get('/poll', storeAuth, async (req, res) => {
 
   } catch (error) {
     console.error('❌ KDS 폴링 실패:', error);
-    // 에러 메시지 표준화 적용
     res.status(500).json({
       error: {
         code: 'KDS_POLLING_FAILED',
         message: 'KDS 데이터를 가져오는 데 실패했습니다.',
-        details: error.message // 상세 에러 메시지 포함
+        details: error.message
       }
     });
   }
 });
 
-// 라인 상태 업데이트
-// [PATCH] /lines/:id
+// 라인 상태 업데이트 (새 스키마 적용)
 router.patch('/lines/:id', storeAuth, async (req, res) => {
   const client = await pool.connect();
 
@@ -179,9 +151,9 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
     const lineId = parseInt(req.params.id);
     const { status } = req.body;
 
-    // 입력 검증 (필수값, 타입, enum)
+    // 입력 검증
     validateRequired(req.body, ['status']);
-    validateEnum(status, ['queued', 'cooking', 'ready', 'served', 'canceled'], 'status');
+    validateEnum(status, ['queued', 'cooking', 'ready', 'served', 'hold', 'cancelled'], 'status');
 
     if (isNaN(lineId) || lineId <= 0) {
       return res.status(400).json({
@@ -194,13 +166,13 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 현재 상태 확인 (SQL 인덱스 힌트: order_lines(id) 기본키 사용)
+    // 현재 상태 확인
     const currentResult = await client.query(`
-      SELECT ol.status, ol.order_id, c.store_id
-      FROM order_lines ol
-      JOIN orders o ON ol.order_id = o.id
+      SELECT oi.status, oi.order_id, c.store_id
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
       JOIN checks c ON o.check_id = c.id
-      WHERE ol.id = $1
+      WHERE oi.id = $1
     `, [lineId]);
 
     if (currentResult.rows.length === 0) {
@@ -226,8 +198,8 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
       });
     }
 
-    // 비즈니스 규칙: served 이후로는 canceled 불가
-    if (currentStatus === 'served' && status === 'canceled') {
+    // 비즈니스 규칙
+    if (currentStatus === 'served' && status === 'cancelled') {
       await client.query('ROLLBACK');
       return res.status(409).json({
         error: {
@@ -237,53 +209,51 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
       });
     }
 
-    // 상태 업데이트 (SQL 인덱스 힌트: order_lines(id) 기본키 사용)
-    await client.query(`
-      UPDATE order_lines
-      SET status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING id, status, updated_at
-    `, [status, lineId]);
+    // 상태별 타임스탬프 업데이트
+    let updateQuery = 'UPDATE order_items SET status = $1, updated_at = CURRENT_TIMESTAMP';
+    let updateParams = [status];
 
-    // TODO: PG 연동 시 서명검증(HMAC) 로직 추가 (e.g., 외부 API 호출 시)
-    // TODO: 메뉴 가격 서버 신뢰 로직 추가 (e.g., 가격 변동 시 재검증)
-    // TODO: RBAC/JWT 확장 포인트: 특정 상태 변경에 대한 권한 체크 강화
+    if (status === 'cooking' && currentStatus !== 'cooking') {
+      updateQuery += ', started_at = CURRENT_TIMESTAMP';
+    } else if (status === 'ready' && currentStatus !== 'ready') {
+      updateQuery += ', ready_at = CURRENT_TIMESTAMP';
+    } else if (status === 'served' && currentStatus !== 'served') {
+      updateQuery += ', served_at = CURRENT_TIMESTAMP';
+    }
 
-    // 이벤트 로그 기록
-    await query(`
-      INSERT INTO order_events (order_id, event_type, event_data)
-      SELECT
-        order_id,
-        CASE
-          WHEN $2 = 'canceled' THEN 'LINE_CANCELED'
-          ELSE 'LINE_STATUS_CHANGED'
-        END,
-        jsonb_build_object(
-          'line_id', $1,
-          'old_status', $3,
-          'new_status', $2,
-          'updated_by', 'KDS'
-        )
-      FROM order_lines
-      WHERE id = $1
-    `, [lineId, status, currentStatus]);
+    updateQuery += ' WHERE id = $2 RETURNING *';
+    updateParams.push(lineId);
+
+    const updateResult = await client.query(updateQuery, updateParams);
 
     await client.query('COMMIT');
 
     console.log(`🍳 KDS 라인 상태 변경: ${lineId} ${currentStatus} → ${status}`);
+
+    // SSE 브로드캐스트
+    const topic = `store:${storeId}`;
+    sse.broadcast(topic, {
+      type: 'line_status_update',
+      data: {
+        line_id: lineId,
+        old_status: currentStatus,
+        new_status: status,
+        updated_line: updateResult.rows[0]
+      },
+      timestamp: new Date().toISOString()
+    });
 
     res.json({
       success: true,
       line_id: lineId,
       status: status,
       previous_status: currentStatus,
-      updated_at: new Date().toISOString() // 실제 업데이트 시간은 DB에서 가져와야 함 (RETURNING 사용 시)
+      updated_at: updateResult.rows[0].updated_at
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
 
-    // 에러 메시지 표준화 적용
     if (error.code === 'MISSING_REQUIRED_FIELD' || error.code === 'INVALID_ENUM_VALUE') {
       res.status(400).json({
         error: {
@@ -298,7 +268,7 @@ router.patch('/lines/:id', storeAuth, async (req, res) => {
         error: {
           code: 'LINE_STATUS_UPDATE_FAILED',
           message: '라인 상태 업데이트에 실패했습니다.',
-          details: error.message // 상세 에러 메시지 포함
+          details: error.message
         }
       });
     }
@@ -314,8 +284,17 @@ router.post('/order-changed', async (req, res) => {
 
     console.log(`📡 KDS 변경사항 알림: 매장 ${storeId}, 테이블 ${tableNumber}, 타입: ${changeType}`);
 
-    // 여기서 실제로는 WebSocket이나 SSE를 통해 KDS 화면에 실시간 알림
-    // 현재는 로그만 남김
+    // SSE를 통한 실시간 알림
+    const topic = `store:${storeId}`;
+    sse.broadcast(topic, {
+      type: 'order_changed',
+      data: {
+        storeId,
+        tableNumber,
+        changeType
+      },
+      timestamp: new Date().toISOString()
+    });
     
     res.json({
       success: true,
@@ -327,6 +306,65 @@ router.post('/order-changed', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'KDS 변경사항 알림 실패'
+    });
+  }
+});
+
+// KDS 전체 주문 목록 조회
+router.get('/orders', storeAuth, async (req, res) => {
+  try {
+    const storeId = req.storeId;
+    const { status, limit = 50 } = req.query;
+
+    let whereClause = 'c.store_id = $1';
+    let params = [storeId];
+    let paramIndex = 2;
+
+    if (status) {
+      whereClause += ` AND o.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        o.order_number,
+        o.status as order_status,
+        o.total_amount,
+        c.table_number,
+        c.customer_name,
+        o.created_at,
+        o.updated_at,
+        COUNT(oi.id) as total_items,
+        COUNT(CASE WHEN oi.status = 'served' THEN 1 END) as served_items,
+        COUNT(CASE WHEN oi.status = 'ready' THEN 1 END) as ready_items,
+        COUNT(CASE WHEN oi.status = 'cooking' THEN 1 END) as cooking_items,
+        COUNT(CASE WHEN oi.status = 'queued' THEN 1 END) as queued_items
+      FROM orders o
+      JOIN checks c ON o.check_id = c.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      WHERE ${whereClause}
+      GROUP BY o.id, o.order_number, o.status, o.total_amount, c.table_number, c.customer_name, o.created_at, o.updated_at
+      ORDER BY o.created_at DESC
+      LIMIT $${paramIndex}
+    `, [...params, parseInt(limit)]);
+
+    res.json({
+      success: true,
+      orders: result.rows,
+      count: result.rows.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 주문 목록 조회 실패:', error);
+    res.status(500).json({
+      error: {
+        code: 'KDS_ORDERS_FETCH_FAILED',
+        message: 'KDS 주문 목록을 가져오는 데 실패했습니다.',
+        details: error.message
+      }
     });
   }
 });
