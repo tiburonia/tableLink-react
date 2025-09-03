@@ -4,106 +4,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TableLink KDS</title>
+    <title>KDS - Kitchen Display System</title>
     <style>
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
+            background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
             overflow: hidden;
         }
-        
-        #main {
+
+        .initial-loading {
             width: 100vw;
             height: 100vh;
-        }
-
-        .loading {
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
             flex-direction: column;
-            gap: 20px;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1a2e 100%);
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
             border: 4px solid rgba(79, 195, 247, 0.3);
             border-top: 4px solid #4fc3f7;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin-bottom: 20px;
         }
 
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .loading-text {
+            color: #4fc3f7;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .loading-subtext {
+            color: #90a4ae;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <div id="main">
-        <div class="loading">
-            <div class="spinner"></div>
-            <h2>KDS 시스템 로딩 중...</h2>
-        </div>
+    <!-- 초기 로딩 화면 -->
+    <div class="initial-loading" id="initialLoading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">📟 KDS 시스템 로딩 중...</div>
+        <div class="loading-subtext">Kitchen Display System v2.0</div>
     </div>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <div id="main"></div>
 
     <script>
         console.log('📟 KDS 페이지 DOM 로드 완료');
-        
-        // KDS 시스템 로드
-        async function loadKDS() {
+
+        // KDS 시스템 초기화
+        async function initKDSSystem() {
             try {
-                console.log('🔄 KDS 모듈 로드 시작');
+                console.log('🔄 KDS 시스템 초기화 시작');
                 
-                // renderKDS.js 로드
+                // 모듈 로드
+                console.log('📦 KDS 모듈 로드 중...');
+                
                 const script = document.createElement('script');
                 script.src = '/kds/components/kds/renderKDS.js';
-                script.onload = () => {
-                    console.log('✅ renderKDS.js 로드 완료');
+                script.type = 'text/javascript';
+                
+                script.onload = async function() {
+                    console.log('✅ KDS 모듈 로드 완료');
                     
-                    // renderKDS 함수가 로드되면 실행
-                    if (typeof renderKDS === 'function') {
-                        renderKDS();
+                    // 초기 로딩 화면 숨기기
+                    const initialLoading = document.getElementById('initialLoading');
+                    if (initialLoading) {
+                        initialLoading.style.display = 'none';
+                    }
+                    
+                    // KDS 시스템 시작
+                    if (typeof window.renderKDS === 'function') {
+                        await window.renderKDS();
+                        console.log('✅ KDS 시스템 초기화 완료');
                     } else {
-                        console.error('❌ renderKDS 함수를 찾을 수 없습니다');
+                        throw new Error('KDS 렌더링 함수를 찾을 수 없습니다');
                     }
                 };
-                script.onerror = () => {
-                    console.error('❌ renderKDS.js 로드 실패');
-                    document.getElementById('main').innerHTML = `
-                        <div class="loading">
-                            <h2 style="color: #f44336;">❌ KDS 로딩 실패</h2>
-                            <p>모듈을 불러올 수 없습니다.</p>
-                            <button onclick="window.location.reload()" 
-                                    style="background: #4fc3f7; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-top: 16px;">
-                                새로고침
-                            </button>
-                        </div>
-                    `;
+                
+                script.onerror = function() {
+                    console.error('❌ KDS 모듈 로드 실패');
+                    showKDSLoadError();
                 };
                 
                 document.head.appendChild(script);
                 
             } catch (error) {
-                console.error('❌ KDS 시스템 로드 오류:', error);
+                console.error('❌ KDS 시스템 초기화 실패:', error);
+                showKDSLoadError();
             }
         }
-        
-        // DOM 로드 완료 후 KDS 시스템 시작
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadKDS);
-        } else {
-            loadKDS();
+
+        // KDS 로드 에러 화면
+        function showKDSLoadError() {
+            const main = document.getElementById('main');
+            const initialLoading = document.getElementById('initialLoading');
+            
+            if (initialLoading) {
+                initialLoading.style.display = 'none';
+            }
+            
+            main.innerHTML = `
+                <div class="load-error">
+                    <div class="error-content">
+                        <div class="error-icon">💥</div>
+                        <h1>KDS 시스템 로드 실패</h1>
+                        <p>시스템 모듈을 불러올 수 없습니다.</p>
+                        <button onclick="window.location.reload()" class="retry-btn">
+                            🔄 새로고침
+                        </button>
+                    </div>
+                </div>
+
+                <style>
+                    .load-error {
+                        width: 100vw;
+                        height: 100vh;
+                        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                        color: white;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    }
+
+                    .error-content {
+                        text-align: center;
+                        padding: 40px;
+                    }
+
+                    .error-icon {
+                        font-size: 4rem;
+                        margin-bottom: 20px;
+                    }
+
+                    .error-content h1 {
+                        color: #f44336;
+                        margin-bottom: 16px;
+                        font-size: 2rem;
+                    }
+
+                    .error-content p {
+                        color: #90a4ae;
+                        margin-bottom: 30px;
+                        font-size: 16px;
+                    }
+
+                    .retry-btn {
+                        background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+                        color: white;
+                        border: none;
+                        padding: 16px 32px;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        font-weight: 600;
+                        font-size: 16px;
+                        transition: all 0.3s ease;
+                    }
+
+                    .retry-btn:hover {
+                        transform: translateY(-2px);
+                    }
+                </style>
+            `;
         }
+
+        // DOM 로드 완료 후 KDS 시스템 초기화
+        document.addEventListener('DOMContentLoaded', initKDSSystem);
+        
+        // 페이지 가시성 변경 시 새로고침
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && window.refreshKDS) {
+                console.log('📱 페이지 활성화 - KDS 새로고침');
+                window.refreshKDS();
+            }
+        });
+        
     </script>
 </body>
 </html>
