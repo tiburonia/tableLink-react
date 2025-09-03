@@ -1,0 +1,828 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableLink KDS v3.0</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .kds-header {
+            background: #2d3748;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #4a5568;
+        }
+        
+        .kds-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e2e8f0;
+        }
+        
+        .store-info {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .station-tabs {
+            background: #2d3748;
+            padding: 0.5rem 2rem;
+            display: flex;
+            gap: 1rem;
+            border-bottom: 2px solid #4a5568;
+        }
+        
+        .station-tab {
+            background: #4a5568;
+            color: #e2e8f0;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .station-tab.active {
+            background: #3182ce;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(49, 130, 206, 0.5);
+        }
+        
+        .station-tab.expo {
+            background: #d69e2e;
+        }
+        
+        .station-tab.expo.active {
+            background: #f6ad55;
+            box-shadow: 0 0 20px rgba(246, 173, 85, 0.5);
+        }
+        
+        .ticket-counter {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #e53e3e;
+            color: #fff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .kds-main {
+            height: calc(100vh - 140px);
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .tickets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+            padding: 1rem;
+        }
+        
+        .ticket-card {
+            background: #2d3748;
+            border-radius: 1rem;
+            padding: 1rem;
+            border: 2px solid #4a5568;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .ticket-card.priority {
+            border-color: #e53e3e;
+            box-shadow: 0 0 20px rgba(229, 62, 62, 0.3);
+        }
+        
+        .ticket-card.ready {
+            border-color: #38a169;
+            box-shadow: 0 0 20px rgba(56, 161, 105, 0.3);
+        }
+        
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .ticket-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        
+        .table-number {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #3182ce;
+        }
+        
+        .customer-name {
+            font-size: 0.9rem;
+            color: #a0aec0;
+        }
+        
+        .ticket-time {
+            text-align: right;
+            font-size: 0.8rem;
+            color: #a0aec0;
+        }
+        
+        .elapsed-time {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #e2e8f0;
+        }
+        
+        .elapsed-time.warning {
+            color: #f6ad55;
+        }
+        
+        .elapsed-time.danger {
+            color: #e53e3e;
+        }
+        
+        .ticket-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+        
+        .ticket-item {
+            background: #1a202c;
+            padding: 0.8rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #4a5568;
+            transition: all 0.3s;
+        }
+        
+        .ticket-item.cooking {
+            border-left-color: #f6ad55;
+            background: rgba(246, 173, 85, 0.1);
+        }
+        
+        .ticket-item.done {
+            border-left-color: #38a169;
+            background: rgba(56, 161, 105, 0.1);
+        }
+        
+        .ticket-item.hold {
+            border-left-color: #e53e3e;
+            background: rgba(229, 62, 62, 0.1);
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .item-quantity {
+            background: #3182ce;
+            color: #fff;
+            border-radius: 0.3rem;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .item-options {
+            font-size: 0.8rem;
+            color: #f6ad55;
+            margin-bottom: 0.5rem;
+        }
+        
+        .item-notes {
+            font-size: 0.8rem;
+            color: #e53e3e;
+            font-weight: 600;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+        
+        .item-btn {
+            background: #4a5568;
+            color: #fff;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.3rem;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .item-btn.start {
+            background: #3182ce;
+        }
+        
+        .item-btn.done {
+            background: #38a169;
+        }
+        
+        .item-btn.hold {
+            background: #e53e3e;
+        }
+        
+        .ticket-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: space-between;
+        }
+        
+        .ticket-btn {
+            background: #4a5568;
+            color: #fff;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+        }
+        
+        .ticket-btn.primary {
+            background: #3182ce;
+        }
+        
+        .ticket-btn.success {
+            background: #38a169;
+        }
+        
+        .ticket-btn.warning {
+            background: #d69e2e;
+        }
+        
+        .expo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .expo-order {
+            background: #2d3748;
+            border-radius: 0.8rem;
+            padding: 1rem;
+            border: 2px solid #38a169;
+        }
+        
+        .expo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            color: #a0aec0;
+        }
+        
+        .error {
+            background: #e53e3e;
+            color: #fff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem;
+            text-align: center;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+        
+        .status-dot.pending { background: #a0aec0; }
+        .status-dot.cooking { background: #f6ad55; }
+        .status-dot.done { background: #38a169; }
+        .status-dot.hold { background: #e53e3e; }
+        .status-dot.expo { background: #d69e2e; }
+        .status-dot.served { background: #9f7aea; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @media (max-width: 768px) {
+            .tickets-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .station-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="kds-header">
+            <div class="kds-title">🍳 TableLink KDS v3.0</div>
+            <div class="store-info">
+                <div>매장: <span id="storeName">로딩중...</span></div>
+                <div>시간: <span id="currentTime"></span></div>
+                <div>연결: <span id="connectionStatus">연결중...</span></div>
+            </div>
+        </div>
+        
+        <div class="station-tabs" id="stationTabs">
+            <!-- 스테이션 탭들이 여기에 렌더링됩니다 -->
+        </div>
+        
+        <div class="kds-main" id="kdsMain">
+            <div class="loading">
+                KDS 시스템 로딩중...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🚀 TableLink KDS v3.0 시작');
+        
+        class KDSSystem {
+            constructor() {
+                this.storeId = new URLSearchParams(window.location.search).get('storeId') || '1';
+                this.currentStation = null;
+                this.stations = [];
+                this.tickets = [];
+                this.isExpoMode = false;
+                this.eventSource = null;
+                this.lastUpdate = 0;
+                
+                this.init();
+            }
+            
+            async init() {
+                console.log('📟 KDS 초기화 시작, 매장 ID:', this.storeId);
+                
+                try {
+                    await this.loadStations();
+                    await this.loadTickets();
+                    this.setupRealtime();
+                    this.startClock();
+                    
+                    console.log('✅ KDS 초기화 완료');
+                } catch (error) {
+                    console.error('❌ KDS 초기화 실패:', error);
+                    this.showError('KDS 시스템 초기화에 실패했습니다.');
+                }
+            }
+            
+            async loadStations() {
+                const response = await fetch(`/api/kds/stations?store_id=${this.storeId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.stations = data.stations;
+                    this.renderStationTabs();
+                    
+                    // 첫 번째 스테이션을 기본으로 선택
+                    if (this.stations.length > 0) {
+                        this.selectStation(this.stations[0].id);
+                    }
+                } else {
+                    throw new Error(data.message);
+                }
+            }
+            
+            renderStationTabs() {
+                const tabsContainer = document.getElementById('stationTabs');
+                
+                const tabs = this.stations.map(station => {
+                    const isExpo = station.is_expo;
+                    const ticketCount = station.active_tickets || 0;
+                    
+                    return `
+                        <button 
+                            class="station-tab ${isExpo ? 'expo' : ''}" 
+                            onclick="kds.selectStation(${station.id})"
+                            data-station="${station.id}"
+                        >
+                            ${station.name}
+                            ${ticketCount > 0 ? `<span class="ticket-counter">${ticketCount}</span>` : ''}
+                        </button>
+                    `;
+                }).join('');
+                
+                tabsContainer.innerHTML = tabs;
+            }
+            
+            selectStation(stationId) {
+                this.currentStation = stationId;
+                this.isExpoMode = this.stations.find(s => s.id === stationId)?.is_expo || false;
+                
+                // 탭 활성화
+                document.querySelectorAll('.station-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelector(`[data-station="${stationId}"]`).classList.add('active');
+                
+                this.loadTickets();
+            }
+            
+            async loadTickets() {
+                try {
+                    const endpoint = this.isExpoMode 
+                        ? `/api/kds/expo?store_id=${this.storeId}&updated_since=${this.lastUpdate}`
+                        : `/api/kds/tickets?store_id=${this.storeId}&station_id=${this.currentStation}&updated_since=${this.lastUpdate}`;
+                    
+                    const response = await fetch(endpoint);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        if (this.isExpoMode) {
+                            this.renderExpoView(data.expo_items);
+                        } else {
+                            this.tickets = data.tickets;
+                            this.renderTickets();
+                        }
+                        this.lastUpdate = data.timestamp;
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('❌ 티켓 로딩 실패:', error);
+                    this.showError('티켓 데이터를 불러올 수 없습니다.');
+                }
+            }
+            
+            renderTickets() {
+                const mainContainer = document.getElementById('kdsMain');
+                
+                if (this.tickets.length === 0) {
+                    mainContainer.innerHTML = `
+                        <div class="loading">
+                            현재 처리할 주문이 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const ticketsHtml = this.tickets.map(ticket => this.renderTicket(ticket)).join('');
+                
+                mainContainer.innerHTML = `
+                    <div class="tickets-grid">
+                        ${ticketsHtml}
+                    </div>
+                `;
+            }
+            
+            renderTicket(ticket) {
+                const elapsedTime = this.getElapsedTime(ticket.created_at);
+                const isReady = ticket.ticket_status === 'READY';
+                const isPriority = ticket.priority > 0;
+                
+                const itemsHtml = ticket.items.map(item => this.renderTicketItem(item)).join('');
+                
+                return `
+                    <div class="ticket-card ${isPriority ? 'priority' : ''} ${isReady ? 'ready' : ''}">
+                        <div class="ticket-header">
+                            <div class="ticket-info">
+                                <div class="table-number">테이블 ${ticket.table_number}</div>
+                                ${ticket.customer_name ? `<div class="customer-name">${ticket.customer_name}</div>` : ''}
+                                <div style="font-size: 0.8rem; color: #a0aec0;">
+                                    ${ticket.source_system} | Course ${ticket.course_no}
+                                </div>
+                            </div>
+                            <div class="ticket-time">
+                                <div class="elapsed-time ${elapsedTime.class}">${elapsedTime.text}</div>
+                                <div>${new Date(ticket.created_at).toLocaleTimeString()}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="ticket-items">
+                            ${itemsHtml}
+                        </div>
+                        
+                        <div class="ticket-actions">
+                            <button class="ticket-btn primary" onclick="kds.ticketAction(${ticket.ticket_id}, 'start_all')">
+                                전체 시작
+                            </button>
+                            <button class="ticket-btn success" onclick="kds.ticketAction(${ticket.ticket_id}, 'complete_all')">
+                                전체 완료
+                            </button>
+                            <button class="ticket-btn warning" onclick="kds.ticketAction(${ticket.ticket_id}, 'raise_priority')">
+                                우선순위 +
+                            </button>
+                            ${isReady ? `
+                                <button class="ticket-btn" onclick="kds.ticketAction(${ticket.ticket_id}, 'bump')" style="background: #9f7aea;">
+                                    Bump
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            renderTicketItem(item) {
+                const statusDot = `<span class="status-dot ${item.kds_status.toLowerCase()}"></span>`;
+                const options = item.options && Object.keys(item.options).length > 0 
+                    ? Object.entries(item.options).map(([k, v]) => `${k}: ${v}`).join(', ')
+                    : '';
+                
+                const actions = this.getItemActions(item);
+                
+                return `
+                    <div class="ticket-item ${item.kds_status.toLowerCase()}">
+                        <div class="item-header">
+                            <div class="item-name">
+                                ${statusDot}${item.menu_name}
+                            </div>
+                            <div class="item-quantity">×${item.quantity}</div>
+                        </div>
+                        ${options ? `<div class="item-options">${options}</div>` : ''}
+                        ${item.notes ? `<div class="item-notes">🗒️ ${item.notes}</div>` : ''}
+                        <div class="item-actions">
+                            ${actions}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            getItemActions(item) {
+                const actions = [];
+                
+                switch (item.kds_status) {
+                    case 'PENDING':
+                        actions.push(`<button class="item-btn start" onclick="kds.itemAction(${item.item_id}, 'start')">시작</button>`);
+                        actions.push(`<button class="item-btn hold" onclick="kds.itemAction(${item.item_id}, 'hold')">보류</button>`);
+                        break;
+                        
+                    case 'COOKING':
+                        actions.push(`<button class="item-btn done" onclick="kds.itemAction(${item.item_id}, 'done')">완료</button>`);
+                        actions.push(`<button class="item-btn hold" onclick="kds.itemAction(${item.item_id}, 'hold')">보류</button>`);
+                        break;
+                        
+                    case 'DONE':
+                        if (!this.isExpoMode) {
+                            actions.push(`<button class="item-btn" onclick="kds.itemAction(${item.item_id}, 'expo')" style="background: #d69e2e;">EXPO</button>`);
+                        }
+                        break;
+                        
+                    case 'HOLD':
+                        actions.push(`<button class="item-btn start" onclick="kds.itemAction(${item.item_id}, 'start')">재시작</button>`);
+                        break;
+                }
+                
+                actions.push(`<button class="item-btn" onclick="kds.itemAction(${item.item_id}, 'cancel')" style="background: #e53e3e;">취소</button>`);
+                
+                return actions.join('');
+            }
+            
+            renderExpoView(expoItems) {
+                const mainContainer = document.getElementById('kdsMain');
+                
+                if (expoItems.length === 0) {
+                    mainContainer.innerHTML = `
+                        <div class="loading">
+                            픽업 대기중인 주문이 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const ordersHtml = expoItems.map(order => {
+                    const readyItems = order.items.filter(item => item.kds_status === 'DONE');
+                    const allReady = order.items.every(item => ['DONE', 'EXPO', 'SERVED'].includes(item.kds_status));
+                    
+                    return `
+                        <div class="expo-order ${allReady ? 'ready' : ''}">
+                            <div class="expo-header">
+                                <div>
+                                    <div class="table-number">테이블 ${order.table_number}</div>
+                                    ${order.customer_name ? `<div class="customer-name">${order.customer_name}</div>` : ''}
+                                </div>
+                                <div class="ticket-time">
+                                    <div>${readyItems.length}/${order.items.length} 완료</div>
+                                </div>
+                            </div>
+                            
+                            <div class="ticket-items">
+                                ${order.items.map(item => `
+                                    <div class="ticket-item ${item.kds_status.toLowerCase()}">
+                                        <div class="item-header">
+                                            <div class="item-name">
+                                                <span class="status-dot ${item.kds_status.toLowerCase()}"></span>
+                                                ${item.menu_name} (${item.station_name})
+                                            </div>
+                                            <div class="item-quantity">×${item.quantity}</div>
+                                        </div>
+                                        ${item.kds_status === 'DONE' ? `
+                                            <button class="item-btn" onclick="kds.itemAction(${item.item_id}, 'served')" style="background: #9f7aea;">
+                                                서빙완료
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            
+                            ${allReady ? `
+                                <button class="ticket-btn success" onclick="kds.completeOrder(${order.check_id})" style="width: 100%; margin-top: 1rem;">
+                                    주문 완료 처리
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                mainContainer.innerHTML = `
+                    <div class="expo-grid">
+                        ${ordersHtml}
+                    </div>
+                `;
+            }
+            
+            async itemAction(itemId, action) {
+                try {
+                    const response = await fetch(`/api/kds/items/${itemId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ action })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log(`✅ 아이템 액션 완료: ${action}`);
+                        // 실시간 업데이트로 자동 갱신됨
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('❌ 아이템 액션 실패:', error);
+                    alert('작업을 완료할 수 없습니다.');
+                }
+            }
+            
+            async ticketAction(ticketId, action) {
+                try {
+                    const response = await fetch(`/api/kds/tickets/${ticketId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ action })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log(`✅ 티켓 액션 완료: ${action}`);
+                        // 실시간 업데이트로 자동 갱신됨
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch (error) {
+                    console.error('❌ 티켓 액션 실패:', error);
+                    alert('작업을 완료할 수 없습니다.');
+                }
+            }
+            
+            async completeOrder(checkId) {
+                // 체크의 모든 아이템을 SERVED로 변경
+                const orderItems = document.querySelectorAll(`[data-check="${checkId}"] .item-btn`);
+                for (const btn of orderItems) {
+                    if (btn.textContent === '서빙완료') {
+                        btn.click();
+                    }
+                }
+            }
+            
+            setupRealtime() {
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+                
+                this.eventSource = new EventSource(`/api/kds/stream/${this.storeId}`);
+                
+                this.eventSource.onopen = () => {
+                    console.log('🔌 KDS 실시간 연결 성공');
+                    document.getElementById('connectionStatus').textContent = '연결됨';
+                    document.getElementById('connectionStatus').style.color = '#38a169';
+                };
+                
+                this.eventSource.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'update') {
+                            console.log('📡 실시간 업데이트:', data);
+                            this.loadTickets(); // 전체 새로고침
+                        }
+                    } catch (error) {
+                        console.error('❌ 실시간 데이터 처리 실패:', error);
+                    }
+                };
+                
+                this.eventSource.onerror = () => {
+                    console.error('❌ KDS 실시간 연결 실패');
+                    document.getElementById('connectionStatus').textContent = '연결 실패';
+                    document.getElementById('connectionStatus').style.color = '#e53e3e';
+                    
+                    // 자동 재연결
+                    setTimeout(() => {
+                        this.setupRealtime();
+                    }, 5000);
+                };
+            }
+            
+            getElapsedTime(createdAt) {
+                const elapsed = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000 / 60);
+                
+                let className = '';
+                if (elapsed > 15) className = 'danger';
+                else if (elapsed > 10) className = 'warning';
+                
+                return {
+                    text: `${elapsed}분`,
+                    class: className
+                };
+            }
+            
+            startClock() {
+                const updateTime = () => {
+                    document.getElementById('currentTime').textContent = 
+                        new Date().toLocaleTimeString();
+                };
+                
+                updateTime();
+                setInterval(updateTime, 1000);
+                
+                // 스테이션 정보도 주기적으로 업데이트
+                setInterval(() => {
+                    this.loadStations();
+                }, 30000);
+            }
+            
+            showError(message) {
+                document.getElementById('kdsMain').innerHTML = `
+                    <div class="error">
+                        ❌ ${message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 전역 KDS 인스턴스
+        let kds;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            kds = new KDSSystem();
+        });
+    </script>
+</body>
+</html>

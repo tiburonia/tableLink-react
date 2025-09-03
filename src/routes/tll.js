@@ -34,10 +34,10 @@ router.post('/checks/from-qr', async (req, res) => {
     const finalUserId = user_id || null;
     const finalGuestPhone = guest_phone || null;
 
-    console.log(`🔍 TLL 체크 생성 파라미터 검증:`, { 
-      user_id: finalUserId, 
+    console.log(`🔍 TLL 체크 생성 파라미터 검증:`, {
+      user_id: finalUserId,
       guest_phone: finalGuestPhone,
-      qr_code 
+      qr_code
     });
 
     await client.query('BEGIN');
@@ -104,9 +104,9 @@ router.post('/checks/from-qr', async (req, res) => {
         VALUES ($1, $2, $3, $4, $5, 'open', 'TLL', CURRENT_TIMESTAMP)
         RETURNING id, opened_at
       `, [
-        qrData.store_id, 
-        qrData.table_number, 
-        finalUserId, 
+        qrData.store_id,
+        qrData.table_number,
+        finalUserId,
         finalGuestPhone,
         finalUserId ? null : '게스트'
       ]);
@@ -115,8 +115,8 @@ router.post('/checks/from-qr', async (req, res) => {
 
       // 테이블 점유 처리
       await client.query(`
-        UPDATE store_tables 
-        SET is_occupied = true, 
+        UPDATE store_tables
+        SET is_occupied = true,
             occupied_since = CURRENT_TIMESTAMP,
             auto_release_source = 'TLL'
         WHERE store_id = $1 AND table_number = $2
@@ -153,18 +153,18 @@ router.post('/orders', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { 
-      check_id, 
-      items, 
+    const {
+      check_id,
+      items,
       payment_method = 'TOSS',
       toss_order_id = null,
       user_notes = null
     } = req.body;
 
-    console.log(`🛒 TLL 주문 생성:`, { 
-      check_id, 
-      itemCount: items?.length, 
-      payment_method 
+    console.log(`🛒 TLL 주문 생성:`, {
+      check_id,
+      itemCount: items?.length,
+      payment_method
     });
 
     if (!check_id || !items || !Array.isArray(items) || items.length === 0) {
@@ -179,7 +179,7 @@ router.post('/orders', async (req, res) => {
     // 체크 존재 및 상태 확인
     const checkResult = await client.query(`
       SELECT id, store_id, table_number, status, user_id, guest_phone
-      FROM checks 
+      FROM checks
       WHERE id = $1
     `, [check_id]);
 
@@ -188,6 +188,7 @@ router.post('/orders', async (req, res) => {
     }
 
     const check = checkResult.rows[0];
+    const { store_id } = check; // KDS 티켓 생성 시 store_id 필요
 
     if (check.status !== 'open') {
       throw new Error('이미 종료된 체크입니다');
@@ -206,7 +207,7 @@ router.post('/orders', async (req, res) => {
 
       const itemResult = await client.query(`
         INSERT INTO check_items (
-          check_id, menu_name, unit_price, quantity, 
+          check_id, menu_name, unit_price, quantity,
           options, kitchen_notes, status, ordered_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, 'ordered', CURRENT_TIMESTAMP)
@@ -228,16 +229,16 @@ router.post('/orders', async (req, res) => {
 
     // 체크 총액 업데이트
     await client.query(`
-      UPDATE checks 
-      SET 
+      UPDATE checks
+      SET
         subtotal_amount = (
-          SELECT COALESCE(SUM(unit_price * quantity), 0) 
-          FROM check_items 
+          SELECT COALESCE(SUM(unit_price * quantity), 0)
+          FROM check_items
           WHERE check_id = $1 AND status != 'canceled'
         ),
         final_amount = (
-          SELECT COALESCE(SUM(unit_price * quantity), 0) 
-          FROM check_items 
+          SELECT COALESCE(SUM(unit_price * quantity), 0)
+          FROM check_items
           WHERE check_id = $1 AND status != 'canceled'
         ),
         updated_at = CURRENT_TIMESTAMP
@@ -248,7 +249,7 @@ router.post('/orders', async (req, res) => {
     if (payment_method && payment_method !== 'LATER') {
       await client.query(`
         INSERT INTO payments (
-          check_id, method, amount, status, 
+          check_id, method, amount, status,
           payment_data, requested_at
         )
         VALUES ($1, $2, $3, 'pending', $4, CURRENT_TIMESTAMP)
@@ -256,7 +257,7 @@ router.post('/orders', async (req, res) => {
         check_id,
         payment_method,
         totalAmount,
-        JSON.stringify({ 
+        JSON.stringify({
           toss_order_id,
           user_notes,
           created_via: 'TLL'
@@ -267,14 +268,23 @@ router.post('/orders', async (req, res) => {
     // 활동 로그 생성
     try {
       await ActivityLogger.logOrderCreated(
-        check.user_id, 
-        check.guest_phone, 
-        check.store_id, 
-        check_id, 
+        check.user_id,
+        check.guest_phone,
+        check.store_id,
+        check_id,
         { items, totalAmount, source: 'TLL' }
       );
     } catch (logError) {
       console.warn('⚠️ 활동 로그 생성 실패:', logError.message);
+    }
+
+    // KDS 티켓 자동 생성
+    try {
+      const { createKDSTicketsForOrder } = require('./kds');
+      await createKDSTicketsForOrder(check_id, store_id, 'TLL');
+      console.log('✅ KDS 티켓 자동 생성 완료');
+    } catch (kdsError) {
+      console.error('⚠️ KDS 티켓 생성 실패 (주문은 정상 처리):', kdsError);
     }
 
     await client.query('COMMIT');
@@ -329,11 +339,11 @@ router.post('/payments/confirm', async (req, res) => {
 
     // 체크 존재 및 상태 확인
     const checkResult = await client.query(`
-      SELECT 
-        c.id, 
-        c.store_id, 
-        c.table_number, 
-        c.status, 
+      SELECT
+        c.id,
+        c.store_id,
+        c.table_number,
+        c.status,
         c.final_amount,
         c.user_id,
         c.guest_phone
@@ -359,8 +369,8 @@ router.post('/payments/confirm', async (req, res) => {
 
     // 대기 중인 결제를 완료 상태로 변경 (표준 필드 포함)
     const paymentUpdateResult = await client.query(`
-      UPDATE payments 
-      SET 
+      UPDATE payments
+      SET
         status = 'completed',
         completed_at = CURRENT_TIMESTAMP,
         pg_transaction_id = $2,
@@ -370,8 +380,8 @@ router.post('/payments/confirm', async (req, res) => {
     `, [
       check_id,
       payment_key, // PG 거래 ID로 사용
-      JSON.stringify({ 
-        payment_key, 
+      JSON.stringify({
+        payment_key,
         toss_order_id: order_id,
         confirmed_at: new Date().toISOString()
       })
@@ -381,7 +391,7 @@ router.post('/payments/confirm', async (req, res) => {
       // 대기 중인 결제가 없으면 새로 생성
       await client.query(`
         INSERT INTO payments (
-          check_id, method, amount, status, 
+          check_id, method, amount, status,
           requested_at, payment_data
         )
         VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3)
@@ -394,8 +404,8 @@ router.post('/payments/confirm', async (req, res) => {
 
     // 체크 종료
     await client.query(`
-      UPDATE checks 
-      SET 
+      UPDATE checks
+      SET
         status = 'closed',
         closed_at = CURRENT_TIMESTAMP,
         final_amount = $2
@@ -404,14 +414,14 @@ router.post('/payments/confirm', async (req, res) => {
 
     // 모든 아이템을 주문 상태로 변경 (주방에서 조리 시작)
     await client.query(`
-      UPDATE check_items 
+      UPDATE check_items
       SET status = 'ordered'
       WHERE check_id = $1 AND status = 'ordered'
     `, [check_id]);
 
     // 테이블 해제 (결제 완료 시)
     await client.query(`
-      UPDATE store_tables 
+      UPDATE store_tables
       SET is_occupied = false,
           occupied_since = NULL,
           auto_release_source = NULL
@@ -423,7 +433,7 @@ router.post('/payments/confirm', async (req, res) => {
       const points = Math.floor(amount * 0.01); // 1% 적립
       if (points > 0) {
         await client.query(`
-          UPDATE users 
+          UPDATE users
           SET point = COALESCE(point, 0) + $1
           WHERE id = $2
         `, [points, check.user_id]);
@@ -437,7 +447,7 @@ router.post('/payments/confirm', async (req, res) => {
       await client.query(`
         INSERT INTO guests (phone, total_visits, last_visit_date)
         VALUES ($1, 1, CURRENT_TIMESTAMP)
-        ON CONFLICT (phone) 
+        ON CONFLICT (phone)
         DO UPDATE SET
           total_visits = guests.total_visits + 1,
           last_visit_date = CURRENT_TIMESTAMP
@@ -494,7 +504,7 @@ router.get('/checks/:checkId', async (req, res) => {
     console.log(`📋 TLL 체크 조회: ${checkId}`);
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         c.id as check_id,
         c.store_id,
         c.table_number,
@@ -593,9 +603,9 @@ router.put('/check-items/:itemId', async (req, res) => {
 
     // 아이템 확인
     const itemResult = await client.query(`
-      SELECT 
-        ci.id, 
-        ci.status, 
+      SELECT
+        ci.id,
+        ci.status,
         ci.check_id,
         ci.menu_name,
         ci.quantity,
@@ -622,8 +632,8 @@ router.put('/check-items/:itemId', async (req, res) => {
       }
 
       await client.query(`
-        UPDATE check_items 
-        SET 
+        UPDATE check_items
+        SET
           status = 'canceled',
           canceled_at = CURRENT_TIMESTAMP,
           kitchen_notes = COALESCE(kitchen_notes, '') || ' [TLL 취소]'
@@ -635,7 +645,7 @@ router.put('/check-items/:itemId', async (req, res) => {
     } else if (action === 'updateQuantity' && quantity > 0) {
       // 수량 변경
       await client.query(`
-        UPDATE check_items 
+        UPDATE check_items
         SET quantity = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [quantity, itemId]);
@@ -645,7 +655,7 @@ router.put('/check-items/:itemId', async (req, res) => {
     } else if (action === 'updateNotes') {
       // 주문 메모 변경
       await client.query(`
-        UPDATE check_items 
+        UPDATE check_items
         SET kitchen_notes = $1, updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
       `, [notes, itemId]);
@@ -655,16 +665,16 @@ router.put('/check-items/:itemId', async (req, res) => {
 
     // 체크 총액 재계산
     await client.query(`
-      UPDATE checks 
-      SET 
+      UPDATE checks
+      SET
         subtotal_amount = (
-          SELECT COALESCE(SUM(unit_price * quantity), 0) 
-          FROM check_items 
+          SELECT COALESCE(SUM(unit_price * quantity), 0)
+          FROM check_items
           WHERE check_id = $1 AND status != 'canceled'
         ),
         final_amount = (
-          SELECT COALESCE(SUM(unit_price * quantity), 0) 
-          FROM check_items 
+          SELECT COALESCE(SUM(unit_price * quantity), 0)
+          FROM check_items
           WHERE check_id = $1 AND status != 'canceled'
         ),
         updated_at = CURRENT_TIMESTAMP

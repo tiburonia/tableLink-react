@@ -73,6 +73,7 @@ app.get('/health', (req, res) => {
 try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
+  const kdsRoutes = require('./routes/kds'); // KDS 라우터 추가
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
@@ -89,6 +90,7 @@ try {
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
+  app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
@@ -105,7 +107,7 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, kds, tll, toss)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
