@@ -4,6 +4,11 @@
  * 책임: 사용자 상호작용 처리, 상태 변경 로직, 워크플로우 제어
  */
 
+// 중복 로딩 방지
+if (window.KDSController) {
+  console.log('⚠️ KDSController 클래스가 이미 정의됨');
+} else {
+
 class KDSController {
     constructor(storeId) {
         this.storeId = storeId;
@@ -231,7 +236,8 @@ class KDSController {
     }
 }
 
-// 전역 컨트롤러 클래스 등록 (중복 방지)
-if (!window.KDSController) {
-    window.KDSController = KDSController;
-}
+// 전역 컨트롤러 클래스 등록
+window.KDSController = KDSController;
+console.log('✅ KDSController 클래스 등록 완료');
+
+} // 중복 로딩 방지 닫기

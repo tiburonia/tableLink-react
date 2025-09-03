@@ -1,7 +1,16 @@
 
 /**
  * KDS UI 렌더링 모듈
- * 책임: 화면 렌더링, 사용자 인터페이스 요소 관리
+ * 책임: 화면 렌더링, 사용자 인터페이스 관리
+ */
+
+// 중복 로딩 방지
+if (window.KDSUIRenderer) {
+  console.log('⚠️ KDSUIRenderer가 이미 로드됨');
+} else {
+
+/**
+ * KDS UI 렌더링, 사용자 인터페이스 요소 관리
  */
 
 class KDSUIRenderer {

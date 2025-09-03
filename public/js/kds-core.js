@@ -1,7 +1,16 @@
 
 /**
  * KDS 핵심 데이터 관리 모듈
- * 책임: 데이터 로딩, 상태 관리, API 통신
+ * 책임: 데이터 로딩, API 통신, 실시간 연결 관리
+ */
+
+// 중복 로딩 방지
+if (window.KDSDataManager) {
+  console.log('⚠️ KDSDataManager가 이미 로드됨');
+} else {
+
+/**
+ * KDS 데이터 로딩, 상태 관리, API 통신
  */
 
 class KDSDataManager {
