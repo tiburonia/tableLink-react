@@ -47,7 +47,6 @@ app.use('/api/', limiter);
 
 // Static file serving
 app.use(express.static('public'));
-app.use('/kds', express.static('kds'));
 app.use('/pos', express.static('pos'));
 
 // 레거시 TLG 시스템 정적 파일 서빙
@@ -74,7 +73,6 @@ app.get('/health', (req, res) => {
 try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
-  const kdsRoutes = require('./routes/kds');
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
@@ -91,7 +89,6 @@ try {
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRoutes);
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
@@ -108,11 +105,7 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
 
-  // Enhanced KDS 라우터
-  const kdsEnhancedRoutes = require('./routes/kds-enhanced');
-  app.use('/api/kds-enhanced', kdsEnhancedRoutes);
-
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, kds-enhanced)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
