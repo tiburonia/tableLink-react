@@ -34,9 +34,14 @@
         </div>
 
         <div class="kds-main" id="kdsMain">
-            <div class="loading">
+            <div class="loading" id="loadingIndicator">
                 <div class="loading-spinner"></div>
                 KDS 시스템 초기화 중...
+            </div>
+            
+            <!-- 티켓 컨테이너 -->
+            <div class="tickets-container" id="ticketsContainer" style="display: none;">
+                <!-- 티켓들이 여기에 렌더링됩니다 -->
             </div>
         </div>
     </div>
@@ -44,6 +49,7 @@
     <!-- KDS 모듈들을 순서대로 로드 -->
     <script src="js/kds-core.js"></script>
     <script src="js/kds-ui.js"></script>
+    <script src="js/kds-controller.js"></script>
     <script src="js/kds-controller.js"></script>
     <script src="kds.js"></script>
 </body>

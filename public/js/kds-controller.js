@@ -18,16 +18,26 @@ class KDSController {
         console.log('📟 KDS 컨트롤러 초기화 시작, 매장 ID:', this.storeId);
         
         try {
+            console.log('🔄 스테이션 정보 로딩...');
             await this.loadStations();
+            
+            console.log('🔄 티켓 정보 로딩...');
             await this.loadTickets();
+            
+            console.log('🔄 실시간 연결 설정...');
             this.setupRealtime();
+            
+            console.log('🔄 시계 시작...');
             this.uiRenderer.startClock();
+            
+            console.log('🔄 자동 새로고침 설정...');
             this.setupAutoRefresh();
             
             console.log('✅ KDS 컨트롤러 초기화 완료');
         } catch (error) {
             console.error('❌ KDS 초기화 실패:', error);
-            this.uiRenderer.showError('KDS 시스템 초기화에 실패했습니다.');
+            this.uiRenderer.showError(`KDS 시스템 초기화에 실패했습니다: ${error.message}`);
+            throw error; // 상위로 에러 전파
         }
     }
     

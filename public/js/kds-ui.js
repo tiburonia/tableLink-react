@@ -34,7 +34,10 @@ class KDSUIRenderer {
     
     renderTickets(tickets) {
         const container = document.getElementById('ticketsContainer');
-        if (!container) return;
+        if (!container) {
+            console.warn('⚠️ ticketsContainer 요소를 찾을 수 없습니다');
+            return;
+        }
         
         console.log('🎫 티켓 렌더링:', tickets?.length || 0, '개');
         
