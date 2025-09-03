@@ -1,4 +1,3 @@
-
 * {
     margin: 0;
     padding: 0;
@@ -186,6 +185,50 @@ body {
     border-color: #f59e0b;
     background: linear-gradient(145deg, #1f2937 0%, #2d2b1b 100%);
     animation: cookingPulse 2s infinite;
+}
+
+/* 빈 티켓 카드 */
+.ticket-card.empty {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 3px dashed #cbd5e1;
+    cursor: default;
+    opacity: 0.7;
+}
+
+.ticket-card.empty:hover {
+    transform: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.empty-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #94a3b8;
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+}
+
+.empty-text {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.empty-slot {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.status-message {
+    grid-column: 1 / -1;
 }
 
 /* 티켓 헤더 */
@@ -638,19 +681,19 @@ body {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
-    
+
     .station-tabs {
         overflow-x: auto;
         white-space: nowrap;
         padding: 1rem;
     }
-    
+
     .kds-header {
         flex-direction: column;
         gap: 1rem;
         padding: 1rem;
     }
-    
+
     .store-info {
         gap: 1.5rem;
     }
@@ -661,11 +704,11 @@ body {
     .tickets-grid {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
     .ticket-card {
         min-height: 400px;
     }
-    
+
     .big-touch-btn {
         min-height: 64px;
         font-size: 1.2rem;

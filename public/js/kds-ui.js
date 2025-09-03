@@ -35,22 +35,40 @@ class KDSUIRenderer {
     renderTickets(tickets) {
         const mainContainer = document.getElementById('kdsMain');
         
+        const sortedTickets = this.sortTicketsByStatus(tickets);
+        const ticketsHtml = sortedTickets.map(ticket => this.renderTicket(ticket)).join('');
+        
+        // 빈 카드 프레임 생성 (최소 6개)
+        const minCards = 6;
+        const emptyCardsNeeded = Math.max(0, minCards - tickets.length);
+        const emptyCardsHtml = Array(emptyCardsNeeded).fill(0).map((_, index) => `
+            <div class="ticket-card empty">
+                <div class="empty-card-content">
+                    <div class="empty-icon">🍽️</div>
+                    <div class="empty-text">주문 대기중</div>
+                    <div class="empty-slot">#${String(tickets.length + index + 1).padStart(3, '0')}</div>
+                </div>
+            </div>
+        `).join('');
+        
         if (tickets.length === 0) {
             mainContainer.innerHTML = `
-                <div class="loading">
-                    <div style="font-size: 3rem;">🍽️</div>
-                    현재 처리할 주문이 없습니다
+                <div class="tickets-grid">
+                    ${emptyCardsHtml}
+                </div>
+                <div class="status-message">
+                    <div style="font-size: 1.2rem; color: #64748b; text-align: center; margin-top: 2rem;">
+                        📭 새로운 주문을 기다리고 있습니다
+                    </div>
                 </div>
             `;
             return;
         }
         
-        const sortedTickets = this.sortTicketsByStatus(tickets);
-        const ticketsHtml = sortedTickets.map(ticket => this.renderTicket(ticket)).join('');
-        
         mainContainer.innerHTML = `
             <div class="tickets-grid">
                 ${ticketsHtml}
+                ${emptyCardsHtml}
             </div>
         `;
     }
