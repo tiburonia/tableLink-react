@@ -24,7 +24,6 @@ router.get('/store/:storeId', async (req, res) => {
         store: {
           id: storeId,
           name: `테스트 매장 ${storeId}`,
-          phone: '02-1234-5678',
           address: '서울시 강남구 테스트로 123',
           hours: '09:00-22:00',
           created_at: new Date().toISOString()

@@ -42,7 +42,7 @@ async function renderKDSMain(storeId) {
       throw new Error('매장 정보 조회 실패');
     }
 
-    const storeData = await response.json();
+    const storeData = await storeResponse.json();
 
     if (!storeData.success || !storeData.store) {
       throw new Error('매장 정보를 찾을 수 없습니다');
