@@ -28,7 +28,6 @@ router.get('/store/:storeId', async (req, res) => {
         store: {
           id: storeId,
           name: `테스트 매장 ${storeId}`,
-          address: '서울시 강남구 테스트로 123',
           hours: '09:00-22:00',
           created_at: new Date().toISOString()
         }
@@ -37,7 +36,7 @@ router.get('/store/:storeId', async (req, res) => {
 
     // 실제 매장 정보 조회 (stores 테이블의 실제 컬럼들만 사용)
     const result = await pool.query(`
-      SELECT id, name, address, hours, latitude, longitude, created_at
+      SELECT id, name, hours, latitude, longitude, created_at
       FROM stores 
       WHERE id = $1
     `, [storeId]);
@@ -114,7 +113,6 @@ router.get('/orders/:storeId', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         o.id,
-        o.order_number,
         o.status,
         o.total_amount,
         o.created_at,
@@ -154,7 +152,7 @@ router.get('/orders/:storeId', async (req, res) => {
       WHERE o.store_id = $1
         AND o.status NOT IN ('cancelled', 'refunded')
         AND o.created_at >= CURRENT_DATE
-      GROUP BY o.id, o.order_number, o.status, o.total_amount, 
+      GROUP BY o.id, o.status, o.total_amount, 
                o.created_at, o.store_id, o.customer_name, 
                o.customer_phone, o.table_number, o.source
       ORDER BY o.created_at DESC
@@ -188,7 +186,6 @@ function generateDummyOrders() {
   return [
     {
       id: 1,
-      order_number: `KDS_${Date.now()}_1`,
       status: 'preparing',
       source: 'TLL',
       total_amount: 25000,
@@ -218,7 +215,6 @@ function generateDummyOrders() {
     },
     {
       id: 2,
-      order_number: `KDS_${Date.now()}_2`,
       status: 'preparing',
       source: 'POS',
       total_amount: 18000,
@@ -240,7 +236,6 @@ function generateDummyOrders() {
     },
     {
       id: 3,
-      order_number: `KDS_${Date.now()}_3`,
       status: 'preparing',
       source: 'TLL',
       total_amount: 12000,
