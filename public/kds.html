@@ -1,49 +1,109 @@
+
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLink KDS</title>
-  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableLink KDS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            overflow: hidden;
+        }
+        
+        #main {
+            width: 100vw;
+            height: 100vh;
+        }
 
-  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
-  <link rel="stylesheet" href="shared/css/globalBody.css" />
-  <link rel="stylesheet" href="shared/css/renderLogin.css" />
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(79, 195, 247, 0.3);
+            border-top: 4px solid #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-
 <body>
-  <!-- 화면을 렌더링할 메인 영역 -->
-  <div id='main'></div>
+    <div id="main">
+        <div class="loading">
+            <div class="spinner"></div>
+            <h2>KDS 시스템 로딩 중...</h2>
+        </div>
+    </div>
 
-  <!--KDS 렌더링 함수-->
-  <script src="/kds/components/kds/renderKDS.js"></script>
-  <!--로그아웃로직 함수-->
-  <script src="/shared/utils/logOut.js"></script>
-  <!--로컬스토리지 캐시 매니저-->
-  <script src="/shared/utils/localStorage.js"></script>
-  <!--JSON 파일 캐시 매니저-->
-  <script src="/shared/utils/cacheFileManager.js"></script>
-
-  <script>
-    // KDS 페이지 초기 진입
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('📟 KDS 페이지 DOM 로드 완료');
-
-      // KDS 렌더링 함수 실행
-      if (typeof renderKDS === 'function') {
-        renderKDS();
-      } else {
-        console.error('❌ renderKDS 함수를 찾을 수 없습니다');
-        document.getElementById('main').innerHTML = `
-          <div style="padding: 40px; text-align: center; color: red;">
-            <h1>KDS 로딩 실패</h1>
-            <p>renderKDS 함수를 찾을 수 없습니다.</p>
-          </div>
-        `;
-      }
-    });
-  </script>
+    <script>
+        console.log('📟 KDS 페이지 DOM 로드 완료');
+        
+        // KDS 시스템 로드
+        async function loadKDS() {
+            try {
+                console.log('🔄 KDS 모듈 로드 시작');
+                
+                // renderKDS.js 로드
+                const script = document.createElement('script');
+                script.src = '/kds/components/kds/renderKDS.js';
+                script.onload = () => {
+                    console.log('✅ renderKDS.js 로드 완료');
+                    
+                    // renderKDS 함수가 로드되면 실행
+                    if (typeof renderKDS === 'function') {
+                        renderKDS();
+                    } else {
+                        console.error('❌ renderKDS 함수를 찾을 수 없습니다');
+                    }
+                };
+                script.onerror = () => {
+                    console.error('❌ renderKDS.js 로드 실패');
+                    document.getElementById('main').innerHTML = `
+                        <div class="loading">
+                            <h2 style="color: #f44336;">❌ KDS 로딩 실패</h2>
+                            <p>모듈을 불러올 수 없습니다.</p>
+                            <button onclick="window.location.reload()" 
+                                    style="background: #4fc3f7; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; margin-top: 16px;">
+                                새로고침
+                            </button>
+                        </div>
+                    `;
+                };
+                
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                console.error('❌ KDS 시스템 로드 오류:', error);
+            }
+        }
+        
+        // DOM 로드 완료 후 KDS 시스템 시작
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadKDS);
+        } else {
+            loadKDS();
+        }
+    </script>
 </body>
-
 </html>
