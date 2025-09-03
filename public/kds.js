@@ -1,5 +1,4 @@
 
-```javascript
 /**
  * KDS 메인 초기화 스크립트
  * 책임: KDS 시스템 초기화 및 전역 함수 노출
@@ -133,4 +132,3 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('✅ KDS 메인 스크립트 로드 완료');
-```

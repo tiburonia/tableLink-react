@@ -231,4 +231,7 @@ class KDSController {
     }
 }
 
-window.KDSController = KDSController;
+// 전역 컨트롤러 클래스 등록 (중복 방지)
+if (!window.KDSController) {
+    window.KDSController = KDSController;
+}
