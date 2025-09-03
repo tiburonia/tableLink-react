@@ -47,7 +47,7 @@ async function renderKDSMain(storeId) {
   try {
     // 매장 정보 조회
     console.log('🔍 KDS - 매장', storeId, '정보 조회 시작');
-    const storeResponse = await fetch(`/api/stores/${storeId}`, {
+    const storeResponse = await fetch(`/api/kds/store/${storeId}`, {
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
@@ -73,8 +73,10 @@ async function renderKDSMain(storeId) {
     // 주문 데이터 로딩
     await loadKDSOrders(storeId);
 
-    // WebSocket 연결 설정
-    setupKDSWebSocket(storeId);
+    // 자동 새로고침 설정 (30초마다)
+    setInterval(() => {
+      loadKDSOrders(storeId);
+    }, 30000);
 
   } catch (error) {
     console.error('❌ KDS 메인 화면 렌더링 실패:', error);
@@ -135,62 +137,12 @@ function renderKDSInterface(store) {
                 <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
               </svg>
             </button>
-            <button class="control-btn settings-btn" onclick="showKDSSettings()" title="설정">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
-              </svg>
-            </button>
-            <button class="control-btn fullscreen-btn" onclick="toggleFullscreen()" title="전체화면">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M7,14H5v5h5v-2H7V14z M5,10h2V7h3V5H5V10z M17,17h-3v2h5v-5h-2V17z M14,5v2h3v3h2V5H14z"/>
-              </svg>
-            </button>
           </div>
         </div>
       </header>
 
       <!-- 메인 컨텐츠 영역 -->
       <main class="kds-main">
-        <!-- 주문 필터 및 검색 -->
-        <div class="filter-bar">
-          <div class="filter-group">
-            <label>주문 유형:</label>
-            <select id="orderTypeFilter" onchange="updateFilter('type', this.value)">
-              <option value="all">전체</option>
-              <option value="TLL">앱 주문</option>
-              <option value="POS">포스 주문</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>상태:</label>
-            <select id="statusFilter" onchange="updateFilter('status', this.value)">
-              <option value="all">전체</option>
-              <option value="PENDING">대기중</option>
-              <option value="COOKING">조리중</option>
-              <option value="READY">완료</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label>정렬:</label>
-            <select id="sortFilter" onchange="updateFilter('sort', this.value)">
-              <option value="time_asc">오래된 순</option>
-              <option value="time_desc">최신 순</option>
-              <option value="priority">우선순위</option>
-            </select>
-          </div>
-
-          <div class="search-group">
-            <input type="text" id="orderSearch" placeholder="주문번호, 고객명 검색..." onkeyup="searchOrders(this.value)">
-            <button class="search-btn" onclick="clearSearch()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-
         <!-- 주문 컨테이너 -->
         <div class="orders-container" id="ordersContainer">
           <div class="orders-grid ${isDevMode ? 'dev-mode' : ''}" id="ordersGrid">
@@ -207,7 +159,7 @@ function renderKDSInterface(store) {
             <h3>처리할 주문이 없습니다</h3>
             <p>새로운 주문이 들어오면 여기에 표시됩니다.</p>
           </div>
-          
+
           <!-- 로딩 오버레이 -->
           <div class="loading-overlay" style="display: none;">
               <div class="loading-spinner"></div>
@@ -220,8 +172,7 @@ function renderKDSInterface(store) {
       <footer class="kds-footer">
         <div class="footer-left">
           <div class="today-stats">
-            <span class="stat-item">오늘 완료: <strong id="todayCompleted">0</strong>건</span>
-            <span class="stat-item">평균 조리시간: <strong id="avgTime">-</strong>분</span>
+            <span class="stat-item">처리 중: <strong id="activeOrders">0</strong>건</span>
           </div>
         </div>
 
@@ -234,36 +185,12 @@ function renderKDSInterface(store) {
         </div>
 
         <div class="footer-right">
-          <button class="footer-btn" onclick="showStatistics()">📊 통계</button>
-          <button class="footer-btn" onclick="showHistory()">📋 내역</button>
-          <button class="footer-btn alert-toggle" onclick="toggleAlerts()" id="alertToggle">🔔 알림</button>
+          <button class="footer-btn" onclick="refreshKDS()">🔄 새로고침</button>
         </div>
       </footer>
     </div>
 
     <style>
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      @keyframes slideOutRight {
-        from {
-          transform: translateX(0);
-          opacity: 1;
-        }
-        to {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-      }
-
       * {
         margin: 0;
         padding: 0;
@@ -314,30 +241,9 @@ function renderKDSInterface(store) {
         overflow: hidden;
       }
 
-      .kds-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(90deg, transparent 0%, rgba(99, 179, 237, 0.1) 50%, transparent 100%);
-        animation: header-shine 3s ease-in-out infinite;
-      }
-
-      @keyframes header-shine {
-        0%, 100% { opacity: 0; }
-        50% { opacity: 1; }
-      }
-
       .dev-mode .kds-header {
         height: 60px;
         padding: 0 20px;
-      }
-
-      .header-left .store-info {
-        position: relative;
-        z-index: 1;
       }
 
       .store-name {
@@ -364,11 +270,6 @@ function renderKDSInterface(store) {
       }
 
       /* 중앙 큐 요약 */
-      .header-center {
-        position: relative;
-        z-index: 1;
-      }
-
       .queue-summary {
         display: flex;
         gap: 32px;
@@ -431,8 +332,6 @@ function renderKDSInterface(store) {
         display: flex;
         align-items: center;
         gap: 24px;
-        position: relative;
-        z-index: 1;
       }
 
       .connection-status {
@@ -454,11 +353,6 @@ function renderKDSInterface(store) {
         border-radius: 50%;
         background: #68d391;
         animation: status-pulse 2s infinite;
-      }
-
-      .status-dot.offline {
-        background: #fc8181;
-        animation: none;
       }
 
       @keyframes status-pulse {
@@ -503,104 +397,12 @@ function renderKDSInterface(store) {
         transform: translateY(-1px);
       }
 
-      .control-btn:active {
-        transform: translateY(0);
-      }
-
       /* 메인 컨텐츠 */
       .kds-main {
         flex: 1;
         display: flex;
         flex-direction: column;
         overflow: hidden;
-      }
-
-      /* 필터 바 */
-      .filter-bar {
-        background: #1a202c;
-        border-bottom: 1px solid #2d3748;
-        padding: 16px 32px;
-        display: flex;
-        align-items: center;
-        gap: 24px;
-        flex-wrap: wrap;
-      }
-
-      .dev-mode .filter-bar {
-        padding: 12px 20px;
-        gap: 16px;
-      }
-
-      .filter-group {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .filter-group label {
-        font-size: 14px;
-        font-weight: 600;
-        color: #a0aec0;
-        min-width: 60px;
-      }
-
-      .filter-group select {
-        background: #2d3748;
-        border: 1px solid #4a5568;
-        color: #e2e8f0;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        min-width: 120px;
-        cursor: pointer;
-      }
-
-      .filter-group select:focus {
-        outline: none;
-        border-color: #63b3ed;
-        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
-      }
-
-      .search-group {
-        display: flex;
-        align-items: center;
-        margin-left: auto;
-        position: relative;
-      }
-
-      .search-group input {
-        background: #2d3748;
-        border: 1px solid #4a5568;
-        color: #e2e8f0;
-        padding: 8px 40px 8px 12px;
-        border-radius: 6px;
-        font-size: 14px;
-        width: 250px;
-      }
-
-      .search-group input:focus {
-        outline: none;
-        border-color: #63b3ed;
-        box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.1);
-      }
-
-      .search-btn {
-        position: absolute;
-        right: 8px;
-        background: none;
-        border: none;
-        color: #a0aec0;
-        cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .search-btn:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #e2e8f0;
       }
 
       /* 주문 컨테이너 */
@@ -854,7 +656,7 @@ function renderKDSInterface(store) {
         background: rgba(252, 129, 129, 0.1);
       }
 
-      .item.completed {
+      .item.ready {
         border-left-color: #68d391;
         opacity: 0.7;
       }
@@ -883,26 +685,6 @@ function renderKDSInterface(store) {
         font-weight: 700;
         min-width: 24px;
         text-align: center;
-      }
-
-      /* 조리 타이머 */
-      .cooking-timer {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        background: rgba(252, 129, 129, 0.9);
-        color: #ffffff;
-        padding: 6px 10px;
-        border-radius: 8px;
-        font-family: 'Courier New', monospace;
-        font-weight: 700;
-        font-size: 12px;
-        animation: timer-pulse 1s infinite;
-      }
-
-      @keyframes timer-pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.8; }
       }
 
       /* 액션 버튼 */
@@ -956,37 +738,6 @@ function renderKDSInterface(store) {
       .serve-btn {
         background: linear-gradient(135deg, #9f7aea 0%, #805ad5 100%);
         color: #ffffff;
-      }
-
-      .detail-btn {
-        background: rgba(74, 85, 104, 0.6);
-        color: #e2e8f0;
-        border: 1px solid rgba(160, 174, 192, 0.3);
-      }
-
-      .detail-btn:hover {
-        background: rgba(74, 85, 104, 0.8);
-        border-color: rgba(160, 174, 192, 0.5);
-      }
-
-      /* 우선순위 배지 */
-      .priority-badge {
-        position: absolute;
-        top: -4px;
-        left: 16px;
-        background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
-        color: #ffffff;
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 10px;
-        font-weight: 700;
-        text-transform: uppercase;
-        animation: priority-pulse 2s infinite;
-      }
-
-      @keyframes priority-pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.8; transform: scale(1.05); }
       }
 
       /* 하단 상태바 */
@@ -1055,11 +806,6 @@ function renderKDSInterface(store) {
         transform: translateY(-1px);
       }
 
-      .alert-toggle.active {
-        background: linear-gradient(135deg, #68d391 0%, #38a169 100%);
-        border-color: #68d391;
-      }
-
       /* 로딩 상태 */
       .loading-overlay {
         position: absolute;
@@ -1095,54 +841,6 @@ function renderKDSInterface(store) {
         color: #e2e8f0;
       }
 
-      /* 반응형 디자인 */
-      @media (max-width: 768px) {
-        .professional-kds:not(.dev-mode) {
-          width: 100vw;
-          height: 100vh;
-        }
-
-        .kds-header {
-          height: 70px;
-          padding: 0 16px;
-          flex-wrap: wrap;
-        }
-
-        .store-name {
-          font-size: 18px;
-        }
-
-        .queue-summary {
-          gap: 16px;
-          padding: 12px 16px;
-        }
-
-        .filter-bar {
-          padding: 12px 16px;
-          gap: 12px;
-        }
-
-        .orders-grid {
-          grid-template-columns: 1fr;
-          gap: 16px;
-          padding: 16px;
-        }
-
-        .kds-footer {
-          height: 50px;
-          padding: 0 16px;
-        }
-
-        .today-stats {
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .stat-item {
-          font-size: 12px;
-        }
-      }
-
       /* 스크롤바 스타일 */
       .orders-grid::-webkit-scrollbar {
         width: 8px;
@@ -1161,17 +859,6 @@ function renderKDSInterface(store) {
       .orders-grid::-webkit-scrollbar-thumb:hover {
         background: rgba(99, 179, 237, 0.7);
       }
-
-      /* 접근성 */
-      .order-card:focus {
-        outline: 2px solid #63b3ed;
-        outline-offset: 2px;
-      }
-
-      .action-btn:focus {
-        outline: 2px solid #63b3ed;
-        outline-offset: 2px;
-      }
     </style>
   `;
 
@@ -1182,32 +869,11 @@ function renderKDSInterface(store) {
     document.body.classList.remove('dev-mode');
   }
 
-  // 이벤트 리스너 설정
-  setupKDSEventListeners(store);
-
   // 시간 업데이트 시작
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
 
-  // 마지막 업데이트 시간 초기화
-  updateLastUpdateTime();
-
-  // 주문 카운트 업데이트
-  updateOrderCounts();
-
   console.log('✅ KDS 인터페이스 렌더링 완료');
-}
-
-// KDS 이벤트 리스너 설정
-function setupKDSEventListeners(store) {
-  // 주문 카드 클릭 이벤트
-  document.addEventListener('click', function(e) {
-    const orderCard = e.target.closest('.order-card');
-    if (orderCard && !e.target.closest('.action-btn')) {
-      const orderId = orderCard.dataset.orderId;
-      showOrderDetail(orderId);
-    }
-  });
 }
 
 // 현재 시간 업데이트
@@ -1235,7 +901,7 @@ async function loadKDSOrders(storeId) {
 
     showLoadingState();
 
-    const response = await fetch(`/api/orders/kds/${storeId}`, {
+    const response = await fetch(`/api/kds/orders/${storeId}`, {
       headers: {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
@@ -1250,7 +916,7 @@ async function loadKDSOrders(storeId) {
 
     if (data.success) {
       updateKDSOrderCards(data.orders);
-      updateOrderCounts();
+      updateOrderCounts(data.orders);
       updateLastUpdateTime();
       hideLoadingState();
       console.log(`✅ KDS 주문 데이터 로딩 완료 (${data.orders.length}개)`);
@@ -1324,18 +990,10 @@ function updateKDSOrderCards(orders) {
 
   if (!ordersGrid) return;
 
-  // 활성 주문만 필터링
-  const activeOrders = orders.filter(order => {
-    const hasActiveItems = order.items?.some(item =>
-      item.cooking_status === 'PENDING' || item.cooking_status === 'COOKING'
-    );
-    return hasActiveItems;
-  });
-
   // 기존 카드들 제거
   ordersGrid.innerHTML = '';
 
-  if (activeOrders.length === 0) {
+  if (orders.length === 0) {
     emptyState.style.display = 'block';
     return;
   }
@@ -1343,17 +1001,17 @@ function updateKDSOrderCards(orders) {
   emptyState.style.display = 'none';
 
   // 주문 카드들 생성
-  activeOrders.forEach(order => {
+  orders.forEach(order => {
     const orderCard = createProfessionalOrderCard(order);
     ordersGrid.appendChild(orderCard);
   });
 
-  console.log(`📟 KDS 카드 업데이트 완료: ${activeOrders.length}개 주문`);
+  console.log(`📟 KDS 카드 업데이트 완료: ${orders.length}개 주문`);
 }
 
 // 전문적인 주문 카드 생성
 function createProfessionalOrderCard(order) {
-  const orderTime = new Date(order.createdAt || order.paymentDate);
+  const orderTime = new Date(order.created_at);
   const timeString = orderTime.toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -1361,11 +1019,7 @@ function createProfessionalOrderCard(order) {
   });
 
   const statusClass = order.cookingStatus?.toLowerCase() || 'pending';
-  const sourceClass = order.isPOSOrder ? 'pos' : 'tll';
-
-  // 조리 시간 계산
-  const cookingTime = calculateCookingTime(order);
-  const isUrgent = cookingTime && cookingTime > 15; // 15분 이상이면 긴급
+  const sourceClass = order.source === 'TLL' ? 'tll' : 'pos';
 
   const card = document.createElement('div');
   card.className = `order-card ${statusClass}`;
@@ -1392,31 +1046,26 @@ function createProfessionalOrderCard(order) {
   };
 
   card.innerHTML = `
-    ${isUrgent ? '<div class="priority-badge">긴급</div>' : ''}
-
     <div class="status-badge ${statusClass}">
       ${statusTexts[statusClass] || '대기중'}
     </div>
-
-    ${statusClass === 'cooking' && cookingTime ? 
-      `<div class="cooking-timer">${Math.floor(cookingTime / 60)}:${(cookingTime % 60).toString().padStart(2, '0')}</div>` : ''}
 
     <div class="order-header">
       <div class="order-info">
         <div class="order-number">#${order.id}</div>
         <div class="order-meta">
-          ${order.tableNumber ? `<span class="table-number">테이블 ${order.tableNumber}</span>` : ''}
+          ${order.table_number ? `<span class="table-number">테이블 ${order.table_number}</span>` : ''}
           <span class="order-time">${timeString}</span>
           <span class="order-source ${sourceClass}">
-            ${order.isPOSOrder ? '🔴 POS' : '📱 앱'}
+            ${order.source === 'TLL' ? '📱 앱' : '🔴 POS'}
           </span>
         </div>
       </div>
     </div>
 
     <div class="customer-info">
-      <span class="customer-name">${order.customerName || '손님'}</span>
-      ${order.customerPhone ? `<span class="customer-phone">${order.customerPhone}</span>` : ''}
+      <span class="customer-name">${order.customername || '손님'}</span>
+      ${order.customer_phone ? `<span class="customer-phone">${order.customer_phone}</span>` : ''}
     </div>
 
     <div class="order-items">
@@ -1465,30 +1114,205 @@ function generateActionButtons(order) {
     `);
   }
 
-  buttons.push(`
-    <button class="action-btn detail-btn" onclick="showOrderDetail(${order.id})">
-      상세보기
-    </button>
-  `);
-
   return buttons.join('');
 }
 
-// 조리 시간 계산
-function calculateCookingTime(order) {
-  const cookingItems = order.items?.filter(item => item.cooking_status === 'COOKING');
-  if (!cookingItems || cookingItems.length === 0) return null;
+// 주문 카운트 업데이트
+function updateOrderCounts(orders) {
+  const pendingCards = orders.filter(o => o.cookingStatus === 'PENDING').length;
+  const cookingCards = orders.filter(o => o.cookingStatus === 'COOKING').length;
+  const readyCards = orders.filter(o => o.cookingStatus === 'READY').length;
 
-  const earliestStart = cookingItems.reduce((earliest, item) => {
-    const startTime = new Date(item.started_at);
-    return !earliest || startTime < earliest ? startTime : earliest;
-  }, null);
+  const pendingCount = document.getElementById('pendingCount');
+  const cookingCount = document.getElementById('cookingCount');
+  const readyCount = document.getElementById('readyCount');
+  const activeOrders = document.getElementById('activeOrders');
 
-  if (!earliestStart) return null;
-
-  const now = new Date();
-  return Math.floor((now - earliestStart) / 1000); // 초 단위 반환
+  if (pendingCount) pendingCount.textContent = pendingCards;
+  if (cookingCount) cookingCount.textContent = cookingCards;
+  if (readyCount) readyCount.textContent = readyCards;
+  if (activeOrders) activeOrders.textContent = orders.length;
 }
+
+// 마지막 업데이트 시간 갱신
+function updateLastUpdateTime() {
+  const lastUpdateElement = document.getElementById('lastUpdate');
+  if (lastUpdateElement) {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    lastUpdateElement.textContent = `최종 업데이트: ${timeString}`;
+  }
+}
+
+// 데이터 새로고침
+function refreshKDS() {
+  console.log('🔄 KDS 수동 새로고침');
+  if (window.currentStoreId) {
+    loadKDSOrders(window.currentStoreId);
+  }
+}
+
+// 주문 전체 조리 시작
+async function startCookingOrder(orderId) {
+  try {
+    const response = await fetch(`/api/kds/orders/${orderId}/start-cooking`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      showNotification('주문 조리를 시작했습니다', 'success');
+      refreshKDS();
+    } else {
+      showNotification('조리 시작 실패: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('❌ 주문 조리 시작 실패:', error);
+    showNotification('조리 시작 중 오류가 발생했습니다', 'error');
+  }
+}
+
+// 주문 완료
+async function completeOrder(orderId) {
+  try {
+    const response = await fetch(`/api/kds/orders/${orderId}/complete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      showNotification('주문이 완료되었습니다', 'success');
+      refreshKDS();
+    } else {
+      showNotification('주문 완료 실패: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('❌ 주문 완료 실패:', error);
+    showNotification('주문 완료 중 오류가 발생했습니다', 'error');
+  }
+}
+
+// 서빙 완료
+async function serveOrder(orderId) {
+  try {
+    // 서빙 완료는 주문 완료와 동일하게 처리
+    const response = await fetch(`/api/kds/orders/${orderId}/complete`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      showNotification('서빙이 완료되었습니다', 'success');
+      refreshKDS();
+    } else {
+      showNotification('서빙 완료 실패: ' + result.error, 'error');
+    }
+  } catch (error) {
+    console.error('❌ 서빙 완료 실패:', error);
+    showNotification('서빙 완료 중 오류가 발생했습니다', 'error');
+  }
+}
+
+// 알림 표시
+function showNotification(message, type = 'info') {
+  const notification = document.createElement('div');
+  const typeColors = {
+    'success': '#68d391',
+    'error': '#fc8181', 
+    'info': '#63b3ed',
+    'warning': '#f6ad55'
+  };
+
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${typeColors[type] || typeColors.info};
+    color: #ffffff;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+    max-width: 300px;
+  `;
+
+  notification.textContent = message;
+  document.body.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOutRight 0.3s ease-in';
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
+}
+
+// 매장 선택 화면 렌더링
+function renderKDSStoreSelection() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #63b3ed;">📟 KDS</h1>
+      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장을 선택하세요</p>
+      <p style="margin: 20px 0; color: #718096;">올바른 매장 ID가 필요합니다.</p>
+      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
+        로그인 화면으로 돌아가기
+      </button>
+    </div>
+  `;
+}
+
+// 에러 화면 렌더링
+function renderKDSError() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fc8181;">❌ KDS 로딩 실패</h1>
+      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장 정보를 불러올 수 없습니다.</p>
+      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
+        로그인 화면으로 돌아가기
+      </button>
+    </div>
+  `;
+}
+
+// CSS 애니메이션 추가
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+`;
+document.head.appendChild(style);
 
 // WebSocket 연결 설정
 function setupKDSWebSocket(storeId) {
@@ -1553,7 +1377,7 @@ function handleKDSRealTimeUpdate(updateData) {
   }
 
   // 데이터 새로고침
-  refreshKDSData();
+  refreshKDS();
 }
 
 // 연결 상태 업데이트
@@ -1570,44 +1394,6 @@ function updateConnectionStatus(isConnected) {
       statusText.textContent = '연결 끊김';
     }
   }
-}
-
-// 알림 표시
-function showNotification(message, type = 'info') {
-  const notification = document.createElement('div');
-  const typeColors = {
-    'success': '#68d391',
-    'error': '#fc8181', 
-    'info': '#63b3ed',
-    'warning': '#f6ad55'
-  };
-
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${typeColors[type] || typeColors.info};
-    color: #ffffff;
-    padding: 16px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-    z-index: 10000;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-    animation: slideInRight 0.3s ease-out;
-    max-width: 300px;
-  `;
-
-  notification.textContent = message;
-  document.body.appendChild(notification);
-
-  setTimeout(() => {
-    notification.style.animation = 'slideOutRight 0.3s ease-in';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
-      }
-    }, 300);
-  }, 3000);
 }
 
 // 알림음 재생
@@ -1634,315 +1420,22 @@ function playNotificationSound() {
   }
 }
 
-// 주문 카운트 업데이트
-function updateOrderCounts() {
-  const pendingCards = document.querySelectorAll('.order-card.pending').length;
-  const cookingCards = document.querySelectorAll('.order-card.cooking').length;
-  const readyCards = document.querySelectorAll('.order-card.ready').length;
-
-  const pendingCount = document.getElementById('pendingCount');
-  const cookingCount = document.getElementById('cookingCount');
-  const readyCount = document.getElementById('readyCount');
-
-  if (pendingCount) pendingCount.textContent = pendingCards;
-  if (cookingCount) cookingCount.textContent = cookingCards;
-  if (readyCount) readyCount.textContent = readyCards;
-}
-
-// 마지막 업데이트 시간 갱신
-function updateLastUpdateTime() {
-  const lastUpdateElement = document.getElementById('lastUpdate');
-  if (lastUpdateElement) {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    lastUpdateElement.textContent = `최종 업데이트: ${timeString}`;
-  }
-}
-
-// 필터 업데이트
-function updateFilter(type, value) {
-  console.log(`필터 업데이트: ${type} = ${value}`);
-  // 여기에 필터링 로직 구현
-  // 현재는 모든 주문을 다시 로드
-  if (window.currentStoreId) {
-    loadKDSOrders(window.currentStoreId);
-  }
-}
-
-// 주문 검색
-function searchOrders(query) {
-  const cards = document.querySelectorAll('.order-card');
-  cards.forEach(card => {
-    const orderNumber = card.querySelector('.order-number').textContent;
-    const customerName = card.querySelector('.customer-name').textContent;
-
-    const isMatch = orderNumber.toLowerCase().includes(query.toLowerCase()) ||
-                   customerName.toLowerCase().includes(query.toLowerCase());
-
-    card.style.display = isMatch ? 'flex' : 'none';
-  });
-}
-
-// 검색 초기화
-function clearSearch() {
-  const searchInput = document.getElementById('orderSearch');
-  if (searchInput) {
-    searchInput.value = '';
-    searchOrders('');
-  }
-}
-
-// 데이터 새로고침
-function refreshKDSData() {
-  if (window.currentStoreId) {
-    loadKDSOrders(window.currentStoreId);
-  }
-}
-
-// 수동 새로고침
-function refreshKDS() {
-  console.log('🔄 KDS 수동 새로고침');
-  refreshKDSData();
-}
-
-// 전체화면 토글
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen();
-  } else {
-    document.exitFullscreen();
-  }
-}
-
-// 설정 표시
-function showKDSSettings() {
-  showNotification('설정 기능은 곧 추가될 예정입니다', 'info');
-}
-
-// 통계 표시
-function showStatistics() {
-  showNotification('통계 기능은 곧 추가될 예정입니다', 'info');
-}
-
-// 내역 표시
-function showHistory() {
-  showNotification('내역 기능은 곧 추가될 예정입니다', 'info');
-}
-
-// 알림 토글
-function toggleAlerts() {
-  const isEnabled = localStorage.getItem('kdsAlertsEnabled') !== 'false';
-  localStorage.setItem('kdsAlertsEnabled', (!isEnabled).toString());
-
-  const alertButton = document.getElementById('alertToggle');
-  if (alertButton) {
-    if (isEnabled) {
-      alertButton.classList.remove('active');
-      showNotification('알림이 비활성화되었습니다', 'warning');
-    } else {
-      alertButton.classList.add('active');
-      showNotification('알림이 활성화되었습니다', 'success');
-    }
-  }
-}
-
-// 개별 메뉴 조리 시작
-async function startCookingItem(itemId) {
-  try {
-    const response = await fetch(`/api/orders/items/${itemId}/start-cooking`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      showNotification('조리를 시작했습니다', 'success');
-      refreshKDSData();
-    } else {
-      showNotification('조리 시작 실패: ' + result.error, 'error');
-    }
-  } catch (error) {
-    console.error('❌ 메뉴 조리 시작 실패:', error);
-    showNotification('조리 시작 중 오류가 발생했습니다', 'error');
-  }
-}
-
-// 개별 메뉴 조리 완료
-async function completeCookingItem(itemId) {
-  try {
-    const response = await fetch(`/api/orders/items/${itemId}/complete-cooking`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      showNotification('조리가 완료되었습니다', 'success');
-      refreshKDSData();
-    } else {
-      showNotification('조리 완료 실패: ' + result.error, 'error');
-    }
-  } catch (error) {
-    console.error('❌ 메뉴 조리 완료 실패:', error);
-    showNotification('조리 완료 중 오류가 발생했습니다', 'error');
-  }
-}
-
-// 주문 전체 조리 시작
-async function startCookingOrder(orderId) {
-  try {
-    const response = await fetch(`/api/orders/${orderId}/start-cooking`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      showNotification('주문 조리를 시작했습니다', 'success');
-      refreshKDSData();
-    } else {
-      showNotification('조리 시작 실패: ' + result.error, 'error');
-    }
-  } catch (error) {
-    console.error('❌ 주문 조리 시작 실패:', error);
-    showNotification('조리 시작 중 오류가 발생했습니다', 'error');
-  }
-}
-
-// 주문 완료
-async function completeOrder(orderId) {
-  try {
-    const response = await fetch(`/api/orders/${orderId}/complete`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      showNotification('주문이 완료되었습니다', 'success');
-      refreshKDSData();
-    } else {
-      showNotification('주문 완료 실패: ' + result.error, 'error');
-    }
-  } catch (error) {
-    console.error('❌ 주문 완료 실패:', error);
-    showNotification('주문 완료 중 오류가 발생했습니다', 'error');
-  }
-}
-
-// 서빙 완료
-async function serveOrder(orderId) {
-  try {
-    // 서빙 완료 API가 없다면 complete와 동일하게 처리
-    const response = await fetch(`/api/orders/${orderId}/complete`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      showNotification('서빙이 완료되었습니다', 'success');
-      refreshKDSData();
-    } else {
-      showNotification('서빙 완료 실패: ' + result.error, 'error');
-    }
-  } catch (error) {
-    console.error('❌ 서빙 완료 실패:', error);
-    showNotification('서빙 완료 중 오류가 발생했습니다', 'error');
-  }
-}
-
 // 주문 상세 보기
 function showOrderDetail(orderId) {
   console.log('📋 주문 상세 보기:', orderId);
   showNotification('상세 화면은 곧 구현될 예정입니다', 'info');
 }
 
-// 매장 선택 화면 렌더링
-function renderKDSStoreSelection() {
-  const main = document.getElementById('main');
-  main.innerHTML = `
-    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #63b3ed;">📟 KDS</h1>
-      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장을 선택하세요</p>
-      <p style="margin: 20px 0; color: #718096;">올바른 매장 ID가 필요합니다.</p>
-      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #63b3ed 0%, #3182ce 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
-        로그인 화면으로 돌아가기
-      </button>
-    </div>
-  `;
-}
-
-// 에러 화면 렌더링
-function renderKDSError() {
-  const main = document.getElementById('main');
-  main.innerHTML = `
-    <div style="padding: 40px; text-align: center; background: #0f1419; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-      <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #fc8181;">❌ KDS 로딩 실패</h1>
-      <p style="margin: 20px 0; color: #a0aec0; font-size: 1.2rem;">매장 정보를 불러올 수 없습니다.</p>
-      <button onclick="window.location.href='/'" style="background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%); color: white; border: none; padding: 16px 32px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: 600; margin-top: 2rem;">
-        로그인 화면으로 돌아가기
-      </button>
-    </div>
-  `;
-}
-
-// CSS 애니메이션 추가
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
-
-  @keyframes slideOutRight {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-  }
-`;
-document.head.appendChild(style);
-
-// 페이지 언로드 시 정리
-window.addEventListener('beforeunload', () => {
-  if (window.kdsSocket) {
-    window.kdsSocket.emit('leave-kds-room', window.currentStoreId);
-    window.kdsSocket.disconnect();
-    console.log('🔌 KDS WebSocket 연결 정리 완료');
-  }
-});
-
 // 전역 함수로 노출
 window.renderKDS = renderKDS;
-window.showOrderDetail = showOrderDetail;
 window.startCookingOrder = startCookingOrder;
-window.startCookingItem = startCookingItem;
-window.completeCookingItem = completeCookingItem;
 window.completeOrder = completeOrder;
 window.serveOrder = serveOrder;
 window.refreshKDS = refreshKDS;
-window.toggleFullscreen = toggleFullscreen;
-window.showKDSSettings = showKDSSettings;
-window.showStatistics = showStatistics;
-window.showHistory = showHistory;
-window.toggleAlerts = toggleAlerts;
-window.updateFilter = updateFilter;
-window.searchOrders = searchOrders;
-window.clearSearch = clearSearch;
+window.setupKDSWebSocket = setupKDSWebSocket;
+window.handleKDSRealTimeUpdate = handleKDSRealTimeUpdate;
+window.updateConnectionStatus = updateConnectionStatus;
+window.playNotificationSound = playNotificationSound;
+window.showOrderDetail = showOrderDetail;
 
 console.log('✅ Professional KDS 시스템 로드 완료');
