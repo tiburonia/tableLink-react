@@ -348,3 +348,6 @@ class KDSUIRenderer {
 }
 
 window.KDSUIRenderer = KDSUIRenderer;
+console.log('✅ KDSUIRenderer 클래스 등록 완료');
+
+} // 중복 로딩 방지 닫기

@@ -9,8 +9,7 @@ console.log('🚀 TableLink KDS v3.0 시작');
 // 중복 로딩 방지
 if (window.kdsMainLoaded) {
   console.log('⚠️ KDS 메인 스크립트가 이미 로드됨');
-  return;
-}
+} else {
 window.kdsMainLoaded = true;
 
 let kdsController = null;
@@ -139,3 +138,5 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('✅ KDS 메인 스크립트 로드 완료');
+
+} // 중복 로딩 방지 닫기

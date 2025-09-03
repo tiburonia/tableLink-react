@@ -165,3 +165,6 @@ class KDSDataManager {
 }
 
 window.KDSDataManager = KDSDataManager;
+console.log('✅ KDSDataManager 클래스 등록 완료');
+
+} // 중복 로딩 방지 닫기
