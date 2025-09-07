@@ -10,7 +10,7 @@ const path = require('path');
  * 2. node scripts/database/import-sql-dump.js [파일명]
  */
 
-async function importSQLDump(filename) {
+async function importSQLDump() {
   console.log('📂 SQL 덤프 파일 적용 시작');
   
   if (!filename) {
