@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
+const fetch = require('node-fetch'); // node-fetch 를 import 해야 합니다.
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -291,51 +292,77 @@ router.get('/search/:keyword', async (req, res) => {
   }
 });
 
-// 뷰포트 기반 매장 조회
+// 뷰포트 내 매장 조회 (지도용) - 새 클러스터 API로 리다이렉트
 router.get('/viewport', async (req, res) => {
-  const { swLat, swLng, neLat, neLng, level } = req.query;
-
   try {
-    console.log('🏪 뷰포트 매장 조회:', { swLat, swLng, neLat, neLng, level });
+    const { swLat, swLng, neLat, neLng, level = 3 } = req.query;
 
-    const result = await pool.query(`
-      SELECT 
-        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
-        sa.address_full as address, sa.latitude, sa.longitude
-      FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE sa.latitude BETWEEN $1 AND $3
-        AND sa.longitude BETWEEN $2 AND $4
-        AND s.is_open = true
-      ORDER BY s.rating_average DESC, s.id ASC
-      LIMIT 50
-    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
+    if (!swLat || !swLng || !neLat || !neLng) {
+      return res.status(400).json({
+        success: false,
+        error: '뷰포트 좌표가 필요합니다 (swLat, swLng, neLat, neLng)'
+      });
+    }
 
-    const stores = result.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      isOpen: store.is_open !== false,
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : null
-    }));
+    console.log(`🔄 레거시 뷰포트 API -> 새 클러스터 API로 리다이렉트`);
 
-    console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개`);
+    // 새 클러스터 API 형태로 변환
+    const bbox = `${swLng},${swLat},${neLng},${neLat}`;
+    const clusterUrl = `/api/stores/clusters?level=${level}&bbox=${bbox}`;
 
-    res.json({
-      success: true,
-      stores: stores
-    });
+    // 내부 리다이렉트로 새 API 호출
+    const clusterRes = await fetch(`${req.protocol}://${req.get('host')}${clusterUrl}`);
+    const clusterData = await clusterRes.json();
+
+    if (clusterData.type === 'individual') {
+      // 개별 매장을 기존 포맷으로 변환
+      const stores = clusterData.features.map(feature => ({
+        id: feature.store_id,
+        name: feature.name || '매장명 없음',
+        category: feature.category || '기타',
+        address: feature.road_address || '주소 정보 없음',
+        ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
+        reviewCount: feature.review_count || 0,
+        favoriteCount: 0,
+        isOpen: feature.is_open !== false,
+        coord: { lat: feature.lat, lng: feature.lon },
+        sido: feature.sido,
+        sigungu: feature.sigungu,
+        eupmyeondong: feature.eupmyeondong
+      }));
+
+      res.json({
+        success: true,
+        stores: stores,
+        meta: {
+          level: parseInt(level),
+          viewport: { swLat, swLng, neLat, neLng },
+          count: stores.length,
+          apiVersion: 'v2-clusters'
+        }
+      });
+    } else {
+      // 클러스터 데이터는 빈 배열로 반환 (기존 호환성)
+      res.json({
+        success: true,
+        stores: [],
+        clusters: clusterData.features,
+        meta: {
+          level: parseInt(level),
+          viewport: { swLat, swLng, neLat, neLng },
+          count: 0,
+          clusterCount: clusterData.features.length,
+          apiVersion: 'v2-clusters',
+          gridSize: clusterData.gridSize
+        }
+      });
+    }
 
   } catch (error) {
     console.error('❌ 뷰포트 매장 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '뷰포트 매장 조회 중 오류가 발생했습니다.'
+      error: '매장 데이터 조회 중 오류가 발생했습니다'
     });
   }
 });
@@ -538,7 +565,7 @@ router.get('/:storeId/menu', async (req, res) => {
     }
 
     const store = storeResult.rows[0];
-    
+
     // 카테고리별 기본 메뉴 사용
     const menu = getDefaultMenusByCategory(store.category).map((item, index) => ({
       id: index + 1,
