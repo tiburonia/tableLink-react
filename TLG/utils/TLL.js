@@ -507,7 +507,7 @@ window.TLL = async function TLL(preselectedStore = null) {
       });
 
 
-// 토스페이먼츠 결제 성공 처리 함수 (통합 개선)
+// 토스페이먼츠 결제 성공 처리 함수 (TLL 스키마에 맞게 수정)
 window.handleTossPaymentSuccess = async function(data) {
   console.log('✅ 토스페이먼츠 결제 성공 처리:', data);
 
@@ -520,23 +520,47 @@ window.handleTossPaymentSuccess = async function(data) {
 
     console.log('🔄 결제 승인 처리 시작:', { paymentKey, orderId, amount });
 
-    // 통합 토스페이먼츠 승인 API 호출
-    const confirmResult = await window.confirmTossPayment(paymentKey, orderId, amount);
-
-    if (!confirmResult.success) {
-      throw new Error(confirmResult.error || '결제 승인 실패');
-    }
-
-    console.log('✅ 결제 승인 완료:', confirmResult);
-
     // TLL 주문인지 확인
     const isTLLOrder = orderId.startsWith('TLL_');
 
     if (isTLLOrder) {
+      // TLL 결제 확인 API 호출
+      const tllOrderData = JSON.parse(sessionStorage.getItem('tllPendingOrder') || '{}');
+      const checkId = tllOrderData.checkId || orderId.split('_')[1];
+
+      const confirmResponse = await fetch('/api/tll/payments/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          check_id: parseInt(checkId),
+          payment_key: paymentKey,
+          order_id: orderId,
+          amount: parseInt(amount)
+        })
+      });
+
+      if (!confirmResponse.ok) {
+        const errorData = await confirmResponse.json();
+        throw new Error(errorData.error || 'TLL 결제 확인 실패');
+      }
+
+      const confirmResult = await confirmResponse.json();
+      console.log('✅ TLL 결제 확인 완료:', confirmResult);
+
       // TLL 주문 데이터 정리
       sessionStorage.removeItem('tllPendingOrder');
       console.log('✅ TLL 주문 완료 처리');
+
     } else {
+      // 일반 주문 - 기존 처리 방식
+      const confirmResult = await window.confirmTossPayment(paymentKey, orderId, amount);
+
+      if (!confirmResult.success) {
+        throw new Error(confirmResult.error || '결제 승인 실패');
+      }
+
+      console.log('✅ 일반 결제 승인 완료:', confirmResult);
+
       // 일반 주문 데이터 정리
       sessionStorage.removeItem('pendingOrderData');
       console.log('✅ 일반 주문 완료 처리');
