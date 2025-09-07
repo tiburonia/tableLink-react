@@ -1,4 +1,3 @@
-
 // 지도 패널 UI 렌더링 관리자
 window.MapPanelUI = {
   renderPanelHTML() {
@@ -805,25 +804,29 @@ window.MapPanelUI = {
             }
           };
         } else if (feature.kind === 'cluster') {
-          // 클러스터 데이터를 가상 매장으로 변환
+          // 클러스터 데이터 변환 (서버 집계 데이터 활용)
           return {
-            id: `cluster_${Math.random().toString(36).substr(2, 9)}`,
-            name: `${feature.store_count}개 매장`,
-            category: '클러스터',
-            address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '지역 정보 없음',
-            ratingAverage: 0.0,
-            reviewCount: 0,
+            id: `cluster-${feature.lat}-${feature.lng}`,
+            name: `${feature.store_count}개 매장 집합`,
+            category: '매장 집합',
+            address: feature.full_address || '지역 정보 없음',
+            ratingAverage: parseFloat(feature.avg_rating) || 0.0,
+            reviewCount: feature.total_reviews || 0,
             favoriteCount: 0,
             isOpen: true,
-            coord: { lat: feature.lat, lng: feature.lon },
-            region: {
-              sido: feature.sido,
-              sigungu: feature.sigungu,
-              eupmyeondong: feature.eupmyeondong
-            },
+            coord: { lat: feature.lat, lng: feature.lng },
             isCluster: true,
-            storeCount: feature.store_count,
-            openCount: feature.open_count
+            storeCount: feature.store_count || 0,
+            openCount: feature.open_count || 0,
+            closedCount: feature.closed_count || 0,
+            categoryBreakdown: {
+              korean: feature.korean_count || 0,
+              chinese: feature.chinese_count || 0,
+              japanese: feature.japanese_count || 0,
+              western: feature.western_count || 0,
+              cafe: feature.cafe_count || 0
+            },
+            dominantIcon: feature.dominant_category_icon || '🍽️'
           };
         }
         return null;
@@ -973,11 +976,11 @@ window.MapPanelUI = {
     if (isCluster) {
       // 클러스터 카드 렌더링
       return `
-        <div class="storeCard cluster-card" data-status="true" data-category="클러스터" data-rating="0" onclick="MapPanelUI.handleClusterClick(${safeStoreData})">
+        <div class="storeCard cluster-card" data-status="true" data-category="매장 집합" data-rating="0" onclick="MapPanelUI.handleClusterClick(${safeStoreData})">
           <div class="storeImageBox">
             <img src="TableLink.png" alt="클러스터 이미지" />
             <div class="storeStatus cluster">
-              🏪 ${store.storeCount}개 매장
+              ${store.dominantIcon} ${store.storeCount}개 매장
             </div>
           </div>
           <div class="storeInfoBox">
@@ -987,7 +990,7 @@ window.MapPanelUI = {
                 <span class="clusterInfo">운영중 ${store.openCount}개</span>
               </div>
             </div>
-            <div class="storeCategory">매장 집합</div>
+            <div class="storeCategory">${storeCategory}</div>
             <div class="storeActions">
               <div class="actionButton primary">
                 <span class="actionIcon">🔍</span>
@@ -1033,17 +1036,17 @@ window.MapPanelUI = {
   // 클러스터 클릭 시 처리 함수
   handleClusterClick(clusterData) {
     console.log('📍 클러스터 클릭됨:', clusterData);
-    
+
     if (window.currentMap && clusterData.coord) {
       try {
         const position = new kakao.maps.LatLng(clusterData.coord.lat, clusterData.coord.lng);
         window.currentMap.setCenter(position);
-        
+
         // 현재 레벨보다 2단계 확대
         const currentLevel = window.currentMap.getLevel();
         const newLevel = Math.max(1, currentLevel - 2);
         window.currentMap.setLevel(newLevel);
-        
+
         console.log(`🔍 클러스터 확대: 레벨 ${currentLevel} → ${newLevel}`);
       } catch (error) {
         console.error('❌ 클러스터 확대 실패:', error);

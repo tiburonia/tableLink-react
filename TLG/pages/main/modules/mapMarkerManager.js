@@ -1,7 +1,8 @@
-// 새로운 PostGIS 기반 지도 마커 관리자
+
+// 새로운 PostGIS 기반 지도 마커 관리자 (최적화 버전)
 window.MapMarkerManager = {
-  // 현재 표시된 마커들
-  currentMarkers: [],
+  // 현재 표시된 마커들 (위치별 인덱싱)
+  currentMarkers: new Map(),
 
   // 현재 지도 레벨
   currentLevel: 0,
@@ -14,6 +15,9 @@ window.MapMarkerManager = {
 
   // 현재 작업 취소 플래그
   shouldCancel: false,
+
+  // 현재 뷰포트 영역
+  currentBounds: null,
 
   // 메인 진입점 - 레벨 변경시 호출
   async handleMapLevelChange(level, map) {
@@ -40,16 +44,22 @@ window.MapMarkerManager = {
     try {
       // 새 마커 타입 결정
       const newMarkerType = this.getMarkerType(level);
+      const newBounds = map.getBounds();
 
       // 마커 타입이 바뀌면 기존 마커 제거
       if (this.currentMarkerType !== newMarkerType) {
         console.log(`🔄 마커 타입 변경 (${this.currentMarkerType} → ${newMarkerType}) - 기존 마커 제거`);
         this.clearAllMarkers();
         this.currentMarkerType = newMarkerType;
+      } 
+      // 같은 타입이면 뷰포트 기반 diff 업데이트
+      else if (this.shouldUpdateForViewportChange(newBounds)) {
+        console.log(`🔄 뷰포트 변경 감지 - diff 업데이트 수행`);
       }
 
       // 통합 API로 마커 업데이트
       await this.refreshMarkersWithAPI(map, level);
+      this.currentBounds = newBounds;
 
     } catch (error) {
       if (!this.shouldCancel) {
@@ -66,21 +76,36 @@ window.MapMarkerManager = {
 
   // 마커 타입 결정 (레벨별)
   getMarkerType(level) {
-    if (level <= 5) return 'individual';      // 개별 매장
-    return 'cluster';                         // 클러스터
+    if (level <= 5) return 'individual';
+    return 'cluster';
+  },
+
+  // 뷰포트 변경 감지
+  shouldUpdateForViewportChange(newBounds) {
+    if (!this.currentBounds) return true;
+
+    const oldSW = this.currentBounds.getSouthWest();
+    const oldNE = this.currentBounds.getNorthEast();
+    const newSW = newBounds.getSouthWest();
+    const newNE = newBounds.getNorthEast();
+
+    // 뷰포트가 30% 이상 변경되면 업데이트
+    const latDiff = Math.abs(oldNE.getLat() - newNE.getLat()) / Math.abs(oldNE.getLat() - oldSW.getLat());
+    const lngDiff = Math.abs(oldNE.getLng() - newNE.getLng()) / Math.abs(oldNE.getLng() - oldSW.getLng());
+
+    return latDiff > 0.3 || lngDiff > 0.3;
   },
 
   // 통합 API를 사용한 마커 갱신
   async refreshMarkersWithAPI(map, level) {
     console.log(`🌐 통합 클러스터 API 호출 시작 (레벨: ${level})`);
 
-    // 현재 뷰포트 가져오기
     const bounds = map.getBounds();
     const bbox = [
-      bounds.getSouthWest().getLng(), // xmin
-      bounds.getSouthWest().getLat(), // ymin
-      bounds.getNorthEast().getLng(), // xmax
-      bounds.getNorthEast().getLat()  // ymax
+      bounds.getSouthWest().getLng(),
+      bounds.getSouthWest().getLat(),
+      bounds.getNorthEast().getLng(),
+      bounds.getNorthEast().getLat()
     ];
 
     const params = new URLSearchParams({
@@ -104,13 +129,13 @@ window.MapMarkerManager = {
         return;
       }
 
-      console.log(`✅ API 응답: ${data.type}, ${data.count}개 피처`);
+      console.log(`✅ API 응답: ${data.type}, ${data.features?.length || 0}개 피처`);
 
-      // 응답 타입별 마커 생성
+      // 표준화된 응답 처리
       if (data.type === 'individual') {
-        await this.renderIndividualMarkers(data.features, map);
+        await this.renderIndividualMarkers(data.features || [], map);
       } else if (data.type === 'cluster') {
-        await this.renderClusterMarkers(data.features, map);
+        await this.renderClusterMarkers(data.features || [], map);
       }
 
     } catch (error) {
@@ -120,7 +145,7 @@ window.MapMarkerManager = {
     }
   },
 
-  // 개별 매장 마커 렌더링
+  // 개별 매장 마커 렌더링 (diff 적용)
   async renderIndividualMarkers(features, map) {
     console.log(`🏪 개별 매장 마커 ${features.length}개 렌더링 시작`);
 
@@ -129,12 +154,22 @@ window.MapMarkerManager = {
       return;
     }
 
-    const markers = [];
+    const newMarkerKeys = new Set();
+    const markersToAdd = [];
+
     for (const feature of features) {
       try {
         if (feature.kind === 'individual') {
-          const marker = this.createStoreMarker(feature, map);
-          if (marker) markers.push(marker);
+          const markerKey = `store-${feature.store_id}-${feature.lat}-${feature.lng}`;
+          newMarkerKeys.add(markerKey);
+
+          // 기존 마커가 없으면 새로 생성
+          if (!this.currentMarkers.has(markerKey)) {
+            const marker = this.createStoreMarker(feature, map);
+            if (marker) {
+              markersToAdd.push({ key: markerKey, marker });
+            }
+          }
         }
       } catch (error) {
         console.error('❌ 개별 마커 생성 실패:', error, feature);
@@ -143,12 +178,24 @@ window.MapMarkerManager = {
 
     // 작업 취소 최종 확인
     if (!this.shouldCancel) {
-      this.currentMarkers.push(...markers);
-      console.log(`✅ 개별 매장 마커 ${markers.length}개 렌더링 완료`);
+      // 사라진 마커들 제거
+      for (const [key, marker] of this.currentMarkers) {
+        if (!newMarkerKeys.has(key)) {
+          marker.setMap(null);
+          this.currentMarkers.delete(key);
+        }
+      }
+
+      // 새 마커들 추가
+      for (const { key, marker } of markersToAdd) {
+        this.currentMarkers.set(key, marker);
+      }
+
+      console.log(`✅ 개별 매장 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
     }
   },
 
-  // 클러스터 마커 렌더링
+  // 클러스터 마커 렌더링 (diff 적용)
   async renderClusterMarkers(features, map) {
     console.log(`🏢 클러스터 마커 ${features.length}개 렌더링 시작`);
 
@@ -157,12 +204,22 @@ window.MapMarkerManager = {
       return;
     }
 
-    const markers = [];
+    const newMarkerKeys = new Set();
+    const markersToAdd = [];
+
     for (const feature of features) {
       try {
         if (feature.kind === 'cluster') {
-          const marker = this.createClusterMarker(feature, map);
-          if (marker) markers.push(marker);
+          const markerKey = `cluster-${feature.lat}-${feature.lng}-${feature.store_count}`;
+          newMarkerKeys.add(markerKey);
+
+          // 기존 마커가 없으면 새로 생성
+          if (!this.currentMarkers.has(markerKey)) {
+            const marker = this.createClusterMarker(feature, map);
+            if (marker) {
+              markersToAdd.push({ key: markerKey, marker });
+            }
+          }
         }
       } catch (error) {
         console.error('❌ 클러스터 마커 생성 실패:', error, feature);
@@ -171,31 +228,41 @@ window.MapMarkerManager = {
 
     // 작업 취소 최종 확인
     if (!this.shouldCancel) {
-      this.currentMarkers.push(...markers);
-      console.log(`✅ 클러스터 마커 ${markers.length}개 렌더링 완료`);
+      // 사라진 마커들 제거
+      for (const [key, marker] of this.currentMarkers) {
+        if (!newMarkerKeys.has(key)) {
+          marker.setMap(null);
+          this.currentMarkers.delete(key);
+        }
+      }
+
+      // 새 마커들 추가
+      for (const { key, marker } of markersToAdd) {
+        this.currentMarkers.set(key, marker);
+      }
+
+      console.log(`✅ 클러스터 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
     }
   },
 
-  // 개별 매장 마커 생성
+  // 개별 매장 마커 생성 (서버 데이터 활용)
   createStoreMarker(feature, map) {
-    // 새 API 구조에 맞게 좌표 추출
-    const coords = [feature.lon || feature.lng, feature.lat];
-    const position = new kakao.maps.LatLng(feature.lat, feature.lon || feature.lng);
-
+    const position = new kakao.maps.LatLng(feature.lat, feature.lng);
     const isOpen = feature.is_open !== false;
-    const rating = feature.rating_average ? parseFloat(feature.rating_average).toFixed(1) : '0.0';
-    const categoryIcon = this.getCategoryIcon(feature.category);
+    const rating = feature.rating_average || '0.0';
+    const categoryIcon = feature.category_icon || '🍽️'; // 서버에서 계산된 아이콘 사용
 
-    const markerId = `store-${feature.store_id || feature.id || Math.random().toString(36).substr(2, 9)}`;
+    const markerId = `store-${feature.store_id || Math.random().toString(36).substr(2, 9)}`;
 
     const storeData = {
-      id: feature.store_id || feature.id,
+      id: feature.store_id,
       name: feature.name,
       category: feature.category,
       ratingAverage: feature.rating_average,
       reviewCount: feature.review_count,
       isOpen: feature.is_open,
-      coord: { lat: feature.lat, lng: feature.lon || feature.lng }
+      coord: { lat: feature.lat, lng: feature.lng },
+      fullAddress: feature.full_address // 서버에서 조합된 주소 사용
     };
 
     const content = `
@@ -322,21 +389,25 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 클러스터 마커 생성
+  // 클러스터 마커 생성 (서버 집계 데이터 활용)
   createClusterMarker(feature, map) {
-    // 클러스터 좌표 추출
-    const position = new kakao.maps.LatLng(feature.lat, feature.lng || feature.lon);
-
+    const position = new kakao.maps.LatLng(feature.lat, feature.lng);
     const storeCount = feature.store_count || 0;
     const openCount = feature.open_count || 0;
+    const avgRating = feature.avg_rating || 0;
+    const dominantIcon = feature.dominant_category_icon || '🍽️'; // 서버에서 계산된 대표 아이콘
 
     const clusterId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${clusterId}" class="cluster-marker" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng || feature.lon})">
+      <div id="${clusterId}" class="cluster-marker" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
         <div class="cluster-circle">
+          <div class="cluster-icon">${dominantIcon}</div>
           <div class="cluster-count">${storeCount}</div>
-          <div class="cluster-info">매장</div>
+          <div class="cluster-info">
+            <div class="cluster-rating">★ ${avgRating}</div>
+            <div class="cluster-status">${openCount}/${storeCount} 운영중</div>
+          </div>
         </div>
       </div>
       <style>
@@ -353,8 +424,8 @@ window.MapMarkerManager = {
         }
 
         .cluster-circle {
-          width: 60px;
-          height: 60px;
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           display: flex;
@@ -364,6 +435,7 @@ window.MapMarkerManager = {
           box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
           border: 3px solid rgba(255, 255, 255, 0.9);
           backdrop-filter: blur(10px);
+          padding: 6px;
         }
 
         .cluster-marker:hover .cluster-circle {
@@ -371,8 +443,13 @@ window.MapMarkerManager = {
           transform: scale(1.05);
         }
 
+        .cluster-icon {
+          font-size: 20px;
+          margin-bottom: 2px;
+        }
+
         .cluster-count {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 800;
           color: white;
           line-height: 1;
@@ -380,11 +457,17 @@ window.MapMarkerManager = {
         }
 
         .cluster-info {
-          font-size: 10px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1px;
+        }
+
+        .cluster-rating, .cluster-status {
+          font-size: 9px;
           font-weight: 600;
           color: rgba(255, 255, 255, 0.9);
           line-height: 1;
-          margin-top: 1px;
         }
       </style>
     `;
@@ -400,38 +483,6 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 카테고리별 아이콘 반환
-  getCategoryIcon(category) {
-    const iconMap = {
-      '한식': '🍚',
-      '중식': '🥢', 
-      '일식': '🍣',
-      '양식': '🍝',
-      '치킨': '🍗',
-      '피자': '🍕',
-      '버거': '🍔',
-      '카페': '☕',
-      '디저트': '🍰',
-      '분식': '🍜',
-      '족발보쌈': '🦶',
-      '바베큐': '🥩',
-      '해산물': '🦐',
-      '아시안': '🍛',
-      '패스트푸드': '🍟',
-      '술집': '🍺',
-      '기타': '🍽️'
-    };
-
-    // 카테고리 이름에서 키워드 매칭
-    for (const [key, icon] of Object.entries(iconMap)) {
-      if (category && category.includes(key)) {
-        return icon;
-      }
-    }
-
-    return '🍽️';
-  },
-
   // 클러스터 확대
   zoomToCluster(lat, lng) {
     console.log(`📍 클러스터 (${lat}, ${lng})로 확대`);
@@ -440,7 +491,6 @@ window.MapMarkerManager = {
       const position = new kakao.maps.LatLng(lat, lng);
       window.currentMap.setCenter(position);
 
-      // 현재 레벨에서 2단계 확대
       const currentLevel = window.currentMap.getLevel();
       const newLevel = Math.max(1, currentLevel - 2);
       window.currentMap.setLevel(newLevel);
@@ -449,20 +499,20 @@ window.MapMarkerManager = {
 
   // 모든 마커 제거
   clearAllMarkers() {
-    console.log(`🧹 기존 마커 ${this.currentMarkers.length}개 제거`);
+    console.log(`🧹 기존 마커 ${this.currentMarkers.size}개 제거`);
 
-    this.currentMarkers.forEach(marker => {
+    for (const [key, marker] of this.currentMarkers) {
       if (marker && marker.setMap) {
         marker.setMap(null);
       }
-    });
+    }
 
-    this.currentMarkers = [];
+    this.currentMarkers.clear();
   },
 
   // 완전 초기화
   reset() {
-    console.log('🔄 MapMarkerManager 완전 초기화 (PostGIS 통합 API 버전)');
+    console.log('🔄 MapMarkerManager 완전 초기화 (최적화 버전)');
 
     this.shouldCancel = true;
     this.clearAllMarkers();
@@ -471,6 +521,7 @@ window.MapMarkerManager = {
     this.currentMarkerType = null;
     this.isLoading = false;
     this.shouldCancel = false;
+    this.currentBounds = null;
 
     console.log('✅ MapMarkerManager 초기화 완료');
   }
