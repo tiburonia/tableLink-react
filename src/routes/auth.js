@@ -202,15 +202,23 @@ async function handleLogin(req, res) {
   }
 
   try {
-    // users 테이블에서 사용자 조회 (DB 스키마에 맞춤)
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    // users 테이블에서 사용자 조회 (실제 스키마에 맞춤)
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 사용자를 찾을 수 없음: ${id}`);
+      return res.status(401).json({ 
+        success: false, 
+        error: '아이디 또는 비밀번호가 일치하지 않습니다' 
+      });
+    }
 
     const user = result.rows[0];
     if (user.user_pw !== pw) {
       console.log(`❌ 비밀번호 불일치: ${id}`);
       return res.status(401).json({ 
         success: false, 
-        error: '비밀번호가 일치하지 않습니다' 
+        error: '아이디 또는 비밀번호가 일치하지 않습니다' 
       });
     }
 
