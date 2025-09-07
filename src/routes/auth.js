@@ -202,7 +202,8 @@ async function handleLogin(req, res) {
   }
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    // users 테이블에서 사용자 조회 (DB 스키마에 맞춤)
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 존재하지 않는 아이디: ${id}`);
@@ -213,7 +214,7 @@ async function handleLogin(req, res) {
     }
 
     const user = result.rows[0];
-    if (user.pw !== pw) {
+    if (user.user_pw !== pw) {
       console.log(`❌ 비밀번호 불일치: ${id}`);
       return res.status(401).json({ 
         success: false, 
@@ -221,20 +222,20 @@ async function handleLogin(req, res) {
       });
     }
 
-    console.log(`✅ 로그인 성공: ${user.name} (${user.id})`);
+    console.log(`✅ 로그인 성공: ${user.user_name} (${user.user_id})`);
 
     res.json({
       success: true,
       message: '로그인 성공',
       user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        point: user.point || 0,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || '',
+        id: user.user_id,
+        name: user.user_name,
+        phone: user.user_phone,
+        point: user.user_point || 0,
+        email: user.user_email || '',
+        address: user.user_address || '',
+        birth: user.user_birth || '',
+        gender: user.user_gender || '',
         orderList: [],
         reservationList: [],
         coupons: { unused: [], used: [] },
@@ -263,7 +264,7 @@ router.get('/user/:userId', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -275,19 +276,19 @@ router.get('/user/:userId', async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id})`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.user_name} (${user.user_id})`);
 
     res.json({
       success: true,
       user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || '',
-        point: user.point || 0
+        id: user.user_id,
+        name: user.user_name,
+        phone: user.user_phone,
+        email: user.user_email || '',
+        address: user.user_address || '',
+        birth: user.user_birth || '',
+        gender: user.user_gender || '',
+        point: user.user_point || 0
       }
     });
   } catch (error) {
@@ -510,7 +511,7 @@ router.post('/users/info', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -522,19 +523,19 @@ router.post('/users/info', async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id})`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.user_name} (${user.user_id})`);
 
     res.json({
       success: true,
       user: {
-        id: user.id,
-        name: user.name,
-        phone: user.phone,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || '',
-        point: user.point || 0
+        id: user.user_id,
+        name: user.user_name,
+        phone: user.user_phone,
+        email: user.user_email || '',
+        address: user.user_address || '',
+        birth: user.user_birth || '',
+        gender: user.user_gender || '',
+        point: user.user_point || 0
       }
     });
   } catch (error) {

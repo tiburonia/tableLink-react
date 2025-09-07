@@ -1079,53 +1079,7 @@ async function renderLogin() {
 
   // 빠른 로그인 버튼 이벤트 리스너
     if (quickLoginBtn) {
-      quickLoginBtn.addEventListener('click', async () => {
-      try {
-        console.log('🚀 빠른 로그인 시작: user1');
-
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: 'user1',
-            pw: '1234'
-          })
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('🔍 로그인 응답 데이터:', data);
-
-        if (data.success && data.user) {
-          console.log('✅ 빠른 로그인 성공:', data.user.name);
-
-          // 전역 사용자 정보 설정
-          setUserInfo(data.user);
-
-          // 성공 알림
-          alert(`${data.user.name}님, 환영합니다!`);
-
-          // 메인 화면으로 이동
-          if (typeof renderMap === 'function') {
-            renderMap();
-          } else {
-            console.error('❌ renderMap 함수를 찾을 수 없음');
-            window.location.href = '/';
-          }
-
-        } else {
-          throw new Error(data.error || data.message || '로그인에 실패했습니다');
-        }
-      } catch (error) {
-        console.error('❌ 빠른 로그인 오류:', error);
-        alert('서버 연결에 실패했습니다');
-      }
-    });
+      quickLoginBtn.addEventListener('click', quickLogin);
     }
 
     // 로그인 버튼 이벤트 리스너
@@ -1522,7 +1476,7 @@ async function renderLogin() {
         const storeName = (store.name || '').replace(/'/g, "\\'");
         const storeCategory = store.category || '기타';
         const storeAddress = store.address || '주소 정보 없음';
-        
+
         return `
           <div class="store-result-item" onclick="selectStoreForPOS(${store.id}, '${storeName}')">
             <div class="store-result-name">${store.name || 'Unknown Store'}</div>
