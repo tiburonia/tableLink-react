@@ -30,8 +30,6 @@ async function removePostGISExtension() {
     const userCheck = await client.query('SELECT current_user, session_user');
     console.log(`  👤 현재 사용자: ${userCheck.rows[0].current_user}`);
     
-    await client.query('BEGIN');
-    
     // 1. PostGIS 관련 뷰 삭제
     console.log('👁️ 1단계: PostGIS 관련 뷰 삭제...');
     
@@ -42,9 +40,12 @@ async function removePostGISExtension() {
     
     for (const view of postgisViews) {
       try {
+        await client.query('BEGIN');
         await client.query(`DROP VIEW IF EXISTS ${view} CASCADE`);
+        await client.query('COMMIT');
         console.log(`  ✅ ${view} 뷰 삭제 완료`);
       } catch (error) {
+        await client.query('ROLLBACK');
         console.log(`  ℹ️ ${view} 뷰가 존재하지 않음`);
       }
     }
@@ -58,9 +59,12 @@ async function removePostGISExtension() {
     
     for (const table of postgisTables) {
       try {
+        await client.query('BEGIN');
         await client.query(`DROP TABLE IF EXISTS ${table} CASCADE`);
+        await client.query('COMMIT');
         console.log(`  ✅ ${table} 테이블 삭제 완료`);
       } catch (error) {
+        await client.query('ROLLBACK');
         console.log(`  ℹ️ ${table} 테이블이 존재하지 않음`);
       }
     }
@@ -76,8 +80,17 @@ async function removePostGISExtension() {
       
       if (extensionCheck.rows.length > 0) {
         console.log('  📦 PostGIS 확장 발견, 제거 시도...');
-        await client.query('DROP EXTENSION IF EXISTS postgis CASCADE');
-        console.log('  ✅ PostGIS 확장 기능 제거 완료');
+        
+        // 새로운 트랜잭션으로 확장 제거 시도
+        try {
+          await client.query('BEGIN');
+          await client.query('DROP EXTENSION IF EXISTS postgis CASCADE');
+          await client.query('COMMIT');
+          console.log('  ✅ PostGIS 확장 기능 제거 완료');
+        } catch (dropError) {
+          await client.query('ROLLBACK');
+          throw dropError;
+        }
       } else {
         console.log('  ℹ️ PostGIS 확장이 설치되어 있지 않음');
       }
@@ -114,13 +127,16 @@ async function removePostGISExtension() {
       
       for (const obj of postgisObjects.rows) {
         try {
+          await client.query('BEGIN');
           if (obj.routine_type === 'FUNCTION') {
             await client.query(`DROP FUNCTION IF EXISTS ${obj.routine_name}() CASCADE`);
           } else {
             await client.query(`DROP ${obj.routine_type} IF EXISTS ${obj.routine_name} CASCADE`);
           }
+          await client.query('COMMIT');
           console.log(`  ✅ ${obj.routine_type} ${obj.routine_name} 삭제`);
         } catch (error) {
+          await client.query('ROLLBACK');
           if (!error.message.includes('required by extension')) {
             console.log(`  ⚠️ ${obj.routine_name} 삭제 실패: ${error.message}`);
           }
@@ -140,14 +156,15 @@ async function removePostGISExtension() {
     
     for (const type of postgisTypes) {
       try {
+        await client.query('BEGIN');
         await client.query(`DROP TYPE IF EXISTS ${type} CASCADE`);
+        await client.query('COMMIT');
         console.log(`  ✅ ${type} 타입 삭제 완료`);
       } catch (error) {
+        await client.query('ROLLBACK');
         console.log(`  ℹ️ ${type} 타입이 존재하지 않음`);
       }
     }
-    
-    await client.query('COMMIT');
     
     // 6. 최종 검증
     console.log('🔍 6단계: PostGIS 제거 검증...');
@@ -186,7 +203,6 @@ async function removePostGISExtension() {
     console.log('💡 이제 완전히 깨끗한 상태에서 새로운 스키마를 설치할 수 있습니다.');
 
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('❌ PostGIS 제거 중 오류:', error);
     throw error;
   } finally {
