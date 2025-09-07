@@ -101,6 +101,7 @@ try {
   // 라우터 등록
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
+  app.use('/api/stores', require('./routes/stores-clusters')); // 새 클러스터 API 추가
   app.use('/api/users', usersRouter);
   app.use('/api/orders', ordersRoutes);
   app.use('/api/reviews', reviewRoutes);

@@ -1,151 +1,134 @@
-
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const pool = require('../db/pool');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
-
-// 통합 클러스터링 API
+// 통합 클러스터 API - 레벨과 뷰포트에 따라 개별/클러스터 반환
 router.get('/clusters', async (req, res) => {
   try {
-    const level = parseInt(req.query.level, 10);
-    const bbox = (req.query.bbox || '').split(',').map(Number);
-    
-    if (isNaN(level) || bbox.length !== 4 || bbox.some(n => Number.isNaN(n))) {
-      return res.status(400).json({ error: 'Invalid level or bbox parameters' });
-    }
-    
-    const [xmin, ymin, xmax, ymax] = bbox;
-    console.log(`🔄 클러스터 API 요청: level=${level}, bbox=[${bbox.join(',')}]`);
+    const { level, bbox } = req.query;
 
-    // 레벨별 모드 및 그리드 크기 결정
-    let mode = 'individual';
-    let gridSizeMeters = null;
-    
-    if (level <= 5) {
-      mode = 'individual';
-    } else if (level <= 7) {
-      mode = 'cluster';
-      gridSizeMeters = 300;
-    } else if (level <= 10) {
-      mode = 'cluster';
-      gridSizeMeters = 2000;
-    } else {
-      mode = 'cluster';
-      gridSizeMeters = 10000;
-    }
-
-    if (mode === 'individual') {
-      // 개별 매장 마커
-      const sql = `
-        WITH viewport AS (
-          SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box
-        )
-        SELECT
-          'individual' AS kind,
-          sa.id,
-          sa.store_id,
-          sa.road_address,
-          ST_X(sa.geom) AS lon,
-          ST_Y(sa.geom) AS lat,
-          si.name,
-          si.category,
-          si.rating_average,
-          si.review_count,
-          s.is_open,
-          sa.sido,
-          sa.sigungu,
-          sa.eupmyeondong
-        FROM store_addresses sa
-        JOIN stores s ON sa.store_id = s.id
-        LEFT JOIN store_info si ON s.id = si.store_id
-        CROSS JOIN viewport v
-        WHERE sa.geom && v.box
-          AND ST_Intersects(sa.geom, v.box)
-        ORDER BY sa.id
-        LIMIT 5000;
-      `;
-      
-      const { rows } = await pool.query(sql, [xmin, ymin, xmax, ymax]);
-      console.log(`✅ 개별 매장 ${rows.length}개 조회 완료`);
-      
-      return res.json({ 
-        type: 'individual', 
-        level: level,
-        count: rows.length,
-        features: rows 
-      });
-      
-    } else {
-      // 클러스터 마커
-      const sql = `
-        WITH
-        viewport AS (
-          SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box4326
-        ),
-        v3857 AS (
-          SELECT ST_Transform(box4326, 3857) AS box3857 FROM viewport
-        ),
-        filtered AS (
-          SELECT sa.*, s.is_open, si.name, si.category
-          FROM store_addresses sa
-          JOIN stores s ON sa.store_id = s.id
-          LEFT JOIN store_info si ON s.id = si.store_id
-          CROSS JOIN viewport v
-          WHERE sa.geom && v.box4326
-            AND ST_Intersects(sa.geom, v.box4326)
-        ),
-        projected AS (
-          SELECT 
-            id, store_id, road_address, name, category, is_open,
-            ST_Transform(geom, 3857) AS g3857
-          FROM filtered
-        ),
-        gridded AS (
-          SELECT
-            ST_SnapToGrid(g3857, $5, $5) AS cell,
-            COUNT(*) AS total_count,
-            COUNT(*) FILTER (WHERE is_open = true) AS open_count,
-            ST_Transform(
-              ST_PointOnSurface(ST_Collect(g3857)),
-              4326
-            ) AS rep_geom,
-            array_agg(DISTINCT category) FILTER (WHERE category IS NOT NULL) AS categories
-          FROM projected
-          CROSS JOIN v3857
-          WHERE g3857 && v3857.box3857
-          GROUP BY ST_SnapToGrid(g3857, $5, $5)
-        )
-        SELECT
-          'cluster' AS kind,
-          total_count,
-          open_count,
-          ST_X(rep_geom) AS lon,
-          ST_Y(rep_geom) AS lat,
-          categories
-        FROM gridded
-        WHERE total_count > 0;
-      `;
-      
-      const { rows } = await pool.query(sql, [xmin, ymin, xmax, ymax, gridSizeMeters]);
-      console.log(`✅ 클러스터 ${rows.length}개 조회 완료 (그리드: ${gridSizeMeters}m)`);
-      
-      return res.json({ 
-        type: 'cluster', 
-        level: level,
-        gridSize: gridSizeMeters,
-        count: rows.length,
-        features: rows 
+    if (!level || !bbox) {
+      return res.status(400).json({
+        success: false,
+        error: '레벨과 bbox 파라미터가 필요합니다'
       });
     }
-    
+
+    const [xmin, ymin, xmax, ymax] = bbox.split(',').map(parseFloat);
+    const mapLevel = parseInt(level);
+
+    console.log(`🎯 통합 클러스터 API: 레벨 ${mapLevel}, bbox: ${xmin},${ymin},${xmax},${ymax}`);
+
+    let result;
+
+    if (mapLevel <= 5) {
+      // 개별 매장 모드
+      result = await getIndividualStores(xmin, ymin, xmax, ymax);
+    } else {
+      // 클러스터 모드
+      const gridSize = getGridSizeForLevel(mapLevel);
+      result = await getClusteredStores(xmin, ymin, xmax, ymax, gridSize);
+    }
+
+    res.json({
+      success: true,
+      data: result,
+      meta: {
+        level: mapLevel,
+        bbox: { xmin, ymin, xmax, ymax },
+        count: result.length
+      }
+    });
+
   } catch (error) {
-    console.error('❌ 클러스터 API 오류:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ 통합 클러스터 API 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '클러스터 데이터 조회 실패'
+    });
   }
 });
+
+// 레벨별 그리드 크기 결정
+function getGridSizeForLevel(level) {
+  if (level >= 6 && level <= 7) return 300;
+  if (level >= 8 && level <= 10) return 2000;
+  if (level > 10) return 10000;
+  return 300; // 기본값
+}
+
+// 개별 매장 조회
+async function getIndividualStores(xmin, ymin, xmax, ymax) {
+  const query = `
+    WITH viewport AS (
+      SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box
+    )
+    SELECT
+      'individual' AS kind,
+      sa.id,
+      sa.store_id,
+      si.name,
+      si.category,
+      si.rating_average,
+      si.review_count,
+      s.is_open,
+      ST_X(sa.geom) AS lon,
+      ST_Y(sa.geom) AS lat,
+      sa.sido,
+      sa.sigungu,
+      sa.eupmyeondong
+    FROM store_addresses sa
+    JOIN stores s ON s.id = sa.store_id
+    LEFT JOIN store_info si ON si.store_id = sa.store_id
+    CROSS JOIN viewport v
+    WHERE sa.geom && v.box
+      AND ST_Intersects(sa.geom, v.box)
+    LIMIT 1000
+  `;
+
+  const result = await pool.query(query, [xmin, ymin, xmax, ymax]);
+  return result.rows;
+}
+
+// 클러스터 매장 조회
+async function getClusteredStores(xmin, ymin, xmax, ymax, gridSizeMeters) {
+  const query = `
+    WITH viewport AS (
+      SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box
+    ),
+    grid_clusters AS (
+      SELECT
+        ST_SnapToGrid(ST_Transform(sa.geom, 3857), $5) AS grid_point,
+        COUNT(*) as store_count,
+        COUNT(CASE WHEN s.is_open = true THEN 1 END) as open_count,
+        ST_Centroid(ST_Collect(sa.geom)) as center_geom,
+        ARRAY_AGG(DISTINCT sa.sido) as sidos,
+        ARRAY_AGG(DISTINCT sa.sigungu) as sigungus,
+        ARRAY_AGG(DISTINCT sa.eupmyeondong) as eupmyeondongs
+      FROM store_addresses sa
+      JOIN stores s ON s.id = sa.store_id
+      CROSS JOIN viewport v
+      WHERE sa.geom && v.box
+        AND ST_Intersects(sa.geom, v.box)
+      GROUP BY grid_point
+      HAVING COUNT(*) > 0
+    )
+    SELECT
+      'cluster' AS kind,
+      store_count,
+      open_count,
+      ST_X(center_geom) AS lon,
+      ST_Y(center_geom) AS lat,
+      sidos[1] as sido,
+      sigungus[1] as sigungu,
+      eupmyeondongs[1] as eupmyeondong
+    FROM grid_clusters
+    ORDER BY store_count DESC
+    LIMIT 500
+  `;
+
+  const result = await pool.query(query, [xmin, ymin, xmax, ymax, gridSizeMeters]);
+  return result.rows;
+}
 
 module.exports = router;

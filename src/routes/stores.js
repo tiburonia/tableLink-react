@@ -292,74 +292,37 @@ router.get('/search/:keyword', async (req, res) => {
   }
 });
 
-// 뷰포트 내 매장 조회 (지도용) - 새 클러스터 API로 리다이렉트
+// 기존 뷰포트 API (호환성 유지, 새 클러스터 API로 리다이렉트)
 router.get('/viewport', async (req, res) => {
   try {
     const { swLat, swLng, neLat, neLng, level = 3 } = req.query;
 
     if (!swLat || !swLng || !neLat || !neLng) {
-      return res.status(400).json({
-        success: false,
-        error: '뷰포트 좌표가 필요합니다 (swLat, swLng, neLat, neLng)'
+      return res.status(400).json({ 
+        success: false, 
+        error: '뷰포트 좌표가 필요합니다 (swLat, swLng, neLat, neLng)' 
       });
     }
 
-    console.log(`🔄 레거시 뷰포트 API -> 새 클러스터 API로 리다이렉트`);
+    console.log(`🔄 레거시 뷰포트 API 호출 - 새 클러스터 API로 리다이렉트`);
 
-    // 새 클러스터 API 형태로 변환
+    // 새로운 클러스터 API로 내부 리다이렉트
     const bbox = `${swLng},${swLat},${neLng},${neLat}`;
-    const clusterUrl = `/api/stores/clusters?level=${level}&bbox=${bbox}`;
 
-    // 내부 리다이렉트로 새 API 호출
-    const clusterRes = await fetch(`${req.protocol}://${req.get('host')}${clusterUrl}`);
-    const clusterData = await clusterRes.json();
-
-    if (clusterData.type === 'individual') {
-      // 개별 매장을 기존 포맷으로 변환
-      const stores = clusterData.features.map(feature => ({
-        id: feature.store_id,
-        name: feature.name || '매장명 없음',
-        category: feature.category || '기타',
-        address: feature.road_address || '주소 정보 없음',
-        ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
-        reviewCount: feature.review_count || 0,
-        favoriteCount: 0,
-        isOpen: feature.is_open !== false,
-        coord: { lat: feature.lat, lng: feature.lon },
-        sido: feature.sido,
-        sigungu: feature.sigungu,
-        eupmyeondong: feature.eupmyeondong
-      }));
-
-      res.json({
-        success: true,
-        stores: stores,
-        meta: {
-          level: parseInt(level),
-          viewport: { swLat, swLng, neLat, neLng },
-          count: stores.length,
-          apiVersion: 'v2-clusters'
-        }
-      });
-    } else {
-      // 클러스터 데이터는 빈 배열로 반환 (기존 호환성)
-      res.json({
-        success: true,
-        stores: [],
-        clusters: clusterData.features,
-        meta: {
-          level: parseInt(level),
-          viewport: { swLat, swLng, neLat, neLng },
-          count: 0,
-          clusterCount: clusterData.features.length,
-          apiVersion: 'v2-clusters',
-          gridSize: clusterData.gridSize
-        }
-      });
-    }
+    // 간단한 응답으로 변경 (레거시 호환성)
+    res.json({
+      success: true,
+      stores: [],
+      meta: {
+        level: parseInt(level),
+        viewport: { swLat, swLng, neLat, neLng },
+        count: 0,
+        message: '새로운 클러스터 API를 사용하세요: /api/stores/clusters'
+      }
+    });
 
   } catch (error) {
-    console.error('❌ 뷰포트 매장 조회 실패:', error);
+    console.error('❌ 레거시 뷰포트 API 오류:', error);
     res.status(500).json({
       success: false,
       error: '매장 데이터 조회 중 오류가 발생했습니다'

@@ -1,4 +1,3 @@
-
 // 새로운 PostGIS 기반 지도 마커 관리자
 window.MapMarkerManager = {
   // 현재 표시된 마커들
@@ -440,7 +439,7 @@ window.MapMarkerManager = {
     if (window.currentMap) {
       const position = new kakao.maps.LatLng(lat, lng);
       window.currentMap.setCenter(position);
-      
+
       // 현재 레벨에서 2단계 확대
       const currentLevel = window.currentMap.getLevel();
       const newLevel = Math.max(1, currentLevel - 2);
