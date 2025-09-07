@@ -182,12 +182,6 @@ window.MapMarkerManager = {
     }
 
     return features;
-
-    } catch (error) {
-      if (!this.shouldCancel) {
-        console.error('❌ 통합 API 호출 실패:', error);
-      }
-    }
   },
 
   // 개별 매장 마커 렌더링 (diff 적용)
