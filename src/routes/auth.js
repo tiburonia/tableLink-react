@@ -223,15 +223,11 @@ async function handleLogin(req, res) {
         id: user.user_id,
         name: user.name,
         phone: user.phone,
-        point: 0, // users 테이블에 point 컬럼이 없으므로 기본값
-        email: '', // users 테이블에 email 컬럼이 없으므로 기본값
-        address: '', // users 테이블에 address 컬럼이 없으므로 기본값
-        birth: '', // users 테이블에 birth 컬럼이 없으므로 기본값
-        gender: '', // users 테이블에 gender 컬럼이 없으므로 기본값
-        orderList: [],
-        reservationList: [],
-        coupons: { unused: [], used: [] },
-        favoriteStores: []
+        email: '', // users 테이블에 없는 컬럼
+        address: '', // users 테이블에 없는 컬럼
+        birth: '', // users 테이블에 없는 컬럼
+        gender: '', // users 테이블에 없는 컬럼
+        point: 0 // users 테이블에 없는 컬럼
       }
     });
   } catch (error) {
@@ -256,7 +252,7 @@ router.get('/user/:userId', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -503,7 +499,7 @@ router.post('/users/info', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
