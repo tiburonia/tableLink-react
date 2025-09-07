@@ -191,7 +191,7 @@ router.post('/users/signup', async (req, res) => {
 // 통합 로그인 함수
 async function handleLogin(req, res) {
   const { id, pw } = req.body;
-  
+
   console.log('🔍 로그인 요청:', { id });
 
   if (!id || !pw) {
@@ -203,15 +203,7 @@ async function handleLogin(req, res) {
 
   try {
     // users 테이블에서 사용자 조회 (DB 스키마에 맞춤)
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
-
-    if (result.rows.length === 0) {
-      console.log(`❌ 존재하지 않는 아이디: ${id}`);
-      return res.status(401).json({ 
-        success: false, 
-        error: '존재하지 않는 아이디입니다' 
-      });
-    }
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
 
     const user = result.rows[0];
     if (user.user_pw !== pw) {
@@ -222,20 +214,20 @@ async function handleLogin(req, res) {
       });
     }
 
-    console.log(`✅ 로그인 성공: ${user.user_name} (${user.user_id})`);
+    console.log(`✅ 로그인 성공: ${user.name} (${user.user_id})`);
 
     res.json({
       success: true,
       message: '로그인 성공',
       user: {
         id: user.user_id,
-        name: user.user_name,
-        phone: user.user_phone,
-        point: user.user_point || 0,
-        email: user.user_email || '',
-        address: user.user_address || '',
-        birth: user.user_birth || '',
-        gender: user.user_gender || '',
+        name: user.name,
+        phone: user.phone,
+        point: 0, // users 테이블에 point 컬럼이 없으므로 기본값
+        email: '', // users 테이블에 email 컬럼이 없으므로 기본값
+        address: '', // users 테이블에 address 컬럼이 없으므로 기본값
+        birth: '', // users 테이블에 birth 컬럼이 없으므로 기본값
+        gender: '', // users 테이블에 gender 컬럼이 없으므로 기본값
         orderList: [],
         reservationList: [],
         coupons: { unused: [], used: [] },
@@ -264,7 +256,7 @@ router.get('/user/:userId', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -276,19 +268,19 @@ router.get('/user/:userId', async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.user_name} (${user.user_id})`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id})`);
 
     res.json({
       success: true,
       user: {
         id: user.user_id,
-        name: user.user_name,
-        phone: user.user_phone,
-        email: user.user_email || '',
-        address: user.user_address || '',
-        birth: user.user_birth || '',
-        gender: user.user_gender || '',
-        point: user.user_point || 0
+        name: user.name,
+        phone: user.phone,
+        email: '', // users 테이블에 없는 컬럼
+        address: '', // users 테이블에 없는 컬럼
+        birth: '', // users 테이블에 없는 컬럼
+        gender: '', // users 테이블에 없는 컬럼
+        point: 0 // users 테이블에 없는 컬럼
       }
     });
   } catch (error) {
@@ -511,7 +503,7 @@ router.post('/users/info', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -523,19 +515,19 @@ router.post('/users/info', async (req, res) => {
 
     const user = result.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.user_name} (${user.user_id})`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id})`);
 
     res.json({
       success: true,
       user: {
         id: user.user_id,
-        name: user.user_name,
-        phone: user.user_phone,
-        email: user.user_email || '',
-        address: user.user_address || '',
-        birth: user.user_birth || '',
-        gender: user.user_gender || '',
-        point: user.user_point || 0
+        name: user.name,
+        phone: user.phone,
+        email: '', // users 테이블에 없는 컬럼
+        address: '', // users 테이블에 없는 컬럼
+        birth: '', // users 테이블에 없는 컬럼
+        gender: '', // users 테이블에 없는 컬럼
+        point: 0 // users 테이블에 없는 컬럼
       }
     });
   } catch (error) {
