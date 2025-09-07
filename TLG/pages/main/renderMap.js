@@ -698,10 +698,14 @@ async function renderMap() {
     console.log('🔍 지도 레벨 변경됨:', level);
 
     // MapMarkerManager를 통한 뷰포트 기반 마커 관리
-    if (window.MapMarkerManager) {
-      window.MapMarkerManager.handleMapLevelChange(level, map);
+    if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+      try {
+        window.MapMarkerManager.handleMapLevelChange(level, map);
+      } catch (error) {
+        console.error('❌ 줌 변경 시 마커 관리 실패:', error);
+      }
     } else {
-      console.error('❌ MapMarkerManager가 로드되지 않음');
+      console.warn('⚠️ MapMarkerManager가 준비되지 않음 (zoom_changed)');
     }
   });
 
@@ -711,27 +715,48 @@ async function renderMap() {
     console.log('🗺️ 지도 이동 완료 - 레벨:', level);
 
     // MapMarkerManager를 통한 뷰포트 기반 마커 관리
-    if (window.MapMarkerManager) {
-      window.MapMarkerManager.handleMapLevelChange(level, map);
+    if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+      try {
+        window.MapMarkerManager.handleMapLevelChange(level, map);
+      } catch (error) {
+        console.error('❌ 드래그 완료 시 마커 관리 실패:', error);
+      }
+    } else {
+      console.warn('⚠️ MapMarkerManager가 준비되지 않음 (dragend)');
     }
   });
 
-  // 초기 마커 로딩 (충분한 딜레이로 안정성 확보)
-  setTimeout(() => {
+  // 초기 마커 로딩 (MapMarkerManager 준비 상태 확인)
+  const loadInitialMarkers = () => {
     if (!window.currentMap) {
       console.error('❌ 지도 인스턴스가 사라짐 - 초기 마커 로딩 취소');
+      return;
+    }
+
+    // MapMarkerManager 준비 상태 확인
+    if (!window.MapMarkerManager || typeof window.MapMarkerManager.handleMapLevelChange !== 'function') {
+      console.warn('⚠️ MapMarkerManager 준비 대기 중... 재시도');
+      setTimeout(loadInitialMarkers, 200);
       return;
     }
 
     const level = map.getLevel();
     console.log('🆕 초기 마커 로딩 시작 - 레벨:', level);
 
-    if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+    try {
       window.MapMarkerManager.handleMapLevelChange(level, map);
-    } else {
-      console.error('❌ MapMarkerManager가 준비되지 않음');
+    } catch (error) {
+      console.error('❌ 초기 마커 로딩 실패:', error);
+      // 한 번 더 시도
+      setTimeout(() => {
+        if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
+          window.MapMarkerManager.handleMapLevelChange(level, map);
+        }
+      }, 1000);
     }
-  }, 500);
+  };
+
+  setTimeout(loadInitialMarkers, 500);
 
   // DOM 준비 확인 및 UI 초기화
   setTimeout(() => {
