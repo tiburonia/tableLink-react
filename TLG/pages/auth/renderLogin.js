@@ -1077,9 +1077,11 @@ async function renderLogin() {
       }
     };
 
-  // 빠른 로그인 버튼 이벤트 리스너
+    // 빠른 로그인 버튼 이벤트 리스너
     if (quickLoginBtn) {
-      quickLoginBtn.addEventListener('click', quickLogin);
+      quickLoginBtn.addEventListener('click', () => {
+        window.quickLogin('tiburonia');
+      });
     }
 
     // 로그인 버튼 이벤트 리스너
