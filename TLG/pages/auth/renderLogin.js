@@ -19,7 +19,7 @@ window.quickLogin = async function(userId) {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: userId, pw: '1234' })
+      body: JSON.stringify({ id: userId, pw: 'cchcch11' })
     });
 
     if (!response.ok) {
