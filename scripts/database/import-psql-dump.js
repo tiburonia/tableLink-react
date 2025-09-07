@@ -17,11 +17,28 @@ async function importSQLDump(dumpFilePath) {
     const sqlContent = fs.readFileSync(dumpFilePath, 'utf8');
     console.log('📄 SQL 파일 읽기 완료');
 
-    // SQL 문들을 분리 (간단한 방식)
+    // SQL 문들을 분리 (PostgreSQL 특수 구문 처리)
     const statements = sqlContent
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => {
+        // 빈 라인, 주석, PostgreSQL 설정 명령 제외
+        return line.length > 0 && 
+               !line.startsWith('--') && 
+               !line.startsWith('/*') && 
+               !line.startsWith('SET ') &&
+               !line.startsWith('SELECT pg_catalog.set_config') &&
+               !line.includes('Type: COMMENT') &&
+               !line.includes('Type: EXTENSION') &&
+               !line.includes('-- Dumped') &&
+               !line.includes('-- Name:') &&
+               line !== 'SET default_tablespace = \'\';' &&
+               line !== 'SET default_table_access_method = heap;'
+      })
+      .join('\n')
       .split(';')
       .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+      .filter(stmt => stmt.length > 0);
 
     console.log(`📊 총 ${statements.length}개의 SQL 문 발견`);
 
