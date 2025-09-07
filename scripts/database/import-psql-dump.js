@@ -8,15 +8,32 @@ const fs = require('fs');
  */
 
 async function importSQLDumpWithPsql(dumpFileName) {
-  const dumpFilePath = path.resolve(dumpFileName);
+  let dumpFilePath;
+  
+  // 파일 경로 찾기 - 여러 위치 확인
+  const possiblePaths = [
+    path.resolve(dumpFileName),                           // 현재 디렉토리
+    path.resolve('backups', dumpFileName),                // backups 폴더
+    path.resolve(__dirname, '../../backups', dumpFileName), // 스크립트 기준 backups 폴더
+    path.resolve(__dirname, '../../', dumpFileName)       // 프로젝트 루트
+  ];
   
   console.log('📂 psql을 사용한 SQL 덤프 파일 가져오기 시작');
-  console.log(`📖 파일: ${dumpFilePath}`);
   
-  // 파일 존재 확인
-  if (!fs.existsSync(dumpFilePath)) {
-    throw new Error(`덤프 파일을 찾을 수 없습니다: ${dumpFilePath}`);
+  for (const possiblePath of possiblePaths) {
+    if (fs.existsSync(possiblePath)) {
+      dumpFilePath = possiblePath;
+      break;
+    }
   }
+  
+  if (!dumpFilePath) {
+    console.error('❌ 다음 경로들에서 파일을 찾을 수 없습니다:');
+    possiblePaths.forEach(p => console.error(`   - ${p}`));
+    throw new Error(`덤프 파일을 찾을 수 없습니다: ${dumpFileName}`);
+  }
+  
+  console.log(`📖 파일 발견: ${dumpFilePath}`);
   
   // DATABASE_URL 확인
   const databaseUrl = process.env.DATABASE_URL;
