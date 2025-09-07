@@ -18,11 +18,11 @@ router.get('/', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         s.id,
-        s.name,
-        s.category,
-        s.rating_average,
-        s.review_count,
-        s.favorite_count,
+        COALESCE(si.name, s.name) as name,
+        COALESCE(si.category, '기타') as category,
+        COALESCE(si.rating_average, 0) as rating_average,
+        COALESCE(si.review_count, 0) as review_count,
+        COALESCE(si.favoratite_count, 0) as favorite_count,
         s.is_open,
         sa.address_full as address,
         sa.latitude,
@@ -31,7 +31,8 @@ router.get('/', async (req, res) => {
         sa.sigungu,
         sa.eupmyeondong
       FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE s.is_open = true
       ORDER BY s.id
       LIMIT $1 OFFSET $2
@@ -105,6 +106,11 @@ router.get('/:storeId', async (req, res) => {
     const storeResult = await pool.query(`
       SELECT 
         s.*,
+        si.name as info_name,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.favoratite_count,
         sa.address_full,
         sa.latitude,
         sa.longitude,
@@ -112,7 +118,8 @@ router.get('/:storeId', async (req, res) => {
         sa.sigungu,
         sa.eupmyeondong
       FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE s.id = $1
     `, [storeIdNum]);
 
@@ -154,8 +161,8 @@ router.get('/:storeId', async (req, res) => {
       success: true,
       store: {
         id: store.id,
-        name: store.name,
-        category: store.category,
+        name: store.info_name || store.name,
+        category: store.category || '기타',
         description: store.description,
         address: store.address_full || '주소 정보 없음',
         coord: store.latitude && store.longitude 
@@ -168,7 +175,7 @@ router.get('/:storeId', async (req, res) => {
         },
         ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
         reviewCount: store.review_count || 0,
-        favoriteCount: store.favorite_count || 0,
+        favoriteCount: store.favoratite_count || 0,
         isOpen: store.is_open !== false,
         menu: defaultMenus,
         tables: tablesResult.rows.map(t => ({
@@ -238,25 +245,26 @@ router.get('/search/:keyword', async (req, res) => {
     const result = await pool.query(`
       SELECT 
         s.id,
-        s.name,
-        s.category,
-        s.rating_average,
-        s.review_count,
-        s.favorite_count,
+        COALESCE(si.name, s.name) as name,
+        COALESCE(si.category, '기타') as category,
+        COALESCE(si.rating_average, 0) as rating_average,
+        COALESCE(si.review_count, 0) as review_count,
+        COALESCE(si.favoratite_count, 0) as favorite_count,
         s.is_open,
         sa.address_full as address,
         sa.latitude,
         sa.longitude
       FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE s.is_open = true
       AND (
-        s.name ILIKE $1 
-        OR s.category ILIKE $1 
+        COALESCE(si.name, s.name) ILIKE $1 
+        OR COALESCE(si.category, '') ILIKE $1 
         OR sa.address_full ILIKE $1
         OR sa.eupmyeondong ILIKE $1
       )
-      ORDER BY s.rating_average DESC, s.review_count DESC
+      ORDER BY COALESCE(si.rating_average, 0) DESC, COALESCE(si.review_count, 0) DESC
       LIMIT $2
     `, [`%${keyword}%`, limit]);
 

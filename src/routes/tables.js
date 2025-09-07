@@ -1,22 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/pool');
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
 
 // 매장별 테이블 조회 API
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
+    console.log(`🪑 매장 ${storeId} 테이블 조회 요청`);
+
     let result = await pool.query(`
       SELECT 
-        id,
         table_number as "tableNumber",
         COALESCE(table_name, table_number || '번') as "tableName",
         COALESCE(seats, 4) as seats,
         CASE 
           WHEN EXISTS (
             SELECT 1 FROM checks 
-            WHERE store_id = st.store_id 
+            WHERE store_id = $1
             AND table_number = st.table_number 
             AND status = 'open'
           ) THEN true 
@@ -24,14 +30,14 @@ router.get('/stores/:storeId', async (req, res) => {
         END as "isOccupied",
         (
           SELECT MIN(opened_at) FROM checks 
-          WHERE store_id = st.store_id 
+          WHERE store_id = $1
           AND table_number = st.table_number 
           AND status = 'open'
         ) as "occupiedSince"
       FROM store_tables st
       WHERE st.store_id = $1 
       ORDER BY st.table_number ASC
-    `, [storeId]);
+    `, [storeId, storeId]);
 
     // 테이블이 없으면 기본 테이블 생성
     if (result.rows.length === 0) {
@@ -49,7 +55,6 @@ router.get('/stores/:storeId', async (req, res) => {
       // 다시 조회
       result = await pool.query(`
         SELECT 
-          id,
           table_number as "tableNumber",
           COALESCE(table_name, table_number || '번') as "tableName",
           COALESCE(seats, 4) as seats,
@@ -62,6 +67,8 @@ router.get('/stores/:storeId', async (req, res) => {
 
       console.log(`✅ 매장 ${storeId} 기본 테이블 ${result.rows.length}개 생성 완료`);
     }
+
+    console.log(`✅ 매장 ${storeId} 테이블 ${result.rows.length}개 조회 완료`);
 
     res.json({
       success: true,
