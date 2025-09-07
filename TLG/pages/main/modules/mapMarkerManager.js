@@ -1,14 +1,10 @@
-
-// 새로운 PostGIS 기반 지도 마커 관리자 (최적화 버전)
+// 개별 매장 전용 지도 마커 관리자 (집계마커 제거)
 window.MapMarkerManager = {
   // 현재 표시된 마커들 (위치별 인덱싱)
   currentMarkers: new Map(),
 
   // 현재 지도 레벨
   currentLevel: 0,
-
-  // 현재 마커 타입
-  currentMarkerType: null,
 
   // 처리 중 플래그
   isLoading: false,
@@ -24,9 +20,9 @@ window.MapMarkerManager = {
   debounceTimer: null,
   requestCache: new Map(),
 
-  // 메인 진입점 - 레벨 변경시 호출 (디바운싱 강화)
+  // 메인 진입점 - 레벨 변경시 호출 (개별 매장만)
   async handleMapLevelChange(level, map) {
-    console.log(`🔄 지도 레벨 ${level} 변경 - 통합 API 마커 업데이트 시작`);
+    console.log(`🔄 지도 레벨 ${level} 변경 - 개별 매장 마커 업데이트 시작`);
 
     // 지도 인스턴스 유효성 검사
     if (!map) {
@@ -55,22 +51,14 @@ window.MapMarkerManager = {
     this.currentLevel = level;
 
     try {
-      // 새 마커 타입 결정
-      const newMarkerType = this.getMarkerType(level);
       const newBounds = map.getBounds();
 
-      // 마커 타입이 바뀌면 기존 마커 제거
-      if (this.currentMarkerType !== newMarkerType) {
-        console.log(`🔄 마커 타입 변경 (${this.currentMarkerType} → ${newMarkerType}) - 기존 마커 제거`);
-        this.clearAllMarkers();
-        this.currentMarkerType = newMarkerType;
-      } 
-      // 같은 타입이면 뷰포트 기반 diff 업데이트
-      else if (this.shouldUpdateForViewportChange(newBounds)) {
+      // 뷰포트 기반 diff 업데이트
+      if (this.shouldUpdateForViewportChange(newBounds)) {
         console.log(`🔄 뷰포트 변경 감지 - diff 업데이트 수행`);
       }
 
-      // 통합 API로 마커 업데이트
+      // 개별 매장 API로 마커 업데이트
       await this.refreshMarkersWithAPI(map, level);
       this.currentBounds = newBounds;
 
@@ -83,14 +71,8 @@ window.MapMarkerManager = {
     }
 
     if (!this.shouldCancel) {
-      console.log(`✅ 지도 레벨 ${level} 마커 업데이트 완료`);
+      console.log(`✅ 지도 레벨 ${level} 개별 매장 마커 업데이트 완료`);
     }
-  },
-
-  // 마커 타입 결정 (레벨별)
-  getMarkerType(level) {
-    if (level <= 5) return 'individual';
-    return 'cluster';
   },
 
   // 뷰포트 변경 감지
@@ -109,9 +91,9 @@ window.MapMarkerManager = {
     return latDiff > 0.3 || lngDiff > 0.3;
   },
 
-  // 통합 API를 사용한 마커 갱신
+  // 개별 매장 전용 API를 사용한 마커 갱신
   async refreshMarkersWithAPI(map, level) {
-    console.log(`🌐 통합 클러스터 API 호출 시작 (레벨: ${level})`);
+    console.log(`🌐 개별 매장 API 호출 시작 (레벨: ${level})`);
 
     const bounds = map.getBounds();
     const bbox = [
@@ -164,22 +146,18 @@ window.MapMarkerManager = {
 
     } catch (error) {
       if (!this.shouldCancel) {
-        console.error('❌ 통합 API 호출 실패:', error);
+        console.error('❌ 개별 매장 API 호출 실패:', error);
       }
     }
   },
 
-  // API 응답 처리 로직 분리
+  // API 응답 처리 로직 (개별 매장만)
   async processAPIResponse(data) {
     const features = data.data || data.features || [];
     console.log(`✅ API 응답 처리: ${data.type}, ${features.length}개 피처`);
 
-    // 표준화된 응답 처리
-    if (data.type === 'individual') {
-      await this.renderIndividualMarkers(features, window.currentMap);
-    } else if (data.type === 'cluster') {
-      await this.renderClusterMarkers(features, window.currentMap);
-    }
+    // 개별 매장만 처리
+    await this.renderIndividualMarkers(features, window.currentMap);
 
     return features;
   },
@@ -231,60 +209,6 @@ window.MapMarkerManager = {
       }
 
       console.log(`✅ 개별 매장 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
-    }
-  },
-
-  // 클러스터 마커 렌더링 (최적화된 diff 적용)
-  async renderClusterMarkers(features, map) {
-    console.log(`🏢 최적화된 클러스터 마커 ${features.length}개 렌더링 시작`);
-
-    if (!features || features.length === 0) {
-      console.log('📍 클러스터 데이터가 없습니다');
-      return;
-    }
-
-    const newMarkerKeys = new Set();
-    const markersToAdd = [];
-
-    for (const feature of features) {
-      try {
-        if (feature.kind === 'cluster') {
-          // 최적화된 마커 키 (cluster_id 활용)
-          const markerKey = feature.cluster_id 
-            ? `cluster-opt-${feature.cluster_id}-${feature.store_count}`
-            : `cluster-${feature.lat}-${feature.lng}-${feature.store_count}`;
-          
-          newMarkerKeys.add(markerKey);
-
-          // 기존 마커가 없으면 새로 생성
-          if (!this.currentMarkers.has(markerKey)) {
-            const marker = this.createClusterMarker(feature, map);
-            if (marker) {
-              markersToAdd.push({ key: markerKey, marker });
-            }
-          }
-        }
-      } catch (error) {
-        console.error('❌ 최적화된 클러스터 마커 생성 실패:', error, feature);
-      }
-    }
-
-    // 작업 취소 최종 확인
-    if (!this.shouldCancel) {
-      // 사라진 마커들 제거
-      for (const [key, marker] of this.currentMarkers) {
-        if (!newMarkerKeys.has(key)) {
-          marker.setMap(null);
-          this.currentMarkers.delete(key);
-        }
-      }
-
-      // 새 마커들 추가
-      for (const { key, marker } of markersToAdd) {
-        this.currentMarkers.set(key, marker);
-      }
-
-      console.log(`✅ 최적화된 클러스터 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
     }
   },
 
@@ -432,136 +356,6 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 행정구역 기반 클러스터 마커 생성 (최적화된 최소 데이터 활용)
-  createClusterMarker(feature, map) {
-    const position = new kakao.maps.LatLng(feature.lat, feature.lng);
-    const storeCount = feature.store_count || 0;
-    const areaName = feature.name || '지역';
-    const areaLevel = feature.level || 'unknown';
-
-    const clusterId = `cluster-admin-${feature.code || Math.random().toString(36).substr(2, 9)}`;
-
-    // 행정구역 레벨에 따른 스타일 결정
-    let circleColor, circleSize, adminIcon;
-    
-    if (areaLevel === 'sido') {
-      circleColor = 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)'; // 보라색 (시도)
-      circleSize = 80;
-      adminIcon = '🏛️';
-    } else if (areaLevel === 'sigungu') {
-      circleColor = 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)'; // 파란색 (시군구)
-      circleSize = 65;
-      adminIcon = '🏢';
-    } else if (areaLevel === 'emd') {
-      circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'; // 초록색 (읍면동)
-      circleSize = 50;
-      adminIcon = '🏪';
-    } else {
-      // 매장 수에 따른 기존 로직 (fallback)
-      if (storeCount <= 5) {
-        circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
-        circleSize = 50;
-      } else if (storeCount <= 15) {
-        circleColor = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
-        circleSize = 60;
-      } else {
-        circleColor = 'linear-gradient(135deg, #dc2626 0%, #f87171 100%)';
-        circleSize = 70;
-      }
-      adminIcon = '🏪';
-    }
-
-    const content = `
-      <div id="${clusterId}" class="cluster-marker-admin" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
-        <div class="cluster-circle-admin" style="width: ${circleSize}px; height: ${circleSize}px; background: ${circleColor};">
-          <div class="cluster-icon-admin">${adminIcon}</div>
-          <div class="cluster-count-admin">${storeCount}</div>
-          <div class="cluster-name-admin">${areaName.length > 6 ? areaName.substring(0, 5) + '…' : areaName}</div>
-        </div>
-      </div>
-      <style>
-        .cluster-marker-admin {
-          position: relative;
-          cursor: pointer;
-          z-index: 300;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .cluster-marker-admin:hover {
-          z-index: 9999 !important;
-          transform: scale(1.1);
-        }
-
-        .cluster-circle-admin {
-          border-radius: 50%;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-          border: 2px solid rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(8px);
-          position: relative;
-        }
-
-        .cluster-marker-admin:hover .cluster-circle-admin {
-          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
-          transform: scale(1.05);
-        }
-
-        .cluster-icon-admin {
-          font-size: 18px;
-          margin-bottom: 1px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-        }
-
-        .cluster-count-admin {
-          font-size: 13px;
-          font-weight: 800;
-          color: white;
-          line-height: 1;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-          margin-bottom: 1px;
-        }
-
-        .cluster-name-admin {
-          font-size: 9px;
-          font-weight: 600;
-          color: white;
-          line-height: 1;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-          text-align: center;
-          max-width: 100%;
-          overflow: hidden;
-        }
-      </style>
-    `;
-
-    const customOverlay = new kakao.maps.CustomOverlay({
-      map: map,
-      position: position,
-      content: content,
-      yAnchor: 0.5,
-      zIndex: 300
-    });
-
-    return customOverlay;
-  },
-
-  // 클러스터 확대
-  zoomToCluster(lat, lng) {
-    console.log(`📍 클러스터 (${lat}, ${lng})로 확대`);
-
-    if (window.currentMap) {
-      const position = new kakao.maps.LatLng(lat, lng);
-      window.currentMap.setCenter(position);
-
-      const currentLevel = window.currentMap.getLevel();
-      const newLevel = Math.max(1, currentLevel - 2);
-      window.currentMap.setLevel(newLevel);
-    }
-  },
-
   // 모든 마커 제거
   clearAllMarkers() {
     console.log(`🧹 기존 마커 ${this.currentMarkers.size}개 제거`);
@@ -577,7 +371,7 @@ window.MapMarkerManager = {
 
   // 완전 초기화 (메모리 관리 강화)
   reset() {
-    console.log('🔄 MapMarkerManager 완전 초기화 (최적화 버전)');
+    console.log('🔄 MapMarkerManager 완전 초기화 (개별 매장 전용)');
 
     this.shouldCancel = true;
     this.clearAllMarkers();
@@ -592,12 +386,11 @@ window.MapMarkerManager = {
     this.requestCache.clear();
 
     this.currentLevel = 0;
-    this.currentMarkerType = null;
     this.isLoading = false;
     this.shouldCancel = false;
     this.currentBounds = null;
     this.lastCallTime = 0;
 
-    console.log('✅ MapMarkerManager 초기화 완료 (메모리 정리 포함)');
+    console.log('✅ MapMarkerManager 초기화 완료 (개별 매장 전용)');
   }
 };
