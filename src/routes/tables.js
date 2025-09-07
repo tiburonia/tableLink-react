@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
@@ -32,6 +31,19 @@ router.get('/stores/:storeId', async (req, res) => {
 
     const storeName = storeCheck.rows[0].name;
 
+    // store_tables 테이블에서 실제 테이블 정보 조회
+    const storeTablesResult = await pool.query(`
+      SELECT 
+        id,
+        table_name,
+        capacity as seats
+      FROM store_tables 
+      WHERE store_id = $1
+      ORDER BY id ASC
+    `, [storeId]);
+
+    console.log(`📊 매장 ${storeId} store_tables에서 ${storeTablesResult.rows.length}개 테이블 발견`)
+
     // checks 테이블에서 현재 오픈된 체크(점유중인 테이블) 조회
     let openChecks = [];
     try {
@@ -45,27 +57,49 @@ router.get('/stores/:storeId', async (req, res) => {
         WHERE store_id = $1 AND status = 'open'
         ORDER BY table_number ASC
       `, [storeId]);
-      
+
       openChecks = openChecksResult.rows;
       console.log(`📊 매장 ${storeId} 오픈된 체크 ${openChecks.length}개`);
     } catch (checkError) {
       console.warn(`⚠️ 체크 조회 실패, 빈 배열로 처리:`, checkError.message);
     }
 
-    // 기본 테이블 20개 생성 (1~20번)
+    // store_tables 데이터를 기반으로 테이블 생성
     const tables = [];
-    for (let i = 1; i <= 20; i++) {
-      const openCheck = openChecks.find(check => check.table_number === i);
-      
-      tables.push({
-        id: i,
-        tableNumber: i,
-        tableName: `${i}번`,
-        seats: 4, // 기본 4석
-        isOccupied: !!openCheck,
-        occupiedSince: openCheck ? openCheck.opened_at : null,
-        occupiedBy: openCheck ? (openCheck.user_id || openCheck.guest_phone) : null
-      });
+
+    if (storeTablesResult.rows.length > 0) {
+      // store_tables에 데이터가 있으면 실제 테이블 정보 사용
+      for (const storeTable of storeTablesResult.rows) {
+        const tableNumber = storeTable.id; // store_tables의 id를 table_number로 사용
+        const openCheck = openChecks.find(check => check.table_number === tableNumber);
+
+        tables.push({
+          id: tableNumber,
+          tableNumber: tableNumber,
+          tableName: storeTable.table_name || `${tableNumber}번`,
+          seats: storeTable.seats || 4,
+          isOccupied: !!openCheck,
+          occupiedSince: openCheck ? openCheck.opened_at : null,
+          occupiedBy: openCheck ? (openCheck.user_id || openCheck.guest_phone) : null
+        });
+      }
+      console.log(`✅ store_tables 기반으로 ${tables.length}개 테이블 생성`);
+    } else {
+      // store_tables에 데이터가 없으면 기본 5개 테이블 생성
+      console.warn(`⚠️ 매장 ${storeId}에 store_tables 데이터가 없어 기본 5개 테이블 생성`);
+      for (let i = 1; i <= 5; i++) {
+        const openCheck = openChecks.find(check => check.table_number === i);
+
+        tables.push({
+          id: i,
+          tableNumber: i,
+          tableName: `${i}번`,
+          seats: 4,
+          isOccupied: !!openCheck,
+          occupiedSince: openCheck ? openCheck.opened_at : null,
+          occupiedBy: openCheck ? (openCheck.user_id || openCheck.guest_phone) : null
+        });
+      }
     }
 
     console.log(`✅ 매장 ${storeName} (${storeId}) 테이블 ${tables.length}개 조회 완료`);
@@ -92,7 +126,7 @@ router.get('/stores/:storeId', async (req, res) => {
 // 테이블 점유 처리 API
 router.post('/occupy', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { storeId, tableNumber, userId, guestPhone, duration } = req.body;
 
@@ -160,7 +194,7 @@ router.post('/occupy', async (req, res) => {
 // 테이블 해제 처리 API
 router.post('/release', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { storeId, tableNumber } = req.body;
 
@@ -216,7 +250,7 @@ router.post('/release', async (req, res) => {
 // 수동 테이블 점유 API (TLM용)
 router.post('/occupy-manual', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { storeId, tableName, duration } = req.body;
 
@@ -285,7 +319,7 @@ router.post('/occupy-manual', async (req, res) => {
 // 수동 테이블 해제 API (TLM용)
 router.post('/release-manual', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { storeId, tableName } = req.body;
 

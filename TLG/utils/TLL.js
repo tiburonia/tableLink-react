@@ -722,9 +722,9 @@ function handleTossPaymentFailure(data) {
           tableSelect.innerHTML = '<option value="">사용 가능한 테이블이 없습니다</option>';
         }
       } else {
-        // 테이블 정보가 없을 때 기본 20개 테이블 표시
-        console.warn(`⚠️ ${storeName}: 테이블 정보 없음, 기본 20개 테이블 사용`);
-        const defaultTables = Array.from({ length: 20 }, (_, i) => i + 1);
+        // 테이블 정보가 없을 때 기본 5개 테이블 표시 (store_tables 기본값에 맞춤)
+        console.warn(`⚠️ ${storeName}: 테이블 정보 없음, 기본 5개 테이블 사용`);
+        const defaultTables = Array.from({ length: 5 }, (_, i) => i + 1);
         const defaultOptions = [
           '<option value="">테이블을 선택하세요</option>',
           ...defaultTables.map(num => `<option value="${num}">${num}번</option>`)
@@ -754,8 +754,8 @@ function handleTossPaymentFailure(data) {
       selectedStoreDiv.style.display = 'block';
       selectedStoreName.textContent = storeName;
 
-      // 기본 테이블 20개 설정
-      const defaultTables = Array.from({ length: 20 }, (_, i) => i + 1);
+      // 기본 테이블 5개 설정 (store_tables 기본값에 맞춤)
+      const defaultTables = Array.from({ length: 5 }, (_, i) => i + 1);
       const defaultOptions = [
         '<option value="">테이블을 선택하세요</option>',
         ...defaultTables.map(num => `<option value="${num}">${num}번</option>`)
