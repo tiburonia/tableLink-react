@@ -1,129 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
-const fetch = require('node-fetch'); // node-fetch 를 import 해야 합니다.
+const pool = require('../db/pool');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
-
-// 매장 목록 조회 (메인 지도용)
-router.get('/', async (req, res) => {
-  try {
-    const { limit = 50, offset = 0 } = req.query;
-
-    console.log(`🏪 매장 목록 조회 요청 (limit: ${limit}, offset: ${offset})`);
-
-    const result = await pool.query(`
-      SELECT 
-        s.id,
-        COALESCE(si.name, s.name) as name,
-        COALESCE(si.category, '기타') as category,
-        COALESCE(si.rating_average, 0) as rating_average,
-        COALESCE(si.review_count, 0) as review_count,
-        COALESCE(si.favoratite_count, 0) as favorite_count,
-        s.is_open,
-        sa.address_full as address,
-        sa.latitude,
-        sa.longitude,
-        sa.sido,
-        sa.sigungu,
-        sa.eupmyeondong
-      FROM stores s
-      LEFT JOIN store_info si ON s.id = si.store_id
-      LEFT JOIN store_addresses sa ON s.id = sa.store_id
-      WHERE s.is_open = true
-      ORDER BY s.id
-      LIMIT $1 OFFSET $2
-    `, [limit, offset]);
-
-    const stores = result.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      favoriteCount: store.favorite_count || 0,
-      isOpen: store.is_open !== false,
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : null,
-      region: {
-        sido: store.sido,
-        sigungu: store.sigungu,
-        eupmyeondong: store.eupmyeondong
-      }
-    }));
-
-    console.log(`✅ 매장 목록 조회 완료: ${stores.length}개`);
-
-    res.json({
-      success: true,
-      stores: stores,
-      pagination: {
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        total: stores.length
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 목록 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '매장 목록 조회 실패'
-    });
-  }
-});
-
-// 매장 상세 정보 조회
+/**
+ * [GET] /stores/:storeId - 매장 정보 조회 (현재 스키마 기반)
+ */
 router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    // 특수 경로들 처리
-    if (storeId === 'get-location-info') {
-      return handleLocationInfo(req, res);
-    }
-    if (storeId === 'viewport') {
-      return handleViewport(req, res);
-    }
+    console.log(`🏪 매장 ${storeId} 정보 조회 요청`);
 
-    // storeId가 숫자인지 확인
-    const storeIdNum = parseInt(storeId);
-    if (isNaN(storeIdNum)) {
-      return res.status(400).json({
-        success: false,
-        error: '유효하지 않은 매장 ID입니다'
-      });
-    }
-
-    console.log(`🏪 매장 ${storeId} 상세 정보 조회 요청`);
-
-    // 1. 매장 기본 정보
+    // store_info 테이블에서 매장 정보 조회
     const storeResult = await pool.query(`
       SELECT 
-        s.*,
-        si.name as info_name,
+        si.store_id as id,
+        si.name,
         si.category,
+        si.store_tel_number as phone,
         si.rating_average,
         si.review_count,
-        si.favoratite_count,
-        sa.address_full,
+        si.favoratite_count as favorite_count,
+        s.is_open,
+        sa.road_address as address,
         sa.latitude,
-        sa.longitude,
-        sa.sido,
-        sa.sigungu,
-        sa.eupmyeondong
-      FROM stores s
-      LEFT JOIN store_info si ON s.id = si.store_id
-      LEFT JOIN store_addresses sa ON s.id = sa.store_id
-      WHERE s.id = $1
-    `, [storeIdNum]);
+        sa.longitude
+      FROM store_info si
+      LEFT JOIN stores s ON si.store_id = s.id
+      LEFT JOIN store_addresses sa ON si.store_id = sa.store_id
+      WHERE si.store_id = $1
+    `, [storeId]);
 
     if (storeResult.rows.length === 0) {
+      console.log(`❌ 매장 ${storeId}를 찾을 수 없음`);
       return res.status(404).json({
         success: false,
         error: '매장을 찾을 수 없습니다'
@@ -131,519 +40,99 @@ router.get('/:storeId', async (req, res) => {
     }
 
     const store = storeResult.rows[0];
-    console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
 
-    // 2. 테이블 정보 조회
-    const tablesResult = await pool.query(`
-      SELECT table_number, is_occupied, occupied_by, occupied_at
-      FROM store_tables
+    // 매장 메뉴 조회
+    const menuResult = await pool.query(`
+      SELECT 
+        id,
+        name,
+        description,
+        price,
+        cook_station
+      FROM store_menu
       WHERE store_id = $1
-      ORDER BY table_number
-    `, [storeIdNum]);
+      ORDER BY id ASC
+    `, [storeId]);
 
-    const occupiedCount = tablesResult.rows.filter(t => t.is_occupied).length;
-    console.log(`🪑 테이블 정보: 총 ${tablesResult.rows.length}개, 사용중 ${occupiedCount}개, 빈 테이블 ${tablesResult.rows.length - occupiedCount}개`);
-
-    // 3. 기본 메뉴 정보 (카테고리별 하드코딩)
-    const defaultMenus = getDefaultMenusByCategory(store.category);
-    console.log(`🍽️ 메뉴 배열 형태: ${defaultMenus.length}개 메뉴`);
-
-    // 4. 프로모션 정보
-    const promotionsResult = await pool.query(`
-      SELECT * FROM store_promotions
-      WHERE store_id = $1 AND is_active = true
-      ORDER BY created_at DESC
-    `, [storeIdNum]);
-
-    console.log(`✅ 매장 ${storeId} 상세 정보 조회 완료`);
+    console.log(`✅ 매장 ${store.name} (${storeId}) 정보 조회 완료`);
 
     res.json({
       success: true,
       store: {
         id: store.id,
-        name: store.info_name || store.name,
-        category: store.category || '기타',
-        description: store.description,
-        address: store.address_full || '주소 정보 없음',
-        coord: store.latitude && store.longitude 
-          ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-          : null,
-        region: {
-          sido: store.sido,
-          sigungu: store.sigungu,
-          eupmyeondong: store.eupmyeondong
-        },
-        ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+        name: store.name,
+        category: store.category,
+        phone: store.phone,
+        address: store.address,
+        rating: parseFloat(store.rating_average) || 0,
         reviewCount: store.review_count || 0,
-        favoriteCount: store.favoratite_count || 0,
+        favoriteCount: store.favorite_count || 0,
         isOpen: store.is_open !== false,
-        menu: defaultMenus,
-        tables: tablesResult.rows.map(t => ({
-          number: t.table_number,
-          isOccupied: t.is_occupied,
-          occupiedBy: t.occupied_by,
-          occupiedAt: t.occupied_at
-        })),
-        promotions: promotionsResult.rows,
-        createdAt: store.created_at
+        location: store.latitude && store.longitude ? {
+          lat: parseFloat(store.latitude),
+          lng: parseFloat(store.longitude)
+        } : null,
+        menu: menuResult.rows
       }
     });
 
   } catch (error) {
-    console.error('❌ 매장 상세 정보 조회 실패:', error);
+    console.error('❌ 매장 정보 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '매장 정보 조회 실패'
+      error: '매장 정보 조회 중 오류가 발생했습니다: ' + error.message
     });
   }
 });
 
-// 기본 메뉴 생성 함수 (카테고리별)
-function getDefaultMenusByCategory(category) {
-  const menusByCategory = {
-    '치킨': [
-      { name: '양념치킨', price: 18000, description: '매콤달콤한 양념치킨' },
-      { name: '후라이드치킨', price: 16000, description: '바삭한 후라이드치킨' },
-      { name: '순살치킨', price: 19000, description: '뼈없는 순살치킨' },
-      { name: '간장치킨', price: 18000, description: '담백한 간장치킨' },
-      { name: '치킨무', price: 3000, description: '시원한 치킨무' },
-      { name: '콜라', price: 2000, description: '시원한 콜라' }
-    ],
-    '양식': [
-      { name: '마르게리타 피자', price: 15000, description: '클래식 마르게리타' },
-      { name: '페퍼로니 피자', price: 18000, description: '매콤한 페퍼로니' },
-      { name: '파스타', price: 12000, description: '크림 파스타' },
-      { name: '리조또', price: 14000, description: '버섯 리조또' },
-      { name: '샐러드', price: 8000, description: '신선한 샐러드' },
-      { name: '콜라', price: 2500, description: '시원한 콜라' }
-    ],
-    '한식': [
-      { name: '김치찌개', price: 8000, description: '얼큰한 김치찌개' },
-      { name: '된장찌개', price: 7000, description: '구수한 된장찌개' },
-      { name: '불고기', price: 15000, description: '달콤한 불고기' },
-      { name: '비빔밥', price: 9000, description: '영양만점 비빔밥' },
-      { name: '공기밥', price: 1000, description: '갓지은 밥' },
-      { name: '음료수', price: 2000, description: '시원한 음료' }
-    ]
-  };
-
-  return menusByCategory[category] || [
-    { name: '기본메뉴1', price: 10000, description: '기본 메뉴' },
-    { name: '기본메뉴2', price: 12000, description: '기본 메뉴' },
-    { name: '음료', price: 2000, description: '시원한 음료' }
-  ];
-}
-
-// 매장 검색
-router.get('/search/:keyword', async (req, res) => {
+/**
+ * [GET] /stores/search/:query - 매장 검색 (현재 스키마 기반)
+ */
+router.get('/search/:query', async (req, res) => {
   try {
-    const { keyword } = req.params;
-    const { limit = 20 } = req.query;
+    const { query } = req.params;
 
-    console.log(`🔍 매장 검색 요청: "${keyword}"`);
+    console.log(`🔍 매장 검색: "${query}"`);
 
-    const result = await pool.query(`
+    const searchResult = await pool.query(`
       SELECT 
-        s.id,
-        COALESCE(si.name, s.name) as name,
-        COALESCE(si.category, '기타') as category,
-        COALESCE(si.rating_average, 0) as rating_average,
-        COALESCE(si.review_count, 0) as review_count,
-        COALESCE(si.favoratite_count, 0) as favorite_count,
+        si.store_id as id,
+        si.name,
+        si.category,
+        si.rating_average,
+        si.review_count,
         s.is_open,
-        sa.address_full as address,
-        sa.latitude,
-        sa.longitude
-      FROM stores s
-      LEFT JOIN store_info si ON s.id = si.store_id
-      LEFT JOIN store_addresses sa ON s.id = sa.store_id
-      WHERE s.is_open = true
-      AND (
-        COALESCE(si.name, s.name) ILIKE $1 
-        OR COALESCE(si.category, '') ILIKE $1 
-        OR sa.address_full ILIKE $1
-        OR sa.eupmyeondong ILIKE $1
-      )
-      ORDER BY COALESCE(si.rating_average, 0) DESC, COALESCE(si.review_count, 0) DESC
-      LIMIT $2
-    `, [`%${keyword}%`, limit]);
+        sa.road_address as address
+      FROM store_info si
+      LEFT JOIN stores s ON si.store_id = s.id
+      LEFT JOIN store_addresses sa ON si.store_id = sa.store_id
+      WHERE si.name ILIKE $1 OR si.category ILIKE $1
+      ORDER BY si.name ASC
+      LIMIT 20
+    `, [`%${query}%`]);
 
-    const stores = result.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      favoriteCount: store.favorite_count || 0,
-      isOpen: store.is_open !== false,
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : null
-    }));
-
-    console.log(`✅ 매장 검색 완료: "${keyword}" - ${stores.length}개 결과`);
+    console.log(`✅ 매장 검색 완료: "${query}" - ${searchResult.rows.length}개 결과`);
 
     res.json({
       success: true,
-      keyword: keyword,
-      stores: stores,
-      count: stores.length
+      stores: searchResult.rows.map(store => ({
+        id: store.id,
+        name: store.name,
+        category: store.category,
+        address: store.address,
+        rating: parseFloat(store.rating_average) || 0,
+        reviewCount: store.review_count || 0,
+        isOpen: store.is_open !== false
+      }))
     });
 
   } catch (error) {
     console.error('❌ 매장 검색 실패:', error);
     res.status(500).json({
       success: false,
-      error: '매장 검색 실패'
+      error: '매장 검색 중 오류가 발생했습니다: ' + error.message
     });
   }
 });
-
-// 기존 뷰포트 API (호환성 유지, 새 클러스터 API로 리다이렉트)
-router.get('/viewport', async (req, res) => {
-  try {
-    const { swLat, swLng, neLat, neLng, level = 3 } = req.query;
-
-    if (!swLat || !swLng || !neLat || !neLng) {
-      return res.status(400).json({ 
-        success: false, 
-        error: '뷰포트 좌표가 필요합니다 (swLat, swLng, neLat, neLng)' 
-      });
-    }
-
-    console.log(`🔄 레거시 뷰포트 API 호출 - 새 클러스터 API로 리다이렉트`);
-
-    // 새로운 클러스터 API로 내부 리다이렉트
-    const bbox = `${swLng},${swLat},${neLng},${neLat}`;
-
-    // 간단한 응답으로 변경 (레거시 호환성)
-    res.json({
-      success: true,
-      stores: [],
-      meta: {
-        level: parseInt(level),
-        viewport: { swLat, swLng, neLat, neLng },
-        count: 0,
-        message: '새로운 클러스터 API를 사용하세요: /api/stores/clusters'
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ 레거시 뷰포트 API 오류:', error);
-    res.status(500).json({
-      success: false,
-      error: '매장 데이터 조회 중 오류가 발생했습니다'
-    });
-  }
-});
-
-// 위치 정보 조회
-router.get('/get-location-info', async (req, res) => {
-  const { lat, lng } = req.query;
-
-  try {
-    console.log(`📍 위치 정보 조회: lat=${lat}, lng=${lng}`);
-
-    // 간단한 지역 정보 반환 (실제로는 역지오코딩 API 사용)
-    const locationInfo = {
-      address: '서울특별시 중구',
-      district: '중구',
-      city: '서울특별시'
-    };
-
-    res.json({
-      success: true,
-      location: locationInfo
-    });
-
-  } catch (error) {
-    console.error('❌ 위치 정보 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '위치 정보 조회 실패'
-    });
-  }
-});
-
-// 위치 정보 핸들러
-async function handleLocationInfo(req, res) {
-  const { lat, lng } = req.query;
-
-  try {
-    console.log(`📍 위치 정보 조회: lat=${lat}, lng=${lng}`);
-
-    const locationInfo = {
-      address: '서울특별시 중구',
-      district: '중구', 
-      city: '서울특별시'
-    };
-
-    res.json({
-      success: true,
-      location: locationInfo
-    });
-  } catch (error) {
-    console.error('❌ 위치 정보 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '위치 정보 조회 실패'
-    });
-  }
-}
-
-// 매장 별점 조회 API
-router.get('/:storeId/rating', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-
-    const result = await pool.query(`
-      SELECT 
-        COALESCE(AVG(rating), 0) as rating_average,
-        COUNT(*) as review_count
-      FROM reviews
-      WHERE store_id = $1
-    `, [storeId]);
-
-    const ratingData = result.rows[0];
-
-    res.json({
-      success: true,
-      ratingAverage: parseFloat(ratingData.rating_average).toFixed(1),
-      reviewCount: parseInt(ratingData.review_count)
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 별점 조회 실패:', error);
-    res.json({
-      success: true,
-      ratingAverage: 0.0,
-      reviewCount: 0
-    });
-  }
-});
-
-// 매장 프로모션 조회 API
-router.get('/:storeId/promotions', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-
-    const result = await pool.query(`
-      SELECT * FROM store_promotions
-      WHERE store_id = $1 AND is_active = true
-      ORDER BY created_at DESC
-    `, [storeId]);
-
-    res.json({
-      success: true,
-      promotions: result.rows
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 프로모션 조회 실패:', error);
-    res.json({
-      success: true,
-      promotions: []
-    });
-  }
-});
-
-// 매장 상위 사용자 조회 API
-router.get('/:storeId/top-users', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-
-    const result = await pool.query(`
-      SELECT 
-        u.id as user_id,
-        u.name as user_name,
-        rl.level_name,
-        rl.visit_count,
-        rl.total_spent
-      FROM regular_levels rl
-      JOIN users u ON rl.user_id = u.id
-      WHERE rl.store_id = $1
-      ORDER BY rl.total_spent DESC, rl.visit_count DESC
-      LIMIT 10
-    `, [storeId]);
-
-    res.json({
-      success: true,
-      users: result.rows
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 상위 사용자 조회 실패:', error);
-    res.json({
-      success: true,
-      users: []
-    });
-  }
-});
-
-// 매장 테이블 조회 API
-router.get('/:storeId/tables', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-
-    const result = await pool.query(`
-      SELECT 
-        id,
-        table_number,
-        table_name,
-        seats,
-        is_occupied,
-        occupied_since,
-        CASE WHEN is_occupied THEN true ELSE false END as isOccupied,
-        table_name as tableName,
-        table_number as tableNumber
-      FROM store_tables
-      WHERE store_id = $1
-      ORDER BY table_number
-    `, [storeId]);
-
-    res.json({
-      success: true,
-      tables: result.rows
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 테이블 조회 실패:', error);
-    res.json({
-      success: true,
-      tables: []
-    });
-  }
-});
-
-// 매장 메뉴 조회 API
-router.get('/:storeId/menu', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-
-    console.log(`🍽️ 매장 ${storeId} 메뉴 조회 요청`);
-
-    // 매장 존재 확인
-    const storeResult = await pool.query(`
-      SELECT id, name, category FROM stores WHERE id = $1
-    `, [storeId]);
-
-    if (storeResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '매장을 찾을 수 없습니다'
-      });
-    }
-
-    const store = storeResult.rows[0];
-
-    // 카테고리별 기본 메뉴 사용
-    const menu = getDefaultMenusByCategory(store.category).map((item, index) => ({
-      id: index + 1,
-      name: item.name,
-      price: item.price,
-      description: item.description || ''
-    }));
-
-    console.log(`✅ 매장 ${storeId} 메뉴 ${menu.length}개 조회 완료`);
-
-    res.json({
-      success: true,
-      menu: menu
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 메뉴 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '매장 메뉴 조회 실패'
-    });
-  }
-});
-
-// 매장 리뷰 조회 API
-router.get('/:storeId/reviews', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-    const { limit = 10 } = req.query;
-
-    const result = await pool.query(`
-      SELECT 
-        r.id,
-        r.rating as score,
-        r.review_text as content,
-        r.created_at,
-        u.name as user,
-        TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
-      FROM reviews r
-      JOIN users u ON r.user_id = u.id
-      WHERE r.store_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT $2
-    `, [storeId, limit]);
-
-    res.json({
-      success: true,
-      reviews: result.rows,
-      total: result.rows.length
-    });
-
-  } catch (error) {
-    console.error('❌ 매장 리뷰 조회 실패:', error);
-    res.json({
-      success: true,
-      reviews: [],
-      total: 0
-    });
-  }
-});
-
-// 뷰포트 핸들러
-async function handleViewport(req, res) {
-  const { swLat, swLng, neLat, neLng, level } = req.query;
-
-  try {
-    console.log('🏪 뷰포트 매장 조회:', { swLat, swLng, neLat, neLng, level });
-
-    const result = await pool.query(`
-      SELECT 
-        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
-        sa.address_full as address, sa.latitude, sa.longitude
-      FROM stores s
-      LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE sa.latitude BETWEEN $1 AND $3
-        AND sa.longitude BETWEEN $2 AND $4
-        AND s.is_open = true
-      ORDER BY s.rating_average DESC, s.id ASC
-      LIMIT 50
-    `, [parseFloat(swLat), parseFloat(swLng), parseFloat(neLat), parseFloat(neLng)]);
-
-    const stores = result.rows.map(store => ({
-      id: store.id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      isOpen: store.is_open !== false,
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : null
-    }));
-
-    console.log(`✅ 뷰포트 매장 조회 완료: ${stores.length}개`);
-
-    res.json({
-      success: true,
-      stores: stores
-    });
-  } catch (error) {
-    console.error('❌ 뷰포트 매장 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '뷰포트 매장 조회 중 오류가 발생했습니다.'
-    });
-  }
-}
 
 module.exports = router;
