@@ -1,3 +1,4 @@
+
 // 지도 패널 UI 렌더링 관리자
 window.MapPanelUI = {
   renderPanelHTML() {
@@ -42,46 +43,6 @@ window.MapPanelUI = {
           <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
             <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
             매장 정보를 불러오는 중...
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  renderStoreCard(store, ratingData) {
-    // 안전한 기본값 설정
-    const rating = parseFloat(ratingData?.ratingAverage || 0).toFixed(1);
-    const reviewCount = ratingData?.reviewCount || 0;
-    const storeName = store?.name || '이름 없음';
-    const storeCategory = store?.category || '기타';
-    const isOpen = store?.isOpen !== false; // null, undefined는 true로 처리
-
-    // JSON 안전 처리
-    const safeStoreData = JSON.stringify(store || {}).replace(/"/g, '&quot;');
-
-    return `
-      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${safeStoreData})">
-        <div class="storeImageBox">
-          <img src="TableLink.png" alt="가게 이미지" />
-          <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
-            ${isOpen ? '🟢 운영중' : '🔴 운영중지'}
-          </div>
-        </div>
-        <div class="storeInfoBox">
-          <div class="storeHeader">
-            <div class="storeName">${storeName}</div>
-            <div class="storeRating">
-              <span class="ratingStars">★</span>
-              <span class="ratingValue">${rating}</span>
-              <span class="reviewCount">(${reviewCount})</span>
-            </div>
-          </div>
-          <div class="storeCategory">${storeCategory}</div>
-          <div class="storeActions">
-            <div class="actionButton primary">
-              <span class="actionIcon">🍽️</span>
-              <span class="actionText">메뉴보기</span>
-            </div>
           </div>
         </div>
       </div>
@@ -223,29 +184,28 @@ window.MapPanelUI = {
           background: #e0e3f3;
           border-radius: 4px;
           margin: 10px auto 6px auto;
-          cursor: grab; /* 드래그 가능한 커서 */
+          cursor: grab;
           opacity: 0.8;
-          touch-action: none; /* 터치 시 기본 스크롤 방지 */
-          user-select: none; /* 텍스트 선택 방지 */
+          touch-action: none;
+          user-select: none;
         }
 
         /* 가게 목록 스크롤 영역 */
         #storeListContainer {
-          height: calc(100% - 170px); /* 핸들 + 필터 공간 빼고 */
+          height: calc(100% - 170px);
           overflow-y: auto;
           padding: 8px 4px 20px 4px;
           box-sizing: border-box;
           transition: height 0.3s ease;
-          /* 스크롤바 숨김 */
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none; /* IE/Edge */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
         }
 
         #storeListContainer.filter-collapsed {
-          height: calc(100% - 60px); /* 핸들만 빼고 (필터 접힘 상태) */
+          height: calc(100% - 60px);
         }
         #storeListContainer::-webkit-scrollbar {
-          display: none; /* Chrome, Safari, Opera */
+          display: none;
         }
 
         /* 개별 가게 카드 */
@@ -326,7 +286,7 @@ window.MapPanelUI = {
         }
 
         .storeStatus.cluster {
-          background: rgba(41, 128, 185, 0.9); /* 클러스터 상태 색상 */
+          background: rgba(41, 128, 185, 0.9);
           color: white;
         }
 
@@ -444,14 +404,14 @@ window.MapPanelUI = {
 
         /* 클러스터 카드 스타일 */
         .cluster-card {
-          background: #f0f4ff; /* 클러스터 카드 배경색 */
+          background: #f0f4ff;
         }
 
         .cluster-card .storeHeader {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           padding: 12px 20px;
           border-radius: 12px 12px 0 0;
-          margin: -1px -1px 0 -1px; /* 경계선 겹침 조정 */
+          margin: -1px -1px 0 -1px;
           color: white;
         }
 
@@ -471,6 +431,7 @@ window.MapPanelUI = {
           color: #667eea;
           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
+
         .cluster-card .actionButton.primary:hover {
           transform: none;
           box-shadow: 0 4px 16px rgba(0,0,0,0.15);
@@ -479,21 +440,21 @@ window.MapPanelUI = {
         .cluster-card .storeAddress {
           margin-top: 0;
           padding: 10px 20px 20px 20px;
-          border-top: 1px dashed #c0caff; /* 구분선 */
+          border-top: 1px dashed #c0caff;
         }
 
       </style>
     `;
   },
 
-  // 필터링 이벤트 설정 (패널 토글 없이 필터링만)
+  // 필터링 이벤트 설정
   setupFilterEvents() {
     const allFilterTabs = document.querySelectorAll('.filter-tab');
 
     allFilterTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
         e.preventDefault();
-        e.stopPropagation(); // 이벤트 전파 중지
+        e.stopPropagation();
 
         const clickedTab = e.target;
         const filterType = clickedTab.getAttribute('data-type');
@@ -504,7 +465,7 @@ window.MapPanelUI = {
         // 클릭된 탭 활성화
         clickedTab.classList.add('active');
 
-        // 필터링 실행 (패널 상태는 변경하지 않음)
+        // 필터링 실행
         this.applyFilters();
 
         console.log('🔍 필터 변경됨:', filterType, '=', clickedTab.getAttribute('data-filter'));
@@ -564,9 +525,8 @@ window.MapPanelUI = {
     const storeCards = document.querySelectorAll('.storeCard');
 
     storeCards.forEach(card => {
-      // data 속성에서 직접 값 가져오기
       const storeCategory = card.dataset.category;
-      const storeStatus = card.dataset.status; // "true" 또는 "false" 문자열
+      const storeStatus = card.dataset.status;
       const storeRating = parseFloat(card.dataset.rating);
 
       let categoryMatch = true;
@@ -578,7 +538,7 @@ window.MapPanelUI = {
         categoryMatch = storeCategory === activeFilters.category;
       }
 
-      // 운영 상태 필터 - 정확한 문자열 비교
+      // 운영 상태 필터
       if (activeFilters.status) {
         if (activeFilters.status === 'open') {
           statusMatch = storeStatus === 'true';
@@ -601,62 +561,38 @@ window.MapPanelUI = {
       }
     });
 
-    // 필터링 결과 디버깅
+    // 필터링 결과 로깅
     const visibleCards = document.querySelectorAll('.storeCard[style*="flex"], .storeCard:not([style*="none"])');
     console.log('🔍 필터링 적용:', activeFilters);
     console.log('📊 필터링 결과 - 총', visibleCards.length, '개 매장 표시');
-
-    // 각 필터별 매칭 상태 디버깅
-    if (Object.keys(activeFilters).length > 0) {
-      console.log('🔍 필터별 상세 정보:');
-      storeCards.forEach(card => {
-        const cardCategory = card.dataset.category;
-        const cardStatus = card.dataset.status;
-        const cardRating = card.dataset.rating;
-        const storeName = card.querySelector('.storeName')?.textContent || 'Unknown';
-
-        console.log(`  - ${storeName}: 카테고리=${cardCategory}, 상태=${cardStatus}, 별점=${cardRating}`);
-      });
-    }
   },
 
-  // 스토어 카드 렌더링 후 필터 이벤트 설정 및 초기화
-  initializeFiltering() {
-    setTimeout(() => {
-      this.setupFilterEvents();
-      // 초기 필터링 (모든 매장 표시)
-      this.applyFilters();
-    }, 100);
-  },
-
-  // 패널 드래그 기능 설정 (마우스 + 터치 지원)
+  // 패널 드래그 기능 설정
   setupPanelDrag() {
     const storePanel = document.getElementById('storePanel');
     const panelHandle = document.getElementById('panelHandle');
     let isDragging = false;
     let startY;
     let startHeight;
-    let currentHeight = storePanel.classList.contains('collapsed') ? 60 : 630; // 초기 높이
+    let currentHeight = storePanel.classList.contains('collapsed') ? 60 : 630;
 
-    // 패널 상태 초기화 (DOM 로드 시)
+    // 패널 상태 초기화
     storePanel.style.height = `${currentHeight}px`;
     if (currentHeight === 60) storePanel.classList.add('collapsed');
     else storePanel.classList.add('expanded');
 
-    // === 마우스 이벤트 ===
-    // 핸들에서만 드래그 시작 (패널 클릭 토글 완전 제거)
+    // 마우스 이벤트
     panelHandle.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
       isDragging = true;
       startY = e.clientY;
       startHeight = currentHeight;
-      storePanel.style.transition = 'none'; // 드래그 중에는 transition 비활성화
-      panelHandle.style.cursor = 'grabbing'; // 드래그 중 커서 변경
-      document.body.style.userSelect = 'none'; // 드래그 중 텍스트 선택 방지
+      storePanel.style.transition = 'none';
+      panelHandle.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
     });
 
-    // 드래그 이벤트는 document에서 처리
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
@@ -664,16 +600,14 @@ window.MapPanelUI = {
       const deltaY = e.clientY - startY;
       let newHeight = startHeight - deltaY;
 
-      // 최대/최소 높이 제한
       const maxHeight = 630;
-      const minHeight = 60; // collapsed 상태 높이
+      const minHeight = 60;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
       storePanel.style.height = `${newHeight}px`;
       currentHeight = newHeight;
 
-      // 패널 상태 클래스 업데이트
       if (newHeight <= minHeight + 10) {
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
@@ -688,12 +622,11 @@ window.MapPanelUI = {
     document.addEventListener('mouseup', (e) => {
       if (!isDragging) return;
       isDragging = false;
-      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
-      panelHandle.style.cursor = 'grab'; // 커서 복구
-      document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)';
+      panelHandle.style.cursor = 'grab';
+      document.body.style.userSelect = '';
 
-      // 드래그 종료 후 높이에 따라 클래스 결정 및 고정
-      const midPoint = 300; // 패널을 열거나 닫을 임계값
+      const midPoint = 300;
 
       if (currentHeight < midPoint) {
         storePanel.style.height = '60px';
@@ -708,20 +641,18 @@ window.MapPanelUI = {
       }
     });
 
-    // === 터치 이벤트 (모바일 대응) ===
-    // 터치 시작
+    // 터치 이벤트
     panelHandle.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
       isDragging = true;
       startY = e.touches[0].clientY;
       startHeight = currentHeight;
-      storePanel.style.transition = 'none'; // 드래그 중에는 transition 비활성화
-      document.body.style.userSelect = 'none'; // 드래그 중 텍스트 선택 방지
+      storePanel.style.transition = 'none';
+      document.body.style.userSelect = 'none';
       console.log('📱 모바일 패널 드래그 시작:', startY);
     });
 
-    // 터치 이동
     panelHandle.addEventListener('touchmove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
@@ -730,16 +661,14 @@ window.MapPanelUI = {
       const deltaY = currentY - startY;
       let newHeight = startHeight - deltaY;
 
-      // 최대/최소 높이 제한
       const maxHeight = 630;
-      const minHeight = 60; // collapsed 상태 높이
+      const minHeight = 60;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
       storePanel.style.height = `${newHeight}px`;
       currentHeight = newHeight;
 
-      // 패널 상태 클래스 업데이트
       if (newHeight <= minHeight + 10) {
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
@@ -751,16 +680,14 @@ window.MapPanelUI = {
       }
     });
 
-    // 터치 종료
     panelHandle.addEventListener('touchend', (e) => {
       if (!isDragging) return;
       e.preventDefault();
       isDragging = false;
-      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
-      document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)';
+      document.body.style.userSelect = '';
 
-      // 드래그 종료 후 높이에 따라 클래스 결정 및 고정
-      const midPoint = 300; // 패널을 열거나 닫을 임계값
+      const midPoint = 300;
 
       if (currentHeight < midPoint) {
         storePanel.style.height = '60px';
@@ -777,28 +704,24 @@ window.MapPanelUI = {
       }
     });
 
-    // 터치 취소 (예: 화면 밖으로 나갔을 때)
     panelHandle.addEventListener('touchcancel', (e) => {
       if (!isDragging) return;
       isDragging = false;
-      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)'; // transition 복구
-      document.body.style.userSelect = ''; // 텍스트 선택 방지 해제
+      storePanel.style.transition = 'height 0.3s cubic-bezier(.68,-0.55,.27,1.55)';
+      document.body.style.userSelect = '';
       console.log('📱 모바일 패널 드래그 취소');
     });
 
-    // 패널 전체에서 클릭 이벤트 완전 차단 (renderStore처럼)
+    // 이벤트 전파 차단
     storePanel.addEventListener('click', (e) => {
       e.stopPropagation();
-      // 클릭으로 인한 패널 토글 완전 방지
     });
 
-    // 패널 전체에서 더블클릭도 차단
     storePanel.addEventListener('dblclick', (e) => {
       e.stopPropagation();
       e.preventDefault();
     });
 
-    // 필터 컨테이너에서도 이벤트 전파 차단
     const filterContainer = document.getElementById('filterContainer');
     if (filterContainer) {
       filterContainer.addEventListener('click', (e) => {
@@ -806,7 +729,6 @@ window.MapPanelUI = {
       });
     }
 
-    // 스토어 리스트 컨테이너에서도 이벤트 전파 차단
     const storeListContainer = document.getElementById('storeListContainer');
     if (storeListContainer) {
       storeListContainer.addEventListener('click', (e) => {
@@ -814,7 +736,6 @@ window.MapPanelUI = {
       });
     }
 
-    // 필터 토글 버튼에서도 이벤트 전파 차단
     const filterToggleBtn = document.getElementById('filterToggleBtn');
     if (filterToggleBtn) {
       filterToggleBtn.addEventListener('click', (e) => {
@@ -822,10 +743,10 @@ window.MapPanelUI = {
       });
     }
 
-    console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료 (클릭 토글 비활성화)');
+    console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료');
   },
 
-  // 뷰포트 기반 매장 데이터 로딩
+  // 통합 클러스터 API 호출 (서버 구조에 맞게 수정)
   async loadViewportStores(map) {
     if (!map) {
       console.warn('⚠️ 지도 인스턴스가 없습니다');
@@ -834,28 +755,24 @@ window.MapPanelUI = {
 
     try {
       const bounds = map.getBounds();
-      const swLat = bounds.getSouthWest().getLat();
-      const swLng = bounds.getSouthWest().getLng();
-      const neLat = bounds.getNorthEast().getLat();
-      const neLng = bounds.getNorthEast().getLng();
       const level = map.getLevel();
 
+      // bbox 형식으로 파라미터 구성 (서버가 기대하는 형식)
+      const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
+
       const params = new URLSearchParams({
-        swLat: swLat,
-        swLng: swLng,
-        neLat: neLat,
-        neLng: neLng,
-        level: level
+        level: level,
+        bbox: bbox
       });
 
-      console.log(`📱 패널 매장 데이터 요청: ${params.toString()}`);
+      console.log(`📱 통합 클러스터 API 호출: level=${level}, bbox=${bbox}`);
 
-      // API 경로 변경: /api/stores/viewport -> /api/stores/clusters (새로운 통합 API)
       const response = await fetch(`/api/stores/clusters?${params}`);
 
-      // 새로운 클러스터 API 응답 구조에 맞게 데이터 처리 로직 수정
       if (!response.ok) {
-        throw new Error('통합 클러스터 API 호출 중 오류가 발생했습니다.');
+        const errorText = await response.text();
+        console.error('❌ API 응답 오류:', response.status, errorText);
+        throw new Error(`API 호출 실패: ${response.status}`);
       }
 
       const data = await response.json();
@@ -864,7 +781,6 @@ window.MapPanelUI = {
         throw new Error(data.error || '클러스터 데이터 조회 실패');
       }
 
-      // 새로운 API 응답 구조: data.data가 실제 매장/클러스터 배열
       const features = data.data || [];
       console.log(`✅ 클러스터/매장 ${features.length}개 로딩 완료 (레벨: ${data.meta?.level})`);
 
@@ -889,7 +805,7 @@ window.MapPanelUI = {
             }
           };
         } else if (feature.kind === 'cluster') {
-          // 클러스터 데이터를 가상 매장으로 변환 (표시용)
+          // 클러스터 데이터를 가상 매장으로 변환
           return {
             id: `cluster_${Math.random().toString(36).substr(2, 9)}`,
             name: `${feature.store_count}개 매장`,
@@ -916,21 +832,20 @@ window.MapPanelUI = {
       return stores;
     } catch (error) {
       console.error('❌ 뷰포트 매장 데이터 로딩 실패:', error);
-      return [];
+      throw error;
     }
   },
 
-  // 뷰포트 기반 패널 완전 재구성 (기존 updateStoreList 대체)
+  // 뷰포트 기반 패널 완전 재구성
   async rebuildStorePanel(map) {
     const storeListContainer = document.getElementById('storeListContainer');
     if (!storeListContainer) return;
 
-    // 현재 뷰포트 정보 로깅
     const bounds = map.getBounds();
     const level = map.getLevel();
     console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${bounds.getSouthWest().getLat()},${bounds.getSouthWest().getLng()}) ~ (${bounds.getNorthEast().getLat()},${bounds.getNorthEast().getLng()})`);
 
-    // 기존 컨텐츠 완전 제거
+    // 기존 컨텐츠 제거
     storeListContainer.innerHTML = '';
 
     // 로딩 상태 표시
@@ -945,7 +860,7 @@ window.MapPanelUI = {
       // 뷰포트 매장 데이터 새로 로딩
       const stores = await this.loadViewportStores(map);
 
-      // 로딩 메시지 완전 제거
+      // 로딩 메시지 제거
       storeListContainer.innerHTML = '';
 
       if (stores.length === 0) {
@@ -960,35 +875,20 @@ window.MapPanelUI = {
         return;
       }
 
-      // 뷰포트 매장 데이터 전처리
-      const storesWithRatings = stores.map(store => ({
-        ...store,
-        ratingAverage: store.ratingAverage || 0.0,
-        reviewCount: store.reviewCount || 0
-      }));
-
-      console.log(`📊 뷰포트 재구성 데이터: ${storesWithRatings.length}개 매장`);
-
-      // 매장 카드 배치 렌더링 (성능 최적화)
-      const cardFragments = storesWithRatings
-        .filter(store => store) // null 체크
+      // 매장 카드 렌더링
+      const cardFragments = stores
+        .filter(store => store)
         .map(store => {
-          const ratingData = {
-            ratingAverage: store.ratingAverage || 0.0,
-            reviewCount: store.reviewCount || 0
-          };
-
           try {
-            // 클러스터 매장 카드 렌더링 지원 추가
             return this.createStoreCard(store);
           } catch (error) {
             console.error(`❌ 매장 카드 렌더링 실패 (${store?.name || 'Unknown'}):`, error);
             return '';
           }
         })
-        .filter(card => card); // 빈 카드 제거
+        .filter(card => card);
 
-      // 모든 카드를 한번에 DOM에 추가 (성능 최적화)
+      // 모든 카드를 한번에 DOM에 추가
       storeListContainer.innerHTML = cardFragments.join('');
 
       console.log(`✅ 뷰포트 기반 패널 완전 재구성 완료: ${cardFragments.length}개 매장 카드`);
@@ -997,12 +897,6 @@ window.MapPanelUI = {
       this.resetFilters();
       this.applyFilters();
 
-      // 재구성 완료 이벤트 발생 (필요시 다른 모듈에서 활용)
-      const rebuildEvent = new CustomEvent('mapPanelRebuilt', {
-        detail: { storeCount: cardFragments.length, level: level }
-      });
-      document.dispatchEvent(rebuildEvent);
-
     } catch (error) {
       console.error('❌ 뷰포트 기반 패널 재구성 실패:', error);
       storeListContainer.innerHTML = `
@@ -1010,19 +904,13 @@ window.MapPanelUI = {
           <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
           <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">패널 재구성 실패</div>
           <div style="font-size: 14px;">네트워크를 확인하고 다시 시도해주세요</div>
-          <div style="font-size: 12px; color: #999; margin-top: 8px;">레벨: ${level}</div>
+          <div style="font-size: 12px; color: #999; margin-top: 8px;">오류: ${error.message}</div>
         </div>
       `;
     }
   },
 
-  // 기존 updateStoreList 메서드 유지 (호환성)
-  async updateStoreList(map) {
-    console.log('⚠️ updateStoreList 호출됨 - rebuildStorePanel로 리다이렉트');
-    return await this.rebuildStorePanel(map);
-  },
-
-  // 지도 이벤트와 연동하여 패널 업데이트 (뷰포트 기반 완전 재구성)
+  // 지도 이벤트와 연동하여 패널 업데이트
   connectToMap(map) {
     if (!map) {
       console.warn('⚠️ 지도 인스턴스가 없어 패널 연동을 건너뜁니다');
@@ -1058,73 +946,13 @@ window.MapPanelUI = {
     // 초기 패널 구성
     this.rebuildStorePanel(map);
 
-    // 지도 이동 완료 시 패널 재구성
+    // 지도 이벤트 리스너 등록
     kakao.maps.event.addListener(map, 'dragend', rebuildPanelForViewport);
-
-    // 지도 줌 변경 시 패널 재구성  
     kakao.maps.event.addListener(map, 'zoom_changed', rebuildPanelForViewport);
-
-    // 지도 idle 이벤트 (모든 변경 완료 후)
     kakao.maps.event.addListener(map, 'idle', () => {
       console.log('🗺️ 지도 idle - 최종 패널 재구성');
       rebuildPanelForViewport();
     });
-  },
-
-  // 초기화 함수
-  init() {
-    // 패널 DOM 및 스타일 렌더링
-    if (!document.getElementById('storePanel')) {
-      document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
-      document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
-    }
-
-    // 필터링 및 드래그 이벤트 설정
-    this.initializeFiltering();
-    this.setupPanelDrag();
-
-    // 지도가 준비되면 연동
-    const checkMapReady = () => {
-      if (window.currentMap) {
-        this.connectToMap(window.currentMap);
-      } else {
-        // 지도가 아직 준비되지 않았으면 100ms 후에 다시 시도
-        setTimeout(checkMapReady, 100);
-      }
-    };
-    checkMapReady();
-  },
-
-  // 필터 상태 초기화
-  resetFilters() {
-    // 모든 필터 탭을 '전체'로 초기화
-    document.querySelectorAll('.filter-tab').forEach(tab => {
-      tab.classList.remove('active');
-    });
-
-    // 각 필터 타입의 '전체' 탭을 활성화
-    document.querySelectorAll('.filter-tab[data-filter="all"]').forEach(tab => {
-      tab.classList.add('active');
-    });
-
-    console.log('🔄 필터 상태 초기화 완료');
-  },
-
-  // 수동 새로고침 메서드 (뷰포트 기반 완전 재구성)
-  async refresh() {
-    if (window.currentMap) {
-      console.log('🔄 패널 수동 새로고침 - 뷰포트 기반 재구성');
-      await this.rebuildStorePanel(window.currentMap);
-    } else {
-      console.warn('⚠️ 지도가 준비되지 않아 패널 새로고침을 건너뜁니다');
-    }
-  },
-
-  // 클러스터 클릭 시 처리 함수 (추후 구현)
-  handleClusterClick(clusterData) {
-    console.log('📍 클러스터 클릭됨:', clusterData);
-    // TODO: 클러스터를 클릭했을 때 해당 지역으로 지도 이동 및 확대
-    // TODO: 클러스터 내부 매장 목록 표시 등
   },
 
   // 매장 카드 생성 (클러스터 지원)
@@ -1134,7 +962,7 @@ window.MapPanelUI = {
     const rating = store?.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
     const reviewCount = store?.reviewCount || 0;
     const storeAddress = store?.address || '주소 정보 없음';
-    const isOpen = store?.isOpen !== false; // null, undefined는 true로 처리
+    const isOpen = store?.isOpen !== false;
 
     // 클러스터 매장인지 확인
     const isCluster = store?.isCluster === true;
@@ -1200,8 +1028,90 @@ window.MapPanelUI = {
         </div>
       </div>
     `;
+  },
+
+  // 클러스터 클릭 시 처리 함수
+  handleClusterClick(clusterData) {
+    console.log('📍 클러스터 클릭됨:', clusterData);
+    
+    if (window.currentMap && clusterData.coord) {
+      try {
+        const position = new kakao.maps.LatLng(clusterData.coord.lat, clusterData.coord.lng);
+        window.currentMap.setCenter(position);
+        
+        // 현재 레벨보다 2단계 확대
+        const currentLevel = window.currentMap.getLevel();
+        const newLevel = Math.max(1, currentLevel - 2);
+        window.currentMap.setLevel(newLevel);
+        
+        console.log(`🔍 클러스터 확대: 레벨 ${currentLevel} → ${newLevel}`);
+      } catch (error) {
+        console.error('❌ 클러스터 확대 실패:', error);
+      }
+    }
+  },
+
+  // 필터 상태 초기화
+  resetFilters() {
+    // 모든 필터 탭을 '전체'로 초기화
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.classList.remove('active');
+    });
+
+    // 각 필터 타입의 '전체' 탭을 활성화
+    document.querySelectorAll('.filter-tab[data-filter="all"]').forEach(tab => {
+      tab.classList.add('active');
+    });
+
+    console.log('🔄 필터 상태 초기화 완료');
+  },
+
+  // 필터링 이벤트 설정 및 초기화
+  initializeFiltering() {
+    setTimeout(() => {
+      this.setupFilterEvents();
+      this.applyFilters();
+    }, 100);
+  },
+
+  // 호환성을 위한 updateStoreList 메서드
+  async updateStoreList(map) {
+    console.log('⚠️ updateStoreList 호출됨 - rebuildStorePanel로 리다이렉트');
+    return await this.rebuildStorePanel(map);
+  },
+
+  // 수동 새로고침 메서드
+  async refresh() {
+    if (window.currentMap) {
+      console.log('🔄 패널 수동 새로고침 - 뷰포트 기반 재구성');
+      await this.rebuildStorePanel(window.currentMap);
+    } else {
+      console.warn('⚠️ 지도가 준비되지 않아 패널 새로고침을 건너뜁니다');
+    }
+  },
+
+  // 초기화 함수
+  init() {
+    // 패널 DOM 및 스타일 렌더링
+    if (!document.getElementById('storePanel')) {
+      document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
+      document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
+    }
+
+    // 필터링 및 드래그 이벤트 설정
+    this.initializeFiltering();
+    this.setupPanelDrag();
+
+    // 지도가 준비되면 연동
+    const checkMapReady = () => {
+      if (window.currentMap) {
+        this.connectToMap(window.currentMap);
+      } else {
+        setTimeout(checkMapReady, 100);
+      }
+    };
+    checkMapReady();
   }
 };
 
 // 실제 사용 시 MapPanelUI.init(); 호출 필요
-// window.MapPanelUI.init();
