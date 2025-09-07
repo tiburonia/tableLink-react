@@ -106,9 +106,6 @@ window.MapMarkerManager = {
 
       console.log(`✅ API 응답: ${data.type}, ${data.count}개 피처`);
 
-      // 기존 마커 제거 (같은 타입이라도 새로 생성)
-      this.clearAllMarkers();
-
       // 응답 타입별 마커 생성
       if (data.type === 'individual') {
         await this.renderIndividualMarkers(data.features, map);
@@ -127,55 +124,78 @@ window.MapMarkerManager = {
   async renderIndividualMarkers(features, map) {
     console.log(`🏪 개별 매장 마커 ${features.length}개 렌더링 시작`);
 
-    const markers = features.map(feature => this.createStoreMarker(feature, map));
+    if (!features || features.length === 0) {
+      console.log('📍 개별 매장 데이터가 없습니다');
+      return;
+    }
+
+    const markers = [];
+    for (const feature of features) {
+      try {
+        if (feature.kind === 'individual') {
+          const marker = this.createStoreMarker(feature, map);
+          if (marker) markers.push(marker);
+        }
+      } catch (error) {
+        console.error('❌ 개별 마커 생성 실패:', error, feature);
+      }
+    }
 
     // 작업 취소 최종 확인
     if (!this.shouldCancel) {
       this.currentMarkers.push(...markers);
       console.log(`✅ 개별 매장 마커 ${markers.length}개 렌더링 완료`);
-    } else {
-      console.log('🚫 개별 매장 마커 렌더링 취소됨');
-      markers.forEach(marker => marker.setMap(null));
     }
   },
 
   // 클러스터 마커 렌더링
   async renderClusterMarkers(features, map) {
-    console.log(`🏘️ 클러스터 마커 ${features.length}개 렌더링 시작`);
+    console.log(`🏢 클러스터 마커 ${features.length}개 렌더링 시작`);
 
-    const markers = features.map(feature => this.createClusterMarker(feature, map));
+    if (!features || features.length === 0) {
+      console.log('📍 클러스터 데이터가 없습니다');
+      return;
+    }
+
+    const markers = [];
+    for (const feature of features) {
+      try {
+        if (feature.kind === 'cluster') {
+          const marker = this.createClusterMarker(feature, map);
+          if (marker) markers.push(marker);
+        }
+      } catch (error) {
+        console.error('❌ 클러스터 마커 생성 실패:', error, feature);
+      }
+    }
 
     // 작업 취소 최종 확인
     if (!this.shouldCancel) {
       this.currentMarkers.push(...markers);
       console.log(`✅ 클러스터 마커 ${markers.length}개 렌더링 완료`);
-    } else {
-      console.log('🚫 클러스터 마커 렌더링 취소됨');
-      markers.forEach(marker => marker.setMap(null));
     }
   },
 
-  // 개별 매장 마커 생성 (통합 API 데이터 기반)
+  // 개별 매장 마커 생성
   createStoreMarker(feature, map) {
-    // 통합 API는 GeoJSON-like 구조: feature.geometry.coordinates = [lng, lat]
-    const coords = feature.geometry?.coordinates || [feature.lon || feature.lng, feature.lat];
-    const position = new kakao.maps.LatLng(coords[1], coords[0]); // [lng, lat] -> (lat, lng)
-    
-    const props = feature.properties || feature; // properties 안에 실제 데이터
-    const isOpen = props.is_open !== false;
-    const rating = props.rating_average ? parseFloat(props.rating_average).toFixed(1) : '0.0';
-    const categoryIcon = this.getCategoryIcon(props.category);
+    // 새 API 구조에 맞게 좌표 추출
+    const coords = [feature.lon || feature.lng, feature.lat];
+    const position = new kakao.maps.LatLng(feature.lat, feature.lon || feature.lng);
 
-    const markerId = `store-${props.id || props.store_id || Math.random().toString(36).substr(2, 9)}`;
+    const isOpen = feature.is_open !== false;
+    const rating = feature.rating_average ? parseFloat(feature.rating_average).toFixed(1) : '0.0';
+    const categoryIcon = this.getCategoryIcon(feature.category);
+
+    const markerId = `store-${feature.store_id || feature.id || Math.random().toString(36).substr(2, 9)}`;
 
     const storeData = {
-      id: props.id || props.store_id,
-      name: props.name,
-      category: props.category,
-      ratingAverage: props.rating_average,
-      reviewCount: props.review_count,
-      isOpen: props.is_open,
-      coord: { lat: coords[1], lng: coords[0] }
+      id: feature.store_id || feature.id,
+      name: feature.name,
+      category: feature.category,
+      ratingAverage: feature.rating_average,
+      reviewCount: feature.review_count,
+      isOpen: feature.is_open,
+      coord: { lat: feature.lat, lng: feature.lon || feature.lng }
     };
 
     const content = `
@@ -185,7 +205,7 @@ window.MapMarkerManager = {
             <span class="icon-emoji">${categoryIcon}</span>
           </div>
           <div class="marker-info">
-            <div class="store-name">${props.name && props.name.length > 8 ? props.name.substring(0, 8) + '...' : props.name || '매장'}</div>
+            <div class="store-name">${feature.name && feature.name.length > 8 ? feature.name.substring(0, 8) + '...' : feature.name || '매장'}</div>
             <div class="store-details">
               <span class="rating">★ ${rating}</span>
               <span class="status ${isOpen ? 'open' : 'closed'}">${isOpen ? '운영중' : '준비중'}</span>
@@ -222,7 +242,7 @@ window.MapMarkerManager = {
 
         .clean-store-marker:hover .marker-card {
           box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-          border-color: rgba(41, 126, 252, 0.3);
+          border-color: rgba(102, 126, 234, 0.3);
         }
 
         .marker-icon {
@@ -286,126 +306,98 @@ window.MapMarkerManager = {
 
         .status.closed {
           background: rgba(239, 68, 68, 0.1);
-          color: #991b1b;
+          color: #7f1d1d;
         }
       </style>
     `;
 
-    const overlay = new kakao.maps.CustomOverlay({
+    const customOverlay = new kakao.maps.CustomOverlay({
+      map: map,
       position: position,
       content: content,
       yAnchor: 1,
-      map: map
+      zIndex: 200
     });
 
-    return overlay;
+    return customOverlay;
   },
 
-  // 클러스터 마커 생성 (통합 API 데이터 기반)
+  // 클러스터 마커 생성
   createClusterMarker(feature, map) {
-    // 통합 API 클러스터 구조: feature.geometry.coordinates = [lng, lat]
-    const coords = feature.geometry?.coordinates || [feature.lon || feature.lng, feature.lat];
-    const position = new kakao.maps.LatLng(coords[1], coords[0]); // [lng, lat] -> (lat, lng)
-    
-    const props = feature.properties || feature; // properties 안에 집계 데이터
-    const totalCount = props.count || props.total_count || props.cluster_count || 0;
-    const openCount = props.open_count || Math.floor(totalCount * 0.8); // 기본값: 80% 운영 가정
+    // 클러스터 좌표 추출
+    const position = new kakao.maps.LatLng(feature.lat, feature.lng || feature.lon);
 
-    const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
+    const storeCount = feature.store_count || 0;
+    const openCount = feature.open_count || 0;
+
+    const clusterId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="clean-cluster-marker" onclick="window.MapMarkerManager.zoomToCluster(${coords[1]}, ${coords[0]})">
-        <div class="cluster-card">
-          <div class="cluster-header">
-            <span class="region-name">클러스터</span>
-          </div>
-          <div class="cluster-stats">
-            <div class="stat-item">
-              <span class="stat-number">${totalCount}</span>
-              <span class="stat-label">매장</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-number">${openCount}</span>
-              <span class="stat-label">운영</span>
-            </div>
-          </div>
+      <div id="${clusterId}" class="cluster-marker" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng || feature.lon})">
+        <div class="cluster-circle">
+          <div class="cluster-count">${storeCount}</div>
+          <div class="cluster-info">매장</div>
         </div>
       </div>
       <style>
-        .clean-cluster-marker {
-          cursor: pointer;
+        .cluster-marker {
           position: relative;
-          z-index: 150;
+          cursor: pointer;
+          z-index: 300;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .clean-cluster-marker:hover {
+        .cluster-marker:hover {
+          z-index: 9999 !important;
           transform: scale(1.1);
-          z-index: 9998 !important;
         }
 
-        .cluster-card {
-          background: linear-gradient(145deg, #4f46e5 0%, #6366f1 100%);
-          border-radius: 12px;
-          padding: 8px 12px;
-          min-width: 80px;
-          box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .clean-cluster-marker:hover .cluster-card {
-          box-shadow: 0 8px 30px rgba(79, 70, 229, 0.5);
-          border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .cluster-header {
-          text-align: center;
-          margin-bottom: 4px;
-        }
-
-        .region-name {
-          color: white;
-          font-weight: 700;
-          font-size: 12px;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        .cluster-stats {
-          display: flex;
-          justify-content: space-around;
-          gap: 4px;
-        }
-
-        .stat-item {
+        .cluster-circle {
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 1px;
+          justify-content: center;
+          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+          border: 3px solid rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(10px);
         }
 
-        .stat-number {
+        .cluster-marker:hover .cluster-circle {
+          box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+          transform: scale(1.05);
+        }
+
+        .cluster-count {
+          font-size: 18px;
+          font-weight: 800;
           color: white;
-          font-weight: 700;
-          font-size: 11px;
+          line-height: 1;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
 
-        .stat-label {
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 9px;
-          font-weight: 500;
+        .cluster-info {
+          font-size: 10px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.9);
+          line-height: 1;
+          margin-top: 1px;
         }
       </style>
     `;
 
-    const overlay = new kakao.maps.CustomOverlay({
+    const customOverlay = new kakao.maps.CustomOverlay({
+      map: map,
       position: position,
       content: content,
-      yAnchor: 1,
-      map: map
+      yAnchor: 0.5,
+      zIndex: 300
     });
 
-    return overlay;
+    return customOverlay;
   },
 
   // 카테고리별 아이콘 반환
