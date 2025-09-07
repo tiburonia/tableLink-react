@@ -231,11 +231,10 @@ async function handleLogin(req, res) {
         id: user.user_id,
         name: user.name,
         phone: user.phone,
-        email: '', // users 테이블에 없는 컬럼
-        address: '', // users 테이블에 없는 컬럼
-        birth: '', // users 테이블에 없는 컬럼
-        gender: '', // users 테이블에 없는 컬럼
-        point: 0 // users 테이블에 없는 컬럼
+        email: user.email,
+        address: user.address,
+        birth: user.birth,
+        gender: user.gender
       }
     });
   } catch (error) {
