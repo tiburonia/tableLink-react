@@ -29,6 +29,17 @@ router.post('/checks/from-qr', async (req, res) => {
       });
     }
 
+    // 사용자 ID 검증 (현재 스키마의 users.user_id는 문자열)
+    if (user_id) {
+      const userExists = await client.query(`
+        SELECT user_id FROM users WHERE user_id = $1
+      `, [user_id]);
+
+      if (userExists.rows.length === 0) {
+        throw new Error('존재하지 않는 사용자입니다');
+      }
+    }
+
     await client.query('BEGIN');
 
     // QR 코드에서 테이블 번호 추출 (TABLE_1, TABLE_2 형태)
@@ -80,13 +91,13 @@ router.post('/checks/from-qr', async (req, res) => {
       orderId = existingOrderResult.rows[0].id;
       console.log(`🔄 TLL 기존 주문 ${orderId} 사용 (테이블 ${tableNumber})`);
     } else {
-      // 새 주문 생성
+      // 새 주문 생성 (현재 스키마에 맞게)
       const newOrderResult = await client.query(`
         INSERT INTO orders (
-          store_id, user_id, guest_id, source, status, payment_status
-        ) VALUES ($1, $2, $3, 'TLL', 'OPEN', 'UNPAID')
+          store_id, user_id, guest_id, source, status, payment_status, table_number
+        ) VALUES ($1, $2, $3, 'TLL', 'OPEN', 'UNPAID', $4)
         RETURNING id
-      `, [storeId, user_id || null, guestId]);
+      `, [storeId, user_id || null, guestId, tableNumber]);
 
       orderId = newOrderResult.rows[0].id;
       console.log(`✅ TLL 새 주문 ${orderId} 생성 완료 (테이블 ${tableNumber})`);

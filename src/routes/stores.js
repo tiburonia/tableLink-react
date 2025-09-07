@@ -11,24 +11,23 @@ router.get('/:storeId', async (req, res) => {
 
     console.log(`🏪 매장 ${storeId} 정보 조회 요청`);
 
-    // store_info 테이블에서 매장 정보 조회
+    // stores 테이블에서 매장 정보 조회 (현재 스키마)
     const storeResult = await pool.query(`
       SELECT 
-        si.store_id as id,
-        si.name,
-        si.category,
-        si.store_tel_number as phone,
-        si.rating_average,
-        si.review_count,
-        si.favoratite_count as favorite_count,
+        s.id,
+        s.name,
+        s.category,
+        s.phone,
+        s.rating_average,
+        s.review_count,
+        s.favorite_count,
         s.is_open,
         sa.road_address as address,
         sa.latitude,
         sa.longitude
-      FROM store_info si
-      LEFT JOIN stores s ON si.store_id = s.id
-      LEFT JOIN store_addresses sa ON si.store_id = sa.store_id
-      WHERE si.store_id = $1
+      FROM stores s
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE s.id = $1
     `, [storeId]);
 
     if (storeResult.rows.length === 0) {
@@ -41,16 +40,15 @@ router.get('/:storeId', async (req, res) => {
 
     const store = storeResult.rows[0];
 
-    // 매장 메뉴 조회
+    // 매장 메뉴 조회 (현재 스키마)
     const menuResult = await pool.query(`
       SELECT 
         id,
         name,
         description,
-        price,
-        cook_station
-      FROM store_menu
-      WHERE store_id = $1
+        price
+      FROM menus
+      WHERE store_id = $1 AND is_available = true
       ORDER BY id ASC
     `, [storeId]);
 
@@ -96,18 +94,17 @@ router.get('/search/:query', async (req, res) => {
 
     const searchResult = await pool.query(`
       SELECT 
-        si.store_id as id,
-        si.name,
-        si.category,
-        si.rating_average,
-        si.review_count,
+        s.id,
+        s.name,
+        s.category,
+        s.rating_average,
+        s.review_count,
         s.is_open,
         sa.road_address as address
-      FROM store_info si
-      LEFT JOIN stores s ON si.store_id = s.id
-      LEFT JOIN store_addresses sa ON si.store_id = sa.store_id
-      WHERE si.name ILIKE $1 OR si.category ILIKE $1
-      ORDER BY si.name ASC
+      FROM stores s
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE s.name ILIKE $1 OR s.category ILIKE $1
+      ORDER BY s.name ASC
       LIMIT 20
     `, [`%${query}%`]);
 

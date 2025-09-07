@@ -41,6 +41,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
     let requestBody = { qr_code: qrCode };
 
     if (userInfo.id && userInfo.id !== 'guest') {
+      // 현재 스키마의 users.user_id는 문자열이므로 그대로 사용
       requestBody.user_id = userInfo.id;
     } else {
       requestBody.guest_phone = userInfo.phone || '010-0000-0000';
