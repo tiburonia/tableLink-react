@@ -12,17 +12,23 @@ async function completeDatabaseRegenerate() {
   console.log('🚨 데이터베이스 완전 재생성 시작');
   console.log('⚠️  모든 데이터가 영구적으로 삭제됩니다!');
   
-  // 원본 데이터베이스 설정 읽기
-  const originalConfig = require('../../shared/config/database');
-  const dbName = process.env.DATABASE_NAME || 'tablelink';
+  // DATABASE_URL에서 연결 정보 추출
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL 환경변수가 설정되지 않았습니다.');
+  }
+
+  console.log('📋 DATABASE_URL 확인:', databaseUrl.replace(/\/\/.*@/, '//***:***@'));
   
-  // postgres 데이터베이스에 연결 (관리자 권한)
+  // URL에서 데이터베이스명 추출
+  const urlParts = new URL(databaseUrl);
+  const dbName = urlParts.pathname.substring(1); // '/' 제거
+  
+  // postgres 기본 데이터베이스에 연결하기 위해 URL 수정
+  const postgresUrl = databaseUrl.replace(`/${dbName}`, '/postgres');
+  
   const adminPool = new Pool({
-    host: process.env.DATABASE_HOST || 'localhost',
-    port: process.env.DATABASE_PORT || 5432,
-    user: process.env.DATABASE_USER || 'postgres',
-    password: process.env.DATABASE_PASSWORD || '',
-    database: 'postgres' // postgres 기본 데이터베이스에 연결
+    connectionString: postgresUrl
   });
 
   try {
@@ -52,11 +58,7 @@ async function completeDatabaseRegenerate() {
     // 4. 새 데이터베이스에 연결
     console.log('\n🔗 4단계: 새 데이터베이스 연결 테스트...');
     const newPool = new Pool({
-      host: process.env.DATABASE_HOST || 'localhost',
-      port: process.env.DATABASE_PORT || 5432,
-      user: process.env.DATABASE_USER || 'postgres',
-      password: process.env.DATABASE_PASSWORD || '',
-      database: dbName
+      connectionString: databaseUrl // 원래 DATABASE_URL 사용
     });
 
     const testResult = await newPool.query('SELECT NOW() as current_time');
