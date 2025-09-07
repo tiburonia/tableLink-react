@@ -635,20 +635,8 @@ function handleTossPaymentFailure(data) {
     console.log(`🏪 TLL - 매장 선택: ${storeName} (ID: ${storeId})`);
 
     try {
-      // 서버에서 최신 테이블 점유 상태 확인
-      const tablesResponse = await fetch(`/api/tables/stores/${storeId}?_t=${Date.now()}`, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-
-      if (!tablesResponse.ok) throw new Error('테이블 정보 조회 실패');
-
-      const tablesData = await tablesResponse.json();
-      if (!tablesData.success) throw new Error('테이블 정보 조회 실패');
-
-      // 매장 정보도 함께 조회
+      // 먼저 매장 정보 조회
+      console.log(`🔍 매장 ${storeId} 기본 정보 조회 중...`);
       const storeResponse = await fetch(`/api/stores/${storeId}`, {
         headers: {
           'Cache-Control': 'no-cache',
@@ -658,13 +646,21 @@ function handleTossPaymentFailure(data) {
 
       if (storeResponse.ok) {
         const storeData = await storeResponse.json();
-        if (storeData.success) {
+        if (storeData.success && storeData.store) {
           selectedStore = storeData.store;
+          console.log(`✅ 매장 기본 정보 로드 완료: ${selectedStore.name}`);
         }
       }
 
+      // 매장 정보가 없으면 기본값 설정
       if (!selectedStore) {
-        selectedStore = { id: storeId, name: storeName, menu: [] };
+        selectedStore = { 
+          id: parseInt(storeId), 
+          name: storeName, 
+          menu: [],
+          isOpen: true 
+        };
+        console.log(`⚠️ 매장 정보 없음, 기본값 사용: ${storeName}`);
       }
 
       // UI 업데이트
@@ -673,49 +669,103 @@ function handleTossPaymentFailure(data) {
       selectedStoreDiv.style.display = 'block';
       selectedStoreName.textContent = storeName;
 
-      console.log(`✅ TLL - 매장 정보 로드 완료:`, selectedStore);
+      // 테이블 정보 조회
+      console.log(`🪑 매장 ${storeId} 테이블 정보 조회 중...`);
+      const tablesResponse = await fetch(`/api/tables/stores/${storeId}?_t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
 
-      // 서버에서 받은 최신 테이블 정보 사용
+      if (!tablesResponse.ok) {
+        const errorText = await tablesResponse.text();
+        throw new Error(`테이블 API 오류 (${tablesResponse.status}): ${errorText}`);
+      }
+
+      const tablesData = await tablesResponse.json();
+      if (!tablesData.success) {
+        throw new Error(`테이블 조회 실패: ${tablesData.error}`);
+      }
+
       const tables = tablesData.tables || [];
-      console.log(`🏪 ${storeName}: ${tables.length}개 테이블 정보 로드 완료`);
+      console.log(`🏪 ${storeName}: 테이블 ${tables.length}개 로드 완료`);
 
       if (tables.length > 0) {
-        // 점유중이지 않은 테이블만 선택 가능하도록 필터링
+        // 사용 가능한 테이블과 점유중인 테이블 분리
         const availableTables = tables.filter(table => !table.isOccupied);
         const occupiedTables = tables.filter(table => table.isOccupied);
 
-        const tableOptions = [
-          ...availableTables.map(table => 
-            `<option value="${table.tableNumber}">${table.tableName || table.tableNumber + '번'}</option>`
-          ),
-          ...occupiedTables.map(table => 
-            `<option value="${table.tableNumber}" disabled>${table.tableName || table.tableNumber + '번'} (사용중)</option>`
-          )
+        console.log(`📊 테이블 현황 - 사용가능: ${availableTables.length}개, 사용중: ${occupiedTables.length}개`);
+
+        // 테이블 옵션 생성
+        const availableOptions = availableTables.map(table => 
+          `<option value="${table.tableNumber}">${table.tableName || table.tableNumber + '번'}</option>`
+        );
+
+        const occupiedOptions = occupiedTables.map(table => {
+          const occupiedTime = table.occupiedSince ? 
+            ` (${new Date(table.occupiedSince).toLocaleTimeString()}부터)` : '';
+          return `<option value="${table.tableNumber}" disabled>${table.tableName || table.tableNumber + '번'} - 사용중${occupiedTime}</option>`;
+        });
+
+        const allOptions = [
+          '<option value="">테이블을 선택하세요</option>',
+          ...availableOptions,
+          ...occupiedOptions
         ].join('');
 
-        tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>${tableOptions}`;
+        tableSelect.innerHTML = allOptions;
 
-        console.log(`🏪 ${storeName}: 전체 ${tables.length}개 (사용가능: ${availableTables.length}개, 사용중: ${occupiedTables.length}개)`);
+        if (availableTables.length === 0) {
+          console.warn(`⚠️ ${storeName}: 사용 가능한 테이블이 없습니다`);
+          tableSelect.innerHTML = '<option value="">사용 가능한 테이블이 없습니다</option>';
+        }
       } else {
-        // 테이블이 없는 경우 기본값 사용
-        console.warn(`⚠️ ${storeName}에 테이블 정보가 없어 기본값 사용`);
-        let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
-        tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
-          tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
+        // 테이블 정보가 없을 때 기본 20개 테이블 표시
+        console.warn(`⚠️ ${storeName}: 테이블 정보 없음, 기본 20개 테이블 사용`);
+        const defaultTables = Array.from({ length: 20 }, (_, i) => i + 1);
+        const defaultOptions = [
+          '<option value="">테이블을 선택하세요</option>',
+          ...defaultTables.map(num => `<option value="${num}">${num}번</option>`)
+        ].join('');
+        tableSelect.innerHTML = defaultOptions;
       }
 
       tableSelect.disabled = false;
       startOrderBtn.disabled = true;
 
+      console.log(`✅ TLL - 매장 ${storeName} 선택 완료`);
+
     } catch (error) {
-      console.error('매장 정보 로드 오류:', error);
-      // 에러 시 기본값 사용
-      selectedStore = { id: storeId, name: storeName, menu: [] };
-      let tableNum = Array.from({ length: 10 }, (_, i) => i + 1);
-      tableSelect.innerHTML = `<option value="">테이블을 선택하세요</option>` +
-        tableNum.map(num => `<option value="${num}">${num}번</option>`).join('');
+      console.error('❌ TLL - 매장 정보 로드 오류:', error);
+      
+      // 에러 발생 시 기본 설정으로 폴백
+      selectedStore = { 
+        id: parseInt(storeId), 
+        name: storeName, 
+        menu: [],
+        isOpen: true 
+      };
+
+      // UI 업데이트
+      storeSearchInput.value = storeName;
+      storeSearchResults.style.display = 'none';
+      selectedStoreDiv.style.display = 'block';
+      selectedStoreName.textContent = storeName;
+
+      // 기본 테이블 20개 설정
+      const defaultTables = Array.from({ length: 20 }, (_, i) => i + 1);
+      const defaultOptions = [
+        '<option value="">테이블을 선택하세요</option>',
+        ...defaultTables.map(num => `<option value="${num}">${num}번</option>`)
+      ].join('');
+      tableSelect.innerHTML = defaultOptions;
+
       tableSelect.disabled = false;
       startOrderBtn.disabled = true;
+
+      console.log(`⚠️ TLL - 에러 복구: 매장 ${storeName} 기본 설정으로 진행`);
     }
   };
 

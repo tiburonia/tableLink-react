@@ -5,7 +5,7 @@ window.TableInfoManager = {
       console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
 
       // 매장이 운영중지 상태면 테이블 정보를 가져오지 않고 바로 운영중지 표시
-      if (!store.isOpen) {
+      if (store.isOpen === false) {
         console.log(`🔴 매장 ${store.name}이 운영중지 상태입니다.`);
         this.updateTableInfoUI({
           totalTables: '-',
@@ -19,25 +19,56 @@ window.TableInfoManager = {
         return;
       }
 
-      const response = await fetch(`/api/stores/${store.id}/tables?_t=${Date.now()}`);
-      if (!response.ok) throw new Error('테이블 정보 조회 실패');
+      // 현재 스키마에 맞는 API 호출
+      const response = await fetch(`/api/tables/stores/${store.id}?_t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`테이블 API 오류 (${response.status}): ${errorText}`);
+      }
 
       const data = await response.json();
       console.log(`📊 테이블 데이터:`, data);
 
+      if (!data.success) {
+        throw new Error(`테이블 조회 실패: ${data.error || '알 수 없는 오류'}`);
+      }
+
       const tables = data.tables || [];
+      if (tables.length === 0) {
+        console.warn(`⚠️ 매장 ${store.name}에 테이블 데이터가 없습니다`);
+        this.updateTableInfoUI({
+          totalTables: '0개',
+          availableTables: '0개',
+          totalSeats: '0석',
+          availableSeats: '0석',
+          occupancyRate: '0',
+          statusText: 'NO TABLES',
+          statusClass: 'empty'
+        });
+        return;
+      }
+
+      // 테이블 통계 계산
       const totalTables = tables.length;
-      const totalSeats = tables.reduce((sum, table) => sum + table.seats, 0);
-      const occupiedTables = tables.filter(t => t.isOccupied);
-      const availableTables = tables.filter(t => !t.isOccupied);
-      const availableSeats = availableTables.reduce((sum, table) => sum + table.seats, 0);
-      const occupancyRate = totalSeats > 0 ? Math.round(((totalSeats - availableSeats) / totalSeats) * 100) : 0;
+      const totalSeats = tables.reduce((sum, table) => sum + (table.seats || 4), 0);
+      const occupiedTables = tables.filter(t => t.isOccupied === true);
+      const availableTables = tables.filter(t => t.isOccupied !== true);
+      const occupiedSeats = occupiedTables.reduce((sum, table) => sum + (table.seats || 4), 0);
+      const availableSeats = totalSeats - occupiedSeats;
+      const occupancyRate = totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 100) : 0;
 
       console.log(`🏪 ${store.name} 통계:
       - 총 테이블: ${totalTables}개
       - 총 좌석: ${totalSeats}석
       - 사용중 테이블: ${occupiedTables.length}개
       - 빈 테이블: ${availableTables.length}개
+      - 사용중 좌석: ${occupiedSeats}석
       - 잔여 좌석: ${availableSeats}석
       - 사용률: ${occupancyRate}%`);
 
@@ -50,6 +81,9 @@ window.TableInfoManager = {
       } else if (occupancyRate >= 70) {
         statusText = 'BUSY';
         statusClass = 'busy';
+      } else if (occupancyRate >= 50) {
+        statusText = 'NORMAL';
+        statusClass = 'normal';
       }
 
       // UI 업데이트
@@ -64,7 +98,7 @@ window.TableInfoManager = {
       });
 
     } catch (error) {
-      console.error('테이블 정보 로딩 실패:', error);
+      console.error('❌ 테이블 정보 로딩 실패:', error);
       this.updateTableInfoUI({
         totalTables: '오류',
         availableTables: '오류',
