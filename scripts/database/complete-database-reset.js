@@ -308,6 +308,18 @@ async function dropUserFunctions() {
       AND routine_name NOT LIKE 'geometry_%'
       AND routine_name NOT LIKE 'geography_%'
       AND routine_name NOT LIKE '_st_%'
+      AND routine_name NOT LIKE 'gettransactionid%'
+      AND routine_name NOT LIKE 'geomfromewkt%'
+      AND routine_name NOT LIKE 'get_proj4%'
+      AND routine_name NOT LIKE 'gidx_%'
+      AND routine_name NOT LIKE 'postgis_%'
+      AND routine_name NOT LIKE 'box2d%'
+      AND routine_name NOT LIKE 'box3d%'
+      AND routine_name NOT IN (
+        'addgeometrycolumn', 'dropgeometrycolumn', 'dropgeometrytable',
+        'populate_geometry_columns', 'probe_geometry_columns',
+        'updategeometrysrid', 'find_srid', 'get_srid'
+      )
       ORDER BY routine_name
     `);
 
