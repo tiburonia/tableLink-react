@@ -34,18 +34,25 @@ router.get('/clusters', async (req, res) => {
       responseType = 'cluster';
     }
 
-    // 표준화된 응답 포맷
-    res.json({
+    // 표준화된 응답 포맷 (디버깅 강화)
+    console.log(`📊 API 응답 준비: ${responseType}, ${result.length}개 결과`);
+    
+    const response = {
       success: true,
       type: responseType,
-      features: result,
+      data: result,  // features → data로 통일
+      features: result,  // 호환성 유지
       meta: {
         level: mapLevel,
         bbox: { xmin, ymin, xmax, ymax },
         count: result.length,
-        gridSize: responseType === 'cluster' ? getGridSizeForLevel(mapLevel) : null
+        gridSize: responseType === 'cluster' ? getGridSizeForLevel(mapLevel) : null,
+        timestamp: new Date().toISOString()
       }
-    });
+    };
+
+    console.log(`✅ 최종 응답:`, JSON.stringify(response, null, 2));
+    res.json(response);
 
   } catch (error) {
     console.error('❌ 통합 클러스터 API 오류:', error);

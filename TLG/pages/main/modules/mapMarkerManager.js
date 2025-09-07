@@ -19,7 +19,12 @@ window.MapMarkerManager = {
   // 현재 뷰포트 영역
   currentBounds: null,
 
-  // 메인 진입점 - 레벨 변경시 호출
+  // 성능 최적화 관련
+  lastCallTime: 0,
+  debounceTimer: null,
+  requestCache: new Map(),
+
+  // 메인 진입점 - 레벨 변경시 호출 (디바운싱 강화)
   async handleMapLevelChange(level, map) {
     console.log(`🔄 지도 레벨 ${level} 변경 - 통합 API 마커 업데이트 시작`);
 
@@ -29,11 +34,19 @@ window.MapMarkerManager = {
       return;
     }
 
-    // 이전 작업 취소
+    // 디바운싱 - 빠른 연속 호출 방지
+    if (this.lastCallTime && Date.now() - this.lastCallTime < 150) {
+      console.log('⚡ 디바운싱: 빠른 연속 호출 무시');
+      return;
+    }
+    this.lastCallTime = Date.now();
+
+    // 이전 작업 취소 (디바운싱 개선)
     if (this.isLoading) {
       console.log('🔄 기존 작업 취소 후 새 작업 시작');
       this.shouldCancel = true;
-      setTimeout(() => this.handleMapLevelChange(level, map), 100);
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(() => this.handleMapLevelChange(level, map), 150);
       return;
     }
 
@@ -113,11 +126,29 @@ window.MapMarkerManager = {
       bbox: bbox.join(',')
     });
 
-    console.log(`📍 API 요청: /api/stores/clusters?${params.toString()}`);
+    const cacheKey = params.toString();
+    console.log(`📍 API 요청: /api/stores/clusters?${cacheKey}`);
+
+    // 캐시 확인 (1분간 유효)
+    if (this.requestCache.has(cacheKey)) {
+      const cached = this.requestCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < 60000) {
+        console.log(`⚡ 캐시된 데이터 사용: ${cached.data.features?.length || 0}개`);
+        return this.processAPIResponse(cached.data);
+      }
+    }
 
     try {
       const response = await fetch(`/api/stores/clusters?${params}`);
       const data = await response.json();
+
+      // 성공한 응답만 캐시
+      if (data.success) {
+        this.requestCache.set(cacheKey, {
+          data: data,
+          timestamp: Date.now()
+        });
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'API 요청 실패');
@@ -129,14 +160,28 @@ window.MapMarkerManager = {
         return;
       }
 
-      console.log(`✅ API 응답: ${data.type}, ${data.features?.length || 0}개 피처`);
+      return this.processAPIResponse(data);
 
-      // 표준화된 응답 처리
-      if (data.type === 'individual') {
-        await this.renderIndividualMarkers(data.features || [], map);
-      } else if (data.type === 'cluster') {
-        await this.renderClusterMarkers(data.features || [], map);
+    } catch (error) {
+      if (!this.shouldCancel) {
+        console.error('❌ 통합 API 호출 실패:', error);
       }
+    }
+  },
+
+  // API 응답 처리 로직 분리
+  async processAPIResponse(data) {
+    const features = data.data || data.features || [];
+    console.log(`✅ API 응답 처리: ${data.type}, ${features.length}개 피처`);
+
+    // 표준화된 응답 처리
+    if (data.type === 'individual') {
+      await this.renderIndividualMarkers(features, window.currentMap);
+    } else if (data.type === 'cluster') {
+      await this.renderClusterMarkers(features, window.currentMap);
+    }
+
+    return features;
 
     } catch (error) {
       if (!this.shouldCancel) {
@@ -510,19 +555,29 @@ window.MapMarkerManager = {
     this.currentMarkers.clear();
   },
 
-  // 완전 초기화
+  // 완전 초기화 (메모리 관리 강화)
   reset() {
     console.log('🔄 MapMarkerManager 완전 초기화 (최적화 버전)');
 
     this.shouldCancel = true;
     this.clearAllMarkers();
 
+    // 타이머 정리
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = null;
+    }
+
+    // 캐시 정리 (메모리 절약)
+    this.requestCache.clear();
+
     this.currentLevel = 0;
     this.currentMarkerType = null;
     this.isLoading = false;
     this.shouldCancel = false;
     this.currentBounds = null;
+    this.lastCallTime = 0;
 
-    console.log('✅ MapMarkerManager 초기화 완료');
+    console.log('✅ MapMarkerManager 초기화 완료 (메모리 정리 포함)');
   }
 };

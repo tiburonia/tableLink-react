@@ -780,8 +780,14 @@ window.MapPanelUI = {
         throw new Error(data.error || '클러스터 데이터 조회 실패');
       }
 
-      const features = data.data || [];
-      console.log(`✅ 클러스터/매장 ${features.length}개 로딩 완료 (레벨: ${data.meta?.level})`);
+      // 응답 데이터 정규화 (data 또는 features 둘 다 지원)
+      const features = data.data || data.features || [];
+      console.log(`✅ 클러스터/매장 ${features.length}개 로딩 완료 (타입: ${data.type}, 레벨: ${data.meta?.level})`);
+      
+      // 빈 결과 처리 최적화
+      if (features.length === 0) {
+        console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 레벨: ${level}, bbox: ${bbox}`);
+      }
 
       // 통합 API 응답을 기존 매장 구조로 변환
       const stores = features.map(feature => {
