@@ -60,7 +60,7 @@ window.quickLogin = async function(userId) {
         <div class="quick-btn-icon">⚡</div>
         <div class="quick-btn-content">
           <span class="quick-btn-title">빠른 로그인</span>
-          <span class="quick-btn-desc">user1 계정</span>
+          <span class="quick-btn-desc">tiburonia 계정</span>
         </div>
       `;
     }
@@ -155,7 +155,7 @@ async function renderLogin() {
                 <div class="quick-btn-icon">⚡</div>
                 <div class="quick-btn-content">
                   <span class="quick-btn-title">빠른 로그인</span>
-                  <span class="quick-btn-desc">user1 계정</span>
+                  <span class="quick-btn-desc">tiburonia 계정</span>
                 </div>
               </button>
 
@@ -956,7 +956,7 @@ async function renderLogin() {
             <div class="quick-btn-icon">⚡</div>
             <div class="quick-btn-content">
               <span class="quick-btn-title">빠른 로그인</span>
-              <span class="quick-btn-desc">user1 계정</span>
+              <span class="quick-btn-desc">tiburonia 계정</span>
             </div>
           </button>
 
