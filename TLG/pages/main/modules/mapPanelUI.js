@@ -325,6 +325,11 @@ window.MapPanelUI = {
           color: white;
         }
 
+        .storeStatus.cluster {
+          background: rgba(41, 128, 185, 0.9); /* 클러스터 상태 색상 */
+          color: white;
+        }
+
         .storeInfoBox {
           padding: 20px;
           display: flex;
@@ -370,6 +375,15 @@ window.MapPanelUI = {
           font-size: 14px;
           color: #666;
           font-weight: 500;
+        }
+
+        .clusterInfo {
+          font-size: 13px;
+          color: #fff;
+          font-weight: 600;
+          background: rgba(0,0,0,0.2);
+          padding: 4px 8px;
+          border-radius: 5px;
         }
 
         .storeCategory {
@@ -420,6 +434,54 @@ window.MapPanelUI = {
         .actionText {
           font-size: 13px;
         }
+
+        .storeAddress {
+          padding: 0 20px 20px 20px;
+          font-size: 12px;
+          color: #666;
+          margin-top: -8px;
+        }
+
+        /* 클러스터 카드 스타일 */
+        .cluster-card {
+          background: #f0f4ff; /* 클러스터 카드 배경색 */
+        }
+
+        .cluster-card .storeHeader {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          padding: 12px 20px;
+          border-radius: 12px 12px 0 0;
+          margin: -1px -1px 0 -1px; /* 경계선 겹침 조정 */
+          color: white;
+        }
+
+        .cluster-card .storeName {
+          color: white;
+          font-weight: 700;
+        }
+
+        .cluster-card .storeCategory {
+          background: rgba(255, 255, 255, 0.3);
+          color: white;
+          font-weight: 600;
+        }
+
+        .cluster-card .actionButton.primary {
+          background: white;
+          color: #667eea;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .cluster-card .actionButton.primary:hover {
+          transform: none;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .cluster-card .storeAddress {
+          margin-top: 0;
+          padding: 10px 20px 20px 20px;
+          border-top: 1px dashed #c0caff; /* 구분선 */
+        }
+
       </style>
     `;
   },
@@ -788,16 +850,70 @@ window.MapPanelUI = {
 
       console.log(`📱 패널 매장 데이터 요청: ${params.toString()}`);
 
-      // API 경로 변경: /api/stores/viewport -> /api/stores/viewport/bounds
-      const response = await fetch(`/api/stores/viewport?${params}`);
+      // API 경로 변경: /api/stores/viewport -> /api/stores/clusters (새로운 통합 API)
+      const response = await fetch(`/api/stores/clusters?${params}`);
+
+      // 새로운 클러스터 API 응답 구조에 맞게 데이터 처리 로직 수정
+      if (!response.ok) {
+        throw new Error('통합 클러스터 API 호출 중 오류가 발생했습니다.');
+      }
+
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || '매장 데이터 조회 실패');
+        throw new Error(data.error || '클러스터 데이터 조회 실패');
       }
 
-      console.log(`✅ 패널 매장 데이터 수신: ${data.stores.length}개`);
-      return data.stores;
+      // 새로운 API 응답 구조: data.data가 실제 매장/클러스터 배열
+      const features = data.data || [];
+      console.log(`✅ 클러스터/매장 ${features.length}개 로딩 완료 (레벨: ${data.meta?.level})`);
+
+      // 통합 API 응답을 기존 매장 구조로 변환
+      const stores = features.map(feature => {
+        if (feature.kind === 'individual') {
+          // 개별 매장 데이터 변환
+          return {
+            id: feature.store_id || feature.id,
+            name: feature.name || '매장명 없음',
+            category: feature.category || '기타',
+            address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
+            ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
+            reviewCount: feature.review_count || 0,
+            favoriteCount: 0,
+            isOpen: feature.is_open !== false,
+            coord: { lat: feature.lat, lng: feature.lon },
+            region: {
+              sido: feature.sido,
+              sigungu: feature.sigungu,
+              eupmyeondong: feature.eupmyeondong
+            }
+          };
+        } else if (feature.kind === 'cluster') {
+          // 클러스터 데이터를 가상 매장으로 변환 (표시용)
+          return {
+            id: `cluster_${Math.random().toString(36).substr(2, 9)}`,
+            name: `${feature.store_count}개 매장`,
+            category: '클러스터',
+            address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '지역 정보 없음',
+            ratingAverage: 0.0,
+            reviewCount: 0,
+            favoriteCount: 0,
+            isOpen: true,
+            coord: { lat: feature.lat, lng: feature.lon },
+            region: {
+              sido: feature.sido,
+              sigungu: feature.sigungu,
+              eupmyeondong: feature.eupmyeondong
+            },
+            isCluster: true,
+            storeCount: feature.store_count,
+            openCount: feature.open_count
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      return stores;
     } catch (error) {
       console.error('❌ 뷰포트 매장 데이터 로딩 실패:', error);
       return [];
@@ -863,7 +979,8 @@ window.MapPanelUI = {
           };
 
           try {
-            return this.renderStoreCard(store, ratingData);
+            // 클러스터 매장 카드 렌더링 지원 추가
+            return this.createStoreCard(store);
           } catch (error) {
             console.error(`❌ 매장 카드 렌더링 실패 (${store?.name || 'Unknown'}):`, error);
             return '';
@@ -956,26 +1073,26 @@ window.MapPanelUI = {
 
   // 초기화 함수
   init() {
-    // DOM이 준비되면 실행
-    document.addEventListener('DOMContentLoaded', () => {
-      // 패널 HTML 렌더링
+    // 패널 DOM 및 스타일 렌더링
+    if (!document.getElementById('storePanel')) {
       document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
       document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
+    }
 
-      // 필터링 및 드래그 이벤트 설정
-      this.initializeFiltering();
-      this.setupPanelDrag();
+    // 필터링 및 드래그 이벤트 설정
+    this.initializeFiltering();
+    this.setupPanelDrag();
 
-      // 지도가 준비되면 연동
-      const checkMapReady = () => {
-        if (window.currentMap) {
-          this.connectToMap(window.currentMap);
-        } else {
-          setTimeout(checkMapReady, 100);
-        }
-      };
-      checkMapReady();
-    });
+    // 지도가 준비되면 연동
+    const checkMapReady = () => {
+      if (window.currentMap) {
+        this.connectToMap(window.currentMap);
+      } else {
+        // 지도가 아직 준비되지 않았으면 100ms 후에 다시 시도
+        setTimeout(checkMapReady, 100);
+      }
+    };
+    checkMapReady();
   },
 
   // 필터 상태 초기화
@@ -1001,6 +1118,88 @@ window.MapPanelUI = {
     } else {
       console.warn('⚠️ 지도가 준비되지 않아 패널 새로고침을 건너뜁니다');
     }
+  },
+
+  // 클러스터 클릭 시 처리 함수 (추후 구현)
+  handleClusterClick(clusterData) {
+    console.log('📍 클러스터 클릭됨:', clusterData);
+    // TODO: 클러스터를 클릭했을 때 해당 지역으로 지도 이동 및 확대
+    // TODO: 클러스터 내부 매장 목록 표시 등
+  },
+
+  // 매장 카드 생성 (클러스터 지원)
+  createStoreCard(store) {
+    const storeName = store?.name || '매장명 없음';
+    const storeCategory = store?.category || '카테고리 없음';
+    const rating = store?.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+    const reviewCount = store?.reviewCount || 0;
+    const storeAddress = store?.address || '주소 정보 없음';
+    const isOpen = store?.isOpen !== false; // null, undefined는 true로 처리
+
+    // 클러스터 매장인지 확인
+    const isCluster = store?.isCluster === true;
+
+    // JSON 안전 처리
+    const safeStoreData = JSON.stringify(store || {}).replace(/"/g, '&quot;');
+
+    if (isCluster) {
+      // 클러스터 카드 렌더링
+      return `
+        <div class="storeCard cluster-card" data-status="true" data-category="클러스터" data-rating="0" onclick="MapPanelUI.handleClusterClick(${safeStoreData})">
+          <div class="storeImageBox">
+            <img src="TableLink.png" alt="클러스터 이미지" />
+            <div class="storeStatus cluster">
+              🏪 ${store.storeCount}개 매장
+            </div>
+          </div>
+          <div class="storeInfoBox">
+            <div class="storeHeader">
+              <div class="storeName">${storeName}</div>
+              <div class="storeRating">
+                <span class="clusterInfo">운영중 ${store.openCount}개</span>
+              </div>
+            </div>
+            <div class="storeCategory">매장 집합</div>
+            <div class="storeActions">
+              <div class="actionButton primary">
+                <span class="actionIcon">🔍</span>
+                <span class="actionText">확대보기</span>
+              </div>
+            </div>
+          </div>
+          <div class="storeAddress">${storeAddress}</div>
+        </div>
+      `;
+    }
+
+    // 개별 매장 카드 렌더링
+    return `
+      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${safeStoreData})">
+        <div class="storeImageBox">
+          <img src="TableLink.png" alt="가게 이미지" />
+          <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
+            ${isOpen ? '🟢 운영중' : '🔴 운영중지'}
+          </div>
+        </div>
+        <div class="storeInfoBox">
+          <div class="storeHeader">
+            <div class="storeName">${storeName}</div>
+            <div class="storeRating">
+              <span class="ratingStars">★</span>
+              <span class="ratingValue">${rating}</span>
+              <span class="reviewCount">(${reviewCount})</span>
+            </div>
+          </div>
+          <div class="storeCategory">${storeCategory}</div>
+          <div class="storeActions">
+            <div class="actionButton primary">
+              <span class="actionIcon">🍽️</span>
+              <span class="actionText">메뉴보기</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 };
 
