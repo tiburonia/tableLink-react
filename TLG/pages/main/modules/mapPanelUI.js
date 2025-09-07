@@ -783,7 +783,7 @@ window.MapPanelUI = {
       // 응답 데이터 정규화 (data 또는 features 둘 다 지원)
       const features = data.data || data.features || [];
       console.log(`✅ 클러스터/매장 ${features.length}개 로딩 완료 (타입: ${data.type}, 레벨: ${data.meta?.level})`);
-      
+
       // 빈 결과 처리 최적화
       if (features.length === 0) {
         console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 레벨: ${level}, bbox: ${bbox}`);
@@ -856,6 +856,22 @@ window.MapPanelUI = {
 
     // 기존 컨텐츠 제거
     storeListContainer.innerHTML = '';
+
+    // 높은 지도 레벨 (클러스터 모드)일 때 안내 메시지 표시
+    if (level >= 6) {
+      storeListContainer.innerHTML = `
+        <div class="zoom-level-notice" style="text-align: center; padding: 40px 20px; color: #667eea;">
+          <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+          <div style="font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #1f2937;">지도 레벨이 너무 높습니다</div>
+          <div style="font-size: 14px; margin-bottom: 8px; color: #6b7280;">개별 매장 정보를 보려면</div>
+          <div style="font-size: 14px; margin-bottom: 20px; color: #6b7280;">지도를 더 확대해주세요</div>
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block;">
+            📍 클러스터 마커를 클릭하여 확대
+          </div>
+        </div>
+      `;
+      return;
+    }
 
     // 로딩 상태 표시
     storeListContainer.innerHTML = `

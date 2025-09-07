@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -36,7 +35,7 @@ router.get('/clusters', async (req, res) => {
 
     // 표준화된 응답 포맷 (디버깅 강화)
     console.log(`📊 API 응답 준비: ${responseType}, ${result.length}개 결과`);
-    
+
     const response = {
       success: true,
       type: responseType,

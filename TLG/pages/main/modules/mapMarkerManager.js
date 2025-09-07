@@ -234,9 +234,9 @@ window.MapMarkerManager = {
     }
   },
 
-  // 클러스터 마커 렌더링 (diff 적용)
+  // 클러스터 마커 렌더링 (최적화된 diff 적용)
   async renderClusterMarkers(features, map) {
-    console.log(`🏢 클러스터 마커 ${features.length}개 렌더링 시작`);
+    console.log(`🏢 최적화된 클러스터 마커 ${features.length}개 렌더링 시작`);
 
     if (!features || features.length === 0) {
       console.log('📍 클러스터 데이터가 없습니다');
@@ -249,7 +249,11 @@ window.MapMarkerManager = {
     for (const feature of features) {
       try {
         if (feature.kind === 'cluster') {
-          const markerKey = `cluster-${feature.lat}-${feature.lng}-${feature.store_count}`;
+          // 최적화된 마커 키 (cluster_id 활용)
+          const markerKey = feature.cluster_id 
+            ? `cluster-opt-${feature.cluster_id}-${feature.store_count}`
+            : `cluster-${feature.lat}-${feature.lng}-${feature.store_count}`;
+          
           newMarkerKeys.add(markerKey);
 
           // 기존 마커가 없으면 새로 생성
@@ -261,7 +265,7 @@ window.MapMarkerManager = {
           }
         }
       } catch (error) {
-        console.error('❌ 클러스터 마커 생성 실패:', error, feature);
+        console.error('❌ 최적화된 클러스터 마커 생성 실패:', error, feature);
       }
     }
 
@@ -280,7 +284,7 @@ window.MapMarkerManager = {
         this.currentMarkers.set(key, marker);
       }
 
-      console.log(`✅ 클러스터 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
+      console.log(`✅ 최적화된 클러스터 마커 업데이트 완료 - 추가: ${markersToAdd.length}개, 총: ${this.currentMarkers.size}개`);
     }
   },
 
@@ -428,85 +432,74 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 클러스터 마커 생성 (서버 집계 데이터 활용)
+  // 클러스터 마커 생성 (최적화된 최소 데이터 활용)
   createClusterMarker(feature, map) {
     const position = new kakao.maps.LatLng(feature.lat, feature.lng);
     const storeCount = feature.store_count || 0;
-    const openCount = feature.open_count || 0;
-    const avgRating = feature.avg_rating || 0;
-    const dominantIcon = feature.dominant_category_icon || '🍽️'; // 서버에서 계산된 대표 아이콘
 
     const clusterId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
 
+    // 매장 수에 따른 색상 결정
+    let circleColor, circleSize;
+    if (storeCount <= 5) {
+      circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+      circleSize = 50;
+    } else if (storeCount <= 15) {
+      circleColor = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
+      circleSize = 60;
+    } else {
+      circleColor = 'linear-gradient(135deg, #dc2626 0%, #f87171 100%)';
+      circleSize = 70;
+    }
+
     const content = `
-      <div id="${clusterId}" class="cluster-marker" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
-        <div class="cluster-circle">
-          <div class="cluster-icon">${dominantIcon}</div>
-          <div class="cluster-count">${storeCount}</div>
-          <div class="cluster-info">
-            <div class="cluster-rating">★ ${avgRating}</div>
-            <div class="cluster-status">${openCount}/${storeCount} 운영중</div>
-          </div>
+      <div id="${clusterId}" class="cluster-marker-optimized" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
+        <div class="cluster-circle-optimized" style="width: ${circleSize}px; height: ${circleSize}px; background: ${circleColor};">
+          <div class="cluster-icon-optimized">🏪</div>
+          <div class="cluster-count-optimized">${storeCount}</div>
         </div>
       </div>
       <style>
-        .cluster-marker {
+        .cluster-marker-optimized {
           position: relative;
           cursor: pointer;
           z-index: 300;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .cluster-marker:hover {
+        .cluster-marker-optimized:hover {
           z-index: 9999 !important;
           transform: scale(1.1);
         }
 
-        .cluster-circle {
-          width: 80px;
-          height: 80px;
+        .cluster-circle-optimized {
           border-radius: 50%;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-          border: 3px solid rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(10px);
-          padding: 6px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+          border: 2px solid rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(8px);
         }
 
-        .cluster-marker:hover .cluster-circle {
-          box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        .cluster-marker-optimized:hover .cluster-circle-optimized {
+          box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
           transform: scale(1.05);
         }
 
-        .cluster-icon {
-          font-size: 20px;
+        .cluster-icon-optimized {
+          font-size: 16px;
           margin-bottom: 2px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
 
-        .cluster-count {
-          font-size: 16px;
+        .cluster-count-optimized {
+          font-size: 14px;
           font-weight: 800;
           color: white;
           line-height: 1;
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        .cluster-info {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 1px;
-        }
-
-        .cluster-rating, .cluster-status {
-          font-size: 9px;
-          font-weight: 600;
-          color: rgba(255, 255, 255, 0.9);
-          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
         }
       </style>
     `;
