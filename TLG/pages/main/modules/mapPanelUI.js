@@ -810,12 +810,20 @@ window.MapPanelUI = {
             }
           };
         } else if (feature.kind === 'cluster') {
-          // 클러스터 데이터 변환 (서버 집계 데이터 활용)
+          // 행정구역 기반 클러스터 데이터 변환
+          const adminLevel = feature.level;
+          const adminLevelName = adminLevel === 'sido' ? '시도' : 
+                               adminLevel === 'sigungu' ? '시군구' : 
+                               adminLevel === 'emd' ? '읍면동' : '지역';
+          const adminIcon = adminLevel === 'sido' ? '🏛️' : 
+                          adminLevel === 'sigungu' ? '🏢' : 
+                          adminLevel === 'emd' ? '🏪' : '🍽️';
+
           return {
-            id: `cluster-${feature.lat}-${feature.lng}`,
-            name: `${feature.store_count}개 매장 집합`,
-            category: '매장 집합',
-            address: feature.full_address || '지역 정보 없음',
+            id: `cluster-admin-${feature.code || feature.lat}-${feature.lng}`,
+            name: `${feature.name} (${feature.store_count}개 매장)`,
+            category: `${adminLevelName} 집합`,
+            address: feature.full_address || feature.name || '지역 정보 없음',
             ratingAverage: parseFloat(feature.avg_rating) || 0.0,
             reviewCount: feature.total_reviews || 0,
             favoriteCount: 0,
@@ -825,14 +833,10 @@ window.MapPanelUI = {
             storeCount: feature.store_count || 0,
             openCount: feature.open_count || 0,
             closedCount: feature.closed_count || 0,
-            categoryBreakdown: {
-              korean: feature.korean_count || 0,
-              chinese: feature.chinese_count || 0,
-              japanese: feature.japanese_count || 0,
-              western: feature.western_count || 0,
-              cafe: feature.cafe_count || 0
-            },
-            dominantIcon: feature.dominant_category_icon || '🍽️'
+            adminCode: feature.code,
+            adminLevel: adminLevel,
+            adminLevelName: adminLevelName,
+            dominantIcon: adminIcon
           };
         }
         return null;

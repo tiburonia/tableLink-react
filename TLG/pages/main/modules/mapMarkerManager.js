@@ -432,47 +432,67 @@ window.MapMarkerManager = {
     return customOverlay;
   },
 
-  // 클러스터 마커 생성 (최적화된 최소 데이터 활용)
+  // 행정구역 기반 클러스터 마커 생성 (최적화된 최소 데이터 활용)
   createClusterMarker(feature, map) {
     const position = new kakao.maps.LatLng(feature.lat, feature.lng);
     const storeCount = feature.store_count || 0;
+    const areaName = feature.name || '지역';
+    const areaLevel = feature.level || 'unknown';
 
-    const clusterId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
+    const clusterId = `cluster-admin-${feature.code || Math.random().toString(36).substr(2, 9)}`;
 
-    // 매장 수에 따른 색상 결정
-    let circleColor, circleSize;
-    if (storeCount <= 5) {
-      circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+    // 행정구역 레벨에 따른 스타일 결정
+    let circleColor, circleSize, adminIcon;
+    
+    if (areaLevel === 'sido') {
+      circleColor = 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)'; // 보라색 (시도)
+      circleSize = 80;
+      adminIcon = '🏛️';
+    } else if (areaLevel === 'sigungu') {
+      circleColor = 'linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%)'; // 파란색 (시군구)
+      circleSize = 65;
+      adminIcon = '🏢';
+    } else if (areaLevel === 'emd') {
+      circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'; // 초록색 (읍면동)
       circleSize = 50;
-    } else if (storeCount <= 15) {
-      circleColor = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
-      circleSize = 60;
+      adminIcon = '🏪';
     } else {
-      circleColor = 'linear-gradient(135deg, #dc2626 0%, #f87171 100%)';
-      circleSize = 70;
+      // 매장 수에 따른 기존 로직 (fallback)
+      if (storeCount <= 5) {
+        circleColor = 'linear-gradient(135deg, #10b981 0%, #34d399 100%)';
+        circleSize = 50;
+      } else if (storeCount <= 15) {
+        circleColor = 'linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)';
+        circleSize = 60;
+      } else {
+        circleColor = 'linear-gradient(135deg, #dc2626 0%, #f87171 100%)';
+        circleSize = 70;
+      }
+      adminIcon = '🏪';
     }
 
     const content = `
-      <div id="${clusterId}" class="cluster-marker-optimized" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
-        <div class="cluster-circle-optimized" style="width: ${circleSize}px; height: ${circleSize}px; background: ${circleColor};">
-          <div class="cluster-icon-optimized">🏪</div>
-          <div class="cluster-count-optimized">${storeCount}</div>
+      <div id="${clusterId}" class="cluster-marker-admin" onclick="MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lng})">
+        <div class="cluster-circle-admin" style="width: ${circleSize}px; height: ${circleSize}px; background: ${circleColor};">
+          <div class="cluster-icon-admin">${adminIcon}</div>
+          <div class="cluster-count-admin">${storeCount}</div>
+          <div class="cluster-name-admin">${areaName.length > 6 ? areaName.substring(0, 5) + '…' : areaName}</div>
         </div>
       </div>
       <style>
-        .cluster-marker-optimized {
+        .cluster-marker-admin {
           position: relative;
           cursor: pointer;
           z-index: 300;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .cluster-marker-optimized:hover {
+        .cluster-marker-admin:hover {
           z-index: 9999 !important;
           transform: scale(1.1);
         }
 
-        .cluster-circle-optimized {
+        .cluster-circle-admin {
           border-radius: 50%;
           display: flex;
           flex-direction: column;
@@ -481,25 +501,38 @@ window.MapMarkerManager = {
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
           border: 2px solid rgba(255, 255, 255, 0.9);
           backdrop-filter: blur(8px);
+          position: relative;
         }
 
-        .cluster-marker-optimized:hover .cluster-circle-optimized {
+        .cluster-marker-admin:hover .cluster-circle-admin {
           box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
           transform: scale(1.05);
         }
 
-        .cluster-icon-optimized {
-          font-size: 16px;
-          margin-bottom: 2px;
+        .cluster-icon-admin {
+          font-size: 18px;
+          margin-bottom: 1px;
           filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
 
-        .cluster-count-optimized {
-          font-size: 14px;
+        .cluster-count-admin {
+          font-size: 13px;
           font-weight: 800;
           color: white;
           line-height: 1;
           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+          margin-bottom: 1px;
+        }
+
+        .cluster-name-admin {
+          font-size: 9px;
+          font-weight: 600;
+          color: white;
+          line-height: 1;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+          text-align: center;
+          max-width: 100%;
+          overflow: hidden;
         }
       </style>
     `;

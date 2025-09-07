@@ -135,77 +135,88 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
   return result.rows;
 }
 
-// 클러스터 매장 조회 - 거리 기반 + 격자 기반 하이브리드
+// 행정구역 기반 클러스터 매장 조회 (최적화된 집계)
 async function getClusteredStores(xmin, ymin, xmax, ymax, gridSizeMeters) {
+  // 줌 레벨에 따른 행정구역 단위 결정
+  const level = getLevelFromGridSize(gridSizeMeters);
+  let adminLevel, joinColumn;
+
+  if (level >= 11) {
+    adminLevel = 'sido';
+    joinColumn = 'sa.sido_code';
+  } else if (level >= 8) {
+    adminLevel = 'sigungu';  
+    joinColumn = 'sa.sigungu_code';
+  } else {
+    adminLevel = 'emd';
+    joinColumn = 'sa.emd_code';
+  }
+
+  console.log(`🏛️ 행정구역 기반 집계: ${adminLevel} 단위 (레벨: ${level})`);
+
   const query = `
     WITH viewport AS (
       SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box
     ),
-    -- 먼저 격자로 그룹핑
-    grid_clusters AS (
+    admin_clusters AS (
       SELECT
-        ST_SnapToGrid(ST_Transform(sa.geom, 3857), $5) AS grid_point,
-        COUNT(*) as store_count,
+        aa.code,
+        aa.name,
+        aa.level,
+        COUNT(sa.store_id) as store_count,
         COUNT(CASE WHEN s.is_open = true THEN 1 END) as open_count,
         COUNT(CASE WHEN s.is_open = false THEN 1 END) as closed_count,
-        ST_Centroid(ST_Collect(sa.geom)) as center_geom,
-        -- 서버에서 카테고리별 집계
-        COUNT(CASE WHEN si.category LIKE '%한식%' THEN 1 END) as korean_count,
-        COUNT(CASE WHEN si.category LIKE '%중식%' THEN 1 END) as chinese_count,
-        COUNT(CASE WHEN si.category LIKE '%일식%' THEN 1 END) as japanese_count,
-        COUNT(CASE WHEN si.category LIKE '%양식%' THEN 1 END) as western_count,
-        COUNT(CASE WHEN si.category LIKE '%카페%' THEN 1 END) as cafe_count,
-        -- 서버에서 평점 평균 계산
+        -- 행정구역 중심점 사용 (기하학적 중심)
+        ST_Y(ST_Centroid(aa.geom)) AS lat,
+        ST_X(ST_Centroid(aa.geom)) AS lng,
+        -- 최소 데이터만 집계 (성능 최적화)
         AVG(COALESCE(si.rating_average, 0))::numeric(3,1) as avg_rating,
-        SUM(COALESCE(si.review_count, 0)) as total_reviews,
-        -- 지역 정보
-        MODE() WITHIN GROUP (ORDER BY sa.sido) as main_sido,
-        MODE() WITHIN GROUP (ORDER BY sa.sigungu) as main_sigungu,
-        MODE() WITHIN GROUP (ORDER BY sa.eupmyeondong) as main_eupmyeondong
-      FROM store_addresses sa
-      JOIN stores s ON s.id = sa.store_id
+        SUM(COALESCE(si.review_count, 0)) as total_reviews
+      FROM administrative_areas aa
+      LEFT JOIN store_addresses sa ON ${joinColumn} = aa.code
+      LEFT JOIN stores s ON sa.store_id = s.id
       LEFT JOIN store_info si ON si.store_id = sa.store_id
       CROSS JOIN viewport v
-      WHERE sa.geom && v.box
-        AND ST_Intersects(sa.geom, v.box)
-      GROUP BY grid_point
-      HAVING COUNT(*) > 0
+      WHERE aa.level = $5
+        AND (aa.geom && v.box OR aa.geom IS NULL)
+        AND (sa.geom IS NULL OR ST_Intersects(sa.geom, v.box))
+      GROUP BY aa.code, aa.name, aa.level, aa.geom
+      HAVING COUNT(sa.store_id) > 0
     )
     SELECT
       'cluster' AS kind,
+      code,
+      name,
+      level,
       store_count,
       open_count,
       closed_count,
-      ST_X(center_geom) AS lng,
-      ST_Y(center_geom) AS lat,
-      -- 서버에서 클러스터 요약 정보 생성
+      lat,
+      lng,
       avg_rating,
       total_reviews,
-      korean_count,
-      chinese_count,
-      japanese_count,
-      western_count,
-      cafe_count,
-      -- 주요 카테고리 아이콘 결정
-      CASE 
-        WHEN korean_count >= ALL(ARRAY[chinese_count, japanese_count, western_count, cafe_count]) THEN '🍚'
-        WHEN chinese_count >= ALL(ARRAY[korean_count, japanese_count, western_count, cafe_count]) THEN '🥢'
-        WHEN japanese_count >= ALL(ARRAY[korean_count, chinese_count, western_count, cafe_count]) THEN '🍣'
-        WHEN western_count >= ALL(ARRAY[korean_count, chinese_count, japanese_count, cafe_count]) THEN '🍝'
-        WHEN cafe_count >= ALL(ARRAY[korean_count, chinese_count, japanese_count, western_count]) THEN '☕'
-        ELSE '🍽️'
-      END as dominant_category_icon,
-      CONCAT_WS(' ', main_sido, main_sigungu, main_eupmyeondong) as full_address,
-      main_sido as sido,
-      main_sigungu as sigungu,
-      main_eupmyeondong as eupmyeondong
-    FROM grid_clusters
+      -- 행정구역 이름을 주소로 사용
+      name as full_address
+    FROM admin_clusters
     ORDER BY store_count DESC
-    LIMIT 500
+    LIMIT 200
   `;
 
-  const result = await pool.query(query, [xmin, ymin, xmax, ymax, gridSizeMeters]);
+  const result = await pool.query(query, [xmin, ymin, xmax, ymax, adminLevel]);
   return result.rows;
+}
+
+// 그리드 크기로부터 줌 레벨 역산 (대략적)
+function getLevelFromGridSize(gridSize) {
+  if (gridSize >= 25600) return 14;
+  if (gridSize >= 12800) return 13;
+  if (gridSize >= 6400) return 12;
+  if (gridSize >= 3200) return 11;
+  if (gridSize >= 1600) return 10;
+  if (gridSize >= 800) return 9;
+  if (gridSize >= 400) return 8;
+  if (gridSize >= 200) return 7;
+  return 6;
 }
 
 module.exports = router;
