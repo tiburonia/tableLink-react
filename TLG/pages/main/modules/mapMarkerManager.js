@@ -155,23 +155,27 @@ window.MapMarkerManager = {
     }
   },
 
-  // 개별 매장 마커 생성 (API 데이터 기반)
+  // 개별 매장 마커 생성 (통합 API 데이터 기반)
   createStoreMarker(feature, map) {
-    const position = new kakao.maps.LatLng(feature.lat, feature.lon);
-    const isOpen = feature.is_open !== false;
-    const rating = feature.rating_average ? parseFloat(feature.rating_average).toFixed(1) : '0.0';
-    const categoryIcon = this.getCategoryIcon(feature.category);
+    // 통합 API는 GeoJSON-like 구조: feature.geometry.coordinates = [lng, lat]
+    const coords = feature.geometry?.coordinates || [feature.lon || feature.lng, feature.lat];
+    const position = new kakao.maps.LatLng(coords[1], coords[0]); // [lng, lat] -> (lat, lng)
+    
+    const props = feature.properties || feature; // properties 안에 실제 데이터
+    const isOpen = props.is_open !== false;
+    const rating = props.rating_average ? parseFloat(props.rating_average).toFixed(1) : '0.0';
+    const categoryIcon = this.getCategoryIcon(props.category);
 
-    const markerId = `store-${feature.store_id || Math.random().toString(36).substr(2, 9)}`;
+    const markerId = `store-${props.id || props.store_id || Math.random().toString(36).substr(2, 9)}`;
 
     const storeData = {
-      id: feature.store_id,
-      name: feature.name,
-      category: feature.category,
-      ratingAverage: feature.rating_average,
-      reviewCount: feature.review_count,
-      isOpen: feature.is_open,
-      coord: { lat: feature.lat, lng: feature.lon }
+      id: props.id || props.store_id,
+      name: props.name,
+      category: props.category,
+      ratingAverage: props.rating_average,
+      reviewCount: props.review_count,
+      isOpen: props.is_open,
+      coord: { lat: coords[1], lng: coords[0] }
     };
 
     const content = `
@@ -181,7 +185,7 @@ window.MapMarkerManager = {
             <span class="icon-emoji">${categoryIcon}</span>
           </div>
           <div class="marker-info">
-            <div class="store-name">${feature.name && feature.name.length > 8 ? feature.name.substring(0, 8) + '...' : feature.name || '매장'}</div>
+            <div class="store-name">${props.name && props.name.length > 8 ? props.name.substring(0, 8) + '...' : props.name || '매장'}</div>
             <div class="store-details">
               <span class="rating">★ ${rating}</span>
               <span class="status ${isOpen ? 'open' : 'closed'}">${isOpen ? '운영중' : '준비중'}</span>
@@ -297,16 +301,20 @@ window.MapMarkerManager = {
     return overlay;
   },
 
-  // 클러스터 마커 생성 (API 데이터 기반)
+  // 클러스터 마커 생성 (통합 API 데이터 기반)
   createClusterMarker(feature, map) {
-    const position = new kakao.maps.LatLng(feature.lat, feature.lon);
-    const totalCount = feature.total_count || 0;
-    const openCount = feature.open_count || 0;
+    // 통합 API 클러스터 구조: feature.geometry.coordinates = [lng, lat]
+    const coords = feature.geometry?.coordinates || [feature.lon || feature.lng, feature.lat];
+    const position = new kakao.maps.LatLng(coords[1], coords[0]); // [lng, lat] -> (lat, lng)
+    
+    const props = feature.properties || feature; // properties 안에 집계 데이터
+    const totalCount = props.count || props.total_count || props.cluster_count || 0;
+    const openCount = props.open_count || Math.floor(totalCount * 0.8); // 기본값: 80% 운영 가정
 
     const markerId = `cluster-${Math.random().toString(36).substr(2, 9)}`;
 
     const content = `
-      <div id="${markerId}" class="clean-cluster-marker" onclick="window.MapMarkerManager.zoomToCluster(${feature.lat}, ${feature.lon})">
+      <div id="${markerId}" class="clean-cluster-marker" onclick="window.MapMarkerManager.zoomToCluster(${coords[1]}, ${coords[0]})">
         <div class="cluster-card">
           <div class="cluster-header">
             <span class="region-name">클러스터</span>
