@@ -1,5 +1,5 @@
 
-const pool = require('../../shared/config/database');
+const { Pool } = require('pg');
 
 /**
  * PostGIS 확장 기능 완전 제거
@@ -8,10 +8,27 @@ const pool = require('../../shared/config/database');
  */
 
 async function removePostGISExtension() {
+  // DATABASE_URL 확인
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL 환경변수가 설정되지 않았습니다.');
+  }
+
+  console.log('📋 DATABASE_URL 확인:', databaseUrl.replace(/\/\/.*@/, '//***:***@'));
+  
+  const pool = new Pool({
+    connectionString: databaseUrl
+  });
+
   const client = await pool.connect();
   
   try {
     console.log('🗑️ PostGIS 확장 기능 완전 제거 시작...');
+    
+    // 권한 확인
+    console.log('🔐 현재 사용자 권한 확인...');
+    const userCheck = await client.query('SELECT current_user, session_user');
+    console.log(`  👤 현재 사용자: ${userCheck.rows[0].current_user}`);
     
     await client.query('BEGIN');
     
@@ -52,10 +69,25 @@ async function removePostGISExtension() {
     console.log('🔧 3단계: PostGIS 확장 기능 제거...');
     
     try {
-      await client.query('DROP EXTENSION IF EXISTS postgis CASCADE');
-      console.log('  ✅ PostGIS 확장 기능 제거 완료');
+      // 먼저 확장이 존재하는지 확인
+      const extensionCheck = await client.query(`
+        SELECT * FROM pg_extension WHERE extname = 'postgis'
+      `);
+      
+      if (extensionCheck.rows.length > 0) {
+        console.log('  📦 PostGIS 확장 발견, 제거 시도...');
+        await client.query('DROP EXTENSION IF EXISTS postgis CASCADE');
+        console.log('  ✅ PostGIS 확장 기능 제거 완료');
+      } else {
+        console.log('  ℹ️ PostGIS 확장이 설치되어 있지 않음');
+      }
     } catch (error) {
-      console.log(`  ⚠️ PostGIS 확장 기능 제거 실패: ${error.message}`);
+      if (error.message.includes('must be owner') || error.message.includes('permission denied')) {
+        console.log(`  ⚠️ 권한 부족으로 PostGIS 확장 제거 불가: ${error.message}`);
+        console.log('  💡 PostGIS 관련 객체만 수동으로 정리합니다...');
+      } else {
+        console.log(`  ⚠️ PostGIS 확장 기능 제거 실패: ${error.message}`);
+      }
     }
     
     // 4. PostGIS 관련 스키마 정리
@@ -82,10 +114,16 @@ async function removePostGISExtension() {
       
       for (const obj of postgisObjects.rows) {
         try {
-          await client.query(`DROP ${obj.routine_type} IF EXISTS ${obj.routine_name}() CASCADE`);
-          console.log(`  ✅ ${obj.routine_type} ${obj.routine_name}() 삭제`);
+          if (obj.routine_type === 'FUNCTION') {
+            await client.query(`DROP FUNCTION IF EXISTS ${obj.routine_name}() CASCADE`);
+          } else {
+            await client.query(`DROP ${obj.routine_type} IF EXISTS ${obj.routine_name} CASCADE`);
+          }
+          console.log(`  ✅ ${obj.routine_type} ${obj.routine_name} 삭제`);
         } catch (error) {
-          console.log(`  ⚠️ ${obj.routine_name} 삭제 실패: ${error.message}`);
+          if (!error.message.includes('required by extension')) {
+            console.log(`  ⚠️ ${obj.routine_name} 삭제 실패: ${error.message}`);
+          }
         }
       }
     } catch (error) {
@@ -153,6 +191,7 @@ async function removePostGISExtension() {
     throw error;
   } finally {
     client.release();
+    await pool.end();
   }
 }
 
