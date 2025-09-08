@@ -1,6 +1,6 @@
 
 /**
- * TLL 주문 화면 렌더링 (현재 스키마에 맞게 완전 재구현)
+ * TLL 주문 화면 렌더링 (TLG 비율 390px × 760px 최적화)
  */
 window.renderOrderScreen = async function(store, tableName, tableNumber) {
   try {
@@ -69,7 +69,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
   }
 };
 
-// 주문 화면 HTML 렌더링
+// 주문 화면 HTML 렌더링 (TLG 비율 최적화)
 function renderOrderHTML(store, tableName, tableNumber, menuByCategory) {
   const main = document.getElementById('main');
   if (!main) {
@@ -78,62 +78,67 @@ function renderOrderHTML(store, tableName, tableNumber, menuByCategory) {
   }
 
   main.innerHTML = `
-    <div class="tll-order-container">
-      <!-- 헤더 -->
-      <div class="order-header">
+    <div class="tll-order-screen">
+      <!-- 헤더 (고정) -->
+      <div class="tll-header">
         <button class="back-btn" onclick="TLL()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 12H5m7-7l-7 7 7 7"/>
           </svg>
-          뒤로가기
+          뒤로
         </button>
         <div class="store-info">
           <h1>${store.name}</h1>
-          <p class="table-info">${tableName}</p>
+          <p>${tableName}</p>
+        </div>
+        <div class="cart-indicator" onclick="toggleCart()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M7 18c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM1 2v2h2l3.6 7.59-1.35 2.41C5.08 14.42 5.37 15 6 15h12v-2H6l1.1-2h7.45c.75 0 1.42-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
+          </svg>
+          <span id="cartCount">0</span>
         </div>
       </div>
 
-      <!-- 메인 컨텐츠 -->
-      <div class="order-main">
-        <!-- 메뉴 섹션 -->
-        <div class="menu-section">
-          <div class="menu-header">
-            <h2>메뉴</h2>
-            <div class="category-tabs" id="categoryTabs">
-              ${renderCategoryTabs(menuByCategory)}
-            </div>
-          </div>
-          <div class="menu-content" id="menuContent">
-            ${renderMenuContent(menuByCategory)}
-          </div>
+      <!-- 메뉴 컨텐츠 (스크롤) -->
+      <div class="tll-content">
+        <!-- 카테고리 탭 -->
+        <div class="category-tabs" id="categoryTabs">
+          ${renderCategoryTabs(menuByCategory)}
         </div>
 
-        <!-- 장바구니 섹션 -->
-        <div class="cart-section">
+        <!-- 메뉴 그리드 -->
+        <div class="menu-container" id="menuContainer">
+          ${renderMenuContent(menuByCategory)}
+        </div>
+      </div>
+
+      <!-- 장바구니 패널 (하단 슬라이드) -->
+      <div class="cart-panel" id="cartPanel">
+        <div class="cart-handle" onclick="toggleCart()">
+          <div class="handle-bar"></div>
+        </div>
+        <div class="cart-content" id="cartContent">
           <div class="cart-header">
-            <h2>주문 내역</h2>
-            <span class="cart-count" id="cartCount">0</span>
+            <h3>주문 내역</h3>
+            <span class="cart-total" id="cartTotal">0원</span>
           </div>
-          <div class="cart-content" id="cartContent">
+          <div class="cart-items" id="cartItems">
             <div class="empty-cart">
               <div class="empty-icon">🛒</div>
               <p>메뉴를 선택해주세요</p>
             </div>
           </div>
-          <div class="cart-footer">
-            <div class="total-price">
-              <span>총 금액</span>
-              <strong id="totalPrice">0원</strong>
-            </div>
-            <button class="order-btn" id="orderBtn" disabled onclick="proceedToPayment()">
-              주문하기
-            </button>
-          </div>
+          <button class="order-btn" id="orderBtn" disabled onclick="proceedToPayment()">
+            주문하기
+          </button>
         </div>
       </div>
+
+      <!-- 오버레이 -->
+      <div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
     </div>
 
-    ${getOrderScreenStyles()}
+    ${getTLLOrderStyles()}
   `;
 }
 
@@ -161,16 +166,12 @@ function renderMenuContent(menuByCategory) {
       <div class="menu-grid">
         ${items.map(item => `
           <div class="menu-item" onclick="addToCart(${item.id}, '${escapeHtml(item.name)}', ${item.price})">
-            <div class="menu-item-content">
-              <h3 class="menu-name">${escapeHtml(item.name)}</h3>
-              <p class="menu-description">${escapeHtml(item.description)}</p>
+            <div class="menu-info">
+              <h4>${escapeHtml(item.name)}</h4>
+              <p>${escapeHtml(item.description || '')}</p>
               <div class="menu-price">${item.price.toLocaleString()}원</div>
             </div>
-            <button class="add-btn">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 5v14m7-7H5"/>
-              </svg>
-            </button>
+            <button class="add-btn">+</button>
           </div>
         `).join('')}
       </div>
@@ -211,6 +212,30 @@ window.switchCategory = function(category) {
   });
 };
 
+// 장바구니 토글
+window.toggleCart = function() {
+  const cartPanel = document.getElementById('cartPanel');
+  const cartOverlay = document.getElementById('cartOverlay');
+  
+  if (cartPanel.classList.contains('open')) {
+    closeCart();
+  } else {
+    cartPanel.classList.add('open');
+    cartOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+};
+
+// 장바구니 닫기
+window.closeCart = function() {
+  const cartPanel = document.getElementById('cartPanel');
+  const cartOverlay = document.getElementById('cartOverlay');
+  
+  cartPanel.classList.remove('open');
+  cartOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+};
+
 // 장바구니에 추가
 window.addToCart = function(menuId, menuName, price) {
   if (!window.currentTLLOrder) return;
@@ -229,25 +254,31 @@ window.addToCart = function(menuId, menuName, price) {
   }
 
   updateCartDisplay();
+  
+  // 장바구니 자동 열기 (첫 번째 아이템 추가시)
+  if (window.currentTLLOrder.cart.length === 1 && window.currentTLLOrder.cart[0].quantity === 1) {
+    setTimeout(() => toggleCart(), 300);
+  }
+  
   console.log('🛒 장바구니에 추가:', menuName);
 };
 
 // 장바구니 표시 업데이트
 function updateCartDisplay() {
-  const cartContent = document.getElementById('cartContent');
   const cartCount = document.getElementById('cartCount');
-  const totalPrice = document.getElementById('totalPrice');
+  const cartTotal = document.getElementById('cartTotal');
+  const cartItems = document.getElementById('cartItems');
   const orderBtn = document.getElementById('orderBtn');
 
   if (!window.currentTLLOrder || window.currentTLLOrder.cart.length === 0) {
-    cartContent.innerHTML = `
+    cartItems.innerHTML = `
       <div class="empty-cart">
         <div class="empty-icon">🛒</div>
         <p>메뉴를 선택해주세요</p>
       </div>
     `;
     cartCount.textContent = '0';
-    totalPrice.textContent = '0원';
+    cartTotal.textContent = '0원';
     orderBtn.disabled = true;
     return;
   }
@@ -262,22 +293,22 @@ function updateCartDisplay() {
     return `
       <div class="cart-item">
         <div class="item-info">
-          <h4 class="item-name">${escapeHtml(item.name)}</h4>
-          <p class="item-price">${item.price.toLocaleString()}원</p>
+          <h4>${escapeHtml(item.name)}</h4>
+          <div class="item-price">${item.price.toLocaleString()}원</div>
         </div>
         <div class="quantity-controls">
-          <button class="qty-btn minus" onclick="updateQuantity(${item.id}, -1)">-</button>
+          <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">−</button>
           <span class="quantity">${item.quantity}</span>
-          <button class="qty-btn plus" onclick="updateQuantity(${item.id}, 1)">+</button>
+          <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
           <button class="remove-btn" onclick="removeFromCart(${item.id})">×</button>
         </div>
       </div>
     `;
   }).join('');
 
-  cartContent.innerHTML = cartHTML;
+  cartItems.innerHTML = cartHTML;
   cartCount.textContent = totalItems.toString();
-  totalPrice.textContent = total.toLocaleString() + '원';
+  cartTotal.textContent = total.toLocaleString() + '원';
   orderBtn.disabled = false;
 }
 
@@ -328,7 +359,7 @@ window.proceedToPayment = async function() {
       total: totalAmount 
     });
 
-    // 결제 화면으로 이동 (renderPay 호출)
+    // 결제 화면으로 이동
     if (typeof renderPay === 'function') {
       // 임시 체크 데이터 생성 (기존 시스템과 호환)
       const tempCheckData = {
@@ -363,7 +394,6 @@ window.proceedToPayment = async function() {
 
 // 이벤트 설정
 function setupOrderEvents() {
-  // 이미 window 객체에 함수들이 등록되어 있으므로 추가 설정 불필요
   console.log('✅ TLL 주문 이벤트 설정 완료');
 }
 
@@ -415,116 +445,153 @@ function getUserInfo() {
   }
 }
 
-// 스타일
-function getOrderScreenStyles() {
+// TLG 비율 최적화 스타일
+function getTLLOrderStyles() {
   return `
     <style>
-      .tll-order-container {
-        min-height: 100vh;
+      .tll-order-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        max-width: 390px;
+        max-height: 760px;
+        margin: 0 auto;
         background: #f8f9fa;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+        z-index: 1000;
       }
 
-      .order-header {
-        background: white;
-        padding: 16px 20px;
-        border-bottom: 1px solid #e9ecef;
-        display: flex;
-        align-items: center;
-        gap: 16px;
+      /* 헤더 */
+      .tll-header {
         position: sticky;
         top: 0;
         z-index: 100;
+        background: white;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 48px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       }
 
       .back-btn {
         background: none;
         border: none;
-        color: #6c757d;
+        color: #666;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 4px;
+        padding: 8px;
+        border-radius: 6px;
         font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      .back-btn:hover {
+        background: #f1f3f5;
+      }
+
+      .store-info {
+        flex: 1;
+        text-align: center;
+        margin: 0 16px;
+      }
+
+      .store-info h1 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #333;
+        line-height: 1.2;
+      }
+
+      .store-info p {
+        margin: 2px 0 0 0;
+        font-size: 12px;
+        color: #666;
+      }
+
+      .cart-indicator {
+        position: relative;
+        cursor: pointer;
         padding: 8px;
         border-radius: 6px;
         transition: background 0.2s;
       }
 
-      .back-btn:hover {
-        background: #f8f9fa;
+      .cart-indicator:hover {
+        background: #f1f3f5;
       }
 
-      .store-info h1 {
-        margin: 0;
-        font-size: 20px;
-        color: #333;
+      .cart-indicator span {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        background: #ff4757;
+        color: white;
+        border-radius: 10px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 600;
+        min-width: 16px;
+        text-align: center;
+        line-height: 1.2;
       }
 
-      .table-info {
-        margin: 0;
-        color: #666;
-        font-size: 14px;
-      }
-
-      .order-main {
+      /* 컨텐츠 영역 */
+      .tll-content {
         flex: 1;
-        display: grid;
-        grid-template-columns: 1fr 400px;
-        gap: 20px;
-        padding: 20px;
-        max-width: 1400px;
-        margin: 0 auto;
-        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
 
-      .menu-section {
-        background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      }
-
-      .menu-header {
-        margin-bottom: 24px;
-      }
-
-      .menu-header h2 {
-        margin: 0 0 16px 0;
-        font-size: 24px;
-        color: #333;
-      }
-
+      /* 카테고리 탭 */
       .category-tabs {
+        padding: 8px 16px;
+        background: white;
+        border-bottom: 1px solid #f1f3f5;
         display: flex;
         gap: 8px;
-        flex-wrap: wrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      .category-tabs::-webkit-scrollbar {
+        display: none;
       }
 
       .category-tab {
         background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 20px;
-        padding: 8px 16px;
-        cursor: pointer;
-        font-size: 14px;
+        border: none;
+        border-radius: 16px;
+        padding: 6px 12px;
+        font-size: 12px;
         color: #666;
+        cursor: pointer;
         transition: all 0.2s;
+        white-space: nowrap;
+        flex-shrink: 0;
       }
 
       .category-tab.active {
         background: #007bff;
-        border-color: #007bff;
         color: white;
       }
 
-      .category-tab:hover:not(.active) {
-        background: #e9ecef;
-      }
-
-      .menu-content {
-        position: relative;
+      /* 메뉴 컨테이너 */
+      .menu-container {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
       }
 
       .menu-category {
@@ -536,49 +603,54 @@ function getOrderScreenStyles() {
       }
 
       .menu-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
       .menu-item {
-        border: 2px solid #e9ecef;
+        background: white;
+        border: 1px solid #e9ecef;
         border-radius: 12px;
-        padding: 20px;
+        padding: 14px;
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: white;
+        gap: 12px;
       }
 
       .menu-item:hover {
         border-color: #007bff;
-        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
-        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,123,255,0.1);
       }
 
-      .menu-item-content {
+      .menu-info {
         flex: 1;
+        min-width: 0;
       }
 
-      .menu-name {
-        margin: 0 0 8px 0;
-        font-size: 16px;
+      .menu-info h4 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
         font-weight: 600;
         color: #333;
+        line-height: 1.3;
       }
 
-      .menu-description {
-        margin: 0 0 12px 0;
-        font-size: 14px;
+      .menu-info p {
+        margin: 0 0 6px 0;
+        font-size: 12px;
         color: #666;
-        line-height: 1.4;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .menu-price {
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 700;
         color: #007bff;
       }
@@ -588,59 +660,93 @@ function getOrderScreenStyles() {
         color: white;
         border: none;
         border-radius: 50%;
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: all 0.2s;
-        margin-left: 16px;
+        font-size: 16px;
+        flex-shrink: 0;
       }
 
       .add-btn:hover {
         background: #0056b3;
-        transform: scale(1.1);
+        transform: scale(1.05);
       }
 
-      .cart-section {
+      /* 장바구니 패널 */
+      .cart-panel {
+        position: fixed;
+        bottom: -100%;
+        left: 0;
+        width: 100%;
+        max-width: 390px;
+        height: 60%;
         background: white;
-        border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -8px 32px rgba(0,0,0,0.15);
+        transition: bottom 0.3s ease;
+        z-index: 1010;
         display: flex;
         flex-direction: column;
-        height: fit-content;
-        position: sticky;
-        top: 100px;
+      }
+
+      .cart-panel.open {
+        bottom: 0;
+      }
+
+      .cart-handle {
+        padding: 8px 0;
+        display: flex;
+        justify-content: center;
+        cursor: pointer;
+        background: white;
+        border-radius: 16px 16px 0 0;
+      }
+
+      .handle-bar {
+        width: 40px;
+        height: 4px;
+        background: #dee2e6;
+        border-radius: 2px;
+      }
+
+      .cart-content {
+        flex: 1;
+        padding: 0 16px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
       }
 
       .cart-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f1f3f5;
+        margin-bottom: 12px;
       }
 
-      .cart-header h2 {
+      .cart-header h3 {
         margin: 0;
-        font-size: 20px;
+        font-size: 16px;
+        font-weight: 600;
         color: #333;
       }
 
-      .cart-count {
-        background: #007bff;
-        color: white;
-        border-radius: 12px;
-        padding: 4px 12px;
-        font-size: 14px;
-        font-weight: 600;
+      .cart-total {
+        font-size: 16px;
+        font-weight: 700;
+        color: #007bff;
       }
 
-      .cart-content {
+      .cart-items {
         flex: 1;
-        min-height: 200px;
-        margin-bottom: 20px;
+        overflow-y: auto;
+        margin-bottom: 16px;
       }
 
       .empty-cart {
@@ -648,41 +754,37 @@ function getOrderScreenStyles() {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 200px;
+        height: 120px;
         color: #999;
         text-align: center;
       }
 
       .empty-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
+        font-size: 32px;
+        margin-bottom: 8px;
       }
 
       .cart-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 16px 0;
-        border-bottom: 1px solid #f1f3f5;
+        padding: 12px 0;
+        border-bottom: 1px solid #f8f9fa;
       }
 
       .cart-item:last-child {
         border-bottom: none;
       }
 
-      .item-info {
-        flex: 1;
-      }
-
-      .item-name {
+      .item-info h4 {
         margin: 0 0 4px 0;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: #333;
+        line-height: 1.3;
       }
 
       .item-price {
-        margin: 0;
         font-size: 12px;
         color: #666;
       }
@@ -694,33 +796,33 @@ function getOrderScreenStyles() {
       }
 
       .qty-btn {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         border: 1px solid #dee2e6;
-        background: #f8f9fa;
+        background: white;
         border-radius: 4px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
+        font-size: 12px;
         transition: all 0.2s;
       }
 
       .qty-btn:hover {
-        background: #e9ecef;
+        background: #f8f9fa;
       }
 
       .quantity {
-        min-width: 24px;
+        min-width: 20px;
         text-align: center;
+        font-size: 12px;
         font-weight: 600;
-        font-size: 14px;
       }
 
       .remove-btn {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         background: #dc3545;
         color: white;
         border: none;
@@ -729,31 +831,12 @@ function getOrderScreenStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
-        margin-left: 8px;
+        font-size: 14px;
         transition: all 0.2s;
       }
 
       .remove-btn:hover {
         background: #c82333;
-      }
-
-      .cart-footer {
-        border-top: 1px solid #e9ecef;
-        padding-top: 20px;
-      }
-
-      .total-price {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        font-size: 18px;
-      }
-
-      .total-price strong {
-        color: #007bff;
-        font-size: 20px;
       }
 
       .order-btn {
@@ -762,55 +845,64 @@ function getOrderScreenStyles() {
         color: white;
         border: none;
         border-radius: 8px;
-        padding: 16px;
-        font-size: 16px;
+        padding: 14px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
+        margin-top: auto;
       }
 
       .order-btn:hover:not(:disabled) {
         background: #218838;
-        transform: translateY(-1px);
       }
 
       .order-btn:disabled {
         background: #6c757d;
         cursor: not-allowed;
-        transform: none;
       }
 
-      @media (max-width: 1024px) {
-        .order-main {
-          grid-template-columns: 1fr;
-          gap: 16px;
-        }
+      /* 오버레이 */
+      .cart-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.3);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 1005;
+      }
 
-        .cart-section {
-          position: static;
+      .cart-overlay.open {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* 반응형 (TLG 비율 유지) */
+      @media (max-height: 600px) {
+        .cart-panel {
+          height: 70%;
         }
       }
 
-      @media (max-width: 768px) {
-        .order-main {
-          padding: 16px;
+      @media (max-width: 360px) {
+        .tll-header {
+          padding: 10px 12px;
         }
-
-        .menu-section,
-        .cart-section {
-          padding: 16px;
+        
+        .menu-container {
+          padding: 12px;
         }
-
-        .menu-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .menu-item {
-          padding: 16px;
+        
+        .cart-content {
+          padding: 0 12px 12px 12px;
         }
       }
     </style>
   `;
 }
 
-console.log('✅ TLL 주문 화면 모듈 로드 완료 (새 버전)');
+console.log('✅ TLL 주문 화면 모듈 로드 완료 (TLG 비율 최적화)');
