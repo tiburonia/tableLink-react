@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db/pool');
+const pool  = require('../db/pool');
 const { v4: uuidv4 } = require('uuid');
 
 // 매장 기본 정보 조회 API
