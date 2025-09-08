@@ -1,4 +1,4 @@
-replit_final_file>
+// TLL (TableLink Live) 주문 시스템
 window.TLL = async function TLL(preselectedStore = null) {
   // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
@@ -943,4 +943,3 @@ async function initApp() {
     console.error('❌ TLL 함수 정의를 찾을 수 없음');
   }
 })();
-</replit_final_file>

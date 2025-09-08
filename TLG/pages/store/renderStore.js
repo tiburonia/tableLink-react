@@ -281,32 +281,13 @@ function setupEventListeners(store) {
             console.log('✅ TLL 함수 발견, 실행 중...');
             tllFunction(store); // 현재 매장 정보를 전달
           } else {
-            console.warn('⚠️ TLL 함수를 찾을 수 없음, 스크립트 재로딩 시도...');
+            console.warn('⚠️ TLL 함수를 찾을 수 없음, 페이지 새로고침 권장');
             
-            // TLL 스크립트 재로딩 시도
-            const existingScript = document.querySelector('script[src*="TLL.js"]');
-            if (existingScript) {
-              existingScript.remove();
+            if (confirm('QR 주문 시스템을 사용하시려면 페이지를 새로고침해야 합니다. 새로고침하시겠습니까?')) {
+              window.location.reload();
+            } else {
+              console.log('ℹ️ 사용자가 새로고침을 취소했습니다.');
             }
-            
-            const script = document.createElement('script');
-            script.src = 'TLG/utils/TLL.js';
-            script.onload = () => {
-              console.log('🔄 TLL.js 재로딩 완료');
-              setTimeout(() => {
-                if (typeof window.TLL === 'function') {
-                  window.TLL(store);
-                } else {
-                  console.error('❌ TLL.js 재로딩 후에도 함수를 찾을 수 없음');
-                  alert('QR 주문 시스템을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
-                }
-              }, 100);
-            };
-            script.onerror = () => {
-              console.error('❌ TLL.js 재로딩 실패');
-              alert('QR 주문 시스템을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
-            };
-            document.head.appendChild(script);
           }
         } catch (tllError) {
           console.error('❌ TLL 실행 중 오류:', tllError);
