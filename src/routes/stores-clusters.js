@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db/pool');
+const pool = require('../db/pool');
 
 // 개별 매장만 반환하는 단순화된 API
 router.get('/clusters', async (req, res) => {
