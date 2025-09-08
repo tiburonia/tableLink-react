@@ -425,7 +425,7 @@ window.proceedToPayment = async function() {
     // 전역 변수 존재 확인
     if (!window.currentTLLOrder) {
       console.error('❌ currentTLLOrder가 존재하지 않습니다');
-      
+
       // currentTLLCart 확인 (다른 주문 시스템과의 혼동 방지)
       if (window.currentTLLCart && window.currentTLLCart.cart && window.currentTLLCart.cart.length > 0) {
         console.log('🔄 currentTLLCart 발견, currentTLLOrder로 변환 시도');
@@ -498,23 +498,25 @@ window.proceedToPayment = async function() {
 
     // 결제 화면으로 이동
     if (typeof renderPay === 'function') {
-      // 임시 체크 데이터 생성 (기존 시스템과 호환)
-      const tempCheckData = {
-        id: `TLL_${Date.now()}`,
-        storeId: window.currentTLLOrder.storeId,
-        storeName: window.currentTLLOrder.storeName,
-        tableName: window.currentTLLOrder.tableName,
-        tableNumber: window.currentTLLOrder.tableNumber,
-        items: window.currentTLLOrder.cart,
-        totalAmount: totalAmount,
-        source: 'TLL'
+      // renderPay 함수가 기대하는 형식으로 데이터 준비
+      const currentOrder = {};
+      window.currentTLLOrder.cart.forEach(item => {
+        currentOrder[item.name] = item.quantity;
+      });
+
+      const store = {
+        id: window.currentTLLOrder.storeId,
+        name: window.currentTLLOrder.storeName,
+        menu: window.currentTLLOrder.cart.map(item => ({
+          name: item.name,
+          price: item.price
+        }))
       };
 
-      // 세션에 임시 저장
-      sessionStorage.setItem('tllOrderData', JSON.stringify(tempCheckData));
+      const tableNum = window.currentTLLOrder.tableNumber;
 
       // 결제 화면으로 이동
-      renderPay(tempCheckData);
+      renderPay(currentOrder, store, tableNum);
     } else {
       throw new Error('결제 시스템을 로드할 수 없습니다.');
     }
