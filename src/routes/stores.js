@@ -4,7 +4,7 @@ const { pool } = require('../db/pool');
 const { v4: uuidv4 } = require('uuid');
 
 // 매장 메뉴 조회 API (새 스키마 기반)
-router.get('/:storeId/menu', async (req, res) => {
+router.get('/:storeId/menu/tll', async (req, res) => {
   try {
     const { storeId } = req.params;
 

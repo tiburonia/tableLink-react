@@ -24,7 +24,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
     let menuData = [];
     try {
       console.log('🔄 매장 메뉴 데이터 로드 중...');
-      const menuResponse = await fetch(`/api/stores/${store.id}/menu`);
+      const menuResponse = await fetch(`/api/stores/${store.id}/menu/tll`);
       if (menuResponse.ok) {
         const menuResult = await menuResponse.json();
         console.log('📋 메뉴 API 응답:', menuResult);
