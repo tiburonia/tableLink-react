@@ -737,13 +737,28 @@ window.MapPanelUI = {
       // 개별 매장 데이터 변환
       const stores = features.map(feature => {
         if (feature.kind === 'individual') {
-          const storeId = feature.store_id || feature.id;
+          // ID 우선순위: feature.id > feature.store_id
+          const storeId = feature.id || feature.store_id;
           if (!storeId) {
-            console.warn('⚠️ 매장 ID가 없는 데이터:', feature);
+            console.warn('⚠️ 매장 ID가 없는 데이터:', {
+              feature,
+              hasId: !!feature.id,
+              hasStoreId: !!feature.store_id,
+              keys: Object.keys(feature)
+            });
             return null;
           }
+          
+          console.log('✅ 매장 데이터 변환:', { 
+            originalId: feature.id,
+            originalStoreId: feature.store_id, 
+            finalId: storeId,
+            name: feature.name 
+          });
+          
           return {
             id: storeId,
+            store_id: storeId,  // 호환성을 위해 store_id도 설정
             name: feature.name || '매장명 없음',
             category: feature.category || '기타',
             address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
@@ -897,11 +912,30 @@ window.MapPanelUI = {
     const storeAddress = store?.address || '주소 정보 없음';
     const isOpen = store?.isOpen !== false;
 
-    // 매장 데이터 정규화 - id 속성 확인 및 설정
+    // ID 검증 및 정규화
+    const storeId = store.id || store.store_id;
+    if (!storeId) {
+      console.error('❌ 매장 카드 생성 실패: ID가 없음', {
+        store,
+        hasId: !!store.id,
+        hasStoreId: !!store.store_id,
+        keys: Object.keys(store || {})
+      });
+      return '';  // 빈 문자열 반환하여 카드 생성하지 않음
+    }
+
+    // 매장 데이터 정규화 - id 속성 확실히 설정
     const normalizedStore = {
       ...store,
-      id: store.id || store.store_id, // store_id를 id로 매핑
+      id: storeId,
+      store_id: storeId  // 호환성을 위해 둘 다 설정
     };
+
+    console.log('🏪 매장 카드 생성:', { 
+      name: storeName, 
+      id: storeId,
+      originalData: { hasId: !!store.id, hasStoreId: !!store.store_id }
+    });
 
     // renderStore 함수 호출을 위한 안전한 데이터 처리
     const storeDataForRender = JSON.stringify(normalizedStore).replace(/"/g, '&quot;');
