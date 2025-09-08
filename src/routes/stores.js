@@ -8,6 +8,15 @@ router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
+    // ID 유효성 검사
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID입니다'
+      });
+    }
+
     console.log(`🏪 매장 ${storeId} 기본 정보 조회 요청`);
 
     // 매장 기본 정보 조회
@@ -29,7 +38,7 @@ router.get('/:storeId', async (req, res) => {
       LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE s.id = $1
-    `, [storeId]);
+    `, [numericStoreId]);
 
     if (storeResult.rows.length === 0) {
       return res.status(404).json({
@@ -61,10 +70,19 @@ router.get('/:storeId/menu/tll', async (req, res) => {
   try {
     const { storeId } = req.params;
 
+    // ID 유효성 검사
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID입니다'
+      });
+    }
+
     console.log(`🔍 매장 ${storeId} 메뉴 조회 요청`);
 
     // 매장 존재 확인
-    const storeResult = await pool.query('SELECT id, name FROM stores WHERE id = $1', [storeId]);
+    const storeResult = await pool.query('SELECT id, name FROM stores WHERE id = $1', [numericStoreId]);
     if (storeResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -83,7 +101,7 @@ router.get('/:storeId/menu/tll', async (req, res) => {
       FROM store_menu 
       WHERE store_id = $1
       ORDER BY id
-    `, [storeId]);
+    `, [numericStoreId]);
 
     console.log(`✅ 매장 ${storeId} 메뉴 ${menuResult.rows.length}개 조회 완료`);
 
