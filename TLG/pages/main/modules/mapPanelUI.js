@@ -1,4 +1,3 @@
-
 // 지도 패널 UI 렌더링 관리자 (개별 매장 전용)
 window.MapPanelUI = {
   renderPanelHTML() {
@@ -712,7 +711,7 @@ window.MapPanelUI = {
 
       console.log(`📱 개별 매장 API 호출: level=${level}, bbox=${bbox}`);
 
-      const response = await fetch(`/api/stores/clusters?${params}`);
+      const response = await fetch(`/api/clusters/clusters?${params}`);
 
       if (!response.ok) {
         const errorText = await response.text();

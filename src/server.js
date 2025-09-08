@@ -96,12 +96,11 @@ try {
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
-  app.use('/api/stores', storesClustersRouter); // 클러스터 API 경로 추가
+  app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로 변경
 
   // 라우터 등록
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
-  app.use('/api/stores', require('./routes/stores-clusters')); // 새 클러스터 API 추가
   app.use('/api/users', usersRouter);
   app.use('/api/orders', ordersRoutes);
   app.use('/api/reviews', reviewRoutes);

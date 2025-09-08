@@ -109,7 +109,7 @@ window.MapMarkerManager = {
     });
 
     const cacheKey = params.toString();
-    console.log(`📍 API 요청: /api/stores/clusters?${cacheKey}`);
+    console.log(`📍 API 요청: /api/clusters/clusters?${cacheKey}`);
 
     // 캐시 확인 (1분간 유효)
     if (this.requestCache.has(cacheKey)) {
@@ -121,7 +121,7 @@ window.MapMarkerManager = {
     }
 
     try {
-      const response = await fetch(`/api/stores/clusters?${params}`);
+      const response = await fetch(`/api/clusters/clusters?${params}`);
       const data = await response.json();
 
       // 성공한 응답만 캐시
