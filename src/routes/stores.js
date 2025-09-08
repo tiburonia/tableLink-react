@@ -132,4 +132,94 @@ router.get('/search/:query', async (req, res) => {
   }
 });
 
+/**
+ * [GET] /stores/get-location-info - 위치 기반 주소 정보 조회
+ */
+router.get('/get-location-info', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({
+        success: false,
+        error: '위도(lat)와 경도(lng) 파라미터가 필요합니다'
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+
+    if (isNaN(latitude) || isNaN(longitude)) {
+      return res.status(400).json({
+        success: false,
+        error: '올바른 위도, 경도 값을 입력해주세요'
+      });
+    }
+
+    console.log(`📍 위치 정보 조회: (${latitude}, ${longitude})`);
+
+    // PostGIS를 이용한 가장 가까운 매장의 주소 정보 조회
+    const locationResult = await pool.query(`
+      SELECT 
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong,
+        sa.road_address,
+        sa.jibun_address,
+        s.name as store_name,
+        ST_Distance(
+          ST_GeogFromText('POINT(' || $2 || ' ' || $1 || ')'),
+          ST_GeogFromText('POINT(' || sa.longitude || ' ' || sa.latitude || ')')
+        ) as distance
+      FROM store_addresses sa
+      JOIN stores s ON sa.store_id = s.id
+      WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
+      ORDER BY distance
+      LIMIT 1
+    `, [latitude, longitude]);
+
+    if (locationResult.rows.length === 0) {
+      // 매장이 없는 경우 기본 서울 정보 반환
+      return res.json({
+        success: true,
+        location: {
+          sido: '서울특별시',
+          sigungu: '강남구',
+          eupmyeondong: '역삼동',
+          fullAddress: '서울특별시 강남구 역삼동',
+          nearestStore: null,
+          distance: null
+        }
+      });
+    }
+
+    const result = locationResult.rows[0];
+
+    console.log(`✅ 위치 정보 조회 완료: ${result.sido} ${result.sigungu} ${result.eupmyeondong}`);
+
+    res.json({
+      success: true,
+      location: {
+        sido: result.sido,
+        sigungu: result.sigungu,
+        eupmyeondong: result.eupmyeondong,
+        roadAddress: result.road_address,
+        jibunAddress: result.jibun_address,
+        fullAddress: `${result.sido} ${result.sigungu} ${result.eupmyeondong}`,
+        nearestStore: {
+          name: result.store_name,
+          distance: Math.round(result.distance) // 미터 단위
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 위치 정보 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '위치 정보 조회 중 오류가 발생했습니다: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
