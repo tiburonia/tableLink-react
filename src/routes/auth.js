@@ -259,9 +259,10 @@ router.get('/user/:userId', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+    // 사용자 기본 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
       return res.status(404).json({ 
         success: false, 
@@ -269,9 +270,79 @@ router.get('/user/:userId', async (req, res) => {
       });
     }
 
-    const user = result.rows[0];
+    const user = userResult.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id})`);
+    // 사용자 쿠폰 정보 조회 (JOIN)
+    const couponsResult = await pool.query(`
+      SELECT 
+        c.id as coupon_id,
+        c.name as coupon_name,
+        c.description,
+        c.discount_type,
+        c.discount_value,
+        c.min_order_amount,
+        c.max_discount,
+        c.starts_at,
+        c.ends_at,
+        uc.used_at,
+        uc.order_id,
+        s.name as store_name
+      FROM user_coupons uc
+      JOIN coupons c ON uc.coupon_id = c.id
+      LEFT JOIN stores s ON c.store_id = s.id
+      WHERE uc.user_id = $1
+      ORDER BY 
+        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
+        c.ends_at ASC
+    `, [userId]);
+
+    // 쿠폰을 사용가능/사용완료로 분류
+    const coupons = {
+      unused: [],
+      used: []
+    };
+
+    couponsResult.rows.forEach(coupon => {
+      const couponData = {
+        id: coupon.coupon_id,
+        name: coupon.coupon_name,
+        description: coupon.description,
+        discountType: coupon.discount_type,
+        discountValue: coupon.discount_value,
+        minOrderAmount: coupon.min_order_amount,
+        maxDiscount: coupon.max_discount,
+        startsAt: coupon.starts_at,
+        endsAt: coupon.ends_at,
+        storeName: coupon.store_name,
+        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null
+      };
+
+      if (coupon.used_at) {
+        coupons.used.push({
+          ...couponData,
+          usedAt: coupon.used_at,
+          orderId: coupon.order_id
+        });
+      } else {
+        // 만료되지 않은 쿠폰만 사용가능 목록에 추가
+        const now = new Date();
+        const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
+        
+        if (!endDate || endDate > now) {
+          coupons.unused.push(couponData);
+        } else {
+          // 만료된 쿠폰은 사용완료로 처리
+          coupons.used.push({
+            ...couponData,
+            usedAt: null,
+            orderId: null,
+            expired: true
+          });
+        }
+      }
+    });
+
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
 
     res.json({
       success: true,
@@ -281,9 +352,14 @@ router.get('/user/:userId', async (req, res) => {
         phone: user.phone,
         email: user.email,
         address: user.address,
-        birth:  user.birth,
-        gender:  user.gender
-       
+        birth: user.birth,
+        gender: user.gender,
+        coupons: coupons,
+        couponStats: {
+          total: couponsResult.rows.length,
+          unused: coupons.unused.length,
+          used: coupons.used.length
+        }
       }
     });
   } catch (error) {
@@ -506,9 +582,10 @@ router.post('/users/info', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
+    // 사용자 기본 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
-    if (result.rows.length === 0) {
+    if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
       return res.status(404).json({ 
         success: false, 
@@ -516,9 +593,79 @@ router.post('/users/info', async (req, res) => {
       });
     }
 
-    const user = result.rows[0];
+    const user = userResult.rows[0];
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id})`);
+    // 사용자 쿠폰 정보 조회 (JOIN)
+    const couponsResult = await pool.query(`
+      SELECT 
+        c.id as coupon_id,
+        c.name as coupon_name,
+        c.description,
+        c.discount_type,
+        c.discount_value,
+        c.min_order_amount,
+        c.max_discount,
+        c.starts_at,
+        c.ends_at,
+        uc.used_at,
+        uc.order_id,
+        s.name as store_name
+      FROM user_coupons uc
+      JOIN coupons c ON uc.coupon_id = c.id
+      LEFT JOIN stores s ON c.store_id = s.id
+      WHERE uc.user_id = $1
+      ORDER BY 
+        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
+        c.ends_at ASC
+    `, [userId]);
+
+    // 쿠폰을 사용가능/사용완료로 분류
+    const coupons = {
+      unused: [],
+      used: []
+    };
+
+    couponsResult.rows.forEach(coupon => {
+      const couponData = {
+        id: coupon.coupon_id,
+        name: coupon.coupon_name,
+        description: coupon.description,
+        discountType: coupon.discount_type,
+        discountValue: coupon.discount_value,
+        minOrderAmount: coupon.min_order_amount,
+        maxDiscount: coupon.max_discount,
+        startsAt: coupon.starts_at,
+        endsAt: coupon.ends_at,
+        storeName: coupon.store_name,
+        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null
+      };
+
+      if (coupon.used_at) {
+        coupons.used.push({
+          ...couponData,
+          usedAt: coupon.used_at,
+          orderId: coupon.order_id
+        });
+      } else {
+        // 만료되지 않은 쿠폰만 사용가능 목록에 추가
+        const now = new Date();
+        const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
+        
+        if (!endDate || endDate > now) {
+          coupons.unused.push(couponData);
+        } else {
+          // 만료된 쿠폰은 사용완료로 처리
+          coupons.used.push({
+            ...couponData,
+            usedAt: null,
+            orderId: null,
+            expired: true
+          });
+        }
+      }
+    });
+
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
 
     res.json({
       success: true,
@@ -526,11 +673,17 @@ router.post('/users/info', async (req, res) => {
         id: user.user_id,
         name: user.name,
         phone: user.phone,
-        email: '', // users 테이블에 없는 컬럼
-        address: '', // users 테이블에 없는 컬럼
-        birth: '', // users 테이블에 없는 컬럼
-        gender: '', // users 테이블에 없는 컬럼
-        point: 0 // users 테이블에 없는 컬럼
+        email: user.email || '',
+        address: user.address || '',
+        birth: user.birth || '',
+        gender: user.gender || '',
+        point: 0, // 포인트는 별도 테이블에서 관리
+        coupons: coupons,
+        couponStats: {
+          total: couponsResult.rows.length,
+          unused: coupons.unused.length,
+          used: coupons.used.length
+        }
       }
     });
   } catch (error) {
