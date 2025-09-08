@@ -1,0 +1,146 @@
+🗺️ TLL 회원 주문/결제 로직 (최종 정리)
+1️⃣ 주문 시작 (QR 진입)
+
+고객이 테이블 QR 스캔 → store_id, table_id, user_id 확보
+
+비회원 로직(guest_phone)은 건너뛰고 회원(user_id)만 처리
+
+2️⃣ 장바구니 작성 (프론트 상태)
+
+메뉴/옵션 선택 → 클라이언트 장바구니에 저장
+
+결제 전까지 DB 반영 없음
+
+renderOrderScreen → renderPay 화면 전환
+
+3️⃣ 주문 생성 (첫 주문 시)
+(1) orders row 생성
+INSERT INTO orders (
+  store_id, table_id, user_id, source,
+  status, payment_status, total_price, idempotency_key
+) VALUES (
+  $store_id, $table_id, $user_id, 'TLL',
+  'OPEN', 'UNPAID', 0, $idempotency_key
+) RETURNING id;
+
+
+idempotency_key: 중복 클릭 방지용 UUID
+
+status=OPEN, payment_status=UNPAID
+
+(2) order_tickets 생성
+INSERT INTO order_tickets (order_id, source, status)
+VALUES ($order_id, 'TLL', 'OPEN')
+RETURNING id;
+
+(3) order_items bulk insert
+INSERT INTO order_items (ticket_id, menu_id, qty, unit_price, options, status)
+VALUES
+  ($ticket_id, $menu1, $qty1, $price1, $options1::jsonb, 'ORDERED'),
+  ($ticket_id, $menu2, $qty2, $price2, $options2::jsonb, 'ORDERED');
+
+
+메뉴 가격을 unit_price로 스냅샷 저장
+
+(4) 주문 금액 계산
+SELECT COALESCE(SUM(unit_price * qty), 0)
+FROM order_items WHERE ticket_id = $ticket_id;
+
+(5) 할인/쿠폰 적용 (있을 경우)
+INSERT INTO order_adjustments (order_id, type, amount, reason)
+VALUES ($order_id, 'coupon', -2000, 'WELCOME2000');
+
+(6) total_price 업데이트
+UPDATE orders
+SET total_price = GREATEST(0, $calc_total + $sum_adjustments)
+WHERE id = $order_id;
+
+4️⃣ 결제 (사전 결제)
+(1) 결제 intent 생성
+INSERT INTO payments (order_id, amount, method, status, provider, intent_ref)
+VALUES ($order_id, $amount, 'CARD', 'PENDING', 'tosspay', $intent_id)
+RETURNING id;
+
+
+프론트에 PG SDK payload 반환
+
+(2) 결제 성공 처리
+UPDATE payments
+SET status='SUCCESS', approved_at=NOW(), pg_receipt=$receipt
+WHERE id=$payment_id AND status='PENDING';
+
+UPDATE orders
+SET payment_status='PAID', status='PAID', updated_at=NOW()
+WHERE id=$order_id;
+
+
+실패 시 payments.status='FAIL', orders.status='CANCELED'
+
+5️⃣ 추가 주문 (추가 티켓 방식)
+(1) 기존 orders 재사용
+
+orders row는 그대로 둠 (status=OPEN/PAID 유지)
+
+(2) 새로운 order_tickets 생성
+INSERT INTO order_tickets (order_id, source, status)
+VALUES ($order_id, 'POS', 'OPEN') -- 추가 주문이 POS일 수도 있음
+RETURNING id;
+
+(3) order_items insert
+
+추가 메뉴들 insert
+
+할인/쿠폰 발생 시 order_adjustments 추가
+
+(4) 추가 결제 발생 시
+INSERT INTO payments (order_id, amount, method, status, provider)
+VALUES ($order_id, $add_amount, 'CARD', 'SUCCESS', 'tosspay');
+
+
+orders.total_price에 누적 반영
+
+6️⃣ KDS 연동
+
+orders가 PAID로 확정되면
+
+해당 order_tickets와 order_items를 KDS로 push (Pub/Sub, WebSocket 등)
+
+item 상태 플로우: ORDERED → COOKING → DONE
+
+ticket 상태 플로우: OPEN → FIRED → DONE
+
+🔐 상태 관리
+
+orders
+
+status: OPEN → PAID → COMPLETED / CANCELED
+
+payment_status: UNPAID → PAID
+
+order_tickets
+
+source: 'TLL' / 'POS'
+
+status: OPEN → FIRED → DONE
+
+order_items
+
+status: ORDERED → COOKING → DONE
+
+payments
+
+status: PENDING → SUCCESS / FAIL
+
+order_adjustments
+
+모든 할인/쿠폰/서비스 로그 기록
+
+🚀 요약
+
+첫 주문: orders 1개 + order_tickets 1개 + order_items N개 + 결제/쿠폰 처리
+
+추가 주문: 기존 orders 재사용, ticket/items만 새로 추가, 결제/adjustments도 별도 기록
+
+혼합 주문 대응: ticket.source로 POS/TLL 구분 가능
+
+결제 흐름: payments 로그로 관리, orders.payment_status와 동기화
