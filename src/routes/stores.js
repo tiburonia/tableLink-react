@@ -222,4 +222,62 @@ router.get('/get-location-info', async (req, res) => {
   }
 });
 
+/**
+ * [GET] /stores/:storeId/menu - 매장 메뉴 조회 (현재 스키마 기반)
+ */
+router.get('/:storeId/menu', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`🍽️ 매장 ${storeId} 메뉴 조회 요청`);
+
+    // 매장 존재 여부 확인
+    const storeResult = await pool.query(`
+      SELECT id, name FROM stores WHERE id = $1
+    `, [storeId]);
+
+    if (storeResult.rows.length === 0) {
+      console.log(`❌ 매장 ${storeId}를 찾을 수 없음`);
+      return res.status(404).json({
+        success: false,
+        error: '매장을 찾을 수 없습니다'
+      });
+    }
+
+    // 메뉴 조회
+    const menuResult = await pool.query(`
+      SELECT 
+        id,
+        name,
+        description,
+        price,
+        category,
+        is_available
+      FROM menus
+      WHERE store_id = $1 AND is_available = true
+      ORDER BY category ASC, name ASC
+    `, [storeId]);
+
+    console.log(`✅ 매장 ${storeResult.rows[0].name} 메뉴 ${menuResult.rows.length}개 조회 완료`);
+
+    res.json({
+      success: true,
+      menu: menuResult.rows.map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description || '',
+        price: parseInt(item.price),
+        category: item.category || '일반'
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 메뉴 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '메뉴 조회 중 오류가 발생했습니다: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
