@@ -737,11 +737,32 @@ window.MapPanelUI = {
       // 개별 매장 데이터 변환
       const stores = features.map(feature => {
         if (feature.kind === 'individual') {
-          // ID 우선순위: feature.id > feature.store_id
-          const storeId = feature.id || feature.store_id;
-          if (!storeId) {
-            console.warn('⚠️ 매장 ID가 없는 데이터:', {
+          // ID 우선순위 확인 및 로깅
+          const originalId = feature.id;
+          const originalStoreId = feature.store_id;
+          
+          console.log('🔍 원본 데이터 검사:', {
+            id: originalId,
+            store_id: originalStoreId,
+            name: feature.name,
+            allKeys: Object.keys(feature)
+          });
+
+          // ID 결정 - 우선순위: id > store_id
+          let storeId = originalId || originalStoreId;
+          
+          // 숫자 형태의 문자열을 숫자로 변환
+          if (typeof storeId === 'string' && !isNaN(storeId)) {
+            storeId = parseInt(storeId, 10);
+          }
+          
+          if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
+            console.error('❌ 유효하지 않은 매장 ID:', {
               feature,
+              originalId,
+              originalStoreId,
+              finalStoreId: storeId,
+              typeOfStoreId: typeof storeId,
               hasId: !!feature.id,
               hasStoreId: !!feature.store_id,
               keys: Object.keys(feature)
@@ -749,10 +770,11 @@ window.MapPanelUI = {
             return null;
           }
           
-          console.log('✅ 매장 데이터 변환:', { 
-            originalId: feature.id,
-            originalStoreId: feature.store_id, 
+          console.log('✅ 매장 데이터 변환 성공:', { 
+            originalId,
+            originalStoreId, 
             finalId: storeId,
+            finalIdType: typeof storeId,
             name: feature.name 
           });
           
@@ -777,6 +799,7 @@ window.MapPanelUI = {
         return null;
       }).filter(Boolean);
 
+      console.log(`✅ 최종 변환된 매장 데이터 ${stores.length}개:`, stores.map(s => ({ id: s.id, name: s.name, idType: typeof s.id })));
       return stores;
     } catch (error) {
       console.error('❌ 뷰포트 매장 데이터 로딩 실패:', error);
@@ -910,15 +933,19 @@ window.MapPanelUI = {
       return '';
     }
 
+    console.log('🔍 매장 카드 생성 시작:', {
+      storeName: store.name,
+      originalId: store.id,
+      originalStoreId: store.store_id,
+      storeKeys: Object.keys(store)
+    });
+
     // ID 우선 검증 - store_id 또는 id 사용
     let storeId = store.id || store.store_id;
     
     // 숫자 타입으로 변환 시도
-    if (typeof storeId === 'string') {
-      const parsed = parseInt(storeId, 10);
-      if (!isNaN(parsed)) {
-        storeId = parsed;
-      }
+    if (typeof storeId === 'string' && !isNaN(storeId)) {
+      storeId = parseInt(storeId, 10);
     }
 
     if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
@@ -951,11 +978,32 @@ window.MapPanelUI = {
       name: storeName, 
       id: storeId,
       type: typeof storeId,
-      originalData: { hasId: !!store.id, hasStoreId: !!store.store_id }
+      originalData: { hasId: !!store.id, hasStoreId: !!store.store_id },
+      normalizedStore: { 
+        id: normalizedStore.id, 
+        store_id: normalizedStore.store_id,
+        name: normalizedStore.name
+      }
     });
 
     // renderStore 함수 호출을 위한 안전한 데이터 처리
-    const storeDataForRender = JSON.stringify(normalizedStore).replace(/"/g, '&quot;');
+    let storeDataForRender;
+    try {
+      const jsonString = JSON.stringify(normalizedStore);
+      storeDataForRender = jsonString.replace(/"/g, '&quot;');
+      console.log('📄 JSON 직렬화 성공, 길이:', jsonString.length);
+    } catch (jsonError) {
+      console.error('❌ JSON 직렬화 실패:', jsonError);
+      // 최소한의 데이터만 전달
+      const minimalStore = {
+        id: storeId,
+        store_id: storeId,
+        name: storeName,
+        category: storeCategory,
+        isOpen: isOpen
+      };
+      storeDataForRender = JSON.stringify(minimalStore).replace(/"/g, '&quot;');
+    }
 
     return `
       <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})">
