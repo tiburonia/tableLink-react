@@ -28,10 +28,25 @@ async function renderStore(store) {
       menuSample: store.menu.slice(0, 2) // 처음 2개만 샘플로 표시
     });
 
-    // 필수 데이터 검증
-    if (!store || !store.id || !store.name) {
-      console.error('❌ 유효하지 않은 매장 데이터:', store);
-      throw new Error('매장 데이터가 유효하지 않습니다');
+    // 필수 데이터 검증 및 정규화
+    if (!store) {
+      console.error('❌ 매장 데이터가 없습니다');
+      throw new Error('매장 데이터가 없습니다');
+    }
+
+    // ID 정규화 (store_id 또는 id 사용)
+    if (!store.id && store.store_id) {
+      store.id = store.store_id;
+    }
+
+    if (!store.id || !store.name) {
+      console.error('❌ 유효하지 않은 매장 데이터:', { 
+        hasId: !!store.id, 
+        hasStoreId: !!store.store_id,
+        hasName: !!store.name,
+        keys: Object.keys(store)
+      });
+      throw new Error('매장 ID 또는 이름이 누락되었습니다');
     }
 
     // 필수 모듈 로딩 확인

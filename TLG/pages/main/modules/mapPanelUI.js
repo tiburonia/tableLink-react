@@ -737,8 +737,13 @@ window.MapPanelUI = {
       // 개별 매장 데이터 변환
       const stores = features.map(feature => {
         if (feature.kind === 'individual') {
+          const storeId = feature.store_id || feature.id;
+          if (!storeId) {
+            console.warn('⚠️ 매장 ID가 없는 데이터:', feature);
+            return null;
+          }
           return {
-            id: feature.store_id || feature.id,
+            id: storeId,
             name: feature.name || '매장명 없음',
             category: feature.category || '기타',
             address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
