@@ -269,9 +269,16 @@ window.addToCart = function(menuId, menuName, price) {
     window.currentTLLOrder.cart = [];
   }
 
-  // 메뉴 ID와 가격 유효성 검사
-  if (!menuId || !menuName || !price) {
-    console.error('❌ 메뉴 정보가 유효하지 않습니다:', { menuId, menuName, price });
+  // 메뉴 ID와 가격 유효성 검사 및 타입 변환
+  const validMenuId = String(menuId);
+  const validMenuName = String(menuName);
+  const validPrice = parseInt(price);
+
+  if (!validMenuId || !validMenuName || isNaN(validPrice) || validPrice <= 0) {
+    console.error('❌ 메뉴 정보가 유효하지 않습니다:', { 
+      original: { menuId, menuName, price },
+      processed: { validMenuId, validMenuName, validPrice }
+    });
     alert('메뉴 정보에 오류가 있습니다.');
     return;
   }
@@ -281,16 +288,16 @@ window.addToCart = function(menuId, menuName, price) {
     cartItems: window.currentTLLOrder.cart
   });
 
-  const existingItem = window.currentTLLOrder.cart.find(item => item.id === menuId);
+  const existingItem = window.currentTLLOrder.cart.find(item => String(item.id) === String(validMenuId));
 
   if (existingItem) {
     existingItem.quantity += 1;
     console.log('🔄 기존 아이템 수량 증가:', existingItem);
   } else {
     const newItem = {
-      id: menuId,
-      name: menuName,
-      price: parseInt(price),
+      id: validMenuId,
+      name: validMenuName,
+      price: validPrice,
       quantity: 1
     };
     window.currentTLLOrder.cart.push(newItem);
@@ -408,24 +415,68 @@ window.proceedToPayment = async function() {
       cartItems: window.currentTLLOrder?.cart
     });
 
+    // 전역 변수들 확인
+    console.log('🔍 전역 변수 상태:', {
+      windowKeys: Object.keys(window).filter(key => key.includes('TLL')),
+      currentTLLOrder: !!window.currentTLLOrder,
+      currentTLLCart: !!window.currentTLLCart
+    });
+
     // 전역 변수 존재 확인
     if (!window.currentTLLOrder) {
       console.error('❌ currentTLLOrder가 존재하지 않습니다');
-      alert('주문 시스템에 오류가 있습니다. 페이지를 새로고침한 후 다시 시도해주세요.');
-      return;
+      
+      // currentTLLCart 확인 (다른 주문 시스템과의 혼동 방지)
+      if (window.currentTLLCart && window.currentTLLCart.cart && window.currentTLLCart.cart.length > 0) {
+        console.log('🔄 currentTLLCart 발견, currentTLLOrder로 변환 시도');
+        window.currentTLLOrder = {
+          storeId: window.currentTLLCart.storeId,
+          storeName: window.currentTLLCart.storeName,
+          tableName: window.currentTLLCart.tableName,
+          tableNumber: window.currentTLLCart.tableNumber,
+          cart: window.currentTLLCart.cart,
+          userInfo: window.currentTLLCart.userInfo
+        };
+        console.log('✅ currentTLLOrder 복원 완료:', window.currentTLLOrder);
+      } else {
+        alert('주문 시스템에 오류가 있습니다. 페이지를 새로고침한 후 다시 시도해주세요.');
+        return;
+      }
     }
 
     // 장바구니 배열 존재 및 내용 확인
     if (!window.currentTLLOrder.cart) {
       console.error('❌ cart 배열이 존재하지 않습니다');
+      window.currentTLLOrder.cart = [];
       alert('장바구니가 초기화되지 않았습니다. 메뉴를 다시 선택해주세요.');
       return;
     }
 
-    if (window.currentTLLOrder.cart.length === 0) {
-      console.warn('⚠️ 장바구니가 비어있습니다');
+    // 실제 장바구니 내용 재검증
+    const validItems = window.currentTLLOrder.cart.filter(item => 
+      item && item.id && item.name && item.price && item.quantity > 0
+    );
+
+    console.log('🔍 장바구니 유효성 검사:', {
+      originalCount: window.currentTLLOrder.cart.length,
+      validCount: validItems.length,
+      invalidItems: window.currentTLLOrder.cart.filter(item => 
+        !item || !item.id || !item.name || !item.price || item.quantity <= 0
+      )
+    });
+
+    if (validItems.length === 0) {
+      console.warn('⚠️ 유효한 장바구니 아이템이 없습니다');
+      console.log('🔍 장바구니 원본 데이터:', window.currentTLLOrder.cart);
       alert('주문할 메뉴를 선택해주세요.');
       return;
+    }
+
+    // 유효한 아이템만으로 장바구니 업데이트
+    if (validItems.length !== window.currentTLLOrder.cart.length) {
+      console.log('🔄 유효하지 않은 아이템 제거, 장바구니 업데이트');
+      window.currentTLLOrder.cart = validItems;
+      updateCartDisplay();
     }
 
     console.log('✅ 장바구니 검증 통과, 결제 진행');
