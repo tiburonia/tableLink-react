@@ -57,6 +57,8 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       userInfo: userInfo
     };
 
+    console.log('🏪 currentTLLOrder 초기화 완료:', window.currentTLLOrder);
+
     // 이벤트 리스너 설정
     setupOrderEvents();
 
@@ -238,20 +240,35 @@ window.closeCart = function() {
 
 // 장바구니에 추가
 window.addToCart = function(menuId, menuName, price) {
-  if (!window.currentTLLOrder) return;
+  console.log('🛒 장바구니 추가 요청:', { menuId, menuName, price });
+  
+  if (!window.currentTLLOrder) {
+    console.error('❌ currentTLLOrder가 존재하지 않습니다');
+    return;
+  }
+
+  if (!window.currentTLLOrder.cart) {
+    console.warn('⚠️ cart 배열이 초기화되지 않음, 새로 생성');
+    window.currentTLLOrder.cart = [];
+  }
 
   const existingItem = window.currentTLLOrder.cart.find(item => item.id === menuId);
 
   if (existingItem) {
     existingItem.quantity += 1;
+    console.log('🔄 기존 아이템 수량 증가:', existingItem);
   } else {
-    window.currentTLLOrder.cart.push({
+    const newItem = {
       id: menuId,
       name: menuName,
       price: price,
       quantity: 1
-    });
+    };
+    window.currentTLLOrder.cart.push(newItem);
+    console.log('➕ 새 아이템 추가:', newItem);
   }
+
+  console.log('🛒 현재 장바구니 상태:', window.currentTLLOrder.cart);
 
   updateCartDisplay();
   
@@ -260,7 +277,7 @@ window.addToCart = function(menuId, menuName, price) {
     setTimeout(() => toggleCart(), 300);
   }
   
-  console.log('🛒 장바구니에 추가:', menuName);
+  console.log('🛒 장바구니에 추가 완료:', menuName, '총 아이템:', window.currentTLLOrder.cart.length);
 };
 
 // 장바구니 표시 업데이트
@@ -339,7 +356,15 @@ window.removeFromCart = function(menuId) {
 // 결제로 진행
 window.proceedToPayment = async function() {
   try {
-    if (!window.currentTLLOrder || window.currentTLLOrder.cart.length === 0) {
+    // 디버깅: 현재 상태 확인
+    console.log('🔍 결제 진행 시 상태 확인:', {
+      currentTLLOrder: window.currentTLLOrder,
+      hasCart: window.currentTLLOrder?.cart,
+      cartLength: window.currentTLLOrder?.cart?.length,
+      cartItems: window.currentTLLOrder?.cart
+    });
+
+    if (!window.currentTLLOrder || !window.currentTLLOrder.cart || window.currentTLLOrder.cart.length === 0) {
       alert('주문할 메뉴를 선택해주세요.');
       return;
     }
