@@ -36,34 +36,8 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
 
     console.log(`🔍 TLL 최종 테이블 정보: ${finalTableName} (번호: ${finalTableNumber})`);
 
-    // TLL 체크 생성
-    const qrCode = `TABLE_${finalTableNumber}`;
-    let requestBody = { qr_code: qrCode };
-
-    if (userInfo.id && userInfo.id !== 'guest') {
-      // 현재 스키마의 users.user_id는 문자열이므로 그대로 사용
-      requestBody.user_id = userInfo.id;
-    } else {
-      requestBody.guest_phone = userInfo.phone || '010-0000-0000';
-    }
-
-    console.log('🔄 TLL 체크 생성 요청:', requestBody);
-
-    const checkResponse = await fetch('/api/tll/checks/from-qr', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
-
-    if (!checkResponse.ok) {
-      const errorData = await checkResponse.json();
-      throw new Error(errorData.error || '체크 생성 실패');
-    }
-
-    const checkResult = await checkResponse.json();
-    const checkId = checkResult.check_id;
-
-    console.log('✅ TLL 체크 생성 완료:', checkId);
+    // TLL 체크 생성 없이 클라이언트 장바구니 기반으로 진행
+    console.log('🛒 TLL 장바구니 기반 주문 시작 (체크 생성 없음)');
 
     // 메뉴 데이터 로드
     let menuData = [];
@@ -344,14 +318,14 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       </style>
     `;
 
-    // 전역 변수 설정
+    // 전역 변수 설정 (체크 없이 장바구니만)
     window.currentTLLOrder = {
-      checkId: checkId,
       storeId: store.id,
       storeName: store.name,
       tableName: finalTableName,
       tableNumber: finalTableNumber,
-      cart: []
+      cart: [],
+      userInfo: userInfo
     };
 
     // 메뉴 클릭 이벤트 설정
@@ -476,7 +450,7 @@ window.removeFromCart = function(menuId) {
   updateCartDisplay();
 };
 
-// TLL 주문 처리
+// TLL 주문 처리 (결제 직전에 주문 생성)
 window.processTLLOrder = async function() {
   try {
     if (!window.currentTLLOrder || window.currentTLLOrder.cart.length === 0) {
@@ -486,48 +460,21 @@ window.processTLLOrder = async function() {
 
     const orderBtn = document.getElementById('orderBtn');
     orderBtn.disabled = true;
-    orderBtn.textContent = '주문 처리 중...';
-
-    // 주문 아이템 변환
-    const items = window.currentTLLOrder.cart.map(item => ({
-      menu_name: item.name,
-      unit_price: item.price,
-      quantity: item.quantity,
-      options: {},
-      notes: ''
-    }));
+    orderBtn.textContent = '결제 처리 중...';
 
     // 총액 계산
-    const totalAmount = items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+    const totalAmount = window.currentTLLOrder.cart.reduce((sum, item) => 
+      sum + (item.price * item.quantity), 0);
 
-    console.log('🛒 TLL 주문 전송:', { checkId: window.currentTLLOrder.checkId, items, totalAmount });
-
-    // TLL 주문 API 호출
-    const orderResponse = await fetch('/api/tll/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        check_id: window.currentTLLOrder.checkId,
-        items: items,
-        payment_method: 'TOSS'
-      })
+    console.log('🛒 TLL 장바구니 기반 결제 시작:', { 
+      store: window.currentTLLOrder.storeName, 
+      table: window.currentTLLOrder.tableName,
+      items: window.currentTLLOrder.cart.length,
+      total: totalAmount 
     });
 
-    if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      throw new Error(errorData.error || '주문 처리 실패');
-    }
-
-    const orderResult = await orderResponse.json();
-    console.log('✅ TLL 주문 생성 완료:', orderResult);
-
-    // 결제 처리
-    if (orderResult.payment_required) {
-      await processTLLPayment(window.currentTLLOrder.checkId, totalAmount);
-    } else {
-      alert('주문이 완료되었습니다!');
-      renderMap();
-    }
+    // 바로 결제 처리로 이동 (주문 생성은 결제 성공 시)
+    await processTLLPayment(totalAmount);
 
   } catch (error) {
     console.error('❌ TLL 주문 처리 실패:', error);
@@ -539,10 +486,10 @@ window.processTLLOrder = async function() {
   }
 };
 
-// TLL 결제 처리
-async function processTLLPayment(checkId, amount) {
+// TLL 결제 처리 (장바구니 기반)
+async function processTLLPayment(amount) {
   try {
-    console.log('💳 TLL 결제 처리 시작:', { checkId, amount });
+    console.log('💳 TLL 결제 처리 시작:', { amount });
 
     // 토스페이먼츠 모듈 확인
     if (!window.requestTossPayment) {
@@ -556,15 +503,21 @@ async function processTLLPayment(checkId, amount) {
       }
     }
 
-    const userInfo = getUserInfo();
-    const orderId = `TLL_${checkId}_${Date.now()}`;
+    const userInfo = window.currentTLLOrder.userInfo;
+    const timestamp = Date.now();
+    const orderId = `TLL_CART_${window.currentTLLOrder.storeId}_${timestamp}`;
 
-    // TLL 주문 정보 임시 저장
-    sessionStorage.setItem('tllPendingOrder', JSON.stringify({
-      checkId: checkId,
+    // TLL 장바구니 주문 정보 임시 저장 (결제 성공 시 실제 주문 생성용)
+    sessionStorage.setItem('tllPendingCartOrder', JSON.stringify({
+      storeId: window.currentTLLOrder.storeId,
+      storeName: window.currentTLLOrder.storeName,
+      tableName: window.currentTLLOrder.tableName,
+      tableNumber: window.currentTLLOrder.tableNumber,
+      cart: window.currentTLLOrder.cart,
+      userInfo: userInfo,
       orderId: orderId,
       amount: amount,
-      timestamp: Date.now()
+      timestamp: timestamp
     }));
 
     // 토스페이먼츠 결제 요청

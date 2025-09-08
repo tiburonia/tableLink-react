@@ -819,8 +819,8 @@ function handleTossPaymentFailure(data) {
           return;
         }
 
-        // 새로운 장바구니 기반 주문 화면으로 이동 (체크 생성 없이)
-        await window.renderTLLOrderCart(selectedStore, tableName, tableNumber);
+        // 기존 renderOrderScreen 호출 (장바구니 기반으로 수정됨)
+        await window.renderOrderScreen(selectedStore, tableName, tableNumber);
 
       } catch (error) {
         console.error('❌ TLL - 주문 시작 실패:', error);
