@@ -36,21 +36,25 @@ window.renderTLLOrderCart = async function(store, tableName, tableNumber) {
 
     console.log(`🔍 TLL 최종 테이블 정보: ${finalTableName} (번호: ${finalTableNumber})`);
 
-    // 메뉴 데이터 로드
+    // 메뉴 데이터 로드 (새 스키마 대응)
     let menuData = [];
     try {
-      if (store.menu && Array.isArray(store.menu)) {
-        menuData = store.menu;
-      } else {
-        console.log('🔄 매장 메뉴 데이터 로드 중...');
-        const menuResponse = await fetch(`/api/stores/${store.id}/menu`);
-        if (menuResponse.ok) {
-          const menuResult = await menuResponse.json();
-          menuData = menuResult.menu || [];
+      console.log('🔄 매장 메뉴 데이터 로드 중...');
+      const menuResponse = await fetch(`/api/stores/${store.id}/menu`);
+      if (menuResponse.ok) {
+        const menuResult = await menuResponse.json();
+        console.log('📋 메뉴 API 응답:', menuResult);
+        
+        if (menuResult.success && menuResult.menu) {
+          menuData = menuResult.menu;
+          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
         } else {
-          console.warn('⚠️ 메뉴 데이터 로드 실패, 기본 메뉴 사용');
+          console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
           menuData = getDefaultMenu();
         }
+      } else {
+        console.warn('⚠️ 메뉴 API 호출 실패:', menuResponse.status);
+        menuData = getDefaultMenu();
       }
     } catch (menuError) {
       console.warn('⚠️ 메뉴 로드 오류:', menuError);

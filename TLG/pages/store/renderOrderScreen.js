@@ -20,16 +20,25 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
 
     console.log(`🔍 TLL 최종 테이블 정보: ${finalTableName} (번호: ${finalTableNumber})`);
 
-    // 메뉴 데이터 로드
+    // 메뉴 데이터 로드 (새 스키마 대응)
     let menuData = [];
     try {
       console.log('🔄 매장 메뉴 데이터 로드 중...');
       const menuResponse = await fetch(`/api/stores/${store.id}/menu`);
       if (menuResponse.ok) {
         const menuResult = await menuResponse.json();
-        if (menuResult.success) {
-          menuData = menuResult.menu || [];
+        console.log('📋 메뉴 API 응답:', menuResult);
+        
+        if (menuResult.success && menuResult.menu) {
+          menuData = menuResult.menu;
+          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
+        } else {
+          console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
+          menuData = [];
         }
+      } else {
+        console.warn('⚠️ 메뉴 API 호출 실패:', menuResponse.status);
+        menuData = [];
       }
       
       if (menuData.length === 0) {
@@ -422,14 +431,15 @@ function setupOrderEvents() {
   console.log('✅ TLL 주문 이벤트 설정 완료');
 }
 
-// 기본 메뉴 데이터
+// 기본 메뉴 데이터 (새 스키마 형식)
 function getDefaultMenu() {
   return [
-    { id: 1, name: '김치찌개', description: '돼지고기와 김치가 들어간 찌개', price: 8000, category: '찌개' },
-    { id: 2, name: '된장찌개', description: '국산 콩으로 만든 된장찌개', price: 7000, category: '찌개' },
-    { id: 3, name: '불고기', description: '양념에 재운 소고기 불고기', price: 15000, category: '메인' },
-    { id: 4, name: '비빔밥', description: '각종 나물이 들어간 비빔밥', price: 9000, category: '메인' },
-    { id: 5, name: '냉면', description: '시원한 물냉면', price: 10000, category: '면' }
+    { id: 1, name: '김치찌개', description: '돼지고기와 김치가 들어간 찌개', price: 8000, category: '찌개류' },
+    { id: 2, name: '된장찌개', description: '국산 콩으로 만든 된장찌개', price: 7000, category: '찌개류' },
+    { id: 3, name: '불고기', description: '양념에 재운 소고기 불고기', price: 15000, category: '구이류' },
+    { id: 4, name: '비빔밥', description: '각종 나물이 들어간 비빔밥', price: 9000, category: '밥류' },
+    { id: 5, name: '냉면', description: '시원한 물냉면', price: 10000, category: '면류' },
+    { id: 6, name: '공기밥', description: '갓 지은 따뜻한 쌀밥', price: 1000, category: '기타' }
   ];
 }
 
