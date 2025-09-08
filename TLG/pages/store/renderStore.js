@@ -265,16 +265,55 @@ function setupEventListeners(store) {
       tllButton.addEventListener('click', () => {
         try {
           console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 미리 선택하여 실행`);
+          
+          // TLL 함수 존재 확인 (전역 및 window에서)
+          let tllFunction = null;
+          
           if (typeof TLL === 'function') {
-            TLL(store); // 현재 매장 정보를 전달
+            tllFunction = TLL;
+          } else if (typeof window.TLL === 'function') {
+            tllFunction = window.TLL;
+          } else if (window.TLL && typeof window.TLL === 'object' && typeof window.TLL.TLL === 'function') {
+            tllFunction = window.TLL.TLL;
+          }
+          
+          if (tllFunction) {
+            console.log('✅ TLL 함수 발견, 실행 중...');
+            tllFunction(store); // 현재 매장 정보를 전달
           } else {
-            console.warn('⚠️ TLL 함수를 찾을 수 없음');
+            console.warn('⚠️ TLL 함수를 찾을 수 없음, 스크립트 재로딩 시도...');
+            
+            // TLL 스크립트 재로딩 시도
+            const existingScript = document.querySelector('script[src*="TLL.js"]');
+            if (existingScript) {
+              existingScript.remove();
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'TLG/utils/TLL.js';
+            script.onload = () => {
+              console.log('🔄 TLL.js 재로딩 완료');
+              setTimeout(() => {
+                if (typeof window.TLL === 'function') {
+                  window.TLL(store);
+                } else {
+                  console.error('❌ TLL.js 재로딩 후에도 함수를 찾을 수 없음');
+                  alert('QR 주문 시스템을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+                }
+              }, 100);
+            };
+            script.onerror = () => {
+              console.error('❌ TLL.js 재로딩 실패');
+              alert('QR 주문 시스템을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+            };
+            document.head.appendChild(script);
           }
         } catch (tllError) {
           console.error('❌ TLL 실행 중 오류:', tllError);
+          alert('QR 주문 시스템 실행 중 오류가 발생했습니다.');
         }
       });
-      console.log('✅ TLL 버튼 이벤트 설정 완료 (매장 미리 선택)');
+      console.log('✅ TLL 버튼 이벤트 설정 완료 (안전한 호출 방식)');
     }
 
     // 프로모션 관련 버튼들 이벤트 설정 (추가 안전장치)

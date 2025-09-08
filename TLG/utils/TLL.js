@@ -923,4 +923,24 @@ async function initApp() {
 
   console.log('✅ 앱 초기화 완료');
 }
+
+// TLL 함수를 전역에 안전하게 등록
+(function() {
+  console.log('🔧 TLL 함수 전역 등록 시작...');
+  
+  // 함수가 이미 정의되었는지 확인
+  if (typeof window.TLL === 'function') {
+    console.log('✅ TLL 함수가 이미 등록되어 있음');
+    return;
+  }
+  
+  // TLL 함수 등록 확인
+  if (typeof TLL !== 'undefined') {
+    window.TLL = TLL;
+    console.log('✅ TLL 함수 전역 등록 완료');
+    console.log('🔍 등록된 TLL 함수 타입:', typeof window.TLL);
+  } else {
+    console.error('❌ TLL 함수 정의를 찾을 수 없음');
+  }
+})();
 </replit_final_file>
