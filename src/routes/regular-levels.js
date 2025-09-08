@@ -5,6 +5,53 @@ const { Pool } = require('pg');
 
 // Pool은 shared/config/database.js에서 가져옴
 
+// 사용자별 매장별 포인트 조회
+router.get('/user/:userId/store/:storeId/points', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+
+    console.log(`💰 사용자 ${userId} 매장 ${storeId} 포인트 조회`);
+
+    const result = await pool.query(`
+      SELECT 
+        sp.balance as points,
+        sp.updated_at,
+        s.name as store_name
+      FROM store_points sp
+      JOIN stores s ON sp.store_id = s.id
+      WHERE sp.user_id = $1 AND sp.store_id = $2
+    `, [userId, storeId]);
+
+    if (result.rows.length === 0) {
+      res.json({
+        success: true,
+        points: 0,
+        store_name: null,
+        updated_at: null
+      });
+      return;
+    }
+
+    const pointsData = result.rows[0];
+
+    res.json({
+      success: true,
+      points: pointsData.points || 0,
+      store_name: pointsData.store_name,
+      updated_at: pointsData.updated_at
+    });
+
+  } catch (error) {
+    console.error('❌ 매장별 포인트 조회 실패:', error);
+    res.json({
+      success: true,
+      points: 0,
+      store_name: null,
+      updated_at: null
+    });
+  }
+});
+
 // 사용자별 매장 단골 레벨 조회
 router.get('/user/:userId/store/:storeId', async (req, res) => {
   try {
@@ -155,5 +202,110 @@ router.get('/user/:userId/all-points', async (req, res) => {
 });
 
 
+
+// 포인트 사용
+router.post('/user/:userId/store/:storeId/points/use', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    const { userId, storeId } = req.params;
+    const { points, orderId } = req.body;
+
+    if (!points || points <= 0) {
+      throw new Error('유효하지 않은 포인트 수량입니다');
+    }
+
+    console.log(`💸 포인트 사용 요청: 사용자 ${userId}, 매장 ${storeId}, 포인트 ${points}`);
+
+    // 현재 포인트 잔액 확인
+    const balanceResult = await client.query(`
+      SELECT balance FROM store_points 
+      WHERE user_id = $1 AND store_id = $2
+    `, [userId, storeId]);
+
+    const currentBalance = balanceResult.rows.length > 0 ? balanceResult.rows[0].balance : 0;
+
+    if (currentBalance < points) {
+      throw new Error('보유 포인트가 부족합니다');
+    }
+
+    // 포인트 차감
+    await client.query(`
+      INSERT INTO store_points (user_id, store_id, balance, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id, store_id)
+      DO UPDATE SET 
+        balance = store_points.balance - $3,
+        updated_at = CURRENT_TIMESTAMP
+    `, [userId, storeId, points]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      used_points: points,
+      remaining_balance: currentBalance - points,
+      message: '포인트 사용이 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 포인트 사용 실패:', error);
+    res.status(400).json({
+      success: false,
+      error: error.message || '포인트 사용 실패'
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 포인트 적립
+router.post('/user/:userId/store/:storeId/points/earn', async (req, res) => {
+  try {
+    const { userId, storeId } = req.params;
+    const { points, orderId } = req.body;
+
+    if (!points || points <= 0) {
+      throw new Error('유효하지 않은 포인트 수량입니다');
+    }
+
+    console.log(`💰 포인트 적립 요청: 사용자 ${userId}, 매장 ${storeId}, 포인트 ${points}`);
+
+    // 포인트 적립
+    await pool.query(`
+      INSERT INTO store_points (user_id, store_id, balance, updated_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      ON CONFLICT (user_id, store_id)
+      DO UPDATE SET 
+        balance = store_points.balance + $3,
+        updated_at = CURRENT_TIMESTAMP
+    `, [userId, storeId, points]);
+
+    // 현재 잔액 조회
+    const balanceResult = await pool.query(`
+      SELECT balance FROM store_points 
+      WHERE user_id = $1 AND store_id = $2
+    `, [userId, storeId]);
+
+    const newBalance = balanceResult.rows[0].balance;
+
+    res.json({
+      success: true,
+      earned_points: points,
+      total_balance: newBalance,
+      message: '포인트 적립이 완료되었습니다'
+    });
+
+  } catch (error) {
+    console.error('❌ 포인트 적립 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || '포인트 적립 실패'
+    });
+  }
+});
 
 module.exports = router;
