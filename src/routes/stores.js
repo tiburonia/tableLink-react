@@ -15,9 +15,7 @@ router.get('/:storeId', async (req, res) => {
       SELECT 
         s.id,
         s.name,
-        s.category,
         s.is_open,
-        si.description,
         si.phone,
         si.rating_average,
         si.review_count,
