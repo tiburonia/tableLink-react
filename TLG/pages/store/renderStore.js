@@ -35,20 +35,32 @@ async function renderStore(store) {
     }
 
     // ID 정규화 (store_id 또는 id 사용)
-    const storeId = store.id || store.store_id;
-    if (!storeId) {
-      console.error('❌ 매장 ID가 없습니다:', { 
+    let storeId = store.id || store.store_id;
+    
+    // 숫자 타입으로 변환 시도
+    if (typeof storeId === 'string') {
+      const parsed = parseInt(storeId, 10);
+      if (!isNaN(parsed)) {
+        storeId = parsed;
+      }
+    }
+
+    if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
+      console.error('❌ 매장 ID가 유효하지 않습니다:', { 
         hasId: !!store.id, 
         hasStoreId: !!store.store_id,
         hasName: !!store.name,
+        storeIdType: typeof storeId,
+        storeIdValue: storeId,
         keys: Object.keys(store),
         storeData: store
       });
-      throw new Error('매장 ID가 누락되었습니다');
+      throw new Error('매장 ID가 누락되었거나 유효하지 않습니다');
     }
 
-    // store 객체에 id 속성 설정
+    // store 객체에 id 속성 설정 (정규화)
     store.id = storeId;
+    store.store_id = storeId;  // 호환성을 위해 둘 다 설정
 
     if (!store.name) {
       console.error('❌ 매장 이름이 없습니다:', { 

@@ -905,24 +905,40 @@ window.MapPanelUI = {
 
   // 매장 카드 생성 (개별 매장 전용)
   createStoreCard(store) {
+    if (!store) {
+      console.error('❌ 매장 데이터가 없음');
+      return '';
+    }
+
+    // ID 우선 검증 - store_id 또는 id 사용
+    let storeId = store.id || store.store_id;
+    
+    // 숫자 타입으로 변환 시도
+    if (typeof storeId === 'string') {
+      const parsed = parseInt(storeId, 10);
+      if (!isNaN(parsed)) {
+        storeId = parsed;
+      }
+    }
+
+    if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
+      console.error('❌ 매장 카드 생성 실패: 유효하지 않은 ID', {
+        store,
+        hasId: !!store.id,
+        hasStoreId: !!store.store_id,
+        storeIdType: typeof storeId,
+        storeIdValue: storeId,
+        keys: Object.keys(store || {})
+      });
+      return '';
+    }
+
     const storeName = store?.name || '매장명 없음';
     const storeCategory = store?.category || '카테고리 없음';
     const rating = store?.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
     const reviewCount = store?.reviewCount || 0;
     const storeAddress = store?.address || '주소 정보 없음';
     const isOpen = store?.isOpen !== false;
-
-    // ID 검증 및 정규화
-    const storeId = store.id || store.store_id;
-    if (!storeId) {
-      console.error('❌ 매장 카드 생성 실패: ID가 없음', {
-        store,
-        hasId: !!store.id,
-        hasStoreId: !!store.store_id,
-        keys: Object.keys(store || {})
-      });
-      return '';  // 빈 문자열 반환하여 카드 생성하지 않음
-    }
 
     // 매장 데이터 정규화 - id 속성 확실히 설정
     const normalizedStore = {
@@ -931,9 +947,10 @@ window.MapPanelUI = {
       store_id: storeId  // 호환성을 위해 둘 다 설정
     };
 
-    console.log('🏪 매장 카드 생성:', { 
+    console.log('🏪 매장 카드 생성 성공:', { 
       name: storeName, 
       id: storeId,
+      type: typeof storeId,
       originalData: { hasId: !!store.id, hasStoreId: !!store.store_id }
     });
 
@@ -941,7 +958,7 @@ window.MapPanelUI = {
     const storeDataForRender = JSON.stringify(normalizedStore).replace(/"/g, '&quot;');
 
     return `
-      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})"
+      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})">
         <div class="storeImageBox">
           <img src="TableLink.png" alt="가게 이미지" />
           <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
