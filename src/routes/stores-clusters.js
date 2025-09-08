@@ -63,6 +63,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
       -- 서버에서 별점 처리
       COALESCE(si.rating_average, 0)::numeric(3,1) as rating_average,
       COALESCE(si.review_count, 0) as review_count,
+      s.id,
       s.is_open,
       ST_X(sa.geom) AS lng,
       ST_Y(sa.geom) AS lat,
