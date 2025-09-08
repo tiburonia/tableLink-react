@@ -35,18 +35,28 @@ async function renderStore(store) {
     }
 
     // ID 정규화 (store_id 또는 id 사용)
-    if (!store.id && store.store_id) {
-      store.id = store.store_id;
-    }
-
-    if (!store.id || !store.name) {
-      console.error('❌ 유효하지 않은 매장 데이터:', { 
+    const storeId = store.id || store.store_id;
+    if (!storeId) {
+      console.error('❌ 매장 ID가 없습니다:', { 
         hasId: !!store.id, 
         hasStoreId: !!store.store_id,
         hasName: !!store.name,
+        keys: Object.keys(store),
+        storeData: store
+      });
+      throw new Error('매장 ID가 누락되었습니다');
+    }
+
+    // store 객체에 id 속성 설정
+    store.id = storeId;
+
+    if (!store.name) {
+      console.error('❌ 매장 이름이 없습니다:', { 
+        storeId: storeId,
+        hasName: !!store.name,
         keys: Object.keys(store)
       });
-      throw new Error('매장 ID 또는 이름이 누락되었습니다');
+      throw new Error('매장 이름이 누락되었습니다');
     }
 
     // 필수 모듈 로딩 확인

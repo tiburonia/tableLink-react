@@ -897,11 +897,17 @@ window.MapPanelUI = {
     const storeAddress = store?.address || '주소 정보 없음';
     const isOpen = store?.isOpen !== false;
 
-    // JSON 안전 처리
-    const safeStoreData = JSON.stringify(store || {}).replace(/"/g, '&quot;');
+    // 매장 데이터 정규화 - id 속성 확인 및 설정
+    const normalizedStore = {
+      ...store,
+      id: store.id || store.store_id, // store_id를 id로 매핑
+    };
+
+    // renderStore 함수 호출을 위한 안전한 데이터 처리
+    const storeDataForRender = JSON.stringify(normalizedStore).replace(/"/g, '&quot;');
 
     return `
-      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${safeStoreData})">
+      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})"
         <div class="storeImageBox">
           <img src="TableLink.png" alt="가게 이미지" />
           <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
