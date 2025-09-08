@@ -20,42 +20,26 @@ router.get('/:storeId/menu', async (req, res) => {
     }
 
     // 메뉴 조회 (현재 스키마에 맞게)
-    let menuData = [];
-    
-    try {
-      const menuResult = await pool.query(`
-        SELECT 
-          id,
-          name,
-          description,
-          price,
-          category,
-          is_available,
-          image_url
-        FROM menu_items 
-        WHERE store_id = $1 AND is_available = true
-        ORDER BY category, name
-      `, [storeId]);
+    const menuResult = await pool.query(`
+      SELECT 
+        id,
+        name,
+        description,
+        price,
+        category,
+        is_available,
+        image_url
+      FROM menu_items 
+      WHERE store_id = $1 AND is_available = true
+      ORDER BY category, name
+    `, [storeId]);
 
-      menuData = menuResult.rows;
-      console.log(`✅ 매장 ${storeId} DB 메뉴 ${menuData.length}개 조회 완료`);
-    } catch (menuError) {
-      console.warn(`⚠️ 매장 ${storeId} 메뉴 테이블 조회 실패:`, menuError.message);
-      menuData = [];
-    }
-
-    // 메뉴가 없으면 기본 메뉴 제공
-    if (menuData.length === 0) {
-      console.log(`🔄 매장 ${storeId} 기본 메뉴 생성`);
-      menuData = getDefaultMenuForStore(storeId);
-    }
-
-    console.log(`✅ 매장 ${storeId} 최종 메뉴 ${menuData.length}개 반환`);
+    console.log(`✅ 매장 ${storeId} 메뉴 ${menuResult.rows.length}개 조회 완료`);
 
     res.json({
       success: true,
       store: storeResult.rows[0],
-      menu: menuData
+      menu: menuResult.rows
     });
 
   } catch (error) {
@@ -258,65 +242,5 @@ router.post('/orders/create-tll', async (req, res) => {
     client.release();
   }
 });
-
-// 기본 메뉴 생성 함수
-function getDefaultMenuForStore(storeId) {
-  return [
-    {
-      id: storeId * 1000 + 1,
-      name: '김치찌개',
-      description: '국산 김치와 돼지고기로 끓인 얼큰한 찌개',
-      price: 8000,
-      category: '찌개류',
-      is_available: true,
-      image_url: null
-    },
-    {
-      id: storeId * 1000 + 2,
-      name: '된장찌개',
-      description: '된장과 두부, 채소가 들어간 구수한 찌개',
-      price: 7000,
-      category: '찌개류',
-      is_available: true,
-      image_url: null
-    },
-    {
-      id: storeId * 1000 + 3,
-      name: '불고기',
-      description: '양념에 재운 소고기를 구워낸 불고기',
-      price: 15000,
-      category: '구이류',
-      is_available: true,
-      image_url: null
-    },
-    {
-      id: storeId * 1000 + 4,
-      name: '비빔밥',
-      description: '각종 나물과 고추장을 넣고 비벼먹는 비빔밥',
-      price: 9000,
-      category: '밥류',
-      is_available: true,
-      image_url: null
-    },
-    {
-      id: storeId * 1000 + 5,
-      name: '냉면',
-      description: '시원하고 깔끔한 물냉면',
-      price: 10000,
-      category: '면류',
-      is_available: true,
-      image_url: null
-    },
-    {
-      id: storeId * 1000 + 6,
-      name: '공기밥',
-      description: '갓 지은 따뜻한 쌀밥',
-      price: 1000,
-      category: '기타',
-      is_available: true,
-      image_url: null
-    }
-  ];
-}
 
 module.exports = router;
