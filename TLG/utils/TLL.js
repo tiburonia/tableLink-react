@@ -1,3 +1,4 @@
+replit_final_file>
 window.TLL = async function TLL(preselectedStore = null) {
   // 1. 모던하고 개선된 UI 프레임 렌더링
   main.innerHTML = `
@@ -819,8 +820,13 @@ function handleTossPaymentFailure(data) {
           return;
         }
 
-        // 기존 renderOrderScreen 호출 (장바구니 기반으로 수정됨)
-        await window.renderOrderScreen(selectedStore, tableName, tableNumber);
+        // TLL 주문 화면으로 이동 (올바른 테이블 정보 전달)
+        if (typeof renderOrderScreen === 'function') {
+          renderOrderScreen(selectedStore, tableName, tableNumber);
+        } else {
+          console.error('❌ renderOrderScreen 함수를 찾을 수 없습니다');
+          alert('주문 시스템을 로드할 수 없습니다.');
+        }
 
       } catch (error) {
         console.error('❌ TLL - 주문 시작 실패:', error);
@@ -917,3 +923,4 @@ async function initApp() {
 
   console.log('✅ 앱 초기화 완료');
 }
+</replit_final_file>
