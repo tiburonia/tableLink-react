@@ -739,7 +739,7 @@ function handleTossPaymentFailure(data) {
 
     } catch (error) {
       console.error('❌ TLL - 매장 정보 로드 오류:', error);
-      
+
       // 에러 발생 시 기본 설정으로 폴백
       selectedStore = { 
         id: parseInt(storeId), 
@@ -791,39 +791,49 @@ function handleTossPaymentFailure(data) {
     }
   });
 
+  // TLL 주문 시작 로직 변경: 장바구니 기반으로 수정
   if (startOrderBtn) {
     startOrderBtn.addEventListener('click', async () => {
       if (!selectedStore || !tableSelect.value) {
-        alert('매장과 테이블을 모두 선택해주세요.');
+        alert('매장과 테이블을 선택해주세요.');
         return;
       }
 
-      const selectedTableNumber = tableSelect.value;
-      const selectedOption = tableSelect.options[tableSelect.selectedIndex];
+      try {
+        startOrderBtn.disabled = true;
+        startOrderBtn.innerHTML = `
+          <div class="loading-spinner"></div>
+          <span class="btn-text">주문 화면 로딩 중...</span>
+        `;
 
-      // 사용중인 테이블인지 확인 (disabled 옵션인지 체크)
-      if (selectedOption.disabled) {
-        alert('선택하신 테이블은 현재 사용중입니다. 다른 테이블을 선택해주세요.');
-        return;
-      }
+        const tableNumber = parseInt(tableSelect.value);
+        const tableName = `${tableNumber}번 테이블`;
 
-      const tableName = selectedOption.textContent.replace(' (사용중)', '').trim();
+        console.log(`🚀 TLL - 주문 시작: 매장 ${selectedStore.name}, 테이블 ${tableName}`);
 
-      // 점유 처리 없이 바로 주문 시작
-      console.log(`🏪 선택된 매장:`, selectedStore);
-      console.log(`🏪 선택된 테이블: ${tableName} (번호: ${selectedTableNumber})`);
-      console.log(`✅ TLL - 주문 화면으로 이동`);
+        // 사용자 정보 확인
+        const userInfo = getUserInfo();
+        if (!userInfo || !userInfo.id) {
+          alert('로그인이 필요합니다.');
+          renderLogin();
+          return;
+        }
 
-      // 테이블명이 유효한지 확인
-      if (!tableName || tableName === '') {
-        console.warn('⚠️ 테이블명이 비어있어 기본값 사용');
-        renderOrderScreen(selectedStore, `${selectedTableNumber}번`);
-      } else {
-        renderOrderScreen(selectedStore, tableName);
+        // 새로운 장바구니 기반 주문 화면으로 이동 (체크 생성 없이)
+        await window.renderTLLOrderCart(selectedStore, tableName, tableNumber);
+
+      } catch (error) {
+        console.error('❌ TLL - 주문 시작 실패:', error);
+        alert('주문 시작 중 오류가 발생했습니다: ' + error.message);
+
+        startOrderBtn.disabled = false;
+        startOrderBtn.innerHTML = `
+          <span class="btn-icon">🚀</span>
+          <span class="btn-text">주문 시작하기</span>
+          <div class="btn-shine"></div>
+        `;
       }
     });
-  } else {
-    console.error('❌ startOrderBtn 요소를 찾을 수 없습니다');
   }
 };
 
