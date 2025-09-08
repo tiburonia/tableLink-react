@@ -16,7 +16,7 @@ router.get('/:storeId', async (req, res) => {
         s.id,
         s.name,
         s.is_open,
-        si.store_phone_number,
+        si.phone,
         si.rating_average,
         si.review_count,
         sa.sido,
@@ -79,7 +79,7 @@ router.get('/:storeId/menu/tll', async (req, res) => {
         name,
         description,
         price,
-        cook_station
+        cook_station as category
       FROM store_menu 
       WHERE store_id = $1
       ORDER BY id

@@ -1,4 +1,3 @@
-
 /**
  * TLL 주문 화면 렌더링 (TLG 비율 390px × 760px 최적화)
  */
@@ -28,7 +27,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       if (menuResponse.ok) {
         const menuResult = await menuResponse.json();
         console.log('📋 메뉴 API 응답:', menuResult);
-        
+
         if (menuResult.success && menuResult.menu) {
           menuData = menuResult.menu;
           console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
@@ -40,7 +39,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         console.warn('⚠️ 메뉴 API 호출 실패:', menuResponse.status);
         menuData = [];
       }
-      
+
       if (menuData.length === 0) {
         console.warn('⚠️ 메뉴 데이터가 없어 기본 메뉴 사용');
         menuData = getDefaultMenu();
@@ -156,7 +155,7 @@ function renderOrderHTML(store, tableName, tableNumber, menuByCategory) {
 // 카테고리 탭 렌더링
 function renderCategoryTabs(menuByCategory) {
   const categories = Object.keys(menuByCategory);
-  
+
   if (categories.length <= 1) {
     return '';
   }
@@ -193,7 +192,7 @@ function renderMenuContent(menuByCategory) {
 // 메뉴를 카테고리별로 그룹화
 function groupMenuByCategory(menuData) {
   const grouped = {};
-  
+
   menuData.forEach(item => {
     const category = item.category || '일반';
     if (!grouped[category]) {
@@ -227,7 +226,7 @@ window.switchCategory = function(category) {
 window.toggleCart = function() {
   const cartPanel = document.getElementById('cartPanel');
   const cartOverlay = document.getElementById('cartOverlay');
-  
+
   if (cartPanel.classList.contains('open')) {
     closeCart();
   } else {
@@ -241,7 +240,7 @@ window.toggleCart = function() {
 window.closeCart = function() {
   const cartPanel = document.getElementById('cartPanel');
   const cartOverlay = document.getElementById('cartOverlay');
-  
+
   cartPanel.classList.remove('open');
   cartOverlay.classList.remove('open');
   document.body.style.overflow = '';
@@ -250,7 +249,7 @@ window.closeCart = function() {
 // 장바구니에 추가
 window.addToCart = function(menuId, menuName, price) {
   console.log('🛒 장바구니 추가 요청:', { menuId, menuName, price });
-  
+
   if (!window.currentTLLOrder) {
     console.error('❌ currentTLLOrder가 존재하지 않습니다');
     return;
@@ -280,12 +279,12 @@ window.addToCart = function(menuId, menuName, price) {
   console.log('🛒 현재 장바구니 상태:', window.currentTLLOrder.cart);
 
   updateCartDisplay();
-  
+
   // 장바구니 자동 열기 (첫 번째 아이템 추가시)
   if (window.currentTLLOrder.cart.length === 1 && window.currentTLLOrder.cart[0].quantity === 1) {
     setTimeout(() => toggleCart(), 300);
   }
-  
+
   console.log('🛒 장바구니에 추가 완료:', menuName, '총 아이템:', window.currentTLLOrder.cart.length);
 };
 
@@ -409,7 +408,7 @@ window.proceedToPayment = async function() {
 
       // 세션에 임시 저장
       sessionStorage.setItem('tllOrderData', JSON.stringify(tempCheckData));
-      
+
       // 결제 화면으로 이동
       renderPay(tempCheckData);
     } else {
@@ -927,11 +926,11 @@ function getTLLOrderStyles() {
         .tll-header {
           padding: 10px 12px;
         }
-        
+
         .menu-container {
           padding: 12px;
         }
-        
+
         .cart-content {
           padding: 0 12px 12px 12px;
         }

@@ -197,9 +197,8 @@ window.MapMarkerManager = {
     if (!this.shouldCancel) {
       // 사라진 마커들 제거
       for (const [key, marker] of this.currentMarkers) {
-        if (!newMarkerKeys.has(key)) {
+        if (marker && marker.setMap) {
           marker.setMap(null);
-          this.currentMarkers.delete(key);
         }
       }
 

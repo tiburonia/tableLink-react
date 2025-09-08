@@ -57,7 +57,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
     )
     SELECT
       'individual' AS kind,
-      sa.store_id,
+      sa.store_id as id,
       si.name,
       si.category,
       -- 서버에서 별점 처리
