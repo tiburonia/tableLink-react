@@ -26,12 +26,10 @@ router.get('/:storeId/menu', async (req, res) => {
         name,
         description,
         price,
-        category,
-        is_available,
-        image_url
-      FROM menu_items 
-      WHERE store_id = $1 AND is_available = true
-      ORDER BY category, name
+        cook_station,
+      FROM store_menu 
+      WHERE store_id = $1
+      ORDER BY id
     `, [storeId]);
 
     console.log(`✅ 매장 ${storeId} 메뉴 ${menuResult.rows.length}개 조회 완료`);
