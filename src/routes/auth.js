@@ -328,7 +328,6 @@ router.get('/user/:userId', async (req, res) => {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-
         if (!endDate || endDate > now) {
           coupons.unused.push(couponData);
         } else {
