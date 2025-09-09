@@ -19,7 +19,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
         s.name as store_name
       FROM store_points sp
       JOIN stores s ON sp.store_id = s.id
-      WHERE sp.user_id = $1 AND sp.store_id = $2
+      WHERE sp.user_id = (SELECT id FROM users WHERE user_id = $1) AND sp.store_id = $2
     `, [userId, storeId]);
 
     if (result.rows.length === 0) {
@@ -68,7 +68,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
         ll.eval_policy
       FROM regular_levels rl
       LEFT JOIN loyalty_levels ll ON rl.level_id = ll.id
-      WHERE rl.user_id = $1 AND rl.store_id = $2
+      WHERE rl.user_id = (SELECT id FROM users WHERE user_id = $1) AND rl.store_id = $2
     `, [userId, storeId]);
 
     if (result.rows.length === 0) {
@@ -150,7 +150,7 @@ router.get('/user/:userId', async (req, res) => {
         END as "currentLevel"
       FROM user_store_stats uss
       JOIN stores s ON uss.store_id = s.id
-      WHERE uss.user_id = $1 AND uss.visit_count > 0
+      WHERE uss.user_id = (SELECT id FROM users WHERE user_id = $1) AND uss.visit_count > 0
       ORDER BY uss.visit_count DESC, uss.total_spent DESC
     `, [userId]);
 
@@ -222,7 +222,7 @@ router.post('/user/:userId/store/:storeId/points/use', async (req, res) => {
     // 현재 포인트 잔액 확인
     const balanceResult = await client.query(`
       SELECT balance FROM store_points 
-      WHERE user_id = $1 AND store_id = $2
+      WHERE user_id = (SELECT id FROM users WHERE user_id = $1) AND store_id = $2
     `, [userId, storeId]);
 
     const currentBalance = balanceResult.rows.length > 0 ? balanceResult.rows[0].balance : 0;
@@ -234,7 +234,7 @@ router.post('/user/:userId/store/:storeId/points/use', async (req, res) => {
     // 포인트 차감
     await client.query(`
       INSERT INTO store_points (user_id, store_id, balance, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      VALUES ((SELECT id FROM users WHERE user_id = $1), $2, $3, CURRENT_TIMESTAMP)
       ON CONFLICT (user_id, store_id)
       DO UPDATE SET 
         balance = store_points.balance - $3,
@@ -277,7 +277,7 @@ router.post('/user/:userId/store/:storeId/points/earn', async (req, res) => {
     // 포인트 적립
     await pool.query(`
       INSERT INTO store_points (user_id, store_id, balance, updated_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+      VALUES ((SELECT id FROM users WHERE user_id = $1), $2, $3, CURRENT_TIMESTAMP)
       ON CONFLICT (user_id, store_id)
       DO UPDATE SET 
         balance = store_points.balance + $3,
@@ -287,7 +287,7 @@ router.post('/user/:userId/store/:storeId/points/earn', async (req, res) => {
     // 현재 잔액 조회
     const balanceResult = await pool.query(`
       SELECT balance FROM store_points 
-      WHERE user_id = $1 AND store_id = $2
+      WHERE user_id = (SELECT id FROM users WHERE user_id = $1) AND store_id = $2
     `, [userId, storeId]);
 
     const newBalance = balanceResult.rows[0].balance;
