@@ -182,7 +182,8 @@
           }
 
           body {
-            overflow: hidden;
+            margin: 0;
+            padding: 0;
           }
 
           .payment-container {
@@ -197,7 +198,9 @@
             display: flex;
             flex-direction: column;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            overflow: hidden;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
           }
 
           .payment-header {
