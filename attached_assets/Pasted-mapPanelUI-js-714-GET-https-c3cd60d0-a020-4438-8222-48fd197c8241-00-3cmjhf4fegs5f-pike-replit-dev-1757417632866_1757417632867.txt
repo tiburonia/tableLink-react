@@ -1,0 +1,53 @@
+mapPanelUI.js:714  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/clusters/clusters?level=3&bbox=126.97580127317178%2C37.56244481111013%2C126.98019066263286%2C37.570554592633904 404 (Not Found)
+loadViewportStores @ mapPanelUI.js:714
+rebuildStorePanel @ mapPanelUI.js:832
+connectToMap @ mapPanelUI.js:918
+(anonymous) @ renderMap.js:771
+setTimeout
+renderMap @ renderMap.js:762
+initializeApp @ authManager.js:62
+(anonymous) @ (index):99Understand this error
+mapPanelUI.js:718 ❌ API 응답 오류: 404 {"error":{"code":"INTERNAL_ERROR","message":"Not Found - /api/clusters/clusters?level=3&bbox=126.97580127317178%2C37.56244481111013%2C126.98019066263286%2C37.570554592633904","timestamp":"2025-09-09T11:33:46.214Z"}}
+loadViewportStores @ mapPanelUI.js:718
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:832
+connectToMap @ mapPanelUI.js:918
+(anonymous) @ renderMap.js:771
+setTimeout
+renderMap @ renderMap.js:762
+initializeApp @ authManager.js:62
+(anonymous) @ (index):99Understand this error
+mapPanelUI.js:805 ❌ 뷰포트 매장 데이터 로딩 실패: Error: API 호출 실패: 404
+    at Object.loadViewportStores (mapPanelUI.js:719:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:832:22)
+loadViewportStores @ mapPanelUI.js:805
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:832
+connectToMap @ mapPanelUI.js:918
+(anonymous) @ renderMap.js:771
+setTimeout
+renderMap @ renderMap.js:762
+initializeApp @ authManager.js:62
+(anonymous) @ (index):99Understand this error
+mapPanelUI.js:872 ❌ 뷰포트 기반 패널 재구성 실패: Error: API 호출 실패: 404
+    at Object.loadViewportStores (mapPanelUI.js:719:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:832:22)
+rebuildStorePanel @ mapPanelUI.js:872
+await in rebuildStorePanel
+connectToMap @ mapPanelUI.js:918
+(anonymous) @ renderMap.js:771
+setTimeout
+renderMap @ renderMap.js:762
+initializeApp @ authManager.js:62
+(anonymous) @ (index):99Understand this error
+mapMarkerManager.js:124  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/clusters/clusters?level=3&bbox=126.97580127317178%2C37.56244481111013%2C126.98019066263286%2C37.570554592633904 404 (Not Found)
+refreshMarkersWithAPI @ mapMarkerManager.js:124
+handleMapLevelChange @ mapMarkerManager.js:62
+loadInitialMarkers @ renderMap.js:747
+setTimeout
+renderMap @ renderMap.js:759
+initializeApp @ authManager.js:62
+(anonymous) @ (index):99Understand this error
+mapMarkerManager.js:149 ❌ 개별 매장 API 호출 실패: Error: [object Object]
+    at Object.refreshMarkersWithAPI (mapMarkerManager.js:136:15)
+    at async Object.handleMapLevelChange (mapMarkerManager.js:62:7)

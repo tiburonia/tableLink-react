@@ -96,7 +96,7 @@ try {
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
-  app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로 변경
+  app.use('/api/clusters/clusters', storesClustersRouter); // 클러스터 API 경로
 
   // 라우터 등록
   app.use('/api/auth', authRoutes);
