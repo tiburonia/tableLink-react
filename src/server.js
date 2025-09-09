@@ -90,7 +90,15 @@ try {
   const auditRoutes = require('./routes/audit'); // 감사 로그 라우터 추가
   const usersRouter = require('./routes/users');
 
-  // 기존 라우터 마운트 (순서 중요)
+  // 새로운 POS 시스템 API
+  app.use('/api/pos', posRoutes);
+  app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
+  app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
+  app.use('/api/payments', krpRoutes);
+  app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
+  app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로 변경
+
+  // 라우터 등록
   app.use('/api/auth', authRoutes);
   app.use('/api/stores', storesRoutes);
   app.use('/api/users', usersRouter);
@@ -100,14 +108,8 @@ try {
   app.use('/api/cart', cartRoutes);
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes);
-
-  // 새로운 POS 시스템 API
-  app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
-  app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
-  app.use('/api/payments', krpRoutes);
-  app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
-  app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로
+  app.use('/api/tll', tllRoutes);
+  app.use('/api/toss', tossRoutes);
 
   console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, kds, tll, toss, stores-clusters)');
 } catch (error) {

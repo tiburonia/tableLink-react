@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Pool = require('pg');
+const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -274,29 +274,26 @@ router.get('/user/:userId', async (req, res) => {
 
     // 사용자 쿠폰 정보 조회 (JOIN)
     const couponsResult = await pool.query(`
-    SELECT 
-      c.id AS coupon_id,
-      c.name AS coupon_name,
-      c.description,
-      c.discount_type,
-      c.discount_value,
-      c.min_order_price,
-      c.max_discount_value,
-      c.valid_from,
-      c.valid_until,
-      c.store_id,
-      uc.used_at,
-      uc.issued_at,
-      uc.expires_at,
-      s.name AS store_name
-    FROM user_coupons uc
-    JOIN coupons c ON uc.coupon_id = c.id
-    LEFT JOIN stores s ON c.store_id = s.id
-    WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
-    ORDER BY 
-      (uc.used_at IS NOT NULL),           -- 미사용(false) 먼저
-      COALESCE(c.valid_until, 'infinity') -- 만료일 없으면 맨 뒤로
-      ASC;
+      SELECT 
+        c.id as coupon_id,
+        c.name as coupon_name,
+        c.description,
+        c.discount_type,
+        c.discount_value,
+        c.min_order_amount,
+        c.max_discount,
+        c.starts_at,
+        c.ends_at,
+        uc.used_at,
+        uc.order_id,
+        s.name as store_name
+      FROM user_coupons uc
+      JOIN coupons c ON uc.coupon_id = c.id
+      LEFT JOIN stores s ON c.store_id = s.id
+      WHERE uc.user_id = $1
+      ORDER BY 
+        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
+        c.ends_at ASC
     `, [userId]);
 
     // 쿠폰을 사용가능/사용완료로 분류
@@ -313,6 +310,7 @@ router.get('/user/:userId', async (req, res) => {
         discountType: coupon.discount_type,
         discountValue: coupon.discount_value,
         minOrderAmount: coupon.min_order_amount,
+        maxDiscount: coupon.max_discount,
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
@@ -329,6 +327,7 @@ router.get('/user/:userId', async (req, res) => {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
+        
         if (!endDate || endDate > now) {
           coupons.unused.push(couponData);
         } else {
@@ -614,7 +613,7 @@ router.post('/users/info', async (req, res) => {
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
+      WHERE uc.user_id = $1
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
         c.ends_at ASC
@@ -634,6 +633,7 @@ router.post('/users/info', async (req, res) => {
         discountType: coupon.discount_type,
         discountValue: coupon.discount_value,
         minOrderAmount: coupon.min_order_amount,
+        maxDiscount: coupon.max_discount,
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
@@ -650,7 +650,7 @@ router.post('/users/info', async (req, res) => {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-
+        
         if (!endDate || endDate > now) {
           coupons.unused.push(couponData);
         } else {

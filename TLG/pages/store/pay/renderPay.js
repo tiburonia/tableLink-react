@@ -806,7 +806,7 @@ window.renderPay = async function(currentOrder, store, tableNum) {
       couponSelect.innerHTML = `
         <option value="">쿠폰을 선택하세요</option>
         ${data.user.coupons.unused.map(coupon => `
-          <option value="${coupon.id}" data-discount="${coupon.discountValue || coupon.discount_amount || 0}" data-type="${coupon.discountType || 'amount'}">
+          <option value="${coupon.id}" data-discount="${coupon.discountValue || coupon.discount_amount || 0}">
             ${coupon.name} - ${(coupon.discountValue || coupon.discount_amount || 0).toLocaleString()}원 할인
           </option>
         `).join('')}
@@ -885,19 +885,8 @@ window.renderPay = async function(currentOrder, store, tableNum) {
 
       const couponSelect = document.getElementById('couponSelect');
       const selectedCouponId = couponSelect ? couponSelect.value : null;
-      
-      let couponDiscount = 0;
-      if (couponSelect && couponSelect.value) {
-        const selectedOption = couponSelect.selectedOptions[0];
-        const discountValue = parseFloat(selectedOption?.dataset.discount) || 0;
-        const discountType = selectedOption?.dataset.type || 'amount';
-
-        if (discountType === 'percent') {
-          couponDiscount = Math.floor(orderData.total * (discountValue / 100));
-        } else {
-          couponDiscount = discountValue;
-        }
-      }
+      const couponDiscount = couponSelect ? 
+        parseInt(couponSelect.selectedOptions[0]?.dataset.discount) || 0 : 0;
 
       const finalAmount = Math.max(0, orderData.total - validatedPoints - couponDiscount);
 
@@ -916,7 +905,7 @@ window.renderPay = async function(currentOrder, store, tableNum) {
         // 1. TLL 체크 생성
         const qrCode = `TABLE_${tableNum}`;
         const userInfo = getUserInfoSafely();
-
+        
         let requestBody = { qr_code: qrCode };
         if (userInfo.id && userInfo.id !== 'guest') {
           requestBody.user_id = userInfo.id;
@@ -1044,21 +1033,8 @@ window.renderPay = async function(currentOrder, store, tableNum) {
     }
 
     const couponSelect = document.getElementById('couponSelect');
-    let couponDiscount = 0;
-
-    if (couponSelect && couponSelect.value) {
-      const selectedOption = couponSelect.selectedOptions[0];
-      const discountValue = parseFloat(selectedOption?.dataset.discount) || 0;
-      const discountType = selectedOption?.dataset.type || 'amount';
-
-      if (discountType === 'percent') {
-        // 퍼센트 할인: 주문 금액의 %
-        couponDiscount = Math.floor(orderData.total * (discountValue / 100));
-      } else {
-        // 정액 할인
-        couponDiscount = discountValue;
-      }
-    }
+    const couponDiscount = couponSelect ? 
+      parseInt(couponSelect.selectedOptions[0]?.dataset.discount) || 0 : 0;
 
     const totalDiscount = validatedPoints + couponDiscount;
     const finalAmount = Math.max(0, orderData.total - totalDiscount);
