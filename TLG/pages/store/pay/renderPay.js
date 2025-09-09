@@ -138,193 +138,287 @@
               </div>
             </div>
 
-            <div class="payment-options">
-              <div class="points-section">
-                <h3>포인트 사용</h3>
-                <div class="points-info">
-                  <span>보유 포인트: <span id="currentPoints">0</span>P</span>
-                </div>
-                <div class="points-input">
-                  <input type="number" id="pointsToUse" placeholder="사용할 포인트" min="0" max="0">
-                  <button id="useAllPoints">전액 사용</button>
-                </div>
+            <div class="payment-section points-section">
+              <h3>포인트 사용</h3>
+              <div class="points-info">
+                <span>보유 포인트: <span id="currentPoints">0</span>P</span>
               </div>
-
-              <div class="coupon-section">
-                <h3>쿠폰 사용</h3>
-                <select id="couponSelect">
-                  <option value="">쿠폰 선택</option>
-                </select>
-                <div class="coupon-discount" id="couponDiscount">0원 할인</div>
+              <div class="points-input">
+                <input type="number" id="pointsToUse" placeholder="사용할 포인트" min="0" max="0">
+                <button id="useAllPoints">전액 사용</button>
               </div>
-
-              <div class="payment-method">
-                <h3>결제 방법</h3>
-                <div class="payment-methods">
-                  <button class="payment-method-btn active" data-method="카드">카드</button>
-                  <button class="payment-method-btn" data-method="현금">현금</button>
-                </div>
-              </div>
-
-              <div class="final-amount">
-                <h3>최종 결제 금액</h3>
-                <div class="amount" id="finalAmount">${orderData.total.toLocaleString()}원</div>
-              </div>
-
-              <button class="pay-btn" id="payBtn">결제하기</button>
             </div>
+
+            <div class="payment-section coupon-section">
+              <h3>쿠폰 사용</h3>
+              <select id="couponSelect">
+                <option value="">쿠폰 선택</option>
+              </select>
+              <div class="coupon-discount" id="couponDiscount">0원 할인</div>
+            </div>
+
+            <div class="payment-section payment-method">
+              <h3>결제 방법</h3>
+              <div class="payment-methods">
+                <button class="payment-method-btn active" data-method="카드">카드</button>
+                <button class="payment-method-btn" data-method="현금">현금</button>
+              </div>
+            </div>
+
+            <div class="final-amount">
+              <h3>최종 결제 금액</h3>
+              <div class="amount" id="finalAmount">${orderData.total.toLocaleString()}원</div>
+            </div>
+
+            <button class="pay-btn" id="payBtn">결제하기</button>
           </div>
         </div>
 
         <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+
+          body {
+            overflow: hidden;
+          }
+
           .payment-container {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
             max-width: 430px;
-            margin: 0 auto;
-            background: #fff;
             height: 100vh;
-            overflow-y: auto;
+            background: #fff;
             display: flex;
             flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
           }
 
           .payment-header {
+            height: 70px;
             display: flex;
             align-items: center;
             padding: 16px;
             border-bottom: 1px solid #e5e7eb;
-            position: sticky;
-            top: 0;
             background: #fff;
             z-index: 100;
             flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
 
           .back-btn {
-            background: none;
+            background: #f1f5f9;
             border: none;
-            font-size: 24px;
+            font-size: 18px;
+            padding: 8px 12px;
+            border-radius: 8px;
             margin-right: 16px;
             cursor: pointer;
+            color: #475569;
+            transition: background 0.2s;
+          }
+
+          .back-btn:hover {
+            background: #e2e8f0;
           }
 
           .payment-title {
             font-size: 20px;
             font-weight: 600;
             margin: 0;
+            color: #1e293b;
           }
 
           .payment-content {
-            padding: 20px;
             flex: 1;
             overflow-y: auto;
+            overflow-x: hidden;
+            padding: 20px;
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
           }
 
           .order-summary {
-            background: #f9fafb;
+            background: #f8fafc;
             padding: 20px;
-            border-radius: 12px;
+            border-radius: 16px;
             margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           }
 
           .order-summary h2 {
             margin: 0 0 16px 0;
             font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
           }
 
           .store-info {
             display: flex;
             justify-content: space-between;
             margin-bottom: 16px;
-            font-weight: 500;
+            font-weight: 600;
+            color: #475569;
           }
 
           .order-items {
-            border-top: 1px solid #e5e7eb;
+            border-top: 1px solid #e2e8f0;
             padding-top: 12px;
+            margin-bottom: 16px;
           }
 
           .order-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 0;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+          }
+
+          .order-item:last-child {
+            border-bottom: none;
           }
 
           .item-name {
             flex: 1;
+            font-weight: 600;
+            color: #1e293b;
           }
 
           .item-quantity {
             margin: 0 12px;
-            color: #6b7280;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+          }
+
+          .item-price {
+            font-weight: 700;
+            color: #2563eb;
           }
 
           .order-total {
             display: flex;
             justify-content: space-between;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 18px;
-            border-top: 2px solid #e5e7eb;
-            padding-top: 12px;
-            margin-top: 12px;
+            border-top: 2px solid #e2e8f0;
+            padding-top: 16px;
+            color: #1e293b;
           }
 
-          .payment-options h3 {
+          .payment-section {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          }
+
+          .payment-section h3 {
             font-size: 16px;
-            margin: 24px 0 12px 0;
+            font-weight: 700;
+            margin: 0 0 16px 0;
+            color: #1e293b;
           }
 
           .points-info {
-            margin-bottom: 8px;
-            color: #6b7280;
+            margin-bottom: 12px;
+            color: #64748b;
+            font-weight: 500;
           }
 
           .points-input {
             display: flex;
-            gap: 8px;
+            gap: 12px;
           }
 
           .points-input input {
             flex: 1;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #f8fafc;
+            font-weight: 600;
+          }
+
+          .points-input input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
           }
 
           .points-input button {
-            padding: 12px 16px;
+            padding: 14px 20px;
             background: #3b82f6;
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             cursor: pointer;
+            font-weight: 700;
+            transition: all 0.2s;
+          }
+
+          .points-input button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
           }
 
           .coupon-section select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            margin-bottom: 8px;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 16px;
+            background: #f8fafc;
+            font-weight: 600;
+          }
+
+          .coupon-section select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
           }
 
           .coupon-discount {
-            color: #dc2626;
-            font-weight: 500;
+            color: #059669;
+            font-weight: 700;
+            font-size: 14px;
           }
 
           .payment-methods {
             display: flex;
-            gap: 8px;
+            gap: 12px;
           }
 
           .payment-method-btn {
             flex: 1;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            background: white;
-            border-radius: 8px;
+            padding: 16px 12px;
+            border: 2px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 12px;
             cursor: pointer;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.2s;
+          }
+
+          .payment-method-btn:hover {
+            border-color: #3b82f6;
+            background: white;
           }
 
           .payment-method-btn.active {
@@ -334,34 +428,49 @@
           }
 
           .final-amount {
-            background: #f3f4f6;
-            padding: 20px;
-            border-radius: 12px;
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 24px;
+            border-radius: 16px;
             margin: 20px 0;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+          }
+
+          .final-amount h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            color: #1e293b;
           }
 
           .final-amount .amount {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1f2937;
-            text-align: center;
+            font-size: 28px;
+            font-weight: 900;
+            color: #2563eb;
           }
 
           .pay-btn {
             width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            padding: 18px;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 800;
             cursor: pointer;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+            transition: all 0.2s;
           }
 
           .pay-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+          }
+
+          .pay-btn:active {
+            transform: translateY(0);
           }
         </style>
       `;
