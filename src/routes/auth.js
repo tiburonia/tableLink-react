@@ -312,7 +312,6 @@ router.get('/user/:userId', async (req, res) => {
         discountType: coupon.discount_type,
         discountValue: coupon.discount_value,
         minOrderAmount: coupon.min_order_amount,
-        maxDiscount: coupon.max_discount,
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
@@ -329,7 +328,7 @@ router.get('/user/:userId', async (req, res) => {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-        
+
         if (!endDate || endDate > now) {
           coupons.unused.push(couponData);
         } else {
@@ -635,7 +634,6 @@ router.post('/users/info', async (req, res) => {
         discountType: coupon.discount_type,
         discountValue: coupon.discount_value,
         minOrderAmount: coupon.min_order_amount,
-        maxDiscount: coupon.max_discount,
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
@@ -652,7 +650,7 @@ router.post('/users/info', async (req, res) => {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-        
+
         if (!endDate || endDate > now) {
           coupons.unused.push(couponData);
         } else {
