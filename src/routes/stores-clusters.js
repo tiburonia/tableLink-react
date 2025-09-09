@@ -5,6 +5,9 @@ const pool = require('../db/pool');
 
 // 매장 클러스터/개별 매장 조회 API
 router.get('/clusters', async (req, res) => {
+  console.log(`🔍 클러스터 API 호출됨: ${req.method} ${req.originalUrl}`);
+  console.log(`📊 쿼리 파라미터:`, req.query);
+  
   try {
     const { level, bbox } = req.query;
 

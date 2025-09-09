@@ -690,7 +690,7 @@ window.MapPanelUI = {
     console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료');
   },
 
-  // 개별 매장 전용 API 호출
+  // MapMarkerManager의 결과를 재사용하여 중복 API 호출 방지
   async loadViewportStores(map) {
     if (!map) {
       console.warn('⚠️ 지도 인스턴스가 없습니다');
@@ -698,113 +698,116 @@ window.MapPanelUI = {
     }
 
     try {
-      const bounds = map.getBounds();
-      const level = map.getLevel();
-
-      // bbox 형식으로 파라미터 구성
-      const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
-
-      const params = new URLSearchParams({
-        level: level,
-        bbox: bbox
-      });
-
-      console.log(`📱 개별 매장 API 호출: level=${level}, bbox=${bbox}`);
-
-      const response = await fetch(`/api/clusters/clusters?${params}`);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API 응답 오류:', response.status, errorText);
-        throw new Error(`API 호출 실패: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error || '매장 데이터 조회 실패');
-      }
-
-      // 응답 데이터 정규화
-      const features = data.data || data.features || [];
-      console.log(`✅ 개별 매장 ${features.length}개 로딩 완료 (레벨: ${level})`);
-
-      // 빈 결과 처리
-      if (features.length === 0) {
-        console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 레벨: ${level}, bbox: ${bbox}`);
-      }
-
-      // 개별 매장 데이터 변환
-      const stores = features.map(feature => {
-        if (feature.kind === 'individual') {
-          // ID 우선순위 확인 및 로깅
-          const originalId = feature.id;
-          const originalStoreId = feature.store_id;
-          
-          console.log('🔍 원본 데이터 검사:', {
-            id: originalId,
-            store_id: originalStoreId,
-            name: feature.name,
-            allKeys: Object.keys(feature)
-          });
-
-          // ID 결정 - 우선순위: id > store_id
-          let storeId = originalId || originalStoreId;
-          
-          // 숫자 형태의 문자열을 숫자로 변환
-          if (typeof storeId === 'string' && !isNaN(storeId)) {
-            storeId = parseInt(storeId, 10);
+      console.log(`📱 MapMarkerManager 캐시 확인 중...`);
+      
+      // MapMarkerManager의 캐시된 결과 활용
+      if (window.MapMarkerManager && window.MapMarkerManager.requestCache) {
+        const level = map.getLevel();
+        const bounds = map.getBounds();
+        const bbox = [
+          bounds.getSouthWest().getLng(),
+          bounds.getSouthWest().getLat(),
+          bounds.getNorthEast().getLng(),
+          bounds.getNorthEast().getLat()
+        ];
+        
+        const params = new URLSearchParams({
+          level: level.toString(),
+          bbox: bbox.join(',')
+        });
+        
+        const cacheKey = params.toString();
+        
+        // 캐시된 데이터가 있으면 재사용
+        if (window.MapMarkerManager.requestCache.has(cacheKey)) {
+          const cached = window.MapMarkerManager.requestCache.get(cacheKey);
+          if (Date.now() - cached.timestamp < 60000) { // 1분 유효
+            console.log(`⚡ MapMarkerManager 캐시 재사용: ${cached.data.data?.length || 0}개`);
+            return this.convertAPIDataToStores(cached.data.data || []);
           }
-          
-          if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
-            console.error('❌ 유효하지 않은 매장 ID:', {
-              feature,
-              originalId,
-              originalStoreId,
-              finalStoreId: storeId,
-              typeOfStoreId: typeof storeId,
-              hasId: !!feature.id,
-              hasStoreId: !!feature.store_id,
-              keys: Object.keys(feature)
-            });
-            return null;
-          }
-          
-          console.log('✅ 매장 데이터 변환 성공:', { 
-            originalId,
-            originalStoreId, 
-            finalId: storeId,
-            finalIdType: typeof storeId,
-            name: feature.name 
-          });
-          
-          return {
-            id: storeId,
-            store_id: storeId,  // 호환성을 위해 store_id도 설정
-            name: feature.name || '매장명 없음',
-            category: feature.category || '기타',
-            address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
-            ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
-            reviewCount: feature.review_count || 0,
-            favoriteCount: 0,
-            isOpen: feature.is_open !== false,
-            coord: { lat: feature.lat, lng: feature.lng },
-            region: {
-              sido: feature.sido,
-              sigungu: feature.sigungu,
-              eupmyeondong: feature.eupmyeondong
-            }
-          };
         }
-        return null;
-      }).filter(Boolean);
-
-      console.log(`✅ 최종 변환된 매장 데이터 ${stores.length}개:`, stores.map(s => ({ id: s.id, name: s.name, idType: typeof s.id })));
-      return stores;
+      }
+      
+      // 캐시가 없으면 직접 API 호출
+      console.log(`📱 직접 API 호출 (캐시 없음)`);
+      return await this.loadViewportStoresFromAPI(map);
+      
     } catch (error) {
       console.error('❌ 뷰포트 매장 데이터 로딩 실패:', error);
       throw error;
     }
+  },
+
+  // 직접 API 호출 (백업용)
+  async loadViewportStoresFromAPI(map) {
+    const bounds = map.getBounds();
+    const level = map.getLevel();
+    const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
+
+    const params = new URLSearchParams({
+      level: level,
+      bbox: bbox
+    });
+
+    console.log(`📱 개별 매장 API 호출: level=${level}, bbox=${bbox}`);
+
+    const response = await fetch(`/api/clusters/clusters?${params}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ API 응답 오류:', response.status, errorText);
+      throw new Error(`API 호출 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || '매장 데이터 조회 실패');
+    }
+
+    return this.convertAPIDataToStores(data.data || []);
+  },
+
+  // API 데이터를 매장 객체로 변환
+  convertAPIDataToStores(features) {
+    console.log(`🔄 API 데이터 변환: ${features.length}개 피처`);
+
+    const stores = features.map(feature => {
+      if (feature.kind === 'individual') {
+        let storeId = feature.id || feature.store_id;
+        
+        if (typeof storeId === 'string' && !isNaN(storeId)) {
+          storeId = parseInt(storeId, 10);
+        }
+        
+        if (!storeId || storeId <= 0) {
+          console.error('❌ 유효하지 않은 매장 ID:', feature);
+          return null;
+        }
+        
+        return {
+          id: storeId,
+          store_id: storeId,
+          name: feature.name || '매장명 없음',
+          category: feature.category || '기타',
+          address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
+          ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
+          reviewCount: feature.review_count || 0,
+          favoriteCount: 0,
+          isOpen: feature.is_open !== false,
+          coord: { lat: feature.lat, lng: feature.lng },
+          region: {
+            sido: feature.sido,
+            sigungu: feature.sigungu,
+            eupmyeondong: feature.eupmyeondong
+          }
+        };
+      }
+      return null;
+    }).filter(Boolean);
+
+    console.log(`✅ 변환 완료: ${stores.length}개 매장`);
+    return stores;
   },
 
   // 뷰포트 기반 패널 완전 재구성 (개별 매장만)
