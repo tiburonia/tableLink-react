@@ -274,26 +274,28 @@ router.get('/user/:userId', async (req, res) => {
 
     // 사용자 쿠폰 정보 조회 (JOIN)
     const couponsResult = await pool.query(`
-      SELECT 
-        c.id as coupon_id,
-        c.name as coupon_name,
-        c.description,
-        c.discount_type,
-        c.discount_value,
-        c.min_order_amount,
-        c.max_discount,
-        c.starts_at,
-        c.ends_at,
-        uc.used_at,
-        uc.order_id,
-        s.name as store_name
-      FROM user_coupons uc
-      JOIN coupons c ON uc.coupon_id = c.id
-      LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
-      ORDER BY 
-        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
-        c.ends_at ASC
+    SELECT 
+      c.id AS coupon_id,
+      c.name AS coupon_name,
+      c.description,
+      c.discount_type,
+      c.discount_value,
+      c.min_order_price,
+      c.max_discount_value,
+      c.valid_from,
+      c.valid_until,
+      uc.used_at,
+      uc.issued_at,
+      uc.exprires_at,
+      s.name AS store_name
+    FROM user_coupons uc
+    JOIN coupons c ON uc.coupon_id = c.id
+    LEFT JOIN stores s ON c.store_id = s.id
+    WHERE uc.user_id = $1
+    ORDER BY 
+      (uc.used_at IS NOT NULL),           -- 미사용(false) 먼저
+      COALESCE(c.valid_until, 'infinity') -- 만료일 없으면 맨 뒤로
+      ASC;
     `, [userId]);
 
     // 쿠폰을 사용가능/사용완료로 분류
