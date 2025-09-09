@@ -245,11 +245,11 @@
             height: 100dvh;
             background: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
           }
 
           .payment-header {
-            position: relative;
             height: 70px;
             display: flex;
             align-items: center;
@@ -258,6 +258,7 @@
             background: #fff;
             z-index: 100;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex-shrink: 0;
           }
 
           .back-btn {
@@ -284,11 +285,8 @@
           }
 
           .payment-content {
-            position: absolute;
-            top: 70px;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            flex: 1;
+            min-height: 0;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 20px;
