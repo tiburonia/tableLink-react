@@ -7,18 +7,67 @@
   // PaymentDataService 모듈
   const PaymentDataService = {
     prepareOrderData: function(currentOrder, store, tableNum) {
-      const items = Object.entries(currentOrder).map(([key, item]) => {
-        const price = parseInt(item.price) || 0;
-        const quantity = parseInt(item.count) || 1;
-        return {
-          name: key,
-          price: price,
-          quantity: quantity,
-          totalPrice: price * quantity
-        };
-      });
+      console.log('📋 주문 데이터 원본:', currentOrder);
+      console.log('🏪 매장 정보:', store);
+      
+      const items = [];
+      let total = 0;
 
-      const total = items.reduce((sum, item) => sum + item.totalPrice, 0);
+      // currentOrder가 배열인지 객체인지 확인
+      if (Array.isArray(currentOrder)) {
+        // TLL 스타일 배열 구조
+        currentOrder.forEach(orderItem => {
+          console.log('📦 배열 아이템 처리:', orderItem);
+          const price = parseInt(orderItem.price) || 0;
+          const quantity = parseInt(orderItem.quantity) || 1;
+          const itemTotal = price * quantity;
+          
+          items.push({
+            name: orderItem.name || '메뉴명 없음',
+            price: price,
+            quantity: quantity,
+            totalPrice: itemTotal
+          });
+          total += itemTotal;
+        });
+      } else if (typeof currentOrder === 'object') {
+        // 기존 TLG 스타일 객체 구조
+        for (const [key, item] of Object.entries(currentOrder)) {
+          console.log(`📦 객체 아이템 처리: ${key}`, item);
+          
+          let price = 0;
+          let quantity = 1;
+          
+          // 여러 가능한 속성명 확인
+          if (typeof item === 'number') {
+            // item이 수량인 경우
+            quantity = item;
+            // 매장 메뉴에서 가격 찾기
+            const menuItem = store?.menu?.find(m => m.name === key);
+            price = menuItem ? parseInt(menuItem.price) || 0 : 0;
+          } else if (typeof item === 'object') {
+            // item이 객체인 경우
+            price = parseInt(item.price || item.unitPrice || 0);
+            quantity = parseInt(item.count || item.quantity || item.qty || 1);
+          }
+          
+          if (price === 0) {
+            console.warn(`⚠️ 메뉴 "${key}"의 가격을 찾을 수 없습니다`);
+          }
+          
+          const itemTotal = price * quantity;
+          items.push({
+            name: key,
+            price: price,
+            quantity: quantity,
+            totalPrice: itemTotal
+          });
+          total += itemTotal;
+        }
+      }
+
+      console.log('✅ 처리된 아이템들:', items);
+      console.log('💰 총 금액:', total);
 
       return {
         storeId: store.id || store.store_id,
@@ -655,12 +704,29 @@
 
       // 주문 데이터 상세 검증
       console.log('📋 주문 데이터 검증:', currentOrder);
-      for (const [itemName, item] of Object.entries(currentOrder)) {
-        if (!item.price || isNaN(parseInt(item.price))) {
-          console.warn(`⚠️ 메뉴 "${itemName}"의 가격이 유효하지 않습니다:`, item.price);
-        }
-        if (!item.count || isNaN(parseInt(item.count))) {
-          console.warn(`⚠️ 메뉴 "${itemName}"의 수량이 유효하지 않습니다:`, item.count);
+      console.log('📋 주문 데이터 타입:', typeof currentOrder, Array.isArray(currentOrder) ? '(배열)' : '(객체)');
+      
+      if (Array.isArray(currentOrder)) {
+        currentOrder.forEach((item, index) => {
+          console.log(`📦 아이템 ${index}:`, item);
+          if (!item.price || isNaN(parseInt(item.price))) {
+            console.warn(`⚠️ 아이템 ${index}의 가격이 유효하지 않습니다:`, item.price);
+          }
+          if (!item.quantity && !item.count) {
+            console.warn(`⚠️ 아이템 ${index}의 수량이 유효하지 않습니다:`, item.quantity || item.count);
+          }
+        });
+      } else {
+        for (const [itemName, item] of Object.entries(currentOrder)) {
+          console.log(`📦 메뉴 "${itemName}":`, item);
+          if (typeof item === 'object') {
+            if (!item.price || isNaN(parseInt(item.price))) {
+              console.warn(`⚠️ 메뉴 "${itemName}"의 가격이 유효하지 않습니다:`, item.price);
+            }
+            if (!item.count && !item.quantity || isNaN(parseInt(item.count || item.quantity))) {
+              console.warn(`⚠️ 메뉴 "${itemName}"의 수량이 유효하지 않습니다:`, item.count || item.quantity);
+            }
+          }
         }
       }
 
