@@ -292,7 +292,7 @@ router.get('/user/:userId', async (req, res) => {
     FROM user_coupons uc
     JOIN coupons c ON uc.coupon_id = c.id
     LEFT JOIN stores s ON c.store_id = s.id
-    WHERE uc.user_id = $1
+    WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
     ORDER BY 
       (uc.used_at IS NOT NULL),           -- 미사용(false) 먼저
       COALESCE(c.valid_until, 'infinity') -- 만료일 없으면 맨 뒤로
@@ -614,7 +614,7 @@ router.post('/users/info', async (req, res) => {
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
+      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
         c.ends_at ASC
