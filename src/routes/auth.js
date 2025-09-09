@@ -272,7 +272,7 @@ router.get('/user/:userId', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // 사용자 쿠폰 정보 조회 (JOIN)
+    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
     const couponsResult = await pool.query(`
       SELECT 
         c.id as coupon_id,
@@ -280,20 +280,20 @@ router.get('/user/:userId', async (req, res) => {
         c.description,
         c.discount_type,
         c.discount_value,
-        c.min_order_amount,
-        c.max_discount,
-        c.starts_at,
-        c.ends_at,
+        c.min_order_price as min_order_amount,
+        c.max_discount_value as max_discount,
+        c.valid_from as starts_at,
+        c.valid_until as ends_at,
         uc.used_at,
-        uc.order_id,
+        uc.status,
         s.name as store_name
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
+      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
-        c.ends_at ASC
+        c.valid_until ASC
     `, [userId]);
 
     // 쿠폰을 사용가능/사용완료로 분류
@@ -314,28 +314,27 @@ router.get('/user/:userId', async (req, res) => {
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
-        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null
+        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null,
+        status: coupon.status
       };
 
-      if (coupon.used_at) {
+      if (coupon.used_at || coupon.status === 'USED') {
         coupons.used.push({
           ...couponData,
-          usedAt: coupon.used_at,
-          orderId: coupon.order_id
+          usedAt: coupon.used_at
         });
       } else {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-        
-        if (!endDate || endDate > now) {
+
+        if ((!endDate || endDate > now) && coupon.status === 'AVAILABLE') {
           coupons.unused.push(couponData);
         } else {
           // 만료된 쿠폰은 사용완료로 처리
           coupons.used.push({
             ...couponData,
             usedAt: null,
-            orderId: null,
             expired: true
           });
         }
@@ -595,7 +594,7 @@ router.post('/users/info', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // 사용자 쿠폰 정보 조회 (JOIN)
+    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
     const couponsResult = await pool.query(`
       SELECT 
         c.id as coupon_id,
@@ -603,20 +602,20 @@ router.post('/users/info', async (req, res) => {
         c.description,
         c.discount_type,
         c.discount_value,
-        c.min_order_amount,
-        c.max_discount,
-        c.starts_at,
-        c.ends_at,
+        c.min_order_price as min_order_amount,
+        c.max_discount_value as max_discount,
+        c.valid_from as starts_at,
+        c.valid_until as ends_at,
         uc.used_at,
-        uc.order_id,
+        uc.status,
         s.name as store_name
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
+      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
-        c.ends_at ASC
+        c.valid_until ASC
     `, [userId]);
 
     // 쿠폰을 사용가능/사용완료로 분류
@@ -637,28 +636,27 @@ router.post('/users/info', async (req, res) => {
         startsAt: coupon.starts_at,
         endsAt: coupon.ends_at,
         storeName: coupon.store_name,
-        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null
+        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null,
+        status: coupon.status
       };
 
-      if (coupon.used_at) {
+      if (coupon.used_at || coupon.status === 'USED') {
         coupons.used.push({
           ...couponData,
-          usedAt: coupon.used_at,
-          orderId: coupon.order_id
+          usedAt: coupon.used_at
         });
       } else {
         // 만료되지 않은 쿠폰만 사용가능 목록에 추가
         const now = new Date();
         const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-        
-        if (!endDate || endDate > now) {
+
+        if ((!endDate || endDate > now) && coupon.status === 'AVAILABLE') {
           coupons.unused.push(couponData);
         } else {
           // 만료된 쿠폰은 사용완료로 처리
           coupons.used.push({
             ...couponData,
             usedAt: null,
-            orderId: null,
             expired: true
           });
         }
