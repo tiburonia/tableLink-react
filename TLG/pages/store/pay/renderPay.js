@@ -242,14 +242,12 @@
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
-            height: 100vh;
+            height: 100dvh;
             background: #fff;
             display: flex;
             flex-direction: column;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            overflow-y: auto;
-            overflow-x: hidden;
-            -webkit-overflow-scrolling: touch;
+            overflow: hidden;
           }
 
           .payment-header {
@@ -259,6 +257,8 @@
             padding: 16px;
             border-bottom: 1px solid #e5e7eb;
             background: #fff;
+            position: sticky;
+            top: 0;
             z-index: 100;
             flex-shrink: 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -288,12 +288,12 @@
           }
 
           .payment-content {
-            flex: 1;
+            flex: 1 1 auto;
+            min-height: 0;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 20px;
             -webkit-overflow-scrolling: touch;
-            scroll-behavior: smooth;
           }
 
           .order-summary {
