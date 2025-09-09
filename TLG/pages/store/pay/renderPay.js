@@ -181,7 +181,10 @@
             max-width: 430px;
             margin: 0 auto;
             background: #fff;
-            min-height: 100vh;
+            height: 100vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
           }
 
           .payment-header {
@@ -193,6 +196,7 @@
             top: 0;
             background: #fff;
             z-index: 100;
+            flex-shrink: 0;
           }
 
           .back-btn {
@@ -211,6 +215,8 @@
 
           .payment-content {
             padding: 20px;
+            flex: 1;
+            overflow-y: auto;
           }
 
           .order-summary {
