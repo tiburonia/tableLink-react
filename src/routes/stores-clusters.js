@@ -4,7 +4,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 
 // 매장 클러스터/개별 매장 조회 API
-router.get('/', async (req, res) => {
+router.get('/clusters', async (req, res) => {
   try {
     const { level, bbox } = req.query;
 
