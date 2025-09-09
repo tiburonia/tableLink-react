@@ -7,16 +7,25 @@
   // PaymentDataService 모듈
   const PaymentDataService = {
     prepareOrderData: function(currentOrder, store, tableNum) {
+      const items = Object.entries(currentOrder).map(([key, item]) => {
+        const price = parseInt(item.price) || 0;
+        const quantity = parseInt(item.count) || 1;
+        return {
+          name: key,
+          price: price,
+          quantity: quantity,
+          totalPrice: price * quantity
+        };
+      });
+
+      const total = items.reduce((sum, item) => sum + item.totalPrice, 0);
+
       return {
         storeId: store.id || store.store_id,
         store: store.name,
         tableNum: tableNum,
-        total: calculateOrderTotal(currentOrder),
-        items: Object.entries(currentOrder).map(([key, item]) => ({
-          name: key,
-          price: item.price,
-          quantity: item.count
-        }))
+        total: total,
+        items: items
       };
     },
 
@@ -117,9 +126,9 @@
               <div class="order-items">
                 ${orderData.items.map(item => `
                   <div class="order-item">
-                    <span class="item-name">${item.name}</span>
-                    <span class="item-quantity">x${item.quantity}</span>
-                    <span class="item-price">${item.price.toLocaleString()}원</span>
+                    <span class="item-name">${item.name || '메뉴명 없음'}</span>
+                    <span class="item-quantity">x${item.quantity || 1}</span>
+                    <span class="item-price">${(item.price || 0).toLocaleString()}원</span>
                   </div>
                 `).join('')}
               </div>
@@ -490,7 +499,9 @@
   function calculateOrderTotal(currentOrder) {
     let total = 0;
     for (const [key, item] of Object.entries(currentOrder)) {
-      total += (item.price || 0) * (item.count || 1);
+      const price = parseInt(item.price) || 0;
+      const count = parseInt(item.count) || 1;
+      total += price * count;
     }
     return total;
   }
@@ -522,6 +533,17 @@
 
       if (!store || !store.name) {
         throw new Error('매장 정보가 없습니다.');
+      }
+
+      // 주문 데이터 상세 검증
+      console.log('📋 주문 데이터 검증:', currentOrder);
+      for (const [itemName, item] of Object.entries(currentOrder)) {
+        if (!item.price || isNaN(parseInt(item.price))) {
+          console.warn(`⚠️ 메뉴 "${itemName}"의 가격이 유효하지 않습니다:`, item.price);
+        }
+        if (!item.count || isNaN(parseInt(item.count))) {
+          console.warn(`⚠️ 메뉴 "${itemName}"의 수량이 유효하지 않습니다:`, item.count);
+        }
       }
 
       const orderData = PaymentDataService.prepareOrderData(currentOrder, store, tableNum);
