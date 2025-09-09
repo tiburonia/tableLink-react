@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const Pool = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -284,9 +284,10 @@ router.get('/user/:userId', async (req, res) => {
       c.max_discount_value,
       c.valid_from,
       c.valid_until,
+      c.store_id,
       uc.used_at,
       uc.issued_at,
-      uc.exprires_at,
+      uc.expires_at,
       s.name AS store_name
     FROM user_coupons uc
     JOIN coupons c ON uc.coupon_id = c.id
