@@ -22,52 +22,81 @@ export class PaymentEventHandler {
    * 네비게이션 이벤트 설정
    */
   static setupNavigationEvents(store, tableNum) {
-    // 뒤로가기
-    document.getElementById('payBackBtn').addEventListener('click', () => {
-      if (typeof renderOrderScreen === 'function') {
-        renderOrderScreen(store, tableNum);
-      } else {
-        console.error('❌ renderOrderScreen 함수를 찾을 수 없습니다');
-      }
-    });
+    const payBackBtn = document.getElementById('payBackBtn');
+    const cancelPayBtn = document.getElementById('cancelPayBtn');
 
-    // 취소
-    document.getElementById('cancelPayBtn').addEventListener('click', () => {
-      if (typeof renderOrderScreen === 'function') {
+    if (payBackBtn) {
+      payBackBtn.addEventListener('click', () => {
+        this.navigateBack(store, tableNum);
+      });
+    }
+
+    if (cancelPayBtn) {
+      cancelPayBtn.addEventListener('click', () => {
+        this.navigateBack(store, tableNum);
+      });
+    }
+  }
+
+  /**
+   * 안전한 뒤로가기 처리
+   */
+  static navigateBack(store, tableNum) {
+    try {
+      if (typeof window.renderOrderScreen === 'function') {
+        window.renderOrderScreen(store, tableNum);
+      } else if (typeof renderOrderScreen === 'function') {
         renderOrderScreen(store, tableNum);
       } else {
         console.error('❌ renderOrderScreen 함수를 찾을 수 없습니다');
+        // 폴백: 브라우저 뒤로가기
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          alert('이전 화면으로 돌아갈 수 없습니다.');
+        }
       }
-    });
+    } catch (error) {
+      console.error('❌ 뒤로가기 처리 실패:', error);
+      alert('화면 전환 중 오류가 발생했습니다.');
+    }
   }
 
   /**
    * 포인트 관련 이벤트 설정
    */
   static setupPointEvents(orderData) {
-    // 전액 사용
-    document.getElementById('maxPointBtn').addEventListener('click', () => {
-      const usePointInput = document.getElementById('usePoint');
-      const maxUsable = Math.min(parseInt(usePointInput.max), orderData.total);
-      usePointInput.value = maxUsable;
-      PaymentDataService.calculateFinalAmount(orderData.total);
-    });
+    const maxPointBtn = document.getElementById('maxPointBtn');
+    const usePointInput = document.getElementById('usePoint');
+
+    // 전액 사용 버튼
+    if (maxPointBtn) {
+      maxPointBtn.addEventListener('click', () => {
+        if (usePointInput) {
+          const maxUsable = Math.min(parseInt(usePointInput.max) || 0, orderData.total);
+          usePointInput.value = maxUsable;
+          PaymentDataService.calculateFinalAmount(orderData.total);
+        }
+      });
+    }
 
     // 포인트 입력 - 실시간 검증
-    document.getElementById('usePoint').addEventListener('input', (e) => {
-      const value = parseInt(e.target.value) || 0;
-      const maxPoints = parseInt(e.target.max) || 0;
-      const maxUsable = Math.min(maxPoints, orderData.total);
+    if (usePointInput) {
+      usePointInput.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value) || 0;
+        const maxPoints = parseInt(e.target.max) || 0;
+        const maxUsable = Math.min(maxPoints, orderData.total);
 
-      if (value > maxUsable) {
-        e.target.value = maxUsable;
-      }
-      if (value < 0) {
-        e.target.value = 0;
-      }
+        if (value > maxUsable) {
+          e.target.value = maxUsable;
+        }
+        if (value < 0) {
+          e.target.value = 0;
+        }
 
-      PaymentDataService.calculateFinalAmount(orderData.total);
-    });
+        PaymentDataService.calculateFinalAmount(orderData.total);
+      });
+    }
   }
 
   /**
@@ -107,9 +136,31 @@ export class PaymentEventHandler {
    * 결제 관련 이벤트 설정
    */
   static setupPaymentEvents(orderData, currentOrder, store, tableNum) {
-    document.getElementById('confirmPayBtn').addEventListener('click', async () => {
-      await this.handlePaymentConfirm(orderData, currentOrder, store, tableNum);
-    });
+    const confirmPayBtn = document.getElementById('confirmPayBtn');
+    
+    if (confirmPayBtn) {
+      confirmPayBtn.addEventListener('click', async (event) => {
+        // 중복 클릭 방지
+        if (confirmPayBtn.disabled) return;
+        
+        try {
+          confirmPayBtn.disabled = true;
+          confirmPayBtn.textContent = '처리중...';
+          
+          await this.handlePaymentConfirm(orderData, currentOrder, store, tableNum);
+        } catch (error) {
+          console.error('❌ 결제 처리 실패:', error);
+          alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+        } finally {
+          // 버튼 상태 복원
+          confirmPayBtn.disabled = false;
+          confirmPayBtn.innerHTML = `
+            <span>결제하기</span>
+            <span class="btn-price">${orderData.total.toLocaleString()}원</span>
+          `;
+        }
+      });
+    }
   }
 
   /**

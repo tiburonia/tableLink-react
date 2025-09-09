@@ -89,16 +89,24 @@ export class PaymentDataService {
    * 포인트 UI 업데이트
    */
   static updatePointUI(points) {
-    document.getElementById('storePointDisplay').textContent = `${points.toLocaleString()}P`;
+    const pointDisplay = document.getElementById('storePointDisplay');
+    if (pointDisplay) {
+      pointDisplay.textContent = `${points.toLocaleString()}P`;
+    }
 
     const usePointInput = document.getElementById('usePoint');
     const maxPointBtn = document.getElementById('maxPointBtn');
+    const subtotalElement = document.querySelector('.subtotal-amount');
 
-    if (points > 0) {
-      const orderTotal = parseInt(document.querySelector('.subtotal-amount').textContent.replace(/[,원]/g, ''));
-      usePointInput.max = Math.min(points, orderTotal);
-      usePointInput.disabled = false;
-      maxPointBtn.disabled = false;
+    if (points > 0 && usePointInput && maxPointBtn && subtotalElement) {
+      try {
+        const orderTotal = parseInt(subtotalElement.textContent.replace(/[,원]/g, ''));
+        usePointInput.max = Math.min(points, orderTotal);
+        usePointInput.disabled = false;
+        maxPointBtn.disabled = false;
+      } catch (error) {
+        console.warn('⚠️ 주문 금액 파싱 실패:', error);
+      }
     }
   }
 
@@ -142,8 +150,21 @@ export class PaymentDataService {
    * 쿠폰 렌더링
    */
   static renderCoupons(coupons) {
+    const couponList = document.getElementById('couponList');
+    if (!couponList) {
+      console.error('❌ couponList 요소를 찾을 수 없습니다');
+      return;
+    }
+
+    // 기존 쿠폰 선택 요소 제거
+    const existingSelect = couponList.querySelector('#couponSelect');
+    if (existingSelect) {
+      existingSelect.remove();
+    }
+
     const couponSelect = document.createElement('select');
     couponSelect.id = 'couponSelect';
+    couponSelect.className = 'coupon-select-element';
 
     couponSelect.innerHTML = `
       <option value="">쿠폰을 선택하세요</option>
@@ -154,7 +175,7 @@ export class PaymentDataService {
       `).join('')}
     `;
 
-    document.getElementById('couponList').appendChild(couponSelect);
+    couponList.appendChild(couponSelect);
   }
 
   /**
