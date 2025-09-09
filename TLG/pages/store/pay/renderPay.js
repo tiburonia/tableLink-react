@@ -244,23 +244,19 @@
             max-width: 430px;
             height: 100dvh;
             background: #fff;
-            display: flex;
-            flex-direction: column;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             overflow: hidden;
           }
 
           .payment-header {
+            position: relative;
             height: 70px;
             display: flex;
             align-items: center;
             padding: 16px;
             border-bottom: 1px solid #e5e7eb;
             background: #fff;
-            position: sticky;
-            top: 0;
             z-index: 100;
-            flex-shrink: 0;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
 
@@ -288,8 +284,11 @@
           }
 
           .payment-content {
-            flex: 1 1 auto;
-            min-height: 0;
+            position: absolute;
+            top: 70px;
+            left: 0;
+            right: 0;
+            bottom: 0;
             overflow-y: auto;
             overflow-x: hidden;
             padding: 20px;
