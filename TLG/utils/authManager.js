@@ -1,9 +1,10 @@
+
 /**
  * 사용자 인증 관리 유틸리티
  */
 
 // 사용자 정보를 안전하게 가져오는 함수
-export function getUserInfoSafely() {
+function getUserInfoSafely() {
   try {
     // 쿠키에서 userInfo 찾기
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
@@ -31,8 +32,6 @@ export function getUserInfoSafely() {
     return null;
   }
 }
-
-// 사용자 정보를 안전하게 가져오는 함수
 
 // 인증 관리자 - 앱 초기화 및 사용자 상태 관리
 console.log('🔧 AuthManager 로드 시작');
@@ -255,6 +254,7 @@ window.addEventListener('message', function(event) {
 });
 
 // 전역 함수로 내보내기
+window.getUserInfoSafely = getUserInfoSafely;
 window.initializeApp = initializeApp;
 window.setUserInfo = setUserInfo;
 window.clearUserInfo = clearUserInfo;
