@@ -1,3 +1,38 @@
+/**
+ * 사용자 인증 관리 유틸리티
+ */
+
+// 사용자 정보를 안전하게 가져오는 함수
+export function getUserInfoSafely() {
+  try {
+    // 쿠키에서 userInfo 찾기
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
+
+    if (userInfoCookie) {
+      const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
+      return JSON.parse(userInfoValue);
+    }
+
+    // localStorage 확인
+    const localStorageUserInfo = localStorage.getItem('userInfo');
+    if (localStorageUserInfo) {
+      return JSON.parse(localStorageUserInfo);
+    }
+
+    // window.userInfo 확인
+    if (window.userInfo && window.userInfo.id) {
+      return window.userInfo;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ 사용자 정보 파싱 오류:', error);
+    return null;
+  }
+}
+
+// 사용자 정보를 안전하게 가져오는 함수
 
 // 인증 관리자 - 앱 초기화 및 사용자 상태 관리
 console.log('🔧 AuthManager 로드 시작');
@@ -163,7 +198,7 @@ function logOutF() {
 
   console.log('✅ 로그아웃 처리 완료');
   alert('로그아웃 완료');
-  
+
   // 로그인 화면으로 이동
   try {
     if (typeof renderLogin === 'function') {

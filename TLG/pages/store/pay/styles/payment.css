@@ -1,0 +1,525 @@
+
+/**
+ * 결제 화면 전용 스타일시트
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+}
+
+.pay-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+/* 헤더 - 고정 높이 */
+.pay-header {
+  height: 80px;
+  background: white;
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 10;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  flex-shrink: 0;
+}
+
+.back-btn {
+  background: #f1f5f9;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.back-btn:hover {
+  background: #e2e8f0;
+}
+
+.header-info h1 {
+  font-size: 20px;
+  color: #1e293b;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.header-info p {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* 메인 콘텐츠 - 중간 유동 공간, 스크롤 가능 */
+.pay-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 푸터 - 고정 높이 */
+.pay-footer {
+  height: 160px;
+  background: white;
+  padding: 20px;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* 공통 섹션 스타일 */
+.order-section, 
+.points-section, 
+.coupon-section, 
+.summary-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.item-count {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* 주문 내역 */
+.order-list {
+  margin-bottom: 20px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.item-qty {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.item-price {
+  font-weight: 700;
+  color: #2563eb;
+  font-size: 16px;
+}
+
+.subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 20px;
+  border-top: 2px solid #f1f5f9;
+  font-weight: 700;
+  color: #475569;
+  font-size: 16px;
+}
+
+.subtotal-amount {
+  color: #1e293b;
+  font-weight: 800;
+}
+
+/* 포인트 */
+.point-balance {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.point-input-group {
+  display: flex;
+  gap: 12px;
+}
+
+.point-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+.point-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.point-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.max-point-btn {
+  padding: 14px 20px;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  background: white;
+  color: #3b82f6;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.max-point-btn:hover:not(:disabled) {
+  background: #3b82f6;
+  color: white;
+}
+
+.max-point-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 쿠폰 */
+.coupon-select select {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #f8fafc;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.coupon-select select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: white;
+}
+
+.coupon-select p {
+  color: #64748b;
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 결제 수단 선택 */
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.payment-method-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 16px;
+}
+
+.payment-method-item:hover {
+  border-color: #3b82f6;
+  background: white;
+}
+
+.payment-method-item.active {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.method-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 8px;
+}
+
+.payment-method-item.active .method-icon {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.method-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.method-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.method-desc {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.method-check {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #e2e8f0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: transparent;
+  transition: all 0.2s ease;
+}
+
+.payment-method-item.active .method-check {
+  border-color: #3b82f6;
+  background: #3b82f6;
+  color: white;
+}
+
+/* 결제 요약 */
+.summary-section {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border: 2px solid #e2e8f0;
+}
+
+.summary-details {
+  margin-bottom: 20px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  color: #475569;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.discount-item {
+  color: #059669;
+  font-weight: 700;
+}
+
+.discount-text {
+  color: #059669;
+  font-weight: 800;
+}
+
+.final-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0 16px 0;
+  border-top: 2px solid #e2e8f0;
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 18px;
+}
+
+.final-amount {
+  font-size: 24px;
+  font-weight: 900;
+  color: #2563eb;
+}
+
+.earn-point-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 16px;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+  font-size: 14px;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.earn-amount {
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+/* 버튼 스타일 */
+.confirm-btn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #059669, #047857);
+  color: white;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+  transition: all 0.2s;
+}
+
+.confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+}
+
+.btn-price {
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cancel-btn {
+  padding: 16px 24px;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  background: white;
+  color: #475569;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 480px) {
+  .pay-container {
+    max-width: 100vw;
+  }
+  
+  .pay-header {
+    padding: 16px;
+    height: 70px;
+  }
+  
+  .pay-main {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .pay-footer {
+    padding: 16px;
+    height: 140px;
+  }
+  
+  .order-section, 
+  .points-section, 
+  .coupon-section, 
+  .summary-section {
+    padding: 20px;
+  }
+  
+  .section-title h2 {
+    font-size: 16px;
+  }
+}
+
+@media (max-height: 700px) {
+  .pay-header {
+    height: 60px;
+    padding: 12px 20px;
+  }
+  
+  .pay-footer {
+    height: 120px;
+    padding: 16px 20px;
+  }
+  
+  .pay-main {
+    gap: 16px;
+  }
+  
+  .order-section, 
+  .points-section, 
+  .coupon-section, 
+  .summary-section {
+    padding: 16px;
+  }
+}
