@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
-const { Pool } = require('pg');
-
-// Pool은 shared/config/database.js에서 가져옴
+const express = require('express');
+const router = express.Router();
+const pool = require('../db/pool');
 
 // 사용자별 매장별 포인트 조회
 router.get('/user/:userId/store/:storeId/points', async (req, res) => {
@@ -51,6 +51,8 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
     });
   }
 });
+
+module.exports = router;
 
 // 사용자별 매장 단골 레벨 조회
 router.get('/user/:userId/store/:storeId', async (req, res) => {
