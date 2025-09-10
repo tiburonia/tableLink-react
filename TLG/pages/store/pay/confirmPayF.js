@@ -101,7 +101,7 @@ async function processPaymentSuccess(paymentKey, orderId, amount) {
   try {
     console.log('🔄 결제 성공 후 처리 시작');
 
-    // 1. 토스페이먼츠 결제 승인
+    // 1. 토스페이먼츠 결제 승인 - 새 스키마로 처리됨
     const confirmResponse = await fetch('/api/toss/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -114,45 +114,19 @@ async function processPaymentSuccess(paymentKey, orderId, amount) {
     }
 
     const confirmResult = await confirmResponse.json();
-    console.log('✅ 결제 승인 완료:', confirmResult);
+    console.log('✅ 결제 승인 및 주문 생성 완료:', confirmResult);
 
-    // 2. 주문 처리
-    const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
-    
-    if (!pendingOrderData.userId) {
-      throw new Error('주문 정보를 찾을 수 없습니다.');
-    }
-
-    const orderResponse = await fetch('/api/orders/pay', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: pendingOrderData.userId,
-        storeId: pendingOrderData.storeId,
-        storeName: pendingOrderData.storeName,
-        tableNumber: pendingOrderData.tableNumber,
-        orderData: pendingOrderData.orderData,
-        usedPoint: pendingOrderData.usedPoint,
-        finalTotal: pendingOrderData.finalTotal,
-        selectedCouponId: pendingOrderData.selectedCouponId,
-        couponDiscount: pendingOrderData.couponDiscount,
-        pgPaymentKey: paymentKey,
-        pgOrderId: orderId,
-        pgPaymentMethod: pendingOrderData.paymentMethod || 'CARD'
-      })
-    });
-
-    if (!orderResponse.ok) {
-      const errorData = await orderResponse.json();
-      throw new Error(errorData.error || '주문 처리 실패');
-    }
-
-    const orderResult = await orderResponse.json();
-    console.log('✅ 주문 처리 완료:', orderResult);
-
-    // 3. 성공 페이지 표시
+    // 2. 세션 정리
     sessionStorage.removeItem('pendingOrderData');
-    return { success: true, data: { ...orderResult, pendingOrderData } };
+    
+    // 3. 성공 처리 완료
+    return { 
+      success: true, 
+      data: { 
+        ...confirmResult,
+        message: '결제가 완료되었습니다. 주문이 접수되었습니다.'
+      }
+    };
 
   } catch (error) {
     console.error('❌ 결제 후 처리 실패:', error);
