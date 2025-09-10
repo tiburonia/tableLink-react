@@ -210,7 +210,6 @@
         <div class="payment-page">
           ${this.renderHeader(orderData)}
           ${this.renderMainContent(orderData)}
-          ${this.renderFooter()}
         </div>
         ${this.renderStyles()}
       `;
@@ -352,15 +351,7 @@
       `;
     },
 
-    /**
-     * 푸터 렌더링
-     */
-    renderFooter() {
-      return `
-        <footer class="payment-footer">
-        </footer>
-      `;
-    },
+    
 
     /**
      * CSS 스타일 렌더링 (데스크톱 전용)
@@ -451,15 +442,8 @@
            flex-direction: column;
            gap: 20px;
            padding: 20px;
-           min-height: calc(100vh - 80px - 20px);
-           padding-bottom: 40px;
-         }
-
-         /* 푸터 */
-         .payment-footer {
-           flex-shrink: 0;
-           height: 20px;
-           background: transparent;
+           min-height: calc(100vh - 80px);
+           padding-bottom: 60px;
          }
 
          /* 섹션 공통 스타일 */
