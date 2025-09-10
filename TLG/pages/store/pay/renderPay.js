@@ -443,7 +443,7 @@
            gap: 20px;
            padding: 20px;
            min-height: calc(100vh - 80px);
-           padding-bottom: 60px;
+           padding-bottom: 120px;
          }
 
          /* 섹션 공통 스타일 */
@@ -643,9 +643,11 @@
            background: white;
            padding: 24px;
            border-radius: 16px;
-           margin-bottom: 0;
-           border: 1px solid #e2e8f0;
-           box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+           margin-bottom: 40px;
+           border: 2px solid #059669;
+           box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15);
+           position: relative;
+           z-index: 10;
          }
 
          /* 결제 버튼 */
@@ -661,6 +663,7 @@
            cursor: pointer;
            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
            transition: all 0.2s;
+           min-height: 60px;
          }
 
          .pay-btn:hover {
