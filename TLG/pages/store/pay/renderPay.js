@@ -368,7 +368,7 @@
     renderStyles() {
       return `
         <style>
-         /* 전체 레이아웃 - 데스크톱 전용 */
+         /* 전체 레이아웃 - 메인 화면과 동일한 비율 */
          * { 
            margin: 0; 
            padding: 0; 
@@ -382,9 +382,12 @@
          .payment-page {
            position: fixed;
            top: 0;
-           left: 50%;
-           transform: translateX(-50%);
-           width: 800px;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           width: 100%;
+           max-width: 430px;
+           margin: 0 auto;
            height: 100vh;
            display: flex;
            flex-direction: column;
@@ -399,7 +402,7 @@
            background: white;
            display: flex;
            align-items: center;
-           padding: 20px 30px;
+           padding: 20px;
            border-bottom: 1px solid #e2e8f0;
            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
            z-index: 10;
@@ -447,9 +450,9 @@
            display: flex;
            flex-direction: column;
            gap: 20px;
-           padding: 30px;
+           padding: 20px;
            min-height: calc(100vh - 80px - 20px);
-           padding-bottom: 50px;
+           padding-bottom: 40px;
          }
 
          /* 푸터 */
@@ -467,7 +470,7 @@
          .final-amount,
          .payment-button-section {
            background: white;
-           padding: 30px;
+           padding: 24px;
            border-radius: 16px;
            border: 1px solid #e2e8f0;
            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
@@ -654,7 +657,7 @@
          /* 결제 버튼 섹션 */
          .payment-button-section {
            background: white;
-           padding: 30px;
+           padding: 24px;
            border-radius: 16px;
            margin-bottom: 0;
            border: 1px solid #e2e8f0;
