@@ -317,7 +317,13 @@
           <h3>결제 방법</h3>
           <div class="payment-methods">
             <button class="payment-method-btn active" data-method="카드">카드</button>
-            <button class="payment-method-btn" data-method="현금">현금</button>
+            <button class="payment-method-btn" data-method="가상계좌">가상계좌</button>
+            <button class="payment-method-btn" data-method="간편결제">간편결제</button>
+            <button class="payment-method-btn" data-method="휴대폰">휴대폰</button>
+            <button class="payment-method-btn" data-method="계좌이체">계좌이체</button>
+            <button class="payment-method-btn" data-method="문화상품권">문화상품권</button>
+            <button class="payment-method-btn" data-method="도서문화상품권">도서문화상품권</button>
+            <button class="payment-method-btn" data-method="게임문화상품권">게임문화상품권</button>
           </div>
         </section>
       `;
@@ -427,16 +433,18 @@
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            height: calc(100vh - 80px);
           }
 
           .payment-content {
             padding: 20px;
-            padding-bottom: 120px;
+            padding-bottom: 40px;
+            min-height: calc(100vh - 120px);
           }
 
           /* 푸터 */
           .payment-footer {
-            height: 20px;
+            height: 0px;
             background: transparent;
             flex-shrink: 0;
           }
@@ -581,20 +589,22 @@
 
           /* 결제 방법 */
           .payment-methods {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
           }
 
           .payment-method-btn {
-            flex: 1;
-            padding: 16px 12px;
+            padding: 14px 10px;
             border: 2px solid #e2e8f0;
             background: #f8fafc;
             border-radius: 12px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 14px;
             color: #475569;
             transition: all 0.2s;
+            text-align: center;
           }
 
           .payment-method-btn:hover {
@@ -657,8 +667,9 @@
           @media (max-width: 480px) {
             .payment-page { max-width: 100vw; }
             .payment-header { height: 70px; padding: 12px 16px; }
-            .payment-footer { height: 20px; }
-            .payment-content { padding: 16px; padding-bottom: 40px; }
+            .payment-footer { height: 0px; }
+            .payment-main { height: calc(100vh - 70px); }
+            .payment-content { padding: 16px; padding-bottom: 30px; min-height: calc(100vh - 110px); }
             .order-summary, .points-section, .coupon-section, .payment-method, .final-amount, .payment-button-section {
               padding: 20px; margin-bottom: 16px;
             }
@@ -666,7 +677,9 @@
 
           @media (max-height: 700px) {
             .payment-header { height: 60px; }
-            .payment-footer { height: 20px; }
+            .payment-footer { height: 0px; }
+            .payment-main { height: calc(100vh - 60px); }
+            .payment-content { min-height: calc(100vh - 100px); }
           }
         </style>
       `;
@@ -883,9 +896,25 @@
           return;
         }
 
+        console.log('💳 토스페이먼츠 결제 요청:', { paymentMethod, finalAmount });
+
+        // 토스페이먼츠 결제 방식 매핑
+        const tossPaymentMethodMap = {
+          '카드': '카드',
+          '가상계좌': '가상계좌', 
+          '간편결제': '간편결제',
+          '휴대폰': '휴대폰',
+          '계좌이체': '계좌이체',
+          '문화상품권': '문화상품권',
+          '도서문화상품권': '도서문화상품권',
+          '게임문화상품권': '게임문화상품권'
+        };
+
+        const tossMethod = tossPaymentMethodMap[paymentMethod] || '카드';
+
         // 결제 확인 함수 호출
         if (typeof confirmPay === 'function') {
-          await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, paymentMethod);
+          await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, tossMethod);
         } else {
           throw new Error('결제 처리 함수를 찾을 수 없습니다.');
         }
