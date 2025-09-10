@@ -159,68 +159,81 @@
       const main = document.getElementById('main') || document.body;
       
       main.innerHTML = `
-        <div class="payment-container">
-          <div class="payment-header">
+        <div class="payment-page">
+          <!-- 헤더: 고정 위치 -->
+          <header class="payment-header">
             <button class="back-btn" id="backBtn">←</button>
-            <h1 class="payment-title">결제하기</h1>
-          </div>
+            <div class="header-info">
+              <h1>결제하기</h1>
+              <p>${orderData.store} • 테이블 ${orderData.tableNum}</p>
+            </div>
+          </header>
           
-          <div class="payment-content">
-            <div class="order-summary">
-              <h2>주문 내역</h2>
-              <div class="store-info">
-                <span class="store-name">${orderData.store}</span>
-                <span class="table-num">테이블 ${orderData.tableNum}</span>
-              </div>
-              <div class="order-items">
-                ${orderData.items.map(item => `
-                  <div class="order-item">
-                    <span class="item-name">${item.name || '메뉴명 없음'}</span>
-                    <span class="item-quantity">x${item.quantity || 1}</span>
-                    <span class="item-price">${(item.price || 0).toLocaleString()}원</span>
-                  </div>
-                `).join('')}
-              </div>
-              <div class="order-total">
-                <span>총 금액</span>
-                <span id="orderTotal">${orderData.total.toLocaleString()}원</span>
-              </div>
-            </div>
+          <!-- 스크롤 가능한 메인 콘텐츠 -->
+          <main class="payment-main">
+            <div class="payment-content">
+              <!-- 주문 내역 -->
+              <section class="order-summary">
+                <h2>주문 내역</h2>
+                <div class="order-items">
+                  ${orderData.items.map(item => `
+                    <div class="order-item">
+                      <div class="item-info">
+                        <span class="item-name">${item.name || '메뉴명 없음'}</span>
+                        <span class="item-quantity">x${item.quantity || 1}</span>
+                      </div>
+                      <span class="item-price">${(item.price || 0).toLocaleString()}원</span>
+                    </div>
+                  `).join('')}
+                </div>
+                <div class="order-total">
+                  <span>총 금액</span>
+                  <span id="orderTotal">${orderData.total.toLocaleString()}원</span>
+                </div>
+              </section>
 
-            <div class="payment-section points-section">
-              <h3>포인트 사용</h3>
-              <div class="points-info">
-                <span>보유 포인트: <span id="currentPoints">0</span>P</span>
-              </div>
-              <div class="points-input">
-                <input type="number" id="pointsToUse" placeholder="사용할 포인트" min="0" max="0">
-                <button id="useAllPoints">전액 사용</button>
-              </div>
-            </div>
+              <!-- 포인트 사용 -->
+              <section class="points-section">
+                <h3>포인트 사용</h3>
+                <div class="points-info">
+                  <span>보유 포인트: <span id="currentPoints">0</span>P</span>
+                </div>
+                <div class="points-input">
+                  <input type="number" id="pointsToUse" placeholder="사용할 포인트" min="0" max="0">
+                  <button id="useAllPoints">전액 사용</button>
+                </div>
+              </section>
 
-            <div class="payment-section coupon-section">
-              <h3>쿠폰 사용</h3>
-              <select id="couponSelect">
-                <option value="">쿠폰 선택</option>
-              </select>
-              <div class="coupon-discount" id="couponDiscount">0원 할인</div>
-            </div>
+              <!-- 쿠폰 사용 -->
+              <section class="coupon-section">
+                <h3>쿠폰 사용</h3>
+                <select id="couponSelect">
+                  <option value="">쿠폰 선택</option>
+                </select>
+                <div class="coupon-discount" id="couponDiscount">0원 할인</div>
+              </section>
 
-            <div class="payment-section payment-method">
-              <h3>결제 방법</h3>
-              <div class="payment-methods">
-                <button class="payment-method-btn active" data-method="카드">카드</button>
-                <button class="payment-method-btn" data-method="현금">현금</button>
-              </div>
-            </div>
+              <!-- 결제 방법 -->
+              <section class="payment-method">
+                <h3>결제 방법</h3>
+                <div class="payment-methods">
+                  <button class="payment-method-btn active" data-method="카드">카드</button>
+                  <button class="payment-method-btn" data-method="현금">현금</button>
+                </div>
+              </section>
 
-            <div class="final-amount">
-              <h3>최종 결제 금액</h3>
-              <div class="amount" id="finalAmount">${orderData.total.toLocaleString()}원</div>
+              <!-- 최종 금액 -->
+              <section class="final-amount">
+                <h3>최종 결제 금액</h3>
+                <div class="amount" id="finalAmount">${orderData.total.toLocaleString()}원</div>
+              </section>
             </div>
+          </main>
 
+          <!-- 하단 결제 버튼: 고정 위치 -->
+          <footer class="payment-footer">
             <button class="pay-btn" id="payBtn">결제하기</button>
-          </div>
+          </footer>
         </div>
 
         <style>
@@ -230,42 +243,41 @@
             box-sizing: border-box;
           }
 
-          body {
-            margin: 0;
-            padding: 0;
-          }
-
-          .payment-container {
+          .payment-page {
             position: fixed;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
             width: 100%;
             max-width: 430px;
+            height: 100vh;
             height: 100dvh;
-            background: #fff;
+            background: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            display: flex;
-            flex-direction: column;
+            overflow: hidden;
           }
 
+          /* 헤더 - 고정 */
           .payment-header {
-            height: 70px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: white;
             display: flex;
             align-items: center;
-            padding: 16px;
-            border-bottom: 1px solid #e5e7eb;
-            background: #fff;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
             z-index: 100;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            flex-shrink: 0;
           }
 
           .back-btn {
             background: #f1f5f9;
             border: none;
             font-size: 18px;
-            padding: 8px 12px;
+            padding: 10px 14px;
             border-radius: 8px;
             margin-right: 16px;
             cursor: pointer;
@@ -277,50 +289,78 @@
             background: #e2e8f0;
           }
 
-          .payment-title {
+          .header-info h1 {
             font-size: 20px;
-            font-weight: 600;
-            margin: 0;
+            font-weight: 700;
+            margin: 0 0 4px 0;
             color: #1e293b;
           }
 
-          .payment-content {
-            flex: 1;
-            min-height: 0;
+          .header-info p {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0;
+          }
+
+          /* 메인 콘텐츠 - 스크롤 */
+          .payment-main {
+            position: absolute;
+            top: 80px;
+            bottom: 100px;
+            left: 0;
+            right: 0;
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 20px;
             -webkit-overflow-scrolling: touch;
           }
 
-          .order-summary {
-            background: #f8fafc;
+          .payment-content {
             padding: 20px;
+            padding-bottom: 40px;
+          }
+
+          /* 푸터 - 고정 */
+          .payment-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: white;
+            padding: 16px 20px;
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+            z-index: 100;
+          }
+
+          /* 섹션 스타일 */
+          .order-summary,
+          .points-section,
+          .coupon-section,
+          .payment-method,
+          .final-amount {
+            background: white;
+            padding: 24px;
             border-radius: 16px;
             margin-bottom: 20px;
             border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
           }
 
-          .order-summary h2 {
-            margin: 0 0 16px 0;
+          .order-summary h2,
+          .points-section h3,
+          .coupon-section h3,
+          .payment-method h3,
+          .final-amount h3 {
             font-size: 18px;
             font-weight: 700;
+            margin: 0 0 16px 0;
             color: #1e293b;
           }
 
-          .store-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            font-weight: 600;
-            color: #475569;
-          }
-
+          /* 주문 내역 */
           .order-items {
-            border-top: 1px solid #e2e8f0;
-            padding-top: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
           }
 
           .order-item {
@@ -335,16 +375,20 @@
             border-bottom: none;
           }
 
+          .item-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+          }
+
           .item-name {
-            flex: 1;
             font-weight: 600;
             color: #1e293b;
           }
 
           .item-quantity {
-            margin: 0 12px;
-            color: #64748b;
             background: #f1f5f9;
+            color: #64748b;
             padding: 4px 8px;
             border-radius: 6px;
             font-size: 12px;
@@ -366,22 +410,7 @@
             color: #1e293b;
           }
 
-          .payment-section {
-            background: white;
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 16px;
-            border: 1px solid #e2e8f0;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          }
-
-          .payment-section h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 0 0 16px 0;
-            color: #1e293b;
-          }
-
+          /* 포인트 */
           .points-info {
             margin-bottom: 12px;
             color: #64748b;
@@ -422,9 +451,9 @@
 
           .points-input button:hover {
             background: #2563eb;
-            transform: translateY(-1px);
           }
 
+          /* 쿠폰 */
           .coupon-section select {
             width: 100%;
             padding: 14px 16px;
@@ -448,6 +477,7 @@
             font-size: 14px;
           }
 
+          /* 결제 방법 */
           .payment-methods {
             display: flex;
             gap: 12px;
@@ -476,20 +506,11 @@
             color: #1d4ed8;
           }
 
+          /* 최종 금액 */
           .final-amount {
             background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-            padding: 24px;
-            border-radius: 16px;
-            margin: 20px 0;
             border: 2px solid #e2e8f0;
             text-align: center;
-          }
-
-          .final-amount h3 {
-            font-size: 16px;
-            font-weight: 700;
-            margin: 0 0 12px 0;
-            color: #1e293b;
           }
 
           .final-amount .amount {
@@ -498,6 +519,7 @@
             color: #2563eb;
           }
 
+          /* 결제 버튼 */
           .pay-btn {
             width: 100%;
             padding: 18px;
@@ -508,7 +530,6 @@
             font-size: 18px;
             font-weight: 800;
             cursor: pointer;
-            margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
             transition: all 0.2s;
           }
@@ -520,6 +541,57 @@
 
           .pay-btn:active {
             transform: translateY(0);
+          }
+
+          /* 모바일 대응 */
+          @media (max-width: 480px) {
+            .payment-page {
+              max-width: 100vw;
+            }
+            
+            .payment-header {
+              height: 70px;
+              padding: 12px 16px;
+            }
+            
+            .payment-main {
+              top: 70px;
+              bottom: 90px;
+            }
+            
+            .payment-footer {
+              height: 90px;
+              padding: 12px 16px;
+            }
+            
+            .payment-content {
+              padding: 16px;
+            }
+            
+            .order-summary,
+            .points-section,
+            .coupon-section,
+            .payment-method,
+            .final-amount {
+              padding: 20px;
+              margin-bottom: 16px;
+            }
+          }
+
+          @media (max-height: 700px) {
+            .payment-header {
+              height: 60px;
+            }
+            
+            .payment-main {
+              top: 60px;
+              bottom: 80px;
+            }
+            
+            .payment-footer {
+              height: 80px;
+              padding: 12px 20px;
+            }
           }
         </style>
       `;
@@ -658,16 +730,6 @@
       console.error('❌ 사용자 정보 파싱 오류:', error);
       return null;
     }
-  }
-
-  function calculateOrderTotal(currentOrder) {
-    let total = 0;
-    for (const [key, item] of Object.entries(currentOrder)) {
-      const price = parseInt(item.price) || 0;
-      const count = parseInt(item.count) || 1;
-      total += price * count;
-    }
-    return total;
   }
 
   // 메인 renderPay 함수
