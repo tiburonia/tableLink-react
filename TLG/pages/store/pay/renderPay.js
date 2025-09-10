@@ -243,6 +243,7 @@
             ${this.renderCouponSection()}
             ${this.renderPaymentMethod()}
             ${this.renderFinalAmount(orderData)}
+            ${this.renderPayButton()}
           </div>
         </main>
       `;
@@ -335,12 +336,22 @@
     },
 
     /**
+     * 결제 버튼 렌더링
+     */
+    renderPayButton() {
+      return `
+        <section class="payment-button-section">
+          <button class="pay-btn" id="payBtn">결제하기</button>
+        </section>
+      `;
+    },
+
+    /**
      * 푸터 렌더링
      */
     renderFooter() {
       return `
         <footer class="payment-footer">
-          <button class="pay-btn" id="payBtn">결제하기</button>
         </footer>
       `;
     },
@@ -425,13 +436,9 @@
 
           /* 푸터 */
           .payment-footer {
-            height: 100px;
-            background: white;
-            padding: 16px 20px;
-            border-top: 1px solid #e2e8f0;
-            box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+            height: 20px;
+            background: transparent;
             flex-shrink: 0;
-            z-index: 100;
           }
 
           /* 섹션 공통 스타일 */
@@ -614,6 +621,16 @@
             color: #2563eb;
           }
 
+          /* 결제 버튼 섹션 */
+          .payment-button-section {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          }
+
           /* 결제 버튼 */
           .pay-btn {
             width: 100%;
@@ -640,16 +657,16 @@
           @media (max-width: 480px) {
             .payment-page { max-width: 100vw; }
             .payment-header { height: 70px; padding: 12px 16px; }
-            .payment-footer { height: 90px; padding: 12px 16px; }
-            .payment-content { padding: 16px; padding-bottom: 110px; }
-            .order-summary, .points-section, .coupon-section, .payment-method, .final-amount {
+            .payment-footer { height: 20px; }
+            .payment-content { padding: 16px; padding-bottom: 40px; }
+            .order-summary, .points-section, .coupon-section, .payment-method, .final-amount, .payment-button-section {
               padding: 20px; margin-bottom: 16px;
             }
           }
 
           @media (max-height: 700px) {
             .payment-header { height: 60px; }
-            .payment-footer { height: 80px; padding: 12px 20px; }
+            .payment-footer { height: 20px; }
           }
         </style>
       `;
