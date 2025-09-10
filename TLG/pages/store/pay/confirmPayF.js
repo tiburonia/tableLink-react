@@ -74,10 +74,12 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
 
     // 토스페이먼츠 결제 요청
+    console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
+    
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
       orderId: orderId,
-      orderName: `${orderData.store} 주문`,
+      orderName: `${orderData.storeName || orderData.store} 주문`,
       customerName: userInfo.name || '고객',
       customerEmail: userInfo.email || 'customer@tablelink.com'
     }, paymentMethod);

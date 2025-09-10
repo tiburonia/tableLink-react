@@ -856,9 +856,17 @@
     setupPaymentMethodEvents() {
       document.querySelectorAll('.payment-method-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          // 모든 버튼에서 active 클래스 제거
           document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+          
+          // 클릭된 버튼에 active 클래스 추가
           e.target.classList.add('active');
-          PaymentStateManager.state.paymentMethod = e.target.dataset.method;
+          
+          // 선택된 결제 방법 저장
+          const selectedMethod = e.target.dataset.method;
+          PaymentStateManager.state.paymentMethod = selectedMethod;
+          
+          console.log('💳 결제 방법 선택됨:', selectedMethod);
         });
       });
     },
@@ -882,7 +890,11 @@
         const selectedCoupon = document.getElementById('couponSelect');
         const couponId = selectedCoupon?.value || null;
         const couponDiscount = parseInt(document.getElementById('couponDiscount')?.textContent?.replace(/[^\d]/g, '') || 0);
-        const paymentMethod = PaymentStateManager.state.paymentMethod;
+        
+        // 선택된 결제 방법 가져오기
+        const selectedMethodElement = document.querySelector('.payment-method-btn.active');
+        const selectedPaymentMethod = selectedMethodElement?.dataset.method || '카드';
+        
         const finalAmount = PaymentStateManager.calculateFinalAmount();
 
         if (finalAmount <= 0) {
@@ -890,9 +902,10 @@
           return;
         }
 
-        console.log('💳 토스페이먼츠 결제 요청:', { paymentMethod, finalAmount });
+        console.log('💳 선택된 결제 방법:', selectedPaymentMethod);
+        console.log('💳 토스페이먼츠 결제 요청:', { selectedPaymentMethod, finalAmount });
 
-        // 토스페이먼츠 결제 방식 매핑
+        // 토스페이먼츠 결제 방식 매핑 (정확한 토스페이먼츠 API 파라미터로 매핑)
         const tossPaymentMethodMap = {
           '카드': '카드',
           '가상계좌': '가상계좌', 
@@ -904,7 +917,9 @@
           '게임문화상품권': '게임문화상품권'
         };
 
-        const tossMethod = tossPaymentMethodMap[paymentMethod] || '카드';
+        const tossMethod = tossPaymentMethodMap[selectedPaymentMethod] || '카드';
+        
+        console.log('💳 매핑된 토스 결제 방법:', tossMethod);
 
         // 결제 확인 함수 호출
         if (typeof confirmPay === 'function') {
@@ -1000,16 +1015,26 @@
       // 2. 필수 모듈 로딩
       await ModuleLoader.loadRequiredModules();
 
-      // 3. 주문 데이터 정규화
+      // 3. 토스페이먼츠 초기화 확인
+      if (typeof window.initTossPayments === 'function') {
+        try {
+          await window.initTossPayments();
+          console.log('✅ 토스페이먼츠 초기화 완료');
+        } catch (error) {
+          console.warn('⚠️ 토스페이먼츠 초기화 실패:', error);
+        }
+      }
+
+      // 4. 주문 데이터 정규화
       const orderData = PaymentDataManager.normalizeOrderData(currentOrder, store, tableNum);
 
-      // 4. 상태 초기화
+      // 5. 상태 초기화
       PaymentStateManager.initialize(orderData);
 
-      // 5. UI 렌더링
+      // 6. UI 렌더링
       PaymentUIRenderer.render(orderData);
 
-      // 6. 데이터 로딩 및 이벤트 설정
+      // 7. 데이터 로딩 및 이벤트 설정
       await Promise.all([
         PaymentAPIService.fetchUserPoints(orderData.storeId).then(points => {
           PaymentStateManager.setPoints(points);
@@ -1019,10 +1044,10 @@
         })
       ]);
 
-      // 7. 이벤트 리스너 설정
+      // 8. 이벤트 리스너 설정
       PaymentEventManager.setupAllEventListeners(currentOrder, store, tableNum);
 
-      // 8. 초기 금액 계산
+      // 9. 초기 금액 계산
       PaymentStateManager.calculateFinalAmount();
 
       console.log('✅ 결제 화면 렌더링 완료');
