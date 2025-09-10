@@ -363,22 +363,29 @@
     },
 
     /**
-     * CSS 스타일 렌더링
+     * CSS 스타일 렌더링 (데스크톱 전용)
      */
     renderStyles() {
       return `
         <style>
-         /* 전체 레이아웃 */
-         * { margin: 0; padding: 0; box-sizing: border-box; }
+         /* 전체 레이아웃 - 데스크톱 전용 */
+         * { 
+           margin: 0; 
+           padding: 0; 
+           box-sizing: border-box; 
+         }
+
+         body {
+           overflow: hidden;
+         }
 
          .payment-page {
            position: fixed;
            top: 0;
            left: 50%;
            transform: translateX(-50%);
-           width: 100%;
-           max-width: 430px;   /* 데스크탑에서도 모바일 화면 비율 유지 */
-           height: 100vh;      /* 데스크탑만 고려하므로 vh 그대로 사용 */
+           width: 800px;
+           height: 100vh;
            display: flex;
            flex-direction: column;
            background: #f8fafc;
@@ -388,11 +395,11 @@
          /* 헤더 */
          .payment-header {
            flex-shrink: 0;
-           height: 70px;
+           height: 80px;
            background: white;
            display: flex;
            align-items: center;
-           padding: 12px 16px;
+           padding: 20px 30px;
            border-bottom: 1px solid #e2e8f0;
            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
            z-index: 10;
@@ -402,49 +409,54 @@
            background: #f1f5f9;
            border: none;
            font-size: 18px;
-           padding: 10px 14px;
+           padding: 12px 16px;
            border-radius: 8px;
-           margin-right: 16px;
+           margin-right: 20px;
            cursor: pointer;
            color: #475569;
            transition: background 0.2s;
          }
 
-         .back-btn:hover { background: #e2e8f0; }
+         .back-btn:hover { 
+           background: #e2e8f0; 
+         }
 
          .header-info h1 {
-           font-size: 20px;
+           font-size: 24px;
            font-weight: 700;
            margin: 0 0 4px 0;
            color: #1e293b;
          }
 
          .header-info p {
-           font-size: 14px;
+           font-size: 16px;
            color: #64748b;
            margin: 0;
          }
 
-         /* 메인 콘텐츠 (스크롤 영역) */
+         /* 메인 콘텐츠 - 스크롤 최적화 */
          .payment-main {
            flex: 1;
            overflow-y: auto;
-           padding: 16px;
+           overflow-x: hidden;
            background: #f8fafc;
+           padding: 0;
          }
 
          .payment-content {
            display: flex;
            flex-direction: column;
-           gap: 16px;
+           gap: 20px;
+           padding: 30px;
+           min-height: calc(100vh - 80px - 20px);
+           padding-bottom: 50px;
          }
 
          /* 푸터 */
          .payment-footer {
            flex-shrink: 0;
-           background: white;
-           padding: 12px 16px;
-           border-top: 1px solid #e2e8f0;
+           height: 20px;
+           background: transparent;
          }
 
          /* 섹션 공통 스타일 */
@@ -455,10 +467,10 @@
          .final-amount,
          .payment-button-section {
            background: white;
-           padding: 20px;
+           padding: 30px;
            border-radius: 16px;
            border: 1px solid #e2e8f0;
-           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+           box-shadow: 0 2px 6px rgba(0,0,0,0.05);
          }
 
          .order-summary h2,
@@ -466,75 +478,82 @@
          .coupon-section h3,
          .payment-method h3,
          .final-amount h3 {
-           font-size: 18px;
+           font-size: 20px;
            font-weight: 700;
-           margin: 0 0 16px 0;
+           margin: 0 0 20px 0;
            color: #1e293b;
          }
 
          /* 주문 내역 */
-         .order-items { margin-bottom: 20px; }
+         .order-items { 
+           margin-bottom: 25px; 
+         }
 
          .order-item {
            display: flex;
            justify-content: space-between;
            align-items: center;
-           padding: 12px 0;
+           padding: 15px 0;
            border-bottom: 1px solid #f1f5f9;
          }
 
-         .order-item:last-child { border-bottom: none; }
+         .order-item:last-child { 
+           border-bottom: none; 
+         }
 
          .item-info {
            display: flex;
            align-items: center;
-           gap: 12px;
+           gap: 15px;
          }
 
          .item-name {
            font-weight: 600;
            color: #1e293b;
+           font-size: 16px;
          }
 
          .item-quantity {
            background: #f1f5f9;
            color: #64748b;
-           padding: 4px 8px;
-           border-radius: 6px;
-           font-size: 12px;
+           padding: 6px 10px;
+           border-radius: 8px;
+           font-size: 14px;
            font-weight: 700;
          }
 
          .item-price {
            font-weight: 700;
            color: #2563eb;
+           font-size: 16px;
          }
 
          .order-total {
            display: flex;
            justify-content: space-between;
            font-weight: 700;
-           font-size: 18px;
+           font-size: 20px;
            border-top: 2px solid #e2e8f0;
-           padding-top: 16px;
+           padding-top: 20px;
            color: #1e293b;
          }
 
          /* 포인트 */
          .points-info {
-           margin-bottom: 12px;
+           margin-bottom: 15px;
            color: #64748b;
            font-weight: 500;
+           font-size: 16px;
          }
 
          .points-input {
            display: flex;
-           gap: 12px;
+           gap: 15px;
          }
 
          .points-input input {
            flex: 1;
-           padding: 14px 16px;
+           padding: 16px 18px;
            border: 2px solid #e2e8f0;
            border-radius: 12px;
            font-size: 16px;
@@ -549,7 +568,7 @@
          }
 
          .points-input button {
-           padding: 14px 20px;
+           padding: 16px 24px;
            background: #3b82f6;
            color: white;
            border: none;
@@ -557,17 +576,20 @@
            cursor: pointer;
            font-weight: 700;
            transition: all 0.2s;
+           font-size: 16px;
          }
 
-         .points-input button:hover { background: #2563eb; }
+         .points-input button:hover { 
+           background: #2563eb; 
+         }
 
          /* 쿠폰 */
          .coupon-section select {
            width: 100%;
-           padding: 14px 16px;
+           padding: 16px 18px;
            border: 2px solid #e2e8f0;
            border-radius: 12px;
-           margin-bottom: 12px;
+           margin-bottom: 15px;
            font-size: 16px;
            background: #f8fafc;
            font-weight: 600;
@@ -582,18 +604,18 @@
          .coupon-discount {
            color: #059669;
            font-weight: 700;
-           font-size: 14px;
+           font-size: 16px;
          }
 
          /* 결제 방법 */
          .payment-methods {
            display: grid;
-           grid-template-columns: repeat(2, 1fr);
-           gap: 12px;
+           grid-template-columns: repeat(4, 1fr);
+           gap: 15px;
          }
 
          .payment-method-btn {
-           padding: 14px 10px;
+           padding: 16px 12px;
            border: 2px solid #e2e8f0;
            background: #f8fafc;
            border-radius: 12px;
@@ -624,20 +646,30 @@
          }
 
          .final-amount .amount {
-           font-size: 28px;
+           font-size: 32px;
            font-weight: 900;
            color: #2563eb;
+         }
+
+         /* 결제 버튼 섹션 */
+         .payment-button-section {
+           background: white;
+           padding: 30px;
+           border-radius: 16px;
+           margin-bottom: 0;
+           border: 1px solid #e2e8f0;
+           box-shadow: 0 2px 6px rgba(0,0,0,0.05);
          }
 
          /* 결제 버튼 */
          .pay-btn {
            width: 100%;
-           padding: 18px;
+           padding: 20px;
            background: linear-gradient(135deg, #059669 0%, #047857 100%);
            color: white;
            border: none;
            border-radius: 16px;
-           font-size: 18px;
+           font-size: 20px;
            font-weight: 800;
            cursor: pointer;
            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
@@ -649,7 +681,9 @@
            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
          }
 
-         .pay-btn:active { transform: translateY(0); }
+         .pay-btn:active { 
+           transform: translateY(0); 
+         }
 
         </style>
       `;
