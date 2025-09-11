@@ -59,11 +59,12 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     const orderInfo = {
       userId: userInfo.id,
       storeId: orderData.storeId,
-      storeName: orderData.store,
+      storeName: orderData.storeName || orderData.store,
       tableNumber: orderData.tableNum,
       orderData: orderData,
       usedPoint: pointsUsed || 0,
       finalTotal: finalAmount,
+      subtotal: orderData.total || finalAmount,
       selectedCouponId: couponId,
       couponDiscount: couponDiscount || 0,
       paymentMethod: paymentMethod,

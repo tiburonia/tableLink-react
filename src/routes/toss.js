@@ -89,13 +89,25 @@ router.post('/confirm', async (req, res) => {
       // TLL 주문 처리 - 기본 주문 정보로 처리 (sessionStorage 사용 안함)
       console.log('📋 TLL 주문 처리 시작 - 기본 정보로 주문 생성');
       
-      // 기본 TLL 주문 정보 설정
+      // sessionStorage에서 주문 정보 가져오기 시도
+      let orderInfo = null;
+      try {
+        const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
+        if (pendingOrderData && pendingOrderData.orderId === orderId) {
+          orderInfo = pendingOrderData;
+        }
+      } catch (error) {
+        console.warn('⚠️ sessionStorage 데이터 파싱 실패:', error);
+      }
+
+      // 기본 TLL 주문 정보 설정 (sessionStorage 없을 경우)
       const defaultOrderInfo = {
-        storeId: 497, // 기본 매장 (정통 양념)
-        userId: 'tiburonia', // 현재 로그인된 사용자
-        tableNumber: 1,
+        storeId: orderInfo?.storeId || 497, // 기본 매장 (정통 양념)
+        userId: orderInfo?.userId || 'tiburonia', // 현재 로그인된 사용자
+        tableNumber: orderInfo?.tableNumber || 1,
         finalTotal: parseInt(amount),
-        items: [
+        subtotal: parseInt(amount),
+        items: orderInfo?.orderData?.items || [
           {
             name: 'TLL 주문',
             price: parseInt(amount),
@@ -110,18 +122,21 @@ router.post('/confirm', async (req, res) => {
         INSERT INTO orders (
           store_id, 
           user_id, 
+          table_number,
           status, 
           payment_status,
-          total_price,
+          subtotal,
+          total_amount,
           source,
+          order_type,
           created_at
-        ) VALUES ($1, $2, $3, 'COMPLETED', 'PAID', $4, $5, 'TLL', 'DINE_IN', CURRENT_TIMESTAMP)
+        ) VALUES ($1, $2, $3, 'PENDING', 'PAID', $4, $5, 'TLL', 'DINE_IN', CURRENT_TIMESTAMP)
         RETURNING id
       `, [
         defaultOrderInfo.storeId,
         defaultOrderInfo.userId,
         defaultOrderInfo.tableNumber,
-        defaultOrderInfo.finalTotal,
+        defaultOrderInfo.subtotal,
         defaultOrderInfo.finalTotal
       ]);
 
