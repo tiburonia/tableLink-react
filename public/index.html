@@ -33,8 +33,11 @@
   <script src="TLG/utils/TLL.js"></script>
   <!--내 계정 화면 렌더링 함수-->
   <script src="TLG/pages/mypage/renderMyAccount.js"></script>
-  <!--마이페이지 전체 리뷰 렌더링 함수-->
-  <script src="TLG/pages/store/order/renderAllOrderHTML.js"></script>
+  <!-- TLL 주문 화면 모듈 -->
+  <script src="/TLG/pages/store/order/renderAllOrderHTML.js"></script>
+
+  <!-- 토스페이먼츠 통합 결제 처리기 -->
+  <script src="/TLG/pages/store/pay/toss-payment-handler.js"></script>
   <!--지도 모듈들-->
   <script src="TLG/pages/main/modules/mapPanelUI.js"></script>
   <script src="TLG/pages/main/modules/mapMarkerManager.js"></script>
@@ -136,6 +139,8 @@
       }
     }, false);
   </script>
+  <!-- 결제 결과 자동 감지기 -->
+  <script src="/TLG/utils/paymentResultDetector.js"></script>
 </body>
 
 </html>
