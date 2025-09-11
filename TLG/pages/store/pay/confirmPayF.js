@@ -78,7 +78,30 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('💾 주문 정보 저장:', orderInfo);
     console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
     console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
-    sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
+    
+    // sessionStorage 저장 전후 로깅
+    const jsonString = JSON.stringify(orderInfo);
+    console.log('📝 JSON 문자열 길이:', jsonString.length);
+    console.log('📝 JSON 저장 데이터 미리보기:', jsonString.substring(0, 200) + '...');
+    
+    sessionStorage.setItem('pendingOrderData', jsonString);
+    
+    // 저장 후 즉시 확인
+    const savedData = sessionStorage.getItem('pendingOrderData');
+    console.log('✅ sessionStorage 저장 확인:', savedData ? '저장됨' : '저장 실패');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        console.log('✅ sessionStorage 파싱 테스트 성공:', {
+          userId: parsed.userId,
+          storeId: parsed.storeId,
+          storeName: parsed.storeName,
+          hasOrderData: !!parsed.orderData
+        });
+      } catch (error) {
+        console.error('❌ sessionStorage 파싱 테스트 실패:', error);
+      }
+    }
 
     // 토스페이먼츠 결제 요청
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
