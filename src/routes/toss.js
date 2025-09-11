@@ -33,11 +33,25 @@ router.post('/confirm', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { paymentKey, orderId, amount } = req.body;
+    console.log('📨 토스 confirm 라우트 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
+    
+    const { paymentKey, orderId, amount, userId, storeId, storeName, tableNumber, orderData, usedPoint, selectedCouponId, couponDiscount, paymentMethod } = req.body;
 
-    console.log('🔄 토스페이먼츠 결제 승인 요청:', { paymentKey, orderId, amount });
+    console.log('🔄 토스페이먼츠 결제 승인 요청 - 필수 파라미터:', { paymentKey, orderId, amount });
+    console.log('🔄 토스페이먼츠 결제 승인 요청 - 추가 파라미터:', {
+      userId,
+      storeId,
+      storeName,
+      tableNumber,
+      orderData: orderData ? '객체 존재' : '없음',
+      usedPoint,
+      selectedCouponId,
+      couponDiscount,
+      paymentMethod
+    });
 
     if (!paymentKey || !orderId || !amount) {
+      console.error('❌ 필수 파라미터 누락:', { paymentKey: !!paymentKey, orderId: !!orderId, amount: !!amount });
       return res.status(400).json({
         success: false,
         error: '필수 파라미터가 누락되었습니다'
@@ -89,33 +103,61 @@ router.post('/confirm', async (req, res) => {
       // TLL 주문 처리 - 기본 주문 정보로 처리 (sessionStorage 사용 안함)
       console.log('📋 TLL 주문 처리 시작 - 기본 정보로 주문 생성');
       
-      // sessionStorage에서 주문 정보 가져오기 시도
+      // 전달받은 파라미터에서 주문 정보 가져오기
       let orderInfo = null;
-      try {
-        const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
-        if (pendingOrderData && pendingOrderData.orderId === orderId) {
-          orderInfo = pendingOrderData;
-        }
-      } catch (error) {
-        console.warn('⚠️ sessionStorage 데이터 파싱 실패:', error);
+      
+      if (userId && storeId && orderData) {
+        console.log('✅ 파라미터에서 주문 정보 사용:', {
+          userId,
+          storeId,
+          storeName,
+          tableNumber,
+          orderData: orderData ? `${Object.keys(orderData).length}개 키` : '없음',
+          usedPoint,
+          couponDiscount
+        });
+        
+        orderInfo = {
+          userId,
+          storeId,
+          storeName,
+          tableNumber,
+          orderData,
+          usedPoint: usedPoint || 0,
+          couponDiscount: couponDiscount || 0,
+          paymentMethod
+        };
+      } else {
+        console.log('⚠️ 파라미터 불완전 - 기본값 사용:', {
+          hasUserId: !!userId,
+          hasStoreId: !!storeId,
+          hasOrderData: !!orderData
+        });
       }
 
-      // 기본 TLL 주문 정보 설정 (sessionStorage 없을 경우)
+      // 기본 TLL 주문 정보 설정 (파라미터 우선, 기본값 fallback)
       const defaultOrderInfo = {
-        storeId: orderInfo?.storeId || 497, // 기본 매장 (정통 양념)
-        userId: orderInfo?.userId || 'tiburonia', // 현재 로그인된 사용자
-        tableNumber: orderInfo?.tableNumber || 1,
-        finalTotal: parseInt(amount),
+        storeId: orderInfo?.storeId || storeId || 497, // 기본 매장 (정통 양념)
+        userId: orderInfo?.userId || userId || 'tiburonia', // 현재 로그인된 사용자
+        tableNumber: orderInfo?.tableNumber || tableNumber || 1,
+        finalTotal: parseInt(amount) - (orderInfo?.usedPoint || usedPoint || 0) - (orderInfo?.couponDiscount || couponDiscount || 0),
         subtotal: parseInt(amount),
-        items: orderInfo?.orderData?.items || [
+        usedPoint: orderInfo?.usedPoint || usedPoint || 0,
+        couponDiscount: orderInfo?.couponDiscount || couponDiscount || 0,
+        items: orderInfo?.orderData?.items || orderData?.items || [
           {
-            name: 'TLL 주문',
+            name: orderData?.storeName || storeName || 'TLL 주문',
             price: parseInt(amount),
             quantity: 1,
             totalPrice: parseInt(amount)
           }
         ]
       };
+      
+      console.log('📊 최종 주문 정보:', {
+        ...defaultOrderInfo,
+        items: `${defaultOrderInfo.items.length}개 아이템`
+      });
 
       // 1. orders 테이블에 주문 생성
       const orderResult = await client.query(`
