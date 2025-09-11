@@ -58,10 +58,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 주문 데이터 저장 (결제 성공 후 사용)
     const orderInfo = {
       userId: userInfo.id,
-      storeId: orderData.storeId,
-      storeName: orderData.storeName || orderData.store,
+      storeId: orderData.storeId || store?.id || store?.store_id,
+      storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum,
-      orderData: orderData,
+      orderData: {
+        items: orderData.items || currentOrder,
+        total: orderData.total || finalAmount,
+        storeName: orderData.storeName || orderData.store || store?.name
+      },
       usedPoint: pointsUsed || 0,
       finalTotal: finalAmount,
       subtotal: orderData.total || finalAmount,
@@ -72,6 +76,8 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     };
 
     console.log('💾 주문 정보 저장:', orderInfo);
+    console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
+    console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
     sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
 
     // 토스페이먼츠 결제 요청
