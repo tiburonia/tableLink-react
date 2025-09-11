@@ -113,8 +113,8 @@ router.post('/confirm', async (req, res) => {
     await client.query('BEGIN');
 
     if (isTLLOrder) {
-      // TLL 주문 처리 - 기본 주문 정보로 처리 (sessionStorage 사용 안함)
-      console.log('📋 TLL 주문 처리 시작 - 기본 정보로 주문 생성');
+      // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
+      console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
       
       // 전달받은 파라미터에서 주문 정보 가져오기
       let orderInfo = null;
@@ -163,7 +163,8 @@ router.post('/confirm', async (req, res) => {
             name: orderData?.storeName || storeName || 'TLL 주문',
             price: parseInt(amount),
             quantity: 1,
-            totalPrice: parseInt(amount)
+            totalPrice: parseInt(amount),
+            menuId: 1 // 기본 메뉴 ID
           }
         ]
       };
@@ -173,81 +174,121 @@ router.post('/confirm', async (req, res) => {
         items: `${defaultOrderInfo.items.length}개 아이템`
       });
 
-      // 1. checks 테이블에 체크 생성
-      const checkResult = await client.query(`
-        INSERT INTO checks (
+      // 1. orders 테이블에 주문 생성
+      const orderResult = await client.query(`
+        INSERT INTO orders (
           store_id, 
           user_id,
-          customer_name,
+          source,
           status,
-          source_system,
-          opened_at
-        ) VALUES ($1, $2, $3, 'closed', 'TLL', CURRENT_TIMESTAMP)
+          payment_status,
+          total_price
+        ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
         RETURNING id
       `, [
         defaultOrderInfo.storeId,
         defaultOrderInfo.userId,
-        '토스페이먼츠 결제'
+        defaultOrderInfo.finalTotal
       ]);
 
-      const checkId = checkResult.rows[0].id;
+      const orderId = orderResult.rows[0].id;
 
-      // 2. check_items 테이블에 아이템들 생성
+      // 2. order_tickets 테이블에 티켓 생성
+      const ticketResult = await client.query(`
+        INSERT INTO order_tickets (
+          order_id,
+          batch_no,
+          status,
+          payment_type,
+          source
+        ) VALUES ($1, 1, 'COMPLETED', 'PREPAID', 'TLL')
+        RETURNING id
+      `, [orderId]);
+
+      const ticketId = ticketResult.rows[0].id;
+
+      // 3. order_items 테이블에 아이템들 생성
       for (const item of defaultOrderInfo.items) {
         await client.query(`
-          INSERT INTO check_items (
-            check_id,
+          INSERT INTO order_items (
+            ticket_id,
+            menu_id,
             menu_name,
-            unit_price,
             quantity,
-            status,
-            ordered_at,
-            served_at
-          ) VALUES ($1, $2, $3, $4, 'served', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            unit_price,
+            total_price,
+            item_status
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'SERVED')
         `, [
-          checkId,
+          ticketId,
+          item.menuId || 1,
           item.name,
+          item.quantity || 1,
           item.price,
-          item.quantity
+          item.totalPrice || item.price
         ]);
       }
 
-      // 3. payments 테이블에 결제 정보 생성
+      // 4. payments 테이블에 결제 정보 생성
       await client.query(`
         INSERT INTO payments (
-          check_id,
-          payment_method,
+          order_id,
+          ticket_id,
+          method,
           amount,
           status,
-          completed_at,
+          paid_at,
           transaction_id,
-          payment_data
-        ) VALUES ($1, 'TOSS', $2, 'completed', CURRENT_TIMESTAMP, $3, $4)
+          provider_response
+        ) VALUES ($1, $2, 'TOSS', $3, 'COMPLETED', CURRENT_TIMESTAMP, $4, $5)
       `, [
-        checkId,
+        orderId,
+        ticketId,
         defaultOrderInfo.finalTotal,
         paymentKey,
         JSON.stringify(tossResult)
       ]);
 
-      // 4. checks 테이블 금액 업데이트
-      await client.query(`
-        UPDATE checks 
-        SET subtotal_amount = $1,
-            final_amount = $2,
-            closed_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-      `, [defaultOrderInfo.subtotal, defaultOrderInfo.finalTotal, checkId]);
+      // 5. order_adjustments 테이블에 할인/포인트 사용 내역 추가
+      if (defaultOrderInfo.usedPoint > 0) {
+        await client.query(`
+          INSERT INTO order_adjustments (
+            order_id,
+            ticket_id,
+            scope,
+            kind,
+            method,
+            code,
+            amount_signed
+          ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
+        `, [orderId, ticketId, -defaultOrderInfo.usedPoint]);
+      }
 
-      // 5. 사용자 포인트 업데이트 (적립)
+      if (defaultOrderInfo.couponDiscount > 0) {
+        await client.query(`
+          INSERT INTO order_adjustments (
+            order_id,
+            ticket_id,
+            scope,
+            kind,
+            method,
+            code,
+            amount_signed
+          ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
+        `, [orderId, ticketId, -defaultOrderInfo.couponDiscount]);
+      }
+
+      // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
       const earnedPoints = Math.floor(defaultOrderInfo.finalTotal * 0.01); // 1% 적립
+      const pointChange = earnedPoints - defaultOrderInfo.usedPoint;
+      
       await client.query(`
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [earnedPoints, defaultOrderInfo.userId]);
+      `, [pointChange, defaultOrderInfo.userId]);
 
-      console.log(`✅ TLL 새 스키마 주문 완료: 체크 ${checkId}, 결제 ${paymentKey}`);
+      console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${orderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
 
     } else {
       // 일반 주문 처리 - 기존 로직 유지
