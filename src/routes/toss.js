@@ -110,13 +110,10 @@ router.post('/confirm', async (req, res) => {
         INSERT INTO orders (
           store_id, 
           user_id, 
-          table_number,
           status, 
           payment_status,
-          subtotal,
-          total_amount,
+          total_price,
           source,
-          order_type,
           created_at
         ) VALUES ($1, $2, $3, 'COMPLETED', 'PAID', $4, $5, 'TLL', 'DINE_IN', CURRENT_TIMESTAMP)
         RETURNING id
