@@ -1,69 +1,111 @@
 
 /**
- * 토스페이먼츠 결제 성공 처리 페이지
+ * 토스페이먼츠 결제 성공 처리 페이지 (안전한 버전)
  */
 
-console.log('🔄 토스 결제 성공 페이지 로드');
+console.log('🔄 토스 결제 성공 페이지 로드 시작');
+
+// DOM 요소 안전 확인
+function ensureContainer() {
+  let container = document.querySelector('.container');
+  if (!container) {
+    console.warn('⚠️ .container 요소가 없음, body에 직접 추가');
+    container = document.createElement('div');
+    container.className = 'container';
+    document.body.appendChild(container);
+  }
+  return container;
+}
 
 // URL 파라미터 추출
 function getUrlParams() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return {
-    paymentKey: urlParams.get('paymentKey'),
-    orderId: urlParams.get('orderId'),
-    amount: urlParams.get('amount')
-  };
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const params = {
+      paymentKey: urlParams.get('paymentKey'),
+      orderId: urlParams.get('orderId'),
+      amount: urlParams.get('amount')
+    };
+    console.log('📋 URL 파라미터 추출:', params);
+    return params;
+  } catch (error) {
+    console.error('❌ URL 파라미터 추출 실패:', error);
+    return { paymentKey: null, orderId: null, amount: null };
+  }
 }
 
 // TableLink로 돌아가기
 function goBack() {
+  console.log('🔄 TableLink로 돌아가기');
   window.location.href = '/';
 }
 
 // 상태 표시
 function showStatus(message) {
-  const container = document.querySelector('.container');
-  container.innerHTML = `
-    <div class="status-icon">⏳</div>
-    <h1>${message}</h1>
-    <div class="loading-spinner"></div>
-  `;
+  try {
+    console.log('📱 상태 표시:', message);
+    const container = ensureContainer();
+    container.innerHTML = `
+      <div class="status-icon">⏳</div>
+      <h1>${message}</h1>
+      <div class="loading-spinner"></div>
+    `;
+  } catch (error) {
+    console.error('❌ 상태 표시 실패:', error);
+  }
 }
 
 // 오류 표시
 function showError(message) {
-  const container = document.querySelector('.container');
-  container.innerHTML = `
-    <div class="status-icon">❌</div>
-    <h1>결제 처리 실패</h1>
-    <p class="error-message">${message}</p>
-    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-  `;
+  try {
+    console.log('❌ 오류 표시:', message);
+    const container = ensureContainer();
+    container.innerHTML = `
+      <div class="status-icon">❌</div>
+      <h1>결제 처리 실패</h1>
+      <p class="error-message">${message}</p>
+      <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+    `;
+  } catch (error) {
+    console.error('❌ 오류 표시 실패:', error);
+    // 최후의 수단으로 alert 사용
+    alert('결제 처리 실패: ' + message);
+  }
 }
 
 // 성공 표시
 function showSuccess(orderData) {
-  const container = document.querySelector('.container');
-  container.innerHTML = `
-    <div class="status-icon">✅</div>
-    <h1>결제 완료!</h1>
-    <div class="order-info">
-      <h3>주문 정보</h3>
-      <p><strong>매장:</strong> ${orderData.storeName || '알 수 없음'}</p>
-      <p><strong>테이블:</strong> ${orderData.tableNumber || '알 수 없음'}</p>
-      <p><strong>주문번호:</strong> ${orderData.orderId || '알 수 없음'}</p>
-      <p><strong>결제금액:</strong> ${parseInt(orderData.finalTotal || orderData.amount || 0).toLocaleString()}원</p>
-    </div>
-    <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
-  `;
+  try {
+    console.log('✅ 성공 표시:', orderData);
+    const container = ensureContainer();
+    container.innerHTML = `
+      <div class="status-icon">✅</div>
+      <h1>결제 완료!</h1>
+      <div class="order-info">
+        <h3>주문 정보</h3>
+        <p><strong>매장:</strong> ${orderData.storeName || '알 수 없음'}</p>
+        <p><strong>테이블:</strong> ${orderData.tableNumber || '알 수 없음'}</p>
+        <p><strong>주문번호:</strong> ${orderData.orderId || '알 수 없음'}</p>
+        <p><strong>결제금액:</strong> ${parseInt(orderData.finalTotal || orderData.amount || 0).toLocaleString()}원</p>
+      </div>
+      <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+    `;
+  } catch (error) {
+    console.error('❌ 성공 표시 실패:', error);
+  }
 }
 
 // 메인 처리 함수
 async function handlePaymentSuccess() {
+  console.log('🚀 결제 성공 처리 함수 시작');
+  
   try {
+    console.log('🔍 URL 파라미터 추출 중...');
     const { paymentKey, orderId, amount } = getUrlParams();
+    console.log('📋 추출된 파라미터:', { paymentKey, orderId, amount });
 
     if (!paymentKey || !orderId || !amount) {
+      console.error('❌ 필수 파라미터 누락');
       throw new Error('결제 정보가 올바르지 않습니다.');
     }
 
@@ -72,6 +114,7 @@ async function handlePaymentSuccess() {
 
     // 1. 전역 객체에서 주문 정보 가져오기
     console.log('📋 전역 객체에서 주문 정보 조회 중...');
+    console.log('🔍 window.tablelink 상태:', window.tablelink);
     
     let pendingOrderData = {};
     
@@ -91,6 +134,8 @@ async function handlePaymentSuccess() {
       // 폴백: sessionStorage에서 시도
       console.warn('⚠️ 전역 객체에 pendingPaymentData가 없음, sessionStorage에서 시도');
       const sessionData = sessionStorage.getItem('pendingOrderData');
+      console.log('💾 sessionStorage 데이터:', sessionData);
+      
       if (sessionData) {
         try {
           pendingOrderData = JSON.parse(sessionData);
@@ -127,6 +172,24 @@ async function handlePaymentSuccess() {
       ...safeOrderData
     });
 
+    const requestBody = { 
+      paymentKey, 
+      orderId, 
+      amount: parseInt(amount),
+      // 안전한 주문 정보 전달
+      userId: safeOrderData.userId,
+      storeId: safeOrderData.storeId,
+      storeName: safeOrderData.storeName,
+      tableNumber: safeOrderData.tableNumber,
+      orderData: safeOrderData.orderData,
+      usedPoint: safeOrderData.usedPoint,
+      selectedCouponId: safeOrderData.selectedCouponId,
+      couponDiscount: safeOrderData.couponDiscount,
+      paymentMethod: safeOrderData.paymentMethod
+    };
+
+    console.log('🔍 최종 요청 본문:', JSON.stringify(requestBody, null, 2));
+
     const confirmResponse = await fetch('/api/toss/confirm', {
       method: 'POST',
       headers: { 
@@ -134,28 +197,25 @@ async function handlePaymentSuccess() {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache'
       },
-      body: JSON.stringify({ 
-        paymentKey, 
-        orderId, 
-        amount: parseInt(amount),
-        // 안전한 주문 정보 전달
-        userId: safeOrderData.userId,
-        storeId: safeOrderData.storeId,
-        storeName: safeOrderData.storeName,
-        tableNumber: safeOrderData.tableNumber,
-        orderData: safeOrderData.orderData,
-        usedPoint: safeOrderData.usedPoint,
-        selectedCouponId: safeOrderData.selectedCouponId,
-        couponDiscount: safeOrderData.couponDiscount,
-        paymentMethod: safeOrderData.paymentMethod
-      })
+      body: JSON.stringify(requestBody)
     });
 
     console.log('📨 API 응답 상태:', confirmResponse.status);
+    console.log('📨 API 응답 헤더:', Object.fromEntries(confirmResponse.headers.entries()));
 
     if (!confirmResponse.ok) {
-      const errorData = await confirmResponse.json();
-      console.error('❌ API 응답 오류:', errorData);
+      const errorText = await confirmResponse.text();
+      console.error('❌ API 응답 오류 (텍스트):', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (parseError) {
+        console.error('❌ 오류 응답 파싱 실패:', parseError);
+        errorData = { error: `서버 오류 (${confirmResponse.status}): ${errorText}` };
+      }
+      
+      console.error('❌ API 응답 오류 (파싱됨):', errorData);
       throw new Error(errorData.error || '결제 승인 실패');
     }
 
@@ -181,11 +241,23 @@ async function handlePaymentSuccess() {
 
   } catch (error) {
     console.error('❌ 결제 후 처리 실패:', error);
+    console.error('❌ 오류 스택:', error.stack);
     showError(error.message || '결제 처리 중 오류가 발생했습니다.');
   }
 }
 
-// DOM 로드 후 실행
-document.addEventListener('DOMContentLoaded', handlePaymentSuccess);
+// DOM 로드 확인
+console.log('🔍 DOM 상태:', document.readyState);
+
+// DOM 로드 후 실행 (더 안전한 방식)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('📄 DOM 로드 완료, 결제 처리 시작');
+    handlePaymentSuccess();
+  });
+} else {
+  console.log('📄 DOM 이미 로드됨, 즉시 결제 처리 시작');
+  handlePaymentSuccess();
+}
 
 console.log('✅ 토스 결제 성공 페이지 스크립트 로드 완료');
