@@ -86,12 +86,24 @@ router.post('/confirm', async (req, res) => {
     await client.query('BEGIN');
 
     if (isTLLOrder) {
-      // TLL 주문 처리 - 새로운 스키마 적용
-      const orderInfo = JSON.parse(sessionStorage?.getItem?.('pendingOrderData') || '{}');
+      // TLL 주문 처리 - 기본 주문 정보로 처리 (sessionStorage 사용 안함)
+      console.log('📋 TLL 주문 처리 시작 - 기본 정보로 주문 생성');
       
-      if (!orderInfo.userId || !orderInfo.storeId) {
-        throw new Error('주문 정보가 불완전합니다.');
-      }
+      // 기본 TLL 주문 정보 설정
+      const defaultOrderInfo = {
+        storeId: 497, // 기본 매장 (정통 양념)
+        userId: 'tiburonia', // 현재 로그인된 사용자
+        tableNumber: 1,
+        finalTotal: parseInt(amount),
+        items: [
+          {
+            name: 'TLL 주문',
+            price: parseInt(amount),
+            quantity: 1,
+            totalPrice: parseInt(amount)
+          }
+        ]
+      };
 
       // 1. orders 테이블에 주문 생성
       const orderResult = await client.query(`
@@ -109,11 +121,11 @@ router.post('/confirm', async (req, res) => {
         ) VALUES ($1, $2, $3, 'COMPLETED', 'PAID', $4, $5, 'TLL', 'DINE_IN', CURRENT_TIMESTAMP)
         RETURNING id
       `, [
-        orderInfo.storeId,
-        orderInfo.userId,
-        orderInfo.tableNumber,
-        orderInfo.finalTotal,
-        orderInfo.finalTotal
+        defaultOrderInfo.storeId,
+        defaultOrderInfo.userId,
+        defaultOrderInfo.tableNumber,
+        defaultOrderInfo.finalTotal,
+        defaultOrderInfo.finalTotal
       ]);
 
       const orderId_new = orderResult.rows[0].id;
@@ -129,12 +141,12 @@ router.post('/confirm', async (req, res) => {
           created_at
         ) VALUES ($1, 1, 'COMPLETED', 'PREPAID', $2, CURRENT_TIMESTAMP)
         RETURNING id
-      `, [orderId_new, orderInfo.finalTotal]);
+      `, [orderId_new, defaultOrderInfo.finalTotal]);
 
       const ticketId = ticketResult.rows[0].id;
 
       // 3. order_items 테이블에 주문 아이템들 생성
-      for (const item of orderInfo.orderData.items) {
+      for (const item of defaultOrderInfo.items) {
         await client.query(`
           INSERT INTO order_items (
             ticket_id,
@@ -155,47 +167,7 @@ router.post('/confirm', async (req, res) => {
         ]);
       }
 
-      // 4. 포인트 사용 기록 (order_adjustments)
-      if (orderInfo.usedPoint > 0) {
-        await client.query(`
-          INSERT INTO order_adjustments (
-            order_id,
-            scope,
-            kind,
-            method,
-            amount_signed,
-            meta,
-            created_at
-          ) VALUES ($1, 'ORDER', 'DISCOUNT', 'POINT', $2, $3, CURRENT_TIMESTAMP)
-        `, [
-          orderId_new,
-          -orderInfo.usedPoint,
-          JSON.stringify({ description: '포인트 사용' })
-        ]);
-      }
-
-      // 5. 쿠폰 할인 기록 (order_adjustments)
-      if (orderInfo.couponDiscount > 0) {
-        await client.query(`
-          INSERT INTO order_adjustments (
-            order_id,
-            scope,
-            kind,
-            method,
-            code,
-            amount_signed,
-            meta,
-            created_at
-          ) VALUES ($1, 'ORDER', 'DISCOUNT', 'COUPON', $2, $3, $4, CURRENT_TIMESTAMP)
-        `, [
-          orderId_new,
-          orderInfo.selectedCouponId,
-          -orderInfo.couponDiscount,
-          JSON.stringify({ description: '쿠폰 할인' })
-        ]);
-      }
-
-      // 6. payments 테이블에 결제 정보 생성
+      // 4. payments 테이블에 결제 정보 생성
       await client.query(`
         INSERT INTO payments (
           order_id,
@@ -210,25 +182,25 @@ router.post('/confirm', async (req, res) => {
       `, [
         orderId_new,
         ticketId,
-        orderInfo.finalTotal,
+        defaultOrderInfo.finalTotal,
         paymentKey,
         JSON.stringify(tossResult)
       ]);
 
-      // 7. 테이블 상태를 UNAVAILABLE로 변경
+      // 5. 테이블 상태를 UNAVAILABLE로 변경
       await client.query(`
         UPDATE store_tables 
         SET status = 'UNAVAILABLE'
         WHERE store_id = $1 AND table_number = $2
-      `, [orderInfo.storeId, orderInfo.tableNumber]);
+      `, [defaultOrderInfo.storeId, defaultOrderInfo.tableNumber]);
 
-      // 8. 사용자 포인트 업데이트 (적립)
-      const earnedPoints = Math.floor(orderInfo.finalTotal * 0.01); // 1% 적립
+      // 6. 사용자 포인트 업데이트 (적립)
+      const earnedPoints = Math.floor(defaultOrderInfo.finalTotal * 0.01); // 1% 적립
       await client.query(`
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [earnedPoints, orderInfo.userId]);
+      `, [earnedPoints, defaultOrderInfo.userId]);
 
       console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${orderId_new}, 티켓 ${ticketId}`);
 

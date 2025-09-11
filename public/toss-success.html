@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9,13 +10,10 @@
 <body>
     <div class="container">
         <div class="status-icon">⏳</div>
-        <h1>결제 처리 중</h1>
-        <p class="loading">결제를 확인하고 있습니다...</p>
-        <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+        <h1>결제 처리 중...</h1>
+        <p>잠시만 기다려주세요.</p>
     </div>
 
-    <script src="/shared/utils/tossPaymentUtils.js"></script>
-    <script src="/TLG/pages/store/pay/tossPayments.js"></script>
     <script>
         // URL 파라미터 파싱
         function getUrlParams() {
@@ -27,32 +25,14 @@
             };
         }
 
-        // 메인 화면으로 돌아가기
-        function goBack() {
-            try {
-                if (window.opener && !window.opener.closed) {
-                    window.opener.postMessage({
-                        type: 'PAYMENT_SUCCESS_REDIRECT',
-                        action: 'navigate',
-                        url: '/'
-                    }, '*');
-                    window.close();
-                } else {
-                    window.location.href = '/';
-                }
-            } catch (error) {
-                window.location.href = '/';
-            }
-        }
-
         // 상태 표시
-        function showStatus(message) {
+        function showStatus(message, isLoading = true) {
             const container = document.querySelector('.container');
             container.innerHTML = `
-                <div class="status-icon">⏳</div>
-                <h1>처리 중</h1>
-                <p class="loading">${message}</p>
-                <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
+                <div class="status-icon">${isLoading ? '⏳' : '✅'}</div>
+                <h1>${isLoading ? '처리 중...' : '완료!'}</h1>
+                <p>${message}</p>
+                ${!isLoading ? '<button class="btn" onclick="goBack()">TableLink로 돌아가기</button>' : ''}
             `;
         }
 
@@ -61,8 +41,8 @@
             const container = document.querySelector('.container');
             container.innerHTML = `
                 <div class="status-icon">❌</div>
-                <h1>처리 실패</h1>
-                <p class="error">${message}</p>
+                <h1>오류 발생</h1>
+                <p>${message}</p>
                 <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
             `;
         }
@@ -74,59 +54,67 @@
                 <div class="status-icon">✅</div>
                 <h1>결제 완료!</h1>
                 <div class="order-info">
-                    <h3>결제 정보</h3>
+                    <h3>주문 정보</h3>
                     <p><strong>주문번호:</strong> ${data.orderId}</p>
-                    <p><strong>결제금액:</strong> ₩${parseInt(data.amount).toLocaleString()}</p>
+                    <p><strong>결제금액:</strong> ${parseInt(data.amount).toLocaleString()}원</p>
+                    <p><strong>결제방법:</strong> 토스페이먼츠</p>
                 </div>
                 <button class="btn" onclick="goBack()">TableLink로 돌아가기</button>
             `;
         }
 
-        // TLL 결제 성공 처리
+        // TLL 결제 성공 처리 (안전한 버전)
         async function processTLLPaymentSuccess() {
             try {
-                const params = getUrlParams();
-                console.log('🔄 TLL 결제 성공 처리 시작:', params);
+                const { paymentKey, orderId, amount } = getUrlParams();
 
-                if (!params.paymentKey || !params.orderId || !params.amount) {
+                if (!paymentKey || !orderId || !amount) {
                     throw new Error('결제 정보가 올바르지 않습니다.');
                 }
 
-                showStatus('결제 승인 처리 중');
+                console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount });
+                showStatus('결제 승인 처리 중...');
 
-                // 토스페이먼츠 결제 승인
-                const confirmResult = await window.confirmTossPayment(
-                    params.paymentKey,
-                    params.orderId,
-                    params.amount
-                );
+                // 토스페이먼츠 결제 승인 직접 호출
+                const confirmResponse = await fetch('/api/toss/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) })
+                });
 
-                if (!confirmResult.success) {
-                    throw new Error(confirmResult.error || '결제 승인 실패');
+                if (!confirmResponse.ok) {
+                    const errorData = await confirmResponse.json();
+                    throw new Error(errorData.error || '결제 승인 실패');
                 }
 
-                console.log('✅ TLL 결제 승인 완료:', confirmResult);
-
-                // 성공 표시
-                showSuccess(params);
-
-                // 저장된 주문 데이터 정리
-                sessionStorage.removeItem('tllPendingOrder');
-
-                // 3초 후 자동으로 메인화면으로 이동
-                setTimeout(() => {
-                    goBack();
-                }, 3000);
+                const result = await confirmResponse.json();
+                console.log('✅ 결제 승인 완료:', result);
+                
+                showSuccess({ paymentKey, orderId, amount });
 
             } catch (error) {
                 console.error('❌ TLL 결제 성공 처리 실패:', error);
-                showError(error.message);
+                showError(`결제 처리 실패: ${error.message}`);
+            }
+        }
+
+        // TableLink로 돌아가기
+        function goBack() {
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.location.href = '/';
+                    window.close();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (e) {
+                window.location.href = '/';
             }
         }
 
         // 페이지 로드 시 실행
-        window.addEventListener('load', () => {
-            console.log('📱 결제 성공 페이지 로드');
+        console.log('📱 결제 성공 페이지 로드');
+        document.addEventListener('DOMContentLoaded', () => {
             processTLLPaymentSuccess();
         });
     </script>
