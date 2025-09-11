@@ -79,49 +79,27 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
     console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
     
-    // sessionStorage 저장 전후 로깅
-    const jsonString = JSON.stringify(orderInfo);
-    console.log('📝 JSON 문자열 길이:', jsonString.length);
-    console.log('📝 JSON 저장 데이터 미리보기:', jsonString.substring(0, 200) + '...');
-    console.log('📝 완전한 orderInfo 객체:', orderInfo);
-    
-    // sessionStorage 저장 전 상태 확인
-    console.log('💾 저장 전 sessionStorage 상태:', {
-      length: sessionStorage.length,
-      keys: Object.keys(sessionStorage)
-    });
-    
-    sessionStorage.setItem('pendingOrderData', jsonString);
-    
-    // 저장 후 즉시 확인
-    const savedData = sessionStorage.getItem('pendingOrderData');
-    console.log('✅ sessionStorage 저장 확인:', savedData ? '저장됨' : '저장 실패');
-    console.log('💾 저장 후 sessionStorage 상태:', {
-      length: sessionStorage.length,
-      keys: Object.keys(sessionStorage),
-      dataLength: savedData?.length || 0
-    });
-    
-    if (savedData) {
-      try {
-        const parsed = JSON.parse(savedData);
-        console.log('✅ sessionStorage 파싱 테스트 성공:', {
-          userId: parsed.userId,
-          storeId: parsed.storeId,
-          storeName: parsed.storeName,
-          tableNumber: parsed.tableNumber,
-          hasOrderData: !!parsed.orderData,
-          orderDataType: typeof parsed.orderData,
-          usedPoint: parsed.usedPoint,
-          selectedCouponId: parsed.selectedCouponId,
-          couponDiscount: parsed.couponDiscount,
-          paymentMethod: parsed.paymentMethod,
-          finalTotal: parsed.finalTotal
-        });
-      } catch (error) {
-        console.error('❌ sessionStorage 파싱 테스트 실패:', error);
-      }
+    // 전역 객체에 결제 데이터 저장
+    if (!window.tablelink) {
+      window.tablelink = {};
     }
+    
+    window.tablelink.pendingPaymentData = orderInfo;
+    
+    console.log('✅ 전역 객체에 결제 데이터 저장 완료:', window.tablelink.pendingPaymentData);
+    console.log('🔍 저장된 데이터 확인:', {
+      userId: window.tablelink.pendingPaymentData.userId,
+      storeId: window.tablelink.pendingPaymentData.storeId,
+      storeName: window.tablelink.pendingPaymentData.storeName,
+      tableNumber: window.tablelink.pendingPaymentData.tableNumber,
+      hasOrderData: !!window.tablelink.pendingPaymentData.orderData,
+      orderDataType: typeof window.tablelink.pendingPaymentData.orderData,
+      usedPoint: window.tablelink.pendingPaymentData.usedPoint,
+      selectedCouponId: window.tablelink.pendingPaymentData.selectedCouponId,
+      couponDiscount: window.tablelink.pendingPaymentData.couponDiscount,
+      paymentMethod: window.tablelink.pendingPaymentData.paymentMethod,
+      finalTotal: window.tablelink.pendingPaymentData.finalTotal
+    });
 
     // 토스페이먼츠 결제 요청
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);

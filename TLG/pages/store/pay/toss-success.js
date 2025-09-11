@@ -70,40 +70,26 @@ async function handlePaymentSuccess() {
     console.log('🔄 결제 성공 처리 시작:', { paymentKey, orderId, amount });
     showStatus('결제 승인 처리 중');
 
-    // 1. sessionStorage에서 주문 정보 가져오기
-    console.log('📋 sessionStorage에서 주문 정보 조회 중...');
-    const pendingOrderDataStr = sessionStorage.getItem('pendingOrderData');
-    
-    console.log('📋 sessionStorage 원본 데이터:', pendingOrderDataStr);
-    console.log('📋 sessionStorage 키 목록:', Object.keys(sessionStorage));
+    // 1. 전역 객체에서 주문 정보 가져오기
+    console.log('📋 전역 객체에서 주문 정보 조회 중...');
     
     let pendingOrderData = {};
     
-    if (pendingOrderDataStr) {
-      try {
-        pendingOrderData = JSON.parse(pendingOrderDataStr);
-        console.log('✅ sessionStorage 파싱 성공:', pendingOrderData);
-        console.log('🔍 파싱된 데이터 상세 확인:', {
-          userId: pendingOrderData.userId,
-          storeId: pendingOrderData.storeId,
-          storeName: pendingOrderData.storeName,
-          tableNumber: pendingOrderData.tableNumber,
-          hasOrderData: !!pendingOrderData.orderData,
-          orderDataType: typeof pendingOrderData.orderData,
-          orderDataKeys: pendingOrderData.orderData ? Object.keys(pendingOrderData.orderData) : 'none'
-        });
-      } catch (parseError) {
-        console.error('❌ sessionStorage 파싱 실패:', parseError);
-        pendingOrderData = {};
-      }
+    if (window.tablelink && window.tablelink.pendingPaymentData) {
+      pendingOrderData = window.tablelink.pendingPaymentData;
+      console.log('✅ 전역 객체에서 데이터 로드 성공:', pendingOrderData);
+      console.log('🔍 로드된 데이터 상세 확인:', {
+        userId: pendingOrderData.userId,
+        storeId: pendingOrderData.storeId,
+        storeName: pendingOrderData.storeName,
+        tableNumber: pendingOrderData.tableNumber,
+        hasOrderData: !!pendingOrderData.orderData,
+        orderDataType: typeof pendingOrderData.orderData,
+        orderDataKeys: pendingOrderData.orderData ? Object.keys(pendingOrderData.orderData) : 'none'
+      });
     } else {
-      console.warn('⚠️ sessionStorage에 pendingOrderData가 없음');
-      // 다른 가능한 키들도 확인해보기
-      console.log('🔍 다른 sessionStorage 키들 확인:');
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        console.log(`  - ${key}: ${sessionStorage.getItem(key)?.substring(0, 100)}...`);
-      }
+      console.warn('⚠️ 전역 객체에 pendingPaymentData가 없음');
+      console.log('🔍 window.tablelink 상태:', window.tablelink);
     }
     
     // 기본값 설정 (undefined 방지)
@@ -166,8 +152,11 @@ async function handlePaymentSuccess() {
     const confirmResult = await confirmResponse.json();
     console.log('✅ 결제 승인 및 주문 생성 완료:', confirmResult);
 
-    // 3. 세션 정리
-    sessionStorage.removeItem('pendingOrderData');
+    // 3. 전역 객체 정리
+    if (window.tablelink) {
+      delete window.tablelink.pendingPaymentData;
+      console.log('🗑️ 전역 객체 결제 데이터 정리 완료');
+    }
     
     // 4. 성공 화면 표시
     showSuccess({
