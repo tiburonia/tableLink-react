@@ -102,11 +102,28 @@ async function processPaymentSuccess(paymentKey, orderId, amount) {
   try {
     console.log('🔄 결제 성공 후 처리 시작');
 
-    // 1. 토스페이먼츠 결제 승인 - 새 스키마로 처리됨
+    // 1. sessionStorage에서 주문 정보 가져오기
+    const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
+    
+    // 2. 토스페이먼츠 결제 승인 - 모든 필요한 데이터를 전달
     const confirmResponse = await fetch('/api/toss/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) })
+      body: JSON.stringify({ 
+        paymentKey, 
+        orderId, 
+        amount: parseInt(amount),
+        // 추가 주문 정보 전달
+        userId: pendingOrderData.userId,
+        storeId: pendingOrderData.storeId,
+        storeName: pendingOrderData.storeName,
+        tableNumber: pendingOrderData.tableNumber,
+        orderData: pendingOrderData.orderData,
+        usedPoint: pendingOrderData.usedPoint || 0,
+        selectedCouponId: pendingOrderData.selectedCouponId,
+        couponDiscount: pendingOrderData.couponDiscount || 0,
+        paymentMethod: pendingOrderData.paymentMethod
+      })
     });
 
     if (!confirmResponse.ok) {
