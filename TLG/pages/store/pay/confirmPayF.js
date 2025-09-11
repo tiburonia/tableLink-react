@@ -60,18 +60,18 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       userId: userInfo.id,
       storeId: orderData.storeId || store?.id || store?.store_id,
       storeName: orderData.storeName || orderData.store || store?.name,
-      tableNumber: orderData.tableNum,
+      tableNumber: orderData.tableNum || 1,
       orderData: {
-        items: orderData.items || currentOrder,
+        items: orderData.items || currentOrder || [],
         total: orderData.total || finalAmount,
         storeName: orderData.storeName || orderData.store || store?.name
       },
-      usedPoint: pointsUsed || 0,
-      finalTotal: finalAmount,
-      subtotal: orderData.total || finalAmount,
-      selectedCouponId: couponId,
-      couponDiscount: couponDiscount || 0,
-      paymentMethod: paymentMethod,
+      usedPoint: parseInt(pointsUsed) || 0,
+      finalTotal: parseInt(finalAmount),
+      subtotal: parseInt(orderData.total || finalAmount),
+      selectedCouponId: couponId || null,
+      couponDiscount: parseInt(couponDiscount) || 0,
+      paymentMethod: paymentMethod || '카드',
       orderId: orderId
     };
 

@@ -136,7 +136,7 @@ async function handlePaymentSuccess() {
     const response = await fetch('/api/toss/confirm', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         paymentKey,

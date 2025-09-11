@@ -35,19 +35,32 @@ router.post('/confirm', async (req, res) => {
   try {
     console.log('📨 토스 confirm 라우트 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
     
-    const { paymentKey, orderId, amount, userId, storeId, storeName, tableNumber, orderData, usedPoint, selectedCouponId, couponDiscount, paymentMethod } = req.body;
+    const { 
+      paymentKey, 
+      orderId, 
+      amount, 
+      userId, 
+      storeId, 
+      storeName, 
+      tableNumber, 
+      orderData, 
+      usedPoint = 0, 
+      selectedCouponId, 
+      couponDiscount = 0, 
+      paymentMethod = '카드' 
+    } = req.body;
 
     console.log('🔄 토스페이먼츠 결제 승인 요청 - 필수 파라미터:', { paymentKey, orderId, amount });
     console.log('🔄 토스페이먼츠 결제 승인 요청 - 추가 파라미터:', {
-      userId,
-      storeId,
-      storeName,
-      tableNumber,
-      orderData: orderData ? '객체 존재' : '없음',
-      usedPoint,
-      selectedCouponId,
-      couponDiscount,
-      paymentMethod
+      userId: userId || 'undefined',
+      storeId: storeId || 'undefined',
+      storeName: storeName || 'undefined',
+      tableNumber: tableNumber || 'undefined',
+      orderData: orderData ? `객체 존재 (${Object.keys(orderData).length}개 키)` : '없음',
+      usedPoint: usedPoint || 0,
+      selectedCouponId: selectedCouponId || 'null',
+      couponDiscount: couponDiscount || 0,
+      paymentMethod: paymentMethod || '카드'
     });
 
     if (!paymentKey || !orderId || !amount) {
@@ -106,33 +119,34 @@ router.post('/confirm', async (req, res) => {
       // 전달받은 파라미터에서 주문 정보 가져오기
       let orderInfo = null;
       
-      if (userId && storeId && orderData) {
-        console.log('✅ 파라미터에서 주문 정보 사용:', {
-          userId,
-          storeId,
-          storeName,
-          tableNumber,
-          orderData: orderData ? `${Object.keys(orderData).length}개 키` : '없음',
-          usedPoint,
-          couponDiscount
-        });
+      console.log('🔍 전달받은 파라미터 상세 검사:', {
+        userId: userId || 'missing',
+        storeId: storeId || 'missing',
+        storeName: storeName || 'missing',
+        tableNumber: tableNumber || 'missing',
+        orderData: orderData ? JSON.stringify(orderData) : 'missing',
+        usedPoint: usedPoint || 0,
+        couponDiscount: couponDiscount || 0,
+        paymentMethod: paymentMethod || '카드'
+      });
+      
+      if (userId && storeId) {
+        console.log('✅ 기본 파라미터 확인됨 - 주문 정보 사용');
         
         orderInfo = {
           userId,
           storeId,
-          storeName,
-          tableNumber,
-          orderData,
-          usedPoint: usedPoint || 0,
-          couponDiscount: couponDiscount || 0,
-          paymentMethod
+          storeName: storeName || '매장명 없음',
+          tableNumber: tableNumber || 1,
+          orderData: orderData || { items: [] },
+          usedPoint: parseInt(usedPoint) || 0,
+          couponDiscount: parseInt(couponDiscount) || 0,
+          paymentMethod: paymentMethod || '카드'
         };
+        
+        console.log('📋 생성된 주문 정보:', orderInfo);
       } else {
-        console.log('⚠️ 파라미터 불완전 - 기본값 사용:', {
-          hasUserId: !!userId,
-          hasStoreId: !!storeId,
-          hasOrderData: !!orderData
-        });
+        console.log('⚠️ 필수 파라미터 누락 - userId나 storeId가 없음');
       }
 
       // 기본 TLL 주문 정보 설정 (파라미터 우선, 기본값 fallback)
