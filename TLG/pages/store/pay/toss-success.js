@@ -88,7 +88,17 @@ async function handlePaymentSuccess() {
         orderDataKeys: pendingOrderData.orderData ? Object.keys(pendingOrderData.orderData) : 'none'
       });
     } else {
-      console.warn('⚠️ 전역 객체에 pendingPaymentData가 없음');
+      // 폴백: sessionStorage에서 시도
+      console.warn('⚠️ 전역 객체에 pendingPaymentData가 없음, sessionStorage에서 시도');
+      const sessionData = sessionStorage.getItem('pendingOrderData');
+      if (sessionData) {
+        try {
+          pendingOrderData = JSON.parse(sessionData);
+          console.log('📦 sessionStorage에서 데이터 복구:', pendingOrderData);
+        } catch (error) {
+          console.error('❌ sessionStorage 데이터 파싱 실패:', error);
+        }
+      }
       console.log('🔍 window.tablelink 상태:', window.tablelink);
     }
     

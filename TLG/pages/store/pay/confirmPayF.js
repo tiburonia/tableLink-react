@@ -79,26 +79,27 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
     console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
     
-    // 전역 객체에 결제 데이터 저장
+    // 전역 객체와 sessionStorage 모두에 결제 데이터 저장 (이중 백업)
     if (!window.tablelink) {
       window.tablelink = {};
     }
     
     window.tablelink.pendingPaymentData = orderInfo;
+    sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
     
-    console.log('✅ 전역 객체에 결제 데이터 저장 완료:', window.tablelink.pendingPaymentData);
+    console.log('✅ 전역 객체와 sessionStorage에 결제 데이터 저장 완료');
     console.log('🔍 저장된 데이터 확인:', {
-      userId: window.tablelink.pendingPaymentData.userId,
-      storeId: window.tablelink.pendingPaymentData.storeId,
-      storeName: window.tablelink.pendingPaymentData.storeName,
-      tableNumber: window.tablelink.pendingPaymentData.tableNumber,
-      hasOrderData: !!window.tablelink.pendingPaymentData.orderData,
-      orderDataType: typeof window.tablelink.pendingPaymentData.orderData,
-      usedPoint: window.tablelink.pendingPaymentData.usedPoint,
-      selectedCouponId: window.tablelink.pendingPaymentData.selectedCouponId,
-      couponDiscount: window.tablelink.pendingPaymentData.couponDiscount,
-      paymentMethod: window.tablelink.pendingPaymentData.paymentMethod,
-      finalTotal: window.tablelink.pendingPaymentData.finalTotal
+      userId: orderInfo.userId,
+      storeId: orderInfo.storeId,
+      storeName: orderInfo.storeName,
+      tableNumber: orderInfo.tableNumber,
+      hasOrderData: !!orderInfo.orderData,
+      orderDataType: typeof orderInfo.orderData,
+      usedPoint: orderInfo.usedPoint,
+      selectedCouponId: orderInfo.selectedCouponId,
+      couponDiscount: orderInfo.couponDiscount,
+      paymentMethod: orderInfo.paymentMethod,
+      finalTotal: orderInfo.finalTotal
     });
 
     // 토스페이먼츠 결제 요청
@@ -124,63 +125,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   }
 }
 
-// 결제 성공 후 처리 (toss-success.html에서 호출)
-async function processPaymentSuccess(paymentKey, orderId, amount) {
-  try {
-    console.log('🔄 결제 성공 후 처리 시작');
-
-    // 1. sessionStorage에서 주문 정보 가져오기
-    const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
-    
-    // 2. 토스페이먼츠 결제 승인 - 모든 필요한 데이터를 전달
-    const confirmResponse = await fetch('/api/toss/confirm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        paymentKey, 
-        orderId, 
-        amount: parseInt(amount),
-        // 추가 주문 정보 전달
-        userId: pendingOrderData.userId,
-        storeId: pendingOrderData.storeId,
-        storeName: pendingOrderData.storeName,
-        tableNumber: pendingOrderData.tableNumber,
-        orderData: pendingOrderData.orderData,
-        usedPoint: pendingOrderData.usedPoint || 0,
-        selectedCouponId: pendingOrderData.selectedCouponId,
-        couponDiscount: pendingOrderData.couponDiscount || 0,
-        paymentMethod: pendingOrderData.paymentMethod
-      })
-    });
-
-    if (!confirmResponse.ok) {
-      const errorData = await confirmResponse.json();
-      throw new Error(errorData.error || '결제 승인 실패');
-    }
-
-    const confirmResult = await confirmResponse.json();
-    console.log('✅ 결제 승인 및 주문 생성 완료:', confirmResult);
-
-    // 2. 세션 정리
-    sessionStorage.removeItem('pendingOrderData');
-    
-    // 3. 성공 처리 완료
-    return { 
-      success: true, 
-      data: { 
-        ...confirmResult,
-        message: '결제가 완료되었습니다. 주문이 접수되었습니다.'
-      }
-    };
-
-  } catch (error) {
-    console.error('❌ 결제 후 처리 실패:', error);
-    return { success: false, error: error.message };
-  }
-}
+// processPaymentSuccess 함수는 toss-success.js에서 처리
 
 // 전역 함수로 등록
 window.confirmPay = confirmPay;
-window.processPaymentSuccess = processPaymentSuccess;
 
 console.log('✅ 결제 확인 모듈 로드 완료');
