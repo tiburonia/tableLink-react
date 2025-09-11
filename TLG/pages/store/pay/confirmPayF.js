@@ -83,12 +83,25 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     const jsonString = JSON.stringify(orderInfo);
     console.log('📝 JSON 문자열 길이:', jsonString.length);
     console.log('📝 JSON 저장 데이터 미리보기:', jsonString.substring(0, 200) + '...');
+    console.log('📝 완전한 orderInfo 객체:', orderInfo);
+    
+    // sessionStorage 저장 전 상태 확인
+    console.log('💾 저장 전 sessionStorage 상태:', {
+      length: sessionStorage.length,
+      keys: Object.keys(sessionStorage)
+    });
     
     sessionStorage.setItem('pendingOrderData', jsonString);
     
     // 저장 후 즉시 확인
     const savedData = sessionStorage.getItem('pendingOrderData');
     console.log('✅ sessionStorage 저장 확인:', savedData ? '저장됨' : '저장 실패');
+    console.log('💾 저장 후 sessionStorage 상태:', {
+      length: sessionStorage.length,
+      keys: Object.keys(sessionStorage),
+      dataLength: savedData?.length || 0
+    });
+    
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
@@ -96,7 +109,14 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           userId: parsed.userId,
           storeId: parsed.storeId,
           storeName: parsed.storeName,
-          hasOrderData: !!parsed.orderData
+          tableNumber: parsed.tableNumber,
+          hasOrderData: !!parsed.orderData,
+          orderDataType: typeof parsed.orderData,
+          usedPoint: parsed.usedPoint,
+          selectedCouponId: parsed.selectedCouponId,
+          couponDiscount: parsed.couponDiscount,
+          paymentMethod: parsed.paymentMethod,
+          finalTotal: parsed.finalTotal
         });
       } catch (error) {
         console.error('❌ sessionStorage 파싱 테스트 실패:', error);

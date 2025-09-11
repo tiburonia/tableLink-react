@@ -75,35 +75,60 @@ async function handlePaymentSuccess() {
     const pendingOrderDataStr = sessionStorage.getItem('pendingOrderData');
     
     console.log('📋 sessionStorage 원본 데이터:', pendingOrderDataStr);
+    console.log('📋 sessionStorage 키 목록:', Object.keys(sessionStorage));
     
     let pendingOrderData = {};
+    
     if (pendingOrderDataStr) {
       try {
         pendingOrderData = JSON.parse(pendingOrderDataStr);
         console.log('✅ sessionStorage 파싱 성공:', pendingOrderData);
+        console.log('🔍 파싱된 데이터 상세 확인:', {
+          userId: pendingOrderData.userId,
+          storeId: pendingOrderData.storeId,
+          storeName: pendingOrderData.storeName,
+          tableNumber: pendingOrderData.tableNumber,
+          hasOrderData: !!pendingOrderData.orderData,
+          orderDataType: typeof pendingOrderData.orderData,
+          orderDataKeys: pendingOrderData.orderData ? Object.keys(pendingOrderData.orderData) : 'none'
+        });
       } catch (parseError) {
         console.error('❌ sessionStorage 파싱 실패:', parseError);
         pendingOrderData = {};
       }
     } else {
       console.warn('⚠️ sessionStorage에 pendingOrderData가 없음');
+      // 다른 가능한 키들도 확인해보기
+      console.log('🔍 다른 sessionStorage 키들 확인:');
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        console.log(`  - ${key}: ${sessionStorage.getItem(key)?.substring(0, 100)}...`);
+      }
     }
+    
+    // 기본값 설정 (undefined 방지)
+    const safeOrderData = {
+      userId: pendingOrderData.userId || null,
+      storeId: pendingOrderData.storeId || null,
+      storeName: pendingOrderData.storeName || null,
+      tableNumber: pendingOrderData.tableNumber || pendingOrderData.tableNum || null,
+      orderData: pendingOrderData.orderData || null,
+      usedPoint: pendingOrderData.usedPoint || pendingOrderData.usedPoints || 0,
+      selectedCouponId: pendingOrderData.selectedCouponId || null,
+      couponDiscount: pendingOrderData.couponDiscount || 0,
+      paymentMethod: pendingOrderData.paymentMethod || '카드',
+      finalTotal: pendingOrderData.finalTotal || amount
+    };
+    
+    console.log('🛡️ 안전한 주문 데이터:', safeOrderData);
 
-    // 2. 토스페이먼츠 결제 승인 API 호출 - 모든 필요한 데이터를 명시적으로 전달
+    // 2. 토스페이먼츠 결제 승인 API 호출 - 안전한 데이터 사용
     console.log('🔄 토스페이먼츠 결제 승인 API 호출 시작');
     console.log('📤 전송할 데이터:', {
       paymentKey,
       orderId,
       amount: parseInt(amount),
-      userId: pendingOrderData.userId,
-      storeId: pendingOrderData.storeId,
-      storeName: pendingOrderData.storeName,
-      tableNumber: pendingOrderData.tableNumber,
-      orderData: pendingOrderData.orderData,
-      usedPoint: pendingOrderData.usedPoint || 0,
-      selectedCouponId: pendingOrderData.selectedCouponId,
-      couponDiscount: pendingOrderData.couponDiscount || 0,
-      paymentMethod: pendingOrderData.paymentMethod
+      ...safeOrderData
     });
 
     const confirmResponse = await fetch('/api/toss/confirm', {
@@ -117,16 +142,16 @@ async function handlePaymentSuccess() {
         paymentKey, 
         orderId, 
         amount: parseInt(amount),
-        // 추가 주문 정보 전달 - 모든 필드를 명시적으로 전달
-        userId: pendingOrderData.userId || null,
-        storeId: pendingOrderData.storeId || null,
-        storeName: pendingOrderData.storeName || null,
-        tableNumber: pendingOrderData.tableNumber || null,
-        orderData: pendingOrderData.orderData || null,
-        usedPoint: pendingOrderData.usedPoint || 0,
-        selectedCouponId: pendingOrderData.selectedCouponId || null,
-        couponDiscount: pendingOrderData.couponDiscount || 0,
-        paymentMethod: pendingOrderData.paymentMethod || '카드'
+        // 안전한 주문 정보 전달
+        userId: safeOrderData.userId,
+        storeId: safeOrderData.storeId,
+        storeName: safeOrderData.storeName,
+        tableNumber: safeOrderData.tableNumber,
+        orderData: safeOrderData.orderData,
+        usedPoint: safeOrderData.usedPoint,
+        selectedCouponId: safeOrderData.selectedCouponId,
+        couponDiscount: safeOrderData.couponDiscount,
+        paymentMethod: safeOrderData.paymentMethod
       })
     });
 
@@ -146,10 +171,10 @@ async function handlePaymentSuccess() {
     
     // 4. 성공 화면 표시
     showSuccess({
-      storeName: pendingOrderData.storeName,
-      tableNumber: pendingOrderData.tableNumber,
+      storeName: safeOrderData.storeName,
+      tableNumber: safeOrderData.tableNumber,
       orderId: orderId,
-      finalTotal: pendingOrderData.finalTotal || amount,
+      finalTotal: safeOrderData.finalTotal,
       amount: amount
     });
 
