@@ -115,51 +115,44 @@ router.post('/confirm', async (req, res) => {
       // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
       console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
 
-      // 전달받은 파라미터에서 주문 정보 가져오기
-      let orderInfo = null;
-
+      // 전달받은 파라미터 정규화 및 검증
       console.log('🔍 전달받은 파라미터 상세 검사:', {
         userId: userId || 'missing',
         storeId: storeId || 'missing',
         storeName: storeName || 'missing',
         tableNumber: tableNumber || 'missing',
-        orderData: orderData ? JSON.stringify(orderData) : 'missing',
+        orderData: orderData ? (typeof orderData === 'object' ? `객체 (${Object.keys(orderData).length}개 키)` : typeof orderData) : 'missing',
         usedPoint: usedPoint || 0,
         couponDiscount: couponDiscount || 0,
         paymentMethod: paymentMethod || '카드'
       });
 
-      if (userId && storeId) {
-        console.log('✅ 기본 파라미터 확인됨 - 주문 정보 사용');
+      // 파라미터 정규화
+      const normalizedParams = {
+        userId: userId || null,
+        storeId: storeId ? parseInt(storeId) : null,
+        storeName: storeName || null,
+        tableNumber: tableNumber ? parseInt(tableNumber) : 1,
+        orderData: orderData || null,
+        usedPoint: parseInt(usedPoint) || 0,
+        couponDiscount: parseInt(couponDiscount) || 0,
+        paymentMethod: paymentMethod || '카드'
+      };
 
-        orderInfo = {
-          userId,
-          storeId,
-          storeName: storeName || '매장명 없음',
-          tableNumber: tableNumber || 1,
-          orderData: orderData || { items: [] },
-          usedPoint: parseInt(usedPoint) || 0,
-          couponDiscount: parseInt(couponDiscount) || 0,
-          paymentMethod: paymentMethod || '카드'
-        };
+      console.log('📋 정규화된 파라미터:', normalizedParams);
 
-        console.log('📋 생성된 주문 정보:', orderInfo);
-      } else {
-        console.log('⚠️ 필수 파라미터 누락 - userId나 storeId가 없음');
-      }
-
-      // 기본 TLL 주문 정보 설정 (파라미터 우선, 기본값 fallback)
-      const defaultOrderInfo = {
-        storeId: orderInfo?.storeId || storeId || 497, // 기본 매장 (정통 양념)
-        userId: orderInfo?.userId || userId || 'tiburonia', // 현재 로그인된 사용자
-        tableNumber: orderInfo?.tableNumber || tableNumber || 1,
-        finalTotal: parseInt(amount) - (orderInfo?.usedPoint || usedPoint || 0) - (orderInfo?.couponDiscount || couponDiscount || 0),
+      // 기본 TLL 주문 정보 설정 (정규화된 파라미터 우선, 기본값 fallback)
+      const finalOrderInfo = {
+        storeId: normalizedParams.storeId || 497, // 기본 매장 (정통 양념)
+        userId: normalizedParams.userId || 'tiburonia', // 현재 로그인된 사용자
+        tableNumber: normalizedParams.tableNumber || 1,
+        finalTotal: parseInt(amount) - normalizedParams.usedPoint - normalizedParams.couponDiscount,
         subtotal: parseInt(amount),
-        usedPoint: orderInfo?.usedPoint || usedPoint || 0,
-        couponDiscount: orderInfo?.couponDiscount || couponDiscount || 0,
-        items: orderInfo?.orderData?.items || orderData?.items || [
+        usedPoint: normalizedParams.usedPoint,
+        couponDiscount: normalizedParams.couponDiscount,
+        items: normalizedParams.orderData?.items || [
           {
-            name: orderData?.storeName || storeName || 'TLL 주문',
+            name: normalizedParams.storeName || 'TLL 주문',
             price: parseInt(amount),
             quantity: 1,
             totalPrice: parseInt(amount),
@@ -169,8 +162,8 @@ router.post('/confirm', async (req, res) => {
       };
 
       console.log('📊 최종 주문 정보:', {
-        ...defaultOrderInfo,
-        items: `${defaultOrderInfo.items.length}개 아이템`
+        ...finalOrderInfo,
+        items: `${finalOrderInfo.items.length}개 아이템`
       });
 
       // 1. orders 테이블에 주문 생성
@@ -181,13 +174,13 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          total_price
+          " total_price"
         ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
         RETURNING id
       `, [
-        defaultOrderInfo.storeId,
-        defaultOrderInfo.userId,
-        defaultOrderInfo.finalTotal
+        finalOrderInfo.storeId,
+        finalOrderInfo.userId,
+        finalOrderInfo.finalTotal
       ]);
 
       const orderId = orderResult.rows[0].id;
@@ -207,7 +200,7 @@ router.post('/confirm', async (req, res) => {
       const ticketId = ticketResult.rows[0].id;
 
       // 3. order_items 테이블에 아이템들 생성
-      for (const item of defaultOrderInfo.items) {
+      for (const item of finalOrderInfo.items) {
         await client.query(`
           INSERT INTO order_items (
             ticket_id,
@@ -243,13 +236,13 @@ router.post('/confirm', async (req, res) => {
       `, [
         orderId,
         ticketId,
-        defaultOrderInfo.finalTotal,
+        finalOrderInfo.finalTotal,
         paymentKey,
         JSON.stringify(tossResult)
       ]);
 
       // 5. order_adjustments 테이블에 할인/포인트 사용 내역 추가
-      if (defaultOrderInfo.usedPoint > 0) {
+      if (finalOrderInfo.usedPoint > 0) {
         await client.query(`
           INSERT INTO order_adjustments (
             order_id,
@@ -260,10 +253,10 @@ router.post('/confirm', async (req, res) => {
             code,
             amount_signed
           ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
-        `, [orderId, ticketId, -defaultOrderInfo.usedPoint]);
+        `, [orderId, ticketId, -finalOrderInfo.usedPoint]);
       }
 
-      if (defaultOrderInfo.couponDiscount > 0) {
+      if (finalOrderInfo.couponDiscount > 0) {
         await client.query(`
           INSERT INTO order_adjustments (
             order_id,
@@ -274,18 +267,18 @@ router.post('/confirm', async (req, res) => {
             code,
             amount_signed
           ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
-        `, [orderId, ticketId, -defaultOrderInfo.couponDiscount]);
+        `, [orderId, ticketId, -finalOrderInfo.couponDiscount]);
       }
 
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
-      const earnedPoints = Math.floor(defaultOrderInfo.finalTotal * 0.01); // 1% 적립
-      const pointChange = earnedPoints - defaultOrderInfo.usedPoint;
+      const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
+      const pointChange = earnedPoints - finalOrderInfo.usedPoint;
 
       await client.query(`
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [pointChange, defaultOrderInfo.userId]);
+      `, [pointChange, finalOrderInfo.userId]);
 
       console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${orderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
 

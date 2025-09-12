@@ -75,6 +75,18 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       orderId: orderId
     };
 
+    // URL에 주문 정보를 쿼리 파라미터로 추가
+    const orderParams = new URLSearchParams({
+      userId: orderInfo.userId,
+      storeId: orderInfo.storeId,
+      storeName: orderInfo.storeName,
+      tableNumber: orderInfo.tableNumber,
+      usedPoint: orderInfo.usedPoint,
+      couponDiscount: orderInfo.couponDiscount,
+      paymentMethod: orderInfo.paymentMethod,
+      orderDataJson: JSON.stringify(orderInfo.orderData)
+    });
+
     console.log('💾 주문 정보 저장:', orderInfo);
     console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
     console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
@@ -110,7 +122,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       orderId: orderId,
       orderName: `${orderData.storeName || orderData.store} 주문`,
       customerName: userInfo.name || '고객',
-      customerEmail: userInfo.email || 'customer@tablelink.com'
+      customerEmail: userInfo.email || 'customer@tablelink.com',
+      successUrl: `${window.location.origin}/toss-success.html?${orderParams.toString()}`,
+      failUrl: `${window.location.origin}/toss-fail.html`
     }, paymentMethod);
 
     console.log('✅ 토스페이먼츠 결제 결과:', paymentResult);

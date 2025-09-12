@@ -4,16 +4,40 @@
 
 console.log('📱 결제 성공 페이지 로드');
 
-// URL 파라미터 추출
+// URL 파라미터 추출 (주문 정보 포함)
 function getUrlParams() {
   console.log('🔍 URL 파라미터 추출 시작');
   const urlParams = new URLSearchParams(window.location.search);
   const params = {
+    // 토스페이먼츠 기본 파라미터
     paymentKey: urlParams.get('paymentKey'),
     orderId: urlParams.get('orderId'),
-    amount: urlParams.get('amount')
+    amount: urlParams.get('amount'),
+    // 주문 정보 파라미터
+    userId: urlParams.get('userId'),
+    storeId: urlParams.get('storeId'),
+    storeName: urlParams.get('storeName'),
+    tableNumber: urlParams.get('tableNumber'),
+    usedPoint: urlParams.get('usedPoint'),
+    couponDiscount: urlParams.get('couponDiscount'),
+    paymentMethod: urlParams.get('paymentMethod'),
+    orderDataJson: urlParams.get('orderDataJson')
   };
-  console.log('✅ URL 파라미터 추출 완료:', params);
+  
+  // orderData JSON 파싱
+  if (params.orderDataJson) {
+    try {
+      params.orderData = JSON.parse(params.orderDataJson);
+    } catch (error) {
+      console.warn('⚠️ orderData JSON 파싱 실패:', error);
+      params.orderData = null;
+    }
+  }
+  
+  console.log('✅ URL 파라미터 추출 완료:', {
+    ...params,
+    orderDataJson: params.orderDataJson ? 'JSON 데이터 존재' : '없음'
+  });
   return params;
 }
 
@@ -69,7 +93,8 @@ async function handlePaymentSuccess() {
   try {
     console.log('🔄 결제 성공 처리 함수 시작');
 
-    const { paymentKey, orderId, amount } = getUrlParams();
+    const urlParams = getUrlParams();
+    const { paymentKey, orderId, amount } = urlParams;
     console.log('📋 추출된 파라미터:', { paymentKey, orderId, amount });
 
     if (!paymentKey || !orderId || !amount) {
@@ -80,35 +105,41 @@ async function handlePaymentSuccess() {
     console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount });
     showStatus('결제 승인 처리 중');
 
-    // 1. 전역 객체에서 주문 정보 가져오기
-    console.log('📋 전역 객체에서 주문 정보 조회 시작...');
-    console.log('🔍 window.tablelink 존재 여부:', !!window.tablelink);
-    console.log('🔍 window.tablelink.pendingPaymentData 존재 여부:', !!(window.tablelink && window.tablelink.pendingPaymentData));
+    // 1. 주문 정보 통합 처리 (URL 파라미터 우선, 저장된 데이터 폴백)
+    console.log('📋 주문 정보 통합 처리 시작...');
+    
+    let orderInfo = {};
 
-    let pendingOrderData = {};
-
-    if (window.tablelink && window.tablelink.pendingPaymentData) {
-      pendingOrderData = window.tablelink.pendingPaymentData;
-      console.log('✅ 전역 객체에서 데이터 로드 성공:', pendingOrderData);
-      console.log('🔍 로드된 데이터 상세 확인:', {
-        userId: pendingOrderData.userId,
-        storeId: pendingOrderData.storeId,
-        storeName: pendingOrderData.storeName,
-        tableNumber: pendingOrderData.tableNumber,
-        hasOrderData: !!pendingOrderData.orderData,
-        orderDataType: typeof pendingOrderData.orderData,
-        orderDataKeys: pendingOrderData.orderData ? Object.keys(pendingOrderData.orderData) : 'none'
-      });
+    // URL 파라미터에서 주문 정보 추출
+    if (urlParams.userId && urlParams.storeId) {
+      console.log('✅ URL 파라미터에서 주문 정보 발견');
+      orderInfo = {
+        userId: urlParams.userId,
+        storeId: parseInt(urlParams.storeId),
+        storeName: urlParams.storeName,
+        tableNumber: parseInt(urlParams.tableNumber) || 1,
+        orderData: urlParams.orderData || { items: [] },
+        usedPoint: parseInt(urlParams.usedPoint) || 0,
+        couponDiscount: parseInt(urlParams.couponDiscount) || 0,
+        paymentMethod: urlParams.paymentMethod || '카드'
+      };
+      console.log('📋 URL에서 추출한 주문 정보:', orderInfo);
     } else {
-      // 폴백: sessionStorage에서 시도
-      console.warn('⚠️ 전역 객체에 pendingPaymentData가 없음, sessionStorage에서 시도');
-      const sessionData = sessionStorage.getItem('pendingOrderData');
-      if (sessionData) {
-        try {
-          pendingOrderData = JSON.parse(sessionData);
-          console.log('📦 sessionStorage에서 데이터 복구:', pendingOrderData);
-        } catch (error) {
-          console.error('❌ sessionStorage 파싱 실패:', error);
+      // 폴백: 전역 객체 또는 sessionStorage에서 시도
+      console.warn('⚠️ URL 파라미터에 주문 정보 없음, 저장된 데이터에서 시도');
+      
+      if (window.tablelink && window.tablelink.pendingPaymentData) {
+        orderInfo = window.tablelink.pendingPaymentData;
+        console.log('📦 전역 객체에서 데이터 복구:', orderInfo);
+      } else {
+        const sessionData = sessionStorage.getItem('pendingOrderData');
+        if (sessionData) {
+          try {
+            orderInfo = JSON.parse(sessionData);
+            console.log('📦 sessionStorage에서 데이터 복구:', orderInfo);
+          } catch (error) {
+            console.error('❌ sessionStorage 파싱 실패:', error);
+          }
         }
       }
     }
@@ -119,15 +150,15 @@ async function handlePaymentSuccess() {
       paymentKey,
       orderId,
       amount,
-      userId: pendingOrderData.userId,
-      storeId: pendingOrderData.storeId,
-      storeName: pendingOrderData.storeName,
-      tableNumber: pendingOrderData.tableNumber,
-      orderData: pendingOrderData.orderData ? '객체 존재' : '없음',
-      usedPoint: pendingOrderData.usedPoint,
-      selectedCouponId: pendingOrderData.selectedCouponId,
-      couponDiscount: pendingOrderData.couponDiscount,
-      paymentMethod: pendingOrderData.paymentMethod
+      userId: orderInfo.userId,
+      storeId: orderInfo.storeId,
+      storeName: orderInfo.storeName,
+      tableNumber: orderInfo.tableNumber,
+      orderData: orderInfo.orderData ? '객체 존재' : '없음',
+      usedPoint: orderInfo.usedPoint,
+      selectedCouponId: orderInfo.selectedCouponId,
+      couponDiscount: orderInfo.couponDiscount,
+      paymentMethod: orderInfo.paymentMethod
     });
 
     // 3. 결제 승인 API 호출
@@ -142,15 +173,15 @@ async function handlePaymentSuccess() {
         paymentKey,
         orderId,
         amount: parseInt(amount),
-        userId: pendingOrderData.userId,
-        storeId: pendingOrderData.storeId,
-        storeName: pendingOrderData.storeName,
-        tableNumber: pendingOrderData.tableNumber,
-        orderData: pendingOrderData.orderData,
-        usedPoint: pendingOrderData.usedPoint || 0,
-        selectedCouponId: pendingOrderData.selectedCouponId,
-        couponDiscount: pendingOrderData.couponDiscount || 0,
-        paymentMethod: pendingOrderData.paymentMethod || '카드'
+        userId: orderInfo.userId,
+        storeId: orderInfo.storeId,
+        storeName: orderInfo.storeName,
+        tableNumber: orderInfo.tableNumber,
+        orderData: orderInfo.orderData,
+        usedPoint: orderInfo.usedPoint || 0,
+        selectedCouponId: orderInfo.selectedCouponId,
+        couponDiscount: orderInfo.couponDiscount || 0,
+        paymentMethod: orderInfo.paymentMethod || '카드'
       })
     });
 
@@ -166,16 +197,16 @@ async function handlePaymentSuccess() {
     console.log('✅ API 응답 성공:', result);
 
     // 4. 성공 화면 표시
-    const orderInfo = {
-      storeName: pendingOrderData.storeName || '매장',
-      tableNumber: pendingOrderData.tableNumber || '테이블',
+    const displayOrderInfo = {
+      storeName: orderInfo.storeName || '매장',
+      tableNumber: orderInfo.tableNumber || '테이블',
       orderId: orderId,
       amount: amount,
       finalTotal: amount
     };
 
     console.log('🎉 결제 성공 처리 완료');
-    showSuccess(orderInfo);
+    showSuccess(displayOrderInfo);
 
     // 5. 전역 객체 정리
     if (window.tablelink && window.tablelink.pendingPaymentData) {

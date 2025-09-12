@@ -126,8 +126,8 @@ async function requestTossPayment(orderData, paymentMethod = '카드') {
       orderName: orderName || '주문',
       customerName: customerName || '고객',
       customerEmail: customerEmail || 'customer@tablelink.com',
-      successUrl: `${window.location.origin}/toss-success.html`,
-      failUrl: `${window.location.origin}/toss-fail.html`
+      successUrl: orderData.successUrl || `${window.location.origin}/toss-success.html`,
+      failUrl: orderData.failUrl || `${window.location.origin}/toss-fail.html`
     });
 
     console.log('✅ 토스페이먼츠 결제 요청 성공:', result);
