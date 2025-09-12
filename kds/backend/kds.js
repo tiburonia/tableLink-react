@@ -1,7 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/pool');
+const pool = require('../../src/db/pool');
 
 // KDS 티켓 조회 (order_tickets 기반)
 router.get('/tickets', async (req, res) => {
