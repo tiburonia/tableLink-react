@@ -1,4 +1,3 @@
-
 /**
  * 결제 확인 처리 모듈 (완전 재작성)
  */
@@ -44,9 +43,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     if (!window.requestTossPayment) {
       console.log('🔄 토스페이먼츠 모듈 로드 중...');
       await import('/TLG/pages/store/pay/tossPayments.js');
-      
+
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       if (!window.requestTossPayment) {
         throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다.');
       }
@@ -78,15 +77,15 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('💾 주문 정보 저장:', orderInfo);
     console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
     console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
-    
+
     // 전역 객체와 sessionStorage 모두에 결제 데이터 저장 (이중 백업)
     if (!window.tablelink) {
       window.tablelink = {};
     }
-    
+
     window.tablelink.pendingPaymentData = orderInfo;
     sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
-    
+
     console.log('✅ 전역 객체와 sessionStorage에 결제 데이터 저장 완료');
     console.log('🔍 저장된 데이터 확인:', {
       userId: orderInfo.userId,
@@ -104,19 +103,61 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     // 토스페이먼츠 결제 요청
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
-    
+
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
       orderId: orderId,
-      orderName: `${orderData.storeName || orderData.store} 주문`,
-      customerName: userInfo.name || '고객',
-      customerEmail: userInfo.email || 'customer@tablelink.com'
-    }, paymentMethod);
+      orderName: `${storeName} 주문`,
+      customerName: userInfo?.name || userInfo?.id || '고객',
+      successUrl: `${window.location.origin}/toss-success.html`,
+      failUrl: `${window.location.origin}/toss-fail.html`,
+      paymentMethod: paymentMethod
+    });
 
-    console.log('✅ 토스페이먼츠 결제 결과:', paymentResult);
+    console.log('💳 토스페이먼츠 결제 결과:', paymentResult);
 
     if (!paymentResult.success) {
       throw new Error(paymentResult.message || '결제에 실패했습니다.');
+    }
+
+    // 토스페이먼츠 confirm 처리 - 주문 정보도 함께 전달
+    console.log('🔄 토스 confirm API 호출 - 주문 정보 포함');
+
+    const confirmResponse = await fetch('/api/toss/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        // 토스페이먼츠 필수 파라미터
+        paymentKey: paymentResult.paymentKey,
+        orderId: orderId,
+        amount: finalAmount,
+
+        // 주문 정보 추가
+        userId: userInfo?.id || userInfo?.user_id,
+        storeId: orderData.storeId,
+        storeName: orderData.storeName,
+        tableNumber: orderData.tableNum,
+        orderData: currentOrder,
+        usedPoint: pointsUsed || 0,
+        couponDiscount: couponDiscount || 0,
+        paymentMethod: paymentMethod || '카드'
+      })
+    });
+
+    const confirmData = await confirmResponse.json();
+
+    if (!confirmResponse.ok || !confirmData.success) {
+      throw new Error(confirmData.message || '결제 확인에 실패했습니다.');
+    }
+
+    console.log('✅ 결제 확인 성공:', confirmData);
+    alert('결제가 성공적으로 완료되었습니다!');
+
+    // 성공 후 메인 화면으로 이동
+    if (typeof renderMap === 'function') {
+      renderMap();
     }
 
   } catch (error) {
