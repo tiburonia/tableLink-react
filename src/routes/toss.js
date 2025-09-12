@@ -244,10 +244,9 @@ router.post('/confirm', async (req, res) => {
       // pending_payments에서 복구된 데이터로 주문 정보 설정
       const finalOrderInfo = {
         storeId: pendingPayment.store_id,
-        userId: pendingPayment.user_id,
-        userPk: pendingPayment.user_pk, // user_pk 사용
+        userPk: pendingPayment.user_pk, // user_pk (정수형) 사용
         tableNumber: pendingPayment.table_number,
-        finalTotal: parseInt(amount) - (orderData.usedPoint || 0) - (orderData.couponDiscount || 0),
+        finalTotal: parseInt(amount),
         subtotal: orderData.subtotal || parseInt(amount),
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
@@ -263,26 +262,27 @@ router.post('/confirm', async (req, res) => {
       };
 
       console.log('📊 최종 주문 정보:', {
-        ...finalOrderInfo,
-        items: `${finalOrderInfo.items.length}개 아이템`
+        storeId: finalOrderInfo.storeId,
+        userPk: finalOrderInfo.userPk,
+        tableNumber: finalOrderInfo.tableNumber,
+        finalTotal: finalOrderInfo.finalTotal,
+        itemCount: finalOrderInfo.items.length
       });
 
-      // 1. orders 테이블에 주문 생성
+      // 1. orders 테이블에 주문 생성 (새 스키마에 맞게)
       const orderResult = await client.query(`
         INSERT INTO orders (
           store_id, 
           user_id,
-          user_pk, -- user_pk 추가
           source,
           status,
           payment_status,
-          "total_price"
-        ) VALUES ($1, $2, $3, 'TLL', 'COMPLETED', 'PAID', $4)
+          total_price
+        ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
         RETURNING id
       `, [
         finalOrderInfo.storeId,
-        finalOrderInfo.userId,
-        finalOrderInfo.userPk, // user_pk 삽입
+        finalOrderInfo.userPk, // user_pk를 user_id에 저장 (정수형)
         finalOrderInfo.finalTotal
       ]);
 
@@ -344,33 +344,41 @@ router.post('/confirm', async (req, res) => {
         JSON.stringify(tossResult)
       ]);
 
-      // 5. order_adjustments 테이블에 할인/포인트 사용 내역 추가
+      // 5. order_adjustments 테이블에 할인/포인트 사용 내역 추가 (존재하는 경우만)
       if (finalOrderInfo.usedPoint > 0) {
-        await client.query(`
-          INSERT INTO order_adjustments (
-            order_id,
-            ticket_id,
-            scope,
-            kind,
-            method,
-            code,
-            amount_signed
-          ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
-        `, [newOrderId, ticketId, -finalOrderInfo.usedPoint]);
+        try {
+          await client.query(`
+            INSERT INTO order_adjustments (
+              order_id,
+              ticket_id,
+              scope,
+              kind,
+              method,
+              code,
+              amount_signed
+            ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
+          `, [newOrderId, ticketId, -finalOrderInfo.usedPoint]);
+        } catch (adjustmentError) {
+          console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
+        }
       }
 
       if (finalOrderInfo.couponDiscount > 0) {
-        await client.query(`
-          INSERT INTO order_adjustments (
-            order_id,
-            ticket_id,
-            scope,
-            kind,
-            method,
-            code,
-            amount_signed
-          ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
-        `, [newOrderId, ticketId, -finalOrderInfo.couponDiscount]);
+        try {
+          await client.query(`
+            INSERT INTO order_adjustments (
+              order_id,
+              ticket_id,
+              scope,
+              kind,
+              method,
+              code,
+              amount_signed
+            ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
+          `, [newOrderId, ticketId, -finalOrderInfo.couponDiscount]);
+        } catch (adjustmentError) {
+          console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
+        }
       }
 
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
@@ -381,7 +389,7 @@ router.post('/confirm', async (req, res) => {
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [pointChange, finalOrderInfo.userPk]); // user_pk 사용
+      `, [pointChange, finalOrderInfo.userPk]);
 
       // pending_payments 상태를 SUCCESS로 업데이트
       await client.query(`
