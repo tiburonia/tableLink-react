@@ -135,13 +135,10 @@
         const userInfo = this.getUserInfo();
         if (!userInfo?.id) return 0;
 
-        console.log('🔍 포인트 조회 요청:', { userId: userInfo.id, storeId });
-
         const response = await fetch(`/api/regular-levels/user/${userInfo.id}/store/${storeId}/points`);
         if (!response.ok) throw new Error('포인트 조회 실패');
 
         const data = await response.json();
-        console.log('✅ 포인트 조회 성공:', data);
         return data.points || 0;
       } catch (error) {
         console.warn('⚠️ 포인트 조회 실패:', error);
@@ -157,13 +154,10 @@
         const userInfo = this.getUserInfo();
         if (!userInfo?.id) return [];
 
-        console.log('🔍 쿠폰 조회 요청:', { userId: userInfo.id });
-
         const response = await fetch(`/api/auth/user/${userInfo.id}`);
         if (!response.ok) throw new Error('쿠폰 조회 실패');
 
         const data = await response.json();
-        console.log('✅ 쿠폰 조회 성공:', data);
         return data.user?.coupons?.unused || [];
       } catch (error) {
         console.warn('⚠️ 쿠폰 조회 실패:', error);

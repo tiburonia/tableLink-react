@@ -203,7 +203,7 @@ async function handleLogin(req, res) {
 
   try {
     // users 테이블에서 사용자 조회 (실제 스키마에 맞춤)
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${id}`);
@@ -214,7 +214,7 @@ async function handleLogin(req, res) {
     }
 
     const user = result.rows[0];
-    if (user.pw !== pw) {
+    if (user.user_pw !== pw) {
       console.log(`❌ 비밀번호 불일치: ${id}`);
       return res.status(401).json({ 
         success: false, 
@@ -222,13 +222,13 @@ async function handleLogin(req, res) {
       });
     }
 
-    console.log(`✅ 로그인 성공: ${user.name} (${user.id})`);
+    console.log(`✅ 로그인 성공: ${user.name} (${user.user_id})`);
 
     res.json({
       success: true,
       message: '로그인 성공',
       user: {
-        id: user.id,
+        id: user.user_id,
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -259,8 +259,8 @@ router.get('/user/:userId', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
 
   try {
-    // 사용자 기본 정보 조회 (users.id로 직접 조회)
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    // 사용자 기본 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -272,7 +272,7 @@ router.get('/user/:userId', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // 사용자 쿠폰 정보 조회 (users.id로 직접 조회)
+    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
     const couponsResult = await pool.query(`
       SELECT 
         c.id as coupon_id,
@@ -290,7 +290,7 @@ router.get('/user/:userId', async (req, res) => {
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
+      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
         c.valid_until ASC
@@ -341,12 +341,12 @@ router.get('/user/:userId', async (req, res) => {
       }
     });
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id}), 쿠폰 ${couponsResult.rows.length}개`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
 
     res.json({
       success: true,
       user: {
-        id: user.id,
+        id: user.user_id,
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -581,8 +581,8 @@ router.post('/users/info', async (req, res) => {
   console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
 
   try {
-    // 사용자 기본 정보 조회 (users.id로 직접 조회)
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    // 사용자 기본 정보 조회
+    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
 
     if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
@@ -594,7 +594,7 @@ router.post('/users/info', async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // 사용자 쿠폰 정보 조회 (users.id로 직접 조회)
+    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
     const couponsResult = await pool.query(`
       SELECT 
         c.id as coupon_id,
@@ -612,7 +612,7 @@ router.post('/users/info', async (req, res) => {
       FROM user_coupons uc
       JOIN coupons c ON uc.coupon_id = c.id
       LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = $1
+      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
       ORDER BY 
         CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
         c.valid_until ASC
@@ -663,12 +663,12 @@ router.post('/users/info', async (req, res) => {
       }
     });
 
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.id}), 쿠폰 ${couponsResult.rows.length}개`);
+    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
 
     res.json({
       success: true,
       user: {
-        id: user.id,
+        id: user.user_id,
         name: user.name,
         phone: user.phone,
         email: user.email || '',

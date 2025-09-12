@@ -37,16 +37,6 @@ router.post('/prepare', async (req, res) => {
       });
     }
 
-    // 사용자 존재 확인 (users.id로 직접 조회)
-    const userCheck = await client.query('SELECT id FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0) {
-      console.error('❌ 사용자를 찾을 수 없음:', userId);
-      return res.status(404).json({
-        success: false,
-        error: '사용자를 찾을 수 없습니다'
-      });
-    }
-
     // orderId 생성
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -169,7 +159,7 @@ router.post('/confirm', async (req, res) => {
 
     const pendingPayment = pendingResult.rows[0];
     const orderData = pendingPayment.order_data;
-
+    
     console.log('📦 pending_payments에서 복구된 주문 데이터:', {
       orderId: pendingPayment.order_id,
       userId: pendingPayment.user_id,
@@ -257,7 +247,7 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          total_price
+          " total_price"
         ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
         RETURNING id
       `, [
