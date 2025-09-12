@@ -55,8 +55,10 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 주문 ID 생성
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // 주문 데이터 저장 (결제 성공 후 사용)
-    const orderInfo = {
+    // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
+    console.log('📋 서버에 결제 준비 요청 시작');
+    
+    const prepareData = {
       userId: userInfo.id,
       storeId: orderData.storeId || store?.id || store?.store_id,
       storeName: orderData.storeName || orderData.store || store?.name,
@@ -66,55 +68,31 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         total: orderData.total || finalAmount,
         storeName: orderData.storeName || orderData.store || store?.name
       },
+      amount: parseInt(finalAmount),
       usedPoint: parseInt(pointsUsed) || 0,
-      finalTotal: parseInt(finalAmount),
-      subtotal: parseInt(orderData.total || finalAmount),
-      selectedCouponId: couponId || null,
       couponDiscount: parseInt(couponDiscount) || 0,
-      paymentMethod: paymentMethod || '카드',
-      orderId: orderId
+      paymentMethod: paymentMethod || '카드'
     };
 
-    // URL에 주문 정보를 쿼리 파라미터로 추가
-    const orderParams = new URLSearchParams({
-      userId: orderInfo.userId,
-      storeId: orderInfo.storeId,
-      storeName: orderInfo.storeName,
-      tableNumber: orderInfo.tableNumber,
-      usedPoint: orderInfo.usedPoint,
-      couponDiscount: orderInfo.couponDiscount,
-      paymentMethod: orderInfo.paymentMethod,
-      orderDataJson: JSON.stringify(orderInfo.orderData)
+    console.log('📤 결제 준비 데이터:', prepareData);
+
+    const prepareResponse = await fetch('/api/toss/prepare', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(prepareData)
     });
 
-    console.log('💾 주문 정보 저장:', orderInfo);
-    console.log('🔍 매장 정보 확인:', { store, storeId: orderData.storeId || store?.id });
-    console.log('🔍 아이템 정보 확인:', { items: orderData.items || currentOrder });
-    
-    // 전역 객체와 sessionStorage 모두에 결제 데이터 저장 (이중 백업)
-    if (!window.tablelink) {
-      window.tablelink = {};
+    if (!prepareResponse.ok) {
+      const errorData = await prepareResponse.json();
+      throw new Error(errorData.error || '결제 준비 실패');
     }
-    
-    window.tablelink.pendingPaymentData = orderInfo;
-    sessionStorage.setItem('pendingOrderData', JSON.stringify(orderInfo));
-    
-    console.log('✅ 전역 객체와 sessionStorage에 결제 데이터 저장 완료');
-    console.log('🔍 저장된 데이터 확인:', {
-      userId: orderInfo.userId,
-      storeId: orderInfo.storeId,
-      storeName: orderInfo.storeName,
-      tableNumber: orderInfo.tableNumber,
-      hasOrderData: !!orderInfo.orderData,
-      orderDataType: typeof orderInfo.orderData,
-      usedPoint: orderInfo.usedPoint,
-      selectedCouponId: orderInfo.selectedCouponId,
-      couponDiscount: orderInfo.couponDiscount,
-      paymentMethod: orderInfo.paymentMethod,
-      finalTotal: orderInfo.finalTotal
-    });
 
-    // 토스페이먼츠 결제 요청
+    const prepareResult = await prepareResponse.json();
+    const orderId = prepareResult.orderId;
+
+    console.log('✅ 결제 준비 완료, orderId:', orderId);
+
+    // 2. 토스페이먼츠 결제 요청 (orderId만 URL에 포함)
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
     
     const paymentResult = await window.requestTossPayment({
@@ -123,7 +101,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       orderName: `${orderData.storeName || orderData.store} 주문`,
       customerName: userInfo.name || '고객',
       customerEmail: userInfo.email || 'customer@tablelink.com',
-      successUrl: `${window.location.origin}/toss-success.html?${orderParams.toString()}`,
+      successUrl: `${window.location.origin}/toss-success.html`,
       failUrl: `${window.location.origin}/toss-fail.html`
     }, paymentMethod);
 

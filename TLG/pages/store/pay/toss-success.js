@@ -105,27 +105,8 @@ async function handlePaymentSuccess() {
     console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount });
     showStatus('결제 승인 처리 중');
 
-    // 1. 주문 정보 통합 처리 (URL 파라미터 우선, 저장된 데이터 폴백)
-    console.log('📋 주문 정보 통합 처리 시작...');
-    
-    let orderInfo = {};
-
-    // URL 파라미터에서 주문 정보 추출
-    if (urlParams.userId && urlParams.storeId) {
-      console.log('✅ URL 파라미터에서 주문 정보 발견');
-      orderInfo = {
-        userId: urlParams.userId,
-        storeId: parseInt(urlParams.storeId),
-        storeName: urlParams.storeName,
-        tableNumber: parseInt(urlParams.tableNumber) || 1,
-        orderData: urlParams.orderData || { items: [] },
-        usedPoint: parseInt(urlParams.usedPoint) || 0,
-        couponDiscount: parseInt(urlParams.couponDiscount) || 0,
-        paymentMethod: urlParams.paymentMethod || '카드'
-      };
-      console.log('📋 URL에서 추출한 주문 정보:', orderInfo);
-    } else {
-      // 폴백: 전역 객체 또는 sessionStorage에서 시도
+    // 1. 결제 승인 API 호출 (orderId만 전달, 서버에서 pending_payments 조회)
+    console.log('📋 결제 승인 API 호출 - orderId 기반 처리 시작...');역 객체 또는 sessionStorage에서 시도
       console.warn('⚠️ URL 파라미터에 주문 정보 없음, 저장된 데이터에서 시도');
       
       if (window.tablelink && window.tablelink.pendingPaymentData) {
@@ -172,16 +153,7 @@ async function handlePaymentSuccess() {
       body: JSON.stringify({
         paymentKey,
         orderId,
-        amount: parseInt(amount),
-        userId: orderInfo.userId,
-        storeId: orderInfo.storeId,
-        storeName: orderInfo.storeName,
-        tableNumber: orderInfo.tableNumber,
-        orderData: orderInfo.orderData,
-        usedPoint: orderInfo.usedPoint || 0,
-        selectedCouponId: orderInfo.selectedCouponId,
-        couponDiscount: orderInfo.couponDiscount || 0,
-        paymentMethod: orderInfo.paymentMethod || '카드'
+        amount: parseInt(amount)
       })
     });
 
