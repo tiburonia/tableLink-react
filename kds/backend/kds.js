@@ -50,77 +50,83 @@ router.get('/tickets', async (req, res) => {
         // 기본 테이블이 없으면 빈 결과 반환
         result = { rows: [] };
       } else {
-        // 티켓 + 아이템 한방 조회 (성능 최적화)
+        // orders 기반 티켓 조회 (KITCHEN 스테이션 아이템만 포함)
         const query = items_exists && items_extended ? `
-          WITH tk AS (
+          WITH order_tickets_with_store AS (
             SELECT 
-              ot.id AS ticket_id, 
-              ot.order_id, 
-              ot.batch_no, 
-              ot.status, 
+              ot.id AS ticket_id,
+              ot.order_id,
+              ot.batch_no,
+              ot.status,
               ot.print_status,
-              ot.display_status, 
-              ot.payment_type, 
-              ot.version, 
+              ot.display_status,
+              ot.payment_type,
+              ot.version,
               ot.created_at,
-              o.store_id, 
+              o.store_id,
               CONCAT('테이블 ', COALESCE(o.table_number, 1)) AS table_label,
               EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds
-            FROM order_tickets ot
-            LEFT JOIN orders o ON o.id = ot.order_id
-            WHERE (o.store_id = $1 OR o.id IS NULL)
+            FROM orders o
+            INNER JOIN order_tickets ot ON ot.order_id = o.id
+            WHERE o.store_id = $1
               AND ot.status IN ('PENDING', 'COOKING', 'DONE')
               AND ot.display_status = 'VISIBLE'
-            ORDER BY 
-              CASE ot.status 
-                WHEN 'COOKING' THEN 1
-                WHEN 'PENDING' THEN 2  
-                WHEN 'DONE' THEN 3
-                ELSE 4
-              END,
-              ot.created_at ASC
+          ),
+          tickets_with_kitchen_items AS (
+            SELECT 
+              otws.*,
+              COALESCE(
+                json_agg(
+                  json_build_object(
+                    'id', oi.id,
+                    'menu_name', COALESCE(oi.menu_name, '메뉴'),
+                    'quantity', COALESCE(oi.quantity, 1),
+                    'item_status', COALESCE(oi.item_status, 'PENDING'),
+                    'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
+                    'special_requests', oi.special_requests,
+                    'unit_price', COALESCE(oi.unit_price, 0)
+                  ) ORDER BY oi.id
+                ) FILTER (WHERE oi.id IS NOT NULL AND oi.cook_station = 'KITCHEN'),
+                '[]'::json
+              ) AS items,
+              COUNT(oi.id) FILTER (WHERE oi.cook_station = 'KITCHEN') as kitchen_item_count
+            FROM order_tickets_with_store otws
+            LEFT JOIN order_items oi ON oi.ticket_id = otws.ticket_id
+            GROUP BY 
+              otws.ticket_id, otws.order_id, otws.batch_no, otws.status, 
+              otws.print_status, otws.display_status, otws.payment_type, 
+              otws.version, otws.created_at, otws.store_id, otws.table_label, 
+              otws.elapsed_seconds
           )
-          SELECT 
-            tk.*, 
-            COALESCE(
-              json_agg(
-                json_build_object(
-                  'id', oi.id,
-                  'menu_name', COALESCE(oi.menu_name, '메뉴'),
-                  'quantity', COALESCE(oi.quantity, 1),
-                  'item_status', COALESCE(oi.item_status, 'PENDING'),
-                  'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
-                  'special_requests', oi.special_requests,
-                  'unit_price', COALESCE(oi.unit_price, 0)
-                ) ORDER BY oi.id
-              ) FILTER (WHERE oi.id IS NOT NULL AND oi.cook_station = 'KITCHEN'),
-              '[]'::json
-            ) AS items
-          FROM tk
-          LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id 
-          GROUP BY 
-            tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
-            tk.display_status, tk.payment_type, tk.version, tk.created_at,
-            tk.store_id, tk.table_label, tk.elapsed_seconds
-          HAVING COUNT(oi.id) FILTER (WHERE oi.cook_station = 'KITCHEN') > 0 OR COUNT(oi.id) = 0
+          SELECT *
+          FROM tickets_with_kitchen_items
+          WHERE kitchen_item_count > 0
+          ORDER BY 
+            CASE status 
+              WHEN 'COOKING' THEN 1
+              WHEN 'PENDING' THEN 2  
+              WHEN 'DONE' THEN 3
+              ELSE 4
+            END,
+            created_at ASC
         ` : `
           SELECT 
-            ot.id AS ticket_id, 
-            ot.order_id, 
-            ot.batch_no, 
-            ot.status, 
+            ot.id AS ticket_id,
+            ot.order_id,
+            ot.batch_no,
+            ot.status,
             ot.print_status,
-            ot.display_status, 
-            ot.payment_type, 
-            ot.version, 
+            ot.display_status,
+            ot.payment_type,
+            ot.version,
             ot.created_at,
-            COALESCE(o.store_id, 1) as store_id,
+            o.store_id,
             CONCAT('테이블 ', COALESCE(o.table_number, 1)) AS table_label,
             EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds,
             '[]'::json AS items
-          FROM order_tickets ot
-          LEFT JOIN orders o ON o.id = ot.order_id
-          WHERE (o.store_id = $1 OR o.id IS NULL)
+          FROM orders o
+          INNER JOIN order_tickets ot ON ot.order_id = o.id
+          WHERE o.store_id = $1
             AND ot.status IN ('PENDING', 'COOKING', 'DONE')
             AND ot.display_status = 'VISIBLE'
           ORDER BY 
@@ -528,10 +534,10 @@ router.get('/stations', async (req, res) => {
             COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_tickets,
             COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_tickets,
             COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_tickets
-          FROM order_items oi
-          LEFT JOIN order_tickets ot ON ot.id = oi.ticket_id
-          LEFT JOIN orders o ON o.id = ot.order_id
-          WHERE o.store_id = $1 OR oi.id IS NULL
+          FROM orders o
+          INNER JOIN order_tickets ot ON ot.order_id = o.id
+          LEFT JOIN order_items oi ON oi.ticket_id = ot.id
+          WHERE o.store_id = $1
           GROUP BY COALESCE(oi.cook_station, 'KITCHEN')
           ORDER BY 
             CASE COALESCE(oi.cook_station, 'KITCHEN')
@@ -626,9 +632,9 @@ router.get('/dashboard', async (req, res) => {
             AVG(
               EXTRACT(EPOCH FROM (NOW() - ot.created_at)) / 60
             ) FILTER (WHERE ot.status IN ('PENDING', 'COOKING')) as avg_wait_time_minutes
-          FROM order_tickets ot
-          LEFT JOIN orders o ON o.id = ot.order_id
-          WHERE (o.store_id = $1 OR o.id IS NULL)
+          FROM orders o
+          INNER JOIN order_tickets ot ON ot.order_id = o.id
+          WHERE o.store_id = $1
             AND DATE(ot.created_at) = CURRENT_DATE
         `, [store_id]);
       } else {
@@ -794,17 +800,20 @@ router.post('/cleanup/:store_id', async (req, res) => {
     console.log(`🧹 매장 ${storeId} 화면 정리 시작 (${minutes_threshold}분 임계값)`);
 
     const result = await pool.query(`
-      UPDATE order_tickets ot
+      UPDATE order_tickets 
       SET 
         display_status = 'HIDDEN',
         updated_at = NOW()
-      FROM orders o
-      WHERE o.id = ot.order_id
-        AND o.store_id = $1
-        AND ot.status = 'DONE'
-        AND ot.display_status = 'VISIBLE'
-        AND ot.updated_at < NOW() - INTERVAL '1 minute' * $2
-      RETURNING ot.id
+      WHERE id IN (
+        SELECT ot.id 
+        FROM orders o
+        INNER JOIN order_tickets ot ON ot.order_id = o.id
+        WHERE o.store_id = $1
+          AND ot.status = 'DONE'
+          AND ot.display_status = 'VISIBLE'
+          AND ot.updated_at < NOW() - INTERVAL '1 minute' * $2
+      )
+      RETURNING id
     `, [storeId, minutes_threshold]);
 
     res.json({
