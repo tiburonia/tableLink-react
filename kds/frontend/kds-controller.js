@@ -113,9 +113,17 @@ window.KDSController = {
         break;
 
       case 'new_ticket':
-        console.log('🎫 새 티켓 알림 처리:', data);
+        console.log('🎫🚨 새 티켓 알림 처리:', data);
+        console.log('📋 주문 상세 정보:', {
+          티켓ID: data.ticket_id || data.id,
+          매장ID: data.store_id,
+          테이블: data.table_label || data.table_number,
+          주문시간: data.created_at || new Date().toISOString(),
+          아이템: data.items || []
+        });
+        
         if (this.ui && this.ui.showNotification) {
-          this.ui.showNotification('새로운 주문이 접수되었습니다!', 'success');
+          this.ui.showNotification('🍽️ 새로운 주문이 접수되었습니다!', 'success');
         }
         this.playNotificationSound('new_order');
         // 티켓 목록 즉시 업데이트

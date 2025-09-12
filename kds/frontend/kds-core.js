@@ -524,7 +524,24 @@ class KDSCore {
 
     switch (data.type) {
       case 'new_ticket':
-        console.log('🎫 새 티켓 알림 수신:', data);
+        console.log('🎫🔥 새 티켓 알림 수신:', data);
+        console.log('🍽️ 주문 정보 상세:', {
+          type: data.type,
+          timestamp: new Date().toLocaleTimeString(),
+          ticketData: data.data,
+          storeId: this.config.storeId
+        });
+        
+        // 새 주문 내역 강조 출력
+        if (data.data) {
+          console.group('🚨 새 주문 내역');
+          console.log('티켓 ID:', data.data.ticket_id || data.data.id);
+          console.log('테이블:', data.data.table_label || data.data.table_number);
+          console.log('주문 시간:', data.data.created_at);
+          console.log('주문 아이템:', data.data.items || []);
+          console.groupEnd();
+        }
+        
         this.emit('new_ticket', data.data);
         // 즉시 티켓 목록 새로고림
         setTimeout(() => this.fetchTickets(), 500);

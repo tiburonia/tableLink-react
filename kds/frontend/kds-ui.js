@@ -73,6 +73,7 @@ class KDSUI {
     });
 
     this.core.on('new_ticket', (data) => {
+      console.log('🚨 새 주문 접수!', data);
       this.playSound('newTicket');
       this.showNotification('새 주문이 들어왔습니다!', 'info');
     });
@@ -247,6 +248,29 @@ class KDSUI {
     const ticketsGrid = document.getElementById('ticketsGrid');
     const ticketsCount = document.getElementById('ticketsCount');
     const ticketsTitle = document.getElementById('ticketsTitle');
+
+    console.log('🎫 티켓 렌더링:', {
+      totalTickets: tickets.length,
+      filter: this.currentFilter,
+      tickets: tickets
+    });
+
+    // 각 티켓의 세부 정보 출력
+    tickets.forEach((ticket, index) => {
+      console.log(`🍽️ 주문 #${ticket.ticket_id}:`, {
+        테이블: ticket.table_label,
+        상태: ticket.status,
+        생성시간: ticket.created_at,
+        경과시간: `${ticket.elapsed_minutes}분`,
+        아이템수: ticket.items?.length || 0,
+        아이템목록: ticket.items?.map(item => ({
+          메뉴명: item.menu_name,
+          수량: item.quantity,
+          상태: item.item_status,
+          조리스테이션: item.cook_station
+        })) || []
+      });
+    });
 
     if (!ticketsGrid) return;
 
@@ -509,12 +533,20 @@ class KDSUI {
   }
 
   // =================== 기타 렌더링 ===================
+  renderStationTabs(stations) {
+    console.log('🏪 스테이션 탭 렌더링:', stations);
+    // 현재 간단한 필터로 구현되어 있어서 별도 처리 불필요
+    this.renderStationFilter();
+  }
+
   renderStationFilter() {
     const stationFilter = document.getElementById('stationFilter');
     if (!stationFilter) return;
 
     const stations = this.core.getStations();
     const currentValue = stationFilter.value;
+
+    console.log('🏪 스테이션 필터 업데이트:', stations);
 
     stationFilter.innerHTML = `
       <option value="">모든 스테이션</option>
@@ -527,10 +559,20 @@ class KDSUI {
   }
 
   renderDashboard(dashboard) {
+    console.log('📊 대시보드 업데이트:', dashboard);
     document.getElementById('pendingCount').textContent = dashboard.pending_count || 0;
     document.getElementById('cookingCount').textContent = dashboard.cooking_count || 0;
     document.getElementById('doneCount').textContent = dashboard.done_count || 0;
     document.getElementById('todayCount').textContent = dashboard.served_today || 0;
+  }
+
+  updateDashboard(dashboard) {
+    this.renderDashboard(dashboard);
+  }
+
+  updateStationCounts(stationCounts) {
+    console.log('🏪 스테이션 카운트 업데이트:', stationCounts);
+    // 스테이션별 카운트 정보 업데이트 로직
   }
 
   // =================== 유틸리티 ===================
