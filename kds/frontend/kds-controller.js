@@ -7,6 +7,7 @@ window.KDSController = {
   // 상태
   storeId: null,
   core: null,
+  ui: null,
   isInitialized: false,
 
   // 초기화
@@ -15,28 +16,31 @@ window.KDSController = {
       this.storeId = storeId;
       console.log(`🚀 KDS Controller v3.0 초기화 - 매장 ${storeId}`);
 
-      // UI 초기화
-      KDSUI.init('app');
-      KDSUI.renderMainInterface(storeId);
-
       // 코어 초기화
-      this.core = new KDSCore(storeId);
-      this.setupEventBindings();
+      this.core = new KDSCore();
+      const coreSuccess = await this.core.initialize(storeId);
 
-      // 초기 데이터 로드
-      KDSUI.showLoading(true);
-      await this.loadInitialData();
-      KDSUI.showLoading(false);
+      if (!coreSuccess) {
+        throw new Error('KDS Core 초기화 실패');
+      }
 
-      // 실시간 연결 시작
-      this.core.setupRealtime();
+      // UI 초기화
+      this.ui = new KDSUI();
+      const uiSuccess = await this.ui.initialize('app', this.core);
+
+      if (!uiSuccess) {
+        throw new Error('KDS UI 초기화 실패');
+      }
+
+      // 시간 업데이트 시작
+      this.ui.startTimeUpdate();
 
       this.isInitialized = true;
       console.log('✅ KDS Controller 초기화 완료');
 
     } catch (error) {
       console.error('❌ KDS Controller 초기화 실패:', error);
-      KDSUI.showToast('KDS 시스템 초기화에 실패했습니다', 'error');
+      this.showError('KDS 시스템 초기화에 실패했습니다: ' + error.message);
       throw error;
     }
   },
@@ -194,46 +198,30 @@ window.KDSController = {
   // 전체 새로고침
   async refresh() {
     try {
-      await this.core.refresh();
-      KDSUI.showToast('데이터를 새로고침했습니다', 'success');
+      if (!this.core) {
+        throw new Error('KDS Core가 초기화되지 않았습니다');
+      }
+
+      await this.core.fetchTickets();
+      await this.core.fetchDashboard();
+
+      if (this.ui && this.ui.showNotification) {
+        this.ui.showNotification('데이터를 새로고침했습니다', 'success');
+      }
     } catch (error) {
       console.error('❌ 새로고침 실패:', error);
-      KDSUI.showToast('새로고침에 실패했습니다', 'error');
+      this.showError('새로고침에 실패했습니다: ' + error.message);
     }
   },
 
-  // 에러 처리
-  handleError(error) {
-    console.error('❌ KDS 에러:', error);
-
-    let errorMessage = '알 수 없는 오류가 발생했습니다';
-    let detailMessage = '';
-
-    if (typeof error === 'string') {
-      errorMessage = error;
-    } else if (error && error.message) {
-      errorMessage = error.message;
-
-      // HTTP 에러인 경우 상태 코드 표시
-      if (error.status) {
-        detailMessage = `HTTP ${error.status}`;
-      }
-
-      // 서버에서 반환한 에러 메시지가 있는 경우
-      if (error.error && error.error !== error.message) {
-        detailMessage = error.error;
-      }
-
-      // 개발 모드에서는 스택 트레이스도 콘솔에 출력
-      if (error.stack && typeof window !== 'undefined' && window.KDS_CONFIG?.DEBUG) {
-        console.error('❌ 스택 트레이스:', error.stack);
-      }
-    }
-
-    const fullMessage = detailMessage ? `${errorMessage} (${detailMessage})` : errorMessage;
-
-    if (this.ui && this.ui.showToast) {
-      this.ui.showToast(fullMessage, 'error', 8000);
+  // 에러 표시
+  showError(message) {
+    if (this.ui && this.ui.showNotification) {
+      this.ui.showNotification(message, 'error');
+    } else {
+      // UI가 초기화되지 않은 경우 콘솔과 alert 사용
+      console.error('❌ KDS 오류:', message);
+      alert(message);
     }
   },
 
@@ -321,8 +309,11 @@ window.KDSController = {
     return {
       storeId: this.storeId,
       isInitialized: this.isInitialized,
-      connectionState: this.core?.getConnectionState(),
-      summary: this.core?.getSummary()
+      coreStatus: this.core?.getStatus(),
+      uiStatus: {
+        initialized: !!this.ui,
+        currentFilter: this.ui?.currentFilter
+      }
     };
   },
 
@@ -333,6 +324,7 @@ window.KDSController = {
       this.core = null;
     }
 
+    this.ui = null;
     this.isInitialized = false;
     console.log('🧹 KDS Controller 정리 완료');
   }
