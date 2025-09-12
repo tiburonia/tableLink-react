@@ -3,6 +3,103 @@ const router = express.Router();
 const pool = require('../db/pool');
 
 /**
+ * 결제 준비 - pending_payments 테이블에 임시 저장
+ */
+router.post('/prepare', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    console.log('📋 결제 준비 요청 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
+
+    const {
+      userId,
+      storeId,
+      storeName,
+      tableNumber = 1,
+      orderData,
+      amount,
+      usedPoint = 0,
+      couponDiscount = 0,
+      paymentMethod = '카드'
+    } = req.body;
+
+    // 필수 파라미터 검증
+    if (!userId || !storeId || !orderData || !amount) {
+      console.error('❌ 필수 파라미터 누락:', {
+        userId: !!userId,
+        storeId: !!storeId,
+        orderData: !!orderData,
+        amount: !!amount
+      });
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    // orderId 생성
+    const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    console.log('🔄 결제 준비 처리 시작:', {
+      orderId,
+      userId,
+      storeId,
+      storeName,
+      tableNumber,
+      amount: parseInt(amount),
+      usedPoint,
+      couponDiscount,
+      paymentMethod
+    });
+
+    // pending_payments 테이블에 데이터 저장
+    await client.query(`
+      INSERT INTO pending_payments (
+        order_id,
+        user_id,
+        store_id,
+        table_number,
+        order_data,
+        amount,
+        status
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+    `, [
+      orderId,
+      userId,
+      parseInt(storeId),
+      parseInt(tableNumber),
+      JSON.stringify({
+        items: orderData.items || [],
+        storeName: storeName,
+        usedPoint: parseInt(usedPoint),
+        couponDiscount: parseInt(couponDiscount),
+        paymentMethod: paymentMethod,
+        total: parseInt(amount),
+        subtotal: parseInt(amount) + parseInt(usedPoint) + parseInt(couponDiscount)
+      }),
+      parseInt(amount)
+    ]);
+
+    console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      message: '결제 준비가 완료되었습니다'
+    });
+
+  } catch (error) {
+    console.error('❌ 결제 준비 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
  * 토스페이먼츠 클라이언트 키 반환
  */
 router.get('/client-key', (req, res) => {
@@ -26,7 +123,7 @@ router.get('/client-key', (req, res) => {
 });
 
 /**
- * 토스페이먼츠 결제 승인 (현재 스키마 적용)
+ * 토스페이먼츠 결제 승인 (pending_payments 사용)
  */
 router.post('/confirm', async (req, res) => {
   const client = await pool.connect();
@@ -34,33 +131,9 @@ router.post('/confirm', async (req, res) => {
   try {
     console.log('📨 토스 confirm 라우트 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
 
-    const { 
-      paymentKey, 
-      orderId, 
-      amount, 
-      userId, 
-      storeId, 
-      storeName, 
-      tableNumber, 
-      orderData, 
-      usedPoint = 0, 
-      selectedCouponId, 
-      couponDiscount = 0, 
-      paymentMethod = '카드' 
-    } = req.body;
+    const { paymentKey, orderId, amount } = req.body;
 
     console.log('🔄 토스페이먼츠 결제 승인 요청 - 필수 파라미터:', { paymentKey, orderId, amount });
-    console.log('🔄 토스페이먼츠 결제 승인 요청 - 추가 파라미터:', {
-      userId: userId || 'undefined',
-      storeId: storeId || 'undefined',
-      storeName: storeName || 'undefined',
-      tableNumber: tableNumber || 'undefined',
-      orderData: orderData ? `객체 존재 (${Object.keys(orderData).length}개 키)` : '없음',
-      usedPoint: usedPoint || 0,
-      selectedCouponId: selectedCouponId || 'null',
-      couponDiscount: couponDiscount || 0,
-      paymentMethod: paymentMethod || '카드'
-    });
 
     if (!paymentKey || !orderId || !amount) {
       console.error('❌ 필수 파라미터 누락:', { paymentKey: !!paymentKey, orderId: !!orderId, amount: !!amount });
@@ -69,6 +142,32 @@ router.post('/confirm', async (req, res) => {
         error: '필수 파라미터가 누락되었습니다'
       });
     }
+
+    // pending_payments에서 주문 데이터 조회
+    const pendingResult = await client.query(`
+      SELECT * FROM pending_payments 
+      WHERE order_id = $1 AND status = 'PENDING'
+    `, [orderId]);
+
+    if (pendingResult.rows.length === 0) {
+      console.error('❌ 대기 중인 결제를 찾을 수 없습니다:', orderId);
+      return res.status(404).json({
+        success: false,
+        error: '대기 중인 결제를 찾을 수 없습니다'
+      });
+    }
+
+    const pendingPayment = pendingResult.rows[0];
+    const orderData = pendingPayment.order_data;
+    
+    console.log('📦 pending_payments에서 복구된 주문 데이터:', {
+      orderId: pendingPayment.order_id,
+      userId: pendingPayment.user_id,
+      storeId: pendingPayment.store_id,
+      tableNumber: pendingPayment.table_number,
+      amount: pendingPayment.amount,
+      orderData: orderData ? '객체 존재' : '없음'
+    });
 
     // 토스페이먼츠 API로 결제 승인 요청
     const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
@@ -115,44 +214,18 @@ router.post('/confirm', async (req, res) => {
       // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
       console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
 
-      // 전달받은 파라미터 정규화 및 검증
-      console.log('🔍 전달받은 파라미터 상세 검사:', {
-        userId: userId || 'missing',
-        storeId: storeId || 'missing',
-        storeName: storeName || 'missing',
-        tableNumber: tableNumber || 'missing',
-        orderData: orderData ? (typeof orderData === 'object' ? `객체 (${Object.keys(orderData).length}개 키)` : typeof orderData) : 'missing',
-        usedPoint: usedPoint || 0,
-        couponDiscount: couponDiscount || 0,
-        paymentMethod: paymentMethod || '카드'
-      });
-
-      // 파라미터 정규화
-      const normalizedParams = {
-        userId: userId || null,
-        storeId: storeId ? parseInt(storeId) : null,
-        storeName: storeName || null,
-        tableNumber: tableNumber ? parseInt(tableNumber) : 1,
-        orderData: orderData || null,
-        usedPoint: parseInt(usedPoint) || 0,
-        couponDiscount: parseInt(couponDiscount) || 0,
-        paymentMethod: paymentMethod || '카드'
-      };
-
-      console.log('📋 정규화된 파라미터:', normalizedParams);
-
-      // 기본 TLL 주문 정보 설정 (정규화된 파라미터 우선, 기본값 fallback)
+      // pending_payments에서 복구된 데이터로 주문 정보 설정
       const finalOrderInfo = {
-        storeId: normalizedParams.storeId || 497, // 기본 매장 (정통 양념)
-        userId: normalizedParams.userId || 'tiburonia', // 현재 로그인된 사용자
-        tableNumber: normalizedParams.tableNumber || 1,
-        finalTotal: parseInt(amount) - normalizedParams.usedPoint - normalizedParams.couponDiscount,
-        subtotal: parseInt(amount),
-        usedPoint: normalizedParams.usedPoint,
-        couponDiscount: normalizedParams.couponDiscount,
-        items: normalizedParams.orderData?.items || [
+        storeId: pendingPayment.store_id,
+        userId: pendingPayment.user_id,
+        tableNumber: pendingPayment.table_number,
+        finalTotal: parseInt(amount) - (orderData.usedPoint || 0) - (orderData.couponDiscount || 0),
+        subtotal: orderData.subtotal || parseInt(amount),
+        usedPoint: orderData.usedPoint || 0,
+        couponDiscount: orderData.couponDiscount || 0,
+        items: orderData.items || [
           {
-            name: normalizedParams.storeName || 'TLL 주문',
+            name: orderData.storeName || 'TLL 주문',
             price: parseInt(amount),
             quantity: 1,
             totalPrice: parseInt(amount),
@@ -279,6 +352,16 @@ router.post('/confirm', async (req, res) => {
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
       `, [pointChange, finalOrderInfo.userId]);
+
+      // pending_payments 상태를 SUCCESS로 업데이트
+      await client.query(`
+        UPDATE pending_payments 
+        SET 
+          status = 'SUCCESS',
+          payment_key = $1,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = $2
+      `, [paymentKey, orderId]);
 
       console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${orderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
 
