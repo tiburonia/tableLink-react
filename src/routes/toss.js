@@ -37,39 +37,18 @@ router.post('/prepare', async (req, res) => {
       });
     }
 
-    // 데이터 타입 검증 및 변환
-    const validUserId = parseInt(userId);
-    const validStoreId = parseInt(storeId);
-    const validTableNumber = parseInt(tableNumber);
-    const validAmount = parseInt(amount);
-    const validUsedPoint = parseInt(usedPoint) || 0;
-    const validCouponDiscount = parseInt(couponDiscount) || 0;
-
-    if (isNaN(validUserId) || isNaN(validStoreId) || isNaN(validTableNumber) || isNaN(validAmount)) {
-      console.error('❌ 잘못된 데이터 타입:', {
-        userId: userId,
-        storeId: storeId,
-        tableNumber: tableNumber,
-        amount: amount
-      });
-      return res.status(400).json({
-        success: false,
-        error: '데이터 타입이 올바르지 않습니다'
-      });
-    }
-
     // orderId 생성
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     console.log('🔄 결제 준비 처리 시작:', {
       orderId,
-      userId: validUserId,
-      storeId: validStoreId,
+      userId,
+      storeId,
       storeName,
-      tableNumber: validTableNumber,
-      amount: validAmount,
-      usedPoint: validUsedPoint,
-      couponDiscount: validCouponDiscount,
+      tableNumber,
+      amount: parseInt(amount),
+      usedPoint,
+      couponDiscount,
       paymentMethod
     });
 
@@ -86,19 +65,19 @@ router.post('/prepare', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
     `, [
       orderId,
-      validUserId,
-      validStoreId,
-      validTableNumber,
+      userId,
+      parseInt(storeId),
+      parseInt(tableNumber),
       JSON.stringify({
         items: orderData.items || [],
         storeName: storeName,
-        usedPoint: validUsedPoint,
-        couponDiscount: validCouponDiscount,
+        usedPoint: parseInt(usedPoint),
+        couponDiscount: parseInt(couponDiscount),
         paymentMethod: paymentMethod,
-        total: validAmount,
-        subtotal: validAmount + validUsedPoint + validCouponDiscount
+        total: parseInt(amount),
+        subtotal: parseInt(amount) + parseInt(usedPoint) + parseInt(couponDiscount)
       }),
-      validAmount
+      parseInt(amount)
     ]);
 
     console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
@@ -163,17 +142,6 @@ router.post('/confirm', async (req, res) => {
         error: '필수 파라미터가 누락되었습니다'
       });
     }
-
-    // orderId 검증
-    if (!orderId || typeof orderId !== 'string') {
-      console.error('❌ 잘못된 orderId 형식:', orderId);
-      return res.status(400).json({
-        success: false,
-        error: 'orderId가 올바르지 않습니다'
-      });
-    }
-
-    console.log('🔍 pending_payments 조회 시작 - orderId:', orderId);
 
     // pending_payments에서 주문 데이터 조회
     const pendingResult = await client.query(`
@@ -246,38 +214,21 @@ router.post('/confirm', async (req, res) => {
       // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
       console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
 
-      // pending_payments에서 복구된 데이터 검증 및 변환
-      const storeId = parseInt(pendingPayment.store_id);
-      const userId = parseInt(pendingPayment.user_id);
-      const tableNumber = parseInt(pendingPayment.table_number);
-      const finalAmount = parseInt(amount);
-
-      // 데이터 타입 검증
-      if (isNaN(storeId) || isNaN(userId) || isNaN(tableNumber) || isNaN(finalAmount)) {
-        console.error('❌ 잘못된 데이터 타입:', {
-          storeId: pendingPayment.store_id,
-          userId: pendingPayment.user_id,
-          tableNumber: pendingPayment.table_number,
-          amount: amount
-        });
-        throw new Error('주문 데이터의 타입이 올바르지 않습니다');
-      }
-
       // pending_payments에서 복구된 데이터로 주문 정보 설정
       const finalOrderInfo = {
-        storeId: storeId,
-        userId: userId,
-        tableNumber: tableNumber,
-        finalTotal: finalAmount - (parseInt(orderData.usedPoint) || 0) - (parseInt(orderData.couponDiscount) || 0),
-        subtotal: parseInt(orderData.subtotal) || finalAmount,
-        usedPoint: parseInt(orderData.usedPoint) || 0,
-        couponDiscount: parseInt(orderData.couponDiscount) || 0,
+        storeId: pendingPayment.store_id,
+        userId: pendingPayment.user_id,
+        tableNumber: pendingPayment.table_number,
+        finalTotal: parseInt(amount) - (orderData.usedPoint || 0) - (orderData.couponDiscount || 0),
+        subtotal: orderData.subtotal || parseInt(amount),
+        usedPoint: orderData.usedPoint || 0,
+        couponDiscount: orderData.couponDiscount || 0,
         items: orderData.items || [
           {
             name: orderData.storeName || 'TLL 주문',
-            price: finalAmount,
+            price: parseInt(amount),
             quantity: 1,
-            totalPrice: finalAmount,
+            totalPrice: parseInt(amount),
             menuId: 1 // 기본 메뉴 ID
           }
         ]
