@@ -1,6 +1,6 @@
 
 /**
- * 결제 확인 처리 모듈 (완전 재작성)
+ * 결제 확인 처리 모듈 (새로운 prepare-confirm 시스템)
  */
 
 // 사용자 정보 가져오기
@@ -32,7 +32,14 @@ function getUserInfo() {
 
 // 메인 결제 확인 함수
 async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId = null, couponDiscount = 0, paymentMethod = '카드') {
-  console.log('💳 결제 확인 처리 시작');
+  console.log('💳 새로운 결제 시스템 - 결제 확인 처리 시작');
+  console.log('📋 결제 파라미터:', { 
+    orderData, 
+    pointsUsed, 
+    finalAmount, 
+    paymentMethod,
+    storeName: store?.name || orderData?.storeName 
+  });
 
   const userInfo = getUserInfo();
   if (!userInfo || !userInfo.id) {
@@ -40,7 +47,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
   }
 
   try {
-    // 토스페이먼츠 모듈 로드
+    // 토스페이먼츠 모듈 로드 확인
     if (!window.requestTossPayment) {
       console.log('🔄 토스페이먼츠 모듈 로드 중...');
       await import('/TLG/pages/store/pay/tossPayments.js');
@@ -51,9 +58,6 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다.');
       }
     }
-
-    // 주문 ID 생성
-    const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
     console.log('📋 서버에 결제 준비 요청 시작');
@@ -88,16 +92,16 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     }
 
     const prepareResult = await prepareResponse.json();
-    const orderId = prepareResult.orderId;
+    const generatedOrderId = prepareResult.orderId;
 
-    console.log('✅ 결제 준비 완료, orderId:', orderId);
+    console.log('✅ 결제 준비 완료, orderId:', generatedOrderId);
 
     // 2. 토스페이먼츠 결제 요청 (orderId만 URL에 포함)
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
     
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
-      orderId: orderId,
+      orderId: generatedOrderId,
       orderName: `${orderData.storeName || orderData.store} 주문`,
       customerName: userInfo.name || '고객',
       customerEmail: userInfo.email || 'customer@tablelink.com',
@@ -108,18 +112,17 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     console.log('✅ 토스페이먼츠 결제 결과:', paymentResult);
 
     if (!paymentResult.success) {
-      throw new Error(paymentResult.message || '결제에 실패했습니다.');
+      throw new Error(paymentResult.error || '결제에 실패했습니다.');
     }
 
   } catch (error) {
     console.error('❌ 결제 처리 중 오류:', error);
     alert(`결제 실패: ${error.message}`);
+    throw error;
   }
 }
-
-// processPaymentSuccess 함수는 toss-success.js에서 처리
 
 // 전역 함수로 등록
 window.confirmPay = confirmPay;
 
-console.log('✅ 결제 확인 모듈 로드 완료');
+console.log('✅ 새로운 결제 확인 모듈 로드 완료 - confirmPay 전역 등록:', typeof window.confirmPay);
