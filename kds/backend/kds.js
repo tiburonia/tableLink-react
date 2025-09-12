@@ -64,7 +64,7 @@ router.get('/tickets', async (req, res) => {
               ot.version, 
               ot.created_at,
               o.store_id, 
-              COALESCE('테이블 ', CAST(COALESCE(o.table_number, 1) AS TEXT)) AS table_label,
+              CONCAT('테이블 ', COALESCE(o.table_number, 1)) AS table_label,
               EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds
             FROM order_tickets ot
             LEFT JOIN orders o ON o.id = ot.order_id
@@ -98,7 +98,6 @@ router.get('/tickets', async (req, res) => {
             ) AS items
           FROM tk
           LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id 
-          WHERE oi.cook_station = 'KITCHEN' OR oi.id IS NULL
           GROUP BY 
             tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
             tk.display_status, tk.payment_type, tk.version, tk.created_at,

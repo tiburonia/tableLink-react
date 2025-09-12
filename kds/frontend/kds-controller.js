@@ -32,6 +32,9 @@ window.KDSController = {
         throw new Error('KDS UI 초기화 실패');
       }
 
+      // 초기 데이터 로드
+      await this.loadInitialData();
+
       // 시간 업데이트 시작
       this.ui.startTimeUpdate();
 
@@ -48,21 +51,30 @@ window.KDSController = {
   // 초기 데이터 로드
   async loadInitialData() {
     try {
-      // 병렬로 데이터 로드
-      const [stations, tickets, dashboard] = await Promise.all([
-        this.core.loadStations(),
-        this.core.loadTickets(),
-        this.core.loadDashboard()
-      ]);
+      console.log('🔄 KDS 초기 데이터 로드 시작');
+      
+      // 순차적으로 데이터 로드 (안정성)
+      const stations = await this.core.fetchStations();
+      console.log('✅ 스테이션 로드 완료:', stations.length, '개');
+      
+      const tickets = await this.core.fetchTickets();
+      console.log('✅ 티켓 로드 완료:', tickets.length, '개');
+      
+      const dashboard = await this.core.fetchDashboard();
+      console.log('✅ 대시보드 로드 완료');
 
       // UI 업데이트
-      KDSUI.renderStationTabs(stations);
-      this.updateTicketDisplay();
-      KDSUI.updateDashboard(dashboard);
+      if (this.ui) {
+        this.ui.renderStationTabs(stations);
+        this.updateTicketDisplay();
+        this.ui.updateDashboard(dashboard);
+      }
+
+      console.log('✅ KDS 초기 데이터 로드 완료');
 
     } catch (error) {
       console.error('❌ 초기 데이터 로드 실패:', error);
-      throw error;
+      this.showError('초기 데이터 로드 실패: ' + error.message);
     }
   },
 

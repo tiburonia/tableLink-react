@@ -413,15 +413,23 @@ router.post('/confirm', async (req, res) => {
         storeId: finalOrderInfo.storeId
       });
 
-      // WebSocket으로 KDS에 실시간 알림
-      if (global.broadcastKDSUpdate) {
-        global.broadcastKDSUpdate(finalOrderInfo.storeId, 'new_ticket', {
+      // PostgreSQL NOTIFY로 KDS에 실시간 알림
+      try {
+        await client.query(`
+          SELECT pg_notify('kds_updates', $1)
+        `, [JSON.stringify({
+          type: 'new_ticket',
+          store_id: finalOrderInfo.storeId,
           ticket_id: ticketId,
           order_id: newOrderId,
           source_system: 'TLL',
           table_number: finalOrderInfo.tableNumber,
-          total_amount: finalOrderInfo.finalTotal
-        });
+          total_amount: finalOrderInfo.finalTotal,
+          timestamp: Date.now()
+        })]);
+        console.log('✅ KDS 실시간 알림 전송 완료');
+      } catch (notifyError) {
+        console.warn('⚠️ KDS 알림 전송 실패:', notifyError.message);
       }
 
       res.json({

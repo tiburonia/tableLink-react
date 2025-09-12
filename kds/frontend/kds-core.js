@@ -396,17 +396,35 @@ class KDSCore {
   // =================== 실시간 연결 ===================
   connectWebSocket() {
     try {
+      // Socket.IO가 있으면 사용, 없으면 SSE 폴백
+      if (typeof io !== 'undefined') {
+        this.connectSocketIO();
+      } else {
+        console.log('📡 Socket.IO 없음 - SSE 연결 시도');
+        this.connectSSE();
+      }
+    } catch (error) {
+      console.error('❌ 실시간 연결 설정 실패:', error);
+      this.connectSSE(); // SSE로 폴백
+    }
+  }
+
+  connectSocketIO() {
+    try {
       if (this.wsConnection) {
         this.wsConnection.close();
         this.wsConnection = null;
       }
 
-      // Socket.IO 클라이언트 연결
       const socketUrl = window.location.origin;
       console.log('🔌 KDS WebSocket 연결 시도:', socketUrl);
       
       this.wsConnection = io(socketUrl, {
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        timeout: 5000,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        maxReconnectionAttempts: 5
       });
 
       this.wsConnection.on('connect', () => {
@@ -430,21 +448,59 @@ class KDSCore {
       this.wsConnection.on('disconnect', (reason) => {
         console.log('🔌 KDS WebSocket 연결 끊김:', reason);
         this.emit('ws_disconnected', reason);
-        
-        if (reason === 'io server disconnect') {
-          // 서버에서 끊은 경우 재연결
-          this.scheduleReconnect();
-        }
       });
 
       this.wsConnection.on('connect_error', (error) => {
         console.error('❌ KDS WebSocket 연결 오류:', error);
         this.emit('ws_error', error);
-        this.scheduleReconnect();
+        // WebSocket 실패 시 SSE로 폴백
+        setTimeout(() => this.connectSSE(), 2000);
       });
 
     } catch (error) {
-      console.error('❌ WebSocket 연결 설정 실패:', error);
+      console.error('❌ Socket.IO 연결 실패:', error);
+      this.connectSSE();
+    }
+  }
+
+  connectSSE() {
+    try {
+      if (this.sseConnection) {
+        this.sseConnection.close();
+        this.sseConnection = null;
+      }
+
+      console.log('📡 SSE 연결 시도 - 매장:', this.config.storeId);
+      
+      this.sseConnection = new EventSource(`${this.config.apiBase}/stream/${this.config.storeId}`);
+
+      this.sseConnection.onopen = () => {
+        console.log('✅ KDS SSE 연결 성공');
+        this.emit('ws_connected');
+        this.state.retryCount = 0;
+      };
+
+      this.sseConnection.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('📨 KDS SSE 메시지 수신:', data);
+          this.handleWebSocketMessage(data);
+        } catch (error) {
+          console.error('❌ SSE 메시지 파싱 실패:', error);
+        }
+      };
+
+      this.sseConnection.onerror = (error) => {
+        console.error('❌ KDS SSE 연결 오류:', error);
+        this.emit('ws_error', error);
+        
+        if (this.sseConnection.readyState === EventSource.CLOSED) {
+          this.scheduleReconnect();
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ SSE 연결 설정 실패:', error);
       this.scheduleReconnect();
     }
   }
