@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -156,7 +155,7 @@ router.get('/stations', async (req, res) => {
           VALUES ($1, $2, $3, $4)
           RETURNING id, name, code, is_expo
         `, [store_id, station.name, station.code, station.is_expo]);
-        
+
         stations.push({
           ...insertResult.rows[0],
           active_items: 0
@@ -185,68 +184,68 @@ router.get('/stations', async (req, res) => {
   }
 });
 
-// 아이템 상태 변경
-router.patch('/items/:id/status', async (req, res) => {
+// 티켓 상태 변경 
+router.patch('/tickets/:id/status', async (req, res) => {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const itemId = req.params.id;
+    const ticketId = req.params.id;
     const { action, actor_id, actor_type } = req.body;
 
-    // 현재 아이템 정보 조회
-    const itemResult = await client.query(`
-      SELECT ci.*, c.store_id
-      FROM check_items ci
-      JOIN checks c ON ci.check_id = c.id
-      WHERE ci.id = $1
-    `, [itemId]);
+    // 현재 티켓 정보 조회
+    const ticketResult = await client.query(`
+      SELECT ot.*, o.store_id, o.source_system
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      WHERE ot.id = $1
+    `, [ticketId]);
 
-    if (itemResult.rows.length === 0) {
+    if (ticketResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: '아이템을 찾을 수 없습니다'
+        message: '티켓을 찾을 수 없습니다'
       });
     }
 
-    const item = itemResult.rows[0];
-    let newStatus = item.kds_status;
+    const ticket = ticketResult.rows[0];
+    let newStatus = ticket.status;
     let updateFields = {};
     let eventType = null;
 
     // 상태 변경 로직
     switch (action) {
       case 'start':
-        if (item.kds_status === 'PENDING') {
+        if (ticket.status === 'PENDING') {
           newStatus = 'COOKING';
           updateFields.started_at = 'NOW()';
-          eventType = 'ITEM_STARTED';
+          eventType = 'TICKET_STARTED';
         }
         break;
 
       case 'done':
-        if (item.kds_status === 'COOKING') {
+        if (ticket.status === 'COOKING') {
           newStatus = 'DONE';
-          updateFields.done_at = 'NOW()';
-          eventType = 'ITEM_DONE';
+          updateFields.completed_at = 'NOW()';
+          eventType = 'TICKET_DONE';
         }
         break;
 
       case 'serve':
-        if (item.kds_status === 'DONE') {
+        if (ticket.status === 'DONE') {
           newStatus = 'SERVED';
           updateFields.served_at = 'NOW()';
-          eventType = 'ITEM_SERVED';
+          eventType = 'TICKET_SERVED';
         }
         break;
 
       case 'cancel':
-        if (['PENDING', 'COOKING'].includes(item.kds_status)) {
+        if (['PENDING', 'COOKING'].includes(ticket.status)) {
           newStatus = 'CANCELED';
           updateFields.canceled_at = 'NOW()';
           updateFields.cancel_reason = req.body.reason || '주방에서 취소';
-          eventType = 'ITEM_CANCELED';
+          eventType = 'TICKET_CANCELED';
         }
         break;
 
@@ -257,15 +256,15 @@ router.patch('/items/:id/status', async (req, res) => {
         });
     }
 
-    if (newStatus === item.kds_status) {
+    if (newStatus === ticket.status) {
       return res.status(400).json({
         success: false,
         message: '이미 해당 상태입니다'
       });
     }
 
-    // 아이템 상태 업데이트
-    let updateQuery = 'UPDATE check_items SET kds_status = $1, updated_at = NOW()';
+    // 티켓 상태 업데이트
+    let updateQuery = 'UPDATE order_tickets SET status = $1, updated_at = NOW()';
     let updateParams = [newStatus];
     let paramIndex = 2;
 
@@ -280,28 +279,29 @@ router.patch('/items/:id/status', async (req, res) => {
     });
 
     updateQuery += ' WHERE id = $' + paramIndex;
-    updateParams.push(itemId);
+    updateParams.push(ticketId);
 
     await client.query(updateQuery, updateParams);
 
     // TLL 주문인 경우 이벤트 로그 기록
-    if (item.source_system === 'TLL' && eventType) {
+    if (ticket.source_system === 'TLL' && eventType) {
       await client.query(`
         INSERT INTO kds_events (
-          store_id, check_item_id, event_type, 
+          store_id, ticket_id, event_type, 
           actor_type, actor_id, payload
         )
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [
-        item.store_id,
-        itemId,
+        ticket.store_id,
+        ticketId,
         eventType,
         actor_type || 'SYSTEM',
         actor_id || 'kds',
         JSON.stringify({
-          old_status: item.kds_status,
+          old_status: ticket.status,
           new_status: newStatus,
-          action: action
+          action: action,
+          table_number: ticket.table_number
         })
       ]);
     }
@@ -313,11 +313,11 @@ router.patch('/items/:id/status', async (req, res) => {
       await client.query(`
         SELECT pg_notify('kds_updates', $1)
       `, [JSON.stringify({
-        type: 'item_status_change',
-        store_id: item.store_id,
-        item_id: itemId,
-        check_id: item.check_id,
-        old_status: item.kds_status,
+        type: 'ticket_status_change',
+        store_id: ticket.store_id,
+        ticket_id: ticketId,
+        order_id: ticket.order_id,
+        old_status: ticket.status,
         new_status: newStatus,
         action: action,
         timestamp: Date.now()
@@ -328,18 +328,18 @@ router.patch('/items/:id/status', async (req, res) => {
 
     res.json({
       success: true,
-      message: `아이템 상태가 ${newStatus}로 변경되었습니다`,
-      item_id: itemId,
-      old_status: item.kds_status,
+      message: `티켓 상태가 ${newStatus}로 변경되었습니다`,
+      ticket_id: ticketId,
+      old_status: ticket.status,
       new_status: newStatus
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ 아이템 상태 변경 실패:', error);
+    console.error('❌ 티켓 상태 변경 실패:', error);
     res.status(500).json({
       success: false,
-      message: '아이템 상태 변경 실패',
+      message: '티켓 상태 변경 실패',
       error: error.message
     });
   } finally {
@@ -373,7 +373,7 @@ async function setupKDSForNewOrder(checkId, storeId, sourceSystem = 'POS') {
     `, [storeId]);
 
     let stations = stationsResult.rows;
-    
+
     // 기본 스테이션이 없으면 생성
     if (stations.length === 0) {
       const defaultStations = [
@@ -394,7 +394,7 @@ async function setupKDSForNewOrder(checkId, storeId, sourceSystem = 'POS') {
     // 각 아이템에 스테이션 할당 및 KDS 상태 설정
     for (const item of items) {
       let targetStation = stations.find(s => !s.is_expo); // 기본적으로 주방 스테이션
-      
+
       // 메뉴명 기반 스테이션 라우팅 로직
       const menuName = item.menu_name.toLowerCase();
       if (menuName.includes('음료') || menuName.includes('커피')) {

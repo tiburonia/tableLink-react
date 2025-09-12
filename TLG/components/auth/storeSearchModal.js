@@ -1,4 +1,3 @@
-
 /**
  * 매장 검색 모달 컴포넌트
  */
@@ -7,7 +6,7 @@ export function createStoreSearchModal(type, title, themeColor) {
   const modalId = `${type}StoreSearchModal`;
   const inputId = `${type}StoreNameInput`;
   const resultsId = `${type}StoreSearchResults`;
-  
+
   return `
     <div class="modal-overlay">
       <div class="modal-content">
@@ -18,10 +17,10 @@ export function createStoreSearchModal(type, title, themeColor) {
         <div class="modal-body">
           <div class="search-section">
             <div class="search-input-wrapper">
-              <input 
-                id="${inputId}" 
-                type="text" 
-                placeholder="매장 이름을 입력하세요..." 
+              <input
+                id="${inputId}"
+                type="text"
+                placeholder="매장 이름을 입력하세요..."
                 class="search-input"
                 autocomplete="off"
               />
@@ -38,10 +37,10 @@ export function createStoreSearchModal(type, title, themeColor) {
 export function setupStoreSearchModal(type, selectCallback) {
   const inputId = `${type}StoreNameInput`;
   const resultsId = `${type}StoreSearchResults`;
-  
+
   const input = document.getElementById(inputId);
   const results = document.getElementById(resultsId);
-  
+
   if (!input || !results) return;
 
   let searchTimeout = null;
@@ -80,47 +79,67 @@ async function searchStores(query, type, resultsElement, selectCallback) {
   try {
     console.log(`🔍 ${type.toUpperCase()} 매장 검색: "${query}"`);
 
-    resultsElement.innerHTML = `
-      <div class="loading-results">
-        <div class="loading-spinner"></div>
-        검색 중...
-      </div>
-    `;
-    resultsElement.style.display = 'block';
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
 
-    const response = await fetch(`/api/stores?search=${encodeURIComponent(query)}&limit=10`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
+    const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query.trim())}&limit=20`);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: 검색 요청 실패`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log(`📊 ${type.toUpperCase()} 매장 검색 결과:`, data);
 
-    if (data.success && data.stores && data.stores.length > 0) {
+    if (data.success && Array.isArray(data.stores)) {
       displaySearchResults(data.stores, resultsElement, selectCallback);
     } else {
+      console.warn(`${type.toUpperCase()} 매장 검색 응답 형식 오류:`, data);
       resultsElement.innerHTML = `
         <div class="no-results">
-          "${query}"에 대한 검색 결과가 없습니다
+          "${query}"에 대한 검색 결과가 없습니다.
         </div>
       `;
       resultsElement.style.display = 'block';
     }
   } catch (error) {
     console.error(`${type.toUpperCase()} 매장 검색 실패:`, error);
+
+    // 사용자에게 에러 표시
+    const errorDiv = document.createElement('div');
+    errorDiv.style.cssText = `
+      position: absolute;
+      top: 50px;
+      left: 20px;
+      right: 20px;
+      background: #fee;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #fed7d7;
+      z-index: 1000;
+    `;
+    errorDiv.textContent = `매장 검색 실패: ${error.message}`;
+
+    const modalContent = document.querySelector(`#${type}StoreSearchModal .modal-content`);
+    if (modalContent) {
+      // 기존 로딩 스피너가 있다면 제거
+      const existingLoading = modalContent.querySelector('.loading-results');
+      if (existingLoading) existingLoading.remove();
+
+      modalContent.appendChild(errorDiv);
+      setTimeout(() => errorDiv.remove(), 3000);
+    }
+
     resultsElement.innerHTML = `
       <div class="no-results">
-        검색 중 오류가 발생했습니다: ${error.message}
+        검색 중 오류가 발생했습니다.
       </div>
     `;
     resultsElement.style.display = 'block';
+
+    return [];
   }
 }
 
@@ -150,6 +169,7 @@ function displaySearchResults(stores, resultsElement, selectCallback) {
         검색 결과 표시 중 오류가 발생했습니다
       </div>
     `;
+    resultsElement.style.display = 'block';
   }
 }
 
@@ -170,6 +190,7 @@ export const modalStyles = `
   }
 
   .modal-content {
+    position: relative; /* Error message positioning for */
     background: white;
     border-radius: 16px;
     width: 90%;

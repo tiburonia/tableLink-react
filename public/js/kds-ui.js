@@ -1,4 +1,3 @@
-
 /**
  * KDS UI 렌더링 모듈 (Simple KDS v2.0)
  * 책임: KDS 화면 렌더링, 사용자 상호작용 처리
@@ -46,7 +45,7 @@ window.KDSUIRenderer = {
     `;
 
     this.loadStations(storeId);
-    this.loadItems(storeId);
+    this.loadTickets(storeId);
   },
 
   // 스테이션 탭 로딩
@@ -66,7 +65,7 @@ window.KDSUIRenderer = {
   // 스테이션 탭 렌더링
   renderStationTabs: function(stations) {
     const tabsContainer = document.getElementById('stationTabs');
-    
+
     let tabsHTML = `
       <button class="station-tab active" data-station="all">
         전체 주문
@@ -106,13 +105,13 @@ window.KDSUIRenderer = {
     // 아이템 로딩
     const urlParams = new URLSearchParams(window.location.search);
     const storeId = urlParams.get('storeId') || 1;
-    this.loadItems(storeId, stationId);
+    this.loadTickets(storeId, stationId);
   },
 
-  // KDS 아이템 로딩
-  loadItems: async function(storeId, stationId = 'all') {
+  // KDS 아이템 로딩 (order_tickets 기반으로 변경)
+  loadTickets: async function(storeId, stationId = 'all') {
     try {
-      let url = `/api/kds/items?store_id=${storeId}`;
+      let url = `/api/kds/tickets?store_id=${storeId}`;
       if (stationId !== 'all') {
         url += `&station_id=${stationId}`;
       }
@@ -121,21 +120,21 @@ window.KDSUIRenderer = {
       const data = await response.json();
 
       if (data.success) {
-        this.renderKDSItems(data.checks || []);
-        this.updateItemCounts(data.checks || []);
+        this.renderKDSTickets(data.tickets || []);
+        this.updateTicketCounts(data.tickets || []);
       }
     } catch (error) {
-      console.error('❌ KDS 아이템 로딩 실패:', error);
-      this.showError('아이템 로딩에 실패했습니다.');
+      console.error('❌ KDS 티켓 로딩 실패:', error);
+      this.showError('티켓 로딩에 실패했습니다.');
     }
   },
 
-  // KDS 아이템 렌더링
-  renderKDSItems: function(checks) {
+  // KDS 티켓 렌더링
+  renderKDSTickets: function(tickets) {
     const kdsMain = document.getElementById('kdsMain');
     const readyState = document.getElementById('readyState');
 
-    if (checks.length === 0) {
+    if (tickets.length === 0) {
       readyState.style.display = 'flex';
       kdsMain.innerHTML = `
         <div class="kds-ready-state">
@@ -149,52 +148,49 @@ window.KDSUIRenderer = {
 
     readyState.style.display = 'none';
 
-    let itemsHTML = '<div class="kds-grid">';
+    let ticketsHTML = '<div class="kds-grid">';
 
-    checks.forEach(check => {
-      itemsHTML += this.renderCheckCard(check);
+    tickets.forEach(ticket => {
+      ticketsHTML += this.renderTicketCard(ticket);
     });
 
-    itemsHTML += '</div>';
-    kdsMain.innerHTML = itemsHTML;
+    ticketsHTML += '</div>';
+    kdsMain.innerHTML = ticketsHTML;
   },
 
-  // 체크 카드 렌더링
-  renderCheckCard: function(check) {
-    const sourceIcon = check.source_system === 'TLL' ? '📱' : '🖥️';
-    const sourceText = check.source_system === 'TLL' ? 'TableLink' : 'POS';
-    
+  // 티켓 카드 렌더링 (새로운 방식)
+  renderTicketCard: function(ticket) {
+    const sourceIcon = ticket.source_system === 'TLL' ? '📱' : '🖥️';
+    const sourceText = ticket.source_system === 'TLL' ? 'TableLink' : 'POS';
+    const statusClass = this.getStatusClass(ticket.ticket_status);
+    const elapsedTime = ticket.elapsed_seconds ? this.formatElapsedTime(ticket.elapsed_seconds) : '';
+
     let itemsHTML = '';
-    check.items.forEach(item => {
-      const statusClass = this.getStatusClass(item.kds_status);
-      const elapsedTime = item.elapsed_seconds ? this.formatElapsedTime(item.elapsed_seconds) : '';
-      
-      itemsHTML += `
-        <div class="kds-item ${statusClass}" data-item-id="${item.id}">
-          <div class="item-header">
-            <span class="menu-name">${item.menu_name}</span>
-            <span class="quantity">x${item.quantity}</span>
+    if (Array.isArray(ticket.items)) {
+      ticket.items.forEach(item => {
+        itemsHTML += `
+          <div class="ticket-item">
+            <div class="item-header">
+              <span class="menu-name">${item.menu_name}</span>
+              <span class="quantity">x${item.quantity}</span>
+            </div>
+            ${item.options && Object.keys(item.options).length > 0 ? 
+              `<div class="item-options">${this.renderOptions(item.options)}</div>` : ''
+            }
           </div>
-          ${item.options && Object.keys(item.options).length > 0 ? 
-            `<div class="item-options">${this.renderOptions(item.options)}</div>` : ''
-          }
-          <div class="item-status">
-            <span class="status-badge">${this.getStatusText(item.kds_status)}</span>
-            ${elapsedTime ? `<span class="elapsed-time">${elapsedTime}</span>` : ''}
-          </div>
-          <div class="item-actions">
-            ${this.renderItemActions(item)}
-          </div>
-        </div>
-      `;
-    });
+        `;
+      });
+    }
 
     return `
-      <div class="kds-card" data-check-id="${check.check_id}">
-        <div class="card-header">
-          <div class="table-info">
-            <span class="table-number">테이블 ${check.table_number}</span>
-            <span class="customer-name">${check.customer_name}</span>
+      <div class="kds-ticket-card ${statusClass}" data-ticket-id="${ticket.ticket_id}">
+        <div class="ticket-header">
+          <div class="ticket-info">
+            <div class="ticket-number">티켓 #${ticket.ticket_id}</div>
+            <div class="table-info">
+              <span class="table-number">테이블 ${ticket.table_number}</span>
+              <span class="customer-name">${ticket.customer_name}</span>
+            </div>
           </div>
           <div class="source-info">
             <span class="source-badge">
@@ -202,37 +198,48 @@ window.KDSUIRenderer = {
             </span>
           </div>
         </div>
-        <div class="card-items">
+
+        <div class="ticket-items">
           ${itemsHTML}
+        </div>
+
+        <div class="ticket-status">
+          <div class="status-info">
+            <span class="status-badge">${this.getStatusText(ticket.ticket_status)}</span>
+            ${elapsedTime ? `<span class="elapsed-time">⏱️ ${elapsedTime}</span>` : ''}
+          </div>
+          <div class="ticket-actions">
+            ${this.renderTicketActions(ticket)}
+          </div>
         </div>
       </div>
     `;
   },
 
-  // 아이템 액션 버튼 렌더링
-  renderItemActions: function(item) {
-    switch (item.kds_status) {
+  // 티켓 액션 버튼 렌더링
+  renderTicketActions: function(ticket) {
+    switch (ticket.ticket_status) {
       case 'PENDING':
         return `
-          <button onclick="window.kdsItemAction(${item.id}, 'start')" class="btn-start">
+          <button onclick="window.kdsTicketAction(${ticket.ticket_id}, 'start')" class="btn-start">
             🔥 조리시작
           </button>
-          <button onclick="window.kdsItemAction(${item.id}, 'cancel')" class="btn-cancel">
+          <button onclick="window.kdsTicketAction(${ticket.ticket_id}, 'cancel')" class="btn-cancel">
             ❌ 취소
           </button>
         `;
       case 'COOKING':
         return `
-          <button onclick="window.kdsItemAction(${item.id}, 'done')" class="btn-done">
+          <button onclick="window.kdsTicketAction(${ticket.ticket_id}, 'done')" class="btn-done">
             ✅ 완료
           </button>
-          <button onclick="window.kdsItemAction(${item.id}, 'cancel')" class="btn-cancel">
+          <button onclick="window.kdsTicketAction(${ticket.ticket_id}, 'cancel')" class="btn-cancel">
             ❌ 취소
           </button>
         `;
       case 'DONE':
         return `
-          <button onclick="window.kdsItemAction(${item.id}, 'serve')" class="btn-serve">
+          <button onclick="window.kdsTicketAction(${ticket.ticket_id}, 'serve')" class="btn-serve">
             🍽️ 서빙
           </button>
         `;
@@ -282,7 +289,7 @@ window.KDSUIRenderer = {
   formatElapsedTime: function(seconds) {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    
+
     if (minutes > 0) {
       return `${minutes}분 ${remainingSeconds}초`;
     } else {
@@ -290,16 +297,30 @@ window.KDSUIRenderer = {
     }
   },
 
-  // 아이템 수 업데이트
-  updateItemCounts: function(checks) {
+  // 티켓 수 업데이트
+  updateTicketCounts: function(tickets) {
     // 전체 카운트 업데이트
-    const totalCount = checks.reduce((sum, check) => sum + check.items.length, 0);
+    const totalCount = tickets.reduce((sum, ticket) => sum + ticket.items.length, 0);
     const allCounter = document.getElementById('counter-all');
     if (allCounter) {
       allCounter.textContent = totalCount;
     }
 
-    // 스테이션별 카운트 업데이트 (향후 구현)
+    // 스테이션별 카운트 업데이트
+    const stationCounts = {};
+    tickets.forEach(ticket => {
+      if (!stationCounts[ticket.station_id]) {
+        stationCounts[ticket.station_id] = 0;
+      }
+      stationCounts[ticket.station_id] += ticket.items.length;
+    });
+
+    Object.keys(stationCounts).forEach(stationId => {
+      const counter = document.getElementById(`counter-${stationId}`);
+      if (counter) {
+        counter.textContent = stationCounts[stationId];
+      }
+    });
   },
 
   // 에러 표시
@@ -321,13 +342,13 @@ window.kdsRefresh = function() {
   const urlParams = new URLSearchParams(window.location.search);
   const storeId = urlParams.get('storeId') || 1;
   const activeStation = document.querySelector('.station-tab.active')?.dataset.station || 'all';
-  
-  window.KDSUIRenderer.loadItems(storeId, activeStation);
+
+  window.KDSUIRenderer.loadTickets(storeId, activeStation);
 };
 
-window.kdsItemAction = async function(itemId, action) {
+window.kdsTicketAction = async function(ticketId, action) {
   try {
-    const response = await fetch(`/api/kds/items/${itemId}/status`, {
+    const response = await fetch(`/api/kds/tickets/${ticketId}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -340,17 +361,25 @@ window.kdsItemAction = async function(itemId, action) {
     });
 
     const result = await response.json();
-    
+
     if (result.success) {
+      console.log(`✅ 티켓 ${ticketId} 상태 변경 성공: ${action}`);
       // 성공 시 자동 새로고침
       window.kdsRefresh();
     } else {
       alert('작업 실패: ' + result.message);
     }
   } catch (error) {
-    console.error('❌ 아이템 액션 실패:', error);
+    console.error('❌ 티켓 액션 실패:', error);
     alert('작업 중 오류가 발생했습니다.');
   }
+};
+
+// 레거시 호환성을 위한 함수
+window.kdsItemAction = function(itemId, action) {
+  console.warn('⚠️ kdsItemAction은 deprecated입니다. kdsTicketAction을 사용하세요.');
+  // 임시로 리다이렉트하거나 에러 메시지 표시
+  alert('시스템이 업데이트되었습니다. 페이지를 새로고침해주세요.');
 };
 
 console.log('✅ KDS UI 렌더러 v2.0 로드 완료');
