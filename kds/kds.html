@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TableLink KDS v3.0</title>
-    <link rel="stylesheet" href="kds.css">
+    <link rel="stylesheet" href="styles/kds.css">
 </head>
 <body>
     <div id="app">
@@ -47,25 +47,9 @@
     </div>
 
     <!-- KDS 모듈들을 순서대로 로드 -->
-    <script src="js/kds-core.js"></script>
-    <script src="js/kds-ui.js"></script>
-    <script src="js/kds-controller.js"></script>
-    <script src="kds.js"></script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Redirecting to KDS...</title>
-    <script>
-        // 새로운 KDS 경로로 리다이렉트
-        window.location.href = '/kds/kds.html' + window.location.search;
-    </script>
-</head>
-<body>
-    <p>KDS 시스템으로 이동 중...</p>
-    <p>자동으로 이동되지 않으면 <a href="/kds/kds.html">여기를 클릭하세요</a></p>
+    <script src="frontend/kds-core.js"></script>
+    <script src="frontend/kds-ui.js"></script>
+    <script src="frontend/kds-controller.js"></script>
+    <script src="frontend/kds.js"></script>
 </body>
 </html>

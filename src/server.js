@@ -50,10 +50,12 @@ app.use(express.static('public'));
 app.use('/pos', express.static('pos'));
 
 // 레거시 TLG 시스템 정적 파일 서빙
-app.use('/TLG', express.static('TLG'));
-app.use('/shared', express.static('shared'));
-app.use('/tlm-components', express.static('tlm-components'));
-app.use('/admin', express.static('admin'));
+app.use('/shared', express.static(path.join(__dirname, '../shared')));
+app.use('/TLG', express.static(path.join(__dirname, '../TLG')));
+app.use('/krp', express.static(path.join(__dirname, '../krp')));
+app.use('/admin', express.static(path.join(__dirname, '../admin')));
+app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
+app.use('/kds', express.static(path.join(__dirname, '../kds')));
 
 // 루트 경로를 레거시 index.html로 리다이렉트
 app.get('/', (req, res) => {
@@ -97,7 +99,7 @@ app.all('/api', (req, res) => {
 try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
-  const kdsRoutes = require('./routes/kds'); // KDS 라우터 추가
+  const kdsRouter = require('../kds/backend/kds'); // KDS 라우터 추가
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
@@ -116,7 +118,7 @@ try {
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
+  app.use('/api/kds', kdsRouter); // KDS 라우터 경로 등록
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
