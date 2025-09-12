@@ -174,10 +174,10 @@ router.post('/orders', async (req, res) => {
 
     // 주문 티켓 생성
     const ticketResult = await client.query(`
-      INSERT INTO order_tickets (order_id, batch_no, status, payment_type)
-      VALUES ($1, 1, 'PENDING', 'PREPAID')
+      INSERT INTO order_tickets (order_id, store_id, batch_no, status, payment_type)
+      VALUES ($1, $2, 1, 'PENDING', 'PREPAID')
       RETURNING id
-    `, [check_id]);
+    `, [check_id, store_id]);
 
     const ticketId = ticketResult.rows[0].id;
 
@@ -195,13 +195,14 @@ router.post('/orders', async (req, res) => {
       // cook_station 정보를 포함하여 order_items에 삽입
       const itemResult = await client.query(`
         INSERT INTO order_items (
-          ticket_id, menu_id, menu_name, quantity, unit_price, 
+          ticket_id, store_id, menu_id, menu_name, quantity, unit_price, 
           total_price, item_status, cook_station
         )
-        VALUES ($1, 1, $2, $3, $4, $5, 'PENDING', $6)
+        VALUES ($1, $2, 1, $3, $4, $5, $6, 'PENDING', $7)
         RETURNING id
       `, [
         ticketId,
+        store_id,
         menu_name,
         parseInt(quantity),
         parseFloat(unit_price),

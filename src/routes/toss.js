@@ -295,13 +295,14 @@ router.post('/confirm', async (req, res) => {
       const ticketResult = await client.query(`
         INSERT INTO order_tickets (
           order_id,
+          store_id,
           batch_no,
           status,
           payment_type,
           source
-        ) VALUES ($1, 1, 'PENDING', 'PREPAID', 'TLL')
+        ) VALUES ($1, $2, 1, 'PENDING', 'PREPAID', 'TLL')
         RETURNING id
-      `, [newOrderId]);
+      `, [newOrderId, finalOrderInfo.storeId]);
 
       const ticketId = ticketResult.rows[0].id;
 
@@ -310,6 +311,7 @@ router.post('/confirm', async (req, res) => {
         await client.query(`
           INSERT INTO order_items (
             ticket_id,
+            store_id,
             menu_id,
             menu_name,
             quantity,
@@ -317,9 +319,10 @@ router.post('/confirm', async (req, res) => {
             total_price,
             item_status,
             cook_station
-          ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7)
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
         `, [
           ticketId,
+          finalOrderInfo.storeId,
           item.menuId || 1,
           item.name,
           item.quantity || 1,

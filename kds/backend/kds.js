@@ -1016,12 +1016,12 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
     // 티켓 생성 (배치 단위)
     const ticketResult = await client.query(`
       INSERT INTO order_tickets (
-        order_id, batch_no, status, payment_type,
+        order_id, store_id, batch_no, status, payment_type,
         print_status, display_status, created_at, updated_at
       )
-      VALUES ($1, 1, 'PENDING', 'POSTPAID', 'WAITING', 'VISIBLE', NOW(), NOW())
+      VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'WAITING', 'VISIBLE', NOW(), NOW())
       RETURNING id
-    `, [orderId]);
+    `, [orderId, storeId]);
 
     const ticketId = ticketResult.rows[0].id;
 
