@@ -8,7 +8,7 @@ const pool = require('../db/pool');
 // 사용자별 매장별 포인트 조회
 router.get('/user/:userId/store/:storeId/points', async (req, res) => {
   const startTime = Date.now();
-  
+
   try {
     const { userId, storeId } = req.params;
 
@@ -32,7 +32,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
 
     // 먼저 user_id(문자열)로 users.id(정수)를 조회
     const userResult = await pool.query('SELECT id FROM users WHERE user_id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       console.log(`❌ [POINTS-API] 사용자를 찾을 수 없음: ${userId}`);
       return res.status(404).json({
@@ -40,7 +40,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
         error: '사용자를 찾을 수 없습니다'
       });
     }
-    
+
     const userPkId = userResult.rows[0].id;
     console.log(`🔍 [POINTS-API] 사용자 ID 변환: ${userId} -> PK ${userPkId}`);
 
@@ -56,7 +56,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
     `, [userPkId, storeId]);
 
     console.log(`📊 [POINTS-API] DB 쿼리 결과: ${result.rows.length}개 행 반환`);
-    
+
     if (result.rows.length > 0) {
       console.log(`✅ [POINTS-API] 포인트 데이터 발견:`, {
         points: result.rows[0].points,
@@ -68,7 +68,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
 
     if (result.rows.length === 0) {
       console.log(`ℹ️ [POINTS-API] 포인트 데이터 없음 - 기본값 0 반환`);
-      
+
       // 매장이 존재하는지 확인
       const storeCheck = await pool.query('SELECT name FROM stores WHERE id = $1', [storeId]);
       if (storeCheck.rows.length === 0) {
@@ -76,17 +76,17 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
       } else {
         console.log(`✅ [POINTS-API] 매장 ${storeId} 존재함: ${storeCheck.rows[0].name}`);
       }
-      
+
       const response = {
         success: true,
         points: 0,
         store_name: storeCheck.rows.length > 0 ? storeCheck.rows[0].name : null,
         updated_at: null
       };
-      
+
       console.log(`📤 [POINTS-API] 응답 전송 (포인트 없음):`, response);
       console.log(`⏱️ [POINTS-API] 처리 시간: ${Date.now() - startTime}ms`);
-      
+
       res.json(response);
       return;
     }
@@ -112,7 +112,7 @@ router.get('/user/:userId/store/:storeId/points', async (req, res) => {
       userId: req.params.userId,
       storeId: req.params.storeId
     });
-    
+
     res.status(500).json({
       success: false,
       error: '포인트 조회 중 오류가 발생했습니다',
@@ -140,7 +140,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
       FROM regular_levels rl
       LEFT JOIN loyalty_levels ll ON rl.level_id = ll.id
       WHERE rl.user_id = $1 AND rl.store_id = $2
-    `, [userId, storeId]);
+    `, [parseInt(userId), parseInt(storeId)]);
 
     if (result.rows.length === 0) {
       res.json({
@@ -196,7 +196,7 @@ router.get('/user/:userId/store/:storeId', async (req, res) => {
 //   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 // });
 
-// 사용자별 단골 레벨 조회
+// 사용자별 모든 단골 레벨 조회
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -205,7 +205,7 @@ router.get('/user/:userId', async (req, res) => {
 
     // 사용자 ID 변환
     const userResult = await pool.query('SELECT id FROM users WHERE user_id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
       return res.status(404).json({
@@ -213,7 +213,7 @@ router.get('/user/:userId', async (req, res) => {
         error: '사용자를 찾을 수 없습니다'
       });
     }
-    
+
     const userPkId = userResult.rows[0].id;
     console.log(`🔍 사용자 ID 변환: ${userId} -> PK ${userPkId}`);
 
@@ -262,7 +262,7 @@ router.get('/user/:userId/all-points', async (req, res) => {
 
     // 사용자 ID 변환
     const userResult = await pool.query('SELECT id FROM users WHERE user_id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
       return res.status(404).json({
@@ -270,7 +270,7 @@ router.get('/user/:userId/all-points', async (req, res) => {
         error: '사용자를 찾을 수 없습니다'
       });
     }
-    
+
     const userPkId = userResult.rows[0].id;
 
     const result = await pool.query(`
@@ -304,10 +304,10 @@ router.get('/user/:userId/all-points', async (req, res) => {
 // 포인트 사용
 router.post('/user/:userId/store/:storeId/points/use', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
-    
+
     const { userId, storeId } = req.params;
     const { points, orderId } = req.body;
 
@@ -319,11 +319,11 @@ router.post('/user/:userId/store/:storeId/points/use', async (req, res) => {
 
     // 사용자 ID 변환
     const userResult = await client.query('SELECT id FROM users WHERE user_id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       throw new Error('사용자를 찾을 수 없습니다');
     }
-    
+
     const userPkId = userResult.rows[0].id;
 
     // 현재 포인트 잔액 확인
@@ -383,11 +383,11 @@ router.post('/user/:userId/store/:storeId/points/earn', async (req, res) => {
 
     // 사용자 ID 변환
     const userResult = await pool.query('SELECT id FROM users WHERE user_id = $1', [userId]);
-    
+
     if (userResult.rows.length === 0) {
       throw new Error('사용자를 찾을 수 없습니다');
     }
-    
+
     const userPkId = userResult.rows[0].id;
 
     // 포인트 적립
