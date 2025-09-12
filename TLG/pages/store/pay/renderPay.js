@@ -78,6 +78,7 @@
       const name = orderItem.name || `메뉴 ${index + 1}`;
       const price = parseInt(orderItem.price) || 0;
       const quantity = parseInt(orderItem.quantity) || 1;
+      const cookStation = orderItem.cook_station || 'KITCHEN'; // cook_station 추가
 
       if (price <= 0) {
         console.warn(`⚠️ 아이템 "${name}"의 가격이 유효하지 않습니다:`, price);
@@ -88,7 +89,8 @@
         name: name,
         price: price,
         quantity: quantity,
-        totalPrice: price * quantity
+        totalPrice: price * quantity,
+        cook_station: cookStation // cook_station 추가
       };
     },
 
@@ -98,6 +100,7 @@
     parseObjectItem(name, itemData, store) {
       let price = 0;
       let quantity = 1;
+      const cookStation = itemData.cook_station || 'KITCHEN'; // cook_station 추가
 
       if (typeof itemData === 'number') {
         // 수량만 있는 경우
@@ -119,7 +122,8 @@
         name: name,
         price: price,
         quantity: quantity,
-        totalPrice: price * quantity
+        totalPrice: price * quantity,
+        cook_station: cookStation // cook_station 추가
       };
     }
   };
@@ -922,6 +926,7 @@
 
         // 결제 확인 함수 호출
         if (typeof confirmPay === 'function') {
+          // confirmPay 함수에 cook_station 정보 전달
           await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, tossMethod);
         } else {
           throw new Error('결제 처리 함수를 찾을 수 없습니다.');

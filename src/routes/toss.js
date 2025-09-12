@@ -65,7 +65,7 @@ router.post('/prepare', async (req, res) => {
 
     // 프론트엔드에서 전달받은 userId는 users.id (PK)이므로, users.user_id를 조회
     const userResult = await client.query('SELECT user_id FROM users WHERE id = $1', [parsedUserId]);
-    
+
     if (userResult.rows.length === 0) {
       console.error('❌ 사용자를 찾을 수 없음:', parsedUserId);
       return res.status(404).json({
@@ -75,6 +75,11 @@ router.post('/prepare', async (req, res) => {
     }
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
+
+    // cook_station 정보 추출
+    const cookStations = orderData.items ?
+      orderData.items.map(item => item.cook_station || 'KITCHEN').join(',') :
+      'KITCHEN';
 
     // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
     await client.query(`
@@ -86,8 +91,9 @@ router.post('/prepare', async (req, res) => {
         table_number,
         order_data,
         amount,
-        status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
+        status,
+        cook_station
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
     `, [
       orderId,
       userIdString, // users.user_id (사용자 입력 ID, 문자열)
@@ -103,7 +109,8 @@ router.post('/prepare', async (req, res) => {
         total: parseInt(amount),
         subtotal: parseInt(amount) + parseInt(usedPoint) + parseInt(couponDiscount)
       }),
-      parseInt(amount)
+      parseInt(amount),
+      cookStations
     ]);
 
     console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
@@ -244,7 +251,7 @@ router.post('/confirm', async (req, res) => {
       // pending_payments에서 복구된 데이터로 주문 정보 설정
       const finalOrderInfo = {
         storeId: pendingPayment.store_id,
-        userPk: pendingPayment.user_pk, // user_pk (정수형) 사용
+        userPk: pendingPayment.user_pk, // user_pk를 user_id에 저장 (정수형)
         tableNumber: pendingPayment.table_number,
         finalTotal: parseInt(amount),
         subtotal: orderData.subtotal || parseInt(amount),
@@ -258,7 +265,8 @@ router.post('/confirm', async (req, res) => {
             totalPrice: parseInt(amount),
             menuId: 1 // 기본 메뉴 ID
           }
-        ]
+        ],
+        cookStation: pendingPayment.cook_station // pending_payments에서 cook_station 가져오기
       };
 
       console.log('📊 최종 주문 정보:', {
@@ -272,7 +280,7 @@ router.post('/confirm', async (req, res) => {
       // 1. orders 테이블에 주문 생성 (새 스키마에 맞게)
       const orderResult = await client.query(`
         INSERT INTO orders (
-          store_id, 
+          store_id,
           user_id,
           source,
           status,
@@ -312,15 +320,17 @@ router.post('/confirm', async (req, res) => {
             quantity,
             unit_price,
             total_price,
-            item_status
-          ) VALUES ($1, $2, $3, $4, $5, $6, 'SERVED')
+            item_status,
+            cook_station
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'SERVED', $7)
         `, [
           ticketId,
           item.menuId || 1,
           item.name,
           item.quantity || 1,
           item.price,
-          item.totalPrice || item.price
+          item.totalPrice || item.price,
+          item.cook_station || 'KITCHEN' // order_items 테이블에 cook_station 추가
         ]);
       }
 
@@ -386,15 +396,15 @@ router.post('/confirm', async (req, res) => {
       const pointChange = earnedPoints - finalOrderInfo.usedPoint;
 
       await client.query(`
-        UPDATE users 
+        UPDATE users
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
       `, [pointChange, finalOrderInfo.userPk]);  */
 
       // pending_payments 상태를 SUCCESS로 업데이트
       await client.query(`
-        UPDATE pending_payments 
-        SET 
+        UPDATE pending_payments
+        SET
           status = 'SUCCESS',
           payment_key = $1,
           updated_at = CURRENT_TIMESTAMP
@@ -406,8 +416,8 @@ router.post('/confirm', async (req, res) => {
     } else {
       // 일반 주문 처리 - 기존 로직 유지
       const orderResult = await client.query(`
-        SELECT id, user_id, store_id, total_amount 
-        FROM orders 
+        SELECT id, user_id, store_id, total_amount
+        FROM orders
         WHERE user_paid_order_id = $1
       `, [orderId]);
 
@@ -416,8 +426,8 @@ router.post('/confirm', async (req, res) => {
 
         // 결제 완료 처리
         await client.query(`
-          UPDATE orders 
-          SET 
+          UPDATE orders
+          SET
             payment_status = 'PAID',
             payment_method = 'TOSS',
             payment_key = $2,

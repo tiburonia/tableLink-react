@@ -242,7 +242,8 @@ export class PaymentEventHandler {
       unit_price: item.price,
       quantity: item.qty,
       options: {},
-      notes: ''
+      notes: '',
+      cook_station: item.cook_station || 'KITCHEN'
     }));
 
     const orderResponse = await fetch('/api/tll/orders', {

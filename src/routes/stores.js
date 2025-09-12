@@ -165,14 +165,15 @@ router.get('/:storeId/menu/tll', async (req, res) => {
       });
     }
 
-    // 메뉴 조회 (현재 스키마에 맞게)
+    // 메뉴 조회 (현재 스키마에 맞게, cook_station 정보 포함)
     const menuResult = await pool.query(`
       SELECT 
         id,
         name,
         description,
         price,
-        cook_station as category
+        cook_station as category,
+        cook_station
       FROM store_menu 
       WHERE store_id = $1
       ORDER BY id

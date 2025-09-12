@@ -186,26 +186,27 @@ router.post('/orders', async (req, res) => {
     let totalAmount = 0;
 
     for (const item of items) {
-      const { menu_name, unit_price, quantity, options = {}, notes = '' } = item;
+      const { menu_name, unit_price, quantity, options = {}, notes = '', cook_station = 'KITCHEN' } = item;
 
       if (!menu_name || !unit_price || !quantity) {
         throw new Error(`주문 아이템에 필수 정보가 누락되었습니다: ${JSON.stringify(item)}`);
       }
 
-      // 메뉴 ID는 임시로 1로 설정 (실제로는 menu_name으로 조회해야 함)
+      // cook_station 정보를 포함하여 order_items에 삽입
       const itemResult = await client.query(`
         INSERT INTO order_items (
           ticket_id, menu_id, menu_name, quantity, unit_price, 
           total_price, item_status, cook_station
         )
-        VALUES ($1, 1, $2, $3, $4, $5, 'PENDING', 'KITCHEN')
+        VALUES ($1, 1, $2, $3, $4, $5, 'PENDING', $6)
         RETURNING id
       `, [
         ticketId,
         menu_name,
         parseInt(quantity),
         parseFloat(unit_price),
-        parseFloat(unit_price) * parseInt(quantity)
+        parseFloat(unit_price) * parseInt(quantity),
+        cook_station
       ]);
 
       itemIds.push(itemResult.rows[0].id);

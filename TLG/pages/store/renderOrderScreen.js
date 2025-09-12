@@ -29,8 +29,11 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         console.log('📋 메뉴 API 응답:', menuResult);
 
         if (menuResult.success && menuResult.menu) {
-          menuData = menuResult.menu;
-          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
+          menuData = menuResult.menu.map(menu => ({
+            ...menu,
+            cook_station: menu.cook_station || menu.category || 'KITCHEN' // cook_station 우선, 없으면 category, 최종적으로 KITCHEN
+          }));
+          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료 (cook_station 포함)`);
         } else {
           console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
           menuData = [];
@@ -539,12 +542,12 @@ function setupOrderEvents() {
 // 기본 메뉴 데이터 (새 스키마 형식)
 function getDefaultMenu() {
   return [
-    { id: 1, name: '김치찌개', description: '돼지고기와 김치가 들어간 찌개', price: 8000, category: '찌개류' },
-    { id: 2, name: '된장찌개', description: '국산 콩으로 만든 된장찌개', price: 7000, category: '찌개류' },
-    { id: 3, name: '불고기', description: '양념에 재운 소고기 불고기', price: 15000, category: '구이류' },
-    { id: 4, name: '비빔밥', description: '각종 나물이 들어간 비빔밥', price: 9000, category: '밥류' },
-    { id: 5, name: '냉면', description: '시원한 물냉면', price: 10000, category: '면류' },
-    { id: 6, name: '공기밥', description: '갓 지은 따뜻한 쌀밥', price: 1000, category: '기타' }
+    { id: 1, name: '김치찌개', description: '돼지고기와 김치가 들어간 찌개', price: 8000, category: '찌개류', cook_station: 'KITCHEN' },
+    { id: 2, name: '된장찌개', description: '국산 콩으로 만든 된장찌개', price: 7000, category: '찌개류', cook_station: 'KITCHEN' },
+    { id: 3, name: '불고기', description: '양념에 재운 소고기 불고기', price: 15000, category: '구이류', cook_station: 'GRILL' },
+    { id: 4, name: '비빔밥', description: '각종 나물이 들어간 비빔밥', price: 9000, category: '밥류', cook_station: 'KITCHEN' },
+    { id: 5, name: '냉면', description: '시원한 물냉면', price: 10000, category: '면류', cook_station: 'COLD_STATION' },
+    { id: 6, name: '공기밥', description: '갓 지은 따뜻한 쌀밥', price: 1000, category: '기타', cook_station: 'KITCHEN' }
   ];
 }
 
