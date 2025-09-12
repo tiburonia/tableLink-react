@@ -69,6 +69,30 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API 기본 경로 핸들러
+app.all('/api', (req, res) => {
+  res.json({
+    message: 'TableLink API Server',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: [
+      '/api/auth',
+      '/api/stores', 
+      '/api/orders',
+      '/api/reviews',
+      '/api/tables',
+      '/api/cart',
+      '/api/regular-levels',
+      '/api/audit',
+      '/api/pos',
+      '/api/kds',
+      '/api/tll',
+      '/api/toss',
+      '/api/clusters'
+    ]
+  });
+});
+
 // Router mounting
 try {
   // 새로운 POS 통합 시스템 라우터
