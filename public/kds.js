@@ -39,7 +39,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // URL에서 매장 ID 추출
     const urlParams = new URLSearchParams(window.location.search);
-    const storeId = urlParams.get('storeId') || urlParams.get('store_id') || '1';
+    let storeId = urlParams.get('storeId') || urlParams.get('store_id');
+    
+    // 매장 ID가 없으면 기본값 사용 (존재하는 매장)
+    if (!storeId) {
+      console.log('📍 매장 ID가 URL에 없음, 기본 매장 사용');
+      storeId = '1'; // 기본 매장 ID
+      
+      // URL 업데이트
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.set('storeId', storeId);
+      window.history.replaceState({}, '', newUrl);
+    }
 
     console.log(`📟 KDS 매장 ID: ${storeId}`);
 

@@ -398,6 +398,13 @@ window.KDSUI = {
   // 토스트 알림 표시
   showToast(message, type = 'info', duration = 3000) {
     const container = document.getElementById('toastContainer');
+    
+    // 컨테이너가 없으면 콘솔에만 메시지 출력
+    if (!container) {
+      console.log(`🍞 Toast (${type}):`, message);
+      return;
+    }
+    
     const toast = document.createElement('div');
     
     const icons = {
@@ -421,8 +428,14 @@ window.KDSUI = {
 
     // 자동 제거
     setTimeout(() => {
-      toast.classList.add('hide');
-      setTimeout(() => toast.remove(), 300);
+      if (toast.parentElement) {
+        toast.classList.add('hide');
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }
     }, duration);
   },
 
