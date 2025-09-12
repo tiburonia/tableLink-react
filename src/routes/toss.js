@@ -382,14 +382,14 @@ router.post('/confirm', async (req, res) => {
       }
 
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
-      const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
+    /*  const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
       const pointChange = earnedPoints - finalOrderInfo.usedPoint;
 
       await client.query(`
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [pointChange, finalOrderInfo.userPk]);
+      `, [pointChange, finalOrderInfo.userPk]);  */
 
       // pending_payments 상태를 SUCCESS로 업데이트
       await client.query(`
