@@ -47,8 +47,15 @@ async function updateCookStations() {
       SELECT 
         cook_station,
         COUNT(*) as count,
-        STRING_AGG(name, ', ' ORDER BY name LIMIT 5) as sample_menus
-      FROM store_menu 
+        STRING_AGG(name, ', ') as sample_menus
+      FROM (
+        SELECT 
+          cook_station,
+          name,
+          ROW_NUMBER() OVER (PARTITION BY cook_station ORDER BY name) as rn
+        FROM store_menu
+      ) ranked
+      WHERE rn <= 5
       GROUP BY cook_station
       ORDER BY cook_station
     `);
