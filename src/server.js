@@ -167,56 +167,74 @@ async function setupKDSListener() {
         // Get store_id from check_item_id (새 스키마)
         if (payload.check_item_id || payload.item_id) {
           const itemId = payload.check_item_id || payload.item_id;
-          const storeResult = await pool.query(`
-            SELECT c.store_id, c.table_number, c.customer_name, ci.menu_name, ci.status
-            FROM check_items ci
-            JOIN checks c ON ci.check_id = c.id
-            WHERE ci.id = $1
+          // Fetch pending order tickets and relevant items
+          const orderResult = await pool.query(`
+            SELECT 
+                o.id as order_id,
+                o.customer_name,
+                o.table_number,
+                oi.id as order_item_id,
+                oi.menu_name,
+                oi.cook_station,
+                oi.status
+            FROM orders o
+            JOIN order_items oi ON o.id = oi.order_id
+            WHERE o.status = 'PENDING' AND oi.id = $1
           `, [itemId]);
 
-          if (storeResult.rows.length > 0) {
-            const { store_id, table_number, customer_name, menu_name, status } = storeResult.rows[0];
-            const topic = `store:${store_id}`;
+          if (orderResult.rows.length > 0) {
+            const { order_id, customer_name, table_number, order_item_id, menu_name, cook_station, status } = orderResult.rows[0];
+            const storeId = await getStoreIdByOrderItem(order_item_id); // Helper to get storeId
 
-            // Broadcast to subscribers of the specific storeId
-            sse.broadcast(topic, {
-              type: 'item_status_update',
-              data: {
-                ...payload,
-                store_id,
-                table_number,
-                customer_name,
-                menu_name,
-                status
-              },
-              timestamp: new Date().toISOString()
-            });
+            if (storeId && cook_station === 'KITCHEN') { // Only include KITCHEN items
+              const topic = `store:${storeId}`;
 
-            // Socket.IO로도 실시간 브로드캐스트
-            io.to(`store:${store_id}`).emit('pos-update', {
-              type: 'item-status-update',
-              storeId: store_id,
-              data: {
-                ...payload,
-                table_number,
-                menu_name,
-                status
-              },
-              timestamp: new Date().toISOString()
-            });
+              // Broadcast to subscribers of the specific storeId
+              sse.broadcast(topic, {
+                type: 'item_status_update',
+                data: {
+                  order_id,
+                  order_item_id,
+                  customer_name,
+                  table_number,
+                  menu_name,
+                  cook_station,
+                  status
+                },
+                timestamp: new Date().toISOString()
+              });
 
-            io.to(`kds:${store_id}`).emit('kds-update', {
-              type: 'item_status_update',
-              storeId: store_id,
-              data: {
-                ...payload,
-                table_number,
-                customer_name,
-                menu_name,
-                status
-              },
-              timestamp: new Date().toISOString()
-            });
+              // Socket.IO로도 실시간 브로드캐스트
+              io.to(`store:${storeId}`).emit('pos-update', {
+                type: 'item-status-update',
+                storeId: storeId,
+                data: {
+                  order_id,
+                  order_item_id,
+                  customer_name,
+                  table_number,
+                  menu_name,
+                  cook_station,
+                  status
+                },
+                timestamp: new Date().toISOString()
+              });
+
+              io.to(`kds:${storeId}`).emit('kds-update', {
+                type: 'item_status_update',
+                storeId: storeId,
+                data: {
+                  order_id,
+                  order_item_id,
+                  customer_name,
+                  table_number,
+                  menu_name,
+                  cook_station,
+                  status
+                },
+                timestamp: new Date().toISOString()
+              });
+            }
           }
         }
       } catch (error) {
@@ -230,55 +248,82 @@ async function setupKDSListener() {
   }
 }
 
-// Socket.IO 연결 관리
-const storeRooms = new Map(); // storeId -> Set of socket.id
+// Helper function to get store_id from order_item_id (assuming a relationship)
+async function getStoreIdByOrderItem(orderItemId) {
+  try {
+    const result = await pool.query(`
+      SELECT s.id as store_id
+      FROM stores s
+      JOIN orders o ON s.id = o.store_id
+      JOIN order_items oi ON o.id = oi.order_id
+      WHERE oi.id = $1
+    `, [orderItemId]);
 
-io.on('connection', (socket) => {
-  console.log(`🔌 새 클라이언트 연결: ${socket.id}`);
-
-  // POS 룸 참여
-  socket.on('join-pos-room', (storeId) => {
-    const roomName = `store:${storeId}`;
-    socket.join(roomName);
-
-    if (!storeRooms.has(storeId)) {
-      storeRooms.set(storeId, new Set());
+    if (result.rows.length > 0) {
+      return result.rows[0].store_id;
     }
-    storeRooms.get(storeId).add(socket.id);
+    return null;
+  } catch (error) {
+    console.error('❌ store_id 조회 실패:', error);
+    return null;
+  }
+}
 
-    console.log(`📡 POS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
+// WebSocket 연결 처리
+io.on('connection', (socket) => {
+  console.log(`🔌 새로운 WebSocket 연결: ${socket.id}`);
 
-    socket.emit('join-pos-room-success', {
-      storeId,
-      clientCount: storeRooms.get(storeId).size
+  // KDS 룸 조인
+  socket.on('join-kds', (storeId) => {
+    const roomName = `kds:${storeId}`;
+    socket.join(roomName);
+    console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName}`);
+
+    socket.emit('joined-kds', { 
+      storeId, 
+      message: `매장 ${storeId} KDS에 연결되었습니다` 
     });
   });
 
-  // KDS 룸 참여
-  socket.on('join-kds-room', (storeId) => {
+  // KDS 룸 떠나기
+  socket.on('leave-kds', (storeId) => {
     const roomName = `kds:${storeId}`;
-    socket.join(roomName);
-    console.log(`🖥️ KDS 클라이언트가 매장 ${storeId} 룸에 참여: ${socket.id}`);
-
-    socket.emit('join-kds-room-success', { storeId });
+    socket.leave(roomName);
+    console.log(`🚪 KDS 룸 떠남: ${socket.id} -> ${roomName}`);
   });
 
-  // 연결 해제 처리
+  // 연결 해제
   socket.on('disconnect', () => {
-    console.log(`❌ 클라이언트 연결 해제: ${socket.id}`);
-
-    // 모든 매장 룸에서 제거
-    for (const [storeId, clients] of storeRooms.entries()) {
-      if (clients.has(socket.id)) {
-        clients.delete(socket.id);
-        if (clients.size === 0) {
-          storeRooms.delete(storeId);
-        }
-        break;
-      }
-    }
+    console.log(`🔌 WebSocket 연결 해제: ${socket.id}`);
   });
 });
+
+// KDS 웹소켓 브로드캐스트 함수
+global.broadcastKDSUpdate = (storeId, event, data) => {
+  const roomName = `kds:${storeId}`;
+  io.to(roomName).emit('kds-update', {
+    type: event,
+    storeId: parseInt(storeId),
+    data: data,
+    timestamp: Date.now()
+  });
+  console.log(`📡 KDS 브로드캐스트: ${roomName} -> ${event}`, data);
+};
+
+// 라우터 등록
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/stores', require('./routes/stores'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/orders', require('./routes/orders'));
+app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/toss', require('./routes/toss'));
+app.use('/api/tll', require('./routes/tll'));
+app.use('/api/cart', require('./routes/cart'));
+app.use('/api/pos', require('./routes/pos'));
+app.use('/api/regular-levels', require('./routes/regular-levels'));
+app.use('/api/tables', require('./routes/tables'));
+app.use('/api/stores-clusters', require('./routes/stores-clusters'));
+app.use('/api/audit', require('./routes/audit'));
 
 // Start Server
 server.listen(PORT, '0.0.0.0', async () => {

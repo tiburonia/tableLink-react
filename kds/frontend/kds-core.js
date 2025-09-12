@@ -46,8 +46,8 @@ class KDSCore {
       this.startPolling();
 
       // 실시간 연결 시도
-      console.log('🔌 SSE 연결 시도 중...');
-      this.connectSSE();
+      console.log('🔌 WebSocket 연결 시도 중...');
+      this.connectWebSocket();
 
       // 자동 정리 타이머
       this.startCleanupTimer();
@@ -394,47 +394,57 @@ class KDSCore {
   }
 
   // =================== 실시간 연결 ===================
-  connectSSE() {
+  connectWebSocket() {
     try {
-      if (this.sseConnection) {
-        this.sseConnection.close();
-        this.sseConnection = null;
+      if (this.wsConnection) {
+        this.wsConnection.close();
+        this.wsConnection = null;
       }
 
-      const url = `${this.config.apiBase}/stream/${this.config.storeId}`;
-      console.log('🔌 KDS SSE 연결 시도:', url);
+      // Socket.IO 클라이언트 연결
+      const socketUrl = window.location.origin;
+      console.log('🔌 KDS WebSocket 연결 시도:', socketUrl);
       
-      this.sseConnection = new EventSource(url);
+      this.wsConnection = io(socketUrl, {
+        transports: ['websocket', 'polling']
+      });
 
-      this.sseConnection.onopen = (event) => {
-        console.log('✅ KDS SSE 연결 성공:', event);
-        this.emit('sse_connected');
-        this.state.retryCount = 0; // 연결 성공 시 재시도 카운트 리셋
-      };
+      this.wsConnection.on('connect', () => {
+        console.log('✅ KDS WebSocket 연결 성공:', this.wsConnection.id);
+        this.emit('ws_connected');
+        this.state.retryCount = 0;
+        
+        // KDS 룸 조인
+        this.wsConnection.emit('join-kds', this.config.storeId);
+      });
 
-      this.sseConnection.onmessage = (event) => {
-        try {
-          console.log('📨 KDS SSE 메시지 수신:', event.data);
-          const data = JSON.parse(event.data);
-          this.handleSSEMessage(data);
-        } catch (error) {
-          console.warn('⚠️ SSE 메시지 파싱 실패:', error, event.data);
-        }
-      };
+      this.wsConnection.on('joined-kds', (data) => {
+        console.log('🏪 KDS 룸 조인 완료:', data);
+      });
 
-      this.sseConnection.onerror = (error) => {
-        console.error('❌ KDS SSE 연결 오류:', error);
-        console.error('SSE 상태:', this.sseConnection?.readyState);
-        this.emit('sse_error', error);
+      this.wsConnection.on('kds-update', (data) => {
+        console.log('📨 KDS 업데이트 수신:', data);
+        this.handleWebSocketMessage(data);
+      });
 
-        // 연결이 끊어진 경우에만 재연결 시도
-        if (this.sseConnection?.readyState === EventSource.CLOSED) {
+      this.wsConnection.on('disconnect', (reason) => {
+        console.log('🔌 KDS WebSocket 연결 끊김:', reason);
+        this.emit('ws_disconnected', reason);
+        
+        if (reason === 'io server disconnect') {
+          // 서버에서 끊은 경우 재연결
           this.scheduleReconnect();
         }
-      };
+      });
+
+      this.wsConnection.on('connect_error', (error) => {
+        console.error('❌ KDS WebSocket 연결 오류:', error);
+        this.emit('ws_error', error);
+        this.scheduleReconnect();
+      });
 
     } catch (error) {
-      console.error('❌ SSE 연결 설정 실패:', error);
+      console.error('❌ WebSocket 연결 설정 실패:', error);
       this.scheduleReconnect();
     }
   }
@@ -443,56 +453,41 @@ class KDSCore {
     this.state.retryCount++;
     const delay = Math.min(1000 * Math.pow(2, this.state.retryCount), 30000); // 최대 30초
     
-    console.log(`🔄 KDS SSE 재연결 예약: ${delay}ms 후 (재시도 ${this.state.retryCount}회)`);
+    console.log(`🔄 KDS WebSocket 재연결 예약: ${delay}ms 후 (재시도 ${this.state.retryCount}회)`);
     
     setTimeout(() => {
-      if (!this.sseConnection || this.sseConnection.readyState === EventSource.CLOSED) {
-        console.log('🔄 KDS SSE 재연결 시도...');
-        this.connectSSE();
+      if (!this.wsConnection || !this.wsConnection.connected) {
+        console.log('🔄 KDS WebSocket 재연결 시도...');
+        this.connectWebSocket();
       }
     }, delay);
   }
 
-  handleSSEMessage(data) {
-    console.log('📨 KDS SSE 메시지 처리:', data);
+  handleWebSocketMessage(data) {
+    console.log('📨 KDS WebSocket 메시지 처리:', data);
 
     switch (data.type) {
-      case 'connected':
-        console.log('✅ KDS SSE 연결 확인됨');
-        break;
-
       case 'new_ticket':
         console.log('🎫 새 티켓 알림 수신:', data);
-        this.emit('new_ticket', data);
-        // 즉시 티켓 목록 새로고침
+        this.emit('new_ticket', data.data);
+        // 즉시 티켓 목록 새로고림
         setTimeout(() => this.fetchTickets(), 500);
         break;
 
       case 'item_status_change':
         console.log('🔄 아이템 상태 변경 알림:', data);
-        this.emit('item_updated', data);
-        if (data.ticket_id) {
-          this.refreshTicket(data.ticket_id);
+        this.emit('item_updated', data.data);
+        if (data.data.ticket_id) {
+          this.refreshTicket(data.data.ticket_id);
         }
         break;
 
       case 'ticket_status_change':
         console.log('🎫 티켓 상태 변경 알림:', data);
-        this.emit('ticket_updated', data);
-        if (data.ticket_id) {
-          this.refreshTicket(data.ticket_id);
+        this.emit('ticket_updated', data.data);
+        if (data.data.ticket_id) {
+          this.refreshTicket(data.data.ticket_id);
         }
-        break;
-
-      case 'heartbeat':
-      case 'keepalive':
-        // 연결 유지 메시지
-        console.debug('💓 KDS SSE 하트비트');
-        break;
-
-      case 'error':
-        console.error('❌ KDS SSE 서버 오류:', data);
-        this.emit('sse_server_error', data);
         break;
 
       default:
@@ -665,8 +660,8 @@ class KDSCore {
 
   getConnectionStatus() {
     return {
-      sseConnected: this.sseConnection?.readyState === EventSource.OPEN,
-      sseState: this.sseConnection?.readyState,
+      wsConnected: this.wsConnection?.connected || false,
+      wsId: this.wsConnection?.id,
       isPolling: this.state.isPolling,
       lastUpdate: this.state.lastUpdate,
       retryCount: this.state.retryCount,
@@ -690,9 +685,10 @@ class KDSCore {
       this.connectionMonitor = null;
     }
 
-    if (this.sseConnection) {
-      this.sseConnection.close();
-      this.sseConnection = null;
+    if (this.wsConnection) {
+      this.wsConnection.emit('leave-kds', this.config.storeId);
+      this.wsConnection.close();
+      this.wsConnection = null;
     }
 
     this.eventHandlers.clear();
@@ -711,7 +707,7 @@ class KDSCore {
       stationCount: this.state.stations.size,
       lastUpdate: this.state.lastUpdate,
       retryCount: this.state.retryCount,
-      sseConnected: this.sseConnection?.readyState === EventSource.OPEN
+      wsConnected: this.wsConnection?.connected || false
     };
   }
 }

@@ -76,9 +76,12 @@ router.post('/prepare', async (req, res) => {
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
 
-    // cook_station 정보 추출
+    // cook_station 정보 추출 - DRINK 제외
     const cookStations = orderData.items ?
-      orderData.items.map(item => item.cook_station || 'KITCHEN').join(',') :
+      orderData.items
+      .filter(item => item.cook_station !== 'DRINK') // DRINK 제외
+      .map(item => item.cook_station || 'KITCHEN')
+      .join(',') :
       'KITCHEN';
 
     // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
@@ -178,7 +181,7 @@ router.post('/confirm', async (req, res) => {
 
     // pending_payments에서 주문 데이터 조회
     const pendingResult = await client.query(`
-      SELECT * FROM pending_payments 
+      SELECT * FROM pending_payments
       WHERE order_id = $1 AND status = 'PENDING'
     `, [orderId]);
 
@@ -257,15 +260,7 @@ router.post('/confirm', async (req, res) => {
         subtotal: orderData.subtotal || parseInt(amount),
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
-        items: orderData.items || [
-          {
-            name: orderData.storeName || 'TLL 주문',
-            price: parseInt(amount),
-            quantity: 1,
-            totalPrice: parseInt(amount),
-            menuId: 1 // 기본 메뉴 ID
-          }
-        ],
+        items: (orderData.items || []).filter(item => item.cook_station !== 'DRINK'), // DRINK 제외
         cookStation: pendingPayment.cook_station // pending_payments에서 cook_station 가져오기
       };
 
@@ -285,7 +280,7 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          total_price
+          total_amount
         ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3)
         RETURNING id
       `, [
@@ -392,14 +387,14 @@ router.post('/confirm', async (req, res) => {
       }
 
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
-    /*  const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
-      const pointChange = earnedPoints - finalOrderInfo.usedPoint;
+      /*  const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
+        const pointChange = earnedPoints - finalOrderInfo.usedPoint;
 
-      await client.query(`
-        UPDATE users
-        SET point = COALESCE(point, 0) + $1
-        WHERE id = $2
-      `, [pointChange, finalOrderInfo.userPk]);  */
+        await client.query(`
+          UPDATE users
+          SET point = COALESCE(point, 0) + $1
+          WHERE id = $2
+        `, [pointChange, finalOrderInfo.userPk]);  */
 
       // pending_payments 상태를 SUCCESS로 업데이트
       await client.query(`
@@ -411,27 +406,31 @@ router.post('/confirm', async (req, res) => {
         WHERE order_id = $2
       `, [paymentKey, orderId]);
 
-      console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${newOrderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
+      console.log('✅ TLL 결제 성공 처리 완료:', {
+        orderId: newOrderId,
+        ticketId: ticketId,
+        finalAmount: finalOrderInfo.finalTotal,
+        storeId: finalOrderInfo.storeId
+      });
 
-      // KDS 실시간 알림 발송
-      try {
-        await client.query(`
-          SELECT pg_notify('kds_updates', $1)
-        `, [JSON.stringify({
-          type: 'new_ticket',
-          store_id: parseInt(finalOrderInfo.storeId),
+      // WebSocket으로 KDS에 실시간 알림
+      if (global.broadcastKDSUpdate) {
+        global.broadcastKDSUpdate(finalOrderInfo.storeId, 'new_ticket', {
           ticket_id: ticketId,
           order_id: newOrderId,
           source_system: 'TLL',
-          customer_name: '고객',
           table_number: finalOrderInfo.tableNumber,
-          timestamp: Date.now()
-        })]);
-
-        console.log('📡 KDS 실시간 알림 발송 완료');
-      } catch (notifyError) {
-        console.warn('⚠️ KDS 실시간 알림 실패:', notifyError.message);
+          total_amount: finalOrderInfo.finalTotal
+        });
       }
+
+      res.json({
+        success: true,
+        orderId: newOrderId,
+        ticketId: ticketId,
+        paymentKey,
+        amount: finalOrderInfo.finalTotal
+      });
 
     } else {
       // 일반 주문 처리 - 기존 로직 유지

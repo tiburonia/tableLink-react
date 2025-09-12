@@ -69,8 +69,8 @@ router.get('/tickets', async (req, res) => {
             FROM order_tickets ot
             LEFT JOIN orders o ON o.id = ot.order_id
             WHERE (o.store_id = $1 OR o.id IS NULL)
-              AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
-              AND ot.display_status = $3
+              AND ot.status IN ('PENDING', 'COOKING', 'DONE')
+              AND ot.display_status = 'VISIBLE'
             ORDER BY 
               CASE ot.status 
                 WHEN 'COOKING' THEN 1
@@ -93,16 +93,17 @@ router.get('/tickets', async (req, res) => {
                   'special_requests', oi.special_requests,
                   'unit_price', COALESCE(oi.unit_price, 0)
                 ) ORDER BY oi.id
-              ) FILTER (WHERE oi.id IS NOT NULL),
+              ) FILTER (WHERE oi.id IS NOT NULL AND oi.cook_station = 'KITCHEN'),
               '[]'::json
             ) AS items
           FROM tk
-          LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id
-          WHERE ($4::text IS NULL OR oi.cook_station = $4 OR oi.id IS NULL)
+          LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id 
+          WHERE oi.cook_station = 'KITCHEN' OR oi.id IS NULL
           GROUP BY 
             tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
             tk.display_status, tk.payment_type, tk.version, tk.created_at,
             tk.store_id, tk.table_label, tk.elapsed_seconds
+          HAVING COUNT(oi.id) FILTER (WHERE oi.cook_station = 'KITCHEN') > 0 OR COUNT(oi.id) = 0
         ` : `
           SELECT 
             ot.id AS ticket_id, 
@@ -121,8 +122,8 @@ router.get('/tickets', async (req, res) => {
           FROM order_tickets ot
           LEFT JOIN orders o ON o.id = ot.order_id
           WHERE (o.store_id = $1 OR o.id IS NULL)
-            AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
-            AND ot.display_status = $3
+            AND ot.status IN ('PENDING', 'COOKING', 'DONE')
+            AND ot.display_status = 'VISIBLE'
           ORDER BY 
             CASE ot.status 
               WHEN 'COOKING' THEN 1
@@ -133,14 +134,9 @@ router.get('/tickets', async (req, res) => {
             ot.created_at ASC
         `;
 
-        const params = [
-          store_id,
-          status || 'PENDING,COOKING',
-          display_status,
-          station || null
-        ];
+        const params = [store_id];
 
-        result = await pool.query(query, params.slice(0, items_exists && items_extended ? 4 : 3));
+        result = await pool.query(query, params);
       }
     } catch (queryError) {
       console.warn('⚠️ 티켓 쿼리 실패, 빈 결과 반환:', queryError.message);
@@ -278,24 +274,21 @@ router.patch('/items/:id', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // 실시간 알림
+    // WebSocket 실시간 알림
     try {
       const storeResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [result.order_id]);
-      if (storeResult.rows.length > 0) {
-        await pool.query(`
-          SELECT pg_notify('kds_updates', $1)
-        `, [JSON.stringify({
-          type: 'item_status_change',
-          store_id: storeResult.rows[0].store_id,
+      if (storeResult.rows.length > 0 && global.broadcastKDSUpdate) {
+        global.broadcastKDSUpdate(storeResult.rows[0].store_id, 'item_status_change', {
           ticket_id: result.ticket_id,
           item_id: itemId,
           new_item_status: item_status,
           new_ticket_status: result.new_ticket_status,
-          timestamp: Date.now()
-        })]);
+          menu_name: result.menu_name,
+          cook_station: result.cook_station
+        });
       }
     } catch (notifyError) {
-      console.warn('⚠️ 실시간 알림 실패:', notifyError.message);
+      console.warn('⚠️ WebSocket 알림 실패:', notifyError.message);
     }
 
     res.json({
