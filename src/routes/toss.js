@@ -247,7 +247,7 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          " total_price"
+          total_price
         ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
         RETURNING id
       `, [
