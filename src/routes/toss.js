@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -10,9 +9,9 @@ router.get('/client-key', (req, res) => {
   try {
     // 환경변수에서 토스페이먼츠 클라이언트 키 가져오기
     const clientKey = process.env.TOSS_CLIENT_KEY || 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
-    
+
     console.log('🔑 토스페이먼츠 클라이언트 키 요청 처리');
-    
+
     res.json({
       success: true,
       clientKey: clientKey
@@ -34,7 +33,7 @@ router.post('/confirm', async (req, res) => {
 
   try {
     console.log('📨 토스 confirm 라우트 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
-    
+
     const { 
       paymentKey, 
       orderId, 
@@ -92,7 +91,7 @@ router.post('/confirm', async (req, res) => {
 
     if (!tossResponse.ok) {
       console.error('❌ 토스페이먼츠 승인 실패:', tossResult);
-      
+
       // 이미 처리된 결제인 경우 성공으로 처리
       if (tossResult.code === 'ALREADY_PROCESSED_PAYMENT') {
         console.log('⚠️ 이미 처리된 결제 - 성공으로 처리');
@@ -101,7 +100,7 @@ router.post('/confirm', async (req, res) => {
           data: { paymentKey, orderId, amount, alreadyProcessed: true }
         });
       }
-      
+
       throw new Error(tossResult.message || '토스페이먼츠 승인 실패');
     }
 
@@ -115,10 +114,10 @@ router.post('/confirm', async (req, res) => {
     if (isTLLOrder) {
       // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
       console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
-      
+
       // 전달받은 파라미터에서 주문 정보 가져오기
       let orderInfo = null;
-      
+
       console.log('🔍 전달받은 파라미터 상세 검사:', {
         userId: userId || 'missing',
         storeId: storeId || 'missing',
@@ -129,10 +128,10 @@ router.post('/confirm', async (req, res) => {
         couponDiscount: couponDiscount || 0,
         paymentMethod: paymentMethod || '카드'
       });
-      
+
       if (userId && storeId) {
         console.log('✅ 기본 파라미터 확인됨 - 주문 정보 사용');
-        
+
         orderInfo = {
           userId,
           storeId,
@@ -143,7 +142,7 @@ router.post('/confirm', async (req, res) => {
           couponDiscount: parseInt(couponDiscount) || 0,
           paymentMethod: paymentMethod || '카드'
         };
-        
+
         console.log('📋 생성된 주문 정보:', orderInfo);
       } else {
         console.log('⚠️ 필수 파라미터 누락 - userId나 storeId가 없음');
@@ -168,7 +167,7 @@ router.post('/confirm', async (req, res) => {
           }
         ]
       };
-      
+
       console.log('📊 최종 주문 정보:', {
         ...defaultOrderInfo,
         items: `${defaultOrderInfo.items.length}개 아이템`
@@ -281,7 +280,7 @@ router.post('/confirm', async (req, res) => {
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
       const earnedPoints = Math.floor(defaultOrderInfo.finalTotal * 0.01); // 1% 적립
       const pointChange = earnedPoints - defaultOrderInfo.usedPoint;
-      
+
       await client.query(`
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
