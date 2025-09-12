@@ -1,4 +1,3 @@
-
 /**
  * 결제 확인 처리 모듈 (새로운 prepare-confirm 시스템)
  */
@@ -51,9 +50,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     if (!window.requestTossPayment) {
       console.log('🔄 토스페이먼츠 모듈 로드 중...');
       await import('/TLG/pages/store/pay/tossPayments.js');
-      
+
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       if (!window.requestTossPayment) {
         throw new Error('토스페이먼츠 모듈을 로드할 수 없습니다.');
       }
@@ -61,9 +60,9 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
     console.log('📋 서버에 결제 준비 요청 시작');
-    
+
     const prepareData = {
-      userId: userInfo.id,
+      userId: parseInt(userInfo.userId), // users.id PK를 정수로 전달
       storeId: orderData.storeId || store?.id || store?.store_id,
       storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum || 1,
@@ -98,7 +97,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     // 2. 토스페이먼츠 결제 요청 (orderId만 URL에 포함)
     console.log('💳 토스페이먼츠 결제 요청 - 결제 방법:', paymentMethod);
-    
+
     const paymentResult = await window.requestTossPayment({
       amount: finalAmount,
       orderId: generatedOrderId,

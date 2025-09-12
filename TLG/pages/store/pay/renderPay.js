@@ -1,4 +1,3 @@
-
 /**
  * 결제 페이지 렌더링 모듈 (리팩토링 버전)
  * - 모듈화된 구조
@@ -19,7 +18,7 @@
      */
     normalizeOrderData(currentOrder, store, tableNum) {
       console.log('📋 주문 데이터 정규화 시작:', { currentOrder, store, tableNum });
-      
+
       if (!currentOrder || (Array.isArray(currentOrder) && currentOrder.length === 0) || 
           (typeof currentOrder === 'object' && Object.keys(currentOrder).length === 0)) {
         throw new Error('주문 데이터가 없습니다.');
@@ -173,7 +172,7 @@
         // 쿠키에서 조회
         const cookies = document.cookie.split(';').map(cookie => cookie.trim());
         const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
-        
+
         if (userInfoCookie) {
           const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
           return JSON.parse(userInfoValue);
@@ -205,7 +204,7 @@
      */
     render(orderData) {
       const main = document.getElementById('main') || document.body;
-      
+
       main.innerHTML = `
         <div class="payment-page">
           ${this.renderHeader(orderData)}
@@ -351,7 +350,7 @@
       `;
     },
 
-    
+
 
     /**
      * CSS 스타일 렌더링 (데스크톱 전용)
@@ -708,11 +707,11 @@
       this.state.userPoints = points;
       const pointsElement = document.getElementById('currentPoints');
       const pointsInput = document.getElementById('pointsToUse');
-      
+
       if (pointsElement) {
         pointsElement.textContent = points.toLocaleString();
       }
-      
+
       if (pointsInput) {
         pointsInput.max = points;
       }
@@ -734,7 +733,7 @@
       if (!couponSelect) return;
 
       couponSelect.innerHTML = '<option value="">쿠폰 선택</option>';
-      
+
       coupons.forEach(coupon => {
         const option = document.createElement('option');
         option.value = coupon.id;
@@ -753,14 +752,14 @@
     calculateFinalAmount() {
       const pointsUsed = parseInt(document.getElementById('pointsToUse')?.value || 0);
       const couponDiscount = parseInt(document.getElementById('couponDiscount')?.textContent?.replace(/[^\d]/g, '') || 0);
-      
+
       const finalAmount = Math.max(0, this.state.orderData.total - pointsUsed - couponDiscount);
-      
+
       const finalAmountElement = document.getElementById('finalAmount');
       if (finalAmountElement) {
         finalAmountElement.textContent = finalAmount.toLocaleString() + '원';
       }
-      
+
       return finalAmount;
     }
   };
@@ -820,13 +819,13 @@
       document.getElementById('couponSelect')?.addEventListener('change', (e) => {
         const selectedOption = e.target.selectedOptions[0];
         const couponDiscountElement = document.getElementById('couponDiscount');
-        
+
         if (selectedOption && selectedOption.value && couponDiscountElement) {
           const discountType = selectedOption.dataset.discountType;
           const discountValue = parseInt(selectedOption.dataset.discountValue);
           const minOrderAmount = parseInt(selectedOption.dataset.minOrderAmount || 0);
           const orderTotal = PaymentStateManager.state.orderData.total;
-          
+
           if (orderTotal >= minOrderAmount) {
             let discount = 0;
             if (discountType === 'PERCENT') {
@@ -845,7 +844,7 @@
         } else if (couponDiscountElement) {
           couponDiscountElement.textContent = '0원 할인';
         }
-        
+
         PaymentStateManager.calculateFinalAmount();
       });
     },
@@ -858,14 +857,14 @@
         btn.addEventListener('click', (e) => {
           // 모든 버튼에서 active 클래스 제거
           document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
-          
+
           // 클릭된 버튼에 active 클래스 추가
           e.target.classList.add('active');
-          
+
           // 선택된 결제 방법 저장
           const selectedMethod = e.target.dataset.method;
           PaymentStateManager.state.paymentMethod = selectedMethod;
-          
+
           console.log('💳 결제 방법 선택됨:', selectedMethod);
         });
       });
@@ -890,11 +889,11 @@
         const selectedCoupon = document.getElementById('couponSelect');
         const couponId = selectedCoupon?.value || null;
         const couponDiscount = parseInt(document.getElementById('couponDiscount')?.textContent?.replace(/[^\d]/g, '') || 0);
-        
+
         // 선택된 결제 방법 가져오기
         const selectedMethodElement = document.querySelector('.payment-method-btn.active');
         const selectedPaymentMethod = selectedMethodElement?.dataset.method || '카드';
-        
+
         const finalAmount = PaymentStateManager.calculateFinalAmount();
 
         if (finalAmount <= 0) {
@@ -918,7 +917,7 @@
         };
 
         const tossMethod = tossPaymentMethodMap[selectedPaymentMethod] || '카드';
-        
+
         console.log('💳 매핑된 토스 결제 방법:', tossMethod);
 
         // 결제 확인 함수 호출
@@ -969,7 +968,7 @@
     async loadModule(module) {
       try {
         console.log(`🔄 ${module.name} 모듈 로드 중...`);
-        
+
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.src = module.path;
@@ -978,10 +977,10 @@
           script.onerror = reject;
           document.head.appendChild(script);
         });
-        
+
         // 모듈 등록 시간 확보
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         if (module.check()) {
           console.log(`✅ ${module.name} 모듈 로드 완료`);
         } else {
@@ -1055,7 +1054,7 @@
     } catch (error) {
       console.error('❌ 결제 화면 렌더링 실패:', error);
       alert('결제 화면을 불러올 수 없습니다: ' + error.message);
-      
+
       // 오류 시 이전 화면으로 복귀
       if (typeof renderOrderScreen === 'function') {
         renderOrderScreen(store, tableNum);

@@ -228,7 +228,8 @@ async function handleLogin(req, res) {
       success: true,
       message: '로그인 성공',
       user: {
-        id: user.user_id,
+        id: user.user_id,        // 사용자 아이디 (문자열)
+        userId: user.id,         // users 테이블 PK (정수)
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -346,7 +347,8 @@ router.get('/user/:userId', async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: user.user_id,
+        id: user.user_id,        // 사용자 아이디 (문자열)
+        userId: user.id,         // users 테이블 PK (정수)
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -668,7 +670,8 @@ router.post('/users/info', async (req, res) => {
     res.json({
       success: true,
       user: {
-        id: user.user_id,
+        id: user.user_id,        // 사용자 아이디 (문자열)
+        userId: user.id,         // users 테이블 PK (정수)
         name: user.name,
         phone: user.phone,
         email: user.email || '',
