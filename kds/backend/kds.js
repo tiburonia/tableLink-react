@@ -17,9 +17,13 @@ router.get('/tickets', async (req, res) => {
 
     console.log(`🎫 KDS 티켓 조회: 매장 ${store_id}, 상태 ${status || 'ALL'}, 스테이션 ${station || 'ALL'}`);
 
+    // KDS 테이블 자동 생성 확인
+    await ensureKDSTables();
+
     // 매장 존재 여부 확인
     const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [store_id]);
     if (storeCheck.rows.length === 0) {
+      console.log(`⚠️ 매장 ${store_id}가 존재하지 않음`);
       return res.json({
         success: true,
         tickets: [],
@@ -29,83 +33,119 @@ router.get('/tickets', async (req, res) => {
       });
     }
 
-    // order_tickets 테이블 존재 여부 확인
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'order_tickets'
-      );
-    `);
-
-    if (!tableCheck.rows[0].exists) {
-      // 테이블이 없으면 자동 생성
-      await createKDSTables();
-    }
-
-    // 티켓 + 아이템 한방 조회 (성능 최적화)
-    const query = `
-      WITH tk AS (
+    // 테이블 존재 여부 확인 후 안전한 쿼리 실행
+    let result;
+    try {
+      const tablesCheck = await pool.query(`
         SELECT 
-          ot.id AS ticket_id, 
-          ot.order_id, 
-          ot.batch_no, 
-          ot.status, 
-          ot.print_status,
-          ot.display_status, 
-          ot.payment_type, 
-          ot.version, 
-          ot.created_at,
-          o.store_id, 
-          COALESCE(st.label, CONCAT('테이블 ', o.table_number)) AS table_label,
-          EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds
-        FROM order_tickets ot
-        JOIN orders o ON o.id = ot.order_id
-        LEFT JOIN store_tables st ON st.pos_session_id = o.id
-        WHERE o.store_id = $1
-          AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
-          AND ot.display_status = $3
-        ORDER BY 
-          CASE ot.status 
-            WHEN 'COOKING' THEN 1
-            WHEN 'PENDING' THEN 2  
-            WHEN 'DONE' THEN 3
-          END,
-          ot.created_at ASC
-      )
-      SELECT 
-        tk.*, 
-        COALESCE(
-          json_agg(
-            json_build_object(
-              'id', oi.id,
-              'menu_name', oi.menu_name,
-              'quantity', oi.quantity,
-              'item_status', oi.item_status,
-              'cook_station', oi.cook_station,
-              'special_requests', oi.special_requests,
-              'unit_price', oi.unit_price
-            ) ORDER BY oi.id
-          ) FILTER (WHERE oi.id IS NOT NULL),
-          '[]'::json
-        ) AS items
-      FROM tk
-      LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id
-      WHERE ($4::text IS NULL OR oi.cook_station = $4 OR oi.id IS NULL)
-      GROUP BY 
-        tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
-        tk.display_status, tk.payment_type, tk.version, tk.created_at,
-        tk.store_id, tk.table_label, tk.elapsed_seconds
-    `;
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'orders') as orders_exists,
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_tickets') as tickets_exists,
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_items') as items_exists,
+          EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'ticket_id') as items_extended;
+      `);
 
-    const params = [
-      store_id,
-      status || 'PENDING,COOKING',
-      display_status,
-      station || null
-    ];
+      const { orders_exists, tickets_exists, items_exists, items_extended } = tablesCheck.rows[0];
 
-    const result = await pool.query(query, params);
+      if (!tickets_exists || !orders_exists) {
+        // 기본 테이블이 없으면 빈 결과 반환
+        result = { rows: [] };
+      } else {
+        // 티켓 + 아이템 한방 조회 (성능 최적화)
+        const query = items_exists && items_extended ? `
+          WITH tk AS (
+            SELECT 
+              ot.id AS ticket_id, 
+              ot.order_id, 
+              ot.batch_no, 
+              ot.status, 
+              ot.print_status,
+              ot.display_status, 
+              ot.payment_type, 
+              ot.version, 
+              ot.created_at,
+              o.store_id, 
+              COALESCE('테이블 ', CAST(COALESCE(o.table_number, 1) AS TEXT)) AS table_label,
+              EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds
+            FROM order_tickets ot
+            LEFT JOIN orders o ON o.id = ot.order_id
+            WHERE (o.store_id = $1 OR o.id IS NULL)
+              AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
+              AND ot.display_status = $3
+            ORDER BY 
+              CASE ot.status 
+                WHEN 'COOKING' THEN 1
+                WHEN 'PENDING' THEN 2  
+                WHEN 'DONE' THEN 3
+                ELSE 4
+              END,
+              ot.created_at ASC
+          )
+          SELECT 
+            tk.*, 
+            COALESCE(
+              json_agg(
+                json_build_object(
+                  'id', oi.id,
+                  'menu_name', COALESCE(oi.menu_name, '메뉴'),
+                  'quantity', COALESCE(oi.quantity, 1),
+                  'item_status', COALESCE(oi.item_status, 'PENDING'),
+                  'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
+                  'special_requests', oi.special_requests,
+                  'unit_price', COALESCE(oi.unit_price, 0)
+                ) ORDER BY oi.id
+              ) FILTER (WHERE oi.id IS NOT NULL),
+              '[]'::json
+            ) AS items
+          FROM tk
+          LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id
+          WHERE ($4::text IS NULL OR oi.cook_station = $4 OR oi.id IS NULL)
+          GROUP BY 
+            tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
+            tk.display_status, tk.payment_type, tk.version, tk.created_at,
+            tk.store_id, tk.table_label, tk.elapsed_seconds
+        ` : `
+          SELECT 
+            ot.id AS ticket_id, 
+            ot.order_id, 
+            ot.batch_no, 
+            ot.status, 
+            ot.print_status,
+            ot.display_status, 
+            ot.payment_type, 
+            ot.version, 
+            ot.created_at,
+            COALESCE(o.store_id, 1) as store_id,
+            CONCAT('테이블 ', COALESCE(o.table_number, 1)) AS table_label,
+            EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds,
+            '[]'::json AS items
+          FROM order_tickets ot
+          LEFT JOIN orders o ON o.id = ot.order_id
+          WHERE (o.store_id = $1 OR o.id IS NULL)
+            AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
+            AND ot.display_status = $3
+          ORDER BY 
+            CASE ot.status 
+              WHEN 'COOKING' THEN 1
+              WHEN 'PENDING' THEN 2  
+              WHEN 'DONE' THEN 3
+              ELSE 4
+            END,
+            ot.created_at ASC
+        `;
+
+        const params = [
+          store_id,
+          status || 'PENDING,COOKING',
+          display_status,
+          station || null
+        ];
+
+        result = await pool.query(query, params.slice(0, items_exists && items_extended ? 4 : 3));
+      }
+    } catch (queryError) {
+      console.warn('⚠️ 티켓 쿼리 실패, 빈 결과 반환:', queryError.message);
+      result = { rows: [] };
+    }
 
     res.json({
       success: true,
@@ -468,29 +508,55 @@ router.get('/stations', async (req, res) => {
 
     console.log(`🏪 KDS 스테이션 조회: 매장 ${store_id}`);
 
-    // 스테이션별 활성 티켓 수 조회
-    const result = await pool.query(`
-      SELECT 
-        DISTINCT oi.cook_station as station_code,
-        COALESCE(oi.cook_station, 'KITCHEN') as station_name,
-        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status IN ('PENDING', 'COOKING', 'DONE') AND ot.display_status = 'VISIBLE') as active_tickets,
-        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_tickets,
-        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_tickets,
-        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_tickets
-      FROM order_items oi
-      JOIN order_tickets ot ON ot.id = oi.ticket_id
-      JOIN orders o ON o.id = ot.order_id
-      WHERE o.store_id = $1
-      GROUP BY oi.cook_station
-      ORDER BY 
-        CASE oi.cook_station
-          WHEN 'KITCHEN' THEN 1
-          WHEN 'BEVERAGE' THEN 2
-          WHEN 'DESSERT' THEN 3
-          ELSE 4
-        END,
-        oi.cook_station
-    `, [store_id]);
+    // KDS 테이블 자동 생성 확인
+    await ensureKDSTables();
+
+    // 스테이션별 활성 티켓 수 조회 (order_items 테이블이 없어도 작동)
+    let result;
+    try {
+      // order_items 테이블 존재 여부 확인
+      const itemsExists = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'order_items'
+          AND EXISTS (
+            SELECT FROM information_schema.columns 
+            WHERE table_name = 'order_items' 
+            AND column_name = 'cook_station'
+          )
+        );
+      `);
+
+      if (itemsExists.rows[0].exists) {
+        result = await pool.query(`
+          SELECT 
+            DISTINCT COALESCE(oi.cook_station, 'KITCHEN') as station_code,
+            COALESCE(oi.cook_station, 'KITCHEN') as station_name,
+            COUNT(DISTINCT ot.id) FILTER (WHERE ot.status IN ('PENDING', 'COOKING', 'DONE') AND ot.display_status = 'VISIBLE') as active_tickets,
+            COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_tickets,
+            COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_tickets,
+            COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_tickets
+          FROM order_items oi
+          LEFT JOIN order_tickets ot ON ot.id = oi.ticket_id
+          LEFT JOIN orders o ON o.id = ot.order_id
+          WHERE o.store_id = $1 OR oi.id IS NULL
+          GROUP BY COALESCE(oi.cook_station, 'KITCHEN')
+          ORDER BY 
+            CASE COALESCE(oi.cook_station, 'KITCHEN')
+              WHEN 'KITCHEN' THEN 1
+              WHEN 'BEVERAGE' THEN 2
+              WHEN 'DESSERT' THEN 3
+              ELSE 4
+            END
+        `, [store_id]);
+      } else {
+        // order_items 테이블이 없거나 cook_station 컬럼이 없으면 기본 스테이션만 반환
+        result = { rows: [] };
+      }
+    } catch (queryError) {
+      console.warn('⚠️ 스테이션 쿼리 실패, 기본값 반환:', queryError.message);
+      result = { rows: [] };
+    }
 
     // 기본 스테이션이 없으면 추가
     const stations = result.rows.length > 0 ? result.rows : [
@@ -541,23 +607,64 @@ router.get('/dashboard', async (req, res) => {
 
     console.log(`📊 KDS 대시보드 조회: 매장 ${store_id}`);
 
-    const result = await pool.query(`
-      SELECT 
-        COUNT(*) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_count,
-        COUNT(*) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_count,
-        COUNT(*) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_count,
-        COUNT(*) FILTER (WHERE ot.status = 'DONE' AND DATE(ot.updated_at) = CURRENT_DATE) as served_today,
-        AVG(
-          EXTRACT(EPOCH FROM (ot.updated_at - ot.created_at)) / 60
-        ) FILTER (WHERE ot.status = 'DONE' AND ot.updated_at > ot.created_at) as avg_cook_time_minutes,
-        AVG(
-          EXTRACT(EPOCH FROM (NOW() - ot.created_at)) / 60
-        ) FILTER (WHERE ot.status IN ('PENDING', 'COOKING')) as avg_wait_time_minutes
-      FROM order_tickets ot
-      JOIN orders o ON o.id = ot.order_id
-      WHERE o.store_id = $1
-        AND DATE(ot.created_at) = CURRENT_DATE
-    `, [store_id]);
+    // KDS 테이블 자동 생성 확인
+    await ensureKDSTables();
+
+    let result;
+    try {
+      // orders 테이블과 order_tickets 테이블 존재 여부 확인
+      const tablesCheck = await pool.query(`
+        SELECT 
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'orders') as orders_exists,
+          EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_tickets') as tickets_exists;
+      `);
+
+      const { orders_exists, tickets_exists } = tablesCheck.rows[0];
+
+      if (orders_exists && tickets_exists) {
+        result = await pool.query(`
+          SELECT 
+            COUNT(*) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_count,
+            COUNT(*) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_count,
+            COUNT(*) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_count,
+            COUNT(*) FILTER (WHERE ot.status = 'DONE' AND DATE(ot.updated_at) = CURRENT_DATE) as served_today,
+            AVG(
+              EXTRACT(EPOCH FROM (ot.updated_at - ot.created_at)) / 60
+            ) FILTER (WHERE ot.status = 'DONE' AND ot.updated_at > ot.created_at) as avg_cook_time_minutes,
+            AVG(
+              EXTRACT(EPOCH FROM (NOW() - ot.created_at)) / 60
+            ) FILTER (WHERE ot.status IN ('PENDING', 'COOKING')) as avg_wait_time_minutes
+          FROM order_tickets ot
+          LEFT JOIN orders o ON o.id = ot.order_id
+          WHERE (o.store_id = $1 OR o.id IS NULL)
+            AND DATE(ot.created_at) = CURRENT_DATE
+        `, [store_id]);
+      } else {
+        // 테이블이 없으면 기본값으로 채워진 결과 생성
+        result = { 
+          rows: [{ 
+            pending_count: '0', 
+            cooking_count: '0', 
+            done_count: '0', 
+            served_today: '0',
+            avg_cook_time_minutes: null,
+            avg_wait_time_minutes: null
+          }] 
+        };
+      }
+    } catch (queryError) {
+      console.warn('⚠️ 대시보드 쿼리 실패, 기본값 반환:', queryError.message);
+      result = { 
+        rows: [{ 
+          pending_count: '0', 
+          cooking_count: '0', 
+          done_count: '0', 
+          served_today: '0',
+          avg_cook_time_minutes: null,
+          avg_wait_time_minutes: null
+        }] 
+      };
+    }
 
     const dashboard = result.rows[0] || {};
 
@@ -708,7 +815,53 @@ router.post('/cleanup/:store_id', async (req, res) => {
   }
 });
 
-// =================== 필수 테이블 생성 함수 ===================
+// =================== KDS 테이블 생성/확인 함수 ===================
+async function ensureKDSTables() {
+  // 이미 생성 시도 중이면 대기
+  if (ensureKDSTables._creating) {
+    await ensureKDSTables._creating;
+    return;
+  }
+
+  // 이미 확인했으면 스�ip
+  if (ensureKDSTables._checked) {
+    return;
+  }
+
+  const client = await pool.connect();
+  
+  try {
+    console.log('🔍 KDS 테이블 존재 여부 확인 중...');
+
+    // 필수 테이블들이 모두 존재하는지 확인
+    const tableCheck = await client.query(`
+      SELECT 
+        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_tickets')) as tickets_exists,
+        (SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'ticket_id')) as items_extended,
+        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'kds_events')) as events_exists
+    `);
+
+    const { tickets_exists, items_extended, events_exists } = tableCheck.rows[0];
+
+    if (!tickets_exists || !items_extended || !events_exists) {
+      console.log('📋 KDS 테이블 일부가 누락됨, 생성 시작...');
+      ensureKDSTables._creating = createKDSTables();
+      await ensureKDSTables._creating;
+      ensureKDSTables._creating = null;
+    }
+
+    ensureKDSTables._checked = true;
+    console.log('✅ KDS 테이블 확인 완료');
+
+  } catch (error) {
+    console.error('❌ KDS 테이블 확인 실패:', error);
+    // 에러가 발생해도 계속 진행 (기본 응답 반환)
+  } finally {
+    client.release();
+  }
+}
+
+// 실제 테이블 생성 함수
 async function createKDSTables() {
   const client = await pool.connect();
   
@@ -721,7 +874,7 @@ async function createKDSTables() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS order_tickets (
         id SERIAL PRIMARY KEY,
-        order_id INTEGER NOT NULL,
+        order_id INTEGER,
         batch_no INTEGER DEFAULT 1,
         status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
         print_status VARCHAR(20) DEFAULT 'WAITING' CHECK (print_status IN ('WAITING', 'QUEUED', 'PRINTED', 'FAILED')),
@@ -730,42 +883,78 @@ async function createKDSTables() {
         version INTEGER DEFAULT 1,
         print_requested_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW(),
-        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+        updated_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // orders 테이블이 존재하면 외래키 추가
+    try {
+      await client.query(`
+        DO $$ 
+        BEGIN
+          IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'orders') THEN
+            ALTER TABLE order_tickets ADD CONSTRAINT fk_order_tickets_order_id 
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE;
+          END IF;
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `);
+    } catch (err) {
+      console.log('⚠️ 외래키 제약조건 추가 스킵:', err.message);
+    }
+
+    // 인덱스 생성
+    await client.query(`
       CREATE INDEX IF NOT EXISTS idx_order_tickets_order_id ON order_tickets(order_id);
       CREATE INDEX IF NOT EXISTS idx_order_tickets_status ON order_tickets(status);
       CREATE INDEX IF NOT EXISTS idx_order_tickets_display_status ON order_tickets(display_status);
     `);
 
-    // order_items 테이블에 필요한 컬럼들 추가
-    await client.query(`
-      ALTER TABLE order_items 
-      ADD COLUMN IF NOT EXISTS ticket_id INTEGER REFERENCES order_tickets(id),
-      ADD COLUMN IF NOT EXISTS item_status VARCHAR(20) DEFAULT 'PENDING' CHECK (item_status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
-      ADD COLUMN IF NOT EXISTS cook_station VARCHAR(50) DEFAULT 'KITCHEN',
-      ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
-      
-      CREATE INDEX IF NOT EXISTS idx_order_items_ticket_id ON order_items(ticket_id);
-      CREATE INDEX IF NOT EXISTS idx_order_items_item_status ON order_items(item_status);
-      CREATE INDEX IF NOT EXISTS idx_order_items_cook_station ON order_items(cook_station);
+    // order_items 테이블이 존재하는 경우만 확장
+    const itemsTableExists = await client.query(`
+      SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_items');
     `);
+
+    if (itemsTableExists.rows[0].exists) {
+      await client.query(`
+        ALTER TABLE order_items 
+        ADD COLUMN IF NOT EXISTS ticket_id INTEGER,
+        ADD COLUMN IF NOT EXISTS item_status VARCHAR(20) DEFAULT 'PENDING',
+        ADD COLUMN IF NOT EXISTS cook_station VARCHAR(50) DEFAULT 'KITCHEN',
+        ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+      `);
+
+      // 제약조건 추가 (이미 있으면 무시)
+      try {
+        await client.query(`
+          ALTER TABLE order_items 
+          ADD CONSTRAINT chk_item_status 
+          CHECK (item_status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED'));
+        `);
+      } catch (err) {
+        // 제약조건이 이미 있으면 무시
+      }
+
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_order_items_ticket_id ON order_items(ticket_id);
+        CREATE INDEX IF NOT EXISTS idx_order_items_item_status ON order_items(item_status);
+        CREATE INDEX IF NOT EXISTS idx_order_items_cook_station ON order_items(cook_station);
+      `);
+    }
 
     // kds_events 테이블 (로그)
     await client.query(`
       CREATE TABLE IF NOT EXISTS kds_events (
         id SERIAL PRIMARY KEY,
-        store_id INTEGER NOT NULL,
+        store_id INTEGER,
         ticket_id INTEGER,
         order_id INTEGER,
         event_type VARCHAR(50) NOT NULL,
         actor_type VARCHAR(20) DEFAULT 'USER',
         actor_id VARCHAR(50) DEFAULT 'unknown',
         payload JSONB,
-        created_at TIMESTAMP DEFAULT NOW(),
-        FOREIGN KEY (store_id) REFERENCES stores(id),
-        FOREIGN KEY (ticket_id) REFERENCES order_tickets(id),
-        FOREIGN KEY (order_id) REFERENCES orders(id)
+        created_at TIMESTAMP DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_kds_events_store_id ON kds_events(store_id);
       CREATE INDEX IF NOT EXISTS idx_kds_events_created_at ON kds_events(created_at);
