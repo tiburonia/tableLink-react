@@ -1,4 +1,3 @@
-
 /**
  * KDS 핵심 데이터 관리 모듈 v3.0
  * 책임: 데이터 로딩, API 통신, 실시간 연결 관리, 상태 관리
@@ -21,7 +20,7 @@ class KDSCore {
     this.updateCallbacks = new Set();
     this.retryCount = 0;
     this.maxRetries = 5;
-    
+
     console.log(`🚀 KDS Core v3.0 초기화 - 매장 ${storeId}`);
   }
 
@@ -46,16 +45,31 @@ class KDSCore {
   async loadStations() {
     try {
       const response = await fetch(`/api/kds/stations?store_id=${this.storeId}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // JSON 파싱 실패 시 기본 에러 메시지 사용
+        }
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         this.stations.clear();
         data.stations.forEach(station => {
           this.stations.set(station.id, station);
         });
-        
+
         this.emit('stations_loaded', Array.from(this.stations.values()));
         return Array.from(this.stations.values());
       } else {
@@ -76,16 +90,31 @@ class KDSCore {
       if (status) url += `&status=${status}`;
 
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // JSON 파싱 실패 시 기본 에러 메시지 사용
+        }
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         // 티켓 맵 업데이트
         if (stationId === 'all') {
           this.tickets.clear();
         }
-        
+
         data.tickets.forEach(ticket => {
           this.tickets.set(ticket.ticket_id, ticket);
         });
@@ -96,7 +125,7 @@ class KDSCore {
           stationId,
           status
         });
-        
+
         return Array.from(this.tickets.values());
       } else {
         throw new Error(data.message);
@@ -112,10 +141,25 @@ class KDSCore {
   async loadDashboard() {
     try {
       const response = await fetch(`/api/kds/dashboard?store_id=${this.storeId}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // JSON 파싱 실패 시 기본 에러 메시지 사용
+        }
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         this.dashboard = data.dashboard;
         this.emit('dashboard_loaded', this.dashboard);
@@ -144,10 +188,25 @@ class KDSCore {
         })
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
+      if (!response.ok) {
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          // JSON 파싱 실패 시 기본 에러 메시지 사용
+        }
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+      }
+
       const data = await response.json();
-      
+
       if (data.success) {
         // 로컬 상태 업데이트
         const ticket = this.tickets.get(parseInt(ticketId));
@@ -203,7 +262,7 @@ class KDSCore {
       try {
         const data = JSON.parse(event.data);
         console.log('📡 KDS 실시간 데이터:', data);
-        
+
         this.handleRealtimeMessage(data);
       } catch (error) {
         console.error('❌ 실시간 데이터 처리 실패:', error);
@@ -219,9 +278,9 @@ class KDSCore {
       if (this.retryCount < this.maxRetries) {
         this.retryCount++;
         const delay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
-        
+
         console.log(`🔄 ${delay/1000}초 후 재연결 시도... (${this.retryCount}/${this.maxRetries})`);
-        
+
         setTimeout(() => {
           if (this.connectionState === 'disconnected') {
             this.setupRealtime();
@@ -251,7 +310,7 @@ class KDSCore {
 
       case 'ticket_status_change':
         console.log('🔄 티켓 상태 변경 알림:', data);
-        
+
         // 로컬 상태 업데이트
         const ticket = this.tickets.get(data.ticket_id);
         if (ticket) {
@@ -307,7 +366,7 @@ class KDSCore {
   // 스테이션별 티켓 수 집계
   getStationCounts() {
     const counts = {};
-    
+
     this.stations.forEach(station => {
       counts[station.id] = {
         total: 0,
@@ -321,7 +380,7 @@ class KDSCore {
       const stationId = ticket.station_id;
       if (counts[stationId]) {
         counts[stationId].total++;
-        
+
         const status = ticket.ticket_status.toLowerCase();
         if (counts[stationId][status] !== undefined) {
           counts[stationId][status]++;
@@ -336,13 +395,13 @@ class KDSCore {
   async refresh() {
     try {
       this.emit('refresh_start');
-      
+
       await Promise.all([
         this.loadStations(),
         this.loadTickets(),
         this.loadDashboard()
       ]);
-      
+
       this.emit('refresh_complete');
       console.log('✅ KDS 데이터 새로고침 완료');
     } catch (error) {
@@ -358,11 +417,11 @@ class KDSCore {
       this.eventSource.close();
       this.eventSource = null;
     }
-    
+
     this.updateCallbacks.clear();
     this.stations.clear();
     this.tickets.clear();
-    
+
     console.log('🧹 KDS Core 정리 완료');
   }
 

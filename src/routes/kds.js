@@ -135,14 +135,12 @@ router.get('/tickets', async (req, res) => {
 
   } catch (error) {
     console.error('❌ KDS 티켓 조회 실패:', error);
-    
-    // 빈 응답으로 폴백
-    res.json({
-      success: true,
-      tickets: [],
-      total_tickets: 0,
-      timestamp: Date.now(),
-      error: 'KDS 데이터 로딩 중 오류 발생'
+    res.status(500).json({
+      success: false,
+      error: 'KDS 티켓 조회 실패',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: Date.now()
     });
   }
 });
@@ -301,22 +299,12 @@ router.get('/stations', async (req, res) => {
 
   } catch (error) {
     console.error('❌ 스테이션 조회 실패:', error);
-    
-    // 에러 시 기본 스테이션 반환
-    const fallbackStations = [
-      { id: 1, name: '주방', code: 'KITCHEN', is_expo: false, display_order: 1,
-        active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 },
-      { id: 2, name: '음료', code: 'BEVERAGE', is_expo: false, display_order: 2,
-        active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 },
-      { id: 3, name: '엑스포', code: 'EXPO', is_expo: true, display_order: 3,
-        active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 }
-    ];
-
-    res.json({
-      success: true,
-      stations: fallbackStations,
-      fallback: true,
-      error: '스테이션 데이터 로딩 실패, 기본값 반환'
+    res.status(500).json({
+      success: false,
+      error: '스테이션 조회 실패',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: Date.now()
     });
   }
 });
@@ -608,20 +596,12 @@ router.get('/dashboard', async (req, res) => {
 
   } catch (error) {
     console.error('❌ KDS 대시보드 조회 실패:', error);
-    
-    // 에러 시 기본 대시보드 반환
-    res.json({
-      success: true,
-      dashboard: {
-        pending_count: 0,
-        cooking_count: 0,
-        done_count: 0,
-        served_today: 0,
-        avg_cook_time_minutes: null,
-        avg_wait_time_minutes: null
-      },
-      timestamp: Date.now(),
-      error: '대시보드 데이터 로딩 실패, 기본값 반환'
+    res.status(500).json({
+      success: false,
+      error: '대시보드 조회 실패',
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: Date.now()
     });
   }
 });

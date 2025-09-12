@@ -1,4 +1,3 @@
-
 /**
  * KDS 메인 컨트롤러 v3.0
  * 책임: KDS 전체 흐름 제어, 데이터와 UI 연결, 상태 관리
@@ -9,7 +8,7 @@ window.KDSController = {
   storeId: null,
   core: null,
   isInitialized: false,
-  
+
   // 초기화
   async init(storeId) {
     try {
@@ -168,7 +167,7 @@ window.KDSController = {
       }
 
       await this.core.updateTicketStatus(ticketId, action, reason);
-      
+
       // 사운드 효과
       this.playActionSound(action);
 
@@ -204,19 +203,38 @@ window.KDSController = {
   },
 
   // 에러 처리
-  handleError(errorData) {
-    console.error('❌ KDS 에러:', errorData);
-    
-    const errorMessages = {
-      'load_stations': '스테이션 정보를 불러오는데 실패했습니다',
-      'load_tickets': '티켓 정보를 불러오는데 실패했습니다',
-      'load_dashboard': '대시보드 정보를 불러오는데 실패했습니다',
-      'update_ticket_status': '티켓 상태 변경에 실패했습니다',
-      'server_error': '서버 오류가 발생했습니다'
-    };
+  handleError(error) {
+    console.error('❌ KDS 에러:', error);
 
-    const message = errorMessages[errorData.type] || '알 수 없는 오류가 발생했습니다';
-    KDSUI.showToast(message, 'error');
+    let errorMessage = '알 수 없는 오류가 발생했습니다';
+    let detailMessage = '';
+
+    if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error && error.message) {
+      errorMessage = error.message;
+
+      // HTTP 에러인 경우 상태 코드 표시
+      if (error.status) {
+        detailMessage = `HTTP ${error.status}`;
+      }
+
+      // 서버에서 반환한 에러 메시지가 있는 경우
+      if (error.error && error.error !== error.message) {
+        detailMessage = error.error;
+      }
+
+      // 개발 모드에서는 스택 트레이스도 콘솔에 출력
+      if (error.stack && typeof window !== 'undefined' && window.KDS_CONFIG?.DEBUG) {
+        console.error('❌ 스택 트레이스:', error.stack);
+      }
+    }
+
+    const fullMessage = detailMessage ? `${errorMessage} (${detailMessage})` : errorMessage;
+
+    if (this.ui && this.ui.showToast) {
+      this.ui.showToast(fullMessage, 'error', 8000);
+    }
   },
 
   // 알림 사운드 재생
@@ -314,7 +332,7 @@ window.KDSController = {
       this.core.destroy();
       this.core = null;
     }
-    
+
     this.isInitialized = false;
     console.log('🧹 KDS Controller 정리 완료');
   }
