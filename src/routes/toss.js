@@ -286,7 +286,7 @@ router.post('/confirm', async (req, res) => {
           status,
           payment_status,
           total_price
-        ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
+        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3)
         RETURNING id
       `, [
         finalOrderInfo.storeId,
@@ -304,7 +304,7 @@ router.post('/confirm', async (req, res) => {
           status,
           payment_type,
           source
-        ) VALUES ($1, 1, 'COMPLETED', 'PREPAID', 'TLL')
+        ) VALUES ($1, 1, 'PENDING', 'PREPAID', 'TLL')
         RETURNING id
       `, [newOrderId]);
 
@@ -322,7 +322,7 @@ router.post('/confirm', async (req, res) => {
             total_price,
             item_status,
             cook_station
-          ) VALUES ($1, $2, $3, $4, $5, $6, 'SERVED', $7)
+          ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7)
         `, [
           ticketId,
           item.menuId || 1,
