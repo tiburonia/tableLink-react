@@ -3,6 +3,81 @@ const router = express.Router();
 const pool  = require('../db/pool');
 const { v4: uuidv4 } = require('uuid');
 
+// 매장 검색 API
+router.get('/search', async (req, res) => {
+  try {
+    const { query, limit = 20 } = req.query;
+
+    if (!query || query.trim().length < 1) {
+      return res.status(400).json({
+        success: false,
+        error: '검색어를 입력해주세요'
+      });
+    }
+
+    const searchQuery = query.trim();
+    const searchLimit = Math.min(parseInt(limit) || 20, 100);
+
+    console.log(`🔍 매장 검색 요청: "${searchQuery}" (limit: ${searchLimit})`);
+
+    // 매장 검색 쿼리 (이름, 카테고리로 검색)
+    const searchResult = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as address
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE 
+        s.name ILIKE $1 
+        OR si.category ILIKE $1
+      ORDER BY 
+        CASE 
+          WHEN s.name ILIKE $2 THEN 1
+          WHEN s.name ILIKE $1 THEN 2
+          ELSE 3
+        END,
+        s.is_open DESC,
+        si.rating_average DESC NULLS LAST
+      LIMIT $3
+    `, [
+      `%${searchQuery}%`,
+      `${searchQuery}%`,
+      searchLimit
+    ]);
+
+    const stores = searchResult.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      category: store.category || '기타',
+      address: store.address || '주소 정보 없음',
+      isOpen: store.is_open || false,
+      ratingAverage: parseFloat(store.rating_average) || 0
+    }));
+
+    console.log(`✅ 매장 검색 완료: ${stores.length}개 결과`);
+
+    res.json({
+      success: true,
+      stores: stores,
+      query: searchQuery,
+      count: stores.length
+    });
+
+  } catch (error) {
+    console.error('❌ 매장 검색 오류:', error);
+    res.status(500).json({
+      success: false,
+      error: '매장 검색 중 오류가 발생했습니다'
+    });
+  }
+});
+
 // 매장 기본 정보 조회 API
 router.get('/:storeId', async (req, res) => {
   try {
