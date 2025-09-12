@@ -1,0 +1,245 @@
+order_tickets 단위 KDS를 어떻게 찍어내야 할지 딱 정리해줄게.
+핵심은 “티켓 = 카드 1장”, “아이템 = 카드 내부 줄”, “상태 전환은 아이템 중심 → 티켓 자동 집계”야.
+
+1) 데이터 규격(Contract)
+KDS가 받는 티켓 페이로드
+{
+  "ticket_id": 123,
+  "order_id": 456,
+  "store_id": 1,
+  "batch_no": 1,
+  "table_label": "A-3",            // 있으면
+  "created_at": "2025-09-12T19:32:00",
+  "status": "PENDING",             // PENDING|COOKING|DONE
+  "print_status": "WAITING",       // WAITING|QUEUED|PRINTED|FAILED
+  "display_status": "VISIBLE",     // VISIBLE|HIDDEN
+  "payment_type": "POSTPAID",      // POSTPAID|PREPAID 등
+  "version": 1,                    // 낙관적 락(동시 수정 대비)
+  "items": [
+    {
+      "id": 987,
+      "menu_name": "치즈돈까스",
+      "quantity": 2,
+      "item_status": "PENDING",    // PENDING|COOKING|DONE|CANCELED
+      "cook_station": "FRY"
+    }
+  ]
+}
+
+2) 상태 규칙(아이템→티켓 집계)
+
+아이템 단위(order_items.item_status) 전환을 기본으로 하고,
+
+티켓 단위(order_tickets.status)는 자동 집계:
+
+if 모든 item = DONE 또는 CANCELED → ticket = DONE
+else if 하나라도 COOKING → ticket = COOKING
+else → ticket = PENDING
+
+
+표시/프린트 보조 상태
+
+display_status: DONE 이후 N분(예: 3분) 지나면 HIDDEN
+
+print_status: WAITING → (출력큐 진입) QUEUED → PRINTED | FAILED
+
+3) API 설계 (Express 기준)
+3.1 티켓 목록(폴링용)
+GET /api/kds/tickets?store_id=1&status=PENDING&station=FRY
+
+
+status 없으면 PENDING+COOKING 기본
+
+station 있으면 해당 cook_station 포함 아이템이 있는 티켓만
+
+SQL 예시
+
+-- 티켓 헤더
+WITH t AS (
+  SELECT ot.*
+  FROM order_tickets ot
+  JOIN orders o ON o.id = ot.order_id
+  WHERE o.store_id = $1
+    AND ( $2::text IS NULL OR ot.status = $2 )         -- status filter
+)
+SELECT t.id AS ticket_id, t.order_id, t.batch_no, t.status, t.print_status,
+       t.display_status, t.payment_type, t.version, t.created_at,
+       o.store_id, st.label AS table_label
+FROM t
+JOIN orders o ON o.id = t.order_id
+LEFT JOIN store_tables st ON st.pos_session_id = o.id;
+
+
+아이템 조인
+
+SELECT oi.*
+FROM order_items oi
+WHERE oi.ticket_id = ANY($1::int[])
+  AND ( $2::text IS NULL OR oi.cook_station = $2 );
+
+3.2 아이템 상태 변경 (버튼 액션)
+PATCH /api/kds/items/:id
+{ "item_status": "COOKING" }
+
+
+트랜잭션 로직
+
+해당 item item_status 업데이트
+
+같은 ticket_id의 아이템들을 다시 집계해 order_tickets.status 갱신
+
+SQL 예시(하나의 트랜잭션/CTE)
+
+BEGIN;
+
+UPDATE order_items
+SET item_status = $1, created_at = created_at -- no-op for trigger touch
+WHERE id = $2;
+
+WITH counts AS (
+  SELECT ticket_id,
+         COUNT(*) FILTER (WHERE item_status IN ('PENDING','COOKING')) AS outstanding,
+         COUNT(*) FILTER (WHERE item_status = 'COOKING') AS cooking_cnt
+  FROM order_items
+  WHERE ticket_id = (SELECT ticket_id FROM order_items WHERE id = $2)
+  GROUP BY ticket_id
+)
+UPDATE order_tickets ot
+SET status = CASE
+               WHEN c.outstanding = 0 THEN 'DONE'
+               WHEN c.cooking_cnt > 0 THEN 'COOKING'
+               ELSE 'PENDING'
+             END,
+    version = ot.version + 1
+FROM counts c
+WHERE ot.id = c.ticket_id;
+
+COMMIT;
+
+3.3 티켓 상태 강제 변경(옵션)
+PATCH /api/kds/tickets/:id
+{ "status": "DONE", "if_version": 3 }
+
+
+낙관적 락: version 비교해서 불일치 시 409 반환(중복 클릭/레이스 방지)
+
+SQL
+
+UPDATE order_tickets
+SET status = $1, version = version + 1
+WHERE id = $2 AND version = $3;
+-- rowcount=0 이면 409
+
+3.4 프린트 큐 진입
+POST /api/kds/tickets/:id/print
+
+
+print_status: WAITING → QUEUED
+
+프린터 워커(별도 프로세스)가 QUEUED를 가져가 ESC/POS 출력 → PRINTED/FAILED 업데이트
+
+4) 폴링 → 실시간 확장
+
+MVP: 3~5초 폴링(GET /api/kds/tickets)
+
+확장: SSE 또는 WebSocket
+
+채널: store:{store_id} / store:{store_id}:station:{cook_station}
+
+이벤트: ticket.created, item.updated, ticket.updated, ticket.printed
+
+5) UI 패턴(그리드 카드)
+
+상단 바: 매장명 / 시계 / 필터(PENDING, COOKING, DONE / 스테이션)
+
+메인: 카드 그리드(2~3열)
+
+헤더: Table A-3 · Ticket #123 · 19:32 · batch_no #1
+
+바디: 아이템 리스트(상태 뱃지 + 수량)
+
+푸터 버튼:
+
+전체 조리 시작: 모든 PENDING → COOKING
+
+전체 완료: 모든 COOKING→DONE (or 아이템별 개별 버튼)
+
+UX
+
+상태별 색: PENDING(회색) / COOKING(주황) / DONE(초록)
+
+DONE 카드는 아래로 이동 + 3분 후 자동 숨김(display_status=HIDDEN)
+
+소리/진동 알림(신규 티켓 도착)
+
+6) 동시성/안전장치
+
+idempotency: 상태 변경 API는 같은 요청을 중복 보내도 최종 상태가 같도록 설계
+
+version 락: order_tickets.version로 레이스 막기(프론트는 patch 전 버전 포함)
+
+권한: KDS 토큰(매장별)로 보호, 다른 매장 데이터 차단
+
+프린트 리트라이: FAILED 시 retry_count, last_error 적재
+
+7) order_tickets 필드 적극 활용
+
+batch_no: 같은 order_id에서 추가 주문을 구분 → KDS는 티켓을 배치 단위로 인식
+
+print_status: KRP(주방프린터) 워크플로우 제어
+
+display_status: 화면 정리(자동 숨김/수동 숨김)
+
+payment_type: 선불/후불에 따라 표시(후불인 경우 POS 알림 표시 등)
+
+source: TLL/TLM/전화주문 등 출처 라벨링
+
+8) 즉시 붙여 쓸 수 있는 최소 SQL 셋
+티켓 + 아이템 한방 조회(폴링 응답용)
+WITH tk AS (
+  SELECT ot.id AS ticket_id, ot.order_id, ot.batch_no, ot.status, ot.print_status,
+         ot.display_status, ot.payment_type, ot.version, ot.created_at,
+         o.store_id, st.label AS table_label
+  FROM order_tickets ot
+  JOIN orders o ON o.id = ot.order_id
+  LEFT JOIN store_tables st ON st.pos_session_id = o.id
+  WHERE o.store_id = $1
+    AND ( $2::text IS NULL OR ot.status = $2 )
+    AND ( ot.display_status = 'VISIBLE' )
+  ORDER BY ot.created_at ASC
+)
+SELECT tk.*, json_agg(json_build_object(
+         'id', oi.id,
+         'menu_name', oi.menu_name,
+         'quantity', oi.quantity,
+         'item_status', oi.item_status,
+         'cook_station', oi.cook_station
+       ) ORDER BY oi.id) AS items
+FROM tk
+JOIN order_items oi ON oi.ticket_id = tk.ticket_id
+WHERE ( $3::text IS NULL OR oi.cook_station = $3 )
+GROUP BY tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
+         tk.display_status, tk.payment_type, tk.version, tk.created_at,
+         tk.store_id, tk.table_label;
+
+9) KRP(주방 프린터) 훅(선택)
+
+티켓 생성 시 print_status=WAITING → /print-queue에 enqueue
+
+워커가 ESC/POS로 출력 → 결과 업데이트
+
+UPDATE order_tickets
+SET print_status = CASE WHEN $1 THEN 'PRINTED' ELSE 'FAILED' END
+WHERE id = $2;
+
+10) MVP 실행 순서 체크리스트
+
+결제 성공 후 orders + 1개의 order_tickets + order_items 인서트 완료
+
+/api/kds/tickets 폴링으로 카드 뿌리기
+
+아이템 상태 변경 → 집계로 티켓 상태 자동 변경
+
+티켓 DONE → 3분 후 display_status=HIDDEN 정리 배치(서버 켜질 때 한 번 돌려도 됨)
+
+(옵션) 프린터 큐 연동
