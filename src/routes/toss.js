@@ -280,13 +280,15 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          total_price
-        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3)
+          " total_price",
+          table_num
+        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
         RETURNING id
       `, [
         finalOrderInfo.storeId,
         finalOrderInfo.userPk, // user_pk를 user_id에 저장 (정수형)
-        finalOrderInfo.finalTotal
+        finalOrderInfo.finalTotal,
+        finalOrderInfo.tableNumber
       ]);
 
       const newOrderId = orderResult.rows[0].id;

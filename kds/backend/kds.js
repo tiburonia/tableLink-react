@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../../src/db/pool');
@@ -648,7 +647,7 @@ router.get('/dashboard', async (req, res) => {
             avg_cook_time_minutes: null,
             avg_wait_time_minutes: null
           }] 
-        };
+        }; 
       }
     } catch (queryError) {
       console.warn('⚠️ 대시보드 쿼리 실패, 기본값 반환:', queryError.message);
@@ -661,7 +660,7 @@ router.get('/dashboard', async (req, res) => {
           avg_cook_time_minutes: null,
           avg_wait_time_minutes: null
         }] 
-      };
+      }; 
     }
 
     const dashboard = result.rows[0] || {};
@@ -734,7 +733,7 @@ router.get('/stream/:store_id', (req, res) => {
         try {
           console.log(`📡 PostgreSQL NOTIFY 수신 (매장 ${storeId}):`, msg.payload);
           const payload = JSON.parse(msg.payload);
-          
+
           // 해당 매장의 알림만 전송
           if (payload.store_id === storeId || payload.store_id === parseInt(storeId)) {
             const message = `data: ${JSON.stringify(payload)}\n\n`;
@@ -749,7 +748,7 @@ router.get('/stream/:store_id', (req, res) => {
             type: 'error',
             message: 'SSE 알림 처리 실패',
             error: error.message
-          })}\n\n`);
+          })}\\n\\n`);
         }
       });
 
@@ -765,7 +764,7 @@ router.get('/stream/:store_id', (req, res) => {
         type: 'error',
         message: 'SSE 연결 실패',
         error: error.message
-      })}\n\n`);
+      })}\\n\\n`);
     }
   };
 
@@ -782,9 +781,9 @@ router.get('/stream/:store_id', (req, res) => {
   // 연결 종료 처리
   req.on('close', () => {
     console.log(`🔌 KDS SSE 연결 종료: 매장 ${storeId}`);
-    
+
     clearInterval(keepAlive);
-    
+
     if (client) {
       client.release();
     }
@@ -841,13 +840,13 @@ async function ensureKDSTables() {
     return;
   }
 
-  // 이미 확인했으면 스�ip
+  // 이미 확인했으면 스킵
   if (ensureKDSTables._checked) {
     return;
   }
 
   const client = await pool.connect();
-  
+
   try {
     console.log('🔍 KDS 테이블 존재 여부 확인 중...');
 
@@ -882,7 +881,7 @@ async function ensureKDSTables() {
 // 실제 테이블 생성 함수
 async function createKDSTables() {
   const client = await pool.connect();
-  
+
   try {
     console.log('📋 KDS 필수 테이블들을 생성합니다...');
 
@@ -893,11 +892,13 @@ async function createKDSTables() {
       CREATE TABLE IF NOT EXISTS order_tickets (
         id SERIAL PRIMARY KEY,
         order_id INTEGER,
+        store_id INTEGER,
         batch_no INTEGER DEFAULT 1,
         status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
         print_status VARCHAR(20) DEFAULT 'WAITING' CHECK (print_status IN ('WAITING', 'QUEUED', 'PRINTED', 'FAILED')),
         display_status VARCHAR(20) DEFAULT 'VISIBLE' CHECK (display_status IN ('VISIBLE', 'HIDDEN')),
         payment_type VARCHAR(20) DEFAULT 'POSTPAID',
+        table_num INTEGER, -- 테이블 번호
         version INTEGER DEFAULT 1,
         print_requested_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW(),
@@ -916,7 +917,7 @@ async function createKDSTables() {
           END IF;
         EXCEPTION
           WHEN duplicate_object THEN null;
-        END $$;
+        END $$
       `);
     } catch (err) {
       console.log('⚠️ 외래키 제약조건 추가 스킵:', err.message);
@@ -927,6 +928,8 @@ async function createKDSTables() {
       CREATE INDEX IF NOT EXISTS idx_order_tickets_order_id ON order_tickets(order_id);
       CREATE INDEX IF NOT EXISTS idx_order_tickets_status ON order_tickets(status);
       CREATE INDEX IF NOT EXISTS idx_order_tickets_display_status ON order_tickets(display_status);
+      CREATE INDEX IF NOT EXISTS idx_order_tickets_store_id ON order_tickets(store_id); -- store_id 인덱스 추가
+      CREATE INDEX IF NOT EXISTS idx_order_tickets_table_num ON order_tickets(table_num); -- table_num 인덱스 추가
     `);
 
     // order_items 테이블이 존재하는 경우만 확장
@@ -938,7 +941,7 @@ async function createKDSTables() {
       await client.query(`
         ALTER TABLE order_items 
         ADD COLUMN IF NOT EXISTS ticket_id INTEGER,
-        ADD COLUMN IF NOT EXISTS item_status VARCHAR(20) DEFAULT 'PENDING',
+        ADD COLUMN IF NOT EXISTS item_status VARCHAR(20) DEFAULT 'PENDING' CHECK (item_status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
         ADD COLUMN IF NOT EXISTS cook_station VARCHAR(50) DEFAULT 'KITCHEN',
         ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
       `);
@@ -991,7 +994,7 @@ async function createKDSTables() {
 }
 
 // =================== 주문 생성 시 자동 티켓 생성 함수 ===================
-async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
+async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL', tableNumber) {
   const client = await pool.connect();
 
   try {
@@ -1017,11 +1020,11 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
     const ticketResult = await client.query(`
       INSERT INTO order_tickets (
         order_id, store_id, batch_no, status, payment_type,
-        print_status, display_status, created_at, updated_at
+        print_status, display_status, table_num, created_at, updated_at
       )
-      VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'WAITING', 'VISIBLE', NOW(), NOW())
+      VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'WAITING', 'VISIBLE', $3, NOW(), NOW())
       RETURNING id
-    `, [orderId, storeId]);
+    `, [orderId, storeId, tableNumber]);
 
     const ticketId = ticketResult.rows[0].id;
 
@@ -1058,22 +1061,25 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
 
     // 실시간 알림
     try {
-      await pool.query(`
-        SELECT pg_notify('kds_updates', $1)
-      `, [JSON.stringify({
-        type: 'new_ticket',
-        store_id: parseInt(storeId),
-        ticket_id: ticketId,
-        order_id: parseInt(orderId),
-        source_system: sourceSystem,
-        timestamp: Date.now()
-      })]);
+      await pool.query(
+        `SELECT pg_notify('kds_updates', $1)`,
+        [
+          JSON.stringify({
+            type: 'new_ticket',
+            store_id: parseInt(storeId),
+            ticket_id: ticketId,
+            order_id: parseInt(orderId),
+            source_system: sourceSystem,
+            timestamp: Date.now()
+          })
+        ]
+      );
     } catch (notifyError) {
       console.warn('⚠️ 실시간 알림 실패:', notifyError.message);
     }
 
     console.log(`✅ KDS 티켓 생성 완료: 티켓 ID ${ticketId}`);
-    
+
     return {
       success: true,
       message: 'KDS 티켓 생성 완료',
@@ -1092,16 +1098,16 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
 // =================== 외부 호출용 티켓 생성 API ===================
 router.post('/create-tickets', async (req, res) => {
   try {
-    const { order_id, store_id, source_system = 'TLL' } = req.body;
+    const { order_id, store_id, source_system = 'TLL', table_number } = req.body;
 
-    if (!order_id || !store_id) {
+    if (!order_id || !store_id || !table_number) {
       return res.status(400).json({
         success: false,
-        message: 'order_id와 store_id가 필요합니다'
+        message: 'order_id, store_id, table_number가 필요합니다'
       });
     }
 
-    const result = await createOrderTickets(order_id, store_id, source_system);
+    const result = await createOrderTickets(order_id, store_id, source_system, table_number);
     res.json(result);
 
   } catch (error) {

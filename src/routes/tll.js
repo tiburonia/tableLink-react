@@ -94,10 +94,10 @@ router.post('/checks/from-qr', async (req, res) => {
       // 새 주문 생성 (현재 스키마에 맞게)
       const newOrderResult = await client.query(`
         INSERT INTO orders (
-          store_id, user_id, guest_id, source, status, payment_status, table_number
-        ) VALUES ($1, $2, $3, 'TLL', 'OPEN', 'UNPAID', $4)
+          store_id, user_id, guest_id, source, status, payment_status, table_number, table_num
+        ) VALUES ($1, $2, $3, 'TLL', 'OPEN', 'UNPAID', $4, $5)
         RETURNING id
-      `, [storeId, user_id || null, guestId, tableNumber]);
+      `, [storeId, user_id || null, guestId, tableNumber, tableNumber]);
 
       orderId = newOrderResult.rows[0].id;
       console.log(`✅ TLL 새 주문 ${orderId} 생성 완료 (테이블 ${tableNumber})`);
@@ -174,10 +174,10 @@ router.post('/orders', async (req, res) => {
 
     // 주문 티켓 생성
     const ticketResult = await client.query(`
-      INSERT INTO order_tickets (order_id, store_id, batch_no, status, payment_type)
-      VALUES ($1, $2, 1, 'PENDING', 'PREPAID')
+      INSERT INTO order_tickets (order_id, store_id, batch_no, status, payment_type, table_num)
+      VALUES ($1, $2, 1, 'PENDING', 'PREPAID', $3)
       RETURNING id
-    `, [check_id, store_id]);
+    `, [check_id, store_id, tableNumber]);
 
     const ticketId = ticketResult.rows[0].id;
 
