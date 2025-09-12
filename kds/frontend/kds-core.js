@@ -1,449 +1,653 @@
+
 /**
- * KDS 핵심 데이터 관리 모듈 v3.0
- * 책임: 데이터 로딩, API 통신, 실시간 연결 관리, 상태 관리
+ * KDS Core v4.0 - Order Tickets 기반 시스템
+ * 티켓 = 카드 1장, 아이템 = 카드 내부 줄, 상태 전환은 아이템 중심 → 티켓 자동 집계
  */
 
-// 중복 로딩 방지
-if (window.KDSCore) {
-  console.log('⚠️ KDSCore가 이미 로드됨');
-} else {
-
 class KDSCore {
-  constructor(storeId) {
-    this.storeId = storeId;
-    this.stations = new Map();
-    this.tickets = new Map();
-    this.dashboard = {};
-    this.eventSource = null;
-    this.lastUpdate = 0;
-    this.connectionState = 'disconnected';
-    this.updateCallbacks = new Set();
-    this.retryCount = 0;
-    this.maxRetries = 5;
+  constructor() {
+    this.config = {
+      storeId: null,
+      pollingInterval: 3000,
+      cleanupInterval: 180000, // 3분
+      maxRetries: 3,
+      apiBase: '/api/kds'
+    };
 
-    console.log(`🚀 KDS Core v3.0 초기화 - 매장 ${storeId}`);
+    this.state = {
+      tickets: new Map(),
+      stations: new Map(),
+      dashboard: {},
+      isPolling: false,
+      retryCount: 0,
+      lastUpdate: null
+    };
+
+    this.eventHandlers = new Map();
+    this.pollingTimer = null;
+    this.cleanupTimer = null;
+    this.sseConnection = null;
+
+    console.log('🎫 KDS Core v4.0 초기화 완료');
   }
 
-  // 상태 변경 이벤트 구독
-  onUpdate(callback) {
-    this.updateCallbacks.add(callback);
-    return () => this.updateCallbacks.delete(callback);
-  }
-
-  // 상태 변경 알림
-  emit(event, data) {
-    this.updateCallbacks.forEach(callback => {
-      try {
-        callback(event, data);
-      } catch (error) {
-        console.error('❌ 이벤트 콜백 실행 실패:', error);
-      }
-    });
-  }
-
-  // 스테이션 데이터 로드
-  async loadStations() {
+  // =================== 초기화 ===================
+  async initialize(storeId, options = {}) {
     try {
-      const response = await fetch(`/api/kds/stations?store_id=${this.storeId}`);
-      if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch (parseError) {
-          // JSON 파싱 실패 시 기본 에러 메시지 사용
-        }
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
-      }
+      this.config.storeId = parseInt(storeId);
+      Object.assign(this.config, options);
 
-      const data = await response.json();
+      console.log(`🚀 KDS Core 시작: 매장 ${this.config.storeId}`);
 
-      if (data.success) {
-        this.stations.clear();
-        data.stations.forEach(station => {
-          this.stations.set(station.id, station);
-        });
+      // 초기 데이터 로드
+      await this.loadInitialData();
 
-        this.emit('stations_loaded', Array.from(this.stations.values()));
-        return Array.from(this.stations.values());
-      } else {
-        throw new Error(data.message);
-      }
+      // 폴링 시작
+      this.startPolling();
+
+      // 실시간 연결 시도
+      this.connectSSE();
+
+      // 자동 정리 타이머
+      this.startCleanupTimer();
+
+      this.emit('initialized', { storeId: this.config.storeId });
+
+      return true;
     } catch (error) {
-      console.error('❌ 스테이션 로딩 실패:', error);
-      this.emit('error', { type: 'load_stations', error });
-      throw error;
+      console.error('❌ KDS Core 초기화 실패:', error);
+      this.emit('error', error);
+      return false;
     }
   }
 
-  // 티켓 데이터 로드
-  async loadTickets(stationId = 'all', status = null) {
-    try {
-      let url = `/api/kds/tickets?store_id=${this.storeId}`;
-      if (stationId !== 'all') url += `&station_id=${stationId}`;
-      if (status) url += `&status=${status}`;
+  // =================== 데이터 로드 ===================
+  async loadInitialData() {
+    const promises = [
+      this.fetchTickets(),
+      this.fetchStations(),
+      this.fetchDashboard()
+    ];
 
-      const response = await fetch(url);
+    await Promise.allSettled(promises);
+  }
+
+  async fetchTickets(status = 'PENDING,COOKING', station = null) {
+    try {
+      const params = new URLSearchParams({
+        store_id: this.config.storeId,
+        status: status
+      });
+
+      if (station) {
+        params.append('station', station);
+      }
+
+      const response = await fetch(`${this.config.apiBase}/tickets?${params}`);
+      
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch (parseError) {
-          // JSON 파싱 실패 시 기본 에러 메시지 사용
-        }
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
 
       if (data.success) {
-        // 티켓 맵 업데이트
-        if (stationId === 'all') {
-          this.tickets.clear();
-        }
-
+        // 기존 티켓 맵 업데이트
+        const newTickets = new Map();
+        
         data.tickets.forEach(ticket => {
-          this.tickets.set(ticket.ticket_id, ticket);
+          newTickets.set(ticket.ticket_id, {
+            ...ticket,
+            items: ticket.items || [],
+            updated_at: new Date(ticket.created_at),
+            elapsed_minutes: Math.floor(ticket.elapsed_seconds / 60)
+          });
         });
 
-        this.lastUpdate = data.timestamp;
-        this.emit('tickets_loaded', {
-          tickets: Array.from(this.tickets.values()),
-          stationId,
-          status
-        });
+        const oldTickets = new Map(this.state.tickets);
+        this.state.tickets = newTickets;
+        this.state.lastUpdate = new Date();
 
-        return Array.from(this.tickets.values());
+        // 변경 사항 감지 및 이벤트 발생
+        this.detectChanges(oldTickets, newTickets);
+        this.emit('tickets_updated', Array.from(newTickets.values()));
+
+        this.state.retryCount = 0;
+        return Array.from(newTickets.values());
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || '티켓 조회 실패');
       }
     } catch (error) {
-      console.error('❌ 티켓 로딩 실패:', error);
-      this.emit('error', { type: 'load_tickets', error });
-      throw error;
+      console.error('❌ 티켓 조회 실패:', error);
+      this.handleError(error);
+      return [];
     }
   }
 
-  // 대시보드 데이터 로드
-  async loadDashboard() {
+  async fetchStations() {
     try {
-      const response = await fetch(`/api/kds/dashboard?store_id=${this.storeId}`);
+      const response = await fetch(`${this.config.apiBase}/stations?store_id=${this.config.storeId}`);
+      
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch (parseError) {
-          // JSON 파싱 실패 시 기본 에러 메시지 사용
-        }
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
 
       if (data.success) {
-        this.dashboard = data.dashboard;
-        this.emit('dashboard_loaded', this.dashboard);
-        return this.dashboard;
+        const stations = new Map();
+        data.stations.forEach(station => {
+          stations.set(station.id, station);
+        });
+
+        this.state.stations = stations;
+        this.emit('stations_updated', Array.from(stations.values()));
+
+        return Array.from(stations.values());
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || '스테이션 조회 실패');
       }
     } catch (error) {
-      console.error('❌ 대시보드 로딩 실패:', error);
-      this.emit('error', { type: 'load_dashboard', error });
+      console.error('❌ 스테이션 조회 실패:', error);
+      this.handleError(error);
+      return [];
+    }
+  }
+
+  async fetchDashboard() {
+    try {
+      const response = await fetch(`${this.config.apiBase}/dashboard?store_id=${this.config.storeId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.state.dashboard = data.dashboard;
+        this.emit('dashboard_updated', data.dashboard);
+
+        return data.dashboard;
+      } else {
+        throw new Error(data.message || '대시보드 조회 실패');
+      }
+    } catch (error) {
+      console.error('❌ 대시보드 조회 실패:', error);
+      this.handleError(error);
+      return {};
+    }
+  }
+
+  // =================== 상태 변경 ===================
+  async updateItemStatus(itemId, newStatus, reason = null) {
+    try {
+      console.log(`🔄 아이템 ${itemId} 상태 변경: ${newStatus}`);
+
+      const response = await fetch(`${this.config.apiBase}/items/${itemId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          item_status: newStatus,
+          actor_id: 'kds_user',
+          reason: reason
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.emit('item_status_changed', data.data);
+        
+        // 즉시 해당 티켓 업데이트
+        await this.refreshTicket(data.data.ticket_id);
+        
+        return data.data;
+      } else {
+        throw new Error(data.message || '아이템 상태 변경 실패');
+      }
+    } catch (error) {
+      console.error('❌ 아이템 상태 변경 실패:', error);
+      this.emit('error', error);
       throw error;
     }
   }
 
-  // 티켓 상태 변경
-  async updateTicketStatus(ticketId, action, reason = null) {
+  async updateTicketStatus(ticketId, newStatus, version = null, reason = null) {
     try {
-      const response = await fetch(`/api/kds/tickets/${ticketId}/status`, {
+      console.log(`🎫 티켓 ${ticketId} 상태 강제 변경: ${newStatus}`);
+
+      const payload = {
+        status: newStatus,
+        actor_id: 'kds_user',
+        reason: reason
+      };
+
+      if (version !== null) {
+        payload.if_version = version;
+      }
+
+      const response = await fetch(`${this.config.apiBase}/tickets/${ticketId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action, 
-          reason,
-          actor_type: 'USER',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        if (response.status === 409) {
+          throw new Error('버전 충돌이 발생했습니다. 페이지를 새로고침하세요.');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        this.emit('ticket_status_changed', data.data);
+        
+        // 즉시 해당 티켓 업데이트
+        await this.refreshTicket(ticketId);
+        
+        return data.data;
+      } else {
+        throw new Error(data.message || '티켓 상태 변경 실패');
+      }
+    } catch (error) {
+      console.error('❌ 티켓 상태 변경 실패:', error);
+      this.emit('error', error);
+      throw error;
+    }
+  }
+
+  async printTicket(ticketId) {
+    try {
+      console.log(`🖨️ 티켓 ${ticketId} 프린트 요청`);
+
+      const response = await fetch(`${this.config.apiBase}/tickets/${ticketId}/print`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           actor_id: 'kds_user'
         })
       });
 
       if (!response.ok) {
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.error) {
-            errorMessage = errorData.error;
-          }
-        } catch (parseError) {
-          // JSON 파싱 실패 시 기본 에러 메시지 사용
-        }
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
 
       if (data.success) {
-        // 로컬 상태 업데이트
-        const ticket = this.tickets.get(parseInt(ticketId));
-        if (ticket) {
-          ticket.ticket_status = data.data.new_status;
-          ticket.updated_at = new Date().toISOString();
-          this.tickets.set(parseInt(ticketId), ticket);
-        }
-
-        this.emit('ticket_updated', {
-          ticketId: parseInt(ticketId),
-          action,
-          oldStatus: data.data.old_status,
-          newStatus: data.data.new_status
-        });
-
+        this.emit('ticket_printed', data.data);
+        
+        // 즉시 해당 티켓 업데이트
+        await this.refreshTicket(ticketId);
+        
         return data.data;
       } else {
-        throw new Error(data.message);
+        throw new Error(data.message || '프린트 요청 실패');
       }
     } catch (error) {
-      console.error('❌ 티켓 상태 변경 실패:', error);
-      this.emit('error', { 
-        type: 'update_ticket_status', 
-        error,
-        ticketId,
-        action 
-      });
+      console.error('❌ 프린트 요청 실패:', error);
+      this.emit('error', error);
       throw error;
     }
   }
 
-  // 실시간 연결 설정
-  setupRealtime() {
-    if (this.eventSource) {
-      this.eventSource.close();
+  // =================== 편의 메서드 ===================
+  async startCooking(ticketId) {
+    const ticket = this.state.tickets.get(ticketId);
+    if (!ticket) {
+      throw new Error('티켓을 찾을 수 없습니다');
     }
 
-    console.log('🔌 KDS 실시간 연결 시작...');
-    this.connectionState = 'connecting';
-    this.emit('connection_state', 'connecting');
+    // 모든 PENDING 아이템을 COOKING으로 변경
+    const promises = ticket.items
+      .filter(item => item.item_status === 'PENDING')
+      .map(item => this.updateItemStatus(item.id, 'COOKING'));
 
-    this.eventSource = new EventSource(`/api/kds/stream/${this.storeId}`);
-
-    this.eventSource.onopen = () => {
-      console.log('✅ KDS 실시간 연결 성공');
-      this.connectionState = 'connected';
-      this.retryCount = 0;
-      this.emit('connection_state', 'connected');
-    };
-
-    this.eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📡 KDS 실시간 데이터:', data);
-
-        this.handleRealtimeMessage(data);
-      } catch (error) {
-        console.error('❌ 실시간 데이터 처리 실패:', error);
-      }
-    };
-
-    this.eventSource.onerror = (error) => {
-      console.error('❌ KDS 실시간 연결 오류:', error);
-      this.connectionState = 'disconnected';
-      this.emit('connection_state', 'disconnected');
-
-      // 재연결 시도
-      if (this.retryCount < this.maxRetries) {
-        this.retryCount++;
-        const delay = Math.min(1000 * Math.pow(2, this.retryCount), 30000);
-
-        console.log(`🔄 ${delay/1000}초 후 재연결 시도... (${this.retryCount}/${this.maxRetries})`);
-
-        setTimeout(() => {
-          if (this.connectionState === 'disconnected') {
-            this.setupRealtime();
-          }
-        }, delay);
-      }
-    };
+    await Promise.all(promises);
   }
 
-  // 실시간 메시지 처리
-  handleRealtimeMessage(data) {
+  async finishCooking(ticketId) {
+    const ticket = this.state.tickets.get(ticketId);
+    if (!ticket) {
+      throw new Error('티켓을 찾을 수 없습니다');
+    }
+
+    // 모든 COOKING 아이템을 DONE으로 변경
+    const promises = ticket.items
+      .filter(item => item.item_status === 'COOKING')
+      .map(item => this.updateItemStatus(item.id, 'DONE'));
+
+    await Promise.all(promises);
+  }
+
+  async cancelTicket(ticketId, reason = '주방에서 취소') {
+    const ticket = this.state.tickets.get(ticketId);
+    if (!ticket) {
+      throw new Error('티켓을 찾을 수 없습니다');
+    }
+
+    // 모든 활성 아이템을 CANCELED로 변경
+    const promises = ticket.items
+      .filter(item => ['PENDING', 'COOKING'].includes(item.item_status))
+      .map(item => this.updateItemStatus(item.id, 'CANCELED', reason));
+
+    await Promise.all(promises);
+  }
+
+  // =================== 조회 메서드 ===================
+  getTickets(filter = {}) {
+    let tickets = Array.from(this.state.tickets.values());
+
+    if (filter.status) {
+      const statuses = Array.isArray(filter.status) ? filter.status : [filter.status];
+      tickets = tickets.filter(ticket => statuses.includes(ticket.status));
+    }
+
+    if (filter.station) {
+      tickets = tickets.filter(ticket => 
+        ticket.items.some(item => item.cook_station === filter.station)
+      );
+    }
+
+    return tickets.sort((a, b) => {
+      // 상태별 정렬 (COOKING > PENDING > DONE)
+      const statusOrder = { 'COOKING': 1, 'PENDING': 2, 'DONE': 3 };
+      const statusCompare = statusOrder[a.status] - statusOrder[b.status];
+      
+      if (statusCompare !== 0) {
+        return statusCompare;
+      }
+
+      // 생성 시간순
+      return new Date(a.created_at) - new Date(b.created_at);
+    });
+  }
+
+  getStations() {
+    return Array.from(this.state.stations.values());
+  }
+
+  getDashboard() {
+    return { ...this.state.dashboard };
+  }
+
+  getTicket(ticketId) {
+    return this.state.tickets.get(ticketId) || null;
+  }
+
+  // =================== 실시간 연결 ===================
+  connectSSE() {
+    try {
+      if (this.sseConnection) {
+        this.sseConnection.close();
+      }
+
+      const url = `${this.config.apiBase}/stream/${this.config.storeId}`;
+      this.sseConnection = new EventSource(url);
+
+      this.sseConnection.onopen = () => {
+        console.log('🔌 KDS SSE 연결 성공');
+        this.emit('sse_connected');
+      };
+
+      this.sseConnection.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handleSSEMessage(data);
+        } catch (error) {
+          console.warn('⚠️ SSE 메시지 파싱 실패:', error);
+        }
+      };
+
+      this.sseConnection.onerror = (error) => {
+        console.warn('⚠️ KDS SSE 연결 오류:', error);
+        this.emit('sse_error', error);
+
+        // 재연결 시도
+        setTimeout(() => {
+          if (!this.sseConnection || this.sseConnection.readyState === EventSource.CLOSED) {
+            console.log('🔄 KDS SSE 재연결 시도...');
+            this.connectSSE();
+          }
+        }, 5000);
+      };
+
+    } catch (error) {
+      console.error('❌ SSE 연결 설정 실패:', error);
+    }
+  }
+
+  handleSSEMessage(data) {
+    console.log('📨 KDS SSE 메시지:', data);
+
     switch (data.type) {
       case 'connected':
-        console.log('✅ KDS 실시간 연결 확인');
+        console.log('✅ KDS SSE 연결 확인');
         break;
 
-      case 'keepalive':
-        // keepalive는 무시
+      case 'new_ticket':
+        this.emit('new_ticket', data);
+        this.fetchTickets(); // 새 티켓 로드
         break;
 
-      case 'new_tickets':
-        console.log('🎫 새 티켓 알림:', data);
-        this.emit('new_tickets', data);
-        // 자동 새로고침
-        this.loadTickets();
+      case 'item_status_change':
+        this.emit('item_updated', data);
+        this.refreshTicket(data.ticket_id);
         break;
 
       case 'ticket_status_change':
-        console.log('🔄 티켓 상태 변경 알림:', data);
-
-        // 로컬 상태 업데이트
-        const ticket = this.tickets.get(data.ticket_id);
-        if (ticket) {
-          ticket.ticket_status = data.new_status;
-          ticket.updated_at = new Date().toISOString();
-          this.tickets.set(data.ticket_id, ticket);
-        }
-
-        this.emit('ticket_status_changed', data);
+        this.emit('ticket_updated', data);
+        this.refreshTicket(data.ticket_id);
         break;
 
-      case 'error':
-        console.error('❌ 서버 에러:', data.message);
-        this.emit('error', { type: 'server_error', error: data });
+      case 'keepalive':
+        // 연결 유지 메시지
         break;
 
       default:
-        console.log('📨 알 수 없는 실시간 메시지:', data.type);
-        this.emit('unknown_message', data);
+        console.log('🔔 KDS 알림:', data);
+        this.emit('notification', data);
     }
   }
 
-  // 필터링된 티켓 조회
-  getFilteredTickets(stationId = 'all', status = null) {
-    let tickets = Array.from(this.tickets.values());
-
-    if (stationId !== 'all') {
-      tickets = tickets.filter(ticket => ticket.station_id === parseInt(stationId));
+  // =================== 폴링 관리 ===================
+  startPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
     }
 
-    if (status) {
-      tickets = tickets.filter(ticket => ticket.ticket_status === status);
-    }
+    this.state.isPolling = true;
 
-    // 정렬: 상태별, 코스별, 시간별
-    tickets.sort((a, b) => {
-      // 1. 상태 우선순위
-      const statusOrder = { 'COOKING': 1, 'PENDING': 2, 'DONE': 3 };
-      const statusDiff = (statusOrder[a.ticket_status] || 4) - (statusOrder[b.ticket_status] || 4);
-      if (statusDiff !== 0) return statusDiff;
+    this.pollingTimer = setInterval(async () => {
+      try {
+        await this.fetchTickets();
+        await this.fetchDashboard();
+      } catch (error) {
+        console.warn('⚠️ 폴링 중 오류:', error);
+      }
+    }, this.config.pollingInterval);
 
-      // 2. 코스 번호
-      const courseDiff = (a.course_no || 1) - (b.course_no || 1);
-      if (courseDiff !== 0) return courseDiff;
-
-      // 3. 발행 시간
-      return new Date(a.fired_at || a.created_at) - new Date(b.fired_at || b.created_at);
-    });
-
-    return tickets;
+    console.log(`🔄 KDS 폴링 시작: ${this.config.pollingInterval}ms 간격`);
   }
 
-  // 스테이션별 티켓 수 집계
-  getStationCounts() {
-    const counts = {};
+  stopPolling() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
 
-    this.stations.forEach(station => {
-      counts[station.id] = {
-        total: 0,
-        pending: 0,
-        cooking: 0,
-        done: 0
-      };
-    });
+    this.state.isPolling = false;
+    console.log('⏹️ KDS 폴링 중지');
+  }
 
-    this.tickets.forEach(ticket => {
-      const stationId = ticket.station_id;
-      if (counts[stationId]) {
-        counts[stationId].total++;
+  // =================== 자동 정리 ===================
+  startCleanupTimer() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+    }
 
-        const status = ticket.ticket_status.toLowerCase();
-        if (counts[stationId][status] !== undefined) {
-          counts[stationId][status]++;
+    this.cleanupTimer = setInterval(async () => {
+      try {
+        await this.cleanup();
+      } catch (error) {
+        console.warn('⚠️ 자동 정리 중 오류:', error);
+      }
+    }, this.config.cleanupInterval);
+
+    console.log(`🧹 KDS 자동 정리 시작: ${this.config.cleanupInterval / 1000}초 간격`);
+  }
+
+  async cleanup() {
+    try {
+      const response = await fetch(`${this.config.apiBase}/cleanup/${this.config.storeId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          minutes_threshold: 3
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.hidden_tickets > 0) {
+          console.log(`🧹 ${data.hidden_tickets}개 티켓이 자동 숨김 처리됨`);
+          this.emit('cleanup_completed', data);
+          
+          // 티켓 목록 새로고침
+          await this.fetchTickets();
         }
       }
-    });
-
-    return counts;
-  }
-
-  // 전체 새로고침
-  async refresh() {
-    try {
-      this.emit('refresh_start');
-
-      await Promise.all([
-        this.loadStations(),
-        this.loadTickets(),
-        this.loadDashboard()
-      ]);
-
-      this.emit('refresh_complete');
-      console.log('✅ KDS 데이터 새로고침 완료');
     } catch (error) {
-      console.error('❌ KDS 새로고침 실패:', error);
-      this.emit('refresh_error', error);
-      throw error;
+      console.warn('⚠️ 자동 정리 실패:', error);
     }
   }
 
-  // 정리
+  // =================== 유틸리티 ===================
+  async refreshTicket(ticketId) {
+    try {
+      const tickets = await this.fetchTickets();
+      const refreshedTicket = tickets.find(t => t.ticket_id === ticketId);
+      
+      if (refreshedTicket) {
+        this.state.tickets.set(ticketId, refreshedTicket);
+        this.emit('ticket_refreshed', refreshedTicket);
+      }
+    } catch (error) {
+      console.warn('⚠️ 티켓 새로고침 실패:', error);
+    }
+  }
+
+  detectChanges(oldTickets, newTickets) {
+    // 새로 추가된 티켓
+    for (const [id, ticket] of newTickets) {
+      if (!oldTickets.has(id)) {
+        this.emit('ticket_added', ticket);
+      }
+    }
+
+    // 상태가 변경된 티켓
+    for (const [id, newTicket] of newTickets) {
+      const oldTicket = oldTickets.get(id);
+      if (oldTicket && oldTicket.status !== newTicket.status) {
+        this.emit('ticket_status_updated', {
+          ticket_id: id,
+          old_status: oldTicket.status,
+          new_status: newTicket.status,
+          ticket: newTicket
+        });
+      }
+    }
+  }
+
+  handleError(error) {
+    this.state.retryCount++;
+
+    if (this.state.retryCount >= this.config.maxRetries) {
+      console.error(`❌ 최대 재시도 횟수 초과 (${this.config.maxRetries}회)`);
+      this.emit('max_retries_exceeded', error);
+    } else {
+      console.warn(`⚠️ 재시도 ${this.state.retryCount}/${this.config.maxRetries}: ${error.message}`);
+    }
+  }
+
+  // =================== 이벤트 시스템 ===================
+  on(event, handler) {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, new Set());
+    }
+    this.eventHandlers.get(event).add(handler);
+  }
+
+  off(event, handler) {
+    if (this.eventHandlers.has(event)) {
+      this.eventHandlers.get(event).delete(handler);
+    }
+  }
+
+  emit(event, data) {
+    if (this.eventHandlers.has(event)) {
+      for (const handler of this.eventHandlers.get(event)) {
+        try {
+          handler(data);
+        } catch (error) {
+          console.error(`❌ 이벤트 핸들러 오류 (${event}):`, error);
+        }
+      }
+    }
+  }
+
+  // =================== 정리 ===================
   destroy() {
-    if (this.eventSource) {
-      this.eventSource.close();
-      this.eventSource = null;
+    console.log('🛑 KDS Core 종료 중...');
+
+    this.stopPolling();
+
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
     }
 
-    this.updateCallbacks.clear();
-    this.stations.clear();
-    this.tickets.clear();
+    if (this.sseConnection) {
+      this.sseConnection.close();
+      this.sseConnection = null;
+    }
 
-    console.log('🧹 KDS Core 정리 완료');
+    this.eventHandlers.clear();
+    this.state.tickets.clear();
+    this.state.stations.clear();
+
+    console.log('✅ KDS Core 정리 완료');
   }
 
-  // 연결 상태 조회
-  getConnectionState() {
-    return this.connectionState;
-  }
-
-  // 상태 요약
-  getSummary() {
+  // =================== 상태 조회 ===================
+  getStatus() {
     return {
-      storeId: this.storeId,
-      connectionState: this.connectionState,
-      stationCount: this.stations.size,
-      ticketCount: this.tickets.size,
-      lastUpdate: this.lastUpdate,
-      dashboard: this.dashboard
+      storeId: this.config.storeId,
+      isPolling: this.state.isPolling,
+      ticketCount: this.state.tickets.size,
+      stationCount: this.state.stations.size,
+      lastUpdate: this.state.lastUpdate,
+      retryCount: this.state.retryCount,
+      sseConnected: this.sseConnection?.readyState === EventSource.OPEN
     };
   }
 }
 
+// 전역 인스턴스
 window.KDSCore = KDSCore;
-console.log('✅ KDS Core v3.0 클래스 등록 완료');
-
-} // 중복 로딩 방지 닫기
+console.log('✅ KDS Core v4.0 클래스 등록 완료');

@@ -1,637 +1,635 @@
 
 /**
- * KDS UI 렌더링 모듈 v3.0
- * 책임: 현대적 UI 렌더링, 사용자 상호작용, 애니메이션
+ * KDS UI v4.0 - Order Tickets 기반 인터페이스
+ * 그리드 카드 레이아웃, 아이템 중심 상태 변경
  */
 
-window.KDSUI = {
-  // 현재 상태
-  currentStationId: 'all',
-  currentStatus: null,
-  isCompactMode: false,
-  
-  // 초기화
-  init(containerId = 'app') {
-    this.container = document.getElementById(containerId);
-    if (!this.container) {
-      throw new Error(`컨테이너를 찾을 수 없습니다: ${containerId}`);
+class KDSUI {
+  constructor() {
+    this.core = null;
+    this.container = null;
+    this.currentFilter = {
+      status: ['PENDING', 'COOKING'],
+      station: null
+    };
+
+    this.sounds = {
+      newTicket: null,
+      statusChange: null,
+      error: null
+    };
+
+    this.config = {
+      cardColumns: 3,
+      autoRefresh: true,
+      soundEnabled: true,
+      showElapsedTime: true
+    };
+
+    console.log('🎨 KDS UI v4.0 초기화 완료');
+  }
+
+  // =================== 초기화 ===================
+  async initialize(containerId, kdsCore) {
+    try {
+      this.container = document.getElementById(containerId);
+      if (!this.container) {
+        throw new Error(`컨테이너를 찾을 수 없습니다: ${containerId}`);
+      }
+
+      this.core = kdsCore;
+
+      // 이벤트 리스너 등록
+      this.registerEventListeners();
+
+      // 초기 UI 렌더링
+      this.render();
+
+      // 사운드 초기화
+      this.initializeSounds();
+
+      console.log('🎨 KDS UI 초기화 완료');
+      return true;
+    } catch (error) {
+      console.error('❌ KDS UI 초기화 실패:', error);
+      return false;
     }
-    
-    console.log('🎨 KDS UI v3.0 초기화');
-    this.setupEventListeners();
-  },
+  }
 
-  // 메인 UI 렌더링
-  renderMainInterface(storeId) {
+  // =================== 이벤트 리스너 ===================
+  registerEventListeners() {
+    // KDS Core 이벤트들
+    this.core.on('tickets_updated', () => {
+      this.renderTickets();
+      this.updateStats();
+    });
+
+    this.core.on('stations_updated', () => {
+      this.renderStationFilter();
+    });
+
+    this.core.on('dashboard_updated', (dashboard) => {
+      this.renderDashboard(dashboard);
+    });
+
+    this.core.on('new_ticket', (data) => {
+      this.playSound('newTicket');
+      this.showNotification('새 주문이 들어왔습니다!', 'info');
+    });
+
+    this.core.on('item_status_changed', (data) => {
+      this.playSound('statusChange');
+      this.showNotification(`${data.menu_name} 상태가 ${data.new_item_status}로 변경되었습니다`, 'success');
+    });
+
+    this.core.on('error', (error) => {
+      this.playSound('error');
+      this.showNotification(error.message, 'error');
+    });
+
+    this.core.on('max_retries_exceeded', (error) => {
+      this.showNotification('연결에 문제가 발생했습니다. 페이지를 새로고침해주세요.', 'error');
+    });
+  }
+
+  // =================== 렌더링 ===================
+  render() {
     this.container.innerHTML = `
-      <div class="kds-app">
-        <!-- 헤더 -->
-        <header class="kds-header">
-          <div class="kds-header-left">
-            <div class="kds-logo">
-              <span class="logo-icon">🍳</span>
-              <h1>TableLink KDS</h1>
-            </div>
-            <div class="store-badge">
-              <span class="badge-label">매장</span>
-              <span class="badge-value" id="storeName">${storeId}</span>
-            </div>
-          </div>
-          
-          <div class="kds-header-center">
-            <div class="dashboard-summary" id="dashboardSummary">
-              <div class="summary-item">
-                <span class="summary-value" id="pendingCount">-</span>
-                <span class="summary-label">대기</span>
-              </div>
-              <div class="summary-item cooking">
-                <span class="summary-value" id="cookingCount">-</span>
-                <span class="summary-label">조리중</span>
-              </div>
-              <div class="summary-item done">
-                <span class="summary-value" id="doneCount">-</span>
-                <span class="summary-label">완료</span>
-              </div>
-            </div>
-          </div>
-          
-          <div class="kds-header-right">
-            <div class="status-indicators">
-              <div class="connection-status" id="connectionStatus">
-                <span class="status-dot"></span>
-                <span class="status-text">연결중...</span>
-              </div>
-              <div class="current-time" id="currentTime">--:--</div>
-            </div>
-            
-            <div class="header-controls">
-              <button class="control-btn compact-toggle" id="compactToggle" title="컴팩트 모드">
-                📱
-              </button>
-              <button class="control-btn refresh-btn" id="refreshBtn" title="새로고침">
-                🔄
-              </button>
-              <button class="control-btn settings-btn" id="settingsBtn" title="설정">
-                ⚙️
-              </button>
-            </div>
-          </div>
-        </header>
-
-        <!-- 스테이션 탭 -->
-        <nav class="station-tabs" id="stationTabs">
-          <div class="tabs-container">
-            <button class="station-tab active" data-station="all">
-              <span class="tab-icon">📋</span>
-              <span class="tab-label">전체</span>
-              <span class="tab-counter" id="counter-all">0</span>
-            </button>
-          </div>
-        </nav>
-
-        <!-- 필터 바 -->
-        <div class="filter-bar" id="filterBar">
-          <div class="filter-group">
-            <button class="filter-btn active" data-status="">전체</button>
-            <button class="filter-btn" data-status="PENDING">대기중</button>
-            <button class="filter-btn" data-status="COOKING">조리중</button>
-            <button class="filter-btn" data-status="DONE">완료</button>
-          </div>
-        </div>
-
-        <!-- 메인 컨텐츠 -->
-        <main class="kds-main" id="kdsMain">
-          <div class="loading-overlay" id="loadingOverlay">
-            <div class="loading-spinner"></div>
-            <p>KDS 시스템 로딩 중...</p>
-          </div>
-          
-          <div class="tickets-grid" id="ticketsGrid">
-            <!-- 티켓들이 여기에 렌더링됩니다 -->
-          </div>
-          
-          <div class="empty-state" id="emptyState" style="display: none;">
-            <div class="empty-icon">📋</div>
-            <h3>주문 대기 중</h3>
-            <p>새로운 주문이 들어오면 자동으로 표시됩니다</p>
-          </div>
-        </main>
-
-        <!-- 알림 토스트 -->
-        <div class="toast-container" id="toastContainer"></div>
+      <div class="kds-container">
+        ${this.renderHeader()}
+        ${this.renderControls()}
+        ${this.renderMainContent()}
+        ${this.renderNotificationArea()}
       </div>
     `;
 
-    this.startClock();
-  },
+    // 초기 데이터 로드
+    this.renderTickets();
+    this.renderStationFilter();
+    this.renderDashboard(this.core.getDashboard());
+  }
 
-  // 스테이션 탭 렌더링
-  renderStationTabs(stations) {
-    const tabsContainer = document.querySelector('#stationTabs .tabs-container');
-    
-    let tabsHTML = `
-      <button class="station-tab ${this.currentStationId === 'all' ? 'active' : ''}" data-station="all">
-        <span class="tab-icon">📋</span>
-        <span class="tab-label">전체</span>
-        <span class="tab-counter" id="counter-all">0</span>
-      </button>
+  renderHeader() {
+    return `
+      <header class="kds-header">
+        <div class="header-left">
+          <h1 class="kds-title">
+            <span class="title-icon">🍳</span>
+            Kitchen Display System
+          </h1>
+          <div class="store-info">
+            <span class="store-id">매장 ${this.core.config.storeId}</span>
+            <span class="current-time" id="currentTime">${new Date().toLocaleTimeString()}</span>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="connection-status" id="connectionStatus">
+            <span class="status-dot connecting"></span>
+            <span class="status-text">연결 중...</span>
+          </div>
+        </div>
+      </header>
     `;
+  }
 
-    stations.forEach(station => {
-      const isActive = this.currentStationId === station.id.toString();
-      const stationIcon = this.getStationIcon(station);
-      
-      tabsHTML += `
-        <button class="station-tab ${isActive ? 'active' : ''} ${station.is_expo ? 'expo' : ''}" 
-                data-station="${station.id}">
-          <span class="tab-icon">${stationIcon}</span>
-          <span class="tab-label">${station.name}</span>
-          <span class="tab-counter" id="counter-${station.id}">0</span>
-        </button>
-      `;
-    });
+  renderControls() {
+    return `
+      <div class="kds-controls">
+        <div class="filter-section">
+          <div class="status-filters">
+            <button class="filter-btn active" data-status="PENDING,COOKING" data-label="활성 주문">
+              📋 활성 주문
+            </button>
+            <button class="filter-btn" data-status="PENDING" data-label="대기 중">
+              ⏳ 대기 중
+            </button>
+            <button class="filter-btn" data-status="COOKING" data-label="조리 중">
+              🔥 조리 중
+            </button>
+            <button class="filter-btn" data-status="DONE" data-label="완료됨">
+              ✅ 완료됨
+            </button>
+          </div>
+          <div class="station-filter">
+            <select id="stationFilter">
+              <option value="">모든 스테이션</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="action-section">
+          <button class="action-btn refresh-btn" id="refreshBtn">
+            🔄 새로고침
+          </button>
+          <button class="action-btn cleanup-btn" id="cleanupBtn">
+            🧹 화면 정리
+          </button>
+          <button class="action-btn settings-btn" id="settingsBtn">
+            ⚙️ 설정
+          </button>
+        </div>
+      </div>
+    `;
+  }
 
-    tabsContainer.innerHTML = tabsHTML;
-  },
+  renderMainContent() {
+    return `
+      <main class="kds-main">
+        <div class="dashboard-section" id="dashboardSection">
+          ${this.renderDashboardPlaceholder()}
+        </div>
+        <div class="tickets-section">
+          <div class="tickets-header">
+            <h2 id="ticketsTitle">주문 대기열</h2>
+            <div class="tickets-count" id="ticketsCount">0개</div>
+          </div>
+          <div class="tickets-grid" id="ticketsGrid">
+            ${this.renderLoadingTickets()}
+          </div>
+        </div>
+      </main>
+    `;
+  }
 
-  // 티켓 그리드 렌더링
-  renderTickets(tickets) {
-    const grid = document.getElementById('ticketsGrid');
-    const emptyState = document.getElementById('emptyState');
-    const loadingOverlay = document.getElementById('loadingOverlay');
+  renderDashboardPlaceholder() {
+    return `
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-info">
+            <div class="stat-number" id="pendingCount">-</div>
+            <div class="stat-label">대기 중</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-info">
+            <div class="stat-number" id="cookingCount">-</div>
+            <div class="stat-label">조리 중</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <div class="stat-number" id="doneCount">-</div>
+            <div class="stat-label">완료</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-info">
+            <div class="stat-number" id="todayCount">-</div>
+            <div class="stat-label">오늘 완료</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 
-    loadingOverlay.style.display = 'none';
+  renderLoadingTickets() {
+    return `
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">주문 정보를 불러오는 중...</div>
+      </div>
+    `;
+  }
+
+  renderNotificationArea() {
+    return `
+      <div class="notification-area" id="notificationArea"></div>
+    `;
+  }
+
+  // =================== 티켓 렌더링 ===================
+  renderTickets() {
+    const tickets = this.core.getTickets(this.currentFilter);
+    const ticketsGrid = document.getElementById('ticketsGrid');
+    const ticketsCount = document.getElementById('ticketsCount');
+    const ticketsTitle = document.getElementById('ticketsTitle');
+
+    if (!ticketsGrid) return;
+
+    // 제목과 카운트 업데이트
+    const filterLabel = document.querySelector('.filter-btn.active')?.dataset.label || '전체';
+    ticketsTitle.textContent = `${filterLabel} 주문`;
+    ticketsCount.textContent = `${tickets.length}개`;
 
     if (tickets.length === 0) {
-      grid.style.display = 'none';
-      emptyState.style.display = 'flex';
+      ticketsGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-title">표시할 주문이 없습니다</div>
+          <div class="empty-subtitle">새로운 주문을 기다리는 중...</div>
+        </div>
+      `;
       return;
     }
 
-    emptyState.style.display = 'none';
-    grid.style.display = 'grid';
+    ticketsGrid.innerHTML = tickets.map(ticket => this.renderTicketCard(ticket)).join('');
 
-    const ticketsHTML = tickets.map(ticket => this.renderTicketCard(ticket)).join('');
-    grid.innerHTML = ticketsHTML;
+    // 이벤트 리스너 추가
+    this.attachTicketEventListeners();
+  }
 
-    // 애니메이션 트리거
-    requestAnimationFrame(() => {
-      grid.querySelectorAll('.ticket-card').forEach((card, index) => {
-        setTimeout(() => card.classList.add('animate-in'), index * 50);
-      });
-    });
-  },
-
-  // 개별 티켓 카드 렌더링
   renderTicketCard(ticket) {
-    const statusClass = this.getStatusClass(ticket.ticket_status);
-    const urgencyClass = this.getUrgencyClass(ticket.elapsed_seconds);
-    const sourceIcon = ticket.source_system === 'TLL' ? '📱' : '🖥️';
-    const elapsedTime = this.formatElapsedTime(ticket.elapsed_seconds);
-    
-    let itemsHTML = '';
-    if (Array.isArray(ticket.items)) {
-      itemsHTML = ticket.items.map(item => `
-        <div class="ticket-item">
-          <div class="item-main">
-            <span class="menu-name">${this.escapeHtml(item.menu_name)}</span>
-            <span class="quantity">×${item.quantity}</span>
-          </div>
-          ${item.options ? `
-            <div class="item-options">${this.renderItemOptions(item.options)}</div>
-          ` : ''}
-          ${item.special_requests ? `
-            <div class="item-requests">📝 ${this.escapeHtml(item.special_requests)}</div>
-          ` : ''}
-        </div>
-      `).join('');
-    }
+    const statusClass = ticket.status.toLowerCase();
+    const elapsedTime = ticket.elapsed_minutes || 0;
+    const isUrgent = elapsedTime > 15;
 
     return `
-      <div class="ticket-card ${statusClass} ${urgencyClass}" data-ticket-id="${ticket.ticket_id}">
-        <!-- 티켓 헤더 -->
+      <div class="ticket-card ${statusClass} ${isUrgent ? 'urgent' : ''}" data-ticket-id="${ticket.ticket_id}">
         <div class="ticket-header">
           <div class="ticket-info">
-            <div class="ticket-number">#${ticket.ticket_id}</div>
-            <div class="table-info">
-              <span class="table-number">T${ticket.table_number}</span>
-              <span class="customer-name">${this.escapeHtml(ticket.customer_name)}</span>
-            </div>
+            <span class="table-label">${ticket.table_label || '테이블'}</span>
+            <span class="ticket-id">#${ticket.ticket_id}</span>
           </div>
           <div class="ticket-meta">
-            <span class="source-badge">
-              ${sourceIcon}
-            </span>
-            <span class="course-badge">C${ticket.course_no || 1}</span>
+            <span class="ticket-time">${new Date(ticket.created_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+            ${elapsedTime > 0 ? `<span class="elapsed-time ${isUrgent ? 'urgent' : ''}">${elapsedTime}분</span>` : ''}
           </div>
         </div>
 
-        <!-- 티켓 아이템들 -->
+        <div class="ticket-status-bar">
+          <span class="status-badge status-${statusClass}">${this.getStatusLabel(ticket.status)}</span>
+          ${ticket.batch_no > 1 ? `<span class="batch-badge">배치 ${ticket.batch_no}</span>` : ''}
+        </div>
+
         <div class="ticket-items">
-          ${itemsHTML}
+          ${ticket.items.map(item => this.renderTicketItem(item)).join('')}
         </div>
 
-        <!-- 티켓 상태 및 액션 -->
-        <div class="ticket-footer">
-          <div class="status-info">
-            <span class="status-badge">${this.getStatusText(ticket.ticket_status)}</span>
-            ${elapsedTime ? `
-              <span class="elapsed-time">
-                <span class="time-icon">⏱️</span>
-                ${elapsedTime}
-              </span>
-            ` : ''}
-          </div>
-          
-          <div class="ticket-actions">
-            ${this.renderTicketActions(ticket)}
-          </div>
+        <div class="ticket-actions">
+          ${this.renderTicketActions(ticket)}
         </div>
       </div>
     `;
-  },
+  }
 
-  // 티켓 액션 버튼 렌더링
-  renderTicketActions(ticket) {
-    const { ticket_status: status, ticket_id: id } = ticket;
+  renderTicketItem(item) {
+    const statusClass = item.item_status.toLowerCase();
+    
+    return `
+      <div class="ticket-item ${statusClass}" data-item-id="${item.id}">
+        <div class="item-main">
+          <div class="item-info">
+            <span class="item-name">${item.menu_name}</span>
+            <span class="item-quantity">×${item.quantity}</span>
+          </div>
+          <div class="item-actions">
+            ${this.renderItemStatusButtons(item)}
+          </div>
+        </div>
+        ${item.special_requests ? `<div class="item-notes">${item.special_requests}</div>` : ''}
+        <div class="item-station">${item.cook_station || 'KITCHEN'}</div>
+      </div>
+    `;
+  }
 
-    switch (status) {
+  renderItemStatusButtons(item) {
+    const currentStatus = item.item_status;
+    let buttons = [];
+
+    switch (currentStatus) {
       case 'PENDING':
-        return `
-          <button class="action-btn primary" onclick="KDSUI.handleTicketAction(${id}, 'start')">
-            🔥 시작
-          </button>
-          <button class="action-btn danger" onclick="KDSUI.handleTicketAction(${id}, 'cancel')">
-            ❌ 취소
-          </button>
-        `;
-
+        buttons.push(`<button class="status-btn start-btn" data-action="start">조리 시작</button>`);
+        buttons.push(`<button class="status-btn cancel-btn" data-action="cancel">취소</button>`);
+        break;
       case 'COOKING':
-        return `
-          <button class="action-btn success" onclick="KDSUI.handleTicketAction(${id}, 'done')">
-            ✅ 완료
-          </button>
-          <button class="action-btn danger" onclick="KDSUI.handleTicketAction(${id}, 'cancel')">
-            ❌ 취소
-          </button>
-        `;
-
+        buttons.push(`<button class="status-btn finish-btn" data-action="finish">완료</button>`);
+        buttons.push(`<button class="status-btn cancel-btn" data-action="cancel">취소</button>`);
+        break;
       case 'DONE':
-        return `
-          <button class="action-btn serve" onclick="KDSUI.handleTicketAction(${id}, 'serve')">
-            🍽️ 서빙
-          </button>
-          <button class="action-btn secondary" onclick="KDSUI.handleTicketAction(${id}, 'recall')">
-            🔄 회수
-          </button>
-        `;
-
-      default:
-        return '';
+        buttons.push(`<button class="status-btn recall-btn" data-action="recall">되돌리기</button>`);
+        break;
+      case 'CANCELED':
+        buttons.push(`<span class="status-text canceled">취소됨</span>`);
+        break;
     }
-  },
 
-  // 대시보드 업데이트
-  updateDashboard(dashboard) {
+    return buttons.join('');
+  }
+
+  renderTicketActions(ticket) {
+    const actions = [];
+
+    // 전체 조리 시작
+    if (ticket.status === 'PENDING' || ticket.items.some(item => item.item_status === 'PENDING')) {
+      actions.push(`
+        <button class="ticket-action-btn start-all-btn" data-action="start-all">
+          🔥 전체 조리 시작
+        </button>
+      `);
+    }
+
+    // 전체 완료
+    if (ticket.status === 'COOKING' || ticket.items.some(item => item.item_status === 'COOKING')) {
+      actions.push(`
+        <button class="ticket-action-btn finish-all-btn" data-action="finish-all">
+          ✅ 전체 완료
+        </button>
+      `);
+    }
+
+    // 프린트
+    if (ticket.print_status === 'WAITING') {
+      actions.push(`
+        <button class="ticket-action-btn print-btn" data-action="print">
+          🖨️ 프린트
+        </button>
+      `);
+    }
+
+    return actions.join('');
+  }
+
+  // =================== 이벤트 핸들링 ===================
+  attachTicketEventListeners() {
+    // 필터 버튼들
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        
+        this.currentFilter.status = e.target.dataset.status.split(',');
+        this.renderTickets();
+      });
+    });
+
+    // 스테이션 필터
+    const stationFilter = document.getElementById('stationFilter');
+    if (stationFilter) {
+      stationFilter.addEventListener('change', (e) => {
+        this.currentFilter.station = e.target.value || null;
+        this.renderTickets();
+      });
+    }
+
+    // 새로고침 버튼
+    document.getElementById('refreshBtn')?.addEventListener('click', () => {
+      this.core.fetchTickets();
+      this.showNotification('새로고침 완료', 'success');
+    });
+
+    // 화면 정리 버튼
+    document.getElementById('cleanupBtn')?.addEventListener('click', () => {
+      this.core.cleanup();
+    });
+
+    // 아이템 상태 변경 버튼들
+    document.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const itemElement = e.target.closest('.ticket-item');
+        const itemId = parseInt(itemElement.dataset.itemId);
+        const action = e.target.dataset.action;
+
+        await this.handleItemAction(itemId, action, e.target);
+      });
+    });
+
+    // 티켓 전체 액션 버튼들
+    document.querySelectorAll('.ticket-action-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const ticketElement = e.target.closest('.ticket-card');
+        const ticketId = parseInt(ticketElement.dataset.ticketId);
+        const action = e.target.dataset.action;
+
+        await this.handleTicketAction(ticketId, action, e.target);
+      });
+    });
+  }
+
+  async handleItemAction(itemId, action, buttonElement) {
+    try {
+      // 버튼 비활성화
+      buttonElement.disabled = true;
+      buttonElement.textContent = '처리 중...';
+
+      let newStatus;
+      switch (action) {
+        case 'start':
+          newStatus = 'COOKING';
+          break;
+        case 'finish':
+          newStatus = 'DONE';
+          break;
+        case 'cancel':
+          const reason = prompt('취소 사유를 입력하세요:', '주방에서 취소');
+          if (!reason) return;
+          newStatus = 'CANCELED';
+          await this.core.updateItemStatus(itemId, newStatus, reason);
+          return;
+        case 'recall':
+          newStatus = 'COOKING';
+          break;
+        default:
+          throw new Error('알 수 없는 액션입니다');
+      }
+
+      await this.core.updateItemStatus(itemId, newStatus);
+
+    } catch (error) {
+      console.error('❌ 아이템 액션 처리 실패:', error);
+      this.showNotification(error.message, 'error');
+    } finally {
+      // UI는 자동으로 업데이트되므로 버튼 복구는 불필요
+    }
+  }
+
+  async handleTicketAction(ticketId, action, buttonElement) {
+    try {
+      // 버튼 비활성화
+      buttonElement.disabled = true;
+      buttonElement.textContent = '처리 중...';
+
+      switch (action) {
+        case 'start-all':
+          await this.core.startCooking(ticketId);
+          break;
+        case 'finish-all':
+          await this.core.finishCooking(ticketId);
+          break;
+        case 'print':
+          await this.core.printTicket(ticketId);
+          break;
+        default:
+          throw new Error('알 수 없는 액션입니다');
+      }
+
+    } catch (error) {
+      console.error('❌ 티켓 액션 처리 실패:', error);
+      this.showNotification(error.message, 'error');
+    } finally {
+      // UI는 자동으로 업데이트되므로 버튼 복구는 불필요
+    }
+  }
+
+  // =================== 기타 렌더링 ===================
+  renderStationFilter() {
+    const stationFilter = document.getElementById('stationFilter');
+    if (!stationFilter) return;
+
+    const stations = this.core.getStations();
+    const currentValue = stationFilter.value;
+
+    stationFilter.innerHTML = `
+      <option value="">모든 스테이션</option>
+      ${stations.map(station => `
+        <option value="${station.id}">${station.name} (${station.active_tickets})</option>
+      `).join('')}
+    `;
+
+    stationFilter.value = currentValue;
+  }
+
+  renderDashboard(dashboard) {
     document.getElementById('pendingCount').textContent = dashboard.pending_count || 0;
     document.getElementById('cookingCount').textContent = dashboard.cooking_count || 0;
     document.getElementById('doneCount').textContent = dashboard.done_count || 0;
-  },
+    document.getElementById('todayCount').textContent = dashboard.served_today || 0;
+  }
 
-  // 스테이션 카운터 업데이트
-  updateStationCounts(counts) {
-    // 전체 카운터
-    const totalTickets = Object.values(counts).reduce((sum, count) => sum + count.total, 0);
-    const allCounter = document.getElementById('counter-all');
-    if (allCounter) {
-      allCounter.textContent = totalTickets;
-      allCounter.className = `tab-counter ${totalTickets > 0 ? 'has-items' : ''}`;
-    }
-
-    // 개별 스테이션 카운터
-    Object.entries(counts).forEach(([stationId, count]) => {
-      const counter = document.getElementById(`counter-${stationId}`);
-      if (counter) {
-        counter.textContent = count.total;
-        counter.className = `tab-counter ${count.total > 0 ? 'has-items' : ''}`;
-      }
-    });
-  },
-
-  // 연결 상태 업데이트
-  updateConnectionStatus(state) {
-    const statusElement = document.getElementById('connectionStatus');
-    const statusDot = statusElement.querySelector('.status-dot');
-    const statusText = statusElement.querySelector('.status-text');
-
-    statusElement.className = `connection-status ${state}`;
-    
-    switch (state) {
-      case 'connected':
-        statusText.textContent = '연결됨';
-        break;
-      case 'connecting':
-        statusText.textContent = '연결중...';
-        break;
-      case 'disconnected':
-        statusText.textContent = '연결 끊김';
-        break;
-    }
-  },
-
-  // 스테이션 전환
-  switchStation(stationId) {
-    this.currentStationId = stationId;
-    
-    // 탭 활성화
-    document.querySelectorAll('.station-tab').forEach(tab => {
-      tab.classList.toggle('active', tab.dataset.station === stationId);
-    });
-
-    this.emit('station_changed', stationId);
-  },
-
-  // 필터 전환
-  switchFilter(status) {
-    this.currentStatus = status || null;
-    
-    // 필터 버튼 활성화
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.status === (status || ''));
-    });
-
-    this.emit('filter_changed', status);
-  },
-
-  // 티켓 액션 처리
-  async handleTicketAction(ticketId, action) {
-    try {
-      // UI 비활성화
-      const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-      if (card) {
-        card.classList.add('processing');
-      }
-
-      // 확인 다이얼로그 (취소의 경우)
-      if (action === 'cancel') {
-        const confirmed = confirm('정말 이 티켓을 취소하시겠습니까?');
-        if (!confirmed) {
-          if (card) card.classList.remove('processing');
-          return;
-        }
-      }
-
-      this.emit('ticket_action', { ticketId, action });
-      
-    } catch (error) {
-      console.error('❌ 티켓 액션 처리 실패:', error);
-      this.showToast('작업 처리 중 오류가 발생했습니다', 'error');
-      
-      // UI 복구
-      const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-      if (card) {
-        card.classList.remove('processing');
-      }
-    }
-  },
-
-  // 토스트 알림 표시
-  showToast(message, type = 'info', duration = 3000) {
-    const container = document.getElementById('toastContainer');
-    
-    // 컨테이너가 없으면 콘솔에만 메시지 출력
-    if (!container) {
-      console.log(`🍞 Toast (${type}):`, message);
-      return;
-    }
-    
-    const toast = document.createElement('div');
-    
-    const icons = {
-      'success': '✅',
-      'error': '❌',
-      'warning': '⚠️',
-      'info': 'ℹ️'
+  // =================== 유틸리티 ===================
+  getStatusLabel(status) {
+    const labels = {
+      'PENDING': '대기 중',
+      'COOKING': '조리 중',
+      'DONE': '완료',
+      'CANCELED': '취소됨'
     };
+    return labels[status] || status;
+  }
 
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `
-      <span class="toast-icon">${icons[type] || icons.info}</span>
-      <span class="toast-message">${this.escapeHtml(message)}</span>
-      <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+  showNotification(message, type = 'info') {
+    const notificationArea = document.getElementById('notificationArea');
+    if (!notificationArea) return;
+
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+      <span class="notification-message">${message}</span>
+      <button class="notification-close">×</button>
     `;
 
-    container.appendChild(toast);
-
-    // 애니메이션
-    requestAnimationFrame(() => toast.classList.add('show'));
+    notificationArea.appendChild(notification);
 
     // 자동 제거
     setTimeout(() => {
-      if (toast.parentElement) {
-        toast.classList.add('hide');
-        setTimeout(() => {
-          if (toast.parentElement) {
-            toast.remove();
-          }
-        }, 300);
-      }
-    }, duration);
-  },
+      notification.remove();
+    }, 5000);
 
-  // 로딩 상태 표시/숨김
-  showLoading(show = true) {
-    const overlay = document.getElementById('loadingOverlay');
-    if (overlay) {
-      overlay.style.display = show ? 'flex' : 'none';
-    }
-  },
-
-  // 시계 시작
-  startClock() {
-    const updateTime = () => {
-      const now = new Date();
-      const timeString = now.toLocaleTimeString('ko-KR', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-      
-      const timeElement = document.getElementById('currentTime');
-      if (timeElement) {
-        timeElement.textContent = timeString;
-      }
-    };
-
-    updateTime();
-    setInterval(updateTime, 1000);
-  },
-
-  // 이벤트 리스너 설정
-  setupEventListeners() {
-    // 스테이션 탭 클릭
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('.station-tab')) {
-        const stationId = e.target.closest('.station-tab').dataset.station;
-        this.switchStation(stationId);
-      }
-    });
-
-    // 필터 버튼 클릭
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('.filter-btn')) {
-        const status = e.target.closest('.filter-btn').dataset.status;
-        this.switchFilter(status);
-      }
-    });
-
-    // 새로고침 버튼
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#refreshBtn')) {
-        this.emit('refresh_requested');
-      }
-    });
-
-    // 컴팩트 모드 토글
-    document.addEventListener('click', (e) => {
-      if (e.target.closest('#compactToggle')) {
-        this.toggleCompactMode();
-      }
-    });
-
-    // 키보드 단축키
-    document.addEventListener('keydown', (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 'r':
-            e.preventDefault();
-            this.emit('refresh_requested');
-            break;
-          case '1':
-          case '2':
-          case '3':
-          case '4':
-          case '5':
-            e.preventDefault();
-            const tabs = document.querySelectorAll('.station-tab');
-            const index = parseInt(e.key) - 1;
-            if (tabs[index]) {
-              const stationId = tabs[index].dataset.station;
-              this.switchStation(stationId);
-            }
-            break;
-        }
-      }
-    });
-  },
-
-  // 컴팩트 모드 토글
-  toggleCompactMode() {
-    this.isCompactMode = !this.isCompactMode;
-    document.body.classList.toggle('compact-mode', this.isCompactMode);
-    
-    const toggle = document.getElementById('compactToggle');
-    if (toggle) {
-      toggle.textContent = this.isCompactMode ? '🖥️' : '📱';
-    }
-  },
-
-  // 유틸리티 함수들
-  getStationIcon(station) {
-    const icons = {
-      'KITCHEN': '🍳',
-      'BEVERAGE': '🥤',
-      'DESSERT': '🍰',
-      'EXPO': '🍽️'
-    };
-    return icons[station.code] || '🏪';
-  },
-
-  getStatusClass(status) {
-    const classes = {
-      'PENDING': 'status-pending',
-      'COOKING': 'status-cooking', 
-      'DONE': 'status-done',
-      'SERVED': 'status-served',
-      'CANCELED': 'status-canceled'
-    };
-    return classes[status] || '';
-  },
-
-  getUrgencyClass(elapsedSeconds) {
-    if (!elapsedSeconds) return '';
-    
-    const minutes = elapsedSeconds / 60;
-    if (minutes > 30) return 'urgent-critical';
-    if (minutes > 15) return 'urgent-high';
-    if (minutes > 10) return 'urgent-medium';
-    return '';
-  },
-
-  getStatusText(status) {
-    const texts = {
-      'PENDING': '대기중',
-      'COOKING': '조리중',
-      'DONE': '완료',
-      'SERVED': '서빙완료',
-      'CANCELED': '취소됨'
-    };
-    return texts[status] || status;
-  },
-
-  formatElapsedTime(seconds) {
-    if (!seconds || seconds < 0) return '';
-    
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    
-    if (mins === 0) {
-      return `${secs}초`;
-    } else {
-      return `${mins}분 ${secs}초`;
-    }
-  },
-
-  renderItemOptions(options) {
-    if (!options) return '';
-    
-    if (typeof options === 'string') {
-      return this.escapeHtml(options);
-    }
-    
-    if (typeof options === 'object') {
-      return Object.entries(options)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ');
-    }
-    
-    return '';
-  },
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  },
-
-  // 이벤트 시스템
-  listeners: new Set(),
-
-  on(callback) {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
-  },
-
-  emit(event, data) {
-    this.listeners.forEach(callback => {
-      try {
-        callback(event, data);
-      } catch (error) {
-        console.error('❌ UI 이벤트 콜백 실행 실패:', error);
-      }
+    // 닫기 버튼
+    notification.querySelector('.notification-close').addEventListener('click', () => {
+      notification.remove();
     });
   }
-};
 
-console.log('✅ KDS UI v3.0 모듈 로드 완료');
+  updateStats() {
+    const tickets = this.core.getTickets();
+    const stats = {
+      total: tickets.length,
+      pending: tickets.filter(t => t.status === 'PENDING').length,
+      cooking: tickets.filter(t => t.status === 'COOKING').length,
+      done: tickets.filter(t => t.status === 'DONE').length
+    };
+
+    // 연결 상태 업데이트
+    const connectionStatus = document.getElementById('connectionStatus');
+    const coreStatus = this.core.getStatus();
+    
+    if (connectionStatus) {
+      const dot = connectionStatus.querySelector('.status-dot');
+      const text = connectionStatus.querySelector('.status-text');
+      
+      if (coreStatus.sseConnected && coreStatus.isPolling) {
+        dot.className = 'status-dot connected';
+        text.textContent = '연결됨';
+      } else {
+        dot.className = 'status-dot disconnected';
+        text.textContent = '연결 끊김';
+      }
+    }
+  }
+
+  // =================== 사운드 ===================
+  initializeSounds() {
+    try {
+      // 사운드 파일들이 있다면 로드
+      // this.sounds.newTicket = new Audio('/sounds/new-ticket.mp3');
+      // this.sounds.statusChange = new Audio('/sounds/status-change.mp3');  
+      // this.sounds.error = new Audio('/sounds/error.mp3');
+    } catch (error) {
+      console.warn('⚠️ 사운드 초기화 실패:', error);
+    }
+  }
+
+  playSound(type) {
+    if (!this.config.soundEnabled) return;
+    
+    try {
+      if (this.sounds[type]) {
+        this.sounds[type].play().catch(e => console.warn('사운드 재생 실패:', e));
+      }
+    } catch (error) {
+      console.warn('⚠️ 사운드 재생 실패:', error);
+    }
+  }
+
+  // =================== 시간 업데이트 ===================
+  startTimeUpdate() {
+    setInterval(() => {
+      const timeElement = document.getElementById('currentTime');
+      if (timeElement) {
+        timeElement.textContent = new Date().toLocaleTimeString('ko-KR');
+      }
+    }, 1000);
+  }
+}
+
+// 전역 인스턴스
+window.KDSUI = KDSUI;
+console.log('✅ KDS UI v4.0 클래스 등록 완료');

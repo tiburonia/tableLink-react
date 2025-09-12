@@ -3,10 +3,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../../src/db/pool');
 
-// KDS 티켓 조회 (order_tickets 기반)
+// =================== KDS 티켓 조회 (폴링용) ===================
 router.get('/tickets', async (req, res) => {
   try {
-    const { store_id, station_id, status } = req.query;
+    const { store_id, status, station, display_status = 'VISIBLE' } = req.query;
 
     if (!store_id) {
       return res.status(400).json({
@@ -15,18 +15,17 @@ router.get('/tickets', async (req, res) => {
       });
     }
 
-    console.log(`🎫 KDS 티켓 조회: 매장 ${store_id}, 스테이션 ${station_id}`);
+    console.log(`🎫 KDS 티켓 조회: 매장 ${store_id}, 상태 ${status || 'ALL'}, 스테이션 ${station || 'ALL'}`);
 
-    // 먼저 매장이 존재하는지 확인
-    const storeCheck = await pool.query('SELECT id FROM stores WHERE id = $1', [store_id]);
+    // 매장 존재 여부 확인
+    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [store_id]);
     if (storeCheck.rows.length === 0) {
-      console.warn(`⚠️ 존재하지 않는 매장 ID: ${store_id}`);
       return res.json({
         success: true,
         tickets: [],
         total_tickets: 0,
         timestamp: Date.now(),
-        message: '매장이 존재하지 않습니다'
+        message: '존재하지 않는 매장입니다'
       });
     }
 
@@ -40,89 +39,71 @@ router.get('/tickets', async (req, res) => {
     `);
 
     if (!tableCheck.rows[0].exists) {
-      console.warn('⚠️ order_tickets 테이블이 존재하지 않음');
-      return res.json({
-        success: true,
-        tickets: [],
-        total_tickets: 0,
-        timestamp: Date.now(),
-        message: 'KDS 시스템이 설정되지 않았습니다'
-      });
+      // 테이블이 없으면 자동 생성
+      await createKDSTables();
     }
 
-    let query = `
-      WITH ticket_items AS (
+    // 티켓 + 아이템 한방 조회 (성능 최적화)
+    const query = `
+      WITH tk AS (
         SELECT 
-          ot.id as ticket_id,
-          ot.order_id,
-          ot.table_number,
-          ot.customer_name,
-          ot.status as ticket_status,
-          ot.station_id,
-          ot.course_no,
-          ot.fired_at,
-          ot.started_at,
-          ot.completed_at,
-          ot.served_at,
-          ot.canceled_at,
-          ot.cancel_reason,
+          ot.id AS ticket_id, 
+          ot.order_id, 
+          ot.batch_no, 
+          ot.status, 
+          ot.print_status,
+          ot.display_status, 
+          ot.payment_type, 
+          ot.version, 
           ot.created_at,
-          ot.updated_at,
-          EXTRACT(EPOCH FROM (NOW() - COALESCE(ot.started_at, ot.fired_at, ot.created_at)))::INTEGER as elapsed_seconds,
-          COALESCE(o.source_system, 'TLL') as source_system,
-          o.store_id,
-          COALESCE(
-            JSON_AGG(
-              JSON_BUILD_OBJECT(
-                'id', ol.id,
-                'menu_name', ol.menu_name,
-                'quantity', ol.quantity,
-                'unit_price', ol.unit_price,
-                'options', ol.options,
-                'special_requests', ol.special_requests
-              ) ORDER BY ol.created_at
-            ) FILTER (WHERE ol.id IS NOT NULL),
-            '[]'::json
-          ) as items
+          o.store_id, 
+          COALESCE(st.label, CONCAT('테이블 ', o.table_number)) AS table_label,
+          EXTRACT(EPOCH FROM (NOW() - ot.created_at))::INTEGER AS elapsed_seconds
         FROM order_tickets ot
-        LEFT JOIN orders o ON ot.order_id = o.id
-        LEFT JOIN order_lines ol ON o.id = ol.order_id AND ot.course_no = ol.course_no
-        WHERE (o.store_id = $1 OR o.store_id IS NULL)
-          AND ot.status IN ('PENDING', 'COOKING', 'DONE')
-    `;
-
-    const params = [store_id];
-    let paramIndex = 2;
-
-    if (station_id && station_id !== 'all') {
-      query += ` AND ot.station_id = $${paramIndex}`;
-      params.push(station_id);
-      paramIndex++;
-    }
-
-    if (status) {
-      query += ` AND ot.status = $${paramIndex}`;
-      params.push(status);
-      paramIndex++;
-    }
-
-    query += `
-        GROUP BY 
-          ot.id, ot.order_id, ot.table_number, ot.customer_name, 
-          ot.status, ot.station_id, ot.course_no, ot.fired_at, 
-          ot.started_at, ot.completed_at, ot.served_at, ot.canceled_at,
-          ot.cancel_reason, ot.created_at, ot.updated_at, o.source_system, o.store_id
+        JOIN orders o ON o.id = ot.order_id
+        LEFT JOIN store_tables st ON st.pos_session_id = o.id
+        WHERE o.store_id = $1
+          AND ($2::text IS NULL OR ot.status = ANY(string_to_array($2, ',')))
+          AND ot.display_status = $3
+        ORDER BY 
+          CASE ot.status 
+            WHEN 'COOKING' THEN 1
+            WHEN 'PENDING' THEN 2  
+            WHEN 'DONE' THEN 3
+          END,
+          ot.created_at ASC
       )
-      SELECT * FROM ticket_items
-      ORDER BY 
-        CASE ticket_status 
-          WHEN 'COOKING' THEN 1
-          WHEN 'PENDING' THEN 2  
-          WHEN 'DONE' THEN 3
-        END,
-        course_no ASC,
-        fired_at ASC NULLS LAST
+      SELECT 
+        tk.*, 
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'menu_name', oi.menu_name,
+              'quantity', oi.quantity,
+              'item_status', oi.item_status,
+              'cook_station', oi.cook_station,
+              'special_requests', oi.special_requests,
+              'unit_price', oi.unit_price
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) AS items
+      FROM tk
+      LEFT JOIN order_items oi ON oi.ticket_id = tk.ticket_id
+      WHERE ($4::text IS NULL OR oi.cook_station = $4 OR oi.id IS NULL)
+      GROUP BY 
+        tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.print_status,
+        tk.display_status, tk.payment_type, tk.version, tk.created_at,
+        tk.store_id, tk.table_label, tk.elapsed_seconds
     `;
+
+    const params = [
+      store_id,
+      status || 'PENDING,COOKING',
+      display_status,
+      station || null
+    ];
 
     const result = await pool.query(query, params);
 
@@ -130,7 +111,8 @@ router.get('/tickets', async (req, res) => {
       success: true,
       tickets: result.rows,
       total_tickets: result.rows.length,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      store_id: parseInt(store_id)
     });
 
   } catch (error) {
@@ -139,346 +121,257 @@ router.get('/tickets', async (req, res) => {
       success: false,
       error: 'KDS 티켓 조회 실패',
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       timestamp: Date.now()
     });
   }
 });
 
-// 스테이션 정보 조회 (개선)
-router.get('/stations', async (req, res) => {
-  try {
-    const { store_id } = req.query;
-
-    if (!store_id) {
-      return res.status(400).json({
-        success: false,
-        message: '매장 ID가 필요합니다'
-      });
-    }
-
-    console.log(`🏪 KDS 스테이션 조회: 매장 ${store_id}`);
-
-    // 매장 존재 여부 확인
-    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [store_id]);
-    if (storeCheck.rows.length === 0) {
-      console.warn(`⚠️ 존재하지 않는 매장 ID: ${store_id}`);
-      
-      // 기본 스테이션 반환 (매장이 없어도 KDS 테스트 가능)
-      const defaultStations = [
-        { id: 1, name: '주방', code: 'KITCHEN', is_expo: false, display_order: 1, 
-          active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 },
-        { id: 2, name: '음료', code: 'BEVERAGE', is_expo: false, display_order: 2, 
-          active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 },
-        { id: 3, name: '엑스포', code: 'EXPO', is_expo: true, display_order: 3, 
-          active_tickets: 0, pending_tickets: 0, cooking_tickets: 0, done_tickets: 0 }
-      ];
-
-      return res.json({
-        success: true,
-        stations: defaultStations,
-        fallback: true,
-        message: '기본 스테이션 반환 (매장 미존재)'
-      });
-    }
-
-    // kds_stations 테이블 존재 여부 확인
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'kds_stations'
-      );
-    `);
-
-    if (!tableCheck.rows[0].exists) {
-      console.warn('⚠️ kds_stations 테이블이 존재하지 않음 - 테이블 생성');
-      
-      // kds_stations 테이블 생성
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS kds_stations (
-          id SERIAL PRIMARY KEY,
-          store_id INTEGER NOT NULL,
-          name VARCHAR(50) NOT NULL,
-          code VARCHAR(20) NOT NULL,
-          is_expo BOOLEAN DEFAULT FALSE,
-          display_order INTEGER DEFAULT 1,
-          is_active BOOLEAN DEFAULT TRUE,
-          created_at TIMESTAMP DEFAULT NOW(),
-          updated_at TIMESTAMP DEFAULT NOW(),
-          UNIQUE(store_id, code)
-        );
-      `);
-      
-      console.log('✅ kds_stations 테이블 생성 완료');
-    }
-
-    // 스테이션별 활성 티켓 수 조회 (안전한 쿼리)
-    let result;
-    try {
-      result = await pool.query(`
-        SELECT 
-          s.id,
-          s.name,
-          s.code,
-          s.is_expo,
-          s.display_order,
-          COUNT(ot.id) as active_tickets,
-          SUM(CASE WHEN ot.status = 'PENDING' THEN 1 ELSE 0 END) as pending_tickets,
-          SUM(CASE WHEN ot.status = 'COOKING' THEN 1 ELSE 0 END) as cooking_tickets,
-          SUM(CASE WHEN ot.status = 'DONE' THEN 1 ELSE 0 END) as done_tickets
-        FROM kds_stations s
-        LEFT JOIN order_tickets ot ON s.id = ot.station_id 
-          AND ot.status IN ('PENDING', 'COOKING', 'DONE')
-        WHERE s.store_id = $1 AND s.is_active = true
-        GROUP BY s.id, s.name, s.code, s.is_expo, s.display_order
-        ORDER BY s.display_order ASC, s.name ASC
-      `, [store_id]);
-    } catch (joinError) {
-      console.warn('⚠️ 조인 쿼리 실패, 기본 스테이션만 조회:', joinError.message);
-      
-      result = await pool.query(`
-        SELECT 
-          id, name, code, is_expo, display_order,
-          0 as active_tickets,
-          0 as pending_tickets,
-          0 as cooking_tickets,
-          0 as done_tickets
-        FROM kds_stations
-        WHERE store_id = $1 AND is_active = true
-        ORDER BY display_order ASC, name ASC
-      `, [store_id]);
-    }
-
-    if (result.rows.length === 0) {
-      console.log('📝 기본 스테이션 생성 중...');
-      
-      // 기본 스테이션 생성
-      const defaultStations = [
-        { name: '주방', code: 'KITCHEN', is_expo: false, display_order: 1 },
-        { name: '음료', code: 'BEVERAGE', is_expo: false, display_order: 2 },
-        { name: '엑스포', code: 'EXPO', is_expo: true, display_order: 3 }
-      ];
-
-      const stations = [];
-      for (const station of defaultStations) {
-        try {
-          const insertResult = await pool.query(`
-            INSERT INTO kds_stations (store_id, name, code, is_expo, display_order)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (store_id, code) DO UPDATE SET
-              name = EXCLUDED.name,
-              is_expo = EXCLUDED.is_expo,
-              display_order = EXCLUDED.display_order
-            RETURNING *
-          `, [store_id, station.name, station.code, station.is_expo, station.display_order]);
-
-          stations.push({
-            ...insertResult.rows[0],
-            active_tickets: 0,
-            pending_tickets: 0,
-            cooking_tickets: 0,
-            done_tickets: 0
-          });
-        } catch (insertError) {
-          console.error(`❌ 스테이션 ${station.name} 생성 실패:`, insertError.message);
-        }
-      }
-
-      return res.json({
-        success: true,
-        stations: stations,
-        created: true
-      });
-    }
-
-    res.json({
-      success: true,
-      stations: result.rows
-    });
-
-  } catch (error) {
-    console.error('❌ 스테이션 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '스테이션 조회 실패',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      timestamp: Date.now()
-    });
-  }
-});
-
-// 티켓 상태 변경 (개선)
-router.patch('/tickets/:ticketId/status', async (req, res) => {
+// =================== 아이템 상태 변경 (핵심 로직) ===================
+router.patch('/items/:id', async (req, res) => {
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const ticketId = req.params.ticketId;
-    const { action, actor_id = 'kds_user', actor_type = 'USER', reason } = req.body;
+    const itemId = parseInt(req.params.id);
+    const { item_status, actor_id = 'kds_user', reason } = req.body;
 
-    // 현재 티켓 정보 조회
-    const ticketResult = await client.query(`
-      SELECT ot.*, o.store_id, o.source_system
-      FROM order_tickets ot
-      JOIN orders o ON ot.order_id = o.id
-      WHERE ot.id = $1
-    `, [ticketId]);
-
-    if (ticketResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: '티켓을 찾을 수 없습니다'
-      });
-    }
-
-    const ticket = ticketResult.rows[0];
-    let newStatus = ticket.status;
-    let updateFields = {};
-    let eventType = null;
-
-    // 상태 변경 로직
-    switch (action) {
-      case 'fire':
-        if (ticket.status === 'CREATED') {
-          newStatus = 'PENDING';
-          updateFields.fired_at = 'NOW()';
-          eventType = 'TICKET_FIRED';
-        }
-        break;
-
-      case 'start':
-        if (ticket.status === 'PENDING') {
-          newStatus = 'COOKING';
-          updateFields.started_at = 'NOW()';
-          eventType = 'TICKET_STARTED';
-        }
-        break;
-
-      case 'done':
-        if (ticket.status === 'COOKING') {
-          newStatus = 'DONE';
-          updateFields.completed_at = 'NOW()';
-          eventType = 'TICKET_COMPLETED';
-        }
-        break;
-
-      case 'serve':
-        if (ticket.status === 'DONE') {
-          newStatus = 'SERVED';
-          updateFields.served_at = 'NOW()';
-          eventType = 'TICKET_SERVED';
-        }
-        break;
-
-      case 'cancel':
-        if (['PENDING', 'COOKING'].includes(ticket.status)) {
-          newStatus = 'CANCELED';
-          updateFields.canceled_at = 'NOW()';
-          updateFields.cancel_reason = reason || '주방에서 취소';
-          eventType = 'TICKET_CANCELED';
-        }
-        break;
-
-      case 'recall':
-        if (ticket.status === 'DONE') {
-          newStatus = 'COOKING';
-          updateFields.completed_at = null;
-          eventType = 'TICKET_RECALLED';
-        }
-        break;
-
-      default:
-        return res.status(400).json({
-          success: false,
-          message: '유효하지 않은 액션입니다'
-        });
-    }
-
-    if (newStatus === ticket.status) {
+    if (!['PENDING', 'COOKING', 'DONE', 'CANCELED'].includes(item_status)) {
       return res.status(400).json({
         success: false,
-        message: `이미 ${ticket.status} 상태입니다`
+        message: '유효하지 않은 아이템 상태입니다'
       });
     }
 
-    // 티켓 상태 업데이트
-    let updateQuery = 'UPDATE order_tickets SET status = $1, updated_at = NOW()';
-    let updateParams = [newStatus];
-    let paramIndex = 2;
+    console.log(`🔄 아이템 ${itemId} 상태 변경: ${item_status}`);
 
-    Object.entries(updateFields).forEach(([field, value]) => {
-      if (value === 'NOW()') {
-        updateQuery += `, ${field} = NOW()`;
-      } else if (value === null) {
-        updateQuery += `, ${field} = NULL`;
-      } else {
-        updateQuery += `, ${field} = $${paramIndex}`;
-        updateParams.push(value);
-        paramIndex++;
-      }
-    });
+    // 아이템 상태 업데이트 + 티켓 자동 집계
+    const updateResult = await client.query(`
+      WITH item_update AS (
+        UPDATE order_items
+        SET item_status = $1, 
+            updated_at = NOW(),
+            cancel_reason = CASE WHEN $1 = 'CANCELED' THEN $2 ELSE cancel_reason END
+        WHERE id = $3
+        RETURNING ticket_id, menu_name, quantity, cook_station
+      ),
+      ticket_aggregation AS (
+        SELECT 
+          iu.ticket_id,
+          COUNT(*) FILTER (WHERE oi.item_status IN ('PENDING','COOKING')) AS outstanding,
+          COUNT(*) FILTER (WHERE oi.item_status = 'COOKING') AS cooking_cnt,
+          COUNT(*) FILTER (WHERE oi.item_status = 'CANCELED') AS canceled_cnt,
+          COUNT(*) AS total_cnt
+        FROM item_update iu
+        JOIN order_items oi ON oi.ticket_id = iu.ticket_id
+        GROUP BY iu.ticket_id
+      ),
+      ticket_update AS (
+        UPDATE order_tickets ot
+        SET 
+          status = CASE
+            WHEN ta.outstanding = 0 AND ta.canceled_cnt < ta.total_cnt THEN 'DONE'
+            WHEN ta.cooking_cnt > 0 THEN 'COOKING'
+            ELSE 'PENDING'
+          END,
+          version = ot.version + 1,
+          updated_at = NOW()
+        FROM ticket_aggregation ta
+        WHERE ot.id = ta.ticket_id
+        RETURNING ot.id, ot.status, ot.order_id
+      )
+      SELECT 
+        iu.ticket_id,
+        iu.menu_name,
+        iu.quantity,
+        iu.cook_station,
+        tu.status AS new_ticket_status,
+        tu.order_id
+      FROM item_update iu
+      JOIN ticket_update tu ON tu.id = iu.ticket_id
+    `, [item_status, reason || null, itemId]);
 
-    updateQuery += ' WHERE id = $' + paramIndex;
-    updateParams.push(ticketId);
-
-    await client.query(updateQuery, updateParams);
-
-    // 이벤트 로그 기록
-    if (eventType) {
-      await client.query(`
-        INSERT INTO kds_events (
-          store_id, ticket_id, event_type, 
-          actor_type, actor_id, payload
-        )
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [
-        ticket.store_id,
-        ticketId,
-        eventType,
-        actor_type,
-        actor_id,
-        JSON.stringify({
-          old_status: ticket.status,
-          new_status: newStatus,
-          action: action,
-          table_number: ticket.table_number,
-          reason: reason
-        })
-      ]);
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: '아이템을 찾을 수 없습니다'
+      });
     }
+
+    const result = updateResult.rows[0];
+
+    // KDS 이벤트 로그 기록
+    await client.query(`
+      INSERT INTO kds_events (
+        store_id, ticket_id, order_id, event_type,
+        actor_type, actor_id, payload, created_at
+      )
+      SELECT 
+        o.store_id,
+        $1,
+        $2,
+        'ITEM_STATUS_CHANGED',
+        'USER',
+        $3,
+        json_build_object(
+          'item_id', $4,
+          'menu_name', $5,
+          'old_status', 'UNKNOWN',
+          'new_status', $6,
+          'cook_station', $7,
+          'reason', $8
+        ),
+        NOW()
+      FROM orders o
+      WHERE o.id = $2
+    `, [
+      result.ticket_id,
+      result.order_id,
+      actor_id,
+      itemId,
+      result.menu_name,
+      item_status,
+      result.cook_station,
+      reason
+    ]);
 
     await client.query('COMMIT');
 
     // 실시간 알림
     try {
-      await client.query(`
-        SELECT pg_notify('kds_updates', $1)
-      `, [JSON.stringify({
-        type: 'ticket_status_change',
-        store_id: ticket.store_id,
-        ticket_id: parseInt(ticketId),
-        order_id: ticket.order_id,
-        table_number: ticket.table_number,
-        old_status: ticket.status,
-        new_status: newStatus,
-        action: action,
-        timestamp: Date.now()
-      })]);
+      const storeResult = await pool.query('SELECT store_id FROM orders WHERE id = $1', [result.order_id]);
+      if (storeResult.rows.length > 0) {
+        await pool.query(`
+          SELECT pg_notify('kds_updates', $1)
+        `, [JSON.stringify({
+          type: 'item_status_change',
+          store_id: storeResult.rows[0].store_id,
+          ticket_id: result.ticket_id,
+          item_id: itemId,
+          new_item_status: item_status,
+          new_ticket_status: result.new_ticket_status,
+          timestamp: Date.now()
+        })]);
+      }
     } catch (notifyError) {
       console.warn('⚠️ 실시간 알림 실패:', notifyError.message);
     }
 
     res.json({
       success: true,
-      message: `티켓이 ${newStatus} 상태로 변경되었습니다`,
+      message: `아이템이 ${item_status} 상태로 변경되었습니다`,
       data: {
-        ticket_id: parseInt(ticketId),
-        old_status: ticket.status,
-        new_status: newStatus,
-        action: action
+        item_id: itemId,
+        ticket_id: result.ticket_id,
+        new_item_status: item_status,
+        new_ticket_status: result.new_ticket_status,
+        menu_name: result.menu_name
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 아이템 상태 변경 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '아이템 상태 변경 실패',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// =================== 티켓 상태 강제 변경 (낙관적 락) ===================
+router.patch('/tickets/:id', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const ticketId = parseInt(req.params.id);
+    const { status, if_version, actor_id = 'kds_user', reason } = req.body;
+
+    if (!['PENDING', 'COOKING', 'DONE'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: '유효하지 않은 티켓 상태입니다'
+      });
+    }
+
+    console.log(`🎫 티켓 ${ticketId} 상태 강제 변경: ${status}`);
+
+    // 낙관적 락으로 버전 체크하며 업데이트
+    const updateResult = await client.query(`
+      UPDATE order_tickets
+      SET 
+        status = $1, 
+        version = version + 1,
+        updated_at = NOW()
+      WHERE id = $2 
+        AND ($3::integer IS NULL OR version = $3)
+      RETURNING id, order_id, status, version
+    `, [status, ticketId, if_version]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        success: false,
+        message: if_version ? '버전 충돌이 발생했습니다. 페이지를 새로고침하세요.' : '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    const result = updateResult.rows[0];
+
+    // 상태에 따라 모든 아이템 상태도 일괄 변경
+    if (status === 'DONE') {
+      await client.query(`
+        UPDATE order_items
+        SET item_status = 'DONE', updated_at = NOW()
+        WHERE ticket_id = $1 AND item_status != 'CANCELED'
+      `, [ticketId]);
+    } else if (status === 'COOKING') {
+      await client.query(`
+        UPDATE order_items
+        SET item_status = 'COOKING', updated_at = NOW()
+        WHERE ticket_id = $1 AND item_status = 'PENDING'
+      `, [ticketId]);
+    }
+
+    // 이벤트 로그
+    await client.query(`
+      INSERT INTO kds_events (
+        store_id, ticket_id, order_id, event_type,
+        actor_type, actor_id, payload, created_at
+      )
+      SELECT 
+        o.store_id,
+        $1,
+        $2,
+        'TICKET_STATUS_FORCED',
+        'USER',
+        $3,
+        json_build_object(
+          'old_status', 'UNKNOWN',
+          'new_status', $4,
+          'version', $5,
+          'reason', $6
+        ),
+        NOW()
+      FROM orders o
+      WHERE o.id = $2
+    `, [ticketId, result.order_id, actor_id, status, result.version, reason]);
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: `티켓이 ${status} 상태로 변경되었습니다`,
+      data: {
+        ticket_id: ticketId,
+        new_status: status,
+        new_version: result.version
       }
     });
 
@@ -495,7 +388,146 @@ router.patch('/tickets/:ticketId/status', async (req, res) => {
   }
 });
 
-// KDS 대시보드 데이터
+// =================== 프린트 큐 진입 ===================
+router.post('/tickets/:id/print', async (req, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { actor_id = 'kds_user' } = req.body;
+
+    console.log(`🖨️ 티켓 ${ticketId} 프린트 큐 진입`);
+
+    const result = await pool.query(`
+      UPDATE order_tickets
+      SET 
+        print_status = 'QUEUED',
+        print_requested_at = NOW(),
+        updated_at = NOW()
+      WHERE id = $1 AND print_status = 'WAITING'
+      RETURNING id, order_id, batch_no
+    `, [ticketId]);
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 프린트 요청되었거나 존재하지 않는 티켓입니다'
+      });
+    }
+
+    // 프린트 큐 이벤트 로그
+    await pool.query(`
+      INSERT INTO kds_events (
+        store_id, ticket_id, order_id, event_type,
+        actor_type, actor_id, payload, created_at
+      )
+      SELECT 
+        o.store_id,
+        $1,
+        $2,
+        'PRINT_QUEUED',
+        'USER',
+        $3,
+        json_build_object(
+          'batch_no', $4,
+          'print_requested_at', NOW()
+        ),
+        NOW()
+      FROM orders o
+      WHERE o.id = $2
+    `, [ticketId, result.rows[0].order_id, actor_id, result.rows[0].batch_no]);
+
+    res.json({
+      success: true,
+      message: '프린트 큐에 추가되었습니다',
+      data: {
+        ticket_id: ticketId,
+        print_status: 'QUEUED'
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 프린트 큐 진입 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '프린트 큐 진입 실패',
+      error: error.message
+    });
+  }
+});
+
+// =================== 스테이션 관리 ===================
+router.get('/stations', async (req, res) => {
+  try {
+    const { store_id } = req.query;
+
+    if (!store_id) {
+      return res.status(400).json({
+        success: false,
+        message: '매장 ID가 필요합니다'
+      });
+    }
+
+    console.log(`🏪 KDS 스테이션 조회: 매장 ${store_id}`);
+
+    // 스테이션별 활성 티켓 수 조회
+    const result = await pool.query(`
+      SELECT 
+        DISTINCT oi.cook_station as station_code,
+        COALESCE(oi.cook_station, 'KITCHEN') as station_name,
+        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status IN ('PENDING', 'COOKING', 'DONE') AND ot.display_status = 'VISIBLE') as active_tickets,
+        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_tickets,
+        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_tickets,
+        COUNT(DISTINCT ot.id) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_tickets
+      FROM order_items oi
+      JOIN order_tickets ot ON ot.id = oi.ticket_id
+      JOIN orders o ON o.id = ot.order_id
+      WHERE o.store_id = $1
+      GROUP BY oi.cook_station
+      ORDER BY 
+        CASE oi.cook_station
+          WHEN 'KITCHEN' THEN 1
+          WHEN 'BEVERAGE' THEN 2
+          WHEN 'DESSERT' THEN 3
+          ELSE 4
+        END,
+        oi.cook_station
+    `, [store_id]);
+
+    // 기본 스테이션이 없으면 추가
+    const stations = result.rows.length > 0 ? result.rows : [
+      {
+        station_code: 'KITCHEN',
+        station_name: 'KITCHEN',
+        active_tickets: 0,
+        pending_tickets: 0,
+        cooking_tickets: 0,
+        done_tickets: 0
+      }
+    ];
+
+    res.json({
+      success: true,
+      stations: stations.map(station => ({
+        id: station.station_code,
+        name: station.station_name,
+        code: station.station_code,
+        active_tickets: parseInt(station.active_tickets) || 0,
+        pending_tickets: parseInt(station.pending_tickets) || 0,
+        cooking_tickets: parseInt(station.cooking_tickets) || 0,
+        done_tickets: parseInt(station.done_tickets) || 0
+      }))
+    });
+
+  } catch (error) {
+    console.error('❌ 스테이션 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '스테이션 조회 실패',
+      message: error.message
+    });
+  }
+});
+
+// =================== KDS 대시보드 데이터 ===================
 router.get('/dashboard', async (req, res) => {
   try {
     const { store_id } = req.query;
@@ -509,89 +541,51 @@ router.get('/dashboard', async (req, res) => {
 
     console.log(`📊 KDS 대시보드 조회: 매장 ${store_id}`);
 
-    // 테이블 존재 여부 확인
-    const tableCheck = await pool.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'order_tickets'
-      );
-    `);
+    const result = await pool.query(`
+      SELECT 
+        COUNT(*) FILTER (WHERE ot.status = 'PENDING' AND ot.display_status = 'VISIBLE') as pending_count,
+        COUNT(*) FILTER (WHERE ot.status = 'COOKING' AND ot.display_status = 'VISIBLE') as cooking_count,
+        COUNT(*) FILTER (WHERE ot.status = 'DONE' AND ot.display_status = 'VISIBLE') as done_count,
+        COUNT(*) FILTER (WHERE ot.status = 'DONE' AND DATE(ot.updated_at) = CURRENT_DATE) as served_today,
+        AVG(
+          EXTRACT(EPOCH FROM (ot.updated_at - ot.created_at)) / 60
+        ) FILTER (WHERE ot.status = 'DONE' AND ot.updated_at > ot.created_at) as avg_cook_time_minutes,
+        AVG(
+          EXTRACT(EPOCH FROM (NOW() - ot.created_at)) / 60
+        ) FILTER (WHERE ot.status IN ('PENDING', 'COOKING')) as avg_wait_time_minutes
+      FROM order_tickets ot
+      JOIN orders o ON o.id = ot.order_id
+      WHERE o.store_id = $1
+        AND DATE(ot.created_at) = CURRENT_DATE
+    `, [store_id]);
 
-    if (!tableCheck.rows[0].exists) {
-      console.warn('⚠️ order_tickets 테이블이 존재하지 않음');
-      
-      return res.json({
-        success: true,
-        dashboard: {
-          pending_count: 0,
-          cooking_count: 0,
-          done_count: 0,
-          served_today: 0,
-          avg_cook_time_minutes: null,
-          avg_wait_time_minutes: null
-        },
-        timestamp: Date.now(),
-        message: 'KDS 시스템이 설정되지 않았습니다'
-      });
-    }
-
-    let result;
-    try {
-      result = await pool.query(`
-        SELECT 
-          COUNT(*) FILTER (WHERE ot.status = 'PENDING') as pending_count,
-          COUNT(*) FILTER (WHERE ot.status = 'COOKING') as cooking_count,
-          COUNT(*) FILTER (WHERE ot.status = 'DONE') as done_count,
-          COUNT(*) FILTER (WHERE ot.status = 'SERVED') as served_today,
-          AVG(
-            EXTRACT(EPOCH FROM (ot.completed_at - ot.started_at)) / 60
-          ) FILTER (WHERE ot.completed_at IS NOT NULL AND ot.started_at IS NOT NULL) as avg_cook_time_minutes,
-          AVG(
-            EXTRACT(EPOCH FROM (ot.served_at - ot.completed_at)) / 60
-          ) FILTER (WHERE ot.served_at IS NOT NULL AND ot.completed_at IS NOT NULL) as avg_wait_time_minutes
-        FROM order_tickets ot
-        LEFT JOIN orders o ON ot.order_id = o.id
-        WHERE (o.store_id = $1 OR o.store_id IS NULL)
-          AND DATE(ot.created_at) = CURRENT_DATE
-      `, [store_id]);
-    } catch (queryError) {
-      console.warn('⚠️ 조인 쿼리 실패, 단순 쿼리 시도:', queryError.message);
-      
-      // 조인 실패 시 order_tickets만 조회
-      result = await pool.query(`
-        SELECT 
-          COUNT(*) FILTER (WHERE status = 'PENDING') as pending_count,
-          COUNT(*) FILTER (WHERE status = 'COOKING') as cooking_count,
-          COUNT(*) FILTER (WHERE status = 'DONE') as done_count,
-          COUNT(*) FILTER (WHERE status = 'SERVED') as served_today,
-          AVG(
-            EXTRACT(EPOCH FROM (completed_at - started_at)) / 60
-          ) FILTER (WHERE completed_at IS NOT NULL AND started_at IS NOT NULL) as avg_cook_time_minutes,
-          AVG(
-            EXTRACT(EPOCH FROM (served_at - completed_at)) / 60
-          ) FILTER (WHERE served_at IS NOT NULL AND completed_at IS NOT NULL) as avg_wait_time_minutes
-        FROM order_tickets
-        WHERE DATE(created_at) = CURRENT_DATE
-      `);
-    }
+    const dashboard = result.rows[0] || {};
 
     // null 값 처리
-    const dashboard = result.rows[0];
     Object.keys(dashboard).forEach(key => {
       if (dashboard[key] === null) {
         if (key.includes('count') || key.includes('today')) {
           dashboard[key] = 0;
         } else {
-          dashboard[key] = null;
+          dashboard[key] = 0;
         }
+      } else if (typeof dashboard[key] === 'string') {
+        dashboard[key] = parseFloat(dashboard[key]) || 0;
       }
     });
 
     res.json({
       success: true,
-      dashboard: dashboard,
-      timestamp: Date.now()
+      dashboard: {
+        pending_count: parseInt(dashboard.pending_count) || 0,
+        cooking_count: parseInt(dashboard.cooking_count) || 0,
+        done_count: parseInt(dashboard.done_count) || 0,
+        served_today: parseInt(dashboard.served_today) || 0,
+        avg_cook_time_minutes: Math.round((dashboard.avg_cook_time_minutes || 0) * 10) / 10,
+        avg_wait_time_minutes: Math.round((dashboard.avg_wait_time_minutes || 0) * 10) / 10
+      },
+      timestamp: Date.now(),
+      store_id: parseInt(store_id)
     });
 
   } catch (error) {
@@ -599,16 +593,14 @@ router.get('/dashboard', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '대시보드 조회 실패',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      timestamp: Date.now()
+      message: error.message
     });
   }
 });
 
-// SSE 스트림 (개선)
+// =================== SSE 스트림 ===================
 router.get('/stream/:store_id', (req, res) => {
-  const storeId = req.params.store_id;
+  const storeId = parseInt(req.params.store_id);
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -621,7 +613,7 @@ router.get('/stream/:store_id', (req, res) => {
   // 연결 확인 메시지
   res.write(`data: ${JSON.stringify({
     type: 'connected',
-    store_id: parseInt(storeId),
+    store_id: storeId,
     timestamp: Date.now()
   })}\n\n`);
 
@@ -636,7 +628,7 @@ router.get('/stream/:store_id', (req, res) => {
       client.on('notification', (msg) => {
         try {
           const payload = JSON.parse(msg.payload);
-          if (payload.store_id === parseInt(storeId)) {
+          if (payload.store_id === storeId) {
             res.write(`data: ${JSON.stringify(payload)}\n\n`);
           }
         } catch (error) {
@@ -677,28 +669,128 @@ router.get('/stream/:store_id', (req, res) => {
   });
 });
 
-// 주문 생성 시 자동 KDS 설정 (새로운 방식)
+// =================== 화면 정리 (DONE 티켓 자동 숨김) ===================
+router.post('/cleanup/:store_id', async (req, res) => {
+  try {
+    const storeId = parseInt(req.params.store_id);
+    const { minutes_threshold = 3 } = req.body;
+
+    console.log(`🧹 매장 ${storeId} 화면 정리 시작 (${minutes_threshold}분 임계값)`);
+
+    const result = await pool.query(`
+      UPDATE order_tickets ot
+      SET 
+        display_status = 'HIDDEN',
+        updated_at = NOW()
+      FROM orders o
+      WHERE o.id = ot.order_id
+        AND o.store_id = $1
+        AND ot.status = 'DONE'
+        AND ot.display_status = 'VISIBLE'
+        AND ot.updated_at < NOW() - INTERVAL '1 minute' * $2
+      RETURNING ot.id
+    `, [storeId, minutes_threshold]);
+
+    res.json({
+      success: true,
+      message: `${result.rows.length}개 티켓이 숨김 처리되었습니다`,
+      hidden_tickets: result.rows.length,
+      store_id: storeId
+    });
+
+  } catch (error) {
+    console.error('❌ 화면 정리 실패:', error);
+    res.status(500).json({
+      success: false,
+      message: '화면 정리 실패',
+      error: error.message
+    });
+  }
+});
+
+// =================== 필수 테이블 생성 함수 ===================
+async function createKDSTables() {
+  const client = await pool.connect();
+  
+  try {
+    console.log('📋 KDS 필수 테이블들을 생성합니다...');
+
+    await client.query('BEGIN');
+
+    // order_tickets 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS order_tickets (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER NOT NULL,
+        batch_no INTEGER DEFAULT 1,
+        status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
+        print_status VARCHAR(20) DEFAULT 'WAITING' CHECK (print_status IN ('WAITING', 'QUEUED', 'PRINTED', 'FAILED')),
+        display_status VARCHAR(20) DEFAULT 'VISIBLE' CHECK (display_status IN ('VISIBLE', 'HIDDEN')),
+        payment_type VARCHAR(20) DEFAULT 'POSTPAID',
+        version INTEGER DEFAULT 1,
+        print_requested_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+      );
+      CREATE INDEX IF NOT EXISTS idx_order_tickets_order_id ON order_tickets(order_id);
+      CREATE INDEX IF NOT EXISTS idx_order_tickets_status ON order_tickets(status);
+      CREATE INDEX IF NOT EXISTS idx_order_tickets_display_status ON order_tickets(display_status);
+    `);
+
+    // order_items 테이블에 필요한 컬럼들 추가
+    await client.query(`
+      ALTER TABLE order_items 
+      ADD COLUMN IF NOT EXISTS ticket_id INTEGER REFERENCES order_tickets(id),
+      ADD COLUMN IF NOT EXISTS item_status VARCHAR(20) DEFAULT 'PENDING' CHECK (item_status IN ('PENDING', 'COOKING', 'DONE', 'CANCELED')),
+      ADD COLUMN IF NOT EXISTS cook_station VARCHAR(50) DEFAULT 'KITCHEN',
+      ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
+      
+      CREATE INDEX IF NOT EXISTS idx_order_items_ticket_id ON order_items(ticket_id);
+      CREATE INDEX IF NOT EXISTS idx_order_items_item_status ON order_items(item_status);
+      CREATE INDEX IF NOT EXISTS idx_order_items_cook_station ON order_items(cook_station);
+    `);
+
+    // kds_events 테이블 (로그)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS kds_events (
+        id SERIAL PRIMARY KEY,
+        store_id INTEGER NOT NULL,
+        ticket_id INTEGER,
+        order_id INTEGER,
+        event_type VARCHAR(50) NOT NULL,
+        actor_type VARCHAR(20) DEFAULT 'USER',
+        actor_id VARCHAR(50) DEFAULT 'unknown',
+        payload JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        FOREIGN KEY (store_id) REFERENCES stores(id),
+        FOREIGN KEY (ticket_id) REFERENCES order_tickets(id),
+        FOREIGN KEY (order_id) REFERENCES orders(id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_kds_events_store_id ON kds_events(store_id);
+      CREATE INDEX IF NOT EXISTS idx_kds_events_created_at ON kds_events(created_at);
+    `);
+
+    await client.query('COMMIT');
+    console.log('✅ KDS 테이블 생성 완료');
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ KDS 테이블 생성 실패:', error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// =================== 주문 생성 시 자동 티켓 생성 함수 ===================
 async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
   const client = await pool.connect();
 
   try {
-    console.log(`🎫 주문 티켓 생성 시작: 주문 ${orderId}`);
+    console.log(`🎫 주문 ${orderId}에 대한 KDS 티켓 생성 시작`);
 
-    // 주문 라인별로 코스별 그룹화
-    const orderLinesResult = await client.query(`
-      SELECT 
-        ol.*,
-        COALESCE(ol.course_no, 1) as effective_course_no
-      FROM order_lines ol
-      WHERE ol.order_id = $1 AND ol.status != 'canceled'
-      ORDER BY ol.course_no, ol.created_at
-    `, [orderId]);
-
-    const orderLines = orderLinesResult.rows;
-    
-    if (orderLines.length === 0) {
-      return { success: true, message: '생성할 티켓이 없습니다' };
-    }
+    await client.query('BEGIN');
 
     // 주문 정보 조회
     const orderResult = await client.query(`
@@ -708,95 +800,64 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
       WHERE o.id = $1
     `, [orderId]);
 
+    if (orderResult.rows.length === 0) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
     const order = orderResult.rows[0];
 
-    // 스테이션 조회
-    const stationsResult = await client.query(`
-      SELECT * FROM kds_stations 
-      WHERE store_id = $1 AND is_active = true
-      ORDER BY display_order ASC
-    `, [storeId]);
+    // 티켓 생성 (배치 단위)
+    const ticketResult = await client.query(`
+      INSERT INTO order_tickets (
+        order_id, batch_no, status, payment_type,
+        print_status, display_status, created_at, updated_at
+      )
+      VALUES ($1, 1, 'PENDING', 'POSTPAID', 'WAITING', 'VISIBLE', NOW(), NOW())
+      RETURNING id
+    `, [orderId]);
 
-    let stations = stationsResult.rows;
+    const ticketId = ticketResult.rows[0].id;
 
-    // 코스별 티켓 생성
-    const courseGroups = {};
-    orderLines.forEach(line => {
-      const courseNo = line.effective_course_no;
-      if (!courseGroups[courseNo]) {
-        courseGroups[courseNo] = [];
-      }
-      courseGroups[courseNo].push(line);
-    });
+    // 모든 order_items에 ticket_id 할당
+    await client.query(`
+      UPDATE order_items 
+      SET 
+        ticket_id = $1,
+        item_status = 'PENDING',
+        cook_station = COALESCE(cook_station, 'KITCHEN')
+      WHERE order_id = $2
+    `, [ticketId, orderId]);
 
-    const createdTickets = [];
+    // 이벤트 로그
+    await client.query(`
+      INSERT INTO kds_events (
+        store_id, ticket_id, order_id, event_type,
+        actor_type, actor_id, payload, created_at
+      )
+      VALUES ($1, $2, $3, 'TICKET_CREATED', 'SYSTEM', $4, $5, NOW())
+    `, [
+      storeId,
+      ticketId,
+      orderId,
+      sourceSystem.toLowerCase(),
+      JSON.stringify({
+        source_system: sourceSystem,
+        customer_name: order.customer_name || '고객',
+        table_number: order.table_number || 1
+      })
+    ]);
 
-    for (const [courseNo, lines] of Object.entries(courseGroups)) {
-      // 메뉴 타입별 스테이션 할당
-      let targetStation = stations.find(s => !s.is_expo) || stations[0];
-
-      // 스테이션 라우팅 로직 (메뉴명 기반)
-      const hasOnlyBeverage = lines.every(line => 
-        line.menu_name.toLowerCase().includes('음료') || 
-        line.menu_name.toLowerCase().includes('커피') ||
-        line.menu_name.toLowerCase().includes('차')
-      );
-
-      if (hasOnlyBeverage) {
-        const beverageStation = stations.find(s => s.code === 'BEVERAGE');
-        if (beverageStation) targetStation = beverageStation;
-      }
-
-      // 티켓 생성
-      const ticketResult = await client.query(`
-        INSERT INTO order_tickets (
-          order_id, table_number, customer_name, course_no,
-          station_id, status, fired_at, created_at, updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), NOW())
-        RETURNING *
-      `, [
-        orderId,
-        order.table_number || 1,
-        order.customer_name || '고객',
-        parseInt(courseNo),
-        targetStation.id,
-        'PENDING'
-      ]);
-
-      const ticket = ticketResult.rows[0];
-      createdTickets.push(ticket);
-
-      // KDS 이벤트 로그
-      await client.query(`
-        INSERT INTO kds_events (
-          store_id, ticket_id, order_id, event_type,
-          actor_type, actor_id, payload
-        )
-        VALUES ($1, $2, $3, 'TICKET_CREATED', 'SYSTEM', $4, $5)
-      `, [
-        storeId,
-        ticket.id,
-        orderId,
-        sourceSystem.toLowerCase(),
-        JSON.stringify({
-          course_no: parseInt(courseNo),
-          item_count: lines.length,
-          station_id: targetStation.id,
-          source_system: sourceSystem
-        })
-      ]);
-    }
+    await client.query('COMMIT');
 
     // 실시간 알림
     try {
-      await client.query(`
+      await pool.query(`
         SELECT pg_notify('kds_updates', $1)
       `, [JSON.stringify({
-        type: 'new_tickets',
+        type: 'new_ticket',
         store_id: parseInt(storeId),
+        ticket_id: ticketId,
         order_id: parseInt(orderId),
-        ticket_count: createdTickets.length,
         source_system: sourceSystem,
         timestamp: Date.now()
       })]);
@@ -804,15 +865,16 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
       console.warn('⚠️ 실시간 알림 실패:', notifyError.message);
     }
 
-    console.log(`✅ KDS 티켓 생성 완료: ${createdTickets.length}개`);
+    console.log(`✅ KDS 티켓 생성 완료: 티켓 ID ${ticketId}`);
     
     return {
       success: true,
-      message: `KDS 티켓 ${createdTickets.length}개 생성 완료`,
-      tickets: createdTickets
+      message: 'KDS 티켓 생성 완료',
+      ticket_id: ticketId
     };
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('❌ KDS 티켓 생성 실패:', error);
     throw error;
   } finally {
@@ -820,10 +882,10 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL') {
   }
 }
 
-// KDS 티켓 생성 API
+// =================== 외부 호출용 티켓 생성 API ===================
 router.post('/create-tickets', async (req, res) => {
   try {
-    const { order_id, store_id, source_system } = req.body;
+    const { order_id, store_id, source_system = 'TLL' } = req.body;
 
     if (!order_id || !store_id) {
       return res.status(400).json({
