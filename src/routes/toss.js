@@ -37,12 +37,23 @@ router.post('/prepare', async (req, res) => {
       });
     }
 
+    // userId를 정수형으로 파싱하여 user_pk로 사용
+    const parsedUserId = parseInt(userId);
+    if (isNaN(parsedUserId)) {
+      console.error('❌ 유효하지 않은 userId:', userId);
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 사용자 ID입니다.'
+      });
+    }
+
     // orderId 생성
     const orderId = `TLL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     console.log('🔄 결제 준비 처리 시작:', {
       orderId,
       userId,
+      parsedUserId, // user_pk로 사용될 값
       storeId,
       storeName,
       tableNumber,
@@ -52,20 +63,22 @@ router.post('/prepare', async (req, res) => {
       paymentMethod
     });
 
-    // pending_payments 테이블에 데이터 저장
+    // pending_payments 테이블에 데이터 저장 (user_pk 컬럼 추가)
     await client.query(`
       INSERT INTO pending_payments (
         order_id,
         user_id,
+        user_pk,
         store_id,
         table_number,
         order_data,
         amount,
         status
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
     `, [
       orderId,
-      userId,
+      userId, // 원본 user_id (문자열일 수 있음)
+      parsedUserId, // users.id PK (정수)
       parseInt(storeId),
       parseInt(tableNumber),
       JSON.stringify({
@@ -159,10 +172,11 @@ router.post('/confirm', async (req, res) => {
 
     const pendingPayment = pendingResult.rows[0];
     const orderData = pendingPayment.order_data;
-    
+
     console.log('📦 pending_payments에서 복구된 주문 데이터:', {
       orderId: pendingPayment.order_id,
       userId: pendingPayment.user_id,
+      user_pk: pendingPayment.user_pk, // user_pk 추가
       storeId: pendingPayment.store_id,
       tableNumber: pendingPayment.table_number,
       amount: pendingPayment.amount,
@@ -218,6 +232,7 @@ router.post('/confirm', async (req, res) => {
       const finalOrderInfo = {
         storeId: pendingPayment.store_id,
         userId: pendingPayment.user_id,
+        userPk: pendingPayment.user_pk, // user_pk 사용
         tableNumber: pendingPayment.table_number,
         finalTotal: parseInt(amount) - (orderData.usedPoint || 0) - (orderData.couponDiscount || 0),
         subtotal: orderData.subtotal || parseInt(amount),
@@ -244,19 +259,21 @@ router.post('/confirm', async (req, res) => {
         INSERT INTO orders (
           store_id, 
           user_id,
+          user_pk, -- user_pk 추가
           source,
           status,
           payment_status,
-          " total_price"
-        ) VALUES ($1, $2, 'TLL', 'COMPLETED', 'PAID', $3)
+          "total_price"
+        ) VALUES ($1, $2, $3, 'TLL', 'COMPLETED', 'PAID', $4)
         RETURNING id
       `, [
         finalOrderInfo.storeId,
         finalOrderInfo.userId,
+        finalOrderInfo.userPk, // user_pk 삽입
         finalOrderInfo.finalTotal
       ]);
 
-      const orderId = orderResult.rows[0].id;
+      const newOrderId = orderResult.rows[0].id;
 
       // 2. order_tickets 테이블에 티켓 생성
       const ticketResult = await client.query(`
@@ -268,7 +285,7 @@ router.post('/confirm', async (req, res) => {
           source
         ) VALUES ($1, 1, 'COMPLETED', 'PREPAID', 'TLL')
         RETURNING id
-      `, [orderId]);
+      `, [newOrderId]);
 
       const ticketId = ticketResult.rows[0].id;
 
@@ -307,7 +324,7 @@ router.post('/confirm', async (req, res) => {
           provider_response
         ) VALUES ($1, $2, 'TOSS', $3, 'COMPLETED', CURRENT_TIMESTAMP, $4, $5)
       `, [
-        orderId,
+        newOrderId,
         ticketId,
         finalOrderInfo.finalTotal,
         paymentKey,
@@ -326,7 +343,7 @@ router.post('/confirm', async (req, res) => {
             code,
             amount_signed
           ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
-        `, [orderId, ticketId, -finalOrderInfo.usedPoint]);
+        `, [newOrderId, ticketId, -finalOrderInfo.usedPoint]);
       }
 
       if (finalOrderInfo.couponDiscount > 0) {
@@ -340,7 +357,7 @@ router.post('/confirm', async (req, res) => {
             code,
             amount_signed
           ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
-        `, [orderId, ticketId, -finalOrderInfo.couponDiscount]);
+        `, [newOrderId, ticketId, -finalOrderInfo.couponDiscount]);
       }
 
       // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
@@ -351,7 +368,7 @@ router.post('/confirm', async (req, res) => {
         UPDATE users 
         SET point = COALESCE(point, 0) + $1
         WHERE id = $2
-      `, [pointChange, finalOrderInfo.userId]);
+      `, [pointChange, finalOrderInfo.userPk]); // user_pk 사용
 
       // pending_payments 상태를 SUCCESS로 업데이트
       await client.query(`
@@ -363,7 +380,7 @@ router.post('/confirm', async (req, res) => {
         WHERE order_id = $2
       `, [paymentKey, orderId]);
 
-      console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${orderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
+      console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${newOrderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
 
     } else {
       // 일반 주문 처리 - 기존 로직 유지
