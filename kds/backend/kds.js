@@ -734,22 +734,39 @@ router.get('/stream/:store_id', (req, res) => {
 
       client.on('notification', (msg) => {
         try {
+          console.log(`📡 PostgreSQL NOTIFY 수신 (매장 ${storeId}):`, msg.payload);
           const payload = JSON.parse(msg.payload);
-          if (payload.store_id === storeId) {
-            res.write(`data: ${JSON.stringify(payload)}\n\n`);
+          
+          // 해당 매장의 알림만 전송
+          if (payload.store_id === storeId || payload.store_id === parseInt(storeId)) {
+            const message = `data: ${JSON.stringify(payload)}\n\n`;
+            res.write(message);
+            console.log(`📤 SSE 메시지 전송됨:`, payload.type);
+          } else {
+            console.log(`🔇 다른 매장 알림 무시: ${payload.store_id} !== ${storeId}`);
           }
         } catch (error) {
           console.error('❌ SSE 알림 처리 실패:', error);
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            message: 'SSE 알림 처리 실패',
+            error: error.message
+          })}\n\n`);
         }
       });
 
-      console.log(`🔌 KDS SSE 연결됨: 매장 ${storeId}`);
+      client.on('error', (error) => {
+        console.error('❌ PostgreSQL 클라이언트 오류:', error);
+      });
+
+      console.log(`✅ KDS SSE PostgreSQL LISTEN 설정 완료: 매장 ${storeId}`);
 
     } catch (error) {
-      console.error('❌ SSE 설정 실패:', error);
+      console.error('❌ SSE PostgreSQL 설정 실패:', error);
       res.write(`data: ${JSON.stringify({
         type: 'error',
-        message: 'SSE 연결 실패'
+        message: 'SSE 연결 실패',
+        error: error.message
       })}\n\n`);
     }
   };

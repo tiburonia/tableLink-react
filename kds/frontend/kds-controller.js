@@ -100,9 +100,14 @@ window.KDSController = {
         KDSUI.updateDashboard(data);
         break;
 
-      case 'new_tickets':
-        KDSUI.showToast('새로운 주문이 접수되었습니다!', 'success');
+      case 'new_ticket':
+        console.log('🎫 새 티켓 알림 처리:', data);
+        if (this.ui && this.ui.showNotification) {
+          this.ui.showNotification('새로운 주문이 접수되었습니다!', 'success');
+        }
         this.playNotificationSound('new_order');
+        // 티켓 목록 즉시 업데이트
+        this.updateTicketDisplay();
         break;
 
       case 'ticket_status_changed':

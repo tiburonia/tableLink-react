@@ -413,6 +413,26 @@ router.post('/confirm', async (req, res) => {
 
       console.log(`✅ TLL 새 스키마 주문 완료: 주문 ${newOrderId}, 티켓 ${ticketId}, 결제 ${paymentKey}`);
 
+      // KDS 실시간 알림 발송
+      try {
+        await client.query(`
+          SELECT pg_notify('kds_updates', $1)
+        `, [JSON.stringify({
+          type: 'new_ticket',
+          store_id: parseInt(finalOrderInfo.storeId),
+          ticket_id: ticketId,
+          order_id: newOrderId,
+          source_system: 'TLL',
+          customer_name: '고객',
+          table_number: finalOrderInfo.tableNumber,
+          timestamp: Date.now()
+        })]);
+
+        console.log('📡 KDS 실시간 알림 발송 완료');
+      } catch (notifyError) {
+        console.warn('⚠️ KDS 실시간 알림 실패:', notifyError.message);
+      }
+
     } else {
       // 일반 주문 처리 - 기존 로직 유지
       const orderResult = await client.query(`

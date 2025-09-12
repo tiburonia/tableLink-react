@@ -46,13 +46,18 @@ class KDSCore {
       this.startPolling();
 
       // 실시간 연결 시도
+      console.log('🔌 SSE 연결 시도 중...');
       this.connectSSE();
 
       // 자동 정리 타이머
       this.startCleanupTimer();
 
+      // 연결 상태 주기적 확인
+      this.startConnectionMonitor();
+
       this.emit('initialized', { storeId: this.config.storeId });
 
+      console.log('✅ KDS Core 초기화 완료:', this.getStatus());
       return true;
     } catch (error) {
       console.error('❌ KDS Core 초기화 실패:', error);
@@ -393,72 +398,105 @@ class KDSCore {
     try {
       if (this.sseConnection) {
         this.sseConnection.close();
+        this.sseConnection = null;
       }
 
       const url = `${this.config.apiBase}/stream/${this.config.storeId}`;
+      console.log('🔌 KDS SSE 연결 시도:', url);
+      
       this.sseConnection = new EventSource(url);
 
-      this.sseConnection.onopen = () => {
-        console.log('🔌 KDS SSE 연결 성공');
+      this.sseConnection.onopen = (event) => {
+        console.log('✅ KDS SSE 연결 성공:', event);
         this.emit('sse_connected');
+        this.state.retryCount = 0; // 연결 성공 시 재시도 카운트 리셋
       };
 
       this.sseConnection.onmessage = (event) => {
         try {
+          console.log('📨 KDS SSE 메시지 수신:', event.data);
           const data = JSON.parse(event.data);
           this.handleSSEMessage(data);
         } catch (error) {
-          console.warn('⚠️ SSE 메시지 파싱 실패:', error);
+          console.warn('⚠️ SSE 메시지 파싱 실패:', error, event.data);
         }
       };
 
       this.sseConnection.onerror = (error) => {
-        console.warn('⚠️ KDS SSE 연결 오류:', error);
+        console.error('❌ KDS SSE 연결 오류:', error);
+        console.error('SSE 상태:', this.sseConnection?.readyState);
         this.emit('sse_error', error);
 
-        // 재연결 시도
-        setTimeout(() => {
-          if (!this.sseConnection || this.sseConnection.readyState === EventSource.CLOSED) {
-            console.log('🔄 KDS SSE 재연결 시도...');
-            this.connectSSE();
-          }
-        }, 5000);
+        // 연결이 끊어진 경우에만 재연결 시도
+        if (this.sseConnection?.readyState === EventSource.CLOSED) {
+          this.scheduleReconnect();
+        }
       };
 
     } catch (error) {
       console.error('❌ SSE 연결 설정 실패:', error);
+      this.scheduleReconnect();
     }
   }
 
+  scheduleReconnect() {
+    this.state.retryCount++;
+    const delay = Math.min(1000 * Math.pow(2, this.state.retryCount), 30000); // 최대 30초
+    
+    console.log(`🔄 KDS SSE 재연결 예약: ${delay}ms 후 (재시도 ${this.state.retryCount}회)`);
+    
+    setTimeout(() => {
+      if (!this.sseConnection || this.sseConnection.readyState === EventSource.CLOSED) {
+        console.log('🔄 KDS SSE 재연결 시도...');
+        this.connectSSE();
+      }
+    }, delay);
+  }
+
   handleSSEMessage(data) {
-    console.log('📨 KDS SSE 메시지:', data);
+    console.log('📨 KDS SSE 메시지 처리:', data);
 
     switch (data.type) {
       case 'connected':
-        console.log('✅ KDS SSE 연결 확인');
+        console.log('✅ KDS SSE 연결 확인됨');
         break;
 
       case 'new_ticket':
+        console.log('🎫 새 티켓 알림 수신:', data);
         this.emit('new_ticket', data);
-        this.fetchTickets(); // 새 티켓 로드
+        // 즉시 티켓 목록 새로고침
+        setTimeout(() => this.fetchTickets(), 500);
         break;
 
       case 'item_status_change':
+        console.log('🔄 아이템 상태 변경 알림:', data);
         this.emit('item_updated', data);
-        this.refreshTicket(data.ticket_id);
+        if (data.ticket_id) {
+          this.refreshTicket(data.ticket_id);
+        }
         break;
 
       case 'ticket_status_change':
+        console.log('🎫 티켓 상태 변경 알림:', data);
         this.emit('ticket_updated', data);
-        this.refreshTicket(data.ticket_id);
+        if (data.ticket_id) {
+          this.refreshTicket(data.ticket_id);
+        }
         break;
 
+      case 'heartbeat':
       case 'keepalive':
         // 연결 유지 메시지
+        console.debug('💓 KDS SSE 하트비트');
+        break;
+
+      case 'error':
+        console.error('❌ KDS SSE 서버 오류:', data);
+        this.emit('sse_server_error', data);
         break;
 
       default:
-        console.log('🔔 KDS 알림:', data);
+        console.log('🔔 KDS 기타 알림:', data);
         this.emit('notification', data);
     }
   }
@@ -611,6 +649,31 @@ class KDSCore {
     }
   }
 
+  // =================== 연결 모니터링 ===================
+  startConnectionMonitor() {
+    // 30초마다 연결 상태 확인
+    this.connectionMonitor = setInterval(() => {
+      const status = this.getConnectionStatus();
+      console.log('🔍 KDS 연결 상태 확인:', status);
+      
+      if (!status.sseConnected && this.config.storeId) {
+        console.log('⚠️ SSE 연결이 끊어짐, 재연결 시도');
+        this.connectSSE();
+      }
+    }, 30000);
+  }
+
+  getConnectionStatus() {
+    return {
+      sseConnected: this.sseConnection?.readyState === EventSource.OPEN,
+      sseState: this.sseConnection?.readyState,
+      isPolling: this.state.isPolling,
+      lastUpdate: this.state.lastUpdate,
+      retryCount: this.state.retryCount,
+      storeId: this.config.storeId
+    };
+  }
+
   // =================== 정리 ===================
   destroy() {
     console.log('🛑 KDS Core 종료 중...');
@@ -620,6 +683,11 @@ class KDSCore {
     if (this.cleanupTimer) {
       clearInterval(this.cleanupTimer);
       this.cleanupTimer = null;
+    }
+
+    if (this.connectionMonitor) {
+      clearInterval(this.connectionMonitor);
+      this.connectionMonitor = null;
     }
 
     if (this.sseConnection) {
