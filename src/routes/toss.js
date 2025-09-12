@@ -52,8 +52,8 @@ router.post('/prepare', async (req, res) => {
 
     console.log('🔄 결제 준비 처리 시작:', {
       orderId,
-      userId,
-      parsedUserId, // user_pk로 사용될 값
+      userId, // 프론트에서 받은 users.id (PK)
+      parsedUserId, // user_pk로 사용될 값 (users.id)
       storeId,
       storeName,
       tableNumber,
@@ -63,7 +63,20 @@ router.post('/prepare', async (req, res) => {
       paymentMethod
     });
 
-    // pending_payments 테이블에 데이터 저장 (user_pk 컬럼 추가)
+    // 프론트엔드에서 전달받은 userId는 users.id (PK)이므로, users.user_id를 조회
+    const userResult = await client.query('SELECT user_id FROM users WHERE id = $1', [parsedUserId]);
+    
+    if (userResult.rows.length === 0) {
+      console.error('❌ 사용자를 찾을 수 없음:', parsedUserId);
+      return res.status(404).json({
+        success: false,
+        error: '사용자를 찾을 수 없습니다'
+      });
+    }
+
+    const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
+
+    // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
     await client.query(`
       INSERT INTO pending_payments (
         order_id,
@@ -77,7 +90,7 @@ router.post('/prepare', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
     `, [
       orderId,
-      userId, // 원본 user_id (문자열일 수 있음)
+      userIdString, // users.user_id (사용자 입력 ID, 문자열)
       parsedUserId, // users.id PK (정수)
       parseInt(storeId),
       parseInt(tableNumber),
