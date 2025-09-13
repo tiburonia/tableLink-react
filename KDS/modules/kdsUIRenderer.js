@@ -176,17 +176,34 @@
       const elapsedTime = this.getElapsedTime(ticket.created_at);
       const statusClass = this.getStatusClass(ticket.status);
       const progressPercent = this.calculateProgress(ticket.items);
+      
+      // COOKING 상태 확인
+      const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
+      const isDone = ['DONE', 'done', 'completed'].includes(ticket.status);
+
+      // COOKING 상태일 때 특별한 스타일 적용
+      const elapsedTimeStyle = isCooking ? 
+        'background: #ff6b6b; color: white; font-weight: 700; animation: pulse 2s infinite; border: 2px solid #e74c3c;' : 
+        '';
+
+      const progressFillStyle = isCooking ? 
+        'background: linear-gradient(90deg, #ff6b6b, #ee5a52); animation: progressPulse 3s infinite;' : 
+        'background: linear-gradient(90deg, #3498db, #2ecc71);';
+
+      const cardExtraStyle = isCooking ? 
+        'border: 3px solid #e74c3c; box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);' : 
+        '';
 
       return `
-        <div class="ticket-card ${statusClass}" data-ticket-id="${ticket.check_id || ticket.id}">
+        <div class="ticket-card ${statusClass}" data-ticket-id="${ticket.check_id || ticket.id}" style="${cardExtraStyle}">
           <div class="ticket-header">
             <div class="ticket-info">
               <span class="table-number">${ticket.table_number || 'N/A'}</span>
-              <span class="elapsed-time">${elapsedTime}</span>
+              <span class="elapsed-time" style="${elapsedTimeStyle}">${elapsedTime}</span>
             </div>
             <div class="ticket-progress">
               <div class="progress-bar">
-                <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                <div class="progress-fill" style="width: ${progressPercent}%; ${progressFillStyle}"></div>
               </div>
               <span class="progress-text">${Math.round(progressPercent)}%</span>
             </div>
@@ -194,18 +211,18 @@
 
           <div class="ticket-body">
             <div class="order-items">
-              ${ticket.items.map(item => this.createItemHTML(item)).join('')}
+              ${ticket.items.map(item => this.createItemHTML(item, isCooking)).join('')}
             </div>
           </div>
 
           <div class="ticket-footer">
             <div class="ticket-actions">
               <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.id}')"
-                      ${ticket.status === 'cooking' || ticket.status === 'done' ? 'disabled' : ''}>
-                <span>🔥</span> 조리 시작
+                      ${isCooking || isDone ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;"' : ''}>
+                <span>🔥</span> ${isCooking ? '조리중' : '조리 시작'}
               </button>
               <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.id}')"
-                      ${ticket.status !== 'cooking' ? 'disabled' : ''}>
+                      ${!isCooking ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400;"' : 'style="opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700;"'}>
                 <span>✅</span> 완료
               </button>
             </div>
@@ -217,21 +234,29 @@
     /**
      * 아이템 HTML 생성
      */
-    createItemHTML(item) {
-      const statusIcon = this.getItemStatusIcon(item.status);
-      const statusClass = this.getItemStatusClass(item.status);
+    createItemHTML(item, isCooking = false) {
+      // 티켓이 COOKING 상태면 모든 아이템도 COOKING 상태로 처리
+      const actualStatus = isCooking ? 'COOKING' : (item.status || item.item_status || 'pending');
+      
+      const statusIcon = this.getItemStatusIcon(actualStatus);
+      const statusClass = this.getItemStatusClass(actualStatus);
       const itemName = item.menuName || item.menu_name || '메뉴명 없음';
       const quantity = item.quantity || 1;
 
+      // COOKING 상태일 때 특별한 스타일 적용
+      const itemExtraStyle = isCooking ? 
+        'background: linear-gradient(135deg, #fdedec, #f8d7da); border: 2px solid #e74c3c; animation: itemPulse 3s infinite;' : 
+        '';
+
       return `
-        <div class="order-item ${statusClass}" data-item-id="${item.id}">
+        <div class="order-item ${statusClass}" data-item-id="${item.id}" style="${itemExtraStyle}">
           <div class="item-info">
             <span class="item-quantity">×${quantity}</span>
             <span class="item-name">${itemName}</span>
             ${item.cook_station ? `<span class="cook-station">${item.cook_station}</span>` : ''}
           </div>
           <div class="item-status">
-            <button class="status-btn" onclick="KDSManager.toggleItemStatus('${item.id}', '${item.status || 'pending'}')">
+            <button class="status-btn" onclick="KDSManager.toggleItemStatus('${item.id}', '${actualStatus}')">
               <span class="status-icon">${statusIcon}</span>
             </button>
           </div>
@@ -498,7 +523,7 @@
         case 'ORDERED':
         case 'PENDING': return 'status-pending';
         case 'PREPARING': 
-        case 'COOKING': return 'status-cooking';
+        case 'COOKING': return 'status-cooking status-cooking-active';
         case 'READY':
         case 'DONE':
         case 'COMPLETED': return 'status-completed';
@@ -842,6 +867,24 @@
             border-left-color: #e74c3c;
             animation: pulse 2s infinite;
             box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+          }
+
+          .ticket-card.status-cooking-active {
+            border: 3px solid #e74c3c !important;
+            box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4) !important;
+          }
+
+          .ticket-card.status-cooking-active .elapsed-time {
+            background: #ff6b6b !important;
+            color: white !important;
+            font-weight: 700 !important;
+            animation: pulse 2s infinite !important;
+            border: 2px solid #e74c3c !important;
+          }
+
+          .ticket-card.status-cooking-active .progress-fill {
+            background: linear-gradient(90deg, #ff6b6b, #ee5a52) !important;
+            animation: progressPulse 3s infinite !important;
           }
 
           .ticket-card.status-completed {
