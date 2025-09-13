@@ -322,59 +322,74 @@
      * 티켓 버튼 상태 업데이트
      */
     updateTicketButtons(card, ticket) {
+      console.log(`🎨 버튼 상태 업데이트 시작: ${ticket.status}, 카드:`, card);
+      
       const startBtn = card.querySelector('.start-btn');
       const completeBtn = card.querySelector('.complete-btn');
 
-      console.log(`🎨 버튼 상태 업데이트: ${ticket.status}`);
+      console.log(`🔍 버튼 요소 찾기 결과 - 시작:`, !!startBtn, `완료:`, !!completeBtn);
 
       if (startBtn) {
-        const isCookingOrDone = ticket.status === 'COOKING' || ticket.status === 'cooking' || 
-                               ticket.status === 'DONE' || ticket.status === 'done' ||
-                               ticket.status === 'completed';
+        const isCookingOrDone = ['COOKING', 'cooking', 'DONE', 'done', 'completed'].includes(ticket.status);
+        
+        console.log(`🎨 조리 시작 버튼 상태 변경: ${ticket.status} -> ${isCookingOrDone ? '비활성화' : '활성화'}`);
         
         startBtn.disabled = isCookingOrDone;
 
         if (isCookingOrDone) {
-          startBtn.style.opacity = '0.3';
-          startBtn.style.cursor = 'not-allowed';
-          startBtn.style.background = '#95a5a6';
-          startBtn.style.transform = 'none';
-          startBtn.textContent = '🔥 조리중';
-          console.log(`🎨 조리 시작 버튼 비활성화`);
+          startBtn.style.setProperty('opacity', '0.3', 'important');
+          startBtn.style.setProperty('cursor', 'not-allowed', 'important');
+          startBtn.style.setProperty('background', '#95a5a6', 'important');
+          startBtn.style.setProperty('transform', 'none', 'important');
+          startBtn.innerHTML = '🔥 조리중';
+          startBtn.setAttribute('disabled', 'true');
+          console.log(`🎨 조리 시작 버튼 비활성화 완료`);
         } else {
-          startBtn.style.opacity = '1';
-          startBtn.style.cursor = 'pointer';
-          startBtn.style.background = '#f39c12';
-          startBtn.style.transform = 'scale(1)';
+          startBtn.style.setProperty('opacity', '1', 'important');
+          startBtn.style.setProperty('cursor', 'pointer', 'important');
+          startBtn.style.setProperty('background', '#f39c12', 'important');
+          startBtn.style.setProperty('transform', 'scale(1)', 'important');
           startBtn.innerHTML = '<span>🔥</span> 조리 시작';
+          startBtn.removeAttribute('disabled');
+          console.log(`🎨 조리 시작 버튼 활성화 완료`);
         }
+      } else {
+        console.warn(`⚠️ 조리 시작 버튼을 찾을 수 없음`);
       }
 
       if (completeBtn) {
-        const isCooking = ticket.status === 'COOKING' || ticket.status === 'cooking';
+        const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
+        
+        console.log(`🎨 완료 버튼 상태 변경: ${ticket.status} -> ${isCooking ? '활성화' : '비활성화'}`);
+        
         completeBtn.disabled = !isCooking;
 
         if (isCooking) {
-          completeBtn.style.opacity = '1';
-          completeBtn.style.cursor = 'pointer';
-          completeBtn.style.background = 'linear-gradient(135deg, #27ae60, #229954)';
-          completeBtn.style.animation = 'buttonReady 2s infinite';
-          completeBtn.style.border = '2px solid #27ae60';
-          completeBtn.style.fontWeight = '700';
+          completeBtn.style.setProperty('opacity', '1', 'important');
+          completeBtn.style.setProperty('cursor', 'pointer', 'important');
+          completeBtn.style.setProperty('background', 'linear-gradient(135deg, #27ae60, #229954)', 'important');
+          completeBtn.style.setProperty('animation', 'buttonReady 2s infinite', 'important');
+          completeBtn.style.setProperty('border', '2px solid #27ae60', 'important');
+          completeBtn.style.setProperty('font-weight', '700', 'important');
           completeBtn.innerHTML = '<span>✅</span> 완료';
-          console.log(`🎨 완료 버튼 활성화`);
+          completeBtn.removeAttribute('disabled');
+          console.log(`🎨 완료 버튼 활성화 완료`);
         } else {
-          completeBtn.style.opacity = '0.3';
-          completeBtn.style.cursor = 'not-allowed';
-          completeBtn.style.background = '#95a5a6';
-          completeBtn.style.animation = 'none';
-          completeBtn.style.border = '1px solid #95a5a6';
-          completeBtn.style.fontWeight = '400';
+          completeBtn.style.setProperty('opacity', '0.3', 'important');
+          completeBtn.style.setProperty('cursor', 'not-allowed', 'important');
+          completeBtn.style.setProperty('background', '#95a5a6', 'important');
+          completeBtn.style.setProperty('animation', 'none', 'important');
+          completeBtn.style.setProperty('border', '1px solid #95a5a6', 'important');
+          completeBtn.style.setProperty('font-weight', '400', 'important');
           completeBtn.innerHTML = '<span>✅</span> 완료';
+          completeBtn.setAttribute('disabled', 'true');
+          console.log(`🎨 완료 버튼 비활성화 완료`);
         }
+      } else {
+        console.warn(`⚠️ 완료 버튼을 찾을 수 없음`);
       }
 
-      console.log(`✅ 버튼 상태 업데이트 완료`);
+      console.log(`✅ 버튼 상태 업데이트 완료: ${ticket.status}`);
     },
 
     /**
@@ -436,8 +451,12 @@
         });
       }
 
-      // 버튼 상태 업데이트
-      this.updateTicketButtons(card, { status });
+      // 버튼 상태 업데이트 (전체 티켓 객체 전달)
+      const ticket = KDSState.getTicket(ticketId);
+      if (ticket) {
+        ticket.status = status; // 상태 동기화
+        this.updateTicketButtons(card, ticket);
+      }
 
       // 추가 시각적 효과
       if (status === 'COOKING') {
