@@ -289,50 +289,54 @@
     },
 
     /**
-     * 주문 완료
+     * 주문 완료 - 즉시 프론트엔드에서 삭제
      */
     async markComplete(ticketId) {
       try {
-        console.log(`✅ 티켓 ${ticketId} 완료 요청`);
+        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 즉시 삭제 모드`);
 
-        // 낙관적 업데이트: 즉시 UI에서 제거
         const ticket = KDSState.getTicket(ticketId);
-        if (ticket) {
-          console.log(`🎯 낙관적 업데이트: 티켓 ${ticketId} 즉시 제거`);
-          
-          // 상태 업데이트
-          ticket.status = 'DONE';
-          
-          // 사운드 재생
-          if (window.KDSSoundManager) {
-            window.KDSSoundManager.playOrderCompleteSound();
-          }
-          
-          // 즉시 UI에서 제거
-          if (window.KDSUIRenderer) {
-            window.KDSUIRenderer.removeTicketCard(ticketId);
-          }
-          
-          // 상태에서 제거
-          KDSState.removeTicket(ticketId);
-          
-          // 필터링 재적용
-          this.filterTickets();
+        if (!ticket) {
+          console.warn(`⚠️ 티켓 ${ticketId}을 찾을 수 없음`);
+          return;
         }
 
-        // 서버 API 호출
-        const result = await KDSAPIService.markComplete(ticketId);
+        // 🎯 즉시 프론트엔드에서 완전 삭제
+        console.log(`🗑️ 프론트엔드 즉시 삭제: 티켓 ${ticketId}`);
 
-        if (result.success) {
-          console.log('✅ 완료 처리 성공:', result.message);
-        } else {
-          throw new Error(result.error);
+        // 1. 사운드 재생
+        if (window.KDSSoundManager) {
+          window.KDSSoundManager.playOrderCompleteSound();
+        }
+
+        // 2. 즉시 UI에서 제거 (애니메이션 포함)
+        if (window.KDSUIRenderer) {
+          window.KDSUIRenderer.removeTicketCard(ticketId);
+        }
+
+        // 3. 상태에서 완전 제거
+        KDSState.removeTicket(ticketId);
+
+        // 4. 필터링 및 카운트 업데이트
+        this.filterTickets();
+
+        console.log(`✅ 티켓 ${ticketId} 프론트엔드 삭제 완료`);
+
+        // 5. 백그라운드에서 서버 API 호출 (실패해도 UI는 이미 삭제됨)
+        try {
+          const result = await KDSAPIService.markComplete(ticketId);
+          if (result.success) {
+            console.log(`✅ 서버 완료 처리 성공: ${ticketId}`);
+          } else {
+            console.warn(`⚠️ 서버 완료 처리 실패 (UI는 이미 삭제됨): ${result.error}`);
+          }
+        } catch (serverError) {
+          console.warn(`⚠️ 서버 API 호출 실패 (UI는 이미 삭제됨):`, serverError);
+          // 서버 실패해도 UI는 이미 삭제된 상태이므로 사용자에게 오류 표시 안함
         }
 
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
-        
-        // 실패 시 복구 로직은 WebSocket 이벤트로 처리
         this.showError('완료 처리 중 오류가 발생했습니다: ' + error.message);
       }
     },

@@ -214,9 +214,9 @@
         statusDisplayText = 'DONE';
       }
 
-      // 버튼 상태 결정 - DB 상태에 정확히 매핑
+      // 버튼 상태 결정 - 완료 버튼은 DONE 상태가 아닌 한 항상 활성화
       const startButtonDisabled = isCooking || isDone;
-      const completeButtonDisabled = !isCooking;
+      const completeButtonDisabled = isDone; // PENDING, COOKING 모두에서 완료 가능
 
       const startButtonStyle = startButtonDisabled ? 
         'opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none; pointer-events: none;' : 
@@ -224,7 +224,9 @@
 
       const completeButtonStyle = completeButtonDisabled ? 
         'opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400; pointer-events: none;' : 
-        'opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700; pointer-events: auto;';
+        (isCooking ? 
+          'opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700; pointer-events: auto;' :
+          'opacity: 1; cursor: pointer; background: #f39c12; border: 2px solid #e67e22; font-weight: 700; pointer-events: auto;');
 
       const startButtonText = isCooking ? '조리중' : '조리 시작';
 
@@ -435,22 +437,34 @@
       }
 
       if (completeBtn) {
-        const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
+        const isDone = ['DONE', 'done', 'completed', 'COMPLETED', 'served', 'SERVED'].includes(ticket.status);
 
-        console.log(`🎨 완료 버튼 상태 변경: ${ticket.status} -> ${isCooking ? '활성화' : '비활성화'}`);
+        console.log(`🎨 완료 버튼 상태 변경: ${ticket.status} -> ${isDone ? '비활성화' : '활성화'}`);
 
-        completeBtn.disabled = !isCooking;
+        completeBtn.disabled = isDone;
 
-        if (isCooking) {
+        if (!isDone) {
+          const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
+          
           completeBtn.style.setProperty('opacity', '1', 'important');
           completeBtn.style.setProperty('cursor', 'pointer', 'important');
-          completeBtn.style.setProperty('background', 'linear-gradient(135deg, #27ae60, #229954)', 'important');
-          completeBtn.style.setProperty('animation', 'buttonReady 2s infinite', 'important');
-          completeBtn.style.setProperty('border', '2px solid #27ae60', 'important');
+          
+          if (isCooking) {
+            // 조리 중일 때는 초록색 + 애니메이션
+            completeBtn.style.setProperty('background', 'linear-gradient(135deg, #27ae60, #229954)', 'important');
+            completeBtn.style.setProperty('animation', 'buttonReady 2s infinite', 'important');
+            completeBtn.style.setProperty('border', '2px solid #27ae60', 'important');
+          } else {
+            // PENDING일 때는 주황색
+            completeBtn.style.setProperty('background', '#f39c12', 'important');
+            completeBtn.style.setProperty('animation', 'none', 'important');
+            completeBtn.style.setProperty('border', '2px solid #e67e22', 'important');
+          }
+          
           completeBtn.style.setProperty('font-weight', '700', 'important');
           completeBtn.innerHTML = '<span>✅</span> 완료';
           completeBtn.removeAttribute('disabled');
-          console.log(`🎨 완료 버튼 활성화 완료`);
+          console.log(`🎨 완료 버튼 활성화 완료 (${ticket.status})`);
         } else {
           completeBtn.style.setProperty('opacity', '0.3', 'important');
           completeBtn.style.setProperty('cursor', 'not-allowed', 'important');

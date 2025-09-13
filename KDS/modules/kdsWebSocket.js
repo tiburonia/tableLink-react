@@ -252,7 +252,7 @@
     },
 
     /**
-     * 티켓 완료 처리 - DONE 상태 티켓 즉시 제거
+     * 티켓 완료 처리 - 이미 프론트엔드에서 삭제된 경우 무시
      */
     handleTicketCompleted(data) {
       console.log('✅ 티켓 완료 이벤트 (DONE 상태):', data);
@@ -260,39 +260,32 @@
       const ticketId = data.ticket_id;
       const ticket = KDSState.getTicket(ticketId);
       
-      if (ticket) {
-        console.log(`🗑️ DONE 상태 티켓 ${ticketId} 즉시 제거 시작`);
-
-        // 사운드 재생
-        if (window.KDSSoundManager) {
-          window.KDSSoundManager.playOrderCompleteSound();
-        }
-
-        // 티켓 상태를 DONE으로 업데이트
-        ticket.status = 'DONE';
-        
-        // 즉시 UI에서 제거 (애니메이션 효과 포함)
-        if (window.KDSUIRenderer) {
-          window.KDSUIRenderer.removeTicketCard(ticketId);
-        }
-
-        // 상태에서 제거
-        KDSState.removeTicket(ticketId);
-
-        // 필터링 재적용 및 카운트 업데이트
-        if (window.KDSManager) {
-          window.KDSManager.filterTickets();
-        }
-
-        console.log(`✅ DONE 상태 티켓 ${ticketId} 완전 제거 완료`);
-      } else {
-        console.warn(`⚠️ 완료 처리할 티켓 ${ticketId}을 찾을 수 없음`);
-        
-        // 티켓이 상태에 없어도 UI에서 제거 시도
-        if (window.KDSUIRenderer) {
-          window.KDSUIRenderer.removeTicketCard(ticketId);
-        }
+      if (!ticket) {
+        console.log(`ℹ️ 티켓 ${ticketId}이 이미 프론트엔드에서 삭제됨 - WebSocket 이벤트 무시`);
+        return;
       }
+
+      console.log(`🗑️ WebSocket DONE 상태 티켓 ${ticketId} 처리`);
+
+      // 사운드 재생 (중복 방지를 위해 조건부)
+      if (window.KDSSoundManager && !ticket._soundPlayed) {
+        window.KDSSoundManager.playOrderCompleteSound();
+      }
+
+      // 즉시 UI에서 제거
+      if (window.KDSUIRenderer) {
+        window.KDSUIRenderer.removeTicketCard(ticketId);
+      }
+
+      // 상태에서 제거
+      KDSState.removeTicket(ticketId);
+
+      // 필터링 재적용
+      if (window.KDSManager) {
+        window.KDSManager.filterTickets();
+      }
+
+      console.log(`✅ WebSocket 티켓 ${ticketId} 완료 처리 완료`);
     },
 
     /**
