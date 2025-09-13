@@ -298,7 +298,7 @@ io.on('connection', (socket) => {
 
         if (orderResult.rows.length > 0) {
           const order = orderResult.rows[0];
-          
+
           // 모든 KDS 클라이언트에게 브로드캐스트
           io.to(`kds:${order.store_id}`).emit('item.updated', {
             item_id: item_id,
