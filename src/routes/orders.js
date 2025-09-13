@@ -176,7 +176,7 @@ router.get('/kds/:storeId', async (req, res) => {
       JOIN order_tickets ot ON o.id = ot.order_id
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE o.store_id = $1 
-        AND o.status IN ('PENDING', 'CONFIRMED')
+        AND o.status = 'OPEN'
         AND oi.item_status IN ('PENDING', 'PREPARING', 'READY')
         AND oi.cook_station = 'KITCHEN'
       GROUP BY o.id, ot.id, o.table_num, o.created_at, o.source
