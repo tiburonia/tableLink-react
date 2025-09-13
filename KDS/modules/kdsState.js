@@ -63,21 +63,25 @@
     },
 
     /**
-     * 활성 티켓 조회
+     * 활성 티켓 조회 (DB 실제 상태값 기준)
      */
     getActiveTickets() {
-      return this.getAllTickets().filter(ticket => 
-        ticket.status !== 'completed' && ticket.status !== 'served'
-      );
+      return this.getAllTickets().filter(ticket => {
+        const status = (ticket.status || '').toUpperCase();
+        // DONE, COMPLETED, SERVED 상태가 아닌 모든 티켓 (PENDING, COOKING 등)
+        return !['DONE', 'COMPLETED', 'SERVED'].includes(status);
+      });
     },
 
     /**
-     * 완료된 티켓 조회
+     * 완료된 티켓 조회 (DB 실제 상태값 기준)
      */
     getCompletedTickets() {
-      return this.getAllTickets().filter(ticket => 
-        ticket.status === 'completed' || ticket.status === 'served'
-      );
+      return this.getAllTickets().filter(ticket => {
+        const status = (ticket.status || '').toUpperCase();
+        // DONE, COMPLETED, SERVED 상태인 티켓들
+        return ['DONE', 'COMPLETED', 'SERVED'].includes(status);
+      });
     },
 
     /**

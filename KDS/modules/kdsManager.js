@@ -511,23 +511,17 @@
         // 상태 초기화
         KDSState.tickets.clear();
 
-        // 데이터 다시 로드 (PENDING, COOKING 상태만)
+        // 데이터 다시 로드 (모든 상태 로드 후 프론트에서 필터링)
         const tickets = await KDSAPIService.loadInitialData(KDSState.storeId);
 
-        console.log(`🔄 새로고침: ${tickets.length}개 티켓 로드 (DONE 상태 제외)`);
+        console.log(`🔄 새로고침: ${tickets.length}개 티켓 로드`);
 
-        // 상태별로 분류하여 정확한 렌더링
+        // 모든 티켓을 상태에 저장 (탭별 필터링은 getActiveTickets/getCompletedTickets에서 처리)
         tickets.forEach(ticket => {
           const actualStatus = (ticket.status || '').toUpperCase();
           const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
 
-          // DONE/COMPLETED/SERVED 상태는 렌더링하지 않음
-          if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
-            console.log(`⏭️ ${actualStatus} 상태 티켓 ${ticketId} 렌더링 스킵`);
-            return;
-          }
-
-          console.log(`🎨 티켓 ${ticketId} DB 상태 ${actualStatus}로 정확히 렌더링`);
+          console.log(`📋 티켓 ${ticketId} 상태: ${actualStatus}`);
 
           // DB 상태를 정확히 보존하여 저장
           const normalizedTicket = {
@@ -550,10 +544,8 @@
           KDSState.setTicket(ticketId, normalizedTicket);
         });
 
-        // Grid 재렌더링
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
-          window.KDSUIRenderer.renderKDSGrid(KDSState.getAllTickets()); // 필터링된 모든 티켓 렌더링
-        }
+        // 현재 탭에 맞는 티켓들만 Grid에 렌더링
+        this.filterTickets(); // 현재 탭 기준으로 필터링된 렌더링
 
         // 카운트 업데이트
         KDSUIRenderer.updateTicketCounts();
