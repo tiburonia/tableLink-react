@@ -471,9 +471,6 @@ router.get('/:id', async (req, res, next) => {
 // TODO: README 섹션 (실행법, ENV, 라우팅 표, 흐름도)은 별도 파일로 관리.
 
 module.exports = router;
-const express = require('express');
-const router = express.Router();
-const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
