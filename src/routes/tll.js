@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -239,62 +240,6 @@ router.post('/orders', async (req, res) => {
     }
 
     await client.query('COMMIT');
-
-    // KDS 실시간 업데이트를 위한 체크 데이터 조회
-    const kdsUpdateResult = await pool.query(`
-      SELECT 
-        o.id as check_id,
-        o.table_number,
-        g.phone as customer_name, -- 게스트의 경우 전화번호를 customer_name으로 사용
-        o.created_at,
-        o.status,
-        o.store_id,
-        json_agg(
-          json_build_object(
-            'id', oi.id,
-            'menuName', oi.menu_name,
-            'quantity', oi.quantity,
-            'status', oi.item_status,
-            'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
-            'notes', oi.notes, -- order_items 테이블에 notes 컬럼이 있다면 사용
-            'created_at', oi.created_at
-          ) ORDER BY oi.id
-        ) as items
-      FROM orders o
-      LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      LEFT JOIN guest g ON o.guest_id = g.id -- guest 테이블 조인
-      WHERE o.id = $1 AND oi.item_status != 'CANCELLED'
-      GROUP BY o.id, o.table_number, g.phone, o.created_at, o.status, o.store_id
-    `, [check_id]);
-
-    // WebSocket으로 KDS에 실시간 브로드캐스트
-    if (global.io && kdsUpdateResult.rows.length > 0) {
-      const ticketData = kdsUpdateResult.rows[0];
-      const normalizedTicket = {
-        check_id: ticketData.check_id,
-        id: ticketData.check_id,
-        ticket_id: ticketData.check_id,
-        customer_name: ticketData.customer_name || `테이블 ${ticketData.table_number}`,
-        table_number: ticketData.table_number,
-        status: ticketData.status?.toLowerCase() || 'pending',
-        created_at: ticketData.created_at,
-        updated_at: ticketData.created_at,
-        items: ticketData.items || []
-      };
-
-      console.log(`📡 TLL 주문 KDS 실시간 브로드캐스트 - 매장 ${ticketData.store_id}, 체크 ${check_id}`);
-
-      // KDS 룸에 새 주문 브로드캐스트
-      global.io.to(`kds:${ticketData.store_id}`).emit('kds-update', {
-        type: 'new-order',
-        data: normalizedTicket,
-        timestamp: new Date().toISOString()
-      });
-
-      // ticket.created 이벤트도 발송 (renderKDS.js 호환성)
-      global.io.to(`kds:${ticketData.store_id}`).emit('ticket.created', normalizedTicket);
-    }
 
     console.log(`✅ TLL 주문 생성 완료: 주문 ${check_id}, ${items.length}개 아이템, 총액 ₩${totalAmount.toLocaleString()}`);
 

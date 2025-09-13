@@ -124,61 +124,6 @@ router.post('/create-or-add', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KDS 실시간 업데이트를 위한 체크 데이터 조회
-    const kdsUpdateResult = await pool.query(`
-      SELECT 
-        c.id as check_id,
-        c.table_number,
-        c.customer_name,
-        c.opened_at as created_at,
-        c.status,
-        c.store_id,
-        json_agg(
-          json_build_object(
-            'id', ci.id,
-            'menuName', ci.menu_name,
-            'menu_name', ci.menu_name,
-            'quantity', ci.quantity,
-            'status', ci.status,
-            'cook_station', COALESCE(ci.cook_station, 'KITCHEN'),
-            'notes', ci.kitchen_notes,
-            'created_at', ci.ordered_at
-          ) ORDER BY ci.ordered_at
-        ) as items
-      FROM checks c
-      INNER JOIN check_items ci ON c.id = ci.check_id
-      WHERE c.id = $1 AND ci.status IN ('ordered', 'preparing', 'ready')
-      GROUP BY c.id, c.table_number, c.customer_name, c.opened_at, c.status, c.store_id
-    `, [checkId]);
-
-    // WebSocket으로 KDS에 실시간 브로드캐스트
-    if (global.io && kdsUpdateResult.rows.length > 0) {
-      const ticketData = kdsUpdateResult.rows[0];
-      const normalizedTicket = {
-        check_id: ticketData.check_id,
-        id: ticketData.check_id,
-        ticket_id: ticketData.check_id,
-        customer_name: ticketData.customer_name || `테이블 ${ticketData.table_number}`,
-        table_number: ticketData.table_number,
-        status: ticketData.status?.toLowerCase() || 'pending',
-        created_at: ticketData.created_at,
-        updated_at: ticketData.created_at,
-        items: ticketData.items || []
-      };
-
-      console.log(`📡 KDS 실시간 브로드캐스트 - 매장 ${ticketData.store_id}, 체크 ${checkId}`);
-      
-      // KDS 룸에 새 주문 브로드캐스트
-      global.io.to(`kds:${ticketData.store_id}`).emit('kds-update', {
-        type: 'new-order',
-        data: normalizedTicket,
-        timestamp: new Date().toISOString()
-      });
-
-      // ticket.created 이벤트도 발송 (renderKDS.js 호환성)
-      global.io.to(`kds:${ticketData.store_id}`).emit('ticket.created', normalizedTicket);
-    }
-
     res.json({
       success: true,
       checkId: checkId,

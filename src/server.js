@@ -261,13 +261,6 @@ io.on('connection', (socket) => {
     const roomName = `kds:${storeId}`;
     socket.join(roomName);
     
-    console.log(`🍳 KDS 룸 조인: ${socket.id} -> ${roomName}`);
-    
-    // 룸 참여자 수 확인
-    const room = io.sockets.adapter.rooms.get(roomName);
-    const clientCount = room ? room.size : 0;
-    console.log(`📊 KDS 룸 ${roomName} 참여자 수: ${clientCount}`);
-    
     const connectionType = userType === 'kds-anonymous' ? '익명 KDS' : 'authenticated';
     console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName} (${connectionType})`);
 

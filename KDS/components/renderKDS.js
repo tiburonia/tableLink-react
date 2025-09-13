@@ -145,35 +145,17 @@
     handleTicketCreated(ticket) {
       // 티켓 ID 정규화
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
-      
-      // 이미 존재하는 티켓인지 확인
-      if (KDSState.tickets.has(ticketId)) {
-        console.log(`🔄 기존 티켓 업데이트: ${ticketId}`);
-        this.handleTicketUpdated(ticket);
-        return;
-      }
-
       const normalizedTicket = {
         ...ticket,
         ticket_id: ticketId,
         check_id: ticketId,
         table_number: ticket.table_number || 'N/A',
-        items: ticket.items || [],
-        status: ticket.status || 'pending',
-        created_at: ticket.created_at || new Date().toISOString()
+        items: ticket.items || []
       };
-      
-      console.log(`🎫 새 티켓 생성 처리:`, normalizedTicket);
       
       KDSState.tickets.set(ticketId, normalizedTicket);
       UIRenderer.addTicketCard(normalizedTicket);
       SoundManager.playNewOrderSound();
-      
-      // 카운트 업데이트
-      UIRenderer.updateTicketCounts();
-      
-      // 빈 상태 숨기기
-      UIRenderer.checkEmptyState();
     },
 
     /**
@@ -397,21 +379,10 @@
     },
 
     /**
-     * 새 주문 사운드 (더 눈에 띄게)
+     * 새 주문 사운드
      */
     playNewOrderSound() {
-      // 사운드 비활성화 확인
-      if (localStorage.getItem('kds-sound-disabled')) {
-        console.log('🔇 사운드 비활성화됨');
-        return;
-      }
-
-      // 더 눈에 띄는 새 주문 알림음
-      this.playBeep(1000, 150);
-      setTimeout(() => this.playBeep(800, 150), 200);
-      setTimeout(() => this.playBeep(1000, 150), 400);
-      
-      console.log('🔊 새 주문 알림음 재생');
+      this.playBeep(800, 200);
     },
 
     /**
