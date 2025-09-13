@@ -782,6 +782,67 @@
     },
 
     /**
+     * 주문 출력 (KRP 연계)
+     */
+    async printOrder(ticketId) {
+      try {
+        console.log(`🖨️ 티켓 ${ticketId} 출력 요청`);
+
+        // 1. 티켓 찾기
+        const ticket = this._findTicketById(ticketId);
+        if (!ticket) {
+          this.showError(`티켓 ${ticketId}을 찾을 수 없습니다.`);
+          return;
+        }
+
+        // 2. 출력 상태 업데이트 API 호출
+        const result = await KDSAPIService.updatePrintStatus(ticketId);
+        
+        if (result.success) {
+          console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 성공`);
+          
+          // 3. KRP 전송 (향후 KRP 모듈과 연계)
+          if (window.KRPManager && typeof window.KRPManager.sendPrintRequest === 'function') {
+            await window.KRPManager.sendPrintRequest(ticket);
+            console.log(`📡 KRP로 출력 요청 전송: ${ticketId}`);
+          }
+
+          // 4. 사운드 재생
+          if (window.KDSSoundManager) {
+            window.KDSSoundManager.playNotificationSound();
+          }
+
+          // 5. UI 피드백 (버튼 상태 변경 등)
+          this._updatePrintButtonState(ticketId, true);
+
+        } else {
+          throw new Error(result.error || '출력 요청 실패');
+        }
+
+      } catch (error) {
+        console.error(`❌ 티켓 ${ticketId} 출력 실패:`, error);
+        this.showError(`출력 중 오류가 발생했습니다: ${error.message}`);
+      }
+    },
+
+    /**
+     * 출력 버튼 상태 업데이트
+     */
+    _updatePrintButtonState(ticketId, printed) {
+      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (cardElement) {
+        const printBtn = cardElement.querySelector('.print-btn');
+        if (printBtn) {
+          if (printed) {
+            printBtn.innerHTML = '✅ 출력완료';
+            printBtn.style.background = '#28a745';
+            printBtn.disabled = true;
+          }
+        }
+      }
+    },
+
+    /**
      * 오류 표시
      */
     showError(message) {

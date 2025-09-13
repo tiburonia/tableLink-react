@@ -1042,6 +1042,63 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
   }
 });
 
+// 🖨️ KDS 티켓 출력 상태 업데이트 API
+router.put('/kds/tickets/:ticketId/print', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { ticketId } = req.params;
+
+    console.log(`🖨️ KDS 티켓 ${ticketId} 출력 상태 업데이트`);
+
+    await client.query('BEGIN');
+
+    // order_tickets 테이블에서 print_status 업데이트
+    const updateResult = await client.query(`
+      UPDATE order_tickets
+      SET print_status = 'PRINTED',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, order_id, print_status
+    `, [parseInt(ticketId)]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    await client.query('COMMIT');
+
+    const updatedTicket = updateResult.rows[0];
+
+    res.json({
+      success: true,
+      message: '출력 상태가 업데이트되었습니다',
+      data: {
+        ticketId: updatedTicket.id,
+        orderId: updatedTicket.order_id,
+        printStatus: updatedTicket.print_status
+      }
+    });
+
+    console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 완료`);
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ KDS 출력 상태 업데이트 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '출력 상태 업데이트 실패',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // 🍳 KDS 티켓 완료 API
 router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
   const client = await pool.connect();

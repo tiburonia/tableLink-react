@@ -247,14 +247,21 @@
           </div>
 
           <div class="card-actions">
-            <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticketId}')"
-                    ${isCooking || isDone ? 'disabled' : ''}>
-              🔥 ${isCooking ? '조리중' : '시작'}
-            </button>
-            <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticketId}')"
-                    ${isDone ? 'disabled' : ''}>
-              ✅ 완료
-            </button>
+            <div class="action-top-row">
+              <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticketId}')"
+                      ${isCooking || isDone ? 'disabled' : ''}>
+                🔥 ${isCooking ? '조리중' : '시작'}
+              </button>
+              <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticketId}')"
+                      ${isDone ? 'disabled' : ''}>
+                ✅ 완료
+              </button>
+            </div>
+            <div class="action-bottom-row">
+              <button class="action-btn print-btn" onclick="KDSManager.printOrder('${ticketId}')">
+                🖨️ 출력
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -819,13 +826,23 @@
             margin-top: 4px;
           }
 
-          /* 카드 액션 */
+          /* 카드 액션 - 2:1 구조 */
           .card-actions {
             padding: 8px;
             display: flex;
+            flex-direction: column;
             gap: 6px;
             border-top: 1px solid #ecf0f1;
             flex-shrink: 0;
+          }
+
+          .action-top-row {
+            display: flex;
+            gap: 6px;
+          }
+
+          .action-bottom-row {
+            display: flex;
           }
 
           .action-btn {
@@ -859,6 +876,15 @@
 
           .complete-btn:hover:not(:disabled) {
             background: #229954;
+          }
+
+          .print-btn {
+            background: #6c757d;
+            color: white;
+          }
+
+          .print-btn:hover:not(:disabled) {
+            background: #545b62;
           }
 
           .action-btn:disabled {

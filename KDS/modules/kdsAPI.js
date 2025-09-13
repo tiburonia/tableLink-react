@@ -1,4 +1,3 @@
-
 /**
  * KDS API 서비스 모듈
  * - 초기 데이터 로드
@@ -103,30 +102,57 @@
     },
 
     /**
-     * 아이템 상태 업데이트 (HTTP 백업)
+     * 아이템 상태 업데이트
      */
-    async updateItemStatus(itemId, status, kitchenNotes = null) {
+    async updateItemStatus(itemId, status) {
       try {
         const response = await fetch(`/api/orders/kds/items/${itemId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            status: status,
-            kitchenNotes: kitchenNotes
-          })
+          body: JSON.stringify({ status })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          throw new Error(data.error || `HTTP ${response.status}`);
         }
 
-        const result = await response.json();
-        return result;
+        return data;
 
       } catch (error) {
-        console.error('❌ 아이템 상태 업데이트 실패:', error);
+        console.error('❌ 아이템 상태 업데이트 API 실패:', error);
+        throw error;
+      }
+    },
+
+    /**
+     * 출력 상태 업데이트
+     */
+    async updatePrintStatus(ticketId) {
+      try {
+        console.log(`📡 출력 상태 업데이트 API 호출: ${ticketId}`);
+
+        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/print`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        console.log(`✅ 출력 상태 업데이트 성공: ${ticketId}`);
+        return data;
+
+      } catch (error) {
+        console.error(`❌ 출력 상태 업데이트 API 실패:`, error);
         throw error;
       }
     }
