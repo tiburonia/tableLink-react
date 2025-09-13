@@ -1,4 +1,3 @@
-
 /**
  * KDS 메인 관리자 모듈
  * - 전체 시스템 조율
@@ -23,8 +22,15 @@
         // 상태 초기화
         KDSState.initialize(storeId);
 
-        // UI 렌더링
-        KDSUIRenderer.render(storeId);
+        // UI 렌더링 (Grid 레이아웃 포함)
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          // 초기에는 빈 그리드 렌더링 (혹은 더미 데이터)
+          window.KDSUIRenderer.renderKDSGrid([]);
+        } else {
+          console.warn('KDSUIRenderer.renderKDSGrid 함수를 찾을 수 없습니다. UI 렌더링 방식이 변경되었을 수 있습니다.');
+          // 이전 방식의 UI 렌더링 (필요시)
+          KDSUIRenderer.render(storeId);
+        }
 
         // 사운드 초기화
         KDSSoundManager.initialize();
@@ -35,7 +41,7 @@
         // 티켓 데이터 저장 (안전한 ID 추출)
         tickets.forEach(ticket => {
           const ticketId = this._extractSafeTicketId(ticket);
-          
+
           // 정규화된 티켓 데이터 생성
           const normalizedTicket = {
             ...ticket,
@@ -44,21 +50,23 @@
             check_id: ticket.check_id || ticketId,
             ticket_id: ticket.ticket_id || ticketId
           };
-          
+
           console.log(`📋 티켓 저장: ID=${ticketId}, 원본 ID들:`, {
             id: ticket.id,
             check_id: ticket.check_id,
             ticket_id: ticket.ticket_id,
             order_id: ticket.order_id
           });
-          
+
           KDSState.setTicket(ticketId, normalizedTicket);
         });
 
-        // 티켓 카드 렌더링
-        tickets.forEach(ticket => {
-          KDSUIRenderer.addTicketCard(ticket);
-        });
+        // 티켓 카드 렌더링 (Grid에 맞게)
+        // KDSUIRenderer.renderKDSGrid에서 처리하도록 변경
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          window.KDSUIRenderer.renderKDSGrid(tickets);
+        }
+
 
         // WebSocket 연결
         await KDSWebSocket.connect(storeId);
@@ -85,7 +93,7 @@
         btn.classList.toggle('active', btn.dataset.tab === tab);
       });
 
-      // 티켓 필터링
+      // 티켓 필터링 (Grid 재렌더링 포함)
       this.filterTickets();
     },
 
@@ -93,33 +101,21 @@
      * 티켓 필터링
      */
     filterTickets() {
-      const cards = document.querySelectorAll('.ticket-card');
+      const currentTab = KDSState.currentTab;
+      let tickets;
 
-      cards.forEach(card => {
-        const ticketId = card.dataset.ticketId;
-        const ticket = KDSState.getTicket(ticketId);
+      if (currentTab === 'active') {
+        tickets = KDSState.getActiveTickets();
+      } else {
+        tickets = KDSState.getCompletedTickets();
+      }
 
-        if (!ticket) {
-          card.style.display = 'none';
-          return;
-        }
+      // Grid 재렌더링
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+        window.KDSUIRenderer.renderKDSGrid(tickets);
+      }
 
-        const status = ticket.status?.toUpperCase();
-        let shouldShow = false;
-
-        if (KDSState.currentTab === 'active') {
-          // 진행중: PENDING, COOKING만 표시
-          shouldShow = ['PENDING', 'COOKING'].includes(status);
-        } else if (KDSState.currentTab === 'completed') {
-          // 완료됨: DONE, COMPLETED만 표시
-          shouldShow = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
-        }
-
-        card.style.display = shouldShow ? 'block' : 'none';
-      });
-
-      KDSUIRenderer.checkEmptyState();
-      KDSUIRenderer.updateTicketCounts();
+      console.log(`🔍 필터링 완료: ${currentTab} 탭, ${tickets.length}개 티켓 표시`);
     },
 
     /**
@@ -142,12 +138,12 @@
 
       // 2. 티켓 찾기 (여러 가지 ID 형태로 시도)
       let ticket = this._findTicketById(ticketId);
-      
+
       if (!ticket) {
         console.error(`❌ 티켓 ${ticketId}을 찾을 수 없음`);
         console.log(`🔍 현재 저장된 모든 티켓 ID:`, Array.from(KDSState.tickets.keys()));
         console.log(`🔍 현재 저장된 티켓 수:`, KDSState.tickets.size);
-        
+
         // 모든 티켓 정보 출력 (디버깅용)
         KDSState.tickets.forEach((ticket, key) => {
           console.log(`📋 티켓 키: ${key}, ID 필드들:`, {
@@ -157,7 +153,7 @@
             order_id: ticket.order_id
           });
         });
-        
+
         this._processingTickets.delete(ticketId);
         this.showError(`티켓 ${ticketId}을 찾을 수 없습니다. 페이지를 새로고침해주세요.`);
         return;
@@ -176,10 +172,10 @@
 
         if (result.success) {
           console.log(`✅ 티켓 ${ticketId} 조리 시작 성공`);
-          
+
           // 5. 성공 후 처리
           KDSSoundManager.playItemCompleteSound();
-          
+
           // 서버 데이터로 최종 동기화 (필요시)
           if (result.data) {
             this._syncTicketWithServerData(ticketId, result.data);
@@ -191,10 +187,10 @@
 
       } catch (error) {
         console.error(`❌ 티켓 ${ticketId} 조리 시작 실패:`, error);
-        
+
         // 6. 실패 시 원래 상태로 복구
         this._restoreTicketState(ticketId, originalTicketState);
-        
+
         this.showError(`조리 시작 중 오류가 발생했습니다: ${error.message}`);
 
       } finally {
@@ -232,8 +228,10 @@
         });
       }
 
-      // 2. UI 업데이트
-      KDSUIRenderer.updateTicketToCookingState(ticketId, ticket);
+      // 2. UI 업데이트 (Grid 내에서 카드 업데이트)
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCard === 'function') {
+        window.KDSUIRenderer.updateTicketCard(ticketId, ticket);
+      }
     },
 
     /**
@@ -258,8 +256,10 @@
         });
       }
 
-      // UI 반영
-      KDSUIRenderer.updateTicketCard(ticket);
+      // UI 반영 (Grid 내에서 카드 업데이트)
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCard === 'function') {
+        window.KDSUIRenderer.updateTicketCard(ticketId, ticket);
+      }
     },
 
     /**
@@ -273,7 +273,7 @@
 
       // 원래 상태로 복구
       ticket.status = originalState.status;
-      
+
       if (ticket.items && originalState.items) {
         ticket.items.forEach(item => {
           const originalItem = originalState.items.find(orig => orig.id === item.id);
@@ -284,8 +284,10 @@
         });
       }
 
-      // UI 복구
-      KDSUIRenderer.updateTicketCard(ticket);
+      // UI 복구 (Grid 내에서 카드 업데이트)
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCard === 'function') {
+        window.KDSUIRenderer.updateTicketCard(ticketId, ticket);
+      }
     },
 
     /**
@@ -301,7 +303,7 @@
           console.warn(`⚠️ 티켓 ${ticketId}을 찾을 수 없음 - 전체 상태 확인:`);
           console.warn(`⚠️ 총 티켓 수: ${KDSState.tickets.size}`);
           console.warn(`⚠️ 모든 키:`, Array.from(KDSState.tickets.keys()));
-          
+
           // 사용자에게 친화적인 오류 메시지
           this.showError(`티켓 ${ticketId}을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.`);
           return;
@@ -315,15 +317,15 @@
           window.KDSSoundManager.playOrderCompleteSound();
         }
 
-        // 2. 즉시 UI에서 제거 (애니메이션 포함)
-        if (window.KDSUIRenderer) {
+        // 2. 즉시 UI에서 제거 (Grid에서 카드 제거)
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeTicketCard === 'function') {
           window.KDSUIRenderer.removeTicketCard(ticketId);
         }
 
         // 3. 상태에서 완전 제거
         KDSState.removeTicket(ticketId);
 
-        // 4. 필터링 및 카운트 업데이트
+        // 4. 필터링 및 카운트 업데이트 (Grid 재렌더링 포함)
         this.filterTickets();
 
         console.log(`✅ 티켓 ${ticketId} 프론트엔드 삭제 완료`);
@@ -414,11 +416,30 @@
      * 설정 화면 표시
      */
     showSettings() {
-      alert('설정 기능은 추후 구현 예정입니다.');
+      alert('설정 화면 (구현 예정)');
+      console.log('⚙️ 설정 화면 요청');
     },
 
     /**
-     * 새로고침 - 상태 기반 로딩
+     * 모든 주문 보기
+     */
+    showAllOrders() {
+      const allOrders = KDSState.getAllTickets();
+      console.log('📋 모든 주문 보기:', allOrders.length + '개');
+
+      // 임시로 콘솔에 출력
+      console.table(allOrders.map(order => ({
+        ID: order.check_id || order.id,
+        테이블: order.table_number,
+        상태: order.status,
+        생성시간: order.created_at
+      })));
+
+      alert(`총 ${allOrders.length}개의 주문이 있습니다. (콘솔 참조)`);
+    },
+
+    /**
+     * 새로고침 - 상태 기반 로딩 (Grid 레이아웃 적용)
      */
     async refresh() {
       try {
@@ -432,8 +453,10 @@
           }, 1000);
         }
 
-        // 기존 카드 제거
-        document.querySelectorAll('.ticket-card').forEach(card => card.remove());
+        // 기존 카드 제거 (Grid 컨테이너 비우기)
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.clearGrid === 'function') {
+          window.KDSUIRenderer.clearGrid();
+        }
 
         // 상태 초기화
         KDSState.tickets.clear();
@@ -447,7 +470,7 @@
         tickets.forEach(ticket => {
           const actualStatus = (ticket.status || '').toUpperCase();
           const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
-          
+
           // DONE/COMPLETED/SERVED 상태는 렌더링하지 않음
           if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
             console.log(`⏭️ ${actualStatus} 상태 티켓 ${ticketId} 렌더링 스킵`);
@@ -475,8 +498,12 @@
           }
 
           KDSState.setTicket(ticketId, normalizedTicket);
-          KDSUIRenderer.addTicketCard(normalizedTicket);
         });
+
+        // Grid 재렌더링
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          window.KDSUIRenderer.renderKDSGrid(KDSState.getAllTickets()); // 필터링된 모든 티켓 렌더링
+        }
 
         // 카운트 업데이트
         KDSUIRenderer.updateTicketCounts();
@@ -504,16 +531,18 @@
     },
 
     /**
-     * 정리
+     * 정리 작업
      */
     cleanup() {
-      // 처리 중인 티켓 목록 정리
-      if (this._processingTickets) {
-        this._processingTickets.clear();
+      if (window.KDSWebSocket) {
+        window.KDSWebSocket.disconnect();
       }
-      
-      KDSState.cleanup();
-      KDSWebSocket.disconnect();
+
+      if (this.refreshInterval) {
+        clearInterval(this.refreshInterval);
+      }
+
+      console.log('🧹 KDS 관리자 정리 완료');
     },
 
     /**
@@ -521,10 +550,10 @@
      */
     _extractSafeTicketId(ticket) {
       // 우선순위: check_id > id > ticket_id > order_id
-      return ticket.check_id || 
-             ticket.id || 
-             ticket.ticket_id || 
-             ticket.order_id || 
+      return ticket.check_id ||
+             ticket.id ||
+             ticket.ticket_id ||
+             ticket.order_id ||
              `unknown_${Date.now()}`;
     },
 
@@ -534,7 +563,7 @@
     _findTicketById(ticketId) {
       console.log(`🔍 티켓 검색 시작: ${ticketId} (타입: ${typeof ticketId})`);
       console.log(`🔍 현재 저장된 티켓 수: ${KDSState.tickets.size}`);
-      
+
       // 디버깅: 현재 저장된 모든 티켓 키 출력
       const allKeys = Array.from(KDSState.tickets.keys());
       console.log(`🔍 저장된 모든 티켓 키:`, allKeys);
@@ -558,7 +587,7 @@
 
       // 3. 모든 티켓을 순회하면서 ID 필드들로 찾기 (개선된 로직)
       console.log(`🔍 전체 순회 검색 시작 (검색 대상: ${ticketId}, ${numericId}, ${stringId})`);
-      
+
       for (const [key, ticketData] of KDSState.tickets.entries()) {
         console.log(`🔍 티켓 ${key} 검사:`, {
           stored_key: key,
@@ -571,7 +600,7 @@
         // ID 필드들을 안전하게 처리
         const idFields = [
           ticketData.id,
-          ticketData.check_id, 
+          ticketData.check_id,
           ticketData.ticket_id,
           ticketData.order_id
         ].filter(id => id != null); // null/undefined 제거
@@ -581,8 +610,8 @@
           const idAsString = String(idField);
           const idAsNumber = parseInt(idField);
 
-          if (idField === ticketId || 
-              idAsString === String(ticketId) || 
+          if (idField === ticketId ||
+              idAsString === String(ticketId) ||
               idAsNumber === numericId ||
               idField === numericId ||
               idField === stringId) {
@@ -594,7 +623,7 @@
 
       // 4. 최후의 수단: Map의 values()를 이용한 검색
       console.log(`🔍 values() 기반 최후 검색 시도`);
-      
+
       for (const ticketData of KDSState.tickets.values()) {
         if (ticketData && (
             ticketData.id == ticketId ||
@@ -610,11 +639,11 @@
       console.warn(`❌ 티켓을 찾을 수 없음: ${ticketId}`);
       console.warn(`❌ 검색 시도한 형태들:`, {
         original: ticketId,
-        numeric: numericId,  
+        numeric: numericId,
         string: stringId,
         type: typeof ticketId
       });
-      
+
       return null;
     },
 
