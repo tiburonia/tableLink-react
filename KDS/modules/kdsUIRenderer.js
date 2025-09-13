@@ -1,4 +1,3 @@
-
 /**
  * KDS UI 렌더링 모듈
  * - UI 컴포넌트 렌더링
@@ -141,6 +140,8 @@
      * 티켓 카드 추가
      */
     addTicketCard(ticket) {
+      // 안전한 티켓 ID 추출
+      const ticketId = this._extractTicketId(ticket);
       const grid = document.getElementById('ticketsGrid');
       const emptyState = document.getElementById('emptyState');
 
@@ -152,6 +153,9 @@
       const cardElement = document.createElement('div');
       cardElement.innerHTML = cardHTML;
       const card = cardElement.firstElementChild;
+
+      // data-ticket-id 속성 설정
+      card.dataset.ticketId = ticketId;
 
       // 애니메이션 효과
       card.style.transform = 'scale(0.8)';
@@ -176,7 +180,7 @@
       const elapsedTime = this.getElapsedTime(ticket.created_at);
       const statusClass = this.getStatusClass(ticket.status);
       const progressPercent = this.calculateProgress(ticket.items);
-      
+
       // COOKING 상태 확인
       const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
       const isDone = ['DONE', 'done', 'completed'].includes(ticket.status);
@@ -195,7 +199,7 @@
         '';
 
       return `
-        <div class="ticket-card ${statusClass}" data-ticket-id="${ticket.check_id || ticket.id}" style="${cardExtraStyle}">
+        <div class="ticket-card ${statusClass}" style="${cardExtraStyle}">
           <div class="ticket-header">
             <div class="ticket-info">
               <span class="table-number">${ticket.table_number || 'N/A'}</span>
@@ -218,7 +222,7 @@
           <div class="ticket-footer">
             <div class="ticket-actions">
               <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.id}')"
-                      ${isCooking || isDone ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;"' : ''}>
+                      ${isCooking || isDone ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;"' : 'style="opacity: 1; cursor: pointer; background: #f39c12; transform: scale(1);"'}>
                 <span>🔥</span> ${isCooking ? '조리중' : '조리 시작'}
               </button>
               <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.id}')"
@@ -237,7 +241,7 @@
     createItemHTML(item, isCooking = false) {
       // 티켓이 COOKING 상태면 모든 아이템도 COOKING 상태로 처리
       const actualStatus = isCooking ? 'COOKING' : (item.status || item.item_status || 'pending');
-      
+
       const statusIcon = this.getItemStatusIcon(actualStatus);
       const statusClass = this.getItemStatusClass(actualStatus);
       const itemName = item.menuName || item.menu_name || '메뉴명 없음';
@@ -288,11 +292,12 @@
      * 티켓 카드 업데이트
      */
     updateTicketCard(ticket) {
-      const card = document.querySelector(`[data-ticket-id="${ticket.ticket_id || ticket.id}"]`);
+      const ticketId = this._extractTicketId(ticket);
+      const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
       if (!card) return;
 
       card.className = `ticket-card ${this.getStatusClass(ticket.status)}`;
-      this.updateTicketProgress(ticket.ticket_id || ticket.id);
+      this.updateTicketProgress(ticketId);
       this.updateTicketButtons(card, ticket);
     },
 
@@ -348,7 +353,7 @@
      */
     updateTicketButtons(card, ticket) {
       console.log(`🎨 버튼 상태 업데이트 시작: ${ticket.status}, 카드:`, card);
-      
+
       const startBtn = card.querySelector('.start-btn');
       const completeBtn = card.querySelector('.complete-btn');
 
@@ -356,9 +361,9 @@
 
       if (startBtn) {
         const isCookingOrDone = ['COOKING', 'cooking', 'DONE', 'done', 'completed'].includes(ticket.status);
-        
+
         console.log(`🎨 조리 시작 버튼 상태 변경: ${ticket.status} -> ${isCookingOrDone ? '비활성화' : '활성화'}`);
-        
+
         startBtn.disabled = isCookingOrDone;
 
         if (isCookingOrDone) {
@@ -384,9 +389,9 @@
 
       if (completeBtn) {
         const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
-        
+
         console.log(`🎨 완료 버튼 상태 변경: ${ticket.status} -> ${isCooking ? '활성화' : '비활성화'}`);
-        
+
         completeBtn.disabled = !isCooking;
 
         if (isCooking) {
@@ -422,7 +427,7 @@
      */
     updateTicketToCookingState(ticketId, ticket) {
       console.log(`🎨 티켓 ${ticketId} 조리 상태로 UI 업데이트`);
-      
+
       const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
       if (!card) {
         console.warn(`⚠️ 티켓 카드를 찾을 수 없음: ${ticketId}`);
@@ -431,7 +436,7 @@
 
       // 1. 카드 전체 스타일 업데이트
       card.className = `ticket-card ${this.getStatusClass('COOKING')}`;
-      
+
       // 2. 조리 중 특별 스타일 적용
       this._applyCookingStyles(card);
 
@@ -526,7 +531,7 @@
       if (!itemElement) return;
 
       itemElement.className = `order-item ${this.getItemStatusClass('COOKING')}`;
-      
+
       // 조리 중 아이템 특별 스타일
       Object.assign(itemElement.style, {
         background: 'linear-gradient(135deg, #fdedec, #f8d7da)',
@@ -548,7 +553,7 @@
       // 일시적인 강조 효과
       card.style.transform = 'scale(1.02)';
       card.style.transition = 'transform 0.3s ease';
-      
+
       setTimeout(() => {
         card.style.transform = 'scale(1)';
       }, 300);
@@ -575,7 +580,7 @@
       switch (status?.toUpperCase()) {
         case 'ORDERED':
         case 'PENDING': return 'status-pending';
-        case 'PREPARING': 
+        case 'PREPARING':
         case 'COOKING': return 'status-cooking status-cooking-active';
         case 'READY':
         case 'DONE':
@@ -654,10 +659,10 @@
     checkEmptyState() {
       const grid = document.getElementById('ticketsGrid');
       const emptyState = document.getElementById('emptyState');
-      const cards = grid.querySelectorAll('.ticket-card');
+      const visibleCards = document.querySelectorAll('.ticket-card[style*="block"], .ticket-card:not([style*="none"])');
 
       if (emptyState) {
-        emptyState.style.display = cards.length === 0 ? 'flex' : 'none';
+        emptyState.style.display = visibleCards.length === 0 ? 'block' : 'none';
       }
     },
 
@@ -1265,6 +1270,18 @@
           }
         </style>
       `;
+    },
+
+    /**
+     * 안전한 티켓 ID 추출
+     */
+    _extractTicketId(ticket) {
+      // 우선순위: check_id > ticket_id > id > order_id
+      return ticket.check_id || 
+             ticket.ticket_id || 
+             ticket.id || 
+             ticket.order_id || 
+             `unknown_${Date.now()}`;
     }
   };
 

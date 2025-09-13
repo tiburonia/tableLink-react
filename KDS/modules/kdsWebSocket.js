@@ -134,7 +134,7 @@
      * 새 티켓 생성 처리
      */
     handleTicketCreated(ticket) {
-      const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
+      const ticketId = this._extractTicketId(ticket);
 
       if (!ticketId) {
         console.warn('⚠️ 티켓 ID가 없음 - 티켓 생성 스킵');
@@ -328,6 +328,18 @@
           if_version: ticket.version
         });
       }
+    },
+
+    /**
+     * 안전한 티켓 ID 추출
+     */
+    _extractTicketId(ticket) {
+      // 우선순위: check_id > ticket_id > id > order_id
+      return ticket.check_id || 
+             ticket.ticket_id || 
+             ticket.id || 
+             ticket.order_id || 
+             `unknown_${Date.now()}`;
     },
 
     /**

@@ -32,9 +32,27 @@
         // 초기 데이터 로드
         const tickets = await KDSAPIService.loadInitialData(storeId);
 
-        // 티켓 데이터 저장
+        // 티켓 데이터 저장 (안전한 ID 추출)
         tickets.forEach(ticket => {
-          KDSState.setTicket(ticket.check_id || ticket.id, ticket);
+          const ticketId = this._extractSafeTicketId(ticket);
+          
+          // 정규화된 티켓 데이터 생성
+          const normalizedTicket = {
+            ...ticket,
+            // 모든 ID 필드를 일관되게 설정
+            id: ticket.id || ticketId,
+            check_id: ticket.check_id || ticketId,
+            ticket_id: ticket.ticket_id || ticketId
+          };
+          
+          console.log(`📋 티켓 저장: ID=${ticketId}, 원본 ID들:`, {
+            id: ticket.id,
+            check_id: ticket.check_id,
+            ticket_id: ticket.ticket_id,
+            order_id: ticket.order_id
+          });
+          
+          KDSState.setTicket(ticketId, normalizedTicket);
         });
 
         // 티켓 카드 렌더링
@@ -98,7 +116,7 @@
     },
 
     /**
-     * 조리 시작 - 리팩토링된 로직
+     * 조리 시작 - 개선된 티켓 ID 처리
      */
     async startCooking(ticketId) {
       console.log(`🔥 티켓 ${ticketId} 조리 시작 요청`);
@@ -115,10 +133,26 @@
       }
       this._processingTickets.add(ticketId);
 
-      const ticket = KDSState.getTicket(ticketId);
+      // 2. 티켓 찾기 (여러 가지 ID 형태로 시도)
+      let ticket = this._findTicketById(ticketId);
+      
       if (!ticket) {
         console.error(`❌ 티켓 ${ticketId}을 찾을 수 없음`);
+        console.log(`🔍 현재 저장된 모든 티켓 ID:`, Array.from(KDSState.tickets.keys()));
+        console.log(`🔍 현재 저장된 티켓 수:`, KDSState.tickets.size);
+        
+        // 모든 티켓 정보 출력 (디버깅용)
+        KDSState.tickets.forEach((ticket, key) => {
+          console.log(`📋 티켓 키: ${key}, ID 필드들:`, {
+            id: ticket.id,
+            check_id: ticket.check_id,
+            ticket_id: ticket.ticket_id,
+            order_id: ticket.order_id
+          });
+        });
+        
         this._processingTickets.delete(ticketId);
+        this.showError(`티켓 ${ticketId}을 찾을 수 없습니다. 페이지를 새로고침해주세요.`);
         return;
       }
 
@@ -401,6 +435,58 @@
       
       KDSState.cleanup();
       KDSWebSocket.disconnect();
+    },
+
+    /**
+     * 안전한 티켓 ID 추출 (초기화용)
+     */
+    _extractSafeTicketId(ticket) {
+      // 우선순위: check_id > id > ticket_id > order_id
+      return ticket.check_id || 
+             ticket.id || 
+             ticket.ticket_id || 
+             ticket.order_id || 
+             `unknown_${Date.now()}`;
+    },
+
+    /**
+     * 티켓 ID로 티켓 찾기 (여러 형태의 ID 지원)
+     */
+    _findTicketById(ticketId) {
+      // 1. 직접 키로 찾기
+      let ticket = KDSState.getTicket(ticketId);
+      if (ticket) {
+        console.log(`✅ 직접 키로 티켓 찾음: ${ticketId}`);
+        return ticket;
+      }
+
+      // 2. 문자열/숫자 변환해서 찾기
+      const numericId = parseInt(ticketId);
+      const stringId = String(ticketId);
+
+      ticket = KDSState.getTicket(numericId) || KDSState.getTicket(stringId);
+      if (ticket) {
+        console.log(`✅ 형변환으로 티켓 찾음: ${numericId} / ${stringId}`);
+        return ticket;
+      }
+
+      // 3. 모든 티켓을 순회하면서 ID 필드들로 찾기
+      for (const [key, ticketData] of KDSState.tickets.entries()) {
+        const ids = [
+          ticketData.id,
+          ticketData.check_id,
+          ticketData.ticket_id,
+          ticketData.order_id
+        ].map(id => [id, parseInt(id), String(id)]).flat();
+
+        if (ids.includes(ticketId) || ids.includes(numericId) || ids.includes(stringId)) {
+          console.log(`✅ ID 필드로 티켓 찾음: ${key} (검색ID: ${ticketId})`);
+          return ticketData;
+        }
+      }
+
+      console.warn(`⚠️ 티켓을 찾을 수 없음: ${ticketId}`);
+      return null;
     },
 
     /**
