@@ -1062,17 +1062,20 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // WebSocket으로 실시간 업데이트 브로드캐스트
+    // WebSocket으로 실시간 업데이트 브로드캐스트 - DONE 상태로 전송
     if (global.io) {
+      // KDS에 DONE 상태 알림 (즉시 제거용)
       global.io.to(`kds:${store_id}`).emit('kds-update', {
         type: 'ticket_completed',
         data: {
           ticket_id: parseInt(ticketId),
           order_id: order_id,
-          status: 'COMPLETED',
+          status: 'DONE', // DONE 상태로 전송하여 KDS에서 즉시 제거
           table_number: table_number
         }
       });
+
+      console.log(`📡 KDS WebSocket 전송: 티켓 ${ticketId} DONE 상태 알림`);
     }
 
     res.json({
@@ -1102,11 +1105,74 @@ router.get('/kds/:storeId', async (req, res) => {
     const { storeId } = req.params;
     console.log(`📡 KDS 데이터 요청 - 매장 ${storeId}`);
 
-    // orders, order_tickets, order_items 테이블 사용
+    // orders, order_tickets, order_items 테이블 사용 - 상태 기반 조회
     const ordersQuery = `
       SELECT 
         ot.id as ticket_id,
+        ot.status as ticket_status,
+        o.id as order_id,
         o.table_num as table_number,
+        o.customer_name,
+        ot.created_at,
+        ot.updated_at,
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', oi.id,
+              'menuName', oi.menu_name,
+              'menu_name', oi.menu_name,
+              'quantity', oi.quantity,
+              'status', oi.item_status,
+              'item_status', oi.item_status,
+              'cook_station', oi.cook_station,
+              'notes', oi.notes
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL), 
+          '[]'::json
+        ) as items
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id 
+        AND oi.cook_station = 'KITCHEN'
+      WHERE o.store_id = $1 
+        AND ot.status IN ('PENDING', 'COOKING')
+      GROUP BY ot.id, ot.status, o.id, o.table_num, o.customer_name, ot.created_at, ot.updated_at
+      ORDER BY ot.created_at ASC
+    `;
+
+    const result = await pool.query(ordersQuery, [storeId]);
+    
+    const tickets = result.rows.map(row => ({
+      check_id: row.ticket_id,
+      ticket_id: row.ticket_id,
+      id: row.order_id,
+      order_id: row.order_id,
+      status: row.ticket_status, // PENDING, COOKING, DONE
+      table_number: row.table_number,
+      table_num: row.table_number,
+      customer_name: row.customer_name || `테이블 ${row.table_number}`,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      items: row.items || []
+    }));
+
+    console.log(`✅ KDS 데이터 응답 - ${tickets.length}개 티켓 (매장 ${storeId})`);
+    
+    res.json({
+      success: true,
+      tickets: tickets,
+      count: tickets.length
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 데이터 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 데이터 조회 실패',
+      details: error.message
+    });
+  }
+}); as table_number,
         COALESCE(u.name, '게스트') as customer_name,
         o.created_at,
         ot.status,

@@ -243,25 +243,33 @@
     },
 
     /**
-     * 티켓 완료 처리
+     * 티켓 완료 처리 - DONE 상태 티켓 즉시 제거
      */
     handleTicketCompleted(data) {
-      console.log('✅ 티켓 완료 이벤트:', data);
+      console.log('✅ 티켓 완료 이벤트 (DONE 상태):', data);
 
-      const ticket = KDSState.getTicket(data.ticket_id);
+      const ticketId = data.ticket_id;
+      const ticket = KDSState.getTicket(ticketId);
+      
       if (ticket) {
-        // 티켓을 완료 상태로 변경
-        ticket.status = 'completed';
+        console.log(`🗑️ DONE 상태 티켓 ${ticketId} 즉시 제거 시작`);
 
         // 사운드 재생
-        KDSSoundManager.playOrderCompleteSound();
+        if (window.KDSSoundManager) {
+          window.KDSSoundManager.playOrderCompleteSound();
+        }
 
-        // 1초 후 UI에서 완전히 제거
-        setTimeout(() => {
-          KDSState.removeTicket(data.ticket_id);
-          KDSUIRenderer.removeTicketFromUI(data.ticket_id);
-          console.log(`🗑️ 완료된 티켓 ${data.ticket_id} UI에서 제거`);
-        }, 1000);
+        // 즉시 상태에서 제거 (UI에서 보이지 않도록)
+        KDSState.removeTicket(ticketId);
+
+        // UI에서 제거 (애니메이션 효과 포함)
+        if (window.KDSUIRenderer) {
+          window.KDSUIRenderer.removeTicketCard(ticketId);
+        }
+
+        console.log(`✅ DONE 상태 티켓 ${ticketId} 제거 완료`);
+      } else {
+        console.warn(`⚠️ 완료 처리할 티켓 ${ticketId}을 찾을 수 없음`);
       }
     },
 

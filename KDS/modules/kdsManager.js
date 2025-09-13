@@ -386,17 +386,19 @@
     },
 
     /**
-     * 새로고침
+     * 새로고침 - 상태 기반 로딩
      */
     async refresh() {
       try {
+        console.log('🔄 KDS 새로고침 시작 - 상태 기반 로딩');
+
         const refreshBtn = document.querySelector('.refresh-btn');
         if (refreshBtn) {
           refreshBtn.style.transform = 'rotate(360deg)';
+          setTimeout(() => {
+            refreshBtn.style.transform = 'rotate(0deg)';
+          }, 1000);
         }
-
-        // 데이터 다시 로드
-        const tickets = await KDSAPIService.loadInitialData(KDSState.storeId);
 
         // 기존 카드 제거
         document.querySelectorAll('.ticket-card').forEach(card => card.remove());
@@ -404,9 +406,38 @@
         // 상태 초기화
         KDSState.tickets.clear();
 
-        // 새 데이터로 렌더링
+        // 데이터 다시 로드 (PENDING, COOKING 상태만)
+        const tickets = await KDSAPIService.loadInitialData(KDSState.storeId);
+
+        console.log(`🔄 새로고침: ${tickets.length}개 티켓 로드 (DONE 상태 제외)`);
+
+        // 상태별로 분류하여 렌더링
         tickets.forEach(ticket => {
-          KDSState.setTicket(ticket.check_id || ticket.id, ticket);
+          const status = (ticket.status || '').toUpperCase();
+          
+          // DONE 상태는 렌더링하지 않음
+          if (status === 'DONE') {
+            console.log(`⏭️ DONE 상태 티켓 ${ticket.ticket_id} 렌더링 스킵`);
+            return;
+          }
+
+          console.log(`🎨 티켓 ${ticket.ticket_id} 상태 ${status}로 렌더링`);
+
+          KDSState.setTicket(ticket.ticket_id || ticket.check_id, ticket);
+          KDSUIRenderer.addTicketCard(ticket);
+        });
+
+        // 카운트 업데이트
+        KDSUIRenderer.updateTicketCounts();
+        KDSUIRenderer.checkEmptyState();
+
+        console.log('✅ KDS 새로고침 완료 - 상태 기반 로딩');
+
+      } catch (error) {
+        console.error('❌ KDS 새로고침 실패:', error);
+        alert('새로고침 중 오류가 발생했습니다: ' + error.message);
+      }
+    },.setTicket(ticket.check_id || ticket.id, ticket);
           KDSUIRenderer.addTicketCard(ticket);
         });
 

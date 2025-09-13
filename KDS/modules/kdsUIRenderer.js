@@ -174,36 +174,56 @@
     },
 
     /**
-     * 티켓 카드 HTML 생성
+     * 티켓 카드 HTML 생성 - 상태 기반 렌더링
      */
     createTicketCardHTML(ticket) {
       const elapsedTime = this.getElapsedTime(ticket.created_at);
       const statusClass = this.getStatusClass(ticket.status);
       const progressPercent = this.calculateProgress(ticket.items);
 
-      // COOKING 상태 확인
-      const isCooking = ['COOKING', 'cooking'].includes(ticket.status);
-      const isDone = ['DONE', 'done', 'completed'].includes(ticket.status);
+      // 실제 DB 상태 기반으로 UI 결정
+      const status = (ticket.status || '').toUpperCase();
+      const isPending = status === 'PENDING';
+      const isCooking = status === 'COOKING';
+      const isDone = status === 'DONE';
 
-      // COOKING 상태일 때 특별한 스타일 적용
-      const elapsedTimeStyle = isCooking ? 
-        'background: #ff6b6b; color: white; font-weight: 700; animation: pulse 2s infinite; border: 2px solid #e74c3c;' : 
-        '';
+      console.log(`🎨 티켓 ${ticket.ticket_id} 상태 기반 렌더링: ${status} (Pending: ${isPending}, Cooking: ${isCooking}, Done: ${isDone})`);
 
-      const progressFillStyle = isCooking ? 
-        'background: linear-gradient(90deg, #ff6b6b, #ee5a52); animation: progressPulse 3s infinite;' : 
-        'background: linear-gradient(90deg, #3498db, #2ecc71);';
+      // 상태별 스타일 결정
+      let elapsedTimeStyle = '';
+      let progressFillStyle = 'background: linear-gradient(90deg, #3498db, #2ecc71);';
+      let cardExtraStyle = '';
 
-      const cardExtraStyle = isCooking ? 
-        'border: 3px solid #e74c3c; box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);' : 
-        '';
+      if (isCooking) {
+        elapsedTimeStyle = 'background: #ff6b6b; color: white; font-weight: 700; animation: pulse 2s infinite; border: 2px solid #e74c3c;';
+        progressFillStyle = 'background: linear-gradient(90deg, #ff6b6b, #ee5a52); animation: progressPulse 3s infinite;';
+        cardExtraStyle = 'border: 3px solid #e74c3c; box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);';
+      } else if (isPending) {
+        elapsedTimeStyle = 'background: #f39c12; color: white; font-weight: 600;';
+        cardExtraStyle = 'border: 2px solid #f39c12;';
+      }
+
+      // 버튼 상태 결정
+      const startButtonDisabled = isCooking || isDone;
+      const completeButtonDisabled = !isCooking;
+
+      const startButtonStyle = startButtonDisabled ? 
+        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;' : 
+        'opacity: 1; cursor: pointer; background: #f39c12; transform: scale(1);';
+
+      const completeButtonStyle = completeButtonDisabled ? 
+        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400;' : 
+        'opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700;';
+
+      const startButtonText = isCooking ? '조리중' : '조리 시작';
 
       return `
-        <div class="ticket-card ${statusClass}" style="${cardExtraStyle}">
+        <div class="ticket-card ${statusClass}" data-status="${status}" style="${cardExtraStyle}">
           <div class="ticket-header">
             <div class="ticket-info">
               <span class="table-number">${ticket.table_number || 'N/A'}</span>
               <span class="elapsed-time" style="${elapsedTimeStyle}">${elapsedTime}</span>
+              <span class="ticket-status" style="font-size: 12px; padding: 4px 8px; border-radius: 8px; background: ${isCooking ? '#e74c3c' : isPending ? '#f39c12' : '#95a5a6'}; color: white; font-weight: 600;">${status}</span>
             </div>
             <div class="ticket-progress">
               <div class="progress-bar">
@@ -215,18 +235,18 @@
 
           <div class="ticket-body">
             <div class="order-items">
-              ${ticket.items.map(item => this.createItemHTML(item, isCooking)).join('')}
+              ${ticket.items.map(item => this.createItemHTML(item, isCooking, status)).join('')}
             </div>
           </div>
 
           <div class="ticket-footer">
             <div class="ticket-actions">
-              <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.id}')"
-                      ${isCooking || isDone ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;"' : 'style="opacity: 1; cursor: pointer; background: #f39c12; transform: scale(1);"'}>
-                <span>🔥</span> ${isCooking ? '조리중' : '조리 시작'}
+              <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.ticket_id}')"
+                      ${startButtonDisabled ? 'disabled' : ''} style="${startButtonStyle}">
+                <span>🔥</span> ${startButtonText}
               </button>
-              <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.id}')"
-                      ${!isCooking ? 'disabled style="opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400;"' : 'style="opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700;"'}>
+              <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.ticket_id}')"
+                      ${completeButtonDisabled ? 'disabled' : ''} style="${completeButtonStyle}">
                 <span>✅</span> 완료
               </button>
             </div>
@@ -236,24 +256,32 @@
     },
 
     /**
-     * 아이템 HTML 생성
+     * 아이템 HTML 생성 - 상태 기반 개선
      */
-    createItemHTML(item, isCooking = false) {
-      // 티켓이 COOKING 상태면 모든 아이템도 COOKING 상태로 처리
-      const actualStatus = isCooking ? 'COOKING' : (item.status || item.item_status || 'pending');
+    createItemHTML(item, isCooking = false, ticketStatus = 'PENDING') {
+      // 실제 아이템 상태 또는 티켓 상태에 따른 상태 결정
+      let actualStatus;
+      if (ticketStatus === 'COOKING') {
+        actualStatus = 'COOKING';
+      } else {
+        actualStatus = item.status || item.item_status || 'PENDING';
+      }
 
       const statusIcon = this.getItemStatusIcon(actualStatus);
       const statusClass = this.getItemStatusClass(actualStatus);
       const itemName = item.menuName || item.menu_name || '메뉴명 없음';
       const quantity = item.quantity || 1;
 
-      // COOKING 상태일 때 특별한 스타일 적용
-      const itemExtraStyle = isCooking ? 
-        'background: linear-gradient(135deg, #fdedec, #f8d7da); border: 2px solid #e74c3c; animation: itemPulse 3s infinite;' : 
-        '';
+      // 상태별 스타일 적용
+      let itemExtraStyle = '';
+      if (actualStatus === 'COOKING') {
+        itemExtraStyle = 'background: linear-gradient(135deg, #fdedec, #f8d7da); border: 2px solid #e74c3c; animation: itemPulse 3s infinite;';
+      } else if (actualStatus === 'PENDING') {
+        itemExtraStyle = 'background: linear-gradient(135deg, #fef9e7, #fdf2e9); border: 1px solid #f39c12;';
+      }
 
       return `
-        <div class="order-item ${statusClass}" data-item-id="${item.id}" style="${itemExtraStyle}">
+        <div class="order-item ${statusClass}" data-item-id="${item.id}" data-status="${actualStatus}" style="${itemExtraStyle}">
           <div class="item-info">
             <span class="item-quantity">×${quantity}</span>
             <span class="item-name">${itemName}</span>
@@ -317,6 +345,14 @@
         this.updateTicketCounts();
         this.checkEmptyState();
       }, 300);
+    },
+
+    /**
+     * UI에서 티켓 제거 (별칭 메서드)
+     */
+    removeTicketFromUI(ticketId) {
+      console.log(`🗑️ UI에서 티켓 ${ticketId} 제거`);
+      this.removeTicketCard(ticketId);
     },
 
     /**
