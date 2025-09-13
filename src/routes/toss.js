@@ -419,8 +419,40 @@ router.post('/confirm', async (req, res) => {
         storeId: finalOrderInfo.storeId
       });
 
-      // PostgreSQL NOTIFY로 KDS에 실시간 알림
+      // KDS 형태로 데이터 변환하여 WebSocket 브로드캐스트
       try {
+        const kdsTicketData = {
+          check_id: ticketId,
+          id: newOrderId,
+          ticket_id: ticketId,
+          customer_name: `테이블 ${finalOrderInfo.tableNumber}`,
+          table_number: finalOrderInfo.tableNumber,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          items: finalOrderInfo.items.map(item => ({
+            id: Math.random().toString(36).substr(2, 9), // 임시 ID
+            menuName: item.name,
+            menu_name: item.name,
+            quantity: item.quantity || 1,
+            status: 'pending',
+            cook_station: item.cook_station || 'KITCHEN',
+            notes: '',
+            created_at: new Date().toISOString()
+          }))
+        };
+
+        console.log('📡 KDS 웹소켓 브로드캐스트 시작:', kdsTicketData);
+
+        // WebSocket을 통한 실시간 브로드캐스트
+        if (typeof global.broadcastKDSUpdate === 'function') {
+          global.broadcastKDSUpdate(finalOrderInfo.storeId, 'new-order', kdsTicketData);
+          console.log('✅ KDS 웹소켓 브로드캐스트 완료');
+        } else {
+          console.warn('⚠️ broadcastKDSUpdate 함수를 찾을 수 없음');
+        }
+
+        // PostgreSQL NOTIFY로 KDS에 실시간 알림 (백업)
         await client.query(`
           SELECT pg_notify('kds_updates', $1)
         `, [JSON.stringify({
@@ -433,7 +465,7 @@ router.post('/confirm', async (req, res) => {
           total_amount: finalOrderInfo.finalTotal,
           timestamp: Date.now()
         })]);
-        console.log('✅ KDS 실시간 알림 전송 완료');
+        console.log('✅ KDS PostgreSQL NOTIFY 전송 완료');
       } catch (notifyError) {
         console.warn('⚠️ KDS 알림 전송 실패:', notifyError.message);
       }

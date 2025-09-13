@@ -1,4 +1,3 @@
-
 /**
  * KDS (Kitchen Display System) 메인 컴포넌트
  * - 그리드 카드 기반 주문 관리
@@ -31,7 +30,7 @@
     async connect(storeId) {
       try {
         const userInfo = this.getUserInfo();
-        
+
         // KDS는 익명 접속도 허용 (주방 직원용)
         const authData = {
           token: userInfo?.token || 'kds-anonymous-token',
@@ -52,7 +51,7 @@
           console.log('✅ KDS WebSocket 연결됨');
           KDSState.isConnected = true;
           this.updateConnectionStatus(true);
-          
+
           // 매장별 룸 조인
           socket.emit('join-kds', storeId);
         });
@@ -131,6 +130,7 @@
           this.handleItemUpdated(data.data);
           break;
         case 'new-order':
+          console.log('🎫 새 주문 수신 (KDS 업데이트):', data.data);
           this.handleTicketCreated(data.data);
           break;
         case 'order-complete':
@@ -152,7 +152,7 @@
         table_number: ticket.table_number || 'N/A',
         items: ticket.items || []
       };
-      
+
       KDSState.tickets.set(ticketId, normalizedTicket);
       UIRenderer.addTicketCard(normalizedTicket);
       SoundManager.playNewOrderSound();
@@ -164,7 +164,7 @@
     handleItemUpdated(data) {
       const ticketId = data.ticket_id;
       const ticket = KDSState.tickets.get(ticketId);
-      
+
       if (ticket && ticket.items) {
         const item = ticket.items.find(i => i.id === data.item_id);
         if (item) {
@@ -308,7 +308,7 @@
         }
 
         const data = await response.json();
-        
+
         if (data.success) {
           console.log(`✅ KDS 데이터 로드 완료: ${data.orders?.length || 0}개 주문`);
           return data.orders || [];
@@ -318,12 +318,12 @@
 
       } catch (error) {
         console.error('❌ KDS 초기 데이터 로드 실패:', error);
-        
+
         // 네트워크 오류인 경우 더 자세한 정보 제공
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
           throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.');
         }
-        
+
         throw error;
       }
     },
@@ -464,14 +464,14 @@
             <div class="current-time">${timeString}</div>
             <div class="store-info">매장 ${KDSState.storeId}</div>
           </div>
-          
+
           <div class="header-center">
             <h1 class="kds-title">
               <span class="title-icon">🍳</span>
               Kitchen Display System
             </h1>
           </div>
-          
+
           <div class="header-right">
             <div id="connectionStatus" class="connection-status disconnected">연결 안됨</div>
             <button class="settings-btn" onclick="KDSManager.showSettings()">
@@ -497,7 +497,7 @@
             <span class="tab-text">진행중 주문</span>
             <span class="tab-count" id="activeCount">0</span>
           </button>
-          
+
           <button class="tab-btn ${KDSState.currentTab === 'completed' ? 'active' : ''}" 
                   data-tab="completed" onclick="KDSManager.switchTab('completed')">
             <span class="tab-icon">✅</span>
@@ -547,7 +547,7 @@
     addTicketCard(ticket) {
       const grid = document.getElementById('ticketsGrid');
       const emptyState = document.getElementById('emptyState');
-      
+
       if (emptyState) {
         emptyState.style.display = 'none';
       }
@@ -556,13 +556,13 @@
       const cardElement = document.createElement('div');
       cardElement.innerHTML = cardHTML;
       const card = cardElement.firstElementChild;
-      
+
       // 애니메이션 효과
       card.style.transform = 'scale(0.8)';
       card.style.opacity = '0';
-      
+
       grid.appendChild(card);
-      
+
       // 애니메이션 실행
       requestAnimationFrame(() => {
         card.style.transition = 'all 0.3s ease';
@@ -658,7 +658,7 @@
 
       // 상태 클래스 업데이트
       item.className = `order-item ${this.getItemStatusClass(status)}`;
-      
+
       // 아이콘 업데이트
       const statusIcon = item.querySelector('.status-icon');
       if (statusIcon) {
@@ -715,14 +715,14 @@
       if (!ticket || !ticket.items) return;
 
       const progressPercent = this.calculateProgress(ticket.items);
-      
+
       const progressFill = card.querySelector('.progress-fill');
       const progressText = card.querySelector('.progress-text');
-      
+
       if (progressFill) {
         progressFill.style.width = `${progressPercent}%`;
       }
-      
+
       if (progressText) {
         progressText.textContent = `${Math.round(progressPercent)}%`;
       }
@@ -880,7 +880,7 @@
           const card = element.closest('.ticket-card');
           const ticketId = card?.dataset.ticketId;
           const ticket = KDSState.tickets.get(ticketId);
-          
+
           if (ticket) {
             element.textContent = this.getElapsedTime(ticket.created_at);
           }
@@ -1435,7 +1435,7 @@
 
         // 초기 데이터 로드
         const tickets = await APIService.loadInitialData(storeId);
-        
+
         // 티켓 데이터 저장
         tickets.forEach(ticket => {
           KDSState.tickets.set(ticket.check_id || ticket.id, ticket);
@@ -1465,7 +1465,7 @@
      */
     switchTab(tab) {
       KDSState.currentTab = tab;
-      
+
       // 탭 버튼 활성화
       document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
@@ -1480,15 +1480,15 @@
      */
     filterTickets() {
       const cards = document.querySelectorAll('.ticket-card');
-      
+
       cards.forEach(card => {
         const ticketId = card.dataset.ticketId;
         const ticket = KDSState.tickets.get(ticketId);
-        
+
         if (!ticket) return;
 
         let shouldShow = false;
-        
+
         if (KDSState.currentTab === 'active') {
           shouldShow = ticket.status !== 'completed' && ticket.status !== 'served';
         } else if (KDSState.currentTab === 'completed') {
@@ -1553,7 +1553,7 @@
     async toggleItemStatus(itemId, currentStatus) {
       try {
         let nextStatus;
-        
+
         switch (currentStatus) {
           case 'ordered':
           case 'pending':
@@ -1629,7 +1629,7 @@
       // 사운드 설정 토글 로직 (로컬 저장소 활용)
       const soundEnabled = !localStorage.getItem('kds-sound-disabled');
       localStorage.setItem('kds-sound-disabled', soundEnabled ? 'true' : '');
-      
+
       if (icon) {
         icon.textContent = soundEnabled ? '🔇' : '🔊';
       }
@@ -1654,13 +1654,13 @@
 
         // 데이터 다시 로드
         const tickets = await APIService.loadInitialData(KDSState.storeId);
-        
+
         // 기존 카드 제거
         document.querySelectorAll('.ticket-card').forEach(card => card.remove());
-        
+
         // 상태 초기화
         KDSState.tickets.clear();
-        
+
         // 새 데이터로 렌더링
         tickets.forEach(ticket => {
           KDSState.tickets.set(ticket.check_id || ticket.id, ticket);
@@ -1699,7 +1699,7 @@
       if (KDSState.autoRefreshInterval) {
         clearInterval(KDSState.autoRefreshInterval);
       }
-      
+
       WebSocketManager.disconnect();
     },
 
@@ -1725,7 +1725,7 @@
 
     } catch (error) {
       console.error('❌ KDS 렌더링 실패:', error);
-      
+
       // 오류 화면 렌더링
       const main = document.getElementById('main') || document.body;
       main.innerHTML = `
