@@ -437,20 +437,6 @@
         console.error('❌ KDS 새로고침 실패:', error);
         alert('새로고침 중 오류가 발생했습니다: ' + error.message);
       }
-    },.setTicket(ticket.check_id || ticket.id, ticket);
-          KDSUIRenderer.addTicketCard(ticket);
-        });
-
-        setTimeout(() => {
-          if (refreshBtn) {
-            refreshBtn.style.transform = '';
-          }
-        }, 500);
-
-      } catch (error) {
-        console.error('❌ 새로고침 실패:', error);
-        this.showError('데이터 새로고침 중 오류가 발생했습니다.');
-      }
     },
 
     /**
