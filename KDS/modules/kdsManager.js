@@ -114,6 +114,19 @@
 
       if (currentTab === 'active') {
         tickets = KDSState.getActiveTickets();
+        
+        // 추가 안전장치: 완료된 상태의 티켓 강제 제거
+        tickets = tickets.filter(ticket => {
+          const status = (ticket.status || '').toUpperCase();
+          const isDone = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
+          
+          if (isDone) {
+            console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${this._extractSafeTicketId(ticket)}`);
+            KDSState.removeTicket(this._extractSafeTicketId(ticket));
+            return false;
+          }
+          return true;
+        });
       } else {
         tickets = KDSState.getCompletedTickets();
       }
@@ -516,12 +529,20 @@
 
         console.log(`🔄 새로고침: ${tickets.length}개 티켓 로드`);
 
-        // 모든 티켓을 상태에 저장 (탭별 필터링은 getActiveTickets/getCompletedTickets에서 처리)
+        // 완료된 티켓은 사전에 필터링하여 상태에 저장하지 않음
         tickets.forEach(ticket => {
           const actualStatus = (ticket.status || '').toUpperCase();
           const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
 
           console.log(`📋 티켓 ${ticketId} 상태: ${actualStatus}`);
+
+          // 완료된 티켓은 상태에 저장하지 않음 (UI 노출 방지)
+          const isCompleted = ['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus);
+          
+          if (isCompleted) {
+            console.log(`🚫 완료된 티켓 ${ticketId} - 상태에 저장하지 않음`);
+            return; // 완료된 티켓은 건너뛰기
+          }
 
           // DB 상태를 정확히 보존하여 저장
           const normalizedTicket = {
