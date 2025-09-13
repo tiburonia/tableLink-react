@@ -470,6 +470,8 @@ router.post('/confirm', async (req, res) => {
         console.warn('⚠️ KDS 알림 전송 실패:', notifyError.message);
       }
 
+      await client.query('COMMIT');
+
       res.json({
         success: true,
         orderId: newOrderId,
@@ -502,22 +504,28 @@ router.post('/confirm', async (req, res) => {
 
         console.log(`✅ 일반 주문 결제 승인 완료: 주문 ${order.id}`);
       }
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        data: tossResult
+      });
     }
-
-    await client.query('COMMIT');
-
-    res.json({
-      success: true,
-      data: tossResult
-    });
 
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message
-    });
+    
+    // 응답이 이미 전송되었는지 확인
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    } else {
+      console.warn('⚠️ 응답이 이미 전송됨 - 추가 응답 생략');
+    }
   } finally {
     client.release();
   }
