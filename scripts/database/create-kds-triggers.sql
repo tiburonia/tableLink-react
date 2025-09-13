@@ -142,7 +142,7 @@ CREATE TRIGGER payments_kds_notify
 -- 인덱스 생성 (성능 최적화)
 CREATE INDEX IF NOT EXISTS idx_order_tickets_status ON order_tickets(status, updated_at);
 CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items(item_status, updated_at);
-CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, completed_at);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, created_at);
 
 COMMENT ON FUNCTION notify_kds_order_change() IS 'KDS 주문 변경 실시간 알림 함수';
 COMMENT ON FUNCTION notify_kds_ticket_change() IS 'KDS 티켓 변경 실시간 알림 함수';
