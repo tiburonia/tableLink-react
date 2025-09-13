@@ -157,10 +157,9 @@ router.get('/kds/:storeId', async (req, res) => {
       SELECT 
         o.id as order_id,
         ot.id as ticket_id,
-        o.table_number,
-        o.customer_name,
+        o.table_num,
         o.created_at,
-        o.source_system,
+        o.source,
         array_agg(
           json_build_object(
             'id', oi.id,
@@ -180,7 +179,7 @@ router.get('/kds/:storeId', async (req, res) => {
         AND o.status IN ('PENDING', 'CONFIRMED')
         AND oi.item_status IN ('PENDING', 'PREPARING', 'READY')
         AND oi.cook_station = 'KITCHEN'
-      GROUP BY o.id, ot.id, o.table_number, o.customer_name, o.created_at, o.source_system
+      GROUP BY o.id, ot.id, o.table_num, o.created_at, o.source
       ORDER BY o.created_at ASC
     `, [parseInt(storeId)]);
 
