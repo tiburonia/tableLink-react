@@ -177,7 +177,7 @@ router.get('/kds/:storeId', async (req, res) => {
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE o.store_id = $1 
         AND o.status = 'OPEN'
-        AND oi.item_status IN ('PENDING', 'PREPARING', 'READY')
+        AND oi.item_status IN ('PENDING', 'COOKING', 'READY')
         AND oi.cook_station = 'KITCHEN'
       GROUP BY o.id, ot.id, o.table_num, o.created_at, o.source
       ORDER BY o.created_at ASC
@@ -967,7 +967,7 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
 
     // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
     const orderQuery = `
-      SELECT o.store_id, o.table_number
+      SELECT o.store_id, o.table_num
       FROM orders o
       WHERE o.id = $1
     `;
