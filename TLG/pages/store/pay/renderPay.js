@@ -1037,6 +1037,9 @@
 
       // 6. UI 렌더링
       PaymentUIRenderer.render(orderData);
+      
+      // 7. 렌더링 완료 후 DOM 요소 확인
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // 7. 데이터 로딩 및 이벤트 설정
       await Promise.all([

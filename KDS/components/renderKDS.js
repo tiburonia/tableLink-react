@@ -151,17 +151,46 @@
     handleTicketCreated(ticket) {
       // 티켓 ID 정규화
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
+
+      if (!ticketId) {
+        console.warn('⚠️ 티켓 ID가 없음 - 티켓 생성 스킵');
+        return;
+      }
+
+      // 이미 존재하는 티켓인지 확인
+      if (KDSState.tickets.has(ticketId)) {
+        console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 업데이트로 처리`);
+        return this.handleTicketUpdated(ticket);
+      }
+
       const normalizedTicket = {
         ...ticket,
         ticket_id: ticketId,
         check_id: ticketId,
-        table_number: ticket.table_number || 'N/A',
-        items: ticket.items || []
+        table_number: ticket.table_number || ticket.table_num || 'N/A',
+        customer_name: ticket.customer_name || `테이블 ${ticket.table_number || ticket.table_num}`,
+        items: ticket.items || [],
+        status: ticket.status || 'pending',
+        created_at: ticket.created_at || new Date().toISOString()
       };
+
+      // 주방 아이템만 필터링
+      const kitchenItems = normalizedTicket.items.filter(item => 
+        item.cook_station === 'KITCHEN' || !item.cook_station
+      );
+
+      if (kitchenItems.length === 0) {
+        console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - 스킵`);
+        return;
+      }
+
+      normalizedTicket.items = kitchenItems;
 
       KDSState.tickets.set(ticketId, normalizedTicket);
       UIRenderer.addTicketCard(normalizedTicket);
       SoundManager.playNewOrderSound();
+
+      console.log(`✅ 새 티켓 추가: ${ticketId} (${kitchenItems.length}개 아이템)`);
     },
 
     /**
@@ -191,7 +220,7 @@
       if (ticket) {
         // 티켓 상태 업데이트
         ticket.status = 'COOKING';
-        
+
         // 모든 아이템 상태를 COOKING으로 변경
         if (ticket.items) {
           ticket.items.forEach(item => {
@@ -199,13 +228,13 @@
             item.item_status = 'COOKING';
           });
         }
-        
+
         // UI 업데이트
         UIRenderer.updateTicketCard(ticket);
         UIRenderer.updateTicketCookingState(ticketId, 'COOKING');
-        
+
         console.log(`🔥 티켓 ${ticketId} 조리 시작 완료 - UI 업데이트됨`);
-        
+
         // 조리 시작 사운드
         SoundManager.playItemCompleteSound();
       }
@@ -216,13 +245,13 @@
      */
     handleTicketCompleted(data) {
       const ticketId = data.ticket_id;
-      
+
       // 상태에서 제거
       KDSState.tickets.delete(ticketId);
-      
+
       // UI에서 제거
       UIRenderer.removeTicketCard(ticketId);
-      
+
       console.log(`✅ 티켓 ${ticketId} 완료 - UI에서 제거됨`);
       SoundManager.playOrderCompleteSound();
     },
@@ -288,7 +317,7 @@
       }
     },
 
-    
+
 
     /**
      * 사용자 정보 가져오기 (KDS용 - 선택적)
@@ -787,7 +816,7 @@
                                ticket.status === 'DONE' || ticket.status === 'done' ||
                                ticket.status === 'completed';
         startBtn.disabled = isCookingOrDone;
-        
+
         if (isCookingOrDone) {
           startBtn.style.opacity = '0.5';
           startBtn.style.cursor = 'not-allowed';
@@ -801,7 +830,7 @@
         // 완료 버튼: COOKING 상태에서만 활성화
         const isCooking = ticket.status === 'COOKING' || ticket.status === 'cooking';
         completeBtn.disabled = !isCooking;
-        
+
         if (isCooking) {
           completeBtn.style.opacity = '1';
           completeBtn.style.cursor = 'pointer';
@@ -825,7 +854,7 @@
 
       // 카드 스타일 업데이트
       card.className = `ticket-card ${this.getStatusClass(status)}`;
-      
+
       // 헤더 경과 시간 색상 변경
       const elapsedTime = card.querySelector('.elapsed-time');
       if (elapsedTime && status === 'COOKING') {
@@ -1670,11 +1699,11 @@
         }
 
         const result = await response.json();
-        
+
         if (result.success) {
           console.log('✅ 조리 시작 성공:', result.message);
           SoundManager.playItemCompleteSound();
-          
+
           // 서버 응답 후 최종 확인 업데이트
           if (ticket) {
             UIRenderer.updateTicketCookingState(ticketId, 'COOKING');
@@ -1719,7 +1748,7 @@
         }
 
         const result = await response.json();
-        
+
         if (result.success) {
           console.log('✅ 완료 처리 성공:', result.message);
           // WebSocket으로 처리되므로 여기서는 사운드만 재생
