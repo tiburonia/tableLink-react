@@ -1,292 +1,248 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TableLink KRP - 주방 프린터</title>
-  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-  <style>
-    .krp-container {
-      padding: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRP - 주방 영수증 프린터 | TableLink</title>
+    <link rel="icon" href="/TableLink.png" type="image/png">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            overflow: hidden;
+        }
 
-    .krp-header {
-      text-align: center;
-      margin-bottom: 30px;
-      padding: 20px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border-radius: 12px;
-    }
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+            color: white;
+        }
 
-    .store-info {
-      margin-top: 10px;
-      font-size: 16px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 20px;
-      flex-wrap: wrap;
-    }
+        .loading-logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
 
-    .connection-status {
-      margin-top: 8px;
-    }
+        .loading-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
 
-    .connection-indicator {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
+        .loading-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 40px;
+        }
 
-    .connection-indicator.online {
-      background: #10b981;
-      color: white;
-    }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
 
-    .connection-indicator.offline {
-      background: #ef4444;
-      color: white;
-    }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
 
-    .krp-controls {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 30px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+        .url-info {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
 
-    .krp-controls button {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
+        .error-container {
+            text-align: center;
+            padding: 40px;
+            color: #ef4444;
+        }
 
-    .load-orders-btn {
-      background: #3b82f6;
-      color: white;
-    }
+        .error-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
 
-    .sample-print-btn {
-      background: #10b981;
-      color: white;
-    }
+        .error-message {
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
 
-    .clear-btn {
-      background: #ef4444;
-      color: white;
-    }
+        .error-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
 
-    .auto-mode-btn {
-      background: #6b7280;
-      color: white;
-    }
+        .error-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
-    .auto-mode-btn.active {
-      background: #059669;
-    }
+        .retry-btn {
+            background: #3b82f6;
+            color: white;
+        }
 
-    .orders-section, .receipts-section {
-      margin-bottom: 30px;
-      padding: 20px;
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
+        .retry-btn:hover {
+            background: #2563eb;
+        }
 
-    .orders-list {
-      display: grid;
-      gap: 12px;
-    }
+        .back-btn {
+            background: #6b7280;
+            color: white;
+        }
 
-    .order-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 16px;
-      background: #f8fafc;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-
-    .order-info {
-      flex: 1;
-    }
-
-    .order-meta {
-      font-size: 12px;
-      color: #64748b;
-      margin-top: 4px;
-    }
-
-    .print-btn {
-      background: #8b5cf6;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    .receipts-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 20px;
-      max-height: 600px;
-      overflow-y: auto;
-    }
-
-    .receipt {
-      border: 2px dashed #374151;
-      background: #ffffff;
-      padding: 16px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      line-height: 1.4;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      animation: fadeInScale 0.3s ease-out;
-      position: relative;
-    }
-
-    .receipt.auto-printed {
-      border-color: #10b981;
-      background: #f0fdf4;
-    }
-
-    .receipt.auto-printed::before {
-      content: "🔄 자동출력";
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: #10b981;
-      color: white;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10px;
-    }
-
-    .receipt h3 {
-      text-align: center;
-      margin: 0 0 12px 0;
-      font-size: 16px;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 8px;
-    }
-
-    .receipt ul {
-      margin: 12px 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .receipt li {
-      margin: 4px 0;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .receipt hr {
-      margin: 8px 0;
-      border: none;
-      border-top: 1px dashed #666;
-    }
-
-    .no-orders {
-      text-align: center;
-      color: #64748b;
-      font-style: italic;
-      padding: 40px 20px;
-    }
-
-    @keyframes fadeInScale {
-      from {
-        opacity: 0;
-        transform: scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .krp-controls {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .krp-controls button {
-        width: 100%;
-        max-width: 300px;
-      }
-
-      .receipts-container {
-        grid-template-columns: 1fr;
-      }
-
-      .store-info {
-        flex-direction: column;
-        gap: 8px;
-      }
-    }
-  </style>
+        .back-btn:hover {
+            background: #4b5563;
+        }
+    </style>
 </head>
-
 <body>
-  <!-- 화면을 렌더링할 메인 영역 -->
-  <div id='main'></div>
+    <div id="main">
+        <div class="loading-container">
+            <div class="loading-logo">🖨️</div>
+            <div class="loading-title">KRP 시스템</div>
+            <div class="loading-subtitle">주방 영수증 프린터 초기화 중...</div>
+            <div class="loading-spinner"></div>
+            <div class="url-info" id="urlInfo"></div>
+        </div>
+    </div>
 
-  <!-- KRP 렌더링 함수 -->
-  <script src="/krp/components/renderKRP.js"></script>
+    <!-- Socket.IO -->
+    <script src="/socket.io/socket.io.js"></script>
 
-  <script>
-    // KRP 페이지 초기 진입
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🖨️ KRP 페이지 DOM 로드 완료');
+    <!-- KRP 시스템 -->
+    <script src="/krp/components/renderKRP.js"></script>
 
-      // URL에서 storeId 추출
-      const urlParams = new URLSearchParams(window.location.search);
-      const storeId = urlParams.get('storeId');
+    <script>
+        // URL 정보 표시
+        document.getElementById('urlInfo').textContent = window.location.href;
 
-      if (!storeId) {
-        console.error('❌ storeId가 없습니다');
-        document.getElementById('main').innerHTML = `
-          <div style="padding: 40px; text-align: center; color: red;">
-            <h2>❌ 오류</h2>
-            <p>매장 ID가 필요합니다.</p>
-            <button onclick="history.back()">돌아가기</button>
-          </div>
-        `;
-        return;
-      }
+        // URL에서 storeId 파라미터 추출
+        function getStoreIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const storeId = urlParams.get('storeId');
+            console.log('🔍 URL에서 추출한 매장 ID:', storeId);
+            return storeId;
+        }
 
-      // KRP 렌더링 함수 실행
-      if (typeof renderKRP === 'function') {
-        renderKRP(storeId);
-      } else {
-        console.error('❌ renderKRP 함수를 찾을 수 없습니다');
-        document.getElementById('main').innerHTML = `
-          <div style="padding: 40px; text-align: center; color: red;">
-            <h2>❌ 오류</h2>
-            <p>KRP 시스템을 로드할 수 없습니다.</p>
-            <button onclick="history.back()">돌아가기</button>
-          </div>
-        `;
-      }
-    });
-  </script>
+        // 에러 화면 렌더링
+        function renderError(message, showRetry = true) {
+            const main = document.getElementById('main');
+            main.innerHTML = `
+                <div class="error-container">
+                    <div class="error-title">❌ KRP 시스템 오류</div>
+                    <div class="error-message">${message}</div>
+                    <div class="error-actions">
+                        ${showRetry ? `
+                            <button class="error-btn retry-btn" onclick="initKRP()">
+                                🔄 다시 시도
+                            </button>
+                        ` : ''}
+                        <button class="error-btn back-btn" onclick="goBack()">
+                            ← 돌아가기
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 뒤로가기
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '/';
+            }
+        }
+
+        // KRP 시스템 초기화
+        async function initKRP() {
+            try {
+                console.log('🖨️ KRP 시스템 초기화 시작');
+
+                // 1. storeId 확인
+                const storeId = getStoreIdFromUrl();
+                if (!storeId) {
+                    throw new Error('매장 ID가 제공되지 않았습니다. URL에 storeId 파라미터를 확인하세요.');
+                }
+
+                console.log(`🏪 매장 ID 확인: ${storeId}`);
+
+                // 2. renderKRP 함수 확인
+                if (typeof window.renderKRP !== 'function') {
+                    throw new Error('KRP 렌더링 함수를 찾을 수 없습니다.');
+                }
+
+                // 3. 매장 ID 유효성 검사
+                const storeIdNumber = parseInt(storeId);
+                if (isNaN(storeIdNumber) || storeIdNumber <= 0) {
+                    throw new Error(`유효하지 않은 매장 ID: ${storeId}`);
+                }
+
+                console.log('✅ 초기 검증 완료, KRP 렌더링 시작...');
+
+                // 4. KRP 렌더링 실행
+                await window.renderKRP(storeIdNumber);
+
+                console.log('✅ KRP 시스템 초기화 완료');
+
+            } catch (error) {
+                console.error('❌ KRP 시스템 초기화 실패:', error);
+
+                let errorMessage = error.message || '알 수 없는 오류가 발생했습니다.';
+
+                // 네트워크 오류 처리
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    errorMessage = '서버에 연결할 수 없습니다. 네트워크 연결을 확인하세요.';
+                }
+
+                renderError(errorMessage);
+            }
+        }
+
+        // 페이지 로드 완료 후 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 KRP 페이지 로드 완료');
+
+            // 짧은 지연 후 초기화 (로딩 화면을 보여주기 위함)
+            setTimeout(() => {
+                initKRP();
+            }, 1000);
+        });
+
+        // 전역 에러 핸들러
+        window.addEventListener('error', (event) => {
+            console.error('🚨 전역 에러 감지:', event.error);
+            renderError('예상치 못한 오류가 발생했습니다.', true);
+        });
+
+        // 네트워크 상태 모니터링
+        window.addEventListener('online', () => {
+            console.log('🌐 네트워크 연결 복구됨');
+        });
+
+        window.addEventListener('offline', () => {
+            console.log('📡 네트워크 연결 끊김');
+        });
+    </script>
 </body>
-
 </html>

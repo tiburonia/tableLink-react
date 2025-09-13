@@ -1152,7 +1152,7 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     // WebSocket으로 실시간 업데이트 브로드캐스트 - DONE 상태 즉시 제거용
     if (global.io) {
       console.log(`📡 WebSocket 브로드캐스트: 티켓 ${ticketId} 완료 이벤트 전송`);
-      
+
       // KDS 업데이트 이벤트
       global.io.to(`kds:${store_id}`).emit('kds-update', {
         type: 'ticket_completed',
@@ -1182,6 +1182,14 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
         status: 'DONE',
         order_id: order_id,
         table_number: table_number
+      });
+
+      // KRP에 출력 요청 이벤트 전송
+      global.io.to(`krp:${store_id}`).emit('krp-print-request', {
+        ticket_id: parseInt(ticketId),
+        order_id: order_id,
+        table_number: table_number,
+        action: 'add_to_print_queue'
       });
 
       console.log(`✅ WebSocket 브로드캐스트 완료: 매장 ${store_id}, 티켓 ${ticketId}`);
@@ -1222,7 +1230,7 @@ router.get('/kds/:storeId/sync', async (req, res) => {
     const whereClause = lastSyncAt 
       ? 'AND (ot.updated_at > $2 OR o.updated_at > $2)'
       : '';
-    
+
     const queryParams = lastSyncAt 
       ? [parseInt(storeId), lastSyncAt]
       : [parseInt(storeId)];

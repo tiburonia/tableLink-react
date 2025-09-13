@@ -74,7 +74,7 @@ app.get('/health', (req, res) => {
 // API 기본 경로 핸들러
 app.all('/api', (req, res) => {
   res.json({
-    message: 'TableLink API Server',
+    message: 'TableLink POS 서버',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     endpoints: [
@@ -89,7 +89,8 @@ app.all('/api', (req, res) => {
       '/api/pos',
       '/api/tll',
       '/api/toss',
-      '/api/clusters'
+      '/api/clusters',
+      '/api/krp' // KRP API 엔드포인트 추가
     ]
   });
 });
@@ -99,7 +100,7 @@ try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
-  const krpRoutes = require('./routes/krp');
+  const krpRoutes = require('./routes/krp'); // KRP 라우터 추가
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
   const storesClustersRouter = require('./routes/stores-clusters'); // 새로운 클러스터 API 라우터 등록
 
@@ -117,7 +118,7 @@ try {
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
-  app.use('/api/payments', krpRoutes);
+  app.use('/api/payments', krpRoutes); // KRP 라우터 경로 변경
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
   app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로 변경
 
@@ -133,8 +134,9 @@ try {
   app.use('/api/audit', auditRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
+  app.use('/api/krp', krpRoutes); // KRP 라우트 등록
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters, krp)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
@@ -319,6 +321,10 @@ io.on('connection', (socket) => {
     console.log(`🚪 KDS 룸 떠남: ${socket.id} -> ${roomName}`);
   });
 
+  // KRP 관련 WebSocket 이벤트 핸들러 (예시)
+  // 사용자의 요구사항에 따라 KRP 관련 이벤트 핸들러를 여기에 추가해야 합니다.
+  // 예: 주문서 큐 추가, 출력 완료 처리 등
+
   // 아이템 상태 변경 요청 처리
   socket.on('item:setStatus', async (data) => {
     try {
@@ -327,7 +333,7 @@ io.on('connection', (socket) => {
 
       // 아이템 상태 업데이트
       const updateResult = await pool.query(`
-        UPDATE order_items 
+        UPDATE order_items
         SET status = $1, updated_at = NOW()
         WHERE id = $2
         RETURNING *
@@ -381,7 +387,7 @@ io.on('connection', (socket) => {
       console.log(`🎫 티켓 상태 변경 요청: ${ticket_id} -> ${next}`);
 
       const updateResult = await pool.query(`
-        UPDATE orders 
+        UPDATE orders
         SET status = $1, updated_at = NOW()
         WHERE check_id = $2
         RETURNING *
@@ -479,6 +485,16 @@ app.use('/api/regular-levels', require('./routes/regular-levels'));
 app.use('/api/tables', require('./routes/tables'));
 app.use('/api/stores-clusters', require('./routes/stores-clusters'));
 app.use('/api/audit', require('./routes/audit'));
+app.use('/api/krp', require('./routes/krp')); // KRP 라우트 등록
+
+// KRP 진입을 위한 루트 라우트 설정 (예시)
+// 실제 KRP UI를 제공하는 라우트를 여기에 추가해야 합니다.
+// 예를 들어, '/krp' 경로로 접속 시 KRP 관련 HTML 파일을 제공하도록 설정할 수 있습니다.
+app.get('/krp', (req, res) => {
+  // 실제 KRP UI 파일 경로로 수정해야 합니다.
+  // 예: res.sendFile(path.join(__dirname, '../krp/index.html'));
+  res.send('<h1>KRP (주방 영수증 프린터) 화면입니다.</h1><p>이곳에 KRP UI를 구현하세요.</p>');
+});
 
 // Start Server
 server.listen(PORT, '0.0.0.0', async () => {

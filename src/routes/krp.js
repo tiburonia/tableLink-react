@@ -471,3 +471,219 @@ router.get('/:id', async (req, res, next) => {
 // TODO: README 섹션 (실행법, ENV, 라우팅 표, 흐름도)은 별도 파일로 관리.
 
 module.exports = router;
+const express = require('express');
+const router = express.Router();
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// 🖨️ KRP 출력 대기 목록 조회
+router.get('/', async (req, res) => {
+  try {
+    const { storeId } = req.query;
+
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '매장 ID가 필요합니다'
+      });
+    }
+
+    console.log(`🖨️ KRP 출력 대기 목록 조회 - 매장 ${storeId}`);
+
+    // print_status가 WAITING인 티켓들 조회
+    const result = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        ot.id as ticket_id,
+        o.table_num,
+        o.created_at,
+        o.source,
+        COALESCE(u.name, g.phone, '게스트') as customer_name,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'price', oi.price,
+            'totalPrice', oi.price * oi.quantity,
+            'options', COALESCE(oi.options, '{}')
+          ) ORDER BY oi.created_at
+        ) as items,
+        SUM(oi.price * oi.quantity) as total_amount
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone
+      WHERE o.store_id = $1 
+        AND o.status = 'OPEN'
+        AND ot.print_status = 'WAITING'
+      GROUP BY o.id, ot.id, o.table_num, o.created_at, o.source, u.name, g.phone
+      ORDER BY o.created_at ASC
+    `, [parseInt(storeId)]);
+
+    const orders = result.rows.map(order => ({
+      order_id: order.order_id,
+      ticket_id: order.ticket_id,
+      table_number: order.table_num,
+      customer_name: order.customer_name,
+      total_amount: parseInt(order.total_amount) || 0,
+      created_at: order.created_at,
+      source: order.source,
+      items: order.items || []
+    }));
+
+    res.json({
+      success: true,
+      orders: orders,
+      count: orders.length
+    });
+
+  } catch (error) {
+    console.error('❌ KRP 출력 대기 목록 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KRP 출력 대기 목록 조회 실패',
+      details: error.message
+    });
+  }
+});
+
+// 🖨️ 주문서 출력 완료 처리
+router.post('/print', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { storeId, orderId, ticketId } = req.body;
+
+    console.log(`🖨️ 주문서 출력 완료 처리: 매장 ${storeId}, 티켓 ${ticketId}`);
+
+    await client.query('BEGIN');
+
+    // print_status를 PRINTED로 업데이트
+    const updateResult = await client.query(`
+      UPDATE order_tickets
+      SET print_status = 'PRINTED',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, order_id, print_status
+    `, [parseInt(ticketId)]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    // 주문 정보 조회 (응답용)
+    const orderResult = await client.query(`
+      SELECT 
+        o.id as order_id,
+        ot.id as ticket_id,
+        o.table_num,
+        o.created_at,
+        COALESCE(u.name, g.phone, '게스트') as customer_name,
+        array_agg(
+          json_build_object(
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'options', COALESCE(oi.options, '{}')
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone
+      WHERE ot.id = $1
+      GROUP BY o.id, ot.id, o.table_num, o.created_at, u.name, g.phone
+    `, [parseInt(ticketId)]);
+
+    const order = orderResult.rows[0];
+
+    await client.query('COMMIT');
+
+    // WebSocket으로 다른 KRP 클라이언트들에게 출력 완료 알림
+    if (global.io) {
+      global.io.to(`krp:${storeId}`).emit('krp-print-completed', {
+        ticket_id: parseInt(ticketId),
+        order_id: parseInt(orderId),
+        table_number: order.table_num,
+        customer_name: order.customer_name,
+        action: 'remove_from_queue'
+      });
+    }
+
+    res.json({
+      success: true,
+      order: order,
+      message: '출력이 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ KRP 출력 완료 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '출력 완료 처리 실패',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 🔄 출력 상태 재설정 (재출력용)
+router.put('/reprint/:ticketId', async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { storeId } = req.body;
+
+    console.log(`🔄 주문서 재출력 요청: 티켓 ${ticketId}`);
+
+    const updateResult = await pool.query(`
+      UPDATE order_tickets
+      SET print_status = 'WAITING',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, order_id
+    `, [parseInt(ticketId)]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    // WebSocket으로 재출력 알림
+    if (global.io) {
+      global.io.to(`krp:${storeId}`).emit('krp-reprint-requested', {
+        ticket_id: parseInt(ticketId),
+        order_id: updateResult.rows[0].order_id,
+        action: 'add_to_queue'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '재출력 요청이 완료되었습니다'
+    });
+
+  } catch (error) {
+    console.error('❌ KRP 재출력 요청 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '재출력 요청 실패',
+      details: error.message
+    });
+  }
+});
+
+module.exports = router;
