@@ -47,6 +47,7 @@ app.use('/api/', limiter);
 // Static file serving
 app.use(express.static('public'));
 app.use('/pos', express.static('pos'));
+app.use('/KDS', express.static('KDS'));
 
 // 레거시 TLG 시스템 정적 파일 서빙
 app.use('/shared', express.static(path.join(__dirname, '../shared')));
