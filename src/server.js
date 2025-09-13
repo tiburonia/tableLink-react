@@ -78,7 +78,7 @@ app.all('/api', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: [
       '/api/auth',
-      '/api/stores', 
+      '/api/stores',
       '/api/orders',
       '/api/reviews',
       '/api/tables',
@@ -165,7 +165,7 @@ async function setupKDSListener() {
           const itemId = payload.check_item_id || payload.item_id;
           // Fetch pending order tickets and relevant items
           const orderResult = await pool.query(`
-            SELECT 
+            SELECT
                 o.id as order_id,
                 o.customer_name,
                 o.table_number,
@@ -258,9 +258,9 @@ io.on('connection', (socket) => {
     socket.join(roomName);
     console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName}`);
 
-    socket.emit('joined-kds', { 
-      storeId, 
-      message: `매장 ${storeId} KDS에 연결되었습니다` 
+    socket.emit('joined-kds', {
+      storeId,
+      message: `매장 ${storeId} KDS에 연결되었습니다`
     });
   });
 

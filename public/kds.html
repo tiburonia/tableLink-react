@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS - Kitchen Display System</title>
+    <link rel="icon" type="image/png" href="/TableLink.png">
+    
+    <!-- Socket.IO 클라이언트 -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #1a1a1a;
+            color: white;
+            overflow: hidden;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .loading-sub {
+            font-size: 16px;
+            color: #bdc3c7;
+        }
+
+        .store-selector {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+        }
+
+        .selector-content {
+            background: white;
+            color: #2c3e50;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .selector-title {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .selector-subtitle {
+            font-size: 16px;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .store-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .store-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .start-btn:hover {
+            background: #2980b9;
+        }
+
+        .start-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            margin-top: 15px;
+            padding: 10px;
+            background: #fdedec;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #main {
+            width: 100%;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <!-- 로딩 화면 -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-icon">🍳</div>
+            <div class="loading-text">KDS 시스템 로딩 중...</div>
+            <div class="loading-sub">Kitchen Display System</div>
+        </div>
+
+        <!-- 매장 선택 화면 -->
+        <div class="store-selector" id="storeSelector" style="display: none;">
+            <div class="selector-content">
+                <h1 class="selector-title">🍳 KDS 시스템</h1>
+                <p class="selector-subtitle">매장 ID를 입력하세요</p>
+                
+                <input 
+                    type="number" 
+                    id="storeIdInput" 
+                    class="store-input" 
+                    placeholder="매장 ID (예: 1)" 
+                    min="1"
+                >
+                
+                <button id="startKdsBtn" class="start-btn">
+                    KDS 시작하기
+                </button>
+                
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KDS 컴포넌트 로드 -->
+    <script src="/KDS/components/renderKDS.js"></script>
+
+    <script>
+        let currentStoreId = null;
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🍳 KDS 페이지 로드');
+            
+            // URL에서 매장 ID 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            const storeId = urlParams.get('store') || urlParams.get('storeId');
+            
+            if (storeId && !isNaN(storeId)) {
+                // URL에 매장 ID가 있으면 바로 시작
+                await startKDS(parseInt(storeId));
+            } else {
+                // 매장 선택 화면 표시
+                showStoreSelector();
+            }
+        });
+
+        // 매장 선택 화면 표시
+        function showStoreSelector() {
+            document.getElementById('loadingScreen').style.display = 'none';
+            document.getElementById('storeSelector').style.display = 'flex';
+            
+            // 이벤트 리스너 설정
+            const storeInput = document.getElementById('storeIdInput');
+            const startBtn = document.getElementById('startKdsBtn');
+            const errorDiv = document.getElementById('errorMessage');
+            
+            storeInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    startBtn.click();
+                }
+            });
+            
+            startBtn.addEventListener('click', async () => {
+                const storeId = parseInt(storeInput.value);
+                
+                if (!storeId || storeId < 1) {
+                    showError('올바른 매장 ID를 입력해주세요.');
+                    return;
+                }
+                
+                await startKDS(storeId);
+            });
+            
+            // 포커스
+            storeInput.focus();
+        }
+
+        // KDS 시작
+        async function startKDS(storeId) {
+            try {
+                console.log(`🍳 KDS 시작 - 매장 ${storeId}`);
+                
+                currentStoreId = storeId;
+                
+                // UI 숨기기
+                document.getElementById('storeSelector').style.display = 'none';
+                document.getElementById('loadingScreen').style.display = 'flex';
+                
+                // URL 업데이트
+                const newUrl = `${window.location.pathname}?store=${storeId}`;
+                window.history.replaceState(null, '', newUrl);
+                
+                // KDS 렌더링
+                if (typeof renderKDS === 'function') {
+                    await renderKDS(storeId);
+                    document.getElementById('loadingScreen').style.display = 'none';
+                } else {
+                    throw new Error('KDS 컴포넌트를 찾을 수 없습니다');
+                }
+                
+            } catch (error) {
+                console.error('❌ KDS 시작 실패:', error);
+                showError('KDS 시스템을 시작할 수 없습니다: ' + error.message);
+                showStoreSelector();
+            }
+        }
+
+        // 오류 표시
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // 페이지 새로고침 단축키
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+                e.preventDefault();
+                if (currentStoreId) {
+                    startKDS(currentStoreId);
+                } else {
+                    location.reload();
+                }
+            }
+        });
+
+        // 전체화면 토글
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'F11') {
+                e.preventDefault();
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                } else {
+                    document.documentElement.requestFullscreen();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
