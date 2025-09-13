@@ -892,4 +892,148 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
+// KDS 전용 API 엔드포인트
+router.get('/kds/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    console.log(`📡 KDS 데이터 요청 - 매장 ${storeId}`);
+
+    // 진행 중인 주문과 아이템 조회
+    const ordersQuery = `
+      SELECT 
+        o.id as order_id,
+        o.check_id,
+        o.customer_name,
+        o.table_number,
+        o.status,
+        o.created_at,
+        o.updated_at,
+        json_agg(
+          json_build_object(
+            'id', oi.id,
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', oi.status,
+            'cook_station', oi.cook_station,
+            'notes', oi.notes,
+            'created_at', oi.created_at
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.store_id = $1 
+        AND o.status IN ('PENDING', 'PREPARING', 'READY')
+        AND oi.cook_station IN ('KITCHEN', 'GRILL', 'FRY', 'DRINK', 'COLD_STATION')
+      GROUP BY o.id, o.check_id, o.customer_name, o.table_number, o.status, o.created_at, o.updated_at
+      ORDER BY o.created_at ASC
+    `;
+
+    const result = await pool.query(ordersQuery, [storeId]);
+
+    const orders = result.rows.map(order => ({
+      id: order.order_id,
+      check_id: order.check_id,
+      ticket_id: order.check_id,
+      customer_name: order.customer_name,
+      table_number: order.table_number,
+      status: order.status,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      items: order.items.filter(item => item.id !== null) // null 아이템 제거
+    }));
+
+    console.log(`✅ KDS 데이터 조회 완료: ${orders.length}개 주문`);
+
+    res.json({
+      success: true,
+      orders: orders,
+      count: orders.length
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 데이터 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 데이터를 가져올 수 없습니다',
+      details: error.message
+    });
+  }
+});
+
+// KDS 아이템 상태 업데이트
+router.put('/kds/items/:itemId/status', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { status, kitchenNotes } = req.body;
+
+    console.log(`🔄 아이템 상태 업데이트: ${itemId} -> ${status}`);
+
+    // 유효한 상태 확인
+    const validStatuses = ['pending', 'preparing', 'ready', 'served'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 상태입니다',
+        validStatuses
+      });
+    }
+
+    // 아이템 상태 업데이트
+    const updateQuery = `
+      UPDATE order_items 
+      SET status = $1, notes = $2, updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, [status, kitchenNotes, itemId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '아이템을 찾을 수 없습니다'
+      });
+    }
+
+    const updatedItem = result.rows[0];
+
+    // 주문 정보도 함께 조회
+    const orderQuery = `
+      SELECT o.id, o.store_id, o.check_id, o.table_number
+      FROM orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      WHERE oi.id = $1
+    `;
+
+    const orderResult = await pool.query(orderQuery, [itemId]);
+    const order = orderResult.rows[0];
+
+    // WebSocket으로 실시간 업데이트 브로드캐스트
+    if (global.broadcastKDSUpdate && order) {
+      global.broadcastKDSUpdate(order.store_id, 'item.updated', {
+        item_id: itemId,
+        ticket_id: order.check_id,
+        item_status: status,
+        menu_name: updatedItem.menu_name,
+        quantity: updatedItem.quantity,
+        cook_station: updatedItem.cook_station
+      });
+    }
+
+    res.json({
+      success: true,
+      item: updatedItem,
+      order: order
+    });
+
+  } catch (error) {
+    console.error('❌ 아이템 상태 업데이트 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '아이템 상태를 업데이트할 수 없습니다',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;

@@ -140,8 +140,18 @@
      * 새 티켓 생성 처리
      */
     handleTicketCreated(ticket) {
-      KDSState.tickets.set(ticket.ticket_id || ticket.id, ticket);
-      UIRenderer.addTicketCard(ticket);
+      // 티켓 ID 정규화
+      const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
+      const normalizedTicket = {
+        ...ticket,
+        ticket_id: ticketId,
+        check_id: ticketId,
+        table_number: ticket.table_number || 'N/A',
+        items: ticket.items || []
+      };
+      
+      KDSState.tickets.set(ticketId, normalizedTicket);
+      UIRenderer.addTicketCard(normalizedTicket);
       SoundManager.playNewOrderSound();
     },
 
@@ -271,9 +281,16 @@
       try {
         console.log(`🔄 매장 ${storeId} KDS 데이터 로드 중...`);
 
-        const response = await fetch(`/api/orders/kds/${storeId}`);
+        const response = await fetch(`/api/orders/kds/${storeId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const data = await response.json();
@@ -287,6 +304,12 @@
 
       } catch (error) {
         console.error('❌ KDS 초기 데이터 로드 실패:', error);
+        
+        // 네트워크 오류인 경우 더 자세한 정보 제공
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.');
+        }
+        
         throw error;
       }
     },
@@ -590,15 +613,18 @@
     createItemHTML(item) {
       const statusIcon = this.getItemStatusIcon(item.status);
       const statusClass = this.getItemStatusClass(item.status);
+      const itemName = item.menuName || item.menu_name || '메뉴명 없음';
+      const quantity = item.quantity || 1;
 
       return `
         <div class="order-item ${statusClass}" data-item-id="${item.id}">
           <div class="item-info">
-            <span class="item-quantity">×${item.quantity}</span>
-            <span class="item-name">${item.menuName || item.menu_name}</span>
+            <span class="item-quantity">×${quantity}</span>
+            <span class="item-name">${itemName}</span>
+            ${item.cook_station ? `<span class="cook-station">${item.cook_station}</span>` : ''}
           </div>
           <div class="item-status">
-            <button class="status-btn" onclick="KDSManager.toggleItemStatus('${item.id}', '${item.status}')">
+            <button class="status-btn" onclick="KDSManager.toggleItemStatus('${item.id}', '${item.status || 'pending'}')">
               <span class="status-icon">${statusIcon}</span>
             </button>
           </div>

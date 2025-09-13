@@ -271,6 +271,134 @@ io.on('connection', (socket) => {
     console.log(`🚪 KDS 룸 떠남: ${socket.id} -> ${roomName}`);
   });
 
+  // 아이템 상태 변경 요청 처리
+  socket.on('item:setStatus', async (data) => {
+    try {
+      const { item_id, next } = data;
+      console.log(`🔄 아이템 상태 변경 요청: ${item_id} -> ${next}`);
+
+      // 아이템 상태 업데이트
+      const updateResult = await pool.query(`
+        UPDATE order_items 
+        SET status = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `, [next, item_id]);
+
+      if (updateResult.rows.length > 0) {
+        const updatedItem = updateResult.rows[0];
+
+        // 주문 정보 조회
+        const orderResult = await pool.query(`
+          SELECT o.store_id, o.check_id, o.table_number
+          FROM orders o
+          JOIN order_items oi ON o.id = oi.order_id
+          WHERE oi.id = $1
+        `, [item_id]);
+
+        if (orderResult.rows.length > 0) {
+          const order = orderResult.rows[0];
+          
+          // 모든 KDS 클라이언트에게 브로드캐스트
+          io.to(`kds:${order.store_id}`).emit('item.updated', {
+            item_id: item_id,
+            ticket_id: order.check_id,
+            item_status: next,
+            menu_name: updatedItem.menu_name,
+            quantity: updatedItem.quantity,
+            cook_station: updatedItem.cook_station
+          });
+
+          socket.emit('item:statusUpdated', {
+            success: true,
+            item_id,
+            status: next
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ 아이템 상태 변경 실패:', error);
+      socket.emit('item:statusUpdated', {
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // 티켓 상태 변경 요청 처리
+  socket.on('ticket:setStatus', async (data) => {
+    try {
+      const { ticket_id, next } = data;
+      console.log(`🎫 티켓 상태 변경 요청: ${ticket_id} -> ${next}`);
+
+      const updateResult = await pool.query(`
+        UPDATE orders 
+        SET status = $1, updated_at = NOW()
+        WHERE check_id = $2
+        RETURNING *
+      `, [next, ticket_id]);
+
+      if (updateResult.rows.length > 0) {
+        const updatedOrder = updateResult.rows[0];
+
+        // 모든 KDS 클라이언트에게 브로드캐스트
+        io.to(`kds:${updatedOrder.store_id}`).emit('ticket.updated', {
+          ticket_id: ticket_id,
+          status: next,
+          order_id: updatedOrder.id,
+          table_number: updatedOrder.table_number
+        });
+
+        socket.emit('ticket:statusUpdated', {
+          success: true,
+          ticket_id,
+          status: next
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ 티켓 상태 변경 실패:', error);
+      socket.emit('ticket:statusUpdated', {
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  // 티켓 숨김 요청 처리
+  socket.on('ticket:hide', async (data) => {
+    try {
+      const { ticket_id } = data;
+      console.log(`👻 티켓 숨김 요청: ${ticket_id}`);
+
+      const orderResult = await pool.query(`
+        SELECT store_id FROM orders WHERE check_id = $1
+      `, [ticket_id]);
+
+      if (orderResult.rows.length > 0) {
+        const storeId = orderResult.rows[0].store_id;
+
+        // 모든 KDS 클라이언트에게 브로드캐스트
+        io.to(`kds:${storeId}`).emit('ticket.hidden', {
+          ticket_id: ticket_id
+        });
+
+        socket.emit('ticket:hidden', {
+          success: true,
+          ticket_id
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ 티켓 숨김 실패:', error);
+      socket.emit('ticket:hidden', {
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
   // 연결 해제
   socket.on('disconnect', () => {
     console.log(`🔌 WebSocket 연결 해제: ${socket.id}`);
