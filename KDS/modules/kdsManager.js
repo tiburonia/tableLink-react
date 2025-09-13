@@ -120,18 +120,30 @@
       if (currentTab === 'active') {
         tickets = KDSState.getActiveTickets();
 
-        // 추가 안전장치: 완료된 상태의 티켓 강제 제거
+        // 강화된 안전장치: 완료된 상태의 티켓 강제 제거 및 로깅
+        const originalCount = tickets.length;
         tickets = tickets.filter(ticket => {
           const status = (ticket.status || '').toUpperCase();
           const isDone = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
 
           if (isDone) {
-            console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${this._extractSafeTicketId(ticket)}`);
-            KDSState.removeTicket(this._extractSafeTicketId(ticket));
+            const ticketId = this._extractSafeTicketId(ticket);
+            console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${ticketId}, 상태: ${status}`);
+            KDSState.removeTicket(ticketId);
+            
+            // UI에서도 강제 제거
+            if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeCardDirectly === 'function') {
+              window.KDSUIRenderer.removeCardDirectly(ticketId);
+            }
+            
             return false;
           }
           return true;
         });
+
+        if (originalCount !== tickets.length) {
+          console.log(`🧹 완료된 티켓 제거: ${originalCount} → ${tickets.length}개`);
+        }
       } else {
         tickets = KDSState.getCompletedTickets();
       }

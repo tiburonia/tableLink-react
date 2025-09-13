@@ -57,7 +57,7 @@
         // KDS 이벤트 리스너
         socket.on('kds-update', (data) => {
           console.log('📡 KDS 업데이트 수신:', data);
-          
+
           // DB 기반 알림인지 확인
           if (data.data?.source === 'db_trigger') {
             this.handleDBNotification(data);
@@ -154,7 +154,7 @@
 
       // DB에서 온 실제 상태를 정규화하여 보존
       const actualStatus = (ticket.status || 'PENDING').toUpperCase();
-      
+
       const normalizedTicket = {
         ...ticket,
         ticket_id: ticketId,
@@ -265,7 +265,7 @@
 
       const ticketId = data.ticket_id;
       const ticket = KDSState.getTicket(ticketId);
-      
+
       if (!ticket) {
         console.log(`ℹ️ 티켓 ${ticketId}이 이미 프론트엔드에서 삭제됨 - WebSocket 이벤트 무시`);
         return;
@@ -295,56 +295,67 @@
     },
 
     /**
-     * 티켓 업데이트 처리 - 실시간 상태 동기화
+     * 티켓 업데이트 처리 - 상태별 분기 처리
      */
     handleTicketUpdated(ticket) {
-      const ticketId = this._extractTicketId(ticket);
+      const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
+      const actualStatus = (ticket.status || '').toUpperCase();
+
+      console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}`);
+
+      // 완료된 티켓은 즉시 제거 처리 (상태 저장하지 않음)
+      if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
+        console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 즉시 제거 (상태 저장 안함)`);
+
+        // 이미 상태에서 제거된 티켓인지 확인
+        const existingTicket = KDSState.getTicket(ticketId);
+        if (!existingTicket) {
+          console.log(`ℹ️ 티켓 ${ticketId}이 이미 제거됨 - WebSocket 이벤트 무시`);
+          return;
+        }
+
+        // 사운드 재생
+        if (window.KDSSoundManager) {
+          window.KDSSoundManager.playOrderCompleteSound();
+        }
+
+        // 즉시 UI에서 제거 (애니메이션 효과)
+        if (window.KDSUIRenderer) {
+          window.KDSUIRenderer.removeTicketCard(ticketId);
+        }
+
+        // 상태에서 제거
+        KDSState.removeTicket(ticketId);
+
+        console.log(`🗑️ WebSocket: 완료된 티켓 ${ticketId} 상태 및 UI에서 완전 제거`);
+        return; // 여기서 완전히 종료, 아래 로직 실행하지 않음
+      }
+
       const existingTicket = KDSState.getTicket(ticketId);
-      
       if (!existingTicket) {
         console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketId}`);
         return this.handleTicketCreated(ticket);
       }
 
       // DB 상태를 정확히 반영
-      const actualStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
-      
-      // DONE/COMPLETED 상태인 경우 즉시 제거
-      if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
-        console.log(`🗑️ 티켓 ${ticketId} ${actualStatus} 상태로 즉시 제거`);
-        
-        // 사운드 재생
-        if (window.KDSSoundManager) {
-          window.KDSSoundManager.playOrderCompleteSound();
-        }
-        
-        // 즉시 UI에서 제거 (애니메이션 효과)
-        if (window.KDSUIRenderer) {
-          window.KDSUIRenderer.removeTicketCard(ticketId);
-        }
-        
-        // 상태에서 제거
-        KDSState.removeTicket(ticketId);
-        
-        // 필터링 재적용 및 카운트 업데이트
-        if (window.KDSManager) {
-          setTimeout(() => {
-            window.KDSManager.filterTickets();
-          }, 100); // UI 제거 후 필터링
-        }
-        
-        return;
+      const normalizedStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
+
+      // 완료된 상태로 변경되는 경우 즉시 제거 로직 재확인 (중복 방지)
+      if (['DONE', 'COMPLETED', 'SERVED'].includes(normalizedStatus)) {
+        console.log(`🗑️ 티켓 ${ticketId} ${normalizedStatus} 상태로 즉시 제거 (업데이트 중 감지)`);
+        return this.handleTicketCompleted({ ticket_id: ticketId }); // handleTicketCompleted 호출 시 ticket_id만 전달
       }
-      
+
+
       const updatedTicket = { 
         ...existingTicket, 
         ...ticket,
-        status: actualStatus,
+        status: normalizedStatus,
         updated_at: ticket.updated_at || new Date().toISOString()
       };
 
       // 아이템들도 티켓 상태에 맞춰 동기화
-      if (updatedTicket.items && actualStatus === 'COOKING') {
+      if (updatedTicket.items && normalizedStatus === 'COOKING') {
         updatedTicket.items = updatedTicket.items.map(item => ({
           ...item,
           status: 'COOKING',
@@ -356,8 +367,8 @@
 
       if (window.KDSUIRenderer) {
         // 상태가 변경된 경우 UI 완전 재렌더링
-        if (existingTicket.status !== actualStatus) {
-          console.log(`🔄 티켓 ${ticketId} 상태 변경: ${existingTicket.status} -> ${actualStatus}`);
+        if (existingTicket.status !== normalizedStatus) {
+          console.log(`🔄 티켓 ${ticketId} 상태 변경: ${existingTicket.status} -> ${normalizedStatus}`);
           window.KDSUIRenderer.removeTicketCard(ticketId);
           setTimeout(() => {
             window.KDSUIRenderer.addTicketCard(updatedTicket);
@@ -371,7 +382,7 @@
         }
       }
 
-      console.log(`✅ 티켓 ${ticketId} 업데이트 완료 (상태: ${actualStatus})`);
+      console.log(`✅ 티켓 ${ticketId} 업데이트 완료 (상태: ${normalizedStatus})`);
     },
 
     /**
@@ -460,7 +471,7 @@
           }
 
           console.log('🔄 KDS 백업 동기화 시작');
-          
+
           const response = await fetch(
             `/api/orders/kds/${storeId}/sync?lastSyncAt=${encodeURIComponent(lastSyncAt)}`
           );
@@ -470,7 +481,7 @@
           }
 
           const syncData = await response.json();
-          
+
           if (syncData.success) {
             // 업데이트된 티켓 처리
             syncData.changes.updated.forEach(ticket => {
@@ -493,7 +504,7 @@
             }
 
             lastSyncAt = syncData.timestamp;
-            
+
             console.log(`✅ KDS 동기화 완료: ${syncData.stats.updated}개 업데이트, ${syncData.stats.deleted}개 삭제`);
           }
 
@@ -531,7 +542,7 @@
             source: 'db_trigger'
           });
           break;
-          
+
         case 'db_item_change':
           this.handleItemUpdated({
             ticket_id: data.data.ticket_id,
@@ -540,20 +551,20 @@
             source: 'db_trigger'
           });
           break;
-          
+
         case 'db_payment_change':
           // 결제 완료 시 해당 테이블의 모든 티켓 제거
           const tableTickets = KDSState.getAllTickets().filter(
             ticket => ticket.table_number === data.data.table_number
           );
-          
+
           tableTickets.forEach(ticket => {
             KDSState.removeTicket(ticket.ticket_id || ticket.id);
             if (window.KDSUIRenderer) {
               window.KDSUIRenderer.removeTicketCard(ticket.ticket_id || ticket.id);
             }
           });
-          
+
           console.log(`💳 결제 완료: 테이블 ${data.data.table_number} 티켓 ${tableTickets.length}개 제거`);
           break;
       }
