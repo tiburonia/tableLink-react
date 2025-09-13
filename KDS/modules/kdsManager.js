@@ -99,20 +99,27 @@
         const ticketId = card.dataset.ticketId;
         const ticket = KDSState.getTicket(ticketId);
 
-        if (!ticket) return;
+        if (!ticket) {
+          card.style.display = 'none';
+          return;
+        }
 
+        const status = ticket.status?.toUpperCase();
         let shouldShow = false;
 
         if (KDSState.currentTab === 'active') {
-          shouldShow = ticket.status !== 'completed' && ticket.status !== 'served';
+          // 진행중: PENDING, COOKING만 표시
+          shouldShow = ['PENDING', 'COOKING'].includes(status);
         } else if (KDSState.currentTab === 'completed') {
-          shouldShow = ticket.status === 'completed' || ticket.status === 'served';
+          // 완료됨: DONE, COMPLETED만 표시
+          shouldShow = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
         }
 
         card.style.display = shouldShow ? 'block' : 'none';
       });
 
       KDSUIRenderer.checkEmptyState();
+      KDSUIRenderer.updateTicketCounts();
     },
 
     /**

@@ -322,9 +322,13 @@
           window.KDSUIRenderer.removeTicketCard(ticketId);
           setTimeout(() => {
             window.KDSUIRenderer.addTicketCard(updatedTicket);
+            // 상태에 맞는 필터링 적용
+            window.KDSManager.filterTickets();
           }, 100);
         } else {
           window.KDSUIRenderer.updateTicketCard(updatedTicket);
+          // 상태 변경이 없어도 필터링 다시 적용
+          window.KDSManager.filterTickets();
         }
       }
 

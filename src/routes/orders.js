@@ -157,6 +157,7 @@ router.get('/kds/:storeId', async (req, res) => {
       SELECT 
         o.id as order_id,
         ot.id as ticket_id,
+        ot.status as ticket_status,
         o.table_num,
         o.created_at,
         o.source,
@@ -177,20 +178,21 @@ router.get('/kds/:storeId', async (req, res) => {
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE o.store_id = $1 
         AND o.status = 'OPEN'
-        AND oi.item_status IN ('PENDING', 'COOKING', 'READY')
+        AND ot.status IN ('PENDING', 'COOKING')
+        AND ot.display_status != 'UNVISIBLE'
         AND oi.cook_station = 'KITCHEN'
-      GROUP BY o.id, ot.id, o.table_num, o.created_at, o.source
+      GROUP BY o.id, ot.id, ot.status, o.table_num, o.created_at, o.source
       ORDER BY o.created_at ASC
     `, [parseInt(storeId)]);
 
-    // renderKDS.js에서 기대하는 형태로 변환
+    // renderKDS.js에서 기대하는 형태로 변환 - 정확한 상태 반영
     const orders = result.rows.map(order => ({
       check_id: order.ticket_id,
       id: order.order_id,
       ticket_id: order.ticket_id,
-      customer_name: order.customer_name || `테이블 ${order.table_number}`,
-      table_number: order.table_number,
-      status: order.status?.toLowerCase() || 'pending',
+      customer_name: order.customer_name || `테이블 ${order.table_num}`,
+      table_number: order.table_num,
+      status: order.ticket_status?.toUpperCase() || 'PENDING', // DB의 실제 ticket 상태 사용
       created_at: order.created_at,
       updated_at: order.created_at,
       items: order.items || []
