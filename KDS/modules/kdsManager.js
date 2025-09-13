@@ -111,7 +111,7 @@
     },
 
     /**
-     * 티켓 필터링
+     * 티켓 필터링 - 완료된 티켓 강제 제거 및 탭 카운트 동기화
      */
     filterTickets() {
       const currentTab = KDSState.currentTab;
@@ -122,6 +122,8 @@
 
         // 강화된 안전장치: 완료된 상태의 티켓 강제 제거 및 로깅
         const originalCount = tickets.length;
+        const removedTickets = [];
+        
         tickets = tickets.filter(ticket => {
           const status = (ticket.status || '').toUpperCase();
           const isDone = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
@@ -129,7 +131,10 @@
           if (isDone) {
             const ticketId = this._extractSafeTicketId(ticket);
             console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${ticketId}, 상태: ${status}`);
+            
+            // 상태에서 제거
             KDSState.removeTicket(ticketId);
+            removedTickets.push(ticketId);
             
             // UI에서도 강제 제거
             if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeCardDirectly === 'function') {
@@ -143,6 +148,15 @@
 
         if (originalCount !== tickets.length) {
           console.log(`🧹 완료된 티켓 제거: ${originalCount} → ${tickets.length}개`);
+          console.log(`🗑️ 제거된 티켓 ID들:`, removedTickets);
+          
+          // 탭 카운트 즉시 업데이트
+          if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+            setTimeout(() => {
+              window.KDSUIRenderer.updateTicketCounts();
+              console.log(`🔢 탭 카운트 업데이트 완료 - active: ${tickets.length}개`);
+            }, 100);
+          }
         }
       } else {
         tickets = KDSState.getCompletedTickets();
@@ -154,6 +168,11 @@
       }
 
       console.log(`🔍 필터링 완료: ${currentTab} 탭, ${tickets.length}개 티켓 표시`);
+      
+      // 필터링 후 탭 카운트 최종 확인
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+        window.KDSUIRenderer.updateTicketCounts();
+      }
     },
 
     /**
@@ -329,56 +348,91 @@
     },
 
     /**
-     * 주문 완료 - 개별 카드 직접 제거 (즉시 삭제)
+     * 주문 완료 - 완전한 상태 업데이트 및 탭 카운트 갱신
      */
     async markComplete(ticketId) {
       try {
-        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 개별 카드 직접 제거`);
+        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 완전한 상태 업데이트`);
 
         // 1. 사운드 재생
         if (window.KDSSoundManager) {
           window.KDSSoundManager.playOrderCompleteSound();
         }
 
-        // 2. 즉시 UI에서 개별 카드 제거 (DOM 직접 조작)
+        // 2. 티켓 찾기 및 상태 업데이트
+        const ticket = this._findTicketById(ticketId);
+        if (ticket) {
+          // 티켓 상태를 완료로 변경
+          ticket.status = 'COMPLETED';
+          
+          // 아이템들도 완료 상태로 변경
+          if (ticket.items) {
+            ticket.items.forEach(item => {
+              item.status = 'COMPLETED';
+              item.item_status = 'COMPLETED';
+            });
+          }
+          
+          console.log(`🔄 티켓 ${ticketId} 상태를 COMPLETED로 변경`);
+        }
+
+        // 3. active 상태에서 제거 (KDSState에서 완전 제거)
+        KDSState.removeTicket(ticketId);
+        console.log(`🗑️ 티켓 ${ticketId} active 상태에서 완전 제거`);
+
+        // 4. UI에서 개별 카드 즉시 제거
         this.removeCardFromUI(ticketId);
 
-        // 3. 상태에서 제거
-        KDSState.removeTicket(ticketId);
+        // 5. 현재 탭이 active인 경우 필터링 재실행 (완료된 티켓 제거 반영)
+        if (KDSState.currentTab === 'active') {
+          console.log(`🔍 active 탭에서 완료된 티켓 ${ticketId} 필터링 제거`);
+          this.filterTickets(); // 이것이 중요! active 탭에서 완료된 티켓들을 제거
+        }
 
-        // 4. 카운트 업데이트
+        // 6. 탭 카운트 강제 업데이트
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
         }
 
-        console.log(`✅ 티켓 ${ticketId} UI에서 즉시 제거 완료`);
+        // 7. 빈 상태 체크
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.checkEmptyState === 'function') {
+          window.KDSUIRenderer.checkEmptyState();
+        }
 
-        // 5. 백그라운드에서 서버 API 호출
+        console.log(`✅ 티켓 ${ticketId} 완료 처리 완료 - 상태 및 UI 동기화`);
+
+        // 8. 백그라운드에서 서버 API 호출
         setTimeout(async () => {
           try {
             const result = await KDSAPIService.markComplete(ticketId);
             if (result.success) {
               console.log(`✅ 서버 완료 처리 성공: ${ticketId}`);
             } else {
-              console.warn(`⚠️ 서버 완료 처리 실패 (UI는 이미 삭제됨): ${result.error}`);
+              console.warn(`⚠️ 서버 완료 처리 실패 (UI는 이미 처리됨): ${result.error}`);
             }
           } catch (serverError) {
-            console.warn(`⚠️ 서버 API 호출 실패 (UI는 이미 삭제됨):`, serverError);
+            console.warn(`⚠️ 서버 API 호출 실패 (UI는 이미 처리됨):`, serverError);
           }
         }, 100);
 
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
 
-        // 에러가 발생해도 강제로 개별 카드 제거
-        this.removeCardFromUI(ticketId);
+        // 에러 발생 시에도 강제로 상태 정리
         KDSState.removeTicket(ticketId);
-
+        this.removeCardFromUI(ticketId);
+        
+        // 필터링 재실행으로 잔존 티켓 정리
+        if (KDSState.currentTab === 'active') {
+          this.filterTickets();
+        }
+        
+        // 탭 카운트 업데이트
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
         }
 
-        console.log(`🚨 에러 발생했지만 강제로 카드 제거 완료: ${ticketId}`);
+        console.log(`🚨 에러 발생했지만 강제로 상태 정리 완료: ${ticketId}`);
       }
     },
 
