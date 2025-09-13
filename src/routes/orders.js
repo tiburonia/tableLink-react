@@ -1066,22 +1066,40 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
     // WebSocket으로 실시간 업데이트 브로드캐스트 - DONE 상태 즉시 제거용
     if (global.io) {
+      console.log(`📡 WebSocket 브로드캐스트: 티켓 ${ticketId} 완료 이벤트 전송`);
+      
+      // KDS 업데이트 이벤트
       global.io.to(`kds:${store_id}`).emit('kds-update', {
         type: 'ticket_completed',
         data: {
           ticket_id: parseInt(ticketId),
           order_id: order_id,
           status: 'DONE',
-          table_number: table_number
+          table_number: table_number,
+          action: 'remove_immediately'
         }
       });
 
-      // 추가: DONE 상태 티켓 즉시 제거 이벤트
+      // 티켓 완료 이벤트 (즉시 제거용)
       global.io.to(`kds:${store_id}`).emit('ticket.completed', {
         ticket_id: parseInt(ticketId),
+        order_id: order_id,
         status: 'DONE',
+        table_number: table_number,
         action: 'remove'
       });
+
+      // 추가: 티켓 업데이트 이벤트 (기존 핸들러 호환)
+      global.io.to(`kds:${store_id}`).emit('ticket.updated', {
+        ticket_id: parseInt(ticketId),
+        id: parseInt(ticketId),
+        check_id: parseInt(ticketId),
+        status: 'DONE',
+        order_id: order_id,
+        table_number: table_number
+      });
+
+      console.log(`✅ WebSocket 브로드캐스트 완료: 매장 ${store_id}, 티켓 ${ticketId}`);
     }
 
     res.json({

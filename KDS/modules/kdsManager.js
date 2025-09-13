@@ -295,29 +295,44 @@
       try {
         console.log(`✅ 티켓 ${ticketId} 완료 요청`);
 
+        // 낙관적 업데이트: 즉시 UI에서 제거
+        const ticket = KDSState.getTicket(ticketId);
+        if (ticket) {
+          console.log(`🎯 낙관적 업데이트: 티켓 ${ticketId} 즉시 제거`);
+          
+          // 상태 업데이트
+          ticket.status = 'DONE';
+          
+          // 사운드 재생
+          if (window.KDSSoundManager) {
+            window.KDSSoundManager.playOrderCompleteSound();
+          }
+          
+          // 즉시 UI에서 제거
+          if (window.KDSUIRenderer) {
+            window.KDSUIRenderer.removeTicketCard(ticketId);
+          }
+          
+          // 상태에서 제거
+          KDSState.removeTicket(ticketId);
+          
+          // 필터링 재적용
+          this.filterTickets();
+        }
+
+        // 서버 API 호출
         const result = await KDSAPIService.markComplete(ticketId);
 
         if (result.success) {
           console.log('✅ 완료 처리 성공:', result.message);
-          
-          // 즉시 UI에서 제거 (WebSocket 이벤트를 기다리지 않음)
-          const ticket = KDSState.getTicket(ticketId);
-          if (ticket) {
-            ticket.status = 'completed';
-            KDSSoundManager.playOrderCompleteSound();
-            
-            setTimeout(() => {
-              KDSState.removeTicket(ticketId);
-              KDSUIRenderer.removeTicketFromUI(ticketId);
-              console.log(`🗑️ 완료된 티켓 ${ticketId} 즉시 제거`);
-            }, 1000);
-          }
         } else {
           throw new Error(result.error);
         }
 
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
+        
+        // 실패 시 복구 로직은 WebSocket 이벤트로 처리
         this.showError('완료 처리 중 오류가 발생했습니다: ' + error.message);
       }
     },
