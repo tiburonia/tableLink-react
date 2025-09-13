@@ -289,15 +289,21 @@
     },
 
     /**
-     * 주문 완료 - 즉시 프론트엔드에서 삭제
+     * 주문 완료 - 즉시 프론트엔드에서 삭제 (개선된 버전)
      */
     async markComplete(ticketId) {
       try {
         console.log(`✅ 티켓 ${ticketId} 완료 요청 - 즉시 삭제 모드`);
 
-        const ticket = KDSState.getTicket(ticketId);
+        // 개선된 티켓 검색 로직 사용
+        const ticket = this._findTicketById(ticketId);
         if (!ticket) {
-          console.warn(`⚠️ 티켓 ${ticketId}을 찾을 수 없음`);
+          console.warn(`⚠️ 티켓 ${ticketId}을 찾을 수 없음 - 전체 상태 확인:`);
+          console.warn(`⚠️ 총 티켓 수: ${KDSState.tickets.size}`);
+          console.warn(`⚠️ 모든 키:`, Array.from(KDSState.tickets.keys()));
+          
+          // 사용자에게 친화적인 오류 메시지
+          this.showError(`티켓 ${ticketId}을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.`);
           return;
         }
 
@@ -523,9 +529,16 @@
     },
 
     /**
-     * 티켓 ID로 티켓 찾기 (여러 형태의 ID 지원)
+     * 티켓 ID로 티켓 찾기 (여러 형태의 ID 지원) - 개선된 버전
      */
     _findTicketById(ticketId) {
+      console.log(`🔍 티켓 검색 시작: ${ticketId} (타입: ${typeof ticketId})`);
+      console.log(`🔍 현재 저장된 티켓 수: ${KDSState.tickets.size}`);
+      
+      // 디버깅: 현재 저장된 모든 티켓 키 출력
+      const allKeys = Array.from(KDSState.tickets.keys());
+      console.log(`🔍 저장된 모든 티켓 키:`, allKeys);
+
       // 1. 직접 키로 찾기
       let ticket = KDSState.getTicket(ticketId);
       if (ticket) {
@@ -543,22 +556,65 @@
         return ticket;
       }
 
-      // 3. 모든 티켓을 순회하면서 ID 필드들로 찾기
+      // 3. 모든 티켓을 순회하면서 ID 필드들로 찾기 (개선된 로직)
+      console.log(`🔍 전체 순회 검색 시작 (검색 대상: ${ticketId}, ${numericId}, ${stringId})`);
+      
       for (const [key, ticketData] of KDSState.tickets.entries()) {
-        const ids = [
+        console.log(`🔍 티켓 ${key} 검사:`, {
+          stored_key: key,
+          ticket_id: ticketData.id,
+          check_id: ticketData.check_id,
+          ticket_id_field: ticketData.ticket_id,
+          order_id: ticketData.order_id
+        });
+
+        // ID 필드들을 안전하게 처리
+        const idFields = [
           ticketData.id,
-          ticketData.check_id,
+          ticketData.check_id, 
           ticketData.ticket_id,
           ticketData.order_id
-        ].map(id => [id, parseInt(id), String(id)]).flat();
+        ].filter(id => id != null); // null/undefined 제거
 
-        if (ids.includes(ticketId) || ids.includes(numericId) || ids.includes(stringId)) {
-          console.log(`✅ ID 필드로 티켓 찾음: ${key} (검색ID: ${ticketId})`);
+        // 각 ID 필드를 문자열과 숫자로 변환하여 비교
+        for (const idField of idFields) {
+          const idAsString = String(idField);
+          const idAsNumber = parseInt(idField);
+
+          if (idField === ticketId || 
+              idAsString === String(ticketId) || 
+              idAsNumber === numericId ||
+              idField === numericId ||
+              idField === stringId) {
+            console.log(`✅ ID 필드 매칭 성공: 키=${key}, 필드=${idField}, 검색=${ticketId}`);
+            return ticketData;
+          }
+        }
+      }
+
+      // 4. 최후의 수단: Map의 values()를 이용한 검색
+      console.log(`🔍 values() 기반 최후 검색 시도`);
+      
+      for (const ticketData of KDSState.tickets.values()) {
+        if (ticketData && (
+            ticketData.id == ticketId ||
+            ticketData.check_id == ticketId ||
+            ticketData.ticket_id == ticketId ||
+            ticketData.order_id == ticketId
+          )) {
+          console.log(`✅ values() 검색으로 티켓 발견:`, ticketData.id || ticketData.check_id);
           return ticketData;
         }
       }
 
-      console.warn(`⚠️ 티켓을 찾을 수 없음: ${ticketId}`);
+      console.warn(`❌ 티켓을 찾을 수 없음: ${ticketId}`);
+      console.warn(`❌ 검색 시도한 형태들:`, {
+        original: ticketId,
+        numeric: numericId,  
+        string: stringId,
+        type: typeof ticketId
+      });
+      
       return null;
     },
 
