@@ -251,17 +251,23 @@ async function getStoreIdByOrderItem(orderItemId) {
 
 // WebSocket 연결 처리
 io.on('connection', (socket) => {
-  console.log(`🔌 새로운 WebSocket 연결: ${socket.id}`);
+  const authData = socket.handshake.auth;
+  const userType = authData?.userType || 'unknown';
+  
+  console.log(`🔌 새로운 WebSocket 연결: ${socket.id} (${userType})`);
 
-  // KDS 룸 조인
+  // KDS 룸 조인 (인증 선택사항)
   socket.on('join-kds', (storeId) => {
     const roomName = `kds:${storeId}`;
     socket.join(roomName);
-    console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName}`);
+    
+    const connectionType = userType === 'kds-anonymous' ? '익명 KDS' : 'authenticated';
+    console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName} (${connectionType})`);
 
     socket.emit('joined-kds', {
       storeId,
-      message: `매장 ${storeId} KDS에 연결되었습니다`
+      message: `매장 ${storeId} KDS에 연결되었습니다`,
+      connectionType: connectionType
     });
   });
 

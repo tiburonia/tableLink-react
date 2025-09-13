@@ -31,18 +31,21 @@
     async connect(storeId) {
       try {
         const userInfo = this.getUserInfo();
-        if (!userInfo?.id) {
-          throw new Error('사용자 인증 정보가 없습니다');
-        }
+        
+        // KDS는 익명 접속도 허용 (주방 직원용)
+        const authData = {
+          token: userInfo?.token || 'kds-anonymous-token',
+          storeId: storeId,
+          userId: userInfo?.id || `kds-user-${storeId}`,
+          userType: userInfo?.id ? 'authenticated' : 'kds-anonymous'
+        };
+
+        console.log('🔌 KDS WebSocket 연결 시도:', authData);
 
         // Socket.IO 연결
         const socket = io({
           path: '/socket.io',
-          auth: {
-            token: userInfo.token || 'temp-token',
-            storeId: storeId,
-            userId: userInfo.id
-          }
+          auth: authData
         });
 
         socket.on('connect', () => {
@@ -245,7 +248,7 @@
     },
 
     /**
-     * 사용자 정보 가져오기
+     * 사용자 정보 가져오기 (KDS용 - 선택적)
      */
     getUserInfo() {
       try {
@@ -255,18 +258,29 @@
 
         if (userInfoCookie) {
           const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
-          return JSON.parse(userInfoValue);
+          const userInfo = JSON.parse(userInfoValue);
+          console.log('✅ KDS 사용자 정보 확인:', userInfo.name || userInfo.id);
+          return userInfo;
         }
 
         // localStorage에서 조회
         const localStorageUserInfo = localStorage.getItem('userInfo');
         if (localStorageUserInfo) {
-          return JSON.parse(localStorageUserInfo);
+          const userInfo = JSON.parse(localStorageUserInfo);
+          console.log('✅ KDS 사용자 정보 확인 (localStorage):', userInfo.name || userInfo.id);
+          return userInfo;
         }
 
+        // window 객체에서 조회
+        if (window.userInfo?.id) {
+          console.log('✅ KDS 사용자 정보 확인 (window):', window.userInfo.name || window.userInfo.id);
+          return window.userInfo;
+        }
+
+        console.log('ℹ️ KDS 익명 모드로 실행 (사용자 정보 없음)');
         return null;
       } catch (error) {
-        console.error('❌ 사용자 정보 파싱 오류:', error);
+        console.warn('⚠️ 사용자 정보 파싱 오류 (KDS 익명 모드로 계속):', error);
         return null;
       }
     }
