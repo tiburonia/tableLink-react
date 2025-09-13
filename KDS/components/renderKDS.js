@@ -129,8 +129,8 @@
       console.error('❌ KDS 렌더링 실패:', error);
 
       // 오류 화면 렌더링
-      const main = document.getElementById('main') || document.body;
-      main.innerHTML = `
+      const errorMain = document.getElementById('main') || document.body;
+      errorMain.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; padding: 20px; text-align: center; background: #f5f7fa;">
           <div style="font-size: 64px; margin-bottom: 20px;">🚨</div>
           <h1 style="color: #e74c3c; margin-bottom: 10px;">KDS 시스템 오류</h1>
