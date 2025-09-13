@@ -280,7 +280,7 @@ router.post('/confirm', async (req, res) => {
           source,
           status,
           payment_status,
-          " total_price",
+          total_price,
           table_num
         ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
         RETURNING id
@@ -301,10 +301,11 @@ router.post('/confirm', async (req, res) => {
           batch_no,
           status,
           payment_type,
-          source
-        ) VALUES ($1, $2, 1, 'PENDING', 'PREPAID', 'TLL')
+          source,
+          table_num
+        ) VALUES ($1, $2, 1, 'PENDING', 'PREPAID', 'TLL',$3)
         RETURNING id
-      `, [newOrderId, finalOrderInfo.storeId]);
+      `, [newOrderId, finalOrderInfo.storeId, finalOrderInfo.tableNumber]);
 
       const ticketId = ticketResult.rows[0].id;
 
