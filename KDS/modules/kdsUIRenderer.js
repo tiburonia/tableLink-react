@@ -322,9 +322,36 @@
      */
     removeTicketCard(ticketId) {
       console.log(`🗑️ 티켓 제거: ${ticketId}`);
+      
+      // 즉시 Grid 재렌더링
       const currentOrders = KDSState.getActiveTickets();
       this.renderKDSGrid(currentOrders);
       this.updateTicketCounts();
+      
+      // 빈 상태 체크
+      this.checkEmptyState();
+    },
+
+    /**
+     * Grid 완전 클리어
+     */
+    clearGrid() {
+      const grid = document.getElementById('kdsGrid');
+      if (grid) {
+        grid.innerHTML = this.renderEmptyGrid();
+        console.log('🧹 Grid 완전 클리어 완료');
+      }
+    },
+
+    /**
+     * 빈 상태 체크 및 처리
+     */
+    checkEmptyState() {
+      const activeTickets = KDSState.getActiveTickets();
+      if (activeTickets.length === 0) {
+        console.log('📭 활성 티켓이 없음 - 빈 Grid 표시');
+        this.clearGrid();
+      }
     },
 
     /**

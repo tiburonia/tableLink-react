@@ -299,61 +299,67 @@
     },
 
     /**
-     * 주문 완료 - 즉시 프론트엔드에서 삭제 (개선된 버전)
+     * 주문 완료 - 즉시 프론트엔드에서 삭제 (강제 삭제 버전)
      */
     async markComplete(ticketId) {
       try {
-        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 즉시 삭제 모드`);
+        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 강제 즉시 삭제`);
 
-        // 개선된 티켓 검색 로직 사용
-        const ticket = this._findTicketById(ticketId);
-        if (!ticket) {
-          console.warn(`⚠️ 티켓 ${ticketId}을 찾을 수 없음 - 전체 상태 확인:`);
-          console.warn(`⚠️ 총 티켓 수: ${KDSState.tickets.size}`);
-          console.warn(`⚠️ 모든 키:`, Array.from(KDSState.tickets.keys()));
-
-          // 사용자에게 친화적인 오류 메시지
-          this.showError(`티켓 ${ticketId}을 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.`);
-          return;
-        }
-
-        // 🎯 즉시 프론트엔드에서 완전 삭제
-        console.log(`🗑️ 프론트엔드 즉시 삭제: 티켓 ${ticketId}`);
+        // 🎯 무조건 프론트엔드에서 즉시 삭제 (티켓 존재 여부와 관계없이)
+        console.log(`🗑️ 강제 프론트엔드 삭제: 티켓 ${ticketId}`);
 
         // 1. 사운드 재생
         if (window.KDSSoundManager) {
           window.KDSSoundManager.playOrderCompleteSound();
         }
 
-        // 2. 즉시 UI에서 제거 (Grid에서 카드 제거)
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeTicketCard === 'function') {
-          window.KDSUIRenderer.removeTicketCard(ticketId);
+        // 2. 상태에서 완전 제거 (존재하지 않아도 에러 없음)
+        const wasRemoved = KDSState.removeTicket(ticketId);
+        console.log(`🗑️ 상태에서 제거 결과: ${wasRemoved ? '성공' : '이미 없음'}`);
+
+        // 3. UI에서 즉시 제거 (Grid 재렌더링)
+        const currentActiveTickets = KDSState.getActiveTickets();
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          window.KDSUIRenderer.renderKDSGrid(currentActiveTickets);
+          console.log(`🎨 Grid 재렌더링 완료: ${currentActiveTickets.length}개 티켓`);
         }
 
-        // 3. 상태에서 완전 제거
-        KDSState.removeTicket(ticketId);
+        // 4. 카운트 업데이트
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
+        }
 
-        // 4. 필터링 및 카운트 업데이트 (Grid 재렌더링 포함)
-        this.filterTickets();
-
-        console.log(`✅ 티켓 ${ticketId} 프론트엔드 삭제 완료`);
+        console.log(`✅ 티켓 ${ticketId} 강제 삭제 완료`);
 
         // 5. 백그라운드에서 서버 API 호출 (실패해도 UI는 이미 삭제됨)
-        try {
-          const result = await KDSAPIService.markComplete(ticketId);
-          if (result.success) {
-            console.log(`✅ 서버 완료 처리 성공: ${ticketId}`);
-          } else {
-            console.warn(`⚠️ 서버 완료 처리 실패 (UI는 이미 삭제됨): ${result.error}`);
+        setTimeout(async () => {
+          try {
+            const result = await KDSAPIService.markComplete(ticketId);
+            if (result.success) {
+              console.log(`✅ 서버 완료 처리 성공: ${ticketId}`);
+            } else {
+              console.warn(`⚠️ 서버 완료 처리 실패 (UI는 이미 삭제됨): ${result.error}`);
+            }
+          } catch (serverError) {
+            console.warn(`⚠️ 서버 API 호출 실패 (UI는 이미 삭제됨):`, serverError);
           }
-        } catch (serverError) {
-          console.warn(`⚠️ 서버 API 호출 실패 (UI는 이미 삭제됨):`, serverError);
-          // 서버 실패해도 UI는 이미 삭제된 상태이므로 사용자에게 오류 표시 안함
-        }
+        }, 100);
 
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
-        this.showError('완료 처리 중 오류가 발생했습니다: ' + error.message);
+        
+        // 에러가 발생해도 강제로 UI에서 제거
+        try {
+          KDSState.removeTicket(ticketId);
+          const currentActiveTickets = KDSState.getActiveTickets();
+          if (window.KDSUIRenderer) {
+            window.KDSUIRenderer.renderKDSGrid(currentActiveTickets);
+            window.KDSUIRenderer.updateTicketCounts();
+          }
+          console.log(`🚨 에러 발생했지만 강제로 UI에서 제거 완료: ${ticketId}`);
+        } catch (forceError) {
+          console.error('❌ 강제 제거도 실패:', forceError);
+        }
       }
     },
 
