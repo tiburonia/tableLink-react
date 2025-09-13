@@ -1219,6 +1219,80 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
 
 module.exports = router;
+// 🖨️ KDS 티켓 출력 상태 업데이트
+router.put('/kds/tickets/:ticketId/print', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { ticketId } = req.params;
+    
+    console.log(`🖨️ 티켓 ${ticketId} 출력 상태 업데이트 요청`);
+
+    // 티켓 존재 확인
+    const ticketCheck = await client.query(
+      'SELECT check_id, store_id FROM order_tickets WHERE check_id = $1',
+      [ticketId]
+    );
+
+    if (ticketCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    const ticket = ticketCheck.rows[0];
+
+    // 출력 상태 업데이트 (printed_at 컬럼이 있다면)
+    const updateResult = await client.query(`
+      UPDATE order_tickets 
+      SET printed_at = NOW(),
+          updated_at = NOW()
+      WHERE check_id = $1
+      RETURNING check_id, printed_at
+    `, [ticketId]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: '출력 상태 업데이트 실패'
+      });
+    }
+
+    console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 완료`);
+
+    // WebSocket으로 실시간 알림 (출력 완료)
+    if (global.io) {
+      global.io.to(`kds:${ticket.store_id}`).emit('kds-update', {
+        type: 'ticket_printed',
+        data: {
+          ticket_id: parseInt(ticketId),
+          printed_at: updateResult.rows[0].printed_at,
+          timestamp: new Date().toISOString(),
+          source: 'print_api'
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ticket_id: ticketId,
+        printed_at: updateResult.rows[0].printed_at
+      }
+    });
+
+  } catch (error) {
+    console.error(`❌ 티켓 ${req.params.ticketId} 출력 상태 업데이트 실패:`, error);
+    res.status(500).json({
+      success: false,
+      error: '출력 상태 업데이트 중 오류가 발생했습니다'
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // 🔄 KDS 동기화 API (백업 시스템)
 router.get('/kds/:storeId/sync', async (req, res) => {
   try {

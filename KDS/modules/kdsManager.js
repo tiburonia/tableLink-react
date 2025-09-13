@@ -803,17 +803,30 @@
           
           // 3. KRP 전송 (향후 KRP 모듈과 연계)
           if (window.KRPManager && typeof window.KRPManager.sendPrintRequest === 'function') {
-            await window.KRPManager.sendPrintRequest(ticket);
-            console.log(`📡 KRP로 출력 요청 전송: ${ticketId}`);
+            try {
+              await window.KRPManager.sendPrintRequest(ticket);
+              console.log(`📡 KRP로 출력 요청 전송: ${ticketId}`);
+            } catch (krpError) {
+              console.warn(`⚠️ KRP 전송 실패 (출력 상태는 업데이트됨):`, krpError);
+            }
+          } else {
+            console.log(`ℹ️ KRP 모듈이 없습니다 - 출력 상태만 업데이트됨`);
           }
 
-          // 4. 사운드 재생
-          if (window.KDSSoundManager) {
-            window.KDSSoundManager.playNotificationSound();
+          // 4. 사운드 재생 (안전하게)
+          if (window.KDSSoundManager && typeof window.KDSSoundManager.playNotificationSound === 'function') {
+            try {
+              window.KDSSoundManager.playNotificationSound();
+            } catch (soundError) {
+              console.warn(`⚠️ 사운드 재생 실패:`, soundError);
+            }
           }
 
           // 5. UI 피드백 (버튼 상태 변경 등)
           this._updatePrintButtonState(ticketId, true);
+
+          // 6. 성공 메시지
+          console.log(`✅ 티켓 ${ticketId} 출력 처리 완료`);
 
         } else {
           throw new Error(result.error || '출력 요청 실패');

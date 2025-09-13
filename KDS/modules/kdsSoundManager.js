@@ -103,6 +103,14 @@
      */
     isSoundEnabled() {
       return this.soundEnabled;
+    },
+
+    /**
+     * 알림 사운드 (출력 등)
+     */
+    playNotificationSound() {
+      if (!this.soundEnabled) return;
+      this.playBeep(1000, 150);
     }
   };
 
