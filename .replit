@@ -29,6 +29,10 @@ args = "sleep 2"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
+args = "npm install"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
 args = "node src/server.js"
 
 [[ports]]
