@@ -472,11 +472,6 @@ router.get('/:id', async (req, res, next) => {
 
 module.exports = router;
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
-
 // 🖨️ KRP 출력 대기 목록 조회
 router.get('/', async (req, res) => {
   try {
