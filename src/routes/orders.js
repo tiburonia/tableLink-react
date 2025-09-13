@@ -1026,7 +1026,8 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     // 1. order_tickets 테이블에서 티켓 상태를 완료로 변경
     const ticketUpdateResult = await client.query(`
       UPDATE order_tickets
-      SET status = 'COMPLETED',
+      SET status = 'DONE',
+          display_status = 'UNVISIBLE',
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
       RETURNING id, order_id
@@ -1045,7 +1046,7 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     // 2. order_items 테이블에서 해당 티켓의 모든 아이템을 완료 상태로 변경
     await client.query(`
       UPDATE order_items 
-      SET item_status = 'READY',
+      SET item_status = 'DONE',
           updated_at = CURRENT_TIMESTAMP
       WHERE ticket_id = $1 AND item_status != 'CANCELED'
     `, [parseInt(ticketId)]);
