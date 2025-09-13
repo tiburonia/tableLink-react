@@ -892,7 +892,7 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
-// KDS 전용 API 엔드포인트
+// KDS 전용 API 엔드포인트 (중복 제거 및 통합)
 router.get('/kds/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
@@ -942,7 +942,7 @@ router.get('/kds/:storeId', async (req, res) => {
       status: order.status?.toLowerCase() || 'pending',
       created_at: order.created_at,
       updated_at: order.updated_at,
-      items: order.items || []
+      items: order.items ? order.items.filter(item => item.id !== null) : []
     }));
 
     res.json({
@@ -956,33 +956,6 @@ router.get('/kds/:storeId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'KDS 주문 조회 실패',
-      details: error.message
-    });
-  }
-});
-      check_id: order.check_id,
-      ticket_id: order.check_id,
-      customer_name: order.customer_name,
-      table_number: order.table_number,
-      status: order.status,
-      created_at: order.created_at,
-      updated_at: order.updated_at,
-      items: order.items.filter(item => item.id !== null) // null 아이템 제거
-    }));
-
-    console.log(`✅ KDS 데이터 조회 완료: ${orders.length}개 주문`);
-
-    res.json({
-      success: true,
-      orders: orders,
-      count: orders.length
-    });
-
-  } catch (error) {
-    console.error('❌ KDS 데이터 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'KDS 데이터를 가져올 수 없습니다',
       details: error.message
     });
   }
