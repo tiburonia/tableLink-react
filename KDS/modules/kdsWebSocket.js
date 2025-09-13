@@ -131,7 +131,7 @@
     },
 
     /**
-     * 새 티켓 생성 처리
+     * 새 티켓 생성 처리 - DB 상태 정확히 반영
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
@@ -146,14 +146,18 @@
         return this.handleTicketUpdated(ticket);
       }
 
+      // DB에서 온 실제 상태를 정규화하여 보존
+      const actualStatus = (ticket.status || 'PENDING').toUpperCase();
+      
       const normalizedTicket = {
         ...ticket,
         ticket_id: ticketId,
         check_id: ticketId,
+        id: ticket.id || ticketId,
         table_number: ticket.table_number || ticket.table_num || 'N/A',
         customer_name: ticket.customer_name || `테이블 ${ticket.table_number || ticket.table_num}`,
         items: ticket.items || [],
-        status: ticket.status || 'pending',
+        status: actualStatus, // DB의 실제 상태 보존
         created_at: ticket.created_at || new Date().toISOString()
       };
 
@@ -167,7 +171,12 @@
         return;
       }
 
-      normalizedTicket.items = kitchenItems;
+      // 아이템들도 티켓 상태에 맞춰 동기화
+      normalizedTicket.items = kitchenItems.map(item => ({
+        ...item,
+        status: actualStatus === 'COOKING' ? 'COOKING' : (item.status || 'PENDING'),
+        item_status: actualStatus === 'COOKING' ? 'COOKING' : (item.item_status || 'PENDING')
+      }));
 
       KDSState.setTicket(ticketId, normalizedTicket);
 
@@ -179,7 +188,7 @@
         window.KDSSoundManager.playNewOrderSound();
       }
 
-      console.log(`✅ 새 티켓 추가: ${ticketId} (${kitchenItems.length}개 아이템)`);
+      console.log(`✅ 새 티켓 추가: ${ticketId} (상태: ${actualStatus}, ${kitchenItems.length}개 아이템)`);
     },
 
     /**
@@ -274,18 +283,52 @@
     },
 
     /**
-     * 티켓 업데이트 처리
+     * 티켓 업데이트 처리 - 실시간 상태 동기화
      */
     handleTicketUpdated(ticket) {
-      const ticketId = ticket.ticket_id || ticket.id;
+      const ticketId = this._extractTicketId(ticket);
       const existingTicket = KDSState.getTicket(ticketId);
-      const updatedTicket = { ...existingTicket, ...ticket };
+      
+      if (!existingTicket) {
+        console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketId}`);
+        return this.handleTicketCreated(ticket);
+      }
+
+      // DB 상태를 정확히 반영
+      const actualStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
+      
+      const updatedTicket = { 
+        ...existingTicket, 
+        ...ticket,
+        status: actualStatus,
+        updated_at: ticket.updated_at || new Date().toISOString()
+      };
+
+      // 아이템들도 티켓 상태에 맞춰 동기화
+      if (updatedTicket.items && actualStatus === 'COOKING') {
+        updatedTicket.items = updatedTicket.items.map(item => ({
+          ...item,
+          status: 'COOKING',
+          item_status: 'COOKING'
+        }));
+      }
 
       KDSState.setTicket(ticketId, updatedTicket);
 
       if (window.KDSUIRenderer) {
-        window.KDSUIRenderer.updateTicketCard(updatedTicket);
+        // 상태가 변경된 경우 UI 완전 재렌더링
+        if (existingTicket.status !== actualStatus) {
+          console.log(`🔄 티켓 ${ticketId} 상태 변경: ${existingTicket.status} -> ${actualStatus}`);
+          window.KDSUIRenderer.removeTicketCard(ticketId);
+          setTimeout(() => {
+            window.KDSUIRenderer.addTicketCard(updatedTicket);
+          }, 100);
+        } else {
+          window.KDSUIRenderer.updateTicketCard(updatedTicket);
+        }
       }
+
+      console.log(`✅ 티켓 ${ticketId} 업데이트 완료 (상태: ${actualStatus})`);
     },
 
     /**

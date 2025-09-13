@@ -174,56 +174,67 @@
     },
 
     /**
-     * 티켓 카드 HTML 생성 - 상태 기반 렌더링
+     * 티켓 카드 HTML 생성 - DB 실제 상태 기반 렌더링
      */
     createTicketCardHTML(ticket) {
       const elapsedTime = this.getElapsedTime(ticket.created_at);
       const statusClass = this.getStatusClass(ticket.status);
       const progressPercent = this.calculateProgress(ticket.items);
 
-      // 실제 DB 상태 기반으로 UI 결정
-      const status = (ticket.status || '').toUpperCase();
-      const isPending = status === 'PENDING';
-      const isCooking = status === 'COOKING';
-      const isDone = status === 'DONE';
+      // 실제 DB 상태 기반으로 UI 결정 (정규화)
+      const dbStatus = (ticket.status || '').toUpperCase();
+      const isPending = dbStatus === 'PENDING';
+      const isCooking = dbStatus === 'COOKING';
+      const isDone = dbStatus === 'DONE' || dbStatus === 'COMPLETED';
 
-      console.log(`🎨 티켓 ${ticket.ticket_id} 상태 기반 렌더링: ${status} (Pending: ${isPending}, Cooking: ${isCooking}, Done: ${isDone})`);
+      console.log(`🎨 티켓 ${ticket.ticket_id || ticket.check_id} DB 상태 기반 렌더링: ${dbStatus} (Pending: ${isPending}, Cooking: ${isCooking}, Done: ${isDone})`);
 
-      // 상태별 스타일 결정
+      // 상태별 UI 스타일 결정
       let elapsedTimeStyle = '';
       let progressFillStyle = 'background: linear-gradient(90deg, #3498db, #2ecc71);';
       let cardExtraStyle = '';
+      let statusDisplayText = dbStatus;
+      let statusBadgeColor = '#95a5a6';
 
       if (isCooking) {
         elapsedTimeStyle = 'background: #ff6b6b; color: white; font-weight: 700; animation: pulse 2s infinite; border: 2px solid #e74c3c;';
         progressFillStyle = 'background: linear-gradient(90deg, #ff6b6b, #ee5a52); animation: progressPulse 3s infinite;';
         cardExtraStyle = 'border: 3px solid #e74c3c; box-shadow: 0 8px 30px rgba(231, 76, 60, 0.4);';
+        statusBadgeColor = '#e74c3c';
+        statusDisplayText = 'COOKING';
       } else if (isPending) {
-        elapsedTimeStyle = 'background: #f39c12; color: white; font-weight: 600;';
+        elapsedTimeStyle = 'background: #f39c12; color: white; font-weight: 600; border: 1px solid #e67e22;';
         cardExtraStyle = 'border: 2px solid #f39c12;';
+        statusBadgeColor = '#f39c12';
+        statusDisplayText = 'PENDING';
+      } else if (isDone) {
+        elapsedTimeStyle = 'background: #27ae60; color: white; font-weight: 600;';
+        cardExtraStyle = 'border: 2px solid #27ae60; opacity: 0.8;';
+        statusBadgeColor = '#27ae60';
+        statusDisplayText = 'DONE';
       }
 
-      // 버튼 상태 결정
+      // 버튼 상태 결정 - DB 상태에 정확히 매핑
       const startButtonDisabled = isCooking || isDone;
       const completeButtonDisabled = !isCooking;
 
       const startButtonStyle = startButtonDisabled ? 
-        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none;' : 
-        'opacity: 1; cursor: pointer; background: #f39c12; transform: scale(1);';
+        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; transform: none; pointer-events: none;' : 
+        'opacity: 1; cursor: pointer; background: #f39c12; transform: scale(1); pointer-events: auto;';
 
       const completeButtonStyle = completeButtonDisabled ? 
-        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400;' : 
-        'opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700;';
+        'opacity: 0.3; cursor: not-allowed; background: #95a5a6; animation: none; border: 1px solid #95a5a6; font-weight: 400; pointer-events: none;' : 
+        'opacity: 1; cursor: pointer; background: linear-gradient(135deg, #27ae60, #229954); animation: buttonReady 2s infinite; border: 2px solid #27ae60; font-weight: 700; pointer-events: auto;';
 
       const startButtonText = isCooking ? '조리중' : '조리 시작';
 
       return `
-        <div class="ticket-card ${statusClass}" data-status="${status}" style="${cardExtraStyle}">
+        <div class="ticket-card ${statusClass}" data-status="${dbStatus}" data-db-status="${dbStatus}" style="${cardExtraStyle}">
           <div class="ticket-header">
             <div class="ticket-info">
-              <span class="table-number">${ticket.table_number || 'N/A'}</span>
+              <span class="table-number">${ticket.table_number || ticket.table_num || 'N/A'}</span>
               <span class="elapsed-time" style="${elapsedTimeStyle}">${elapsedTime}</span>
-              <span class="ticket-status" style="font-size: 12px; padding: 4px 8px; border-radius: 8px; background: ${isCooking ? '#e74c3c' : isPending ? '#f39c12' : '#95a5a6'}; color: white; font-weight: 600;">${status}</span>
+              <span class="ticket-status" style="font-size: 12px; padding: 4px 8px; border-radius: 8px; background: ${statusBadgeColor}; color: white; font-weight: 600;">${statusDisplayText}</span>
             </div>
             <div class="ticket-progress">
               <div class="progress-bar">
@@ -235,17 +246,17 @@
 
           <div class="ticket-body">
             <div class="order-items">
-              ${ticket.items.map(item => this.createItemHTML(item, isCooking, status)).join('')}
+              ${ticket.items ? ticket.items.map(item => this.createItemHTML(item, isCooking, dbStatus)).join('') : ''}
             </div>
           </div>
 
           <div class="ticket-footer">
             <div class="ticket-actions">
-              <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.ticket_id}')"
+              <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.ticket_id || ticket.id}')"
                       ${startButtonDisabled ? 'disabled' : ''} style="${startButtonStyle}">
                 <span>🔥</span> ${startButtonText}
               </button>
-              <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.ticket_id}')"
+              <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.ticket_id || ticket.id}')"
                       ${completeButtonDisabled ? 'disabled' : ''} style="${completeButtonStyle}">
                 <span>✅</span> 완료
               </button>

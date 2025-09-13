@@ -411,20 +411,39 @@
 
         console.log(`🔄 새로고침: ${tickets.length}개 티켓 로드 (DONE 상태 제외)`);
 
-        // 상태별로 분류하여 렌더링
+        // 상태별로 분류하여 정확한 렌더링
         tickets.forEach(ticket => {
-          const status = (ticket.status || '').toUpperCase();
+          const actualStatus = (ticket.status || '').toUpperCase();
+          const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
           
           // DONE 상태는 렌더링하지 않음
-          if (status === 'DONE') {
-            console.log(`⏭️ DONE 상태 티켓 ${ticket.ticket_id} 렌더링 스킵`);
+          if (actualStatus === 'DONE' || actualStatus === 'COMPLETED') {
+            console.log(`⏭️ ${actualStatus} 상태 티켓 ${ticketId} 렌더링 스킵`);
             return;
           }
 
-          console.log(`🎨 티켓 ${ticket.ticket_id} 상태 ${status}로 렌더링`);
+          console.log(`🎨 티켓 ${ticketId} DB 상태 ${actualStatus}로 정확히 렌더링`);
 
-          KDSState.setTicket(ticket.ticket_id || ticket.check_id, ticket);
-          KDSUIRenderer.addTicketCard(ticket);
+          // DB 상태를 정확히 보존하여 저장
+          const normalizedTicket = {
+            ...ticket,
+            status: actualStatus,
+            ticket_id: ticketId,
+            check_id: ticketId,
+            id: ticket.id || ticketId
+          };
+
+          // 아이템들도 티켓 상태에 맞춰 동기화
+          if (normalizedTicket.items && actualStatus === 'COOKING') {
+            normalizedTicket.items = normalizedTicket.items.map(item => ({
+              ...item,
+              status: 'COOKING',
+              item_status: 'COOKING'
+            }));
+          }
+
+          KDSState.setTicket(ticketId, normalizedTicket);
+          KDSUIRenderer.addTicketCard(normalizedTicket);
         });
 
         // 카운트 업데이트
