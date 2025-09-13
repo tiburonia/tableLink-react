@@ -929,7 +929,7 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
-// 🍳 KDS 티켓 조리 시작 API
+// 🍳 KDS 티켓 조리 시작 API (현재 스키마 호환)
 router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
   const client = await pool.connect();
 
@@ -940,52 +940,86 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 1. order_tickets 상태를 COOKING으로 변경
-    const ticketUpdateResult = await client.query(`
-      UPDATE order_tickets 
-      SET status = 'COOKING', updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING order_id
+    // 현재 시스템에서는 orders 테이블 사용
+    // ticketId는 check_id 또는 order id로 사용됨
+    
+    // 1. 주문 상태를 조리 중으로 변경
+    const orderUpdateResult = await client.query(`
+      UPDATE orders 
+      SET status = 'COOKING',
+          cooking_status = 'COOKING',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE check_id = $1 OR id = $1
+      RETURNING id, store_id, table_num as table_number, check_id
     `, [parseInt(ticketId)]);
 
-    if (ticketUpdateResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        error: '티켓을 찾을 수 없습니다'
+    if (orderUpdateResult.rows.length === 0) {
+      // checks 테이블에서도 확인 시도  
+      const checkUpdateResult = await client.query(`
+        UPDATE checks 
+        SET status = 'cooking',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING id, store_id, table_number
+      `, [parseInt(ticketId)]);
+
+      if (checkUpdateResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          error: '티켓을 찾을 수 없습니다'
+        });
+      }
+
+      const check = checkUpdateResult.rows[0];
+
+      // check_items도 조리 중 상태로 변경
+      await client.query(`
+        UPDATE check_items 
+        SET status = 'preparing',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE check_id = $1 AND status = 'ordered'
+      `, [parseInt(ticketId)]);
+
+      await client.query('COMMIT');
+
+      // WebSocket 브로드캐스트
+      if (global.io) {
+        global.io.to(`kds:${check.store_id}`).emit('kds-update', {
+          type: 'ticket_cooking_started',
+          data: {
+            ticket_id: parseInt(ticketId),
+            check_id: check.id,
+            status: 'COOKING',
+            table_number: check.table_number
+          }
+        });
+      }
+
+      return res.json({
+        success: true,
+        ticketId: parseInt(ticketId),
+        checkId: check.id,
+        status: 'COOKING',
+        message: '조리가 시작되었습니다'
       });
     }
 
-    const orderId = ticketUpdateResult.rows[0].order_id;
-
-    // 2. 해당 티켓의 모든 order_items를 COOKING으로 변경
-    await client.query(`
-      UPDATE order_items 
-      SET item_status = 'COOKING', updated_at = CURRENT_TIMESTAMP
-      WHERE ticket_id = $1
-    `, [parseInt(ticketId)]);
-
-    // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
-    const orderQuery = `
-      SELECT o.store_id, o.table_num
-      FROM orders o
-      WHERE o.id = $1
-    `;
-
-    const orderResult = await client.query(orderQuery, [orderId]);
-    const { store_id, table_number } = orderResult.rows[0];
+    // orders 테이블 업데이트 성공한 경우
+    const order = orderUpdateResult.rows[0];
 
     await client.query('COMMIT');
 
     // WebSocket으로 실시간 업데이트 브로드캐스트
     if (global.io) {
-      global.io.to(`kds:${store_id}`).emit('kds-update', {
+      global.io.to(`kds:${order.store_id}`).emit('kds-update', {
         type: 'ticket_cooking_started',
         data: {
           ticket_id: parseInt(ticketId),
-          order_id: orderId,
+          order_id: order.id,
+          check_id: order.check_id,
           status: 'COOKING',
-          table_number: table_number
+          table_number: order.table_number
         }
       });
     }
@@ -993,7 +1027,8 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
     res.json({
       success: true,
       ticketId: parseInt(ticketId),
-      orderId: orderId,
+      orderId: order.id,
+      checkId: order.check_id,
       status: 'COOKING',
       message: '조리가 시작되었습니다'
     });
@@ -1011,7 +1046,7 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
   }
 });
 
-// 🍳 KDS 티켓 완료 API  
+// 🍳 KDS 티켓 완료 API (현재 스키마 호환)
 router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
   const client = await pool.connect();
 
@@ -1022,53 +1057,86 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 1. order_tickets 상태를 DONE으로, display_status를 UNVISIBLE로 변경
-    const ticketUpdateResult = await client.query(`
-      UPDATE order_tickets 
-      SET status = 'DONE', display_status = 'UNVISIBLE', updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING order_id
+    // 현재 시스템에서는 orders 테이블 사용
+    // ticketId는 check_id 또는 order id로 사용됨
+    
+    // 1. 주문 상태를 완료로 변경
+    const orderUpdateResult = await client.query(`
+      UPDATE orders 
+      SET status = 'COMPLETED', 
+          cooking_status = 'DONE',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE check_id = $1 OR id = $1
+      RETURNING id, store_id, table_num as table_number, check_id
     `, [parseInt(ticketId)]);
 
-    if (ticketUpdateResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        error: '티켓을 찾을 수 없습니다'
+    if (orderUpdateResult.rows.length === 0) {
+      // checks 테이블에서도 확인 시도
+      const checkUpdateResult = await client.query(`
+        UPDATE checks 
+        SET status = 'completed',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING id, store_id, table_number
+      `, [parseInt(ticketId)]);
+
+      if (checkUpdateResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          error: '티켓을 찾을 수 없습니다'
+        });
+      }
+
+      const check = checkUpdateResult.rows[0];
+
+      // check_items도 완료 상태로 변경
+      await client.query(`
+        UPDATE check_items 
+        SET status = 'served',
+            served_at = CURRENT_TIMESTAMP
+        WHERE check_id = $1 AND status != 'canceled'
+      `, [parseInt(ticketId)]);
+
+      await client.query('COMMIT');
+
+      // WebSocket 브로드캐스트
+      if (global.io) {
+        global.io.to(`kds:${check.store_id}`).emit('kds-update', {
+          type: 'ticket_completed',
+          data: {
+            ticket_id: parseInt(ticketId),
+            check_id: check.id,
+            status: 'COMPLETED',
+            table_number: check.table_number
+          }
+        });
+      }
+
+      return res.json({
+        success: true,
+        ticketId: parseInt(ticketId),
+        checkId: check.id,
+        status: 'COMPLETED',
+        message: '주문이 완료되었습니다'
       });
     }
 
-    const orderId = ticketUpdateResult.rows[0].order_id;
-
-    // 2. 해당 티켓의 모든 order_items를 DONE으로 변경
-    await client.query(`
-      UPDATE order_items 
-      SET item_status = 'DONE', updated_at = CURRENT_TIMESTAMP
-      WHERE ticket_id = $1
-    `, [parseInt(ticketId)]);
-
-    // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
-    const orderQuery = `
-      SELECT o.store_id, o.table_number
-      FROM orders o
-      WHERE o.id = $1
-    `;
-
-    const orderResult = await client.query(orderQuery, [orderId]);
-    const { store_id, table_number } = orderResult.rows[0];
+    // orders 테이블 업데이트 성공한 경우
+    const order = orderUpdateResult.rows[0];
 
     await client.query('COMMIT');
 
     // WebSocket으로 실시간 업데이트 브로드캐스트
     if (global.io) {
-      global.io.to(`kds:${store_id}`).emit('kds-update', {
+      global.io.to(`kds:${order.store_id}`).emit('kds-update', {
         type: 'ticket_completed',
         data: {
           ticket_id: parseInt(ticketId),
-          order_id: orderId,
-          status: 'DONE',
-          display_status: 'UNVISIBLE',
-          table_number: table_number
+          order_id: order.id,
+          check_id: order.check_id,
+          status: 'COMPLETED',
+          table_number: order.table_number
         }
       });
     }
@@ -1076,9 +1144,9 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     res.json({
       success: true,
       ticketId: parseInt(ticketId),
-      orderId: orderId,
-      status: 'DONE',
-      displayStatus: 'UNVISIBLE',
+      orderId: order.id,
+      checkId: order.check_id,
+      status: 'COMPLETED',
       message: '주문이 완료되었습니다'
     });
 
