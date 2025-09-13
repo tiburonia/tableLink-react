@@ -133,6 +133,12 @@
           console.log('🎫 새 주문 수신 (KDS 업데이트):', data.data);
           this.handleTicketCreated(data.data);
           break;
+        case 'ticket_cooking_started':
+          this.handleTicketCookingStarted(data.data);
+          break;
+        case 'ticket_completed':
+          this.handleTicketCompleted(data.data);
+          break;
         case 'order-complete':
           this.handleTicketUpdated(data.data);
           break;
@@ -173,6 +179,44 @@
           this.checkTicketCompletion(ticketId);
         }
       }
+    },
+
+    /**
+     * 티켓 조리 시작 처리
+     */
+    handleTicketCookingStarted(data) {
+      const ticketId = data.ticket_id;
+      const ticket = KDSState.tickets.get(ticketId);
+
+      if (ticket) {
+        ticket.status = 'cooking';
+        // 모든 아이템 상태를 cooking으로 변경
+        if (ticket.items) {
+          ticket.items.forEach(item => {
+            item.status = 'cooking';
+            item.item_status = 'cooking';
+          });
+        }
+        
+        UIRenderer.updateTicketCard(ticket);
+        console.log(`🔥 티켓 ${ticketId} 조리 시작 완료`);
+      }
+    },
+
+    /**
+     * 티켓 완료 처리 (UI에서 제거)
+     */
+    handleTicketCompleted(data) {
+      const ticketId = data.ticket_id;
+      
+      // 상태에서 제거
+      KDSState.tickets.delete(ticketId);
+      
+      // UI에서 제거
+      UIRenderer.removeTicketCard(ticketId);
+      
+      console.log(`✅ 티켓 ${ticketId} 완료 - UI에서 제거됨`);
+      SoundManager.playOrderCompleteSound();
     },
 
     /**
@@ -236,16 +280,7 @@
       }
     },
 
-    /**
-     * 티켓 숨김 요청
-     */
-    hideTicket(ticketId) {
-      if (KDSState.socket && KDSState.isConnected) {
-        KDSState.socket.emit('ticket:hide', {
-          ticket_id: ticketId
-        });
-      }
-    },
+    
 
     /**
      * 사용자 정보 가져오기 (KDS용 - 선택적)
@@ -605,15 +640,12 @@
           <div class="ticket-footer">
             <div class="ticket-actions">
               <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticket.check_id || ticket.id}')"
-                      ${ticket.status === 'preparing' ? 'disabled' : ''}>
+                      ${ticket.status === 'cooking' || ticket.status === 'done' ? 'disabled' : ''}>
                 <span>🔥</span> 조리 시작
               </button>
               <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticket.check_id || ticket.id}')"
-                      ${progressPercent < 100 ? 'disabled' : ''}>
+                      ${ticket.status !== 'cooking' ? 'disabled' : ''}>
                 <span>✅</span> 완료
-              </button>
-              <button class="action-btn hide-btn" onclick="KDSManager.hideTicket('${ticket.check_id || ticket.id}')">
-                <span>👻</span> 숨김
               </button>
             </div>
           </div>
@@ -742,12 +774,13 @@
       const completeBtn = card.querySelector('.complete-btn');
 
       if (startBtn) {
-        startBtn.disabled = ticket.status === 'preparing' || ticket.status === 'ready';
+        // 조리 시작 버튼: pending/ordered 상태에서만 활성화
+        startBtn.disabled = ticket.status === 'cooking' || ticket.status === 'done';
       }
 
       if (completeBtn) {
-        const progress = this.calculateProgress(ticket.items);
-        completeBtn.disabled = progress < 100;
+        // 완료 버튼: cooking 상태에서만 활성화
+        completeBtn.disabled = ticket.status !== 'cooking';
       }
     },
 
@@ -1506,21 +1539,31 @@
      */
     async startCooking(ticketId) {
       try {
-        const ticket = KDSState.tickets.get(ticketId);
-        if (!ticket) return;
+        console.log(`🔥 티켓 ${ticketId} 조리 시작 요청`);
 
-        // 모든 아이템을 조리 중으로 변경
-        for (const item of ticket.items) {
-          if (item.status === 'ordered' || item.status === 'pending') {
-            await this.updateItemStatus(item.id, 'preparing');
+        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/start-cooking`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
           }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        SoundManager.playItemCompleteSound();
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ 조리 시작 성공:', result.message);
+          SoundManager.playItemCompleteSound();
+        } else {
+          throw new Error(result.error);
+        }
 
       } catch (error) {
         console.error('❌ 조리 시작 실패:', error);
-        this.showError('조리 시작 처리 중 오류가 발생했습니다.');
+        this.showError('조리 시작 처리 중 오류가 발생했습니다: ' + error.message);
       }
     },
 
@@ -1529,21 +1572,32 @@
      */
     async markComplete(ticketId) {
       try {
-        const ticket = KDSState.tickets.get(ticketId);
-        if (!ticket) return;
+        console.log(`✅ 티켓 ${ticketId} 완료 요청`);
 
-        // 모든 아이템을 완료로 변경
-        for (const item of ticket.items) {
-          if (item.status !== 'ready' && item.status !== 'served') {
-            await this.updateItemStatus(item.id, 'ready');
+        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/complete`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
           }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
         }
 
-        SoundManager.playOrderCompleteSound();
+        const result = await response.json();
+        
+        if (result.success) {
+          console.log('✅ 완료 처리 성공:', result.message);
+          // WebSocket으로 처리되므로 여기서는 사운드만 재생
+          SoundManager.playOrderCompleteSound();
+        } else {
+          throw new Error(result.error);
+        }
 
       } catch (error) {
-        console.error('❌ 주문 완료 실패:', error);
-        this.showError('주문 완료 처리 중 오류가 발생했습니다.');
+        console.error('❌ 완료 처리 실패:', error);
+        this.showError('완료 처리 중 오류가 발생했습니다: ' + error.message);
       }
     },
 
@@ -1597,28 +1651,10 @@
     },
 
     /**
-     * 티켓 숨김
-     */
-    hideTicket(ticketId) {
-      if (KDSState.isConnected) {
-        WebSocketManager.hideTicket(ticketId);
-      } else {
-        // 로컬에서 즉시 제거
-        UIRenderer.removeTicketCard(ticketId);
-        KDSState.tickets.delete(ticketId);
-      }
-    },
-
-    /**
-     * 완료된 주문 정리
+     * 완료된 주문 정리 (현재는 자동으로 제거되므로 수동 정리 불필요)
      */
     clearCompleted() {
-      const completedTickets = Array.from(KDSState.tickets.values())
-        .filter(ticket => ticket.status === 'completed' || ticket.status === 'served');
-
-      completedTickets.forEach(ticket => {
-        this.hideTicket(ticket.check_id || ticket.id);
-      });
+      console.log('ℹ️ 완료된 주문은 자동으로 제거됩니다');
     },
 
     /**

@@ -929,6 +929,172 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
+// 🍳 KDS 티켓 조리 시작 API
+router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { ticketId } = req.params;
+
+    console.log(`🔥 KDS 티켓 ${ticketId} 조리 시작`);
+
+    await client.query('BEGIN');
+
+    // 1. order_tickets 상태를 COOKING으로 변경
+    const ticketUpdateResult = await client.query(`
+      UPDATE order_tickets 
+      SET status = 'COOKING', updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING order_id
+    `, [parseInt(ticketId)]);
+
+    if (ticketUpdateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    const orderId = ticketUpdateResult.rows[0].order_id;
+
+    // 2. 해당 티켓의 모든 order_items를 COOKING으로 변경
+    await client.query(`
+      UPDATE order_items 
+      SET item_status = 'COOKING', updated_at = CURRENT_TIMESTAMP
+      WHERE ticket_id = $1
+    `, [parseInt(ticketId)]);
+
+    // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
+    const orderQuery = `
+      SELECT o.store_id, o.table_number
+      FROM orders o
+      WHERE o.id = $1
+    `;
+
+    const orderResult = await client.query(orderQuery, [orderId]);
+    const { store_id, table_number } = orderResult.rows[0];
+
+    await client.query('COMMIT');
+
+    // WebSocket으로 실시간 업데이트 브로드캐스트
+    if (global.io) {
+      global.io.to(`kds:${store_id}`).emit('kds-update', {
+        type: 'ticket_cooking_started',
+        data: {
+          ticket_id: parseInt(ticketId),
+          order_id: orderId,
+          status: 'COOKING',
+          table_number: table_number
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      ticketId: parseInt(ticketId),
+      orderId: orderId,
+      status: 'COOKING',
+      message: '조리가 시작되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ KDS 조리 시작 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '조리 시작 처리 중 오류가 발생했습니다',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+// 🍳 KDS 티켓 완료 API  
+router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { ticketId } = req.params;
+
+    console.log(`✅ KDS 티켓 ${ticketId} 완료 처리`);
+
+    await client.query('BEGIN');
+
+    // 1. order_tickets 상태를 DONE으로, display_status를 UNVISIBLE로 변경
+    const ticketUpdateResult = await client.query(`
+      UPDATE order_tickets 
+      SET status = 'DONE', display_status = 'UNVISIBLE', updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING order_id
+    `, [parseInt(ticketId)]);
+
+    if (ticketUpdateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없습니다'
+      });
+    }
+
+    const orderId = ticketUpdateResult.rows[0].order_id;
+
+    // 2. 해당 티켓의 모든 order_items를 DONE으로 변경
+    await client.query(`
+      UPDATE order_items 
+      SET item_status = 'DONE', updated_at = CURRENT_TIMESTAMP
+      WHERE ticket_id = $1
+    `, [parseInt(ticketId)]);
+
+    // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
+    const orderQuery = `
+      SELECT o.store_id, o.table_number
+      FROM orders o
+      WHERE o.id = $1
+    `;
+
+    const orderResult = await client.query(orderQuery, [orderId]);
+    const { store_id, table_number } = orderResult.rows[0];
+
+    await client.query('COMMIT');
+
+    // WebSocket으로 실시간 업데이트 브로드캐스트
+    if (global.io) {
+      global.io.to(`kds:${store_id}`).emit('kds-update', {
+        type: 'ticket_completed',
+        data: {
+          ticket_id: parseInt(ticketId),
+          order_id: orderId,
+          status: 'DONE',
+          display_status: 'UNVISIBLE',
+          table_number: table_number
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      ticketId: parseInt(ticketId),
+      orderId: orderId,
+      status: 'DONE',
+      displayStatus: 'UNVISIBLE',
+      message: '주문이 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ KDS 완료 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '완료 처리 중 오류가 발생했습니다',
+      details: error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // KDS 전용 API 엔드포인트 (올바른 데이터 구조 사용)
 router.get('/kds/:storeId', async (req, res) => {
   try {
