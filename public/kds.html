@@ -247,16 +247,26 @@
                 const newUrl = `${window.location.pathname}?store=${storeId}`;
                 window.history.replaceState(null, '', newUrl);
 
+                // KDS 컴포넌트 로드 대기
+                let retryCount = 0;
+                const maxRetries = 10;
+
+                while (typeof renderKDS !== 'function' && retryCount < maxRetries) {
+                  console.log(`🔄 KDS 컴포넌트 로드 대기... (${retryCount + 1}/${maxRetries})`);
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  retryCount++;
+                }
+
                 // KDS 렌더링
                 if (typeof renderKDS === 'function') {
-                    await renderKDS(storeId);
-                    // 로딩 숨기기
-                    const loadingElement = document.getElementById('loading');
-                    if (loadingElement) {
-                      loadingElement.style.display = 'none';
-                    }
+                  await renderKDS(storeId);
+                  // 로딩 숨기기
+                  const loadingElement = document.getElementById('loadingScreen');
+                  if (loadingElement) {
+                    loadingElement.style.display = 'none';
+                  }
                 } else {
-                    throw new Error('KDS 컴포넌트를 찾을 수 없습니다');
+                  throw new Error(`KDS 컴포넌트를 찾을 수 없습니다 (${maxRetries}회 재시도 후 실패)`);
                 }
 
             } catch (error) {
