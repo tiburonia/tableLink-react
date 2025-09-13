@@ -155,41 +155,60 @@ router.get('/kds/:storeId', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        c.id as check_id,
-        c.table_number,
-        c.customer_name,
-        c.opened_at,
-        c.source_system,
+        o.id as order_id,
+        ot.id as ticket_id,
+        o.table_number,
+        o.customer_name,
+        o.created_at,
+        o.source_system,
         array_agg(
           json_build_object(
-            'id', ci.id,
-            'menuName', ci.menu_name,
-            'quantity', ci.quantity,
-            'status', ci.status,
-            'orderedAt', ci.ordered_at,
-            'kitchenNotes', ci.kitchen_notes,
-            'priority', ci.priority
-          ) ORDER BY ci.ordered_at
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', oi.item_status,
+            'orderedAt', oi.created_at,
+            'kitchenNotes', '',
+            'priority', 0,
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
+          ) ORDER BY oi.created_at
         ) as items
-      FROM checks c
-      JOIN check_items ci ON c.id = ci.check_id
-      WHERE c.store_id = $1 
-        AND c.status = 'open'
-        AND ci.status IN ('ordered', 'preparing', 'ready')
-      GROUP BY c.id, c.table_number, c.customer_name, c.opened_at, c.source_system
-      ORDER BY c.opened_at ASC
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 
+        AND o.status IN ('PENDING', 'CONFIRMED')
+        AND oi.item_status IN ('PENDING', 'PREPARING', 'READY')
+        AND oi.cook_station = 'KITCHEN'
+      GROUP BY o.id, ot.id, o.table_number, o.customer_name, o.created_at, o.source_system
+      ORDER BY o.created_at ASC
     `, [parseInt(storeId)]);
+
+    // renderKDS.js에서 기대하는 형태로 변환
+    const orders = result.rows.map(order => ({
+      check_id: order.ticket_id,
+      id: order.order_id,
+      ticket_id: order.ticket_id,
+      customer_name: order.customer_name || `테이블 ${order.table_number}`,
+      table_number: order.table_number,
+      status: order.status?.toLowerCase() || 'pending',
+      created_at: order.created_at,
+      updated_at: order.created_at,
+      items: order.items || []
+    }));
 
     res.json({
       success: true,
-      orders: result.rows
+      orders: orders,
+      count: orders.length
     });
 
   } catch (error) {
     console.error('❌ KDS 주문 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'KDS 주문 조회 실패'
+      error: 'KDS 주문 조회 실패',
+      details: error.message
     });
   }
 });
@@ -204,31 +223,28 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
 
     console.log(`🍳 KDS 아이템 ${itemId} 상태 업데이트: ${status}`);
 
-    await client.query('BEGIN');
-
-    // 상태별 시간 컬럼 업데이트
-    const timeColumns = {
-      'preparing': 'preparing_at',
-      'ready': 'ready_at',
-      'served': 'served_at',
-      'canceled': 'canceled_at'
-    };
-
-    const timeColumn = timeColumns[status];
-    let updateQuery = `
-      UPDATE check_items 
-      SET status = $1, kitchen_notes = $2, updated_at = CURRENT_TIMESTAMP
-    `;
-
-    let queryParams = [status, kitchenNotes || null, itemId];
-
-    if (timeColumn) {
-      updateQuery += `, ${timeColumn} = CURRENT_TIMESTAMP`;
+    // 유효한 상태 확인
+    const validStatuses = ['PENDING', 'PREPARING', 'READY', 'SERVED', 'CANCELED'];
+    const upperStatus = status.toUpperCase();
+    if (!validStatuses.includes(upperStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 상태입니다',
+        validStatuses: validStatuses
+      });
     }
 
-    updateQuery += ` WHERE id = $3 RETURNING check_id, menu_name`;
+    await client.query('BEGIN');
 
-    const result = await client.query(updateQuery, queryParams);
+    // order_items 테이블에서 아이템 상태 업데이트
+    const updateQuery = `
+      UPDATE order_items 
+      SET item_status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+      RETURNING ticket_id, menu_name, quantity
+    `;
+
+    const result = await client.query(updateQuery, [upperStatus, parseInt(itemId)]);
 
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
@@ -238,23 +254,44 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
       });
     }
 
-    const { check_id, menu_name } = result.rows[0];
+    const { ticket_id, menu_name, quantity } = result.rows[0];
 
-    // 체크의 매장 ID 조회
-    const checkInfo = await client.query(`
-      SELECT store_id, table_number FROM checks WHERE id = $1
-    `, [check_id]);
+    // 주문 정보 조회
+    const orderQuery = `
+      SELECT o.store_id, o.table_number, o.id as order_id
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE ot.id = $1
+    `;
 
-    const { store_id, table_number } = checkInfo.rows[0];
+    const orderResult = await client.query(orderQuery, [ticket_id]);
+    const { store_id, table_number, order_id } = orderResult.rows[0];
 
     await client.query('COMMIT');
+
+    // WebSocket으로 실시간 업데이트 브로드캐스트
+    if (global.io) {
+      global.io.to(`kds:${store_id}`).emit('kds-update', {
+        type: 'item_status_update',
+        data: {
+          item_id: parseInt(itemId),
+          ticket_id: ticket_id,
+          order_id: order_id,
+          item_status: upperStatus,
+          menu_name: menu_name,
+          quantity: quantity,
+          table_number: table_number
+        }
+      });
+    }
 
     res.json({
       success: true,
       itemId: parseInt(itemId),
-      checkId: check_id,
-      newStatus: status,
-      message: `${menu_name} 상태가 ${status}로 변경되었습니다`
+      ticketId: ticket_id,
+      orderId: order_id,
+      newStatus: upperStatus,
+      message: `${menu_name} 상태가 ${upperStatus}로 변경되었습니다`
     });
 
   } catch (error) {
@@ -262,7 +299,8 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
     console.error('❌ KDS 아이템 상태 업데이트 실패:', error);
     res.status(500).json({
       success: false,
-      error: 'KDS 아이템 상태 업데이트 실패'
+      error: '아이템 상태를 업데이트할 수 없습니다',
+      details: error.message
     });
   } finally {
     client.release();
