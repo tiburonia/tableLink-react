@@ -1062,12 +1062,12 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     
     // 1. 주문 상태를 완료로 변경
     const orderUpdateResult = await client.query(`
-      UPDATE orders 
+      UPDATE order_tickets
       SET status = 'COMPLETED', 
           cooking_status = 'DONE',
           updated_at = CURRENT_TIMESTAMP
-      WHERE check_id = $1 OR id = $1
-      RETURNING id, store_id, table_num as table_number, check_id
+      WHERE id = $1
+      RETURNING id, store_id, table_num as table_number
     `, [parseInt(ticketId)]);
 
     if (orderUpdateResult.rows.length === 0) {
@@ -1077,7 +1077,7 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
         SET status = 'completed',
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
-        RETURNING id, store_id, table_number
+        RETURNING id, store_id, table_num
       `, [parseInt(ticketId)]);
 
       if (checkUpdateResult.rows.length === 0) {
