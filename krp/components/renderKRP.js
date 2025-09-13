@@ -1,9 +1,16 @@
 
-// KRP 주방 영수증 프린터 시뮬레이터 (출력 전용)
+/**
+ * KRP (주방 영수증 프린터) 시스템 - 리팩토링 버전
+ * - 단일 주문서 표시 + 대기 큐 방식
+ * - WebSocket 기반 실시간 처리
+ * - 직관적인 주방 운영 경험 제공
+ */
+
 let krpSocket = null;
 let currentStoreId = null;
-let printQueue = [];
-let selectedOrder = null;
+let currentReceipt = null; // 현재 표시중인 주문서
+let waitingQueue = []; // 대기 큐
+let isProcessing = false; // 처리 중 플래그
 
 // KRP 시스템 초기화
 async function renderKRP(storeId) {
@@ -11,6 +18,8 @@ async function renderKRP(storeId) {
     console.log(`🖨️ KRP 시스템 초기화 - 매장 ID: ${storeId}`);
 
     currentStoreId = storeId;
+    currentReceipt = null;
+    waitingQueue = [];
 
     // 매장 정보 조회
     const storeResponse = await fetch(`/api/stores/${storeId}`, {
@@ -36,8 +45,8 @@ async function renderKRP(storeId) {
     // KRP 화면 렌더링
     renderKRPInterface(store);
 
-    // 출력 대기 목록 로딩
-    await loadPrintQueue(storeId);
+    // 기존 출력 대기 목록 로딩 (페이지 새로고침 시)
+    await loadInitialQueue(storeId);
 
     // WebSocket 연결 설정
     setupKRPWebSocket(storeId);
@@ -67,11 +76,11 @@ function renderKRPInterface(store) {
           <div class="print-status">
             <div class="status-item">
               <div class="status-count" id="queueCount">0</div>
-              <div class="status-label">출력 대기</div>
+              <div class="status-label">대기 중</div>
             </div>
             <div class="status-item">
-              <div class="status-count" id="printedCount">0</div>
-              <div class="status-label">출력완료</div>
+              <div class="status-indicator ${currentReceipt ? 'active' : ''}" id="printingIndicator"></div>
+              <div class="status-label">출력 중</div>
             </div>
           </div>
         </div>
@@ -81,54 +90,42 @@ function renderKRPInterface(store) {
             <div class="sync-indicator" id="syncIndicator"></div>
             <span id="syncTime">연결 중...</span>
           </div>
-          <button class="refresh-btn" onclick="refreshPrintQueue()">🔄</button>
-          <button class="test-btn" onclick="testPrint()">🧪</button>
+          <button class="refresh-btn" onclick="refreshKRP()">🔄</button>
+          <button class="test-btn" onclick="testKRP()">🧪</button>
         </div>
       </header>
 
       <!-- 메인 컨텐츠 -->
       <main class="krp-main">
-        <!-- 출력 대기 목록 -->
-        <section class="queue-section">
-          <div class="section-header">
-            <h2>📋 출력 대기 목록</h2>
-            <div class="queue-controls">
-              <button class="auto-print-btn" id="autoPrintBtn" onclick="toggleAutoPrint()">
-                🔄 자동출력 OFF
-              </button>
+        <!-- 메인 주문서 영역 -->
+        <section class="main-receipt-area">
+          <div class="receipt-container" id="receiptContainer">
+            <div class="no-receipt">
+              <div class="no-receipt-icon">📄</div>
+              <h3>출력할 주문서 없음</h3>
+              <p>새로운 출력 요청을 기다리는 중입니다</p>
             </div>
-          </div>
-          <div class="print-queue" id="printQueue">
-            <!-- 출력 대기 주문들이 여기에 렌더링됩니다 -->
           </div>
         </section>
 
-        <!-- 주문서 프리뷰 -->
-        <section class="preview-section">
-          <div class="section-header">
-            <h2>📄 주문서 프리뷰</h2>
-            <div class="preview-controls">
-              <button class="print-complete-btn" id="printCompleteBtn" onclick="completePrint()" disabled>
-                ✅ 출력 완료
-              </button>
-              <button class="reprint-btn" id="reprintBtn" onclick="reprintOrder()" disabled>
-                🔄 재출력
-              </button>
+        <!-- 대기 큐 패널 -->
+        <aside class="waiting-panel">
+          <div class="panel-header">
+            <h3>📋 대기 큐</h3>
+            <span class="queue-badge" id="queueBadge">0</span>
+          </div>
+          <div class="waiting-list" id="waitingList">
+            <div class="empty-queue">
+              <p>대기 중인 주문 없음</p>
             </div>
           </div>
-          <div class="receipt-preview" id="receiptPreview">
-            <div class="no-selection">
-              <div class="no-selection-icon">📄</div>
-              <p>출력할 주문을 선택하세요</p>
-            </div>
-          </div>
-        </section>
+        </aside>
       </main>
 
       <!-- 로딩 오버레이 -->
       <div class="loading-overlay" id="loadingOverlay" style="display: none;">
         <div class="loading-spinner"></div>
-        <div class="loading-text">데이터 로딩 중...</div>
+        <div class="loading-text">처리 중...</div>
       </div>
     </div>
 
@@ -141,26 +138,26 @@ function renderKRPInterface(store) {
 
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f8fafc;
-        color: #1a202c;
-        overflow-x: hidden;
+        background: #f1f5f9;
+        color: #1e293b;
+        overflow: hidden;
       }
 
       .krp-system {
-        min-height: 100vh;
+        height: 100vh;
         display: flex;
         flex-direction: column;
       }
 
       /* 헤더 스타일 */
       .krp-header {
-        background: linear-gradient(135deg, #e67e22 0%, #d35400 100%);
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         color: white;
         padding: 16px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        box-shadow: 0 4px 20px rgba(230, 126, 34, 0.3);
+        box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
         position: sticky;
         top: 0;
         z-index: 100;
@@ -181,6 +178,7 @@ function renderKRPInterface(store) {
       .print-status {
         display: flex;
         gap: 32px;
+        align-items: center;
       }
 
       .status-item {
@@ -191,6 +189,20 @@ function renderKRPInterface(store) {
         font-size: 28px;
         font-weight: 800;
         line-height: 1;
+      }
+
+      .status-indicator {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #6b7280;
+        margin: 0 auto 4px;
+        position: relative;
+      }
+
+      .status-indicator.active {
+        background: #10b981;
+        animation: pulse 2s infinite;
       }
 
       .status-label {
@@ -243,176 +255,68 @@ function renderKRPInterface(store) {
       /* 메인 컨텐츠 */
       .krp-main {
         flex: 1;
-        padding: 24px;
         display: grid;
-        grid-template-columns: 1fr 400px;
-        gap: 24px;
-        min-height: calc(100vh - 80px);
+        grid-template-columns: 1fr 300px;
+        gap: 20px;
+        padding: 20px;
+        overflow: hidden;
       }
 
-      .section-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-      }
-
-      .section-header h2 {
-        font-size: 18px;
-        font-weight: 700;
-        color: #1a202c;
-      }
-
-      .queue-controls {
-        display: flex;
-        gap: 12px;
-      }
-
-      .auto-print-btn {
-        background: #6b7280;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-      }
-
-      .auto-print-btn.active {
-        background: #10b981;
-      }
-
-      .preview-controls {
-        display: flex;
-        gap: 12px;
-      }
-
-      .print-complete-btn, .reprint-btn {
-        border: none;
-        padding: 8px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-      }
-
-      .print-complete-btn {
-        background: #10b981;
-        color: white;
-      }
-
-      .print-complete-btn:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
-      }
-
-      .reprint-btn {
-        background: #3b82f6;
-        color: white;
-      }
-
-      .reprint-btn:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
-      }
-
-      /* 출력 대기 목록 */
-      .print-queue {
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
+      /* 메인 주문서 영역 */
+      .main-receipt-area {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        overflow: hidden;
       }
 
-      .queue-item {
-        background: white;
-        border-radius: 12px;
-        padding: 16px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        border: 2px solid transparent;
-        cursor: pointer;
-        transition: all 0.2s ease;
+      .receipt-container {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        position: relative;
       }
 
-      .queue-item:hover {
-        border-color: #e67e22;
-        transform: translateY(-1px);
-      }
-
-      .queue-item.selected {
-        border-color: #e67e22;
-        background: #fef7ed;
-      }
-
-      .queue-header {
+      .no-receipt {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: center;
-        margin-bottom: 12px;
+        justify-content: center;
+        height: 100%;
+        color: #64748b;
+        text-align: center;
       }
 
-      .order-info {
-        display: flex;
-        align-items: center;
-        gap: 12px;
+      .no-receipt-icon {
+        font-size: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
       }
 
-      .order-number {
+      .no-receipt h3 {
+        font-size: 24px;
+        margin-bottom: 8px;
+        color: #475569;
+      }
+
+      .no-receipt p {
         font-size: 16px;
-        font-weight: 800;
-        color: #e67e22;
       }
 
-      .order-table {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1a202c;
-      }
-
-      .order-time {
-        font-size: 12px;
-        color: #64748b;
-      }
-
-      .order-items {
-        font-size: 13px;
-        color: #64748b;
-        line-height: 1.4;
-      }
-
-      .order-total {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1a202c;
-        margin-top: 8px;
-      }
-
-      /* 주문서 프리뷰 */
-      .receipt-preview {
-        background: white;
-        border: 2px dashed #64748b;
-        border-radius: 12px;
-        padding: 20px;
+      /* 주문서 스타일 */
+      .receipt {
         font-family: 'Courier New', monospace;
         font-size: 14px;
         line-height: 1.6;
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
-      }
-
-      .no-selection {
-        text-align: center;
-        padding: 60px 20px;
-        color: #64748b;
-      }
-
-      .no-selection-icon {
-        font-size: 48px;
-        margin-bottom: 16px;
+        max-width: 400px;
+        margin: 0 auto;
+        border: 2px dashed #64748b;
+        padding: 20px;
+        border-radius: 12px;
+        background: #fefefe;
+        position: relative;
       }
 
       .receipt-header {
@@ -426,11 +330,6 @@ function renderKRPInterface(store) {
         font-weight: bold;
         font-size: 18px;
         margin-bottom: 8px;
-      }
-
-      .receipt-store {
-        font-size: 14px;
-        margin-bottom: 4px;
       }
 
       .receipt-order-info {
@@ -490,6 +389,116 @@ function renderKRPInterface(store) {
         color: #64748b;
       }
 
+      .receipt-actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 20px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .complete-btn {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 700;
+        transition: all 0.2s ease;
+      }
+
+      .complete-btn:hover {
+        background: #b91c1c;
+        transform: translateY(-1px);
+      }
+
+      /* 대기 큐 패널 */
+      .waiting-panel {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        background: #f8fafc;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .panel-header h3 {
+        font-size: 18px;
+        font-weight: 700;
+      }
+
+      .queue-badge {
+        background: #dc2626;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .waiting-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+      }
+
+      .empty-queue {
+        text-align: center;
+        color: #64748b;
+        padding: 40px 20px;
+      }
+
+      .queue-item {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .queue-item:hover {
+        background: #e2e8f0;
+        border-color: #cbd5e1;
+      }
+
+      .queue-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .queue-table {
+        font-weight: 700;
+        color: #dc2626;
+      }
+
+      .queue-time {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .queue-summary {
+        font-size: 12px;
+        color: #475569;
+      }
+
       /* 로딩 오버레이 */
       .loading-overlay {
         position: fixed;
@@ -509,7 +518,7 @@ function renderKRPInterface(store) {
         width: 48px;
         height: 48px;
         border: 4px solid #e5e7eb;
-        border-top: 4px solid #e67e22;
+        border-top: 4px solid #dc2626;
         border-radius: 50%;
         animation: spin 1s linear infinite;
         margin-bottom: 16px;
@@ -535,19 +544,7 @@ function renderKRPInterface(store) {
       @media (max-width: 1024px) {
         .krp-main {
           grid-template-columns: 1fr;
-          gap: 16px;
-        }
-      }
-
-      @media (max-width: 768px) {
-        .krp-header {
-          flex-direction: column;
-          gap: 16px;
-          padding: 16px;
-        }
-
-        .print-status {
-          gap: 16px;
+          grid-template-rows: 1fr 200px;
         }
       }
     </style>
@@ -556,6 +553,9 @@ function renderKRPInterface(store) {
   // 시간 업데이트 시작
   updateCurrentTime();
   setInterval(updateCurrentTime, 1000);
+
+  // 상태 UI 업데이트
+  updateStatusUI();
 }
 
 // 시간 업데이트
@@ -575,12 +575,10 @@ function updateCurrentTime() {
   }
 }
 
-// 출력 대기 목록 로딩
-async function loadPrintQueue(storeId) {
+// 초기 대기 큐 로딩 (페이지 새로고침 시)
+async function loadInitialQueue(storeId) {
   try {
-    console.log(`📋 출력 대기 목록 로딩 - 매장 ${storeId}`);
-
-    showLoading(true);
+    console.log(`📋 초기 출력 대기 목록 로딩 - 매장 ${storeId}`);
 
     const response = await fetch(`/api/krp?storeId=${storeId}`, {
       headers: {
@@ -595,288 +593,26 @@ async function loadPrintQueue(storeId) {
 
     const data = await response.json();
 
-    if (data.success) {
-      printQueue = data.orders || [];
-      renderPrintQueue();
-      updateQueueCounts();
-      console.log(`✅ 출력 대기 목록 로딩 완료: ${printQueue.length}개`);
-    } else {
-      throw new Error(data.error || '출력 대기 목록 조회 실패');
-    }
-
-  } catch (error) {
-    console.error('❌ 출력 대기 목록 로딩 실패:', error);
-    showNotification('출력 대기 목록을 불러올 수 없습니다', 'error');
-  } finally {
-    showLoading(false);
-  }
-}
-
-// 출력 대기 목록 렌더링
-function renderPrintQueue() {
-  const queueElement = document.getElementById('printQueue');
-  if (!queueElement) return;
-
-  if (printQueue.length === 0) {
-    queueElement.innerHTML = `
-      <div style="text-align: center; padding: 40px; color: #64748b;">
-        <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-        <h3>출력 대기 중인 주문이 없습니다</h3>
-        <p>새로운 주문이 들어오면 여기에 표시됩니다</p>
-      </div>
-    `;
-    return;
-  }
-
-  const queueHTML = printQueue.map(order => {
-    const orderTime = new Date(order.created_at);
-    const timeString = orderTime.toLocaleTimeString('ko-KR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const itemsText = order.items.slice(0, 3).map(item => 
-      `${item.quantity}x ${item.menuName}`
-    ).join(', ');
-
-    const moreItems = order.items.length > 3 ? ` 외 ${order.items.length - 3}개` : '';
-
-    return `
-      <div class="queue-item ${selectedOrder?.ticket_id === order.ticket_id ? 'selected' : ''}" 
-           onclick="selectOrder(${order.ticket_id})">
-        <div class="queue-header">
-          <div class="order-info">
-            <div class="order-number">#${order.ticket_id}</div>
-            <div class="order-table">테이블 ${order.table_number}</div>
-          </div>
-          <div class="order-time">${timeString}</div>
-        </div>
-        <div class="order-items">${itemsText}${moreItems}</div>
-        <div class="order-total">합계: ${order.total_amount.toLocaleString()}원</div>
-      </div>
-    `;
-  }).join('');
-
-  queueElement.innerHTML = queueHTML;
-}
-
-// 주문 선택
-function selectOrder(ticketId) {
-  selectedOrder = printQueue.find(order => order.ticket_id === ticketId);
-  
-  if (!selectedOrder) return;
-
-  console.log(`📄 주문 선택: 티켓 ${ticketId}`);
-
-  // 대기 목록에서 선택 표시
-  renderPrintQueue();
-
-  // 프리뷰 렌더링
-  renderReceiptPreview(selectedOrder);
-
-  // 버튼 활성화
-  document.getElementById('printCompleteBtn').disabled = false;
-  document.getElementById('reprintBtn').disabled = false;
-}
-
-// 주문서 프리뷰 렌더링
-function renderReceiptPreview(order) {
-  const previewElement = document.getElementById('receiptPreview');
-  if (!previewElement) return;
-
-  const orderTime = new Date(order.created_at);
-  const timeString = orderTime.toLocaleString('ko-KR');
-
-  const itemsHTML = order.items.map(item => `
-    <div class="receipt-item">
-      <div class="item-left">
-        <div class="item-name">${item.quantity}x ${item.menuName}</div>
-        ${item.options && Object.keys(item.options).length > 0 ? 
-          `<div class="item-details">${JSON.stringify(item.options)}</div>` : ''}
-      </div>
-      <div class="item-price">${item.totalPrice.toLocaleString()}원</div>
-    </div>
-  `).join('');
-
-  previewElement.innerHTML = `
-    <div class="receipt-header">
-      <div class="receipt-title">🍴 주방 주문서</div>
-      <div class="receipt-store">TableLink Kitchen</div>
-    </div>
-
-    <div class="receipt-order-info">
-      <strong>주문번호: #${order.ticket_id}</strong><br>
-      <strong>테이블: ${order.table_number}</strong><br>
-      고객: ${order.customer_name}<br>
-      ${timeString}
-    </div>
-
-    <div class="receipt-items">
-      ${itemsHTML}
-    </div>
-
-    <div class="receipt-total">
-      <div class="total-amount">합계: ${order.total_amount.toLocaleString()}원</div>
-    </div>
-
-    <div class="receipt-footer">
-      주방에서 조리를 시작하세요<br>
-      TableLink KRP System
-    </div>
-  `;
-}
-
-// 출력 완료 처리
-async function completePrint() {
-  if (!selectedOrder) return;
-
-  try {
-    console.log(`✅ 출력 완료 처리: 티켓 ${selectedOrder.ticket_id}`);
-
-    const response = await fetch('/api/krp/print', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        storeId: currentStoreId,
-        orderId: selectedOrder.order_id,
-        ticketId: selectedOrder.ticket_id
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // 대기 목록에서 제거
-      printQueue = printQueue.filter(order => order.ticket_id !== selectedOrder.ticket_id);
+    if (data.success && data.orders) {
+      // 시간순으로 정렬
+      const sortedOrders = data.orders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       
-      // 선택 초기화
-      selectedOrder = null;
+      if (sortedOrders.length > 0) {
+        // 첫 번째는 메인 화면에 표시
+        displayMainReceipt(sortedOrders[0]);
+        
+        // 나머지는 대기 큐에 추가
+        if (sortedOrders.length > 1) {
+          waitingQueue = sortedOrders.slice(1);
+          updateWaitingList();
+        }
+      }
 
-      // UI 업데이트
-      renderPrintQueue();
-      updateQueueCounts();
-
-      // 프리뷰 초기화
-      document.getElementById('receiptPreview').innerHTML = `
-        <div class="no-selection">
-          <div class="no-selection-icon">📄</div>
-          <p>출력할 주문을 선택하세요</p>
-        </div>
-      `;
-
-      // 버튼 비활성화
-      document.getElementById('printCompleteBtn').disabled = true;
-      document.getElementById('reprintBtn').disabled = true;
-
-      showNotification(`주문 #${result.order.ticket_id} 출력이 완료되었습니다`, 'success');
-
-    } else {
-      throw new Error(result.error || '출력 완료 처리 실패');
+      console.log(`✅ 초기 로딩 완료: 메인 1개, 대기 ${waitingQueue.length}개`);
     }
 
   } catch (error) {
-    console.error('❌ 출력 완료 처리 실패:', error);
-    showNotification('출력 완료 처리에 실패했습니다', 'error');
-  }
-}
-
-// 재출력 처리
-async function reprintOrder() {
-  if (!selectedOrder) return;
-
-  try {
-    console.log(`🔄 재출력 처리: 티켓 ${selectedOrder.ticket_id}`);
-
-    const response = await fetch(`/api/krp/reprint/${selectedOrder.ticket_id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        storeId: currentStoreId
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      showNotification(`주문 #${selectedOrder.ticket_id} 재출력이 요청되었습니다`, 'info');
-      
-      // 대기 목록 새로고침
-      await loadPrintQueue(currentStoreId);
-
-    } else {
-      throw new Error(result.error || '재출력 요청 실패');
-    }
-
-  } catch (error) {
-    console.error('❌ 재출력 처리 실패:', error);
-    showNotification('재출력 요청에 실패했습니다', 'error');
-  }
-}
-
-// 자동 출력 토글
-let autoPrintEnabled = false;
-function toggleAutoPrint() {
-  autoPrintEnabled = !autoPrintEnabled;
-  const btn = document.getElementById('autoPrintBtn');
-  
-  if (btn) {
-    btn.textContent = autoPrintEnabled ? '🔄 자동출력 ON' : '🔄 자동출력 OFF';
-    btn.classList.toggle('active', autoPrintEnabled);
-  }
-
-  console.log(`🔄 자동 출력 모드: ${autoPrintEnabled ? 'ON' : 'OFF'}`);
-  showNotification(`자동 출력 모드가 ${autoPrintEnabled ? '활성화' : '비활성화'}되었습니다`, 'info');
-}
-
-// 대기 목록 카운트 업데이트
-function updateQueueCounts() {
-  const queueCountElement = document.getElementById('queueCount');
-  const printedCountElement = document.getElementById('printedCount');
-
-  if (queueCountElement) {
-    queueCountElement.textContent = printQueue.length;
-  }
-
-  // 출력 완료 카운트는 간단하게 처리 (실제로는 DB에서 조회)
-  if (printedCountElement && !window.krpPrintedCount) {
-    window.krpPrintedCount = 0;
-  }
-}
-
-// 테스트 출력
-function testPrint() {
-  const testOrder = {
-    order_id: 'TEST-' + Date.now(),
-    ticket_id: 'TEST-' + Date.now(),
-    table_number: '테스트',
-    customer_name: '테스트 고객',
-    total_amount: 25000,
-    created_at: new Date().toISOString(),
-    items: [
-      { menuName: '김치찌개', quantity: 2, totalPrice: 16000, options: {} },
-      { menuName: '공기밥', quantity: 1, totalPrice: 2000, options: {} },
-      { menuName: '계란말이', quantity: 1, totalPrice: 7000, options: {} }
-    ]
-  };
-
-  selectedOrder = testOrder;
-  renderReceiptPreview(testOrder);
-  
-  document.getElementById('printCompleteBtn').disabled = false;
-  document.getElementById('reprintBtn').disabled = true;
-
-  showNotification('테스트 주문서가 로드되었습니다', 'info');
-}
-
-// 대기 목록 새로고침
-async function refreshPrintQueue() {
-  if (currentStoreId) {
-    await loadPrintQueue(currentStoreId);
-    showNotification('출력 대기 목록을 새로고침했습니다', 'info');
+    console.warn('⚠️ 초기 대기 목록 로딩 실패:', error);
   }
 }
 
@@ -903,30 +639,10 @@ function setupKRPWebSocket(storeId) {
       updateConnectionStatus(false);
     });
 
-    // 새 출력 요청 수신
-    krpSocket.on('krp-print-request', (data) => {
-      console.log('🖨️ 새 출력 요청 수신:', data);
-      
-      if (autoPrintEnabled) {
-        // 자동 출력 모드인 경우 즉시 처리
-        console.log('🔄 자동 출력 모드 - 즉시 처리');
-      }
-      
-      // 대기 목록 새로고침
-      loadPrintQueue(currentStoreId);
-      showNotification(`새 출력 요청: 테이블 ${data.table_number}`, 'info');
-    });
-
-    // 출력 완료 알림 수신
-    krpSocket.on('krp-print-completed', (data) => {
-      console.log('✅ 출력 완료 알림 수신:', data);
-      
-      if (data.action === 'remove_from_queue') {
-        // 다른 클라이언트에서 출력 완료한 경우 대기 목록에서 제거
-        printQueue = printQueue.filter(order => order.ticket_id !== data.ticket_id);
-        renderPrintQueue();
-        updateQueueCounts();
-      }
+    // 새 출력 요청 수신 - 핵심 이벤트
+    krpSocket.on('krp:new-print', (printData) => {
+      console.log('🖨️ 새 출력 요청 수신:', printData);
+      handleNewPrintRequest(printData);
     });
 
     krpSocket.on('connect_error', (error) => {
@@ -937,6 +653,208 @@ function setupKRPWebSocket(storeId) {
   } catch (error) {
     console.error('❌ KRP WebSocket 설정 실패:', error);
     updateConnectionStatus(false);
+  }
+}
+
+// 새 출력 요청 처리 - 핵심 로직
+function handleNewPrintRequest(printData) {
+  console.log(`🎯 새 출력 요청 처리: 테이블 ${printData.table_number}`);
+
+  if (isProcessing) {
+    console.log('⚠️ 이미 처리 중 - 요청 대기열에 추가');
+    waitingQueue.push(printData);
+    updateWaitingList();
+    return;
+  }
+
+  // 현재 화면이 비어 있으면 즉시 메인 화면에 표시
+  if (!currentReceipt) {
+    console.log('📄 메인 화면이 비어있음 - 즉시 표시');
+    displayMainReceipt(printData);
+  } else {
+    // 이미 주문서가 표시 중이면 대기 큐에 추가
+    console.log('📝 메인 화면이 사용 중 - 대기 큐에 추가');
+    waitingQueue.push(printData);
+    updateWaitingList();
+  }
+
+  // 알림 사운드
+  playPrintSound();
+  showNotification(`새 출력: 테이블 ${printData.table_number}`, 'info');
+}
+
+// 메인 화면에 주문서 표시
+function displayMainReceipt(printData) {
+  currentReceipt = printData;
+  
+  const container = document.getElementById('receiptContainer');
+  if (!container) return;
+
+  const orderTime = new Date(printData.created_at);
+  const timeString = orderTime.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const itemsHTML = printData.items.map(item => `
+    <div class="receipt-item">
+      <div class="item-left">
+        <div class="item-name">${item.quantity}x ${item.menuName}</div>
+        ${item.options && Object.keys(item.options).length > 0 ? 
+          `<div class="item-details">${JSON.stringify(item.options)}</div>` : ''}
+      </div>
+      <div class="item-price">${item.totalPrice.toLocaleString()}원</div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="receipt">
+      <div class="receipt-header">
+        <div class="receipt-title">🍴 주방 주문서</div>
+        <div class="receipt-store">TableLink Kitchen</div>
+      </div>
+
+      <div class="receipt-order-info">
+        <strong>주문번호: #${printData.ticket_id}</strong><br>
+        <strong>테이블: ${printData.table_number}</strong><br>
+        고객: ${printData.customer_name}<br>
+        ${timeString}
+      </div>
+
+      <div class="receipt-items">
+        ${itemsHTML}
+      </div>
+
+      <div class="receipt-total">
+        <div class="total-amount">합계: ${printData.total_amount.toLocaleString()}원</div>
+      </div>
+
+      <div class="receipt-footer">
+        주방에서 조리를 시작하세요<br>
+        TableLink KRP System
+      </div>
+
+      <div class="receipt-actions">
+        <button class="complete-btn" onclick="completeCurrentReceipt()">
+          ✅ 완료 (화면에서 제거)
+        </button>
+      </div>
+    </div>
+  `;
+
+  updateStatusUI();
+  console.log(`✅ 메인 화면에 주문서 표시: 티켓 ${printData.ticket_id}`);
+}
+
+// 현재 주문서 완료 처리
+function completeCurrentReceipt() {
+  if (!currentReceipt) return;
+
+  console.log(`✅ 주문서 완료: 티켓 ${currentReceipt.ticket_id}`);
+
+  // 메인 화면 초기화
+  currentReceipt = null;
+  const container = document.getElementById('receiptContainer');
+  if (container) {
+    container.innerHTML = `
+      <div class="no-receipt">
+        <div class="no-receipt-icon">📄</div>
+        <h3>출력할 주문서 없음</h3>
+        <p>새로운 출력 요청을 기다리는 중입니다</p>
+      </div>
+    `;
+  }
+
+  // 대기 큐에서 다음 주문서 가져오기
+  if (waitingQueue.length > 0) {
+    const nextReceipt = waitingQueue.shift();
+    console.log(`📄 다음 주문서 표시: 티켓 ${nextReceipt.ticket_id}`);
+    
+    setTimeout(() => {
+      displayMainReceipt(nextReceipt);
+      updateWaitingList();
+    }, 500); // 약간의 딜레이로 자연스러운 전환
+  }
+
+  updateStatusUI();
+  showNotification('주문서 처리 완료', 'success');
+}
+
+// 대기 목록 UI 업데이트
+function updateWaitingList() {
+  const listElement = document.getElementById('waitingList');
+  const badgeElement = document.getElementById('queueBadge');
+  
+  if (!listElement || !badgeElement) return;
+
+  badgeElement.textContent = waitingQueue.length;
+
+  if (waitingQueue.length === 0) {
+    listElement.innerHTML = `
+      <div class="empty-queue">
+        <p>대기 중인 주문 없음</p>
+      </div>
+    `;
+    return;
+  }
+
+  const itemsHTML = waitingQueue.map((item, index) => {
+    const orderTime = new Date(item.created_at);
+    const timeString = orderTime.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const itemCount = item.items?.length || 0;
+
+    return `
+      <div class="queue-item" onclick="moveToMain(${index})">
+        <div class="queue-item-header">
+          <span class="queue-table">테이블 ${item.table_number}</span>
+          <span class="queue-time">${timeString}</span>
+        </div>
+        <div class="queue-summary">
+          #${item.ticket_id} • ${itemCount}개 메뉴 • ${item.total_amount.toLocaleString()}원
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  listElement.innerHTML = itemsHTML;
+}
+
+// 대기 큐에서 메인으로 이동
+function moveToMain(index) {
+  if (!waitingQueue[index]) return;
+
+  // 현재 주문서가 있으면 대기 큐 맨 앞에 추가
+  if (currentReceipt) {
+    waitingQueue.unshift(currentReceipt);
+  }
+
+  // 선택된 주문서를 메인으로 이동
+  const selectedReceipt = waitingQueue.splice(index, 1)[0];
+  displayMainReceipt(selectedReceipt);
+  updateWaitingList();
+
+  console.log(`🔄 대기 큐에서 메인으로 이동: 티켓 ${selectedReceipt.ticket_id}`);
+}
+
+// 상태 UI 업데이트
+function updateStatusUI() {
+  const queueCountElement = document.getElementById('queueCount');
+  const printingIndicatorElement = document.getElementById('printingIndicator');
+
+  if (queueCountElement) {
+    queueCountElement.textContent = waitingQueue.length;
+  }
+
+  if (printingIndicatorElement) {
+    if (currentReceipt) {
+      printingIndicatorElement.classList.add('active');
+    } else {
+      printingIndicatorElement.classList.remove('active');
+    }
   }
 }
 
@@ -956,11 +874,41 @@ function updateConnectionStatus(isConnected) {
   }
 }
 
-// 로딩 표시
-function showLoading(show) {
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  if (loadingOverlay) {
-    loadingOverlay.style.display = show ? 'flex' : 'none';
+// 새로고침
+function refreshKRP() {
+  if (currentStoreId) {
+    location.reload();
+  }
+}
+
+// 테스트 기능
+function testKRP() {
+  const testData = {
+    ticket_id: `TEST-${Date.now()}`,
+    order_id: `TEST-ORDER-${Date.now()}`,
+    table_number: '테스트',
+    customer_name: '테스트 고객',
+    total_amount: 25000,
+    created_at: new Date().toISOString(),
+    items: [
+      { menuName: '김치찌개', quantity: 2, totalPrice: 16000, options: {} },
+      { menuName: '공기밥', quantity: 1, totalPrice: 2000, options: {} },
+      { menuName: '계란말이', quantity: 1, totalPrice: 7000, options: {} }
+    ]
+  };
+
+  handleNewPrintRequest(testData);
+  showNotification('테스트 주문서가 추가되었습니다', 'info');
+}
+
+// 사운드 재생
+function playPrintSound() {
+  try {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2u2IdBT2V2/LHdikELIHN8tp9MwgWa7zx6qNPFAtGn97xsnIdBjiS2+zBeyMFJHfH8N+NQQoUX7Pp66hVFApGnt7xuDMF=');
+    audio.volume = 0.3;
+    audio.play().catch(e => console.log('사운드 재생 실패:', e));
+  } catch (error) {
+    console.log('사운드 재생 불가:', error);
   }
 }
 
@@ -996,6 +944,23 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
+// KRP 에러 화면 렌더링
+function renderKRPError() {
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div style="padding: 40px; text-align: center; color: #ef4444;">
+      <h2>❌ KRP 시스템 오류</h2>
+      <p>KRP 시스템을 초기화할 수 없습니다.</p>
+      <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        다시 시도
+      </button>
+      <button onclick="history.back()" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        돌아가기
+      </button>
+    </div>
+  `;
+}
+
 // CSS 애니메이션 추가
 const style = document.createElement('style');
 style.textContent = `
@@ -1023,30 +988,11 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// KRP 에러 화면 렌더링
-function renderKRPError() {
-  const main = document.getElementById('main');
-  main.innerHTML = `
-    <div style="padding: 40px; text-align: center; color: #ef4444;">
-      <h2>❌ KRP 시스템 오류</h2>
-      <p>KRP 시스템을 초기화할 수 없습니다.</p>
-      <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-        다시 시도
-      </button>
-      <button onclick="history.back()" style="margin-top: 20px; margin-left: 10px; padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer;">
-        돌아가기
-      </button>
-    </div>
-  `;
-}
-
 // 전역 함수 등록
 window.renderKRP = renderKRP;
-window.selectOrder = selectOrder;
-window.completePrint = completePrint;
-window.reprintOrder = reprintOrder;
-window.toggleAutoPrint = toggleAutoPrint;
-window.testPrint = testPrint;
-window.refreshPrintQueue = refreshPrintQueue;
+window.completeCurrentReceipt = completeCurrentReceipt;
+window.moveToMain = moveToMain;
+window.refreshKRP = refreshKRP;
+window.testKRP = testKRP;
 
-console.log('✅ KRP 시스템 로드 완료 - 출력 전용 모드');
+console.log('✅ KRP 시스템 리팩토링 완료 - 단일 주문서 + 대기 큐 방식');

@@ -123,7 +123,7 @@
         // 강화된 안전장치: 완료된 상태의 티켓 강제 제거 및 로깅
         const originalCount = tickets.length;
         const removedTickets = [];
-        
+
         tickets = tickets.filter(ticket => {
           const status = (ticket.status || '').toUpperCase();
           const isDone = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
@@ -131,16 +131,16 @@
           if (isDone) {
             const ticketId = this._extractSafeTicketId(ticket);
             console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${ticketId}, 상태: ${status}`);
-            
+
             // 상태에서 제거
             KDSState.removeTicket(ticketId);
             removedTickets.push(ticketId);
-            
+
             // UI에서도 강제 제거
             if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeCardDirectly === 'function') {
               window.KDSUIRenderer.removeCardDirectly(ticketId);
             }
-            
+
             return false;
           }
           return true;
@@ -149,7 +149,7 @@
         if (originalCount !== tickets.length) {
           console.log(`🧹 완료된 티켓 제거: ${originalCount} → ${tickets.length}개`);
           console.log(`🗑️ 제거된 티켓 ID들:`, removedTickets);
-          
+
           // 탭 카운트 즉시 업데이트
           if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
             setTimeout(() => {
@@ -168,7 +168,7 @@
       }
 
       console.log(`🔍 필터링 완료: ${currentTab} 탭, ${tickets.length}개 티켓 표시`);
-      
+
       // 필터링 후 탭 카운트 최종 확인
       if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
         window.KDSUIRenderer.updateTicketCounts();
@@ -364,7 +364,7 @@
         if (ticket) {
           // 티켓 상태를 완료로 변경
           ticket.status = 'COMPLETED';
-          
+
           // 아이템들도 완료 상태로 변경
           if (ticket.items) {
             ticket.items.forEach(item => {
@@ -372,7 +372,7 @@
               item.item_status = 'COMPLETED';
             });
           }
-          
+
           console.log(`🔄 티켓 ${ticketId} 상태를 COMPLETED로 변경`);
         }
 
@@ -421,12 +421,12 @@
         // 에러 발생 시에도 강제로 상태 정리
         KDSState.removeTicket(ticketId);
         this.removeCardFromUI(ticketId);
-        
+
         // 필터링 재실행으로 잔존 티켓 정리
         if (KDSState.currentTab === 'active') {
           this.filterTickets();
         }
-        
+
         // 탭 카운트 업데이트
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
@@ -797,10 +797,10 @@
 
         // 2. 출력 상태 업데이트 API 호출
         const result = await KDSAPIService.updatePrintStatus(ticketId);
-        
+
         if (result.success) {
           console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 성공`);
-          
+
           // 3. KRP 전송 (향후 KRP 모듈과 연계)
           if (window.KRPManager && typeof window.KRPManager.sendPrintRequest === 'function') {
             try {
@@ -835,6 +835,51 @@
       } catch (error) {
         console.error(`❌ 티켓 ${ticketId} 출력 실패:`, error);
         this.showError(`출력 중 오류가 발생했습니다: ${error.message}`);
+      }
+    },
+
+    /**
+     * 주문서 출력 처리 - 즉시 PRINTED 상태로 업데이트
+     */
+    async printTicket(ticketId) {
+      try {
+        console.log(`🖨️ 티켓 ${ticketId} 출력 시작`);
+
+        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/print`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('출력 요청 실패');
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          // 즉시 UI에서 티켓 제거
+          if (window.KDSUIRenderer) {
+            window.KDSUIRenderer.removeTicketCard(ticketId);
+          }
+
+          // 상태에서 제거
+          KDSState.removeTicket(ticketId);
+
+          // 사운드 재생
+          if (window.KDSSoundManager) {
+            window.KDSSoundManager.playPrintSound();
+          }
+
+          console.log(`✅ 티켓 ${ticketId} 출력 완료 - KRP로 전송됨`);
+        } else {
+          throw new Error(result.error || '출력 처리 실패');
+        }
+
+      } catch (error) {
+        console.error(`❌ 티켓 ${ticketId} 출력 실패:`, error);
+        alert('주문서 출력에 실패했습니다: ' + error.message);
       }
     },
 

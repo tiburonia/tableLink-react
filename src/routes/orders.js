@@ -1049,20 +1049,21 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
   try {
     const { ticketId } = req.params;
 
-    console.log(`🖨️ KDS 티켓 ${ticketId} 출력 상태 업데이트`);
+    console.log(`🖨️ KDS 티켓 ${ticketId} 출력 처리 - PRINTED 상태로 업데이트`);
 
     await client.query('BEGIN');
 
-    // order_tickets 테이블에서 print_status 업데이트
-    const updateResult = await client.query(`
+    // order_tickets 테이블에서 출력 상태를 PRINTED로 변경하고 printed_at 설정
+    const ticketUpdateResult = await client.query(`
       UPDATE order_tickets
       SET print_status = 'PRINTED',
+          printed_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
-      RETURNING id, order_id, print_status
+      RETURNING id, order_id, created_at
     `, [parseInt(ticketId)]);
 
-    if (updateResult.rows.length === 0) {
+    if (ticketUpdateResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
         success: false,
@@ -1070,28 +1071,97 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
       });
     }
 
+    const { order_id, created_at } = ticketUpdateResult.rows[0];
+
+    // 상세 주문 정보 조회 (KRP 전송용)
+    const orderDetailResult = await client.query(`
+      SELECT 
+        o.id as order_id,
+        o.store_id,
+        o.table_num,
+        o.created_at as order_created_at,
+        COALESCE(u.name, g.phone, '게스트') as customer_name,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'price', oi.price,
+            'totalPrice', oi.price * oi.quantity,
+            'options', COALESCE(oi.options, '{}')
+          ) ORDER BY oi.created_at
+        ) as items,
+        SUM(oi.price * oi.quantity) as total_amount
+      FROM orders o
+      JOIN order_items oi ON oi.ticket_id = $1
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone
+      WHERE o.id = $2
+      GROUP BY o.id, o.store_id, o.table_num, o.created_at, u.name, g.phone
+    `, [parseInt(ticketId), order_id]);
+
+    if (orderDetailResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '주문 정보를 찾을 수 없습니다'
+      });
+    }
+
+    const orderDetail = orderDetailResult.rows[0];
+
     await client.query('COMMIT');
 
-    const updatedTicket = updateResult.rows[0];
+    // KRP WebSocket으로 새 출력 요청 전송
+    if (global.io) {
+      const printData = {
+        ticket_id: parseInt(ticketId),
+        order_id: order_detail.order_id,
+        table_number: orderDetail.table_num,
+        customer_name: orderDetail.customer_name,
+        total_amount: parseInt(orderDetail.total_amount) || 0,
+        created_at: orderDetail.order_created_at,
+        items: orderDetail.items || [],
+        printed_at: new Date().toISOString()
+      };
+
+      console.log(`📡 KRP 웹소켓 이벤트 전송: 티켓 ${ticketId}`);
+
+      // KRP에 새 출력 요청 전송
+      global.io.to(`krp:${orderDetail.store_id}`).emit('krp:new-print', printData);
+
+      // KDS에서 티켓 제거 알림
+      global.io.to(`kds:${orderDetail.store_id}`).emit('kds-update', {
+        type: 'ticket_printed',
+        data: {
+          ticket_id: parseInt(ticketId),
+          order_id: order_detail.order_id,
+          status: 'PRINTED',
+          table_number: orderDetail.table_num,
+          action: 'remove_immediately'
+        }
+      });
+    }
 
     res.json({
       success: true,
-      message: '출력 상태가 업데이트되었습니다',
-      data: {
-        ticketId: updatedTicket.id,
-        orderId: updatedTicket.order_id,
-        printStatus: updatedTicket.print_status
+      message: '출력 처리 완료 - KRP로 전송됨',
+      ticket_id: parseInt(ticketId),
+      order_id: order_detail.order_id,
+      print_data: {
+        table_number: orderDetail.table_num,
+        customer_name: orderDetail.customer_name,
+        items_count: orderDetail.items?.length || 0,
+        total_amount: parseInt(orderDetail.total_amount) || 0
       }
     });
 
-    console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 완료`);
-
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('❌ KDS 출력 상태 업데이트 실패:', error);
+    console.error('❌ KDS 출력 처리 실패:', error);
     res.status(500).json({
       success: false,
-      error: '출력 상태 업데이트 실패',
+      error: '출력 처리 실패',
       details: error.message
     });
   } finally {
@@ -1219,180 +1289,3 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
 
 module.exports = router;
-// 🖨️ KDS 티켓 출력 상태 업데이트
-router.put('/kds/tickets/:ticketId/print', async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    const { ticketId } = req.params;
-    
-    console.log(`🖨️ 티켓 ${ticketId} 출력 상태 업데이트 요청`);
-
-    // 티켓 존재 확인
-    const ticketCheck = await client.query(
-      'SELECT check_id, store_id FROM order_tickets WHERE check_id = $1',
-      [ticketId]
-    );
-
-    if (ticketCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '티켓을 찾을 수 없습니다'
-      });
-    }
-
-    const ticket = ticketCheck.rows[0];
-
-    // 출력 상태 업데이트 (printed_at 컬럼이 있다면)
-    const updateResult = await client.query(`
-      UPDATE order_tickets 
-      SET printed_at = NOW(),
-          updated_at = NOW()
-      WHERE check_id = $1
-      RETURNING check_id, printed_at
-    `, [ticketId]);
-
-    if (updateResult.rows.length === 0) {
-      return res.status(500).json({
-        success: false,
-        error: '출력 상태 업데이트 실패'
-      });
-    }
-
-    console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 완료`);
-
-    // WebSocket으로 실시간 알림 (출력 완료)
-    if (global.io) {
-      global.io.to(`kds:${ticket.store_id}`).emit('kds-update', {
-        type: 'ticket_printed',
-        data: {
-          ticket_id: parseInt(ticketId),
-          printed_at: updateResult.rows[0].printed_at,
-          timestamp: new Date().toISOString(),
-          source: 'print_api'
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      data: {
-        ticket_id: ticketId,
-        printed_at: updateResult.rows[0].printed_at
-      }
-    });
-
-  } catch (error) {
-    console.error(`❌ 티켓 ${req.params.ticketId} 출력 상태 업데이트 실패:`, error);
-    res.status(500).json({
-      success: false,
-      error: '출력 상태 업데이트 중 오류가 발생했습니다'
-    });
-  } finally {
-    client.release();
-  }
-});
-
-// 🔄 KDS 동기화 API (백업 시스템)
-router.get('/kds/:storeId/sync', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-    const { lastSyncAt, version } = req.query;
-
-    console.log(`🔄 KDS 동기화 요청 - 매장 ${storeId}, 마지막 동기화: ${lastSyncAt}`);
-
-    const whereClause = lastSyncAt 
-      ? 'AND (ot.updated_at > $2 OR o.updated_at > $2)'
-      : '';
-
-    const queryParams = lastSyncAt 
-      ? [parseInt(storeId), lastSyncAt]
-      : [parseInt(storeId)];
-
-    // 변경된 티켓들 조회
-    const result = await pool.query(`
-      SELECT 
-        o.id as order_id,
-        ot.id as ticket_id,
-        ot.status as ticket_status,
-        ot.display_status,
-        o.table_num,
-        o.created_at,
-        o.updated_at,
-        ot.updated_at as ticket_updated_at,
-        o.source,
-        array_agg(
-          json_build_object(
-            'id', oi.id,
-            'menuName', oi.menu_name,
-            'quantity', oi.quantity,
-            'status', oi.item_status,
-            'orderedAt', oi.created_at,
-            'updatedAt', oi.updated_at,
-            'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
-          ) ORDER BY oi.created_at
-        ) FILTER (WHERE oi.cook_station = 'KITCHEN') as items
-      FROM orders o
-      JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE o.store_id = $1 
-        AND o.status = 'OPEN'
-        ${whereClause}
-      GROUP BY o.id, ot.id, ot.status, ot.display_status, o.table_num, 
-               o.created_at, o.updated_at, ot.updated_at, o.source
-      HAVING array_length(array_agg(oi.id) FILTER (WHERE oi.cook_station = 'KITCHEN'), 1) > 0
-      ORDER BY o.created_at ASC
-    `, queryParams);
-
-    // 삭제된 티켓들 조회 (DONE, COMPLETED 상태)
-    const deletedResult = lastSyncAt ? await pool.query(`
-      SELECT DISTINCT ot.id as ticket_id, ot.status
-      FROM order_tickets ot
-      JOIN orders o ON ot.order_id = o.id
-      WHERE o.store_id = $1 
-        AND ot.status IN ('DONE', 'COMPLETED', 'SERVED')
-        AND ot.updated_at > $2
-      ORDER BY ot.updated_at DESC
-    `, [parseInt(storeId), lastSyncAt]) : { rows: [] };
-
-    const syncData = {
-      success: true,
-      timestamp: new Date().toISOString(),
-      storeId: parseInt(storeId),
-      version: Date.now(), // 간단한 버전 관리
-      changes: {
-        updated: result.rows.map(order => ({
-          check_id: order.ticket_id,
-          id: order.order_id,
-          ticket_id: order.ticket_id,
-          customer_name: `테이블 ${order.table_num}`,
-          table_number: order.table_num,
-          status: order.ticket_status?.toUpperCase() || 'PENDING',
-          display_status: order.display_status,
-          created_at: order.created_at,
-          updated_at: order.ticket_updated_at || order.updated_at,
-          items: order.items || []
-        })),
-        deleted: deletedResult.rows.map(row => ({
-          ticket_id: row.ticket_id,
-          status: row.status,
-          action: 'remove'
-        }))
-      },
-      stats: {
-        updated: result.rows.length,
-        deleted: deletedResult.rows.length
-      }
-    };
-
-    res.json(syncData);
-
-  } catch (error) {
-    console.error('❌ KDS 동기화 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'KDS 동기화 실패',
-      details: error.message
-    });
-  }
-});
