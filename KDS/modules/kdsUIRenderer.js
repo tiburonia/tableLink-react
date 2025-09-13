@@ -452,10 +452,10 @@
       }
 
       // 버튼 상태 업데이트 (전체 티켓 객체 전달)
-      const ticket = KDSState.getTicket(ticketId);
-      if (ticket) {
-        ticket.status = status; // 상태 동기화
-        this.updateTicketButtons(card, ticket);
+      const ticketData = KDSState.getTicket(ticketId);
+      if (ticketData) {
+        ticketData.status = status; // 상태 동기화
+        this.updateTicketButtons(card, ticketData);
       }
 
       // 추가 시각적 효과
