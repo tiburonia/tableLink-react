@@ -207,9 +207,14 @@
      */
     handleTicketCookingStarted(data) {
       const ticketId = data.ticket_id;
+      console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 이벤트 수신`);
+      
       const ticket = KDSState.getTicket(ticketId);
 
       if (ticket) {
+        console.log(`🔄 티켓 ${ticketId} 상태 업데이트 시작`);
+        
+        // 상태 업데이트
         ticket.status = 'COOKING';
 
         if (ticket.items) {
@@ -217,18 +222,24 @@
             item.status = 'COOKING';
             item.item_status = 'COOKING';
           });
+          console.log(`🍽️ ${ticket.items.length}개 아이템 상태를 COOKING으로 변경`);
         }
 
+        // UI 업데이트
         if (window.KDSUIRenderer) {
-          window.KDSUIRenderer.updateTicketCard(ticket);
+          console.log(`🎨 WebSocket: 티켓 ${ticketId} UI 업데이트 시작`);
           window.KDSUIRenderer.updateTicketCookingState(ticketId, 'COOKING');
+          window.KDSUIRenderer.updateTicketCard(ticket);
+          console.log(`✅ WebSocket: 티켓 ${ticketId} UI 업데이트 완료`);
         }
 
-        console.log(`🔥 티켓 ${ticketId} 조리 시작 완료 - UI 업데이트됨`);
+        console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 처리 완료`);
 
         if (window.KDSSoundManager) {
           window.KDSSoundManager.playItemCompleteSound();
         }
+      } else {
+        console.warn(`⚠️ WebSocket: 티켓 ${ticketId}를 찾을 수 없음`);
       }
     },
 

@@ -325,18 +325,28 @@
       const startBtn = card.querySelector('.start-btn');
       const completeBtn = card.querySelector('.complete-btn');
 
+      console.log(`🎨 버튼 상태 업데이트: ${ticket.status}`);
+
       if (startBtn) {
         const isCookingOrDone = ticket.status === 'COOKING' || ticket.status === 'cooking' || 
                                ticket.status === 'DONE' || ticket.status === 'done' ||
                                ticket.status === 'completed';
+        
         startBtn.disabled = isCookingOrDone;
 
         if (isCookingOrDone) {
-          startBtn.style.opacity = '0.5';
+          startBtn.style.opacity = '0.3';
           startBtn.style.cursor = 'not-allowed';
+          startBtn.style.background = '#95a5a6';
+          startBtn.style.transform = 'none';
+          startBtn.textContent = '🔥 조리중';
+          console.log(`🎨 조리 시작 버튼 비활성화`);
         } else {
           startBtn.style.opacity = '1';
           startBtn.style.cursor = 'pointer';
+          startBtn.style.background = '#f39c12';
+          startBtn.style.transform = 'scale(1)';
+          startBtn.innerHTML = '<span>🔥</span> 조리 시작';
         }
       }
 
@@ -347,49 +357,104 @@
         if (isCooking) {
           completeBtn.style.opacity = '1';
           completeBtn.style.cursor = 'pointer';
-          completeBtn.style.background = '#27ae60';
-          completeBtn.style.animation = 'pulse 2s infinite';
+          completeBtn.style.background = 'linear-gradient(135deg, #27ae60, #229954)';
+          completeBtn.style.animation = 'buttonReady 2s infinite';
+          completeBtn.style.border = '2px solid #27ae60';
+          completeBtn.style.fontWeight = '700';
+          completeBtn.innerHTML = '<span>✅</span> 완료';
+          console.log(`🎨 완료 버튼 활성화`);
         } else {
-          completeBtn.style.opacity = '0.5';
+          completeBtn.style.opacity = '0.3';
           completeBtn.style.cursor = 'not-allowed';
           completeBtn.style.background = '#95a5a6';
           completeBtn.style.animation = 'none';
+          completeBtn.style.border = '1px solid #95a5a6';
+          completeBtn.style.fontWeight = '400';
+          completeBtn.innerHTML = '<span>✅</span> 완료';
         }
       }
+
+      console.log(`✅ 버튼 상태 업데이트 완료`);
     },
 
     /**
      * 티켓 조리 상태 UI 업데이트
      */
     updateTicketCookingState(ticketId, status) {
+      console.log(`🎨 티켓 ${ticketId} 조리 상태 UI 업데이트 시작: ${status}`);
+      
       const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-      if (!card) return;
+      if (!card) {
+        console.warn(`⚠️ 티켓 카드를 찾을 수 없음: ${ticketId}`);
+        return;
+      }
 
-      card.className = `ticket-card ${this.getStatusClass(status)}`;
+      // 카드 전체 스타일 업데이트
+      const newClass = `ticket-card ${this.getStatusClass(status)}`;
+      card.className = newClass;
+      console.log(`🎨 카드 클래스 업데이트: ${newClass}`);
 
+      // 경과 시간 스타일 업데이트
       const elapsedTime = card.querySelector('.elapsed-time');
-      if (elapsedTime && status === 'COOKING') {
-        elapsedTime.style.background = '#ff6b6b';
-        elapsedTime.style.color = 'white';
-        elapsedTime.style.fontWeight = '700';
-        elapsedTime.style.animation = 'pulse 2s infinite';
+      if (elapsedTime) {
+        if (status === 'COOKING') {
+          elapsedTime.style.background = '#ff6b6b';
+          elapsedTime.style.color = 'white';
+          elapsedTime.style.fontWeight = '700';
+          elapsedTime.style.animation = 'pulse 2s infinite';
+          elapsedTime.style.border = '2px solid #e74c3c';
+          console.log(`🎨 경과 시간 조리 중 스타일 적용`);
+        } else {
+          elapsedTime.style.background = '#fdedec';
+          elapsedTime.style.color = '#e74c3c';
+          elapsedTime.style.fontWeight = '600';
+          elapsedTime.style.animation = 'none';
+          elapsedTime.style.border = 'none';
+        }
       }
 
+      // 진행률 바 스타일 업데이트
       const progressFill = card.querySelector('.progress-fill');
-      if (progressFill && status === 'COOKING') {
-        progressFill.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a52)';
+      if (progressFill) {
+        if (status === 'COOKING') {
+          progressFill.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a52)';
+          progressFill.style.animation = 'progressPulse 3s infinite';
+          console.log(`🎨 진행률 바 조리 중 스타일 적용`);
+        } else {
+          progressFill.style.background = 'linear-gradient(90deg, #3498db, #2ecc71)';
+          progressFill.style.animation = 'none';
+        }
       }
 
+      // 개별 아이템 상태 업데이트
       const ticket = KDSState.getTicket(ticketId);
       if (ticket && ticket.items) {
-        ticket.items.forEach(item => {
+        console.log(`🎨 ${ticket.items.length}개 아이템 상태 업데이트`);
+        ticket.items.forEach((item, index) => {
           this.updateItemStatus(ticketId, item.id, status);
+          console.log(`🎨 아이템 ${index + 1} 상태 업데이트: ${item.id} -> ${status}`);
         });
       }
 
+      // 버튼 상태 업데이트
       this.updateTicketButtons(card, { status });
 
-      console.log(`🎨 티켓 ${ticketId} UI 업데이트 완료: ${status}`);
+      // 추가 시각적 효과
+      if (status === 'COOKING') {
+        card.style.border = '3px solid #e74c3c';
+        card.style.boxShadow = '0 8px 30px rgba(231, 76, 60, 0.4)';
+        
+        // 일시적인 강조 효과
+        card.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          card.style.transform = 'scale(1)';
+        }, 300);
+      } else {
+        card.style.border = 'none';
+        card.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+      }
+
+      console.log(`✅ 티켓 ${ticketId} UI 업데이트 완료: ${status}`);
     },
 
     /**
@@ -794,8 +859,19 @@
           }
 
           @keyframes buttonReady {
-            0%, 100% { box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); }
-            50% { box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5); }
+            0%, 100% { 
+              box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+              transform: scale(1);
+            }
+            50% { 
+              box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5);
+              transform: scale(1.05);
+            }
+          }
+
+          @keyframes progressPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
           }
 
           /* 티켓 헤더 */
