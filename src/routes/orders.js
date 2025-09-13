@@ -1128,6 +1128,8 @@ router.get('/kds/:storeId', async (req, res) => {
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1 
         AND o.status = 'OPEN'
+        AND ot.status NOT IN ('DONE', 'COMPLETED')
+        AND ot.display_status != 'UNVISIBLE'
         AND oi.item_status IN ('PENDING', 'COOKING', 'READY')
         AND COALESCE(oi.cook_station, 'KITCHEN') = 'KITCHEN'
       GROUP BY ot.id, o.table_num, u.name, o.created_at, ot.status

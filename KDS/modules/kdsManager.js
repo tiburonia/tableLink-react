@@ -292,8 +292,19 @@
 
         if (result.success) {
           console.log('✅ 완료 처리 성공:', result.message);
-          // WebSocket으로 처리되므로 여기서는 사운드만 재생
-          KDSSoundManager.playOrderCompleteSound();
+          
+          // 즉시 UI에서 제거 (WebSocket 이벤트를 기다리지 않음)
+          const ticket = KDSState.getTicket(ticketId);
+          if (ticket) {
+            ticket.status = 'completed';
+            KDSSoundManager.playOrderCompleteSound();
+            
+            setTimeout(() => {
+              KDSState.removeTicket(ticketId);
+              KDSUIRenderer.removeTicketFromUI(ticketId);
+              console.log(`🗑️ 완료된 티켓 ${ticketId} 즉시 제거`);
+            }, 1000);
+          }
         } else {
           throw new Error(result.error);
         }

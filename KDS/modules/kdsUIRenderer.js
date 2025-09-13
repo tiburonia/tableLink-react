@@ -646,23 +646,33 @@
       const activeTickets = KDSState.getActiveTickets();
       const completedTickets = KDSState.getCompletedTickets();
 
-      const activeCount = document.getElementById('activeCount');
-      const completedCount = document.getElementById('completedCount');
+      const activeCountElement = document.getElementById('activeCount');
+      const completedCountElement = document.getElementById('completedCount');
 
-      if (activeCount) activeCount.textContent = activeTickets.length;
-      if (completedCount) completedCount.textContent = completedTickets.length;
+      if (activeCountElement) {
+        activeCountElement.textContent = activeTickets.length;
+      }
+
+      if (completedCountElement) {
+        completedCountElement.textContent = completedTickets.length;
+      }
     },
 
     /**
-     * 빈 상태 확인
+     * 빈 상태 확인 및 표시
      */
     checkEmptyState() {
-      const grid = document.getElementById('ticketsGrid');
+      const ticketsGrid = document.getElementById('ticketsGrid');
       const emptyState = document.getElementById('emptyState');
-      const visibleCards = document.querySelectorAll('.ticket-card[style*="block"], .ticket-card:not([style*="none"])');
 
-      if (emptyState) {
-        emptyState.style.display = visibleCards.length === 0 ? 'block' : 'none';
+      if (!ticketsGrid || !emptyState) return;
+
+      const visibleTickets = ticketsGrid.querySelectorAll('.ticket-card:not([style*="display: none"])');
+
+      if (visibleTickets.length === 0) {
+        emptyState.style.display = 'flex';
+      } else {
+        emptyState.style.display = 'none';
       }
     },
 

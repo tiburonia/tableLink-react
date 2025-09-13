@@ -246,18 +246,22 @@
      * 티켓 완료 처리
      */
     handleTicketCompleted(data) {
-      const ticketId = data.ticket_id;
+      console.log('✅ 티켓 완료 이벤트:', data);
 
-      KDSState.removeTicket(ticketId);
+      const ticket = KDSState.getTicket(data.ticket_id);
+      if (ticket) {
+        // 티켓을 완료 상태로 변경
+        ticket.status = 'completed';
 
-      if (window.KDSUIRenderer) {
-        window.KDSUIRenderer.removeTicketCard(ticketId);
-      }
+        // 사운드 재생
+        KDSSoundManager.playOrderCompleteSound();
 
-      console.log(`✅ 티켓 ${ticketId} 완료 - UI에서 제거됨`);
-
-      if (window.KDSSoundManager) {
-        window.KDSSoundManager.playOrderCompleteSound();
+        // 1초 후 UI에서 완전히 제거
+        setTimeout(() => {
+          KDSState.removeTicket(data.ticket_id);
+          KDSUIRenderer.removeTicketFromUI(data.ticket_id);
+          console.log(`🗑️ 완료된 티켓 ${data.ticket_id} UI에서 제거`);
+        }, 1000);
       }
     },
 
