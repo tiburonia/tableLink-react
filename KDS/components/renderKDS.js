@@ -189,17 +189,25 @@
       const ticket = KDSState.tickets.get(ticketId);
 
       if (ticket) {
-        ticket.status = 'cooking';
-        // 모든 아이템 상태를 cooking으로 변경
+        // 티켓 상태 업데이트
+        ticket.status = 'COOKING';
+        
+        // 모든 아이템 상태를 COOKING으로 변경
         if (ticket.items) {
           ticket.items.forEach(item => {
-            item.status = 'cooking';
-            item.item_status = 'cooking';
+            item.status = 'COOKING';
+            item.item_status = 'COOKING';
           });
         }
         
+        // UI 업데이트
         UIRenderer.updateTicketCard(ticket);
-        console.log(`🔥 티켓 ${ticketId} 조리 시작 완료`);
+        UIRenderer.updateTicketCookingState(ticketId, 'COOKING');
+        
+        console.log(`🔥 티켓 ${ticketId} 조리 시작 완료 - UI 업데이트됨`);
+        
+        // 조리 시작 사운드
+        SoundManager.playItemCompleteSound();
       }
     },
 
@@ -774,14 +782,77 @@
       const completeBtn = card.querySelector('.complete-btn');
 
       if (startBtn) {
-        // 조리 시작 버튼: pending/ordered 상태에서만 활성화
-        startBtn.disabled = ticket.status === 'cooking' || ticket.status === 'done';
+        // 조리 시작 버튼: PENDING/ORDERED 상태에서만 활성화
+        const isCookingOrDone = ticket.status === 'COOKING' || ticket.status === 'cooking' || 
+                               ticket.status === 'DONE' || ticket.status === 'done' ||
+                               ticket.status === 'completed';
+        startBtn.disabled = isCookingOrDone;
+        
+        if (isCookingOrDone) {
+          startBtn.style.opacity = '0.5';
+          startBtn.style.cursor = 'not-allowed';
+        } else {
+          startBtn.style.opacity = '1';
+          startBtn.style.cursor = 'pointer';
+        }
       }
 
       if (completeBtn) {
-        // 완료 버튼: cooking 상태에서만 활성화
-        completeBtn.disabled = ticket.status !== 'cooking';
+        // 완료 버튼: COOKING 상태에서만 활성화
+        const isCooking = ticket.status === 'COOKING' || ticket.status === 'cooking';
+        completeBtn.disabled = !isCooking;
+        
+        if (isCooking) {
+          completeBtn.style.opacity = '1';
+          completeBtn.style.cursor = 'pointer';
+          completeBtn.style.background = '#27ae60';
+          completeBtn.style.animation = 'pulse 2s infinite';
+        } else {
+          completeBtn.style.opacity = '0.5';
+          completeBtn.style.cursor = 'not-allowed';
+          completeBtn.style.background = '#95a5a6';
+          completeBtn.style.animation = 'none';
+        }
       }
+    },
+
+    /**
+     * 티켓 조리 상태 UI 업데이트
+     */
+    updateTicketCookingState(ticketId, status) {
+      const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (!card) return;
+
+      // 카드 스타일 업데이트
+      card.className = `ticket-card ${this.getStatusClass(status)}`;
+      
+      // 헤더 경과 시간 색상 변경
+      const elapsedTime = card.querySelector('.elapsed-time');
+      if (elapsedTime && status === 'COOKING') {
+        elapsedTime.style.background = '#ff6b6b';
+        elapsedTime.style.color = 'white';
+        elapsedTime.style.fontWeight = '700';
+        elapsedTime.style.animation = 'pulse 2s infinite';
+      }
+
+      // 진행률 바 색상 변경
+      const progressFill = card.querySelector('.progress-fill');
+      if (progressFill && status === 'COOKING') {
+        progressFill.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a52)';
+      }
+
+      // 모든 아이템 상태 업데이트
+      const ticket = KDSState.tickets.get(ticketId);
+      if (ticket && ticket.items) {
+        ticket.items.forEach(item => {
+          this.updateItemStatus(ticketId, item.id, status);
+        });
+      }
+
+      // 버튼 상태 업데이트
+      this.updateTicketButtons(card, { status });
+
+      console.log(`🎨 티켓 ${ticketId} UI 업데이트 완료: ${status}`);
     },
 
     /**
@@ -802,13 +873,14 @@
      * 상태별 클래스 반환
      */
     getStatusClass(status) {
-      switch (status) {
-        case 'ordered':
-        case 'pending': return 'status-pending';
-        case 'preparing': 
-        case 'cooking': return 'status-cooking';
-        case 'ready':
-        case 'completed': return 'status-completed';
+      switch (status?.toUpperCase()) {
+        case 'ORDERED':
+        case 'PENDING': return 'status-pending';
+        case 'PREPARING': 
+        case 'COOKING': return 'status-cooking';
+        case 'READY':
+        case 'DONE':
+        case 'COMPLETED': return 'status-completed';
         default: return 'status-pending';
       }
     },
@@ -817,13 +889,14 @@
      * 아이템 상태별 클래스 반환
      */
     getItemStatusClass(status) {
-      switch (status) {
-        case 'ordered':
-        case 'pending': return 'item-pending';
-        case 'preparing':
-        case 'cooking': return 'item-cooking';
-        case 'ready': return 'item-ready';
-        case 'served': return 'item-served';
+      switch (status?.toUpperCase()) {
+        case 'ORDERED':
+        case 'PENDING': return 'item-pending';
+        case 'PREPARING':
+        case 'COOKING': return 'item-cooking';
+        case 'READY': return 'item-ready';
+        case 'DONE': return 'item-ready';
+        case 'SERVED': return 'item-served';
         default: return 'item-pending';
       }
     },
@@ -832,13 +905,14 @@
      * 아이템 상태별 아이콘 반환
      */
     getItemStatusIcon(status) {
-      switch (status) {
-        case 'ordered':
-        case 'pending': return '⏳';
-        case 'preparing':
-        case 'cooking': return '🔥';
-        case 'ready': return '✅';
-        case 'served': return '🍽️';
+      switch (status?.toUpperCase()) {
+        case 'ORDERED':
+        case 'PENDING': return '⏳';
+        case 'PREPARING':
+        case 'COOKING': return '🔥';
+        case 'READY': return '✅';
+        case 'DONE': return '✅';
+        case 'SERVED': return '🍽️';
         default: return '⏳';
       }
     },
@@ -1150,6 +1224,7 @@
           .ticket-card.status-cooking {
             border-left-color: #e74c3c;
             animation: pulse 2s infinite;
+            box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
           }
 
           .ticket-card.status-completed {
@@ -1157,8 +1232,37 @@
           }
 
           @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
+            0%, 100% { 
+              opacity: 1; 
+              transform: scale(1);
+            }
+            50% { 
+              opacity: 0.9; 
+              transform: scale(1.02);
+            }
+          }
+
+          /* 조리 중 아이템 스타일 강화 */
+          .order-item.item-cooking {
+            background: linear-gradient(135deg, #fdedec, #f8d7da);
+            border: 2px solid #e74c3c;
+            animation: itemPulse 3s infinite;
+          }
+
+          @keyframes itemPulse {
+            0%, 100% { border-color: #e74c3c; }
+            50% { border-color: #ff6b6b; }
+          }
+
+          /* 완료 버튼 활성화 스타일 */
+          .complete-btn:not(:disabled) {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            animation: buttonReady 2s infinite;
+          }
+
+          @keyframes buttonReady {
+            0%, 100% { box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3); }
+            50% { box-shadow: 0 6px 20px rgba(39, 174, 96, 0.5); }
           }
 
           /* 티켓 헤더 */
@@ -1541,6 +1645,19 @@
       try {
         console.log(`🔥 티켓 ${ticketId} 조리 시작 요청`);
 
+        // 즉시 UI 업데이트 (낙관적 업데이트)
+        const ticket = KDSState.tickets.get(ticketId);
+        if (ticket) {
+          ticket.status = 'COOKING';
+          if (ticket.items) {
+            ticket.items.forEach(item => {
+              item.status = 'COOKING';
+              item.item_status = 'COOKING';
+            });
+          }
+          UIRenderer.updateTicketCookingState(ticketId, 'COOKING');
+        }
+
         const response = await fetch(`/api/orders/kds/tickets/${ticketId}/start-cooking`, {
           method: 'PUT',
           headers: {
@@ -1557,7 +1674,23 @@
         if (result.success) {
           console.log('✅ 조리 시작 성공:', result.message);
           SoundManager.playItemCompleteSound();
+          
+          // 서버 응답 후 최종 확인 업데이트
+          if (ticket) {
+            UIRenderer.updateTicketCookingState(ticketId, 'COOKING');
+          }
         } else {
+          // 실패 시 원래 상태로 복구
+          if (ticket) {
+            ticket.status = 'PENDING';
+            if (ticket.items) {
+              ticket.items.forEach(item => {
+                item.status = 'PENDING';
+                item.item_status = 'PENDING';
+              });
+            }
+            UIRenderer.updateTicketCard(ticket);
+          }
           throw new Error(result.error);
         }
 
