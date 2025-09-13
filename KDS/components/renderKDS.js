@@ -109,6 +109,22 @@
       // KDS 시스템 초기화
       await window.KDSManager.initialize(storeId);
 
+      // 로딩 화면 제거 (KDS 화면이 렌더링된 후)
+      console.log('✅ KDS 초기화 완료, 로딩 화면 제거');
+      
+      // 메인 컨테이너에서 로딩 화면을 찾아 제거
+      const loadingScreen = document.getElementById('loadingScreen');
+      if (loadingScreen) {
+        loadingScreen.style.display = 'none';
+      }
+      
+      // 또는 전체 main 요소가 KDS UI로 대체되었는지 확인
+      const main = document.getElementById('main');
+      if (main && main.querySelector('.loading-screen')) {
+        // 로딩 화면이 아직 있다면 KDS UI가 제대로 렌더링되지 않은 것
+        console.warn('⚠️ KDS UI 렌더링이 완료되지 않았습니다');
+      }
+
     } catch (error) {
       console.error('❌ KDS 렌더링 실패:', error);
 

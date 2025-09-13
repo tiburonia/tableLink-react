@@ -16,8 +16,14 @@
      * 메인 KDS 화면 렌더링
      */
     render(storeId) {
+      console.log('🎨 KDS UI 렌더링 시작 - 매장:', storeId);
+      
       const main = document.getElementById('main') || document.body;
-
+      
+      // 기존 내용 완전히 제거
+      main.innerHTML = '';
+      
+      // KDS UI 렌더링
       main.innerHTML = `
         <div class="kds-container">
           ${this.renderHeader()}
@@ -27,7 +33,17 @@
         ${this.renderStyles()}
       `;
 
+      // 이벤트 리스너 설정
       this.setupEventListeners();
+      
+      console.log('✅ KDS UI 렌더링 완료');
+      
+      // 로딩 화면이 남아있다면 제거
+      const loadingScreen = document.getElementById('loadingScreen');
+      if (loadingScreen) {
+        loadingScreen.remove();
+        console.log('✅ 로딩 화면 제거 완료');
+      }
     },
 
     /**

@@ -23,13 +23,21 @@
         KDSState.initialize(storeId);
 
         // UI 렌더링 (Grid 레이아웃 포함)
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
-          // 초기에는 빈 그리드 렌더링 (혹은 더미 데이터)
-          window.KDSUIRenderer.renderKDSGrid([]);
-        } else {
-          console.warn('KDSUIRenderer.renderKDSGrid 함수를 찾을 수 없습니다. UI 렌더링 방식이 변경되었을 수 있습니다.');
-          // 이전 방식의 UI 렌더링 (필요시)
+        console.log('🎨 KDS UI 렌더링 시작');
+        
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.render === 'function') {
+          // 메인 UI 구조 렌더링 (헤더, 탭, 그리드 컨테이너)
           KDSUIRenderer.render(storeId);
+          console.log('✅ KDS 메인 UI 구조 렌더링 완료');
+          
+          // 초기에는 빈 그리드 렌더링
+          if (typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+            window.KDSUIRenderer.renderKDSGrid([]);
+            console.log('✅ KDS 빈 그리드 렌더링 완료');
+          }
+        } else {
+          console.error('❌ KDSUIRenderer.render 함수를 찾을 수 없습니다');
+          throw new Error('KDS UI 렌더러를 찾을 수 없습니다');
         }
 
         // 사운드 초기화
