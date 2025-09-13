@@ -98,82 +98,153 @@
     },
 
     /**
-     * 조리 시작
+     * 조리 시작 - 리팩토링된 로직
      */
     async startCooking(ticketId) {
+      console.log(`🔥 티켓 ${ticketId} 조리 시작 요청`);
+
+      // 1. 중복 요청 방지
+      if (this._processingTickets?.has(ticketId)) {
+        console.warn(`⚠️ 티켓 ${ticketId} 이미 처리 중`);
+        return;
+      }
+
+      // 처리 중인 티켓으로 마킹
+      if (!this._processingTickets) {
+        this._processingTickets = new Set();
+      }
+      this._processingTickets.add(ticketId);
+
+      const ticket = KDSState.getTicket(ticketId);
+      if (!ticket) {
+        console.error(`❌ 티켓 ${ticketId}을 찾을 수 없음`);
+        this._processingTickets.delete(ticketId);
+        return;
+      }
+
+      // 2. 현재 상태 백업 (실패 시 복구용)
+      const originalTicketState = this._backupTicketState(ticket);
+
       try {
-        console.log(`🔥 티켓 ${ticketId} 조리 시작 요청`);
+        // 3. UI 즉시 업데이트 (낙관적 업데이트)
+        this._updateTicketToCookingState(ticketId, ticket);
 
-        // 즉시 UI 업데이트 (낙관적 업데이트)
-        const ticket = KDSState.getTicket(ticketId);
-        if (ticket) {
-          console.log(`🎨 티켓 ${ticketId} UI 즉시 업데이트 시작`);
-          
-          // 상태 변경
-          ticket.status = 'COOKING';
-          if (ticket.items) {
-            ticket.items.forEach(item => {
-              item.status = 'COOKING';
-              item.item_status = 'COOKING';
-            });
-          }
-
-          // UI 즉시 업데이트
-          KDSUIRenderer.updateTicketCookingState(ticketId, 'COOKING');
-          KDSUIRenderer.updateTicketCard(ticket);
-          
-          console.log(`✅ 티켓 ${ticketId} UI 즉시 업데이트 완료`);
-        }
-
-        // 서버 API 호출
+        // 4. 서버 API 호출
+        console.log(`🌐 티켓 ${ticketId} 서버 API 호출`);
         const result = await KDSAPIService.startCooking(ticketId);
 
         if (result.success) {
-          console.log('✅ 조리 시작 서버 처리 성공:', result.message);
+          console.log(`✅ 티켓 ${ticketId} 조리 시작 성공`);
+          
+          // 5. 성공 후 처리
           KDSSoundManager.playItemCompleteSound();
+          
+          // 서버 데이터로 최종 동기화 (필요시)
+          if (result.data) {
+            this._syncTicketWithServerData(ticketId, result.data);
+          }
 
-          // 서버 응답 후 최종 확인 업데이트
-          if (ticket) {
-            console.log(`🔄 티켓 ${ticketId} 최종 UI 업데이트`);
-            KDSUIRenderer.updateTicketCookingState(ticketId, 'COOKING');
-            KDSUIRenderer.updateTicketCard(ticket);
-          }
         } else {
-          // 실패 시 원래 상태로 복구
-          console.warn(`⚠️ 조리 시작 실패 - 티켓 ${ticketId} 상태 복구`);
-          if (ticket) {
-            ticket.status = 'PENDING';
-            if (ticket.items) {
-              ticket.items.forEach(item => {
-                item.status = 'PENDING';
-                item.item_status = 'PENDING';
-              });
-            }
-            KDSUIRenderer.updateTicketCard(ticket);
-            KDSUIRenderer.updateTicketCookingState(ticketId, 'PENDING');
-          }
-          throw new Error(result.error);
+          throw new Error(result.error || '조리 시작 실패');
         }
 
       } catch (error) {
-        console.error('❌ 조리 시작 실패:', error);
+        console.error(`❌ 티켓 ${ticketId} 조리 시작 실패:`, error);
         
-        // 오류 시에도 상태 복구
-        const ticket = KDSState.getTicket(ticketId);
-        if (ticket) {
-          ticket.status = 'PENDING';
-          if (ticket.items) {
-            ticket.items.forEach(item => {
-              item.status = 'PENDING';
-              item.item_status = 'PENDING';
-            });
-          }
-          KDSUIRenderer.updateTicketCard(ticket);
-          KDSUIRenderer.updateTicketCookingState(ticketId, 'PENDING');
-        }
+        // 6. 실패 시 원래 상태로 복구
+        this._restoreTicketState(ticketId, originalTicketState);
         
-        this.showError('조리 시작 처리 중 오류가 발생했습니다: ' + error.message);
+        this.showError(`조리 시작 중 오류가 발생했습니다: ${error.message}`);
+
+      } finally {
+        // 7. 처리 완료 마킹 해제
+        this._processingTickets.delete(ticketId);
       }
+    },
+
+    /**
+     * 티켓 상태 백업
+     */
+    _backupTicketState(ticket) {
+      return {
+        status: ticket.status,
+        items: ticket.items ? ticket.items.map(item => ({
+          id: item.id,
+          status: item.status,
+          item_status: item.item_status
+        })) : []
+      };
+    },
+
+    /**
+     * 티켓을 조리 중 상태로 업데이트
+     */
+    _updateTicketToCookingState(ticketId, ticket) {
+      console.log(`🎨 티켓 ${ticketId} COOKING 상태로 UI 업데이트`);
+
+      // 1. 상태 데이터 업데이트
+      ticket.status = 'COOKING';
+      if (ticket.items) {
+        ticket.items.forEach(item => {
+          item.status = 'COOKING';
+          item.item_status = 'COOKING';
+        });
+      }
+
+      // 2. UI 업데이트
+      KDSUIRenderer.updateTicketToCookingState(ticketId, ticket);
+    },
+
+    /**
+     * 서버 데이터와 동기화
+     */
+    _syncTicketWithServerData(ticketId, serverData) {
+      const ticket = KDSState.getTicket(ticketId);
+      if (!ticket) return;
+
+      // 서버에서 받은 데이터로 업데이트
+      if (serverData.status) {
+        ticket.status = serverData.status;
+      }
+
+      if (serverData.items) {
+        serverData.items.forEach(serverItem => {
+          const localItem = ticket.items?.find(item => item.id === serverItem.id);
+          if (localItem) {
+            localItem.status = serverItem.status || serverItem.item_status;
+            localItem.item_status = serverItem.item_status || serverItem.status;
+          }
+        });
+      }
+
+      // UI 반영
+      KDSUIRenderer.updateTicketCard(ticket);
+    },
+
+    /**
+     * 티켓 상태 복구
+     */
+    _restoreTicketState(ticketId, originalState) {
+      console.log(`🔄 티켓 ${ticketId} 원래 상태로 복구`);
+
+      const ticket = KDSState.getTicket(ticketId);
+      if (!ticket) return;
+
+      // 원래 상태로 복구
+      ticket.status = originalState.status;
+      
+      if (ticket.items && originalState.items) {
+        ticket.items.forEach(item => {
+          const originalItem = originalState.items.find(orig => orig.id === item.id);
+          if (originalItem) {
+            item.status = originalItem.status;
+            item.item_status = originalItem.item_status;
+          }
+        });
+      }
+
+      // UI 복구
+      KDSUIRenderer.updateTicketCard(ticket);
     },
 
     /**
@@ -323,6 +394,11 @@
      * 정리
      */
     cleanup() {
+      // 처리 중인 티켓 목록 정리
+      if (this._processingTickets) {
+        this._processingTickets.clear();
+      }
+      
       KDSState.cleanup();
       KDSWebSocket.disconnect();
     },

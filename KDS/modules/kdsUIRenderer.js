@@ -418,10 +418,10 @@
     },
 
     /**
-     * 티켓 조리 상태 UI 업데이트
+     * 티켓을 조리 중 상태로 UI 업데이트 - 통합 메서드
      */
-    updateTicketCookingState(ticketId, status) {
-      console.log(`🎨 티켓 ${ticketId} 조리 상태 UI 업데이트 시작: ${status}`);
+    updateTicketToCookingState(ticketId, ticket) {
+      console.log(`🎨 티켓 ${ticketId} 조리 상태로 UI 업데이트`);
       
       const card = document.querySelector(`[data-ticket-id="${ticketId}"]`);
       if (!card) {
@@ -429,76 +429,129 @@
         return;
       }
 
-      // 카드 전체 스타일 업데이트
-      const newClass = `ticket-card ${this.getStatusClass(status)}`;
-      card.className = newClass;
-      console.log(`🎨 카드 클래스 업데이트: ${newClass}`);
+      // 1. 카드 전체 스타일 업데이트
+      card.className = `ticket-card ${this.getStatusClass('COOKING')}`;
+      
+      // 2. 조리 중 특별 스타일 적용
+      this._applyCookingStyles(card);
 
-      // 경과 시간 스타일 업데이트
-      const elapsedTime = card.querySelector('.elapsed-time');
-      if (elapsedTime) {
-        if (status === 'COOKING') {
-          elapsedTime.style.background = '#ff6b6b';
-          elapsedTime.style.color = 'white';
-          elapsedTime.style.fontWeight = '700';
-          elapsedTime.style.animation = 'pulse 2s infinite';
-          elapsedTime.style.border = '2px solid #e74c3c';
-          console.log(`🎨 경과 시간 조리 중 스타일 적용`);
-        } else {
-          elapsedTime.style.background = '#fdedec';
-          elapsedTime.style.color = '#e74c3c';
-          elapsedTime.style.fontWeight = '600';
-          elapsedTime.style.animation = 'none';
-          elapsedTime.style.border = 'none';
-        }
-      }
+      // 3. 버튼 상태 업데이트
+      this._updateButtonsForCooking(card);
 
-      // 진행률 바 스타일 업데이트
-      const progressFill = card.querySelector('.progress-fill');
-      if (progressFill) {
-        if (status === 'COOKING') {
-          progressFill.style.background = 'linear-gradient(90deg, #ff6b6b, #ee5a52)';
-          progressFill.style.animation = 'progressPulse 3s infinite';
-          console.log(`🎨 진행률 바 조리 중 스타일 적용`);
-        } else {
-          progressFill.style.background = 'linear-gradient(90deg, #3498db, #2ecc71)';
-          progressFill.style.animation = 'none';
-        }
-      }
-
-      // 개별 아이템 상태 업데이트
-      const ticket = KDSState.getTicket(ticketId);
-      if (ticket && ticket.items) {
-        console.log(`🎨 ${ticket.items.length}개 아이템 상태 업데이트`);
-        ticket.items.forEach((item, index) => {
-          this.updateItemStatus(ticketId, item.id, status);
-          console.log(`🎨 아이템 ${index + 1} 상태 업데이트: ${item.id} -> ${status}`);
+      // 4. 개별 아이템 상태 업데이트
+      if (ticket.items) {
+        ticket.items.forEach(item => {
+          this._updateItemToCookingState(card, item.id);
         });
       }
 
-      // 버튼 상태 업데이트 (전체 티켓 객체 전달)
-      const ticketData = KDSState.getTicket(ticketId);
-      if (ticketData) {
-        ticketData.status = status; // 상태 동기화
-        this.updateTicketButtons(card, ticketData);
+      // 5. 강조 애니메이션
+      this._playStartCookingAnimation(card);
+
+      console.log(`✅ 티켓 ${ticketId} 조리 상태 UI 업데이트 완료`);
+    },
+
+    /**
+     * 조리 중 스타일 적용
+     */
+    _applyCookingStyles(card) {
+      // 경과 시간 스타일
+      const elapsedTime = card.querySelector('.elapsed-time');
+      if (elapsedTime) {
+        Object.assign(elapsedTime.style, {
+          background: '#ff6b6b',
+          color: 'white',
+          fontWeight: '700',
+          animation: 'pulse 2s infinite',
+          border: '2px solid #e74c3c'
+        });
       }
 
-      // 추가 시각적 효과
-      if (status === 'COOKING') {
-        card.style.border = '3px solid #e74c3c';
-        card.style.boxShadow = '0 8px 30px rgba(231, 76, 60, 0.4)';
-        
-        // 일시적인 강조 효과
-        card.style.transform = 'scale(1.02)';
-        setTimeout(() => {
-          card.style.transform = 'scale(1)';
-        }, 300);
-      } else {
-        card.style.border = 'none';
-        card.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+      // 진행률 바 스타일
+      const progressFill = card.querySelector('.progress-fill');
+      if (progressFill) {
+        Object.assign(progressFill.style, {
+          background: 'linear-gradient(90deg, #ff6b6b, #ee5a52)',
+          animation: 'progressPulse 3s infinite'
+        });
       }
 
-      console.log(`✅ 티켓 ${ticketId} UI 업데이트 완료: ${status}`);
+      // 카드 테두리 및 그림자
+      Object.assign(card.style, {
+        border: '3px solid #e74c3c',
+        boxShadow: '0 8px 30px rgba(231, 76, 60, 0.4)'
+      });
+    },
+
+    /**
+     * 조리 중 상태 버튼 업데이트
+     */
+    _updateButtonsForCooking(card) {
+      const startBtn = card.querySelector('.start-btn');
+      const completeBtn = card.querySelector('.complete-btn');
+
+      // 조리 시작 버튼 비활성화
+      if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.innerHTML = '🔥 조리중';
+        Object.assign(startBtn.style, {
+          opacity: '0.3',
+          cursor: 'not-allowed',
+          background: '#95a5a6',
+          transform: 'none'
+        });
+      }
+
+      // 완료 버튼 활성화
+      if (completeBtn) {
+        completeBtn.disabled = false;
+        completeBtn.innerHTML = '<span>✅</span> 완료';
+        Object.assign(completeBtn.style, {
+          opacity: '1',
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, #27ae60, #229954)',
+          animation: 'buttonReady 2s infinite',
+          border: '2px solid #27ae60',
+          fontWeight: '700'
+        });
+        completeBtn.removeAttribute('disabled');
+      }
+    },
+
+    /**
+     * 개별 아이템을 조리 중 상태로 업데이트
+     */
+    _updateItemToCookingState(card, itemId) {
+      const itemElement = card.querySelector(`[data-item-id="${itemId}"]`);
+      if (!itemElement) return;
+
+      itemElement.className = `order-item ${this.getItemStatusClass('COOKING')}`;
+      
+      // 조리 중 아이템 특별 스타일
+      Object.assign(itemElement.style, {
+        background: 'linear-gradient(135deg, #fdedec, #f8d7da)',
+        border: '2px solid #e74c3c',
+        animation: 'itemPulse 3s infinite'
+      });
+
+      // 상태 아이콘 업데이트
+      const statusIcon = itemElement.querySelector('.status-icon');
+      if (statusIcon) {
+        statusIcon.textContent = '🔥';
+      }
+    },
+
+    /**
+     * 조리 시작 애니메이션
+     */
+    _playStartCookingAnimation(card) {
+      // 일시적인 강조 효과
+      card.style.transform = 'scale(1.02)';
+      card.style.transition = 'transform 0.3s ease';
+      
+      setTimeout(() => {
+        card.style.transform = 'scale(1)';
+      }, 300);
     },
 
     /**
