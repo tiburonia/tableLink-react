@@ -959,10 +959,7 @@ router.get('/kds/:storeId', async (req, res) => {
       details: error.message
     });
   }
-});dersQuery, [storeId]);
-
-    const orders = result.rows.map(order => ({
-      id: order.order_id,
+});
       check_id: order.check_id,
       ticket_id: order.check_id,
       customer_name: order.customer_name,
