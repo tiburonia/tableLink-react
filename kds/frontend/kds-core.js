@@ -1,4 +1,3 @@
-
 /**
  * KDS Core v4.0 - Order Tickets 기반 시스템
  * 티켓 = 카드 1장, 아이템 = 카드 내부 줄, 상태 전환은 아이템 중심 → 티켓 자동 집계
@@ -89,7 +88,7 @@ class KDSCore {
       }
 
       const response = await fetch(`${this.config.apiBase}/tickets?${params}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -99,7 +98,7 @@ class KDSCore {
       if (data.success) {
         // 기존 티켓 맵 업데이트
         const newTickets = new Map();
-        
+
         data.tickets.forEach(ticket => {
           newTickets.set(ticket.ticket_id, {
             ...ticket,
@@ -132,7 +131,7 @@ class KDSCore {
   async fetchStations() {
     try {
       const response = await fetch(`${this.config.apiBase}/stations?store_id=${this.config.storeId}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -162,7 +161,7 @@ class KDSCore {
   async fetchDashboard() {
     try {
       const response = await fetch(`${this.config.apiBase}/dashboard?store_id=${this.config.storeId}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -209,10 +208,10 @@ class KDSCore {
 
       if (data.success) {
         this.emit('item_status_changed', data.data);
-        
+
         // 즉시 해당 티켓 업데이트
         await this.refreshTicket(data.data.ticket_id);
-        
+
         return data.data;
       } else {
         throw new Error(data.message || '아이템 상태 변경 실패');
@@ -257,10 +256,10 @@ class KDSCore {
 
       if (data.success) {
         this.emit('ticket_status_changed', data.data);
-        
+
         // 즉시 해당 티켓 업데이트
         await this.refreshTicket(ticketId);
-        
+
         return data.data;
       } else {
         throw new Error(data.message || '티켓 상태 변경 실패');
@@ -294,10 +293,10 @@ class KDSCore {
 
       if (data.success) {
         this.emit('ticket_printed', data.data);
-        
+
         // 즉시 해당 티켓 업데이트
         await this.refreshTicket(ticketId);
-        
+
         return data.data;
       } else {
         throw new Error(data.message || '프린트 요청 실패');
@@ -362,7 +361,7 @@ class KDSCore {
     }
 
     if (filter.station) {
-      tickets = tickets.filter(ticket => 
+      tickets = tickets.filter(ticket =>
         ticket.items.some(item => item.cook_station === filter.station)
       );
     }
@@ -371,7 +370,7 @@ class KDSCore {
       // 상태별 정렬 (COOKING > PENDING > DONE)
       const statusOrder = { 'COOKING': 1, 'PENDING': 2, 'DONE': 3 };
       const statusCompare = statusOrder[a.status] - statusOrder[b.status];
-      
+
       if (statusCompare !== 0) {
         return statusCompare;
       }
@@ -418,7 +417,7 @@ class KDSCore {
 
       const socketUrl = window.location.origin;
       console.log('🔌 KDS WebSocket 연결 시도:', socketUrl);
-      
+
       this.wsConnection = io(socketUrl, {
         transports: ['websocket', 'polling'],
         timeout: 5000,
@@ -431,7 +430,7 @@ class KDSCore {
         console.log('✅ KDS WebSocket 연결 성공:', this.wsConnection.id);
         this.emit('ws_connected');
         this.state.retryCount = 0;
-        
+
         // KDS 룸 조인
         this.wsConnection.emit('join-kds', this.config.storeId);
       });
@@ -471,7 +470,7 @@ class KDSCore {
       }
 
       console.log('📡 SSE 연결 시도 - 매장:', this.config.storeId);
-      
+
       this.sseConnection = new EventSource(`${this.config.apiBase}/stream/${this.config.storeId}`);
 
       this.sseConnection.onopen = () => {
@@ -493,7 +492,7 @@ class KDSCore {
       this.sseConnection.onerror = (error) => {
         console.error('❌ KDS SSE 연결 오류:', error);
         this.emit('ws_error', error);
-        
+
         if (this.sseConnection.readyState === EventSource.CLOSED) {
           this.scheduleReconnect();
         }
@@ -508,9 +507,9 @@ class KDSCore {
   scheduleReconnect() {
     this.state.retryCount++;
     const delay = Math.min(1000 * Math.pow(2, this.state.retryCount), 30000); // 최대 30초
-    
+
     console.log(`🔄 KDS WebSocket 재연결 예약: ${delay}ms 후 (재시도 ${this.state.retryCount}회)`);
-    
+
     setTimeout(() => {
       if (!this.wsConnection || !this.wsConnection.connected) {
         console.log('🔄 KDS WebSocket 재연결 시도...');
@@ -531,7 +530,7 @@ class KDSCore {
           ticketData: data.data,
           storeId: this.config.storeId
         });
-        
+
         // 새 주문 내역 강조 출력
         if (data.data) {
           console.group('🚨 새 주문 내역');
@@ -541,10 +540,10 @@ class KDSCore {
           console.log('주문 아이템:', data.data.items || []);
           console.groupEnd();
         }
-        
+
         this.emit('new_ticket', data.data);
-        // 즉시 티켓 목록 새로고림
-        setTimeout(() => this.fetchTickets(), 500);
+        // 즉시 티켓 목록 새로고림 (PENDING 상태를 우선으로)
+        setTimeout(() => this.fetchTickets('PENDING,COOKING,DONE'), 100);
         break;
 
       case 'item_status_change':
@@ -633,7 +632,7 @@ class KDSCore {
         if (data.hidden_tickets > 0) {
           console.log(`🧹 ${data.hidden_tickets}개 티켓이 자동 숨김 처리됨`);
           this.emit('cleanup_completed', data);
-          
+
           // 티켓 목록 새로고침
           await this.fetchTickets();
         }
@@ -648,7 +647,7 @@ class KDSCore {
     try {
       const tickets = await this.fetchTickets();
       const refreshedTicket = tickets.find(t => t.ticket_id === ticketId);
-      
+
       if (refreshedTicket) {
         this.state.tickets.set(ticketId, refreshedTicket);
         this.emit('ticket_refreshed', refreshedTicket);
@@ -723,7 +722,7 @@ class KDSCore {
     this.connectionMonitor = setInterval(() => {
       const status = this.getConnectionStatus();
       console.log('🔍 KDS 연결 상태 확인:', status);
-      
+
       if (!status.sseConnected && this.config.storeId) {
         console.log('⚠️ SSE 연결이 끊어짐, 재연결 시도');
         this.connectSSE();

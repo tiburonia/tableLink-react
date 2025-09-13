@@ -894,7 +894,7 @@
         const couponId = selectedCoupon?.value || null;
         const couponDiscount = parseInt(document.getElementById('couponDiscount')?.textContent?.replace(/[^\d]/g, '') || 0);
 
-        // 선택된 결제 방법 가져오기
+        // 선택된 결제 방법 가져기
         const selectedMethodElement = document.querySelector('.payment-method-btn.active');
         const selectedPaymentMethod = selectedMethodElement?.dataset.method || '카드';
 
@@ -924,10 +924,10 @@
 
         console.log('💳 매핑된 토스 결제 방법:', tossMethod);
 
-        // 결제 확인 함수 호출
+        // 결제 확인 함수 호출 - table_num도 전달
         if (typeof confirmPay === 'function') {
-          // confirmPay 함수에 cook_station 정보 전달
-          await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, tossMethod);
+          // confirmPay 함수에 cook_station과 table_num 정보 전달
+          await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, tossMethod, orderData.tableNum);
         } else {
           throw new Error('결제 처리 함수를 찾을 수 없습니다.');
         }

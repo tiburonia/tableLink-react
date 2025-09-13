@@ -241,40 +241,7 @@ router.patch('/items/:id', async (req, res) => {
 
     const result = updateResult.rows[0];
 
-    // KDS 이벤트 로그 기록
-    await client.query(`
-      INSERT INTO kds_events (
-        store_id, ticket_id, order_id, event_type,
-        actor_type, actor_id, payload, created_at
-      )
-      SELECT 
-        o.store_id,
-        $1,
-        $2,
-        'ITEM_STATUS_CHANGED',
-        'USER',
-        $3,
-        json_build_object(
-          'item_id', $4,
-          'menu_name', $5,
-          'old_status', 'UNKNOWN',
-          'new_status', $6,
-          'cook_station', $7,
-          'reason', $8
-        ),
-        NOW()
-      FROM orders o
-      WHERE o.id = $2
-    `, [
-      result.ticket_id,
-      result.order_id,
-      actor_id,
-      itemId,
-      result.menu_name,
-      item_status,
-      result.cook_station,
-      reason
-    ]);
+    // 이벤트 로깅 제거 - 기본 테이블만 사용
 
     await client.query('COMMIT');
 
@@ -376,29 +343,7 @@ router.patch('/tickets/:id', async (req, res) => {
       `, [ticketId]);
     }
 
-    // 이벤트 로그
-    await client.query(`
-      INSERT INTO kds_events (
-        store_id, ticket_id, order_id, event_type,
-        actor_type, actor_id, payload, created_at
-      )
-      SELECT 
-        o.store_id,
-        $1,
-        $2,
-        'TICKET_STATUS_FORCED',
-        'USER',
-        $3,
-        json_build_object(
-          'old_status', 'UNKNOWN',
-          'new_status', $4,
-          'version', $5,
-          'reason', $6
-        ),
-        NOW()
-      FROM orders o
-      WHERE o.id = $2
-    `, [ticketId, result.order_id, actor_id, status, result.version, reason]);
+    // 이벤트 로깅 제거 - 기본 테이블만 사용
 
     await client.query('COMMIT');
 
@@ -450,27 +395,7 @@ router.post('/tickets/:id/print', async (req, res) => {
       });
     }
 
-    // 프린트 큐 이벤트 로그
-    await pool.query(`
-      INSERT INTO kds_events (
-        store_id, ticket_id, order_id, event_type,
-        actor_type, actor_id, payload, created_at
-      )
-      SELECT 
-        o.store_id,
-        $1,
-        $2,
-        'PRINT_QUEUED',
-        'USER',
-        $3,
-        json_build_object(
-          'batch_no', $4,
-          'print_requested_at', NOW()
-        ),
-        NOW()
-      FROM orders o
-      WHERE o.id = $2
-    `, [ticketId, result.rows[0].order_id, actor_id, result.rows[0].batch_no]);
+    // 프린트 큐 이벤트 로깅 제거 - 기본 테이블만 사용
 
     res.json({
       success: true,
@@ -850,17 +775,16 @@ async function ensureKDSTables() {
   try {
     console.log('🔍 KDS 테이블 존재 여부 확인 중...');
 
-    // 필수 테이블들이 모두 존재하는지 확인
+    // 필수 테이블들이 모두 존재하는지 확인 (kds_events 제외)
     const tableCheck = await client.query(`
       SELECT 
         (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'order_tickets')) as tickets_exists,
-        (SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'ticket_id')) as items_extended,
-        (SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'kds_events')) as events_exists
+        (SELECT EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'order_items' AND column_name = 'ticket_id')) as items_extended
     `);
 
-    const { tickets_exists, items_extended, events_exists } = tableCheck.rows[0];
+    const { tickets_exists, items_extended } = tableCheck.rows[0];
 
-    if (!tickets_exists || !items_extended || !events_exists) {
+    if (!tickets_exists || !items_extended) {
       console.log('📋 KDS 테이블 일부가 누락됨, 생성 시작...');
       ensureKDSTables._creating = createKDSTables();
       await ensureKDSTables._creating;
@@ -964,22 +888,7 @@ async function createKDSTables() {
       `);
     }
 
-    // kds_events 테이블 (로그)
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS kds_events (
-        id SERIAL PRIMARY KEY,
-        store_id INTEGER,
-        ticket_id INTEGER,
-        order_id INTEGER,
-        event_type VARCHAR(50) NOT NULL,
-        actor_type VARCHAR(20) DEFAULT 'USER',
-        actor_id VARCHAR(50) DEFAULT 'unknown',
-        payload JSONB,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_kds_events_store_id ON kds_events(store_id);
-      CREATE INDEX IF NOT EXISTS idx_kds_events_created_at ON kds_events(created_at);
-    `);
+    // kds_events 테이블은 제거됨 - 기본 3개 테이블만 사용
 
     await client.query('COMMIT');
     console.log('✅ KDS 테이블 생성 완료');
@@ -1038,24 +947,7 @@ async function createOrderTickets(orderId, storeId, sourceSystem = 'TLL', tableN
       WHERE order_id = $2
     `, [ticketId, orderId]);
 
-    // 이벤트 로그
-    await client.query(`
-      INSERT INTO kds_events (
-        store_id, ticket_id, order_id, event_type,
-        actor_type, actor_id, payload, created_at
-      )
-      VALUES ($1, $2, $3, 'TICKET_CREATED', 'SYSTEM', $4, $5, NOW())
-    `, [
-      storeId,
-      ticketId,
-      orderId,
-      sourceSystem.toLowerCase(),
-      JSON.stringify({
-        source_system: sourceSystem,
-        customer_name: order.customer_name || '고객',
-        table_number: order.table_number || 1
-      })
-    ]);
+    // 이벤트 로깅 제거 - 기본 테이블만 사용
 
     await client.query('COMMIT');
 

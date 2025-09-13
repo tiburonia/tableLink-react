@@ -177,7 +177,7 @@ router.post('/orders', async (req, res) => {
       INSERT INTO order_tickets (order_id, store_id, batch_no, status, payment_type, table_num)
       VALUES ($1, $2, 1, 'PENDING', 'PREPAID', $3)
       RETURNING id
-    `, [check_id, store_id, tableNumber]);
+    `, [check_id, order.store_id, order.table_number]);
 
     const ticketId = ticketResult.rows[0].id;
 
