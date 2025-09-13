@@ -48,6 +48,15 @@
 
     <!-- Socket.IO 클라이언트 -->
     <script src="/socket.io/socket.io.js"></script>
+  <!-- Socket.IO CDN 백업 -->
+  <script>
+    if (typeof io === 'undefined') {
+      console.log('📦 Socket.IO CDN 백업 로드');
+      const script = document.createElement('script');
+      script.src = 'https://cdn.socket.io/4.7.2/socket.io.min.js';
+      document.head.appendChild(script);
+    }
+  </script>
     
     <!-- KDS 모듈들을 순서대로 로드 -->
     <script src="frontend/kds-core.js"></script>

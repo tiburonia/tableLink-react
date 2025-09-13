@@ -7,7 +7,6 @@ const { Pool } = require('pg');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const { notFound, errorHandler } = require('./mw/errors');
-const sse = require('./services/sse');
 
 const app = express();
 
@@ -187,24 +186,7 @@ async function setupKDSListener() {
             const storeId = await getStoreIdByOrderItem(order_item_id); // Helper to get storeId
 
             if (storeId && cook_station === 'KITCHEN') { // Only include KITCHEN items
-              const topic = `store:${storeId}`;
-
-              // Broadcast to subscribers of the specific storeId
-              sse.broadcast(topic, {
-                type: 'item_status_update',
-                data: {
-                  order_id,
-                  order_item_id,
-                  customer_name,
-                  table_number,
-                  menu_name,
-                  cook_station,
-                  status
-                },
-                timestamp: new Date().toISOString()
-              });
-
-              // Socket.IO로도 실시간 브로드캐스트
+              // WebSocket 전용 실시간 브로드캐스트
               io.to(`store:${storeId}`).emit('pos-update', {
                 type: 'item-status-update',
                 storeId: storeId,
