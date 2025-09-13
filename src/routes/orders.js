@@ -892,63 +892,62 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
-// KDS 전용 API 엔드포인트 (중복 제거 및 통합)
+// KDS 전용 API 엔드포인트 (올바른 데이터 구조 사용)
 router.get('/kds/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
     console.log(`📡 KDS 데이터 요청 - 매장 ${storeId}`);
 
-    // 진행 중인 주문과 아이템 조회 (INNER JOIN으로 변경하여 아이템이 있는 주문만 조회)
+    // checks 기반 시스템 사용 (새로운 통합 스키마)
     const ordersQuery = `
       SELECT 
-        o.id as order_id,
-        o.check_id,
-        o.customer_name,
-        o.table_number,
-        o.status,
-        o.created_at,
-        o.updated_at,
+        c.id as check_id,
+        c.table_number,
+        c.customer_name,
+        c.opened_at as created_at,
+        c.status,
         json_agg(
           json_build_object(
-            'id', oi.id,
-            'menu_name', oi.menu_name,
-            'quantity', oi.quantity,
-            'status', oi.status,
-            'cook_station', oi.cook_station,
-            'notes', oi.notes,
-            'created_at', oi.created_at
-          ) ORDER BY oi.created_at
+            'id', ci.id,
+            'menuName', ci.menu_name,
+            'menu_name', ci.menu_name,
+            'quantity', ci.quantity,
+            'status', ci.status,
+            'cook_station', COALESCE(ci.cook_station, 'KITCHEN'),
+            'notes', ci.kitchen_notes,
+            'created_at', ci.ordered_at
+          ) ORDER BY ci.ordered_at
         ) as items
-      FROM orders o
-      INNER JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.store_id = $1 
-        AND o.status IN ('PENDING', 'PREPARING', 'READY')
-        AND oi.cook_station IN ('KITCHEN', 'GRILL', 'FRY', 'DRINK', 'COLD_STATION')
-      GROUP BY o.id, o.check_id, o.customer_name, o.table_number, o.status, o.created_at, o.updated_at
-      ORDER BY o.created_at ASC
+      FROM checks c
+      INNER JOIN check_items ci ON c.id = ci.check_id
+      WHERE c.store_id = $1 
+        AND c.status = 'open'
+        AND ci.status IN ('ordered', 'preparing', 'ready')
+      GROUP BY c.id, c.table_number, c.customer_name, c.opened_at, c.status
+      ORDER BY c.opened_at ASC
     `;
 
-    const result = await pool.query(ordersQuery, [storeId]);
+    const result = await pool.query(ordersQuery, [parseInt(storeId)]);
     
     console.log(`✅ KDS 데이터 조회 완료 - 매장 ${storeId}, 주문 ${result.rows.length}건`);
 
-    // 티켓 형태로 변환
-    const tickets = result.rows.map(order => ({
-      id: order.check_id,
+    // renderKDS.js에서 기대하는 형태로 변환
+    const orders = result.rows.map(order => ({
       check_id: order.check_id,
-      order_id: order.order_id,
+      id: order.check_id,
+      ticket_id: order.check_id,
       customer_name: order.customer_name || `테이블 ${order.table_number}`,
       table_number: order.table_number,
       status: order.status?.toLowerCase() || 'pending',
       created_at: order.created_at,
-      updated_at: order.updated_at,
-      items: order.items ? order.items.filter(item => item.id !== null) : []
+      updated_at: order.created_at,
+      items: order.items || []
     }));
 
     res.json({
       success: true,
-      tickets: tickets,
-      count: tickets.length
+      orders: orders,
+      count: orders.length
     });
 
   } catch (error) {
@@ -961,8 +960,10 @@ router.get('/kds/:storeId', async (req, res) => {
   }
 });
 
-// KDS 아이템 상태 업데이트
+// KDS 아이템 상태 업데이트 (check_items 테이블 사용)
 router.put('/kds/items/:itemId/status', async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { itemId } = req.params;
     const { status, kitchenNotes } = req.body;
@@ -970,7 +971,7 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
     console.log(`🔄 아이템 상태 업데이트: ${itemId} -> ${status}`);
 
     // 유효한 상태 확인
-    const validStatuses = ['pending', 'preparing', 'ready', 'served'];
+    const validStatuses = ['ordered', 'preparing', 'ready', 'served', 'canceled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
@@ -979,61 +980,71 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
       });
     }
 
-    // 아이템 상태 업데이트
+    await client.query('BEGIN');
+
+    // check_items 테이블에서 아이템 상태 업데이트
     const updateQuery = `
-      UPDATE order_items 
-      SET status = $1, notes = $2, updated_at = NOW()
+      UPDATE check_items 
+      SET status = $1, kitchen_notes = $2, updated_at = CURRENT_TIMESTAMP
       WHERE id = $3
-      RETURNING *
+      RETURNING check_id, menu_name, quantity
     `;
 
-    const result = await pool.query(updateQuery, [status, kitchenNotes, itemId]);
+    const result = await client.query(updateQuery, [status, kitchenNotes, parseInt(itemId)]);
 
     if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({
         success: false,
         error: '아이템을 찾을 수 없습니다'
       });
     }
 
-    const updatedItem = result.rows[0];
+    const { check_id, menu_name, quantity } = result.rows[0];
 
-    // 주문 정보도 함께 조회
-    const orderQuery = `
-      SELECT o.id, o.store_id, o.check_id, o.table_number
-      FROM orders o
-      JOIN order_items oi ON o.id = oi.order_id
-      WHERE oi.id = $1
+    // 체크 정보 조회
+    const checkQuery = `
+      SELECT store_id, table_number FROM checks WHERE id = $1
     `;
 
-    const orderResult = await pool.query(orderQuery, [itemId]);
-    const order = orderResult.rows[0];
+    const checkResult = await client.query(checkQuery, [check_id]);
+    const { store_id, table_number } = checkResult.rows[0];
+
+    await client.query('COMMIT');
 
     // WebSocket으로 실시간 업데이트 브로드캐스트
-    if (global.broadcastKDSUpdate && order) {
-      global.broadcastKDSUpdate(order.store_id, 'item.updated', {
-        item_id: itemId,
-        ticket_id: order.check_id,
-        item_status: status,
-        menu_name: updatedItem.menu_name,
-        quantity: updatedItem.quantity,
-        cook_station: updatedItem.cook_station
+    if (global.io) {
+      global.io.to(`kds:${store_id}`).emit('kds-update', {
+        type: 'item_status_update',
+        data: {
+          item_id: parseInt(itemId),
+          ticket_id: check_id,
+          item_status: status,
+          menu_name: menu_name,
+          quantity: quantity,
+          table_number: table_number
+        }
       });
     }
 
     res.json({
       success: true,
-      item: updatedItem,
-      order: order
+      itemId: parseInt(itemId),
+      checkId: check_id,
+      newStatus: status,
+      message: `${menu_name} 상태가 ${status}로 변경되었습니다`
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('❌ 아이템 상태 업데이트 실패:', error);
     res.status(500).json({
       success: false,
       error: '아이템 상태를 업데이트할 수 없습니다',
       details: error.message
     });
+  } finally {
+    client.release();
   }
 });
 
