@@ -898,7 +898,7 @@ router.get('/kds/:storeId', async (req, res) => {
     const { storeId } = req.params;
     console.log(`📡 KDS 데이터 요청 - 매장 ${storeId}`);
 
-    // 진행 중인 주문과 아이템 조회
+    // 진행 중인 주문과 아이템 조회 (INNER JOIN으로 변경하여 아이템이 있는 주문만 조회)
     const ordersQuery = `
       SELECT 
         o.id as order_id,
@@ -920,7 +920,7 @@ router.get('/kds/:storeId', async (req, res) => {
           ) ORDER BY oi.created_at
         ) as items
       FROM orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
+      INNER JOIN order_items oi ON o.id = oi.order_id
       WHERE o.store_id = $1 
         AND o.status IN ('PENDING', 'PREPARING', 'READY')
         AND oi.cook_station IN ('KITCHEN', 'GRILL', 'FRY', 'DRINK', 'COLD_STATION')
@@ -929,6 +929,37 @@ router.get('/kds/:storeId', async (req, res) => {
     `;
 
     const result = await pool.query(ordersQuery, [storeId]);
+    
+    console.log(`✅ KDS 데이터 조회 완료 - 매장 ${storeId}, 주문 ${result.rows.length}건`);
+
+    // 티켓 형태로 변환
+    const tickets = result.rows.map(order => ({
+      id: order.check_id,
+      check_id: order.check_id,
+      order_id: order.order_id,
+      customer_name: order.customer_name || `테이블 ${order.table_number}`,
+      table_number: order.table_number,
+      status: order.status?.toLowerCase() || 'pending',
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      items: order.items || []
+    }));
+
+    res.json({
+      success: true,
+      tickets: tickets,
+      count: tickets.length
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 주문 조회 실패',
+      details: error.message
+    });
+  }
+});dersQuery, [storeId]);
 
     const orders = result.rows.map(order => ({
       id: order.order_id,
