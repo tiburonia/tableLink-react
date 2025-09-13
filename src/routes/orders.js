@@ -1116,7 +1116,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
     if (global.io) {
       const printData = {
         ticket_id: parseInt(ticketId),
-        order_id: order_detail.order_id,
+        order_id: orderDetail.order_id,
         table_number: orderDetail.table_num,
         customer_name: orderDetail.customer_name,
         total_amount: parseInt(orderDetail.total_amount) || 0,
@@ -1135,7 +1135,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
         type: 'ticket_printed',
         data: {
           ticket_id: parseInt(ticketId),
-          order_id: order_detail.order_id,
+          order_id: orderDetail.order_id,
           status: 'PRINTED',
           table_number: orderDetail.table_num,
           action: 'remove_immediately'
@@ -1147,7 +1147,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
       success: true,
       message: '출력 처리 완료 - KRP로 전송됨',
       ticket_id: parseInt(ticketId),
-      order_id: order_detail.order_id,
+      order_id: orderDetail.order_id,
       print_data: {
         table_number: orderDetail.table_num,
         customer_name: orderDetail.customer_name,
