@@ -86,7 +86,6 @@ app.all('/api', (req, res) => {
       '/api/regular-levels',
       '/api/audit',
       '/api/pos',
-      '/api/kds',
       '/api/tll',
       '/api/toss',
       '/api/clusters'
@@ -98,7 +97,6 @@ app.all('/api', (req, res) => {
 try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
-  const kdsRouter = require('../kds/backend/kds'); // KDS 라우터 추가
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp');
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
@@ -117,7 +115,6 @@ try {
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
-  app.use('/api/kds', kdsRouter); // KDS 라우터 경로 등록
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
@@ -136,7 +133,7 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, kds, tll, toss, stores-clusters)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
@@ -311,7 +308,7 @@ app.use('/api/audit', require('./routes/audit'));
 server.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 TableLink POS 서버가 포트 ${PORT}에서 실행 중입니다.`);
   console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
-  console.log('🏗️ POS/KDS/TLL/KRP 통합 시스템');
+  console.log('🏗️ POS/TLL/KRP 통합 시스템');
   console.log('🔌 Socket.IO 실시간 통신 준비완료');
 
   // Setup KDS LISTEN
