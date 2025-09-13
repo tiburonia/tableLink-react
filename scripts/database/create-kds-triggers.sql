@@ -79,24 +79,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. 결제 이벤트 알림 함수
+-- 4. 결제 이벤트 알림 함수 (새 스키마 호환)
 CREATE OR REPLACE FUNCTION notify_kds_payment_change()
 RETURNS trigger AS $$
 DECLARE
   store_id_val integer;
   table_number_val integer;
 BEGIN
-  -- payments에서 store_id와 table_number 가져오기
-  SELECT c.store_id, c.table_number INTO store_id_val, table_number_val
-  FROM checks c
-  WHERE c.id = COALESCE(NEW.check_id, OLD.check_id);
+  -- payments에서 order_id를 통해 orders 테이블에서 store_id와 table_num 가져오기
+  SELECT o.store_id, o.table_num INTO store_id_val, table_number_val
+  FROM orders o
+  WHERE o.id = COALESCE(NEW.order_id, OLD.order_id);
 
   PERFORM pg_notify(
     'kds_payment_events',
     json_build_object(
       'action', TG_OP,
       'payment_id', COALESCE(NEW.id, OLD.id),
-      'check_id', COALESCE(NEW.check_id, OLD.check_id),
+      'order_id', COALESCE(NEW.order_id, OLD.order_id),
+      'ticket_id', COALESCE(NEW.ticket_id, OLD.ticket_id),
       'store_id', store_id_val,
       'table_number', table_number_val,
       'final_amount', COALESCE(NEW.amount, OLD.amount),
