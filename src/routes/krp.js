@@ -470,8 +470,6 @@ router.get('/:id', async (req, res, next) => {
 // TODO: 메뉴 가격 서버 신뢰, RBAC/JWT 확장 포인트 등은 별도 로직으로 구현 필요.
 // TODO: README 섹션 (실행법, ENV, 라우팅 표, 흐름도)은 별도 파일로 관리.
 
-module.exports = router;
-
 // 🖨️ KRP 출력 대기 목록 조회
 router.get('/', async (req, res) => {
   try {
