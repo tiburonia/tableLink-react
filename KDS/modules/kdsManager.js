@@ -299,39 +299,31 @@
     },
 
     /**
-     * 주문 완료 - 즉시 프론트엔드에서 삭제 (강제 삭제 버전)
+     * 주문 완료 - 개별 카드 직접 제거 (즉시 삭제)
      */
     async markComplete(ticketId) {
       try {
-        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 강제 즉시 삭제`);
-
-        // 🎯 무조건 프론트엔드에서 즉시 삭제 (티켓 존재 여부와 관계없이)
-        console.log(`🗑️ 강제 프론트엔드 삭제: 티켓 ${ticketId}`);
+        console.log(`✅ 티켓 ${ticketId} 완료 요청 - 개별 카드 직접 제거`);
 
         // 1. 사운드 재생
         if (window.KDSSoundManager) {
           window.KDSSoundManager.playOrderCompleteSound();
         }
 
-        // 2. 상태에서 완전 제거 (존재하지 않아도 에러 없음)
-        const wasRemoved = KDSState.removeTicket(ticketId);
-        console.log(`🗑️ 상태에서 제거 결과: ${wasRemoved ? '성공' : '이미 없음'}`);
+        // 2. 즉시 UI에서 개별 카드 제거 (DOM 직접 조작)
+        this.removeCardFromUI(ticketId);
 
-        // 3. UI에서 즉시 제거 (Grid 재렌더링)
-        const currentActiveTickets = KDSState.getActiveTickets();
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
-          window.KDSUIRenderer.renderKDSGrid(currentActiveTickets);
-          console.log(`🎨 Grid 재렌더링 완료: ${currentActiveTickets.length}개 티켓`);
-        }
+        // 3. 상태에서 제거
+        KDSState.removeTicket(ticketId);
 
         // 4. 카운트 업데이트
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
         }
 
-        console.log(`✅ 티켓 ${ticketId} 강제 삭제 완료`);
+        console.log(`✅ 티켓 ${ticketId} UI에서 즉시 제거 완료`);
 
-        // 5. 백그라운드에서 서버 API 호출 (실패해도 UI는 이미 삭제됨)
+        // 5. 백그라운드에서 서버 API 호출
         setTimeout(async () => {
           try {
             const result = await KDSAPIService.markComplete(ticketId);
@@ -348,18 +340,62 @@
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
         
-        // 에러가 발생해도 강제로 UI에서 제거
-        try {
-          KDSState.removeTicket(ticketId);
-          const currentActiveTickets = KDSState.getActiveTickets();
-          if (window.KDSUIRenderer) {
-            window.KDSUIRenderer.renderKDSGrid(currentActiveTickets);
-            window.KDSUIRenderer.updateTicketCounts();
-          }
-          console.log(`🚨 에러 발생했지만 강제로 UI에서 제거 완료: ${ticketId}`);
-        } catch (forceError) {
-          console.error('❌ 강제 제거도 실패:', forceError);
+        // 에러가 발생해도 강제로 개별 카드 제거
+        this.removeCardFromUI(ticketId);
+        KDSState.removeTicket(ticketId);
+        
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
         }
+        
+        console.log(`🚨 에러 발생했지만 강제로 카드 제거 완료: ${ticketId}`);
+      }
+    },
+
+    /**
+     * UI에서 개별 카드 직접 제거
+     */
+    removeCardFromUI(ticketId) {
+      try {
+        // 1. 해당 티켓 카드 찾기
+        const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+        
+        if (cardElement) {
+          // 2. 부모 슬롯 찾기
+          const slotElement = cardElement.closest('.grid-slot');
+          
+          if (slotElement) {
+            // 3. 슬롯 번호 가져오기
+            const slotNumber = slotElement.dataset.slot;
+            
+            // 4. 애니메이션 효과와 함께 제거
+            cardElement.style.transition = 'all 0.3s ease';
+            cardElement.style.transform = 'scale(0.8)';
+            cardElement.style.opacity = '0';
+            
+            setTimeout(() => {
+              // 5. 빈 슬롯으로 교체
+              if (slotElement && slotNumber) {
+                slotElement.innerHTML = `
+                  <div class="empty-slot">
+                    <div class="slot-number">${slotNumber}</div>
+                    <div class="slot-text">대기중</div>
+                  </div>
+                `;
+                console.log(`🗑️ 티켓 ${ticketId} 카드를 슬롯 ${slotNumber}에서 제거하고 빈 슬롯으로 교체`);
+              }
+            }, 300);
+            
+            return true;
+          }
+        }
+        
+        console.warn(`⚠️ 티켓 ${ticketId} 카드를 DOM에서 찾을 수 없음`);
+        return false;
+        
+      } catch (error) {
+        console.error('❌ 개별 카드 제거 실패:', error);
+        return false;
       }
     },
 

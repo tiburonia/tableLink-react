@@ -318,18 +318,62 @@
     },
 
     /**
-     * 티켓 카드 제거 (Grid 전체 재렌더링)
+     * 티켓 카드 제거 (개별 카드 직접 제거)
      */
     removeTicketCard(ticketId) {
-      console.log(`🗑️ 티켓 제거: ${ticketId}`);
+      console.log(`🗑️ 티켓 개별 제거: ${ticketId}`);
       
-      // 즉시 Grid 재렌더링
+      // 개별 카드 직접 제거
+      if (window.KDSManager && typeof window.KDSManager.removeCardFromUI === 'function') {
+        const success = window.KDSManager.removeCardFromUI(ticketId);
+        
+        if (success) {
+          this.updateTicketCounts();
+          console.log(`✅ 티켓 ${ticketId} 개별 제거 성공`);
+          return;
+        }
+      }
+      
+      // 백업: Grid 재렌더링
+      console.log(`🔄 개별 제거 실패, Grid 재렌더링으로 백업 처리`);
       const currentOrders = KDSState.getActiveTickets();
       this.renderKDSGrid(currentOrders);
       this.updateTicketCounts();
-      
-      // 빈 상태 체크
       this.checkEmptyState();
+    },
+
+    /**
+     * 개별 카드 직접 제거 (DOM 조작)
+     */
+    removeCardDirectly(ticketId) {
+      try {
+        const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+        
+        if (cardElement) {
+          const slotElement = cardElement.closest('.grid-slot');
+          const slotNumber = slotElement?.dataset.slot;
+          
+          // 애니메이션 효과
+          cardElement.style.transition = 'all 0.3s ease';
+          cardElement.style.transform = 'scale(0.8)';
+          cardElement.style.opacity = '0';
+          
+          setTimeout(() => {
+            if (slotElement && slotNumber) {
+              slotElement.innerHTML = this.createEmptySlotHTML(slotNumber);
+              console.log(`🗑️ 슬롯 ${slotNumber}을 빈 슬롯으로 교체`);
+            }
+          }, 300);
+          
+          return true;
+        }
+        
+        return false;
+        
+      } catch (error) {
+        console.error('❌ 개별 카드 제거 실패:', error);
+        return false;
+      }
     },
 
     /**
