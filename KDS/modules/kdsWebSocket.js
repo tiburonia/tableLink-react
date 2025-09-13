@@ -268,6 +268,9 @@
           window.KDSSoundManager.playOrderCompleteSound();
         }
 
+        // 티켓 상태를 DONE으로 업데이트 후 즉시 제거
+        ticket.status = 'DONE';
+        
         // 즉시 상태에서 제거 (UI에서 보이지 않도록)
         KDSState.removeTicket(ticketId);
 
@@ -276,7 +279,12 @@
           window.KDSUIRenderer.removeTicketCard(ticketId);
         }
 
-        console.log(`✅ DONE 상태 티켓 ${ticketId} 제거 완료`);
+        // 필터링 재적용 및 카운트 업데이트
+        if (window.KDSManager) {
+          window.KDSManager.filterTickets();
+        }
+
+        console.log(`✅ DONE 상태 티켓 ${ticketId} 완전 제거 완료`);
       } else {
         console.warn(`⚠️ 완료 처리할 티켓 ${ticketId}을 찾을 수 없음`);
       }
@@ -296,6 +304,31 @@
 
       // DB 상태를 정확히 반영
       const actualStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
+      
+      // DONE/COMPLETED 상태인 경우 즉시 제거
+      if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
+        console.log(`🗑️ 티켓 ${ticketId} ${actualStatus} 상태로 즉시 제거`);
+        
+        // 사운드 재생
+        if (window.KDSSoundManager) {
+          window.KDSSoundManager.playOrderCompleteSound();
+        }
+        
+        // 상태에서 제거
+        KDSState.removeTicket(ticketId);
+        
+        // UI에서 제거
+        if (window.KDSUIRenderer) {
+          window.KDSUIRenderer.removeTicketCard(ticketId);
+        }
+        
+        // 필터링 재적용
+        if (window.KDSManager) {
+          window.KDSManager.filterTickets();
+        }
+        
+        return;
+      }
       
       const updatedTicket = { 
         ...existingTicket, 

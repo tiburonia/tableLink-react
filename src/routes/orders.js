@@ -855,7 +855,7 @@ router.delete('/order/:orderId', async (req, res) => {
     await client.query('BEGIN');
 
     // 주문 존재 확인
-    const orderResult = await client.query(
+    const orderResult = await pool.query(
       'SELECT id, status FROM orders WHERE id = $1',
       [parseInt(orderId)]
     );
@@ -970,7 +970,7 @@ router.put('/kds/tickets/:ticketId/start-cooking', async (req, res) => {
     `, [parseInt(ticketId)]);
 
     // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
-    const orderResult = await client.query(`
+    const orderResult = await pool.query(`
       SELECT o.store_id, o.table_num as table_number
       FROM orders o
       WHERE o.id = $1
@@ -1054,7 +1054,7 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
     `, [parseInt(ticketId)]);
 
     // 3. 주문 정보 조회 (WebSocket 브로드캐스트용)
-    const orderResult = await client.query(`
+    const orderResult = await pool.query(`
       SELECT o.store_id, o.table_num as table_number
       FROM orders o
       WHERE o.id = $1
@@ -1064,20 +1064,24 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // WebSocket으로 실시간 업데이트 브로드캐스트 - DONE 상태로 전송
+    // WebSocket으로 실시간 업데이트 브로드캐스트 - DONE 상태 즉시 제거용
     if (global.io) {
-      // KDS에 DONE 상태 알림 (즉시 제거용)
       global.io.to(`kds:${store_id}`).emit('kds-update', {
         type: 'ticket_completed',
         data: {
           ticket_id: parseInt(ticketId),
           order_id: order_id,
-          status: 'DONE', // DONE 상태로 전송하여 KDS에서 즉시 제거
+          status: 'DONE',
           table_number: table_number
         }
       });
 
-      console.log(`📡 KDS WebSocket 전송: 티켓 ${ticketId} DONE 상태 알림`);
+      // 추가: DONE 상태 티켓 즉시 제거 이벤트
+      global.io.to(`kds:${store_id}`).emit('ticket.completed', {
+        ticket_id: parseInt(ticketId),
+        status: 'DONE',
+        action: 'remove'
+      });
     }
 
     res.json({

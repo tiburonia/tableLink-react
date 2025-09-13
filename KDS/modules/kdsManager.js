@@ -423,8 +423,8 @@
           const actualStatus = (ticket.status || '').toUpperCase();
           const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
           
-          // DONE 상태는 렌더링하지 않음
-          if (actualStatus === 'DONE' || actualStatus === 'COMPLETED') {
+          // DONE/COMPLETED/SERVED 상태는 렌더링하지 않음
+          if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
             console.log(`⏭️ ${actualStatus} 상태 티켓 ${ticketId} 렌더링 스킵`);
             return;
           }
