@@ -24,12 +24,12 @@
 
         // UI 렌더링 (Grid 레이아웃 포함)
         console.log('🎨 KDS UI 렌더링 시작');
-        
+
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.render === 'function') {
           // 메인 UI 구조 렌더링 (헤더, 탭, 그리드 컨테이너)
           KDSUIRenderer.render(storeId);
           console.log('✅ KDS 메인 UI 구조 렌더링 완료');
-          
+
           // 초기에는 빈 그리드 렌더링
           if (typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
             window.KDSUIRenderer.renderKDSGrid([]);
@@ -82,7 +82,12 @@
         // 자동 새로고침 설정
         this.setupAutoRefresh();
 
-        console.log('✅ KDS 시스템 초기화 완료');
+        // 8. 주기적 동기화 시작 (백업 시스템)
+        if (window.KDSWebSocket) {
+          KDSWebSocket.startPeriodicSync(storeId, 15000); // 15초 간격
+        }
+
+        console.log('✅ KDS 시스템 초기화 완료 - 3단계 실시간 시스템 활성화');
 
       } catch (error) {
         console.error('❌ KDS 시스템 초기화 실패:', error);
@@ -114,12 +119,12 @@
 
       if (currentTab === 'active') {
         tickets = KDSState.getActiveTickets();
-        
+
         // 추가 안전장치: 완료된 상태의 티켓 강제 제거
         tickets = tickets.filter(ticket => {
           const status = (ticket.status || '').toUpperCase();
           const isDone = ['DONE', 'COMPLETED', 'SERVED'].includes(status);
-          
+
           if (isDone) {
             console.log(`🚨 완료된 티켓이 active 탭에 있음 - 강제 제거: ${this._extractSafeTicketId(ticket)}`);
             KDSState.removeTicket(this._extractSafeTicketId(ticket));
@@ -352,15 +357,15 @@
 
       } catch (error) {
         console.error('❌ 완료 처리 실패:', error);
-        
+
         // 에러가 발생해도 강제로 개별 카드 제거
         this.removeCardFromUI(ticketId);
         KDSState.removeTicket(ticketId);
-        
+
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
         }
-        
+
         console.log(`🚨 에러 발생했지만 강제로 카드 제거 완료: ${ticketId}`);
       }
     },
@@ -372,20 +377,20 @@
       try {
         // 1. 해당 티켓 카드 찾기
         const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-        
+
         if (cardElement) {
           // 2. 부모 슬롯 찾기
           const slotElement = cardElement.closest('.grid-slot');
-          
+
           if (slotElement) {
             // 3. 슬롯 번호 가져오기
             const slotNumber = slotElement.dataset.slot;
-            
+
             // 4. 애니메이션 효과와 함께 제거
             cardElement.style.transition = 'all 0.3s ease';
             cardElement.style.transform = 'scale(0.8)';
             cardElement.style.opacity = '0';
-            
+
             setTimeout(() => {
               // 5. 빈 슬롯으로 교체
               if (slotElement && slotNumber) {
@@ -398,14 +403,14 @@
                 console.log(`🗑️ 티켓 ${ticketId} 카드를 슬롯 ${slotNumber}에서 제거하고 빈 슬롯으로 교체`);
               }
             }, 300);
-            
+
             return true;
           }
         }
-        
+
         console.warn(`⚠️ 티켓 ${ticketId} 카드를 DOM에서 찾을 수 없음`);
         return false;
-        
+
       } catch (error) {
         console.error('❌ 개별 카드 제거 실패:', error);
         return false;
@@ -538,7 +543,7 @@
 
           // 완료된 티켓은 상태에 저장하지 않음 (UI 노출 방지)
           const isCompleted = ['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus);
-          
+
           if (isCompleted) {
             console.log(`🚫 완료된 티켓 ${ticketId} - 상태에 저장하지 않음`);
             return; // 완료된 티켓은 건너뛰기

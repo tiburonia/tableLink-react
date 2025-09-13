@@ -272,6 +272,7 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
 
     // WebSocket으로 실시간 업데이트 브로드캐스트
     if (global.io) {
+      // 메인 이벤트
       global.io.to(`kds:${store_id}`).emit('kds-update', {
         type: 'item_status_update',
         data: {
@@ -281,9 +282,20 @@ router.put('/kds/items/:itemId/status', async (req, res) => {
           item_status: upperStatus,
           menu_name: menu_name,
           quantity: quantity,
-          table_number: table_number
+          table_number: table_number,
+          timestamp: new Date().toISOString()
         }
       });
+
+      // 호환성을 위한 개별 이벤트
+      global.io.to(`kds:${store_id}`).emit('item.updated', {
+        item_id: parseInt(itemId),
+        ticket_id: ticket_id,
+        item_status: upperStatus,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`📡 아이템 상태 업데이트 이벤트: 매장 ${store_id}, 아이템 ${itemId} -> ${upperStatus}`);
     }
 
     res.json({
@@ -425,6 +437,22 @@ router.post('/pay/:checkId', async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    // 결제 완료 시 KDS에 실시간 이벤트 전송
+    if (global.io) {
+      // 해당 매장의 모든 티켓을 DONE 상태로 브로드캐스트
+      global.io.to(`kds:${check.store_id}`).emit('kds-update', {
+        type: 'payment_completed',
+        data: {
+          table_number: check.table_number,
+          check_id: parseInt(checkId),
+          final_amount: finalAmount,
+          action: 'remove_all_table_tickets'
+        }
+      });
+
+      console.log(`📡 결제 완료 이벤트 브로드캐스트: 매장 ${check.store_id}, 테이블 ${check.table_number}`);
+    }
 
     res.json({
       success: true,
@@ -1126,3 +1154,106 @@ router.put('/kds/tickets/:ticketId/complete', async (req, res) => {
 
 
 module.exports = router;
+// 🔄 KDS 동기화 API (백업 시스템)
+router.get('/kds/:storeId/sync', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { lastSyncAt, version } = req.query;
+
+    console.log(`🔄 KDS 동기화 요청 - 매장 ${storeId}, 마지막 동기화: ${lastSyncAt}`);
+
+    const whereClause = lastSyncAt 
+      ? 'AND (ot.updated_at > $2 OR o.updated_at > $2)'
+      : '';
+    
+    const queryParams = lastSyncAt 
+      ? [parseInt(storeId), lastSyncAt]
+      : [parseInt(storeId)];
+
+    // 변경된 티켓들 조회
+    const result = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        ot.id as ticket_id,
+        ot.status as ticket_status,
+        ot.display_status,
+        o.table_num,
+        o.created_at,
+        o.updated_at,
+        ot.updated_at as ticket_updated_at,
+        o.source,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', oi.item_status,
+            'orderedAt', oi.created_at,
+            'updatedAt', oi.updated_at,
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
+          ) ORDER BY oi.created_at
+        ) FILTER (WHERE oi.cook_station = 'KITCHEN') as items
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 
+        AND o.status = 'OPEN'
+        ${whereClause}
+      GROUP BY o.id, ot.id, ot.status, ot.display_status, o.table_num, 
+               o.created_at, o.updated_at, ot.updated_at, o.source
+      HAVING array_length(array_agg(oi.id) FILTER (WHERE oi.cook_station = 'KITCHEN'), 1) > 0
+      ORDER BY o.created_at ASC
+    `, queryParams);
+
+    // 삭제된 티켓들 조회 (DONE, COMPLETED 상태)
+    const deletedResult = lastSyncAt ? await pool.query(`
+      SELECT DISTINCT ot.id as ticket_id, ot.status
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      WHERE o.store_id = $1 
+        AND ot.status IN ('DONE', 'COMPLETED', 'SERVED')
+        AND ot.updated_at > $2
+      ORDER BY ot.updated_at DESC
+    `, [parseInt(storeId), lastSyncAt]) : { rows: [] };
+
+    const syncData = {
+      success: true,
+      timestamp: new Date().toISOString(),
+      storeId: parseInt(storeId),
+      version: Date.now(), // 간단한 버전 관리
+      changes: {
+        updated: result.rows.map(order => ({
+          check_id: order.ticket_id,
+          id: order.order_id,
+          ticket_id: order.ticket_id,
+          customer_name: `테이블 ${order.table_num}`,
+          table_number: order.table_num,
+          status: order.ticket_status?.toUpperCase() || 'PENDING',
+          display_status: order.display_status,
+          created_at: order.created_at,
+          updated_at: order.ticket_updated_at || order.updated_at,
+          items: order.items || []
+        })),
+        deleted: deletedResult.rows.map(row => ({
+          ticket_id: row.ticket_id,
+          status: row.status,
+          action: 'remove'
+        }))
+      },
+      stats: {
+        updated: result.rows.length,
+        deleted: deletedResult.rows.length
+      }
+    };
+
+    res.json(syncData);
+
+  } catch (error) {
+    console.error('❌ KDS 동기화 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 동기화 실패',
+      details: error.message
+    });
+  }
+});

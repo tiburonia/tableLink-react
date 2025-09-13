@@ -57,7 +57,13 @@
         // KDS 이벤트 리스너
         socket.on('kds-update', (data) => {
           console.log('📡 KDS 업데이트 수신:', data);
-          this.handleKDSUpdate(data);
+          
+          // DB 기반 알림인지 확인
+          if (data.data?.source === 'db_trigger') {
+            this.handleDBNotification(data);
+          } else {
+            this.handleKDSUpdate(data);
+          }
         });
 
         socket.on('ticket.created', (ticket) => {
@@ -432,6 +438,125 @@
              ticket.id || 
              ticket.order_id || 
              `unknown_${Date.now()}`;
+    },
+
+    /**
+     * 주기적 동기화 시작
+     */
+    startPeriodicSync(storeId, intervalMs = 15000) {
+      // 기존 동기화 타이머 정리
+      if (KDSState.syncInterval) {
+        clearInterval(KDSState.syncInterval);
+      }
+
+      let lastSyncAt = new Date().toISOString();
+
+      KDSState.syncInterval = setInterval(async () => {
+        try {
+          // WebSocket 연결이 정상이면 동기화 생략
+          if (KDSState.isConnected && KDSState.socket?.connected) {
+            console.log('🔄 WebSocket 연결 정상 - 동기화 생략');
+            return;
+          }
+
+          console.log('🔄 KDS 백업 동기화 시작');
+          
+          const response = await fetch(
+            `/api/orders/kds/${storeId}/sync?lastSyncAt=${encodeURIComponent(lastSyncAt)}`
+          );
+
+          if (!response.ok) {
+            throw new Error(`동기화 API 오류: ${response.status}`);
+          }
+
+          const syncData = await response.json();
+          
+          if (syncData.success) {
+            // 업데이트된 티켓 처리
+            syncData.changes.updated.forEach(ticket => {
+              console.log(`🔄 동기화: 티켓 ${ticket.ticket_id} 업데이트`);
+              this.handleTicketUpdated(ticket);
+            });
+
+            // 삭제된 티켓 처리
+            syncData.changes.deleted.forEach(deletedTicket => {
+              console.log(`🔄 동기화: 티켓 ${deletedTicket.ticket_id} 제거`);
+              KDSState.removeTicket(deletedTicket.ticket_id);
+              if (window.KDSUIRenderer) {
+                window.KDSUIRenderer.removeTicketCard(deletedTicket.ticket_id);
+              }
+            });
+
+            // 필터링 재적용
+            if (window.KDSManager) {
+              window.KDSManager.filterTickets();
+            }
+
+            lastSyncAt = syncData.timestamp;
+            
+            console.log(`✅ KDS 동기화 완료: ${syncData.stats.updated}개 업데이트, ${syncData.stats.deleted}개 삭제`);
+          }
+
+        } catch (error) {
+          console.warn('⚠️ KDS 백업 동기화 실패:', error);
+        }
+      }, intervalMs);
+
+      console.log(`✅ KDS 주기적 동기화 시작 (${intervalMs/1000}초 간격)`);
+    },
+
+    /**
+     * 동기화 중지
+     */
+    stopPeriodicSync() {
+      if (KDSState.syncInterval) {
+        clearInterval(KDSState.syncInterval);
+        KDSState.syncInterval = null;
+        console.log('🔄 KDS 주기적 동기화 중지');
+      }
+    },
+
+    /**
+     * DB 기반 변경 감지 처리
+     */
+    handleDBNotification(data) {
+      console.log('📡 DB 알림 수신:', data);
+
+      switch (data.type) {
+        case 'db_order_change':
+        case 'db_ticket_change':
+          this.handleTicketUpdated({
+            ticket_id: data.data.ticket_id,
+            status: data.data.status,
+            source: 'db_trigger'
+          });
+          break;
+          
+        case 'db_item_change':
+          this.handleItemUpdated({
+            ticket_id: data.data.ticket_id,
+            item_id: data.data.item_id,
+            item_status: data.data.item_status,
+            source: 'db_trigger'
+          });
+          break;
+          
+        case 'db_payment_change':
+          // 결제 완료 시 해당 테이블의 모든 티켓 제거
+          const tableTickets = KDSState.getAllTickets().filter(
+            ticket => ticket.table_number === data.data.table_number
+          );
+          
+          tableTickets.forEach(ticket => {
+            KDSState.removeTicket(ticket.ticket_id || ticket.id);
+            if (window.KDSUIRenderer) {
+              window.KDSUIRenderer.removeTicketCard(ticket.ticket_id || ticket.id);
+            }
+          });
+          
+          console.log(`💳 결제 완료: 테이블 ${data.data.table_number} 티켓 ${tableTickets.length}개 제거`);
+          break;
+      }
     },
 
     /**

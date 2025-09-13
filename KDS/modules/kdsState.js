@@ -20,6 +20,7 @@
     isConnected: false,
     selectedStations: ['KITCHEN', 'GRILL', 'FRY', 'DRINK', 'COLD_STATION'],
     autoRefreshInterval: null,
+    syncInterval: null, // 주기적 동기화 인터벌
 
     /**
      * 상태 초기화

@@ -145,107 +145,148 @@ try {
 app.use(notFound);
 app.use(errorHandler);
 
-// PostgreSQL LISTEN setup (KDS Real-time Notifications)
+// PostgreSQL LISTEN/NOTIFY 완전 구현
 async function setupKDSListener() {
-  const client = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  });
-
   try {
-    const listenerClient = await client.connect();
-    await listenerClient.query('LISTEN kds_line_events');
+    const listenerClient = await pool.connect();
+
+    // 여러 채널 구독
+    await listenerClient.query('LISTEN kds_order_events');
+    await listenerClient.query('LISTEN kds_ticket_events');
+    await listenerClient.query('LISTEN kds_item_events');
+    await listenerClient.query('LISTEN kds_payment_events');
 
     listenerClient.on('notification', async (msg) => {
       try {
         const payload = JSON.parse(msg.payload);
-        console.log('📡 KDS 이벤트 수신:', payload);
+        console.log('📡 PostgreSQL NOTIFY 수신:', msg.channel, payload);
 
-        // Get store_id from check_item_id (새 스키마)
-        if (payload.check_item_id || payload.item_id) {
-          const itemId = payload.check_item_id || payload.item_id;
-          // Fetch pending order tickets and relevant items
-          const orderResult = await pool.query(`
-            SELECT
-                o.id as order_id,
-                o.customer_name,
-                o.table_number,
-                oi.id as order_item_id,
-                oi.menu_name,
-                oi.cook_station,
-                oi.status
-            FROM orders o
-            JOIN order_items oi ON o.id = oi.order_id
-            WHERE o.status = 'PENDING' AND oi.id = $1
-          `, [itemId]);
-
-          if (orderResult.rows.length > 0) {
-            const { order_id, customer_name, table_number, order_item_id, menu_name, cook_station, status } = orderResult.rows[0];
-            const storeId = await getStoreIdByOrderItem(order_item_id); // Helper to get storeId
-
-            if (storeId && cook_station === 'KITCHEN') { // Only include KITCHEN items
-              // WebSocket 전용 실시간 브로드캐스트
-              io.to(`store:${storeId}`).emit('pos-update', {
-                type: 'item-status-update',
-                storeId: storeId,
-                data: {
-                  order_id,
-                  order_item_id,
-                  customer_name,
-                  table_number,
-                  menu_name,
-                  cook_station,
-                  status
-                },
-                timestamp: new Date().toISOString()
-              });
-
-              io.to(`kds:${storeId}`).emit('kds-update', {
-                type: 'item_status_update',
-                storeId: storeId,
-                data: {
-                  order_id,
-                  order_item_id,
-                  customer_name,
-                  table_number,
-                  menu_name,
-                  cook_station,
-                  status
-                },
-                timestamp: new Date().toISOString()
-              });
-            }
-          }
+        switch (msg.channel) {
+          case 'kds_order_events':
+            await handleOrderNotification(payload);
+            break;
+          case 'kds_ticket_events':
+            await handleTicketNotification(payload);
+            break;
+          case 'kds_item_events':
+            await handleItemNotification(payload);
+            break;
+          case 'kds_payment_events':
+            await handlePaymentNotification(payload);
+            break;
         }
+
       } catch (error) {
-        console.error('❌ KDS 이벤트 처리 실패:', error);
+        console.error('❌ PostgreSQL 알림 처리 실패:', error);
       }
     });
 
-    console.log('👂 PostgreSQL LISTEN kds_line_events 준비완료');
+    console.log('✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독');
+
+    // 연결 끊김 감지 및 재연결
+    listenerClient.on('error', async (error) => {
+      console.error('❌ PostgreSQL LISTEN 연결 오류:', error);
+      setTimeout(() => setupKDSListener(), 5000); // 5초 후 재연결
+    });
+
   } catch (error) {
     console.error('❌ PostgreSQL LISTEN 설정 실패:', error);
+    setTimeout(() => setupKDSListener(), 10000); // 10초 후 재시도
   }
 }
 
-// Helper function to get store_id from order_item_id (assuming a relationship)
-async function getStoreIdByOrderItem(orderItemId) {
-  try {
-    const result = await pool.query(`
-      SELECT s.id as store_id
-      FROM stores s
-      JOIN orders o ON s.id = o.store_id
-      JOIN order_items oi ON o.id = oi.order_id
-      WHERE oi.id = $1
-    `, [orderItemId]);
+// 주문 알림 처리
+async function handleOrderNotification(payload) {
+  const { action, order_id, store_id, table_num, status } = payload;
 
-    if (result.rows.length > 0) {
-      return result.rows[0].store_id;
+  if (global.io && store_id) {
+    global.io.to(`kds:${store_id}`).emit('kds-update', {
+      type: 'db_order_change',
+      data: {
+        action,
+        order_id: parseInt(order_id),
+        table_number: table_num,
+        status,
+        timestamp: new Date().toISOString(),
+        source: 'db_trigger'
+      }
+    });
+
+    console.log(`📡 DB 주문 변경 이벤트: 매장 ${store_id}, 주문 ${order_id} -> ${status}`);
+  }
+}
+
+// 티켓 알림 처리
+async function handleTicketNotification(payload) {
+  const { action, ticket_id, order_id, store_id, status } = payload;
+
+  if (global.io && store_id) {
+    global.io.to(`kds:${store_id}`).emit('kds-update', {
+      type: 'db_ticket_change',
+      data: {
+        action,
+        ticket_id: parseInt(ticket_id),
+        order_id: parseInt(order_id),
+        status,
+        timestamp: new Date().toISOString(),
+        source: 'db_trigger'
+      }
+    });
+
+    // 완료된 티켓의 경우 즉시 제거 이벤트
+    if (status === 'DONE' || status === 'COMPLETED') {
+      global.io.to(`kds:${store_id}`).emit('ticket.completed', {
+        ticket_id: parseInt(ticket_id),
+        status,
+        action: 'remove',
+        source: 'db_trigger'
+      });
     }
-    return null;
-  } catch (error) {
-    console.error('❌ store_id 조회 실패:', error);
-    return null;
+
+    console.log(`📡 DB 티켓 변경 이벤트: 매장 ${store_id}, 티켓 ${ticket_id} -> ${status}`);
+  }
+}
+
+// 아이템 알림 처리
+async function handleItemNotification(payload) {
+  const { action, item_id, ticket_id, store_id, item_status, menu_name } = payload;
+
+  if (global.io && store_id) {
+    global.io.to(`kds:${store_id}`).emit('kds-update', {
+      type: 'db_item_change',
+      data: {
+        action,
+        item_id: parseInt(item_id),
+        ticket_id: parseInt(ticket_id),
+        item_status,
+        menu_name,
+        timestamp: new Date().toISOString(),
+        source: 'db_trigger'
+      }
+    });
+
+    console.log(`📡 DB 아이템 변경 이벤트: 매장 ${store_id}, 아이템 ${item_id} -> ${item_status}`);
+  }
+}
+
+// 결제 알림 처리
+async function handlePaymentNotification(payload) {
+  const { action, payment_id, store_id, table_number, final_amount } = payload;
+
+  if (global.io && store_id) {
+    global.io.to(`kds:${store_id}`).emit('kds-update', {
+      type: 'db_payment_change',
+      data: {
+        action,
+        payment_id: parseInt(payment_id),
+        table_number,
+        final_amount,
+        timestamp: new Date().toISOString(),
+        source: 'db_trigger'
+      }
+    });
+
+    console.log(`📡 DB 결제 변경 이벤트: 매장 ${store_id}, 테이블 ${table_number} 결제 완료`);
   }
 }
 
@@ -253,14 +294,14 @@ async function getStoreIdByOrderItem(orderItemId) {
 io.on('connection', (socket) => {
   const authData = socket.handshake.auth;
   const userType = authData?.userType || 'unknown';
-  
+
   console.log(`🔌 새로운 WebSocket 연결: ${socket.id} (${userType})`);
 
   // KDS 룸 조인 (인증 선택사항)
   socket.on('join-kds', (storeId) => {
     const roomName = `kds:${storeId}`;
     socket.join(roomName);
-    
+
     const connectionType = userType === 'kds-anonymous' ? '익명 KDS' : 'authenticated';
     console.log(`🏪 KDS 룸 조인: ${socket.id} -> ${roomName} (${connectionType})`);
 
