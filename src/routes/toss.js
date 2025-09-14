@@ -76,13 +76,22 @@ router.post('/prepare', async (req, res) => {
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
 
-    // cook_station 정보를 각 메뉴 아이템에서 추출하여 jsonb 형태로 저장
+    // cook_station 정보를 각 메뉴 아이템에서 추출하여 jsonb 형태로 저장 (menu_id 포함)
     const cookStationData = {
-      items: (orderData.items || []).map(item => ({
-        name: item.name,
-        cook_station: item.cook_station || 'KITCHEN',
-        menuId: item.menuId || item.menu_id || item.id || null
-      }))
+      items: (orderData.items || []).map(item => {
+        // menu_id 우선순위: menuId > menu_id > id
+        const menuId = item.menuId || item.menu_id || item.id || null;
+        
+        console.log(`📋 prepare - 메뉴 ${item.name}: menu_id=${menuId}, cook_station=${item.cook_station || 'KITCHEN'}`);
+        
+        return {
+          name: item.name,
+          cook_station: item.cook_station || 'KITCHEN',
+          menuId: menuId,
+          price: item.price,
+          quantity: item.quantity || 1
+        };
+      })
     };
 
     const cookStations = JSON.stringify(cookStationData);
@@ -364,24 +373,55 @@ router.post('/confirm', async (req, res) => {
       console.log('📊 pending_payments에서 복원된 cook_station 데이터:', cookStationData);
 
       for (const item of finalOrderInfo.items) {
-        // menu_id 우선순위: 1) 프론트에서 전달된 값, 2) DB 조회, 3) null
+        // menu_id 우선순위: 1) 프론트에서 전달된 값, 2) pending_payments에서 복원, 3) DB 조회, 4) 1 (기본값)
         let actualMenuId = item.menuId || item.menu_id || null;
         let actualCookStation = 'KITCHEN'; // 기본값
 
-        // pending_payments에 저장된 cook_station 정보에서 해당 메뉴의 cook_station 찾기
+        // pending_payments에 저장된 cook_station 정보에서 해당 메뉴의 menu_id와 cook_station 찾기
         if (cookStationData && cookStationData.items && Array.isArray(cookStationData.items)) {
           const savedItem = cookStationData.items.find(saved => 
             saved.name === item.name
           );
-          if (savedItem && savedItem.cook_station) {
-            actualCookStation = savedItem.cook_station;
-            console.log(`✅ pending_payments에서 cook_station 복원: ${item.name} -> ${actualCookStation}`);
-          } else {
-            console.warn(`⚠️ pending_payments에서 ${item.name}의 cook_station 정보를 찾을 수 없음`);
+          if (savedItem) {
+            // cook_station 복원
+            if (savedItem.cook_station) {
+              actualCookStation = savedItem.cook_station;
+              console.log(`✅ pending_payments에서 cook_station 복원: ${item.name} -> ${actualCookStation}`);
+            }
+            
+            // menu_id 복원 (우선순위 높음)
+            if (savedItem.menuId && !actualMenuId) {
+              actualMenuId = savedItem.menuId;
+              console.log(`✅ pending_payments에서 menu_id 복원: ${item.name} -> ${actualMenuId}`);
+            }
           }
-        } else {
-          console.warn('⚠️ pending_payments에 cook_station 데이터가 없거나 형식이 잘못됨');
         }
+
+        // menu_id가 여전히 null인 경우 DB에서 조회 시도
+        if (!actualMenuId) {
+          console.warn(`⚠️ ${item.name}의 menu_id가 없음 - DB에서 조회 시도`);
+          try {
+            const menuResult = await client.query(`
+              SELECT id FROM store_menu 
+              WHERE store_id = $1 AND name = $2 
+              LIMIT 1
+            `, [finalOrderInfo.storeId, item.name]);
+
+            if (menuResult.rows.length > 0) {
+              actualMenuId = menuResult.rows[0].id;
+              console.log(`✅ DB에서 menu_id 조회 성공: ${item.name} -> ${actualMenuId}`);
+            } else {
+              // 마지막 수단: 기본값 1 사용
+              actualMenuId = 1;
+              console.warn(`⚠️ ${item.name}의 menu_id를 찾을 수 없음 - 기본값 1 사용`);
+            }
+          } catch (menuError) {
+            console.error(`❌ ${item.name}의 menu_id DB 조회 실패:`, menuError.message);
+            actualMenuId = 1; // 기본값
+          }
+        }
+
+        console.log(`📋 order_items 삽입: ${item.name} (menu_id: ${actualMenuId}, cook_station: ${actualCookStation})`);
 
         await client.query(`
           INSERT INTO order_items (
@@ -398,7 +438,7 @@ router.post('/confirm', async (req, res) => {
         `, [
           ticketId,
           finalOrderInfo.storeId,
-          actualMenuId, // 수정된 menu_id 사용
+          actualMenuId, // 확실한 menu_id 사용
           item.name,
           item.quantity || 1,
           item.price,
