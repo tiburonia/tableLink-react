@@ -123,26 +123,30 @@ const POSTableMap = {
             <div class="pos-side-panel">
                 <div class="side-panel-section">
                     <h3>테이블 관리</h3>
-                    <button class="side-btn" onclick="POSTableMap.mergeTable()">
-                        🔗 합석
-                    </button>
-                    <button class="side-btn" onclick="POSTableMap.splitTable()">
-                        ✂️ 분리
-                    </button>
                     <button class="side-btn" onclick="POSTableMap.moveTable()">
                         🔄 이동
+                    </button>
+                    <button class="side-btn" onclick="POSTableMap.splitTable()">
+                        ✂️ 분할
+                    </button>
+                    <button class="side-btn" onclick="POSTableMap.groupTable()">
+                        👥 단체
                     </button>
                 </div>
                 
                 <div class="side-panel-section">
-                    <h3>출력/리포트</h3>
+                    <h3>영수증/출력</h3>
+                    <button class="side-btn" onclick="POSTableMap.receiptManagement()">
+                        📋 영수증관리
+                    </button>
                     <button class="side-btn" onclick="POSTableMap.reprintReceipt()">
                         🖨️ 재출력
                     </button>
-                    <button class="side-btn" onclick="POSTableMap.showDailySales()">
-                        📈 일일매출
-                    </button>
-                    <button class="side-btn" onclick="POSTableMap.showReport()">
+                </div>
+                
+                <div class="side-panel-section">
+                    <h3>현황/리포트</h3>
+                    <button class="side-btn" onclick="POSTableMap.showSalesStatus()">
                         📊 판매현황
                     </button>
                 </div>
@@ -356,14 +360,13 @@ const POSTableMap = {
     
     // 기타 기능들 (추후 구현)
     showOrderStatus() { alert('주문현황 기능 (추후 구현)'); },
-    showSalesStatus() { alert('매출현황 기능 (추후 구현)'); },
+    showSalesStatus() { alert('판매현황 기능 (추후 구현)'); },
     showNotifications() { alert('알림 기능 (추후 구현)'); },
-    mergeTable() { alert('합석 기능 (추후 구현)'); },
-    splitTable() { alert('분리 기능 (추후 구현)'); },
-    moveTable() { alert('이동 기능 (추후 구현)'); },
+    moveTable() { alert('테이블 이동 기능 (추후 구현)'); },
+    splitTable() { alert('테이블 분할 기능 (추후 구현)'); },
+    groupTable() { alert('단체 테이블 기능 (추후 구현)'); },
+    receiptManagement() { alert('영수증 관리 기능 (추후 구현)'); },
     reprintReceipt() { alert('재출력 기능 (추후 구현)'); },
-    showDailySales() { alert('일일매출 기능 (추후 구현)'); },
-    showReport() { alert('판매현황 기능 (추후 구현)'); },
     showSettings() { alert('설정 기능 (추후 구현)'); },
     logout() { 
         if (confirm('POS를 종료하시겠습니까?')) {
