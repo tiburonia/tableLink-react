@@ -471,21 +471,21 @@ global.broadcastKDSUpdate = (storeId, event, data) => {
   console.log(`📡 KDS 브로드캐스트: ${roomName} -> ${event}`, data);
 };
 
-// 라우터 등록
+// 라우터 설정
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/stores', require('./routes/stores'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/reviews', require('./routes/reviews'));
-app.use('/api/toss', require('./routes/toss'));
-app.use('/api/tll', require('./routes/tll'));
-app.use('/api/cart', require('./routes/cart'));
-app.use('/api/pos', require('./routes/pos'));
 app.use('/api/regular-levels', require('./routes/regular-levels'));
 app.use('/api/tables', require('./routes/tables'));
-app.use('/api/stores-clusters', require('./routes/stores-clusters'));
+app.use('/api/toss', require('./routes/toss'));
+app.use('/api/tll', require('./routes/tll'));
+app.use('/api/pos', require('./routes/pos'));
+app.use('/api/cart', require('./routes/cart'));
 app.use('/api/audit', require('./routes/audit'));
-app.use('/api/krp', require('./routes/krp')); // KRP 라우트 등록
+app.use('/api/stores-clusters', require('./routes/stores-clusters'));
+app.use('/api/krp', require('./routes/krp'));
 
 // KRP 진입을 위한 루트 라우트 설정 (예시)
 // 실제 KRP UI를 제공하는 라우트를 여기에 추가해야 합니다.

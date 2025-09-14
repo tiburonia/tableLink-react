@@ -629,7 +629,7 @@ function setupKRPWebSocket(storeId) {
 
     krpSocket.on('connect', () => {
       console.log('✅ KRP WebSocket 연결 성공:', krpSocket.id);
-      krpSocket.emit('join-krp-room', parseInt(storeId));
+      krpSocket.emit('join-kds', parseInt(storeId)); // KDS 룸으로 조인 (기존 로직 재사용)
       updateConnectionStatus(true);
       showNotification('🔌 KRP 실시간 연결 활성화', 'success');
     });
