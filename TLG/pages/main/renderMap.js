@@ -1475,6 +1475,8 @@ async function renderMap() {
   // 장바구니 상태 업데이트 함수
   function updateCartBadge() {
     const cartBadge = document.getElementById('cartBadge');
+    if (!cartBadge) return; // 요소가 없으면 함수 종료
+    
     if (window.savedCart && window.savedCart.order) {
       const totalItems = Object.values(window.savedCart.order).reduce((a, b) => a + b, 0);
       if (totalItems > 0) {
