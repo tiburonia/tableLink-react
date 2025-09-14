@@ -249,7 +249,7 @@ router.post('/confirm', async (req, res) => {
 
     if (isTLLOrder) {
       // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
-      console.log('📋 TLL 주문 처리 시작 - 새 스키마로 주문 생성');
+      console.log('📋 TLL 주문 처리 시작 - 기존 OPEN 주문 확인');
 
       // pending_payments에서 복구된 데이터로 주문 정보 설정
       const finalOrderInfo = {
@@ -272,28 +272,59 @@ router.post('/confirm', async (req, res) => {
         itemCount: finalOrderInfo.items.length
       });
 
-      // 1. orders 테이블에 주문 생성 (새 스키마에 맞게)
-      const orderResult = await client.query(`
-        INSERT INTO orders (
-          store_id,
-          user_id,
-          source,
-          status,
-          payment_status,
-          total_price,
-          table_num
-        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
-        RETURNING id
-      `, [
-        finalOrderInfo.storeId,
-        finalOrderInfo.userPk, // user_pk를 user_id에 저장 (정수형)
-        finalOrderInfo.finalTotal,
-        finalOrderInfo.tableNumber
-      ]);
+      // 1. 해당 매장에서 OPEN 상태인 기존 주문 확인
+      const existingOrderResult = await client.query(`
+        SELECT id FROM orders 
+        WHERE store_id = $1 AND status = 'OPEN'
+        LIMIT 1
+      `, [finalOrderInfo.storeId]);
 
-      const newOrderId = orderResult.rows[0].id;
+      let orderIdToUse;
 
-      // 2. order_tickets 테이블에 티켓 생성
+      if (existingOrderResult.rows.length > 0) {
+        // 기존 OPEN 주문이 있으면 그것을 사용
+        orderIdToUse = existingOrderResult.rows[0].id;
+        console.log('🔄 기존 OPEN 주문 재사용:', orderIdToUse);
+      } else {
+        // 기존 OPEN 주문이 없으면 새로 생성
+        const newOrderResult = await client.query(`
+          INSERT INTO orders (
+            store_id,
+            user_id,
+            source,
+            status,
+            payment_status,
+            total_price,
+            table_num
+          ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
+          RETURNING id
+        `, [
+          finalOrderInfo.storeId,
+          finalOrderInfo.userPk,
+          finalOrderInfo.finalTotal,
+          finalOrderInfo.tableNumber
+        ]);
+        
+        orderIdToUse = newOrderResult.rows[0].id;
+        console.log('✨ 새 주문 생성:', orderIdToUse);
+      }
+
+      // 2. 해당 주문의 기존 order_tickets 개수 확인하여 batch_no 계산
+      const existingTicketsResult = await client.query(`
+        SELECT COUNT(*) as count FROM order_tickets 
+        WHERE order_id = $1
+      `, [orderIdToUse]);
+
+      const existingTicketCount = parseInt(existingTicketsResult.rows[0].count);
+      const nextBatchNo = existingTicketCount + 1;
+
+      console.log('📊 배치 번호 계산:', {
+        orderId: orderIdToUse,
+        existingTickets: existingTicketCount,
+        nextBatchNo: nextBatchNo
+      });
+
+      // 3. order_tickets 테이블에 티켓 생성 (순차적 batch_no 부여)
       const ticketResult = await client.query(`
         INSERT INTO order_tickets (
           order_id,
@@ -303,9 +334,9 @@ router.post('/confirm', async (req, res) => {
           payment_type,
           source,
           table_num
-        ) VALUES ($1, $2, 1, 'PENDING', 'PREPAID', 'TLL',$3)
+        ) VALUES ($1, $2, $3, 'PENDING', 'PREPAID', 'TLL', $4)
         RETURNING id
-      `, [newOrderId, finalOrderInfo.storeId, finalOrderInfo.tableNumber]);
+      `, [orderIdToUse, finalOrderInfo.storeId, nextBatchNo, finalOrderInfo.tableNumber]);
 
       const ticketId = ticketResult.rows[0].id;
 
@@ -348,7 +379,7 @@ router.post('/confirm', async (req, res) => {
           provider_response
         ) VALUES ($1, $2, 'TOSS', $3, 'COMPLETED', CURRENT_TIMESTAMP, $4, $5)
       `, [
-        newOrderId,
+        orderIdToUse,
         ticketId,
         finalOrderInfo.finalTotal,
         paymentKey,
@@ -368,7 +399,7 @@ router.post('/confirm', async (req, res) => {
               code,
               amount_signed
             ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
-          `, [newOrderId, ticketId, -finalOrderInfo.usedPoint]);
+          `, [orderIdToUse, ticketId, -finalOrderInfo.usedPoint]);
         } catch (adjustmentError) {
           console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
         }
@@ -386,7 +417,7 @@ router.post('/confirm', async (req, res) => {
               code,
               amount_signed
             ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
-          `, [newOrderId, ticketId, -finalOrderInfo.couponDiscount]);
+          `, [orderIdToUse, ticketId, -finalOrderInfo.couponDiscount]);
         } catch (adjustmentError) {
           console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
         }
@@ -413,8 +444,9 @@ router.post('/confirm', async (req, res) => {
       `, [paymentKey, orderId]);
 
       console.log('✅ TLL 결제 성공 처리 완료:', {
-        orderId: newOrderId,
+        orderId: orderIdToUse,
         ticketId: ticketId,
+        batchNo: nextBatchNo,
         finalAmount: finalOrderInfo.finalTotal,
         storeId: finalOrderInfo.storeId
       });
@@ -423,8 +455,9 @@ router.post('/confirm', async (req, res) => {
       try {
         const kdsTicketData = {
           check_id: ticketId,
-          id: newOrderId,
+          id: orderIdToUse,
           ticket_id: ticketId,
+          batch_no: nextBatchNo,
           customer_name: `테이블 ${finalOrderInfo.tableNumber}`,
           table_number: finalOrderInfo.tableNumber,
           status: 'pending',
@@ -459,7 +492,8 @@ router.post('/confirm', async (req, res) => {
           type: 'new_ticket',
           store_id: finalOrderInfo.storeId,
           ticket_id: ticketId,
-          order_id: newOrderId,
+          order_id: orderIdToUse,
+          batch_no: nextBatchNo,
           source_system: 'TLL',
           table_number: finalOrderInfo.tableNumber,
           total_amount: finalOrderInfo.finalTotal,
@@ -474,8 +508,9 @@ router.post('/confirm', async (req, res) => {
 
       res.json({
         success: true,
-        orderId: newOrderId,
+        orderId: orderIdToUse,
         ticketId: ticketId,
+        batchNo: nextBatchNo,
         paymentKey,
         amount: finalOrderInfo.finalTotal
       });
