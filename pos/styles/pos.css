@@ -219,7 +219,7 @@ body {
 /* =================== 주문 내역 섹션 =================== */
 
 .order-section {
-    flex: 1;
+    flex: 5;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -406,7 +406,7 @@ body {
 /* =================== 결제/계산 섹션 =================== */
 
 .payment-section {
-    flex: 0 0 auto;
+    flex: 3;
     border-top: 2px solid #e5e7eb;
     background: #ffffff;
 }
