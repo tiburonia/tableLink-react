@@ -280,12 +280,12 @@ router.post('/confirm', async (req, res) => {
         itemCount: finalOrderInfo.items.length
       });
 
-      // 1. 해당 매장에서 OPEN 상태인 기존 주문 확인
+      // 1. 해당 매장에서 해당 사용자의 OPEN 상태인 기존 주문 확인
       const existingOrderResult = await client.query(`
         SELECT id FROM orders 
-        WHERE store_id = $1 AND status = 'OPEN'
+        WHERE store_id = $1 AND user_id = $2 AND status = 'OPEN'
         LIMIT 1
-      `, [finalOrderInfo.storeId]);
+      `, [finalOrderInfo.storeId, finalOrderInfo.userPk]);
 
       let orderIdToUse;
 
@@ -295,26 +295,31 @@ router.post('/confirm', async (req, res) => {
         console.log('🔄 기존 OPEN 주문 재사용:', orderIdToUse);
       } else {
         // 기존 OPEN 주문이 없으면 새로 생성
-        const newOrderResult = await client.query(`
-          INSERT INTO orders (
-            store_id,
-            user_id,
-            source,
-            status,
-            payment_status,
-            total_price,
-            table_num
-          ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
-          RETURNING id
-        `, [
-          finalOrderInfo.storeId,
-          finalOrderInfo.userPk,
-          finalOrderInfo.finalTotal,
-          finalOrderInfo.tableNumber
-        ]);
-        
-        orderIdToUse = newOrderResult.rows[0].id;
-        console.log('✨ 새 주문 생성:', orderIdToUse);
+        try {
+          const newOrderResult = await client.query(`
+            INSERT INTO orders (
+              store_id,
+              user_id,
+              source,
+              status,
+              payment_status,
+              total_price,
+              table_num
+            ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
+            RETURNING id
+          `, [
+            finalOrderInfo.storeId,
+            finalOrderInfo.userPk,
+            finalOrderInfo.finalTotal,
+            finalOrderInfo.tableNumber
+          ]);
+          
+          orderIdToUse = newOrderResult.rows[0].id;
+          console.log('✨ 새 주문 생성:', orderIdToUse);
+        } catch (orderError) {
+          console.error('❌ 주문 생성 실패:', orderError);
+          throw new Error('주문 생성에 실패했습니다: ' + orderError.message);
+        }
       }
 
       // 2. 해당 주문의 기존 order_tickets 개수 확인하여 batch_no 계산
@@ -357,7 +362,7 @@ router.post('/confirm', async (req, res) => {
         if (!actualMenuId) {
           try {
             const menuResult = await client.query(`
-              SELECT id FROM menu_items 
+              SELECT id FROM store_menu 
               WHERE store_id = $1 AND name = $2
               LIMIT 1
             `, [finalOrderInfo.storeId, item.name]);
