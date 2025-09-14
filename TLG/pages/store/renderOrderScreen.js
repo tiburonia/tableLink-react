@@ -31,9 +31,13 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         if (menuResult.success && menuResult.menu) {
           menuData = menuResult.menu.map(menu => ({
             ...menu,
-            cook_station: menu.cook_station || menu.category || 'KITCHEN' // cook_station 우선, 없으면 category, 최종적으로 KITCHEN
+            cook_station: menu.cook_station || 'KITCHEN' // DB에서 가져온 cook_station 사용
           }));
           console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료 (cook_station 포함)`);
+          console.log('🔍 cook_station 분포:', menuData.reduce((acc, item) => {
+            acc[item.cook_station] = (acc[item.cook_station] || 0) + 1;
+            return acc;
+          }, {}));
         } else {
           console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
           menuData = [];
@@ -67,6 +71,9 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       cart: [],
       userInfo: userInfo
     };
+
+    // 메뉴 데이터를 전역 변수에 저장 (cook_station 정보 참조용)
+    window.currentMenuData = menuData;
 
     console.log('🏪 currentTLLOrder 초기화 완료:', window.currentTLLOrder);
 
@@ -184,11 +191,15 @@ function renderMenuContent(menuByCategory) {
     <div class="menu-category ${index === 0 ? 'active' : ''}" data-category="${category}">
       <div class="menu-grid">
         ${items.map(item => `
-          <div class="menu-item" onclick="addToCart('${item.id}', '${escapeHtml(item.name)}', ${item.price})">
+          <div class="menu-item" 
+               data-menu-id="${item.id}" 
+               data-cook-station="${item.cook_station || 'KITCHEN'}"
+               onclick="addToCart('${item.id}', '${escapeHtml(item.name)}', ${item.price})">
             <div class="menu-info">
               <h4>${escapeHtml(item.name)}</h4>
               <p>${escapeHtml(item.description || '')}</p>
               <div class="menu-price">${item.price.toLocaleString()}원</div>
+              <div class="cook-station-badge">${item.cook_station || 'KITCHEN'}</div>
             </div>
             <button class="add-btn" onclick="event.stopPropagation(); addToCart('${item.id}', '${escapeHtml(item.name)}', ${item.price});">+</button>
           </div>
@@ -286,6 +297,23 @@ window.addToCart = function(menuId, menuName, price) {
     return;
   }
 
+  // 메뉴 데이터에서 cook_station 정보 찾기
+  let cookStation = 'KITCHEN'; // 기본값
+  try {
+    // 전역 menuData에서 해당 메뉴의 cook_station 찾기
+    if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
+      const menuItem = window.currentMenuData.find(item => 
+        String(item.id) === String(validMenuId) || item.name === validMenuName
+      );
+      if (menuItem && menuItem.cook_station) {
+        cookStation = menuItem.cook_station;
+        console.log(`✅ 메뉴 ${validMenuName}의 cook_station: ${cookStation}`);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ cook_station 조회 실패, 기본값 사용:', error);
+  }
+
   console.log('📝 장바구니 추가 전 상태:', {
     cartLength: window.currentTLLOrder.cart.length,
     cartItems: window.currentTLLOrder.cart
@@ -299,12 +327,14 @@ window.addToCart = function(menuId, menuName, price) {
   } else {
     const newItem = {
       id: validMenuId,
+      menuId: validMenuId, // menu_id도 명시적으로 설정
       name: validMenuName,
       price: validPrice,
-      quantity: 1
+      quantity: 1,
+      cook_station: cookStation // cook_station 정보 포함
     };
     window.currentTLLOrder.cart.push(newItem);
-    console.log('➕ 새 아이템 추가:', newItem);
+    console.log('➕ 새 아이템 추가 (cook_station 포함):', newItem);
   }
 
   console.log('📝 장바구니 추가 후 상태:', {
@@ -796,6 +826,17 @@ function getTLLOrderStyles() {
         font-size: 14px;
         font-weight: 700;
         color: #007bff;
+      }
+
+      .cook-station-badge {
+        display: inline-block;
+        background: #f8f9fa;
+        color: #666;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        margin-top: 4px;
+        border: 1px solid #e9ecef;
       }
 
       .add-btn {
