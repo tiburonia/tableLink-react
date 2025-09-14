@@ -582,10 +582,20 @@ function setupKRPWebSocket(storeId) {
   try {
     console.log(`🔌 KRP WebSocket 연결 시작 - 매장 ${storeId}`);
 
+    // 기존 소켓 정리
+    if (krpSocket) {
+      console.log('🧹 기존 KRP WebSocket 연결 정리');
+      krpSocket.disconnect();
+      krpSocket = null;
+    }
+
     krpSocket = io({
       transports: ['websocket', 'polling'],
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000
     });
 
     krpSocket.on('connect', () => {
@@ -593,7 +603,7 @@ function setupKRPWebSocket(storeId) {
       
       // KDS 룸과 KRP 룸 모두 조인
       krpSocket.emit('join-kds', parseInt(storeId));
-      krpSocket.emit('join-krp', parseInt(storeId)); // KRP 전용 룸 추가
+      krpSocket.emit('join-krp', parseInt(storeId));
       
       updateConnectionStatus(true);
       showNotification('🔌 KRP 실시간 연결 활성화', 'success');
@@ -601,19 +611,40 @@ function setupKRPWebSocket(storeId) {
       console.log(`🏪 KRP 룸 조인 완료: kds:${storeId}, krp:${storeId}`);
     });
 
+    krpSocket.on('joined-kds', (data) => {
+      console.log('✅ KDS 룸 조인 확인:', data);
+    });
+
+    krpSocket.on('joined-krp', (data) => {
+      console.log('✅ KRP 룸 조인 확인:', data);
+    });
+
     krpSocket.on('disconnect', (reason) => {
       console.log('❌ KRP WebSocket 연결 해제:', reason);
       updateConnectionStatus(false);
     });
 
-    // 새 출력 요청 수신 - 다양한 이벤트명 지원
+    krpSocket.on('reconnect', () => {
+      console.log('🔄 KRP WebSocket 재연결 성공');
+      krpSocket.emit('join-kds', parseInt(storeId));
+      krpSocket.emit('join-krp', parseInt(storeId));
+      updateConnectionStatus(true);
+    });
+
+    // 새 출력 요청 수신 - 모든 가능한 이벤트명 지원
     const printEvents = ['krp:new-print', 'new-print', 'print-request'];
     
     printEvents.forEach(eventName => {
       krpSocket.on(eventName, (printData) => {
         console.log(`🖨️ 출력 요청 수신 (${eventName}):`, printData);
-        console.log(`📄 출력 데이터: 티켓 ${printData.ticket_id}, 테이블 ${printData.table_number}`);
+        console.log(`📄 출력 데이터: 티켓 ${printData.ticket_id}, 테이블 ${printData.table_number}, 소스: ${printData.source}`);
         
+        // 데이터 유효성 검사
+        if (!printData.ticket_id || !printData.table_number) {
+          console.warn('⚠️ 출력 데이터가 불완전함:', printData);
+          return;
+        }
+
         // 즉시 처리
         handleNewPrintRequest(printData);
       });
@@ -634,13 +665,48 @@ function setupKRPWebSocket(storeId) {
       updateConnectionStatus(false);
     });
 
-    // 모든 이벤트 수신 (디버깅용)
+    krpSocket.on('error', (error) => {
+      console.error('❌ KRP WebSocket 일반 에러:', error);
+    });
+
+    // 연결 테스트 이벤트 수신
+    krpSocket.on('krp:connection-test', (data) => {
+      console.log('✅ KRP 연결 테스트 수신:', data);
+      showNotification(`🔗 KRP 연결 확인: ${data.message}`, 'success');
+    });
+
+    // 모든 이벤트 수신 (디버깅용) - 강화된 로깅
     const originalOnevent = krpSocket.onevent;
     krpSocket.onevent = function(packet) {
       const args = packet.data || [];
-      console.log('🔍 모든 WebSocket 이벤트:', packet.type, args[0], args[1]);
+      const eventName = args[0];
+      const eventData = args[1];
+      
+      console.log(`🔍 KRP WebSocket 이벤트 수신:`, {
+        type: packet.type,
+        event: eventName,
+        data: eventData,
+        nsp: packet.nsp,
+        timestamp: new Date().toISOString()
+      });
+
+      // 출력 관련 이벤트 특별 처리
+      if (eventName && (eventName.includes('print') || eventName.includes('krp'))) {
+        console.log(`🖨️ 출력 관련 이벤트 감지: ${eventName}`, eventData);
+      }
+
       originalOnevent.call(this, packet);
     };
+
+    // 연결 상태 주기적 확인
+    setInterval(() => {
+      if (krpSocket) {
+        console.log(`🔍 KRP WebSocket 상태: 연결=${krpSocket.connected}, ID=${krpSocket.id}`);
+        if (!krpSocket.connected) {
+          console.warn('⚠️ KRP WebSocket 연결이 끊어짐 - 재연결 시도');
+        }
+      }
+    }, 30000); // 30초마다 체크
 
   } catch (error) {
     console.error('❌ KRP WebSocket 설정 실패:', error);

@@ -1126,29 +1126,53 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
         source: 'kds_print_button'
       };
 
-      // 다양한 방식으로 브로드캐스트 (확실한 전달을 위해)
-      
-      // 1. 전체 브로드캐스트
-      global.io.emit('krp:new-print', printData);
-      global.io.emit('new-print', printData);
-      
-      // 2. KDS 룸 브로드캐스트
-      global.io.to(`kds:${orderDetail.store_id}`).emit('krp:new-print', printData);
-      global.io.to(`kds:${orderDetail.store_id}`).emit('new-print', printData);
-      
-      // 3. KRP 전용 룸 브로드캐스트
-      global.io.to(`krp:${orderDetail.store_id}`).emit('krp:new-print', printData);
-      global.io.to(`krp:${orderDetail.store_id}`).emit('new-print', printData);
-      global.io.to(`krp:${orderDetail.store_id}`).emit('print-request', printData);
+      console.log(`🖨️ KRP 출력 데이터 준비:`, printData);
 
-      // 4. 일반 메시지 형태로도 전송 (호환성)
-      global.io.emit('message', {
-        type: 'new-print',
-        data: printData
-      });
+      // 모든 가능한 방식으로 KRP에 전송
+      try {
+        // 1. 전체 브로드캐스트 (모든 연결된 클라이언트)
+        global.io.emit('krp:new-print', printData);
+        global.io.emit('new-print', printData);
+        global.io.emit('print-request', printData);
+        
+        // 2. 매장별 룸 브로드캐스트
+        global.io.to(`kds:${orderDetail.store_id}`).emit('krp:new-print', printData);
+        global.io.to(`kds:${orderDetail.store_id}`).emit('new-print', printData);
+        global.io.to(`kds:${orderDetail.store_id}`).emit('print-request', printData);
+        
+        // 3. KRP 전용 룸 브로드캐스트
+        global.io.to(`krp:${orderDetail.store_id}`).emit('krp:new-print', printData);
+        global.io.to(`krp:${orderDetail.store_id}`).emit('new-print', printData);
+        global.io.to(`krp:${orderDetail.store_id}`).emit('print-request', printData);
 
-      console.log(`📡 KRP WebSocket 출력 요청 다중 브로드캐스트: 티켓 ${ticketId}, 매장 ${orderDetail.store_id}`);
-      console.log(`📊 브로드캐스트 대상: 전체, kds:${orderDetail.store_id}, krp:${orderDetail.store_id}`);
+        // 4. 일반 메시지 형태로도 전송 (호환성)
+        global.io.emit('message', {
+          type: 'new-print',
+          data: printData
+        });
+
+        global.io.to(`krp:${orderDetail.store_id}`).emit('message', {
+          type: 'new-print',
+          data: printData
+        });
+
+        // 5. 연결된 소켓 수 확인
+        const totalSockets = global.io.engine.clientsCount;
+        const kdsRoomSockets = global.io.sockets.adapter.rooms.get(`kds:${orderDetail.store_id}`)?.size || 0;
+        const krpRoomSockets = global.io.sockets.adapter.rooms.get(`krp:${orderDetail.store_id}`)?.size || 0;
+
+        console.log(`📡 KRP WebSocket 브로드캐스트 완료:`);
+        console.log(`   - 총 연결된 소켓: ${totalSockets}개`);
+        console.log(`   - KDS 룸 소켓: ${kdsRoomSockets}개`);
+        console.log(`   - KRP 룸 소켓: ${krpRoomSockets}개`);
+        console.log(`   - 전송 이벤트: krp:new-print, new-print, print-request, message`);
+        console.log(`   - 티켓 ${ticketId}, 매장 ${orderDetail.store_id}`);
+
+      } catch (socketError) {
+        console.error(`❌ KRP WebSocket 전송 실패:`, socketError);
+      }
+    } else {
+      console.error(`❌ global.io가 없음 - WebSocket 서버가 초기화되지 않음`);
     }
 
     res.json({

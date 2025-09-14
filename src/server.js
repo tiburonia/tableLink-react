@@ -319,12 +319,26 @@ io.on('connection', (socket) => {
     const roomName = `krp:${storeId}`;
     socket.join(roomName);
 
-    console.log(`🖨️ KRP 룸 조인: ${socket.id} -> ${roomName}`);
+    // 룸 조인 확인
+    const roomSize = io.sockets.adapter.rooms.get(roomName)?.size || 0;
+    console.log(`🖨️ KRP 룸 조인: ${socket.id} -> ${roomName} (총 ${roomSize}개 소켓)`);
 
     socket.emit('joined-krp', {
       storeId,
+      roomName,
+      socketId: socket.id,
+      roomSize,
       message: `매장 ${storeId} KRP에 연결되었습니다`
     });
+
+    // 테스트 이벤트 즉시 전송 (연결 확인용)
+    setTimeout(() => {
+      socket.emit('krp:connection-test', {
+        message: 'KRP 연결 테스트',
+        timestamp: new Date().toISOString(),
+        storeId
+      });
+    }, 1000);
   });
 
   // KDS 룸 떠나기
