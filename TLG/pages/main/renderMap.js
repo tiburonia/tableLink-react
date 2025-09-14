@@ -132,6 +132,7 @@ async function renderMap() {
   align-items: center;
   gap: 8px;
   pointer-events: auto;
+  backdrop-filter: blur(2px);
 }
 
 /* 위치 선택 버튼 (텍스트 버튼) */
