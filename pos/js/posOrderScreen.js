@@ -121,15 +121,26 @@ const POSOrderScreen = {
                     </div>
                 </div>
                 
-                <div class="order-list" id="orderList">
-                    ${this.renderOrderItems()}
+                <div class="order-table-container">
+                    <div class="order-table-header">
+                        <div class="header-col col-menu">메뉴</div>
+                        <div class="header-col col-price">단가</div>
+                        <div class="header-col col-quantity">수량</div>
+                        <div class="header-col col-total">금액</div>
+                        <div class="header-col col-status">출처/상태</div>
+                        <div class="header-col col-actions">액션</div>
+                    </div>
+                    
+                    <div class="order-list" id="orderList">
+                        ${this.renderOrderItems()}
+                    </div>
                 </div>
             </div>
         `;
     },
     
     /**
-     * 주문 아이템 렌더링
+     * 주문 아이템 렌더링 (테이블 행 형태)
      */
     renderOrderItems() {
         if (this.currentOrders.length === 0) {
@@ -143,37 +154,42 @@ const POSOrderScreen = {
         }
         
         return this.currentOrders.map(order => `
-            <div class="order-item" data-order-id="${order.id}">
-                <div class="item-main">
-                    <div class="item-info">
-                        <div class="item-name">${order.menuName}</div>
-                        <div class="item-meta">
-                            <span class="unit-price">${order.price.toLocaleString()}원</span>
-                            <span class="source-badge ${order.sessionId ? 'tll' : 'pos'}">
-                                ${order.sessionId ? '📱 TLL' : '💻 POS'}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="item-controls">
-                        <div class="quantity-control">
-                            <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">−</button>
-                            <span class="quantity">${order.quantity}</span>
-                            <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">+</button>
-                        </div>
-                        
-                        <div class="item-total">${(order.price * order.quantity).toLocaleString()}원</div>
-                        
-                        <button class="remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})">
-                            🗑️
-                        </button>
+            <div class="order-row" data-order-id="${order.id}">
+                <div class="row-col col-menu">
+                    <div class="menu-name">${order.menuName}</div>
+                </div>
+                
+                <div class="row-col col-price">
+                    <span class="price-value">${order.price.toLocaleString()}원</span>
+                </div>
+                
+                <div class="row-col col-quantity">
+                    <div class="quantity-control">
+                        <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">−</button>
+                        <span class="quantity">${order.quantity}</span>
+                        <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">+</button>
                     </div>
                 </div>
                 
-                <div class="item-status">
-                    <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
-                        ${this.getStatusText(order.cookingStatus)}
-                    </span>
+                <div class="row-col col-total">
+                    <span class="total-value">${(order.price * order.quantity).toLocaleString()}원</span>
+                </div>
+                
+                <div class="row-col col-status">
+                    <div class="status-badges">
+                        <span class="source-badge ${order.sessionId ? 'tll' : 'pos'}">
+                            ${order.sessionId ? '📱 TLL' : '💻 POS'}
+                        </span>
+                        <span class="cooking-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                            ${this.getStatusText(order.cookingStatus)}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="row-col col-actions">
+                    <button class="remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="주문 삭제">
+                        🗑️
+                    </button>
                 </div>
             </div>
         `).join('');
