@@ -181,7 +181,7 @@ async function renderMap() {
   width: 42px;
   height: 42px;
   background: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.8);
+  border: 2px solid rgba(0, 0, 0, 0.6);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -193,7 +193,7 @@ async function renderMap() {
 
 .top-control-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 1);
+  border-color: rgba(0, 0, 0, 0.8);
   transform: translateY(-1px);
 }
 
@@ -234,15 +234,15 @@ async function renderMap() {
 .search-container {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(248, 250, 252, 0.80));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(248, 250, 252, 0.60));
   border-radius: 28px;
   padding: 10px 16px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 4px 16px rgba(41, 126, 252, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.3s ease;
 }
 
