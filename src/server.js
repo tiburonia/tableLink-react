@@ -292,6 +292,33 @@ async function handlePaymentNotification(payload) {
   }
 }
 
+// WebSocket 인스턴스를 전역으로 설정 (라우터에서 사용)
+global.io = io;
+
+// KRP 웹소켓 브로드캐스트 함수 (전역 설정)
+global.broadcastKRPPrint = (storeId, printData) => {
+  if (!global.io) {
+    console.error('❌ global.io가 초기화되지 않음');
+    return;
+  }
+
+  try {
+    console.log(`🖨️ KRP 브로드캐스트 시작: 매장 ${storeId}`);
+
+    // 모든 가능한 방식으로 KRP에 전송
+    global.io.emit('krp:new-print', printData);
+    global.io.to(`kds:${storeId}`).emit('krp:new-print', printData);
+    global.io.to(`krp:${storeId}`).emit('krp:new-print', printData);
+    
+    // 일반 메시지 형태로도 전송
+    global.io.emit('message', { type: 'new-print', data: printData });
+    
+    console.log(`✅ KRP 브로드캐스트 완료: 티켓 ${printData.ticket_id}`);
+  } catch (error) {
+    console.error('❌ KRP 브로드캐스트 실패:', error);
+  }
+};
+
 // WebSocket 연결 처리
 io.on('connection', (socket) => {
   const authData = socket.handshake.auth;
