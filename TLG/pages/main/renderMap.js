@@ -124,7 +124,7 @@ async function renderMap() {
 /* 상단 컨트롤 바 */
 #topControlBar {
   position: absolute;
-  top: 8px;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 1003;
@@ -133,7 +133,7 @@ async function renderMap() {
   gap: 8px;
   pointer-events: auto;
   backdrop-filter: blur(2px);
-  padding: 0 12px;
+  padding: 8px 12px 16px 12px;
 }
 
 /* 위치 선택 버튼 (텍스트 버튼) */
@@ -229,7 +229,7 @@ async function renderMap() {
 /* 검색바 - 지도 위 오버레이 (상단 컨트롤 바 아래로) */
 #searchBar {
   position: absolute;
-  top: 56px;
+  top: 64px;
   left: 12px;
   right: 12px;
   z-index: 1002;
