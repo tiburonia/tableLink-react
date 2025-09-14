@@ -314,11 +314,31 @@ io.on('connection', (socket) => {
     });
   });
 
+  // KRP 룸 조인
+  socket.on('join-krp', (storeId) => {
+    const roomName = `krp:${storeId}`;
+    socket.join(roomName);
+
+    console.log(`🖨️ KRP 룸 조인: ${socket.id} -> ${roomName}`);
+
+    socket.emit('joined-krp', {
+      storeId,
+      message: `매장 ${storeId} KRP에 연결되었습니다`
+    });
+  });
+
   // KDS 룸 떠나기
   socket.on('leave-kds', (storeId) => {
     const roomName = `kds:${storeId}`;
     socket.leave(roomName);
     console.log(`🚪 KDS 룸 떠남: ${socket.id} -> ${roomName}`);
+  });
+
+  // KRP 룸 떠나기
+  socket.on('leave-krp', (storeId) => {
+    const roomName = `krp:${storeId}`;
+    socket.leave(roomName);
+    console.log(`🚪 KRP 룸 떠남: ${socket.id} -> ${roomName}`);
   });
 
   // KRP 출력 완료 처리

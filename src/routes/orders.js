@@ -1112,7 +1112,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KRP WebSocket으로 새 출력 요청 즉시 전송
+    // KRP WebSocket으로 새 출력 요청 즉시 전송 (강화된 브로드캐스트)
     if (global.io) {
       const printData = {
         ticket_id: parseInt(ticketId),
@@ -1126,11 +1126,29 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
         source: 'kds_print_button'
       };
 
-      // 모든 클라이언트에게 즉시 브로드캐스트 (KRP와 KDS 모두)
+      // 다양한 방식으로 브로드캐스트 (확실한 전달을 위해)
+      
+      // 1. 전체 브로드캐스트
       global.io.emit('krp:new-print', printData);
+      global.io.emit('new-print', printData);
+      
+      // 2. KDS 룸 브로드캐스트
       global.io.to(`kds:${orderDetail.store_id}`).emit('krp:new-print', printData);
+      global.io.to(`kds:${orderDetail.store_id}`).emit('new-print', printData);
+      
+      // 3. KRP 전용 룸 브로드캐스트
+      global.io.to(`krp:${orderDetail.store_id}`).emit('krp:new-print', printData);
+      global.io.to(`krp:${orderDetail.store_id}`).emit('new-print', printData);
+      global.io.to(`krp:${orderDetail.store_id}`).emit('print-request', printData);
 
-      console.log(`📡 KRP WebSocket 출력 요청 즉시 전송: 티켓 ${ticketId}, 매장 ${orderDetail.store_id}`);
+      // 4. 일반 메시지 형태로도 전송 (호환성)
+      global.io.emit('message', {
+        type: 'new-print',
+        data: printData
+      });
+
+      console.log(`📡 KRP WebSocket 출력 요청 다중 브로드캐스트: 티켓 ${ticketId}, 매장 ${orderDetail.store_id}`);
+      console.log(`📊 브로드캐스트 대상: 전체, kds:${orderDetail.store_id}, krp:${orderDetail.store_id}`);
     }
 
     res.json({
