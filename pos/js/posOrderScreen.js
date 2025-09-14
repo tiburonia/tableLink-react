@@ -191,6 +191,20 @@ const POSOrderScreen = {
             <div class="payment-section">
                 <div class="section-header">
                     <h3>💰 결제/계산</h3>
+                    <div class="payment-control-bar">
+                        <button class="control-btn cancel-all" onclick="POSOrderScreen.cancelAllOrders()">
+                            전체취소
+                        </button>
+                        <button class="control-btn cancel-selected" onclick="POSOrderScreen.cancelSelectedOrders()">
+                            선택취소
+                        </button>
+                        <button class="control-btn quantity-add" onclick="POSOrderScreen.addQuantityToSelected()">
+                            +
+                        </button>
+                        <button class="control-btn quantity-minus" onclick="POSOrderScreen.minusQuantityFromSelected()">
+                            -
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="payment-content">
@@ -610,7 +624,15 @@ const POSOrderScreen = {
     // 새로운 결제 기능들
     showOrderHistory() { alert('주문 내역 관리 기능 (추후 구현)'); },
     showDutchPay() { alert('더치페이 기능 (추후 구현)'); },
-    showReceiptManagement() { alert('영수증 관리 기능 (추후 구현)'); }
+    showReceiptManagement() { alert('영수증 관리 기능 (추후 구현)'); },
+    
+    // 컨트롤 바 기능들
+    addQuantityToSelected() { 
+        alert('선택된 주문의 수량 증가 기능 (추후 구현)'); 
+    },
+    minusQuantityFromSelected() { 
+        alert('선택된 주문의 수량 감소 기능 (추후 구현)'); 
+    }
 };
 
 // 전역 함수로 등록

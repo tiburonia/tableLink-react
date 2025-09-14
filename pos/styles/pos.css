@@ -216,6 +216,84 @@ body {
     margin: 0;
 }
 
+/* =================== 결제 컨트롤 바 =================== */
+
+.payment-control-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.control-btn {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #374151;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    min-width: 60px;
+}
+
+.control-btn:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
+}
+
+.control-btn.cancel-all {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.control-btn.cancel-all:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.control-btn.cancel-selected {
+    background: #fefce8;
+    border-color: #fde68a;
+    color: #d97706;
+}
+
+.control-btn.cancel-selected:hover {
+    background: #fef3c7;
+    border-color: #fcd34d;
+}
+
+.control-btn.quantity-add {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #059669;
+    font-weight: 700;
+    font-size: 16px;
+    min-width: 36px;
+    padding: 6px 10px;
+}
+
+.control-btn.quantity-add:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.control-btn.quantity-minus {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+    font-weight: 700;
+    font-size: 16px;
+    min-width: 36px;
+    padding: 6px 10px;
+}
+
+.control-btn.quantity-minus:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
 /* =================== 주문 내역 섹션 =================== */
 
 .order-section {
