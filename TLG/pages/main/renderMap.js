@@ -139,7 +139,7 @@ async function renderMap() {
   position: relative;
   height: 36px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.05);
   border: none;
   border-radius: 18px;
   display: flex;
@@ -148,8 +148,8 @@ async function renderMap() {
   cursor: pointer;
   transition: all 0.3s ease;
   max-width: 180px;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(2px);
+  
 }
 
 .location-select-btn #locationText {
@@ -164,7 +164,7 @@ async function renderMap() {
 
 .location-select-btn .dropdown-arrow {
   font-size: 10px;
-  color: #6b7280;
+  color: #1f2937;
   transition: transform 0.2s ease;
 }
 
@@ -237,7 +237,7 @@ async function renderMap() {
 .search-container {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(248, 250, 252, 0.40));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(248, 250, 252, 0.40));
   border-radius: 28px;
   padding: 10px 16px;
   box-shadow:
