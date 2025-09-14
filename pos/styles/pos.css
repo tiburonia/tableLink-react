@@ -905,15 +905,14 @@ body {
 
 .table-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 16px;
     padding: 20px;
     height: calc(100vh - 160px);
     flex: 1;
-    aspect-ratio: 1;
-    max-width: calc(100vh - 160px);
+    overflow-y: auto;
     margin: 0 auto;
+    max-width: 100%;
 }
 
 .table-card {
