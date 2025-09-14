@@ -139,15 +139,13 @@ async function renderMap() {
   position: relative;
   height: 36px;
   padding: 0 12px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  border: none;
   border-radius: 18px;
   display: flex;
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
   max-width: 180px;
 }
@@ -169,8 +167,7 @@ async function renderMap() {
 }
 
 .location-select-btn:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
-  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
 }
 
@@ -183,22 +180,19 @@ async function renderMap() {
   position: relative;
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 18px;
-  backdrop-filter: blur(20px);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
 }
 
 .top-control-btn:hover {
-  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
-  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
 }
 
