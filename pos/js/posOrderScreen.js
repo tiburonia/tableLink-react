@@ -1,4 +1,3 @@
-
 /**
  * POS 주문 화면 (OK POS 스타일 - 2분할 구조)
  */
@@ -9,37 +8,37 @@ const POSOrderScreen = {
     menuData: [],
     cart: [],
     selectedPaymentMethod: 'card',
-    
+
     /**
      * 주문 화면 렌더링
      */
-    async render(storeId, storeInfo, tableNumber) {
+    async render(storeId, tableNumber) {
         try {
             console.log(`🛒 주문 화면 렌더링 - 테이블 ${tableNumber}`);
-            
+
             this.currentTable = tableNumber;
-            
+
             // 기존 주문 로드
             await this.loadCurrentOrders(storeId, tableNumber);
-            
+
             // 메뉴 데이터 로드
             await this.loadMenuData(storeId);
-            
+
             const main = document.getElementById('posMain');
             main.innerHTML = `
-                ${this.renderHeader(storeInfo, tableNumber)}
+                ${this.renderHeader(POSCore.storeInfo, tableNumber)}
                 ${this.renderMainLayout()}
             `;
-            
+
             // 이벤트 리스너 설정
             this.setupEventListeners();
-            
+
         } catch (error) {
             console.error('❌ 주문 화면 렌더링 실패:', error);
             POSCore.showError('주문 화면을 불러올 수 없습니다.');
         }
     },
-    
+
     /**
      * 헤더 렌더링 (전역 네비게이션)
      */
@@ -52,7 +51,7 @@ const POSOrderScreen = {
             hour: '2-digit',
             minute: '2-digit'
         });
-        
+
         return `
             <div class="pos-header-expanded">
                 <div class="header-left">
@@ -67,11 +66,11 @@ const POSOrderScreen = {
                         <span class="table-info">테이블 ${tableNumber}</span>
                     </div>
                 </div>
-                
+
                 <div class="header-center">
                     <div class="current-time">${currentTime}</div>
                 </div>
-                
+
                 <div class="header-right">
                     <button class="nav-btn" onclick="POSOrderScreen.showKitchenDisplay()">
                         🏪 주방출력
@@ -86,7 +85,7 @@ const POSOrderScreen = {
             </div>
         `;
     },
-    
+
     /**
      * 메인 레이아웃 (2분할 구조)
      */
@@ -98,7 +97,7 @@ const POSOrderScreen = {
                     ${this.renderOrderSection()}
                     ${this.renderPaymentSection()}
                 </div>
-                
+
                 <!-- 우측: 메뉴 선택 영역 -->
                 <div class="right-panel">
                     ${this.renderMenuSection()}
@@ -107,7 +106,7 @@ const POSOrderScreen = {
             </div>
         `;
     },
-    
+
     /**
      * 주문 내역 섹션
      */
@@ -120,14 +119,14 @@ const POSOrderScreen = {
                         <span class="item-count">${this.currentOrders.length}개 아이템</span>
                     </div>
                 </div>
-                
+
                 <div class="order-list" id="orderList">
                     ${this.renderOrderItems()}
                 </div>
             </div>
         `;
     },
-    
+
     /**
      * 주문 아이템 렌더링
      */
@@ -141,7 +140,7 @@ const POSOrderScreen = {
                 </div>
             `;
         }
-        
+
         return this.currentOrders.map(order => `
             <div class="order-item" data-order-id="${order.id}">
                 <div class="item-main">
@@ -154,22 +153,22 @@ const POSOrderScreen = {
                             </span>
                         </div>
                     </div>
-                    
+
                     <div class="item-controls">
                         <div class="quantity-control">
                             <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">−</button>
                             <span class="quantity">${order.quantity}</span>
                             <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">+</button>
                         </div>
-                        
+
                         <div class="item-total">${(order.price * order.quantity).toLocaleString()}원</div>
-                        
+
                         <button class="remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})">
                             🗑️
                         </button>
                     </div>
                 </div>
-                
+
                 <div class="item-status">
                     <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
                         ${this.getStatusText(order.cookingStatus)}
@@ -178,7 +177,7 @@ const POSOrderScreen = {
             </div>
         `).join('');
     },
-    
+
     /**
      * 결제/계산 섹션 (좌우 2분할)
      */
@@ -186,13 +185,23 @@ const POSOrderScreen = {
         const subtotal = this.currentOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
         const discount = 0; // TLL 할인 로직 추가 예정
         const total = subtotal - discount;
-        
+
         return `
             <div class="payment-section">
-                <div class="section-header">
-                    <h3>💰 결제/계산</h3>
+                <!-- 네비게이션 탭 -->
+                <div class="payment-nav-tabs">
+                    <button class="nav-tab active" data-tab="payment">
+                        💳 결제 처리
+                    </button>
+                    <button class="nav-tab" data-tab="analytics">
+                        📊 판매 분석
+                    </button>
+                    <button class="nav-tab" data-tab="settings">
+                        ⚙️ 설정
+                    </button>
                 </div>
-                
+
+                <!-- 결제 정보 좌우 2분할 -->
                 <div class="payment-content">
                     <!-- 좌측: 금액 계산 -->
                     <div class="payment-left">
@@ -219,7 +228,7 @@ const POSOrderScreen = {
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 우측: 액션 버튼 및 TL 기능 -->
                     <div class="payment-right">
                         <div class="payment-actions">
@@ -231,10 +240,10 @@ const POSOrderScreen = {
                                     선택취소
                                 </button>
                             </div>
-                            
+
                             <div class="tll-special" id="tllSpecial">
                                 <div class="tll-header">
-                                    <span>🎯 TL 특화 기능</span>
+                                    <span>🎯 TLL관련 기능 구상중</span>
                                 </div>
                                 <div class="tll-options">
                                     <div class="tll-option">
@@ -257,7 +266,7 @@ const POSOrderScreen = {
             </div>
         `;
     },
-    
+
     /**
      * 메뉴 선택 섹션
      */
@@ -270,20 +279,20 @@ const POSOrderScreen = {
                         ${this.renderMenuCategories()}
                     </div>
                 </div>
-                
+
                 <div class="menu-grid" id="menuGrid">
                     ${this.renderMenuGrid()}
                 </div>
             </div>
         `;
     },
-    
+
     /**
      * 메뉴 카테고리 렌더링
      */
     renderMenuCategories() {
         const categories = [...new Set(this.menuData.map(menu => menu.category || '일반'))];
-        
+
         return categories.map((category, index) => `
             <button class="category-tab ${index === 0 ? 'active' : ''}" 
                     data-category="${category}"
@@ -292,25 +301,25 @@ const POSOrderScreen = {
             </button>
         `).join('');
     },
-    
+
     /**
      * 메뉴 그리드 렌더링 (큰 버튼)
      */
     renderMenuGrid(selectedCategory = null) {
         const categories = [...new Set(this.menuData.map(menu => menu.category || '일반'))];
         const activeCategory = selectedCategory || categories[0];
-        
+
         const filteredMenu = this.menuData.filter(menu => 
             (menu.category || '일반') === activeCategory
         );
-        
+
         // 핫메뉴 우선 정렬
         const sortedMenu = filteredMenu.sort((a, b) => {
             if (a.isHot && !b.isHot) return -1;
             if (!a.isHot && b.isHot) return 1;
             return 0;
         });
-        
+
         return sortedMenu.map(menu => `
             <div class="menu-card ${menu.isHot ? 'hot-menu' : ''}" 
                  onclick="POSOrderScreen.addToCart(${menu.id}, '${menu.name}', ${menu.price})">
@@ -326,7 +335,7 @@ const POSOrderScreen = {
             </div>
         `).join('');
     },
-    
+
     /**
      * 결제 수단 섹션 (3열 2행 - 6개 기능)
      */
@@ -336,38 +345,38 @@ const POSOrderScreen = {
                 <div class="section-header">
                     <h3>💳 결제 기능</h3>
                 </div>
-                
+
                 <div class="payment-methods-grid">
                     <button class="payment-method-btn ${this.selectedPaymentMethod === 'card' ? 'active' : ''}" 
                             onclick="POSOrderScreen.selectPaymentMethod('card')">
                         <div class="method-icon">💳</div>
                         <div class="method-name">카드</div>
                     </button>
-                    
+
                     <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" 
                             onclick="POSOrderScreen.selectPaymentMethod('cash')">
                         <div class="method-icon">💵</div>
                         <div class="method-name">현금</div>
                     </button>
-                    
+
                     <button class="payment-method-btn ${this.selectedPaymentMethod === 'mixed' ? 'active' : ''}" 
                             onclick="POSOrderScreen.selectPaymentMethod('mixed')">
                         <div class="method-icon">🔄</div>
                         <div class="method-name">복합결제</div>
                     </button>
-                    
+
                     <button class="payment-method-btn" 
                             onclick="POSOrderScreen.showOrderHistory()">
                         <div class="method-icon">📋</div>
                         <div class="method-name">주문</div>
                     </button>
-                    
+
                     <button class="payment-method-btn" 
                             onclick="POSOrderScreen.showDutchPay()">
                         <div class="method-icon">🤝</div>
                         <div class="method-name">더치페이</div>
                     </button>
-                    
+
                     <button class="payment-method-btn" 
                             onclick="POSOrderScreen.showReceiptManagement()">
                         <div class="method-icon">🧾</div>
@@ -377,7 +386,7 @@ const POSOrderScreen = {
             </div>
         `;
     },
-    
+
     /**
      * 기존 주문 로드
      */
@@ -385,21 +394,21 @@ const POSOrderScreen = {
         try {
             const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/all-orders`);
             const data = await response.json();
-            
+
             if (data.success && data.currentSession) {
                 this.currentOrders = data.currentSession.items || [];
             } else {
                 this.currentOrders = [];
             }
-            
+
             console.log(`✅ 기존 주문 ${this.currentOrders.length}개 로드`);
-            
+
         } catch (error) {
             console.error('❌ 기존 주문 로드 실패:', error);
             this.currentOrders = [];
         }
     },
-    
+
     /**
      * 메뉴 데이터 로드
      */
@@ -407,7 +416,7 @@ const POSOrderScreen = {
         try {
             const response = await fetch(`/api/pos/stores/${storeId}/menu`);
             const data = await response.json();
-            
+
             if (data.success) {
                 this.menuData = data.menu.map(menu => ({
                     ...menu,
@@ -416,15 +425,15 @@ const POSOrderScreen = {
             } else {
                 this.menuData = this.getDefaultMenu();
             }
-            
+
             console.log(`✅ 메뉴 ${this.menuData.length}개 로드`);
-            
+
         } catch (error) {
             console.error('❌ 메뉴 데이터 로드 실패:', error);
             this.menuData = this.getDefaultMenu();
         }
     },
-    
+
     /**
      * 카테고리 선택
      */
@@ -432,23 +441,23 @@ const POSOrderScreen = {
         document.querySelectorAll('.category-tab').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.category === category);
         });
-        
+
         document.getElementById('menuGrid').innerHTML = this.renderMenuGrid(category);
     },
-    
+
     /**
      * 결제 수단 선택
      */
     selectPaymentMethod(method) {
         this.selectedPaymentMethod = method;
-        
+
         document.querySelectorAll('.payment-method-btn').forEach(btn => {
             btn.classList.remove('active');
         });
-        
+
         event.currentTarget.classList.add('active');
     },
-    
+
     /**
      * 장바구니에 추가 (즉시 주문에 반영)
      */
@@ -465,27 +474,27 @@ const POSOrderScreen = {
                     orderType: 'POS'
                 })
             });
-            
+
             if (response.ok) {
                 await this.refreshOrders();
                 this.showToast(`${menuName} 추가됨`);
             } else {
                 throw new Error('주문 추가 실패');
             }
-            
+
         } catch (error) {
             console.error('❌ 주문 추가 실패:', error);
             alert('주문 추가 중 오류가 발생했습니다.');
         }
     },
-    
+
     /**
      * 주문 새로고침
      */
     async refreshOrders() {
         await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
         document.getElementById('orderList').innerHTML = this.renderOrderItems();
-        
+
         // 결제 섹션도 업데이트
         const paymentSection = document.querySelector('.payment-section');
         if (paymentSection) {
@@ -494,7 +503,7 @@ const POSOrderScreen = {
             paymentSection.replaceWith(newPaymentSection.firstElementChild);
         }
     },
-    
+
     /**
      * 결제 처리
      */
@@ -503,14 +512,14 @@ const POSOrderScreen = {
             alert('결제할 주문이 없습니다.');
             return;
         }
-        
+
         const total = this.currentOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
-        
+
         if (confirm(`${total.toLocaleString()}원을 ${this.getPaymentMethodName()}로 결제하시겠습니까?`)) {
             alert('결제 처리 기능 구현 예정');
         }
     },
-    
+
     /**
      * 토스트 메시지 표시
      */
@@ -519,16 +528,16 @@ const POSOrderScreen = {
         toast.className = 'toast-message';
         toast.textContent = message;
         document.body.appendChild(toast);
-        
+
         setTimeout(() => {
             toast.classList.add('show');
         }, 100);
-        
+
         setTimeout(() => {
             toast.remove();
         }, 2000);
     },
-    
+
     /**
      * 유틸리티 함수들
      */
@@ -541,7 +550,7 @@ const POSOrderScreen = {
         };
         return statusMap[status] || '대기';
     },
-    
+
     getMenuIcon(category) {
         const icons = {
             '찌개류': '🍲',
@@ -553,7 +562,7 @@ const POSOrderScreen = {
         };
         return icons[category] || '🍽️';
     },
-    
+
     getPaymentMethodName() {
         const names = {
             'cash': '현금',
@@ -564,7 +573,7 @@ const POSOrderScreen = {
         };
         return names[this.selectedPaymentMethod] || '카드';
     },
-    
+
     getDefaultMenu() {
         return [
             { id: 1, name: '김치찌개', price: 8000, category: '찌개류' },
@@ -575,7 +584,7 @@ const POSOrderScreen = {
             { id: 6, name: '사이다', price: 2000, category: '음료' }
         ];
     },
-    
+
     /**
      * 이벤트 리스너 설정
      */
@@ -587,7 +596,7 @@ const POSOrderScreen = {
                 const received = parseInt(e.target.value) || 0;
                 const total = this.currentOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
                 const change = Math.max(0, received - total);
-                
+
                 const changeElement = document.getElementById('changeAmount');
                 if (changeElement) {
                     changeElement.textContent = change.toLocaleString() + '원';
@@ -595,8 +604,20 @@ const POSOrderScreen = {
                 }
             });
         }
+
+        // 네비게이션 탭 클릭 시 컨텐츠 전환 (구현 예정)
+        document.querySelectorAll('.payment-nav-tabs .nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                document.querySelectorAll('.payment-nav-tabs .nav-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // TODO: 실제 컨텐츠 전환 로직 구현
+                console.log(`Nav tab clicked: ${targetTab}`);
+            });
+        });
     },
-    
+
     // 기타 기능들 (임시 구현)
     showKitchenDisplay() { alert('주방출력 기능 (추후 구현)'); },
     showSalesStatus() { alert('매출현황 기능 (추후 구현)'); },
@@ -606,7 +627,7 @@ const POSOrderScreen = {
     cancelAllOrders() { alert('전체취소 기능 (추후 구현)'); },
     cancelSelectedOrders() { alert('선택취소 기능 (추후 구현)'); },
     addToOrder() { alert('주문추가 기능 (추후 구현)'); },
-    
+
     // 새로운 결제 기능들
     showOrderHistory() { alert('주문 내역 관리 기능 (추후 구현)'); },
     showDutchPay() { alert('더치페이 기능 (추후 구현)'); },
