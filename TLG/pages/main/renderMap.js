@@ -124,7 +124,7 @@ async function renderMap() {
 /* 상단 컨트롤 바 */
 #topControlBar {
   position: absolute;
-  top: 16px;
+  top: 8px;
   left: 12px;
   right: 12px;
   z-index: 1003;
@@ -151,9 +151,9 @@ async function renderMap() {
 }
 
 .location-select-btn #locationText {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -175,11 +175,11 @@ async function renderMap() {
   transform: translateY(-1px);
 }
 
-/* 일반 컨트롤 버튼들 (크기 축소) */
+/* 일반 컨트롤 버튼들 (정렬 및 크기 조정) */
 .top-control-btn {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   background: transparent;
   border: none;
   border-radius: 50%;
@@ -187,7 +187,7 @@ async function renderMap() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 19px;
   transition: all 0.3s ease;
 }
 
@@ -223,7 +223,7 @@ async function renderMap() {
 /* 검색바 - 지도 위 오버레이 (상단 컨트롤 바 아래로) */
 #searchBar {
   position: absolute;
-  top: 64px;
+  top: 56px;
   left: 12px;
   right: 12px;
   z-index: 1002;
@@ -233,15 +233,15 @@ async function renderMap() {
 .search-container {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.88));
   border-radius: 28px;
   padding: 10px 16px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 4px 16px rgba(41, 126, 252, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -1062,22 +1062,12 @@ async function renderMap() {
   clearBtn.style.display = 'none';
 
   // === 위치 설정 기능 ===
-  const locationBtn = document.getElementById('locationBtn');
   const locationModal = document.getElementById('locationModal');
   const closeModal = document.getElementById('closeModal');
-  const locationSearchInput = document.getElementById('locationSearchInput');
-  const locationSearchBtn = document.getElementById('locationSearchBtn');
-  const locationSearchResults = document.getElementById('locationSearchResults');
   const getCurrentLocationBtn = document.getElementById('getCurrentLocationBtn');
 
   // 현재 설정된 위치 표시용 마커
   let currentLocationMarker = null;
-
-  // 위치 설정 모달 열기 (기존 버튼)
-  locationBtn.addEventListener('click', () => {
-    locationModal.classList.remove('hidden');
-    loadProvinces(); // 시/도 데이터 로드
-  });
 
   // 상단 위치 선택 버튼 이벤트
   const locationSelectBtn = document.getElementById('locationSelectBtn');
@@ -1349,8 +1339,6 @@ async function renderMap() {
 
           setCurrentLocation(lat, lng, '현재 GPS 위치');
           locationModal.classList.add('hidden');
-          locationSearchInput.value = '';
-          locationSearchResults.innerHTML = '';
 
           getCurrentLocationBtn.textContent = '🎯 현재 GPS 위치 사용';
           getCurrentLocationBtn.disabled = false;
