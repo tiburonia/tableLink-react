@@ -531,37 +531,25 @@ window.proceedToPayment = async function() {
 
     // 결제 화면으로 이동
     if (typeof renderPay === 'function') {
-      // renderPay 함수가 기대하는 형식으로 데이터 준비 - 장바구니 아이템을 그대로 전달
-      const orderArray = window.currentTLLOrder.cart.map(item => ({
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        totalPrice: item.price * item.quantity,
-        menuId: item.menuId || item.id || null,
-        cook_station: item.cook_station || 'KITCHEN'
-      }));
+      // renderPay 함수가 기대하는 형식으로 데이터 준비
+      const currentOrder = {};
+      window.currentTLLOrder.cart.forEach(item => {
+        currentOrder[item.name] = item.quantity;
+      });
 
       const store = {
         id: window.currentTLLOrder.storeId,
         name: window.currentTLLOrder.storeName,
         menu: window.currentTLLOrder.cart.map(item => ({
           name: item.name,
-          price: item.price,
-          cook_station: item.cook_station || 'KITCHEN'
+          price: item.price
         }))
       };
 
       const tableNum = window.currentTLLOrder.tableNumber;
 
-      console.log('🔍 결제로 전달하는 데이터:', {
-        orderArray,
-        store,
-        tableNum,
-        totalAmount: orderArray.reduce((sum, item) => sum + item.totalPrice, 0)
-      });
-
       // 결제 화면으로 이동
-      renderPay(orderArray, store, tableNum);
+      renderPay(currentOrder, store, tableNum);
     } else {
       throw new Error('결제 시스템을 로드할 수 없습니다.');
     }
