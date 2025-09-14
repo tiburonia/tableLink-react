@@ -190,7 +190,6 @@ const POSOrderScreen = {
         return `
             <div class="payment-section">
                 <div class="section-header">
-                    <h3>💰 결제/계산</h3>
                     <div class="payment-control-bar">
                         <button class="control-btn cancel-all" onclick="POSOrderScreen.cancelAllOrders()">
                             전체취소

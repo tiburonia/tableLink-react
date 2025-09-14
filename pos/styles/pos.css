@@ -220,7 +220,7 @@ body {
 
 .payment-control-bar {
     display: flex;
-    gap: 8px;
+    gap: 60px;
     align-items: center;
 }
 
@@ -234,7 +234,7 @@ body {
     font-size: 13px;
     font-weight: 600;
     transition: all 0.2s;
-    min-width: 60px;
+    min-width: 180px;
 }
 
 .control-btn:hover {
@@ -270,7 +270,7 @@ body {
     color: #059669;
     font-weight: 700;
     font-size: 16px;
-    min-width: 36px;
+    min-width: 180px;
     padding: 6px 10px;
 }
 
@@ -285,7 +285,7 @@ body {
     color: #dc2626;
     font-weight: 700;
     font-size: 16px;
-    min-width: 36px;
+    min-width: 180px;
     padding: 6px 10px;
 }
 
