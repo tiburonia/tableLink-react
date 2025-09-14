@@ -411,9 +411,29 @@ body {
     background: #ffffff;
 }
 
-.payment-summary {
+/* 결제 섹션 좌우 2분할 레이아웃 */
+.payment-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
     padding: 16px 20px;
+}
+
+.payment-left {
     background: #f8fafc;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.payment-right {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+}
+
+.payment-summary {
+    margin: 0;
 }
 
 .summary-row {
@@ -464,7 +484,7 @@ body {
 }
 
 .payment-actions {
-    padding: 16px 20px;
+    margin: 0;
 }
 
 .action-row {

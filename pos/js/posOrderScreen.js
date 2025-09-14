@@ -180,7 +180,7 @@ const POSOrderScreen = {
     },
     
     /**
-     * 결제/계산 섹션
+     * 결제/계산 섹션 (좌우 2분할)
      */
     renderPaymentSection() {
         const subtotal = this.currentOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
@@ -193,55 +193,63 @@ const POSOrderScreen = {
                     <h3>💰 결제/계산</h3>
                 </div>
                 
-                <div class="payment-summary">
-                    <div class="summary-row">
-                        <span>소계:</span>
-                        <span class="amount">${subtotal.toLocaleString()}원</span>
-                    </div>
-                    <div class="summary-row discount">
-                        <span>할인:</span>
-                        <span class="amount">-${discount.toLocaleString()}원</span>
-                    </div>
-                    <div class="summary-row total">
-                        <span>받을 금액:</span>
-                        <span class="amount">${total.toLocaleString()}원</span>
-                    </div>
-                    <div class="summary-row received">
-                        <span>받은 금액:</span>
-                        <input type="number" class="received-input" id="receivedAmount" placeholder="0" />
-                    </div>
-                    <div class="summary-row change">
-                        <span>거스름돈:</span>
-                        <span class="amount change-amount" id="changeAmount">0원</span>
-                    </div>
-                </div>
-                
-                <div class="payment-actions">
-                    <div class="action-row">
-                        <button class="action-btn secondary" onclick="POSOrderScreen.cancelAllOrders()">
-                            전체취소
-                        </button>
-                        <button class="action-btn secondary" onclick="POSOrderScreen.cancelSelectedOrders()">
-                            선택취소
-                        </button>
+                <div class="payment-content">
+                    <!-- 좌측: 금액 계산 -->
+                    <div class="payment-left">
+                        <div class="payment-summary">
+                            <div class="summary-row">
+                                <span>소계:</span>
+                                <span class="amount">${subtotal.toLocaleString()}원</span>
+                            </div>
+                            <div class="summary-row discount">
+                                <span>할인:</span>
+                                <span class="amount">-${discount.toLocaleString()}원</span>
+                            </div>
+                            <div class="summary-row total">
+                                <span>받을 금액:</span>
+                                <span class="amount">${total.toLocaleString()}원</span>
+                            </div>
+                            <div class="summary-row received">
+                                <span>받은 금액:</span>
+                                <input type="number" class="received-input" id="receivedAmount" placeholder="0" />
+                            </div>
+                            <div class="summary-row change">
+                                <span>거스름돈:</span>
+                                <span class="amount change-amount" id="changeAmount">0원</span>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="tll-special" id="tllSpecial">
-                        <div class="tll-header">
-                            <span>🎯 TL 특화 기능</span>
-                        </div>
-                        <div class="tll-options">
-                            <div class="tll-option">
-                                <span>포인트 적립:</span>
-                                <span class="tll-value">${Math.floor(total * 0.01).toLocaleString()}P</span>
+                    <!-- 우측: 액션 버튼 및 TL 기능 -->
+                    <div class="payment-right">
+                        <div class="payment-actions">
+                            <div class="action-row">
+                                <button class="action-btn secondary" onclick="POSOrderScreen.cancelAllOrders()">
+                                    전체취소
+                                </button>
+                                <button class="action-btn secondary" onclick="POSOrderScreen.cancelSelectedOrders()">
+                                    선택취소
+                                </button>
                             </div>
-                            <div class="tll-option">
-                                <span>쿠폰 할인:</span>
-                                <select class="tll-select" id="couponSelect">
-                                    <option value="">선택하세요</option>
-                                    <option value="1000">1,000원 할인</option>
-                                    <option value="2000">2,000원 할인</option>
-                                </select>
+                            
+                            <div class="tll-special" id="tllSpecial">
+                                <div class="tll-header">
+                                    <span>🎯 TL 특화 기능</span>
+                                </div>
+                                <div class="tll-options">
+                                    <div class="tll-option">
+                                        <span>포인트 적립:</span>
+                                        <span class="tll-value">${Math.floor(total * 0.01).toLocaleString()}P</span>
+                                    </div>
+                                    <div class="tll-option">
+                                        <span>쿠폰 할인:</span>
+                                        <select class="tll-select" id="couponSelect">
+                                            <option value="">선택하세요</option>
+                                            <option value="1000">1,000원 할인</option>
+                                            <option value="2000">2,000원 할인</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
