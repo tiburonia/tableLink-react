@@ -366,18 +366,6 @@ const POSOrderScreen = {
                         <div class="method-name">영수증관리</div>
                     </button>
                 </div>
-                
-                <div class="final-actions">
-                    <button class="final-btn primary" onclick="POSOrderScreen.processPayment()" 
-                            ${this.currentOrders.length === 0 ? 'disabled' : ''}>
-                        💰 결제 처리
-                    </button>
-                    
-                    <button class="final-btn secondary" onclick="POSOrderScreen.addToOrder()" 
-                            ${this.cart.length === 0 ? 'disabled' : ''}>
-                        ➕ 주문 추가
-                    </button>
-                </div>
             </div>
         `;
     },

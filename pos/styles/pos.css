@@ -672,21 +672,25 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 8px;
-    padding: 16px;
+    gap: 12px;
+    padding: 20px;
+    height: auto;
+    min-height: 200px;
 }
 
 .payment-method-btn {
     background: #f8fafc;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
-    padding: 12px;
+    padding: 20px 12px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    min-height: 80px;
+    justify-content: center;
 }
 
 .payment-method-btn:hover {
@@ -708,45 +712,7 @@ body {
     color: #374151;
 }
 
-.final-actions {
-    padding: 16px;
-    display: flex;
-    gap: 8px;
-}
 
-.final-btn {
-    flex: 1;
-    padding: 14px 20px;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 700;
-    transition: all 0.2s;
-}
-
-.final-btn.primary {
-    background: #059669;
-    color: white;
-}
-
-.final-btn.primary:hover:not(:disabled) {
-    background: #047857;
-}
-
-.final-btn.secondary {
-    background: #3b82f6;
-    color: white;
-}
-
-.final-btn.secondary:hover:not(:disabled) {
-    background: #2563eb;
-}
-
-.final-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
 
 /* =================== 테이블맵 (기존 스타일 유지) =================== */
 
