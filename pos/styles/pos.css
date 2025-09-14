@@ -905,14 +905,15 @@ body {
 
 .table-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
     gap: 16px;
     padding: 20px;
     height: calc(100vh - 160px);
     flex: 1;
-    overflow-y: auto;
     margin: 0 auto;
-    max-width: 100%;
+    max-width: calc(100vh - 160px);
+    aspect-ratio: 1;
 }
 
 .table-card {
@@ -928,8 +929,9 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    width: 100%;
     height: 100%;
-    min-height: 0;
+    box-sizing: border-box;
 }
 
 .table-card:hover {
