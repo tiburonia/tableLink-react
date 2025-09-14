@@ -71,7 +71,7 @@ const POSTableMap = {
      */
     renderMainContent(tables) {
         return `
-            <div class="pos-main-content" style="display: flex; height: calc(100vh - 70px); padding: 20px; gap: 20px;">
+            <div class="pos-main-content" style="display: flex; height: calc(100vh - 70px); padding: 20px; gap: 20px; align-items: center;">
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
                     <div class="table-grid" id="tableGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(5, 1fr); gap: 16px; width: 100%; max-width: 80vh; aspect-ratio: 1;">
                         ${tables.map(table => this.renderTableCard(table)).join('')}
