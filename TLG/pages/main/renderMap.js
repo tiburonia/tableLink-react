@@ -125,14 +125,15 @@ async function renderMap() {
 #topControlBar {
   position: absolute;
   top: 8px;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   z-index: 1003;
   display: flex;
   align-items: center;
   gap: 8px;
   pointer-events: auto;
   backdrop-filter: blur(2px);
+  padding: 0 12px;
 }
 
 /* 위치 선택 버튼 (텍스트 버튼) */
