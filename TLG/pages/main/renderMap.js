@@ -139,7 +139,7 @@ async function renderMap() {
   position: relative;
   height: 36px;
   padding: 0 12px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.35);
   border: none;
   border-radius: 18px;
   display: flex;
@@ -148,7 +148,7 @@ async function renderMap() {
   cursor: pointer;
   transition: all 0.3s ease;
   max-width: 180px;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -169,7 +169,7 @@ async function renderMap() {
 }
 
 .location-select-btn:hover {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.55);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
