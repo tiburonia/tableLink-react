@@ -118,7 +118,7 @@ function showStoreSearchModal(type, title, themeColor, redirectUrl) {
 
 // 각 시스템별 모달 표시 함수들
 window.showKDSStoreSearchModal = () => showStoreSearchModal('kds', '📟 KDS 진입', { primary: '#2c3e50', secondary: '#34495e' }, '/kds.html');
-window.showPOSStoreSearchModal = () => showStoreSearchModal('pos', '💳 POS 진입', { primary: '#666666', secondary: '#333333' }, '/pos.html');
+window.showPOSStoreSearchModal = () => showStoreSearchModal('pos', '💳 POS 진입', { primary: '#666666', secondary: '#333333' }, '/pos/index.html');
 window.showKRPStoreSearchModal = () => showStoreSearchModal('krp', '🖨️ KRP 진입', { primary: '#e67e22', secondary: '#d35400' }, '/krp.html');
 window.showStoreSearchModal = () => showStoreSearchModal('tlm', '🏪 사장님 앱 진입', { primary: '#667eea', secondary: '#764ba2' }, '/tlm.html');
 

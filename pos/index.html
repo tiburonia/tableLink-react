@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableLink POS 시스템</title>
+    <link rel="stylesheet" href="/pos/styles/pos.css">
+</head>
+<body>
+    <div id="posMain">
+        <div class="pos-loading">
+            <div class="loading-spinner"></div>
+            <h2>🍴 TableLink POS</h2>
+            <p>시스템 초기화 중...</p>
+        </div>
+    </div>
+
+    <!-- POS 모듈 로드 -->
+    <script src="/pos/js/posCore.js"></script>
+    <script src="/pos/js/posTableMap.js"></script>
+    <script src="/pos/js/posOrderScreen.js"></script>
+    <script src="/pos/js/posPaymentScreen.js"></script>
+    <script src="/pos/js/posDataManager.js"></script>
+    
+    <script>
+        // URL에서 매장 ID 파싱
+        const urlParams = new URLSearchParams(window.location.search);
+        const storeId = urlParams.get('storeId');
+        
+        if (!storeId) {
+            alert('매장 ID가 필요합니다.');
+            window.history.back();
+        } else {
+            // POS 시스템 초기화
+            POSCore.initialize(parseInt(storeId));
+        }
+    </script>
+</body>
+</html>
