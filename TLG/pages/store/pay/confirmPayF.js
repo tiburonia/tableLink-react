@@ -67,10 +67,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum || 1,
       orderData: {
-        items: (orderData.items || currentOrder || []).map(item => ({
-          ...item,
-          menuId: item.menuId || item.menu_id || null // menu_id 정보 포함
-        })),
+        items: orderData.items || currentOrder || [],
         total: orderData.total || finalAmount,
         storeName: orderData.storeName || orderData.store || store?.name
       },
