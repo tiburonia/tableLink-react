@@ -76,12 +76,6 @@ router.post('/prepare', async (req, res) => {
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
 
-    // cook_station 정보 처리 - 프론트엔드에서 이미 jsonb 형태로 전달받음
-    const cookStations = orderData.cook_station ?
-      JSON.stringify(orderData.cook_station) :
-      JSON.stringify({ stations: ['KITCHEN'], drink_count: 0, total_items: 0 });
-
-
     // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
     await client.query(`
       INSERT INTO pending_payments (
@@ -92,9 +86,8 @@ router.post('/prepare', async (req, res) => {
         table_number,
         order_data,
         amount,
-        status,
-        cook_station
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
+        status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
     `, [
       orderId,
       userIdString, // users.user_id (사용자 입력 ID, 문자열)
@@ -115,11 +108,16 @@ router.post('/prepare', async (req, res) => {
         usedPoint: parseInt(usedPoint),
         couponDiscount: parseInt(couponDiscount),
         paymentMethod: paymentMethod,
-        total: parseInt(amount),
-        subtotal: parseInt(amount) + parseInt(usedPoint) + parseInt(couponDiscount)
+        // cook_station 정보도 order_data 안에 포함
+        cook_station: {
+          items: (orderData.items || []).map(item => ({
+            name: item.name,
+            cook_station: item.cook_station || 'KITCHEN',
+            menuId: item.menuId || item.menu_id || item.id || null
+          }))
+        }
       }),
-      parseInt(amount),
-      cookStations
+      parseInt(amount)
     ]);
 
     console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
@@ -267,7 +265,7 @@ router.post('/confirm', async (req, res) => {
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
         items: (orderData.items || []).filter(item => item.cook_station !== 'DRINK'), // DRINK 제외
-        cookStation: pendingPayment.cook_station // pending_payments에서 cook_station 가져오기
+        orderData: orderData // order_data 전체를 포함
       };
 
       console.log('📊 최종 주문 정보:', {
@@ -351,12 +349,22 @@ router.post('/confirm', async (req, res) => {
 
       const ticketId = ticketResult.rows[0].id;
 
+      // order_data에서 cook_station 정보 추출
+      let cookStationData = {};
+      try {
+        const orderDataObj = typeof finalOrderInfo.orderData === 'string'
+          ? JSON.parse(finalOrderInfo.orderData)
+          : finalOrderInfo.orderData;
+
+        cookStationData = orderDataObj.cook_station || { items: [] };
+        console.log('✅ order_data에서 cook_station 정보 추출 완료:', cookStationData);
+      } catch (parseError) {
+        console.warn('⚠️ order_data에서 cook_station 파싱 실패, 기본값 사용:', parseError);
+        cookStationData = { items: [] };
+      }
+
+
       // 3. order_items 테이블에 아이템들 생성 (pending_payments의 cook_station 정보 활용)
-      const cookStationData = typeof pendingPayment.cook_station === 'string' ?
-        JSON.parse(pendingPayment.cook_station) : pendingPayment.cook_station;
-
-      console.log('📊 pending_payments에서 복원된 cook_station 데이터:', cookStationData);
-
       for (const item of finalOrderInfo.items) {
         // menu_id 우선순위: 1) 프론트에서 전달된 값, 2) DB 조회, 3) null
         let actualMenuId = item.menuId || item.menu_id || null;
@@ -364,7 +372,7 @@ router.post('/confirm', async (req, res) => {
 
         // pending_payments에 저장된 cook_station 정보에서 해당 메뉴의 cook_station 찾기
         if (cookStationData && cookStationData.items && Array.isArray(cookStationData.items)) {
-          const savedItem = cookStationData.items.find(saved => 
+          const savedItem = cookStationData.items.find(saved =>
             saved.name === item.name
           );
           if (savedItem && savedItem.cook_station) {
