@@ -59,6 +59,9 @@ const POSTableMap = {
                     <button class="top-btn" onclick="POSTableMap.showSalesStatus()">
                         💰 매출현황
                     </button>
+                    <button class="top-btn" onclick="POSTableMap.showSettings()">
+                        ⚙️ 설정
+                    </button>
                     <button class="top-btn notification-btn" onclick="POSTableMap.showNotifications()">
                         🔔 <span class="notification-count">3</span>
                     </button>
