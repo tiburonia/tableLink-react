@@ -29,8 +29,9 @@ async function renderMap() {
 
       <!-- 상단 컨트롤 바 -->
       <div id="topControlBar">
-        <button id="locationSelectBtn" class="top-control-btn" title="위치 선택">
-          <span>📍</span>
+        <button id="locationSelectBtn" class="location-select-btn" title="위치 선택">
+          <span id="locationText">현재 위치 선택</span>
+          <span class="dropdown-arrow">▼</span>
         </button>
         <div class="top-control-spacer"></div>
         <button id="notificationBtn" class="top-control-btn" title="알림" onclick="renderNotification()">
@@ -123,20 +124,65 @@ async function renderMap() {
 /* 상단 컨트롤 바 */
 #topControlBar {
   position: absolute;
-  top: 20px;
-  left: 16px;
-  right: 16px;
+  top: 16px;
+  left: 12px;
+  right: 12px;
   z-index: 1003;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   pointer-events: auto;
 }
 
+/* 위치 선택 버튼 (텍스트 버튼) */
+.location-select-btn {
+  position: relative;
+  height: 36px;
+  padding: 0 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  max-width: 180px;
+}
+
+.location-select-btn #locationText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.location-select-btn .dropdown-arrow {
+  font-size: 10px;
+  color: #6b7280;
+  transition: transform 0.2s ease;
+}
+
+.location-select-btn:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.12);
+  transform: translateY(-1px);
+}
+
+.location-select-btn:hover .dropdown-arrow {
+  transform: translateY(-1px);
+}
+
+/* 일반 컨트롤 버튼들 (크기 축소) */
 .top-control-btn {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 50%;
@@ -144,16 +190,16 @@ async function renderMap() {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   backdrop-filter: blur(20px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   transition: all 0.3s ease;
 }
 
 .top-control-btn:hover {
   background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
-  box-shadow: 0 6px 20px rgba(41, 126, 252, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(41, 126, 252, 0.12);
+  transform: translateY(-1px);
 }
 
 .top-control-spacer {
@@ -163,15 +209,15 @@ async function renderMap() {
 .notification-badge,
 .cart-badge {
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -1px;
+  right: -1px;
   background: #dc2626;
   color: white;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 16px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 14px;
   text-align: center;
 }
 
@@ -180,12 +226,12 @@ async function renderMap() {
   display: none;
 }
 
-/* 검색바 - 지도 위 오버레이 (30px 아래로) */
+/* 검색바 - 지도 위 오버레이 (상단 컨트롤 바 아래로) */
 #searchBar {
   position: absolute;
-  top: 80px;
-  left: 16px;
-  right: 16px;
+  top: 64px;
+  left: 12px;
+  right: 12px;
   z-index: 1002;
   pointer-events: auto;
 }
@@ -1347,8 +1393,46 @@ async function renderMap() {
       currentLocationMarker = null;
     }
 
+    // 위치 텍스트 업데이트
+    const locationTextElement = document.getElementById('locationText');
+    if (locationTextElement) {
+      locationTextElement.textContent = locationName;
+    }
+
     console.log(`📍 위치 설정 완료: ${locationName} (${lat}, ${lng})`);
   }
+
+  // 지도 이동 시 현재 위치 정보 업데이트
+  const updateLocationInfo = async () => {
+    const center = map.getCenter();
+    const lat = center.getLat();
+    const lng = center.getLng();
+
+    try {
+      // 서버를 통해 카카오 API 호출 (API 키 보안)
+      const response = await fetch(`/api/stores/get-location-info?lat=${lat}&lng=${lng}`);
+      const data = await response.json();
+
+      if (data.success && data.eupmyeondong) {
+        const locationTextElement = document.getElementById('locationText');
+        if (locationTextElement) {
+          locationTextElement.textContent = data.eupmyeondong;
+        }
+      }
+    } catch (error) {
+      console.error('현재 위치 정보 로딩 실패:', error);
+      const locationTextElement = document.getElementById('locationText');
+      if (locationTextElement) {
+        locationTextElement.textContent = '위치 정보 없음';
+      }
+    }
+  };
+
+  // 초기 위치 정보 로드
+  updateLocationInfo();
+
+  // 지도 이동 완료 시 위치 정보 업데이트
+  kakao.maps.event.addListener(map, 'idle', updateLocationInfo);
 
   // 바텀바 지도 버튼 클릭시
   const renderMapBtn = document.getElementById('renderMapBtn');
