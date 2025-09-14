@@ -28,6 +28,22 @@ async function renderMap() {
         <div id="searchResults" class="search-results hidden"></div>
       </div>
 
+      <!-- 상단 컨트롤 바 -->
+      <div id="topControlBar">
+        <button id="locationSelectBtn" class="top-control-btn" title="위치 선택">
+          <span>📍</span>
+        </button>
+        <div class="top-control-spacer"></div>
+        <button id="notificationBtn" class="top-control-btn" title="알림" onclick="renderNotification()">
+          <span>🔔</span>
+          <span id="notificationBadge" class="notification-badge hidden">3</span>
+        </button>
+        <button id="cartBtn" class="top-control-btn" title="장바구니">
+          <span>🛒</span>
+          <span id="cartBadge" class="cart-badge hidden">2</span>
+        </button>
+      </div>
+
       <!-- 위치 설정 모달 -->
       <div id="locationModal" class="location-modal hidden">
         <div class="modal-content">
@@ -105,10 +121,70 @@ async function renderMap() {
   overflow: hidden;
 }
 
-/* 검색바 - 지도 위 오버레이 */
-#searchBar {
+/* 상단 컨트롤 바 */
+#topControlBar {
   position: absolute;
   top: 20px;
+  left: 16px;
+  right: 16px;
+  z-index: 1003;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.top-control-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.top-control-btn:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+  box-shadow: 0 6px 20px rgba(41, 126, 252, 0.15);
+  transform: translateY(-2px);
+}
+
+.top-control-spacer {
+  flex: 1;
+}
+
+.notification-badge,
+.cart-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.notification-badge.hidden,
+.cart-badge.hidden {
+  display: none;
+}
+
+/* 검색바 - 지도 위 오버레이 (30px 아래로) */
+#searchBar {
+  position: absolute;
+  top: 80px;
   left: 16px;
   right: 16px;
   z-index: 1002;
@@ -1006,8 +1082,15 @@ async function renderMap() {
   // 현재 설정된 위치 표시용 마커
   let currentLocationMarker = null;
 
-  // 위치 설정 모달 열기
+  // 위치 설정 모달 열기 (기존 버튼)
   locationBtn.addEventListener('click', () => {
+    locationModal.classList.remove('hidden');
+    loadProvinces(); // 시/도 데이터 로드
+  });
+
+  // 상단 위치 선택 버튼 이벤트
+  const locationSelectBtn = document.getElementById('locationSelectBtn');
+  locationSelectBtn.addEventListener('click', () => {
     locationModal.classList.remove('hidden');
     loadProvinces(); // 시/도 데이터 로드
   });
@@ -1396,6 +1479,45 @@ async function renderMap() {
     }
   }
 
+  // 장바구니 버튼 이벤트
+  const cartBtn = document.getElementById('cartBtn');
+  cartBtn.addEventListener('click', () => {
+    // 장바구니가 있는지 확인
+    if (window.savedCart && window.savedCart.order && Object.keys(window.savedCart.order).length > 0) {
+      // 장바구니 내용이 있으면 장바구니 화면으로
+      if (typeof renderCart === 'function') {
+        renderCart(window.savedCart);
+      } else {
+        alert('장바구니 기능을 불러올 수 없습니다.');
+      }
+    } else {
+      alert('장바구니가 비어있습니다.');
+    }
+  });
+
+  // 장바구니 상태 업데이트 함수
+  function updateCartBadge() {
+    const cartBadge = document.getElementById('cartBadge');
+    if (window.savedCart && window.savedCart.order) {
+      const totalItems = Object.values(window.savedCart.order).reduce((a, b) => a + b, 0);
+      if (totalItems > 0) {
+        cartBadge.textContent = totalItems;
+        cartBadge.classList.remove('hidden');
+      } else {
+        cartBadge.classList.add('hidden');
+      }
+    } else {
+      cartBadge.classList.add('hidden');
+    }
+  }
+
+  // 초기 장바구니 상태 업데이트
+  updateCartBadge();
+
+  // 장바구니 변경 감지를 위한 주기적 업데이트
+  setInterval(updateCartBadge, 1000);
+
   // 전역 함수로 설정
   window.loadStoreRatingAsync = loadStoreRatingAsync;
+  window.updateCartBadge = updateCartBadge;
 }
