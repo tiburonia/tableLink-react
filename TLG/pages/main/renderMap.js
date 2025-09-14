@@ -698,43 +698,7 @@ async function renderMap() {
   border-color: rgba(124, 58, 237, 0.2);
 }
 
-/* 위치 정보 표시 */
-#locationInfo {
-  position: absolute;
-  top: 90px;
-  left: 20px;
-  z-index: 1000;
-  pointer-events: none;
-}
 
-.location-container {
-  background: linear-gradient(135deg, rgba(41, 126, 252, 0.9), rgba(79, 70, 229, 0.85));
-  color: white;
-  border-radius: 12px;
-  padding: 4px 8px;
-  text-align: left;
-  box-shadow: 0 2px 8px rgba(41, 126, 252, 0.2);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.2s ease;
-  font-size: 11px;
-  font-weight: 600;
-  min-width: 80px;
-  max-width: 120px;
-}
-
-.location-container:hover {
-  background: linear-gradient(135deg, rgba(41, 126, 252, 1), rgba(79, 70, 229, 0.95));
-  box-shadow: 0 3px 12px rgba(41, 126, 252, 0.3);
-  transform: translateY(-1px);
-}
-
-#locationText {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  line-height: 1.2;
-}
 
 /* 버튼별 고유 색상 */
   </style>
@@ -911,12 +875,6 @@ async function renderMap() {
   function displayCombinedResults(stores, places, keyword) {
     console.log(`🔍 검색 결과 표시: 매장 ${stores?.length || 0}개, 장소 ${places?.length || 0}개`);
 
-    // 현재 위치 UI 숨기기
-    const locationInfo = document.getElementById('locationInfo');
-    if (locationInfo) {
-      locationInfo.style.display = 'none';
-    }
-
     let resultHTML = '';
     const totalResults = (stores?.length || 0) + (places?.length || 0);
 
@@ -1013,12 +971,6 @@ async function renderMap() {
   // 검색 결과 숨기기 함수
   function hideSearchResults() {
     searchResults.classList.add('hidden');
-
-    // 현재 위치 UI 다시 보이기
-    const locationInfo = document.getElementById('locationInfo');
-    if (locationInfo) {
-      locationInfo.style.display = 'block';
-    }
   }
 
   // 입력 이벤트 (실시간 검색)
@@ -1396,12 +1348,6 @@ async function renderMap() {
       currentLocationMarker = null;
     }
 
-    // 위치 정보 업데이트
-    const locationTextElement = document.getElementById('locationText');
-    if (locationTextElement) {
-      locationTextElement.innerHTML = `📍 ${locationName}`;
-    }
-
     console.log(`📍 위치 설정 완료: ${locationName} (${lat}, ${lng})`);
   }
 
@@ -1415,47 +1361,7 @@ async function renderMap() {
     }
   });
 
-  // 지도 이동 또는 확대/축소 시 현재 위치 정보를 업데이트하는 로직 추가
-  const updateLocationInfo = async () => {
-    const center = map.getCenter();
-    const lat = center.getLat();
-    const lng = center.getLng();
-
-    try {
-      // 서버를 통해 카카오 API 호출 (API 키 보안)
-      const response = await fetch(`/api/stores/get-location-info?lat=${lat}&lng=${lng}`);
-      const data = await response.json();
-
-      if (data.success && data.eupmyeondong) {
-        const locationTextElement = document.getElementById('locationText');
-        if (locationTextElement) {
-          locationTextElement.innerHTML = `📍 ${data.eupmyeondong}`;
-        }
-      }
-    } catch (error) {
-      console.error('현재 위치 정보 로딩 실패:', error);
-      const locationTextElement = document.getElementById('locationText');
-      if (locationTextElement) {
-        locationTextElement.innerHTML = '📍 위치 정보 없음';
-      }
-    }
-  };
-
-  // 위치 정보 UI 생성
-  const locationInfoDiv = document.createElement('div');
-  locationInfoDiv.id = 'locationInfo';
-  locationInfoDiv.innerHTML = `
-    <div class="location-container">
-      <div id="locationText">⏳ 로딩 중...</div>
-    </div>
-  `;
-  main.appendChild(locationInfoDiv);
-
-  // 초기 위치 정보 로드
-  updateLocationInfo();
-
-  // 지도 이동 또는 확대/축소 시 위치 정보 업데이트
-  kakao.maps.event.addListener(map, 'idle', updateLocationInfo); // 'idle' 이벤트는 지도 이동/확대/축소 완료 시 발생
+  
 
 
   // 개별 매장 별점 정보 조회 (MapMarkerManager에서 사용)
