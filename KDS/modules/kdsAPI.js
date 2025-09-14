@@ -129,17 +129,21 @@
     },
 
     /**
-     * 출력 상태 업데이트
+     * 출력 상태 업데이트 - 즉시 PRINTED 상태로 변경 및 KRP WebSocket 전송
      */
     async updatePrintStatus(ticketId) {
       try {
-        console.log(`📡 출력 상태 업데이트 API 호출: ${ticketId}`);
+        console.log(`📡 출력 상태 업데이트 API 호출: ${ticketId} - 즉시 PRINTED 처리`);
 
         const response = await fetch(`/api/orders/kds/tickets/${ticketId}/print`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({
+            immediate: true, // 즉시 처리 플래그
+            timestamp: new Date().toISOString()
+          })
         });
 
         const data = await response.json();
@@ -148,7 +152,7 @@
           throw new Error(data.error || `HTTP ${response.status}`);
         }
 
-        console.log(`✅ 출력 상태 업데이트 성공: ${ticketId}`);
+        console.log(`✅ 출력 상태 업데이트 성공: ${ticketId} - KRP로 즉시 전송됨`);
         return data;
 
       } catch (error) {

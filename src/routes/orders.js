@@ -1074,7 +1074,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
     const { order_id, created_at } = ticketUpdateResult.rows[0];
 
     // 상세 주문 정보 조회 (KRP 전송용)
-    const orderDetailResult = await client.query(`
+    const orderDetailResult = await pool.query(`
       SELECT 
         o.id as order_id,
         o.store_id,
@@ -1112,7 +1112,7 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KRP WebSocket으로 새 출력 요청 전송
+    // KRP WebSocket으로 새 출력 요청 즉시 전송
     if (global.io) {
       const printData = {
         ticket_id: parseInt(ticketId),
@@ -1120,27 +1120,17 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
         table_number: orderDetail.table_num,
         customer_name: orderDetail.customer_name,
         total_amount: parseInt(orderDetail.total_amount) || 0,
-        created_at: orderDetail.order_created_at,
         items: orderDetail.items || [],
-        printed_at: new Date().toISOString()
+        created_at: orderDetail.order_created_at,
+        timestamp: new Date().toISOString(),
+        source: 'kds_print_button'
       };
 
-      console.log(`📡 KRP 웹소켓 이벤트 전송: 티켓 ${ticketId}`);
+      // 모든 클라이언트에게 즉시 브로드캐스트 (KRP와 KDS 모두)
+      global.io.emit('krp:new-print', printData);
+      global.io.to(`kds:${orderDetail.store_id}`).emit('krp:new-print', printData);
 
-      // KRP에 새 출력 요청 전송
-      global.io.to(`krp:${orderDetail.store_id}`).emit('krp:new-print', printData);
-
-      // KDS에서 티켓 제거 알림
-      global.io.to(`kds:${orderDetail.store_id}`).emit('kds-update', {
-        type: 'ticket_printed',
-        data: {
-          ticket_id: parseInt(ticketId),
-          order_id: orderDetail.order_id,
-          status: 'PRINTED',
-          table_number: orderDetail.table_num,
-          action: 'remove_immediately'
-        }
-      });
+      console.log(`📡 KRP WebSocket 출력 요청 즉시 전송: 티켓 ${ticketId}, 매장 ${orderDetail.store_id}`);
     }
 
     res.json({

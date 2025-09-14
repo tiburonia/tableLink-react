@@ -321,9 +321,22 @@ io.on('connection', (socket) => {
     console.log(`🚪 KDS 룸 떠남: ${socket.id} -> ${roomName}`);
   });
 
-  // KRP 관련 WebSocket 이벤트 핸들러 (예시)
-  // 사용자의 요구사항에 따라 KRP 관련 이벤트 핸들러를 여기에 추가해야 합니다.
-  // 예: 주문서 큐 추가, 출력 완료 처리 등
+  // KRP 출력 완료 처리
+  socket.on('krp:print-completed', (data) => {
+    try {
+      const { ticket_id } = data;
+      console.log(`🖨️ KRP 출력 완료 처리: 티켓 ${ticket_id}`);
+      
+      // 다른 KRP 클라이언트들에게도 알림
+      socket.broadcast.emit('krp:receipt-completed', {
+        ticket_id: ticket_id,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ KRP 출력 완료 처리 실패:', error);
+    }
+  });
 
   // 아이템 상태 변경 요청 처리
   socket.on('item:setStatus', async (data) => {

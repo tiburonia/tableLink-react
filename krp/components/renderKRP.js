@@ -45,8 +45,8 @@ async function renderKRP(storeId) {
     // KRP 화면 렌더링
     renderKRPInterface(store);
 
-    // 기존 출력 대기 목록 로딩 (페이지 새로고침 시)
-    await loadInitialQueue(storeId);
+    // 초기 로딩 제거 - WebSocket을 통한 실시간 출력 요청만 처리
+    console.log('✅ KRP 초기화 완료 - WebSocket 실시간 출력 대기 중');
 
     // WebSocket 연결 설정
     setupKRPWebSocket(storeId);
@@ -575,46 +575,7 @@ function updateCurrentTime() {
   }
 }
 
-// 초기 대기 큐 로딩 (페이지 새로고침 시)
-async function loadInitialQueue(storeId) {
-  try {
-    console.log(`📋 초기 출력 대기 목록 로딩 - 매장 ${storeId}`);
-
-    const response = await fetch(`/api/krp?storeId=${storeId}`, {
-      headers: {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('출력 대기 목록 조회 실패');
-    }
-
-    const data = await response.json();
-
-    if (data.success && data.orders) {
-      // 시간순으로 정렬
-      const sortedOrders = data.orders.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      
-      if (sortedOrders.length > 0) {
-        // 첫 번째는 메인 화면에 표시
-        displayMainReceipt(sortedOrders[0]);
-        
-        // 나머지는 대기 큐에 추가
-        if (sortedOrders.length > 1) {
-          waitingQueue = sortedOrders.slice(1);
-          updateWaitingList();
-        }
-      }
-
-      console.log(`✅ 초기 로딩 완료: 메인 1개, 대기 ${waitingQueue.length}개`);
-    }
-
-  } catch (error) {
-    console.warn('⚠️ 초기 대기 목록 로딩 실패:', error);
-  }
-}
+// 초기 대기 큐 로딩 함수 제거 - WebSocket 실시간 전용
 
 // KRP WebSocket 설정
 function setupKRPWebSocket(storeId) {
@@ -639,9 +600,12 @@ function setupKRPWebSocket(storeId) {
       updateConnectionStatus(false);
     });
 
-    // 새 출력 요청 수신 - 핵심 이벤트
+    // 새 출력 요청 수신 - 핵심 이벤트 (즉시 처리)
     krpSocket.on('krp:new-print', (printData) => {
-      console.log('🖨️ 새 출력 요청 수신:', printData);
+      console.log('🖨️ 새 출력 요청 즉시 수신:', printData);
+      console.log(`📄 출력 데이터: 티켓 ${printData.ticket_id}, 테이블 ${printData.table_number}, 시간: ${printData.timestamp}`);
+      
+      // 즉시 처리
       handleNewPrintRequest(printData);
     });
 
@@ -656,14 +620,17 @@ function setupKRPWebSocket(storeId) {
   }
 }
 
-// 새 출력 요청 처리 - 핵심 로직
+// 새 출력 요청 처리 - 핵심 로직 (즉시 처리)
 function handleNewPrintRequest(printData) {
-  console.log(`🎯 새 출력 요청 처리: 테이블 ${printData.table_number}`);
+  console.log(`🎯 새 출력 요청 즉시 처리: 테이블 ${printData.table_number}, 티켓 ${printData.ticket_id}`);
+  console.log(`⏰ 요청 시간: ${printData.timestamp || new Date().toISOString()}`);
 
-  if (isProcessing) {
-    console.log('⚠️ 이미 처리 중 - 요청 대기열에 추가');
-    waitingQueue.push(printData);
-    updateWaitingList();
+  // 중복 방지 체크
+  const isDuplicate = waitingQueue.some(item => item.ticket_id === printData.ticket_id) || 
+                     (currentReceipt && currentReceipt.ticket_id === printData.ticket_id);
+
+  if (isDuplicate) {
+    console.log(`⚠️ 중복 출력 요청 무시: 티켓 ${printData.ticket_id}`);
     return;
   }
 
@@ -678,9 +645,11 @@ function handleNewPrintRequest(printData) {
     updateWaitingList();
   }
 
-  // 알림 사운드
+  // 즉시 알림
   playPrintSound();
-  showNotification(`새 출력: 테이블 ${printData.table_number}`, 'info');
+  showNotification(`🖨️ 새 출력: 테이블 ${printData.table_number}`, 'info');
+  
+  console.log(`✅ 출력 요청 처리 완료: 현재 메인 ${currentReceipt ? '사용중' : '비어있음'}, 대기 큐 ${waitingQueue.length}개`);
 }
 
 // 메인 화면에 주문서 표시

@@ -782,11 +782,11 @@
     },
 
     /**
-     * 주문 출력 (KRP 연계)
+     * 주문 출력 (KRP 연계) - 즉시 PRINTED 상태로 업데이트 및 WebSocket 전송
      */
     async printOrder(ticketId) {
       try {
-        console.log(`🖨️ 티켓 ${ticketId} 출력 요청`);
+        console.log(`🖨️ 티켓 ${ticketId} 출력 요청 - 즉시 처리`);
 
         // 1. 티켓 찾기
         const ticket = this._findTicketById(ticketId);
@@ -795,27 +795,25 @@
           return;
         }
 
-        // 2. 출력 상태 업데이트 API 호출 (수정된 API 사용)
+        // 2. 즉시 UI에서 티켓 제거 (낙관적 업데이트)
+        this.removeCardFromUI(ticketId);
+        KDSState.removeTicket(ticketId);
+
+        // 3. 탭 필터링 및 카운트 업데이트
+        if (KDSState.currentTab === 'active') {
+          this.filterTickets();
+        }
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
+        }
+
+        // 4. 백그라운드에서 서버 API 호출 및 KRP WebSocket 전송
         const result = await KDSAPIService.updatePrintStatus(ticketId);
 
         if (result.success) {
-          console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 성공`);
+          console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 성공 - KRP로 즉시 전송됨`);
 
-          // 3. UI에서 즉시 티켓 제거 (출력 완료 처리)
-          this.removeCardFromUI(ticketId);
-          KDSState.removeTicket(ticketId);
-
-          // 4. 현재 탭 필터링 재실행
-          if (KDSState.currentTab === 'active') {
-            this.filterTickets();
-          }
-
-          // 5. 탭 카운트 업데이트
-          if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-            window.KDSUIRenderer.updateTicketCounts();
-          }
-
-          // 6. 사운드 재생
+          // 5. 사운드 재생
           if (window.KDSSoundManager && typeof window.KDSSoundManager.playNotificationSound === 'function') {
             try {
               window.KDSSoundManager.playNotificationSound();
@@ -824,15 +822,17 @@
             }
           }
 
-          console.log(`✅ 티켓 ${ticketId} 출력 처리 완료 - KRP로 전송됨`);
-
         } else {
-          throw new Error(result.error || '출력 요청 실패');
+          // 실패 시에도 UI는 이미 업데이트되었으므로 경고만 표시
+          console.warn(`⚠️ 서버 출력 상태 업데이트 실패 (UI는 이미 처리됨): ${result.error}`);
         }
+
+        console.log(`✅ 티켓 ${ticketId} 출력 처리 완료 - 즉시 KRP 전송`);
 
       } catch (error) {
         console.error(`❌ 티켓 ${ticketId} 출력 실패:`, error);
-        this.showError(`출력 중 오류가 발생했습니다: ${error.message}`);
+        // 에러 발생 시에도 UI 상태는 유지 (이미 제거됨)
+        console.log(`🚨 출력 에러 발생했지만 UI는 이미 처리됨: ${ticketId}`);
       }
     },
 
