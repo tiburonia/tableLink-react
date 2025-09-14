@@ -104,7 +104,15 @@ router.post('/prepare', async (req, res) => {
       parseInt(storeId),
       parseInt(tableNumber),
       JSON.stringify({
-        items: orderData.items || [],
+        items: (orderData.items || []).map(item => ({
+          ...item,
+          menuId: item.menuId || item.menu_id || item.id || null,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          totalPrice: item.totalPrice || (item.price * (item.quantity || 1)),
+          cook_station: item.cook_station || 'KITCHEN'
+        })),
         storeName: storeName,
         usedPoint: parseInt(usedPoint),
         couponDiscount: parseInt(couponDiscount),
@@ -342,6 +350,33 @@ router.post('/confirm', async (req, res) => {
 
       // 3. order_items 테이블에 아이템들 생성
       for (const item of finalOrderInfo.items) {
+        // menu_id 우선순위: 1) 프론트에서 전달된 값, 2) DB 조회, 3) null
+        let actualMenuId = item.menuId || item.menu_id || null;
+
+        // 프론트에서 menu_id를 전달하지 않은 경우에만 DB에서 조회
+        if (!actualMenuId) {
+          try {
+            const menuResult = await client.query(`
+              SELECT id FROM menu_items 
+              WHERE store_id = $1 AND name = $2
+              LIMIT 1
+            `, [finalOrderInfo.storeId, item.name]);
+
+            if (menuResult.rows.length > 0) {
+              actualMenuId = menuResult.rows[0].id;
+              console.log(`✅ DB에서 메뉴 ID 조회 성공: ${item.name} -> ${actualMenuId}`);
+            } else {
+              console.warn(`⚠️ 메뉴를 찾을 수 없음: ${item.name} (store_id: ${finalOrderInfo.storeId})`);
+              actualMenuId = null;
+            }
+          } catch (menuError) {
+            console.warn(`⚠️ 메뉴 조회 실패: ${item.name}`, menuError.message);
+            actualMenuId = null;
+          }
+        } else {
+          console.log(`✅ 프론트에서 전달된 menu_id 사용: ${item.name} -> ${actualMenuId}`);
+        }
+
         await client.query(`
           INSERT INTO order_items (
             ticket_id,
@@ -357,12 +392,12 @@ router.post('/confirm', async (req, res) => {
         `, [
           ticketId,
           finalOrderInfo.storeId,
-          item.menuId || 1,
+          actualMenuId, // 수정된 menu_id 사용
           item.name,
           item.quantity || 1,
           item.price,
           item.totalPrice || item.price,
-          item.cook_station || 'KITCHEN' // order_items 테이블에 cook_station 추가
+          item.cook_station || 'KITCHEN'
         ]);
       }
 

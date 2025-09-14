@@ -67,7 +67,15 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum || 1,
       orderData: {
-        items: orderData.items || currentOrder || [],
+        items: (orderData.items || currentOrder || []).map(item => ({
+          ...item,
+          menuId: item.menuId || item.menu_id || item.id || null, // menu_id 정보 명시적 포함
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || item.qty || 1,
+          totalPrice: item.totalPrice || (item.price * (item.quantity || item.qty || 1)),
+          cook_station: item.cook_station || 'KITCHEN'
+        })),
         total: orderData.total || finalAmount,
         storeName: orderData.storeName || orderData.store || store?.name
       },
