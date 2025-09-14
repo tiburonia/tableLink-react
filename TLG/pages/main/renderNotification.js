@@ -411,6 +411,36 @@ window.renderNotification = async function renderNotification() {
   loadNotifications('all');
 }
 
+// 사용자 정보 가져오기 함수
+function getUserInfo() {
+  try {
+    // 쿠키에서 사용자 정보 확인
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
+    
+    if (userInfoCookie) {
+      const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
+      return JSON.parse(userInfoValue);
+    }
+
+    // localStorage에서 사용자 정보 확인
+    const localStorageUserInfo = localStorage.getItem('userInfo');
+    if (localStorageUserInfo) {
+      return JSON.parse(localStorageUserInfo);
+    }
+
+    // 전역 변수에서 사용자 정보 확인
+    if (window.userInfo && window.userInfo.userId) {
+      return window.userInfo;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('❌ 사용자 정보 파싱 오류:', error);
+    return null;
+  }
+}
+
 // 알림 목록 로드 함수
 async function loadNotifications(type = 'all') {
   const notificationList = document.getElementById('notificationList');
@@ -474,55 +504,33 @@ async function loadNotifications(type = 'all') {
   }
 }
 
-// 알림 데이터 가져오기 (임시 목업 함수)
+// 알림 데이터 가져오기 (실제 API 연동)
 async function fetchNotifications(type) {
-  // 실제로는 서버 API를 호출해야 함
-  // return await fetch(`/api/notifications?type=${type}`).then(r => r.json());
-
-  // 임시 목업 데이터
-  await new Promise(resolve => setTimeout(resolve, 800)); // 로딩 시뮬레이션
-
-  const mockNotifications = [
-    {
-      id: 1,
-      type: 'order',
-      title: '주문 접수 완료',
-      message: '치킨천국에서 주문이 접수되었습니다. 예상 조리시간: 15분',
-      createdAt: new Date(Date.now() - 5 * 60 * 1000), // 5분 전
-      isRead: false
-    },
-    {
-      id: 2,
-      type: 'promotion',
-      title: '🎉 특별 할인 이벤트',
-      message: '파스타하우스에서 20% 할인 이벤트를 진행합니다!',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2시간 전
-      isRead: false
-    },
-    {
-      id: 3,
-      type: 'system',
-      title: '앱 업데이트 안내',
-      message: '더 나은 서비스 제공을 위해 앱이 업데이트되었습니다.',
-      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1일 전
-      isRead: true
-    },
-    {
-      id: 4,
-      type: 'order',
-      title: '주문 완료',
-      message: '피자헛 주문이 완료되어 픽업 가능합니다.',
-      createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000), // 2일 전
-      isRead: true
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo?.userId) {
+      console.warn('⚠️ 사용자 정보가 없습니다. 게스트는 알림을 받을 수 없습니다.');
+      return [];
     }
-  ];
 
-  // 타입별 필터링
-  if (type !== 'all') {
-    return mockNotifications.filter(n => n.type === type);
+    const url = `/api/notifications?userId=${userInfo.userId}${type !== 'all' ? `&type=${type}` : ''}`;
+    console.log('📤 알림 API 요청:', url);
+
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error('❌ 알림 API 요청 실패:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    console.log('✅ 알림 데이터 로드 성공:', data);
+
+    return data.notifications || [];
+  } catch (error) {
+    console.error('❌ 알림 데이터 로드 실패:', error);
+    return [];
   }
-
-  return mockNotifications;
 }
 
 // 알림 타입별 아이콘
@@ -553,29 +561,68 @@ function formatTimeAgo(date) {
 }
 
 // 알림 클릭 처리
-function handleNotificationClick(notificationId) {
+async function handleNotificationClick(notificationId) {
   console.log(`알림 클릭: ${notificationId}`);
 
   // 읽음 상태로 변경
   const item = document.querySelector(`[data-id="${notificationId}"]`);
   if (item && item.classList.contains('unread')) {
     item.classList.remove('unread');
-    // 서버에 읽음 상태 전송
-    // markNotificationAsRead(notificationId);
+    await markNotificationAsRead(notificationId);
   }
 
   // 알림 타입에 따른 적절한 액션 수행
   // 예: 주문 알림이면 주문 상세 페이지로, 프로모션이면 해당 매장으로
 }
 
-// 모든 알림을 읽음으로 처리
-function markAllNotificationsAsRead() {
-  const unreadItems = document.querySelectorAll('.notification-item.unread');
-  unreadItems.forEach(item => {
-    item.classList.remove('unread');
-  });
+// 개별 알림 읽음 처리
+async function markNotificationAsRead(notificationId) {
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo?.userId) return;
 
-  console.log('모든 알림을 읽음으로 처리했습니다.');
-  // 서버에 모든 알림 읽음 상태 전송
-  // markAllNotificationsAsReadOnServer();
+    const response = await fetch(`/api/notifications/${notificationId}/read`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userInfo.userId })
+    });
+
+    if (!response.ok) {
+      console.error('❌ 알림 읽음 처리 실패:', response.status);
+    } else {
+      console.log('✅ 알림 읽음 처리 성공:', notificationId);
+    }
+  } catch (error) {
+    console.error('❌ 알림 읽음 처리 오류:', error);
+  }
+}
+
+// 모든 알림을 읽음으로 처리
+async function markAllNotificationsAsRead() {
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo?.userId) {
+      console.warn('⚠️ 사용자 정보가 없습니다.');
+      return;
+    }
+
+    const response = await fetch('/api/notifications/mark-all-read', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userInfo.userId })
+    });
+
+    if (response.ok) {
+      const unreadItems = document.querySelectorAll('.notification-item.unread');
+      unreadItems.forEach(item => {
+        item.classList.remove('unread');
+      });
+      
+      console.log('✅ 모든 알림을 읽음으로 처리했습니다.');
+    } else {
+      console.error('❌ 모든 알림 읽음 처리 실패:', response.status);
+    }
+  } catch (error) {
+    console.error('❌ 모든 알림 읽음 처리 오류:', error);
+  }
 }
