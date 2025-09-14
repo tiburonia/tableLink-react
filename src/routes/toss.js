@@ -76,13 +76,11 @@ router.post('/prepare', async (req, res) => {
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
 
-    // cook_station 정보 추출 - DRINK 제외
-    const cookStations = orderData.items ?
-      orderData.items
-      .filter(item => item.cook_station !== 'DRINK') // DRINK 제외
-      .map(item => item.cook_station || 'KITCHEN')
-      .join(',') :
-      'KITCHEN';
+    // cook_station 정보 처리 - 프론트엔드에서 이미 jsonb 형태로 전달받음
+    const cookStations = orderData.cook_station ?
+      JSON.stringify(orderData.cook_station) :
+      JSON.stringify({ stations: ['KITCHEN'], drink_count: 0, total_items: 0 });
+
 
     // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
     await client.query(`
@@ -313,7 +311,7 @@ router.post('/confirm', async (req, res) => {
             finalOrderInfo.finalTotal,
             finalOrderInfo.tableNumber
           ]);
-          
+
           orderIdToUse = newOrderResult.rows[0].id;
           console.log('✨ 새 주문 생성:', orderIdToUse);
         } catch (orderError) {
@@ -591,7 +589,7 @@ router.post('/confirm', async (req, res) => {
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
-    
+
     // 응답이 이미 전송되었는지 확인
     if (!res.headersSent) {
       res.status(500).json({

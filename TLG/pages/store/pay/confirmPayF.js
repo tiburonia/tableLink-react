@@ -61,6 +61,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
     console.log('📋 서버에 결제 준비 요청 시작');
 
+    // cook_station을 jsonb 형태로 전송하도록 수정
     const prepareData = {
       userId: parseInt(userInfo.userId), // users.id PK를 정수로 전달
       storeId: orderData.storeId || store?.id || store?.store_id,
@@ -77,7 +78,15 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
           cook_station: item.cook_station || 'KITCHEN'
         })),
         total: orderData.total || finalAmount,
-        storeName: orderData.storeName || orderData.store || store?.name
+        storeName: orderData.storeName || orderData.store || store?.name,
+        // cook_station을 jsonb 형태로 구성
+        cook_station: {
+          stations: (orderData.items || currentOrder || []).filter(item => item.cook_station !== 'DRINK') // DRINK 제외
+            .map(item => item.cook_station || 'KITCHEN')
+            .filter((value, index, self) => self.indexOf(value) === index), // 중복 제거
+          drink_count: (orderData.items || currentOrder || []).filter(item => item.cook_station === 'DRINK').length,
+          total_items: (orderData.items || currentOrder || []).length
+        }
       },
       amount: parseInt(finalAmount),
       usedPoint: parseInt(pointsUsed) || 0,
