@@ -537,6 +537,16 @@ window.proceedToPayment = async function() {
         currentOrder[item.name] = item.quantity;
       });
 
+      // 주문 데이터를 배열 형태로 변환 (cook_station 정보 포함)
+      const orderArray = Object.entries(currentOrder).map(([name, data]) => ({
+        name: name,
+        price: data.price,
+        quantity: data.count,
+        totalPrice: data.price * data.count,
+        menuId: data.menuId || null,
+        cook_station: data.cook_station || 'KITCHEN' // cook_station 정보 포함
+      }));
+
       const store = {
         id: window.currentTLLOrder.storeId,
         name: window.currentTLLOrder.storeName,
@@ -549,7 +559,7 @@ window.proceedToPayment = async function() {
       const tableNum = window.currentTLLOrder.tableNumber;
 
       // 결제 화면으로 이동
-      renderPay(currentOrder, store, tableNum);
+      renderPay(orderArray, store, tableNum);
     } else {
       throw new Error('결제 시스템을 로드할 수 없습니다.');
     }
