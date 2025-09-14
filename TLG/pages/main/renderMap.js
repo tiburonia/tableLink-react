@@ -30,7 +30,7 @@ async function renderMap() {
       <!-- 상단 컨트롤 바 -->
       <div id="topControlBar">
         <button id="locationSelectBtn" class="location-select-btn" title="위치 선택">
-          <span id="locationText">현재 위치 선택</span>
+          <span id="locationText">중구 세종대로 110</span>
           <span class="dropdown-arrow">▼</span>
         </button>
         <div class="top-control-spacer"></div>
