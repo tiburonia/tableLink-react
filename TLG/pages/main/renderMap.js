@@ -22,7 +22,6 @@ async function renderMap() {
         <div class="search-container">
           <input id="searchInput" type="text" placeholder="매장명, 카테고리 또는 위치 검색...">
           <button id="searchBtn">🔍</button>
-          <button id="locationBtn" title="내 위치 설정">📍</button>
           <button id="clearBtn">✕</button>
         </div>
         <div id="searchResults" class="search-results hidden"></div>
