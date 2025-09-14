@@ -446,7 +446,7 @@
            gap: 20px;
            padding: 20px;
            min-height: calc(100vh - 80px);
-           padding-bottom: 120px;
+           padding-bottom: 300px;
          }
 
          /* 섹션 공통 스타일 */
