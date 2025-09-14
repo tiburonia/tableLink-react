@@ -320,38 +320,50 @@ const POSOrderScreen = {
     },
     
     /**
-     * 결제 수단 섹션
+     * 결제 수단 섹션 (3열 2행 - 6개 기능)
      */
     renderPaymentMethodSection() {
         return `
             <div class="payment-method-section">
                 <div class="section-header">
-                    <h3>💳 결제 수단</h3>
+                    <h3>💳 결제 기능</h3>
                 </div>
                 
-                <div class="payment-methods">
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" 
-                            onclick="POSOrderScreen.selectPaymentMethod('cash')">
-                        <div class="method-icon">💵</div>
-                        <div class="method-name">현금</div>
-                    </button>
-                    
+                <div class="payment-methods-grid">
                     <button class="payment-method-btn ${this.selectedPaymentMethod === 'card' ? 'active' : ''}" 
                             onclick="POSOrderScreen.selectPaymentMethod('card')">
                         <div class="method-icon">💳</div>
                         <div class="method-name">카드</div>
                     </button>
                     
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'tlpay' ? 'active' : ''}" 
-                            onclick="POSOrderScreen.selectPaymentMethod('tlpay')">
-                        <div class="method-icon">📱</div>
-                        <div class="method-name">TL Pay</div>
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" 
+                            onclick="POSOrderScreen.selectPaymentMethod('cash')">
+                        <div class="method-icon">💵</div>
+                        <div class="method-name">현금</div>
                     </button>
                     
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'simple' ? 'active' : ''}" 
-                            onclick="POSOrderScreen.selectPaymentMethod('simple')">
-                        <div class="method-icon">⚡</div>
-                        <div class="method-name">간편결제</div>
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'mixed' ? 'active' : ''}" 
+                            onclick="POSOrderScreen.selectPaymentMethod('mixed')">
+                        <div class="method-icon">🔄</div>
+                        <div class="method-name">복합결제</div>
+                    </button>
+                    
+                    <button class="payment-method-btn" 
+                            onclick="POSOrderScreen.showOrderHistory()">
+                        <div class="method-icon">📋</div>
+                        <div class="method-name">주문</div>
+                    </button>
+                    
+                    <button class="payment-method-btn" 
+                            onclick="POSOrderScreen.showDutchPay()">
+                        <div class="method-icon">🤝</div>
+                        <div class="method-name">더치페이</div>
+                    </button>
+                    
+                    <button class="payment-method-btn" 
+                            onclick="POSOrderScreen.showReceiptManagement()">
+                        <div class="method-icon">🧾</div>
+                        <div class="method-name">영수증관리</div>
                     </button>
                 </div>
                 
@@ -550,6 +562,7 @@ const POSOrderScreen = {
         const names = {
             'cash': '현금',
             'card': '카드',
+            'mixed': '복합결제',
             'tlpay': 'TL Pay',
             'simple': '간편결제'
         };
@@ -596,7 +609,12 @@ const POSOrderScreen = {
     removeOrder(orderId) { alert('주문삭제 기능 (추후 구현)'); },
     cancelAllOrders() { alert('전체취소 기능 (추후 구현)'); },
     cancelSelectedOrders() { alert('선택취소 기능 (추후 구현)'); },
-    addToOrder() { alert('주문추가 기능 (추후 구현)'); }
+    addToOrder() { alert('주문추가 기능 (추후 구현)'); },
+    
+    // 새로운 결제 기능들
+    showOrderHistory() { alert('주문 내역 관리 기능 (추후 구현)'); },
+    showDutchPay() { alert('더치페이 기능 (추후 구현)'); },
+    showReceiptManagement() { alert('영수증 관리 기능 (추후 구현)'); }
 };
 
 // 전역 함수로 등록
