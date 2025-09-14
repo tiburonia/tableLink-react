@@ -76,10 +76,16 @@ router.post('/prepare', async (req, res) => {
 
     const userIdString = userResult.rows[0].user_id; // users.user_id (문자열)
 
-    // cook_station 정보 처리 - 프론트엔드에서 이미 jsonb 형태로 전달받음
-    const cookStations = orderData.cook_station ?
-      JSON.stringify(orderData.cook_station) :
-      JSON.stringify({ stations: ['KITCHEN'], drink_count: 0, total_items: 0 });
+    // cook_station 정보를 각 메뉴 아이템에서 추출하여 jsonb 형태로 저장
+    const cookStationData = {
+      items: (orderData.items || []).map(item => ({
+        name: item.name,
+        cook_station: item.cook_station || 'KITCHEN',
+        menuId: item.menuId || item.menu_id || item.id || null
+      }))
+    };
+
+    const cookStations = JSON.stringify(cookStationData);
 
 
     // pending_payments 테이블에 데이터 저장 (user_id에 users.user_id, user_pk에 users.id 저장)
