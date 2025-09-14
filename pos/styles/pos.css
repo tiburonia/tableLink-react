@@ -674,8 +674,10 @@ body {
     grid-template-rows: 1fr 1fr;
     gap: 12px;
     padding: 20px;
+    padding-bottom: 30px;
     height: auto;
     min-height: 200px;
+    margin-bottom: 20px;
 }
 
 .payment-method-btn {
