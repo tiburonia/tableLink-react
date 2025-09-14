@@ -417,23 +417,34 @@ body {
     grid-template-columns: 1fr 1fr;
     gap: 16px;
     padding: 16px 20px;
+    height: calc(100% - 32px);
 }
 
 .payment-left {
     background: #f8fafc;
     border-radius: 12px;
-    padding: 16px;
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .payment-right {
     background: #ffffff;
     border-radius: 12px;
-    padding: 16px;
+    padding: 20px;
     border: 1px solid #e5e7eb;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .payment-summary {
     margin: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .summary-row {
@@ -485,6 +496,10 @@ body {
 
 .payment-actions {
     margin: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
 }
 
 .action-row {
