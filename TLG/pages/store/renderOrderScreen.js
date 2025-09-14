@@ -531,20 +531,14 @@ window.proceedToPayment = async function() {
 
     // 결제 화면으로 이동
     if (typeof renderPay === 'function') {
-      // renderPay 함수가 기대하는 형식으로 데이터 준비
-      const currentOrder = {};
-      window.currentTLLOrder.cart.forEach(item => {
-        currentOrder[item.name] = item.quantity;
-      });
-
-      // 주문 데이터를 배열 형태로 변환 (cook_station 정보 포함)
-      const orderArray = Object.entries(currentOrder).map(([name, data]) => ({
-        name: name,
-        price: data.price,
-        quantity: data.count,
-        totalPrice: data.price * data.count,
-        menuId: data.menuId || null,
-        cook_station: data.cook_station || 'KITCHEN' // cook_station 정보 포함
+      // renderPay 함수가 기대하는 형식으로 데이터 준비 - 장바구니 아이템을 그대로 전달
+      const orderArray = window.currentTLLOrder.cart.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        totalPrice: item.price * item.quantity,
+        menuId: item.menuId || item.id || null,
+        cook_station: item.cook_station || 'KITCHEN'
       }));
 
       const store = {
@@ -552,11 +546,19 @@ window.proceedToPayment = async function() {
         name: window.currentTLLOrder.storeName,
         menu: window.currentTLLOrder.cart.map(item => ({
           name: item.name,
-          price: item.price
+          price: item.price,
+          cook_station: item.cook_station || 'KITCHEN'
         }))
       };
 
       const tableNum = window.currentTLLOrder.tableNumber;
+
+      console.log('🔍 결제로 전달하는 데이터:', {
+        orderArray,
+        store,
+        tableNum,
+        totalAmount: orderArray.reduce((sum, item) => sum + item.totalPrice, 0)
+      });
 
       // 결제 화면으로 이동
       renderPay(orderArray, store, tableNum);
