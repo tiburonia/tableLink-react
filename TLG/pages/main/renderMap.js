@@ -139,7 +139,7 @@ async function renderMap() {
   position: relative;
   height: 36px;
   padding: 0 12px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.85);
   border: none;
   border-radius: 18px;
   display: flex;
@@ -148,6 +148,8 @@ async function renderMap() {
   cursor: pointer;
   transition: all 0.3s ease;
   max-width: 180px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .location-select-btn #locationText {
@@ -167,8 +169,9 @@ async function renderMap() {
 }
 
 .location-select-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.95);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .location-select-btn:hover .dropdown-arrow {
@@ -181,7 +184,7 @@ async function renderMap() {
   width: 42px;
   height: 42px;
   background: transparent;
-  border: 2px solid rgba(0, 0, 0, 0.6);
+  border: none;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -192,9 +195,9 @@ async function renderMap() {
 }
 
 .top-control-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(0, 0, 0, 0.8);
+  background: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .top-control-spacer {
@@ -234,15 +237,15 @@ async function renderMap() {
 .search-container {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(248, 250, 252, 0.60));
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(248, 250, 252, 0.40));
   border-radius: 28px;
   padding: 10px 16px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 4px 16px rgba(41, 126, 252, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
