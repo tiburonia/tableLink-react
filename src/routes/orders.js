@@ -1086,12 +1086,12 @@ router.put('/kds/tickets/:ticketId/print', async (req, res) => {
             'id', oi.id,
             'menuName', oi.menu_name,
             'quantity', oi.quantity,
-            'price', oi.price,
-            'totalPrice', oi.price * oi.quantity,
+            'price', oi.unit_price,
+            'totalPrice', oi.unit_price * oi.quantity,
             'options', COALESCE(oi.options, '{}')
           ) ORDER BY oi.created_at
         ) as items,
-        SUM(oi.price * oi.quantity) as total_amount
+        SUM(oi.unit_price * oi.quantity) as total_amount
       FROM orders o
       JOIN order_items oi ON oi.ticket_id = $1
       LEFT JOIN users u ON o.user_id = u.id
