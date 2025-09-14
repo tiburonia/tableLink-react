@@ -31,13 +31,9 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         if (menuResult.success && menuResult.menu) {
           menuData = menuResult.menu.map(menu => ({
             ...menu,
-            cook_station: menu.cook_station || 'KITCHEN' // DB에서 가져온 cook_station 사용
+            cook_station: menu.cook_station || 'KITCHEN'
           }));
-          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료 (cook_station 포함)`);
-          console.log('🔍 cook_station 분포:', menuData.reduce((acc, item) => {
-            acc[item.cook_station] = (acc[item.cook_station] || 0) + 1;
-            return acc;
-          }, {}));
+          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
         } else {
           console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
           menuData = [];
@@ -72,7 +68,7 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
       userInfo: userInfo
     };
 
-    // 메뉴 데이터를 전역 변수에 저장 (cook_station 정보 참조용)
+    // 메뉴 데이터를 전역 변수에 저장
     window.currentMenuData = menuData;
 
     console.log('🏪 currentTLLOrder 초기화 완료:', window.currentTLLOrder);
@@ -299,19 +295,13 @@ window.addToCart = function(menuId, menuName, price) {
 
   // 메뉴 데이터에서 cook_station 정보 찾기
   let cookStation = 'KITCHEN'; // 기본값
-  try {
-    // 전역 menuData에서 해당 메뉴의 cook_station 찾기
-    if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
-      const menuItem = window.currentMenuData.find(item => 
-        String(item.id) === String(validMenuId) || item.name === validMenuName
-      );
-      if (menuItem && menuItem.cook_station) {
-        cookStation = menuItem.cook_station;
-        console.log(`✅ 메뉴 ${validMenuName}의 cook_station: ${cookStation}`);
-      }
+  if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
+    const menuItem = window.currentMenuData.find(item => 
+      String(item.id) === String(validMenuId) || item.name === validMenuName
+    );
+    if (menuItem?.cook_station) {
+      cookStation = menuItem.cook_station;
     }
-  } catch (error) {
-    console.warn('⚠️ cook_station 조회 실패, 기본값 사용:', error);
   }
 
   console.log('📝 장바구니 추가 전 상태:', {
@@ -327,14 +317,14 @@ window.addToCart = function(menuId, menuName, price) {
   } else {
     const newItem = {
       id: validMenuId,
-      menuId: validMenuId, // menu_id도 명시적으로 설정
+      menuId: validMenuId,
       name: validMenuName,
       price: validPrice,
       quantity: 1,
-      cook_station: cookStation // cook_station 정보 포함
+      cook_station: cookStation
     };
     window.currentTLLOrder.cart.push(newItem);
-    console.log('➕ 새 아이템 추가 (cook_station 포함):', newItem);
+    console.log('➕ 새 아이템 추가:', newItem);
   }
 
   console.log('📝 장바구니 추가 후 상태:', {
