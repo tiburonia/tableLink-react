@@ -899,31 +899,38 @@ body {
     height: calc(100vh - 60px);
     padding: 20px;
     gap: 20px;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 .table-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 16px;
     padding: 20px;
-    max-height: calc(100vh - 120px);
-    overflow-y: auto;
+    height: calc(100vh - 160px);
     flex: 1;
+    aspect-ratio: 1;
+    max-width: calc(100vh - 160px);
+    margin: 0 auto;
 }
 
 .table-card {
     background: white;
     border: 2px solid #e5e7eb;
-    border-radius: 16px;
-    padding: 20px;
+    border-radius: 12px;
+    padding: 16px;
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: center;
     position: relative;
-    min-height: 160px;
     display: flex;
     flex-direction: column;
     justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 0;
 }
 
 .table-card:hover {
@@ -954,7 +961,7 @@ body {
 }
 
 .table-number {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 800;
     color: #1f2937;
 }
@@ -962,37 +969,37 @@ body {
 .tlg-badge {
     background: #3b82f6;
     color: white;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
 }
 
 .table-icon {
-    font-size: 48px;
-    margin: 12px 0;
+    font-size: 32px;
+    margin: 8px 0;
 }
 
 .table-status {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 600;
     color: #4b5563;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .table-info {
-    margin-top: 12px;
-    padding-top: 12px;
+    margin-top: 8px;
+    padding-top: 8px;
     border-top: 1px solid #e5e7eb;
 }
 
 .occupied-time {
-    font-size: 12px;
+    font-size: 10px;
     color: #6b7280;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
 .table-amount {
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
     color: #059669;
 }

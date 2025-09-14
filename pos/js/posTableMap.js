@@ -169,36 +169,54 @@ const POSTableMap = {
             const tablesResponse = await fetch(`/api/tables/stores/${storeId}`);
             const tablesData = await tablesResponse.json();
             
-            if (!tablesData.success) {
-                throw new Error('테이블 정보 조회 실패');
-            }
-            
             // 활성 주문 정보 조회
             const ordersResponse = await fetch(`/api/pos/stores/${storeId}/orders/active`);
             const ordersData = await ordersResponse.json();
             
-            // 테이블과 주문 정보 병합
-            const tables = tablesData.tables.map(table => {
-                const activeOrder = ordersData.success ? 
-                    ordersData.activeOrders.find(order => order.tableNumber === table.tableNumber) : null;
+            // 5x5 격자를 위한 25개 테이블 생성
+            const tables = [];
+            for (let i = 1; i <= 25; i++) {
+                // DB에서 가져온 테이블 정보가 있으면 사용, 없으면 기본값
+                const dbTable = tablesData.success ? 
+                    tablesData.tables.find(table => table.tableNumber === i) : null;
                 
-                return {
-                    ...table,
+                const activeOrder = ordersData.success ? 
+                    ordersData.activeOrders.find(order => order.tableNumber === i) : null;
+                
+                tables.push({
+                    tableNumber: i,
+                    capacity: dbTable?.capacity || 4,
+                    isActive: dbTable?.isActive !== false,
                     isOccupied: !!activeOrder,
                     totalAmount: activeOrder?.totalAmount || 0,
                     orderCount: activeOrder?.itemCount || 0,
                     isFromTLG: activeOrder?.sourceSystem === 'TLL',
                     occupiedSince: activeOrder?.openedAt,
                     checkId: activeOrder?.checkId
-                };
-            });
+                });
+            }
             
-            console.log(`✅ 테이블 ${tables.length}개 로드 완료`);
+            console.log(`✅ 테이블 ${tables.length}개 로드 완료 (5x5 격자)`);
             return tables;
             
         } catch (error) {
             console.error('❌ 테이블 정보 로드 실패:', error);
-            return [];
+            // 에러 시에도 25개 기본 테이블 반환
+            const defaultTables = [];
+            for (let i = 1; i <= 25; i++) {
+                defaultTables.push({
+                    tableNumber: i,
+                    capacity: 4,
+                    isActive: true,
+                    isOccupied: false,
+                    totalAmount: 0,
+                    orderCount: 0,
+                    isFromTLG: false,
+                    occupiedSince: null,
+                    checkId: null
+                });
+            }
+            return defaultTables;
         }
     },
     
