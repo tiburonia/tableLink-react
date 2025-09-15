@@ -637,7 +637,29 @@ function setupKRPWebSocket(storeId) {
     printEvents.forEach(eventName => {
       krpSocket.on(eventName, (printData) => {
         console.log(`🖨️ 출력 요청 수신 (${eventName}):`, printData);
-        console.log(`📄 출력 데이터: 티켓 ${printData.ticket_id}, 테이블 ${printData.table_number}, 소스: ${printData.source}`);
+        console.log(`📄 출력 데이터 기본 정보:`, {
+          ticket_id: printData.ticket_id,
+          table_number: printData.table_number,
+          source: printData.source,
+          items_count: printData.items?.length || 0
+        });
+        
+        // cook_station 정보 상세 분석
+        if (printData.items && Array.isArray(printData.items)) {
+          const stationBreakdown = {};
+          printData.items.forEach(item => {
+            const station = item.cook_station || 'UNKNOWN';
+            if (!stationBreakdown[station]) {
+              stationBreakdown[station] = [];
+            }
+            stationBreakdown[station].push({
+              name: item.menuName || item.menu_name,
+              quantity: item.quantity
+            });
+          });
+          
+          console.log(`📊 KRP 수신 데이터 cook_station 분석:`, stationBreakdown);
+        }
         
         // 데이터 유효성 검사
         if (!printData.ticket_id || !printData.table_number) {
@@ -759,13 +781,38 @@ function displayMainReceipt(printData) {
     minute: '2-digit'
   });
 
-  // 주방 관련 아이템만 필터링
+  // 주방 관련 아이템만 필터링 - 강화된 로직
+  console.log(`🔍 KRP 원본 아이템 데이터:`, printData.items);
+  
   const kitchenItems = (printData.items || []).filter(item => {
     const cookStation = item.cook_station || 'KITCHEN';
-    return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+    const isKitchenItem = ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+    
+    console.log(`📋 아이템 "${item.menuName || item.menu_name}": cook_station="${cookStation}" → 주방용: ${isKitchenItem}`);
+    
+    return isKitchenItem;
   });
 
-  console.log(`🍳 KRP 아이템 필터링: 전체 ${printData.items?.length || 0}개 → 주방 ${kitchenItems.length}개`);
+  const drinkItems = (printData.items || []).filter(item => {
+    const cookStation = item.cook_station || 'KITCHEN';
+    return cookStation === 'DRINK';
+  });
+
+  console.log(`🍳 KRP 아이템 필터링 결과:`, {
+    전체_아이템: printData.items?.length || 0,
+    주방_아이템: kitchenItems.length,
+    음료_아이템: drinkItems.length,
+    주방_아이템_목록: kitchenItems.map(item => ({
+      name: item.menuName || item.menu_name,
+      cook_station: item.cook_station,
+      quantity: item.quantity
+    })),
+    음료_아이템_목록: drinkItems.map(item => ({
+      name: item.menuName || item.menu_name,
+      cook_station: item.cook_station,
+      quantity: item.quantity
+    }))
+  });
 
   // 주방 아이템이 없으면 음료만 있다는 안내
   if (kitchenItems.length === 0) {

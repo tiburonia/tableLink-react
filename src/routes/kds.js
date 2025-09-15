@@ -337,26 +337,47 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KRP WebSocket으로 새 출력 요청 즉시 전송 - cook_station 정보 포함
+    // KRP WebSocket으로 새 출력 요청 즉시 전송 - cook_station 정보 강화
     const printData = {
       ticket_id: parseInt(ticketId),
       order_id: orderDetail.order_id,
       table_number: orderDetail.table_num,
       customer_name: orderDetail.customer_name,
       total_amount: parseInt(orderDetail.total_amount) || 0,
-      items: orderDetail.items || [],
+      items: (orderDetail.items || []).map(item => ({
+        ...item,
+        // cook_station 정보 명시적 설정 (null/undefined 방지)
+        cook_station: item.cook_station || 'KITCHEN',
+        menuName: item.menuName || item.menu_name || '메뉴',
+        quantity: item.quantity || 1,
+        price: item.price || item.unit_price || 0,
+        totalPrice: item.totalPrice || (item.price * item.quantity) || 0
+      })),
       created_at: orderDetail.order_created_at,
       timestamp: new Date().toISOString(),
       source: 'kds_print_button'
     };
 
-    console.log(`🖨️ KRP 출력 데이터 준비 (cook_station 포함):`, {
+    // 상세한 cook_station 분석 로깅
+    const stationAnalysis = {};
+    printData.items.forEach(item => {
+      const station = item.cook_station;
+      if (!stationAnalysis[station]) {
+        stationAnalysis[station] = { count: 0, items: [] };
+      }
+      stationAnalysis[station].count++;
+      stationAnalysis[station].items.push(item.menuName);
+    });
+
+    console.log(`🖨️ KRP 출력 데이터 준비 (cook_station 상세 분석):`, {
       ticket_id: printData.ticket_id,
       total_items: printData.items.length,
-      kitchen_items: printData.items.filter(item => 
-        ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(item.cook_station)
-      ).length,
-      drink_items: printData.items.filter(item => item.cook_station === 'DRINK').length
+      station_breakdown: stationAnalysis,
+      raw_items: printData.items.map(item => ({
+        name: item.menuName,
+        cook_station: item.cook_station,
+        quantity: item.quantity
+      }))
     });
 
     // 전역 브로드캐스트 함수 사용
