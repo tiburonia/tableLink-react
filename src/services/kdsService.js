@@ -36,7 +36,21 @@ class KDSService {
 
       const { orderId, ticketId, storeId, tableNumber, items, batchNo } = orderData;
 
-      // KDS 형태로 데이터 변환
+      // KDS 형태로 데이터 변환 - 조리 필요 아이템만 포함
+      const kdsItems = items.filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return cookStation !== 'DRINK' && cookStation !== 'NO_COOK';
+      }).map(item => ({
+        id: Math.random().toString(36).substr(2, 9),
+        menuName: item.name,
+        menu_name: item.name,
+        quantity: item.quantity || 1,
+        status: 'pending',
+        cook_station: item.cook_station || 'KITCHEN',
+        notes: '',
+        created_at: new Date().toISOString()
+      }));
+
       const kdsTicketData = {
         check_id: ticketId,
         id: orderId,
@@ -47,16 +61,9 @@ class KDSService {
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        items: items.map(item => ({
-          id: Math.random().toString(36).substr(2, 9),
-          menuName: item.name,
-          menu_name: item.name,
-          quantity: item.quantity || 1,
-          status: 'pending',
-          cook_station: item.cook_station || 'KITCHEN',
-          notes: '',
-          created_at: new Date().toISOString()
-        }))
+        items: kdsItems,
+        original_items_count: items.length,
+        filtered_items_count: kdsItems.length
       };
 
       // KRP용 필터링된 데이터 생성 (조리가 필요한 아이템만)
@@ -85,8 +92,13 @@ class KDSService {
         filtered_items_count: krpItems.length
       };
 
-      // WebSocket 브로드캐스트 (KDS용)
-      await this.broadcastToKDS(storeId, 'new-order', kdsTicketData);
+      // KDS에 조리할 아이템이 있는 경우만 브로드캐스트
+      if (kdsItems.length > 0) {
+        console.log(`🍳 KDS 서비스: ${kdsItems.length}개 조리 아이템으로 KDS 브로드캐스트`);
+        await this.broadcastToKDS(storeId, 'new-order', kdsTicketData);
+      } else {
+        console.log(`ℹ️ KDS 서비스: 조리가 필요한 아이템이 없어 KDS 브로드캐스트 생략`);
+      }
 
       // KRP 브로드캐스트 (필터링된 데이터 사용)
       if (krpItems.length > 0 && global.broadcastKRPPrint) {

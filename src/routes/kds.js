@@ -42,22 +42,38 @@ router.get('/:storeId', async (req, res) => {
         AND o.status = 'OPEN'
         AND ot.status IN ('PENDING', 'COOKING')
         AND ot.display_status != 'UNVISIBLE'
+        AND EXISTS (
+          SELECT 1 FROM order_items oi2 
+          WHERE oi2.ticket_id = ot.id 
+          AND COALESCE(oi2.cook_station, 'KITCHEN') != 'DRINK'
+          AND COALESCE(oi2.cook_station, 'KITCHEN') != 'NO_COOK'
+        )
       GROUP BY o.id, ot.id, ot.status, o.table_num, o.created_at, o.source
       ORDER BY o.created_at ASC
     `, [parseInt(storeId)]);
 
-    // renderKDS.js에서 기대하는 형태로 변환 - 정확한 상태 반영
-    const orders = result.rows.map(order => ({
-      check_id: order.ticket_id,
-      id: order.order_id,
-      ticket_id: order.ticket_id,
-      customer_name: order.customer_name || `테이블 ${order.table_num}`,
-      table_number: order.table_num,
-      status: order.ticket_status?.toUpperCase() || 'PENDING', // DB의 실제 ticket 상태 사용
-      created_at: order.created_at,
-      updated_at: order.created_at,
-      items: order.items || []
-    }));
+    // renderKDS.js에서 기대하는 형태로 변환 - cook_station 필터링 적용
+    const orders = result.rows.map(order => {
+      // 조리가 필요한 아이템만 필터링 (DRINK, NO_COOK 제외)
+      const filteredItems = (order.items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return cookStation !== 'DRINK' && cookStation !== 'NO_COOK';
+      });
+
+      return {
+        check_id: order.ticket_id,
+        id: order.order_id,
+        ticket_id: order.ticket_id,
+        customer_name: order.customer_name || `테이블 ${order.table_num}`,
+        table_number: order.table_num,
+        status: order.ticket_status?.toUpperCase() || 'PENDING',
+        created_at: order.created_at,
+        updated_at: order.created_at,
+        items: filteredItems,
+        original_items_count: order.items?.length || 0,
+        filtered_items_count: filteredItems.length
+      };
+    }).filter(order => order.items.length > 0); // 조리할 아이템이 없는 티켓은 제외
 
     res.json({
       success: true,
