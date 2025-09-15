@@ -37,15 +37,14 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
               name: menu.name || `메뉴 ${index + 1}`,
               description: menu.description || '',
               price: parseInt(menu.price) || 0,
-              cook_station: menu.cook_station || 'KITCHEN',
+              cook_station: menu.cook_station ,
               category: menu.category || menu.cook_station || 'KITCHEN'
             };
 
             console.log(`📋 메뉴 ${index + 1} 정규화:`, {
               원본: menu,
               정규화: normalizedMenu,
-              id확인: normalizedMenu.id,
-              cook_station확인: normalizedMenu.cook_station
+              id확인: normalizedMenu.id
             });
 
             return normalizedMenu;
