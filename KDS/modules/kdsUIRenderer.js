@@ -145,6 +145,21 @@
       const grid = document.getElementById('kdsGrid');
       if (!grid) return;
 
+      // 기존 슬롯 위치 정보 수집
+      const existingSlots = {};
+      const existingSlotElements = Array.from(grid.children);
+      
+      existingSlotElements.forEach(slot => {
+        const card = slot.querySelector('[data-ticket-id]');
+        if (card) {
+          const ticketId = card.getAttribute('data-ticket-id');
+          const slotNumber = parseInt(slot.dataset.slot);
+          existingSlots[ticketId] = slotNumber;
+        }
+      });
+
+      console.log(`🔍 기존 슬롯 위치 정보:`, existingSlots);
+
       // Grid 초기화
       grid.innerHTML = '';
 
@@ -160,21 +175,56 @@
 
       console.log(`🎨 Grid 필터링: 전체 ${orders.length}개 → 주방 관련 ${kitchenOrders.length}개 주문`);
 
+      // 슬롯별 티켓 배치 계획
+      const slotAssignments = {};
+      const usedSlots = new Set();
+      const unassignedOrders = [];
+
+      // 1단계: 기존 위치 유지 가능한 티켓들을 원래 슬롯에 배치
+      kitchenOrders.forEach(order => {
+        const ticketId = this._extractTicketId(order);
+        const originalSlot = existingSlots[ticketId];
+
+        if (originalSlot && originalSlot >= 1 && originalSlot <= 9 && !usedSlots.has(originalSlot)) {
+          slotAssignments[originalSlot] = order;
+          usedSlots.add(originalSlot);
+          console.log(`🔄 티켓 ${ticketId}: 기존 슬롯 ${originalSlot} 위치 유지`);
+        } else {
+          unassignedOrders.push(order);
+        }
+      });
+
+      // 2단계: 배치되지 않은 티켓들을 빈 슬롯에 배치
+      let nextSlot = 1;
+      unassignedOrders.forEach(order => {
+        while (nextSlot <= 9 && usedSlots.has(nextSlot)) {
+          nextSlot++;
+        }
+        
+        if (nextSlot <= 9) {
+          const ticketId = this._extractTicketId(order);
+          slotAssignments[nextSlot] = order;
+          usedSlots.add(nextSlot);
+          console.log(`📍 티켓 ${ticketId}: 새 슬롯 ${nextSlot}에 배치`);
+          nextSlot++;
+        }
+      });
+
       const maxDisplayOrders = 9;
       const totalOrders = kitchenOrders.length;
 
-      // 1-9번 슬롯: 주문 카드 또는 빈 슬롯
-      for (let i = 0; i < maxDisplayOrders; i++) {
+      // 1-9번 슬롯 생성
+      for (let i = 1; i <= maxDisplayOrders; i++) {
         const slot = document.createElement('div');
         slot.className = 'grid-slot';
-        slot.dataset.slot = i + 1;
+        slot.dataset.slot = i;
 
-        if (i < totalOrders) {
-          // 주문 카드 렌더링
-          slot.innerHTML = this.createOrderCardHTML(kitchenOrders[i]);
+        if (slotAssignments[i]) {
+          // 할당된 주문 카드 렌더링
+          slot.innerHTML = this.createOrderCardHTML(slotAssignments[i]);
         } else {
           // 빈 슬롯
-          slot.innerHTML = this.createEmptySlotHTML(i + 1);
+          slot.innerHTML = this.createEmptySlotHTML(i);
         }
 
         grid.appendChild(slot);
@@ -196,7 +246,7 @@
 
       grid.appendChild(lastSlot);
 
-      console.log(`✅ Grid 렌더링 완료: ${Math.min(totalOrders, maxDisplayOrders)}개 카드 + 1개 상태 슬롯`);
+      console.log(`✅ Grid 렌더링 완료: ${Object.keys(slotAssignments).length}개 카드 + 1개 상태 슬롯 (위치 유지 적용)`);
     },
 
     /**
