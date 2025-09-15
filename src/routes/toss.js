@@ -163,10 +163,11 @@ router.get('/client-key', (req, res) => {
 });
 
 /**
- * 토스페이먼츠 결제 승인 (pending_payments 사용)
+ * 토스페이먼츠 결제 승인 (이벤트 기반 아키텍처)
  */
 router.post('/confirm', async (req, res) => {
-  const client = await pool.connect();
+  const eventBus = require('../utils/eventBus');
+  const paymentService = require('../services/paymentService');
 
   try {
     console.log('📨 토스 confirm 라우트 - 전체 요청 바디:', JSON.stringify(req.body, null, 2));
@@ -184,26 +185,34 @@ router.post('/confirm', async (req, res) => {
     }
 
     // pending_payments에서 주문 데이터 조회
-    const pendingResult = await client.query(`
-      SELECT * FROM pending_payments
-      WHERE order_id = $1 AND status = 'PENDING'
-    `, [orderId]);
+    const client = await pool.connect();
+    let pendingPayment;
 
-    if (pendingResult.rows.length === 0) {
-      console.error('❌ 대기 중인 결제를 찾을 수 없습니다:', orderId);
-      return res.status(404).json({
-        success: false,
-        error: '대기 중인 결제를 찾을 수 없습니다'
-      });
+    try {
+      const pendingResult = await client.query(`
+        SELECT * FROM pending_payments
+        WHERE order_id = $1 AND status = 'PENDING'
+      `, [orderId]);
+
+      if (pendingResult.rows.length === 0) {
+        console.error('❌ 대기 중인 결제를 찾을 수 없습니다:', orderId);
+        return res.status(404).json({
+          success: false,
+          error: '대기 중인 결제를 찾을 수 없습니다'
+        });
+      }
+
+      pendingPayment = pendingResult.rows[0];
+    } finally {
+      client.release();
     }
 
-    const pendingPayment = pendingResult.rows[0];
     const orderData = pendingPayment.order_data;
 
     console.log('📦 pending_payments에서 복구된 주문 데이터:', {
       orderId: pendingPayment.order_id,
       userId: pendingPayment.user_id,
-      user_pk: pendingPayment.user_pk, // user_pk 추가
+      user_pk: pendingPayment.user_pk,
       storeId: pendingPayment.store_id,
       tableNumber: pendingPayment.table_number,
       amount: pendingPayment.amount,
@@ -249,353 +258,130 @@ router.post('/confirm', async (req, res) => {
     // 주문 타입 확인 (TLL vs 일반 주문)
     const isTLLOrder = orderId.startsWith('TLL_');
 
-    await client.query('BEGIN');
-
     if (isTLLOrder) {
-      // TLL 주문 처리 - 새로운 스키마(orders, order_tickets, order_items) 사용
-      console.log('📋 TLL 주문 처리 시작 - 기존 OPEN 주문 확인');
+      // TLL 주문 처리 - 이벤트 기반 결제 서비스 사용
+      console.log('📋 TLL 주문 처리 시작 - 이벤트 기반 아키텍처 적용');
 
-      // pending_payments에서 복구된 데이터로 주문 정보 설정
-      const finalOrderInfo = {
+      // cook_station 정보 추출
+      let cookStationData = {};
+      try {
+        const orderDataObj = typeof orderData === 'string' ? JSON.parse(orderData) : orderData;
+        cookStationData = orderDataObj.cook_station || { items: [] };
+      } catch (parseError) {
+        console.warn('⚠️ cook_station 파싱 실패, 기본값 사용:', parseError);
+        cookStationData = { items: [] };
+      }
+
+      // 아이템에 cook_station 정보 추가
+      const itemsWithCookStation = (orderData.items || []).map(item => {
+        let actualCookStation = 'KITCHEN';
+
+        if (cookStationData?.items && Array.isArray(cookStationData.items)) {
+          const savedItem = cookStationData.items.find(saved => saved.name === item.name);
+          if (savedItem?.cook_station) {
+            actualCookStation = savedItem.cook_station;
+          }
+        }
+
+        return {
+          ...item,
+          cook_station: actualCookStation
+        };
+      });
+
+      // 결제 서비스를 통한 주문 처리
+      const orderInfo = {
         storeId: pendingPayment.store_id,
-        userPk: pendingPayment.user_pk, // user_pk를 user_id에 저장 (정수형)
+        userPk: pendingPayment.user_pk,
         tableNumber: pendingPayment.table_number,
         finalTotal: parseInt(amount),
         subtotal: orderData.subtotal || parseInt(amount),
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
-        items: (orderData.items || []).filter(item => item.cook_station !== 'DRINK'), // DRINK 제외
-        orderData: orderData // order_data 전체를 포함
+        items: itemsWithCookStation
       };
 
-      console.log('📊 최종 주문 정보:', {
-        storeId: finalOrderInfo.storeId,
-        userPk: finalOrderInfo.userPk,
-        tableNumber: finalOrderInfo.tableNumber,
-        finalTotal: finalOrderInfo.finalTotal,
-        itemCount: finalOrderInfo.items.length
-      });
-
-      // 1. 해당 매장에서 해당 사용자의 OPEN 상태인 기존 주문 확인
-      const existingOrderResult = await client.query(`
-        SELECT id FROM orders 
-        WHERE store_id = $1 AND user_id = $2 AND status = 'OPEN'
-        LIMIT 1
-      `, [finalOrderInfo.storeId, finalOrderInfo.userPk]);
-
-      let orderIdToUse;
-
-      if (existingOrderResult.rows.length > 0) {
-        // 기존 OPEN 주문이 있으면 그것을 사용
-        orderIdToUse = existingOrderResult.rows[0].id;
-        console.log('🔄 기존 OPEN 주문 재사용:', orderIdToUse);
-      } else {
-        // 기존 OPEN 주문이 없으면 새로 생성
-        try {
-          const newOrderResult = await client.query(`
-            INSERT INTO orders (
-              store_id,
-              user_id,
-              source,
-              status,
-              payment_status,
-              total_price,
-              table_num
-            ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
-            RETURNING id
-          `, [
-            finalOrderInfo.storeId,
-            finalOrderInfo.userPk,
-            finalOrderInfo.finalTotal,
-            finalOrderInfo.tableNumber
-          ]);
-
-          orderIdToUse = newOrderResult.rows[0].id;
-          console.log('✨ 새 주문 생성:', orderIdToUse);
-        } catch (orderError) {
-          console.error('❌ 주문 생성 실패:', orderError);
-          throw new Error('주문 생성에 실패했습니다: ' + orderError.message);
-        }
-      }
-
-      // 2. 해당 주문의 기존 order_tickets 개수 확인하여 batch_no 계산
-      const existingTicketsResult = await client.query(`
-        SELECT COUNT(*) as count FROM order_tickets 
-        WHERE order_id = $1
-      `, [orderIdToUse]);
-
-      const existingTicketCount = parseInt(existingTicketsResult.rows[0].count);
-      const nextBatchNo = existingTicketCount + 1;
-
-      console.log('📊 배치 번호 계산:', {
-        orderId: orderIdToUse,
-        existingTickets: existingTicketCount,
-        nextBatchNo: nextBatchNo
-      });
-
-      // 3. order_tickets 테이블에 티켓 생성 (순차적 batch_no 부여)
-      const ticketResult = await client.query(`
-        INSERT INTO order_tickets (
-          order_id,
-          store_id,
-          batch_no,
-          status,
-          payment_type,
-          source,
-          table_num
-        ) VALUES ($1, $2, $3, 'PENDING', 'PREPAID', 'TLL', $4)
-        RETURNING id
-      `, [orderIdToUse, finalOrderInfo.storeId, nextBatchNo, finalOrderInfo.tableNumber]);
-
-      const ticketId = ticketResult.rows[0].id;
-
-      // order_data에서 cook_station 정보 추출
-      let cookStationData = {};
-      try {
-        const orderDataObj = typeof finalOrderInfo.orderData === 'string'
-          ? JSON.parse(finalOrderInfo.orderData)
-          : finalOrderInfo.orderData;
-
-        cookStationData = orderDataObj.cook_station || { items: [] };
-        console.log('✅ order_data에서 cook_station 정보 추출 완료:', cookStationData);
-      } catch (parseError) {
-        console.warn('⚠️ order_data에서 cook_station 파싱 실패, 기본값 사용:', parseError);
-        cookStationData = { items: [] };
-      }
-
-
-      // 3. order_items 테이블에 아이템들 생성 (pending_payments의 cook_station 정보 활용)
-      for (const item of finalOrderInfo.items) {
-        // menu_id 우선순위: 1) 프론트에서 전달된 값, 2) DB 조회, 3) null
-        let actualMenuId = item.menuId || item.menu_id || null;
-        let actualCookStation = 'KITCHEN'; // 기본값
-
-        // pending_payments에 저장된 cook_station 정보에서 해당 메뉴의 cook_station 찾기
-        if (cookStationData && cookStationData.items && Array.isArray(cookStationData.items)) {
-          const savedItem = cookStationData.items.find(saved =>
-            saved.name === item.name
-          );
-          if (savedItem && savedItem.cook_station) {
-            actualCookStation = savedItem.cook_station;
-            console.log(`✅ pending_payments에서 cook_station 복원: ${item.name} -> ${actualCookStation}`);
-          } else {
-            console.warn(`⚠️ pending_payments에서 ${item.name}의 cook_station 정보를 찾을 수 없음`);
-          }
-        } else {
-          console.warn('⚠️ pending_payments에 cook_station 데이터가 없거나 형식이 잘못됨');
-        }
-
-        await client.query(`
-          INSERT INTO order_items (
-            ticket_id,
-            store_id,
-            menu_id,
-            menu_name,
-            quantity,
-            unit_price,
-            total_price,
-            item_status,
-            cook_station
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
-        `, [
-          ticketId,
-          finalOrderInfo.storeId,
-          actualMenuId, // 수정된 menu_id 사용
-          item.name,
-          item.quantity || 1,
-          item.price,
-          item.totalPrice || item.price,
-          actualCookStation
-        ]);
-      }
-
-      // 4. payments 테이블에 결제 정보 생성
-      await client.query(`
-        INSERT INTO payments (
-          order_id,
-          ticket_id,
-          method,
-          amount,
-          status,
-          paid_at,
-          transaction_id,
-          provider_response
-        ) VALUES ($1, $2, 'TOSS', $3, 'COMPLETED', CURRENT_TIMESTAMP, $4, $5)
-      `, [
-        orderIdToUse,
-        ticketId,
-        finalOrderInfo.finalTotal,
+      const result = await paymentService.processTLLOrder({
+        orderId,
+        amount: parseInt(amount),
         paymentKey,
-        JSON.stringify(tossResult)
-      ]);
-
-      // 5. order_adjustments 테이블에 할인/포인트 사용 내역 추가 (존재하는 경우만)
-      if (finalOrderInfo.usedPoint > 0) {
-        try {
-          await client.query(`
-            INSERT INTO order_adjustments (
-              order_id,
-              ticket_id,
-              scope,
-              kind,
-              method,
-              code,
-              amount_signed
-            ) VALUES ($1, $2, 'order', 'point', 'use', 'POINT_USE', $3)
-          `, [orderIdToUse, ticketId, -finalOrderInfo.usedPoint]);
-        } catch (adjustmentError) {
-          console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
-        }
-      }
-
-      if (finalOrderInfo.couponDiscount > 0) {
-        try {
-          await client.query(`
-            INSERT INTO order_adjustments (
-              order_id,
-              ticket_id,
-              scope,
-              kind,
-              method,
-              code,
-              amount_signed
-            ) VALUES ($1, $2, 'order', 'coupon', 'discount', 'COUPON_DISCOUNT', $3)
-          `, [orderIdToUse, ticketId, -finalOrderInfo.couponDiscount]);
-        } catch (adjustmentError) {
-          console.log('⚠️ order_adjustments 테이블 없음 - 스킵');
-        }
-      }
-
-      // 6. 사용자 포인트 업데이트 (사용한 포인트 차감 및 적립)
-      /*  const earnedPoints = Math.floor(finalOrderInfo.finalTotal * 0.01); // 1% 적립
-        const pointChange = earnedPoints - finalOrderInfo.usedPoint;
-
-        await client.query(`
-          UPDATE users
-          SET point = COALESCE(point, 0) + $1
-          WHERE id = $2
-        `, [pointChange, finalOrderInfo.userPk]);  */
-
-      // pending_payments 상태를 SUCCESS로 업데이트
-      await client.query(`
-        UPDATE pending_payments
-        SET
-          status = 'SUCCESS',
-          payment_key = $1,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE order_id = $2
-      `, [paymentKey, orderId]);
-
-      console.log('✅ TLL 결제 성공 처리 완료:', {
-        orderId: orderIdToUse,
-        ticketId: ticketId,
-        batchNo: nextBatchNo,
-        finalAmount: finalOrderInfo.finalTotal,
-        storeId: finalOrderInfo.storeId
+        tossResult,
+        orderData: orderInfo
       });
 
-      // KDS 형태로 데이터 변환하여 WebSocket 브로드캐스트
+      // pending_payments 상태 업데이트
+      const updateClient = await pool.connect();
       try {
-        const kdsTicketData = {
-          check_id: ticketId,
-          id: orderIdToUse,
-          ticket_id: ticketId,
-          batch_no: nextBatchNo,
-          customer_name: `테이블 ${finalOrderInfo.tableNumber}`,
-          table_number: finalOrderInfo.tableNumber,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          items: finalOrderInfo.items.map(item => ({
-            id: Math.random().toString(36).substr(2, 9), // 임시 ID
-            menuName: item.name,
-            menu_name: item.name,
-            quantity: item.quantity || 1,
-            status: 'pending',
-            cook_station: item.cook_station || 'KITCHEN',
-            notes: '',
-            created_at: new Date().toISOString()
-          }))
-        };
-
-        console.log('📡 KDS 웹소켓 브로드캐스트 시작:', kdsTicketData);
-
-        // WebSocket을 통한 실시간 브로드캐스트
-        if (typeof global.broadcastKDSUpdate === 'function') {
-          global.broadcastKDSUpdate(finalOrderInfo.storeId, 'new-order', kdsTicketData);
-          console.log('✅ KDS 웹소켓 브로드캐스트 완료');
-        } else {
-          console.warn('⚠️ broadcastKDSUpdate 함수를 찾을 수 없음');
-        }
-
-        // PostgreSQL NOTIFY로 KDS에 실시간 알림 (백업)
-        await client.query(`
-          SELECT pg_notify('kds_updates', $1)
-        `, [JSON.stringify({
-          type: 'new_ticket',
-          store_id: finalOrderInfo.storeId,
-          ticket_id: ticketId,
-          order_id: orderIdToUse,
-          batch_no: nextBatchNo,
-          source_system: 'TLL',
-          table_number: finalOrderInfo.tableNumber,
-          total_amount: finalOrderInfo.finalTotal,
-          timestamp: Date.now()
-        })]);
-        console.log('✅ KDS PostgreSQL NOTIFY 전송 완료');
-      } catch (notifyError) {
-        console.warn('⚠️ KDS 알림 전송 실패:', notifyError.message);
+        await updateClient.query(`
+          UPDATE pending_payments
+          SET
+            status = 'SUCCESS',
+            payment_key = $1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE order_id = $2
+        `, [paymentKey, orderId]);
+      } finally {
+        updateClient.release();
       }
 
-      await client.query('COMMIT');
+      console.log('✅ TLL 결제 성공 처리 완료 (이벤트 기반)');
 
       res.json({
         success: true,
-        orderId: orderIdToUse,
-        ticketId: ticketId,
-        batchNo: nextBatchNo,
+        orderId: result.orderId,
+        ticketId: result.ticketId,
+        batchNo: result.batchNo,
         paymentKey,
-        amount: finalOrderInfo.finalTotal
+        amount: result.amount
       });
 
     } else {
       // 일반 주문 처리 - 기존 로직 유지
-      const orderResult = await client.query(`
-        SELECT id, user_id, store_id, total_amount
-        FROM orders
-        WHERE user_paid_order_id = $1
-      `, [orderId]);
+      const client = await pool.connect();
 
-      if (orderResult.rows.length > 0) {
-        const order = orderResult.rows[0];
+      try {
+        await client.query('BEGIN');
 
-        // 결제 완료 처리
-        await client.query(`
-          UPDATE orders
-          SET
-            payment_status = 'PAID',
-            payment_method = 'TOSS',
-            payment_key = $2,
-            updated_at = CURRENT_TIMESTAMP
-          WHERE id = $1
-        `, [order.id, paymentKey]);
+        const orderResult = await client.query(`
+          SELECT id, user_id, store_id, total_amount
+          FROM orders
+          WHERE user_paid_order_id = $1
+        `, [orderId]);
 
-        console.log(`✅ 일반 주문 결제 승인 완료: 주문 ${order.id}`);
+        if (orderResult.rows.length > 0) {
+          const order = orderResult.rows[0];
+
+          // 결제 완료 처리
+          await client.query(`
+            UPDATE orders
+            SET
+              payment_status = 'PAID',
+              payment_method = 'TOSS',
+              payment_key = $2,
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = $1
+          `, [order.id, paymentKey]);
+
+          console.log(`✅ 일반 주문 결제 승인 완료: 주문 ${order.id}`);
+        }
+
+        await client.query('COMMIT');
+
+        res.json({
+          success: true,
+          data: tossResult
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
       }
-
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        data: tossResult
-      });
     }
 
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
 
-    // 응답이 이미 전송되었는지 확인
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
@@ -604,8 +390,6 @@ router.post('/confirm', async (req, res) => {
     } else {
       console.warn('⚠️ 응답이 이미 전송됨 - 추가 응답 생략');
     }
-  } finally {
-    client.release();
   }
 });
 

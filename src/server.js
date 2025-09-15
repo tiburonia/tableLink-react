@@ -95,6 +95,15 @@ app.all('/api', (req, res) => {
   });
 });
 
+// 이벤트 기반 서비스 초기화
+try {
+  const kdsService = require('./services/kdsService');
+  const paymentService = require('./services/paymentService');
+  console.log('✅ 이벤트 기반 서비스 초기화 완료 (KDS, Payment)');
+} catch (error) {
+  console.error('❌ 이벤트 기반 서비스 초기화 실패:', error);
+}
+
 // Router mounting
 try {
   // 새로운 POS 통합 시스템 라우터
