@@ -59,8 +59,42 @@ class KDSService {
         }))
       };
 
-      // WebSocket 브로드캐스트
+      // KRP용 필터링된 데이터 생성 (조리가 필요한 아이템만)
+      const krpItems = items.filter(item => 
+        item.cook_station !== 'DRINK' && 
+        item.cook_station !== 'NO_COOK'
+      );
+
+      const krpPrintData = {
+        ticket_id: ticketId,
+        order_id: orderId,
+        table_number: tableNumber,
+        customer_name: `테이블 ${tableNumber}`,
+        total_amount: krpItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0),
+        items: krpItems.map(item => ({
+          menuName: item.name,
+          quantity: item.quantity || 1,
+          price: item.price || 0,
+          totalPrice: (item.price || 0) * (item.quantity || 1),
+          cook_station: item.cook_station || 'KITCHEN'
+        })),
+        created_at: new Date().toISOString(),
+        source: 'new_order_auto',
+        filter_applied: true,
+        original_items_count: items.length,
+        filtered_items_count: krpItems.length
+      };
+
+      // WebSocket 브로드캐스트 (KDS용)
       await this.broadcastToKDS(storeId, 'new-order', kdsTicketData);
+
+      // KRP 브로드캐스트 (필터링된 데이터 사용)
+      if (krpItems.length > 0 && global.broadcastKRPPrint) {
+        console.log(`🖨️ KDS 서비스: KRP 자동 출력 - ${krpItems.length}개 조리 아이템`);
+        global.broadcastKRPPrint(storeId, krpPrintData);
+      } else {
+        console.log(`ℹ️ KDS 서비스: 조리가 필요한 아이템이 없어 KRP 출력 생략`);
+      }
 
       // PostgreSQL NOTIFY
       await this.sendPostgreSQLNotify('kds_updates', {

@@ -295,7 +295,7 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     const { order_id, created_at } = ticketUpdateResult.rows[0];
 
-    // 상세 주문 정보 조회 (KRP 전송용)
+    // 해당 티켓의 실제 아이템 정보 조회 (KRP 전송용)
     const orderDetailResult = await client.query(`
       SELECT 
         o.id as order_id,
@@ -310,6 +310,8 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
             'quantity', oi.quantity,
             'price', oi.unit_price,
             'totalPrice', oi.unit_price * oi.quantity,
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
+            'item_status', oi.item_status,
             'options', COALESCE(oi.options, '{}')
           ) ORDER BY oi.created_at
         ) as items,
@@ -334,17 +336,28 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KRP WebSocket으로 새 출력 요청 즉시 전송
+    // KDS에서 실제 출력될 아이템만 필터링 (DRINK 제외 등)
+    const filteredItems = (orderDetail.items || []).filter(item => {
+      // KDS에서 실제로 조리가 필요한 아이템만 출력
+      return item.cook_station !== 'DRINK' && 
+             item.item_status !== 'CANCELED' &&
+             item.item_status !== 'DONE';
+    });
+
+    // KRP WebSocket으로 필터링된 출력 요청 전송
     const printData = {
       ticket_id: parseInt(ticketId),
       order_id: orderDetail.order_id,
       table_number: orderDetail.table_num,
       customer_name: orderDetail.customer_name,
-      total_amount: parseInt(orderDetail.total_amount) || 0,
-      items: orderDetail.items || [],
+      total_amount: filteredItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+      items: filteredItems,
+      original_items_count: orderDetail.items?.length || 0,
+      filtered_items_count: filteredItems.length,
       created_at: orderDetail.order_created_at,
       timestamp: new Date().toISOString(),
-      source: 'kds_print_button'
+      source: 'kds_print_button',
+      filter_applied: true
     };
 
     console.log(`🖨️ KRP 출력 데이터 준비:`, printData);
@@ -358,14 +371,20 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     res.json({
       success: true,
-      message: '출력 처리 완료 - KRP로 전송됨',
+      message: '출력 처리 완료 - KRP로 전송됨 (KDS 필터링 적용)',
       ticket_id: parseInt(ticketId),
       order_id: orderDetail.order_id,
       print_data: {
         table_number: orderDetail.table_num,
         customer_name: orderDetail.customer_name,
-        items_count: orderDetail.items?.length || 0,
-        total_amount: parseInt(orderDetail.total_amount) || 0
+        original_items_count: orderDetail.items?.length || 0,
+        filtered_items_count: filteredItems.length,
+        filtered_total_amount: filteredItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0),
+        filter_info: {
+          excluded_drinks: (orderDetail.items || []).filter(item => item.cook_station === 'DRINK').length,
+          excluded_done: (orderDetail.items || []).filter(item => item.item_status === 'DONE').length,
+          excluded_canceled: (orderDetail.items || []).filter(item => item.item_status === 'CANCELED').length
+        }
       }
     });
 
