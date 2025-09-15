@@ -1,0 +1,75 @@
+📊 현재 KDSState 티켓 수: 8개
+kdsWebSocket.js:194 📋 새 티켓 76: 총 2개 아이템 저장 (상태: PENDING)
+kdsWebSocket.js:198 💾 티켓 76 KDSState에 저장 완료 - 총 9개 티켓
+kdsWebSocket.js:201 🎨 티켓 76 HTML 추가 시도
+kdsWebSocket.js:234 🔍 새 티켓 76 DOM 추가 시작
+kdsWebSocket.js:244 🔍 현재 그리드 상태: 총 10개 슬롯
+kdsWebSocket.js:250 슬롯 1: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 2: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 3: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 4: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 5: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 6: 빈슬롯=false, 카드있음=true
+kdsWebSocket.js:250 슬롯 7: 빈슬롯=true, 카드있음=false
+kdsWebSocket.js:250 슬롯 8: 빈슬롯=true, 카드있음=false
+kdsWebSocket.js:250 슬롯 9: 빈슬롯=true, 카드있음=false
+kdsWebSocket.js:250 슬롯 10: 빈슬롯=false, 카드있음=false
+kdsWebSocket.js:259 🔍 티켓 76: 전체 2개 → 주방 2개 아이템
+kdsWebSocket.js:272 🎯 빈 슬롯 발견: 7번 슬롯 사용
+kdsUIRenderer.js:216 🎨 카드 생성: 티켓 76, 전체 2개 → 주방 2개 아이템 필터링
+kdsWebSocket.js:306 🎨 티켓 76 카드 HTML 생성 완료 - 슬롯 7에 삽입
+kdsWebSocket.js:328 ✅ 티켓 76 HTML 슬롯 7에 성공적으로 추가
+kdsSoundManager.js:78 The AudioContext was not allowed to start. It must be resumed (or created) after a user gesture on the page. https://developer.chrome.com/blog/autoplay/#web_audio
+playBeep @ kdsSoundManager.js:78
+playNewOrderSound @ kdsSoundManager.js:40
+handleTicketCreated @ kdsWebSocket.js:217
+handleKDSUpdate @ kdsWebSocket.js:125
+(anonymous) @ kdsWebSocket.js:65
+Emitter.emit @ index.js:136
+emitEvent @ socket.js:553
+onevent @ socket.js:540
+onpacket @ socket.js:508
+Emitter.emit @ index.js:136
+(anonymous) @ manager.js:217
+Promise.then
+(anonymous) @ globals.js:4
+ondecoded @ manager.js:216
+Emitter.emit @ index.js:136
+add @ index.js:142
+ondata @ manager.js:203
+Emitter.emit @ index.js:136
+_onPacket @ socket.js:259
+Emitter.emit @ index.js:136
+onPacket @ transport.js:99
+onData @ transport.js:91
+ws.onmessage @ websocket.js:48Understand this warning
+kdsWebSocket.js:225 ✅ 새 티켓 처리 완료: 76 (HTML 추가: 성공)
+kdsWebSocket.js:59 📡 KDS 업데이트 수신: {type: 'payment-completed', storeId: 497, data: {…}, timestamp: 1757937418772}
+kdsWebSocket.js:59 📡 KDS 업데이트 수신: {type: 'db_payment_change', data: {…}}
+kdsWebSocket.js:794 📡 DB 알림 수신: {type: 'db_payment_change', data: {…}}
+kdsWebSocket.js:822 💳 결제 완료 알림: 테이블 3210 티켓 8개 일괄 제거 시작
+kdsWebSocket.js:396 ℹ️ 티켓 62 카드를 찾을 수 없음
+kdsWebSocket.js:849 ⚠️ 티켓 62 개별 제거 실패 - Grid 재렌더링 예약
+kdsWebSocket.js:852 🗑️ 티켓 62 제거 완료
+kdsWebSocket.js:396 ℹ️ 티켓 65 카드를 찾을 수 없음
+kdsWebSocket.js:849 ⚠️ 티켓 65 개별 제거 실패 - Grid 재렌더링 예약
+kdsWebSocket.js:852 🗑️ 티켓 65 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 70 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 71 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 72 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 73 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 74 제거 완료
+kdsWebSocket.js:852 🗑️ 티켓 75 제거 완료
+kdsWebSocket.js:336 🔍 카드 추가 후 상태: 1-9번 슬롯 중 7개 점유
+kdsWebSocket.js:729 🔄 WebSocket 연결 정상 - 동기화 생략
+kdsWebSocket.js:422 🗑️ 티켓 70을 슬롯 1에서 제거하고 빈 슬롯으로 교체
+kdsWebSocket.js:422 🗑️ 티켓 71을 슬롯 2에서 제거하고 빈 슬롯으로 교체
+kdsWebSocket.js:422 🗑️ 티켓 72을 슬롯 3에서 제거하고 빈 슬롯으로 교체
+kdsWebSocket.js:422 🗑️ 티켓 73을 슬롯 4에서 제거하고 빈 슬롯으로 교체
+kdsWebSocket.js:422 🗑️ 티켓 74을 슬롯 5에서 제거하고 빈 슬롯으로 교체
+kdsWebSocket.js:422 🗑️ 티켓 75을 슬롯 6에서 제거하고 빈 슬롯으로 교체
+kdsUIRenderer.js:143 🎨 Grid 렌더링 시작: 1개 주문
+kdsUIRenderer.js:161 🎨 Grid 필터링: 전체 1개 → 주방 관련 1개 주문
+kdsUIRenderer.js:216 🎨 카드 생성: 티켓 76, 전체 2개 → 주방 2개 아이템 필터링
+kdsUIRenderer.js:199 ✅ Grid 렌더링 완료: 1개 카드 + 1개 상태 슬롯
+kdsWebSocket.js:866 ✅ 테이블 3210 결제 완료 처리 완료 - 남은 티켓: 1개
