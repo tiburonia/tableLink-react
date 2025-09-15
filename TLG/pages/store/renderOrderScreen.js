@@ -29,11 +29,35 @@ window.renderOrderScreen = async function(store, tableName, tableNumber) {
         console.log('📋 메뉴 API 응답:', menuResult);
 
         if (menuResult.success && menuResult.menu) {
-          menuData = menuResult.menu.map(menu => ({
-            ...menu,
-            cook_station: menu.cook_station || 'KITCHEN'
-          }));
-          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 완료`);
+          // 메뉴 데이터 정규화 및 검증
+          menuData = menuResult.menu.map((menu, index) => {
+            const normalizedMenu = {
+              id: parseInt(menu.id),
+              menuId: parseInt(menu.id), // menuId도 명시적으로 설정
+              name: menu.name || `메뉴 ${index + 1}`,
+              description: menu.description || '',
+              price: parseInt(menu.price) || 0,
+              cook_station: menu.cook_station || 'KITCHEN',
+              category: menu.category || menu.cook_station || 'KITCHEN'
+            };
+
+            console.log(`📋 메뉴 ${index + 1} 정규화:`, {
+              원본: menu,
+              정규화: normalizedMenu,
+              id확인: normalizedMenu.id,
+              cook_station확인: normalizedMenu.cook_station
+            });
+
+            return normalizedMenu;
+          });
+
+          console.log(`✅ 매장 ${store.id} 메뉴 ${menuData.length}개 로드 및 정규화 완료`);
+          
+          // 메뉴 데이터 검증
+          if (!validateMenuData(menuData)) {
+            console.error('❌ 메뉴 데이터 검증 실패, 기본 메뉴로 대체');
+            menuData = getDefaultMenu();
+          }
         } else {
           console.warn('⚠️ API 응답에서 메뉴 데이터가 없음');
           menuData = [];
@@ -186,20 +210,26 @@ function renderMenuContent(menuByCategory) {
   return Object.entries(menuByCategory).map(([category, items], index) => `
     <div class="menu-category ${index === 0 ? 'active' : ''}" data-category="${category}">
       <div class="menu-grid">
-        ${items.map(item => `
+        ${items.map(item => {
+          const menuId = item.id || item.menuId;
+          const cookStation = item.cook_station || 'KITCHEN';
+          const itemPrice = item.price || 0;
+          
+          return `
           <div class="menu-item" 
-               data-menu-id="${item.id}" 
-               data-cook-station="${item.cook_station || 'KITCHEN'}"
-               onclick="addToCart('${item.id}', '${escapeHtml(item.name)}', ${item.price})">
+               data-menu-id="${menuId}" 
+               data-cook-station="${cookStation}"
+               onclick="addToCart('${menuId}', '${escapeHtml(item.name)}', ${itemPrice})">
             <div class="menu-info">
               <h4>${escapeHtml(item.name)}</h4>
               <p>${escapeHtml(item.description || '')}</p>
-              <div class="menu-price">${item.price.toLocaleString()}원</div>
-              <div class="cook-station-badge">${item.cook_station || 'KITCHEN'}</div>
+              <div class="menu-price">${itemPrice.toLocaleString()}원</div>
+              <div class="cook-station-badge">${cookStation}</div>
             </div>
-            <button class="add-btn" onclick="event.stopPropagation(); addToCart('${item.id}', '${escapeHtml(item.name)}', ${item.price});">+</button>
+            <button class="add-btn" onclick="event.stopPropagation(); addToCart('${menuId}', '${escapeHtml(item.name)}', ${itemPrice});">+</button>
           </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   `).join('');
@@ -289,39 +319,54 @@ window.addToCart = function(menuId, menuName, price) {
     입력받은menuId: menuId,
     입력받은menuName: menuName,
     파싱된menuId: validMenuId,
+    validPrice: validPrice,
     currentMenuData존재: !!window.currentMenuData,
     currentMenuData길이: window.currentMenuData?.length
   });
 
   if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
-    // 전체 메뉴 데이터 로그
-    console.log('📋 전체 메뉴 데이터:', window.currentMenuData.map(item => ({
+    // 전체 메뉴 데이터 로그 (처음 3개만)
+    console.log('📋 메뉴 데이터 샘플:', window.currentMenuData.slice(0, 3).map(item => ({
       id: item.id,
+      menuId: item.menuId,
       name: item.name,
       cook_station: item.cook_station
     })));
 
-    // ID로 먼저 찾기 (다양한 형태로 시도)
-    actualMenuData = window.currentMenuData.find(item => 
-      parseInt(item.id) === validMenuId || 
-      String(item.id) === String(menuId) ||
-      item.id === menuId
-    );
+    // 1단계: ID로 정확히 찾기 (다양한 ID 필드 고려)
+    actualMenuData = window.currentMenuData.find(item => {
+      const itemId = parseInt(item.id);
+      const itemMenuId = parseInt(item.menuId);
+      return itemId === validMenuId || itemMenuId === validMenuId;
+    });
 
-    console.log('🔍 ID로 찾기 결과:', actualMenuData);
+    console.log('🔍 1단계 ID로 찾기 결과:', actualMenuData);
 
-    // ID로 찾지 못하면 이름으로 찾기
+    // 2단계: ID로 찾지 못하면 이름으로 찾기
     if (!actualMenuData) {
       actualMenuData = window.currentMenuData.find(item => 
-        item.name === validMenuName
+        String(item.name).trim() === String(validMenuName).trim()
       );
 
-      console.log('🔍 이름으로 찾기 결과:', actualMenuData);
+      console.log('🔍 2단계 이름으로 찾기 결과:', actualMenuData);
 
       // 이름으로 찾았다면 해당 ID 사용
       if (actualMenuData) {
-        validMenuId = parseInt(actualMenuData.id);
-        console.log(`✅ 메뉴명으로 ID 찾음: ${validMenuName} -> ID: ${validMenuId}`);
+        validMenuId = parseInt(actualMenuData.id) || parseInt(actualMenuData.menuId);
+        console.log(`✅ 메뉴명으로 ID 찾음: "${validMenuName}" -> ID: ${validMenuId}`);
+      }
+    }
+
+    // 3단계: 여전히 찾지 못하면 부분 매칭 시도
+    if (!actualMenuData) {
+      actualMenuData = window.currentMenuData.find(item => 
+        String(item.name).toLowerCase().includes(String(validMenuName).toLowerCase()) ||
+        String(validMenuName).toLowerCase().includes(String(item.name).toLowerCase())
+      );
+
+      if (actualMenuData) {
+        validMenuId = parseInt(actualMenuData.id) || parseInt(actualMenuData.menuId);
+        console.log(`🔍 3단계 부분 매칭으로 찾음: "${validMenuName}" ≈ "${actualMenuData.name}" -> ID: ${validMenuId}`);
       }
     }
   }
@@ -362,15 +407,24 @@ window.addToCart = function(menuId, menuName, price) {
       name: validMenuName,
       price: validPrice,
       quantity: 1,
-      cook_station: cookStation
-    };
-    window.currentTLLOrder.cart.push(newItem);
-    console.log('➕ 새 아이템 추가:', {
-      menuId: validMenuId,
-      menu_id: validMenuId,
-      name: validMenuName,
       cook_station: cookStation,
-      전체아이템: newItem
+      // 추가 메타데이터
+      originalMenuData: actualMenuData ? {
+        id: actualMenuData.id,
+        menuId: actualMenuData.menuId,
+        cook_station: actualMenuData.cook_station
+      } : null
+    };
+
+    window.currentTLLOrder.cart.push(newItem);
+    
+    console.log('➕ 새 아이템 추가 완료:', {
+      아이템ID: validMenuId,
+      메뉴명: validMenuName,
+      조리스테이션: cookStation,
+      가격: validPrice,
+      원본메뉴데이터: actualMenuData,
+      최종아이템: newItem
     });
   }
 
@@ -623,6 +677,58 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// 메뉴 데이터 검증 함수
+function validateMenuData(menuData) {
+  console.log('🔍 메뉴 데이터 검증 시작...');
+  
+  if (!Array.isArray(menuData)) {
+    console.error('❌ 메뉴 데이터가 배열이 아님:', typeof menuData);
+    return false;
+  }
+
+  const validationResults = menuData.map((item, index) => {
+    const hasId = !!(item.id || item.menuId);
+    const hasName = !!item.name;
+    const hasPrice = !!(item.price && !isNaN(parseInt(item.price)));
+    const hasCookStation = !!item.cook_station;
+    
+    const isValid = hasId && hasName && hasPrice;
+    
+    if (!isValid) {
+      console.warn(`⚠️ 메뉴 ${index + 1} 검증 실패:`, {
+        item,
+        hasId,
+        hasName,
+        hasPrice,
+        hasCookStation
+      });
+    }
+
+    return {
+      index,
+      isValid,
+      item: {
+        id: item.id,
+        menuId: item.menuId,
+        name: item.name,
+        price: item.price,
+        cook_station: item.cook_station
+      }
+    };
+  });
+
+  const validCount = validationResults.filter(r => r.isValid).length;
+  const invalidCount = menuData.length - validCount;
+
+  console.log(`📊 메뉴 데이터 검증 완료: ${validCount}개 유효, ${invalidCount}개 무효`);
+  
+  if (invalidCount > 0) {
+    console.error('❌ 무효한 메뉴들:', validationResults.filter(r => !r.isValid));
+  }
+
+  return invalidCount === 0;
 }
 
 // 사용자 정보 가져오기
