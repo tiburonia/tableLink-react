@@ -137,12 +137,12 @@
     },
 
     /**
-     * 새 티켓 생성 처리 - HTML에 직접 추가
+     * 새 티켓 생성 처리 - 순차배열 로직 적용
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
 
-      console.log(`🎫 새 티켓 생성 이벤트 처리 시작: ${ticketId}`);
+      console.log(`🎫 새 티켓 생성 이벤트 처리 시작: ${ticketId} - 순차배열 적용`);
       console.log(`🔍 티켓 데이터:`, {
         ticket_id: ticket.ticket_id,
         check_id: ticket.check_id,
@@ -197,18 +197,17 @@
       KDSState.setTicket(ticketId, normalizedTicket);
       console.log(`💾 티켓 ${ticketId} KDSState에 저장 완료 - 총 ${KDSState.tickets.size}개 티켓`);
 
-      // HTML에 카드 직접 추가
-      console.log(`🎨 티켓 ${ticketId} HTML 추가 시도`);
-      const addSuccess = this._addTicketCardToDOM(normalizedTicket);
-
-      if (!addSuccess) {
-        console.warn(`⚠️ 티켓 ${ticketId} HTML 추가 실패 - Grid 재렌더링으로 백업 처리`);
-        
-        // 백업: Grid 전체 재렌더링
+      // 새 티켓 추가로 인한 전체 Grid 재정렬
+      console.log(`🔄 새 티켓 ${ticketId} 추가 - 전체 Grid 재정렬 시작`);
+      
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
+        window.KDSUIRenderer.triggerGridReorder('new_ticket_added');
+      } else {
+        // 백업: 직접 재렌더링
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
           const currentTickets = KDSState.getActiveTickets();
           window.KDSUIRenderer.renderKDSGrid(currentTickets);
-          console.log(`🔄 Grid 전체 재렌더링 완료: ${currentTickets.length}개 티켓`);
+          console.log(`🔄 직접 Grid 재렌더링 완료: ${currentTickets.length}개 티켓`);
         }
       }
 
@@ -222,7 +221,7 @@
         window.KDSUIRenderer.updateTicketCounts();
       }
 
-      console.log(`✅ 새 티켓 처리 완료: ${ticketId} (HTML 추가: ${addSuccess ? '성공' : '백업처리'})`);
+      console.log(`✅ 새 티켓 처리 완료: ${ticketId} - 순차배열 재정렬됨`);
     },
 
     /**
@@ -485,11 +484,11 @@
     },
 
     /**
-     * 티켓 조리 시작 처리 - 개별 슬롯 업데이트
+     * 티켓 조리 시작 처리 - 전체 Grid 재정렬
      */
     handleTicketCookingStarted(data) {
       const ticketId = data.ticket_id;
-      console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 이벤트 수신`);
+      console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 이벤트 수신 - 재정렬 적용`);
 
       const ticket = KDSState.getTicket(ticketId);
       if (!ticket) {
@@ -504,6 +503,7 @@
       }
 
       // 상태 업데이트
+      const oldStatus = ticket.status;
       ticket.status = 'COOKING';
       if (ticket.items) {
         ticket.items.forEach(item => {
@@ -512,19 +512,19 @@
         });
       }
 
-      // 개별 슬롯 업데이트
-      const success = this._updateTicketSlot(ticket);
+      console.log(`📊 티켓 ${ticketId} 상태 변경: ${oldStatus} → COOKING - 전체 재정렬 시작`);
 
-      if (success) {
-        console.log(`✅ 티켓 ${ticketId} 개별 슬롯 조리 상태 업데이트 완료`);
-      } else {
-        console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
+      // COOKING 상태 변경은 우선순위를 바꾸므로 전체 Grid 재정렬
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
+        window.KDSUIRenderer.triggerGridReorder('cooking_started');
       }
 
       // 사운드 재생
       if (window.KDSSoundManager) {
         window.KDSSoundManager.playItemCompleteSound();
       }
+
+      console.log(`✅ 티켓 ${ticketId} 조리 시작 처리 완료 - Grid 재정렬됨`);
     },
 
     /**
@@ -588,7 +588,7 @@
     },
 
     /**
-     * 티켓 업데이트 처리 - 개별 슬롯 업데이트
+     * 티켓 업데이트 처리 - 상태 변경 시 재정렬 적용
      */
     handleTicketUpdated(ticket) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
@@ -598,7 +598,7 @@
 
       // 완료된 티켓은 즉시 제거 처리
       if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
-        console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 개별 슬롯에서 제거`);
+        console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 제거 및 재정렬`);
         return this.handleTicketCompleted({ ticket_id: ticketId });
       }
 
@@ -608,18 +608,23 @@
         return this.handleTicketCreated(ticket);
       }
 
-      // DB 상태를 정확히 반영
-      const normalizedStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
+      // 기존 상태와 새 상태 비교
+      const oldStatus = (existingTicket.status || 'PENDING').toUpperCase();
+      const newStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
+      const statusChanged = oldStatus !== newStatus;
 
+      console.log(`📊 티켓 ${ticketId} 상태 변경: ${oldStatus} → ${newStatus} (변경: ${statusChanged})`);
+
+      // 업데이트된 티켓 데이터 생성
       const updatedTicket = {
         ...existingTicket,
         ...ticket,
-        status: normalizedStatus,
+        status: newStatus,
         updated_at: ticket.updated_at || new Date().toISOString()
       };
 
       // 아이템들도 티켓 상태에 맞춰 동기화
-      if (updatedTicket.items && normalizedStatus === 'COOKING') {
+      if (updatedTicket.items && newStatus === 'COOKING') {
         updatedTicket.items = updatedTicket.items.map(item => ({
           ...item,
           status: 'COOKING',
@@ -630,19 +635,30 @@
       // 상태에 업데이트된 티켓 저장
       KDSState.setTicket(ticketId, updatedTicket);
 
-      // 개별 슬롯 업데이트
-      const success = this._updateTicketSlot(updatedTicket);
-
-      if (success) {
-        console.log(`✅ 티켓 ${ticketId} 개별 슬롯 업데이트 완료 (상태: ${normalizedStatus})`);
+      // 상태가 변경된 경우 (특히 COOKING <-> 다른 상태) 전체 재정렬
+      if (statusChanged && (oldStatus === 'COOKING' || newStatus === 'COOKING')) {
+        console.log(`🔄 상태 변경으로 인한 전체 Grid 재정렬: ${ticketId}`);
+        
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
+          window.KDSUIRenderer.triggerGridReorder('status_changed');
+        }
       } else {
-        console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
+        // 상태 변경이 없으면 개별 슬롯 업데이트
+        const success = this._updateTicketSlot(updatedTicket);
+
+        if (success) {
+          console.log(`✅ 티켓 ${ticketId} 개별 슬롯 업데이트 완료 (상태: ${newStatus})`);
+        } else {
+          console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
+        }
       }
 
       // 탭 카운트 업데이트
       if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
         window.KDSUIRenderer.updateTicketCounts();
       }
+
+      console.log(`✅ 티켓 ${ticketId} 업데이트 처리 완료`);
     },
 
     /**
