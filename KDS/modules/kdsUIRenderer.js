@@ -148,8 +148,20 @@
       // Grid 초기화
       grid.innerHTML = '';
 
+      // 주방 아이템이 있는 주문만 필터링
+      const kitchenOrders = orders.filter(order => {
+        if (!order.items) return false;
+        const kitchenItems = order.items.filter(item => {
+          const cookStation = item.cook_station || 'KITCHEN';
+          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+        });
+        return kitchenItems.length > 0;
+      });
+
+      console.log(`🎨 Grid 필터링: 전체 ${orders.length}개 → 주방 관련 ${kitchenOrders.length}개 주문`);
+
       const maxDisplayOrders = 9;
-      const totalOrders = orders.length;
+      const totalOrders = kitchenOrders.length;
 
       // 1-9번 슬롯: 주문 카드 또는 빈 슬롯
       for (let i = 0; i < maxDisplayOrders; i++) {
@@ -159,7 +171,7 @@
 
         if (i < totalOrders) {
           // 주문 카드 렌더링
-          slot.innerHTML = this.createOrderCardHTML(orders[i]);
+          slot.innerHTML = this.createOrderCardHTML(kitchenOrders[i]);
         } else {
           // 빈 슬롯
           slot.innerHTML = this.createEmptySlotHTML(i + 1);
@@ -195,6 +207,20 @@
       const statusClass = this.getStatusClass(order.status);
       const ticketId = this._extractTicketId(order);
 
+      // 프론트엔드에서 cook_station 필터링 - 주방 관련 아이템만 표시
+      const kitchenItems = order.items ? order.items.filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      }) : [];
+
+      console.log(`🎨 카드 생성: 티켓 ${ticketId}, 전체 ${order.items?.length || 0}개 → 주방 ${kitchenItems.length}개 아이템 필터링`);
+
+      // 주방 아이템이 없으면 카드 생성하지 않음
+      if (kitchenItems.length === 0) {
+        console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - 카드 생성 스킵`);
+        return '<div class="skip-card" style="display: none;"></div>';
+      }
+
       // DB 상태 기반으로 UI 결정
       const dbStatus = (order.status || '').toUpperCase();
       const isPending = dbStatus === 'PENDING';
@@ -216,15 +242,16 @@
         statusColor = '#27ae60';
       }
 
-      // 아이템 목록 생성
-      const itemsHTML = order.items ? order.items.slice(0, 4).map(item => `
+      // 필터링된 주방 아이템으로 목록 생성
+      const itemsHTML = kitchenItems.slice(0, 4).map(item => `
         <div class="order-item">
           <span class="item-name">${item.menuName || item.menu_name || '메뉴'}</span>
           <span class="item-quantity">×${item.quantity || 1}</span>
+          <span class="item-station">[${item.cook_station || 'KITCHEN'}]</span>
         </div>
-      `).join('') : '';
+      `).join('');
 
-      const moreItemsCount = order.items && order.items.length > 4 ? order.items.length - 4 : 0;
+      const moreItemsCount = kitchenItems.length > 4 ? kitchenItems.length - 4 : 0;
 
       return `
         <div class="${cardClass}" data-ticket-id="${ticketId}">
@@ -864,6 +891,16 @@
             font-weight: 700;
             min-width: 20px;
             text-align: center;
+          }
+
+          .item-station {
+            background: #95a5a6;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 600;
+            margin-left: 4px;
           }
 
           .more-items {

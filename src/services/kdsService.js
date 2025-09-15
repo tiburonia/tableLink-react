@@ -35,14 +35,11 @@ class KDSService {
 
       const { orderId, ticketId, storeId, tableNumber, items, batchNo } = orderData;
 
-      // cook_station별로 아이템 분리 (DRINK 제외, 주방 관련만)
-      const kitchenItems = items.filter(item => {
-        const cookStation = item.cook_station || 'KITCHEN';
-        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
-      });
+      // 모든 아이템을 KDS로 전송 (프론트엔드에서 필터링)
+      console.log(`🍳 KDS: 티켓 ${ticketId}에 총 ${items.length}개 아이템 전송 (프론트엔드 필터링)`);
 
-      if (kitchenItems.length === 0) {
-        console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - KDS 처리 스킵`);
+      if (items.length === 0) {
+        console.log(`ℹ️ 티켓 ${ticketId}에 아이템이 없음 - KDS 처리 스킵`);
         return { success: true, ticketId, skipped: true };
       }
 
@@ -57,7 +54,7 @@ class KDSService {
         status: 'pending',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        items: kitchenItems.map(item => ({
+        items: items.map(item => ({
           id: Math.random().toString(36).substr(2, 9),
           menuName: item.name,
           menu_name: item.name,
@@ -69,7 +66,7 @@ class KDSService {
         }))
       };
 
-      console.log(`🍳 KDS 티켓 데이터 생성: ${kitchenItems.length}개 주방 아이템`, kdsTicketData);
+      console.log(`🍳 KDS 티켓 데이터 생성: ${items.length}개 전체 아이템`, kdsTicketData);
 
       // WebSocket 브로드캐스트 (기존 카드 유지하며 새 카드 추가)
       await this.broadcastToKDS(storeId, 'new-order', kdsTicketData);
@@ -83,12 +80,12 @@ class KDSService {
         batch_no: batchNo || 1,
         source_system: 'TLL',
         table_number: tableNumber,
-        kitchen_items_count: kitchenItems.length,
+        total_items_count: items.length,
         timestamp: Date.now()
       });
 
-      console.log(`✅ KDS: 새 주문 처리 완료 - ${kitchenItems.length}개 주방 아이템`);
-      return { success: true, ticketId, kitchenItemsCount: kitchenItems.length };
+      console.log(`✅ KDS: 새 주문 처리 완료 - ${items.length}개 전체 아이템`);
+      return { success: true, ticketId, totalItemsCount: items.length };
 
     } catch (error) {
       console.error('❌ KDS: 새 주문 처리 실패:', error);
