@@ -798,24 +798,14 @@
         const result = await KDSAPIService.updatePrintStatus(ticketId);
 
         if (result.success) {
-          console.log(`✅ 출력 요청 성공: ${ticketId} - 재출력 가능`);
-          this.showSuccess(`주문서 #${ticketId} 출력 완료 (재출력 가능)`);
+          console.log(`✅ 출력 요청 성공: ${ticketId} - 카드는 유지됨`);
+          this.showSuccess(`주문서 #${ticketId} 출력 요청 완료`);
 
-          // 출력 버튼을 비활성화하지 않고 시각적 피드백만 제공
+          // 출력 버튼 비활성화 (재출력 방지)
           const printBtn = document.querySelector(`[data-ticket-id="${ticketId}"] .print-btn`);
           if (printBtn) {
-            // 잠시 색상 변경으로 출력 완료 알림
-            const originalBg = printBtn.style.background;
-            const originalText = printBtn.textContent;
-            
-            printBtn.style.background = '#28a745';
-            printBtn.textContent = '🖨️ 출력완료';
-            
-            // 3초 후 원래 상태로 복구 (재출력 가능)
-            setTimeout(() => {
-              printBtn.style.background = originalBg;
-              printBtn.textContent = originalText || '🖨️ 출력';
-            }, 3000);
+            printBtn.disabled = true;
+            printBtn.textContent = '🖨️ 출력됨';
           }
         } else {
           throw new Error(result.error || '출력 실패');
@@ -880,7 +870,7 @@
     },
 
     /**
-     * 출력 버튼 상태 업데이트 - 재출력 허용
+     * 출력 버튼 상태 업데이트
      */
     _updatePrintButtonState(ticketId, printed) {
       const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
@@ -888,18 +878,9 @@
         const printBtn = cardElement.querySelector('.print-btn');
         if (printBtn) {
           if (printed) {
-            // 비활성화하지 않고 시각적 피드백만 제공
-            const originalBg = printBtn.style.background;
-            const originalText = printBtn.textContent;
-            
             printBtn.innerHTML = '✅ 출력완료';
             printBtn.style.background = '#28a745';
-            
-            // 3초 후 원래 상태로 복구하여 재출력 허용
-            setTimeout(() => {
-              printBtn.style.background = originalBg;
-              printBtn.innerHTML = originalText || '🖨️ 출력';
-            }, 3000);
+            printBtn.disabled = true;
           }
         }
       }
