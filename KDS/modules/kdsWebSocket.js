@@ -142,6 +142,16 @@
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
 
+      console.log(`🎫 새 티켓 생성 이벤트 처리 시작: ${ticketId}`);
+      console.log(`🔍 티켓 데이터:`, {
+        ticket_id: ticket.ticket_id,
+        check_id: ticket.check_id,
+        id: ticket.id,
+        table_number: ticket.table_number,
+        items_count: ticket.items?.length || 0,
+        status: ticket.status
+      });
+
       if (!ticketId) {
         console.warn('⚠️ 티켓 ID가 없음 - 티켓 생성 스킵');
         return;
@@ -153,6 +163,10 @@
         console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 업데이트로 처리`);
         return this.handleTicketUpdated(ticket);
       }
+
+      // 현재 KDSState의 티켓 수 확인
+      const currentTicketCount = KDSState.tickets.size;
+      console.log(`📊 현재 KDSState 티켓 수: ${currentTicketCount}개`);
 
       // DB에서 온 실제 상태를 정규화하여 보존
       const actualStatus = (ticket.status || 'PENDING').toUpperCase();
@@ -177,13 +191,26 @@
         cook_station: item.cook_station || 'KITCHEN'
       }));
 
-      console.log(`📋 새 티켓 ${ticketId}: 총 ${normalizedTicket.items.length}개 아이템 저장`);
+      console.log(`📋 새 티켓 ${ticketId}: 총 ${normalizedTicket.items.length}개 아이템 저장 (상태: ${actualStatus})`);
 
       // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
+      console.log(`💾 티켓 ${ticketId} KDSState에 저장 완료 - 총 ${KDSState.tickets.size}개 티켓`);
 
       // HTML에 카드 직접 추가
-      this._addTicketCardToDOM(normalizedTicket);
+      console.log(`🎨 티켓 ${ticketId} HTML 추가 시도`);
+      const addSuccess = this._addTicketCardToDOM(normalizedTicket);
+
+      if (!addSuccess) {
+        console.warn(`⚠️ 티켓 ${ticketId} HTML 추가 실패 - Grid 재렌더링으로 백업 처리`);
+        
+        // 백업: Grid 전체 재렌더링
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          const currentTickets = KDSState.getActiveTickets();
+          window.KDSUIRenderer.renderKDSGrid(currentTickets);
+          console.log(`🔄 Grid 전체 재렌더링 완료: ${currentTickets.length}개 티켓`);
+        }
+      }
 
       // 사운드 재생
       if (window.KDSSoundManager) {
@@ -195,7 +222,7 @@
         window.KDSUIRenderer.updateTicketCounts();
       }
 
-      console.log(`✅ 새 티켓 HTML 추가 완료: ${ticketId}`);
+      console.log(`✅ 새 티켓 처리 완료: ${ticketId} (HTML 추가: ${addSuccess ? '성공' : '백업처리'})`);
     },
 
     /**
@@ -203,11 +230,25 @@
      */
     _addTicketCardToDOM(ticket) {
       try {
+        const ticketId = this._extractTicketId(ticket);
+        console.log(`🔍 새 티켓 ${ticketId} DOM 추가 시작`);
+
         const gridContainer = document.getElementById('kdsGrid');
         if (!gridContainer) {
           console.warn('⚠️ Grid 컨테이너를 찾을 수 없음');
           return false;
         }
+
+        // 현재 그리드 상태 로깅
+        const allSlots = Array.from(gridContainer.children);
+        console.log(`🔍 현재 그리드 상태: 총 ${allSlots.length}개 슬롯`);
+
+        allSlots.forEach((slot, index) => {
+          const slotNumber = slot.dataset.slot;
+          const isEmpty = slot.querySelector('.empty-slot') !== null;
+          const hasCard = slot.querySelector('.order-card') !== null;
+          console.log(`슬롯 ${slotNumber}: 빈슬롯=${isEmpty}, 카드있음=${hasCard}`);
+        });
 
         // 주방 아이템 필터링
         const kitchenItems = (ticket.items || []).filter(item => {
@@ -215,45 +256,86 @@
           return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
         });
 
+        console.log(`🔍 티켓 ${ticketId}: 전체 ${ticket.items?.length || 0}개 → 주방 ${kitchenItems.length}개 아이템`);
+
         if (kitchenItems.length === 0) {
-          console.log(`ℹ️ 티켓 ${ticket.ticket_id}에 주방 아이템이 없음 - HTML 추가 스킵`);
+          console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - HTML 추가 스킵`);
           return false;
         }
 
-        // 1-9번 슬롯 중 빈 슬롯 찾기
-        const emptySlot = Array.from(gridContainer.children)
-          .find(slot => {
-            const slotNumber = parseInt(slot.dataset.slot);
-            return slotNumber <= 9 && slot.querySelector('.empty-slot');
-          });
+        // 1-9번 슬롯 중 빈 슬롯 찾기 (순차적으로)
+        let emptySlot = null;
+        for (let i = 1; i <= 9; i++) {
+          const slot = allSlots.find(s => parseInt(s.dataset.slot) === i);
+          if (slot && slot.querySelector('.empty-slot')) {
+            emptySlot = slot;
+            console.log(`🎯 빈 슬롯 발견: ${i}번 슬롯 사용`);
+            break;
+          }
+        }
 
         if (!emptySlot) {
-          console.log('ℹ️ 빈 슬롯이 없음 - 기존 카드 유지하고 새 카드 추가');
-          // 빈 슬롯이 없어도 강제로 추가하거나 스크롤 영역 확장 등의 로직 추가 가능
+          console.log('⚠️ 1-9번 슬롯에 빈 공간이 없음 - 추가 불가');
+          
+          // 각 슬롯 상태 재확인
+          for (let i = 1; i <= 9; i++) {
+            const slot = allSlots.find(s => parseInt(s.dataset.slot) === i);
+            if (slot) {
+              const isEmpty = slot.querySelector('.empty-slot') !== null;
+              const hasCard = slot.querySelector('.order-card') !== null;
+              const cardTicketId = slot.querySelector('[data-ticket-id]')?.getAttribute('data-ticket-id');
+              console.log(`슬롯 ${i} 상세: 빈슬롯=${isEmpty}, 카드=${hasCard}, 티켓ID=${cardTicketId}`);
+            }
+          }
+          
           return false;
         }
 
-        // 카드 HTML 생성 및 직접 삽입
+        // 중복 티켓 확인
+        const existingCard = gridContainer.querySelector(`[data-ticket-id="${ticketId}"]`);
+        if (existingCard) {
+          console.log(`⚠️ 티켓 ${ticketId} 카드가 이미 존재함 - 추가 중단`);
+          return false;
+        }
+
+        // 카드 HTML 생성
         const cardHTML = window.KDSUIRenderer ? 
           window.KDSUIRenderer.createOrderCardHTML(ticket) : 
           this._createSimpleCardHTML(ticket);
 
+        console.log(`🎨 티켓 ${ticketId} 카드 HTML 생성 완료 - 슬롯 ${emptySlot.dataset.slot}에 삽입`);
+
+        // HTML 삽입
         emptySlot.innerHTML = cardHTML;
 
-        // 애니메이션 효과
-        const newCard = emptySlot.querySelector('.order-card');
-        if (newCard) {
-          newCard.style.opacity = '0';
-          newCard.style.transform = 'scale(0.9)';
-
-          requestAnimationFrame(() => {
-            newCard.style.transition = 'all 0.3s ease';
-            newCard.style.opacity = '1';
-            newCard.style.transform = 'scale(1)';
-          });
+        // 삽입 후 검증
+        const insertedCard = emptySlot.querySelector('.order-card');
+        if (!insertedCard) {
+          console.error(`❌ 티켓 ${ticketId} 카드 삽입 실패 - HTML이 제대로 삽입되지 않음`);
+          return false;
         }
 
-        console.log(`✅ 티켓 ${ticket.ticket_id} HTML 슬롯 ${emptySlot.dataset.slot}에 직접 추가`);
+        // 애니메이션 효과
+        insertedCard.style.opacity = '0';
+        insertedCard.style.transform = 'scale(0.9)';
+
+        requestAnimationFrame(() => {
+          insertedCard.style.transition = 'all 0.3s ease';
+          insertedCard.style.opacity = '1';
+          insertedCard.style.transform = 'scale(1)';
+        });
+
+        console.log(`✅ 티켓 ${ticketId} HTML 슬롯 ${emptySlot.dataset.slot}에 성공적으로 추가`);
+        
+        // 추가 후 그리드 상태 확인
+        setTimeout(() => {
+          const finalSlots = Array.from(gridContainer.children);
+          const occupiedCount = finalSlots.filter(slot => 
+            parseInt(slot.dataset.slot) <= 9 && slot.querySelector('.order-card')
+          ).length;
+          console.log(`🔍 카드 추가 후 상태: 1-9번 슬롯 중 ${occupiedCount}개 점유`);
+        }, 100);
+
         return true;
 
       } catch (error) {
