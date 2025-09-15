@@ -548,6 +548,13 @@
     },
 
     /**
+     * 주문 카드 HTML 생성 (외부 접근용)
+     */
+    createOrderCardHTML(order) {
+      return createOrderCardHTML(order);
+    },
+
+    /**
      * CSS 스타일
      */
     renderStyles() {
