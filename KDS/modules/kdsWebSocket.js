@@ -137,7 +137,7 @@
     },
 
     /**
-     * 새 티켓 생성 처리 - 기존 주문 유지하며 새 주문만 추가
+     * 새 티켓 생성 처리 - 개별 그리드 칸 렌더링
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
@@ -165,7 +165,7 @@
         table_number: ticket.table_number || ticket.table_num || 'N/A',
         customer_name: ticket.customer_name || `테이블 ${ticket.table_number || ticket.table_num}`,
         items: ticket.items || [],
-        status: actualStatus, // DB의 실제 상태 보존
+        status: actualStatus,
         created_at: ticket.created_at || new Date().toISOString()
       };
 
@@ -182,18 +182,10 @@
       // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
 
-      // 개별 카드 추가 (기존 카드들 절대 삭제하지 않음)
+      // 개별 그리드 칸에 직접 렌더링
       if (window.KDSUIRenderer) {
-        console.log(`🎨 새 티켓 개별 추가: ${ticketId} (기존 주문들 유지)`);
-        
-        // 강제로 개별 카드 추가 시도
-        const success = this._addSingleTicketCard(normalizedTicket);
-        
-        if (!success) {
-          console.log(`⚠️ 개별 카드 추가 실패 - 안전한 추가 방식 사용`);
-          // 기존 주문들을 보존하면서 새 카드만 추가
-          this._safelyAddNewCard(normalizedTicket);
-        }
+        console.log(`🎨 티켓 ${ticketId} 개별 그리드 칸 렌더링`);
+        this._renderTicketToEmptySlot(normalizedTicket);
       }
 
       // 사운드 재생
@@ -203,18 +195,16 @@
 
       // 탭 카운트 업데이트
       if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-        setTimeout(() => {
-          window.KDSUIRenderer.updateTicketCounts();
-        }, 100);
+        window.KDSUIRenderer.updateTicketCounts();
       }
 
-      console.log(`✅ 새 티켓 추가 완료: ${ticketId} (기존 주문 ${KDSState.getAllTickets().length - 1}개 유지)`);
+      console.log(`✅ 새 티켓 개별 렌더링 완료: ${ticketId}`);
     },
 
     /**
-     * 안전한 개별 카드 추가 - 기존 주문들 절대 삭제 안함
+     * 빈 슬롯에 티켓 직접 렌더링
      */
-    _addSingleTicketCard(ticket) {
+    _renderTicketToEmptySlot(ticket) {
       try {
         const gridContainer = document.getElementById('kdsGrid');
         if (!gridContainer) {
@@ -222,21 +212,39 @@
           return false;
         }
 
-        // 빈 슬롯 찾기 (1-9번 슬롯만 사용)
-        const emptySlot = gridContainer.querySelector('.empty-slot');
-        if (!emptySlot || !emptySlot.parentElement) {
-          console.log(`ℹ️ 빈 슬롯이 없음 - 기존 주문들은 유지하고 새 주문은 대기`);
+        // 1-9번 슬롯 중 빈 슬롯 찾기
+        const emptySlot = Array.from(gridContainer.children)
+          .find(slot => {
+            const slotNumber = parseInt(slot.dataset.slot);
+            return slotNumber <= 9 && slot.querySelector('.empty-slot');
+          });
+
+        if (!emptySlot) {
+          console.log('ℹ️ 사용 가능한 빈 슬롯이 없음 (1-9번)');
           return false;
         }
 
-        // 새 카드 HTML 생성
-        const newCardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
+        const slotNumber = emptySlot.dataset.slot;
         
-        // 슬롯에 새 카드 삽입 (기존 카드들은 건드리지 않음)
-        emptySlot.parentElement.innerHTML = newCardHTML;
+        // 주방 아이템이 있는지 확인
+        const kitchenItems = (ticket.items || []).filter(item => {
+          const cookStation = item.cook_station || 'KITCHEN';
+          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+        });
+
+        if (kitchenItems.length === 0) {
+          console.log(`ℹ️ 티켓 ${ticket.ticket_id}에 주방 아이템이 없음 - 렌더링 스킵`);
+          return false;
+        }
+
+        // 카드 HTML 생성
+        const cardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
+        
+        // 슬롯에 카드 직접 삽입
+        emptySlot.innerHTML = cardHTML;
 
         // 애니메이션 효과
-        const newCard = emptySlot.parentElement.querySelector('.order-card');
+        const newCard = emptySlot.querySelector('.order-card');
         if (newCard) {
           newCard.style.opacity = '0';
           newCard.style.transform = 'scale(0.8)';
@@ -245,45 +253,94 @@
             newCard.style.transition = 'all 0.3s ease';
             newCard.style.opacity = '1';
             newCard.style.transform = 'scale(1)';
-          }, 50);
+          }, 100);
         }
 
-        console.log(`✅ 개별 카드 추가 성공: ${ticket.ticket_id}`);
+        console.log(`✅ 티켓 ${ticket.ticket_id}을 슬롯 ${slotNumber}에 개별 렌더링 완료`);
         return true;
 
       } catch (error) {
-        console.error('❌ 개별 카드 추가 실패:', error);
+        console.error('❌ 개별 슬롯 렌더링 실패:', error);
         return false;
       }
     },
 
     /**
-     * 안전한 새 카드 추가 - 전체 재렌더링 없이
+     * 티켓 개별 슬롯에서 제거
      */
-    _safelyAddNewCard(ticket) {
+    _removeTicketFromSlot(ticketId) {
       try {
-        console.log(`🛡️ 안전 모드로 새 카드 추가: ${ticket.ticket_id}`);
-        
-        // 현재 모든 활성 티켓 가져오기 (기존 + 새로운)
-        const allActiveTickets = KDSState.getActiveTickets();
-        
-        // 기존 카드 정보 백업
-        const existingCards = document.querySelectorAll('.order-card');
-        const existingTicketIds = Array.from(existingCards).map(card => 
-          card.getAttribute('data-ticket-id')
-        ).filter(id => id !== ticket.ticket_id); // 새 티켓은 제외
-
-        console.log(`🛡️ 기존 카드 ${existingTicketIds.length}개 보존, 새 카드 1개 추가`);
-        
-        // Grid 업데이트 (기존 주문 보존하며 새 주문 추가)
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
-          window.KDSUIRenderer.renderKDSGrid(allActiveTickets);
+        const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+        if (!cardElement) {
+          console.log(`ℹ️ 티켓 ${ticketId} 카드를 찾을 수 없음`);
+          return false;
         }
-        
-        console.log(`✅ 안전 모드 카드 추가 완료`);
-        
+
+        const slotElement = cardElement.closest('.grid-slot');
+        if (!slotElement) {
+          console.warn(`⚠️ 티켓 ${ticketId}의 슬롯을 찾을 수 없음`);
+          return false;
+        }
+
+        const slotNumber = slotElement.dataset.slot;
+
+        // 애니메이션 효과
+        cardElement.style.transition = 'all 0.3s ease';
+        cardElement.style.transform = 'scale(0.8)';
+        cardElement.style.opacity = '0';
+
+        setTimeout(() => {
+          // 빈 슬롯으로 교체
+          if (parseInt(slotNumber) <= 9) { // 1-9번 슬롯만
+            slotElement.innerHTML = `
+              <div class="empty-slot">
+                <div class="slot-number">${slotNumber}</div>
+                <div class="slot-text">대기중</div>
+              </div>
+            `;
+            console.log(`🗑️ 티켓 ${ticketId}을 슬롯 ${slotNumber}에서 제거하고 빈 슬롯으로 교체`);
+          }
+        }, 300);
+
+        return true;
+
       } catch (error) {
-        console.error('❌ 안전 모드 카드 추가 실패:', error);
+        console.error('❌ 개별 슬롯에서 제거 실패:', error);
+        return false;
+      }
+    },
+
+    /**
+     * 티켓 상태 변경 시 개별 슬롯 업데이트
+     */
+    _updateTicketSlot(ticket) {
+      try {
+        const ticketId = this._extractTicketId(ticket);
+        const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+        
+        if (!cardElement) {
+          console.log(`ℹ️ 티켓 ${ticketId} 카드를 찾을 수 없음`);
+          return false;
+        }
+
+        const slotElement = cardElement.closest('.grid-slot');
+        if (!slotElement) {
+          console.warn(`⚠️ 티켓 ${ticketId}의 슬롯을 찾을 수 없음`);
+          return false;
+        }
+
+        // 새 카드 HTML 생성
+        const newCardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
+        
+        // 슬롯 내용 교체
+        slotElement.innerHTML = newCardHTML;
+
+        console.log(`🔄 티켓 ${ticketId} 슬롯 개별 업데이트 완료`);
+        return true;
+
+      } catch (error) {
+        console.error('❌ 개별 슬롯 업데이트 실패:', error);
+        return false;
       }
     },
 
@@ -307,7 +364,7 @@
     },
 
     /**
-     * 티켓 조리 시작 처리 - 간소화된 로직
+     * 티켓 조리 시작 처리 - 개별 슬롯 업데이트
      */
     handleTicketCookingStarted(data) {
       const ticketId = data.ticket_id;
@@ -334,21 +391,23 @@
         });
       }
 
-      // UI 업데이트
-      if (window.KDSUIRenderer) {
-        window.KDSUIRenderer.updateTicketToCookingState(ticketId, ticket);
+      // 개별 슬롯 업데이트
+      const success = this._updateTicketSlot(ticket);
+      
+      if (success) {
+        console.log(`✅ 티켓 ${ticketId} 개별 슬롯 조리 상태 업데이트 완료`);
+      } else {
+        console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
       }
 
       // 사운드 재생
       if (window.KDSSoundManager) {
         window.KDSSoundManager.playItemCompleteSound();
       }
-
-      console.log(`✅ WebSocket: 티켓 ${ticketId} 조리 시작 처리 완료`);
     },
 
     /**
-     * 티켓 완료 처리 - 이미 프론트엔드에서 삭제된 경우 무시
+     * 티켓 완료 처리 - 개별 슬롯에서 제거
      */
     handleTicketCompleted(data) {
       console.log('✅ 티켓 완료 이벤트 (DONE 상태):', data);
@@ -357,35 +416,38 @@
       const ticket = KDSState.getTicket(ticketId);
 
       if (!ticket) {
-        console.log(`ℹ️ 티켓 ${ticketId}이 이미 프론트엔드에서 삭제됨 - WebSocket 이벤트 무시`);
+        console.log(`ℹ️ 티켓 ${ticketId}이 이미 제거됨 - WebSocket 이벤트 무시`);
         return;
       }
 
-      console.log(`🗑️ WebSocket DONE 상태 티켓 ${ticketId} 처리`);
+      console.log(`🗑️ 티켓 ${ticketId} 개별 슬롯에서 제거`);
 
-      // 사운드 재생 (중복 방지를 위해 조건부)
+      // 사운드 재생
       if (window.KDSSoundManager && !ticket._soundPlayed) {
         window.KDSSoundManager.playOrderCompleteSound();
+        ticket._soundPlayed = true;
       }
 
-      // 즉시 UI에서 제거
-      if (window.KDSUIRenderer) {
-        window.KDSUIRenderer.removeTicketCard(ticketId);
+      // 개별 슬롯에서 제거
+      const success = this._removeTicketFromSlot(ticketId);
+      
+      if (success) {
+        // 상태에서 제거
+        KDSState.removeTicket(ticketId);
+        
+        // 탭 카운트 업데이트
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
+        }
+        
+        console.log(`✅ 티켓 ${ticketId} 개별 슬롯 제거 완료`);
+      } else {
+        console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 제거 실패`);
       }
-
-      // 상태에서 제거
-      KDSState.removeTicket(ticketId);
-
-      // 필터링 재적용
-      if (window.KDSManager) {
-        window.KDSManager.filterTickets();
-      }
-
-      console.log(`✅ WebSocket 티켓 ${ticketId} 완료 처리 완료`);
     },
 
     /**
-     * 티켓 업데이트 처리 - 상태별 분기 처리
+     * 티켓 업데이트 처리 - 개별 슬롯 업데이트
      */
     handleTicketUpdated(ticket) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
@@ -393,32 +455,10 @@
 
       console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}`);
 
-      // 완료된 티켓은 즉시 제거 처리 (상태 저장하지 않음)
+      // 완료된 티켓은 즉시 제거 처리
       if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
-        console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 즉시 제거 (상태 저장 안함)`);
-
-        // 이미 상태에서 제거된 티켓인지 확인
-        const existingTicket = KDSState.getTicket(ticketId);
-        if (!existingTicket) {
-          console.log(`ℹ️ 티켓 ${ticketId}이 이미 제거됨 - WebSocket 이벤트 무시`);
-          return;
-        }
-
-        // 사운드 재생
-        if (window.KDSSoundManager) {
-          window.KDSSoundManager.playOrderCompleteSound();
-        }
-
-        // 즉시 UI에서 제거 (애니메이션 효과)
-        if (window.KDSUIRenderer) {
-          window.KDSUIRenderer.removeTicketCard(ticketId);
-        }
-
-        // 상태에서 제거
-        KDSState.removeTicket(ticketId);
-
-        console.log(`🗑️ WebSocket: 완료된 티켓 ${ticketId} 상태 및 UI에서 완전 제거`);
-        return; // 여기서 완전히 종료, 아래 로직 실행하지 않음
+        console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 개별 슬롯에서 제거`);
+        return this.handleTicketCompleted({ ticket_id: ticketId });
       }
 
       const existingTicket = KDSState.getTicket(ticketId);
@@ -429,13 +469,6 @@
 
       // DB 상태를 정확히 반영
       const normalizedStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
-
-      // 완료된 상태로 변경되는 경우 즉시 제거 로직 재확인 (중복 방지)
-      if (['DONE', 'COMPLETED', 'SERVED'].includes(normalizedStatus)) {
-        console.log(`🗑️ 티켓 ${ticketId} ${normalizedStatus} 상태로 즉시 제거 (업데이트 중 감지)`);
-        return this.handleTicketCompleted({ ticket_id: ticketId }); // handleTicketCompleted 호출 시 ticket_id만 전달
-      }
-
 
       const updatedTicket = { 
         ...existingTicket, 
@@ -453,26 +486,22 @@
         }));
       }
 
+      // 상태에 업데이트된 티켓 저장
       KDSState.setTicket(ticketId, updatedTicket);
 
-      if (window.KDSUIRenderer) {
-        // 상태가 변경된 경우 UI 완전 재렌더링
-        if (existingTicket.status !== normalizedStatus) {
-          console.log(`🔄 티켓 ${ticketId} 상태 변경: ${existingTicket.status} -> ${normalizedStatus}`);
-          window.KDSUIRenderer.removeTicketCard(ticketId);
-          setTimeout(() => {
-            window.KDSUIRenderer.addTicketCard(updatedTicket);
-            // 상태에 맞는 필터링 적용
-            window.KDSManager.filterTickets();
-          }, 100);
-        } else {
-          window.KDSUIRenderer.updateTicketCard(updatedTicket);
-          // 상태 변경이 없어도 필터링 다시 적용
-          window.KDSManager.filterTickets();
-        }
+      // 개별 슬롯 업데이트
+      const success = this._updateTicketSlot(updatedTicket);
+      
+      if (success) {
+        console.log(`✅ 티켓 ${ticketId} 개별 슬롯 업데이트 완료 (상태: ${normalizedStatus})`);
+      } else {
+        console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
       }
 
-      console.log(`✅ 티켓 ${ticketId} 업데이트 완료 (상태: ${normalizedStatus})`);
+      // 탭 카운트 업데이트
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+        window.KDSUIRenderer.updateTicketCounts();
+      }
     },
 
     /**
