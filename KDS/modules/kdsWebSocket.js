@@ -137,7 +137,7 @@
     },
 
     /**
-     * 새 티켓 생성 처리 - 개별 그리드 칸 렌더링
+     * 새 티켓 생성 처리 - HTML에 직접 추가
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
@@ -182,11 +182,8 @@
       // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
 
-      // 개별 그리드 칸에 직접 렌더링
-      if (window.KDSUIRenderer) {
-        console.log(`🎨 티켓 ${ticketId} 개별 그리드 칸 렌더링`);
-        this._renderTicketToEmptySlot(normalizedTicket);
-      }
+      // HTML에 카드 직접 추가
+      this._addTicketCardToDOM(normalizedTicket);
 
       // 사운드 재생
       if (window.KDSSoundManager) {
@@ -198,17 +195,28 @@
         window.KDSUIRenderer.updateTicketCounts();
       }
 
-      console.log(`✅ 새 티켓 개별 렌더링 완료: ${ticketId}`);
+      console.log(`✅ 새 티켓 HTML 추가 완료: ${ticketId}`);
     },
 
     /**
-     * 빈 슬롯에 티켓 직접 렌더링
+     * HTML DOM에 새 티켓 카드 직접 추가
      */
-    _renderTicketToEmptySlot(ticket) {
+    _addTicketCardToDOM(ticket) {
       try {
         const gridContainer = document.getElementById('kdsGrid');
         if (!gridContainer) {
           console.warn('⚠️ Grid 컨테이너를 찾을 수 없음');
+          return false;
+        }
+
+        // 주방 아이템 필터링
+        const kitchenItems = (ticket.items || []).filter(item => {
+          const cookStation = item.cook_station || 'KITCHEN';
+          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+        });
+
+        if (kitchenItems.length === 0) {
+          console.log(`ℹ️ 티켓 ${ticket.ticket_id}에 주방 아이템이 없음 - HTML 추가 스킵`);
           return false;
         }
 
@@ -220,49 +228,80 @@
           });
 
         if (!emptySlot) {
-          console.log('ℹ️ 사용 가능한 빈 슬롯이 없음 (1-9번)');
+          console.log('ℹ️ 빈 슬롯이 없음 - 기존 카드 유지하고 새 카드 추가');
+          // 빈 슬롯이 없어도 강제로 추가하거나 스크롤 영역 확장 등의 로직 추가 가능
           return false;
         }
 
-        const slotNumber = emptySlot.dataset.slot;
+        // 카드 HTML 생성 및 직접 삽입
+        const cardHTML = window.KDSUIRenderer ? 
+          window.KDSUIRenderer.createOrderCardHTML(ticket) : 
+          this._createSimpleCardHTML(ticket);
 
-        // 주방 아이템이 있는지 확인
-        const kitchenItems = (ticket.items || []).filter(item => {
-          const cookStation = item.cook_station || 'KITCHEN';
-          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
-        });
-
-        if (kitchenItems.length === 0) {
-          console.log(`ℹ️ 티켓 ${ticket.ticket_id}에 주방 아이템이 없음 - 렌더링 스킵`);
-          return false;
-        }
-
-        // 카드 HTML 생성
-        const cardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
-
-        // 슬롯에 카드 직접 삽입
         emptySlot.innerHTML = cardHTML;
 
         // 애니메이션 효과
         const newCard = emptySlot.querySelector('.order-card');
         if (newCard) {
           newCard.style.opacity = '0';
-          newCard.style.transform = 'scale(0.8)';
+          newCard.style.transform = 'scale(0.9)';
 
-          setTimeout(() => {
+          requestAnimationFrame(() => {
             newCard.style.transition = 'all 0.3s ease';
             newCard.style.opacity = '1';
             newCard.style.transform = 'scale(1)';
-          }, 100);
+          });
         }
 
-        console.log(`✅ 티켓 ${ticket.ticket_id}을 슬롯 ${slotNumber}에 개별 렌더링 완료`);
+        console.log(`✅ 티켓 ${ticket.ticket_id} HTML 슬롯 ${emptySlot.dataset.slot}에 직접 추가`);
         return true;
 
       } catch (error) {
-        console.error('❌ 개별 슬롯 렌더링 실패:', error);
+        console.error('❌ HTML 카드 추가 실패:', error);
         return false;
       }
+    },
+
+    /**
+     * 간단한 카드 HTML 생성 (백업용)
+     */
+    _createSimpleCardHTML(ticket) {
+      const ticketId = this._extractTicketId(ticket);
+      const kitchenItems = (ticket.items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      return `
+        <div class="order-card" data-ticket-id="${ticketId}">
+          <div class="card-header">
+            <div class="table-info">
+              <span class="table-number">테이블 ${ticket.table_number || 'N/A'}</span>
+              <span class="ticket-id">#${ticketId}</span>
+            </div>
+            <div class="status-badge" style="background: #f39c12">대기</div>
+          </div>
+          <div class="card-body">
+            <div class="order-items">
+              ${kitchenItems.slice(0, 3).map(item => `
+                <div class="order-item">
+                  <span class="item-name">${item.menuName || item.menu_name || '메뉴'}</span>
+                  <span class="item-quantity">×${item.quantity || 1}</span>
+                </div>
+              `).join('')}
+              ${kitchenItems.length > 3 ? `<div class="more-items">+${kitchenItems.length - 3}개 더</div>` : ''}
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="action-btn start-btn" onclick="KDSManager.startCooking('${ticketId}')">
+              🔥 시작
+            </button>
+            <button class="action-btn complete-btn" onclick="KDSManager.markComplete('${ticketId}')">
+              ✅ 완료
+            </button>
+          </div>
+        </div>
+      `;
     },
 
     /**

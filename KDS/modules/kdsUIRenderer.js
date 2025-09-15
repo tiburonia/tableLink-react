@@ -342,11 +342,11 @@
     },
 
     /**
-     * 티켓 카드 추가 (기존 주문 절대 삭제하지 않고 새 주문만 추가)
+     * 티켓 카드 추가 (HTML에 직접 추가)
      */
     addTicketCard(ticket) {
       const ticketId = this._extractTicketId(ticket);
-      console.log(`🎨 새 티켓 카드 추가: ${ticketId} (기존 주문 보존 모드)`);
+      console.log(`🎨 새 티켓 카드 HTML 추가: ${ticketId}`);
 
       // 중복 카드 확인
       const existingCard = document.querySelector(`[data-ticket-id="${ticketId}"]`);
@@ -356,25 +356,25 @@
         return;
       }
 
-      // 개별 카드 추가 시도
-      const success = this._tryAddSingleCard(ticket);
+      // HTML에 카드 직접 추가
+      const success = this._addCardDirectlyToDOM(ticket);
       
-      if (!success) {
-        // 개별 추가 실패시 안전한 방법으로 추가
-        console.log(`⚠️ 개별 추가 실패 - 기존 주문 보존하며 안전하게 추가`);
-        this._safeAddWithPreservation(ticket);
+      if (success) {
+        console.log(`✅ 티켓 ${ticketId} HTML 직접 추가 성공`);
+      } else {
+        console.log(`⚠️ HTML 직접 추가 실패 - Grid 재렌더링으로 처리`);
+        const currentOrders = KDSState.getActiveTickets();
+        this.renderKDSGrid(currentOrders);
       }
 
       // 탭 카운트 업데이트
       this.updateTicketCounts();
-
-      console.log(`✅ 티켓 ${ticketId} 추가 완료 (기존 주문들 유지됨)`);
     },
 
     /**
-     * 개별 카드만 추가 시도 (Grid 절대 건드리지 않음, 기존 주문 보존)
+     * DOM에 카드 직접 추가
      */
-    _tryAddSingleCard(ticket) {
+    _addCardDirectlyToDOM(ticket) {
       try {
         const gridContainer = document.getElementById('kdsGrid');
         if (!gridContainer) {
@@ -382,102 +382,51 @@
           return false;
         }
 
-        // 진짜 빈 슬롯만 찾기 (1-9번 슬롯 중에서, 기존 주문 카드 있는 슬롯은 절대 건드리지 않음)
-        const emptySlots = Array.from(gridContainer.children).filter(slot => {
-          const slotNumber = parseInt(slot.dataset.slot);
-          if (slotNumber > 9) return false; // 10번 슬롯 제외
-          
-          // 완전히 빈 슬롯인지 확인 (기존 주문 카드가 없어야 함)
-          const hasEmptySlot = slot.querySelector('.empty-slot');
-          const hasOrderCard = slot.querySelector('.order-card');
-          
-          return hasEmptySlot && !hasOrderCard;
-        });
-
-        if (emptySlots.length === 0) {
-          console.log(`ℹ️ 사용 가능한 완전 빈 슬롯이 없음 (1-9번 슬롯) - 기존 주문 건드리지 않음`);
-          return false;
-        }
-
-        const targetSlot = emptySlots[0];
-        const slotNumber = targetSlot.dataset.slot;
-
-        // 주방 아이템 확인
+        // 주방 아이템 필터링
         const kitchenItems = (ticket.items || []).filter(item => {
           const cookStation = item.cook_station || 'KITCHEN';
           return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
         });
 
         if (kitchenItems.length === 0) {
-          console.log(`ℹ️ 티켓에 주방 아이템이 없음 - 렌더링 스킵`);
+          console.log(`ℹ️ 티켓에 주방 아이템이 없음 - 추가 스킵`);
           return false;
         }
 
-        // 새 카드 HTML 생성
-        const newCardHTML = this.createOrderCardHTML(ticket);
-        
-        // 빈 슬롯만 안전하게 교체 (기존 주문은 절대 건드리지 않음)
-        targetSlot.innerHTML = newCardHTML;
+        // 빈 슬롯 찾기 (1-9번)
+        const emptySlot = Array.from(gridContainer.children).find(slot => {
+          const slotNumber = parseInt(slot.dataset.slot);
+          return slotNumber <= 9 && slot.querySelector('.empty-slot');
+        });
+
+        if (!emptySlot) {
+          console.log(`ℹ️ 빈 슬롯이 없음 - 추가 실패`);
+          return false;
+        }
+
+        // 카드 HTML 생성 및 삽입
+        const cardHTML = this.createOrderCardHTML(ticket);
+        emptySlot.innerHTML = cardHTML;
 
         // 애니메이션 효과
-        const newCard = targetSlot.querySelector('.order-card');
+        const newCard = emptySlot.querySelector('.order-card');
         if (newCard) {
           newCard.style.opacity = '0';
-          newCard.style.transform = 'scale(0.8)';
+          newCard.style.transform = 'scale(0.9)';
 
-          setTimeout(() => {
+          requestAnimationFrame(() => {
             newCard.style.transition = 'all 0.3s ease';
             newCard.style.opacity = '1';
             newCard.style.transform = 'scale(1)';
-          }, 50);
+          });
         }
 
-        console.log(`✅ 개별 카드 추가 성공: 빈 슬롯 ${slotNumber}에 추가 (기존 주문 보존됨)`);
+        console.log(`✅ 카드를 슬롯 ${emptySlot.dataset.slot}에 직접 추가`);
         return true;
 
       } catch (error) {
-        console.error('❌ 개별 카드 추가 실패:', error);
+        console.error('❌ DOM 직접 추가 실패:', error);
         return false;
-      }
-    },
-
-    /**
-     * 기존 주문 보존하며 안전하게 새 카드 추가
-     */
-    _safeAddWithPreservation(ticket) {
-      try {
-        console.log(`🛡️ 기존 주문 보존 모드로 새 카드 추가`);
-        
-        // 현재 화면의 모든 기존 카드 정보 백업
-        const existingCards = document.querySelectorAll('.order-card');
-        const preservedTickets = [];
-        
-        existingCards.forEach(card => {
-          const ticketId = card.getAttribute('data-ticket-id');
-          if (ticketId) {
-            const ticketData = KDSState.getTicket(ticketId);
-            if (ticketData) {
-              preservedTickets.push(ticketData);
-            }
-          }
-        });
-
-        console.log(`🛡️ 기존 ${preservedTickets.length}개 주문 백업 완료`);
-
-        // 새 티켓 추가
-        preservedTickets.push(ticket);
-
-        // 전체 Grid 재렌더링 (보존된 주문 + 새 주문)
-        this.renderKDSGrid(preservedTickets);
-
-        console.log(`✅ 기존 주문 보존하며 새 주문 추가 완료`);
-        
-      } catch (error) {
-        console.error('❌ 보존 모드 추가 실패:', error);
-        
-        // 최후의 수단: 상태에서 모든 활성 티켓 가져와서 렌더링
-        const allActiveTickets = KDSState.getActiveTickets();
-        this.renderKDSGrid(allActiveTickets);
       }
     },
 
