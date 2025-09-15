@@ -17,7 +17,14 @@ class PaymentService {
     try {
       const { orderId, amount, orderData } = paymentData;
 
-      console.log('💳 결제 서비스: TLL 주문 처리 시작', orderId);
+      console.log('💳 결제 서비스: TLL 주문 처리 시작', {
+        orderId,
+        amount,
+        userPk: orderData.userPk,
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        itemsCount: orderData.items?.length || 0
+      });
 
       await client.query('BEGIN');
 
@@ -25,7 +32,7 @@ class PaymentService {
       const orderResult = await this.getOrCreateOrder(client, orderData);
       const { orderIdToUse, isNewOrder } = orderResult;
 
-      // 2. 배치 번호 계산
+      // 2. 배치 번호 계산 (order_tickets 기준)
       const batchNo = await this.calculateBatchNumber(client, orderIdToUse);
 
       // 3. 티켓 생성
@@ -105,7 +112,7 @@ class PaymentService {
     });
 
     const existingOrderResult = await client.query(`
-      SELECT id, batch_no, status, created_at
+      SELECT id, status, created_at
       FROM orders
       WHERE user_pk = $1 
         AND store_id = $2 
@@ -120,26 +127,25 @@ class PaymentService {
       주문들: existingOrderResult.rows
     });
 
-    let orderId, batchNo, isNewOrder;
+    let orderId, isNewOrder;
 
     if (existingOrderResult.rows.length > 0) {
       // 기존 주문에 추가
       const existingOrder = existingOrderResult.rows[0];
       orderId = existingOrder.id;
-      batchNo = existingOrder.batch_no;
       isNewOrder = false;
 
-      console.log(`🔄 기존 주문에 추가: Order ID ${orderId}, Batch ${batchNo}, Status ${existingOrder.status}`);
+      console.log(`🔄 기존 주문에 추가: Order ID ${orderId}, Status ${existingOrder.status}`);
     } else {
       // 새 주문 생성
-      console.log(`🆕 새 주문 생성 시작: Batch ${newBatchNo}`);
+      console.log(`🆕 새 주문 생성 시작`);
 
       const newOrderResult = await client.query(`
         INSERT INTO orders (
           user_pk, store_id, table_number, subtotal, final_total,
-          used_point, coupon_discount, status, batch_no, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED', $8, CURRENT_TIMESTAMP)
-        RETURNING id, batch_no
+          used_point, coupon_discount, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED', CURRENT_TIMESTAMP)
+        RETURNING id
       `, [
         orderData.userPk,
         orderData.storeId,
@@ -147,18 +153,16 @@ class PaymentService {
         orderData.subtotal,
         orderData.finalTotal,
         orderData.usedPoint,
-        orderData.couponDiscount,
-        newBatchNo
+        orderData.couponDiscount
       ]);
 
       orderId = newOrderResult.rows[0].id;
-      batchNo = newOrderResult.rows[0].batch_no;
       isNewOrder = true;
 
-      console.log(`✅ 새 주문 생성 완료: Order ID ${orderId}, Batch ${batchNo}`);
+      console.log(`✅ 새 주문 생성 완료: Order ID ${orderId}`);
     }
 
-    return { orderIdToUse: orderId, batchNo, isNewOrder };
+    return { orderIdToUse: orderId, isNewOrder };
   }
 
   /**
@@ -170,7 +174,11 @@ class PaymentService {
       WHERE order_id = $1
     `, [orderId]);
 
-    return parseInt(result.rows[0].count) + 1;
+    const batchNo = parseInt(result.rows[0].count) + 1;
+    
+    console.log(`📊 배치 번호 계산: Order ID ${orderId}, 기존 티켓 ${result.rows[0].count}개, 새 배치 번호 ${batchNo}`);
+
+    return batchNo;
   }
 
   /**
