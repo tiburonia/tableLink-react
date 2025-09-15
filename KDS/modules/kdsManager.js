@@ -46,34 +46,25 @@
         // 초기 데이터 로드
         const tickets = await KDSAPIService.loadInitialData(storeId);
 
-        // 티켓 데이터 저장 (cook_station 필터링 적용)
+        // 티켓 데이터 저장 (안전한 ID 추출)
         tickets.forEach(ticket => {
           const ticketId = this._extractSafeTicketId(ticket);
-
-          // 조리가 필요한 아이템만 필터링
-          const cookingItems = (ticket.items || []).filter(item => {
-            const cookStation = item.cook_station || 'KITCHEN';
-            return cookStation !== 'DRINK' && cookStation !== 'NO_COOK';
-          });
-
-          // 조리할 아이템이 없으면 KDS에 표시하지 않음
-          if (cookingItems.length === 0) {
-            console.log(`🚫 티켓 ${ticketId}: 조리할 아이템이 없어 KDS에서 제외`);
-            return;
-          }
 
           // 정규화된 티켓 데이터 생성
           const normalizedTicket = {
             ...ticket,
+            // 모든 ID 필드를 일관되게 설정
             id: ticket.id || ticketId,
             check_id: ticket.check_id || ticketId,
-            ticket_id: ticket.ticket_id || ticketId,
-            items: cookingItems,
-            original_items_count: ticket.items?.length || 0,
-            filtered_items_count: cookingItems.length
+            ticket_id: ticket.ticket_id || ticketId
           };
 
-          console.log(`📋 티켓 저장: ID=${ticketId}, 조리 아이템 ${cookingItems.length}/${ticket.items?.length || 0}개`);
+          console.log(`📋 티켓 저장: ID=${ticketId}, 원본 ID들:`, {
+            id: ticket.id,
+            check_id: ticket.check_id,
+            ticket_id: ticket.ticket_id,
+            order_id: ticket.order_id
+          });
 
           KDSState.setTicket(ticketId, normalizedTicket);
         });

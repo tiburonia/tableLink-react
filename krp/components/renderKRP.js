@@ -389,23 +389,6 @@ function renderKRPInterface(store) {
         color: #64748b;
       }
 
-      .filter-info {
-        background: #f0f9ff;
-        border: 1px solid #0ea5e9;
-        border-radius: 4px;
-        padding: 8px;
-        margin: 12px 0;
-        text-align: center;
-        color: #0369a1;
-      }
-
-      .item-station {
-        font-size: 10px;
-        color: #059669;
-        font-weight: bold;
-        margin-top: 2px;
-      }
-
       .receipt-actions {
         display: flex;
         justify-content: center;
@@ -780,20 +763,12 @@ function displayMainReceipt(printData) {
     <div class="receipt-item">
       <div class="item-left">
         <div class="item-name">${item.quantity}x ${item.menuName}</div>
-        ${item.cook_station ? `<div class="item-station">[${item.cook_station}]</div>` : ''}
         ${item.options && Object.keys(item.options).length > 0 ? 
           `<div class="item-details">${JSON.stringify(item.options)}</div>` : ''}
       </div>
       <div class="item-price">${item.totalPrice.toLocaleString()}원</div>
     </div>
   `).join('');
-
-  // 필터링 정보 표시
-  const filterInfo = printData.filter_applied ? `
-    <div class="filter-info">
-      <small>📋 조리 아이템만 표시 (${printData.filtered_items_count}/${printData.original_items_count}개)</small>
-    </div>
-  ` : '';
 
   container.innerHTML = `
     <div class="receipt">
@@ -816,8 +791,6 @@ function displayMainReceipt(printData) {
       <div class="receipt-total">
         <div class="total-amount">합계: ${printData.total_amount.toLocaleString()}원</div>
       </div>
-
-      ${filterInfo}
 
       <div class="receipt-footer">
         주방에서 조리를 시작하세요<br>
