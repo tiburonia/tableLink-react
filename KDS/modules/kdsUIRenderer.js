@@ -437,23 +437,52 @@
     removeTicketCard(ticketId) {
       console.log(`🗑️ 티켓 개별 제거: ${ticketId}`);
 
-      // 개별 카드 직접 제거
-      if (window.KDSManager && typeof window.KDSManager.removeCardFromUI === 'function') {
-        const success = window.KDSManager.removeCardFromUI(ticketId);
-
-        if (success) {
-          this.updateTicketCounts();
-          console.log(`✅ 티켓 ${ticketId} 개별 제거 성공`);
-          return;
-        }
+      // 중복 제거 방지
+      if (this._removingCards && this._removingCards.has(ticketId)) {
+        console.log(`🔄 티켓 ${ticketId} 이미 제거 처리 중 - 중복 방지`);
+        return;
       }
 
-      // 백업: Grid 재렌더링
-      console.log(`🔄 개별 제거 실패, Grid 재렌더링으로 백업 처리`);
-      const currentOrders = KDSState.getActiveTickets();
-      this.renderKDSGrid(currentOrders);
-      this.updateTicketCounts();
-      this.checkEmptyState();
+      // 제거 처리 중 마킹
+      if (!this._removingCards) {
+        this._removingCards = new Set();
+      }
+      this._removingCards.add(ticketId);
+
+      try {
+        // 개별 카드 직접 제거
+        if (window.KDSManager && typeof window.KDSManager.removeCardFromUI === 'function') {
+          const success = window.KDSManager.removeCardFromUI(ticketId);
+
+          if (success) {
+            this.updateTicketCounts();
+            console.log(`✅ 티켓 ${ticketId} 개별 제거 성공`);
+            return;
+          }
+        }
+
+        // 백업: Grid 재렌더링 (지연 실행으로 중복 방지)
+        console.log(`🔄 개별 제거 실패, Grid 재렌더링으로 백업 처리`);
+        
+        if (!this._gridRerenderScheduled) {
+          this._gridRerenderScheduled = true;
+          
+          setTimeout(() => {
+            const currentOrders = KDSState.getActiveTickets();
+            this.renderKDSGrid(currentOrders);
+            this.updateTicketCounts();
+            this.checkEmptyState();
+            this._gridRerenderScheduled = false;
+            console.log(`🔄 Grid 재렌더링 완료: ${currentOrders.length}개 티켓`);
+          }, 300);
+        }
+
+      } finally {
+        // 제거 처리 완료 - 마킹 해제
+        setTimeout(() => {
+          this._removingCards.delete(ticketId);
+        }, 1000);
+      }
     },
 
     /**
