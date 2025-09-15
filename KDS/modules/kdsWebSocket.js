@@ -829,59 +829,8 @@
           break;
 
         case 'db_payment_change':
-          // 결제 완료 시 해당 테이블의 모든 티켓 제거
-          const tableNumber = data.data.table_number;
-          const tableTickets = KDSState.getAllTickets().filter(
-            ticket => ticket.table_number === tableNumber
-          );
-
-          console.log(`💳 결제 완료 알림: 테이블 ${tableNumber} 티켓 ${tableTickets.length}개 일괄 제거 시작`);
-
-          // 중복 제거 방지를 위한 Set 초기화
-          if (!this._removingTickets) {
-            this._removingTickets = new Set();
-          }
-
-          tableTickets.forEach(ticket => {
-            const ticketId = ticket.ticket_id || ticket.id;
-            
-            // 이미 제거 중인 티켓은 스킵
-            if (this._removingTickets.has(ticketId)) {
-              console.log(`🔄 티켓 ${ticketId} 이미 제거 처리 중 - 스킵`);
-              return;
-            }
-
-            // 제거 처리 중 마킹
-            this._removingTickets.add(ticketId);
-
-            // 상태에서 제거
-            KDSState.removeTicket(ticketId);
-
-            // UI에서 제거 (개별 제거 우선 시도)
-            const removeSuccess = this._removeTicketFromSlot(ticketId);
-            
-            if (!removeSuccess && window.KDSUIRenderer) {
-              // 개별 제거 실패 시에만 Grid 재렌더링 호출
-              console.log(`⚠️ 티켓 ${ticketId} 개별 제거 실패 - Grid 재렌더링 예약`);
-            }
-
-            console.log(`🗑️ 티켓 ${ticketId} 제거 완료`);
-          });
-
-          // Grid 재렌더링이 필요한 경우 한 번만 실행
-          setTimeout(() => {
-            const remainingTickets = KDSState.getActiveTickets();
-            if (window.KDSUIRenderer) {
-              window.KDSUIRenderer.renderKDSGrid(remainingTickets);
-              window.KDSUIRenderer.updateTicketCounts();
-            }
-            
-            // 제거 처리 완료 - 모든 마킹 해제
-            this._removingTickets.clear();
-            
-            console.log(`✅ 테이블 ${tableNumber} 결제 완료 처리 완료 - 남은 티켓: ${remainingTickets.length}개`);
-          }, 500);
-
+          // 결제 완료 이벤트는 로그만 남기고 KDS에서는 처리하지 않음
+          console.log(`💳 결제 완료 알림 수신: 테이블 ${data.data.table_number} (KDS 처리 생략)`);
           break;
       }
     },
