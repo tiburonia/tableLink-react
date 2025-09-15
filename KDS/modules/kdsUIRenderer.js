@@ -372,7 +372,7 @@
     },
 
     /**
-     * 개별 카드만 추가 시도 (Grid 건드리지 않음)
+     * 개별 카드만 추가 시도 (Grid 절대 건드리지 않음, 기존 주문 보존)
      */
     _tryAddSingleCard(ticket) {
       try {
@@ -382,29 +382,45 @@
           return false;
         }
 
-        // 빈 슬롯 찾기 (10번 슬롯은 제외)
-        const emptySlots = Array.from(gridContainer.querySelectorAll('.empty-slot')).filter(slot => {
-          const slotElement = slot.closest('.grid-slot');
-          const slotNumber = slotElement?.dataset.slot;
-          return slotNumber && parseInt(slotNumber) <= 9; // 1-9번 슬롯만
+        // 진짜 빈 슬롯만 찾기 (1-9번 슬롯 중에서, 기존 주문 카드 있는 슬롯은 절대 건드리지 않음)
+        const emptySlots = Array.from(gridContainer.children).filter(slot => {
+          const slotNumber = parseInt(slot.dataset.slot);
+          if (slotNumber > 9) return false; // 10번 슬롯 제외
+          
+          // 완전히 빈 슬롯인지 확인 (기존 주문 카드가 없어야 함)
+          const hasEmptySlot = slot.querySelector('.empty-slot');
+          const hasOrderCard = slot.querySelector('.order-card');
+          
+          return hasEmptySlot && !hasOrderCard;
         });
 
         if (emptySlots.length === 0) {
-          console.log(`ℹ️ 사용 가능한 빈 슬롯이 없음 (1-9번 슬롯)`);
+          console.log(`ℹ️ 사용 가능한 완전 빈 슬롯이 없음 (1-9번 슬롯) - 기존 주문 건드리지 않음`);
           return false;
         }
 
         const targetSlot = emptySlots[0];
-        const slotContainer = targetSlot.parentElement;
+        const slotNumber = targetSlot.dataset.slot;
+
+        // 주방 아이템 확인
+        const kitchenItems = (ticket.items || []).filter(item => {
+          const cookStation = item.cook_station || 'KITCHEN';
+          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+        });
+
+        if (kitchenItems.length === 0) {
+          console.log(`ℹ️ 티켓에 주방 아이템이 없음 - 렌더링 스킵`);
+          return false;
+        }
 
         // 새 카드 HTML 생성
         const newCardHTML = this.createOrderCardHTML(ticket);
         
-        // 빈 슬롯을 새 카드로 교체
-        slotContainer.innerHTML = newCardHTML;
+        // 빈 슬롯만 안전하게 교체 (기존 주문은 절대 건드리지 않음)
+        targetSlot.innerHTML = newCardHTML;
 
         // 애니메이션 효과
-        const newCard = slotContainer.querySelector('.order-card');
+        const newCard = targetSlot.querySelector('.order-card');
         if (newCard) {
           newCard.style.opacity = '0';
           newCard.style.transform = 'scale(0.8)';
@@ -416,7 +432,7 @@
           }, 50);
         }
 
-        console.log(`✅ 개별 카드 추가 성공: 슬롯 교체`);
+        console.log(`✅ 개별 카드 추가 성공: 빈 슬롯 ${slotNumber}에 추가 (기존 주문 보존됨)`);
         return true;
 
       } catch (error) {

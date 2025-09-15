@@ -225,7 +225,7 @@
         }
 
         const slotNumber = emptySlot.dataset.slot;
-        
+
         // 주방 아이템이 있는지 확인
         const kitchenItems = (ticket.items || []).filter(item => {
           const cookStation = item.cook_station || 'KITCHEN';
@@ -239,7 +239,7 @@
 
         // 카드 HTML 생성
         const cardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
-        
+
         // 슬롯에 카드 직접 삽입
         emptySlot.innerHTML = cardHTML;
 
@@ -317,7 +317,7 @@
       try {
         const ticketId = this._extractTicketId(ticket);
         const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-        
+
         if (!cardElement) {
           console.log(`ℹ️ 티켓 ${ticketId} 카드를 찾을 수 없음`);
           return false;
@@ -331,7 +331,7 @@
 
         // 새 카드 HTML 생성
         const newCardHTML = window.KDSUIRenderer.createOrderCardHTML(ticket);
-        
+
         // 슬롯 내용 교체
         slotElement.innerHTML = newCardHTML;
 
@@ -393,7 +393,7 @@
 
       // 개별 슬롯 업데이트
       const success = this._updateTicketSlot(ticket);
-      
+
       if (success) {
         console.log(`✅ 티켓 ${ticketId} 개별 슬롯 조리 상태 업데이트 완료`);
       } else {
@@ -430,16 +430,16 @@
 
       // 개별 슬롯에서 제거
       const success = this._removeTicketFromSlot(ticketId);
-      
+
       if (success) {
         // 상태에서 제거
         KDSState.removeTicket(ticketId);
-        
+
         // 탭 카운트 업데이트
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
           window.KDSUIRenderer.updateTicketCounts();
         }
-        
+
         console.log(`✅ 티켓 ${ticketId} 개별 슬롯 제거 완료`);
       } else {
         console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 제거 실패`);
@@ -470,8 +470,8 @@
       // DB 상태를 정확히 반영
       const normalizedStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
 
-      const updatedTicket = { 
-        ...existingTicket, 
+      const updatedTicket = {
+        ...existingTicket,
         ...ticket,
         status: normalizedStatus,
         updated_at: ticket.updated_at || new Date().toISOString()
@@ -491,7 +491,7 @@
 
       // 개별 슬롯 업데이트
       const success = this._updateTicketSlot(updatedTicket);
-      
+
       if (success) {
         console.log(`✅ 티켓 ${ticketId} 개별 슬롯 업데이트 완료 (상태: ${normalizedStatus})`);
       } else {
@@ -523,7 +523,7 @@
       const ticket = KDSState.getTicket(ticketId);
       if (!ticket || !ticket.items) return;
 
-      const allCompleted = ticket.items.every(item => 
+      const allCompleted = ticket.items.every(item =>
         item.item_status === 'ready' || item.item_status === 'served'
       );
 
@@ -563,10 +563,10 @@
      */
     _extractTicketId(ticket) {
       // 우선순위: check_id > ticket_id > id > order_id
-      return ticket.check_id || 
-             ticket.ticket_id || 
-             ticket.id || 
-             ticket.order_id || 
+      return ticket.check_id ||
+             ticket.ticket_id ||
+             ticket.id ||
+             ticket.order_id ||
              `unknown_${Date.now()}`;
     },
 
