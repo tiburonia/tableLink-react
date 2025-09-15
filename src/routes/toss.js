@@ -299,9 +299,17 @@ router.post('/confirm', async (req, res) => {
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
         items: itemsWithCookStation,
-        storeName: pendingPayment.store_name, // storeName 추가
+        storeName: orderData.storeName || '매장명 없음', // orderData에서 storeName 가져오기
         userId: pendingPayment.user_id
       };
+
+      console.log('📋 결제 서비스 호출 전 orderInfo:', {
+        storeId: orderInfo.storeId,
+        userPk: orderInfo.userPk,
+        tableNumber: orderInfo.tableNumber,
+        storeName: orderInfo.storeName,
+        itemsCount: orderInfo.items.length
+      });
 
       const result = await paymentService.processTLLOrder({
         orderId,
@@ -309,6 +317,13 @@ router.post('/confirm', async (req, res) => {
         paymentKey,
         tossResult,
         orderData: orderInfo
+      });
+
+      console.log('📋 결제 서비스 처리 결과:', {
+        ticketId: result.ticketId,
+        batchNo: result.batchNo,
+        isNewOrder: result.isNewOrder,
+        orderId: result.orderId
       });
 
       // pending_payments 상태 업데이트
@@ -331,24 +346,40 @@ router.post('/confirm', async (req, res) => {
       const orderIdToUse = result.orderId;
       const paymentData = { paymentKey, finalTotal: result.amount };
 
-      // 새 주문 생성 시 알림 생성
+      // 새 주문 생성 시 알림 생성 (별도 연결 사용)
       if (isNewOrder) {
-        await client.query(`
-          INSERT INTO notifications (
-            user_id, type, title, message,
-            related_order_id, related_store_id,
-            created_at, is_read
-          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
-        `, [
-          orderInfo.userPk,
-          'order',
-          '새로운 주문이 시작되었습니다',
-          `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
-          orderIdToUse,
-          orderInfo.storeId
-        ]);
+        console.log(`📢 새 주문 알림 생성 시작: 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+        
+        const notificationClient = await pool.connect();
+        try {
+          const notificationResult = await notificationClient.query(`
+            INSERT INTO notifications (
+              user_id, type, title, message,
+              related_order_id, related_store_id,
+              created_at, is_read
+            ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
+            RETURNING id
+          `, [
+            orderInfo.userPk,
+            'order',
+            '새로운 주문이 시작되었습니다',
+            `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
+            orderIdToUse,
+            orderInfo.storeId
+          ]);
 
-        console.log(`📢 새 주문 알림 생성: 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+          console.log(`✅ 새 주문 알림 생성 완료: ID ${notificationResult.rows[0].id}, 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+        } catch (notificationError) {
+          console.error(`❌ 새 주문 알림 생성 실패:`, {
+            error: notificationError.message,
+            userPk: orderInfo.userPk,
+            orderId: orderIdToUse,
+            storeId: orderInfo.storeId,
+            storeName: orderInfo.storeName
+          });
+        } finally {
+          notificationClient.release();
+        }
       }
 
       // 이벤트 발생: 새 주문 생성됨

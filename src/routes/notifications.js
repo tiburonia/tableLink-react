@@ -31,24 +31,29 @@ router.get('/', async (req, res) => {
         type,
         title,
         message,
+        related_order_id,
+        related_store_id,
         created_at,
-        is_read
+        is_read,
+        read_at
       FROM notifications
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
     `, [...queryParams, parseInt(limit), parseInt(offset)]);
 
+    console.log(`📢 알림 조회 완료: 사용자 ${userId}, ${result.rows.length}개 알림 발견`);
+
     const notifications = result.rows.map(notification => ({
       id: notification.id,
       type: notification.type,
       title: notification.title,
       message: notification.message,
-     // relatedOrderId: notification.related_order_id,
-     // relatedStoreId: notification.related_store_id,
+      relatedOrderId: notification.related_order_id,
+      relatedStoreId: notification.related_store_id,
       createdAt: new Date(notification.created_at),
       isRead: notification.is_read,
-     // readAt: notification.read_at
+      readAt: notification.read_at
     }));
 
     res.json({

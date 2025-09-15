@@ -1,4 +1,3 @@
-
 /**
  * 결제 전용 서비스 모듈
  * - 결제 관련 비즈니스 로직 집중 관리
@@ -98,43 +97,68 @@ class PaymentService {
    * 기존 주문 확인 또는 새 주문 생성
    */
   async getOrCreateOrder(client, orderData) {
-    // 기존 OPEN 주문 확인
+    // 기존 주문이 있는지 확인
+    console.log('🔍 기존 주문 확인:', {
+      userPk: orderData.userPk,
+      storeId: orderData.storeId,
+      tableNumber: orderData.tableNumber
+    });
+
     const existingOrderResult = await client.query(`
-      SELECT id FROM orders 
-      WHERE store_id = $1 AND user_id = $2 AND status = 'OPEN'
+      SELECT id, batch_no, status, created_at
+      FROM orders
+      WHERE user_pk = $1 
+        AND store_id = $2 
+        AND table_number = $3 
+        AND status IN ('PENDING', 'CONFIRMED', 'COOKING')
+      ORDER BY created_at DESC
       LIMIT 1
-    `, [orderData.storeId, orderData.userPk]);
+    `, [orderData.userPk, orderData.storeId, orderData.tableNumber]);
+
+    console.log('📊 기존 주문 조회 결과:', {
+      찾은개수: existingOrderResult.rows.length,
+      주문들: existingOrderResult.rows
+    });
+
+    let orderId, batchNo, isNewOrder;
 
     if (existingOrderResult.rows.length > 0) {
-      return {
-        orderIdToUse: existingOrderResult.rows[0].id,
-        isNewOrder: false
-      };
+      // 기존 주문에 추가
+      const existingOrder = existingOrderResult.rows[0];
+      orderId = existingOrder.id;
+      batchNo = existingOrder.batch_no;
+      isNewOrder = false;
+
+      console.log(`🔄 기존 주문에 추가: Order ID ${orderId}, Batch ${batchNo}, Status ${existingOrder.status}`);
+    } else {
+      // 새 주문 생성
+      console.log(`🆕 새 주문 생성 시작: Batch ${newBatchNo}`);
+
+      const newOrderResult = await client.query(`
+        INSERT INTO orders (
+          user_pk, store_id, table_number, subtotal, final_total,
+          used_point, coupon_discount, status, batch_no, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED', $8, CURRENT_TIMESTAMP)
+        RETURNING id, batch_no
+      `, [
+        orderData.userPk,
+        orderData.storeId,
+        orderData.tableNumber,
+        orderData.subtotal,
+        orderData.finalTotal,
+        orderData.usedPoint,
+        orderData.couponDiscount,
+        newBatchNo
+      ]);
+
+      orderId = newOrderResult.rows[0].id;
+      batchNo = newOrderResult.rows[0].batch_no;
+      isNewOrder = true;
+
+      console.log(`✅ 새 주문 생성 완료: Order ID ${orderId}, Batch ${batchNo}`);
     }
 
-    // 새 주문 생성
-    const newOrderResult = await client.query(`
-      INSERT INTO orders (
-        store_id,
-        user_id,
-        source,
-        status,
-        payment_status,
-        total_price,
-        table_num
-      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
-      RETURNING id
-    `, [
-      orderData.storeId,
-      orderData.userPk,
-      orderData.finalTotal,
-      orderData.tableNumber
-    ]);
-
-    return {
-      orderIdToUse: newOrderResult.rows[0].id,
-      isNewOrder: true
-    };
+    return { orderIdToUse: orderId, batchNo, isNewOrder };
   }
 
   /**
