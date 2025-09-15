@@ -801,12 +801,8 @@
           console.log(`✅ 출력 요청 성공: ${ticketId} - 카드는 유지됨`);
           this.showSuccess(`주문서 #${ticketId} 출력 요청 완료`);
 
-          // 출력 버튼 비활성화 (재출력 방지)
-          const printBtn = document.querySelector(`[data-ticket-id="${ticketId}"] .print-btn`);
-          if (printBtn) {
-            printBtn.disabled = true;
-            printBtn.textContent = '🖨️ 출력됨';
-          }
+          // 출력 버튼은 비활성화하지 않음 (재출력 가능)
+          console.log(`🖨️ 출력 완료 - 버튼은 활성 상태 유지 (재출력 가능)`);
         } else {
           throw new Error(result.error || '출력 실패');
         }
@@ -870,18 +866,17 @@
     },
 
     /**
-     * 출력 버튼 상태 업데이트
+     * 출력 버튼 상태 업데이트 - 비활성화하지 않음
      */
     _updatePrintButtonState(ticketId, printed) {
       const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
       if (cardElement) {
         const printBtn = cardElement.querySelector('.print-btn');
-        if (printBtn) {
-          if (printed) {
-            printBtn.innerHTML = '✅ 출력완료';
-            printBtn.style.background = '#28a745';
-            printBtn.disabled = true;
-          }
+        if (printBtn && printed) {
+          // 버튼 텍스트만 변경하고 비활성화하지 않음
+          printBtn.innerHTML = '🖨️ 재출력';
+          printBtn.style.background = '#007bff'; // 파란색으로 변경
+          console.log(`🖨️ 출력 버튼 텍스트 변경: ${ticketId} - 재출력 가능 상태`);
         }
       }
     },
