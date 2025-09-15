@@ -17,12 +17,12 @@
      */
     render(storeId) {
       console.log('🎨 KDS UI 렌더링 시작 - 매장:', storeId);
-      
+
       const main = document.getElementById('main') || document.body;
-      
+
       // 기존 내용 완전히 제거
       main.innerHTML = '';
-      
+
       // KDS UI 렌더링
       main.innerHTML = `
         <div class="kds-container">
@@ -35,9 +35,9 @@
 
       // 이벤트 리스너 설정
       this.setupEventListeners();
-      
+
       console.log('✅ KDS UI 렌더링 완료');
-      
+
       // 로딩 화면이 남아있다면 제거
       const loadingScreen = document.getElementById('loadingScreen');
       if (loadingScreen) {
@@ -315,32 +315,82 @@
     },
 
     /**
-     * 티켓 카드 추가 (Grid 전체 재렌더링)
+     * 티켓 카드 추가 (개별 추가 - 기존 카드 유지)
      */
     addTicketCard(ticket) {
-      console.log(`🎨 티켓 추가: ${this._extractTicketId(ticket)}`);
-      const currentOrders = KDSState.getActiveTickets();
-      this.renderKDSGrid(currentOrders);
+      const ticketId = this._extractTicketId(ticket);
+      console.log(`🎨 개별 티켓 카드 추가: ${ticketId} (기존 카드 유지)`);
+
+      // 이미 존재하는 카드인지 확인
+      const existingCard = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (existingCard) {
+        console.log(`ℹ️ 티켓 ${ticketId} 카드가 이미 존재 - 업데이트로 처리`);
+        this.updateTicketCard(ticketId, ticket);
+        return;
+      }
+
+      // Grid 컨테이너 찾기
+      const gridContainer = document.getElementById('kdsGrid');
+      if (!gridContainer) {
+        console.warn('⚠️ Grid 컨테이너를 찾을 수 없음 - 전체 재렌더링으로 폴백');
+        const currentOrders = KDSState.getActiveTickets();
+        this.renderKDSGrid(currentOrders);
+        return;
+      }
+
+      // 빈 슬롯 찾기
+      const emptySlot = gridContainer.querySelector('.empty-slot');
+      if (!emptySlot || !emptySlot.parentElement) {
+        console.log(`ℹ️ 빈 슬롯이 없음 - 전체 재렌더링으로 추가`);
+        const currentOrders = KDSState.getActiveTickets();
+        this.renderKDSGrid(currentOrders);
+        return;
+      }
+
+      // 새 카드 생성
+      const newCardHTML = this.createOrderCardHTML(ticket); // ticket 정보를 그대로 사용
+
+      // 슬롯에 카드 삽입
+      emptySlot.parentElement.innerHTML = newCardHTML;
+
+      // 애니메이션 효과
+      const newCard = emptySlot.parentElement.querySelector('.order-card'); // .ticket-card 대신 .order-card 사용
+      if (newCard) {
+        newCard.style.opacity = '0';
+        newCard.style.transform = 'scale(0.8)';
+
+        // 부드러운 애니메이션
+        setTimeout(() => {
+          newCard.style.transition = 'all 0.3s ease';
+          newCard.style.opacity = '1';
+          newCard.style.transform = 'scale(1)';
+        }, 50);
+      }
+
+      // 탭 카운트 업데이트
       this.updateTicketCounts();
+
+      console.log(`✅ 티켓 ${ticketId} 개별 카드 추가 완료`);
     },
+
 
     /**
      * 티켓 카드 제거 (개별 카드 직접 제거)
      */
     removeTicketCard(ticketId) {
       console.log(`🗑️ 티켓 개별 제거: ${ticketId}`);
-      
+
       // 개별 카드 직접 제거
       if (window.KDSManager && typeof window.KDSManager.removeCardFromUI === 'function') {
         const success = window.KDSManager.removeCardFromUI(ticketId);
-        
+
         if (success) {
           this.updateTicketCounts();
           console.log(`✅ 티켓 ${ticketId} 개별 제거 성공`);
           return;
         }
       }
-      
+
       // 백업: Grid 재렌더링
       console.log(`🔄 개별 제거 실패, Grid 재렌더링으로 백업 처리`);
       const currentOrders = KDSState.getActiveTickets();
@@ -355,28 +405,28 @@
     removeCardDirectly(ticketId) {
       try {
         const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-        
+
         if (cardElement) {
           const slotElement = cardElement.closest('.grid-slot');
           const slotNumber = slotElement?.dataset.slot;
-          
+
           // 애니메이션 효과
           cardElement.style.transition = 'all 0.3s ease';
           cardElement.style.transform = 'scale(0.8)';
           cardElement.style.opacity = '0';
-          
+
           setTimeout(() => {
             if (slotElement && slotNumber) {
               slotElement.innerHTML = this.createEmptySlotHTML(slotNumber);
               console.log(`🗑️ 슬롯 ${slotNumber}을 빈 슬롯으로 교체`);
             }
           }, 300);
-          
+
           return true;
         }
-        
+
         return false;
-        
+
       } catch (error) {
         console.error('❌ 개별 카드 제거 실패:', error);
         return false;
@@ -415,8 +465,8 @@
     /**
      * 티켓 카드 업데이트 (Grid 전체 재렌더링)
      */
-    updateTicketCard(ticket) {
-      console.log(`🔄 티켓 업데이트: ${this._extractTicketId(ticket)}`);
+    updateTicketCard(ticketId, ticket) { // ticketId와 ticket을 인자로 받도록 수정
+      console.log(`🔄 티켓 업데이트: ${ticketId}`);
       const currentOrders = KDSState.getActiveTickets();
       this.renderKDSGrid(currentOrders);
     },

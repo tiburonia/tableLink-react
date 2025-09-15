@@ -137,7 +137,7 @@
     },
 
     /**
-     * 새 티켓 생성 처리 - DB 상태 정확히 반영
+     * 새 티켓 생성 처리 - 순차적 카드 생성 (기존 카드 유지)
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
@@ -147,9 +147,24 @@
         return;
       }
 
-      if (KDSState.getTicket(ticketId)) {
-        console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 업데이트로 처리`);
-        return this.handleTicketUpdated(ticket);
+      // 기존 티켓이 있어도 새로운 티켓으로 처리 (중복 방지만 수행)
+      const existingTicket = KDSState.getTicket(ticketId);
+      if (existingTicket) {
+        console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 중복 생성 방지`);
+        
+        // 기존 티켓의 상태가 완료된 상태라면 새 티켓으로 교체
+        const existingStatus = (existingTicket.status || '').toUpperCase();
+        if (['DONE', 'COMPLETED', 'SERVED'].includes(existingStatus)) {
+          console.log(`🔄 완료된 티켓 ${ticketId} 교체 - 새 주문으로 처리`);
+          KDSState.removeTicket(ticketId);
+          // 기존 UI 카드 제거
+          if (window.KDSUIRenderer && typeof window.KDSUIRenderer.removeTicketCard === 'function') {
+            window.KDSUIRenderer.removeTicketCard(ticketId);
+          }
+        } else {
+          // 진행 중인 티켓은 업데이트로 처리
+          return this.handleTicketUpdated(ticket);
+        }
       }
 
       // DB에서 온 실제 상태를 정규화하여 보존
@@ -167,34 +182,47 @@
         created_at: ticket.created_at || new Date().toISOString()
       };
 
-      // 주방 아이템만 필터링
-      const kitchenItems = normalizedTicket.items.filter(item => 
-        item.cook_station === 'KITCHEN' || !item.cook_station
-      );
+      // cook_station 필터링 - KITCHEN 및 기타 주방 스테이션만 포함
+      const kitchenItems = normalizedTicket.items.filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
 
       if (kitchenItems.length === 0) {
         console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - 스킵`);
         return;
       }
 
-      // 아이템들도 티켓 상태에 맞춰 동기화
+      // 아이템들을 cook_station별로 분리하여 저장
       normalizedTicket.items = kitchenItems.map(item => ({
         ...item,
         status: actualStatus === 'COOKING' ? 'COOKING' : (item.status || 'PENDING'),
-        item_status: actualStatus === 'COOKING' ? 'COOKING' : (item.item_status || 'PENDING')
+        item_status: actualStatus === 'COOKING' ? 'COOKING' : (item.item_status || 'PENDING'),
+        cook_station: item.cook_station || 'KITCHEN'
       }));
 
+      // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
 
+      // UI에 개별 카드 추가 (기존 카드들 유지)
       if (window.KDSUIRenderer) {
+        console.log(`🎨 새 티켓 카드 추가: ${ticketId} (기존 카드들 유지)`);
         window.KDSUIRenderer.addTicketCard(normalizedTicket);
       }
 
+      // 사운드 재생
       if (window.KDSSoundManager) {
         window.KDSSoundManager.playNewOrderSound();
       }
 
-      console.log(`✅ 새 티켓 추가: ${ticketId} (상태: ${actualStatus}, ${kitchenItems.length}개 아이템)`);
+      // 탭 카운트 업데이트
+      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+        setTimeout(() => {
+          window.KDSUIRenderer.updateTicketCounts();
+        }, 100);
+      }
+
+      console.log(`✅ 새 티켓 순차 추가: ${ticketId} (상태: ${actualStatus}, ${kitchenItems.length}개 아이템, 기존 카드 유지)`);
     },
 
     /**
