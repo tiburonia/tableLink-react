@@ -19,7 +19,7 @@
       try {
         console.log(`🔄 매장 ${storeId} KDS 데이터 로드 중...`);
 
-        const response = await fetch(`/api/orders/kds/${storeId}`, {
+        const response = await fetch(`/api/kds/${storeId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -56,7 +56,7 @@
      */
     async startCooking(ticketId) {
       try {
-        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/start-cooking`, {
+        const response = await fetch(`/api/kds/tickets/${ticketId}/start-cooking`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -81,7 +81,7 @@
      */
     async markComplete(ticketId) {
       try {
-        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/complete`, {
+        const response = await fetch(`/api/kds/tickets/${ticketId}/complete`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -106,7 +106,7 @@
      */
     async updateItemStatus(itemId, status) {
       try {
-        const response = await fetch(`/api/orders/kds/items/${itemId}/status`, {
+        const response = await fetch(`/api/kds/items/${itemId}/status`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'
@@ -135,7 +135,7 @@
       try {
         console.log(`📡 출력 상태 업데이트 API 호출: ${ticketId} - 즉시 PRINTED 처리`);
 
-        const response = await fetch(`/api/orders/kds/tickets/${ticketId}/print`, {
+        const response = await fetch(`/api/kds/tickets/${ticketId}/print`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json'

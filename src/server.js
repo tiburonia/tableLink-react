@@ -101,6 +101,7 @@ try {
   const posRoutes = require('./routes/pos');
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp'); // KRP 라우터 추가
+  const kdsRoutes = require('./routes/kds'); // KDS 라우터 추가
   const tossRoutes = require('./routes/toss'); // 토스페이먼츠 라우터 추가
   const storesClustersRouter = require('./routes/stores-clusters'); // 새로운 클러스터 API 라우터 등록
 
@@ -118,6 +119,7 @@ try {
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
+  app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
   app.use('/api/payments', krpRoutes); // KRP 라우터 경로 변경
   app.use('/api/toss', tossRoutes); // 토스페이먼츠 라우터 경로 등록
   app.use('/api/clusters', storesClustersRouter); // 클러스터 API 경로 변경
@@ -136,7 +138,7 @@ try {
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes); // KRP 라우트 등록
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters, krp)');
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters, krp, kds)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);
@@ -556,6 +558,7 @@ app.use('/api/tables', require('./routes/tables'));
 app.use('/api/toss', require('./routes/toss'));
 app.use('/api/tll', require('./routes/tll'));
 app.use('/api/pos', require('./routes/pos'));
+app.use('/api/kds', require('./routes/kds'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/audit', require('./routes/audit'));
 app.use('/api/stores-clusters', require('./routes/stores-clusters'));
