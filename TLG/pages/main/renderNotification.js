@@ -172,15 +172,8 @@ window.renderNotification = async function renderNotification() {
       }
 
       .notification-item.unread {
-        background: #f0f0ff; /* slightly changed for better visibility */
+        background: #f0f7ff;
         border-left: 4px solid #297efc;
-      }
-      
-      .notification-item.unread .notification-action {
-        color: #297efc;
-        font-weight: 500;
-        margin-top: 8px;
-        font-size: 13px;
       }
 
       .notification-item.unread::before {
@@ -424,7 +417,7 @@ function getUserInfo() {
     // 쿠키에서 사용자 정보 확인
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
     const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
-
+    
     if (userInfoCookie) {
       const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
       return JSON.parse(userInfoValue);
@@ -524,7 +517,7 @@ async function fetchNotifications(type) {
     console.log('📤 알림 API 요청:', url);
 
     const response = await fetch(url);
-
+    
     if (!response.ok) {
       console.error('❌ 알림 API 요청 실패:', response.status);
       return [];
@@ -595,10 +588,10 @@ async function handleNotificationClick(notificationId) {
           if (notification.related_order_id) {
             // renderProcessingOrder 스크립트 로드
             await loadRenderProcessingOrderScript();
-
+            
             // 이전 화면 정보 저장
             window.previousScreen = 'renderNotification';
-
+            
             // 주문 진행 상황 화면으로 이동
             if (typeof renderProcessingOrder === 'function') {
               renderProcessingOrder(notification.related_order_id);
@@ -607,7 +600,7 @@ async function handleNotificationClick(notificationId) {
             }
           }
           break;
-
+          
         case 'promotion':
           if (notification.related_store_id) {
             // 프로모션 관련 매장으로 이동
@@ -616,7 +609,7 @@ async function handleNotificationClick(notificationId) {
             }
           }
           break;
-
+          
         default:
           console.log('처리되지 않은 알림 타입:', notification.type);
       }
@@ -697,7 +690,7 @@ async function markAllNotificationsAsRead() {
       unreadItems.forEach(item => {
         item.classList.remove('unread');
       });
-
+      
       console.log('✅ 모든 알림을 읽음으로 처리했습니다.');
     } else {
       console.error('❌ 모든 알림 읽음 처리 실패:', response.status);

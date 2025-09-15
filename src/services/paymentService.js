@@ -1,3 +1,4 @@
+
 /**
  * 결제 전용 서비스 모듈
  * - 결제 관련 비즈니스 로직 집중 관리
@@ -17,14 +18,7 @@ class PaymentService {
     try {
       const { orderId, amount, orderData } = paymentData;
 
-      console.log('💳 결제 서비스: TLL 주문 처리 시작', {
-        orderId,
-        amount,
-        userPk: orderData.userPk,
-        storeId: orderData.storeId,
-        tableNumber: orderData.tableNumber,
-        itemsCount: orderData.items?.length || 0
-      });
+      console.log('💳 결제 서비스: TLL 주문 처리 시작', orderId);
 
       await client.query('BEGIN');
 
@@ -32,7 +26,7 @@ class PaymentService {
       const orderResult = await this.getOrCreateOrder(client, orderData);
       const { orderIdToUse, isNewOrder } = orderResult;
 
-      // 2. 배치 번호 계산 (order_tickets 기준)
+      // 2. 배치 번호 계산
       const batchNo = await this.calculateBatchNumber(client, orderIdToUse);
 
       // 3. 티켓 생성
@@ -104,65 +98,43 @@ class PaymentService {
    * 기존 주문 확인 또는 새 주문 생성
    */
   async getOrCreateOrder(client, orderData) {
-    // 기존 주문이 있는지 확인
-    console.log('🔍 기존 주문 확인:', {
-      userPk: orderData.userPk,
-      storeId: orderData.storeId,
-      tableNumber: orderData.tableNumber
-    });
-
+    // 기존 OPEN 주문 확인
     const existingOrderResult = await client.query(`
-      SELECT id, status, created_at
-      FROM orders
-      WHERE user_pk = $1 
-        AND store_id = $2 
-        AND table_number = $3 
-        AND status IN ('PENDING', 'CONFIRMED', 'COOKING')
-      ORDER BY created_at DESC
+      SELECT id FROM orders 
+      WHERE store_id = $1 AND user_id = $2 AND status = 'OPEN'
       LIMIT 1
-    `, [orderData.userPk, orderData.storeId, orderData.tableNumber]);
-
-    console.log('📊 기존 주문 조회 결과:', {
-      찾은개수: existingOrderResult.rows.length,
-      주문들: existingOrderResult.rows
-    });
-
-    let orderId, isNewOrder;
+    `, [orderData.storeId, orderData.userPk]);
 
     if (existingOrderResult.rows.length > 0) {
-      // 기존 주문에 추가
-      const existingOrder = existingOrderResult.rows[0];
-      orderId = existingOrder.id;
-      isNewOrder = false;
-
-      console.log(`🔄 기존 주문에 추가: Order ID ${orderId}, Status ${existingOrder.status}`);
-    } else {
-      // 새 주문 생성
-      console.log(`🆕 새 주문 생성 시작`);
-
-      const newOrderResult = await client.query(`
-        INSERT INTO orders (
-          user_pk, store_id, table_number, subtotal, final_total,
-          used_point, coupon_discount, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED', CURRENT_TIMESTAMP)
-        RETURNING id
-      `, [
-        orderData.userPk,
-        orderData.storeId,
-        orderData.tableNumber,
-        orderData.subtotal,
-        orderData.finalTotal,
-        orderData.usedPoint,
-        orderData.couponDiscount
-      ]);
-
-      orderId = newOrderResult.rows[0].id;
-      isNewOrder = true;
-
-      console.log(`✅ 새 주문 생성 완료: Order ID ${orderId}`);
+      return {
+        orderIdToUse: existingOrderResult.rows[0].id,
+        isNewOrder: false
+      };
     }
 
-    return { orderIdToUse: orderId, isNewOrder };
+    // 새 주문 생성
+    const newOrderResult = await client.query(`
+      INSERT INTO orders (
+        store_id,
+        user_id,
+        source,
+        status,
+        payment_status,
+        total_price,
+        table_num
+      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
+      RETURNING id
+    `, [
+      orderData.storeId,
+      orderData.userPk,
+      orderData.finalTotal,
+      orderData.tableNumber
+    ]);
+
+    return {
+      orderIdToUse: newOrderResult.rows[0].id,
+      isNewOrder: true
+    };
   }
 
   /**
@@ -174,11 +146,7 @@ class PaymentService {
       WHERE order_id = $1
     `, [orderId]);
 
-    const batchNo = parseInt(result.rows[0].count) + 1;
-    
-    console.log(`📊 배치 번호 계산: Order ID ${orderId}, 기존 티켓 ${result.rows[0].count}개, 새 배치 번호 ${batchNo}`);
-
-    return batchNo;
+    return parseInt(result.rows[0].count) + 1;
   }
 
   /**

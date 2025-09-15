@@ -42,8 +42,6 @@ router.get('/', async (req, res) => {
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
     `, [...queryParams, parseInt(limit), parseInt(offset)]);
 
-    console.log(`📢 알림 조회 완료: 사용자 ${userId}, ${result.rows.length}개 알림 발견`);
-
     const notifications = result.rows.map(notification => ({
       id: notification.id,
       type: notification.type,
