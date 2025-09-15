@@ -571,8 +571,81 @@ async function handleNotificationClick(notificationId) {
     await markNotificationAsRead(notificationId);
   }
 
-  // 알림 타입에 따른 적절한 액션 수행
-  // 예: 주문 알림이면 주문 상세 페이지로, 프로모션이면 해당 매장으로
+  // 알림 상세 정보 조회
+  try {
+    const userInfo = getUserInfo();
+    if (!userInfo?.userId) return;
+
+    const response = await fetch(`/api/notifications/${notificationId}`);
+    const data = await response.json();
+
+    if (data.success && data.notification) {
+      const notification = data.notification;
+
+      // 알림 타입에 따른 액션 수행
+      switch (notification.type) {
+        case 'order':
+          if (notification.related_order_id) {
+            // renderProcessingOrder 스크립트 로드
+            await loadRenderProcessingOrderScript();
+            
+            // 이전 화면 정보 저장
+            window.previousScreen = 'renderNotification';
+            
+            // 주문 진행 상황 화면으로 이동
+            if (typeof renderProcessingOrder === 'function') {
+              renderProcessingOrder(notification.related_order_id);
+            } else {
+              console.error('renderProcessingOrder 함수를 찾을 수 없습니다');
+            }
+          }
+          break;
+          
+        case 'promotion':
+          if (notification.related_store_id) {
+            // 프로모션 관련 매장으로 이동
+            if (typeof renderStore === 'function') {
+              renderStore(notification.related_store_id);
+            }
+          }
+          break;
+          
+        default:
+          console.log('처리되지 않은 알림 타입:', notification.type);
+      }
+    }
+
+  } catch (error) {
+    console.error('❌ 알림 처리 실패:', error);
+  }
+}
+
+// renderProcessingOrder 스크립트 로드
+async function loadRenderProcessingOrderScript() {
+  if (typeof window.renderProcessingOrder === 'function') {
+    return; // 이미 로드됨
+  }
+
+  try {
+    console.log('🔄 renderProcessingOrder 스크립트 로드 시작');
+    const script = document.createElement('script');
+    script.src = '/TLG/pages/store/order/renderProcessingOrder.js';
+
+    await new Promise((resolve, reject) => {
+      script.onload = () => {
+        console.log('✅ renderProcessingOrder 스크립트 로드 완료');
+        resolve();
+      };
+      script.onerror = () => {
+        console.error('❌ renderProcessingOrder 스크립트 로드 실패');
+        reject();
+      };
+      document.head.appendChild(script);
+    });
+  } catch (error) {
+    console.error('❌ renderProcessingOrder 스크립트 로드 중 오류:', error);
+    throw error;
+  }
 }
 
 // 개별 알림 읽음 처리

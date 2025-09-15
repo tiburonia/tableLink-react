@@ -298,7 +298,9 @@ router.post('/confirm', async (req, res) => {
         subtotal: orderData.subtotal || parseInt(amount),
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
-        items: itemsWithCookStation
+        items: itemsWithCookStation,
+        storeName: pendingPayment.store_name, // storeName 추가
+        userId: pendingPayment.user_id
       };
 
       const result = await paymentService.processTLLOrder({
@@ -324,15 +326,60 @@ router.post('/confirm', async (req, res) => {
         updateClient.release();
       }
 
+      // 주문 처리 결과에서 ticketId, batchNo, isNewOrder 추출
+      const { ticketId, batchNo, isNewOrder } = result;
+      const orderIdToUse = result.orderId;
+      const paymentData = { paymentKey, finalTotal: result.amount };
+
+      // 새 주문 생성 시 알림 생성
+      if (isNewOrder) {
+        await client.query(`
+          INSERT INTO notifications (
+            user_id, type, title, message,
+            related_order_id, related_store_id,
+            created_at, is_read
+          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
+        `, [
+          orderInfo.userPk,
+          'order',
+          '새로운 주문이 시작되었습니다',
+          `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
+          orderIdToUse,
+          orderInfo.storeId
+        ]);
+
+        console.log(`📢 새 주문 알림 생성: 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+      }
+
+      // 이벤트 발생: 새 주문 생성됨
+      eventBus.emit('order.created', {
+        orderId: orderIdToUse,
+        ticketId,
+        storeId: orderInfo.storeId,
+        tableNumber: orderInfo.tableNumber,
+        items: orderInfo.items,
+        batchNo,
+        isNewOrder
+      });
+
+      // 이벤트 발생: 결제 완료됨
+      eventBus.emit('payment.completed', {
+        orderId: orderIdToUse,
+        ticketId,
+        storeId: orderInfo.storeId,
+        amount: orderInfo.finalTotal,
+        paymentKey: paymentData.paymentKey
+      });
+
       console.log('✅ TLL 결제 성공 처리 완료 (이벤트 기반)');
 
       res.json({
         success: true,
-        orderId: result.orderId,
-        ticketId: result.ticketId,
-        batchNo: result.batchNo,
+        orderId: orderIdToUse,
+        ticketId: ticketId,
+        batchNo: batchNo,
         paymentKey,
-        amount: result.amount
+        amount: orderInfo.finalTotal
       });
 
     } else {

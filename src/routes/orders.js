@@ -757,6 +757,196 @@ router.delete('/order/:orderId', async (req, res) => {
     client.release();
   }
 });
+// 📋 주문 진행 상황 조회 API
+router.get('/processing/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`📋 주문 진행 상황 조회: ${orderId}`);
+
+    // 주문 기본 정보 조회
+    const orderResult = await pool.query(`
+      SELECT 
+        o.id,
+        o.store_id,
+        s.name as store_name,
+        o.table_num as table_number,
+        o.status,
+        o.created_at,
+        o.session_ended,
+        COUNT(DISTINCT ot.id) as total_tickets,
+        SUM(p.amount) as total_amount
+      FROM orders o
+      JOIN stores s ON o.store_id = s.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      LEFT JOIN payments p ON o.id = p.order_id AND p.status = 'COMPLETED'
+      WHERE o.id = $1
+      GROUP BY o.id, s.name
+    `, [parseInt(orderId)]);
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
+    }
+
+    const order = orderResult.rows[0];
+
+    // 티켓 정보 조회 (KDS 진행 상황)
+    const ticketsResult = await pool.query(`
+      SELECT 
+        ot.id,
+        ot.status,
+        ot.created_at,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'name', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', oi.item_status
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM order_tickets ot
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE ot.order_id = $1
+      GROUP BY ot.id, ot.status, ot.created_at
+      ORDER BY ot.created_at DESC
+    `, [parseInt(orderId)]);
+
+    // 결제 내역 조회
+    const paymentsResult = await pool.query(`
+      SELECT 
+        id,
+        method,
+        amount,
+        status,
+        completed_at as created_at
+      FROM payments
+      WHERE order_id = $1 AND status = 'completed'
+      ORDER BY completed_at DESC
+    `, [parseInt(orderId)]);
+
+    const responseData = {
+      id: order.id,
+      storeId: order.store_id,
+      storeName: order.store_name,
+      tableNumber: order.table_number,
+      status: order.status,
+      createdAt: order.created_at,
+      sessionEnded: order.session_ended || false,
+      totalOrders: parseInt(order.total_tickets) || 0,
+      totalAmount: parseInt(order.total_amount) || 0,
+      tickets: ticketsResult.rows.map(ticket => ({
+        id: ticket.id,
+        status: ticket.status,
+        createdAt: ticket.created_at,
+        items: ticket.items || []
+      })),
+      payments: paymentsResult.rows.map(payment => ({
+        id: payment.id,
+        method: payment.method.toUpperCase(),
+        amount: parseInt(payment.amount),
+        status: payment.status,
+        createdAt: payment.created_at
+      }))
+    };
+
+    res.json({
+      success: true,
+      order: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 진행 상황 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 진행 상황을 조회할 수 없습니다'
+    });
+  }
+});
+
+// 🔚 주문 세션 종료 API
+router.put('/:orderId/end-session', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🔚 주문 세션 종료: ${orderId}`);
+
+    await client.query('BEGIN');
+
+    // 주문 세션 종료 처리
+    const updateResult = await client.query(`
+      UPDATE orders
+      SET 
+        session_ended = true,
+        session_ended_at = CURRENT_TIMESTAMP,
+        status = CASE 
+          WHEN status = 'OPEN' THEN 'CLOSED'
+          ELSE status
+        END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [parseInt(orderId)]);
+
+    if (updateResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
+    }
+
+    const order = updateResult.rows[0];
+
+    // 해당 테이블 해제 (다른 활성 주문이 없는 경우)
+    const activeOrdersResult = await client.query(`
+      SELECT COUNT(*) as count
+      FROM orders
+      WHERE store_id = $1 AND table_num = $2 
+        AND status = 'OPEN' AND session_ended = false
+        AND id != $3
+    `, [order.store_id, order.table_num, parseInt(orderId)]);
+
+    const hasActiveOrders = parseInt(activeOrdersResult.rows[0].count) > 0;
+
+    if (!hasActiveOrders) {
+      await client.query(`
+        UPDATE store_tables
+        SET 
+          is_occupied = false,
+          occupied_since = NULL,
+          auto_release_source = NULL
+        WHERE store_id = $1 AND table_number = $2
+      `, [order.store_id, order.table_num]);
+
+      console.log(`🍽️ 테이블 ${order.table_num} 해제 완료`);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      message: '주문 세션이 종료되었습니다',
+      orderId: parseInt(orderId),
+      tableReleased: !hasActiveOrders
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 주문 세션 종료 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 세션 종료 실패'
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // 주문별 리뷰 상태 확인 API  
 router.get('/:orderId/review-status', async (req, res) => {
   try {
