@@ -61,6 +61,15 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
     console.log('📋 서버에 결제 준비 요청 시작');
 
+    // 아이템 배열 준비
+    const itemsArray = orderData.items || currentOrder || [];
+    
+    console.log('📋 confirmPay - 아이템 준비:', {
+      orderData_items: orderData.items,
+      currentOrder: currentOrder,
+      최종_itemsArray: itemsArray
+    });
+
     // cook_station을 jsonb 형태로 전송하도록 수정
     const prepareData = {
       userId: parseInt(userInfo.userId), // users.id PK를 정수로 전달
@@ -68,24 +77,35 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum || 1,
       orderData: {
-        items: (orderData.items || currentOrder || []).map(item => ({
-          ...item,
-          menuId: item.menuId || item.menu_id || item.id || null, // menu_id 정보 명시적 포함
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity || item.qty || 1,
-          totalPrice: item.totalPrice || (item.price * (item.quantity || item.qty || 1)),
-          cook_station: item.cook_station || 'KITCHEN'
-        })),
+        items: itemsArray.map((item, index) => {
+          const processedItem = {
+            ...item,
+            menuId: item.menuId || item.menu_id || item.id || null,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity || item.qty || 1,
+            totalPrice: item.totalPrice || (item.price * (item.quantity || item.qty || 1)),
+            cook_station: item.cook_station || 'KITCHEN'
+          };
+          
+          console.log(`📋 아이템 ${index + 1} 처리:`, {
+            원본: item,
+            처리된것: processedItem,
+            menuId확인: processedItem.menuId,
+            cook_station확인: processedItem.cook_station
+          });
+          
+          return processedItem;
+        }),
         total: orderData.total || finalAmount,
         storeName: orderData.storeName || orderData.store || store?.name,
         // cook_station을 jsonb 형태로 구성
         cook_station: {
-          stations: (orderData.items || currentOrder || []).filter(item => item.cook_station !== 'DRINK') // DRINK 제외
+          stations: itemsArray.filter(item => item.cook_station !== 'DRINK') // DRINK 제외
             .map(item => item.cook_station || 'KITCHEN')
             .filter((value, index, self) => self.indexOf(value) === index), // 중복 제거
-          drink_count: (orderData.items || currentOrder || []).filter(item => item.cook_station === 'DRINK').length,
-          total_items: (orderData.items || currentOrder || []).length
+          drink_count: itemsArray.filter(item => item.cook_station === 'DRINK').length,
+          total_items: itemsArray.length
         }
       },
       amount: parseInt(finalAmount),

@@ -78,7 +78,17 @@
       const name = orderItem.name || `메뉴 ${index + 1}`;
       const price = parseInt(orderItem.price) || 0;
       const quantity = parseInt(orderItem.quantity) || 1;
-      const cookStation = orderItem.cook_station || 'KITCHEN'; // cook_station 추가
+      const cookStation = orderItem.cook_station || 'KITCHEN';
+      
+      // menuId 정보 추출 (여러 필드에서 시도)
+      const menuId = orderItem.menuId || orderItem.menu_id || orderItem.id || null;
+
+      console.log('🔍 parseArrayItem - 아이템 파싱:', {
+        name,
+        menuId,
+        cook_station: cookStation,
+        원본아이템: orderItem
+      });
 
       if (price <= 0) {
         console.warn(`⚠️ 아이템 "${name}"의 가격이 유효하지 않습니다:`, price);
@@ -90,7 +100,9 @@
         price: price,
         quantity: quantity,
         totalPrice: price * quantity,
-        cook_station: cookStation // cook_station 추가
+        cook_station: cookStation,
+        menuId: menuId, // menuId 추가
+        menu_id: menuId // 서버 호환성
       };
     },
 
@@ -100,18 +112,32 @@
     parseObjectItem(name, itemData, store) {
       let price = 0;
       let quantity = 1;
-      const cookStation = itemData.cook_station || 'KITCHEN'; // cook_station 추가
+      let cookStation = 'KITCHEN';
+      let menuId = null;
 
       if (typeof itemData === 'number') {
         // 수량만 있는 경우
         quantity = itemData;
         const menuItem = store?.menu?.find(m => m.name === name);
-        price = menuItem ? parseInt(menuItem.price) || 0 : 0;
+        if (menuItem) {
+          price = parseInt(menuItem.price) || 0;
+          cookStation = menuItem.cook_station || 'KITCHEN';
+          menuId = menuItem.id || null;
+        }
       } else if (typeof itemData === 'object') {
         // 객체 형태인 경우
         price = parseInt(itemData.price || itemData.unitPrice || 0);
         quantity = parseInt(itemData.count || itemData.quantity || itemData.qty || 1);
+        cookStation = itemData.cook_station || 'KITCHEN';
+        menuId = itemData.menuId || itemData.menu_id || itemData.id || null;
       }
+
+      console.log('🔍 parseObjectItem - 객체 아이템 파싱:', {
+        name,
+        menuId,
+        cook_station: cookStation,
+        원본데이터: itemData
+      });
 
       if (price <= 0) {
         console.warn(`⚠️ 메뉴 "${name}"의 가격을 찾을 수 없습니다`);
@@ -123,7 +149,9 @@
         price: price,
         quantity: quantity,
         totalPrice: price * quantity,
-        cook_station: cookStation // cook_station 추가
+        cook_station: cookStation,
+        menuId: menuId,
+        menu_id: menuId
       };
     }
   };

@@ -279,15 +279,60 @@ window.addToCart = function(menuId, menuName, price) {
     window.currentTLLOrder.cart = [];
   }
 
-  // 메뉴 ID와 가격 유효성 검사 및 타입 변환
-  const validMenuId = String(menuId);
+  // 메뉴 데이터에서 실제 메뉴 정보 찾기
+  let actualMenuData = null;
+  let validMenuId = parseInt(menuId);
   const validMenuName = String(menuName);
   const validPrice = parseInt(price);
 
-  if (!validMenuId || !validMenuName || isNaN(validPrice) || validPrice <= 0) {
-    console.error('❌ 메뉴 정보가 유효하지 않습니다:', { 
+  console.log('🔍 메뉴 찾기 시작:', {
+    입력받은menuId: menuId,
+    입력받은menuName: menuName,
+    파싱된menuId: validMenuId,
+    currentMenuData존재: !!window.currentMenuData,
+    currentMenuData길이: window.currentMenuData?.length
+  });
+
+  if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
+    // 전체 메뉴 데이터 로그
+    console.log('📋 전체 메뉴 데이터:', window.currentMenuData.map(item => ({
+      id: item.id,
+      name: item.name,
+      cook_station: item.cook_station
+    })));
+
+    // ID로 먼저 찾기 (다양한 형태로 시도)
+    actualMenuData = window.currentMenuData.find(item => 
+      parseInt(item.id) === validMenuId || 
+      String(item.id) === String(menuId) ||
+      item.id === menuId
+    );
+
+    console.log('🔍 ID로 찾기 결과:', actualMenuData);
+
+    // ID로 찾지 못하면 이름으로 찾기
+    if (!actualMenuData) {
+      actualMenuData = window.currentMenuData.find(item => 
+        item.name === validMenuName
+      );
+
+      console.log('🔍 이름으로 찾기 결과:', actualMenuData);
+
+      // 이름으로 찾았다면 해당 ID 사용
+      if (actualMenuData) {
+        validMenuId = parseInt(actualMenuData.id);
+        console.log(`✅ 메뉴명으로 ID 찾음: ${validMenuName} -> ID: ${validMenuId}`);
+      }
+    }
+  }
+
+  // 메뉴 ID 유효성 검사
+  if (!validMenuId || isNaN(validMenuId) || validMenuId <= 0) {
+    console.error('❌ 유효하지 않은 메뉴 ID:', { 
       original: { menuId, menuName, price },
-      processed: { validMenuId, validMenuName, validPrice }
+      found: actualMenuData,
+      validMenuId,
+      menuDataSample: window.currentMenuData?.slice(0, 3)
     });
     alert('메뉴 정보에 오류가 있습니다.');
     return;
@@ -295,13 +340,8 @@ window.addToCart = function(menuId, menuName, price) {
 
   // 메뉴 데이터에서 cook_station 정보 찾기
   let cookStation = 'KITCHEN'; // 기본값
-  if (window.currentMenuData && Array.isArray(window.currentMenuData)) {
-    const menuItem = window.currentMenuData.find(item => 
-      String(item.id) === String(validMenuId) || item.name === validMenuName
-    );
-    if (menuItem?.cook_station) {
-      cookStation = menuItem.cook_station;
-    }
+  if (actualMenuData?.cook_station) {
+    cookStation = actualMenuData.cook_station;
   }
 
   console.log('📝 장바구니 추가 전 상태:', {
@@ -317,14 +357,21 @@ window.addToCart = function(menuId, menuName, price) {
   } else {
     const newItem = {
       id: validMenuId,
-      menuId: validMenuId,
+      menuId: validMenuId, // 확실한 정수형 menuId
+      menu_id: validMenuId, // 서버 호환성을 위한 추가
       name: validMenuName,
       price: validPrice,
       quantity: 1,
       cook_station: cookStation
     };
     window.currentTLLOrder.cart.push(newItem);
-    console.log('➕ 새 아이템 추가:', newItem);
+    console.log('➕ 새 아이템 추가:', {
+      menuId: validMenuId,
+      menu_id: validMenuId,
+      name: validMenuName,
+      cook_station: cookStation,
+      전체아이템: newItem
+    });
   }
 
   console.log('📝 장바구니 추가 후 상태:', {
