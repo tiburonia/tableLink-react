@@ -266,13 +266,13 @@
     },
 
     /**
-     * Grid 렌더링 - 순차배열 로직 적용 (상태 변경 시 전체 재배열)
+     * Grid 렌더링 - 단순화된 전체 재렌더링 (모든 이벤트에서 완전 재배열)
      */
-    renderKDSGrid(orders = [], forceRerender = false) {
-      console.log(`🎨 Grid 렌더링 시작: ${orders.length}개 주문 (강제 재렌더링: ${forceRerender})`);
+    renderKDSGrid(orders = []) {
+      console.log(`🎨 Grid 전체 재렌더링 시작: ${orders.length}개 주문`);
 
-      // 렌더링 중복 방지 (강제 재렌더링이 아닌 경우만)
-      if (UIState.isRendering && !forceRerender) {
+      // 중복 렌더링 방지
+      if (UIState.isRendering) {
         UIState.renderQueue = orders;
         console.log('🔄 렌더링 대기열에 추가');
         return;
@@ -295,53 +295,24 @@
 
         console.log(`🔍 주방 주문 필터링: ${orders.length} → ${kitchenOrders.length}`);
 
-        // 상태별 분석 로깅
-        const cookingOrders = kitchenOrders.filter(order => 
-          (order.status || '').toUpperCase() === 'COOKING'
-        );
-        const otherOrders = kitchenOrders.filter(order => 
-          (order.status || '').toUpperCase() !== 'COOKING'
-        );
-
-        console.log(`📊 상태별 분석: COOKING ${cookingOrders.length}개, 기타 ${otherOrders.length}개`);
-
-        // 슬롯 배치 계획 (order_tickets.id 기준 순차 배열)
+        // 슬롯 배치 계획 (COOKING 우선 + order_tickets.id 순차)
         const slotAssignments = this.planSlotAssignments(kitchenOrders);
 
-        // 기존 슬롯 상태 파악
-        const currentSlotState = {};
-        for (let i = 1; i <= 9; i++) {
-          const slot = grid.querySelector(`[data-slot="${i}"]`);
-          const existingCard = slot?.querySelector('.order-card');
-          if (existingCard) {
-            currentSlotState[i] = existingCard.getAttribute('data-ticket-id');
-          }
-        }
-
-        // Grid 업데이트 - 전체 재배열 보장
+        // 모든 슬롯을 완전히 새로 렌더링 (애니메이션 없이 즉시 교체)
         for (let i = 1; i <= 9; i++) {
           const slot = grid.querySelector(`[data-slot="${i}"]`);
           if (!slot) continue;
 
           const assignedOrder = slotAssignments[i];
-          const currentTicketId = currentSlotState[i];
 
           if (assignedOrder) {
-            const newTicketId = extractTicketId(assignedOrder);
-            
-            // 카드가 변경되었거나 강제 재렌더링인 경우
-            if (currentTicketId !== newTicketId || forceRerender) {
-              console.log(`🔄 슬롯 ${i}: ${currentTicketId} → ${newTicketId}`);
-              this.animateCardChange(slot, assignedOrder, i);
-            }
+            // 카드 HTML 생성 후 즉시 교체
+            slot.innerHTML = createOrderCardHTML(assignedOrder);
+            const ticketId = extractTicketId(assignedOrder);
+            console.log(`📍 슬롯 ${i}: 티켓 ${ticketId} 배치`);
           } else {
-            // 빈 슬롯으로 변경
-            if (currentTicketId) {
-              console.log(`🗑️ 슬롯 ${i}: ${currentTicketId} → 빈 슬롯`);
-              this.animateCardRemoval(slot, i);
-            } else if (forceRerender) {
-              slot.innerHTML = createEmptySlotHTML(i);
-            }
+            // 빈 슬롯으로 교체
+            slot.innerHTML = createEmptySlotHTML(i);
           }
         }
 
@@ -355,7 +326,7 @@
         // 탭 카운트 업데이트
         this.updateTicketCounts();
 
-        console.log(`✅ Grid 렌더링 완료: ${Object.keys(slotAssignments).length}개 카드 순차배치 (COOKING 우선)`);
+        console.log(`✅ Grid 전체 재렌더링 완료: ${Object.keys(slotAssignments).length}개 카드 완전 재배치`);
 
       } finally {
         UIState.isRendering = false;
@@ -364,7 +335,7 @@
         if (UIState.renderQueue.length > 0) {
           const queuedOrders = UIState.renderQueue;
           UIState.renderQueue = [];
-          setTimeout(() => this.renderKDSGrid(queuedOrders, false), 100);
+          setTimeout(() => this.renderKDSGrid(queuedOrders), 100);
         }
       }
     },
@@ -461,45 +432,18 @@
     },
 
     /**
-     * 티켓 카드 추가
+     * 티켓 카드 추가 - 전체 Grid 재렌더링으로 처리
      */
     addTicketCard(ticket) {
       const ticketId = extractTicketId(ticket);
-      console.log(`🎨 티켓 카드 추가: ${ticketId}`);
+      console.log(`🎨 티켓 카드 추가: ${ticketId} - 전체 Grid 재렌더링`);
 
-      // 중복 확인
-      if (document.querySelector(`[data-ticket-id="${ticketId}"]`)) {
-        console.log(`ℹ️ 티켓 ${ticketId} 이미 존재 - 업데이트`);
-        return this.updateTicketCard(ticketId, ticket);
-      }
-
-      // 빈 슬롯 찾기
-      const emptySlot = this.findEmptySlot();
-      if (emptySlot) {
-        const slotNumber = parseInt(emptySlot.dataset.slot);
-        emptySlot.innerHTML = createOrderCardHTML(ticket);
-        UIState.slotPositions.set(ticketId, slotNumber);
-
-        // 애니메이션 효과
-        const card = emptySlot.querySelector('.order-card');
-        if (card) {
-          card.style.opacity = '0';
-          card.style.transform = 'scale(0.9)';
-          requestAnimationFrame(() => {
-            card.style.transition = 'all 0.3s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'scale(1)';
-          });
-        }
-
-        console.log(`✅ 티켓 ${ticketId} 슬롯 ${slotNumber}에 추가`);
-      } else {
-        console.warn(`⚠️ 빈 슬롯 없음 - Grid 재렌더링`);
-        const currentOrders = KDSState.getActiveTickets();
-        this.renderKDSGrid(currentOrders);
-      }
-
-      this.updateTicketCounts();
+      // 상태에 티켓이 추가되었으므로 전체 재렌더링
+      const currentOrders = KDSState.currentTab === 'active' ? 
+        KDSState.getActiveTickets() : KDSState.getCompletedTickets();
+      
+      this.renderKDSGrid(currentOrders);
+      console.log(`✅ 티켓 ${ticketId} 추가로 인한 전체 Grid 재렌더링 완료`);
     },
 
     /**
@@ -519,50 +463,34 @@
     },
 
     /**
-     * 티켓 카드 제거
+     * 티켓 카드 제거 - 전체 Grid 재렌더링으로 처리
      */
     removeTicketCard(ticketId) {
-      console.log(`🗑️ 티켓 제거: ${ticketId}`);
+      console.log(`🗑️ 티켓 제거: ${ticketId} - 전체 Grid 재렌더링`);
 
-      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-      if (cardElement) {
-        const slotElement = cardElement.closest('.grid-slot');
-        const slotNumber = parseInt(slotElement.dataset.slot);
-
-        // 애니메이션과 함께 제거
-        cardElement.style.transition = 'all 0.3s ease';
-        cardElement.style.transform = 'scale(0.8)';
-        cardElement.style.opacity = '0';
-
-        setTimeout(() => {
-          slotElement.innerHTML = createEmptySlotHTML(slotNumber);
-          UIState.slotPositions.delete(ticketId);
-          console.log(`✅ 티켓 ${ticketId} 슬롯 ${slotNumber}에서 제거`);
-        }, 300);
-
-        this.updateTicketCounts();
-        return true;
-      }
-
-      console.warn(`⚠️ 티켓 ${ticketId} 카드 없음`);
-      return false;
+      // 상태에서 티켓이 제거되었으므로 전체 재렌더링
+      UIState.slotPositions.delete(ticketId);
+      
+      const currentOrders = KDSState.currentTab === 'active' ? 
+        KDSState.getActiveTickets() : KDSState.getCompletedTickets();
+      
+      this.renderKDSGrid(currentOrders);
+      console.log(`✅ 티켓 ${ticketId} 제거로 인한 전체 Grid 재렌더링 완료`);
+      return true;
     },
 
     /**
-     * 티켓 카드 업데이트
+     * 티켓 카드 업데이트 - 전체 Grid 재렌더링으로 처리
      */
     updateTicketCard(ticketId, ticket) {
-      console.log(`🔄 티켓 업데이트: ${ticketId}`);
+      console.log(`🔄 티켓 업데이트: ${ticketId} - 전체 Grid 재렌더링`);
 
-      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
-      if (cardElement) {
-        const slotElement = cardElement.closest('.grid-slot');
-        slotElement.innerHTML = createOrderCardHTML(ticket);
-        console.log(`✅ 티켓 ${ticketId} 카드 업데이트`);
-      } else {
-        console.log(`ℹ️ 카드 없음 - 새로 추가: ${ticketId}`);
-        this.addTicketCard(ticket);
-      }
+      // 상태의 티켓이 업데이트되었으므로 전체 재렌더링
+      const currentOrders = KDSState.currentTab === 'active' ? 
+        KDSState.getActiveTickets() : KDSState.getCompletedTickets();
+      
+      this.renderKDSGrid(currentOrders);
+      console.log(`✅ 티켓 ${ticketId} 업데이트로 인한 전체 Grid 재렌더링 완료`);
     },
 
     /**
@@ -683,27 +611,19 @@
     },
 
     /**
-     * 전체 Grid 재정렬 트리거 - 강제 재렌더링으로 정확한 순서 보장
+     * 전체 Grid 재정렬 트리거 - 모든 이벤트에서 전체 재렌더링
      */
     triggerGridReorder(reason = 'manual') {
-      console.log(`🔄 Grid 재정렬 트리거: ${reason} (전체 재배열)`);
-      
-      // 상태 변경 이벤트의 경우 강제 재렌더링으로 정확한 순서 보장
-      const forceRerender = [
-        'cooking_started', 
-        'cooking_completed', 
-        'status_changed', 
-        'new_ticket_added'
-      ].includes(reason);
+      console.log(`🔄 Grid 재정렬 트리거: ${reason} (전체 재렌더링)`);
       
       if (KDSState.currentTab === 'active') {
         const activeTickets = KDSState.getActiveTickets();
-        console.log(`📋 활성 티켓 재정렬: ${activeTickets.length}개 (강제: ${forceRerender})`);
-        this.renderKDSGrid(activeTickets, forceRerender);
+        console.log(`📋 활성 티켓 전체 재렌더링: ${activeTickets.length}개`);
+        this.renderKDSGrid(activeTickets);
       } else {
         const completedTickets = KDSState.getCompletedTickets();
-        console.log(`📋 완료 티켓 재정렬: ${completedTickets.length}개 (강제: ${forceRerender})`);
-        this.renderKDSGrid(completedTickets, forceRerender);
+        console.log(`📋 완료 티켓 전체 재렌더링: ${completedTickets.length}개`);
+        this.renderKDSGrid(completedTickets);
       }
     },
 

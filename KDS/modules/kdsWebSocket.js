@@ -137,21 +137,12 @@
     },
 
     /**
-     * 새 티켓 생성 처리 - order_tickets.id 기준 순차배열, COOKING 우선 적용
+     * 새 티켓 생성 처리 - 전체 Grid 재렌더링으로 처리
      */
     handleTicketCreated(ticket) {
       const ticketId = this._extractTicketId(ticket);
 
-      console.log(`🎫 새 티켓 생성 이벤트: ${ticketId} - order_tickets.id 기준 순차배열`);
-      console.log(`🔍 티켓 데이터:`, {
-        ticket_id: ticket.ticket_id,
-        check_id: ticket.check_id,
-        id: ticket.id,
-        table_number: ticket.table_number,
-        items_count: ticket.items?.length || 0,
-        status: ticket.status,
-        order_tickets_id: ticket.ticket_id || ticket.id
-      });
+      console.log(`🎫 새 티켓 생성 이벤트: ${ticketId} - 전체 Grid 재렌더링`);
 
       if (!ticketId) {
         console.warn('⚠️ 티켓 ID가 없음 - 티켓 생성 스킵');
@@ -189,41 +180,19 @@
         cook_station: item.cook_station || 'KITCHEN'
       }));
 
-      const orderTicketId = normalizedTicket.ticket_id || normalizedTicket.id;
-      console.log(`📋 새 티켓 ${ticketId}: order_tickets.id=${orderTicketId}, 상태=${actualStatus}, 아이템=${normalizedTicket.items.length}개`);
-
       // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
       console.log(`💾 티켓 ${ticketId} 저장 완료 - 총 ${KDSState.tickets.size}개 티켓`);
 
-      // 새 티켓 추가로 인한 order_tickets.id 기준 순차배열 재정렬
-      console.log(`🔄 새 티켓 추가 - order_tickets.id 순차배열 재정렬 (COOKING 우선)`);
-      
-      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
-        // 새 티켓 추가 시 전체 재정렬 (COOKING 우선순위 적용)
-        setTimeout(() => {
-          window.KDSUIRenderer.triggerGridReorder('new_ticket_added');
-        }, 100);
-      } else {
-        // 백업: 직접 재렌더링
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
-          const currentTickets = KDSState.getActiveTickets();
-          window.KDSUIRenderer.renderKDSGrid(currentTickets, true);
-          console.log(`🔄 직접 Grid 재렌더링: ${currentTickets.length}개 티켓`);
-        }
-      }
+      // 전체 Grid 재렌더링
+      this._triggerFullGridRerender('new_ticket');
 
       // 사운드 재생
       if (window.KDSSoundManager) {
         window.KDSSoundManager.playNewOrderSound();
       }
 
-      // 탭 카운트 업데이트
-      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-        window.KDSUIRenderer.updateTicketCounts();
-      }
-
-      console.log(`✅ 새 티켓 ${ticketId} 처리 완료 - order_tickets.id 순차배열 적용됨`);
+      console.log(`✅ 새 티켓 ${ticketId} 처리 완료 - 전체 Grid 재렌더링됨`);
     },
 
     /**
@@ -486,21 +455,15 @@
     },
 
     /**
-     * 티켓 조리 시작 처리 - COOKING 우선순위 적용한 전체 Grid 재정렬
+     * 티켓 조리 시작 처리 - 전체 Grid 재렌더링
      */
     handleTicketCookingStarted(data) {
       const ticketId = data.ticket_id;
-      console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 이벤트 수신 - COOKING 우선순위 재정렬`);
+      console.log(`🔥 WebSocket: 티켓 ${ticketId} 조리 시작 이벤트 - 전체 Grid 재렌더링`);
 
       const ticket = KDSState.getTicket(ticketId);
       if (!ticket) {
         console.warn(`⚠️ WebSocket: 티켓 ${ticketId}을 찾을 수 없음`);
-        return;
-      }
-
-      // 현재 처리 중인 티켓이면 WebSocket 이벤트 무시 (중복 방지)
-      if (window.KDSManager?._processingTickets?.has(ticketId)) {
-        console.log(`🔄 WebSocket: 티켓 ${ticketId} 이미 처리 중 - 이벤트 무시`);
         return;
       }
 
@@ -517,22 +480,17 @@
       // 업데이트된 티켓 저장
       KDSState.setTicket(ticketId, ticket);
 
-      console.log(`📊 티켓 ${ticketId} 상태 변경: ${oldStatus} → COOKING - COOKING 우선순위 재정렬 시작`);
+      console.log(`📊 티켓 ${ticketId} 상태 변경: ${oldStatus} → COOKING`);
 
-      // COOKING 상태 변경은 최우선순위이므로 전체 Grid 재정렬 필수
-      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
-        // 조리 시작은 우선순위 변경이므로 강제 재정렬
-        setTimeout(() => {
-          window.KDSUIRenderer.triggerGridReorder('cooking_started');
-        }, 100);
-      }
+      // 전체 Grid 재렌더링
+      this._triggerFullGridRerender('cooking_started');
 
       // 사운드 재생
       if (window.KDSSoundManager) {
         window.KDSSoundManager.playItemCompleteSound();
       }
 
-      console.log(`✅ 티켓 ${ticketId} 조리 시작 처리 완료 - COOKING 우선순위 Grid 재정렬됨`);
+      console.log(`✅ 티켓 ${ticketId} 조리 시작 처리 완료`);
     },
 
     /**
@@ -576,32 +534,10 @@
         // 상태에서 제거
         KDSState.removeTicket(ticketId);
 
-        // COOKING 상태였던 카드가 제거되면 전체 재배치 필요
-        if (wasCooking) {
-          console.log(`🔄 COOKING 상태 카드 ${ticketId} 제거 - 전체 Grid 재배치 시작`);
-          
-          // 개별 제거 후 전체 재정렬
-          const success = this._removeTicketFromSlot(ticketId);
-          
-          if (success) {
-            // 전체 Grid 재정렬 (COOKING 우선순위 다시 적용)
-            if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
-              setTimeout(() => {
-                window.KDSUIRenderer.triggerGridReorder('cooking_completed');
-              }, 400); // 제거 애니메이션 후 실행
-            }
-          }
-        } else {
-          // 일반 상태 카드는 개별 제거만
-          this._removeTicketFromSlot(ticketId);
-        }
+        // 전체 Grid 재렌더링 (모든 완료 이벤트에서)
+        this._triggerFullGridRerender('ticket_completed');
 
-        // 탭 카운트 업데이트
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-          window.KDSUIRenderer.updateTicketCounts();
-        }
-
-        console.log(`✅ 티켓 ${ticketId} 완료 처리 완료 (재배치: ${wasCooking})`);
+        console.log(`✅ 티켓 ${ticketId} 완료 처리 완료 - 전체 Grid 재렌더링됨`);
 
       } finally {
         // 제거 처리 완료 - 마킹 해제 (지연 실행)
@@ -659,28 +595,8 @@
       // 상태에 업데이트된 티켓 저장
       KDSState.setTicket(ticketId, updatedTicket);
 
-      // 상태가 변경된 경우 (특히 COOKING <-> 다른 상태) 전체 재정렬
-      if (statusChanged && (oldStatus === 'COOKING' || newStatus === 'COOKING')) {
-        console.log(`🔄 상태 변경으로 인한 전체 Grid 재정렬: ${ticketId}`);
-        
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
-          window.KDSUIRenderer.triggerGridReorder('status_changed');
-        }
-      } else {
-        // 상태 변경이 없으면 개별 슬롯 업데이트
-        const success = this._updateTicketSlot(updatedTicket);
-
-        if (success) {
-          console.log(`✅ 티켓 ${ticketId} 개별 슬롯 업데이트 완료 (상태: ${newStatus})`);
-        } else {
-          console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 업데이트 실패`);
-        }
-      }
-
-      // 탭 카운트 업데이트
-      if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-        window.KDSUIRenderer.updateTicketCounts();
-      }
+      // 모든 티켓 업데이트에서 전체 Grid 재렌더링
+      this._triggerFullGridRerender('ticket_updated');
 
       console.log(`✅ 티켓 ${ticketId} 업데이트 처리 완료`);
     },
@@ -858,6 +774,29 @@
           console.log(`💳 결제 완료 알림 수신: 테이블 ${data.data.table_number} (KDS 처리 생략)`);
           break;
       }
+    },
+
+    /**
+     * 전체 Grid 재렌더링 트리거 (모든 이벤트 통합 처리)
+     */
+    _triggerFullGridRerender(reason = 'unknown') {
+      console.log(`🔄 전체 Grid 재렌더링 트리거: ${reason}`);
+
+      setTimeout(() => {
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
+          window.KDSUIRenderer.triggerGridReorder(reason);
+        } else if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
+          // 백업: 직접 재렌더링
+          const currentTickets = KDSState.currentTab === 'active' ? 
+            KDSState.getActiveTickets() : KDSState.getCompletedTickets();
+          window.KDSUIRenderer.renderKDSGrid(currentTickets);
+        }
+
+        // 탭 카운트 업데이트
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
+        }
+      }, 100);
     },
 
     /**
