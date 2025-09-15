@@ -786,53 +786,41 @@
      */
     async printOrder(ticketId) {
       try {
-        console.log(`🖨️ 티켓 ${ticketId} 출력 요청 - 즉시 처리`);
+        console.log(`🖨️ 주문서 출력 요청: ${ticketId} (완료 처리 안함)`);
 
-        // 1. 티켓 찾기
+        // UI 즉시 업데이트 (optimistic update) - 출력 상태만
         const ticket = this._findTicketById(ticketId);
-        if (!ticket) {
-          this.showError(`티켓 ${ticketId}을 찾을 수 없습니다.`);
-          return;
+        if (ticket) {
+          ticket._printRequested = true;
         }
 
-        // 2. 즉시 UI에서 티켓 제거 (낙관적 업데이트)
-        this.removeCardFromUI(ticketId);
-        KDSState.removeTicket(ticketId);
-
-        // 3. 탭 필터링 및 카운트 업데이트
-        if (KDSState.currentTab === 'active') {
-          this.filterTickets();
-        }
-        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-          window.KDSUIRenderer.updateTicketCounts();
-        }
-
-        // 4. 백그라운드에서 서버 API 호출 및 KRP WebSocket 전송
-        const result = await KDSAPIService.updatePrintStatus(ticketId);
+        // 서버에 출력 상태만 업데이트 (KRP로 전송용)
+        const result = await window.KDSAPI.updatePrintStatus(ticketId);
 
         if (result.success) {
-          console.log(`✅ 티켓 ${ticketId} 출력 상태 업데이트 성공 - KRP로 즉시 전송됨`);
+          console.log(`✅ 출력 요청 성공: ${ticketId} - 카드는 유지됨`);
+          this.showSuccess(`주문서 #${ticketId} 출력 요청 완료`);
 
-          // 5. 사운드 재생
-          if (window.KDSSoundManager && typeof window.KDSSoundManager.playNotificationSound === 'function') {
-            try {
-              window.KDSSoundManager.playNotificationSound();
-            } catch (soundError) {
-              console.warn(`⚠️ 사운드 재생 실패:`, soundError);
-            }
+          // 출력 버튼 비활성화 (재출력 방지)
+          const printBtn = document.querySelector(`[data-ticket-id="${ticketId}"] .print-btn`);
+          if (printBtn) {
+            printBtn.disabled = true;
+            printBtn.textContent = '🖨️ 출력됨';
           }
-
         } else {
-          // 실패 시에도 UI는 이미 업데이트되었으므로 경고만 표시
-          console.warn(`⚠️ 서버 출력 상태 업데이트 실패 (UI는 이미 처리됨): ${result.error}`);
+          throw new Error(result.error || '출력 실패');
         }
 
-        console.log(`✅ 티켓 ${ticketId} 출력 처리 완료 - 즉시 KRP 전송`);
-
       } catch (error) {
-        console.error(`❌ 티켓 ${ticketId} 출력 실패:`, error);
-        // 에러 발생 시에도 UI 상태는 유지 (이미 제거됨)
-        console.log(`🚨 출력 에러 발생했지만 UI는 이미 처리됨: ${ticketId}`);
+        console.error('❌ 주문서 출력 실패:', error);
+
+        // 실패 시 UI 복구
+        const ticket = this._findTicketById(ticketId);
+        if (ticket) {
+          ticket._printRequested = false;
+        }
+
+        this.showError(`출력 실패: ${error.message}`);
       }
     },
 

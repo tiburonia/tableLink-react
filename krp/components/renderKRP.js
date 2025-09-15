@@ -746,7 +746,7 @@ function handleNewPrintRequest(printData) {
   console.log(`✅ 출력 요청 처리 완료: 현재 메인 ${currentReceipt ? '사용중' : '비어있음'}, 대기 큐 ${waitingQueue.length}개`);
 }
 
-// 메인 화면에 주문서 표시
+// 메인 화면에 주방서 표시
 function displayMainReceipt(printData) {
   currentReceipt = printData;
   
@@ -759,14 +759,44 @@ function displayMainReceipt(printData) {
     minute: '2-digit'
   });
 
-  const itemsHTML = printData.items.map(item => `
+  // 주방 관련 아이템만 필터링
+  const kitchenItems = (printData.items || []).filter(item => {
+    const cookStation = item.cook_station || 'KITCHEN';
+    return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+  });
+
+  console.log(`🍳 KRP 아이템 필터링: 전체 ${printData.items?.length || 0}개 → 주방 ${kitchenItems.length}개`);
+
+  // 주방 아이템이 없으면 음료만 있다는 안내
+  if (kitchenItems.length === 0) {
+    const drinkCount = (printData.items || []).filter(item => 
+      (item.cook_station || 'KITCHEN') === 'DRINK'
+    ).length;
+    
+    container.innerHTML = `
+      <div class="no-receipt">
+        <div class="no-receipt-icon">🥤</div>
+        <h3>주방 조리 없음</h3>
+        <p>이 주문은 음료만 ${drinkCount}개 있습니다</p>
+        <div class="receipt-actions">
+          <button class="complete-btn" onclick="completeCurrentReceipt()">
+            ✅ 확인 완료
+          </button>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const itemsHTML = kitchenItems.map(item => `
     <div class="receipt-item">
       <div class="item-left">
-        <div class="item-name">${item.quantity}x ${item.menuName}</div>
+        <div class="item-name">${item.quantity || 1}x ${item.menuName || item.menu_name || '메뉴'}</div>
+        <div class="item-details">[${item.cook_station || 'KITCHEN'}]</div>
         ${item.options && Object.keys(item.options).length > 0 ? 
           `<div class="item-details">${JSON.stringify(item.options)}</div>` : ''}
       </div>
-      <div class="item-price">${item.totalPrice.toLocaleString()}원</div>
+      <div class="item-price">${(item.totalPrice || item.price || 0).toLocaleString()}원</div>
     </div>
   `).join('');
 

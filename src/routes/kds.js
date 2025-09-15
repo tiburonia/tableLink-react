@@ -264,25 +264,25 @@ router.put('/tickets/:ticketId/start-cooking', async (req, res) => {
   }
 });
 
-// 🖨️ KDS 티켓 출력 상태 업데이트 API
+// 🖨️ KDS 티켓 출력 상태 업데이트 API - 완료 처리하지 않음
 router.put('/tickets/:ticketId/print', async (req, res) => {
   const client = await pool.connect();
 
   try {
     const { ticketId } = req.params;
 
-    console.log(`🖨️ KDS 티켓 ${ticketId} 출력 처리 - PRINTED 상태로 업데이트`);
+    console.log(`🖨️ KDS 티켓 ${ticketId} 출력 요청 - 출력 상태만 업데이트 (완료 처리 안함)`);
 
     await client.query('BEGIN');
 
-    // order_tickets 테이블에서 출력 상태를 PRINTED로 변경하고 printed_at 설정
+    // order_tickets 테이블에서 출력 상태만 PRINTED로 변경 (status는 변경하지 않음)
     const ticketUpdateResult = await client.query(`
       UPDATE order_tickets
       SET print_status = 'PRINTED',
           printed_at = CURRENT_TIMESTAMP,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
-      RETURNING id, order_id, created_at
+      RETURNING id, order_id, status, created_at
     `, [parseInt(ticketId)]);
 
     if (ticketUpdateResult.rows.length === 0) {
@@ -293,9 +293,11 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
       });
     }
 
-    const { order_id, created_at } = ticketUpdateResult.rows[0];
+    const { order_id, status, created_at } = ticketUpdateResult.rows[0];
 
-    // 상세 주문 정보 조회 (KRP 전송용)
+    console.log(`ℹ️ 출력 처리 완료 - 티켓 상태는 ${status}로 유지됨 (변경하지 않음)`);
+
+    // 상세 주문 정보 조회 (KRP 전송용) - cook_station 정보 포함
     const orderDetailResult = await client.query(`
       SELECT 
         o.id as order_id,
@@ -310,6 +312,7 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
             'quantity', oi.quantity,
             'price', oi.unit_price,
             'totalPrice', oi.unit_price * oi.quantity,
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
             'options', COALESCE(oi.options, '{}')
           ) ORDER BY oi.created_at
         ) as items,
@@ -334,7 +337,7 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     await client.query('COMMIT');
 
-    // KRP WebSocket으로 새 출력 요청 즉시 전송
+    // KRP WebSocket으로 새 출력 요청 즉시 전송 - cook_station 정보 포함
     const printData = {
       ticket_id: parseInt(ticketId),
       order_id: orderDetail.order_id,
@@ -347,7 +350,14 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
       source: 'kds_print_button'
     };
 
-    console.log(`🖨️ KRP 출력 데이터 준비:`, printData);
+    console.log(`🖨️ KRP 출력 데이터 준비 (cook_station 포함):`, {
+      ticket_id: printData.ticket_id,
+      total_items: printData.items.length,
+      kitchen_items: printData.items.filter(item => 
+        ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(item.cook_station)
+      ).length,
+      drink_items: printData.items.filter(item => item.cook_station === 'DRINK').length
+    });
 
     // 전역 브로드캐스트 함수 사용
     if (global.broadcastKRPPrint) {
@@ -358,13 +368,17 @@ router.put('/tickets/:ticketId/print', async (req, res) => {
 
     res.json({
       success: true,
-      message: '출력 처리 완료 - KRP로 전송됨',
+      message: '출력 요청 완료 - KRP로 전송됨 (티켓 상태 유지)',
       ticket_id: parseInt(ticketId),
       order_id: orderDetail.order_id,
+      ticket_status: status, // 현재 티켓 상태 반환
       print_data: {
         table_number: orderDetail.table_num,
         customer_name: orderDetail.customer_name,
         items_count: orderDetail.items?.length || 0,
+        kitchen_items: orderDetail.items?.filter(item => 
+          ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(item.cook_station)
+        ).length || 0,
         total_amount: parseInt(orderDetail.total_amount) || 0
       }
     });
