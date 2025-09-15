@@ -61,13 +61,24 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
     // 1. 서버에 결제 준비 요청 (/api/toss/prepare)
     console.log('📋 서버에 결제 준비 요청 시작');
 
-    // 아이템 배열 준비
-    const itemsArray = orderData.items || currentOrder || [];
+    // 아이템 배열 준비 - 우선순위: currentOrder > orderData.items
+    let itemsArray = [];
     
-    console.log('📋 confirmPay - 아이템 준비:', {
-      orderData_items: orderData.items,
-      currentOrder: currentOrder,
-      최종_itemsArray: itemsArray
+    if (Array.isArray(currentOrder) && currentOrder.length > 0) {
+      itemsArray = currentOrder;
+      console.log('📋 currentOrder 배열 사용:', currentOrder.length, '개');
+    } else if (Array.isArray(orderData.items) && orderData.items.length > 0) {
+      itemsArray = orderData.items;
+      console.log('📋 orderData.items 배열 사용:', orderData.items.length, '개');
+    } else {
+      console.error('❌ 유효한 아이템 배열을 찾을 수 없음:', { currentOrder, orderData_items: orderData.items });
+      throw new Error('주문 아이템 정보가 없습니다.');
+    }
+    
+    console.log('📋 confirmPay - 최종 아이템 배열:', {
+      길이: itemsArray.length,
+      첫번째아이템: itemsArray[0],
+      전체아이템: itemsArray
     });
 
     // cook_station을 jsonb 형태로 전송하도록 수정
@@ -78,21 +89,39 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
       tableNumber: orderData.tableNum || 1,
       orderData: {
         items: itemsArray.map((item, index) => {
+          // menuId 우선순위 처리
+          let finalMenuId = null;
+          if (item.menuId && !isNaN(parseInt(item.menuId))) {
+            finalMenuId = parseInt(item.menuId);
+          } else if (item.menu_id && !isNaN(parseInt(item.menu_id))) {
+            finalMenuId = parseInt(item.menu_id);
+          } else if (item.id && !isNaN(parseInt(item.id))) {
+            finalMenuId = parseInt(item.id);
+          }
+
           const processedItem = {
-            ...item,
-            menuId: item.menuId || item.menu_id || item.id || null,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity || item.qty || 1,
-            totalPrice: item.totalPrice || (item.price * (item.quantity || item.qty || 1)),
+            menuId: finalMenuId,
+            menu_id: finalMenuId, // 서버 호환성
+            name: item.name || '메뉴명 없음',
+            price: parseInt(item.price) || 0,
+            quantity: parseInt(item.quantity || item.qty) || 1,
+            totalPrice: item.totalPrice || (parseInt(item.price) * parseInt(item.quantity || item.qty || 1)),
             cook_station: item.cook_station || 'KITCHEN'
           };
           
-          console.log(`📋 아이템 ${index + 1} 처리:`, {
-            원본: item,
-            처리된것: processedItem,
-            menuId확인: processedItem.menuId,
-            cook_station확인: processedItem.cook_station
+          console.log(`📋 아이템 ${index + 1} 상세 처리:`, {
+            원본아이템: {
+              name: item.name,
+              menuId: item.menuId,
+              menu_id: item.menu_id,
+              id: item.id,
+              cook_station: item.cook_station,
+              price: item.price,
+              quantity: item.quantity
+            },
+            처리결과: processedItem,
+            menuId변환: `${item.menuId} -> ${finalMenuId}`,
+            cook_station유지: `${item.cook_station} -> ${processedItem.cook_station}`
           });
           
           return processedItem;

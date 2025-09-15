@@ -934,7 +934,29 @@
         }
 
         console.log('💳 선택된 결제 방법:', selectedPaymentMethod);
-        console.log('💳 토스페이먼츠 결제 요청:', { selectedPaymentMethod, finalAmount });
+        console.log('💳 결제 전 orderData 확인:', orderData);
+        console.log('💳 결제 전 currentOrder 확인:', currentOrder);
+
+        // currentOrder가 TLL 장바구니 형식인지 확인하고 처리
+        let processedCurrentOrder = currentOrder;
+        
+        if (Array.isArray(currentOrder)) {
+          console.log('📋 배열 형태 currentOrder 감지, 그대로 사용');
+          processedCurrentOrder = currentOrder.map(item => ({
+            ...item,
+            menuId: item.menuId || item.menu_id || item.id,
+            cook_station: item.cook_station || 'KITCHEN'
+          }));
+        } else if (typeof currentOrder === 'object' && window.currentTLLOrder?.cart) {
+          console.log('📋 TLL 장바구니 데이터 사용');
+          processedCurrentOrder = window.currentTLLOrder.cart.map(item => ({
+            ...item,
+            menuId: item.menuId || item.menu_id || item.id,
+            cook_station: item.cook_station || 'KITCHEN'
+          }));
+        }
+
+        console.log('📋 처리된 currentOrder:', processedCurrentOrder);
 
         // 토스페이먼츠 결제 방식 매핑 (정확한 토스페이먼츠 API 파라미터로 매핑)
         const tossPaymentMethodMap = {
@@ -952,10 +974,9 @@
 
         console.log('💳 매핑된 토스 결제 방법:', tossMethod);
 
-        // 결제 확인 함수 호출 - table_num도 전달
+        // 결제 확인 함수 호출 - 처리된 currentOrder 전달
         if (typeof confirmPay === 'function') {
-          // confirmPay 함수에 cook_station과 table_num 정보 전달
-          await confirmPay(orderData, pointsUsed, store, currentOrder, finalAmount, couponId, couponDiscount, tossMethod, orderData.tableNum);
+          await confirmPay(orderData, pointsUsed, store, processedCurrentOrder, finalAmount, couponId, couponDiscount, tossMethod, orderData.tableNum);
         } else {
           throw new Error('결제 처리 함수를 찾을 수 없습니다.');
         }
