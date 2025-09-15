@@ -266,14 +266,15 @@
     },
 
     /**
-     * Grid 렌더링 - 순차배열 로직 적용
+     * Grid 렌더링 - 순차배열 로직 적용 (상태 변경 시 전체 재배열)
      */
-    renderKDSGrid(orders = []) {
-      console.log(`🎨 Grid 렌더링 시작: ${orders.length}개 주문`);
+    renderKDSGrid(orders = [], forceRerender = false) {
+      console.log(`🎨 Grid 렌더링 시작: ${orders.length}개 주문 (강제 재렌더링: ${forceRerender})`);
 
-      // 렌더링 중복 방지
-      if (UIState.isRendering) {
+      // 렌더링 중복 방지 (강제 재렌더링이 아닌 경우만)
+      if (UIState.isRendering && !forceRerender) {
         UIState.renderQueue = orders;
+        console.log('🔄 렌더링 대기열에 추가');
         return;
       }
 
@@ -281,7 +282,10 @@
 
       try {
         const grid = document.getElementById('kdsGrid');
-        if (!grid) return;
+        if (!grid) {
+          console.warn('⚠️ Grid 컨테이너를 찾을 수 없음');
+          return;
+        }
 
         // 주방 관련 주문만 필터링
         const kitchenOrders = orders.filter(order => {
@@ -295,45 +299,63 @@
         const cookingOrders = kitchenOrders.filter(order => 
           (order.status || '').toUpperCase() === 'COOKING'
         );
-        const pendingOrders = kitchenOrders.filter(order => 
+        const otherOrders = kitchenOrders.filter(order => 
           (order.status || '').toUpperCase() !== 'COOKING'
         );
 
-        console.log(`📊 상태별 분석: COOKING ${cookingOrders.length}개, 기타 ${pendingOrders.length}개`);
+        console.log(`📊 상태별 분석: COOKING ${cookingOrders.length}개, 기타 ${otherOrders.length}개`);
 
-        // 슬롯 배치 계획 (순차 배열 로직)
+        // 슬롯 배치 계획 (order_tickets.id 기준 순차 배열)
         const slotAssignments = this.planSlotAssignments(kitchenOrders);
 
-        // Grid 업데이트 (애니메이션 효과 포함)
+        // 기존 슬롯 상태 파악
+        const currentSlotState = {};
+        for (let i = 1; i <= 9; i++) {
+          const slot = grid.querySelector(`[data-slot="${i}"]`);
+          const existingCard = slot?.querySelector('.order-card');
+          if (existingCard) {
+            currentSlotState[i] = existingCard.getAttribute('data-ticket-id');
+          }
+        }
+
+        // Grid 업데이트 - 전체 재배열 보장
         for (let i = 1; i <= 9; i++) {
           const slot = grid.querySelector(`[data-slot="${i}"]`);
           if (!slot) continue;
 
-          if (slotAssignments[i]) {
-            // 기존 카드와 비교하여 변경된 경우만 애니메이션
-            const existingCard = slot.querySelector('.order-card');
-            const newTicketId = extractTicketId(slotAssignments[i]);
-            const existingTicketId = existingCard?.getAttribute('data-ticket-id');
+          const assignedOrder = slotAssignments[i];
+          const currentTicketId = currentSlotState[i];
 
-            if (existingTicketId !== newTicketId) {
-              // 카드 교체 애니메이션
-              this.animateCardChange(slot, slotAssignments[i], i);
+          if (assignedOrder) {
+            const newTicketId = extractTicketId(assignedOrder);
+            
+            // 카드가 변경되었거나 강제 재렌더링인 경우
+            if (currentTicketId !== newTicketId || forceRerender) {
+              console.log(`🔄 슬롯 ${i}: ${currentTicketId} → ${newTicketId}`);
+              this.animateCardChange(slot, assignedOrder, i);
             }
           } else {
-            // 빈 슬롯으로 업데이트
-            const hasCard = slot.querySelector('.order-card');
-            if (hasCard) {
+            // 빈 슬롯으로 변경
+            if (currentTicketId) {
+              console.log(`🗑️ 슬롯 ${i}: ${currentTicketId} → 빈 슬롯`);
               this.animateCardRemoval(slot, i);
-            } else {
+            } else if (forceRerender) {
               slot.innerHTML = createEmptySlotHTML(i);
             }
           }
         }
 
+        // 슬롯 위치 상태 업데이트
+        UIState.slotPositions.clear();
+        Object.entries(slotAssignments).forEach(([slotNum, order]) => {
+          const ticketId = extractTicketId(order);
+          UIState.slotPositions.set(ticketId, parseInt(slotNum));
+        });
+
         // 탭 카운트 업데이트
         this.updateTicketCounts();
 
-        console.log(`✅ Grid 렌더링 완료: ${Object.keys(slotAssignments).length}개 카드 순차배치`);
+        console.log(`✅ Grid 렌더링 완료: ${Object.keys(slotAssignments).length}개 카드 순차배치 (COOKING 우선)`);
 
       } finally {
         UIState.isRendering = false;
@@ -342,63 +364,99 @@
         if (UIState.renderQueue.length > 0) {
           const queuedOrders = UIState.renderQueue;
           UIState.renderQueue = [];
-          setTimeout(() => this.renderKDSGrid(queuedOrders), 100);
+          setTimeout(() => this.renderKDSGrid(queuedOrders, false), 100);
         }
       }
     },
 
     /**
-     * 슬롯 배치 계획 - order_tickets.id 기준 순차배열, COOKING 우선배치
+     * 슬롯 배치 계획 - order_tickets.id 기준 순차배열, COOKING 최우선, 빈 칸 없는 배치
      */
     planSlotAssignments(orders) {
       const assignments = {};
 
       console.log(`🎯 카드 배열 로직 시작: ${orders.length}개 티켓`);
 
-      // 1단계: 티켓 정렬 (COOKING 상태 우선, 그 다음 ID 순)
+      if (orders.length === 0) {
+        console.log('📋 표시할 티켓이 없음');
+        return assignments;
+      }
+
+      // 1단계: 정확한 order_tickets.id 추출 및 정렬
       const sortedOrders = [...orders].sort((a, b) => {
         const statusA = (a.status || '').toUpperCase();
         const statusB = (b.status || '').toUpperCase();
         
-        // COOKING 상태 우선배치
+        // COOKING 상태 최우선 배치
         const isCookingA = statusA === 'COOKING';
         const isCookingB = statusB === 'COOKING';
         
         if (isCookingA && !isCookingB) return -1;
         if (!isCookingA && isCookingB) return 1;
         
-        // 동일 상태 내에서는 order_tickets.id(또는 ticket_id) 오름차순
-        const idA = parseInt(a.id || a.ticket_id || a.check_id || 0);
-        const idB = parseInt(b.id || b.ticket_id || b.check_id || 0);
+        // 동일 상태 내에서는 order_tickets.id 기준 오름차순 정렬
+        // 우선순위: ticket_id > id > check_id (order_tickets.id를 의미)
+        const getOrderTicketId = (order) => {
+          // ticket_id가 order_tickets.id를 가리키는 경우가 많음
+          if (order.ticket_id && !isNaN(parseInt(order.ticket_id))) {
+            return parseInt(order.ticket_id);
+          }
+          // id 필드 확인
+          if (order.id && !isNaN(parseInt(order.id))) {
+            return parseInt(order.id);
+          }
+          // check_id 필드 확인
+          if (order.check_id && !isNaN(parseInt(order.check_id))) {
+            return parseInt(order.check_id);
+          }
+          // 기본값
+          return 999999;
+        };
+
+        const idA = getOrderTicketId(a);
+        const idB = getOrderTicketId(b);
         
         return idA - idB;
       });
 
-      console.log('📊 정렬된 티켓 순서:', sortedOrders.map(order => {
+      console.log('📊 정렬된 티켓 순서 (order_tickets.id 기준):', sortedOrders.map(order => {
         const ticketId = extractTicketId(order);
         const status = (order.status || '').toUpperCase();
-        const id = parseInt(order.id || order.ticket_id || order.check_id || 0);
-        return { ticketId, status, id, isCooking: status === 'COOKING' };
+        const orderTicketId = order.ticket_id || order.id || order.check_id;
+        return { 
+          ticketId, 
+          status, 
+          orderTicketId, 
+          isCooking: status === 'COOKING',
+          priority: status === 'COOKING' ? 1 : 2
+        };
       }));
 
-      // 2단계: 1번부터 순차적으로 빈 칸 없이 배치
+      // 2단계: 1번 슬롯부터 순차적으로 빈 칸 없이 배치
       let slotIndex = 1;
+      
       sortedOrders.forEach((order, index) => {
         const ticketId = extractTicketId(order);
         const status = (order.status || '').toUpperCase();
+        const orderTicketId = order.ticket_id || order.id || order.check_id;
         
         if (slotIndex <= 9) {
           assignments[slotIndex] = order;
           UIState.slotPositions.set(ticketId, slotIndex);
           
-          console.log(`📍 티켓 ${ticketId}: 슬롯 ${slotIndex} 배치 (상태: ${status}, 순서: ${index + 1})`);
+          console.log(`📍 슬롯 ${slotIndex}: 티켓 ${ticketId} (order_tickets.id: ${orderTicketId}, 상태: ${status})`);
           slotIndex++;
         } else {
-          console.warn(`⚠️ 티켓 ${ticketId}: 슬롯 부족으로 배치 불가`);
+          console.warn(`⚠️ 슬롯 부족: 티켓 ${ticketId} 배치 불가 (9개 슬롯 초과)`);
         }
       });
 
-      console.log(`✅ 배치 완료: ${Object.keys(assignments).length}개 슬롯 사용`);
+      // 3단계: 슬롯 배치 결과 검증
+      const cookingCount = sortedOrders.filter(o => (o.status || '').toUpperCase() === 'COOKING').length;
+      const totalAssigned = Object.keys(assignments).length;
+
+      console.log(`✅ 카드 배열 완료: 총 ${totalAssigned}개 배치 (COOKING: ${cookingCount}개, 기타: ${totalAssigned - cookingCount}개)`);
+      
       return assignments;
     },
 
@@ -625,17 +683,27 @@
     },
 
     /**
-     * 전체 Grid 재정렬 트리거
+     * 전체 Grid 재정렬 트리거 - 강제 재렌더링으로 정확한 순서 보장
      */
     triggerGridReorder(reason = 'manual') {
-      console.log(`🔄 Grid 재정렬 트리거: ${reason}`);
+      console.log(`🔄 Grid 재정렬 트리거: ${reason} (전체 재배열)`);
+      
+      // 상태 변경 이벤트의 경우 강제 재렌더링으로 정확한 순서 보장
+      const forceRerender = [
+        'cooking_started', 
+        'cooking_completed', 
+        'status_changed', 
+        'new_ticket_added'
+      ].includes(reason);
       
       if (KDSState.currentTab === 'active') {
         const activeTickets = KDSState.getActiveTickets();
-        this.renderKDSGrid(activeTickets);
+        console.log(`📋 활성 티켓 재정렬: ${activeTickets.length}개 (강제: ${forceRerender})`);
+        this.renderKDSGrid(activeTickets, forceRerender);
       } else {
         const completedTickets = KDSState.getCompletedTickets();
-        this.renderKDSGrid(completedTickets);
+        console.log(`📋 완료 티켓 재정렬: ${completedTickets.length}개 (강제: ${forceRerender})`);
+        this.renderKDSGrid(completedTickets, forceRerender);
       }
     },
 
