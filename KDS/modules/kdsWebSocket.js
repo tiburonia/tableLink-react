@@ -528,7 +528,7 @@
     },
 
     /**
-     * 티켓 완료 처리 - 개별 슬롯에서 제거
+     * 티켓 완료 처리 - COOKING 상태에서 완료된 경우 재배치 적용
      */
     handleTicketCompleted(data) {
       console.log('✅ 티켓 완료 이벤트 (DONE 상태):', data);
@@ -540,6 +540,9 @@
         console.log(`ℹ️ 티켓 ${ticketId}이 이미 제거됨 - WebSocket 이벤트 무시`);
         return;
       }
+
+      // 현재 상태가 COOKING이었는지 확인
+      const wasCooking = (ticket.status || '').toUpperCase() === 'COOKING';
 
       // 중복 제거 방지 - 이미 처리 중인 티켓인지 확인
       if (this._removingTickets && this._removingTickets.has(ticketId)) {
@@ -553,7 +556,7 @@
       }
       this._removingTickets.add(ticketId);
 
-      console.log(`🗑️ 티켓 ${ticketId} 개별 슬롯에서 제거`);
+      console.log(`🗑️ 티켓 ${ticketId} 완료 처리 - COOKING 상태였음: ${wasCooking}`);
 
       try {
         // 사운드 재생
@@ -562,22 +565,35 @@
           ticket._soundPlayed = true;
         }
 
-        // 개별 슬롯에서 제거
-        const success = this._removeTicketFromSlot(ticketId);
+        // 상태에서 제거
+        KDSState.removeTicket(ticketId);
 
-        if (success) {
-          // 상태에서 제거
-          KDSState.removeTicket(ticketId);
-
-          // 탭 카운트 업데이트
-          if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
-            window.KDSUIRenderer.updateTicketCounts();
+        // COOKING 상태였던 카드가 제거되면 전체 재배치 필요
+        if (wasCooking) {
+          console.log(`🔄 COOKING 상태 카드 ${ticketId} 제거 - 전체 Grid 재배치 시작`);
+          
+          // 개별 제거 후 전체 재정렬
+          const success = this._removeTicketFromSlot(ticketId);
+          
+          if (success) {
+            // 전체 Grid 재정렬 (COOKING 우선순위 다시 적용)
+            if (window.KDSUIRenderer && typeof window.KDSUIRenderer.triggerGridReorder === 'function') {
+              setTimeout(() => {
+                window.KDSUIRenderer.triggerGridReorder('cooking_completed');
+              }, 400); // 제거 애니메이션 후 실행
+            }
           }
-
-          console.log(`✅ 티켓 ${ticketId} 개별 슬롯 제거 완료`);
         } else {
-          console.warn(`⚠️ 티켓 ${ticketId} 개별 슬롯 제거 실패`);
+          // 일반 상태 카드는 개별 제거만
+          this._removeTicketFromSlot(ticketId);
         }
+
+        // 탭 카운트 업데이트
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.updateTicketCounts === 'function') {
+          window.KDSUIRenderer.updateTicketCounts();
+        }
+
+        console.log(`✅ 티켓 ${ticketId} 완료 처리 완료 (재배치: ${wasCooking})`);
 
       } finally {
         // 제거 처리 완료 - 마킹 해제 (지연 실행)
@@ -820,6 +836,7 @@
           break;
 
         case 'db_item_change':
+          console.log('🍽️ DB 아이템 변경 처리:', data.data);
           this.handleItemUpdated({
             ticket_id: data.data.ticket_id,
             item_id: data.data.item_id,

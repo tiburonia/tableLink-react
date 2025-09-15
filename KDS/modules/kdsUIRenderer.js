@@ -665,6 +665,66 @@
     },
 
     /**
+     * 아이템 상태 업데이트 (웹소켓용)
+     */
+    updateItemStatus(ticketId, itemId, status) {
+      console.log(`🔄 아이템 상태 업데이트: 티켓 ${ticketId}, 아이템 ${itemId} -> ${status}`);
+      
+      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (!cardElement) {
+        console.warn(`⚠️ 티켓 ${ticketId} 카드를 찾을 수 없음`);
+        return;
+      }
+
+      // 아이템 상태 업데이트 (UI 반영은 전체 카드 재렌더링으로 처리)
+      const ticket = KDSState.getTicket(ticketId);
+      if (ticket && ticket.items) {
+        const item = ticket.items.find(i => i.id == itemId);
+        if (item) {
+          item.item_status = status;
+          item.status = status;
+          
+          // 카드 전체 업데이트
+          this.updateTicketCard(ticketId, ticket);
+          console.log(`✅ 아이템 ${itemId} 상태 업데이트 완료: ${status}`);
+        }
+      }
+    },
+
+    /**
+     * 카드 직접 제거 (강제 제거용)
+     */
+    removeCardDirectly(ticketId) {
+      console.log(`🗑️ 카드 직접 제거: ${ticketId}`);
+      
+      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (cardElement) {
+        const slotElement = cardElement.closest('.grid-slot');
+        if (slotElement) {
+          const slotNumber = parseInt(slotElement.dataset.slot);
+          
+          // 애니메이션과 함께 제거
+          cardElement.style.transition = 'all 0.3s ease';
+          cardElement.style.transform = 'scale(0.8)';
+          cardElement.style.opacity = '0';
+
+          setTimeout(() => {
+            if (slotNumber <= 9) {
+              slotElement.innerHTML = createEmptySlotHTML(slotNumber);
+            }
+            UIState.slotPositions.delete(ticketId);
+            console.log(`✅ 카드 ${ticketId} 직접 제거 완료`);
+          }, 300);
+
+          return true;
+        }
+      }
+      
+      console.warn(`⚠️ 제거할 카드 ${ticketId}를 찾을 수 없음`);
+      return false;
+    },
+
+    /**
      * CSS 스타일
      */
     renderStyles() {
