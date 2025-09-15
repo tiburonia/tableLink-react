@@ -795,7 +795,7 @@
         }
 
         // 서버에 출력 상태만 업데이트 (KRP로 전송용)
-        const result = await window.KDSAPI.updatePrintStatus(ticketId);
+        const result = await KDSAPIService.updatePrintStatus(ticketId);
 
         if (result.success) {
           console.log(`✅ 출력 요청 성공: ${ticketId} - 카드는 유지됨`);
@@ -892,6 +892,15 @@
     showError(message) {
       // 간단한 오류 표시 (추후 토스트나 모달로 개선 가능)
       alert(message);
+    },
+
+    /**
+     * 성공 메시지 표시
+     */
+    showSuccess(message) {
+      // 간단한 성공 메시지 표시 (추후 토스트나 모달로 개선 가능)
+      console.log('✅', message);
+      // 추후 토스트 알림으로 개선 가능
     }
   };
 
