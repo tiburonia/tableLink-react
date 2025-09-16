@@ -111,6 +111,62 @@ router.put('/:notificationId/read', async (req, res) => {
   }
 });
 
+// 📢 개별 알림 상세 조회
+router.get('/:notificationId', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        user_id,
+        type,
+        title,
+        message,
+        metadata,
+        created_at,
+        is_read,
+        sent_source
+      FROM notifications
+      WHERE id = $1
+    `, [parseInt(notificationId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '알림을 찾을 수 없습니다'
+      });
+    }
+
+    const notification = result.rows[0];
+
+    res.json({
+      success: true,
+      notification: {
+        id: notification.id,
+        user_id: notification.user_id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        metadata: notification.metadata,
+        createdAt: new Date(notification.created_at),
+        isRead: notification.is_read,
+        sentSource: notification.sent_source,
+        // 기존 호환성을 위한 필드들 (metadata에서 추출)
+        related_order_id: notification.metadata?.order_id || null,
+        related_store_id: notification.metadata?.store_id || null
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 개별 알림 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '알림을 조회할 수 없습니다'
+    });
+  }
+});
+
 // 📢 모든 알림 읽음 처리
 router.put('/mark-all-read', async (req, res) => {
   try {
