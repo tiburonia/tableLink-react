@@ -299,7 +299,7 @@ router.post('/confirm', async (req, res) => {
         usedPoint: orderData.usedPoint || 0,
         couponDiscount: orderData.couponDiscount || 0,
         items: itemsWithCookStation,
-        storeName: pendingPayment.store_name, // storeName 추가
+        storeName: orderData.storeName || '매장', // order_data에서 storeName 추출
         userId: pendingPayment.user_id
       };
 
@@ -335,6 +335,17 @@ router.post('/confirm', async (req, res) => {
       if (isNewOrder) {
         const notificationClient = await pool.connect();
         try {
+          // storeName을 orderData에서 직접 가져오거나 기본값 사용
+          const storeName = orderData.storeName || pendingPayment.order_data?.storeName || '매장';
+          
+          console.log(`📢 알림 생성 데이터 확인:`, {
+            userPk: orderInfo.userPk,
+            storeId: orderInfo.storeId,
+            storeName: storeName,
+            tableNumber: orderInfo.tableNumber,
+            orderId: orderIdToUse
+          });
+
           await notificationClient.query(`
             INSERT INTO notifications (
               user_id, type, title, message, metadata, is_read, sent_source
@@ -343,13 +354,13 @@ router.post('/confirm', async (req, res) => {
             orderInfo.userPk, // INTEGER 타입 user_id
             'order',
             '새로운 주문이 시작되었습니다',
-            `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
+            `${storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
             JSON.stringify({
               order_id: orderIdToUse,
               store_id: orderInfo.storeId,
-              store_name: orderInfo.storeName,
+              store_name: storeName,
               table_number: orderInfo.tableNumber,
-              payment_key: paymentData.paymentKey,
+              payment_key: paymentKey,
               amount: orderInfo.finalTotal
             })
           ]);
@@ -357,6 +368,12 @@ router.post('/confirm', async (req, res) => {
           console.log(`📢 토스 라우트: 새 주문 알림 생성 성공 - 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
         } catch (notificationError) {
           console.error('❌ 토스 라우트: 새 주문 알림 생성 실패:', notificationError);
+          console.error('❌ 알림 생성 오류 상세:', {
+            error: notificationError.message,
+            code: notificationError.code,
+            userPk: orderInfo.userPk,
+            storeId: orderInfo.storeId
+          });
         } finally {
           notificationClient.release();
         }
