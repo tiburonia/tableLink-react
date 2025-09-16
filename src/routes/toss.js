@@ -336,7 +336,7 @@ router.post('/confirm', async (req, res) => {
         const notificationClient = await pool.connect();
         try {
           // storeName 우선순위: orderData.storeName > pendingPayment.order_data.storeName > '매장'
-          let storeName = '매장'; // 기본값
+          let storeName;
           if (orderData && orderData.storeName) {
             storeName = orderData.storeName;
           } else if (pendingPayment.order_data && pendingPayment.order_data.storeName) {
