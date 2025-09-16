@@ -764,23 +764,19 @@ router.get('/processing/:orderId', async (req, res) => {
 
     console.log(`📋 주문 진행 상황 조회: ${orderId}`);
 
-    // 주문 기본 정보 조회
+    // 주문 기본 정보 조회 (단순화된 쿼리)
     const orderResult = await pool.query(`
       SELECT 
         o.id,
         o.store_id,
         s.name as store_name,
-        o.table_num as table_number,
-        o.status,
+        COALESCE(o.table_num, o.table_number, 1) as table_number,
+        COALESCE(o.status, 'OPEN') as status,
         o.created_at,
-        COUNT(DISTINCT ot.id) as total_tickets,
-        SUM(p.amount) as total_amount
+        COALESCE(o.session_ended, false) as session_ended
       FROM orders o
       JOIN stores s ON o.store_id = s.id
-      LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN payments p ON o.id = p.order_id AND p.status = 'COMPLETED'
       WHERE o.id = $1
-      GROUP BY o.id, s.name
     `, [parseInt(orderId)]);
 
     if (orderResult.rows.length === 0) {
@@ -792,39 +788,71 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // 티켓 정보 조회 (KDS 진행 상황)
-    const ticketsResult = await pool.query(`
-      SELECT 
-        ot.id,
-        ot.status,
-        ot.created_at,
-        array_agg(
-          json_build_object(
-            'id', oi.id,
-            'name', oi.menu_name,
-            'quantity', oi.quantity,
-            'status', oi.item_status
-          ) ORDER BY oi.created_at
-        ) as items
-      FROM order_tickets ot
-      JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE ot.order_id = $1
-      GROUP BY ot.id, ot.status, ot.created_at
-      ORDER BY ot.created_at DESC
-    `, [parseInt(orderId)]);
+    // 티켓 정보 조회 (존재하는 경우만)
+    let tickets = [];
+    try {
+      const ticketsResult = await pool.query(`
+        SELECT 
+          id,
+          COALESCE(status, 'PENDING') as status,
+          created_at
+        FROM order_tickets
+        WHERE order_id = $1
+        ORDER BY created_at DESC
+      `, [parseInt(orderId)]);
 
-    // 결제 내역 조회
-    const paymentsResult = await pool.query(`
-      SELECT 
-        id,
-        method,
-        amount,
-        status,
-        completed_at as created_at
-      FROM payments
-      WHERE order_id = $1 AND status = 'completed'
-      ORDER BY completed_at DESC
-    `, [parseInt(orderId)]);
+      tickets = ticketsResult.rows.map(ticket => ({
+        id: ticket.id,
+        status: ticket.status,
+        createdAt: ticket.created_at,
+        items: [] // 추후 order_items와 연동
+      }));
+    } catch (ticketError) {
+      console.warn('⚠️ 티켓 조회 실패 (테이블이 없을 수 있음):', ticketError.message);
+    }
+
+    // 결제 내역 조회 (존재하는 경우만)
+    let payments = [];
+    let totalAmount = 0;
+    try {
+      const paymentsResult = await pool.query(`
+        SELECT 
+          id,
+          COALESCE(method, 'TOSS') as method,
+          amount,
+          COALESCE(status, 'completed') as status,
+          COALESCE(completed_at, created_at) as created_at
+        FROM payments
+        WHERE order_id = $1 AND status = 'completed'
+        ORDER BY created_at DESC
+      `, [parseInt(orderId)]);
+
+      payments = paymentsResult.rows.map(payment => ({
+        id: payment.id,
+        method: payment.method.toUpperCase(),
+        amount: parseInt(payment.amount),
+        status: payment.status,
+        createdAt: payment.created_at
+      }));
+
+      totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    } catch (paymentError) {
+      console.warn('⚠️ 결제 내역 조회 실패:', paymentError.message);
+      // orders 테이블에서 직접 금액 조회
+      try {
+        const amountResult = await pool.query(`
+          SELECT COALESCE(total_amount, final_amount, 0) as amount
+          FROM orders
+          WHERE id = $1
+        `, [parseInt(orderId)]);
+        
+        if (amountResult.rows.length > 0) {
+          totalAmount = parseInt(amountResult.rows[0].amount) || 0;
+        }
+      } catch (amountError) {
+        console.warn('⚠️ 주문 금액 조회도 실패:', amountError.message);
+      }
+    }
 
     const responseData = {
       id: order.id,
@@ -833,23 +861,20 @@ router.get('/processing/:orderId', async (req, res) => {
       tableNumber: order.table_number,
       status: order.status,
       createdAt: order.created_at,
-      sessionEnded: order.session_ended || false,
-      totalOrders: parseInt(order.total_tickets) || 0,
-      totalAmount: parseInt(order.total_amount) || 0,
-      tickets: ticketsResult.rows.map(ticket => ({
-        id: ticket.id,
-        status: ticket.status,
-        createdAt: ticket.created_at,
-        items: ticket.items || []
-      })),
-      payments: paymentsResult.rows.map(payment => ({
-        id: payment.id,
-        method: payment.method.toUpperCase(),
-        amount: parseInt(payment.amount),
-        status: payment.status,
-        createdAt: payment.created_at
-      }))
+      sessionEnded: order.session_ended,
+      totalOrders: tickets.length,
+      totalAmount: totalAmount,
+      tickets: tickets,
+      payments: payments
     };
+
+    console.log(`✅ 주문 진행 상황 조회 성공:`, {
+      orderId: responseData.id,
+      storeName: responseData.storeName,
+      ticketCount: tickets.length,
+      paymentCount: payments.length,
+      totalAmount: responseData.totalAmount
+    });
 
     res.json({
       success: true,
@@ -860,7 +885,7 @@ router.get('/processing/:orderId', async (req, res) => {
     console.error('❌ 주문 진행 상황 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '주문 진행 상황을 조회할 수 없습니다'
+      error: '주문 진행 상황을 조회할 수 없습니다: ' + error.message
     });
   }
 });

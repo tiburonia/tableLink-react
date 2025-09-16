@@ -76,37 +76,115 @@ router.put('/:notificationId/read', async (req, res) => {
     const { notificationId } = req.params;
     const { userId } = req.body;
 
+    console.log(`📢 알림 읽음 처리 요청:`, {
+      notificationId,
+      userId,
+      notificationIdType: typeof notificationId,
+      userIdType: typeof userId
+    });
+
     if (!userId) {
+      console.error('❌ 사용자 ID 누락');
       return res.status(400).json({
         success: false,
         error: '사용자 ID가 필요합니다'
       });
     }
 
-    const result = await pool.query(`
-      UPDATE notifications
-      SET is_read = true, read_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND user_id = $2
-      RETURNING *
-    `, [parseInt(notificationId), parseInt(userId)]);
+    // 파라미터 검증
+    const parsedNotificationId = parseInt(notificationId);
+    const parsedUserId = parseInt(userId);
 
-    if (result.rows.length === 0) {
+    if (isNaN(parsedNotificationId) || isNaN(parsedUserId)) {
+      console.error('❌ 유효하지 않은 ID:', { notificationId, userId });
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 ID입니다'
+      });
+    }
+
+    // 먼저 알림이 존재하는지 확인
+    const existsResult = await pool.query(`
+      SELECT id, user_id, is_read
+      FROM notifications
+      WHERE id = $1
+    `, [parsedNotificationId]);
+
+    if (existsResult.rows.length === 0) {
+      console.error('❌ 알림을 찾을 수 없음:', parsedNotificationId);
       return res.status(404).json({
         success: false,
         error: '알림을 찾을 수 없습니다'
       });
     }
 
+    const notification = existsResult.rows[0];
+    console.log(`📢 알림 확인:`, {
+      id: notification.id,
+      user_id: notification.user_id,
+      is_read: notification.is_read,
+      requestUserId: parsedUserId
+    });
+
+    // 사용자 권한 확인
+    if (notification.user_id !== parsedUserId) {
+      console.error('❌ 권한 없음:', { 
+        notificationUserId: notification.user_id, 
+        requestUserId: parsedUserId 
+      });
+      return res.status(403).json({
+        success: false,
+        error: '이 알림에 대한 권한이 없습니다'
+      });
+    }
+
+    // 이미 읽음 상태인 경우
+    if (notification.is_read) {
+      console.log('ℹ️ 이미 읽음 상태인 알림:', parsedNotificationId);
+      return res.json({
+        success: true,
+        message: '이미 읽음으로 처리된 알림입니다'
+      });
+    }
+
+    // 읽음 상태로 업데이트
+    const updateResult = await pool.query(`
+      UPDATE notifications
+      SET is_read = true, read_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND user_id = $2
+      RETURNING id, is_read, read_at
+    `, [parsedNotificationId, parsedUserId]);
+
+    if (updateResult.rows.length === 0) {
+      console.error('❌ 업데이트 실패 - 조건에 맞는 알림 없음');
+      return res.status(404).json({
+        success: false,
+        error: '알림 업데이트에 실패했습니다'
+      });
+    }
+
+    const updatedNotification = updateResult.rows[0];
+    console.log('✅ 알림 읽음 처리 성공:', {
+      id: updatedNotification.id,
+      is_read: updatedNotification.is_read,
+      read_at: updatedNotification.read_at
+    });
+
     res.json({
       success: true,
-      message: '알림을 읽음으로 처리했습니다'
+      message: '알림을 읽음으로 처리했습니다',
+      notification: {
+        id: updatedNotification.id,
+        isRead: updatedNotification.is_read,
+        readAt: updatedNotification.read_at
+      }
     });
 
   } catch (error) {
     console.error('❌ 알림 읽음 처리 실패:', error);
     res.status(500).json({
       success: false,
-      error: '알림 읽음 처리 실패'
+      error: '알림 읽음 처리 실패: ' + error.message
     });
   }
 });
