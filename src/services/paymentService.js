@@ -56,6 +56,19 @@ class PaymentService {
 
       console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
 
+      // 새 주문 생성 시 알림 생성
+      if (isNewOrder) {
+        await this.createOrderNotification(client, {
+          userId: orderData.userPk,
+          storeId: orderData.storeId,
+          storeName: orderData.storeName,
+          tableNumber: orderData.tableNumber,
+          orderId: orderIdToUse,
+          paymentKey: paymentData.paymentKey,
+          amount: orderData.finalTotal
+        });
+      }
+
       // 이벤트 발생: 새 주문 생성됨
       eventBus.emit('order.created', {
         orderId: orderIdToUse,
@@ -81,7 +94,8 @@ class PaymentService {
         orderId: orderIdToUse,
         ticketId,
         batchNo,
-        amount: orderData.finalTotal
+        amount: orderData.finalTotal,
+        isNewOrder
       };
 
     } catch (error) {
@@ -227,6 +241,69 @@ class PaymentService {
       paymentData.paymentKey,
       JSON.stringify(paymentData.providerResponse)
     ]);
+  }
+
+  /**
+   * 새 주문 알림 생성
+   */
+  async createOrderNotification(client, notificationData) {
+    try {
+      const { userId, storeId, storeName, tableNumber, orderId, paymentKey, amount } = notificationData;
+
+      // user_id 검증 (반드시 정수여야 함)
+      const validUserId = parseInt(userId);
+      if (isNaN(validUserId)) {
+        throw new Error(`유효하지 않은 user_id: ${userId}`);
+      }
+
+      console.log(`📢 결제 서비스: 새 주문 알림 생성 준비`, {
+        validUserId,
+        storeId,
+        storeName,
+        tableNumber,
+        orderId,
+        paymentKey,
+        amount
+      });
+
+      const insertResult = await client.query(`
+        INSERT INTO notifications (
+          user_id, type, title, message, metadata, is_read, sent_source
+        ) VALUES ($1, $2, $3, $4, $5, false, 'TLL')
+        RETURNING id
+      `, [
+        validUserId,
+        'order',
+        '새로운 주문이 시작되었습니다',
+        `${storeName || '매장'}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${tableNumber}`,
+        JSON.stringify({
+          order_id: orderId,
+          store_id: storeId,
+          store_name: storeName || '매장',
+          table_number: tableNumber,
+          payment_key: paymentKey,
+          amount: amount
+        })
+      ]);
+
+      const notificationId = insertResult.rows[0]?.id;
+      console.log(`✅ 결제 서비스: 새 주문 알림 생성 성공 - 알림 ID ${notificationId}, 사용자 ${validUserId}, 주문 ${orderId}`);
+
+      return notificationId;
+    } catch (error) {
+      console.error('❌ 결제 서비스: 새 주문 알림 생성 실패:', error);
+      console.error('❌ 알림 생성 오류 상세:', {
+        error: error.message,
+        code: error.code,
+        detail: error.detail,
+        hint: error.hint,
+        userId: notificationData.userId,
+        userIdType: typeof notificationData.userId,
+        storeId: notificationData.storeId,
+        storeIdType: typeof notificationData.storeId
+      });
+      // 알림 생성 실패가 전체 결제를 실패시키지 않도록 에러를 던지지 않음
+    }
   }
 }
 
