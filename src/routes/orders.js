@@ -773,7 +773,6 @@ router.get('/processing/:orderId', async (req, res) => {
         o.table_num as table_number,
         o.status,
         o.created_at,
-        o.session_ended,
         COUNT(DISTINCT ot.id) as total_tickets,
         SUM(p.amount) as total_amount
       FROM orders o
