@@ -335,23 +335,38 @@ router.post('/confirm', async (req, res) => {
       if (isNewOrder) {
         const notificationClient = await pool.connect();
         try {
-          // storeName을 orderData에서 직접 가져오거나 기본값 사용
-          const storeName = orderData.storeName || pendingPayment.order_data?.storeName || '매장';
-          
-          console.log(`📢 알림 생성 데이터 확인:`, {
-            userPk: orderInfo.userPk,
+          // storeName 우선순위: orderData.storeName > pendingPayment.order_data.storeName > '매장'
+          let storeName = '매장'; // 기본값
+          if (orderData && orderData.storeName) {
+            storeName = orderData.storeName;
+          } else if (pendingPayment.order_data && pendingPayment.order_data.storeName) {
+            storeName = pendingPayment.order_data.storeName;
+          }
+
+          // user_id 검증 (반드시 정수여야 함)
+          const validUserId = parseInt(orderInfo.userPk);
+          if (isNaN(validUserId)) {
+            throw new Error(`유효하지 않은 user_id: ${orderInfo.userPk}`);
+          }
+
+          console.log(`📢 알림 생성 준비:`, {
+            validUserId,
             storeId: orderInfo.storeId,
-            storeName: storeName,
+            storeName,
             tableNumber: orderInfo.tableNumber,
-            orderId: orderIdToUse
+            orderId: orderIdToUse,
+            paymentKey,
+            orderDataStoreName: orderData?.storeName,
+            pendingDataStoreName: pendingPayment.order_data?.storeName
           });
 
-          await notificationClient.query(`
+          const insertResult = await notificationClient.query(`
             INSERT INTO notifications (
               user_id, type, title, message, metadata, is_read, sent_source
             ) VALUES ($1, $2, $3, $4, $5, false, 'TLL')
+            RETURNING id
           `, [
-            orderInfo.userPk, // INTEGER 타입 user_id
+            validUserId, // 검증된 INTEGER 타입 user_id
             'order',
             '새로운 주문이 시작되었습니다',
             `${storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
@@ -365,14 +380,21 @@ router.post('/confirm', async (req, res) => {
             })
           ]);
 
-          console.log(`📢 토스 라우트: 새 주문 알림 생성 성공 - 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+          const notificationId = insertResult.rows[0]?.id;
+          console.log(`✅ 토스 라우트: 새 주문 알림 생성 성공 - 알림 ID ${notificationId}, 사용자 ${validUserId}, 주문 ${orderIdToUse}`);
         } catch (notificationError) {
           console.error('❌ 토스 라우트: 새 주문 알림 생성 실패:', notificationError);
           console.error('❌ 알림 생성 오류 상세:', {
             error: notificationError.message,
             code: notificationError.code,
+            detail: notificationError.detail,
+            hint: notificationError.hint,
             userPk: orderInfo.userPk,
-            storeId: orderInfo.storeId
+            userPkType: typeof orderInfo.userPk,
+            storeId: orderInfo.storeId,
+            storeIdType: typeof orderInfo.storeId,
+            orderData_storeName: orderData?.storeName,
+            pendingData_storeName: pendingPayment.order_data?.storeName
           });
         } finally {
           notificationClient.release();
