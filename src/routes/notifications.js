@@ -31,8 +31,10 @@ router.get('/', async (req, res) => {
         type,
         title,
         message,
+        metadata,
         created_at,
-        is_read
+        is_read,
+        sent_source
       FROM notifications
       ${whereClause}
       ORDER BY created_at DESC
@@ -44,8 +46,13 @@ router.get('/', async (req, res) => {
       type: notification.type,
       title: notification.title,
       message: notification.message,
+      metadata: notification.metadata,
       createdAt: new Date(notification.created_at),
-      isRead: notification.is_read
+      isRead: notification.is_read,
+      sentSource: notification.sent_source,
+      // 기존 호환성을 위한 필드들 (metadata에서 추출)
+      related_order_id: notification.metadata?.order_id || null,
+      related_store_id: notification.metadata?.store_id || null
     }));
 
     res.json({

@@ -585,7 +585,9 @@ async function handleNotificationClick(notificationId) {
       // 알림 타입에 따른 액션 수행
       switch (notification.type) {
         case 'order':
-          if (notification.related_order_id) {
+          // metadata에서 order_id 추출 (기존 related_order_id 호환)
+          const orderId = notification.metadata?.order_id || notification.related_order_id;
+          if (orderId) {
             // renderProcessingOrder 스크립트 로드
             await loadRenderProcessingOrderScript();
             
@@ -594,7 +596,7 @@ async function handleNotificationClick(notificationId) {
             
             // 주문 진행 상황 화면으로 이동
             if (typeof renderProcessingOrder === 'function') {
-              renderProcessingOrder(notification.related_order_id);
+              renderProcessingOrder(orderId);
             } else {
               console.error('renderProcessingOrder 함수를 찾을 수 없습니다');
             }
@@ -602,16 +604,19 @@ async function handleNotificationClick(notificationId) {
           break;
           
         case 'promotion':
-          if (notification.related_store_id) {
+          // metadata에서 store_id 추출 (기존 related_store_id 호환)
+          const storeId = notification.metadata?.store_id || notification.related_store_id;
+          if (storeId) {
             // 프로모션 관련 매장으로 이동
             if (typeof renderStore === 'function') {
-              renderStore(notification.related_store_id);
+              renderStore(storeId);
             }
           }
           break;
           
         default:
           console.log('처리되지 않은 알림 타입:', notification.type);
+          console.log('알림 메타데이터:', notification.metadata);
       }
     }
 

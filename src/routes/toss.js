@@ -331,23 +331,27 @@ router.post('/confirm', async (req, res) => {
       const orderIdToUse = result.orderId;
       const paymentData = { paymentKey, finalTotal: result.amount };
 
-      // 새 주문 생성 시 알림 생성 - 별도 클라이언트 사용
+      // 새 주문 생성 시 알림 생성 - 스키마에 맞게 수정
       if (isNewOrder) {
         const notificationClient = await pool.connect();
         try {
           await notificationClient.query(`
             INSERT INTO notifications (
-              user_id, type, title, message,
-              related_order_id, related_store_id,
-              created_at, is_read
-            ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
+              user_id, type, title, message, metadata, is_read, sent_source
+            ) VALUES ($1, $2, $3, $4, $5, false, 'TLL')
           `, [
-            orderInfo.userPk,
+            orderInfo.userPk, // INTEGER 타입 user_id
             'order',
             '새로운 주문이 시작되었습니다',
             `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
-            orderIdToUse,
-            orderInfo.storeId
+            JSON.stringify({
+              order_id: orderIdToUse,
+              store_id: orderInfo.storeId,
+              store_name: orderInfo.storeName,
+              table_number: orderInfo.tableNumber,
+              payment_key: paymentData.paymentKey,
+              amount: orderInfo.finalTotal
+            })
           ]);
 
           console.log(`📢 토스 라우트: 새 주문 알림 생성 성공 - 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
