@@ -1,4 +1,3 @@
-
 /**
  * 결제 전용 서비스 모듈
  * - 결제 관련 비즈니스 로직 집중 관리
@@ -55,6 +54,8 @@ class PaymentService {
 
       await client.query('COMMIT');
 
+      console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
+
       // 이벤트 발생: 새 주문 생성됨
       eventBus.emit('order.created', {
         orderId: orderIdToUse,
@@ -74,8 +75,6 @@ class PaymentService {
         amount: orderData.finalTotal,
         paymentKey: paymentData.paymentKey
       });
-
-      console.log('✅ 결제 서비스: TLL 주문 처리 완료');
 
       return {
         success: true,

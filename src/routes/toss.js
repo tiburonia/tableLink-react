@@ -331,24 +331,33 @@ router.post('/confirm', async (req, res) => {
       const orderIdToUse = result.orderId;
       const paymentData = { paymentKey, finalTotal: result.amount };
 
-      // 새 주문 생성 시 알림 생성
+      // 새 주문 생성 시 알림 생성 - 별도 클라이언트 사용
       if (isNewOrder) {
-        await client.query(`
-          INSERT INTO notifications (
-            user_id, type, title, message,
-            related_order_id, related_store_id,
-            created_at, is_read
-          ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
-        `, [
-          orderInfo.userPk,
-          'order',
-          '새로운 주문이 시작되었습니다',
-          `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
-          orderIdToUse,
-          orderInfo.storeId
-        ]);
+        const notificationClient = await pool.connect();
+        try {
+          await notificationClient.query(`
+            INSERT INTO notifications (
+              user_id, type, title, message,
+              related_order_id, related_store_id,
+              created_at, is_read
+            ) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, false)
+          `, [
+            orderInfo.userPk,
+            'order',
+            '새로운 주문이 시작되었습니다',
+            `${orderInfo.storeName}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${orderInfo.tableNumber}`,
+            orderIdToUse,
+            orderInfo.storeId
+          ]);
 
-        console.log(`📢 새 주문 알림 생성: 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+          console.log(`📢 토스 라우트: 새 주문 알림 생성 성공 - 사용자 ${orderInfo.userPk}, 주문 ${orderIdToUse}`);
+        } catch (notificationError) {
+          console.error('❌ 토스 라우트: 새 주문 알림 생성 실패:', notificationError);
+        } finally {
+          notificationClient.release();
+        }
+      } else {
+        console.log(`ℹ️ 기존 주문에 추가됨 - 알림 생성 생략: 주문 ${orderIdToUse}`);
       }
 
       // 이벤트 발생: 새 주문 생성됨
