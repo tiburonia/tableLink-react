@@ -31,11 +31,8 @@ router.get('/', async (req, res) => {
         type,
         title,
         message,
-        related_order_id,
-        related_store_id,
         created_at,
-        is_read,
-        read_at
+        is_read
       FROM notifications
       ${whereClause}
       ORDER BY created_at DESC
@@ -47,11 +44,8 @@ router.get('/', async (req, res) => {
       type: notification.type,
       title: notification.title,
       message: notification.message,
-      relatedOrderId: notification.related_order_id,
-      relatedStoreId: notification.related_store_id,
       createdAt: new Date(notification.created_at),
-      isRead: notification.is_read,
-      readAt: notification.read_at
+      isRead: notification.is_read
     }));
 
     res.json({
