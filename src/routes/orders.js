@@ -786,51 +786,74 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // 티켓 정보 조회 (존재하는 경우만)
+    // 티켓 정보 조회 (order_items와 조인하여 아이템 정보도 함께)
     let tickets = [];
     try {
       const ticketsResult = await pool.query(`
         SELECT 
-          id,
-          COALESCE(status, 'PENDING') as status,
-          created_at
-        FROM order_tickets
-        WHERE order_id = $1
-        ORDER BY created_at DESC
+          ot.id,
+          ot.order_id,
+          ot.batch_no,
+          COALESCE(ot.status, 'PENDING') as status,
+          ot.created_at,
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'menu_name', oi.menu_name,
+              'quantity', oi.quantity,
+              'unit_price', oi.unit_price,
+              'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
+              'item_status', COALESCE(oi.item_status, 'PENDING')
+            )
+          ) FILTER (WHERE oi.id IS NOT NULL) as items
+        FROM order_tickets ot
+        LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+        WHERE ot.order_id = $1
+        GROUP BY ot.id, ot.order_id, ot.batch_no, ot.status, ot.created_at
+        ORDER BY ot.created_at DESC
       `, [parseInt(orderId)]);
 
       tickets = ticketsResult.rows.map(ticket => ({
+        ticket_id: ticket.id,
         id: ticket.id,
+        order_id: ticket.order_id,
+        batch_no: ticket.batch_no,
         status: ticket.status,
-        createdAt: ticket.created_at,
-        items: [] // 추후 order_items와 연동
+        created_at: ticket.created_at,
+        items: ticket.items || []
       }));
     } catch (ticketError) {
       console.warn('⚠️ 티켓 조회 실패 (테이블이 없을 수 있음):', ticketError.message);
     }
 
-    // 결제 내역 조회 (존재하는 경우만)
+    // 결제 내역 조회 (ticket_id 정보 포함)
     let payments = [];
     let totalAmount = 0;
     try {
       const paymentsResult = await pool.query(`
         SELECT 
-          id,
-          COALESCE(method, 'TOSS') as method,
-          amount,
-          COALESCE(status, 'completed') as status,
-          COALESCE(completed_at, created_at) as created_at
-        FROM payments
-        WHERE order_id = $1 AND status = 'completed'
-        ORDER BY created_at DESC
+          p.id,
+          p.ticket_id,
+          COALESCE(p.method, 'TOSS') as method,
+          p.amount,
+          COALESCE(p.status, 'completed') as status,
+          COALESCE(p.completed_at, p.created_at) as created_at,
+          p.payment_key
+        FROM payments p
+        WHERE (p.order_id = $1 OR p.ticket_id IN (
+          SELECT id FROM order_tickets WHERE order_id = $1
+        )) AND p.status = 'completed'
+        ORDER BY p.created_at DESC
       `, [parseInt(orderId)]);
 
       payments = paymentsResult.rows.map(payment => ({
         id: payment.id,
+        ticket_id: payment.ticket_id,
         method: payment.method.toUpperCase(),
         amount: parseInt(payment.amount),
         status: payment.status,
-        createdAt: payment.created_at
+        createdAt: payment.created_at,
+        payment_key: payment.payment_key
       }));
 
       totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);

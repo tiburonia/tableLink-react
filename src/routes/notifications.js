@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -164,141 +163,106 @@ async function getEnrichedNotificationData(metadata) {
   const enrichedData = {};
 
   try {
-    // 주문 정보 조회
+    // 메타데이터에서 관련 정보 조회하여 enrichedData 생성
     if (metadata.order_id) {
-      const orderQuery = await pool.query(`
-        SELECT 
-          o.id,
-          o.store_id,
-          o.table_num,
-          o.total_price,
-          o.status as order_status,
-          o.created_at as order_date,
-          si.name as store_name
-        FROM orders o
-        LEFT JOIN store_info si ON o.store_id = si.store_id
-        WHERE o.id = $1
-      `, [metadata.order_id]);
-
-      if (orderQuery.rows.length > 0) {
-        enrichedData.order = orderQuery.rows[0];
-
-        // 주문 아이템들 조회
-        const itemsQuery = await pool.query(`
+      try {
+        const orderQuery = await pool.query(`
           SELECT 
-            oi.id,
-            oi.menu_name,
-            oi.quantity,
-            oi.total_price,
-            oi.item_status as item_status,
-            oi.cook_station
-          FROM order_items oi
-          WHERE oi.order_id = $1
-          ORDER BY oi.id
+            o.id,
+            o.store_id,
+            o.table_num as table_number,
+            o.total_amount,
+            o.created_at,
+            s.name as store_name
+          FROM orders o
+          JOIN stores s ON o.store_id = s.id
+          WHERE o.id = $1
         `, [metadata.order_id]);
 
-        enrichedData.order.items = itemsQuery.rows;
+        if (orderQuery.rows.length > 0) {
+          enrichedData.order = orderQuery.rows[0];
+        }
+      } catch (error) {
+        console.warn('⚠️ 주문 정보 조회 실패:', error);
       }
     }
 
-    // 티켓 정보 조회 (order_tickets 테이블)
-    if (metadata.ticket_id) {
-      const ticketQuery = await pool.query(`
-        SELECT 
-          ot.id,
-          ot.batch_no,
-          ot.order_id,
-          ot.store_id,
-          ot.table_num,
-          ot.status as ticket_status,
-          ot.created_at as ticket_created,
-          ot.completed_at,
-          si.name as store_name
-        FROM order_tickets ot
-        LEFT JOIN store_info si ON ot.store_id = si.store_id
-        WHERE ot.ticket_id = $1
-      `, [metadata.ticket_id]);
-
-      if (ticketQuery.rows.length > 0) {
-        enrichedData.ticket = ticketQuery.rows[0];
-      }
-    }
-
-    // 매장 정보 조회
     if (metadata.store_id) {
-      const storeQuery = await pool.query(`
-        SELECT 
-          si.store_id,
-          si.name,
-          si.store_tel_number,
-          si.category,
-          si.rating_average
-        FROM store_info si
-        WHERE si.store_id = $1
-      `, [metadata.store_id]);
+      try {
+        const storeQuery = await pool.query(`
+          SELECT id as store_id, name, category, address
+          FROM stores
+          WHERE id = $1
+        `, [metadata.store_id]);
 
-      if (storeQuery.rows.length > 0) {
-        enrichedData.store = storeQuery.rows[0];
+        if (storeQuery.rows.length > 0) {
+          enrichedData.store = storeQuery.rows[0];
+        }
+      } catch (error) {
+        console.warn('⚠️ 매장 정보 조회 실패:', error);
       }
     }
 
-    // 결제 정보 조회
+    if (metadata.ticket_id) {
+      try {
+        // ticket_id를 통해 order_tickets와 orders 조인하여 정보 조회
+        const ticketQuery = await pool.query(`
+          SELECT 
+            ot.id as ticket_id,
+            ot.status,
+            ot.created_at,
+            ot.order_id,
+            o.table_num as table_number,
+            o.total_amount,
+            s.name as store_name,
+            s.id as store_id
+          FROM order_tickets ot
+          JOIN orders o ON ot.order_id = o.id
+          JOIN stores s ON o.store_id = s.id
+          WHERE ot.id = $1
+        `, [metadata.ticket_id]);
+
+        if (ticketQuery.rows.length > 0) {
+          const ticket = ticketQuery.rows[0];
+          enrichedData.ticket = {
+            ticket_id: ticket.ticket_id,
+            status: ticket.status,
+            created_at: ticket.created_at
+          };
+          // 주문 정보도 함께 추가
+          if (!enrichedData.order) {
+            enrichedData.order = {
+              id: ticket.order_id,
+              table_number: ticket.table_number,
+              total_amount: ticket.total_amount
+            };
+          }
+          // 매장 정보도 함께 추가
+          if (!enrichedData.store) {
+            enrichedData.store = {
+              store_id: ticket.store_id,
+              name: ticket.store_name
+            };
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ 티켓 정보 조회 실패:', error);
+      }
+    }
+
     if (metadata.payment_id) {
-      const paymentQuery = await pool.query(`
-        SELECT 
-          p.id,
-          p.order_id,
-          p.ticket_id,
-          p.transaction_id,
-          p._method,
-          p.amount,
-          p.status as payment_status,
-          p.created_at as payment_date,
-          p.paid_at
-        FROM payments p
-        WHERE p.id = $1
-      `, [metadata.payment_id]);
+      try {
+        const paymentQuery = await pool.query(`
+          SELECT id, amount as final_amount, method, status, created_at
+          FROM payments
+          WHERE id = $1
+        `, [metadata.payment_id]);
 
-      if (paymentQuery.rows.length > 0) {
-        enrichedData.payment = paymentQuery.rows[0];
-      }
-    }
-
-    // 결제 키로 결제 정보 조회 (대안)
-    if (metadata.payment_key && !enrichedData.payment) {
-      const paymentByKeyQuery = await pool.query(`
-        SELECT 
-          p.id,
-          p.order_id,
-          p.ticket_id,
-          p.transaction_id,
-          p.method,
-          p.amount,
-          p.status as payment_status,
-          p.created_at as payment_date,
-          p.paid_at
-        FROM payments p
-        WHERE p.transaction_id = $1
-      `, [metadata.payment_key]);
-
-      if (paymentByKeyQuery.rows.length > 0) {
-        enrichedData.payment = paymentByKeyQuery.rows[0];
-      }
-    }
-
-    // 테이블 정보 조회
-    if (metadata.store_id && metadata.table_number) {
-      const tableQuery = await pool.query(`
-        SELECT 
-          st.id,
-          st.table_name,
-          st.capacity
-        FROM store_tables st
-        WHERE st.store_id = $1 AND st.table_name = $2
-      `, [metadata.store_id, metadata.table_number.toString()]);
-
-      if (tableQuery.rows.length > 0) {
-        enrichedData.table = tableQuery.rows[0];
+        if (paymentQuery.rows.length > 0) {
+          enrichedData.payment = paymentQuery.rows[0];
+        }
+      } catch (error) {
+        console.warn('⚠️ 결제 정보 조회 실패:', error);
       }
     }
 
