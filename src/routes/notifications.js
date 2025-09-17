@@ -169,14 +169,12 @@ async function getEnrichedNotificationData(metadata) {
       const orderQuery = await pool.query(`
         SELECT 
           o.id,
-          o.check_id as ticket_id,
           o.store_id,
-          o.table_number,
-          o.total_amount,
+          o.table_num,
+          o.total_price,
           o.status as order_status,
           o.created_at as order_date,
-          si.name as store_name,
-          si.address as store_address
+          si.name as store_name
         FROM orders o
         LEFT JOIN store_info si ON o.store_id = si.store_id
         WHERE o.id = $1
@@ -191,8 +189,8 @@ async function getEnrichedNotificationData(metadata) {
             oi.id,
             oi.menu_name,
             oi.quantity,
-            oi.price,
-            oi.status as item_status,
+            oi.total_price,
+            oi.item_status as item_status,
             oi.cook_station
           FROM order_items oi
           WHERE oi.order_id = $1
@@ -208,12 +206,11 @@ async function getEnrichedNotificationData(metadata) {
       const ticketQuery = await pool.query(`
         SELECT 
           ot.id,
-          ot.ticket_id,
+          ot.batch_no,
           ot.order_id,
           ot.store_id,
-          ot.table_number,
+          ot.table_num,
           ot.status as ticket_status,
-          ot.cook_station,
           ot.created_at as ticket_created,
           ot.completed_at,
           si.name as store_name
@@ -233,13 +230,9 @@ async function getEnrichedNotificationData(metadata) {
         SELECT 
           si.store_id,
           si.name,
-          si.address,
-          si.phone,
+          si.store_tel_number,
           si.category,
-          si.rating,
-          si.image_url,
-          si.latitude,
-          si.longitude
+          si.rating_average
         FROM store_info si
         WHERE si.store_id = $1
       `, [metadata.store_id]);
@@ -257,12 +250,11 @@ async function getEnrichedNotificationData(metadata) {
           p.order_id,
           p.ticket_id,
           p.transaction_id,
-          p.payment_method,
+          p._method,
           p.amount,
-          p.final_amount,
           p.status as payment_status,
           p.created_at as payment_date,
-          p.approved_at
+          p.paid_at
         FROM payments p
         WHERE p.id = $1
       `, [metadata.payment_id]);
@@ -280,12 +272,11 @@ async function getEnrichedNotificationData(metadata) {
           p.order_id,
           p.ticket_id,
           p.transaction_id,
-          p.payment_method,
+          p.method,
           p.amount,
-          p.final_amount,
           p.status as payment_status,
           p.created_at as payment_date,
-          p.approved_at
+          p.paid_at
         FROM payments p
         WHERE p.transaction_id = $1
       `, [metadata.payment_key]);
