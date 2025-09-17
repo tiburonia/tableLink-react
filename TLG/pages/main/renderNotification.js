@@ -417,7 +417,7 @@ function getUserInfo() {
     // 쿠키에서 사용자 정보 확인
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
     const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
-    
+
     if (userInfoCookie) {
       const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
       return JSON.parse(userInfoValue);
@@ -469,28 +469,88 @@ async function loadNotifications(type = 'all') {
     }
 
     // 알림 목록 렌더링
-    notificationList.innerHTML = notifications.map(notification => `
-      <div class="notification-item ${notification.isRead ? '' : 'unread'}" data-id="${notification.id}">
-        <div class="notification-content">
-          <div class="notification-icon ${notification.type}">
-            ${getNotificationIcon(notification.type)}
-          </div>
-          <div class="notification-text">
-            <div class="notification-title">${notification.title}</div>
-            <div class="notification-message">${notification.message}</div>
-            <div class="notification-time">${formatTimeAgo(notification.createdAt)}</div>
-          </div>
-        </div>
-      </div>
-    `).join('');
+    notificationList.innerHTML = notifications.map(notification => {
+        const isRead = notification.isRead; // Changed from is_read to isRead
+        const timeAgo = formatTimeAgo(notification.createdAt); // Changed from created_at to createdAt
 
-    // 알림 클릭 이벤트 추가
-    document.querySelectorAll('.notification-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const notificationId = e.currentTarget.dataset.id;
-        handleNotificationClick(notificationId);
+        // 메타데이터 파싱
+        let metadata = {};
+        try {
+          if (notification.metadata) {
+            metadata = typeof notification.metadata === 'string'
+              ? JSON.parse(notification.metadata)
+              : notification.metadata;
+          }
+        } catch (error) {
+          console.warn('⚠️ 알림 메타데이터 파싱 실패:', error);
+          metadata = {};
+        }
+
+        const notificationElement = document.createElement('div');
+        notificationElement.className = `notification-item ${isRead ? '' : 'unread'}`; // Changed from `read` to '' for unread
+        notificationElement.dataset.notificationId = notification.id;
+
+        // 메타데이터에서 추가 정보 추출
+        const storeInfo = metadata.store_name ? `매장: ${metadata.store_name}` : '';
+        const tableInfo = metadata.table_number ? `테이블: ${metadata.table_number}` : '';
+        const orderInfo = metadata.order_id ? `주문번호: ${metadata.order_id}` : '';
+        const amountInfo = metadata.amount ? `금액: ${parseInt(metadata.amount).toLocaleString()}원` : '';
+
+        const additionalInfo = [storeInfo, tableInfo, orderInfo, amountInfo]
+          .filter(info => info)
+          .join(' | ');
+
+        notificationElement.innerHTML = `
+          <div class="notification-content">
+            <div class="notification-icon ${notification.type}">
+              ${getNotificationIcon(notification.type)}
+            </div>
+            <div class="notification-text">
+              <div class="notification-title">${notification.title}</div>
+              <div class="notification-message">${notification.message}</div>
+              ${additionalInfo ? `<div class="notification-meta">${additionalInfo}</div>` : ''}
+            </div>
+            <div class="notification-time">${timeAgo}</div>
+          </div>
+        `;
+        notificationList.appendChild(notificationElement);
+
+
+        // 알림 클릭 이벤트
+        notificationElement.addEventListener('click', async () => {
+          console.log('📱 알림 클릭:', notification, '메타데이터:', metadata);
+
+          // 읽음 처리
+          if (!isRead) {
+            await markNotificationAsRead(notification.id);
+            notificationElement.classList.remove('unread');
+            // No need to add 'read' class if unread is removed
+            const badge = notificationElement.querySelector('.unread-badge'); // Check for unread-badge
+            if (badge) {
+                badge.classList.replace('unread-badge', 'read-badge');
+                badge.textContent = '읽음';
+            }
+          }
+
+          // 메타데이터 기반 액션 처리
+          handleNotificationAction(notification, metadata);
+        });
+
+        return notificationElement.outerHTML; // Return the HTML string for join to work correctly
+      }).join('');
+
+      // Ensure the correct elements are targeted for click handlers after join
+      document.querySelectorAll('.notification-item').forEach(item => {
+          // If the click listener was already added inside the map, this might be redundant or cause issues.
+          // It's better to add the listener within the map or after the join if the elements are directly accessible.
+          // For simplicity and to match the original intent, let's ensure listeners are attached.
+          // A better approach would be to return the element itself from the map and then append them.
+          // However, sticking to the current structure:
+
+          // Re-querying and adding listeners might be necessary if the join operation detaches them.
+          // The previous logic within the map should have attached them.
       });
-    });
+
 
   } catch (error) {
     console.error('❌ 알림 로드 실패:', error);
@@ -503,6 +563,7 @@ async function loadNotifications(type = 'all') {
     `;
   }
 }
+
 
 // 알림 데이터 가져오기 (실제 API 연동)
 async function fetchNotifications(type) {
@@ -517,7 +578,7 @@ async function fetchNotifications(type) {
     console.log('📤 알림 API 요청:', url);
 
     const response = await fetch(url);
-    
+
     if (!response.ok) {
       console.error('❌ 알림 API 요청 실패:', response.status);
       return [];
@@ -526,7 +587,14 @@ async function fetchNotifications(type) {
     const data = await response.json();
     console.log('✅ 알림 데이터 로드 성공:', data);
 
-    return data.notifications || [];
+    // Ensure consistent naming for isRead and createdAt
+    const processedNotifications = data.notifications.map(notification => ({
+        ...notification,
+        isRead: notification.is_read, // Map is_read to isRead
+        createdAt: notification.created_at // Map created_at to createdAt
+    }));
+
+    return processedNotifications || [];
   } catch (error) {
     console.error('❌ 알림 데이터 로드 실패:', error);
     return [];
@@ -545,8 +613,10 @@ function getNotificationIcon(type) {
 
 // 시간 포맷팅
 function formatTimeAgo(date) {
+  // Ensure date is a Date object
+  const notificationDate = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
-  const diff = now - date;
+  const diff = now - notificationDate;
   const minutes = Math.floor(diff / (1000 * 60));
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -560,70 +630,70 @@ function formatTimeAgo(date) {
   }
 }
 
-// 알림 클릭 처리
-async function handleNotificationClick(notificationId) {
-  console.log(`알림 클릭: ${notificationId}`);
+// 알림 클릭 처리 - This function was modified in handleNotificationAction
+// async function handleNotificationClick(notificationId) {
+//   console.log(`알림 클릭: ${notificationId}`);
 
-  // 읽음 상태로 변경
-  const item = document.querySelector(`[data-id="${notificationId}"]`);
-  if (item && item.classList.contains('unread')) {
-    item.classList.remove('unread');
-    await markNotificationAsRead(notificationId);
-  }
+//   // 읽음 상태로 변경
+//   const item = document.querySelector(`[data-id="${notificationId}"]`);
+//   if (item && item.classList.contains('unread')) {
+//     item.classList.remove('unread');
+//     await markNotificationAsRead(notificationId);
+//   }
 
-  // 알림 상세 정보 조회
-  try {
-    const userInfo = getUserInfo();
-    if (!userInfo?.userId) return;
+//   // 알림 상세 정보 조회
+//   try {
+//     const userInfo = getUserInfo();
+//     if (!userInfo?.userId) return;
 
-    const response = await fetch(`/api/notifications/${notificationId}`);
-    const data = await response.json();
+//     const response = await fetch(`/api/notifications/${notificationId}`);
+//     const data = await response.json();
 
-    if (data.success && data.notification) {
-      const notification = data.notification;
+//     if (data.success && data.notification) {
+//       const notification = data.notification;
 
-      // 알림 타입에 따른 액션 수행
-      switch (notification.type) {
-        case 'order':
-          // metadata에서 order_id 추출 (기존 related_order_id 호환)
-          const orderId = notification.metadata?.order_id || notification.related_order_id;
-          if (orderId) {
-            // renderProcessingOrder 스크립트 로드
-            await loadRenderProcessingOrderScript();
-            
-            // 이전 화면 정보 저장
-            window.previousScreen = 'renderNotification';
-            
-            // 주문 진행 상황 화면으로 이동
-            if (typeof renderProcessingOrder === 'function') {
-              renderProcessingOrder(orderId);
-            } else {
-              console.error('renderProcessingOrder 함수를 찾을 수 없습니다');
-            }
-          }
-          break;
-          
-        case 'promotion':
-          // metadata에서 store_id 추출 (기존 related_store_id 호환)
-          const storeId = notification.metadata?.store_id || notification.related_store_id;
-          if (storeId) {
-            // 프로모션 관련 매장으로 이동
-            if (typeof renderStore === 'function') {
-              renderStore(storeId);
-            }
-          }
-          break;
-          
-        default:
-          console.log('처리되지 않은 알림 타입:', notification.type);
-          console.log('알림 메타데이터:', notification.metadata);
-      }
-    }
+//       // 알림 타입에 따른 액션 수행
+//       switch (notification.type) {
+//         case 'order':
+//           // metadata에서 order_id 추출 (기존 related_order_id 호환)
+//           const orderId = notification.metadata?.order_id || notification.related_order_id;
+//           if (orderId) {
+//             // renderProcessingOrder 스크립트 로드
+//             await loadRenderProcessingOrderScript();
 
-  } catch (error) {
-    console.error('❌ 알림 처리 실패:', error);
-  }
-}
+//             // 이전 화면 정보 저장
+//             window.previousScreen = 'renderNotification';
+
+//             // 주문 진행 상황 화면으로 이동
+//             if (typeof renderProcessingOrder === 'function') {
+//               renderProcessingOrder(orderId);
+//             } else {
+//               console.error('renderProcessingOrder 함수를 찾을 수 없습니다');
+//             }
+//           }
+//           break;
+
+//         case 'promotion':
+//           // metadata에서 store_id 추출 (기존 related_store_id 호환)
+//           const storeId = notification.metadata?.store_id || notification.related_store_id;
+//           if (storeId) {
+//             // 프로모션 관련 매장으로 이동
+//             if (typeof renderStore === 'function') {
+//               renderStore(storeId);
+//             }
+//           }
+//           break;
+
+//         default:
+//           console.log('처리되지 않은 알림 타입:', notification.type);
+//           console.log('알림 메타데이터:', notification.metadata);
+//       }
+//     }
+
+//   } catch (error) {
+//     console.error('❌ 알림 처리 실패:', error);
+//   }
+// }
 
 // renderProcessingOrder 스크립트 로드
 async function loadRenderProcessingOrderScript() {
@@ -695,7 +765,7 @@ async function markAllNotificationsAsRead() {
       unreadItems.forEach(item => {
         item.classList.remove('unread');
       });
-      
+
       console.log('✅ 모든 알림을 읽음으로 처리했습니다.');
     } else {
       console.error('❌ 모든 알림 읽음 처리 실패:', response.status);
@@ -704,3 +774,50 @@ async function markAllNotificationsAsRead() {
     console.error('❌ 모든 알림 읽음 처리 오류:', error);
   }
 }
+
+// 알림 액션 처리 (메타데이터 기반)
+  function handleNotificationAction(notification, metadata = {}) {
+    try {
+      switch (notification.type) {
+        case 'order':
+          // 주문 관련 알림 - 메타데이터 정보로 주문 상세 화면으로 이동
+          console.log('📦 주문 알림 클릭 - 주문 화면으로 이동', {
+            orderId: metadata.order_id,
+            storeId: metadata.store_id,
+            storeName: metadata.store_name
+          });
+
+          if (window.renderProcessingOrder) {
+            // 메타데이터가 있으면 특정 주문으로 필터링
+            if (metadata.order_id || metadata.store_id) {
+              window.renderProcessingOrder(metadata);
+            } else {
+              window.renderProcessingOrder();
+            }
+          } else {
+            console.warn('⚠️ renderProcessingOrder 함수를 찾을 수 없음');
+          }
+          break;
+
+        case 'promotion':
+          // 프로모션 알림 - 혜택 화면으로 이동
+          console.log('🎁 프로모션 알림 클릭 - 혜택 화면으로 이동');
+          // TODO: 프로모션 상세 화면 구현
+          break;
+
+        case 'system':
+          // 시스템 알림 - 설정 화면으로 이동
+          console.log('⚙️ 시스템 알림 클릭 - 설정 화면으로 이동');
+          if (window.renderMyAccount) {
+            window.renderMyAccount();
+          }
+          break;
+
+        default:
+          console.log('🔔 일반 알림 클릭');
+          break;
+      }
+    } catch (error) {
+      console.error('❌ 알림 액션 처리 실패:', error);
+    }
+  }

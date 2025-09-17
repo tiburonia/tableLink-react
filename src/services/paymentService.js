@@ -52,8 +52,8 @@ class PaymentService {
         orderId: orderIdToUse,
         ticketId,
         amount: orderData.finalTotal,
-        paymentKey: paymentData.paymentKey,
-        providerResponse: paymentData.tossResult
+        paymentKey,
+        providerResponse: tossResult
       });
 
       await client.query('COMMIT');
@@ -93,7 +93,7 @@ class PaymentService {
         ticketId,
         storeId: orderData.storeId,
         amount: orderData.finalTotal,
-        paymentKey: paymentData.paymentKey
+        paymentKey: paymentKey
       });
 
       return {
