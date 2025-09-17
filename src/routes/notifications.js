@@ -3,7 +3,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
 
-// 📢 사용자 알림 목록 조회
+// 📢 사용자 알림 목록 조회 (메타데이터 기반 관련 정보 포함)
 router.get('/', async (req, res) => {
   try {
     const { userId, type, limit = 50, offset = 0 } = req.query;
@@ -41,24 +41,51 @@ router.get('/', async (req, res) => {
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
     `, [...queryParams, parseInt(limit), parseInt(offset)]);
 
-    const notifications = result.rows.map(notification => ({
-      id: notification.id,
-      type: notification.type,
-      title: notification.title,
-      message: notification.message,
-      metadata: notification.metadata,
-      createdAt: new Date(notification.created_at),
-      isRead: notification.is_read,
-      sentSource: notification.sent_source,
-      // 기존 호환성을 위한 필드들 (metadata에서 추출)
-      related_order_id: notification.metadata?.order_id || null,
-      related_store_id: notification.metadata?.store_id || null
-    }));
+    // 알림에 관련 데이터 조회 및 추가
+    const enrichedNotifications = await Promise.all(
+      result.rows.map(async (notification) => {
+        try {
+          const metadata = notification.metadata || {};
+          const enrichedData = await getEnrichedNotificationData(metadata);
+
+          return {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            metadata: metadata,
+            createdAt: new Date(notification.created_at),
+            isRead: notification.is_read,
+            sentSource: notification.sent_source,
+            // 기존 호환성을 위한 필드들
+            related_order_id: metadata.order_id || null,
+            related_store_id: metadata.store_id || null,
+            // 새로운 조회된 관련 데이터
+            enrichedData: enrichedData
+          };
+        } catch (error) {
+          console.error('❌ 알림 데이터 조회 실패:', notification.id, error);
+          return {
+            id: notification.id,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            metadata: notification.metadata,
+            createdAt: new Date(notification.created_at),
+            isRead: notification.is_read,
+            sentSource: notification.sent_source,
+            related_order_id: notification.metadata?.order_id || null,
+            related_store_id: notification.metadata?.store_id || null,
+            enrichedData: null
+          };
+        }
+      })
+    );
 
     res.json({
       success: true,
-      notifications: notifications,
-      count: notifications.length
+      notifications: enrichedNotifications,
+      count: enrichedNotifications.length
     });
 
   } catch (error) {
@@ -69,6 +96,228 @@ router.get('/', async (req, res) => {
     });
   }
 });
+
+// 📢 개별 알림 상세 조회 (관련 데이터 포함)
+router.get('/:notificationId', async (req, res) => {
+  try {
+    const { notificationId } = req.params;
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        user_id,
+        type,
+        title,
+        message,
+        metadata,
+        created_at,
+        is_read,
+        sent_source
+      FROM notifications
+      WHERE id = $1
+    `, [parseInt(notificationId)]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '알림을 찾을 수 없습니다'
+      });
+    }
+
+    const notification = result.rows[0];
+    const metadata = notification.metadata || {};
+
+    // 메타데이터 기반 관련 데이터 조회
+    const enrichedData = await getEnrichedNotificationData(metadata);
+
+    res.json({
+      success: true,
+      notification: {
+        id: notification.id,
+        user_id: notification.user_id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        metadata: metadata,
+        createdAt: new Date(notification.created_at),
+        isRead: notification.is_read,
+        sentSource: notification.sent_source,
+        // 기존 호환성을 위한 필드들
+        related_order_id: metadata.order_id || null,
+        related_store_id: metadata.store_id || null,
+        // 새로운 조회된 관련 데이터
+        enrichedData: enrichedData
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 개별 알림 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '알림을 조회할 수 없습니다'
+    });
+  }
+});
+
+// 🔍 메타데이터 기반 관련 데이터 조회 함수
+async function getEnrichedNotificationData(metadata) {
+  const enrichedData = {};
+
+  try {
+    // 주문 정보 조회
+    if (metadata.order_id) {
+      const orderQuery = await pool.query(`
+        SELECT 
+          o.id,
+          o.check_id as ticket_id,
+          o.store_id,
+          o.table_number,
+          o.total_amount,
+          o.status as order_status,
+          o.created_at as order_date,
+          si.name as store_name,
+          si.address as store_address
+        FROM orders o
+        LEFT JOIN store_info si ON o.store_id = si.store_id
+        WHERE o.id = $1
+      `, [metadata.order_id]);
+
+      if (orderQuery.rows.length > 0) {
+        enrichedData.order = orderQuery.rows[0];
+
+        // 주문 아이템들 조회
+        const itemsQuery = await pool.query(`
+          SELECT 
+            oi.id,
+            oi.menu_name,
+            oi.quantity,
+            oi.price,
+            oi.status as item_status,
+            oi.cook_station
+          FROM order_items oi
+          WHERE oi.order_id = $1
+          ORDER BY oi.id
+        `, [metadata.order_id]);
+
+        enrichedData.order.items = itemsQuery.rows;
+      }
+    }
+
+    // 티켓 정보 조회 (order_tickets 테이블)
+    if (metadata.ticket_id) {
+      const ticketQuery = await pool.query(`
+        SELECT 
+          ot.id,
+          ot.ticket_id,
+          ot.order_id,
+          ot.store_id,
+          ot.table_number,
+          ot.status as ticket_status,
+          ot.cook_station,
+          ot.created_at as ticket_created,
+          ot.completed_at,
+          si.name as store_name
+        FROM order_tickets ot
+        LEFT JOIN store_info si ON ot.store_id = si.store_id
+        WHERE ot.ticket_id = $1
+      `, [metadata.ticket_id]);
+
+      if (ticketQuery.rows.length > 0) {
+        enrichedData.ticket = ticketQuery.rows[0];
+      }
+    }
+
+    // 매장 정보 조회
+    if (metadata.store_id) {
+      const storeQuery = await pool.query(`
+        SELECT 
+          si.store_id,
+          si.name,
+          si.address,
+          si.phone,
+          si.category,
+          si.rating,
+          si.image_url,
+          si.latitude,
+          si.longitude
+        FROM store_info si
+        WHERE si.store_id = $1
+      `, [metadata.store_id]);
+
+      if (storeQuery.rows.length > 0) {
+        enrichedData.store = storeQuery.rows[0];
+      }
+    }
+
+    // 결제 정보 조회
+    if (metadata.payment_id) {
+      const paymentQuery = await pool.query(`
+        SELECT 
+          p.id,
+          p.order_id,
+          p.ticket_id,
+          p.transaction_id,
+          p.payment_method,
+          p.amount,
+          p.final_amount,
+          p.status as payment_status,
+          p.created_at as payment_date,
+          p.approved_at
+        FROM payments p
+        WHERE p.id = $1
+      `, [metadata.payment_id]);
+
+      if (paymentQuery.rows.length > 0) {
+        enrichedData.payment = paymentQuery.rows[0];
+      }
+    }
+
+    // 결제 키로 결제 정보 조회 (대안)
+    if (metadata.payment_key && !enrichedData.payment) {
+      const paymentByKeyQuery = await pool.query(`
+        SELECT 
+          p.id,
+          p.order_id,
+          p.ticket_id,
+          p.transaction_id,
+          p.payment_method,
+          p.amount,
+          p.final_amount,
+          p.status as payment_status,
+          p.created_at as payment_date,
+          p.approved_at
+        FROM payments p
+        WHERE p.transaction_id = $1
+      `, [metadata.payment_key]);
+
+      if (paymentByKeyQuery.rows.length > 0) {
+        enrichedData.payment = paymentByKeyQuery.rows[0];
+      }
+    }
+
+    // 테이블 정보 조회
+    if (metadata.store_id && metadata.table_number) {
+      const tableQuery = await pool.query(`
+        SELECT 
+          st.id,
+          st.table_name,
+          st.capacity
+        FROM store_tables st
+        WHERE st.store_id = $1 AND st.table_name = $2
+      `, [metadata.store_id, metadata.table_number.toString()]);
+
+      if (tableQuery.rows.length > 0) {
+        enrichedData.table = tableQuery.rows[0];
+      }
+    }
+
+    return enrichedData;
+
+  } catch (error) {
+    console.error('❌ 관련 데이터 조회 실패:', error);
+    return {};
+  }
+}
 
 // 📢 개별 알림 읽음 처리
 router.put('/:notificationId/read', async (req, res) => {
@@ -185,62 +434,6 @@ router.put('/:notificationId/read', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '알림 읽음 처리 실패: ' + error.message
-    });
-  }
-});
-
-// 📢 개별 알림 상세 조회
-router.get('/:notificationId', async (req, res) => {
-  try {
-    const { notificationId } = req.params;
-
-    const result = await pool.query(`
-      SELECT 
-        id,
-        user_id,
-        type,
-        title,
-        message,
-        metadata,
-        created_at,
-        is_read,
-        sent_source
-      FROM notifications
-      WHERE id = $1
-    `, [parseInt(notificationId)]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '알림을 찾을 수 없습니다'
-      });
-    }
-
-    const notification = result.rows[0];
-
-    res.json({
-      success: true,
-      notification: {
-        id: notification.id,
-        user_id: notification.user_id,
-        type: notification.type,
-        title: notification.title,
-        message: notification.message,
-        metadata: notification.metadata,
-        createdAt: new Date(notification.created_at),
-        isRead: notification.is_read,
-        sentSource: notification.sent_source,
-        // 기존 호환성을 위한 필드들 (metadata에서 추출)
-        related_order_id: notification.metadata?.order_id || null,
-        related_store_id: notification.metadata?.store_id || null
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ 개별 알림 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '알림을 조회할 수 없습니다'
     });
   }
 });
