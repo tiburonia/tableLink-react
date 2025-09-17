@@ -773,8 +773,7 @@ router.get('/processing/:orderId', async (req, res) => {
         s.name as store_name,
         COALESCE(o.table_num, 1) as table_number,
         COALESCE(o.status, 'OPEN') as status,
-        o.created_at,
-        COALESCE(o.session_ended, false) as session_ended
+        o.created_at
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       WHERE o.id = $1
