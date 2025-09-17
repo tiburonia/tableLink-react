@@ -837,8 +837,8 @@ router.get('/processing/:orderId', async (req, res) => {
           COALESCE(p.method, 'TOSS') as method,
           p.amount,
           COALESCE(p.status, 'completed') as status,
-          COALESCE(p.completed_at, p.created_at) as created_at,
-          p.payment_key
+          p.created_at,
+          p.transaction_id
         FROM payments p
         WHERE (p.order_id = $1 OR p.ticket_id IN (
           SELECT id FROM order_tickets WHERE order_id = $1
@@ -862,7 +862,7 @@ router.get('/processing/:orderId', async (req, res) => {
       // orders 테이블에서 직접 금액 조회
       try {
         const amountResult = await pool.query(`
-          SELECT COALESCE(total_amount, final_amount, 0) as amount
+          SELECT COALESCE(amount, final_amount, 0) as amount
           FROM orders
           WHERE id = $1
         `, [parseInt(orderId)]);

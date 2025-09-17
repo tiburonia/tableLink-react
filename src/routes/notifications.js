@@ -190,7 +190,7 @@ async function getEnrichedNotificationData(metadata) {
     if (metadata.store_id) {
       try {
         const storeQuery = await pool.query(`
-          SELECT id as store_id, name, category, address
+          SELECT id as store_id, name
           FROM stores
           WHERE id = $1
         `, [metadata.store_id]);
@@ -213,7 +213,7 @@ async function getEnrichedNotificationData(metadata) {
             ot.created_at,
             ot.order_id,
             o.table_num as table_number,
-            o.total_amount,
+            o.total_price,
             s.name as store_name,
             s.id as store_id
           FROM order_tickets ot
