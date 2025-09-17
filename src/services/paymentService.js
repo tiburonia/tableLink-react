@@ -9,15 +9,19 @@ const pool = require('../db/pool');
 
 class PaymentService {
   /**
-   * TLL 주문 결제 처리
+   * TLL 주문 처리 (이벤트 기반 아키텍처)
    */
-  async processTLLOrder(paymentData) {
+  async processTLLOrder({ orderId, amount, paymentKey, tossResult, orderData, notificationMetadata }) {
     const client = await pool.connect();
 
     try {
-      const { orderId, amount, orderData } = paymentData;
-
-      console.log('💳 결제 서비스: TLL 주문 처리 시작', orderId);
+      console.log('💳 결제 서비스: TLL 주문 처리 시작', {
+        orderId,
+        amount,
+        storeId: orderData.storeId,
+        userPk: orderData.userPk,
+        itemCount: orderData.items?.length
+      });
 
       await client.query('BEGIN');
 
@@ -56,7 +60,7 @@ class PaymentService {
 
       console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
 
-      // 새 주문 생성 시 알림 생성
+      // 새 주문인 경우 알림 생성
       if (isNewOrder) {
         await this.createOrderNotification(client, {
           userId: orderData.userPk,
@@ -64,8 +68,11 @@ class PaymentService {
           storeName: orderData.storeName,
           tableNumber: orderData.tableNumber,
           orderId: orderIdToUse,
-          paymentKey: paymentData.paymentKey,
-          amount: orderData.finalTotal
+          ticketId: ticketId,
+          paymentKey,
+          amount,
+          // 추가 메타데이터 포함
+          additionalMetadata: notificationMetadata || {}
         });
       }
 
@@ -248,7 +255,17 @@ class PaymentService {
    */
   async createOrderNotification(client, notificationData) {
     try {
-      const { userId, storeId, storeName, tableNumber, orderId, paymentKey, amount } = notificationData;
+      const { 
+        userId, 
+        storeId, 
+        storeName, 
+        tableNumber, 
+        orderId, 
+        ticketId,
+        paymentKey, 
+        amount,
+        additionalMetadata = {}
+      } = notificationData;
 
       // user_id 검증 (반드시 정수여야 함)
       const validUserId = parseInt(userId);
@@ -262,9 +279,48 @@ class PaymentService {
         storeName,
         tableNumber,
         orderId,
+        ticketId,
         paymentKey,
         amount
       });
+
+      // 결제 ID 조회 (방금 생성된 결제 레코드)
+      let paymentId = null;
+      try {
+        const paymentResult = await client.query(`
+          SELECT id FROM payments 
+          WHERE order_id = $1 AND transaction_id = $2 
+          ORDER BY created_at DESC LIMIT 1
+        `, [orderId, paymentKey]);
+
+        if (paymentResult.rows.length > 0) {
+          paymentId = paymentResult.rows[0].id;
+        }
+      } catch (paymentError) {
+        console.warn('⚠️ 결제 ID 조회 실패:', paymentError.message);
+      }
+
+      // 완전한 메타데이터 구성
+      const completeMetadata = {
+        // 핵심 ID들
+        order_id: orderId,
+        ticket_id: ticketId,
+        store_id: storeId,
+        payment_id: paymentId,
+
+        // 기본 정보
+        store_name: storeName || '매장',
+        table_number: tableNumber,
+        payment_key: paymentKey,
+        amount: amount,
+
+        // 추가 메타데이터 병합
+        ...additionalMetadata,
+
+        // 알림 생성 정보
+        created_source: 'payment_completion',
+        notification_type: 'new_order'
+      };
 
       const insertResult = await client.query(`
         INSERT INTO notifications (
@@ -276,33 +332,22 @@ class PaymentService {
         'order',
         '새로운 주문이 시작되었습니다',
         `${storeName || '매장'}에서 새로운 주문 세션이 시작되었습니다. 테이블 ${tableNumber}`,
-        JSON.stringify({
-          order_id: orderId,
-          store_id: storeId,
-          store_name: storeName || '매장',
-          table_number: tableNumber,
-          payment_key: paymentKey,
-          amount: amount
-        })
+        JSON.stringify(completeMetadata)
       ]);
 
       const notificationId = insertResult.rows[0]?.id;
-      console.log(`✅ 결제 서비스: 새 주문 알림 생성 성공 - 알림 ID ${notificationId}, 사용자 ${validUserId}, 주문 ${orderId}`);
+      console.log(`✅ 결제 서비스: 새 주문 알림 생성 성공`, {
+        notificationId,
+        userId: validUserId,
+        orderId,
+        ticketId,
+        paymentId,
+        metadataKeys: Object.keys(completeMetadata)
+      });
 
-      return notificationId;
     } catch (error) {
       console.error('❌ 결제 서비스: 새 주문 알림 생성 실패:', error);
-      console.error('❌ 알림 생성 오류 상세:', {
-        error: error.message,
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint,
-        userId: notificationData.userId,
-        userIdType: typeof notificationData.userId,
-        storeId: notificationData.storeId,
-        storeIdType: typeof notificationData.storeId
-      });
-      // 알림 생성 실패가 전체 결제를 실패시키지 않도록 에러를 던지지 않음
+      // 알림 실패가 전체 결제를 방해하지 않도록 에러를 throw하지 않음
     }
   }
 }

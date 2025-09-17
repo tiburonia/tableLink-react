@@ -503,4 +503,80 @@ router.put('/mark-read-by-order', async (req, res) => {
   }
 });
 
+// 📋 결제 완료 알림 생성 (토스 결제 전용)
+router.post('/create-payment-notification', async (req, res) => {
+  try {
+    const { 
+      userId, 
+      orderId, 
+      ticketId,
+      storeId, 
+      storeName,
+      tableNumber,
+      paymentId,
+      paymentKey,
+      amount,
+      type = 'payment' 
+    } = req.body;
+
+    if (!userId || !orderId || !storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다 (userId, orderId, storeId 필요)'
+      });
+    }
+
+    const metadata = {
+      order_id: orderId,
+      ticket_id: ticketId,
+      store_id: storeId,
+      store_name: storeName,
+      table_number: tableNumber,
+      payment_id: paymentId,
+      payment_key: paymentKey,
+      amount: amount,
+      created_source: 'toss_payment_completion',
+      notification_type: 'payment_completed'
+    };
+
+    const result = await pool.query(`
+      INSERT INTO notifications (
+        user_id,
+        type,
+        title,
+        message,
+        metadata,
+        sent_source
+      ) VALUES ($1, $2, $3, $4, $5, 'TLL')
+      RETURNING id, created_at
+    `, [
+      parseInt(userId),
+      type,
+      '결제가 완료되었습니다',
+      `${storeName || '매장'}에서 ${amount ? `${amount.toLocaleString()}원` : ''} 결제가 완료되었습니다. 테이블 ${tableNumber}`,
+      JSON.stringify(metadata)
+    ]);
+
+    const notification = result.rows[0];
+
+    console.log(`📢 결제 완료 알림 생성: 사용자 ${userId}, 주문 ${orderId}, 알림 ${notification.id}`);
+
+    res.json({
+      success: true,
+      notification: {
+        id: notification.id,
+        createdAt: notification.created_at,
+        metadata: metadata
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 결제 완료 알림 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '결제 완료 알림 생성 실패: ' + error.message
+    });
+  }
+});
+
 module.exports = router;

@@ -308,7 +308,17 @@ router.post('/confirm', async (req, res) => {
         amount: parseInt(amount),
         paymentKey,
         tossResult,
-        orderData: orderInfo
+        orderData: orderInfo,
+        // 알림 생성을 위한 추가 메타데이터
+        notificationMetadata: {
+          pendingPaymentId: pendingPayment.id,
+          originalOrderId: orderId,
+          storeId: pendingPayment.store_id,
+          storeName: orderData.storeName || '매장',
+          tableNumber: pendingPayment.table_number,
+          userId: pendingPayment.user_id,
+          userPk: pendingPayment.user_pk
+        }
       });
 
       // pending_payments 상태 업데이트
