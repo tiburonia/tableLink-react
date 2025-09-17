@@ -453,13 +453,6 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 초기화
   if (preselectedStore) {
     console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
-
-    // UI 요소들이 생성된 후 매장 선택 처리
-    setTimeout(() => {
-      if (typeof window.selectStore === 'function') {
-        window.selectStore(preselectedStore.id, preselectedStore.name);
-      }
-    }, 100);
   }
 
   const storeSearchInput = document.getElementById('storeSearchInput');
@@ -473,6 +466,19 @@ window.TLL = async function TLL(preselectedStore = null) {
   if (!storeSearchInput || !tableSelect) {
     console.error('❌ 필수 요소를 찾을 수 없습니다');
     return;
+  }
+
+  // 미리 선택된 매장이 있다면 DOM 요소 초기화 후 자동 선택
+  if (preselectedStore) {
+    console.log(`🎯 TLL - 매장 자동 선택 시작: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
+    setTimeout(() => {
+      if (typeof window.selectStore === 'function') {
+        console.log('✅ selectStore 함수 발견, 매장 자동 선택 실행');
+        window.selectStore(preselectedStore.id, preselectedStore.name);
+      } else {
+        console.error('❌ selectStore 함수를 찾을 수 없음');
+      }
+    }, 300); // DOM 완전 렌더링 대기
   }
 
   // 매장 검색 이벤트
