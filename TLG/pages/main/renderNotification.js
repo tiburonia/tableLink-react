@@ -475,17 +475,23 @@ async function loadNotifications(type = 'all') {
         const isRead = notification.isRead;
         const timeAgo = formatTimeAgo(notification.createdAt);
 
-        // 메타데이터 파싱
+        // 메타데이터 및 enrichedData 파싱
         let metadata = {};
+        let enrichedData = {};
         try {
           if (notification.metadata) {
             metadata = typeof notification.metadata === 'string'
               ? JSON.parse(notification.metadata)
               : notification.metadata;
           }
+          // 서버에서 조회한 enrichedData가 있으면 활용
+          if (notification.enrichedData) {
+            enrichedData = notification.enrichedData;
+          }
         } catch (error) {
           console.warn('⚠️ 알림 메타데이터 파싱 실패:', error);
           metadata = {};
+          enrichedData = {};
         }
 
         // DOM 요소 직접 생성
@@ -493,13 +499,19 @@ async function loadNotifications(type = 'all') {
         notificationElement.className = `notification-item ${isRead ? '' : 'unread'}`;
         notificationElement.dataset.notificationId = notification.id;
 
-        // 메타데이터에서 추가 정보 추출
-        const storeInfo = metadata.store_name ? `매장: ${metadata.store_name}` : '';
-        const tableInfo = metadata.table_number ? `테이블: ${metadata.table_number}` : '';
-        const orderInfo = metadata.order_id ? `주문번호: ${metadata.order_id}` : '';
-        const amountInfo = metadata.amount ? `금액: ${parseInt(metadata.amount).toLocaleString()}원` : '';
+        // enrichedData 우선, metadata 백업으로 활용하여 추가 정보 추출
+        const storeInfo = enrichedData.store?.name || metadata.store_name ? 
+          `매장: ${enrichedData.store?.name || metadata.store_name}` : '';
+        const tableInfo = enrichedData.order?.table_number || metadata.table_number ? 
+          `테이블: ${enrichedData.order?.table_number || metadata.table_number}` : '';
+        const orderInfo = enrichedData.order?.id || metadata.order_id ? 
+          `주문번호: ${enrichedData.order?.id || metadata.order_id}` : '';
+        const amountInfo = enrichedData.order?.total_amount || enrichedData.payment?.final_amount || metadata.amount ? 
+          `금액: ${parseInt(enrichedData.order?.total_amount || enrichedData.payment?.final_amount || metadata.amount).toLocaleString()}원` : '';
+        const ticketInfo = enrichedData.ticket?.ticket_id || metadata.ticket_id ?
+          `티켓: ${enrichedData.ticket?.ticket_id || metadata.ticket_id}` : '';
 
-        const additionalInfo = [storeInfo, tableInfo, orderInfo, amountInfo]
+        const additionalInfo = [storeInfo, tableInfo, orderInfo, ticketInfo, amountInfo]
           .filter(info => info)
           .join(' | ');
 
@@ -527,8 +539,8 @@ async function loadNotifications(type = 'all') {
             notificationElement.classList.remove('unread');
           }
 
-          // 메타데이터 기반 액션 처리
-          handleNotificationAction(notification, metadata);
+          // 메타데이터 및 enrichedData 기반 액션 처리
+          handleNotificationAction(notification, metadata, enrichedData);
         });
 
         // DOM에 추가
@@ -571,11 +583,17 @@ async function fetchNotifications(type) {
     const data = await response.json();
     console.log('✅ 알림 데이터 로드 성공:', data);
 
-    // Ensure consistent naming for isRead and createdAt
+    // 서버 응답 데이터를 프론트엔드 형식으로 변환
     const processedNotifications = data.notifications.map(notification => ({
         ...notification,
-        isRead: notification.is_read, // Map is_read to isRead
-        createdAt: notification.created_at // Map created_at to createdAt
+        isRead: notification.isRead !== undefined ? notification.isRead : notification.is_read, // 서버 응답 우선
+        createdAt: notification.createdAt ? new Date(notification.createdAt) : new Date(notification.created_at),
+        // 메타데이터 안전하게 파싱
+        metadata: typeof notification.metadata === 'string' 
+          ? JSON.parse(notification.metadata) 
+          : (notification.metadata || {}),
+        // enrichedData가 있으면 활용
+        enrichedData: notification.enrichedData || null
     }));
 
     return processedNotifications || [];
@@ -759,17 +777,22 @@ async function markAllNotificationsAsRead() {
   }
 }
 
-// 알림 액션 처리 (메타데이터 기반)
-  async function handleNotificationAction(notification, metadata = {}) {
+// 알림 액션 처리 (메타데이터 및 enrichedData 기반)
+  async function handleNotificationAction(notification, metadata = {}, enrichedData = {}) {
     try {
       switch (notification.type) {
         case 'order':
-          // 주문 관련 알림 - 메타데이터 정보로 주문 상세 화면으로 이동
-          console.log('📦 주문 알림 클릭 - 주문 화면으로 이동', {
-            orderId: metadata.order_id,
-            storeId: metadata.store_id,
-            storeName: metadata.store_name
-          });
+        case 'payment':
+          // 주문/결제 관련 알림 - enrichedData 우선 활용하여 주문 상세 화면으로 이동
+          const orderInfo = {
+            orderId: enrichedData.order?.id || metadata.order_id,
+            storeId: enrichedData.store?.store_id || metadata.store_id,
+            storeName: enrichedData.store?.name || metadata.store_name,
+            ticketId: enrichedData.ticket?.ticket_id || metadata.ticket_id,
+            tableNumber: enrichedData.order?.table_number || metadata.table_number
+          };
+          
+          console.log('📦 주문/결제 알림 클릭 - 주문 화면으로 이동', orderInfo);
 
           // renderProcessingOrder 스크립트 동적 로드
           if (!window.renderProcessingOrder) {
@@ -785,11 +808,16 @@ async function markAllNotificationsAsRead() {
           // 이전 화면 정보 저장
           window.previousScreen = 'renderNotification';
 
-          // 메타데이터에서 orderId 추출
-          const orderId = metadata.order_id;
+          // enrichedData 우선, 메타데이터 백업으로 orderId 추출
+          const orderId = orderInfo.orderId;
           
           if (orderId && window.renderProcessingOrder) {
-            window.renderProcessingOrder(orderId);
+            // enrichedData가 있으면 함께 전달
+            if (enrichedData && Object.keys(enrichedData).length > 0) {
+              window.renderProcessingOrder(orderId, enrichedData);
+            } else {
+              window.renderProcessingOrder(orderId);
+            }
           } else if (window.renderProcessingOrder) {
             window.renderProcessingOrder();
           } else {
@@ -799,9 +827,18 @@ async function markAllNotificationsAsRead() {
           break;
 
         case 'promotion':
-          // 프로모션 알림 - 혜택 화면으로 이동
-          console.log('🎁 프로모션 알림 클릭 - 혜택 화면으로 이동');
-          // TODO: 프로모션 상세 화면 구현
+          // 프로모션 알림 - enrichedData 활용하여 매장 화면으로 이동
+          const promoStoreId = enrichedData.store?.store_id || metadata.store_id;
+          console.log('🎁 프로모션 알림 클릭 - 매장 화면으로 이동', {
+            storeId: promoStoreId,
+            storeName: enrichedData.store?.name || metadata.store_name
+          });
+          
+          if (promoStoreId && window.renderStore) {
+            window.renderStore(promoStoreId);
+          } else {
+            console.warn('⚠️ 프로모션 관련 매장 정보가 없습니다');
+          }
           break;
 
         case 'system':
