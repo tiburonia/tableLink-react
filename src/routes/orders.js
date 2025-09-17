@@ -990,10 +990,8 @@ router.put('/:orderId/end-session', async (req, res) => {
       await client.query(`
         UPDATE store_tables
         SET 
-          is_occupied = false,
-          occupied_since = NULL,
-          auto_release_source = NULL
-        WHERE store_id = $1 AND table_number = $2
+          status = 'AVAILABLE'
+        WHERE store_id = $1 AND id = $2
       `, [order.store_id, order.table_num]);
 
       console.log(`🍽️ 테이블 ${order.table_num} 해제 완료`);
