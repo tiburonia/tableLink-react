@@ -760,7 +760,7 @@ async function markAllNotificationsAsRead() {
 }
 
 // 알림 액션 처리 (메타데이터 기반)
-  function handleNotificationAction(notification, metadata = {}) {
+  async function handleNotificationAction(notification, metadata = {}) {
     try {
       switch (notification.type) {
         case 'order':
@@ -771,15 +771,30 @@ async function markAllNotificationsAsRead() {
             storeName: metadata.store_name
           });
 
-          if (window.renderProcessingOrder) {
-            // 메타데이터가 있으면 특정 주문으로 필터링
-            if (metadata.order_id || metadata.store_id) {
-              window.renderProcessingOrder(metadata);
-            } else {
-              window.renderProcessingOrder();
+          // renderProcessingOrder 스크립트 동적 로드
+          if (!window.renderProcessingOrder) {
+            try {
+              await loadRenderProcessingOrderScript();
+            } catch (error) {
+              console.error('❌ renderProcessingOrder 스크립트 로드 실패:', error);
+              alert('주문 화면을 불러올 수 없습니다. 다시 시도해주세요.');
+              return;
             }
+          }
+
+          // 이전 화면 정보 저장
+          window.previousScreen = 'renderNotification';
+
+          // 메타데이터에서 orderId 추출
+          const orderId = metadata.order_id;
+          
+          if (orderId && window.renderProcessingOrder) {
+            window.renderProcessingOrder(orderId);
+          } else if (window.renderProcessingOrder) {
+            window.renderProcessingOrder();
           } else {
             console.warn('⚠️ renderProcessingOrder 함수를 찾을 수 없음');
+            alert('주문 화면을 불러올 수 없습니다.');
           }
           break;
 
