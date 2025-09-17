@@ -171,7 +171,7 @@ async function getEnrichedNotificationData(metadata) {
             o.id,
             o.store_id,
             o.table_num as table_number,
-            o.total_amount,
+            o.total_price as total_amount,
             o.created_at,
             s.name as store_name
           FROM orders o

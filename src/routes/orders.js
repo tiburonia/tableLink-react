@@ -862,11 +862,11 @@ router.get('/processing/:orderId', async (req, res) => {
             p.ticket_id,
             COALESCE(p.method, 'TOSS') as method,
             p.amount,
-            COALESCE(p.status, 'completed') as status,
+            COALESCE(p.status, 'PENDING') as status,
             p.created_at,
-            p.payment_key
+            p.transaction_id as payment_key
           FROM payments p
-          WHERE p.order_id = $1 AND COALESCE(p.status, 'completed') = 'completed'
+          WHERE p.order_id = $1 AND COALESCE(p.status, 'PENDING') IN ('PENDING', 'COMPLETED')
           ORDER BY p.created_at DESC
         `, [parseInt(orderId)]);
 
@@ -877,7 +877,7 @@ router.get('/processing/:orderId', async (req, res) => {
           amount: parseInt(payment.amount),
           status: payment.status,
           createdAt: payment.created_at,
-          payment_key: payment.payment_key
+          payment_key: payment.payment_key || payment.transaction_id
         }));
 
         totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -890,7 +890,7 @@ router.get('/processing/:orderId', async (req, res) => {
     if (totalAmount === 0) {
       try {
         const amountResult = await pool.query(`
-          SELECT COALESCE(total_price, final_amount, amount, 0) as amount
+          SELECT COALESCE(total_price, 0) as amount
           FROM orders
           WHERE id = $1
         `, [parseInt(orderId)]);
