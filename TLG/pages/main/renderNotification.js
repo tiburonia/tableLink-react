@@ -468,10 +468,12 @@ async function loadNotifications(type = 'all') {
       return;
     }
 
-    // 알림 목록 렌더링
-    notificationList.innerHTML = notifications.map(notification => {
-        const isRead = notification.isRead; // Changed from is_read to isRead
-        const timeAgo = formatTimeAgo(notification.createdAt); // Changed from created_at to createdAt
+    // 알림 목록 렌더링 - DOM 요소 직접 생성 방식으로 변경
+    notificationList.innerHTML = ''; // 기존 내용 초기화
+
+    notifications.forEach(notification => {
+        const isRead = notification.isRead;
+        const timeAgo = formatTimeAgo(notification.createdAt);
 
         // 메타데이터 파싱
         let metadata = {};
@@ -486,8 +488,9 @@ async function loadNotifications(type = 'all') {
           metadata = {};
         }
 
+        // DOM 요소 직접 생성
         const notificationElement = document.createElement('div');
-        notificationElement.className = `notification-item ${isRead ? '' : 'unread'}`; // Changed from `read` to '' for unread
+        notificationElement.className = `notification-item ${isRead ? '' : 'unread'}`;
         notificationElement.dataset.notificationId = notification.id;
 
         // 메타데이터에서 추가 정보 추출
@@ -508,15 +511,13 @@ async function loadNotifications(type = 'all') {
             <div class="notification-text">
               <div class="notification-title">${notification.title}</div>
               <div class="notification-message">${notification.message}</div>
-              ${additionalInfo ? `<div class="notification-meta">${additionalInfo}</div>` : ''}
+              ${additionalInfo ? `<div class="notification-meta" style="font-size: 12px; color: #888; margin-top: 4px;">${additionalInfo}</div>` : ''}
             </div>
             <div class="notification-time">${timeAgo}</div>
           </div>
         `;
-        notificationList.appendChild(notificationElement);
 
-
-        // 알림 클릭 이벤트
+        // 알림 클릭 이벤트 리스너 추가
         notificationElement.addEventListener('click', async () => {
           console.log('📱 알림 클릭:', notification, '메타데이터:', metadata);
 
@@ -524,31 +525,14 @@ async function loadNotifications(type = 'all') {
           if (!isRead) {
             await markNotificationAsRead(notification.id);
             notificationElement.classList.remove('unread');
-            // No need to add 'read' class if unread is removed
-            const badge = notificationElement.querySelector('.unread-badge'); // Check for unread-badge
-            if (badge) {
-                badge.classList.replace('unread-badge', 'read-badge');
-                badge.textContent = '읽음';
-            }
           }
 
           // 메타데이터 기반 액션 처리
           handleNotificationAction(notification, metadata);
         });
 
-        return notificationElement.outerHTML; // Return the HTML string for join to work correctly
-      }).join('');
-
-      // Ensure the correct elements are targeted for click handlers after join
-      document.querySelectorAll('.notification-item').forEach(item => {
-          // If the click listener was already added inside the map, this might be redundant or cause issues.
-          // It's better to add the listener within the map or after the join if the elements are directly accessible.
-          // For simplicity and to match the original intent, let's ensure listeners are attached.
-          // A better approach would be to return the element itself from the map and then append them.
-          // However, sticking to the current structure:
-
-          // Re-querying and adding listeners might be necessary if the join operation detaches them.
-          // The previous logic within the map should have attached them.
+        // DOM에 추가
+        notificationList.appendChild(notificationElement);
       });
 
 
