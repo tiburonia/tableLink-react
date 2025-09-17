@@ -172,7 +172,7 @@ function renderProcessingOrderUI(orderData) {
   setupEventListeners(orderData);
 }
 
-// 티켓 그리드 렌더링
+// 티켓 그리드 렌더링 (order_tickets 단위)
 function renderTicketsGrid(tickets) {
   if (!tickets || tickets.length === 0) {
     return `
@@ -183,41 +183,144 @@ function renderTicketsGrid(tickets) {
     `;
   }
 
-  return tickets.map(ticket => `
-    <div class="ticket-card status-${ticket.status.toLowerCase()}">
-      <div class="ticket-header">
-        <span class="ticket-id">#${ticket.id}</span>
-        <span class="ticket-status">${getStatusText(ticket.status)}</span>
-      </div>
-      <div class="ticket-items">
-        ${ticket.items.slice(0, 2).map(item => `
-          <div class="ticket-item">
-            <span class="item-name">${item.name}</span>
-            <span class="item-quantity">×${item.quantity}</span>
+  return tickets.map(ticket => {
+    const ticketId = ticket.ticket_id || ticket.id;
+    const status = ticket.status || 'PENDING';
+    const statusText = getTicketStatusText(status);
+    const statusClass = status.toLowerCase();
+    
+    return `
+      <div class="ticket-card status-${statusClass}" data-ticket-id="${ticketId}">
+        <div class="ticket-header">
+          <span class="ticket-id">티켓 #${ticketId}</span>
+          <span class="ticket-status ${statusClass}">${statusText}</span>
+        </div>
+        <div class="ticket-meta">
+          <span class="ticket-order">주문 #${ticket.order_id}</span>
+          <span class="ticket-batch">배치 ${ticket.batch_no || 1}</span>
+        </div>
+        <div class="ticket-items">
+          ${renderTicketItems(ticket.items || [])}
+        </div>
+        <div class="ticket-footer">
+          <div class="ticket-time">${formatOrderTime(ticket.created_at)}</div>
+          <div class="ticket-actions">
+            ${renderTicketActions(ticketId, status)}
           </div>
-        `).join('')}
-        ${ticket.items.length > 2 ? `<div class="more-items">+${ticket.items.length - 2}개 더</div>` : ''}
+        </div>
       </div>
-      <div class="ticket-time">${formatOrderTime(ticket.createdAt)}</div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
-// 결제 내역 렌더링
+// 티켓 아이템 렌더링
+function renderTicketItems(items) {
+  if (!items || items.length === 0) {
+    return '<div class="no-items">아이템 정보 없음</div>';
+  }
+
+  const displayItems = items.slice(0, 3);
+  const remainingCount = items.length - 3;
+
+  return `
+    ${displayItems.map(item => `
+      <div class="ticket-item">
+        <span class="item-name">${item.menu_name || item.name || '메뉴'}</span>
+        <span class="item-quantity">×${item.quantity || 1}</span>
+        <span class="item-station">[${item.cook_station || 'KITCHEN'}]</span>
+      </div>
+    `).join('')}
+    ${remainingCount > 0 ? `<div class="more-items">+${remainingCount}개 더</div>` : ''}
+  `;
+}
+
+// 티켓 액션 버튼 렌더링
+function renderTicketActions(ticketId, status) {
+  switch (status) {
+    case 'PENDING':
+      return `<button class="action-btn start-cooking" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
+    case 'COOKING':
+      return `<button class="action-btn mark-ready" onclick="markTicketReady('${ticketId}')">완료</button>`;
+    case 'READY':
+      return `<button class="action-btn served" onclick="markTicketServed('${ticketId}')">서빙 완료</button>`;
+    default:
+      return `<span class="status-text">${getTicketStatusText(status)}</span>`;
+  }
+}
+
+// 티켓 상태 텍스트 변환
+function getTicketStatusText(status) {
+  const statusMap = {
+    'PENDING': '대기중',
+    'COOKING': '조리중', 
+    'READY': '완료',
+    'SERVED': '서빙완료',
+    'CANCELLED': '취소됨'
+  };
+  return statusMap[status] || status;
+}
+
+// 결제 내역 렌더링 (payments.ticket_id 단위)
 function renderPaymentsList(payments) {
-  return payments.map(payment => `
-    <div class="payment-item">
-      <div class="payment-info">
-        <div class="payment-method">
-          ${getPaymentMethodIcon(payment.method)} ${payment.method}
+  if (!payments || payments.length === 0) {
+    return `
+      <div class="no-payments">
+        <div class="no-payments-icon">💳</div>
+        <p>결제 내역이 없습니다</p>
+      </div>
+    `;
+  }
+
+  return payments.map(payment => {
+    const ticketId = payment.ticket_id;
+    const paymentId = payment.id || payment.payment_id;
+    
+    return `
+      <div class="payment-item" data-payment-id="${paymentId}" data-ticket-id="${ticketId}">
+        <div class="payment-header">
+          <div class="payment-info">
+            <div class="payment-method">
+              ${getPaymentMethodIcon(payment.method || payment.payment_method)} 
+              ${payment.method || payment.payment_method || 'CARD'}
+            </div>
+            ${ticketId ? `<div class="payment-ticket">티켓 #${ticketId}</div>` : ''}
+          </div>
+          <div class="payment-amount">
+            ${(payment.amount || 0).toLocaleString()}원
+          </div>
         </div>
-        <div class="payment-time">${formatOrderTime(payment.createdAt)}</div>
+        <div class="payment-details">
+          <div class="payment-time">${formatOrderTime(payment.created_at || payment.createdAt)}</div>
+          <div class="payment-status status-${(payment.status || 'completed').toLowerCase()}">
+            ${getPaymentStatusText(payment.status || 'completed')}
+          </div>
+          ${payment.payment_key ? `<div class="payment-key">결제키: ${payment.payment_key.slice(-8)}</div>` : ''}
+        </div>
+        <div class="payment-actions">
+          <button class="action-btn receipt" onclick="viewPaymentReceipt('${paymentId}')">
+            📄 영수증
+          </button>
+          ${payment.status === 'completed' ? `
+            <button class="action-btn refund" onclick="requestRefund('${paymentId}')">
+              🔄 환불
+            </button>
+          ` : ''}
+        </div>
       </div>
-      <div class="payment-amount">
-        ${payment.amount.toLocaleString()}원
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+}
+
+// 결제 상태 텍스트 변환
+function getPaymentStatusText(status) {
+  const statusMap = {
+    'completed': '완료',
+    'pending': '대기중',
+    'failed': '실패',
+    'cancelled': '취소',
+    'refunded': '환불완료'
+  };
+  return statusMap[status] || status;
 }
 
 // 이벤트 리스너 설정
@@ -390,6 +493,211 @@ function updateProcessingData(orderData) {
   if (ticketsGrid) {
     ticketsGrid.innerHTML = renderTicketsGrid(orderData.tickets);
   }
+}
+
+// 티켓 액션 함수들
+async function startTicketCooking(ticketId) {
+  try {
+    const response = await fetch(`/api/orders/tickets/${ticketId}/start-cooking`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      // UI 즉시 업데이트
+      updateTicketCard(ticketId, 'COOKING');
+      showSuccess('조리를 시작했습니다');
+    } else {
+      throw new Error(result.error || '조리 시작 실패');
+    }
+  } catch (error) {
+    console.error('❌ 조리 시작 실패:', error);
+    showError('조리 시작 중 오류가 발생했습니다');
+  }
+}
+
+async function markTicketReady(ticketId) {
+  try {
+    const response = await fetch(`/api/orders/tickets/${ticketId}/ready`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      updateTicketCard(ticketId, 'READY');
+      showSuccess('조리가 완료되었습니다');
+    } else {
+      throw new Error(result.error || '완료 처리 실패');
+    }
+  } catch (error) {
+    console.error('❌ 완료 처리 실패:', error);
+    showError('완료 처리 중 오류가 발생했습니다');
+  }
+}
+
+async function markTicketServed(ticketId) {
+  try {
+    const response = await fetch(`/api/orders/tickets/${ticketId}/served`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      removeTicketCard(ticketId);
+      showSuccess('서빙이 완료되었습니다');
+    } else {
+      throw new Error(result.error || '서빙 처리 실패');
+    }
+  } catch (error) {
+    console.error('❌ 서빙 처리 실패:', error);
+    showError('서빙 처리 중 오류가 발생했습니다');
+  }
+}
+
+// 결제 액션 함수들
+async function viewPaymentReceipt(paymentId) {
+  try {
+    const response = await fetch(`/api/payments/${paymentId}/receipt`);
+    const result = await response.json();
+    
+    if (result.success) {
+      // 영수증 모달 표시
+      showReceiptModal(result.receipt);
+    } else {
+      throw new Error(result.error || '영수증 조회 실패');
+    }
+  } catch (error) {
+    console.error('❌ 영수증 조회 실패:', error);
+    showError('영수증을 조회할 수 없습니다');
+  }
+}
+
+async function requestRefund(paymentId) {
+  if (!confirm('정말로 환불을 진행하시겠습니까?')) return;
+
+  try {
+    const response = await fetch(`/api/payments/${paymentId}/refund`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      updatePaymentCard(paymentId, 'refunded');
+      showSuccess('환불이 요청되었습니다');
+    } else {
+      throw new Error(result.error || '환불 요청 실패');
+    }
+  } catch (error) {
+    console.error('❌ 환불 요청 실패:', error);
+    showError('환불 요청 중 오류가 발생했습니다');
+  }
+}
+
+// UI 업데이트 함수들
+function updateTicketCard(ticketId, status) {
+  const ticketCard = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+  if (!ticketCard) return;
+
+  // 상태 클래스 업데이트
+  ticketCard.className = `ticket-card status-${status.toLowerCase()}`;
+  
+  // 상태 텍스트 업데이트
+  const statusElement = ticketCard.querySelector('.ticket-status');
+  if (statusElement) {
+    statusElement.textContent = getTicketStatusText(status);
+    statusElement.className = `ticket-status ${status.toLowerCase()}`;
+  }
+
+  // 액션 버튼 업데이트
+  const actionsElement = ticketCard.querySelector('.ticket-actions');
+  if (actionsElement) {
+    actionsElement.innerHTML = renderTicketActions(ticketId, status);
+  }
+}
+
+function removeTicketCard(ticketId) {
+  const ticketCard = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+  if (ticketCard) {
+    ticketCard.style.transition = 'all 0.3s ease';
+    ticketCard.style.transform = 'scale(0.8)';
+    ticketCard.style.opacity = '0';
+    
+    setTimeout(() => {
+      ticketCard.remove();
+      
+      // 빈 상태 체크
+      const ticketsGrid = document.getElementById('ticketsGrid');
+      if (ticketsGrid && ticketsGrid.children.length === 0) {
+        ticketsGrid.innerHTML = `
+          <div class="no-tickets">
+            <div class="no-tickets-icon">🍽️</div>
+            <p>아직 조리 중인 주문이 없습니다</p>
+          </div>
+        `;
+      }
+    }, 300);
+  }
+}
+
+function updatePaymentCard(paymentId, status) {
+  const paymentCard = document.querySelector(`[data-payment-id="${paymentId}"]`);
+  if (!paymentCard) return;
+
+  const statusElement = paymentCard.querySelector('.payment-status');
+  if (statusElement) {
+    statusElement.textContent = getPaymentStatusText(status);
+    statusElement.className = `payment-status status-${status.toLowerCase()}`;
+  }
+}
+
+// 영수증 모달 표시
+function showReceiptModal(receipt) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.innerHTML = `
+    <div class="modal-content receipt-modal">
+      <div class="modal-header">
+        <h3>📄 결제 영수증</h3>
+        <button class="close-btn" onclick="this.closest('.modal-overlay').remove()">×</button>
+      </div>
+      <div class="receipt-content">
+        <div class="receipt-info">
+          <p><strong>결제 ID:</strong> ${receipt.payment_id}</p>
+          <p><strong>결제 방법:</strong> ${receipt.method}</p>
+          <p><strong>결제 금액:</strong> ${receipt.amount.toLocaleString()}원</p>
+          <p><strong>결제 시간:</strong> ${formatOrderTime(receipt.created_at)}</p>
+          ${receipt.ticket_id ? `<p><strong>티켓 ID:</strong> ${receipt.ticket_id}</p>` : ''}
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary" onclick="this.closest('.modal-overlay').remove()">
+          닫기
+        </button>
+        <button class="btn primary" onclick="printReceipt('${receipt.payment_id}')">
+          🖨️ 인쇄
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// 알림 함수들
+function showSuccess(message) {
+  // 간단한 성공 알림 (추후 토스트로 개선 가능)
+  console.log('✅', message);
+  alert(message);
+}
+
+function showError(message) {
+  // 간단한 오류 알림 (추후 토스트로 개선 가능)
+  console.error('❌', message);
+  alert(message);
 }
 
 // 유틸리티 함수들
@@ -693,11 +1001,32 @@ function getProcessingOrderStyles() {
         padding: 16px;
         border: 1px solid #e2e8f0;
         transition: all 0.2s ease;
+        position: relative;
       }
 
       .ticket-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+
+      .ticket-card.status-pending {
+        border-left: 4px solid #f39c12;
+      }
+
+      .ticket-card.status-cooking {
+        border-left: 4px solid #e74c3c;
+        background: #fef7f7;
+      }
+
+      .ticket-card.status-ready {
+        border-left: 4px solid #27ae60;
+        background: #f7fef8;
+      }
+
+      .ticket-card.status-served {
+        border-left: 4px solid #6c757d;
+        background: #f8f9fa;
+        opacity: 0.7;
       }
 
       .ticket-header {
@@ -772,13 +1101,171 @@ function getProcessingOrderStyles() {
       }
 
       .payment-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .payment-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+
+      .payment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .payment-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .payment-ticket {
+        font-size: 12px;
+        color: #6366f1;
+        font-weight: 600;
+        background: #f0f4ff;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .payment-details {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      .payment-status {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .payment-status.status-completed {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      .payment-status.status-pending {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .payment-status.status-refunded {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      .payment-key {
+        font-family: monospace;
+        font-size: 10px;
+      }
+
+      .payment-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .action-btn {
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .action-btn.start-cooking {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .action-btn.mark-ready {
+        background: #10b981;
+        color: white;
+      }
+
+      .action-btn.served {
+        background: #6b7280;
+        color: white;
+      }
+
+      .action-btn.receipt {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+      }
+
+      .action-btn.refund {
+        background: #fef2f2;
+        color: #dc2626;
+        border: 1px solid #fecaca;
+      }
+
+      .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .ticket-meta {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      .ticket-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 16px;
-        background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
+        margin-top: 12px;
+      }
+
+      .item-station {
+        font-size: 10px;
+        color: #6366f1;
+        background: #f0f4ff;
+        padding: 1px 4px;
+        border-radius: 3px;
+      }
+
+      .no-payments {
+        text-align: center;
+        padding: 40px 20px;
+        color: #9ca3af;
+      }
+
+      .no-payments-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+      }
+
+      .receipt-modal {
+        max-width: 400px;
+        width: 90%;
+      }
+
+      .receipt-content {
+        padding: 20px 0;
+      }
+
+      .receipt-info p {
+        margin: 8px 0;
+        padding: 4px 0;
+        border-bottom: 1px solid #f3f4f6;
       }
 
       .payment-method {

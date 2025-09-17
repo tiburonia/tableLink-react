@@ -277,4 +277,230 @@ router.put('/mark-all-read', async (req, res) => {
   }
 });
 
+// 📋 주문 처리 관련 알림 생성
+router.post('/create-order-notification', async (req, res) => {
+  try {
+    const { 
+      userId, 
+      type = 'order', 
+      title, 
+      message, 
+      orderId, 
+      storeId, 
+      ticketId 
+    } = req.body;
+
+    if (!userId || !title || !message) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    const metadata = {
+      order_id: orderId,
+      store_id: storeId,
+      ticket_id: ticketId,
+      created_source: 'processing_order'
+    };
+
+    const result = await pool.query(`
+      INSERT INTO notifications (
+        user_id,
+        type,
+        title,
+        message,
+        metadata,
+        sent_source
+      ) VALUES ($1, $2, $3, $4, $5, 'system')
+      RETURNING id, created_at
+    `, [
+      parseInt(userId),
+      type,
+      title,
+      message,
+      JSON.stringify(metadata)
+    ]);
+
+    const notification = result.rows[0];
+
+    console.log(`📢 주문 처리 알림 생성: 사용자 ${userId}, 알림 ${notification.id}`);
+
+    res.json({
+      success: true,
+      notification: {
+        id: notification.id,
+        createdAt: notification.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 주문 처리 알림 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '알림 생성 실패: ' + error.message
+    });
+  }
+});
+
+// 📋 티켓별 알림 조회
+router.get('/ticket/:ticketId', async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: '사용자 ID가 필요합니다'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        type,
+        title,
+        message,
+        metadata,
+        created_at,
+        is_read,
+        sent_source
+      FROM notifications
+      WHERE user_id = $1 
+        AND metadata->>'ticket_id' = $2
+      ORDER BY created_at DESC
+    `, [parseInt(userId), ticketId]);
+
+    const notifications = result.rows.map(notification => ({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      metadata: notification.metadata,
+      createdAt: new Date(notification.created_at),
+      isRead: notification.is_read,
+      sentSource: notification.sent_source
+    }));
+
+    res.json({
+      success: true,
+      notifications: notifications,
+      count: notifications.length
+    });
+
+  } catch (error) {
+    console.error('❌ 티켓별 알림 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '티켓별 알림 조회 실패'
+    });
+  }
+});
+
+// 📋 주문별 알림 조회
+router.get('/order/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: '사용자 ID가 필요합니다'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        id,
+        type,
+        title,
+        message,
+        metadata,
+        created_at,
+        is_read,
+        sent_source
+      FROM notifications
+      WHERE user_id = $1 
+        AND metadata->>'order_id' = $2
+      ORDER BY created_at DESC
+    `, [parseInt(userId), orderId]);
+
+    const notifications = result.rows.map(notification => ({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      metadata: notification.metadata,
+      createdAt: new Date(notification.created_at),
+      isRead: notification.is_read,
+      sentSource: notification.sent_source
+    }));
+
+    res.json({
+      success: true,
+      notifications: notifications,
+      count: notifications.length
+    });
+
+  } catch (error) {
+    console.error('❌ 주문별 알림 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문별 알림 조회 실패'
+    });
+  }
+});
+
+// 📋 일괄 알림 읽음 처리 (주문/티켓별)
+router.put('/mark-read-by-order', async (req, res) => {
+  try {
+    const { userId, orderId, ticketId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: '사용자 ID가 필요합니다'
+      });
+    }
+
+    let whereCondition = 'user_id = $1 AND is_read = false';
+    const queryParams = [parseInt(userId)];
+
+    if (orderId) {
+      whereCondition += ` AND metadata->>'order_id' = $2`;
+      queryParams.push(orderId);
+    }
+
+    if (ticketId) {
+      const paramIndex = queryParams.length + 1;
+      whereCondition += ` AND metadata->>'ticket_id' = $${paramIndex}`;
+      queryParams.push(ticketId);
+    }
+
+    const updateResult = await pool.query(`
+      UPDATE notifications
+      SET is_read = true, read_at = CURRENT_TIMESTAMP
+      WHERE ${whereCondition}
+      RETURNING id
+    `, queryParams);
+
+    console.log(`📢 일괄 알림 읽음 처리: ${updateResult.rows.length}개 알림 처리`);
+
+    res.json({
+      success: true,
+      message: `${updateResult.rows.length}개의 알림을 읽음으로 처리했습니다`,
+      updatedCount: updateResult.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ 일괄 알림 읽음 처리 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '일괄 알림 읽음 처리 실패'
+    });
+  }
+});
+
 module.exports = router;
