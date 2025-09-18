@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const pool = require('../db/pool');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
