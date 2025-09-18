@@ -1,67 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../db/pool');
-
-/**
- * [PUT] /:orderId/end-session - 주문 세션 종료
- */
-router.put('/:orderId/end-session', async (req, res) => {
-  const client = await pool.connect();
-  
-  try {
-    const { orderId } = req.params;
-    
-    console.log(`🔚 주문 세션 종료 요청: ${orderId}`);
-    
-    await client.query('BEGIN');
-    
-    // 주문 상태를 CLOSED로 변경
-    const orderResult = await client.query(`
-      UPDATE orders 
-      SET status = 'CLOSED', updated_at = NOW()
-      WHERE id = $1
-      RETURNING store_id, table_num
-    `, [orderId]);
-    
-    if (orderResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        error: '주문을 찾을 수 없습니다'
-      });
-    }
-    
-    const { store_id, table_num } = orderResult.rows[0];
-    
-    // store_tables.processing_order_id를 NULL로 업데이트
-    await client.query(`
-      UPDATE store_tables 
-      SET processing_order_id = NULL
-      WHERE store_id = $1 AND id = $2
-    `, [store_id, table_num]);
-    
-    await client.query('COMMIT');
-    
-    console.log(`✅ 주문 세션 종료 완료: 주문 ${orderId}, 테이블 ${table_num}`);
-    
-    res.json({
-      success: true,
-      message: '세션이 성공적으로 종료되었습니다'
-    });
-    
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ 세션 종료 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '세션 종료 중 오류가 발생했습니다'
-    });
-  } finally {
-    client.release();
-  }
-});
-
-module.exports = router;
+const { Pool } = require('pg');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
