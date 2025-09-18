@@ -219,17 +219,16 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
       SELECT 
         o.id as order_id,
         o.user_id,
-        o.guest_id,
+        o.guest_phone,
         o.created_at,
         u.name as user_name,
         u.phone as user_phone,
-        u.point as user_point,
         g.phone as guest_phone
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guest g ON o.guest_id = g.id
+      LEFT JOIN guests g ON o.guest_phone = g.phone
       WHERE o.store_id = $1 
-        AND (o.table_number = $2 OR o.table_num = $2)
+        AND o.table_num = $2
         AND o.status = 'OPEN'
         AND o.source = 'TLL'
       ORDER BY o.created_at DESC
