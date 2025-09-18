@@ -293,121 +293,491 @@ body {
     border-color: #fca5a5;
 }
 
-/* =================== 주문 내역 섹션 =================== */
+/* =================== 주문 내역 섹션 (모던 디자인) =================== */
 
-.order-section {
+.order-section-modern {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-}
-
-.order-stats {
-    font-size: 14px;
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.order-table-container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: #ffffff;
-}
-
-.order-table-header {
-    display: grid;
-    grid-template-columns: 2fr 1fr 0.8fr 1fr 1.2fr 0.6fr;
-    gap: 12px;
-    padding: 12px 16px;
     background: #f8fafc;
-    border-bottom: 2px solid #e5e7eb;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    padding: 16px;
+    gap: 16px;
 }
 
-.header-col {
-    font-size: 12px;
-    font-weight: 700;
-    color: #374151;
-    text-align: center;
+/* 주문 대시보드 */
+.order-dashboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.dashboard-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card .card-icon {
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 10px;
+}
+
+.dashboard-card .card-content {
+    flex: 1;
+}
+
+.dashboard-card .card-content h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 0 0 4px 0;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.header-col.col-menu {
-    text-align: left;
+.dashboard-card .card-content .count {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1f2937;
 }
 
-.order-list {
+.dashboard-card .card-indicator {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    border-radius: 0 12px 12px 0;
+}
+
+.dashboard-card .card-indicator.pos {
+    background: linear-gradient(135deg, #059669 0%, #065f46 100%);
+}
+
+.dashboard-card .card-indicator.tll {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.dashboard-card .card-indicator.total {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* 주문 탭 */
+.order-tabs {
+    display: flex;
+    gap: 8px;
+    background: #ffffff;
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+}
+
+.order-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.order-tab.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+.order-tab:hover:not(.active) {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+/* 주문 컨텐츠 */
+.order-content {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.order-content.active {
+    display: flex;
+}
+
+.order-list-modern {
     flex: 1;
     overflow-y: auto;
-    padding: 0 16px 16px 16px;
-    background: #ffffff;
+    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.empty-orders {
+/* TLL 액션 바 */
+.tll-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+}
+
+.refresh-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.refresh-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4);
+}
+
+.refresh-icon {
+    font-size: 14px;
+}
+
+/* 주문 카드 */
+.order-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.order-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    transform: translateY(-1px);
+}
+
+.order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.order-card .menu-info {
+    flex: 1;
+}
+
+.order-card .menu-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 4px 0;
+}
+
+.order-card .menu-price {
+    font-size: 14px;
+    font-weight: 600;
+    color: #059669;
+}
+
+.order-status,
+.order-status-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.order-status-group {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.status-badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.status-badge.status-cooking {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.status-badge.status-ready,
+.status-badge.status-completed {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #86efac;
+}
+
+.cook-station-badge {
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.cook-station-badge.station-kitchen {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.cook-station-badge.station-drink {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.cook-station-badge.station-dessert {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.order-card-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+/* POS 주문 카드 전용 스타일 */
+.pos-order-card .quantity-section,
+.pos-order-card .total-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quantity-label,
+.total-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quantity-control-modern {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 4px 8px;
+    width: fit-content;
+}
+
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    transition: all 0.2s ease;
+}
+
+.qty-btn:hover {
+    background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+    transform: scale(1.05);
+}
+
+.qty-btn.minus:hover {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #dc2626;
+}
+
+.qty-btn.plus:hover {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    color: #059669;
+}
+
+.quantity-display {
+    min-width: 24px;
+    text-align: center;
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.total-amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: #059669;
+}
+
+/* TLL 주문 카드 전용 스타일 */
+.tll-order-card .quantity-info,
+.tll-order-card .total-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.quantity-label,
+.total-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.quantity-value,
+.total-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.total-value {
+    color: #059669;
+}
+
+.order-card-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.action-btn {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.action-btn.remove-btn {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.action-btn.remove-btn:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+}
+
+.order-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f3f4f6;
+    margin-top: 12px;
+}
+
+.tll-source-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.source-icon {
+    font-size: 12px;
+}
+
+.order-time {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Empty 상태 */
+.empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    height: 200px;
     color: #9ca3af;
     text-align: center;
-    padding: 40px 16px;
+    background: white;
+    border-radius: 12px;
+    border: 2px dashed #e5e7eb;
 }
 
-.empty-icon {
+.empty-state .empty-icon {
     font-size: 48px;
     margin-bottom: 12px;
+    opacity: 0.7;
 }
 
-.order-row {
-    display: grid;
-    grid-template-columns: 2fr 1fr 0.8fr 1fr 1.2fr 0.6fr;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid #f3f4f6;
-    align-items: center;
-    transition: all 0.2s;
-}
-
-.order-row:hover {
-    background: #f8fafc;
-    margin: 0 -16px;
-    padding: 12px 16px;
-    border-radius: 8px;
-}
-
-.order-row:last-child {
-    border-bottom: none;
-}
-
-.row-col {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 40px;
-}
-
-.row-col.col-menu {
-    justify-content: flex-start;
-}
-
-.menu-name {
-    font-size: 14px;
+.empty-state h4 {
+    font-size: 16px;
     font-weight: 600;
-    color: #1f2937;
-    line-height: 1.3;
+    color: #6b7280;
+    margin: 0 0 4px 0;
 }
 
-.price-value,
-.total-value {
+.empty-state p {
     font-size: 14px;
-    font-weight: 600;
-    color: #059669;
+    color: #9ca3af;
+    margin: 0;
 }
 
 .quantity-control {

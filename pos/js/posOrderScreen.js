@@ -109,54 +109,71 @@ const POSOrderScreen = {
     },
     
     /**
-     * 주문 내역 섹션 (상하 분할: POS 60% + TLL 40%)
+     * 주문 내역 섹션 (카드 기반 모던 디자인)
      */
     renderOrderSection() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
         const tllOrderCount = this.tllOrders?.length || 0;
         
         return `
-            <div class="order-section">
-                <div class="section-header">
-                    <h3>📋 주문 내역</h3>
-                    <div class="order-stats">
-                        <span class="item-count">POS: ${posOrders.length}개 | TLL: ${tllOrderCount}개</span>
-                    </div>
-                </div>
-                
-                <!-- POS 주문 영역 (60%) -->
-                <div class="pos-orders-container" style="height: 60%; border-bottom: 2px solid #e9ecef;">
-                    <div class="pos-orders-header">
-                        <h4>💻 POS 주문</h4>
+            <div class="order-section-modern">
+                <!-- 주문 현황 대시보드 -->
+                <div class="order-dashboard">
+                    <div class="dashboard-card pos-card">
+                        <div class="card-icon">💻</div>
+                        <div class="card-content">
+                            <h4>POS 주문</h4>
+                            <span class="count">${posOrders.length}건</span>
+                        </div>
+                        <div class="card-indicator pos"></div>
                     </div>
                     
-                    <div class="order-table-container" style="height: calc(100% - 40px);">
-                        <div class="order-table-header">
-                            <div class="header-col col-menu">메뉴</div>
-                            <div class="header-col col-price">단가</div>
-                            <div class="header-col col-quantity">수량</div>
-                            <div class="header-col col-total">금액</div>
-                            <div class="header-col col-status">상태</div>
-                            <div class="header-col col-actions">액션</div>
+                    <div class="dashboard-card tll-card">
+                        <div class="card-icon">📱</div>
+                        <div class="card-content">
+                            <h4>TLL 주문</h4>
+                            <span class="count">${tllOrderCount}건</span>
                         </div>
-                        
-                        <div class="order-list" id="posOrderList" style="height: calc(100% - 40px); overflow-y: auto;">
-                            ${this.renderPOSOrderItems()}
+                        <div class="card-indicator tll"></div>
+                    </div>
+                    
+                    <div class="dashboard-card total-card">
+                        <div class="card-icon">📊</div>
+                        <div class="card-content">
+                            <h4>총 주문</h4>
+                            <span class="count">${posOrders.length + tllOrderCount}건</span>
                         </div>
+                        <div class="card-indicator total"></div>
                     </div>
                 </div>
                 
-                <!-- TLL 주문 영역 (40%) -->
-                <div class="tll-orders-container" style="height: 40%; padding-top: 8px;">
-                    <div class="tll-orders-header">
-                        <h4>📱 TLL 주문</h4>
-                        <button class="refresh-tll-btn" onclick="POSOrderScreen.refreshTLLOrders()" title="TLL 주문 새로고침">
-                            🔄
+                <!-- 주문 내역 탭 -->
+                <div class="order-tabs">
+                    <button class="order-tab active" data-tab="pos" onclick="POSOrderScreen.switchOrderTab('pos')">
+                        💻 POS 주문 (${posOrders.length})
+                    </button>
+                    <button class="order-tab" data-tab="tll" onclick="POSOrderScreen.switchOrderTab('tll')">
+                        📱 TLL 주문 (${tllOrderCount})
+                    </button>
+                </div>
+                
+                <!-- POS 주문 영역 -->
+                <div class="order-content pos-content active" id="posOrderContent">
+                    <div class="order-list-modern" id="posOrderList">
+                        ${this.renderPOSOrderItemsModern()}
+                    </div>
+                </div>
+                
+                <!-- TLL 주문 영역 -->
+                <div class="order-content tll-content" id="tllOrderContent">
+                    <div class="tll-actions-bar">
+                        <button class="refresh-btn" onclick="POSOrderScreen.refreshTLLOrders()" title="TLL 주문 새로고침">
+                            <span class="refresh-icon">🔄</span>
+                            새로고침
                         </button>
                     </div>
-                    
-                    <div class="tll-order-list" id="tllOrderList" style="height: calc(100% - 40px); overflow-y: auto;">
-                        ${this.renderTLLOrderItems()}
+                    <div class="order-list-modern" id="tllOrderList">
+                        ${this.renderTLLOrderItemsModern()}
                     </div>
                 </div>
             </div>
@@ -164,52 +181,61 @@ const POSOrderScreen = {
     },
     
     /**
-     * POS 주문 아이템 렌더링
+     * POS 주문 아이템 렌더링 (모던 카드 스타일)
      */
-    renderPOSOrderItems() {
+    renderPOSOrderItemsModern() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
         
         if (posOrders.length === 0) {
             return `
-                <div class="empty-orders">
+                <div class="empty-state">
                     <div class="empty-icon">💻</div>
-                    <p>POS 주문 내역이 없습니다</p>
-                    <small>우측에서 메뉴를 선택하세요</small>
+                    <h4>POS 주문이 없습니다</h4>
+                    <p>우측 메뉴에서 상품을 선택해주세요</p>
                 </div>
             `;
         }
         
         return posOrders.map(order => `
-            <div class="order-row" data-order-id="${order.id}">
-                <div class="row-col col-menu">
-                    <div class="menu-name">${order.menuName}</div>
-                </div>
-                
-                <div class="row-col col-price">
-                    <span class="price-value">${order.price.toLocaleString()}원</span>
-                </div>
-                
-                <div class="row-col col-quantity">
-                    <div class="quantity-control">
-                        <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">−</button>
-                        <span class="quantity">${order.quantity}</span>
-                        <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">+</button>
+            <div class="order-card pos-order-card" data-order-id="${order.id}">
+                <div class="order-card-header">
+                    <div class="menu-info">
+                        <h5 class="menu-name">${order.menuName}</h5>
+                        <span class="menu-price">${order.price.toLocaleString()}원</span>
+                    </div>
+                    <div class="order-status">
+                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                            ${this.getStatusText(order.cookingStatus)}
+                        </span>
                     </div>
                 </div>
                 
-                <div class="row-col col-total">
-                    <span class="total-value">${(order.price * order.quantity).toLocaleString()}원</span>
+                <div class="order-card-body">
+                    <div class="quantity-section">
+                        <label class="quantity-label">수량</label>
+                        <div class="quantity-control-modern">
+                            <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">
+                                <span>−</span>
+                            </button>
+                            <span class="quantity-display">${order.quantity}</span>
+                            <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">
+                                <span>+</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="total-section">
+                        <label class="total-label">합계</label>
+                        <span class="total-amount">${(order.price * order.quantity).toLocaleString()}원</span>
+                    </div>
                 </div>
                 
-                <div class="row-col col-status">
-                    <span class="cooking-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
-                        ${this.getStatusText(order.cookingStatus)}
-                    </span>
-                </div>
-                
-                <div class="row-col col-actions">
-                    <button class="remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="주문 삭제">
-                        🗑️
+                <div class="order-card-actions">
+                    <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="주문 수정">
+                        ✏️ 수정
+                    </button>
+                    <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="주문 삭제">
+                        🗑️ 삭제
                     </button>
                 </div>
             </div>
@@ -217,15 +243,22 @@ const POSOrderScreen = {
     },
 
     /**
-     * TLL 주문 아이템 렌더링 (메뉴별로 수량 통합)
+     * POS 주문 아이템 렌더링 (기존 호환성용)
      */
-    renderTLLOrderItems() {
+    renderPOSOrderItems() {
+        return this.renderPOSOrderItemsModern();
+    },
+
+    /**
+     * TLL 주문 아이템 렌더링 (모던 카드 스타일)
+     */
+    renderTLLOrderItemsModern() {
         if (!this.tllOrders || this.tllOrders.length === 0) {
             return `
-                <div class="empty-tll-orders">
+                <div class="empty-state">
                     <div class="empty-icon">📱</div>
-                    <p>TLL 주문이 없습니다</p>
-                    <small>고객이 앱에서 주문하면 여기에 표시됩니다</small>
+                    <h4>TLL 주문이 없습니다</h4>
+                    <p>고객이 앱에서 주문하면 여기에 표시됩니다</p>
                 </div>
             `;
         }
@@ -254,26 +287,52 @@ const POSOrderScreen = {
         const consolidatedOrdersList = Object.values(consolidatedOrders);
 
         return consolidatedOrdersList.map(order => `
-            <div class="tll-order-row" data-order-id="${order.order_id}">
-                <div class="tll-menu-info">
-                    <div class="tll-menu-name">${order.menu_name}</div>
-                    <div class="tll-menu-details">
-                        <span class="tll-unit-price">${order.unit_price.toLocaleString()}원</span>
-                        <span class="tll-quantity">× ${order.quantity}</span>
-                        <span class="tll-total-price">${order.total_price.toLocaleString()}원</span>
+            <div class="order-card tll-order-card" data-order-id="${order.order_id}">
+                <div class="order-card-header">
+                    <div class="menu-info">
+                        <h5 class="menu-name">${order.menu_name}</h5>
+                        <span class="menu-price">${order.unit_price.toLocaleString()}원</span>
+                    </div>
+                    <div class="order-status-group">
+                        <span class="cook-station-badge station-${order.cook_station?.toLowerCase() || 'kitchen'}">
+                            ${this.getCookStationText(order.cook_station)}
+                        </span>
+                        <span class="status-badge status-${order.item_status?.toLowerCase() || 'pending'}">
+                            ${this.getStatusText(order.item_status)}
+                        </span>
                     </div>
                 </div>
                 
-                <div class="tll-status-info">
-                    <div class="cook-station-badge station-${order.cook_station?.toLowerCase() || 'kitchen'}">
-                        ${this.getCookStationText(order.cook_station)}
+                <div class="order-card-body">
+                    <div class="quantity-info">
+                        <span class="quantity-label">주문 수량</span>
+                        <span class="quantity-value">× ${order.quantity}</span>
                     </div>
-                    <div class="tll-status-badge status-${order.item_status?.toLowerCase() || 'pending'}">
-                        ${this.getStatusText(order.item_status)}
+                    
+                    <div class="total-info">
+                        <span class="total-label">주문 금액</span>
+                        <span class="total-value">${order.total_price.toLocaleString()}원</span>
+                    </div>
+                </div>
+                
+                <div class="order-card-footer">
+                    <div class="tll-source-badge">
+                        <span class="source-icon">📱</span>
+                        <span>TLL 앱 주문</span>
+                    </div>
+                    <div class="order-time">
+                        ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                 </div>
             </div>
         `).join('');
+    },
+
+    /**
+     * TLL 주문 아이템 렌더링 (기존 호환성용)
+     */
+    renderTLLOrderItems() {
+        return this.renderTLLOrderItemsModern();
     },
     
     /**
@@ -743,6 +802,28 @@ const POSOrderScreen = {
     },
 
     /**
+     * 주문 탭 전환
+     */
+    switchOrderTab(tabType) {
+        // 탭 버튼 활성화 상태 변경
+        document.querySelectorAll('.order-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabType);
+        });
+        
+        // 컨텐츠 영역 표시/숨김
+        document.querySelectorAll('.order-content').forEach(content => {
+            content.classList.toggle('active', content.id === `${tabType}OrderContent`);
+        });
+    },
+
+    /**
+     * 주문 편집 (추후 구현)
+     */
+    editOrder(orderId) {
+        alert('주문 편집 기능은 추후 구현 예정입니다.');
+    },
+
+    /**
      * TLL 주문 새로고침
      */
     async refreshTLLOrders() {
@@ -753,8 +834,11 @@ const POSOrderScreen = {
             // UI 업데이트
             const tllOrderList = document.getElementById('tllOrderList');
             if (tllOrderList) {
-                tllOrderList.innerHTML = this.renderTLLOrderItems();
+                tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
             }
+
+            // 대시보드 카드 업데이트
+            this.updateOrderDashboard();
 
             // 결제 섹션 업데이트 (사용자 정보 반영)
             const paymentSection = document.querySelector('.payment-section');
@@ -770,6 +854,30 @@ const POSOrderScreen = {
             console.error('❌ TLL 주문 새로고침 실패:', error);
             this.showToast('TLL 주문 새로고침에 실패했습니다');
         }
+    },
+
+    /**
+     * 주문 대시보드 업데이트
+     */
+    updateOrderDashboard() {
+        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+        const tllOrderCount = this.tllOrders?.length || 0;
+        
+        // 카운트 업데이트
+        const posCard = document.querySelector('.pos-card .count');
+        const tllCard = document.querySelector('.tll-card .count');
+        const totalCard = document.querySelector('.total-card .count');
+        
+        if (posCard) posCard.textContent = `${posOrders.length}건`;
+        if (tllCard) tllCard.textContent = `${tllOrderCount}건`;
+        if (totalCard) totalCard.textContent = `${posOrders.length + tllOrderCount}건`;
+        
+        // 탭 텍스트 업데이트
+        const posTab = document.querySelector('.order-tab[data-tab="pos"]');
+        const tllTab = document.querySelector('.order-tab[data-tab="tll"]');
+        
+        if (posTab) posTab.textContent = `💻 POS 주문 (${posOrders.length})`;
+        if (tllTab) tllTab.textContent = `📱 TLL 주문 (${tllOrderCount})`;
     },
     
     getMenuIcon(category) {
