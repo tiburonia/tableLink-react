@@ -323,9 +323,9 @@ router.post('/confirm', async (req, res) => {
       });
 
       // store_tables.processing_order_id 업데이트
-      const updateClient = await pool.connect();
+      const tableUpdateClient = await pool.connect();
       try {
-        await updateClient.query(`
+        await tableUpdateClient.query(`
           UPDATE store_tables 
           SET processing_order_id = $1
           WHERE store_id = $2 AND id = $3
@@ -335,7 +335,7 @@ router.post('/confirm', async (req, res) => {
       } catch (updateError) {
         console.warn('⚠️ store_tables.processing_order_id 업데이트 실패:', updateError);
       } finally {
-        updateClient.release();
+        tableUpdateClient.release();
       }
 
       // pending_payments 상태 업데이트
