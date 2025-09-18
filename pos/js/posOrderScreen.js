@@ -673,11 +673,17 @@ const POSOrderScreen = {
     /**
      * 장바구니에 추가 (프론트엔드 카트 관리)
      */
-    async addToCart(menuId, menuName, price) {
+    async addToCart(menuId, menuName, price, storeId = null, cookStation = null) {
         try {
-            // 메뉴 데이터에서 cook_station 정보 가져오기
-            const menuItem = this.menuData.find(menu => menu.id === menuId);
-            const cookStation = menuItem?.cook_station || menuItem?.category;
+            // 파라미터로 받은 값들 우선 사용, 없으면 기본값 설정
+            const finalStoreId = storeId || POSCore.storeId;
+            
+            let finalCookStation = cookStation;
+            if (!finalCookStation) {
+                // 메뉴 데이터에서 cook_station 정보 가져오기
+                const menuItem = this.menuData.find(menu => menu.id === menuId);
+                finalCookStation = menuItem?.cook_station || menuItem?.category || this.getCookStationByMenu(menuName);
+            }
             
             // 기존 카트에서 같은 메뉴 찾기
             const existingItem = this.cart.find(item => 
@@ -696,10 +702,10 @@ const POSOrderScreen = {
                     name: menuName,
                     price: price,
                     quantity: 1,
-                    store_id: POSCore.storeId, // 매장 ID 추가
-                    cook_station: cookStation // 조리스테이션 정보 추가
+                    store_id: finalStoreId, // 파라미터로 받은 매장 ID 사용
+                    cook_station: finalCookStation // 파라미터로 받은 조리스테이션 사용
                 });
-                console.log(`➕ 카트 새 아이템 추가: ${menuName} (매장: ${POSCore.storeId}, 조리스테이션: ${cookStation})`);
+                console.log(`➕ 카트 새 아이템 추가: ${menuName} (매장: ${finalStoreId}, 조리스테이션: ${finalCookStation})`);
             }
             
             // UI 업데이트
