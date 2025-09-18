@@ -400,46 +400,6 @@ const POSOrderScreen = {
                     <!-- 우측: TLL 사용자 정보 및 액션 버튼 -->
                     <div class="payment-right">
                         ${this.renderTLLUserInfo()}
-                        
-                        <div class="payment-actions">
-                            <div class="action-row">
-                                ${this.cart.length > 0 ? `
-                                    <button class="action-btn primary" onclick="POSOrderScreen.confirmOrder()">
-                                        주문확정 (${this.cart.length}개)
-                                    </button>
-                                    <button class="action-btn secondary" onclick="POSOrderScreen.clearCart()">
-                                        카트비우기
-                                    </button>
-                                ` : `
-                                    <button class="action-btn secondary" onclick="POSOrderScreen.cancelAllOrders()">
-                                        전체취소
-                                    </button>
-                                    <button class="action-btn secondary" onclick="POSOrderScreen.cancelSelectedOrders()">
-                                        선택취소
-                                    </button>
-                                `}
-                            </div>
-                            
-                            <div class="tll-special" id="tllSpecial">
-                                <div class="tll-header">
-                                    <span>🎯 TL 특화 기능</span>
-                                </div>
-                                <div class="tll-options">
-                                    <div class="tll-option">
-                                        <span>포인트 적립:</span>
-                                        <span class="tll-value">${Math.floor(total * 0.01).toLocaleString()}P</span>
-                                    </div>
-                                    <div class="tll-option">
-                                        <span>쿠폰 할인:</span>
-                                        <select class="tll-select" id="couponSelect">
-                                            <option value="">선택하세요</option>
-                                            <option value="1000">1,000원 할인</option>
-                                            <option value="2000">2,000원 할인</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -545,7 +505,7 @@ const POSOrderScreen = {
                     </button>
                     
                     <button class="payment-method-btn" 
-                            onclick="POSOrderScreen.showOrderHistory()">
+                            onclick="POSOrderScreen.confirmOrder()">
                         <div class="method-icon">📋</div>
                         <div class="method-name">주문</div>
                     </button>
