@@ -5,7 +5,7 @@ const pool = require('../db/pool');
 // 📢 사용자 알림 목록 조회 (메타데이터 기반 관련 정보 포함)
 router.get('/', async (req, res) => {
   try {
-    const { userId, type, limit = 50, offset = 0, unreadOnly = false } = req.query;
+    const { userId, type, limit = 50, offset = 0 } = req.query;
 
     if (!userId) {
       return res.status(400).json({
@@ -22,10 +22,6 @@ router.get('/', async (req, res) => {
       whereClause += ` AND type = $${paramCount}`;
       queryParams.push(type);
       paramCount++;
-    }
-
-    if (unreadOnly === 'true') {
-      whereClause += ` AND is_read = false`;
     }
 
     const result = await pool.query(`
