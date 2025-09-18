@@ -1,4 +1,3 @@
-
 // TableLink 서브메인 화면 렌더링
 async function renderSubMain() {
   const main = document.getElementById('main');
@@ -139,6 +138,22 @@ async function renderSubMain() {
   renderNearbySkeleton();
   renderPromoSkeleton();
 
+  // 알림 개수 가져오기 및 표시
+  try {
+    const notificationCount = await apiFetchUnreadNotificationCount();
+    const notificationBtn = document.getElementById('notificationBtn');
+    if (notificationBtn) {
+      const badge = document.createElement('span');
+      badge.className = 'notification-count';
+      badge.textContent = notificationCount;
+      if (notificationCount > 0) {
+        notificationBtn.appendChild(badge);
+      }
+    }
+  } catch (error) {
+    console.error('❌ 알림 개수 로드 실패:', error);
+  }
+
   // 병렬로 데이터 로드 및 에러 처리 개선
   try {
     const [favorites, recent, nearby, promotions, userStats] = await Promise.allSettled([
@@ -188,10 +203,10 @@ function initializeGreeting() {
     hour: '2-digit', 
     minute: '2-digit' 
   });
-  
+
   const hour = currentTime.getHours();
   let greeting = '안녕하세요!';
-  
+
   if (hour < 12) {
     greeting = '좋은 아침이에요!';
   } else if (hour < 18) {
@@ -199,10 +214,10 @@ function initializeGreeting() {
   } else {
     greeting = '저녁 시간이네요!';
   }
-  
+
   const greetingText = document.getElementById('greetingText');
   const currentTimeEl = document.getElementById('currentTime');
-  
+
   if (greetingText) greetingText.textContent = greeting + ' 오늘도 맛있는 하루 되세요 😊';
   if (currentTimeEl) currentTimeEl.textContent = timeString;
 
@@ -244,7 +259,7 @@ function initializeEventBanner() {
   ];
 
   const randomBanner = banners[Math.floor(Math.random() * banners.length)];
-  
+
   bannerContainer.innerHTML = `
     <div class="event-banner" style="background: ${randomBanner.color};" onclick="handleBannerClick()">
       <div class="banner-content">
@@ -323,7 +338,7 @@ function showGlobalError(message) {
       <button class="error-dismiss" onclick="this.parentElement.parentElement.remove()">✕</button>
     </div>
   `;
-  
+
   const subContent = document.getElementById('subContent');
   if (subContent) {
     subContent.insertBefore(errorDiv, subContent.firstChild.nextSibling);
@@ -469,12 +484,12 @@ async function replaceFavSection(favorites, recent) {
   if (!container) return;
 
   const allStores = [];
-  
+
   // 즐겨찾기 매장 추가
   if (Array.isArray(favorites) && favorites.length > 0) {
     allStores.push(...favorites.map(store => ({ ...store, type: 'favorite' })));
   }
-  
+
   // 최근 방문 매장 추가 (즐겨찾기와 중복 제거)
   if (Array.isArray(recent) && recent.length > 0) {
     const favoriteIds = new Set(favorites.map(f => f.id));
@@ -540,7 +555,7 @@ function renderNearbySkeleton() {
 async function replaceNearbySection(nearbyData) {
   const container = document.getElementById('nearbyContainer');
   const loadMoreContainer = document.getElementById('nearbyLoadMore');
-  
+
   if (!container) return;
 
   const stores = nearbyData?.stores || [];
@@ -671,10 +686,10 @@ function goToStore(storeId) {
 async function apiFetchFavorites() {
   try {
     if (!userInfo?.id) return [];
-    
+
     const response = await fetch(`/api/auth/users/favorites/${userInfo.id}`);
     if (!response.ok) throw new Error('즐겨찾기 조회 실패');
-    
+
     const data = await response.json();
     return data.stores || [];
   } catch (error) {
@@ -686,10 +701,10 @@ async function apiFetchFavorites() {
 async function apiFetchRecentStores() {
   try {
     if (!userInfo?.id) return [];
-    
+
     const response = await fetch(`/api/orders/users/${userInfo.id}?limit=5`);
     if (!response.ok) throw new Error('최근 방문 조회 실패');
-    
+
     const data = await response.json();
     return data.orders?.map(order => ({
       id: order.store_id,
@@ -706,7 +721,7 @@ async function apiFetchRecentStores() {
 async function apiFetchNearby(options = {}) {
   try {
     const { offset = 0, limit = 10 } = options;
-    
+
     // 현재 위치 기반 또는 기본 위치 사용
     const params = new URLSearchParams({
       swLat: 37.5665,
@@ -715,10 +730,10 @@ async function apiFetchNearby(options = {}) {
       neLng: 126.9790,
       level: 5
     });
-    
+
     const response = await fetch(`/api/stores/viewport?${params}`);
     if (!response.ok) throw new Error('주변 매장 조회 실패');
-    
+
     const data = await response.json();
     return {
       stores: data.stores || [],
@@ -747,5 +762,52 @@ async function apiFetchPromotions() {
   }
 }
 
+// 안 읽은 알림 개수 API 호출 (가상)
+async function apiFetchUnreadNotificationCount() {
+  // 실제 API 연동 시 이 부분을 수정해야 합니다.
+  // 예시: return fetch('/api/notifications/unread').then(res => res.json()).then(data => data.count);
+  console.log('🔔 안 읽은 알림 개수 조회 (가상 데이터)');
+  return Math.floor(Math.random() * 5) + 1; // 1~5개의 안 읽은 알림 반환
+}
+
+
 // 전역 함수 등록
 window.renderSubMain = renderSubMain;
+
+// CSS 추가
+const styleSheet = document.createElement("style");
+styleSheet.type = "text/css";
+styleSheet.innerText = `
+      #bottomBar button:active {
+        transform: translateY(0px);
+        box-shadow: 
+          0 4px 16px rgba(41, 126, 252, 0.15),
+          0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      /* 알림 배지 스타일 */
+      .notification-count {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        min-width: 20px;
+        height: 20px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+      }
+`;
+document.head.appendChild(styleSheet);

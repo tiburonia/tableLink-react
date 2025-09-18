@@ -537,6 +537,12 @@ async function loadNotifications(type = 'all') {
           if (!isRead) {
             await markNotificationAsRead(notification.id);
             notificationElement.classList.remove('unread');
+            
+            // 서브메인의 알림 배지 업데이트
+            if (window.updateNotificationBadge) {
+              const remainingUnread = document.querySelectorAll('.notification-item.unread').length;
+              window.updateNotificationBadge(remainingUnread);
+            }
           }
 
           // 메타데이터 및 enrichedData 기반 액션 처리
@@ -767,6 +773,11 @@ async function markAllNotificationsAsRead() {
       unreadItems.forEach(item => {
         item.classList.remove('unread');
       });
+
+      // 서브메인의 알림 배지 업데이트
+      if (window.updateNotificationBadge) {
+        window.updateNotificationBadge(0);
+      }
 
       console.log('✅ 모든 알림을 읽음으로 처리했습니다.');
     } else {
