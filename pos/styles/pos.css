@@ -220,7 +220,7 @@ body {
 
 .payment-control-bar {
     display: flex;
-    gap: 60px;
+    gap: 35px;
     align-items: center;
 }
 

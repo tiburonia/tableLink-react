@@ -168,7 +168,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
         oi.created_at,
         oi.options
       FROM order_items oi
-      WHERE oi.order_id = $1 AND oi.item_status != 'CANCELED'
+      WHERE oi.ticket_id = $1 AND oi.item_status != 'CANCELED'
       ORDER BY oi.created_at ASC
     `, [currentOrder.order_id]);
 
@@ -276,7 +276,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
         COUNT(oi.id) as item_count
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN order_items oi ON o.id = oi.ticket_id
       WHERE o.store_id = $1 AND o.table_num = $2 AND o.status = 'OPEN'
       GROUP BY o.id, o.status, o.created_at, u.name, o.source
       ORDER BY o.created_at DESC
