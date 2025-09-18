@@ -109,8 +109,9 @@ router.post('/orders/confirm', async (req, res) => {
           item_status,
           cook_station,
           created_at,
-          menu_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8)
+          menu_id,
+          store_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8, $9)
       `, [
         orderId,
         ticketId,
@@ -119,7 +120,8 @@ router.post('/orders/confirm', async (req, res) => {
         item.quantity,
         item.price * item.quantity,
         item.cook_station || 'KITCHEN',
-        item.menuId ||
+        item.id,
+        item.store_id
       ]);
     }
 
