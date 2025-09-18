@@ -347,7 +347,9 @@ const POSOrderScreen = {
      * 결제/계산 섹션 (좌우 2분할)
      */
     renderPaymentSection() {
-        const subtotal = this.currentOrders.reduce((sum, order) => sum + (order.price * order.quantity), 0);
+        // 카트 아이템들만 결제 계산에 포함
+        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = cartTotal;
         const discount = 0; // TLL 할인 로직 추가 예정
         const total = subtotal - discount;
         
@@ -571,21 +573,42 @@ const POSOrderScreen = {
     },
 
     /**
-     * 기존 주문 로드 (POS + TLL 통합)
+     * 기존 주문 로드 (DB에서 order_items 직접 로드, 수량 통합)
      */
     async loadCurrentOrders(storeId, tableNumber) {
         try {
-            // POS 주문 로드
-            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/all-orders`);
+            // POS 주문 로드 (order_items 기준)
+            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
             const data = await response.json();
             
-            if (data.success && data.currentSession) {
-                this.currentOrders = data.currentSession.items || [];
+            if (data.success && data.orderItems && data.orderItems.length > 0) {
+                // 메뉴별로 수량 통합
+                const consolidatedOrders = {};
+                
+                data.orderItems.forEach(item => {
+                    const key = `${item.menu_name}_${item.unit_price}_${item.menu_id}`;
+                    if (consolidatedOrders[key]) {
+                        consolidatedOrders[key].quantity += item.quantity;
+                    } else {
+                        consolidatedOrders[key] = {
+                            id: item.menu_id,
+                            menuName: item.menu_name,
+                            price: item.unit_price,
+                            quantity: item.quantity,
+                            cookingStatus: item.item_status,
+                            isCart: false,
+                            orderItemId: item.id,
+                            ticketId: item.ticket_id
+                        };
+                    }
+                });
+                
+                this.currentOrders = Object.values(consolidatedOrders);
             } else {
                 this.currentOrders = [];
             }
             
-            console.log(`✅ POS 주문 ${this.currentOrders.length}개 로드`);
+            console.log(`✅ POS 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
             
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
@@ -720,11 +743,14 @@ const POSOrderScreen = {
     
     
     /**
-     * 카트 표시 업데이트
+     * 카트 표시 업데이트 (기존 주문내역 + 카트 순차적 표시)
      */
     async updateCartDisplay() {
-        // 현재 카트를 POS 주문으로 표시
-        this.currentOrders = this.cart.map((item, index) => ({
+        // 먼저 기존 주문내역 로드
+        await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+        
+        // 기존 주문내역과 카트 아이템을 합쳐서 표시
+        const cartOrders = this.cart.map((item, index) => ({
             id: `cart_${index}`,
             menuName: item.name,
             price: item.price,
@@ -734,15 +760,17 @@ const POSOrderScreen = {
             originalCartIndex: index
         }));
         
+        // 기존 주문내역을 먼저 표시하고, 그 다음에 카트 아이템들 표시
+        const allOrders = [...this.currentOrders, ...cartOrders];
+        
         // tbody만 업데이트 (테이블 구조 유지)
         const posOrderTable = document.querySelector('.pos-order-table tbody');
         if (posOrderTable) {
-            // 기존 카트 아이템들과 빈 행들을 포함한 새로운 tbody 내용 생성
             let tableBody = '';
             
-            // 카트 아이템들 순차적 표시
-            if (this.currentOrders.length > 0) {
-                tableBody = this.currentOrders.map(order => `
+            // 모든 주문 (기존 + 카트) 순차적 표시
+            if (allOrders.length > 0) {
+                tableBody = allOrders.map(order => `
                     <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}">
                         <td class="col-menu">
                             <div class="menu-info">
@@ -795,7 +823,7 @@ const POSOrderScreen = {
             }
             
             // 남은 빈 행들 추가 (총 10행 유지)
-            const remainingRows = Math.max(0, 10 - this.currentOrders.length);
+            const remainingRows = Math.max(0, 10 - allOrders.length);
             for (let i = 0; i < remainingRows; i++) {
                 tableBody += `
                     <tr class="empty-row">
@@ -813,7 +841,7 @@ const POSOrderScreen = {
             posOrderTable.innerHTML = tableBody;
         }
         
-        // 결제 섹션 업데이트
+        // 결제 섹션 업데이트 (카트 아이템들만 계산에 포함)
         const paymentSection = document.querySelector('.payment-section');
         if (paymentSection) {
             const newPaymentSection = document.createElement('div');
@@ -930,8 +958,75 @@ const POSOrderScreen = {
             // 카트 초기화
             this.cart = [];
             
-            // 주문 목록 새로고침
-            await this.refreshOrders();
+            // 주문 목록 새로고침 (DB에서 최신 order_items 로드)
+            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+            
+            // tbody 업데이트 (카트 없이 기존 주문내역만 표시)
+            const posOrderTable = document.querySelector('.pos-order-table tbody');
+            if (posOrderTable) {
+                let tableBody = '';
+                
+                if (this.currentOrders.length > 0) {
+                    tableBody = this.currentOrders.map(order => `
+                        <tr class="order-row" data-order-id="${order.id}">
+                            <td class="col-menu">
+                                <div class="menu-info">
+                                    <strong>${order.menuName}</strong>
+                                </div>
+                            </td>
+                            <td class="col-price">
+                                ${order.price.toLocaleString()}원
+                            </td>
+                            <td class="col-quantity">
+                                <div class="quantity-control-table">
+                                    <span class="quantity-display">${order.quantity}</span>
+                                </div>
+                            </td>
+                            <td class="col-total">
+                                <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                            </td>
+                            <td class="col-status">
+                                <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                                    ${this.getStatusText(order.cookingStatus)}
+                                </span>
+                            </td>
+                            <td class="col-actions">
+                                <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
+                                    ✏️
+                                </button>
+                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+                
+                // 남은 빈 행들 추가
+                const remainingRows = Math.max(0, 10 - this.currentOrders.length);
+                for (let i = 0; i < remainingRows; i++) {
+                    tableBody += `
+                        <tr class="empty-row">
+                            <td class="col-menu"></td>
+                            <td class="col-price"></td>
+                            <td class="col-quantity"></td>
+                            <td class="col-total"></td>
+                            <td class="col-status"></td>
+                            <td class="col-actions"></td>
+                        </tr>
+                    `;
+                }
+                
+                posOrderTable.innerHTML = tableBody;
+            }
+            
+            // 결제 섹션 업데이트
+            const paymentSection = document.querySelector('.payment-section');
+            if (paymentSection) {
+                const newPaymentSection = document.createElement('div');
+                newPaymentSection.innerHTML = this.renderPaymentSection();
+                paymentSection.replaceWith(newPaymentSection.firstElementChild);
+            }
             
             this.showToast(`주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
             

@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
@@ -30,7 +29,7 @@ router.post('/orders/confirm', async (req, res) => {
 
     // 1. 해당 테이블의 활성 주문 확인 또는 생성
     let orderId;
-    
+
     const existingOrderResult = await client.query(`
       SELECT id FROM orders 
       WHERE store_id = $1 AND table_num = $2 AND status = 'OPEN'
@@ -42,7 +41,7 @@ router.post('/orders/confirm', async (req, res) => {
       // 기존 주문에 추가
       orderId = existingOrderResult.rows[0].id;
       console.log(`📋 기존 주문 ${orderId}에 추가`);
-      
+
       // 기존 주문 금액 업데이트
       await client.query(`
         UPDATE orders 
@@ -67,7 +66,7 @@ router.post('/orders/confirm', async (req, res) => {
 
       orderId = orderResult.rows[0].id;
       console.log(`📋 새 주문 ${orderId} 생성`);
-      
+
       // store_tables의 processing_order_id 업데이트
       await client.query(`
         UPDATE store_tables 
@@ -261,7 +260,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
 });
 
 /**
- * [GET] /stores/:storeId/table/:tableNumber/all-orders - 테이블별 주문 조회
+ * [GET] /stores/:storeId/table/:tableNumber/all-orders - 테이블별 모든 주문 조회
  */
 router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) => {
   try {
@@ -343,6 +342,54 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
     res.status(500).json({
       success: false,
       error: '테이블 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/table/:tableNumber/order-items - 테이블별 order_items 조회 (수량 통합용)
+ */
+router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`📋 POS order_items 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // 해당 테이블의 order_items 조회 (POS 소스만)
+    const result = await pool.query(`
+      SELECT 
+        oi.id,
+        oi.menu_id,
+        oi.menu_name,
+        oi.unit_price,
+        oi.quantity,
+        oi.total_price,
+        oi.item_status,
+        oi.cook_station,
+        oi.ticket_id,
+        oi.created_at,
+        ot.order_id
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      JOIN orders o ON ot.order_id = o.id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND ot.source = 'POS'
+        AND oi.item_status != 'CANCELLED'
+      ORDER BY oi.created_at ASC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    res.json({
+      success: true,
+      orderItems: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ POS order_items 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'order_items 조회 실패: ' + error.message
     });
   }
 });
