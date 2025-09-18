@@ -117,36 +117,6 @@ const POSOrderScreen = {
         
         return `
             <div class="order-section-modern">
-                <!-- 주문 현황 대시보드 -->
-                <div class="order-dashboard">
-                    <div class="dashboard-card pos-card">
-                        <div class="card-icon">💻</div>
-                        <div class="card-content">
-                            <h4>POS 주문</h4>
-                            <span class="count">${posOrders.length}건</span>
-                        </div>
-                        <div class="card-indicator pos"></div>
-                    </div>
-                    
-                    <div class="dashboard-card tll-card">
-                        <div class="card-icon">📱</div>
-                        <div class="card-content">
-                            <h4>TLL 주문</h4>
-                            <span class="count">${tllOrderCount}건</span>
-                        </div>
-                        <div class="card-indicator tll"></div>
-                    </div>
-                    
-                    <div class="dashboard-card total-card">
-                        <div class="card-icon">📊</div>
-                        <div class="card-content">
-                            <h4>총 주문</h4>
-                            <span class="count">${posOrders.length + tllOrderCount}건</span>
-                        </div>
-                        <div class="card-indicator total"></div>
-                    </div>
-                </div>
-                
                 <!-- 주문 내역 탭 -->
                 <div class="order-tabs">
                     <button class="order-tab active" data-tab="pos" onclick="POSOrderScreen.switchOrderTab('pos')">
