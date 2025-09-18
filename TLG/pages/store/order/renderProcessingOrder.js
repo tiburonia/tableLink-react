@@ -1,4 +1,3 @@
-
 /**
  * 주문 진행 상황 모니터링 화면
  * - 현재 진행 중인 주문 세션 실시간 모니터링
@@ -15,7 +14,7 @@ async function renderProcessingOrder(orderId) {
     window.currentOrderId = orderId;
 
     const main = document.getElementById('main');
-    
+
     // 로딩 상태 표시
     main.innerHTML = `
       <div class="processing-order-container">
@@ -42,7 +41,7 @@ async function renderProcessingOrder(orderId) {
 
     // 주문 데이터 로드
     const orderData = await loadOrderData(orderId);
-    
+
     if (!orderData) {
       showErrorState('주문 정보를 찾을 수 없습니다');
       return;
@@ -70,7 +69,7 @@ async function renderProcessingOrder(orderId) {
 async function loadOrderData(orderId) {
   try {
     const response = await fetch(`/api/orders/processing/${orderId}`);
-    
+
     if (!response.ok) {
       throw new Error('주문 데이터 로드 실패');
     }
@@ -87,7 +86,7 @@ async function loadOrderData(orderId) {
 // 주문 진행 UI 렌더링
 function renderProcessingOrderUI(orderData) {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div class="processing-order-container">
       <!-- 헤더 -->
@@ -191,7 +190,7 @@ function renderTicketsGrid(tickets) {
     const status = ticket.status || 'PENDING';
     const statusText = getTicketStatusText(status);
     const statusClass = status.toLowerCase();
-    
+
     return `
       <div class="ticket-card status-${statusClass}" data-ticket-id="${ticketId}">
         <div class="ticket-header">
@@ -277,7 +276,7 @@ function renderPaymentsList(payments) {
   return payments.map(payment => {
     const ticketId = payment.ticket_id;
     const paymentId = payment.id || payment.payment_id;
-    
+
     return `
       <div class="payment-item" data-payment-id="${paymentId}" data-ticket-id="${ticketId}">
         <div class="payment-header">
@@ -369,7 +368,7 @@ function showEndSessionConfirm(orderId) {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
 }
 
@@ -385,10 +384,10 @@ async function endSession(orderId) {
     if (result.success) {
       // 모달 닫기
       document.querySelector('.modal-overlay')?.remove();
-      
+
       // 종료 완료 화면 표시
       showSessionEndedState({ id: orderId, sessionEnded: true });
-      
+
     } else {
       throw new Error(result.error || '세션 종료 실패');
     }
@@ -402,7 +401,7 @@ async function endSession(orderId) {
 // 세션 종료 상태 표시
 function showSessionEndedState(orderData) {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div class="processing-order-container">
       <div class="processing-header">
@@ -421,7 +420,7 @@ function showSessionEndedState(orderData) {
         <div class="ended-icon">🎉</div>
         <h2>식사를 완료하셨습니다!</h2>
         <p>즐거운 시간이 되셨길 바랍니다.</p>
-        
+
         <div class="ended-actions">
           <button class="btn primary" onclick="renderMyPage()">
             마이페이지로
@@ -458,12 +457,12 @@ async function addNewOrder(storeId, tableNumber) {
     // renderOrderScreen 스크립트 로드 확인
     if (typeof renderOrderScreen !== 'function') {
       console.log('🔄 renderOrderScreen 스크립트 로드 시도...');
-      
+
       try {
         const script = document.createElement('script');
         script.src = '/TLG/pages/store/renderOrderScreen.js';
         script.async = false;
-        
+
         await new Promise((resolve, reject) => {
           script.onload = resolve;
           script.onerror = reject;
@@ -472,7 +471,7 @@ async function addNewOrder(storeId, tableNumber) {
 
         // 로드 후 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         if (typeof renderOrderScreen !== 'function') {
           throw new Error('renderOrderScreen 함수를 로드할 수 없습니다');
         }
@@ -506,13 +505,13 @@ async function addNewOrder(storeId, tableNumber) {
 async function fetchStoreInfo(storeId) {
   try {
     const response = await fetch(`/api/stores/${storeId}`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 정보 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success || !data.store) {
       throw new Error('매장 정보가 없습니다');
     }
@@ -538,7 +537,7 @@ function startRealTimeUpdates(orderId) {
   const updateInterval = setInterval(async () => {
     try {
       const orderData = await loadOrderData(orderId);
-      
+
       if (orderData && orderData.status !== 'CLOSED' && !orderData.session_ended) {
         updateProcessingData(orderData);
       } else {
@@ -641,7 +640,7 @@ async function viewPaymentReceipt(paymentId) {
   try {
     const response = await fetch(`/api/payments/${paymentId}/receipt`);
     const result = await response.json();
-    
+
     if (result.success) {
       // 영수증 모달 표시
       showReceiptModal(result.receipt);
@@ -683,7 +682,7 @@ function updateTicketCard(ticketId, status) {
 
   // 상태 클래스 업데이트
   ticketCard.className = `ticket-card status-${status.toLowerCase()}`;
-  
+
   // 상태 텍스트 업데이트
   const statusElement = ticketCard.querySelector('.ticket-status');
   if (statusElement) {
@@ -704,10 +703,10 @@ function removeTicketCard(ticketId) {
     ticketCard.style.transition = 'all 0.3s ease';
     ticketCard.style.transform = 'scale(0.8)';
     ticketCard.style.opacity = '0';
-    
+
     setTimeout(() => {
       ticketCard.remove();
-      
+
       // 빈 상태 체크
       const ticketsGrid = document.getElementById('ticketsGrid');
       if (ticketsGrid && ticketsGrid.children.length === 0) {
@@ -762,7 +761,7 @@ function showReceiptModal(receipt) {
       </div>
     </div>
   `;
-  
+
   document.body.appendChild(modal);
 }
 
@@ -792,10 +791,10 @@ function getElapsedTime(startTime) {
   const start = new Date(startTime);
   const now = new Date();
   const diffMs = now - start;
-  
+
   const hours = Math.floor(diffMs / (1000 * 60 * 60));
   const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  
+
   if (hours > 0) {
     return `${hours}시간 ${minutes}분`;
   } else {
@@ -812,7 +811,7 @@ function getStatusText(status) {
     'CLOSED': '종료',
     'PENDING': '대기중'
   };
-  
+
   return statusMap[status] || status;
 }
 
@@ -823,7 +822,7 @@ function getPaymentMethodIcon(method) {
     'CASH': '💵',
     'MOBILE': '📱'
   };
-  
+
   return methodIcons[method] || '💳';
 }
 
@@ -835,7 +834,7 @@ function refreshTickets() {
 // 에러 상태 표시
 function showErrorState(message) {
   const main = document.getElementById('main');
-  
+
   main.innerHTML = `
     <div class="processing-order-container">
       <div class="processing-header">
@@ -853,7 +852,7 @@ function showErrorState(message) {
         <div class="error-icon">❌</div>
         <h2>문제가 발생했습니다</h2>
         <p>${message}</p>
-        
+
         <div class="error-actions">
           <button class="btn primary" onclick="renderMyPage()">
             마이페이지로

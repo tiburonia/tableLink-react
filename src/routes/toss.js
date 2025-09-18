@@ -322,6 +322,22 @@ router.post('/confirm', async (req, res) => {
         }
       });
 
+      // store_tables.processing_order_id 업데이트
+      const updateClient = await pool.connect();
+      try {
+        await updateClient.query(`
+          UPDATE store_tables 
+          SET processing_order_id = $1
+          WHERE store_id = $2 AND id = $3
+        `, [result.orderId, pendingPayment.store_id, pendingPayment.table_number]);
+        
+        console.log(`✅ store_tables.processing_order_id 업데이트: 테이블 ${pendingPayment.table_number} -> 주문 ${result.orderId}`);
+      } catch (updateError) {
+        console.warn('⚠️ store_tables.processing_order_id 업데이트 실패:', updateError);
+      } finally {
+        updateClient.release();
+      }
+
       // pending_payments 상태 업데이트
       const updateClient = await pool.connect();
       try {

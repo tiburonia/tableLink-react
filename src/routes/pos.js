@@ -67,13 +67,12 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    console.log(`📊 매장 ${storeId} 활성 주문 조회`);
+    console.log(`📊 매장 ${storeId} 활성 주문 조회 (store_tables.processing_order_id 기반)`);
 
     const result = await pool.query(`
       SELECT 
+        st.id as table_number,
         o.id as order_id,
-        ot.id as ticket_id,
-        o.table_num as table_number,
         COALESCE(u.name, '포스고객') as customer_name,
         o.user_id,
         o.total_price as total_amount,
@@ -81,18 +80,18 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
         o.created_at as opened_at,
         o.source as source_system,
         COUNT(oi.id) as item_count
-      FROM orders o
-      JOIN order_tickets ot ON o.id = ot.order_id
+      FROM store_tables st
+      JOIN orders o ON st.processing_order_id = o.id
       LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON ot.id = oi.ticket_id AND oi.item_status != 'CANCELED'
-      WHERE o.store_id = $1 AND o.status = 'OPEN'
-      GROUP BY o.id, ot.id, o.table_num, u.name, o.user_id, 
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id, 
                o.total_price, o.status, o.created_at, o.source
       ORDER BY o.created_at ASC
     `, [storeId]);
 
     const activeOrders = result.rows.map(row => ({
-      checkId: row.ticket_id,
+      checkId: row.order_id, // order_id를 checkId로 사용
       tableNumber: row.table_number,
       customerName: row.customer_name,
       isGuest: !row.user_id,
