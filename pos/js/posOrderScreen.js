@@ -734,10 +734,83 @@ const POSOrderScreen = {
             originalCartIndex: index
         }));
         
-        // UI 새로고침
-        const posOrderList = document.getElementById('posOrderList');
-        if (posOrderList) {
-            posOrderList.innerHTML = this.renderPOSOrderItemsModern();
+        // tbody만 업데이트 (테이블 구조 유지)
+        const posOrderTable = document.querySelector('.pos-order-table tbody');
+        if (posOrderTable) {
+            // 기존 카트 아이템들과 빈 행들을 포함한 새로운 tbody 내용 생성
+            let tableBody = '';
+            
+            // 카트 아이템들 순차적 표시
+            if (this.currentOrders.length > 0) {
+                tableBody = this.currentOrders.map(order => `
+                    <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}">
+                        <td class="col-menu">
+                            <div class="menu-info">
+                                <strong>${order.menuName}</strong>
+                                ${order.isCart ? '<span class="cart-badge">카트</span>' : ''}
+                            </div>
+                        </td>
+                        <td class="col-price">
+                            ${order.price.toLocaleString()}원
+                        </td>
+                        <td class="col-quantity">
+                            <div class="quantity-control-table">
+                                ${order.isCart ? `
+                                    <button class="qty-btn minus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
+                                        −
+                                    </button>
+                                    <span class="quantity-display">${order.quantity}</span>
+                                    <button class="qty-btn plus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
+                                        +
+                                    </button>
+                                ` : `
+                                    <span class="quantity-display">${order.quantity}</span>
+                                `}
+                            </div>
+                        </td>
+                        <td class="col-total">
+                            <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                        </td>
+                        <td class="col-status">
+                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                                ${this.getStatusText(order.cookingStatus)}
+                            </span>
+                        </td>
+                        <td class="col-actions">
+                            ${order.isCart ? `
+                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeCartItem(${order.originalCartIndex})" title="삭제">
+                                    🗑️
+                                </button>
+                            ` : `
+                                <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
+                                    ✏️
+                                </button>
+                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
+                                    🗑️
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `).join('');
+            }
+            
+            // 남은 빈 행들 추가 (총 10행 유지)
+            const remainingRows = Math.max(0, 10 - this.currentOrders.length);
+            for (let i = 0; i < remainingRows; i++) {
+                tableBody += `
+                    <tr class="empty-row">
+                        <td class="col-menu"></td>
+                        <td class="col-price"></td>
+                        <td class="col-quantity"></td>
+                        <td class="col-total"></td>
+                        <td class="col-status"></td>
+                        <td class="col-actions"></td>
+                    </tr>
+                `;
+            }
+            
+            // tbody 내용만 업데이트
+            posOrderTable.innerHTML = tableBody;
         }
         
         // 결제 섹션 업데이트
