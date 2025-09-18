@@ -206,58 +206,96 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
 });
 
 /**
- * [POST] /stores/:storeId/table/:tableNumber/acquire-lock - 세션 락 획득
+ * [GET] /stores/:storeId/table/:tableNumber/tll-orders - 테이블별 TLL 주문 조회
  */
-router.post('/stores/:storeId/table/:tableNumber/acquire-lock', async (req, res) => {
+router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {
   try {
     const { storeId, tableNumber } = req.params;
-    const { lockBy = 'POS', lockDuration = 300000 } = req.body;
 
-    const lockKey = `table_${storeId}_${tableNumber}`;
+    console.log(`📱 테이블 ${tableNumber} TLL 주문 조회`);
 
-    // 전역 락 저장소 초기화
-    if (!global.tableLocks) {
-      global.tableLocks = {};
-    }
+    // 해당 테이블의 활성 TLL 주문 조회
+    const ordersResult = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        o.user_id,
+        o.guest_id,
+        o.created_at,
+        u.name as user_name,
+        u.phone as user_phone,
+        u.point as user_point,
+        g.phone as guest_phone
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guest g ON o.guest_id = g.id
+      WHERE o.store_id = $1 
+        AND (o.table_number = $2 OR o.table_num = $2)
+        AND o.status = 'OPEN'
+        AND o.source = 'TLL'
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    // 기존 락 확인
-    const existingLock = global.tableLocks[lockKey];
-    if (existingLock && new Date() < new Date(existingLock.expires)) {
-      return res.status(409).json({
-        success: false,
-        error: `테이블이 ${existingLock.lockedBy}에서 사용 중입니다`,
-        lockedBy: existingLock.lockedBy,
-        expires: existingLock.expires
+    if (ordersResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        tllOrders: [],
+        userInfo: null
       });
     }
 
-    // 새 락 설정
-    const lockData = {
-      lockedBy: lockBy,
-      lockedAt: new Date().toISOString(),
-      expires: new Date(Date.now() + lockDuration).toISOString()
-    };
+    const order = ordersResult.rows[0];
 
-    global.tableLocks[lockKey] = lockData;
+    // 해당 주문의 아이템들 조회 (order_tickets의 source가 TLL인 것)
+    const itemsResult = await pool.query(`
+      SELECT 
+        oi.id,
+        oi.order_id,
+        oi.menu_name,
+        oi.quantity,
+        oi.unit_price,
+        oi.total_price,
+        oi.item_status,
+        oi.cook_station
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1 
+        AND ot.source = 'TLL'
+        AND oi.item_status != 'CANCELLED'
+      ORDER BY oi.id
+    `, [order.order_id]);
 
-    console.log(`🔒 테이블 ${tableNumber} 락 획득: ${lockBy}`);
+    // 사용자 정보 구성
+    const userInfo = order.user_id ? {
+      user_id: order.user_id,
+      name: order.user_name,
+      phone: order.user_phone,
+      point: order.user_point,
+      created_at: order.created_at
+    } : order.guest_id ? {
+      guest_id: order.guest_id,
+      name: '게스트',
+      guest_phone: order.guest_phone,
+      created_at: order.created_at
+    } : null;
 
     res.json({
       success: true,
-      lockData: lockData
+      tllOrders: itemsResult.rows,
+      userInfo: userInfo
     });
 
   } catch (error) {
-    console.error('❌ 세션 락 획득 실패:', error);
+    console.error('❌ TLL 주문 조회 실패:', error);
     res.status(500).json({
       success: false,
-      error: '세션 락 획득 실패'
+      error: 'TLL 주문 조회 실패: ' + error.message
     });
   }
 });
 
 /**
- * [GET] /stores/:storeId/table/:tableNumber/session-status - 세션 상태 확인
+ * [GET] /stores/:storeId/table/:tableNumber/session-status - 테이블 세션 상태 확인
  */
 router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res) => {
   try {

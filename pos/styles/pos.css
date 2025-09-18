@@ -1,4 +1,3 @@
-
 /**
  * TableLink POS 스타일 (2분할 와이어프레임 구조)
  */
@@ -1176,7 +1175,7 @@ body {
     .pos-main-layout {
         grid-template-columns: 48% 52%;
     }
-    
+
     .menu-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
@@ -1187,16 +1186,200 @@ body {
         padding: 12px 16px;
         min-height: 60px;
     }
-    
+
     .store-table-info {
         font-size: 14px;
     }
-    
+
     .menu-grid {
         grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
     }
-    
+
     .payment-methods {
         grid-template-columns: 1fr;
     }
+}
+
+/* TLL 사용자 정보 스타일 */
+.tll-user-info {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.tll-user-header {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.tll-user-details .user-detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.tll-user-details .detail-label {
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.tll-user-details .detail-value {
+  color: #495057;
+  font-weight: 600;
+}
+
+.no-tll-user {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 8px;
+}
+
+/* TLL 주문 영역 스타일 */
+.pos-orders-header, .tll-orders-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.pos-orders-header h4, .tll-orders-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.refresh-tll-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.refresh-tll-btn:hover {
+  background: #e9ecef;
+}
+
+/* TLL 주문 아이템 스타일 */
+.tll-order-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: white;
+  transition: background-color 0.2s;
+}
+
+.tll-order-row:hover {
+  background: #f8f9fa;
+}
+
+.tll-menu-info {
+  flex: 1;
+}
+
+.tll-menu-name {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 2px;
+}
+
+.tll-menu-details {
+  font-size: 12px;
+  color: #6c757d;
+  display: flex;
+  gap: 8px;
+}
+
+.tll-status-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.cook-station-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.cook-station-badge.station-kitchen {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cook-station-badge.station-drink {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.cook-station-badge.station-dessert {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.tll-status-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.tll-status-badge.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.tll-status-badge.status-cooking {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.tll-status-badge.status-ready,
+.tll-status-badge.status-completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+/* Empty 상태 스타일 */
+.empty-tll-orders {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6c757d;
+  text-align: center;
+}
+
+.empty-tll-orders .empty-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.empty-tll-orders p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.empty-tll-orders small {
+  margin-top: 4px;
+  font-size: 11px;
 }
