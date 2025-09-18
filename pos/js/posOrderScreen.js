@@ -156,16 +156,6 @@ const POSOrderScreen = {
     renderPOSOrderItemsModern() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
         
-        if (posOrders.length === 0) {
-            return `
-                <div class="empty-state">
-                    <div class="empty-icon">💻</div>
-                    <h4>POS 주문이 없습니다</h4>
-                    <p>우측 메뉴에서 상품을 선택해주세요</p>
-                </div>
-            `;
-        }
-        
         return posOrders.map(order => `
             <div class="order-card pos-order-card" data-order-id="${order.id}">
                 <div class="order-card-header">
