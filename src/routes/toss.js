@@ -300,7 +300,8 @@ router.post('/confirm', async (req, res) => {
         couponDiscount: orderData.couponDiscount || 0,
         items: itemsWithCookStation,
         storeName: orderData.storeName || '매장', // order_data에서 storeName 추출
-        userId: pendingPayment.user_id
+        userId: pendingPayment.user_id,
+        orderId: orderId // 결제 서비스에서 order_items 생성 시 사용할 orderId 전달
       };
 
       const result = await paymentService.processTLLOrder({
