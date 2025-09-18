@@ -195,14 +195,15 @@ router.post('/orders', async (req, res) => {
       // cook_station 정보를 포함하여 order_items에 삽입
       const itemResult = await client.query(`
         INSERT INTO order_items (
-          ticket_id, store_id, menu_id, menu_name, quantity, unit_price, 
+          order_id, ticket_id, store_id, menu_id, menu_name, quantity, unit_price, 
           total_price, item_status, cook_station
         )
-        VALUES ($1, $2, 1, $3, $4, $5, $6, 'PENDING', $7)
+        VALUES ($1, $2, $3, 1, $4, $5, $6, $7, 'PENDING', $8)
         RETURNING id
       `, [
+        check_id,
         ticketId,
-        store_id,
+        order.store_id,
         menu_name,
         parseInt(quantity),
         parseFloat(unit_price),

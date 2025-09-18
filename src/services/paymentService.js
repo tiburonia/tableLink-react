@@ -42,6 +42,7 @@ class PaymentService {
 
       // 4. 주문 아이템 생성
       await this.createOrderItems(client, {
+        orderId: orderIdToUse,
         ticketId,
         storeId: orderData.storeId,
         items: orderData.items
@@ -198,11 +199,12 @@ class PaymentService {
    * 주문 아이템 생성
    */
   async createOrderItems(client, itemData) {
-    const { ticketId, storeId, items } = itemData;
+    const { orderId, ticketId, storeId, items } = itemData;
 
     for (const item of items) {
       await client.query(`
         INSERT INTO order_items (
+          order_id,
           ticket_id,
           store_id,
           menu_id,
@@ -212,11 +214,12 @@ class PaymentService {
           total_price,
           item_status,
           cook_station
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
       `, [
+        orderId,
         ticketId,
         storeId,
-        item.menuId || item.menu_id || null,
+        item.menuId || item.menu_id || 1,
         item.name,
         item.quantity || 1,
         item.price,
