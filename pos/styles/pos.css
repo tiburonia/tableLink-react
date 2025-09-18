@@ -436,6 +436,35 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 200px;
+    background: #f8fafc;
+    border: 2px dashed #e5e7eb;
+    border-radius: 12px;
+    position: relative;
+}
+
+.order-list-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(90deg, transparent 24%, rgba(229, 231, 235, 0.3) 25%, rgba(229, 231, 235, 0.3) 26%, transparent 27%, transparent 74%, rgba(229, 231, 235, 0.3) 75%, rgba(229, 231, 235, 0.3) 76%, transparent 77%),
+        linear-gradient(0deg, transparent 24%, rgba(229, 231, 235, 0.3) 25%, rgba(229, 231, 235, 0.3) 26%, transparent 27%, transparent 74%, rgba(229, 231, 235, 0.3) 75%, rgba(229, 231, 235, 0.3) 76%, transparent 77%);
+    background-size: 100px 80px;
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.order-list-modern:not(:empty)::before {
+    display: none;
+}
+
+.order-list-modern:not(:empty) {
+    background: transparent;
+    border: none;
 }
 
 /* TLL 액션 바 */
