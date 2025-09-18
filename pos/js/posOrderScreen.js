@@ -675,6 +675,10 @@ const POSOrderScreen = {
      */
     async addToCart(menuId, menuName, price) {
         try {
+            // 메뉴 데이터에서 cook_station 정보 가져오기
+            const menuItem = this.menuData.find(menu => menu.id === menuId);
+            const cookStation = menuItem?.cook_station || menuItem?.category || this.getCookStationByMenu(menuName);
+            
             // 기존 카트에서 같은 메뉴 찾기
             const existingItem = this.cart.find(item => 
                 item.id === menuId && item.name === menuName && item.price === price
@@ -688,12 +692,14 @@ const POSOrderScreen = {
                 // 새 아이템 추가
                 this.cart.push({
                     id: menuId,
+                    menuId: menuId, // 명시적으로 menuId 필드 추가
                     name: menuName,
                     price: price,
                     quantity: 1,
-                    cook_station: this.getCookStationByMenu(menuName) // 메뉴에 따른 조리스테이션 설정
+                    store_id: POSCore.storeId, // 매장 ID 추가
+                    cook_station: cookStation // 조리스테이션 정보 추가
                 });
-                console.log(`➕ 카트 새 아이템 추가: ${menuName}`);
+                console.log(`➕ 카트 새 아이템 추가: ${menuName} (매장: ${POSCore.storeId}, 조리스테이션: ${cookStation})`);
             }
             
             // UI 업데이트
@@ -710,14 +716,24 @@ const POSOrderScreen = {
      * 메뉴명에 따른 조리스테이션 결정
      */
     getCookStationByMenu(menuName) {
-        const drinkKeywords = ['콜라', '사이다', '음료', '주스', '커피', '차'];
-        const dessertKeywords = ['아이스크림', '케이크', '디저트'];
+        const drinkKeywords = ['콜라', '사이다', '음료', '주스', '커피', '차', '라떼', '아메리카노', '에스프레소', '물', '맥주', '소주'];
+        const dessertKeywords = ['아이스크림', '케이크', '디저트', '빙수', '와플'];
+        const fryerKeywords = ['치킨', '튀김', '돈카츠', '후라이드', '양념'];
+        const grillKeywords = ['스테이크', '구이', '불고기', '갈비'];
         
-        if (drinkKeywords.some(keyword => menuName.includes(keyword))) {
+        const menuLower = menuName.toLowerCase();
+        
+        if (drinkKeywords.some(keyword => menuLower.includes(keyword))) {
             return 'DRINK';
         }
-        if (dessertKeywords.some(keyword => menuName.includes(keyword))) {
+        if (dessertKeywords.some(keyword => menuLower.includes(keyword))) {
             return 'DESSERT';
+        }
+        if (fryerKeywords.some(keyword => menuLower.includes(keyword))) {
+            return 'FRYER';
+        }
+        if (grillKeywords.some(keyword => menuLower.includes(keyword))) {
+            return 'GRILL';
         }
         return 'KITCHEN';
     },
