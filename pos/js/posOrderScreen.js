@@ -151,55 +151,92 @@ const POSOrderScreen = {
     },
     
     /**
-     * POS 주문 아이템 렌더링 (모던 카드 스타일)
+     * POS 주문 아이템 렌더링 (테이블 형식)
      */
     renderPOSOrderItemsModern() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
         
-        return posOrders.map(order => `
-            <div class="order-card pos-order-card" data-order-id="${order.id}">
-                <div class="order-card-header">
-                    <div class="menu-info">
-                        <h5 class="menu-name">${order.menuName}</h5>
-                        <span class="menu-price">${order.price.toLocaleString()}원</span>
-                    </div>
-                    <div class="order-status">
-                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
-                            ${this.getStatusText(order.cookingStatus)}
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="order-card-body">
-                    <div class="quantity-section">
-                        <label class="quantity-label">수량</label>
-                        <div class="quantity-control-modern">
+        // 테이블 헤더는 항상 표시
+        const tableHeader = `
+            <table class="pos-order-table">
+                <thead>
+                    <tr>
+                        <th class="col-menu">메뉴명</th>
+                        <th class="col-price">단가</th>
+                        <th class="col-quantity">수량</th>
+                        <th class="col-total">합계</th>
+                        <th class="col-status">상태</th>
+                        <th class="col-actions">액션</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        // 주문이 있으면 주문 데이터, 없으면 빈 행들로 채움
+        let tableBody = '';
+        
+        if (posOrders.length > 0) {
+            tableBody = posOrders.map(order => `
+                <tr class="order-row" data-order-id="${order.id}">
+                    <td class="col-menu">
+                        <div class="menu-info">
+                            <strong>${order.menuName}</strong>
+                        </div>
+                    </td>
+                    <td class="col-price">
+                        ${order.price.toLocaleString()}원
+                    </td>
+                    <td class="col-quantity">
+                        <div class="quantity-control-table">
                             <button class="qty-btn minus" onclick="POSOrderScreen.changeQuantity(${order.id}, -1)">
-                                <span>−</span>
+                                −
                             </button>
                             <span class="quantity-display">${order.quantity}</span>
                             <button class="qty-btn plus" onclick="POSOrderScreen.changeQuantity(${order.id}, 1)">
-                                <span>+</span>
+                                +
                             </button>
                         </div>
-                    </div>
-                    
-                    <div class="total-section">
-                        <label class="total-label">합계</label>
-                        <span class="total-amount">${(order.price * order.quantity).toLocaleString()}원</span>
-                    </div>
-                </div>
-                
-                <div class="order-card-actions">
-                    <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="주문 수정">
-                        ✏️ 수정
-                    </button>
-                    <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="주문 삭제">
-                        🗑️ 삭제
-                    </button>
-                </div>
-            </div>
-        `).join('');
+                    </td>
+                    <td class="col-total">
+                        <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                    </td>
+                    <td class="col-status">
+                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                            ${this.getStatusText(order.cookingStatus)}
+                        </span>
+                    </td>
+                    <td class="col-actions">
+                        <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
+                            ✏️
+                        </button>
+                        <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
+                            🗑️
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } else {
+            // 빈 행들로 기본 프레임 유지 (10개 빈 행)
+            for (let i = 0; i < 10; i++) {
+                tableBody += `
+                    <tr class="empty-row">
+                        <td class="col-menu"></td>
+                        <td class="col-price"></td>
+                        <td class="col-quantity"></td>
+                        <td class="col-total"></td>
+                        <td class="col-status"></td>
+                        <td class="col-actions"></td>
+                    </tr>
+                `;
+            }
+        }
+        
+        const tableFooter = `
+                </tbody>
+            </table>
+        `;
+        
+        return tableHeader + tableBody + tableFooter;
     },
 
     /**
