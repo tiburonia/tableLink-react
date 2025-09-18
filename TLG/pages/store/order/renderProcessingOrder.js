@@ -11,6 +11,9 @@ async function renderProcessingOrder(orderId) {
   try {
     console.log('📋 주문 진행 상황 화면 렌더링:', orderId);
 
+    // 현재 주문 ID 저장 (추가 주문에서 사용)
+    window.currentOrderId = orderId;
+
     const main = document.getElementById('main');
     
     // 로딩 상태 표시
@@ -329,6 +332,9 @@ function setupEventListeners(orderData) {
   document.getElementById('backBtn').addEventListener('click', () => {
     if (window.previousScreen === 'renderNotification') {
       renderNotification();
+    } else if (window.previousScreen === 'renderOrderScreen' && window.previousScreenParams) {
+      // 추가 주문에서 돌아온 경우 다시 처리 중인 주문 화면으로
+      renderProcessingOrder(window.previousScreenParams.orderId);
     } else {
       renderMyPage();
     }
@@ -439,17 +445,90 @@ function showSessionEndedState(orderData) {
 // 추가 주문 처리
 async function addNewOrder(storeId, tableNumber) {
   try {
-    // renderOrderScreen으로 이동 (기존 세션 유지)
-    if (typeof renderOrderScreen === 'function') {
-      await renderOrderScreen(storeId, tableNumber, { continuingSession: true });
-    } else {
-      console.warn('renderOrderScreen 함수를 찾을 수 없습니다');
-      alert('추가 주문 기능을 사용할 수 없습니다');
+    console.log(`➕ 추가 주문 요청 - 매장 ID: ${storeId}, 테이블: ${tableNumber}`);
+
+    // 매장 정보 조회
+    const storeInfo = await fetchStoreInfo(storeId);
+    if (!storeInfo) {
+      throw new Error('매장 정보를 조회할 수 없습니다');
     }
+
+    console.log('🏪 매장 정보 조회 성공:', storeInfo.name);
+
+    // renderOrderScreen 스크립트 로드 확인
+    if (typeof renderOrderScreen !== 'function') {
+      console.log('🔄 renderOrderScreen 스크립트 로드 시도...');
+      
+      try {
+        const script = document.createElement('script');
+        script.src = '/TLG/pages/store/renderOrderScreen.js';
+        script.async = false;
+        
+        await new Promise((resolve, reject) => {
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+        // 로드 후 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (typeof renderOrderScreen !== 'function') {
+          throw new Error('renderOrderScreen 함수를 로드할 수 없습니다');
+        }
+
+        console.log('✅ renderOrderScreen 스크립트 로드 완료');
+
+      } catch (scriptError) {
+        console.error('❌ renderOrderScreen 스크립트 로드 실패:', scriptError);
+        throw new Error('주문 화면을 로드할 수 없습니다');
+      }
+    }
+
+    // 이전 화면 정보 저장 (처리 중인 주문 화면으로 돌아오기 위해)
+    window.previousScreen = 'renderProcessingOrder';
+    window.previousScreenParams = { orderId: window.currentOrderId };
+
+    // renderOrderScreen으로 이동 (기존 세션 유지)
+    console.log('🔄 주문 화면으로 이동 중...');
+    await renderOrderScreen(storeInfo, tableNumber, { 
+      continuingSession: true,
+      previousOrderId: window.currentOrderId 
+    });
 
   } catch (error) {
     console.error('❌ 추가 주문 실패:', error);
-    alert('추가 주문 중 오류가 발생했습니다');
+    alert(`추가 주문 중 오류가 발생했습니다: ${error.message}`);
+  }
+}
+
+// 매장 정보 조회 함수
+async function fetchStoreInfo(storeId) {
+  try {
+    const response = await fetch(`/api/stores/${storeId}`);
+    
+    if (!response.ok) {
+      throw new Error(`매장 정보 조회 실패: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.success || !data.store) {
+      throw new Error('매장 정보가 없습니다');
+    }
+
+    return {
+      id: data.store.id,
+      store_id: data.store.id, // 호환성
+      name: data.store.name,
+      category: data.store.category,
+      address: data.store.address || data.store.full_address,
+      menu: data.store.menu || []
+    };
+
+  } catch (error) {
+    console.error('❌ 매장 정보 조회 실패:', error);
+    return null;
   }
 }
 
