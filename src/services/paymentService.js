@@ -214,7 +214,7 @@ class PaymentService {
           total_price,
           item_status,
           cook_station
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', $9)
       `, [
         orderId,
         ticketId,
