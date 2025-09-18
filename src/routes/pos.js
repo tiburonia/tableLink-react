@@ -1,4 +1,13 @@
 
+const express = require('express');
+const router = express.Router();
+const { v4: uuidv4 } = require('uuid');
+const pool = require('../db/pool');
+
+/**
+ * 새로운 POS 시스템 API (orders, order_tickets, order_items 스키마 사용)
+ */
+
 /**
  * [POST] /orders/confirm - POS 주문 확정 (카트 -> order_tickets/order_items 생성)
  */
@@ -135,15 +144,6 @@ router.post('/orders/confirm', async (req, res) => {
     client.release();
   }
 });
-
-const express = require('express');
-const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
-const pool = require('../db/pool');
-
-/**
- * 새로운 POS 시스템 API (orders, order_tickets, order_items 스키마 사용)
- */
 
 /**
  * [GET] /stores/:storeId/menu - 매장 메뉴 조회
