@@ -262,9 +262,33 @@ function setupEventListeners(store) {
       // 기존 onclick 속성 제거
       tllButton.removeAttribute('onclick');
 
-      tllButton.addEventListener('click', () => {
+      tllButton.addEventListener('click', async () => {
         try {
           console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 미리 선택하여 실행`);
+          
+          // 매장 정보 정규화 및 유효성 검증
+          const normalizedStore = {
+            id: parseInt(store.id) || parseInt(store.store_id),
+            store_id: parseInt(store.id) || parseInt(store.store_id),
+            name: store.name,
+            category: store.category,
+            address: store.address || store.full_address,
+            isOpen: store.isOpen !== false, // 기본값 true
+            menu: store.menu || []
+          };
+
+          console.log('📋 TLL로 전달할 매장 정보:', {
+            id: normalizedStore.id,
+            name: normalizedStore.name,
+            isValid: !!(normalizedStore.id && normalizedStore.name)
+          });
+
+          // 매장 정보 유효성 검증
+          if (!normalizedStore.id || !normalizedStore.name) {
+            console.error('❌ 매장 정보가 유효하지 않음:', normalizedStore);
+            alert('매장 정보를 불러올 수 없습니다. 다시 시도해주세요.');
+            return;
+          }
           
           // TLL 함수 존재 확인 (전역 및 window에서)
           let tllFunction = null;
@@ -278,23 +302,46 @@ function setupEventListeners(store) {
           }
           
           if (tllFunction) {
-            console.log('✅ TLL 함수 발견, 실행 중...');
-            tllFunction(store); // 현재 매장 정보를 전달
-          } else {
-            console.warn('⚠️ TLL 함수를 찾을 수 없음, 페이지 새로고침 권장');
+            console.log('✅ TLL 함수 발견, 매장 정보와 함께 실행 중...');
             
-            if (confirm('QR 주문 시스템을 사용하시려면 페이지를 새로고침해야 합니다. 새로고침하시겠습니까?')) {
-              window.location.reload();
-            } else {
-              console.log('ℹ️ 사용자가 새로고침을 취소했습니다.');
+            // 전역에 매장 정보 저장 (TLL에서 참조 가능하도록)
+            window.preselectedStoreForTLL = normalizedStore;
+            
+            // TLL 함수 호출
+            await tllFunction(normalizedStore);
+            
+          } else {
+            console.warn('⚠️ TLL 함수를 찾을 수 없음, TLL.js 로드 시도');
+            
+            // TLL.js 동적 로드 시도
+            try {
+              const script = document.createElement('script');
+              script.src = '/TLG/utils/TLL.js';
+              script.onload = async () => {
+                console.log('✅ TLL.js 동적 로드 완료');
+                if (typeof window.TLL === 'function') {
+                  window.preselectedStoreForTLL = normalizedStore;
+                  await window.TLL(normalizedStore);
+                } else {
+                  throw new Error('TLL 함수 로드 실패');
+                }
+              };
+              script.onerror = () => {
+                console.error('❌ TLL.js 로드 실패');
+                alert('QR 주문 시스템을 로드할 수 없습니다.');
+              };
+              document.head.appendChild(script);
+            } catch (loadError) {
+              console.error('❌ TLL.js 동적 로드 실패:', loadError);
+              alert('QR 주문 시스템을 로드할 수 없습니다.');
             }
           }
         } catch (tllError) {
           console.error('❌ TLL 실행 중 오류:', tllError);
-          alert('QR 주문 시스템 실행 중 오류가 발생했습니다.');
+          alert('QR 주문 시스템 실행 중 오류가 발생했습니다: ' + tllError.message);
         }
       });
-      console.log('✅ TLL 버튼 이벤트 설정 완료 (안전한 호출 방식)');
+      console.log('✅ TLL 버튼 이벤트 설정 완료 (매장 정보 연동 강화)');
     }
 
     // 프로모션 관련 버튼들 이벤트 설정 (추가 안전장치)

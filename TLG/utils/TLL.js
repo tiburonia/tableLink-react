@@ -453,6 +453,11 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 초기화
   if (preselectedStore) {
     console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
+    // 전역에서도 확인
+    window.preselectedStoreForTLL = preselectedStore;
+  } else if (window.preselectedStoreForTLL) {
+    preselectedStore = window.preselectedStoreForTLL;
+    console.log(`🏪 TLL - 전역 매장 정보 사용: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
   }
 
   const storeSearchInput = document.getElementById('storeSearchInput');
@@ -471,14 +476,41 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 DOM 요소 초기화 후 자동 선택
   if (preselectedStore) {
     console.log(`🎯 TLL - 매장 자동 선택 시작: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
-    setTimeout(() => {
+    
+    // DOM 완전 렌더링 후 매장 자동 선택
+    const autoSelectStore = () => {
+      console.log('🔄 매장 자동 선택 시도 중...');
+      
       if (typeof window.selectStore === 'function') {
         console.log('✅ selectStore 함수 발견, 매장 자동 선택 실행');
         window.selectStore(preselectedStore.id, preselectedStore.name);
+        
+        // 추가 검증: 선택이 제대로 되었는지 확인
+        setTimeout(() => {
+          const selectedStoreDiv = document.getElementById('selectedStore');
+          const selectedStoreName = document.getElementById('selectedStoreName');
+          
+          if (selectedStoreDiv && selectedStoreName) {
+            if (selectedStoreDiv.style.display === 'block' && selectedStoreName.textContent === preselectedStore.name) {
+              console.log('✅ 매장 자동 선택 성공 확인');
+            } else {
+              console.warn('⚠️ 매장 자동 선택이 UI에 반영되지 않음, 재시도');
+              window.selectStore(preselectedStore.id, preselectedStore.name);
+            }
+          }
+        }, 500);
+        
       } else {
-        console.error('❌ selectStore 함수를 찾을 수 없음');
+        console.error('❌ selectStore 함수를 찾을 수 없음, 재시도 중...');
+        // 함수가 아직 로드되지 않았을 수 있으므로 재시도
+        setTimeout(autoSelectStore, 200);
       }
-    }, 300); // DOM 완전 렌더링 대기
+    };
+    
+    // 초기 시도
+    setTimeout(autoSelectStore, 100);
+    // 백업 시도 (혹시 첫 번째가 실패할 경우)
+    setTimeout(autoSelectStore, 500);
   }
 
   // 매장 검색 이벤트
@@ -669,6 +701,9 @@ function handleTossPaymentFailure(data) {
         };
         console.log(`⚠️ 매장 정보 없음, 기본값 사용: ${storeName}`);
       }
+
+      // 전역에 선택된 매장 저장
+      window.selectedStore = selectedStore;
 
       // UI 업데이트
       storeSearchInput.value = storeName;
