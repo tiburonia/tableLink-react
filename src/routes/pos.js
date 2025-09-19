@@ -354,11 +354,10 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`📋 POS order_items 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    console.log(`📋 POS 주문 아이템 조회: 매장 ${storeId}, 테이블 ${tableNumber} (UNPAID 티켓만)`);
 
-    // 해당 테이블의 order_items 조회 (POS 소스만)
     const result = await pool.query(`
-      SELECT 
+      SELECT DISTINCT
         oi.id,
         oi.menu_id,
         oi.menu_name,
@@ -366,18 +365,22 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         oi.quantity,
         oi.total_price,
         oi.item_status,
-        oi.cook_station,
         oi.ticket_id,
-        oi.created_at,
-        ot.order_id
+        ot.status as ticket_status,
+        ot.source,
+        ot.batch_no,
+        ot.paid_status,
+        o.id as order_id,
+        o.table_num,
+        o.created_at as order_created_at
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
       WHERE o.store_id = $1 
-        AND o.table_num = $2 
+        AND o.table_num = $2
         AND ot.source = 'POS'
-        AND oi.item_status != 'CANCELLED'
-      ORDER BY oi.created_at ASC
+        AND ot.paid_status = 'UNPAID'
+      ORDER BY o.created_at DESC, ot.batch_no ASC
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     res.json({
@@ -396,7 +399,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 });
 
 /**
- * [GET] /stores/:storeId/table/:tableNumber/tll-orders - 테이블별 TLL 주문 조회
+ * [GET] /stores/:storeId/table/:tableNumber/tll-orders - TLL 주문 조회
  */
 router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {
   try {
@@ -468,159 +471,6 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
       success: false,
       error: 'TLL 주문 조회 실패: ' + error.message
     });
-  }
-});
-
-/**
- * [GET] /stores/:storeId/table/:tableNumber/session-status - 테이블 세션 상태 확인
- */
-router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res) => {
-  try {
-    const { storeId, tableNumber } = req.params;
-
-    console.log(`🔍 테이블 ${tableNumber} 세션 상태 확인 (매장 ${storeId})`);
-
-    const result = await pool.query(`
-      SELECT 
-        o.id,
-        o.status,
-        o.created_at,
-        COALESCE(u.name, '포스고객') as customer_name,
-        o.source,
-        COUNT(oi.id) as item_count
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON o.id = oi.ticket_id
-      WHERE o.store_id = $1 AND o.table_num = $2 AND o.status = 'OPEN'
-      GROUP BY o.id, o.status, o.created_at, u.name, o.source
-      ORDER BY o.created_at DESC
-    `, [storeId, tableNumber]);
-
-    const hasActiveSession = result.rows.length > 0;
-    const sessionInfo = hasActiveSession ? {
-      orderId: result.rows[0].id,
-      status: result.rows[0].status,
-      startTime: result.rows[0].created_at,
-      customerName: result.rows[0].customer_name,
-      sourceSystem: result.rows[0].source,
-      itemCount: parseInt(result.rows[0].item_count)
-    } : null;
-
-    console.log(`✅ 테이블 ${tableNumber} 세션 상태 확인 완료 - 활성 세션: ${hasActiveSession}`);
-
-    res.json({
-      success: true,
-      hasActiveSession,
-      sessionInfo
-    });
-
-  } catch (error) {
-    console.error('❌ 세션 상태 확인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '세션 상태 확인 실패: ' + error.message
-    });
-  }
-});
-
-/**
- * [POST] /orders - POS 주문 생성 (기존 API - 호환성용)
- */
-router.post('/orders', async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    const { storeId, tableNumber, items, totalAmount, orderType } = req.body;
-
-    console.log(`🛒 POS 주문 생성: 매장 ${storeId}, 테이블 ${tableNumber}, ${items.length}개 아이템`);
-
-    if (!storeId || !tableNumber || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: '필수 정보가 누락되었습니다'
-      });
-    }
-
-    await client.query('BEGIN');
-
-    // 1. orders 테이블에 주문 생성
-    const orderResult = await client.query(`
-      INSERT INTO orders (
-        store_id, 
-        table_num,
-        source,
-        status, 
-        payment_status,
-        total_price,
-        created_at
-      ) VALUES ($1, $2, 'POS', 'OPEN', 'PENDING', $3, NOW())
-      RETURNING id
-    `, [storeId, tableNumber, totalAmount]);
-
-    const orderId = orderResult.rows[0].id;
-
-    // 2. order_tickets 테이블에 티켓 생성
-    const ticketResult = await client.query(`
-      INSERT INTO order_tickets (
-        order_id,
-        store_id,
-        batch_no,
-        status,
-        payment_type,
-        source,
-        table_num,
-        created_at
-      ) VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'POS', $3, NOW())
-      RETURNING id
-    `, [orderId, storeId, tableNumber]);
-
-    const ticketId = ticketResult.rows[0].id;
-
-    // 3. order_items 테이블에 주문 아이템들 생성
-    for (const item of items) {
-      await client.query(`
-        INSERT INTO order_items (
-          order_id,
-          ticket_id,
-          menu_name,
-          unit_price,
-          quantity,
-          subtotal,
-          item_status,
-          options,
-          created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW())
-      `, [
-        orderId,
-        ticketId,
-        item.name,
-        item.price,
-        item.quantity,
-        item.price * item.quantity,
-        item.options ? JSON.stringify(item.options) : null
-      ]);
-    }
-
-    await client.query('COMMIT');
-
-    console.log(`✅ POS 주문 생성 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}`);
-
-    res.json({
-      success: true,
-      orderId: orderId,
-      ticketId: ticketId,
-      message: '주문이 성공적으로 생성되었습니다'
-    });
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ POS 주문 생성 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '주문 생성 중 오류가 발생했습니다'
-    });
-  } finally {
-    client.release();
   }
 });
 
