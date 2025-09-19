@@ -673,7 +673,7 @@ router.post('/orders', async (req, res) => {
 
 
 /**
- * [GET] /pos/stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
+ * [GET] /stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
  */
 router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) => {
   try {
