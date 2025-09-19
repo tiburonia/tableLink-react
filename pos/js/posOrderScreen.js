@@ -118,51 +118,37 @@ const POSOrderScreen = {
      * 주문 내역 섹션 (카드 기반 모던 디자인)
      */
     renderOrderSection() {
-        const tllUnpaidOrders = this.currentOrders.filter(order => order.source === 'TLL');
-        const tllPaidOrderCount = this.tllOrders?.length || 0;
+        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+        const tllOrderCount = this.tllOrders?.length || 0;
 
         return `
             <div class="order-section-modern">
                 <!-- 주문 내역 탭 -->
                 <div class="order-tabs">
-                    <button class="order-tab active" data-tab="tll-unpaid" onclick="POSOrderScreen.switchOrderTab('tll-unpaid')">
-                        💳 TLL 미지불 (${tllUnpaidOrders.length})
+                    <button class="order-tab active" data-tab="pos" onclick="POSOrderScreen.switchOrderTab('pos')">
+                        💻 POS 주문 (${posOrders.length})
                     </button>
-                    <button class="order-tab" data-tab="tll-paid" onclick="POSOrderScreen.switchOrderTab('tll-paid')">
-                        📱 TLL 지불완료 (${tllPaidOrderCount})
+                    <button class="order-tab" data-tab="tll" onclick="POSOrderScreen.switchOrderTab('tll')">
+                        📱 TLL 주문 (${tllOrderCount})
                     </button>
                 </div>
 
-                <!-- TLL 미지불 주문 영역 -->
-                <div class="order-content tll-unpaid-content active" id="tllUnpaidOrderContent">
-                    <div class="tll-actions-bar">
-                        <button class="refresh-btn" onclick="POSOrderScreen.refreshTLLUnpaidOrders()" title="TLL 미지불 주문 새로고침">
-                            <span class="refresh-icon">🔄</span>
-                            새로고침
-                        </button>
-                        <div class="unpaid-notice">
-                            <span class="notice-icon">⚠️</span>
-                            <span>결제 대기 중인 TLL 주문</span>
-                        </div>
-                    </div>
-                    <div class="order-list-modern" id="tllUnpaidOrderList">
-                        ${this.renderTLLUnpaidOrderItemsModern()}
+                <!-- POS 주문 영역 -->
+                <div class="order-content pos-content active" id="posOrderContent">
+                    <div class="order-list-modern" id="posOrderList">
+                        ${this.renderPOSOrderItemsModern()}
                     </div>
                 </div>
 
-                <!-- TLL 지불완료 주문 영역 -->
-                <div class="order-content tll-paid-content" id="tllPaidOrderContent">
+                <!-- TLL 주문 영역 -->
+                <div class="order-content tll-content" id="tllOrderContent">
                     <div class="tll-actions-bar">
-                        <button class="refresh-btn" onclick="POSOrderScreen.refreshTLLOrders()" title="TLL 지불완료 주문 새로고침">
+                        <button class="refresh-btn" onclick="POSOrderScreen.refreshTLLOrders()" title="TLL 주문 새로고침">
                             <span class="refresh-icon">🔄</span>
                             새로고침
                         </button>
-                        <div class="paid-notice">
-                            <span class="notice-icon">✅</span>
-                            <span>결제 완료된 TLL 주문</span>
-                        </div>
                     </div>
-                    <div class="order-list-modern" id="tllPaidOrderList">
+                    <div class="order-list-modern" id="tllOrderList">
                         ${this.renderTLLOrderItemsModern()}
                     </div>
                 </div>
@@ -259,85 +245,6 @@ const POSOrderScreen = {
      */
     renderPOSOrderItems() {
         return this.renderPOSOrderItemsModern();
-    },
-
-    /**
-     * TLL 미지불 주문 아이템 렌더링 (테이블 형식)
-     */
-    renderTLLUnpaidOrderItemsModern() {
-        const tllUnpaidOrders = this.currentOrders.filter(order => order.source === 'TLL');
-
-        // 테이블 헤더는 항상 표시
-        const tableHeader = `
-            <table class="pos-order-table tll-unpaid-table">
-                <thead>
-                    <tr>
-                        <th class="col-menu">메뉴명</th>
-                        <th class="col-price">단가</th>
-                        <th class="col-quantity">수량</th>
-                        <th class="col-total">합계</th>
-                        <th class="col-status">상태</th>
-                        <th class="col-actions">액션</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
-
-        // 주문이 있으면 주문 데이터, 없으면 빈 행들로 채움
-        let tableBody = '';
-
-        if (tllUnpaidOrders.length > 0) {
-            tableBody = tllUnpaidOrders.map(order => `
-                <tr class="order-row tll-unpaid-item" data-order-id="${order.id}">
-                    <td class="col-menu">
-                        <div class="menu-info">
-                            <strong>${order.menuName}</strong>
-                            <span class="tll-badge unpaid">TLL 미지불</span>
-                        </div>
-                    </td>
-                    <td class="col-price">
-                        ${order.price.toLocaleString()}원
-                    </td>
-                    <td class="col-quantity">
-                        <span class="quantity-display">${order.quantity}</span>
-                    </td>
-                    <td class="col-total">
-                        <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
-                    </td>
-                    <td class="col-status">
-                        <span class="status-badge status-unpaid">
-                            ${this.getStatusText(order.cookingStatus)} (미지불)
-                        </span>
-                    </td>
-                    <td class="col-actions">
-                        <button class="action-btn process-payment" onclick="POSOrderScreen.processUnpaidOrder('${order.ticketId}')" title="결제 처리">
-                            💳
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-        } else {
-            // 빈 행들로 기본 프레임 유지 (10개 빈 행)
-            for (let i = 0; i < 10; i++) {
-                tableBody += `
-                    <tr class="empty-row">
-                        <td class="col-menu"></td>
-                        <td class="col-price"></td>
-                        <td class="col-quantity"></td>
-                        <td class="col-total"></td>
-                        <td class="col-status"></td>
-                        <td class="col-actions"></td>
-                    </tr>
-                `;
-            }
-        }
-
-        const tableFooter = `
-                </tbody>
-            </table>
-        `;
-
-        return tableHeader + tableBody + tableFooter;
     },
 
     /**
@@ -656,12 +563,12 @@ const POSOrderScreen = {
     },
 
     /**
-     * 기존 주문 로드 (TLL 주문만 로드 - source='TLL', paid_status='UNPAID')
+     * 기존 주문 로드 (DB에서 order_items 직접 로드, 수량 통합)
      */
     async loadCurrentOrders(storeId, tableNumber) {
         try {
-            // TLL 주문만 로드 (order_tickets.source='TLL', order_tickets.paid_status='UNPAID')
-            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/tll-unpaid-orders`);
+            // POS 주문 로드 (order_items 기준)
+            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
             const data = await response.json();
 
             if (data.success && data.orderItems && data.orderItems.length > 0) {
@@ -681,8 +588,7 @@ const POSOrderScreen = {
                             cookingStatus: item.item_status,
                             isCart: false,
                             orderItemId: item.id,
-                            ticketId: item.ticket_id,
-                            source: 'TLL' // TLL 주문임을 명시
+                            ticketId: item.ticket_id
                         };
                     }
                 });
@@ -692,13 +598,13 @@ const POSOrderScreen = {
                 this.currentOrders = [];
             }
 
-            console.log(`✅ TLL 미지불 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
+            console.log(`✅ POS 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
 
-            // 기존 TLL 주문 로드도 유지 (기존 호환성)
+            // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
 
         } catch (error) {
-            console.error('❌ TLL 미지불 주문 로드 실패:', error);
+            console.error('❌ 기존 주문 로드 실패:', error);
             this.currentOrders = [];
         }
     },
@@ -1272,81 +1178,8 @@ const POSOrderScreen = {
 
         // 컨텐츠 영역 표시/숨김
         document.querySelectorAll('.order-content').forEach(content => {
-            if (tabType === 'tll-unpaid') {
-                content.classList.toggle('active', content.id === 'tllUnpaidOrderContent');
-            } else if (tabType === 'tll-paid') {
-                content.classList.toggle('active', content.id === 'tllPaidOrderContent');
-            } else {
-                content.classList.toggle('active', content.id === `${tabType}OrderContent`);
-            }
+            content.classList.toggle('active', content.id === `${tabType}OrderContent`);
         });
-    },
-
-    /**
-     * TLL 미지불 주문 새로고침
-     */
-    async refreshTLLUnpaidOrders() {
-        try {
-            console.log('🔄 TLL 미지불 주문 새로고침');
-            
-            // TLL 미지불 주문 다시 로드
-            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
-
-            // UI 업데이트
-            const tllUnpaidOrderList = document.getElementById('tllUnpaidOrderList');
-            if (tllUnpaidOrderList) {
-                tllUnpaidOrderList.innerHTML = this.renderTLLUnpaidOrderItemsModern();
-            }
-
-            // 탭 카운트 업데이트
-            this.updateOrderTabCounts();
-
-            this.showToast('TLL 미지불 주문이 새로고침되었습니다');
-
-        } catch (error) {
-            console.error('❌ TLL 미지불 주문 새로고침 실패:', error);
-            this.showToast('TLL 미지불 주문 새로고침에 실패했습니다');
-        }
-    },
-
-    /**
-     * 주문 탭 카운트 업데이트
-     */
-    updateOrderTabCounts() {
-        const tllUnpaidOrders = this.currentOrders.filter(order => order.source === 'TLL');
-        const tllPaidOrderCount = this.tllOrders?.length || 0;
-
-        // 탭 텍스트 업데이트
-        const unpaidTab = document.querySelector('.order-tab[data-tab="tll-unpaid"]');
-        const paidTab = document.querySelector('.order-tab[data-tab="tll-paid"]');
-
-        if (unpaidTab) unpaidTab.textContent = `💳 TLL 미지불 (${tllUnpaidOrders.length})`;
-        if (paidTab) paidTab.textContent = `📱 TLL 지불완료 (${tllPaidOrderCount})`;
-    },
-
-    /**
-     * 미지불 주문 결제 처리
-     */
-    async processUnpaidOrder(ticketId) {
-        try {
-            if (!confirm('이 주문의 결제를 처리하시겠습니까?')) {
-                return;
-            }
-
-            console.log(`💳 미지불 주문 결제 처리: 티켓 ${ticketId}`);
-
-            // 여기에 결제 처리 로직 구현
-            // 예: POS 결제 API 호출
-            
-            this.showToast('결제 처리가 완료되었습니다');
-            
-            // 주문 목록 새로고침
-            await this.refreshTLLUnpaidOrders();
-
-        } catch (error) {
-            console.error('❌ 미지불 주문 결제 처리 실패:', error);
-            alert(`결제 처리 실패: ${error.message}`);
-        }
     },
 
     /**
