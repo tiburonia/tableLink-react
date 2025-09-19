@@ -90,7 +90,7 @@ router.post('/orders/confirm', async (req, res) => {
         paid_status
       ) VALUES ($1, $2, 
         (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
-        'PENDING', 'POSTPAID', 'POS', $3, NOW())
+        'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
       RETURNING id, batch_no
     `, [orderId, storeId, tableNumber]);
 
@@ -269,7 +269,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
 
     console.log(`📋 테이블 ${tableNumber} 주문 조회 요청 (매장 ${storeId})`);
 
-    // 해당 테이블의 활성 주문들 조회
+    // 해당 테이블의 활성 주문들 조회 (UNPAID 상태만)
     const ordersResult = await pool.query(`
       SELECT 
         o.id as order_id,
@@ -282,7 +282,10 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       LEFT JOIN users u ON o.user_id = u.id
-      WHERE o.store_id = $1 AND o.table_num = $2 AND o.status = 'OPEN'
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND o.status = 'OPEN'
+        AND ot.paid_status = 'UNPAID'
       ORDER BY o.created_at DESC
       LIMIT 1
     `, [parseInt(storeId), parseInt(tableNumber)]);
@@ -356,7 +359,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 
     console.log(`📋 POS order_items 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
-    // 해당 테이블의 order_items 조회 (POS 소스만)
+    // 해당 테이블의 order_items 조회 (POS 소스, UNPAID 상태만)
     const result = await pool.query(`
       SELECT 
         oi.id,
@@ -376,6 +379,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
       WHERE o.store_id = $1 
         AND o.table_num = $2 
         AND ot.source = 'POS'
+        AND ot.paid_status = 'UNPAID'
         AND oi.item_status != 'CANCELLED'
       ORDER BY oi.created_at ASC
     `, [parseInt(storeId), parseInt(tableNumber)]);
@@ -570,8 +574,9 @@ router.post('/orders', async (req, res) => {
         payment_type,
         source,
         table_num,
-        created_at
-      ) VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'POS', $3, NOW())
+        created_at,
+        paid_status
+      ) VALUES ($1, $2, 1, 'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
       RETURNING id
     `, [orderId, storeId, tableNumber]);
 
