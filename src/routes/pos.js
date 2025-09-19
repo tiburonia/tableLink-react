@@ -404,7 +404,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
 
     console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
-    // TLL 주문 조회 (order_items 기준으로 조회)
+    // TLL 주문 조회 (order_items 기준으로 조회, PAID 상태만)
     const tllOrdersResult = await pool.query(`
       SELECT 
         oi.id,
@@ -424,6 +424,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         AND o.table_num = $2 
         AND ot.source = 'TLL'
         AND ot.paid_status = 'PAID'
+        AND oi.item_status != 'CANCELLED'
       ORDER BY oi.created_at DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
 

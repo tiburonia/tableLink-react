@@ -563,11 +563,11 @@ const POSOrderScreen = {
     },
 
     /**
-     * 기존 주문 로드 (DB에서 order_items 직접 로드, 수량 통합)
+     * 기존 주문 로드 (DB에서 order_items 직접 로드, 수량 통합, UNPAID만)
      */
     async loadCurrentOrders(storeId, tableNumber) {
         try {
-            // POS 주문 로드 (order_items 기준)
+            // POS 주문 로드 (order_items 기준, UNPAID 상태만)
             const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
             const data = await response.json();
 
@@ -598,7 +598,7 @@ const POSOrderScreen = {
                 this.currentOrders = [];
             }
 
-            console.log(`✅ POS 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
+            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
