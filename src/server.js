@@ -124,7 +124,7 @@ try {
   const regularLevelsRoutes = require('./routes/regular-levels');
   const auditRoutes = require('./routes/audit'); // 감사 로그 라우터 추가
   const usersRouter = require('./routes/users');
-  const notificationsRouter = require('./routes/notifications'); // 알림 라우터 추가
+  const notificationsRoutes = require('./routes/notifications'); // 알림 라우터 추가
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
@@ -144,7 +144,7 @@ try {
   app.use('/api/cart', cartRoutes);
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes);
-  app.use('/api/notifications', notificationsRouter); // 알림 라우터 등록
+  app.use('/api/notifications', notificationsRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes); // KRP 라우트 등록
