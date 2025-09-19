@@ -49,7 +49,7 @@ class PaymentService {
       });
 
       // 5. 결제 정보 저장
-      await this.createPaymentRecord(client, {
+      const paymentId = await this.createPaymentRecord(client, {
         orderId: orderIdToUse,
         amount: orderData.finalTotal,
         paymentKey,
@@ -102,7 +102,8 @@ class PaymentService {
         ticketId,
         batchNo,
         amount: orderData.finalTotal,
-        isNewOrder
+        isNewOrder,
+        paymentId
       };
 
     } catch (error) {
@@ -229,10 +230,11 @@ class PaymentService {
   }
 
   /**
-   * 결제 정보 저장
+   * 결제 정보 저장 (payment_details와 함께)
    */
   async createPaymentRecord(client, paymentData) {
-    await client.query(`
+    // 1. payments 테이블에 결제 정보 저장
+    const paymentResult = await client.query(`
       INSERT INTO payments (
         order_id,
         method,
@@ -242,12 +244,41 @@ class PaymentService {
         transaction_id,
         provider_response
       ) VALUES ($1, 'TOSS', $2, 'COMPLETED', CURRENT_TIMESTAMP, $3, $4)
+      RETURNING id
     `, [
       paymentData.orderId,
       paymentData.amount,
       paymentData.paymentKey,
       JSON.stringify(paymentData.providerResponse)
     ]);
+
+    const paymentId = paymentResult.rows[0].id;
+
+    // 2. payment_details 테이블에 연관 정보 저장
+    // orderId로 해당 주문의 모든 티켓 조회
+    const ticketsResult = await client.query(`
+      SELECT id FROM order_tickets 
+      WHERE order_id = $1
+    `, [paymentData.orderId]);
+
+    // 각 티켓에 대해 payment_details 레코드 생성
+    for (const ticket of ticketsResult.rows) {
+      await client.query(`
+        INSERT INTO payment_details (
+          payment_id,
+          order_id,
+          ticket_id
+        ) VALUES ($1, $2, $3)
+      `, [
+        paymentId,
+        paymentData.orderId,
+        ticket.id
+      ]);
+    }
+
+    console.log(`✅ 결제 정보 저장 완료: payment ${paymentId}, payment_details ${ticketsResult.rows.length}개`);
+    
+    return paymentId;
   }
 
   /**
