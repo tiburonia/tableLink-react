@@ -294,15 +294,14 @@ body {
 }
 
 /* =================== 주문 내역 섹션 (모던 디자인) =================== */
-
 .order-section-modern {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #f8fafc;
-    padding: 16px;
-    gap: 16px;
+    background: #ffffff;
+    padding: 0;
+    gap: 0;
 }
 
 /* 주문 대시보드 */
@@ -452,6 +451,9 @@ body {
 .pos-order-table thead {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
+    position: sticky; /* thead 고정 */
+    top: 0;
+    z-index: 10;
 }
 
 .pos-order-table thead th {
@@ -465,6 +467,15 @@ body {
 
 .pos-order-table thead th:last-child {
     border-right: none;
+}
+
+.pos-order-table tbody {
+    /* tbody 기본 10행 설정을 위해 overflow-y: auto와 height 설정 필요 */
+    /* 이 부분은 동적으로 처리되거나, 10행을 강제하는 JS 로직이 필요할 수 있습니다. */
+    /* CSS만으로는 기본 10행을 보장하기 어렵습니다. */
+    /* 아래는 시각적인 10행 높이를 위한 예시입니다. */
+    max-height: 480px; /* 10행 * 48px (행 높이) */
+    overflow-y: auto;
 }
 
 .pos-order-table tbody tr {

@@ -212,19 +212,20 @@ const POSOrderScreen = {
                     
                 </tr>
             `).join('');
-        } else {
-            // 빈 행들로 기본 프레임 유지 (10개 빈 행)
-            for (let i = 0; i < 10; i++) {
-                tableBody += `
-                    <tr class="empty-row">
-                        <td class="col-menu"></td>
-                        <td class="col-price"></td>
-                        <td class="col-quantity"></td>
-                        <td class="col-total"></td>
-                        <td class="col-status"></td>
-                    </tr>
-                `;
-            }
+        }
+        
+        // 남은 빈 행들로 최소 10행 유지
+        const remainingRows = Math.max(0, 10 - posOrders.length);
+        for (let i = 0; i < remainingRows; i++) {
+            tableBody += `
+                <tr class="empty-row">
+                    <td class="col-menu"></td>
+                    <td class="col-price"></td>
+                    <td class="col-quantity"></td>
+                    <td class="col-total"></td>
+                    <td class="col-status"></td>
+                </tr>
+            `;
         }
         
         const tableFooter = `
@@ -793,7 +794,7 @@ const POSOrderScreen = {
                 `).join('');
             }
             
-            // 남은 빈 행들 추가 (총 10행 유지)
+            // 빈 행들 추가 (최소 10행 유지)
             const remainingRows = Math.max(0, 10 - allOrders.length);
             for (let i = 0; i < remainingRows; i++) {
                 tableBody += `
