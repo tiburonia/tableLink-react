@@ -856,23 +856,26 @@ router.get('/processing/:orderId', async (req, res) => {
       `);
 
       if (paymentsTableCheck.rows[0].exists) {
+        // 결제 내역 조회 (payments와 payment_details 조인)
         const paymentsResult = await pool.query(`
           SELECT 
             p.id,
-            p.ticket_id,
-            COALESCE(p.method, 'TOSS') as method,
+            p.method,
             p.amount,
-            COALESCE(p.status, 'PENDING') as status,
+            p.status,
+            p.transaction_id,
             p.created_at,
-            p.transaction_id as payment_key
+            array_agg(pd.ticket_id) FILTER (WHERE pd.ticket_id IS NOT NULL) as ticket_ids
           FROM payments p
-          WHERE p.order_id = $1 AND COALESCE(p.status, 'PENDING') IN ('PENDING', 'COMPLETED')
+          LEFT JOIN payment_details pd ON p.id = pd.payment_id
+          WHERE p.order_id = $1
+          GROUP BY p.id, p.method, p.amount, p.status, p.transaction_id, p.created_at
           ORDER BY p.created_at DESC
-        `, [parseInt(orderId)]);
+        `, [orderId]);
 
         payments = paymentsResult.rows.map(payment => ({
           id: payment.id,
-          ticket_id: payment.ticket_id,
+          ticket_ids: payment.ticket_ids || [],
           method: payment.method.toUpperCase(),
           amount: parseInt(payment.amount),
           status: payment.status,

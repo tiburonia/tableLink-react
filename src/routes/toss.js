@@ -353,15 +353,15 @@ router.post('/confirm', async (req, res) => {
         updateClient.release();
       }
 
-      // 주문 처리 결과에서 ticketId, batchNo, isNewOrder 추출
-      const { ticketId, batchNo, isNewOrder } = result;
+      // 주문 처리 결과에서 ticketId, batchNo, isNewOrder, paymentId 추출
+      const { ticketId, batchNo, isNewOrder, paymentId } = result;
       const orderIdToUse = result.orderId;
-      const paymentData = { paymentKey, finalTotal: result.amount };
+      const paymentData = { paymentKey, finalTotal: result.amount, paymentId };
 
       if (isNewOrder) {
-        console.log(`✅ 토스 라우트: 새 주문 생성됨 - 주문 ${orderIdToUse} (알림은 결제 서비스에서 처리됨)`);
+        console.log(`✅ 토스 라우트: 새 주문 생성됨 - 주문 ${orderIdToUse}, 결제 ${paymentId} (알림은 결제 서비스에서 처리됨)`);
       } else {
-        console.log(`ℹ️ 기존 주문에 추가됨 - 주문 ${orderIdToUse}`);
+        console.log(`ℹ️ 기존 주문에 추가됨 - 주문 ${orderIdToUse}, 결제 ${paymentId}`);
       }
 
       // 이벤트 발생: 새 주문 생성됨
