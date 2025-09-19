@@ -129,7 +129,9 @@ const POSOrderScreen = {
                 
                 <!-- POS 주문 영역 -->
                 <div class="order-content pos-content active" id="posOrderContent">
+                    <div class="order-list-modern" id="posOrderList">
                         ${this.renderPOSOrderItemsModern()}
+                    </div>
                 </div>
                 
                 <!-- TLL 주문 영역 -->
@@ -207,23 +209,21 @@ const POSOrderScreen = {
                             ${this.getStatusText(order.cookingStatus)}
                         </span>
                     </td>
-                    
                 </tr>
             `).join('');
-        }
-        
-        // 남은 빈 행들로 최소 10행 유지
-        const remainingRows = Math.max(0, 10 - posOrders.length);
-        for (let i = 0; i < remainingRows; i++) {
-            tableBody += `
-                <tr class="empty-row">
-                    <td class="col-menu"></td>
-                    <td class="col-price"></td>
-                    <td class="col-quantity"></td>
-                    <td class="col-total"></td>
-                    <td class="col-status"></td>
-                </tr>
-            `;
+        } else {
+            // 빈 행들로 기본 프레임 유지 (10개 빈 행)
+            for (let i = 0; i < 10; i++) {
+                tableBody += `
+                    <tr class="empty-row">
+                        <td class="col-menu"></td>
+                        <td class="col-price"></td>
+                        <td class="col-quantity"></td>
+                        <td class="col-total"></td>
+                        <td class="col-status"></td>
+                    </tr>
+                `;
+            }
         }
         
         const tableFooter = `
@@ -472,13 +472,13 @@ const POSOrderScreen = {
                 </div>
                 
                 <div class="payment-methods-grid">
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'card' ? 'active' : ''}" 
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'card' ? 'active' : ''}" id="cardPaymentBtn"
                             onclick="POSOrderScreen.selectPaymentMethod('card')">
                         <div class="method-icon">💳</div>
                         <div class="method-name">카드</div>
                     </button>
                     
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" 
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" id="cashPaymentBtn"
                             onclick="POSOrderScreen.selectPaymentMethod('cash')">
                         <div class="method-icon">💵</div>
                         <div class="method-name">현금</div>
@@ -792,7 +792,7 @@ const POSOrderScreen = {
                 `).join('');
             }
             
-            // 빈 행들 추가 (최소 10행 유지)
+            // 남은 빈 행들 추가 (총 10행 유지)
             const remainingRows = Math.max(0, 10 - allOrders.length);
             for (let i = 0; i < remainingRows; i++) {
                 tableBody += `
@@ -959,14 +959,6 @@ const POSOrderScreen = {
                                     ${this.getStatusText(order.cookingStatus)}
                                 </span>
                             </td>
-                            <td class="col-actions">
-                                <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
-                                    ✏️
-                                </button>
-                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
-                                    🗑️
-                                </button>
-                            </td>
                         </tr>
                     `).join('');
                 }
@@ -981,7 +973,6 @@ const POSOrderScreen = {
                             <td class="col-quantity"></td>
                             <td class="col-total"></td>
                             <td class="col-status"></td>
-                            <td class="col-actions"></td>
                         </tr>
                     `;
                 }

@@ -182,8 +182,9 @@ class PaymentService {
         status,
         payment_type,
         source,
-        table_num
-      ) VALUES ($1, $2, $3, 'PENDING', 'PREPAID', 'TLL', $4)
+        table_num,
+        paid_status
+      ) VALUES ($1, $2, $3, 'PENDING', 'PREPAID', 'TLL', $4, 'PAID')
       RETURNING id
     `, [
       ticketData.orderId,

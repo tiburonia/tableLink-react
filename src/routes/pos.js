@@ -86,7 +86,8 @@ router.post('/orders/confirm', async (req, res) => {
         payment_type,
         source,
         table_num,
-        created_at
+        created_at,
+        paid_status
       ) VALUES ($1, $2, 
         (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
         'PENDING', 'POSTPAID', 'POS', $3, NOW())
