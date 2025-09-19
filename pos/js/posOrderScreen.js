@@ -614,21 +614,46 @@ const POSOrderScreen = {
      */
     async loadTLLOrders(storeId, tableNumber) {
         try {
-            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/tll-orders`);
+            console.log(`🔍 TLL 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
+            
+            const url = `/api/pos/stores/${storeId}/table/${tableNumber}/tll-orders`;
+            console.log(`📡 TLL 주문 API 호출: ${url}`);
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`API 요청 실패 (${response.status}): ${errorText}`);
+            }
+            
             const data = await response.json();
+            console.log(`📊 TLL 주문 API 응답:`, data);
 
             if (data.success) {
                 this.tllOrders = data.tllOrders || [];
                 this.tllUserInfo = data.userInfo || null;
 
-                console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드, 사용자 정보:`, this.tllUserInfo?.name || '없음');
+                console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
+                console.log(`👤 TLL 사용자 정보:`, this.tllUserInfo?.name || '없음');
+                
+                // TLL 주문 세부 정보 로깅
+                if (this.tllOrders.length > 0) {
+                    console.log(`📋 TLL 주문 첫 번째 아이템:`, this.tllOrders[0]);
+                }
             } else {
+                console.warn('⚠️ TLL 주문 API 응답이 실패 상태:', data.error);
                 this.tllOrders = [];
                 this.tllUserInfo = null;
             }
 
         } catch (error) {
             console.error('❌ TLL 주문 로드 실패:', error);
+            console.error('❌ 에러 상세:', {
+                message: error.message,
+                stack: error.stack,
+                storeId,
+                tableNumber
+            });
             this.tllOrders = [];
             this.tllUserInfo = null;
         }
@@ -1194,13 +1219,22 @@ const POSOrderScreen = {
      */
     async refreshTLLOrders() {
         try {
-            console.log('🔄 TLL 주문 새로고침');
+            console.log('🔄 TLL 주문 새로고침 시작');
+            console.log(`📍 현재 정보: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`);
+
+            if (!POSCore.storeId || !this.currentTable) {
+                console.error('❌ 매장 ID 또는 테이블 정보가 없습니다');
+                this.showToast('매장 또는 테이블 정보가 없습니다');
+                return;
+            }
+
             await this.loadTLLOrders(POSCore.storeId, this.currentTable);
 
             // UI 업데이트
             const tllOrderList = document.getElementById('tllOrderList');
             if (tllOrderList) {
                 tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
+                console.log(`✅ TLL 주문 목록 UI 업데이트: ${this.tllOrders?.length || 0}개 주문`);
             }
 
             // 대시보드 카드 업데이트
@@ -1212,13 +1246,14 @@ const POSOrderScreen = {
                 const newPaymentSection = document.createElement('div');
                 newPaymentSection.innerHTML = this.renderPaymentSection();
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
+                console.log('✅ 결제 섹션 업데이트 완료');
             }
 
-            this.showToast('TLL 주문이 새로고침되었습니다');
+            this.showToast(`TLL 주문 새로고침 완료 (${this.tllOrders?.length || 0}개)`);
 
         } catch (error) {
             console.error('❌ TLL 주문 새로고침 실패:', error);
-            this.showToast('TLL 주문 새로고침에 실패했습니다');
+            this.showToast('TLL 주문 새로고침에 실패했습니다: ' + error.message);
         }
     },
 

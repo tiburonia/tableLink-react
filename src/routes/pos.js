@@ -408,7 +408,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
 
     console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
-    // TLL 주문 조회 (order_items 기준으로 조회, PAID 상태만)
+    // TLL 주문 조회 (order_items 기준으로 조회, TLL 소스의 모든 상태)
     const tllOrdersResult = await pool.query(`
       SELECT 
         oi.id,
@@ -419,18 +419,23 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         oi.item_status,
         oi.cook_station,
         oi.order_id,
+        ot.paid_status,
+        ot.created_at as ticket_created_at,
         o.user_id,
-        o.guest_phone
+        o.guest_phone,
+        o.created_at as order_created_at
       FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
       JOIN order_tickets ot ON oi.ticket_id = ot.id
+      JOIN orders o ON ot.order_id = o.id
       WHERE o.store_id = $1 
         AND o.table_num = $2 
         AND ot.source = 'TLL'
-        AND ot.paid_status = 'PAID'
         AND oi.item_status != 'CANCELLED'
+        AND o.status != 'CANCELLED'
       ORDER BY oi.created_at DESC
     `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    console.log(`📱 TLL 주문 조회 결과: ${tllOrdersResult.rows.length}개 아이템 발견`);
 
     // 사용자 정보 조회 (첫 번째 TLL 주문의 사용자 정보 사용)
     let userInfo = null;
@@ -447,6 +452,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
 
         if (userResult.rows.length > 0) {
           userInfo = userResult.rows[0];
+          console.log(`📱 TLL 회원 사용자 정보 로드: ${userInfo.name}`);
         }
       } else if (firstOrder.guest_phone) {
         // 게스트 주문인 경우
@@ -458,6 +464,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
           point: 0,
           created_at: null
         };
+        console.log(`📱 TLL 게스트 사용자 정보 로드: ${userInfo.phone}`);
       }
     }
 
@@ -630,81 +637,7 @@ router.post('/orders', async (req, res) => {
   }
 });
 
-/**
- * [GET] /pos/stores/:storeId/table/:tableNumber/tll-orders - TLL 주문 조회
- */
-router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {
-  try {
-    const { storeId, tableNumber } = req.params;
 
-    console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
-
-    // TLL 주문 조회 (order_items 기준으로 조회)
-    const tllOrdersResult = await pool.query(`
-      SELECT 
-        oi.id,
-        oi.menu_name,
-        oi.quantity,
-        oi.unit_price,
-        oi.total_price,
-        oi.item_status,
-        oi.cook_station,
-        oi.order_id,
-        o.user_id,
-        o.guest_phone
-      FROM order_items oi
-      JOIN orders o ON oi.order_id = o.id
-      JOIN order_tickets ot ON oi.ticket_id = ot.id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
-        AND ot.source = 'TLL'
-        AND ot.paid_status = 'PAID'
-      ORDER BY oi.created_at DESC
-    `, [parseInt(storeId), parseInt(tableNumber)]);
-
-    // 사용자 정보 조회 (첫 번째 TLL 주문의 사용자 정보 사용)
-    let userInfo = null;
-    if (tllOrdersResult.rows.length > 0) {
-      const firstOrder = tllOrdersResult.rows[0];
-
-      if (firstOrder.user_id) {
-        // 회원 주문인 경우
-        const userResult = await pool.query(`
-          SELECT id, name, phone, point, created_at
-          FROM users
-          WHERE id = $1
-        `, [firstOrder.user_id]);
-
-        if (userResult.rows.length > 0) {
-          userInfo = userResult.rows[0];
-        }
-      } else if (firstOrder.guest_phone) {
-        // 게스트 주문인 경우
-        userInfo = {
-          id: null,
-          name: '게스트',
-          phone: firstOrder.guest_phone,
-          guest_phone: firstOrder.guest_phone,
-          point: 0,
-          created_at: null
-        };
-      }
-    }
-
-    res.json({
-      success: true,
-      tllOrders: tllOrdersResult.rows,
-      userInfo: userInfo
-    });
-
-  } catch (error) {
-    console.error('❌ TLL 주문 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'TLL 주문 조회 실패: ' + error.message
-    });
-  }
-});
 
 /**
  * [GET] /pos/stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
