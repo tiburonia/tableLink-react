@@ -402,75 +402,63 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`📱 테이블 ${tableNumber} TLL 주문 조회`);
+    console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
-    // 해당 테이블의 활성 TLL 주문 조회
-    const ordersResult = await pool.query(`
-      SELECT 
-        o.id as order_id,
-        o.user_id,
-        o.guest_phone,
-        o.created_at,
-        u.name as user_name,
-        u.phone as user_phone,
-        g.phone as guest_phone
-      FROM orders o
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN guests g ON o.guest_phone = g.phone
-      WHERE o.store_id = $1 
-        AND o.table_num = $2
-        AND o.status = 'OPEN'
-        AND o.source = 'TLL'
-      ORDER BY o.created_at DESC
-      LIMIT 1
-    `, [parseInt(storeId), parseInt(tableNumber)]);
-
-    if (ordersResult.rows.length === 0) {
-      return res.json({
-        success: true,
-        tllOrders: [],
-        userInfo: null
-      });
-    }
-
-    const order = ordersResult.rows[0];
-
-    // 해당 주문의 아이템들 조회 (order_tickets의 source가 TLL인 것)
-    const itemsResult = await pool.query(`
+    // TLL 주문 조회 (order_items 기준으로 조회)
+    const tllOrdersResult = await pool.query(`
       SELECT 
         oi.id,
-        oi.order_id,
         oi.menu_name,
         oi.quantity,
         oi.unit_price,
         oi.total_price,
         oi.item_status,
-        oi.cook_station
+        oi.cook_station,
+        oi.order_id,
+        o.user_id,
+        o.guest_phone
       FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
       JOIN order_tickets ot ON oi.ticket_id = ot.id
-      WHERE ot.order_id = $1 
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
         AND ot.source = 'TLL'
-        AND oi.item_status != 'CANCELLED'
-      ORDER BY oi.id
-    `, [order.order_id]);
+        AND ot.paid_status = 'PAID'
+      ORDER BY oi.created_at DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
 
-    // 사용자 정보 구성
-    const userInfo = order.user_id ? {
-      user_id: order.user_id,
-      name: order.user_name,
-      phone: order.user_phone,
-      point: order.user_point,
-      created_at: order.created_at
-    } : order.guest_id ? {
-      guest_id: order.guest_id,
-      name: '게스트',
-      guest_phone: order.guest_phone,
-      created_at: order.created_at
-    } : null;
+    // 사용자 정보 조회 (첫 번째 TLL 주문의 사용자 정보 사용)
+    let userInfo = null;
+    if (tllOrdersResult.rows.length > 0) {
+      const firstOrder = tllOrdersResult.rows[0];
+
+      if (firstOrder.user_id) {
+        // 회원 주문인 경우
+        const userResult = await pool.query(`
+          SELECT id, name, phone, point, created_at
+          FROM users
+          WHERE id = $1
+        `, [firstOrder.user_id]);
+
+        if (userResult.rows.length > 0) {
+          userInfo = userResult.rows[0];
+        }
+      } else if (firstOrder.guest_phone) {
+        // 게스트 주문인 경우
+        userInfo = {
+          id: null,
+          name: '게스트',
+          phone: firstOrder.guest_phone,
+          guest_phone: firstOrder.guest_phone,
+          point: 0,
+          created_at: null
+        };
+      }
+    }
 
     res.json({
       success: true,
-      tllOrders: itemsResult.rows,
+      tllOrders: tllOrdersResult.rows,
       userInfo: userInfo
     });
 
@@ -633,6 +621,129 @@ router.post('/orders', async (req, res) => {
     });
   } finally {
     client.release();
+  }
+});
+
+/**
+ * [GET] /pos/stores/:storeId/table/:tableNumber/tll-orders - TLL 주문 조회
+ */
+router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // TLL 주문 조회 (order_items 기준으로 조회)
+    const tllOrdersResult = await pool.query(`
+      SELECT 
+        oi.id,
+        oi.menu_name,
+        oi.quantity,
+        oi.unit_price,
+        oi.total_price,
+        oi.item_status,
+        oi.cook_station,
+        oi.order_id,
+        o.user_id,
+        o.guest_phone
+      FROM order_items oi
+      JOIN orders o ON oi.order_id = o.id
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND ot.source = 'TLL'
+        AND ot.paid_status = 'PAID'
+      ORDER BY oi.created_at DESC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    // 사용자 정보 조회 (첫 번째 TLL 주문의 사용자 정보 사용)
+    let userInfo = null;
+    if (tllOrdersResult.rows.length > 0) {
+      const firstOrder = tllOrdersResult.rows[0];
+
+      if (firstOrder.user_id) {
+        // 회원 주문인 경우
+        const userResult = await pool.query(`
+          SELECT id, name, phone, point, created_at
+          FROM users
+          WHERE id = $1
+        `, [firstOrder.user_id]);
+
+        if (userResult.rows.length > 0) {
+          userInfo = userResult.rows[0];
+        }
+      } else if (firstOrder.guest_phone) {
+        // 게스트 주문인 경우
+        userInfo = {
+          id: null,
+          name: '게스트',
+          phone: firstOrder.guest_phone,
+          guest_phone: firstOrder.guest_phone,
+          point: 0,
+          created_at: null
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      tllOrders: tllOrdersResult.rows,
+      userInfo: userInfo
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
+ * [GET] /pos/stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
+ */
+router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`🔍 활성 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // 현재 테이블에서 UNPAID 상태의 티켓이 있는 주문 찾기
+    const activeOrderResult = await pool.query(`
+      SELECT DISTINCT o.id as order_id
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND ot.paid_status = 'UNPAID'
+        AND ot.source = 'POS'
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    if (activeOrderResult.rows.length === 0) {
+      return res.json({
+        success: false,
+        message: '활성 주문이 없습니다'
+      });
+    }
+
+    const orderId = activeOrderResult.rows[0].order_id;
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      storeId: parseInt(storeId),
+      tableNumber: parseInt(tableNumber)
+    });
+
+  } catch (error) {
+    console.error('❌ 활성 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '활성 주문 조회 실패: ' + error.message
+    });
   }
 });
 

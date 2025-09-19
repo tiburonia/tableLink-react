@@ -1022,12 +1022,6 @@ const POSOrderScreen = {
     async processPayment(method) {
         console.log(`💳 ${method} 결제 처리 시작`);
 
-        const currentSession = this.getCurrentSession();
-        if (!currentSession || !currentSession.orderId) {
-            alert('활성 주문 세션이 없습니다.');
-            return;
-        }
-
         try {
             // 결제 버튼 비활성화
             const paymentBtns = document.querySelectorAll('.payment-method-btn');
@@ -1036,8 +1030,26 @@ const POSOrderScreen = {
                 btn.style.opacity = '0.5';
             });
 
-            // 1. 미지불 티켓 조회
-            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${currentSession.orderId}`);
+            // 1. 현재 테이블의 미지불 티켓 조회 (storeId와 tableNumber 기반)
+            if (!this.currentStoreId || !this.currentTableNumber) {
+                alert('매장 또는 테이블 정보가 없습니다.');
+                return;
+            }
+
+            // 먼저 현재 테이블의 활성 주문을 찾아서 orderId 확인
+            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+            const activeOrderData = await activeOrderResponse.json();
+
+            if (!activeOrderData.success || !activeOrderData.orderId) {
+                alert('결제할 활성 주문이 없습니다.');
+                return;
+            }
+
+            const orderId = activeOrderData.orderId;
+            console.log(`📋 결제 대상 주문 ID: ${orderId}`);
+
+            // 2. 미지불 티켓 조회
+            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
             const unpaidData = await unpaidResponse.json();
 
             if (!unpaidData.success || unpaidData.totalTickets === 0) {
@@ -1047,14 +1059,14 @@ const POSOrderScreen = {
 
             console.log(`📋 결제할 티켓: ${unpaidData.totalTickets}개, 총 금액: ${unpaidData.totalAmount}원`);
 
-            // 2. 결제 처리 요청
+            // 3. 결제 처리 요청
             const paymentResponse = await fetch('/api/pos-payment/process', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    orderId: currentSession.orderId,
+                    orderId: orderId,
                     paymentMethod: method.toUpperCase(),
                     amount: unpaidData.totalAmount,
                     storeId: this.currentStoreId,
@@ -1073,20 +1085,14 @@ const POSOrderScreen = {
                       `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
                       `처리된 티켓: ${paymentResult.totalTicketsPaid}개`);
 
-                // 주문이 완전히 결제되었으면 세션 종료
-                if (paymentResult.orderFullyPaid) {
-                    this.endCurrentSession();
-                    console.log('🏁 모든 결제 완료 - 세션 종료');
-                } else {
-                    // 부분 결제인 경우 화면 갱신
-                    this.loadSessionData();
-                }
-
                 // 장바구니 초기화
                 this.clearCart();
 
                 // 화면 새로고침
-                this.render();
+                await this.refreshOrders();
+                
+                // 결제 완료 후 화면 재렌더링
+                await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
 
             } else {
                 throw new Error(paymentResult.error || '결제 처리 실패');
