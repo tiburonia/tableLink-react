@@ -508,7 +508,7 @@ body {
 
 /* 테이블 컬럼 너비 */
 .col-menu {
-    width: 30%;
+    width: 35%;
     text-align: left !important;
 }
 
@@ -525,7 +525,7 @@ body {
 }
 
 .col-status {
-    width: 10%;
+    width: 15%;
 }
 
 /* 메뉴 정보 스타일 */
@@ -586,35 +586,7 @@ body {
     font-size: 12px;
 }
 
-/* 테이블용 액션 버튼 */
-.pos-order-table .action-btn {
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    margin: 0 2px;
-    transition: all 0.2s;
-}
 
-.pos-order-table .action-btn.edit-btn {
-    background: #f3f4f6;
-    color: #374151;
-}
-
-.pos-order-table .action-btn.edit-btn:hover {
-    background: #e5e7eb;
-}
-
-.pos-order-table .action-btn.remove-btn {
-    background: #fef2f2;
-    color: #dc2626;
-}
-
-.pos-order-table .action-btn.remove-btn:hover {
-    background: #fee2e2;
-}
 
 /* 상태 배지 테이블용 */
 .pos-order-table .status-badge {
