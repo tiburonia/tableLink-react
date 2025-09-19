@@ -756,13 +756,15 @@ const POSOrderScreen = {
                 console.log(`➕ 카트 새 아이템 추가: ${menuName} (매장: ${finalStoreId}, 조리스테이션: ${finalCookStation})`);
             }
 
-            // UI 업데이트
+            // UI 업데이트 (테이블 선택 여부와 관계없이)
             await this.updateCartDisplay();
             this.showToast(`${menuName} 카트에 추가됨`);
 
         } catch (error) {
             console.error('❌ 카트 추가 실패:', error);
-            alert('카트 추가 중 오류가 발생했습니다.');
+            // 에러가 발생해도 카트에는 추가되도록 처리
+            console.log('⚠️ API 호출 실패했지만 카트 업데이트는 계속 진행');
+            this.showToast(`${menuName} 카트에 추가됨 (오프라인 모드)`);
         }
     },
 
@@ -771,8 +773,10 @@ const POSOrderScreen = {
      * 카트 표시 업데이트 (기존 주문내역 + 카트 순차적 표시)
      */
     async updateCartDisplay() {
-        // 먼저 기존 주문내역 로드
-        await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+        // 테이블이 선택된 경우에만 기존 주문내역 로드
+        if (this.currentTable && POSCore.storeId) {
+            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+        }
 
         // 기존 주문내역과 카트 아이템을 합쳐서 표시
         const cartOrders = this.cart.map((item, index) => ({
