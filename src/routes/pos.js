@@ -445,7 +445,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
       if (firstOrder.user_id) {
         // 회원 주문인 경우
         const userResult = await pool.query(`
-          SELECT id, name, phone, point, created_at
+          SELECT id, name, phone,  created_at
           FROM users
           WHERE id = $1
         `, [firstOrder.user_id]);
