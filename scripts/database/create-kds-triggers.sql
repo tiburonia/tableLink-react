@@ -85,11 +85,17 @@ RETURNS trigger AS $$
 DECLARE
   store_id_val integer;
   table_number_val integer;
+  ticket_ids_array integer[];
 BEGIN
   -- payments에서 order_id를 통해 orders 테이블에서 store_id와 table_num 가져오기
   SELECT o.store_id, o.table_num INTO store_id_val, table_number_val
   FROM orders o
   WHERE o.id = COALESCE(NEW.order_id, OLD.order_id);
+
+  -- payment_details에서 해당 payment의 ticket_id들 가져오기
+  SELECT ARRAY_AGG(pd.ticket_id) INTO ticket_ids_array
+  FROM payment_details pd
+  WHERE pd.payment_id = COALESCE(NEW.id, OLD.id);
 
   PERFORM pg_notify(
     'kds_payment_events',
@@ -97,7 +103,7 @@ BEGIN
       'action', TG_OP,
       'payment_id', COALESCE(NEW.id, OLD.id),
       'order_id', COALESCE(NEW.order_id, OLD.order_id),
-      'ticket_id', COALESCE(NEW.ticket_id, OLD.ticket_id),
+      'ticket_ids', COALESCE(ticket_ids_array, ARRAY[]::integer[]),
       'store_id', store_id_val,
       'table_number', table_number_val,
       'final_amount', COALESCE(NEW.amount, OLD.amount),
@@ -148,4 +154,4 @@ CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, created_at);
 COMMENT ON FUNCTION notify_kds_order_change() IS 'KDS 주문 변경 실시간 알림 함수';
 COMMENT ON FUNCTION notify_kds_ticket_change() IS 'KDS 티켓 변경 실시간 알림 함수';
 COMMENT ON FUNCTION notify_kds_item_change() IS 'KDS 아이템 변경 실시간 알림 함수';
-COMMENT ON FUNCTION notify_kds_payment_change() IS 'KDS 결제 변경 실시간 알림 함수';
+COMMENT ON FUNCTION notify_kds_payment_change() IS 'KDS 결제 변경 실시간 알림 함수 (새 스키마 호환)';
