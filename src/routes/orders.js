@@ -775,28 +775,95 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const parsedOrderId = parseInt(orderId);
 
-    // 주문 기본 정보 조회 (더 안전한 방식)
+    // 주문 기본 정보 조회 - 더 안전한 방식으로 개선
     let orderResult;
     try {
-      orderResult = await pool.query(`
+      // orders 테이블 존재 여부 먼저 확인
+      const ordersTableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_name = 'orders'
+        ) as exists
+      `);
+
+      if (!ordersTableCheck.rows[0]?.exists) {
+        console.error('❌ orders 테이블이 존재하지 않습니다');
+        return res.status(500).json({
+          success: false,
+          error: 'orders 테이블이 존재하지 않습니다'
+        });
+      }
+
+      // 컬럼 존재 여부 확인
+      const columnsCheck = await pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'orders'
+      `);
+
+      const columnNames = columnsCheck.rows.map(row => row.column_name);
+      console.log('📋 orders 테이블 컬럼들:', columnNames);
+
+      // 동적으로 SELECT 쿼리 생성
+      const selectFields = [];
+      selectFields.push('o.id');
+      
+      if (columnNames.includes('store_id')) {
+        selectFields.push('o.store_id');
+      } else {
+        selectFields.push('NULL as store_id');
+      }
+
+      if (columnNames.includes('table_num')) {
+        selectFields.push('COALESCE(o.table_num, 1) as table_number');
+      } else if (columnNames.includes('table_number')) {
+        selectFields.push('COALESCE(o.table_number, 1) as table_number');
+      } else {
+        selectFields.push('1 as table_number');
+      }
+
+      if (columnNames.includes('status')) {
+        selectFields.push('COALESCE(o.status, \'OPEN\') as status');
+      } else if (columnNames.includes('order_status')) {
+        selectFields.push('COALESCE(o.order_status, \'OPEN\') as status');
+      } else {
+        selectFields.push('\'OPEN\' as status');
+      }
+
+      selectFields.push('o.created_at');
+
+      if (columnNames.includes('session_ended')) {
+        selectFields.push('COALESCE(o.session_ended, false) as session_ended');
+      } else {
+        selectFields.push('false as session_ended');
+      }
+
+      if (columnNames.includes('total_price')) {
+        selectFields.push('COALESCE(o.total_price, 0) as base_amount');
+      } else if (columnNames.includes('total_amount')) {
+        selectFields.push('COALESCE(o.total_amount, 0) as base_amount');
+      } else {
+        selectFields.push('0 as base_amount');
+      }
+
+      const selectQuery = `
         SELECT 
-          o.id,
-          o.store_id,
-          COALESCE(s.name, '알 수 없는 매장') as store_name,
-          COALESCE(o.table_num, o.table_number, 1) as table_number,
-          COALESCE(o.status, o.order_status, 'OPEN') as status,
-          o.created_at,
-          COALESCE(o.session_ended, false) as session_ended,
-          COALESCE(o.total_price, 0) as base_amount
+          ${selectFields.join(',\n          ')},
+          COALESCE(s.name, '알 수 없는 매장') as store_name
         FROM orders o
         LEFT JOIN stores s ON o.store_id = s.id
         WHERE o.id = $1
-      `, [parsedOrderId]);
+      `;
+
+      console.log('🔍 실행할 쿼리:', selectQuery);
+
+      orderResult = await pool.query(selectQuery, [parsedOrderId]);
+
     } catch (orderError) {
       console.error('❌ 주문 기본 정보 조회 실패:', orderError);
       return res.status(500).json({
         success: false,
-        error: '주문 정보를 조회할 수 없습니다'
+        error: '주문 정보를 조회할 수 없습니다: ' + orderError.message
       });
     }
 
@@ -812,7 +879,6 @@ router.get('/processing/:orderId', async (req, res) => {
     // 티켓 정보 조회 (안전한 방식)
     let tickets = [];
     try {
-      // order_tickets 테이블 존재 확인
       const tableCheckResult = await pool.query(`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables 
@@ -841,7 +907,7 @@ router.get('/processing/:orderId', async (req, res) => {
             batch_no: ticket.batch_no,
             status: ticket.status,
             created_at: ticket.created_at,
-            items: [] // 아이템은 별도 조회로 안전하게 처리
+            items: []
           }));
         } catch (ticketQueryError) {
           console.warn('⚠️ 티켓 쿼리 실패:', ticketQueryError.message);
@@ -856,7 +922,6 @@ router.get('/processing/:orderId', async (req, res) => {
     let totalAmount = parseInt(order.base_amount) || 0;
     
     try {
-      // payments 테이블 존재 확인
       const paymentsTableCheck = await pool.query(`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables 
@@ -866,19 +931,42 @@ router.get('/processing/:orderId', async (req, res) => {
 
       if (paymentsTableCheck.rows[0]?.exists) {
         try {
-          const paymentsResult = await pool.query(`
+          // payments 테이블 컬럼 확인
+          const paymentColumnsCheck = await pool.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_schema = 'public' AND table_name = 'payments'
+          `);
+
+          const paymentColumnNames = paymentColumnsCheck.rows.map(row => row.column_name);
+
+          let paymentQuery = `
             SELECT 
               p.id,
-              COALESCE(p.method, p.payment_method, 'UNKNOWN') as method,
               COALESCE(p.amount, 0) as amount,
               COALESCE(p.status, 'pending') as status,
-              p.created_at,
-              p.transaction_id,
-              p.payment_key
-            FROM payments p
-            WHERE p.order_id = $1
-            ORDER BY p.created_at DESC
-          `, [parsedOrderId]);
+              p.created_at
+          `;
+
+          if (paymentColumnNames.includes('method')) {
+            paymentQuery += `, COALESCE(p.method, 'UNKNOWN') as method`;
+          } else if (paymentColumnNames.includes('payment_method')) {
+            paymentQuery += `, COALESCE(p.payment_method, 'UNKNOWN') as method`;
+          } else {
+            paymentQuery += `, 'UNKNOWN' as method`;
+          }
+
+          if (paymentColumnNames.includes('payment_key')) {
+            paymentQuery += `, p.payment_key`;
+          } else if (paymentColumnNames.includes('transaction_id')) {
+            paymentQuery += `, p.transaction_id as payment_key`;
+          } else {
+            paymentQuery += `, NULL as payment_key`;
+          }
+
+          paymentQuery += ` FROM payments p WHERE p.order_id = $1 ORDER BY p.created_at DESC`;
+
+          const paymentsResult = await pool.query(paymentQuery, [parsedOrderId]);
 
           payments = paymentsResult.rows.map(payment => ({
             id: payment.id,
@@ -886,7 +974,7 @@ router.get('/processing/:orderId', async (req, res) => {
             amount: parseInt(payment.amount) || 0,
             status: payment.status,
             createdAt: payment.created_at,
-            payment_key: payment.payment_key || payment.transaction_id,
+            payment_key: payment.payment_key,
             ticket_ids: []
           }));
 
