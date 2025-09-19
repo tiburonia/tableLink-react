@@ -51,7 +51,6 @@ class PaymentService {
       // 5. 결제 정보 저장
       await this.createPaymentRecord(client, {
         orderId: orderIdToUse,
-        ticketId,
         amount: orderData.finalTotal,
         paymentKey,
         providerResponse: tossResult
@@ -236,17 +235,15 @@ class PaymentService {
     await client.query(`
       INSERT INTO payments (
         order_id,
-        ticket_id,
         method,
         amount,
         status,
         paid_at,
         transaction_id,
         provider_response
-      ) VALUES ($1, $2, 'TOSS', $3, 'COMPLETED', CURRENT_TIMESTAMP, $4, $5)
+      ) VALUES ($1, 'TOSS', $2, 'COMPLETED', CURRENT_TIMESTAMP, $3, $4)
     `, [
       paymentData.orderId,
-      paymentData.ticketId,
       paymentData.amount,
       paymentData.paymentKey,
       JSON.stringify(paymentData.providerResponse)
