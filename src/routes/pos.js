@@ -723,7 +723,7 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     if (activeOrderResult.rows.length === 0) {
-      return res.json({
+      return res.status(404).json({
         success: false,
         message: '활성 주문이 없습니다'
       });
