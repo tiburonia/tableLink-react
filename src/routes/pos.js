@@ -267,7 +267,18 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`📋 테이블 ${tableNumber} 주문 조회 요청 (매장 ${storeId})`);
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`
+      });
+    }
+
+    console.log(`📋 테이블 ${parsedTableNumber} 주문 조회 요청 (매장 ${parsedStoreId})`);
 
     // 해당 테이블의 활성 주문들 조회 (UNPAID 상태만)
     const ordersResult = await pool.query(`
@@ -288,7 +299,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
         AND ot.paid_status = 'UNPAID'
       ORDER BY o.created_at DESC
       LIMIT 1
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    `, [parsedStoreId, parsedTableNumber]);
 
     if (ordersResult.rows.length === 0) {
       console.log(`ℹ️ 테이블 ${tableNumber}에 활성 주문 없음`);
@@ -357,7 +368,18 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`📋 POS order_items 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`
+      });
+    }
+
+    console.log(`📋 POS order_items 조회: 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
     // 해당 테이블의 order_items 조회 (POS 소스, UNPAID 상태만)
     const result = await pool.query(`
@@ -382,7 +404,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         AND ot.paid_status = 'UNPAID'
         AND oi.item_status != 'CANCELLED'
       ORDER BY oi.created_at ASC
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    `, [parsedStoreId, parsedTableNumber]);
 
     res.json({
       success: true,
@@ -406,7 +428,18 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`📱 TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`
+      });
+    }
+
+    console.log(`📱 TLL 주문 조회: 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
     // TLL 주문 조회 (order_items 기준으로 조회, TLL 소스의 모든 상태)
     const tllOrdersResult = await pool.query(`
@@ -433,7 +466,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         AND oi.item_status != 'CANCELLED'
         AND o.status != 'CANCELLED'
       ORDER BY oi.created_at DESC
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    `, [parsedStoreId, parsedTableNumber]);
 
     console.log(`📱 TLL 주문 조회 결과: ${tllOrdersResult.rows.length}개 아이템 발견`);
 
@@ -646,7 +679,18 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
   try {
     const { storeId, tableNumber } = req.params;
 
-    console.log(`🔍 활성 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`
+      });
+    }
+
+    console.log(`🔍 활성 주문 조회: 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
     // 현재 테이블에서 UNPAID 상태의 티켓이 있는 주문 찾기
     const activeOrderResult = await pool.query(`
@@ -659,7 +703,7 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
         AND ot.source = 'POS'
       ORDER BY o.created_at DESC
       LIMIT 1
-    `, [parseInt(storeId), parseInt(tableNumber)]);
+    `, [parsedStoreId, parsedTableNumber]);
 
     if (activeOrderResult.rows.length === 0) {
       return res.status(404).json({
