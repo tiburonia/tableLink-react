@@ -322,10 +322,10 @@ global.broadcastKRPPrint = (storeId, printData) => {
     global.io.emit('krp:new-print', printData);
     global.io.to(`kds:${storeId}`).emit('krp:new-print', printData);
     global.io.to(`krp:${storeId}`).emit('krp:new-print', printData);
-    
+
     // 일반 메시지 형태로도 전송
     global.io.emit('message', { type: 'new-print', data: printData });
-    
+
     console.log(`✅ KRP 브로드캐스트 완료: 티켓 ${printData.ticket_id}`);
   } catch (error) {
     console.error('❌ KRP 브로드캐스트 실패:', error);
@@ -400,13 +400,13 @@ io.on('connection', (socket) => {
     try {
       const { ticket_id } = data;
       console.log(`🖨️ KRP 출력 완료 처리: 티켓 ${ticket_id}`);
-      
+
       // 다른 KRP 클라이언트들에게도 알림
       socket.broadcast.emit('krp:receipt-completed', {
         ticket_id: ticket_id,
         timestamp: new Date().toISOString()
       });
-      
+
     } catch (error) {
       console.error('❌ KRP 출력 완료 처리 실패:', error);
     }
@@ -569,10 +569,8 @@ app.use('/api/tables', require('./routes/tables'));
 app.use('/api/toss', require('./routes/toss'));
 app.use('/api/tll', require('./routes/tll'));
 app.use('/api/pos', require('./routes/pos'));
+app.use('/api/pos-payment', require('./routes/pos-payment'));
 app.use('/api/kds', require('./routes/kds'));
-app.use('/api/cart', require('./routes/cart'));
-app.use('/api/audit', require('./routes/audit'));
-app.use('/api/stores-clusters', require('./routes/stores-clusters'));
 app.use('/api/krp', require('./routes/krp'));
 
 // KRP 진입을 위한 루트 라우트 설정 (예시)
