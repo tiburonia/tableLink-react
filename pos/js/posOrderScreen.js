@@ -166,7 +166,6 @@ const POSOrderScreen = {
                         <th class="col-quantity">수량</th>
                         <th class="col-total">합계</th>
                         <th class="col-status">상태</th>
-                        <th class="col-actions">액션</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -210,20 +209,7 @@ const POSOrderScreen = {
                             ${this.getStatusText(order.cookingStatus)}
                         </span>
                     </td>
-                    <td class="col-actions">
-                        ${order.isCart ? `
-                            <button class="action-btn remove-btn" onclick="POSOrderScreen.removeCartItem(${order.originalCartIndex})" title="삭제">
-                                🗑️
-                            </button>
-                        ` : `
-                            <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
-                                ✏️
-                            </button>
-                            <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
-                                🗑️
-                            </button>
-                        `}
-                    </td>
+                    
                 </tr>
             `).join('');
         } else {
@@ -236,7 +222,6 @@ const POSOrderScreen = {
                         <td class="col-quantity"></td>
                         <td class="col-total"></td>
                         <td class="col-status"></td>
-                        <td class="col-actions"></td>
                     </tr>
                 `;
             }
@@ -804,20 +789,6 @@ const POSOrderScreen = {
                                 ${this.getStatusText(order.cookingStatus)}
                             </span>
                         </td>
-                        <td class="col-actions">
-                            ${order.isCart ? `
-                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeCartItem(${order.originalCartIndex})" title="삭제">
-                                    🗑️
-                                </button>
-                            ` : `
-                                <button class="action-btn edit-btn" onclick="POSOrderScreen.editOrder(${order.id})" title="수정">
-                                    ✏️
-                                </button>
-                                <button class="action-btn remove-btn" onclick="POSOrderScreen.removeOrder(${order.id})" title="삭제">
-                                    🗑️
-                                </button>
-                            `}
-                        </td>
                     </tr>
                 `).join('');
             }
@@ -832,7 +803,6 @@ const POSOrderScreen = {
                         <td class="col-quantity"></td>
                         <td class="col-total"></td>
                         <td class="col-status"></td>
-                        <td class="col-actions"></td>
                     </tr>
                 `;
             }
