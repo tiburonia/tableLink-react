@@ -18,8 +18,22 @@ const POSOrderScreen = {
         try {
             console.log(`🛒 주문 화면 렌더링 - 테이블 ${tableNumber}`);
 
-            this.currentStoreId = storeId; // Store ID 저장
-            this.currentTableNumber = tableNumber; // Table Number 저장
+            // Store ID와 Table Number를 여러 방식으로 저장 (호환성 보장)
+            this.currentStoreId = parseInt(storeId);
+            this.currentTableNumber = parseInt(tableNumber);
+            this.currentTable = parseInt(tableNumber);
+            
+            // POSCore에도 저장
+            if (typeof POSCore !== 'undefined') {
+                POSCore.storeId = parseInt(storeId);
+                POSCore.tableNumber = parseInt(tableNumber);
+            }
+
+            console.log('📋 POS 주문 화면 초기화:', {
+                storeId: this.currentStoreId,
+                tableNumber: this.currentTableNumber,
+                currentTable: this.currentTable
+            });
 
             // 기존 주문 로드
             await this.loadCurrentOrders(storeId, tableNumber);
@@ -941,9 +955,19 @@ const POSOrderScreen = {
                 return;
             }
 
+            // 필수 정보 검증 및 설정
+            const storeId = this.currentStoreId || POSCore.storeId;
+            const tableNumber = this.currentTableNumber || this.currentTable;
+
+            if (!storeId || !tableNumber) {
+                alert('매장 ID 또는 테이블 번호가 설정되지 않았습니다.');
+                console.error('❌ 필수 정보 누락:', { storeId, tableNumber });
+                return;
+            }
+
             console.log('📋 POS 주문 확정 시작:', {
-                storeId: POSCore.storeId,
-                tableNumber: this.currentTable,
+                storeId: storeId,
+                tableNumber: tableNumber,
                 cartItems: this.cart.length,
                 totalAmount: total
             });
@@ -953,8 +977,8 @@ const POSOrderScreen = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    storeId: POSCore.storeId,
-                    tableNumber: this.currentTable,
+                    storeId: parseInt(storeId),
+                    tableNumber: parseInt(tableNumber),
                     items: this.cart,
                     totalAmount: total,
                     orderType: 'POS'
