@@ -765,19 +765,40 @@ router.get('/processing/:orderId', async (req, res) => {
 
     console.log(`📋 주문 진행 상황 조회: ${orderId}`);
 
-    // 주문 기본 정보 조회 (실제 컬럼명 사용)
-    const orderResult = await pool.query(`
-      SELECT 
-        o.id,
-        o.store_id,
-        s.name as store_name,
-        COALESCE(o.table_num, 1) as table_number,
-        COALESCE(o.status, 'OPEN') as status,
-        o.created_at
-      FROM orders o
-      JOIN stores s ON o.store_id = s.id
-      WHERE o.id = $1
-    `, [parseInt(orderId)]);
+    // 입력 검증
+    if (!orderId || isNaN(parseInt(orderId))) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 주문 ID입니다'
+      });
+    }
+
+    const parsedOrderId = parseInt(orderId);
+
+    // 주문 기본 정보 조회 (더 안전한 방식)
+    let orderResult;
+    try {
+      orderResult = await pool.query(`
+        SELECT 
+          o.id,
+          o.store_id,
+          COALESCE(s.name, '알 수 없는 매장') as store_name,
+          COALESCE(o.table_num, o.table_number, 1) as table_number,
+          COALESCE(o.status, o.order_status, 'OPEN') as status,
+          o.created_at,
+          COALESCE(o.session_ended, false) as session_ended,
+          COALESCE(o.total_price, 0) as base_amount
+        FROM orders o
+        LEFT JOIN stores s ON o.store_id = s.id
+        WHERE o.id = $1
+      `, [parsedOrderId]);
+    } catch (orderError) {
+      console.error('❌ 주문 기본 정보 조회 실패:', orderError);
+      return res.status(500).json({
+        success: false,
+        error: '주문 정보를 조회할 수 없습니다'
+      });
+    }
 
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
@@ -788,122 +809,97 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // 티켓 정보 조회 - order_tickets 테이블이 없을 수 있으므로 조건부로 처리
+    // 티켓 정보 조회 (안전한 방식)
     let tickets = [];
     try {
-      // 먼저 order_tickets 테이블 존재 확인
+      // order_tickets 테이블 존재 확인
       const tableCheckResult = await pool.query(`
         SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'order_tickets'
-        );
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_name = 'order_tickets'
+        ) as exists
       `);
 
-      if (tableCheckResult.rows[0].exists) {
-        const ticketsResult = await pool.query(`
-          SELECT 
-            ot.id,
-            ot.order_id,
-            COALESCE(ot.batch_no, 1) as batch_no,
-            COALESCE(ot.status, 'PENDING') as status,
-            ot.created_at,
-            json_agg(
-              json_build_object(
-                'id', oi.id,
-                'menu_name', oi.menu_name,
-                'quantity', oi.quantity,
-                'unit_price', oi.unit_price,
-                'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
-                'item_status', COALESCE(oi.item_status, 'PENDING')
-              )
-            ) FILTER (WHERE oi.id IS NOT NULL) as items
-          FROM order_tickets ot
-          LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-          WHERE ot.order_id = $1
-          GROUP BY ot.id, ot.order_id, ot.batch_no, ot.status, ot.created_at
-          ORDER BY ot.created_at DESC
-        `, [parseInt(orderId)]);
+      if (tableCheckResult.rows[0]?.exists) {
+        try {
+          const ticketsResult = await pool.query(`
+            SELECT 
+              ot.id,
+              ot.order_id,
+              COALESCE(ot.batch_no, 1) as batch_no,
+              COALESCE(ot.status, 'PENDING') as status,
+              ot.created_at
+            FROM order_tickets ot
+            WHERE ot.order_id = $1
+            ORDER BY ot.created_at DESC
+          `, [parsedOrderId]);
 
-        tickets = ticketsResult.rows.map(ticket => ({
-          ticket_id: ticket.id,
-          id: ticket.id,
-          order_id: ticket.order_id,
-          batch_no: ticket.batch_no,
-          status: ticket.status,
-          created_at: ticket.created_at,
-          items: ticket.items || []
-        }));
-      } else {
-        // order_tickets 테이블이 없으면 빈 배열로 설정
-        console.log('⚠️ order_tickets 테이블이 존재하지 않음');
-        tickets = [];
+          tickets = ticketsResult.rows.map(ticket => ({
+            ticket_id: ticket.id,
+            id: ticket.id,
+            order_id: ticket.order_id,
+            batch_no: ticket.batch_no,
+            status: ticket.status,
+            created_at: ticket.created_at,
+            items: [] // 아이템은 별도 조회로 안전하게 처리
+          }));
+        } catch (ticketQueryError) {
+          console.warn('⚠️ 티켓 쿼리 실패:', ticketQueryError.message);
+        }
       }
     } catch (ticketError) {
-      console.warn('⚠️ 티켓 조회 실패:', ticketError.message);
-      tickets = [];
+      console.warn('⚠️ 티켓 테이블 확인 실패:', ticketError.message);
     }
 
-    // 결제 내역 조회 - payments 테이블 존재 확인 후 조회
+    // 결제 내역 조회 (안전한 방식)
     let payments = [];
-    let totalAmount = 0;
+    let totalAmount = parseInt(order.base_amount) || 0;
+    
     try {
       // payments 테이블 존재 확인
       const paymentsTableCheck = await pool.query(`
         SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'payments'
-        );
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' AND table_name = 'payments'
+        ) as exists
       `);
 
-      if (paymentsTableCheck.rows[0].exists) {
-        // 결제 내역 조회 (payments와 payment_details 조인)
-        const paymentsResult = await pool.query(`
-          SELECT 
-            p.id,
-            p.method,
-            p.amount,
-            p.status,
-            p.transaction_id,
-            p.created_at,
-            array_agg(pd.ticket_id) FILTER (WHERE pd.ticket_id IS NOT NULL) as ticket_ids
-          FROM payments p
-          LEFT JOIN payment_details pd ON p.id = pd.payment_id
-          WHERE p.order_id = $1
-          GROUP BY p.id, p.method, p.amount, p.status, p.transaction_id, p.created_at
-          ORDER BY p.created_at DESC
-        `, [orderId]);
+      if (paymentsTableCheck.rows[0]?.exists) {
+        try {
+          const paymentsResult = await pool.query(`
+            SELECT 
+              p.id,
+              COALESCE(p.method, p.payment_method, 'UNKNOWN') as method,
+              COALESCE(p.amount, 0) as amount,
+              COALESCE(p.status, 'pending') as status,
+              p.created_at,
+              p.transaction_id,
+              p.payment_key
+            FROM payments p
+            WHERE p.order_id = $1
+            ORDER BY p.created_at DESC
+          `, [parsedOrderId]);
 
-        payments = paymentsResult.rows.map(payment => ({
-          id: payment.id,
-          ticket_ids: payment.ticket_ids || [],
-          method: payment.method.toUpperCase(),
-          amount: parseInt(payment.amount),
-          status: payment.status,
-          createdAt: payment.created_at,
-          payment_key: payment.payment_key || payment.transaction_id
-        }));
+          payments = paymentsResult.rows.map(payment => ({
+            id: payment.id,
+            method: payment.method?.toString().toUpperCase() || 'UNKNOWN',
+            amount: parseInt(payment.amount) || 0,
+            status: payment.status,
+            createdAt: payment.created_at,
+            payment_key: payment.payment_key || payment.transaction_id,
+            ticket_ids: []
+          }));
 
-        totalAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+          const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+          if (paidAmount > 0) {
+            totalAmount = paidAmount;
+          }
+        } catch (paymentQueryError) {
+          console.warn('⚠️ 결제 쿼리 실패:', paymentQueryError.message);
+        }
       }
     } catch (paymentError) {
-      console.warn('⚠️ 결제 내역 조회 실패:', paymentError.message);
-    }
-
-    // payments에서 금액을 가져오지 못한 경우 orders 테이블에서 조회
-    if (totalAmount === 0) {
-      try {
-        const amountResult = await pool.query(`
-          SELECT COALESCE(total_price, 0) as amount
-          FROM orders
-          WHERE id = $1
-        `, [parseInt(orderId)]);
-
-        if (amountResult.rows.length > 0) {
-          totalAmount = parseInt(amountResult.rows[0].amount) || 0;
-        }
-      } catch (amountError) {
-        console.warn('⚠️ 주문 금액 조회 실패:', amountError.message);
-      }
+      console.warn('⚠️ 결제 테이블 확인 실패:', paymentError.message);
     }
 
     const responseData = {
