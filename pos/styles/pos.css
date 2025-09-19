@@ -421,7 +421,7 @@ body {
     flex: 1;
     display: none;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: scroll;
 }
 
 .order-content.active {
@@ -444,7 +444,6 @@ body {
     border-collapse: collapse;
     background: #ffffff;
     border-radius: 8px;
-    overflow: hidden;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -520,7 +519,6 @@ body {
 /* 테이블 컬럼 너비 */
 .col-menu {
     width: 25%;
-    text-align: left !important;
 }
 
 .col-price {

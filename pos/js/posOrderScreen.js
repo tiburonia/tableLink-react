@@ -129,9 +129,7 @@ const POSOrderScreen = {
                 
                 <!-- POS 주문 영역 -->
                 <div class="order-content pos-content active" id="posOrderContent">
-                    <div class="order-list-modern" id="posOrderList">
                         ${this.renderPOSOrderItemsModern()}
-                    </div>
                 </div>
                 
                 <!-- TLL 주문 영역 -->
