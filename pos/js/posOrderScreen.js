@@ -615,17 +615,17 @@ const POSOrderScreen = {
     async loadTLLOrders(storeId, tableNumber) {
         try {
             console.log(`🔍 TLL 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
-            
+
             const url = `/api/pos/stores/${storeId}/table/${tableNumber}/tll-orders`;
             console.log(`📡 TLL 주문 API 호출: ${url}`);
-            
+
             const response = await fetch(url);
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 throw new Error(`API 요청 실패 (${response.status}): ${errorText}`);
             }
-            
+
             const data = await response.json();
             console.log(`📊 TLL 주문 API 응답:`, data);
 
@@ -635,7 +635,7 @@ const POSOrderScreen = {
 
                 console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
                 console.log(`👤 TLL 사용자 정보:`, this.tllUserInfo?.name || '없음');
-                
+
                 // TLL 주문 세부 정보 로깅
                 if (this.tllOrders.length > 0) {
                     console.log(`📋 TLL 주문 첫 번째 아이템:`, this.tllOrders[0]);
@@ -1067,9 +1067,18 @@ const POSOrderScreen = {
 
             // 먼저 현재 테이블의 활성 주문을 찾아서 orderId 확인
             const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
-            const activeOrderData = await activeOrderResponse.json();
 
-            if (!activeOrderData.success || !activeOrderData.orderId) {
+            if (!activeOrderResponse.ok) {
+                const errorText = await activeOrderResponse.text();
+                console.error(`❌ 활성 주문 조회 실패 (${activeOrderResponse.status}):`, errorText);
+                alert('활성 주문을 조회할 수 없습니다.');
+                return;
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+            console.log('📋 활성 주문 조회 응답:', activeOrderData);
+
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder || !activeOrderData.orderId) {
                 alert('결제할 활성 주문이 없습니다.');
                 return;
             }

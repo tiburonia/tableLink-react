@@ -692,33 +692,42 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
 
     console.log(`🔍 활성 주문 조회: 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
-    // 현재 테이블에서 UNPAID 상태의 티켓이 있는 주문 찾기
+    // 현재 테이블에서 UNPAID 상태의 티켓이 있는 주문 찾기 (store_tables.id와 매칭)
     const activeOrderResult = await pool.query(`
-      SELECT DISTINCT o.id as order_id, o.created_at
+      SELECT DISTINCT o.id as order_id, o.created_at, o.total_price,
+             COUNT(oi.id) as item_count
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id AND oi.item_status != 'CANCELLED'
       WHERE o.store_id = $1 
         AND o.table_num = $2 
         AND ot.paid_status = 'UNPAID'
-        AND ot.source = 'POS'
+        AND o.status = 'OPEN'
+      GROUP BY o.id, o.created_at, o.total_price
       ORDER BY o.created_at DESC
       LIMIT 1
     `, [parsedStoreId, parsedTableNumber]);
 
     if (activeOrderResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
+      console.log(`ℹ️ 테이블 ${parsedTableNumber}에 활성 주문이 없습니다`);
+      return res.json({
+        success: true,
+        hasActiveOrder: false,
         message: '활성 주문이 없습니다'
       });
     }
 
-    const orderId = activeOrderResult.rows[0].order_id;
+    const orderData = activeOrderResult.rows[0];
+    console.log(`✅ 활성 주문 발견: ${orderData.order_id}, 아이템 ${orderData.item_count}개`);
 
     res.json({
       success: true,
-      orderId: orderId,
-      storeId: parseInt(storeId),
-      tableNumber: parseInt(tableNumber)
+      hasActiveOrder: true,
+      orderId: orderData.order_id,
+      totalAmount: orderData.total_price || 0,
+      itemCount: parseInt(orderData.item_count) || 0,
+      storeId: parsedStoreId,
+      tableNumber: parsedTableNumber
     });
 
   } catch (error) {

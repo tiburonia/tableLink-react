@@ -14,15 +14,24 @@ router.get('/stores/:storeId', async (req, res) => {
 
     console.log(`🪑 매장 ${storeId} 테이블 조회 요청`);
 
-    // store_info 테이블에서 매장 존재 여부 확인
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    if (isNaN(parsedStoreId)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID입니다'
+      });
+    }
+
+    // stores 테이블에서 매장 존재 여부 확인 (store_info 대신 stores 사용)
     const storeCheck = await pool.query(`
-      SELECT si.store_id, si.name 
-      FROM store_info si 
-      WHERE si.store_id = $1
-    `, [storeId]);
+      SELECT id, name 
+      FROM stores 
+      WHERE id = $1
+    `, [parsedStoreId]);
 
     if (storeCheck.rows.length === 0) {
-      console.log(`❌ 매장 ${storeId}를 찾을 수 없음`);
+      console.log(`❌ 매장 ${parsedStoreId}를 찾을 수 없음`);
       return res.status(404).json({
         success: false,
         error: '매장을 찾을 수 없습니다'
@@ -40,7 +49,7 @@ router.get('/stores/:storeId', async (req, res) => {
       FROM store_tables 
       WHERE store_id = $1
       ORDER BY id ASC
-    `, [storeId]);
+    `, [parsedStoreId]);
 
     console.log(`📊 매장 ${storeId} store_tables에서 ${storeTablesResult.rows.length}개 테이블 발견`)
 
@@ -56,7 +65,7 @@ router.get('/stores/:storeId', async (req, res) => {
         FROM checks 
         WHERE store_id = $1 AND status = 'open'
         ORDER BY table_number ASC
-      `, [storeId]);
+      `, [parsedStoreId]);
 
       openChecks = openChecksResult.rows;
       console.log(`📊 매장 ${storeId} 오픈된 체크 ${openChecks.length}개`);
@@ -109,7 +118,7 @@ router.get('/stores/:storeId', async (req, res) => {
       success: true,
       tables: tables,
       store: {
-        id: parseInt(storeId),
+        id: parsedStoreId,
         name: storeName
       }
     });
