@@ -1090,7 +1090,7 @@ const POSOrderScreen = {
 
                 // 화면 새로고침
                 await this.refreshOrders();
-                
+
                 // 결제 완료 후 화면 재렌더링
                 await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
 

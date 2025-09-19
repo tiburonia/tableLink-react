@@ -1021,6 +1021,93 @@ router.put('/:orderId/end-session', async (req, res) => {
   }
 });
 
+// 🔄 KDS 동기화 API
+router.get('/kds/:storeId/sync', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    const { lastSyncAt } = req.query;
+
+    console.log(`🔄 KDS 동기화 요청: 매장 ${storeId}, 마지막 동기화: ${lastSyncAt}`);
+
+    const syncTimestamp = lastSyncAt ? new Date(lastSyncAt) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // 업데이트된 티켓들 조회
+    const updatedTicketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.status,
+        ot.order_id,
+        ot.batch_no,
+        ot.updated_at,
+        o.table_num as table_number,
+        o.created_at,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', COALESCE(oi.item_status, 'PENDING'),
+            'item_status', COALESCE(oi.item_status, 'PENDING'),
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 
+        AND ot.updated_at > $2
+        AND ot.display_status != 'UNVISIBLE'
+      GROUP BY ot.id, ot.status, ot.order_id, ot.batch_no, ot.updated_at, o.table_num, o.created_at
+      ORDER BY ot.updated_at ASC
+    `, [parseInt(storeId), syncTimestamp]);
+
+    // 삭제된 티켓들 조회 (UNVISIBLE 상태)
+    const deletedTicketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.updated_at
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      WHERE o.store_id = $1 
+        AND ot.updated_at > $2
+        AND ot.display_status = 'UNVISIBLE'
+    `, [parseInt(storeId), syncTimestamp]);
+
+    const changes = {
+      updated: updatedTicketsResult.rows.map(ticket => ({
+        ticket_id: ticket.ticket_id,
+        id: ticket.ticket_id,
+        check_id: ticket.ticket_id,
+        order_id: ticket.order_id,
+        table_number: ticket.table_number,
+        status: ticket.status?.toUpperCase() || 'PENDING',
+        created_at: ticket.created_at,
+        updated_at: ticket.updated_at,
+        items: ticket.items || []
+      })),
+      deleted: deletedTicketsResult.rows.map(ticket => ({
+        ticket_id: ticket.ticket_id,
+        updated_at: ticket.updated_at
+      }))
+    };
+
+    console.log(`✅ KDS 동기화 완료: 업데이트 ${changes.updated.length}개, 삭제 ${changes.deleted.length}개`);
+
+    res.json({
+      success: true,
+      lastSyncAt: new Date().toISOString(),
+      changes: changes
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 동기화 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'KDS 동기화 실패: ' + error.message
+    });
+  }
+});
+
 // 주문별 리뷰 상태 확인 API  
 router.get('/:orderId/review-status', async (req, res) => {
   try {
