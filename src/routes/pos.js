@@ -12,6 +12,145 @@ const pool = require('../db/pool');
  * 비회원 포스 주문 지원 (user_id, guest_phone NULL)
  */
 router.post('/orders/confirm', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { storeId, tableNumber, items, totalAmount, orderType, isGuestOrder = true } = req.body;
+
+    console.log(`🛒 POS 주문 확정: 매장 ${storeId}, 테이블 ${tableNumber}, ${items.length}개 아이템 (비회원: ${isGuestOrder})`);
+
+    if (!storeId || !tableNumber || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. 해당 테이블의 활성 주문 확인 또는 생성
+    let orderId;
+
+    const existingOrderResult = await client.query(`
+      SELECT id FROM orders 
+      WHERE store_id = $1 AND table_num = $2 AND status = 'OPEN'
+      ORDER BY created_at DESC 
+      LIMIT 1
+    `, [storeId, tableNumber]);
+
+    if (existingOrderResult.rows.length > 0) {
+      // 기존 주문에 추가
+      orderId = existingOrderResult.rows[0].id;
+      console.log(`📋 기존 주문 ${orderId}에 추가`);
+
+      // 기존 주문 금액 업데이트
+      await client.query(`
+        UPDATE orders 
+        SET total_price = COALESCE(total_price, 0) + $1,
+            updated_at = NOW()
+        WHERE id = $2
+      `, [totalAmount, orderId]);
+    } else {
+      // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
+      const orderResult = await client.query(`
+        INSERT INTO orders (
+          store_id, 
+          table_num,
+          user_id,
+          guest_phone,
+          source,
+          status, 
+          payment_status,
+          total_price,
+          created_at
+        ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', $3, NOW())
+        RETURNING id
+      `, [storeId, tableNumber, totalAmount]);
+
+      orderId = orderResult.rows[0].id;
+      console.log(`📋 새 비회원 POS 주문 ${orderId} 생성 (user_id: NULL, guest_phone: NULL)`);
+
+      // store_tables의 processing_order_id 업데이트
+      await client.query(`
+        UPDATE store_tables 
+        SET processing_order_id = $1,
+            status = 'OCCUPIED'
+        WHERE store_id = $2 AND id = $3
+      `, [orderId, storeId, tableNumber]);
+    }
+
+    // 2. order_tickets 테이블에 티켓 생성
+    const ticketResult = await client.query(`
+      INSERT INTO order_tickets (
+        order_id,
+        store_id,
+        batch_no,
+        status,
+        payment_type,
+        source,
+        table_num,
+        created_at,
+        paid_status
+      ) VALUES ($1, $2, 
+        (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
+        'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
+      RETURNING id, batch_no
+    `, [orderId, storeId, tableNumber]);
+
+    const { id: ticketId, batch_no: batchNo } = ticketResult.rows[0];
+
+    // 3. order_items 테이블에 주문 아이템들 생성
+    for (const item of items) {
+      await client.query(`
+        INSERT INTO order_items (
+          order_id,
+          ticket_id,
+          menu_name,
+          unit_price,
+          quantity,
+          total_price,
+          item_status,
+          cook_station,
+          created_at,
+          menu_id,
+          store_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8, $9)
+      `, [
+        orderId,
+        ticketId,
+        item.name,
+        item.price,
+        item.quantity,
+        item.price * item.quantity,
+        item.cook_station || 'KITCHEN',
+        item.id,
+        item.store_id
+      ]);
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      ticketId: ticketId,
+      batchNo: batchNo,
+      message: '주문이 성공적으로 확정되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 주문 확정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 확정 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
 
 /**
  * [POST] /guest-orders/confirm - 비회원 POS 주문 확정 전용 API
@@ -164,146 +303,6 @@ router.post('/guest-orders/confirm', async (req, res) => {
   }
 });
 
-
-  const client = await pool.connect();
-
-  try {
-    const { storeId, tableNumber, items, totalAmount, orderType, isGuestOrder = true } = req.body;
-
-    console.log(`🛒 POS 주문 확정: 매장 ${storeId}, 테이블 ${tableNumber}, ${items.length}개 아이템 (비회원: ${isGuestOrder})`);
-
-    if (!storeId || !tableNumber || !items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: '필수 정보가 누락되었습니다'
-      });
-    }
-
-    await client.query('BEGIN');
-
-    // 1. 해당 테이블의 활성 주문 확인 또는 생성
-    let orderId;
-
-    const existingOrderResult = await client.query(`
-      SELECT id FROM orders 
-      WHERE store_id = $1 AND table_num = $2 AND status = 'OPEN'
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `, [storeId, tableNumber]);
-
-    if (existingOrderResult.rows.length > 0) {
-      // 기존 주문에 추가
-      orderId = existingOrderResult.rows[0].id;
-      console.log(`📋 기존 주문 ${orderId}에 추가`);
-
-      // 기존 주문 금액 업데이트
-      await client.query(`
-        UPDATE orders 
-        SET total_price = COALESCE(total_price, 0) + $1,
-            updated_at = NOW()
-        WHERE id = $2
-      `, [totalAmount, orderId]);
-    } else {
-      // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
-      const orderResult = await client.query(`
-        INSERT INTO orders (
-          store_id, 
-          table_num,
-          user_id,
-          guest_phone,
-          source,
-          status, 
-          payment_status,
-          total_price,
-          created_at
-        ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', $3, NOW())
-        RETURNING id
-      `, [storeId, tableNumber, totalAmount]);
-
-      orderId = orderResult.rows[0].id;
-      console.log(`📋 새 비회원 POS 주문 ${orderId} 생성 (user_id: NULL, guest_phone: NULL)`);
-
-      // store_tables의 processing_order_id 업데이트
-      await client.query(`
-        UPDATE store_tables 
-        SET processing_order_id = $1,
-            status = 'OCCUPIED'
-        WHERE store_id = $2 AND id = $3
-      `, [orderId, storeId, tableNumber]);
-    }
-
-    // 2. order_tickets 테이블에 티켓 생성
-    const ticketResult = await client.query(`
-      INSERT INTO order_tickets (
-        order_id,
-        store_id,
-        batch_no,
-        status,
-        payment_type,
-        source,
-        table_num,
-        created_at,
-        paid_status
-      ) VALUES ($1, $2, 
-        (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
-        'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
-      RETURNING id, batch_no
-    `, [orderId, storeId, tableNumber]);
-
-    const { id: ticketId, batch_no: batchNo } = ticketResult.rows[0];
-
-    // 3. order_items 테이블에 주문 아이템들 생성
-    for (const item of items) {
-      await client.query(`
-        INSERT INTO order_items (
-          order_id,
-          ticket_id,
-          menu_name,
-          unit_price,
-          quantity,
-          total_price,
-          item_status,
-          cook_station,
-          created_at,
-          menu_id,
-          store_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8, $9)
-      `, [
-        orderId,
-        ticketId,
-        item.name,
-        item.price,
-        item.quantity,
-        item.price * item.quantity,
-        item.cook_station || 'KITCHEN',
-        item.id,
-        item.store_id
-      ]);
-    }
-
-    await client.query('COMMIT');
-
-    console.log(`✅ POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
-
-    res.json({
-      success: true,
-      orderId: orderId,
-      ticketId: ticketId,
-      batchNo: batchNo,
-      message: '주문이 성공적으로 확정되었습니다'
-    });
-
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('❌ POS 주문 확정 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '주문 확정 중 오류가 발생했습니다: ' + error.message
-    });
-  } finally {
-    client.release();
-  }
-});
 
 /**
  * [GET] /stores/:storeId/menu - 매장 메뉴 조회
