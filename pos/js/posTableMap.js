@@ -249,6 +249,25 @@ const POSTableMap = {
         
 
     /**
+     * 점유 시간 포맷
+     */
+    formatOccupiedTime(occupiedSince) {
+        if (!occupiedSince) return '';
+        
+        const now = new Date();
+        const occupied = new Date(occupiedSince);
+        const diffMinutes = Math.floor((now - occupied) / (1000 * 60));
+        
+        if (diffMinutes < 60) {
+            return `${diffMinutes}분`;
+        } else {
+            const hours = Math.floor(diffMinutes / 60);
+            const minutes = diffMinutes % 60;
+            return `${hours}시간 ${minutes}분`;
+        }
+    },
+    
+    /**
      * TLL 연동 여부 확인
      */
     async checkTLLIntegration(storeId, tableNumber) {
@@ -263,20 +282,6 @@ const POSTableMap = {
         }
     },
 
-
-        const now = new Date();
-        const occupied = new Date(occupiedSince);
-        const diffMinutes = Math.floor((now - occupied) / (1000 * 60));
-        
-        if (diffMinutes < 60) {
-            return `${diffMinutes}분`;
-        } else {
-            const hours = Math.floor(diffMinutes / 60);
-            const minutes = diffMinutes % 60;
-            return `${hours}시간 ${minutes}분`;
-        }
-    },
-    
     /**
      * 테이블 선택
      */

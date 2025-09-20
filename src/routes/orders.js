@@ -1119,4 +1119,110 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
+// 📋 비회원 POS 주문 생성
+router.post('/pos-guest', async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const {
+      storeId,
+      tableNumber,
+      orderItems, // [{ menuId, menuName, price, quantity, cookStation }]
+      notes = ''
+    } = req.body;
+
+    console.log(`📋 비회원 POS 주문 생성: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    if (!storeId || !tableNumber || !orderItems || !Array.isArray(orderItems) || orderItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 파라미터가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 총 금액 계산
+    const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // 1. orders 테이블에 주문 생성 (guest_phone는 null로 설정)
+    const orderResult = await client.query(`
+      INSERT INTO orders (
+        store_id,
+        table_num,
+        total_price,
+        notes,
+        created_at,
+        guest_phone
+      ) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, null)
+      RETURNING id, created_at
+    `, [storeId, tableNumber, totalAmount, notes]);
+
+    const orderId = orderResult.rows[0].id;
+    console.log(`✅ 비회원 주문 생성: ${orderId}`);
+
+    // 2. order_tickets 테이블에 티켓 생성 (POS 소스, UNPAID 상태)
+    const ticketResult = await client.query(`
+      INSERT INTO order_tickets (
+        order_id,
+        batch_no,
+        status,
+        source,
+        paid_status,
+        created_at
+      ) VALUES ($1, 1, 'PENDING', 'POS', 'UNPAID', CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [orderId]);
+
+    const ticketId = ticketResult.rows[0].id;
+    console.log(`✅ 비회원 티켓 생성: ${ticketId}`);
+
+    // 3. order_items 테이블에 주문 아이템들 생성
+    for (const item of orderItems) {
+      await client.query(`
+        INSERT INTO order_items (
+          ticket_id,
+          menu_name,
+          unit_price,
+          quantity,
+          cook_station,
+          item_status,
+          created_at
+        ) VALUES ($1, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP)
+      `, [
+        ticketId,
+        item.menuName,
+        item.price,
+        item.quantity,
+        item.cookStation || 'KITCHEN'
+      ]);
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ 비회원 POS 주문 생성 완료: 주문 ${orderId}, 티켓 ${ticketId}, 아이템 ${orderItems.length}개`);
+
+    res.json({
+      success: true,
+      order: {
+        id: orderId,
+        ticketId: ticketId,
+        totalAmount: totalAmount,
+        itemCount: orderItems.length,
+        createdAt: orderResult.rows[0].created_at
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ 비회원 POS 주문 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 생성 실패: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = router;
