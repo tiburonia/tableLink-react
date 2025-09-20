@@ -247,13 +247,6 @@ const POSTableMap = {
     formatOccupiedTime(occupiedSince) {
         if (!occupiedSince) return '';
         
-
-    /**
-     * 점유 시간 포맷
-     */
-    formatOccupiedTime(occupiedSince) {
-        if (!occupiedSince) return '';
-        
         const now = new Date();
         const occupied = new Date(occupiedSince);
         const diffMinutes = Math.floor((now - occupied) / (1000 * 60));

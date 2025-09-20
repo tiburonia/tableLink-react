@@ -17,9 +17,9 @@
     </div>
 
     <!-- POS 모듈 로드 -->
-    <script src="/pos/js/posCore.js"></script>
     <script src="/pos/js/posTableMap.js"></script>
     <script src="/pos/js/posOrderScreen.js"></script>
+    <script src="/pos/js/posCore.js"></script>
     
     <script>
         // URL에서 매장 ID 파싱
@@ -31,7 +31,11 @@
             window.history.back();
         } else {
             // POS 시스템 초기화
-            POSCore.initialize(parseInt(storeId));
+            POSCore.initialize(storeId);
+        }
+    </script>
+</body>
+</html>.initialize(parseInt(storeId));
         }
     </script>
 </body>
