@@ -22,17 +22,44 @@
     <script src="/pos/js/posOrderScreen.js"></script>
 
     <script>
-        // URL에서 매장 ID 파싱
-        const urlParams = new URLSearchParams(window.location.search);
-        const storeId = urlParams.get('storeId');
+        // 모든 스크립트 로딩 완료 확인 후 초기화
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔄 DOM 로드 완료, POS 모듈 확인 중...');
+            
+            // 필수 모듈들이 로드될 때까지 대기
+            let retryCount = 0;
+            const maxRetries = 20; // 최대 2초 대기
+            
+            while (retryCount < maxRetries) {
+                const modulesLoaded = 
+                    typeof POSCore !== 'undefined' &&
+                    typeof POSOrderScreen !== 'undefined' &&
+                    typeof POSPaymentModal !== 'undefined' &&
+                    typeof POSTableMap !== 'undefined';
+                
+                if (modulesLoaded) {
+                    console.log('✅ 모든 POS 모듈 로드 확인됨');
+                    break;
+                }
+                
+                console.log(`🔄 POS 모듈 로딩 대기 중... (${retryCount + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retryCount++;
+            }
+            
+            // URL에서 매장 ID 파싱
+            const urlParams = new URLSearchParams(window.location.search);
+            const storeId = urlParams.get('storeId');
 
-        if (!storeId) {
-            alert('매장 ID가 필요합니다.');
-            window.history.back();
-        } else {
-            // POS 시스템 초기화
-            POSCore.initialize(parseInt(storeId));
-        }
+            if (!storeId) {
+                alert('매장 ID가 필요합니다.');
+                window.history.back();
+            } else {
+                // POS 시스템 초기화
+                console.log('🚀 POS 시스템 초기화 시작');
+                POSCore.initialize(parseInt(storeId));
+            }
+        });
     </script>
 </body>
 </html>

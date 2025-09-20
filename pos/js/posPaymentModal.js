@@ -1441,3 +1441,10 @@ const POSPaymentModal = {
 
 // 전역으로 등록
 window.POSPaymentModal = POSPaymentModal;
+
+// 등록 확인 로그
+console.log('✅ POSPaymentModal 전역 등록 완료:', {
+    type: typeof POSPaymentModal,
+    hasShow: typeof POSPaymentModal.show === 'function',
+    timestamp: new Date().toISOString()
+});

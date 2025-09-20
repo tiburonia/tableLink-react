@@ -851,8 +851,10 @@ const POSOrderScreen = {
 
         console.log(`💳 결제 방법 선택: ${method}`);
 
-        // POSPaymentModal을 사용하여 결제 모달 표시
-        this.showPOSPaymentModal(method);
+        // 약간의 지연을 두고 결제 모달 표시 (UI 업데이트 완료 대기)
+        setTimeout(() => {
+            this.showPOSPaymentModal(method);
+        }, 50);
     },
 
     /**
@@ -1322,17 +1324,42 @@ const POSOrderScreen = {
         }
 
         try {
-            // POSPaymentModal 표시 (API는 모달 내에서 호출)
-            if (typeof POSPaymentModal !== 'undefined') {
+            // POSPaymentModal 로딩 확인 및 대기
+            let retryCount = 0;
+            const maxRetries = 10; // 최대 1초 대기 (100ms * 10)
+
+            while (typeof POSPaymentModal === 'undefined' && retryCount < maxRetries) {
+                console.log(`🔄 POSPaymentModal 로딩 대기 중... (${retryCount + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 100));
+                retryCount++;
+            }
+
+            if (typeof POSPaymentModal !== 'undefined' && POSPaymentModal.show) {
+                console.log('✅ POSPaymentModal 로드 확인됨, 모달 표시');
                 await POSPaymentModal.show(method);
             } else {
-                console.error('❌ POSPaymentModal이 로드되지 않았습니다');
-                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+                console.error('❌ POSPaymentModal 로딩 실패 또는 show 메서드 없음:', {
+                    POSPaymentModalType: typeof POSPaymentModal,
+                    hasShowMethod: POSPaymentModal?.show ? 'yes' : 'no',
+                    retryCount: retryCount
+                });
+                
+                // 폴백: 기존 결제 처리 방식 사용
+                console.log('🔄 폴백: 기존 결제 처리 방식 사용');
+                await this.processPayment(method.toLowerCase());
             }
 
         } catch (error) {
             console.error('❌ 결제 모달 표시 실패:', error);
-            alert(`결제 모달을 표시할 수 없습니다: ${error.message}`);
+            
+            // 폴백: 기존 결제 처리 방식 사용
+            console.log('🔄 에러 발생, 폴백: 기존 결제 처리 방식 사용');
+            try {
+                await this.processPayment(method.toLowerCase());
+            } catch (fallbackError) {
+                console.error('❌ 폴백 결제 처리도 실패:', fallbackError);
+                alert(`결제 처리 실패: ${fallbackError.message}`);
+            }
         }
     },
 
