@@ -786,14 +786,13 @@ const POSPaymentModal = {
                     left: 0;
                     right: 0;
                     bottom: 0;
-                    background: linear-gradient(135deg, rgba(30, 64, 175, 0.9) 0%, rgba(59, 130, 246, 0.8) 100%);
-                    backdrop-filter: blur(12px);
+                    background: rgba(0, 0, 0, 0.5);
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     z-index: 10000;
                     opacity: 0;
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                    transition: opacity 0.3s ease;
                 }
 
                 .pos-payment-modal-overlay.show {
@@ -801,671 +800,146 @@ const POSPaymentModal = {
                 }
 
                 .pos-payment-modal {
-                    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-                    border-radius: 24px;
+                    background: white;
+                    border-radius: 20px;
                     width: 90%;
-                    max-width: 550px;
+                    max-width: 500px;
                     max-height: 90vh;
-                    overflow: hidden;
-                    box-shadow: 
-                        0 32px 64px rgba(0, 0, 0, 0.25),
-                        0 16px 32px rgba(59, 130, 246, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-                    transform: scale(0.8) translateY(50px);
-                    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    overflow-y: auto;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                    transform: scale(0.9);
+                    transition: transform 0.3s ease;
                 }
 
                 .pos-payment-modal-overlay.show .pos-payment-modal {
-                    transform: scale(1) translateY(0);
+                    transform: scale(1);
                 }
 
                 .modal-header {
-                    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-                    color: white;
-                    padding: 28px 32px 24px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .modal-header::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="75" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="75" cy="25" r="0.5" fill="rgba(255,255,255,0.05)"/><circle cx="25" cy="75" r="0.5" fill="rgba(255,255,255,0.05)"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-                    pointer-events: none;
+                    padding: 24px 24px 16px;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                 }
 
                 .modal-header h2 {
                     margin: 0;
-                    font-size: 24px;
-                    font-weight: 800;
-                    color: white;
-                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                    position: relative;
-                    z-index: 1;
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #1e293b;
                 }
 
                 .close-btn {
-                    background: rgba(255, 255, 255, 0.15);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    color: white;
+                    background: none;
+                    border: none;
+                    font-size: 28px;
+                    color: #64748b;
                     cursor: pointer;
                     padding: 0;
-                    width: 40px;
-                    height: 40px;
+                    width: 32px;
+                    height: 32px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border-radius: 12px;
-                    transition: all 0.3s ease;
-                    font-size: 20px;
-                    font-weight: 600;
-                    position: relative;
-                    z-index: 2;
-                    backdrop-filter: blur(10px);
+                    border-radius: 50%;
+                    transition: all 0.2s;
                 }
 
                 .close-btn:hover {
-                    background: rgba(255, 255, 255, 0.25);
-                    border-color: rgba(255, 255, 255, 0.4);
-                    transform: scale(1.05);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                    background: #f1f5f9;
+                    color: #374151;
                 }
 
                 .modal-body {
-                    padding: 32px;
-                    overflow-y: auto;
-                    max-height: calc(90vh - 180px);
+                    padding: 24px;
                 }
 
                 .modal-footer {
-                    padding: 24px 32px 32px;
-                    background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
-                    border-top: 1px solid #e2e8f0;
+                    padding: 16px 24px 24px;
                     display: flex;
-                    gap: 16px;
-                }
-
-                /* 결제 요약 섹션 */
-                .payment-summary {
-                    background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
-                    border: 2px solid #e2e8f0;
-                    border-radius: 16px;
-                    padding: 24px;
-                    margin-bottom: 24px;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .payment-summary::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 4px;
-                    background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
-                }
-
-                .summary-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 12px;
-                    font-size: 16px;
-                    color: #374151;
-                }
-
-                .summary-row:last-child {
-                    margin-bottom: 0;
-                }
-
-                .summary-row.total {
-                    font-size: 20px;
-                    font-weight: 800;
-                    padding-top: 16px;
-                    border-top: 2px solid #e2e8f0;
-                    color: #1f2937;
-                    margin-top: 8px;
-                }
-
-                .summary-row .label {
-                    font-weight: 600;
-                    color: #4b5563;
-                }
-
-                .summary-row .value {
-                    font-weight: 700;
-                    color: #059669;
-                }
-
-                .summary-row.total .value {
-                    color: #1e40af;
-                    font-size: 24px;
-                }
-
-                /* 고객 유형 선택 */
-                .customer-type-selection {
-                    margin-bottom: 28px;
-                }
-
-                .customer-type-selection h3 {
-                    font-size: 18px;
-                    font-weight: 700;
-                    color: #1f2937;
-                    margin-bottom: 16px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                .type-buttons {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 16px;
-                }
-
-                .customer-type-btn {
-                    background: linear-gradient(145deg, #ffffff 0%, #f9fafb 100%);
-                    border: 2px solid #e5e7eb;
-                    border-radius: 16px;
-                    padding: 24px 20px;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
                     gap: 12px;
-                    position: relative;
-                    overflow: hidden;
                 }
 
-                .customer-type-btn::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-                    transition: left 0.6s ease;
-                }
-
-                .customer-type-btn:hover::before {
-                    left: 100%;
-                }
-
-                .customer-type-btn:hover {
-                    border-color: #3b82f6;
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
-                }
-
-                .customer-type-btn.active {
-                    background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%);
-                    border-color: #3b82f6;
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
-                }
-
-                .type-icon {
-                    font-size: 32px;
-                    transition: transform 0.3s ease;
-                }
-
-                .customer-type-btn:hover .type-icon,
-                .customer-type-btn.active .type-icon {
-                    transform: scale(1.1);
-                }
-
-                .customer-type-btn span {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #374151;
-                    transition: color 0.3s ease;
-                }
-
-                .customer-type-btn.active span {
-                    color: #1e40af;
-                }
-
-                /* 정보 입력 섹션 */
-                .guest-info-section,
-                .member-info-section {
-                    margin-bottom: 28px;
-                    background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
-                    border: 1px solid #e2e8f0;
-                    border-radius: 16px;
-                    padding: 24px;
-                    transition: all 0.3s ease;
-                }
-
-                .guest-info-section h3,
-                .member-info-section h3 {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #1f2937;
-                    margin-bottom: 16px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                .phone-input-group,
-                .member-input-group {
-                    position: relative;
-                }
-
-                .phone-input-group label,
-                .member-input-group label {
-                    display: block;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #374151;
-                    margin-bottom: 8px;
-                }
-
-                .phone-input-group input,
-                .member-input-group input {
-                    width: 100%;
-                    padding: 16px 20px;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 12px;
-                    font-size: 16px;
-                    font-weight: 500;
-                    transition: all 0.3s ease;
-                    background: linear-gradient(145deg, #ffffff 0%, #f9fafb 100%);
-                    box-sizing: border-box;
-                }
-
-                .phone-input-group input:focus,
-                .member-input-group input:focus {
-                    outline: none;
-                    border-color: #3b82f6;
-                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-                    background: #ffffff;
-                }
-
-                .phone-help-text {
-                    font-size: 12px;
-                    color: #6b7280;
-                    margin-top: 8px;
-                    line-height: 1.4;
-                }
-
-                .member-search-btn {
-                    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 12px;
-                    padding: 12px 20px;
-                    font-size: 14px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    margin-top: 12px;
-                }
-
-                .member-search-btn:hover {
-                    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-                }
-
-                /* 결제 수단 선택 */
-                .payment-methods {
-                    margin-bottom: 28px;
-                }
-
-                .payment-methods h3 {
-                    font-size: 18px;
-                    font-weight: 700;
-                    color: #1f2937;
-                    margin-bottom: 16px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                .method-buttons {
-                    display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 16px;
-                }
-
-                .payment-method-btn {
-                    background: linear-gradient(145deg, #ffffff 0%, #f9fafb 100%);
-                    border: 2px solid #e5e7eb;
-                    border-radius: 16px;
-                    padding: 24px 20px;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 12px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .payment-method-btn::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
-                    transition: left 0.6s ease;
-                }
-
-                .payment-method-btn:hover::before {
-                    left: 100%;
-                }
-
-                .payment-method-btn:hover {
-                    border-color: #059669;
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.15);
-                }
-
-                .payment-method-btn.active {
-                    background: linear-gradient(145deg, #ecfdf5 0%, #d1fae5 100%);
-                    border-color: #059669;
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.2);
-                }
-
-                .method-icon {
-                    font-size: 32px;
-                    transition: transform 0.3s ease;
-                }
-
-                .payment-method-btn:hover .method-icon,
-                .payment-method-btn.active .method-icon {
-                    transform: scale(1.1);
-                }
-
-                .payment-method-btn span {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #374151;
-                    transition: color 0.3s ease;
-                }
-
-                .payment-method-btn.active span {
-                    color: #059669;
-                }
-
-                /* 현금 결제 섹션 */
-                .cash-section {
-                    background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
-                    border: 2px solid #fde68a;
-                    border-radius: 16px;
-                    padding: 24px;
-                    margin-bottom: 24px;
-                }
-
-                .cash-section h3 {
-                    font-size: 16px;
-                    font-weight: 700;
-                    color: #92400e;
-                    margin-bottom: 16px;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-
-                .cash-input-group label {
-                    display: block;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: #92400e;
-                    margin-bottom: 8px;
-                }
-
-                .cash-input-group input {
-                    width: 100%;
-                    padding: 16px 20px;
-                    border: 2px solid #fde68a;
-                    border-radius: 12px;
-                    font-size: 18px;
-                    font-weight: 700;
-                    text-align: right;
-                    background: #ffffff;
-                    color: #92400e;
-                    box-sizing: border-box;
-                }
-
-                .quick-amount-buttons {
-                    display: grid;
-                    grid-template-columns: repeat(4, 1fr);
-                    gap: 8px;
-                    margin-top: 12px;
-                }
-
-                .quick-btn {
-                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                }
-
-                .quick-btn:hover {
-                    background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-                    transform: translateY(-1px);
-                }
-
-                .change-display {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-top: 16px;
-                    padding: 16px;
-                    background: rgba(255, 255, 255, 0.8);
-                    border-radius: 12px;
-                    font-size: 18px;
-                    font-weight: 700;
-                }
-
-                /* 버튼 스타일 */
                 .cancel-btn {
                     flex: 1;
-                    padding: 18px 24px;
-                    border: 2px solid #e5e7eb;
-                    border-radius: 16px;
+                    padding: 16px 20px;
+                    border: none;
+                    border-radius: 12px;
                     font-size: 16px;
                     font-weight: 700;
                     cursor: pointer;
-                    transition: all 0.3s ease;
-                    background: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
-                    color: #6b7280;
+                    transition: all 0.2s;
+                    background: #f1f5f9;
+                    color: #64748b;
                 }
 
                 .cancel-btn:hover {
-                    background: linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%);
-                    border-color: #d1d5db;
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                    background: #e2e8f0;
                 }
 
-                .confirm-btn {
-                    flex: 2;
-                    padding: 18px 24px;
-                    border: none;
-                    border-radius: 16px;
-                    font-size: 16px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    background: linear-gradient(135deg, #059669 0%, #047857 100%);
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .confirm-btn::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-                    transition: left 0.6s ease;
-                }
-
-                .confirm-btn:hover::before {
-                    left: 100%;
-                }
-
-                .confirm-btn:hover {
-                    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-                    transform: translateY(-2px);
-                    box-shadow: 0 8px 24px rgba(5, 150, 105, 0.3);
-                }
-
-                .confirm-btn .amount {
-                    font-size: 18px;
-                    font-weight: 800;
-                }
-
-                /* 로딩 상태 */
                 .loading-state {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    padding: 80px 40px;
+                    padding: 60px 40px;
                     text-align: center;
                 }
 
                 .loading-spinner {
-                    width: 48px;
-                    height: 48px;
-                    border: 4px solid #e2e8f0;
-                    border-top: 4px solid #3b82f6;
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #e2e8f0;
+                    border-top: 3px solid #3b82f6;
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
-                    margin-bottom: 24px;
+                    margin-bottom: 20px;
                 }
 
-                .loading-state h3 {
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: #1f2937;
-                    margin: 0 0 8px 0;
-                }
-
-                .loading-state p {
-                    font-size: 16px;
-                    color: #6b7280;
-                    margin: 0;
-                }
-
-                /* 에러 상태 */
                 .error-state {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    padding: 80px 40px;
+                    padding: 60px 40px;
                     text-align: center;
                 }
 
                 .error-icon {
-                    font-size: 64px;
-                    margin-bottom: 24px;
-                    color: #dc2626;
+                    font-size: 48px;
+                    margin-bottom: 16px;
                 }
 
                 .error-title {
-                    font-size: 20px;
+                    font-size: 18px;
                     font-weight: 700;
                     color: #dc2626;
-                    margin-bottom: 12px;
+                    margin-bottom: 8px;
                 }
 
                 .error-message {
                     color: #6b7280;
-                    margin-bottom: 28px;
-                    font-size: 16px;
-                    line-height: 1.5;
+                    margin-bottom: 20px;
                 }
 
                 .retry-btn {
-                    padding: 12px 24px;
-                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                    padding: 10px 20px;
+                    background: #3b82f6;
                     color: white;
                     border: none;
-                    border-radius: 12px;
+                    border-radius: 6px;
                     cursor: pointer;
-                    font-weight: 700;
-                    font-size: 16px;
-                    transition: all 0.3s ease;
+                    font-weight: 600;
                 }
 
                 .retry-btn:hover {
-                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                    background: #2563eb;
                 }
 
-                /* 애니메이션 */
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
-                }
-
-                /* 반응형 */
-                @media (max-width: 640px) {
-                    .pos-payment-modal {
-                        width: 95%;
-                        margin: 20px auto;
-                    }
-
-                    .modal-header {
-                        padding: 20px 24px 16px;
-                    }
-
-                    .modal-header h2 {
-                        font-size: 20px;
-                    }
-
-                    .modal-body {
-                        padding: 24px 20px;
-                    }
-
-                    .modal-footer {
-                        padding: 16px 20px 24px;
-                        flex-direction: column;
-                    }
-
-                    .type-buttons,
-                    .method-buttons {
-                        grid-template-columns: 1fr;
-                    }
-
-                    .quick-amount-buttons {
-                        grid-template-columns: repeat(2, 1fr);
-                    }
                 }
             </style>
         `;
