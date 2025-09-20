@@ -13,60 +13,75 @@ const POSPaymentModal = {
     /**
      * 결제 모달 표시
      */
-    async show(paymentData) {
-        console.log('🔍 결제 모달 표시 요청:', paymentData);
+    async show(initialData) {
+        console.log('🔍 결제 모달 표시 요청:', initialData);
 
-        if (!paymentData) {
-            console.error('❌ 결제 데이터가 없습니다');
-            alert('결제 정보를 불러올 수 없습니다.');
-            return;
-        }
-
-        // 필수 필드 검증
-        const requiredFields = ['totalAmount', 'itemCount', 'storeId', 'tableNumber'];
-        const missingFields = requiredFields.filter(field => paymentData[field] === undefined || paymentData[field] === null);
-
-        if (missingFields.length > 0) {
-            console.error('❌ 필수 결제 데이터 누락:', missingFields, paymentData);
-            alert('결제 정보가 완전하지 않습니다: ' + missingFields.join(', '));
-            return;
-        }
-
-        // 데이터 유효성 재확인
-        if (typeof paymentData.totalAmount !== 'number' || paymentData.totalAmount <= 0) {
-            console.error('❌ 결제 금액이 유효하지 않습니다:', paymentData.totalAmount);
-            alert('결제 금액이 유효하지 않습니다.');
-            return;
-        }
-
-        // 현재 테이블의 실제 결제 정보 조회
-        const actualPaymentInfo = await this.loadActualPaymentInfo(paymentData.storeId, paymentData.tableNumber);
-
-        // 실제 결제 정보가 있으면 우선 사용, 없으면 전달받은 데이터 사용
-        const finalPaymentData = actualPaymentInfo || {
-            totalAmount: paymentData.totalAmount,
-            itemCount: paymentData.itemCount,
-            storeId: paymentData.storeId,
-            tableNumber: paymentData.tableNumber,
-            orderId: paymentData.orderId || null,
-            paymentMethod: paymentData.paymentMethod || 'CARD'
+        // 기본 데이터 설정 (API 호출 전에도 모달을 렌더링할 수 있도록)
+        this.currentPaymentData = initialData || {
+            totalAmount: 0,
+            itemCount: 0,
+            storeId: null,
+            tableNumber: null,
+            orderId: null,
+            paymentMethod: 'CARD',
+            isLoading: true
         };
 
-        // 모든 검증 통과 후 데이터 설정
-        this.currentPaymentData = finalPaymentData;
-
-        // 데이터 설정 확인
-        if (!this.currentPaymentData || this.currentPaymentData.totalAmount <= 0) {
-            console.error('❌ 유효하지 않은 결제 데이터:', this.currentPaymentData);
-            alert('결제 정보가 유효하지 않습니다.');
-            return;
-        }
-
-        console.log('✅ 결제 데이터 설정 완료:', this.currentPaymentData);
-
         this.isVisible = true;
+
+        // 모달 먼저 렌더링 (로딩 상태로)
         this.render();
         this.setupEventListeners();
+
+        // API 호출로 실제 결제 정보 로드
+        try {
+            if (initialData && initialData.storeId && initialData.tableNumber) {
+                console.log('📡 실제 결제 정보 API 호출 시작');
+                
+                const actualPaymentInfo = await this.loadActualPaymentInfo(initialData.storeId, initialData.tableNumber);
+                
+                if (actualPaymentInfo) {
+                    // API로부터 받은 실제 데이터로 업데이트
+                    this.currentPaymentData = {
+                        ...actualPaymentInfo,
+                        paymentMethod: initialData.paymentMethod || 'CARD',
+                        isLoading: false
+                    };
+                    
+                    console.log('✅ 실제 결제 정보 로드 완료:', this.currentPaymentData);
+                } else {
+                    // API 응답이 없을 경우 초기 데이터 사용
+                    this.currentPaymentData = {
+                        ...initialData,
+                        isLoading: false
+                    };
+                    
+                    console.log('ℹ️ 초기 데이터 사용:', this.currentPaymentData);
+                }
+            } else {
+                // 초기 데이터가 불완전한 경우
+                this.currentPaymentData.isLoading = false;
+                console.warn('⚠️ 초기 데이터가 불완전하여 API 호출을 건너뜀');
+            }
+
+            // 데이터 로드 후 모달 재렌더링
+            this.render();
+            this.setupEventListeners();
+
+        } catch (error) {
+            console.error('❌ 결제 정보 API 로드 실패:', error);
+            
+            this.currentPaymentData = {
+                ...this.currentPaymentData,
+                isLoading: false,
+                hasError: true,
+                errorMessage: error.message
+            };
+            
+            // 에러 상태로 모달 재렌더링
+            this.render();
+            this.setupEventListeners();
+        }
     },
 
     /**
@@ -110,6 +125,16 @@ const POSPaymentModal = {
         if (!this.currentPaymentData) {
             console.error('❌ getModalHTML: currentPaymentData가 null입니다');
             return '<div class="error">결제 데이터를 불러올 수 없습니다.</div>';
+        }
+
+        // 로딩 상태 처리
+        if (this.currentPaymentData.isLoading) {
+            return this.getLoadingHTML();
+        }
+
+        // 에러 상태 처리
+        if (this.currentPaymentData.hasError) {
+            return this.getErrorHTML();
         }
 
         const { totalAmount, itemCount, storeId, tableNumber } = this.currentPaymentData;
@@ -226,365 +251,7 @@ const POSPaymentModal = {
                 </div>
             </div>
 
-            <style>
-                .pos-payment-modal-overlay {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10000;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                }
-
-                .pos-payment-modal-overlay.show {
-                    opacity: 1;
-                }
-
-                .pos-payment-modal {
-                    background: white;
-                    border-radius: 20px;
-                    width: 90%;
-                    max-width: 500px;
-                    max-height: 90vh;
-                    overflow-y: auto;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-                    transform: scale(0.9);
-                    transition: transform 0.3s ease;
-                }
-
-                .pos-payment-modal-overlay.show .pos-payment-modal {
-                    transform: scale(1);
-                }
-
-                .modal-header {
-                    padding: 24px 24px 16px;
-                    border-bottom: 1px solid #e2e8f0;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .modal-header h2 {
-                    margin: 0;
-                    font-size: 20px;
-                    font-weight: 700;
-                    color: #1e293b;
-                }
-
-                .close-btn {
-                    background: none;
-                    border: none;
-                    font-size: 28px;
-                    color: #64748b;
-                    cursor: pointer;
-                    padding: 0;
-                    width: 32px;
-                    height: 32px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 50%;
-                    transition: all 0.2s;
-                }
-
-                .close-btn:hover {
-                    background: #f1f5f9;
-                    color: #374151;
-                }
-
-                .modal-body {
-                    padding: 24px;
-                }
-
-                .payment-summary {
-                    background: #f8fafc;
-                    border-radius: 12px;
-                    padding: 20px;
-                    margin-bottom: 24px;
-                    border: 1px solid #e2e8f0;
-                }
-
-                .summary-row {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 8px 0;
-                    font-size: 16px;
-                }
-
-                .summary-row:not(:last-child) {
-                    border-bottom: 1px solid #e2e8f0;
-                }
-
-                .summary-row.total {
-                    font-weight: 700;
-                    font-size: 18px;
-                    color: #1e293b;
-                    border-top: 2px solid #3b82f6;
-                    padding-top: 16px;
-                    margin-top: 8px;
-                }
-
-                .customer-type-selection h3,
-                .guest-info-section h3,
-                .member-info-section h3,
-                .payment-methods h3,
-                .cash-section h3 {
-                    margin: 0 0 16px 0;
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: #374151;
-                }
-
-                .type-buttons,
-                .method-buttons {
-                    display: flex;
-                    gap: 12px;
-                    margin-bottom: 24px;
-                }
-
-                .customer-type-btn,
-                .payment-method-btn {
-                    flex: 1;
-                    padding: 16px 12px;
-                    border: 2px solid #e2e8f0;
-                    border-radius: 12px;
-                    background: white;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    gap: 8px;
-                    font-weight: 600;
-                    color: #64748b;
-                }
-
-                .customer-type-btn:hover,
-                .payment-method-btn:hover {
-                    border-color: #3b82f6;
-                    background: #f8fafc;
-                }
-
-                .customer-type-btn.active,
-                .payment-method-btn.active {
-                    border-color: #3b82f6;
-                    background: #eff6ff;
-                    color: #1d4ed8;
-                }
-
-                .type-icon,
-                .method-icon {
-                    font-size: 24px;
-                }
-
-                .guest-info-section,
-                .member-info-section {
-                    background: #f8fafc;
-                    border-radius: 12px;
-                    padding: 20px;
-                    margin-bottom: 24px;
-                    border: 1px solid #e2e8f0;
-                }
-
-                .phone-input-group,
-                .member-input-group {
-                    margin-bottom: 12px;
-                }
-
-                .phone-input-group label,
-                .member-input-group label {
-                    display: block;
-                    margin-bottom: 8px;
-                    font-weight: 600;
-                    color: #374151;
-                }
-
-                .phone-input-group input,
-                .member-input-group input {
-                    width: 100%;
-                    padding: 12px 16px;
-                    border: 2px solid #e2e8f0;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    margin-bottom: 8px;
-                }
-
-                .phone-input-group input:focus,
-                .member-input-group input:focus {
-                    outline: none;
-                    border-color: #3b82f6;
-                }
-
-                .phone-help-text {
-                    font-size: 12px;
-                    color: #6b7280;
-                    line-height: 1.4;
-                }
-
-                .member-search-btn {
-                    padding: 10px 16px;
-                    background: #3b82f6;
-                    color: white;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-weight: 600;
-                    transition: all 0.2s;
-                }
-
-                .member-search-btn:hover {
-                    background: #2563eb;
-                }
-
-                .member-info-display {
-                    margin-top: 16px;
-                    padding: 16px;
-                    background: white;
-                    border-radius: 8px;
-                    border: 1px solid #d1d5db;
-                }
-
-                .member-details {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .member-name {
-                    font-weight: 600;
-                    color: #1f2937;
-                }
-
-                .member-points {
-                    color: #059669;
-                    font-weight: 600;
-                }
-
-                .cash-section {
-                    background: #f8fafc;
-                    border-radius: 12px;
-                    padding: 20px;
-                    border: 1px solid #e2e8f0;
-                }
-
-                .cash-input-group {
-                    margin-bottom: 16px;
-                }
-
-                .cash-input-group label {
-                    display: block;
-                    margin-bottom: 8px;
-                    font-weight: 600;
-                    color: #374151;
-                }
-
-                .cash-input-group input {
-                    width: 100%;
-                    padding: 12px 16px;
-                    border: 2px solid #e2e8f0;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: 600;
-                    margin-bottom: 12px;
-                }
-
-                .cash-input-group input:focus {
-                    outline: none;
-                    border-color: #3b82f6;
-                }
-
-                .quick-amount-buttons {
-                    display: flex;
-                    gap: 8px;
-                    flex-wrap: wrap;
-                }
-
-                .quick-btn {
-                    padding: 8px 12px;
-                    background: white;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 600;
-                    transition: all 0.2s;
-                    color: #6b7280;
-                }
-
-                .quick-btn:hover {
-                    background: #f3f4f6;
-                    border-color: #9ca3af;
-                }
-
-                .change-display {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 12px 16px;
-                    background: white;
-                    border-radius: 8px;
-                    border: 1px solid #d1d5db;
-                    font-weight: 600;
-                }
-
-                .change-display .value {
-                    color: #059669;
-                    font-size: 16px;
-                }
-
-                .modal-footer {
-                    padding: 16px 24px 24px;
-                    display: flex;
-                    gap: 12px;
-                }
-
-                .cancel-btn,
-                .confirm-btn {
-                    flex: 1;
-                    padding: 16px 20px;
-                    border: none;
-                    border-radius: 12px;
-                    font-size: 16px;
-                    font-weight: 700;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                }
-
-                .cancel-btn {
-                    background: #f1f5f9;
-                    color: #64748b;
-                }
-
-                .cancel-btn:hover {
-                    background: #e2e8f0;
-                }
-
-                .confirm-btn {
-                    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-                    color: white;
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-                }
-
-                .confirm-btn:hover {
-                    transform: translateY(-1px);
-                    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
-                }
-
-                .confirm-btn .amount {
-                    font-size: 18px;
-                    font-weight: 800;
-                }
-            </style>
+            ${this.getModalStyles()}
         `;
     },
 
@@ -699,6 +366,52 @@ const POSPaymentModal = {
         if (confirmBtn) {
             confirmBtn.addEventListener('click', () => {
                 this.processPayment();
+            });
+        }
+
+        // 재시도 버튼 (에러 상태일 때)
+        const retryBtn = document.getElementById('retryLoadPayment');
+        if (retryBtn) {
+            retryBtn.addEventListener('click', async () => {
+                console.log('🔄 결제 정보 재시도');
+                
+                // 로딩 상태로 변경
+                this.currentPaymentData.isLoading = true;
+                this.currentPaymentData.hasError = false;
+                this.render();
+                this.setupEventListeners();
+
+                // API 재호출
+                try {
+                    const actualPaymentInfo = await this.loadActualPaymentInfo(
+                        this.currentPaymentData.storeId, 
+                        this.currentPaymentData.tableNumber
+                    );
+                    
+                    if (actualPaymentInfo) {
+                        this.currentPaymentData = {
+                            ...actualPaymentInfo,
+                            paymentMethod: this.currentPaymentData.paymentMethod || 'CARD',
+                            isLoading: false
+                        };
+                    } else {
+                        this.currentPaymentData.isLoading = false;
+                    }
+                    
+                    this.render();
+                    this.setupEventListeners();
+                    
+                } catch (error) {
+                    console.error('❌ 재시도 실패:', error);
+                    this.currentPaymentData = {
+                        ...this.currentPaymentData,
+                        isLoading: false,
+                        hasError: true,
+                        errorMessage: error.message
+                    };
+                    this.render();
+                    this.setupEventListeners();
+                }
             });
         }
 
@@ -958,6 +671,236 @@ const POSPaymentModal = {
         }
 
         return await response.json();
+    },
+
+    /**
+     * 로딩 상태 HTML 생성
+     */
+    getLoadingHTML() {
+        return `
+            <div class="pos-payment-modal">
+                <div class="modal-header">
+                    <h2>💳 결제 확인</h2>
+                    <button class="close-btn" id="closePaymentModal">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <h3>결제 정보를 불러오는 중입니다</h3>
+                        <p>잠시만 기다려 주세요...</p>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="cancel-btn" id="cancelPayment">취소</button>
+                </div>
+            </div>
+
+            ${this.getModalStyles()}
+        `;
+    },
+
+    /**
+     * 에러 상태 HTML 생성
+     */
+    getErrorHTML() {
+        return `
+            <div class="pos-payment-modal">
+                <div class="modal-header">
+                    <h2>💳 결제 확인</h2>
+                    <button class="close-btn" id="closePaymentModal">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="error-state">
+                        <div class="error-icon">⚠️</div>
+                        <h3 class="error-title">결제 정보 로드 실패</h3>
+                        <p class="error-message">
+                            ${this.currentPaymentData.errorMessage || '결제 정보를 불러올 수 없습니다.'}
+                        </p>
+                        <button class="retry-btn" id="retryLoadPayment">다시 시도</button>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="cancel-btn" id="cancelPayment">취소</button>
+                </div>
+            </div>
+
+            ${this.getModalStyles()}
+        `;
+    },
+
+    /**
+     * 모달 스타일 분리
+     */
+    getModalStyles() {
+        return `
+            <style>
+                .pos-payment-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .pos-payment-modal-overlay.show {
+                    opacity: 1;
+                }
+
+                .pos-payment-modal {
+                    background: white;
+                    border-radius: 20px;
+                    width: 90%;
+                    max-width: 500px;
+                    max-height: 90vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                    transform: scale(0.9);
+                    transition: transform 0.3s ease;
+                }
+
+                .pos-payment-modal-overlay.show .pos-payment-modal {
+                    transform: scale(1);
+                }
+
+                .modal-header {
+                    padding: 24px 24px 16px;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-header h2 {
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #1e293b;
+                }
+
+                .close-btn {
+                    background: none;
+                    border: none;
+                    font-size: 28px;
+                    color: #64748b;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    transition: all 0.2s;
+                }
+
+                .close-btn:hover {
+                    background: #f1f5f9;
+                    color: #374151;
+                }
+
+                .modal-body {
+                    padding: 24px;
+                }
+
+                .modal-footer {
+                    padding: 16px 24px 24px;
+                    display: flex;
+                    gap: 12px;
+                }
+
+                .cancel-btn {
+                    flex: 1;
+                    padding: 16px 20px;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    background: #f1f5f9;
+                    color: #64748b;
+                }
+
+                .cancel-btn:hover {
+                    background: #e2e8f0;
+                }
+
+                .loading-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 60px 40px;
+                    text-align: center;
+                }
+
+                .loading-spinner {
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #e2e8f0;
+                    border-top: 3px solid #3b82f6;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    margin-bottom: 20px;
+                }
+
+                .error-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 60px 40px;
+                    text-align: center;
+                }
+
+                .error-icon {
+                    font-size: 48px;
+                    margin-bottom: 16px;
+                }
+
+                .error-title {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #dc2626;
+                    margin-bottom: 8px;
+                }
+
+                .error-message {
+                    color: #6b7280;
+                    margin-bottom: 20px;
+                }
+
+                .retry-btn {
+                    padding: 10px 20px;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-weight: 600;
+                }
+
+                .retry-btn:hover {
+                    background: #2563eb;
+                }
+
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            </style>
+        `;
     },
 
     /**
