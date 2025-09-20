@@ -21,6 +21,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- 1-1. 주문 세션 상태 변경 시 테이블 해제 함수
+CREATE OR REPLACE FUNCTION handle_order_session_close()
+RETURNS trigger AS $$
+BEGIN
+  -- session_status가 OPEN에서 CLOSE로 변경되었을 때
+  IF OLD.session_status = 'OPEN' AND NEW.session_status = 'CLOSE' THEN
+    -- 해당 테이블의 processing_order_id를 null로 설정
+    UPDATE store_tables 
+    SET processing_order_id = NULL
+    WHERE store_id = NEW.store_id 
+      AND table_number = NEW.table_num 
+      AND processing_order_id = NEW.id;
+      
+    -- 로그 출력
+    RAISE NOTICE '테이블 해제: 매장 %, 테이블 %, 주문 %', NEW.store_id, NEW.table_num, NEW.id;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- 2. 티켓 이벤트 알림 함수
 CREATE OR REPLACE FUNCTION notify_kds_ticket_change()
 RETURNS trigger AS $$
@@ -118,12 +139,19 @@ $$ LANGUAGE plpgsql;
 
 -- 트리거 생성
 
--- orders 테이블 트리거
+-- orders 테이블 트리거 (KDS 알림)
 DROP TRIGGER IF EXISTS orders_kds_notify ON orders;
 CREATE TRIGGER orders_kds_notify
   AFTER INSERT OR UPDATE OR DELETE ON orders
   FOR EACH ROW
   EXECUTE FUNCTION notify_kds_order_change();
+
+-- orders 테이블 트리거 (세션 상태 변경 시 테이블 해제)
+DROP TRIGGER IF EXISTS orders_session_close ON orders;
+CREATE TRIGGER orders_session_close
+  AFTER UPDATE OF session_status ON orders
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_order_session_close();
 
 -- order_tickets 테이블 트리거 (상태 변경만 감지)
 DROP TRIGGER IF EXISTS order_tickets_kds_notify ON order_tickets;
@@ -152,6 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_order_items_status ON order_items(item_status, up
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status, created_at);
 
 COMMENT ON FUNCTION notify_kds_order_change() IS 'KDS 주문 변경 실시간 알림 함수';
+COMMENT ON FUNCTION handle_order_session_close() IS '주문 세션 종료 시 테이블 해제 처리 함수';
 COMMENT ON FUNCTION notify_kds_ticket_change() IS 'KDS 티켓 변경 실시간 알림 함수';
 COMMENT ON FUNCTION notify_kds_item_change() IS 'KDS 아이템 변경 실시간 알림 함수';
 COMMENT ON FUNCTION notify_kds_payment_change() IS 'KDS 결제 변경 실시간 알림 함수 (새 스키마 호환)';
