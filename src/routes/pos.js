@@ -634,6 +634,82 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 });
 
 /**
+ * [GET] /stores/:storeId/table/:tableNumber/order-tickets - 테이블별 POS 주문 티켓 조회
+ */
+router.get('/stores/:storeId/table/:tableNumber/order-tickets', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    console.log(`🎫 테이블 ${parsedTableNumber}의 POS 주문 티켓 조회 (매장 ${parsedStoreId})`);
+
+    // 해당 테이블의 미지불 POS 티켓들과 그 아이템들을 조회
+    const result = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.batch_no,
+        ot.status,
+        ot.paid_status,
+        ot.created_at,
+        ot.order_id,
+        o.status as order_status,
+        
+        -- 티켓의 모든 아이템 정보를 JSON으로 집계
+        COALESCE(
+          JSON_AGG(
+            JSON_BUILD_OBJECT(
+              'id', oi.id,
+              'menu_id', oi.menu_id,
+              'menu_name', oi.menu_name,
+              'unit_price', oi.unit_price,
+              'quantity', oi.quantity,
+              'total_price', oi.total_price,
+              'item_status', oi.item_status,
+              'cook_station', oi.cook_station
+            ) ORDER BY oi.created_at
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) as items
+        
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id 
+        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND ot.source = 'POS'
+        AND ot.paid_status = 'UNPAID'
+        AND o.status = 'OPEN'
+        AND ot.status NOT IN ('CANCELLED', 'REFUNDED')
+      GROUP BY ot.id, ot.batch_no, ot.status, ot.paid_status, ot.created_at, ot.order_id, o.status
+      ORDER BY ot.created_at DESC
+    `, [parsedStoreId, parsedTableNumber]);
+
+    console.log(`📊 조회된 POS 티켓: ${result.rows.length}개`);
+
+    if (result.rows.length > 0) {
+      result.rows.forEach(ticket => {
+        console.log(`🎫 티켓 #${ticket.batch_no}: ${ticket.items.length}개 아이템, 상태: ${ticket.status}`);
+      });
+    }
+
+    res.json({
+      success: true,
+      orderTickets: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ POS 주문 티켓 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 주문 티켓 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
  * [GET] /stores/:storeId/table/:tableNumber/tll-orders - 테이블별 TLL 주문 조회
  */
 router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) => {

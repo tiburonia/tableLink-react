@@ -2014,6 +2014,61 @@ body {
     vertical-align: middle;
 }
 
+/* 티켓 배지 스타일 */
+.ticket-badge {
+    background: #9c27b0;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* 티켓 시간 스타일 */
+.ticket-time {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+/* 티켓 아이템 행 스타일 */
+.order-row.ticket-item {
+    background: #faf5ff;
+    border-left: 3px solid #9c27b0;
+}
+
+.order-row.ticket-item:hover {
+    background: #f3e8ff;
+}
+
+/* 티켓용 수량 표시 */
+.quantity-display-ticket {
+    background: #f3e8ff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #7c3aed;
+    border: 1px solid #c4b5fd;
+    font-size: 13px;
+}
+
+/* 메뉴 상세 툴팁 */
+.menu-details-tooltip {
+    font-size: 12px;
+    color: #374151;
+    cursor: help;
+    max-width: 150px;
+    word-wrap: break-word;
+}
+
+.menu-details-tooltip:hover {
+    color: #1f2937;
+    font-weight: 600;
+}
+
 /* 빈 플레이스홀더 */
 .empty-placeholder {
     color: #9ca3af;
