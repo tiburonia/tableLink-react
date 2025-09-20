@@ -1326,7 +1326,7 @@ const POSOrderScreen = {
             const loadingIndicator = this.showLoadingIndicator('결제 정보를 불러오는 중...');
 
             // API 호출로 실제 결제 대상 내역 조회
-            const paymentData = await this.fetchPaymentTargetData();
+            const paymentData = await this.fetchPaymentTargetData(method);
 
             // 로딩 표시 제거
             if (loadingIndicator) {
@@ -1357,7 +1357,7 @@ const POSOrderScreen = {
     /**
      * API 호출로 결제 대상 데이터 조회
      */
-    async fetchPaymentTargetData() {
+    async fetchPaymentTargetData(method = 'card') {
         console.log(`🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`);
 
         try {
@@ -1413,7 +1413,7 @@ const POSOrderScreen = {
                 orderId: orderId,
                 unpaidTickets: unpaidData.unpaidTickets,
                 orderItems: orderItems,
-                paymentMethod: method
+                paymentMethod: method.toUpperCase()
             };
 
         } catch (error) {
