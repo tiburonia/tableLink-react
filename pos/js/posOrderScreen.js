@@ -1862,17 +1862,8 @@ const POSOrderScreen = {
                 this.sessionItems = data.session.orderItems || [];
                 console.log('✅ 세션 데이터 로드:', this.currentSession);
 
-                // 세션이 있으면 currentOrders에 세션 아이템들 반영
-                this.currentOrders = this.sessionItems.map(item => ({
-                    id: item.menu_id,
-                    menuName: item.menu_name,
-                    price: item.unit_price,
-                    quantity: item.quantity,
-                    cookingStatus: item.item_status,
-                    isCart: false, // 세션 아이템은 카트가 아님
-                    orderItemId: item.order_item_id,
-                    ticketId: item.ticket_id
-                }));
+                // 세션 정보는 별도로 저장 (currentOrders 덮어쓰지 않음)
+                // currentOrders는 이미 consolidateOrderItems에서 통합 처리되었으므로 유지
 
                 // 테이블 상태 업데이트 (예: 'occupied')
                 this.updateTableStatus(this.currentTable, 'occupied');
