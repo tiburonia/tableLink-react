@@ -1268,6 +1268,18 @@ const POSOrderScreen = {
     async showPOSPaymentModal(method) {
         console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
 
+        // POSPaymentModal 존재 확인
+        if (typeof POSPaymentModal === 'undefined') {
+            console.error('❌ POSPaymentModal이 로드되지 않았습니다');
+            alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+            
+            // 강제 새로고침
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+            return;
+        }
+
         // 필수 정보 검증
         if (!this.currentStoreId || !this.currentTableNumber) {
             console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
@@ -1295,12 +1307,7 @@ const POSOrderScreen = {
             console.log('💳 API로부터 받은 결제 데이터:', paymentData);
 
             // POSPaymentModal 표시
-            if (typeof POSPaymentModal !== 'undefined') {
-                await POSPaymentModal.show(paymentData);
-            } else {
-                console.error('❌ POSPaymentModal이 로드되지 않았습니다');
-                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
-            }
+            await POSPaymentModal.show(paymentData);
 
         } catch (error) {
             console.error('❌ 결제 정보 조회 실패:', error);
