@@ -355,18 +355,18 @@ router.get('/stats/:storeId/daily', async (req, res) => {
 
     const result = await pool.query(`
       SELECT 
-        COUNT(c.id) as total_orders,
+        COUNT(DISTINCT o.id) as total_orders,
         COALESCE(SUM(p.amount), 0) as total_revenue,
-        COUNT(DISTINCT COALESCE(c.user_id, c.guest_phone)) as total_customers,
-        COUNT(CASE WHEN p.payment_method = 'CASH' THEN 1 END) as cash_orders,
-        COUNT(CASE WHEN p.payment_method = 'CARD' THEN 1 END) as card_orders,
-        COUNT(CASE WHEN p.payment_method = 'TOSS' THEN 1 END) as toss_orders
-      FROM checks c
-      JOIN payments p ON c.id = p.check_id
-      WHERE c.store_id = $1 
-        AND DATE(c.closed_at) = $2
-        AND c.status = 'closed'
-        AND p.status = 'completed'
+        COUNT(DISTINCT COALESCE(o.user_id, o.guest_phone)) as total_customers,
+        COUNT(CASE WHEN p.method = 'CASH' THEN 1 END) as cash_orders,
+        COUNT(CASE WHEN p.method = 'CARD' THEN 1 END) as card_orders,
+        COUNT(CASE WHEN p.method = 'TOSS' THEN 1 END) as toss_orders
+      FROM orders o
+      LEFT JOIN payments p ON o.id = p.order_id
+      WHERE o.store_id = $1 
+        AND DATE(o.created_at) = $2
+        AND o.status != 'CANCELLED'
+        AND (p.status = 'completed' OR p.status IS NULL)
     `, [parseInt(storeId), date]);
 
     const stats = result.rows[0];
@@ -558,7 +558,7 @@ router.get('/order/:orderId', async (req, res) => {
         m.name as menu_name,
         m.category as menu_category
       FROM order_items oi
-      JOIN menus m ON oi.menu_id = m.id
+      LEFT JOIN menus m ON oi.menu_id = m.id
       WHERE oi.order_id = $1
       ORDER BY oi.id
     `, [parseInt(orderId)]);
@@ -569,7 +569,7 @@ router.get('/order/:orderId', async (req, res) => {
         ...order,
         items: itemsResult.rows.map(item => ({
           ...item,
-          options: typeof item.options === 'string' ? JSON.parse(item.options) : item.options
+          options: typeof item.options === 'string' ? JSON.parse(item.options) : (item.options || {})
         }))
       }
     });
@@ -591,7 +591,6 @@ router.get('/users/:userId', async (req, res) => {
 
     console.log(`📋 사용자 ${userId} 주문 목록 조회`);
 
-    // 현재 orders 테이블에서 직접 조회 (기존 구조 사용)
     let whereClause = 'WHERE o.user_id = $1';
     const queryParams = [userId];
 
@@ -604,15 +603,16 @@ router.get('/users/:userId', async (req, res) => {
       SELECT 
         o.id, 
         o.total_price, 
-        COALESCE(o.status, o.order_status, 'OPEN') as status,
+        COALESCE(o.status, 'OPEN') as status,
         o.created_at,
-        o.table_number,
+        o.table_num as table_number,
         s.id as store_id, 
         s.name as store_name, 
         s.category as store_category,
-        0 as item_count
+        COUNT(ot.id) as ticket_count
       FROM orders o
       JOIN stores s ON o.store_id = s.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
       ${whereClause}
       GROUP BY o.id, s.id, s.name, s.category
       ORDER BY o.created_at DESC
@@ -676,9 +676,10 @@ router.get('/store/:storeId', async (req, res) => {
         o.*,
         COALESCE(u.name, '게스트') as customer_name,
         COALESCE(u.phone, o.guest_phone) as customer_phone,
-        0 as item_count
+        COUNT(ot.id) as ticket_count
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
       ${whereClause}
       GROUP BY o.id, u.name, u.phone
       ORDER BY o.created_at DESC
@@ -734,6 +735,9 @@ router.delete('/order/:orderId', async (req, res) => {
     // 주문 항목들 먼저 삭제
     await client.query('DELETE FROM order_items WHERE order_id = $1', [parseInt(orderId)]);
 
+    // 주문 티켓들 삭제
+    await client.query('DELETE FROM order_tickets WHERE order_id = $1', [parseInt(orderId)]);
+
     // 주문 삭제
     await client.query('DELETE FROM orders WHERE id = $1', [parseInt(orderId)]);
 
@@ -775,97 +779,21 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const parsedOrderId = parseInt(orderId);
 
-    // 주문 기본 정보 조회 - 더 안전한 방식으로 개선
-    let orderResult;
-    try {
-      // orders 테이블 존재 여부 먼저 확인
-      const ordersTableCheck = await pool.query(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables 
-          WHERE table_schema = 'public' AND table_name = 'orders'
-        ) as exists
-      `);
-
-      if (!ordersTableCheck.rows[0]?.exists) {
-        console.error('❌ orders 테이블이 존재하지 않습니다');
-        return res.status(500).json({
-          success: false,
-          error: 'orders 테이블이 존재하지 않습니다'
-        });
-      }
-
-      // 컬럼 존재 여부 확인
-      const columnsCheck = await pool.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_schema = 'public' AND table_name = 'orders'
-      `);
-
-      const columnNames = columnsCheck.rows.map(row => row.column_name);
-      console.log('📋 orders 테이블 컬럼들:', columnNames);
-
-      // 동적으로 SELECT 쿼리 생성
-      const selectFields = [];
-      selectFields.push('o.id');
-      
-      if (columnNames.includes('store_id')) {
-        selectFields.push('o.store_id');
-      } else {
-        selectFields.push('NULL as store_id');
-      }
-
-      if (columnNames.includes('table_num')) {
-        selectFields.push('COALESCE(o.table_num, 1) as table_number');
-      } else if (columnNames.includes('table_number')) {
-        selectFields.push('COALESCE(o.table_number, 1) as table_number');
-      } else {
-        selectFields.push('1 as table_number');
-      }
-
-      if (columnNames.includes('status')) {
-        selectFields.push('COALESCE(o.status, \'OPEN\') as status');
-      } else if (columnNames.includes('order_status')) {
-        selectFields.push('COALESCE(o.order_status, \'OPEN\') as status');
-      } else {
-        selectFields.push('\'OPEN\' as status');
-      }
-
-      selectFields.push('o.created_at');
-
-      if (columnNames.includes('session_ended')) {
-        selectFields.push('COALESCE(o.session_ended, false) as session_ended');
-      } else {
-        selectFields.push('false as session_ended');
-      }
-
-      if (columnNames.includes('total_price')) {
-        selectFields.push('COALESCE(o.total_price, 0) as base_amount');
-      } else if (columnNames.includes('total_amount')) {
-        selectFields.push('COALESCE(o.total_amount, 0) as base_amount');
-      } else {
-        selectFields.push('0 as base_amount');
-      }
-
-      const selectQuery = `
-        SELECT 
-          ${selectFields.join(',\n          ')},
-          COALESCE(s.name, '알 수 없는 매장') as store_name
-        FROM orders o
-        LEFT JOIN stores s ON o.store_id = s.id
-        WHERE o.id = $1
-      `;
-
-      console.log('🔍 실행할 쿼리:', selectQuery);
-
-      orderResult = await pool.query(selectQuery, [parsedOrderId]);
-
-    } catch (orderError) {
-      console.error('❌ 주문 기본 정보 조회 실패:', orderError);
-      return res.status(500).json({
-        success: false,
-        error: '주문 정보를 조회할 수 없습니다: ' + orderError.message
-      });
-    }
+    // 주문 기본 정보 조회
+    const orderResult = await pool.query(`
+      SELECT 
+        o.id,
+        o.store_id,
+        COALESCE(o.table_num, 1) as table_number,
+        COALESCE(o.status, 'OPEN') as status,
+        o.created_at,
+        COALESCE(o.session_ended, false) as session_ended,
+        COALESCE(o.total_price, 0) as base_amount,
+        COALESCE(s.name, '알 수 없는 매장') as store_name
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.id = $1
+    `, [parsedOrderId]);
 
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
@@ -876,252 +804,86 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // 티켓 정보 조회 (안전한 방식)
-    let tickets = [];
-    try {
-      const tableCheckResult = await pool.query(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables 
-          WHERE table_schema = 'public' AND table_name = 'order_tickets'
-        ) as exists
-      `);
+    // 티켓 정보 조회 (아이템 포함)
+    const ticketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.order_id,
+        COALESCE(ot.batch_no, 1) as batch_no,
+        COALESCE(ot.status, 'PENDING') as status,
+        ot.created_at
+      FROM order_tickets ot
+      WHERE ot.order_id = $1
+      ORDER BY ot.created_at DESC
+    `, [parsedOrderId]);
 
-      if (tableCheckResult.rows[0]?.exists) {
-        try {
-          // 먼저 티켓 기본 정보 조회
-          const ticketsResult = await pool.query(`
-            SELECT 
-              ot.id,
-              ot.order_id,
-              COALESCE(ot.batch_no, 1) as batch_no,
-              COALESCE(ot.status, 'PENDING') as status,
-              ot.created_at
-            FROM order_tickets ot
-            WHERE ot.order_id = $1
-            ORDER BY ot.created_at DESC
-          `, [parsedOrderId]);
+    // 각 티켓에 대해 아이템 정보 조회
+    const ticketsWithItems = await Promise.all(
+      ticketsResult.rows.map(async (ticket) => {
+        console.log(`🔍 티켓 ${ticket.ticket_id} 아이템 조회 시작`);
 
-          // 각 티켓에 대해 아이템 정보도 조회
-          const ticketsWithItems = await Promise.all(
-            ticketsResult.rows.map(async (ticket) => {
-              let items = [];
-              
-              try {
-                console.log(`🔍 티켓 ${ticket.id} 아이템 조회 시작`);
-                
-                // 먼저 order_items 테이블 구조 확인
-                const orderItemsCheck = await pool.query(`
-                  SELECT column_name 
-                  FROM information_schema.columns 
-                  WHERE table_schema = 'public' AND table_name = 'order_items'
-                `);
+        // order_items에서 ticket_id로 조회
+        const itemsResult = await pool.query(`
+          SELECT 
+            oi.id,
+            COALESCE(oi.menu_name, '메뉴') as menu_name,
+            COALESCE(oi.menu_name, '메뉴') as name,
+            COALESCE(oi.quantity, 1) as quantity,
+            COALESCE(oi.unit_price, 0) as unit_price,
+            COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
+            COALESCE(oi.item_status, 'PENDING') as status,
+            oi.options
+          FROM order_items oi
+          WHERE oi.ticket_id = $1
+          ORDER BY oi.created_at
+        `, [ticket.ticket_id]);
 
-                const orderItemColumns = orderItemsCheck.rows.map(row => row.column_name);
-                console.log(`📋 order_items 테이블 컬럼:`, orderItemColumns);
+        const items = itemsResult.rows.map(item => ({
+          ...item,
+          options: typeof item.options === 'string' ? JSON.parse(item.options) : (item.options || {})
+        }));
 
-                let items = [];
+        console.log(`✅ 티켓 ${ticket.ticket_id} 아이템 조회 완료: ${items.length}개`);
 
-                // 1. ticket_id로 조회 시도
-                if (orderItemColumns.includes('ticket_id')) {
-                  const itemsResult = await pool.query(`
-                    SELECT 
-                      oi.id,
-                      COALESCE(oi.menu_name, '메뉴') as menu_name,
-                      COALESCE(oi.menu_name, '메뉴') as name,
-                      COALESCE(oi.quantity, 1) as quantity,
-                      COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
-                      COALESCE(oi.item_status, 'PENDING') as status
-                    FROM order_items oi
-                    WHERE oi.ticket_id = $1
-                    ORDER BY oi.created_at
-                  `, [ticket.id]);
+        return {
+          ticket_id: ticket.ticket_id,
+          id: ticket.ticket_id,
+          order_id: ticket.order_id,
+          batch_no: ticket.batch_no,
+          status: ticket.status,
+          created_at: ticket.created_at,
+          items: items
+        };
+      })
+    );
 
-                  items = itemsResult.rows;
-                  console.log(`✅ 티켓 ${ticket.id} ticket_id로 조회:`, {
-                    itemCount: items.length,
-                    items: items
-                  });
-                }
+    // 결제 내역 조회
+    const paymentsResult = await pool.query(`
+      SELECT 
+        p.id,
+        COALESCE(p.method, 'UNKNOWN') as method,
+        COALESCE(p.amount, 0) as amount,
+        COALESCE(p.status, 'pending') as status,
+        p.created_at,
+        p.payment_key
+      FROM payments p 
+      WHERE p.order_id = $1 
+      ORDER BY p.created_at DESC
+    `, [parsedOrderId]);
 
-                // 2. ticket_id로 찾지 못했으면 order_id로 조회
-                if (items.length === 0 && orderItemColumns.includes('order_id')) {
-                  console.log(`🔄 티켓 ${ticket.id} order_id로 재시도`);
-                  
-                  const orderItemsResult = await pool.query(`
-                    SELECT 
-                      oi.id,
-                      COALESCE(oi.menu_name, '메뉴') as menu_name,
-                      COALESCE(oi.menu_name, '메뉴') as name,
-                      COALESCE(oi.quantity, 1) as quantity,
-                      COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
-                      COALESCE(oi.item_status, 'PENDING') as status,
-                      oi.ticket_id
-                    FROM order_items oi
-                    WHERE oi.order_id = $1
-                    ORDER BY oi.created_at
-                  `, [ticket.order_id]);
+    const payments = paymentsResult.rows.map(payment => ({
+      id: payment.id,
+      method: payment.method?.toString().toUpperCase() || 'UNKNOWN',
+      amount: parseInt(payment.amount) || 0,
+      status: payment.status,
+      createdAt: payment.created_at,
+      payment_key: payment.payment_key,
+      ticket_ids: []
+    }));
 
-                  // 만약 여러 티켓이 있다면 해당 티켓의 아이템만 필터링
-                  const allOrderItems = orderItemsResult.rows;
-                  
-                  if (allOrderItems.length > 0) {
-                    // ticket_id가 일치하는 아이템이 있으면 그것만
-                    const matchingItems = allOrderItems.filter(item => item.ticket_id === ticket.id);
-                    
-                    if (matchingItems.length > 0) {
-                      items = matchingItems;
-                      console.log(`✅ 티켓 ${ticket.id} 필터링된 아이템:`, {
-                        totalOrderItems: allOrderItems.length,
-                        matchingItems: items.length,
-                        items: items
-                      });
-                    } else {
-                      // ticket_id가 없거나 일치하지 않으면 전체 주문의 아이템을 균등분배
-                      const ticketIndex = ticketsResult.rows.findIndex(t => t.id === ticket.id);
-                      const totalTickets = ticketsResult.rows.length;
-                      const itemsPerTicket = Math.ceil(allOrderItems.length / totalTickets);
-                      const startIndex = ticketIndex * itemsPerTicket;
-                      const endIndex = Math.min(startIndex + itemsPerTicket, allOrderItems.length);
-                      
-                      items = allOrderItems.slice(startIndex, endIndex);
-                      console.log(`✅ 티켓 ${ticket.id} 균등분배 아이템:`, {
-                        ticketIndex,
-                        totalTickets,
-                        itemsPerTicket,
-                        startIndex,
-                        endIndex,
-                        items: items
-                      });
-                    }
-                  }
-                }
-
-                // 3. 여전히 없으면 check_items 테이블에서 조회
-                if (items.length === 0) {
-                  try {
-                    console.log(`🔄 티켓 ${ticket.id} check_items 테이블에서 조회`);
-                    const checkItemsResult = await pool.query(`
-                      SELECT 
-                        ci.id,
-                        ci.menu_name as name,
-                        ci.menu_name,
-                        COALESCE(ci.quantity, 1) as quantity,
-                        'KITCHEN' as cook_station,
-                        COALESCE(ci.status, 'PENDING') as status
-                      FROM check_items ci
-                      JOIN checks c ON ci.check_id = c.id
-                      WHERE c.id = $1
-                      ORDER BY ci.ordered_at
-                    `, [ticket.id]);
-
-                    items = checkItemsResult.rows;
-                    console.log(`✅ 티켓 ${ticket.id} check_items 조회 결과:`, {
-                      itemCount: items.length,
-                      items: items
-                    });
-                  } catch (checkError) {
-                    console.warn(`⚠️ check_items 조회 실패:`, checkError.message);
-                  }
-                }
-                
-              } catch (itemError) {
-                console.error(`❌ 티켓 ${ticket.id} 아이템 조회 전체 실패:`, itemError.message);
-                items = [];
-              }
-
-              return {
-                ticket_id: ticket.id,
-                id: ticket.id,
-                order_id: ticket.order_id,
-                batch_no: ticket.batch_no,
-                status: ticket.status,
-                created_at: ticket.created_at,
-                items: items
-              };
-            })
-          );
-
-          tickets = ticketsWithItems;
-        } catch (ticketQueryError) {
-          console.warn('⚠️ 티켓 쿼리 실패:', ticketQueryError.message);
-        }
-      }
-    } catch (ticketError) {
-      console.warn('⚠️ 티켓 테이블 확인 실패:', ticketError.message);
-    }
-
-    // 결제 내역 조회 (안전한 방식)
-    let payments = [];
-    let totalAmount = parseInt(order.base_amount) || 0;
-    
-    try {
-      const paymentsTableCheck = await pool.query(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.tables 
-          WHERE table_schema = 'public' AND table_name = 'payments'
-        ) as exists
-      `);
-
-      if (paymentsTableCheck.rows[0]?.exists) {
-        try {
-          // payments 테이블 컬럼 확인
-          const paymentColumnsCheck = await pool.query(`
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_schema = 'public' AND table_name = 'payments'
-          `);
-
-          const paymentColumnNames = paymentColumnsCheck.rows.map(row => row.column_name);
-
-          let paymentQuery = `
-            SELECT 
-              p.id,
-              COALESCE(p.amount, 0) as amount,
-              COALESCE(p.status, 'pending') as status,
-              p.created_at
-          `;
-
-          if (paymentColumnNames.includes('method')) {
-            paymentQuery += `, COALESCE(p.method, 'UNKNOWN') as method`;
-          } else if (paymentColumnNames.includes('payment_method')) {
-            paymentQuery += `, COALESCE(p.payment_method, 'UNKNOWN') as method`;
-          } else {
-            paymentQuery += `, 'UNKNOWN' as method`;
-          }
-
-          if (paymentColumnNames.includes('payment_key')) {
-            paymentQuery += `, p.payment_key`;
-          } else if (paymentColumnNames.includes('transaction_id')) {
-            paymentQuery += `, p.transaction_id as payment_key`;
-          } else {
-            paymentQuery += `, NULL as payment_key`;
-          }
-
-          paymentQuery += ` FROM payments p WHERE p.order_id = $1 ORDER BY p.created_at DESC`;
-
-          const paymentsResult = await pool.query(paymentQuery, [parsedOrderId]);
-
-          payments = paymentsResult.rows.map(payment => ({
-            id: payment.id,
-            method: payment.method?.toString().toUpperCase() || 'UNKNOWN',
-            amount: parseInt(payment.amount) || 0,
-            status: payment.status,
-            createdAt: payment.created_at,
-            payment_key: payment.payment_key,
-            ticket_ids: []
-          }));
-
-          const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
-          if (paidAmount > 0) {
-            totalAmount = paidAmount;
-          }
-        } catch (paymentQueryError) {
-          console.warn('⚠️ 결제 쿼리 실패:', paymentQueryError.message);
-        }
-      }
-    } catch (paymentError) {
-      console.warn('⚠️ 결제 테이블 확인 실패:', paymentError.message);
-    }
+    // 최종 금액 계산
+    const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = paidAmount > 0 ? paidAmount : parseInt(order.base_amount) || 0;
 
     const responseData = {
       id: order.id,
@@ -1131,18 +893,19 @@ router.get('/processing/:orderId', async (req, res) => {
       status: order.status,
       createdAt: order.created_at,
       sessionEnded: order.session_ended,
-      totalOrders: tickets.length,
+      totalOrders: ticketsWithItems.length,
       totalAmount: totalAmount,
-      tickets: tickets,
+      tickets: ticketsWithItems,
       payments: payments
     };
 
     console.log(`✅ 주문 진행 상황 조회 성공:`, {
       orderId: responseData.id,
       storeName: responseData.storeName,
-      ticketCount: tickets.length,
+      ticketCount: ticketsWithItems.length,
       paymentCount: payments.length,
-      totalAmount: responseData.totalAmount
+      totalAmount: responseData.totalAmount,
+      ticketItems: ticketsWithItems.map(t => ({ ticket_id: t.ticket_id, itemCount: t.items.length }))
     });
 
     res.json({
@@ -1352,6 +1115,5 @@ router.get('/:orderId/review-status', async (req, res) => {
     });
   }
 });
-
 
 module.exports = router;
