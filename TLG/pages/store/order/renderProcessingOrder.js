@@ -68,14 +68,57 @@ async function renderProcessingOrder(orderId) {
 // 주문 데이터 로드
 async function loadOrderData(orderId) {
   try {
+    console.log('📋 주문 데이터 로드 시작:', orderId);
+    
     const response = await fetch(`/api/orders/processing/${orderId}`);
 
     if (!response.ok) {
-      throw new Error('주문 데이터 로드 실패');
+      throw new Error(`주문 데이터 로드 실패: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data.success ? data.order : null;
+    
+    console.log('📋 API 응답 전체 데이터:', data);
+    
+    if (!data.success) {
+      throw new Error(data.error || '주문 데이터 조회 실패');
+    }
+    
+    const orderData = data.order;
+    console.log('📋 파싱된 주문 데이터:', {
+      id: orderData.id,
+      storeName: orderData.storeName,
+      tableNumber: orderData.tableNumber,
+      ticketCount: orderData.tickets?.length || 0,
+      tickets: orderData.tickets
+    });
+    
+    // 각 티켓의 아이템 정보 상세 로그
+    if (orderData.tickets && orderData.tickets.length > 0) {
+      orderData.tickets.forEach((ticket, index) => {
+        console.log(`🎫 티켓 ${index + 1} (ID: ${ticket.ticket_id || ticket.id}):`, {
+          status: ticket.status,
+          itemsCount: ticket.items?.length || 0,
+          items: ticket.items
+        });
+        
+        if (ticket.items && ticket.items.length > 0) {
+          ticket.items.forEach((item, itemIndex) => {
+            console.log(`  🍽️ 아이템 ${itemIndex + 1}:`, {
+              name: item.menu_name || item.name,
+              quantity: item.quantity,
+              station: item.cook_station
+            });
+          });
+        } else {
+          console.warn(`  ⚠️ 티켓 ${ticket.ticket_id || ticket.id}에 아이템이 없습니다`);
+        }
+      });
+    } else {
+      console.warn('⚠️ 주문에 티켓이 없습니다');
+    }
+    
+    return orderData;
 
   } catch (error) {
     console.error('❌ 주문 데이터 로드 실패:', error);
@@ -176,7 +219,14 @@ function renderProcessingOrderUI(orderData) {
 
 // 티켓 그리드 렌더링 (order_tickets 단위)
 function renderTicketsGrid(tickets) {
+  console.log('🎫 renderTicketsGrid 호출:', {
+    ticketsProvided: !!tickets,
+    ticketCount: tickets?.length || 0,
+    tickets: tickets
+  });
+  
   if (!tickets || tickets.length === 0) {
+    console.log('🎫 티켓이 없어서 빈 상태 표시');
     return `
       <div class="no-tickets">
         <div class="no-tickets-icon">🍽️</div>
@@ -185,11 +235,22 @@ function renderTicketsGrid(tickets) {
     `;
   }
 
-  return tickets.map(ticket => {
+  return tickets.map((ticket, ticketIndex) => {
     const ticketId = ticket.ticket_id || ticket.id;
     const status = ticket.status || 'PENDING';
     const statusText = getTicketStatusText(status);
     const statusClass = status.toLowerCase();
+    
+    console.log(`🎫 티켓 ${ticketIndex + 1} 렌더링:`, {
+      ticketId: ticketId,
+      status: status,
+      itemsCount: ticket.items?.length || 0,
+      rawItems: ticket.items
+    });
+
+    // 아이템 데이터 안전성 확인
+    const safeItems = Array.isArray(ticket.items) ? ticket.items : [];
+    console.log(`🎫 티켓 ${ticketId} 안전한 아이템:`, safeItems);
 
     return `
       <div class="ticket-card status-${statusClass}" data-ticket-id="${ticketId}">
@@ -202,7 +263,7 @@ function renderTicketsGrid(tickets) {
           <span class="ticket-batch">배치 ${ticket.batch_no || 1}</span>
         </div>
         <div class="ticket-items">
-          ${renderTicketItems(ticket.items || [])}
+          ${renderTicketItems(safeItems)}
         </div>
         <div class="ticket-footer">
           <div class="ticket-time">${formatOrderTime(ticket.created_at)}</div>

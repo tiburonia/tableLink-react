@@ -907,6 +907,8 @@ router.get('/processing/:orderId', async (req, res) => {
               let items = [];
               
               try {
+                console.log(`🔍 티켓 ${ticket.id} 아이템 조회 시작`);
+                
                 // order_items 테이블에서 해당 티켓의 아이템들 조회
                 const itemsResult = await pool.query(`
                   SELECT 
@@ -922,29 +924,66 @@ router.get('/processing/:orderId', async (req, res) => {
                 `, [ticket.id]);
 
                 items = itemsResult.rows;
-              } catch (itemError) {
-                console.warn(`⚠️ 티켓 ${ticket.id} 아이템 조회 실패:`, itemError.message);
+                console.log(`✅ 티켓 ${ticket.id} order_items 조회 결과:`, {
+                  itemCount: items.length,
+                  items: items
+                });
                 
-                // 백업으로 check_items 테이블에서 조회 시도
+              } catch (itemError) {
+                console.warn(`⚠️ 티켓 ${ticket.id} order_items 조회 실패:`, itemError.message);
+                
+                // 백업 1: 주문 ID를 통한 아이템 조회
                 try {
-                  const checkItemsResult = await pool.query(`
+                  console.log(`🔄 티켓 ${ticket.id} 백업 조회 1: order_items by order_id`);
+                  const orderItemsResult = await pool.query(`
                     SELECT 
-                      ci.id,
-                      ci.menu_name as name,
-                      ci.menu_name,
-                      COALESCE(ci.quantity, 1) as quantity,
-                      'KITCHEN' as cook_station,
-                      COALESCE(ci.status, 'PENDING') as status
-                    FROM check_items ci
-                    JOIN checks c ON ci.check_id = c.id
-                    WHERE c.id = $1
-                    ORDER BY ci.ordered_at
-                  `, [ticket.id]);
+                      oi.id,
+                      COALESCE(oi.menu_name, oi.name, '메뉴') as menu_name,
+                      COALESCE(oi.name, oi.menu_name, '메뉴') as name,
+                      COALESCE(oi.quantity, 1) as quantity,
+                      COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
+                      COALESCE(oi.item_status, oi.status, 'PENDING') as status
+                    FROM order_items oi
+                    WHERE oi.order_id = $1
+                    ORDER BY oi.created_at
+                  `, [ticket.order_id]);
 
-                  items = checkItemsResult.rows;
-                } catch (checkItemError) {
-                  console.warn(`⚠️ 티켓 ${ticket.id} check_items 조회도 실패:`, checkItemError.message);
-                  items = [];
+                  items = orderItemsResult.rows;
+                  console.log(`✅ 티켓 ${ticket.id} order_items by order_id 조회 결과:`, {
+                    itemCount: items.length,
+                    items: items
+                  });
+                  
+                } catch (orderItemError) {
+                  console.warn(`⚠️ 티켓 ${ticket.id} order_items by order_id 조회 실패:`, orderItemError.message);
+                  
+                  // 백업 2: check_items 테이블에서 조회 시도
+                  try {
+                    console.log(`🔄 티켓 ${ticket.id} 백업 조회 2: check_items`);
+                    const checkItemsResult = await pool.query(`
+                      SELECT 
+                        ci.id,
+                        ci.menu_name as name,
+                        ci.menu_name,
+                        COALESCE(ci.quantity, 1) as quantity,
+                        'KITCHEN' as cook_station,
+                        COALESCE(ci.status, 'PENDING') as status
+                      FROM check_items ci
+                      JOIN checks c ON ci.check_id = c.id
+                      WHERE c.id = $1
+                      ORDER BY ci.ordered_at
+                    `, [ticket.id]);
+
+                    items = checkItemsResult.rows;
+                    console.log(`✅ 티켓 ${ticket.id} check_items 조회 결과:`, {
+                      itemCount: items.length,
+                      items: items
+                    });
+                    
+                  } catch (checkItemError) {
+                    console.warn(`⚠️ 티켓 ${ticket.id} check_items 조회도 실패:`, checkItemError.message);
+                    items = [];
+                  }
                 }
               }
 
