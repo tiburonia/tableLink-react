@@ -96,26 +96,44 @@ async function loadOrderData(orderId) {
     // 각 티켓의 아이템 정보 상세 로그
     if (orderData.tickets && orderData.tickets.length > 0) {
       orderData.tickets.forEach((ticket, index) => {
-        console.log(`🎫 티켓 ${index + 1} (ID: ${ticket.ticket_id || ticket.id}):`, {
+        const ticketId = ticket.ticket_id || ticket.id;
+        const itemsArray = ticket.items;
+        
+        console.log(`🎫 티켓 ${index + 1} (ID: ${ticketId}):`, {
+          ticket_id: ticketId,
+          order_id: ticket.order_id,
           status: ticket.status,
-          itemsCount: ticket.items?.length || 0,
-          items: ticket.items
+          itemsCount: itemsArray?.length || 0,
+          itemsType: Array.isArray(itemsArray) ? 'array' : typeof itemsArray,
+          rawItems: itemsArray
         });
         
-        if (ticket.items && ticket.items.length > 0) {
-          ticket.items.forEach((item, itemIndex) => {
+        if (itemsArray && Array.isArray(itemsArray) && itemsArray.length > 0) {
+          itemsArray.forEach((item, itemIndex) => {
             console.log(`  🍽️ 아이템 ${itemIndex + 1}:`, {
+              id: item.id,
               name: item.menu_name || item.name,
               quantity: item.quantity,
-              station: item.cook_station
+              station: item.cook_station,
+              status: item.status,
+              rawItem: item
             });
           });
         } else {
-          console.warn(`  ⚠️ 티켓 ${ticket.ticket_id || ticket.id}에 아이템이 없습니다`);
+          console.warn(`  ⚠️ 티켓 ${ticketId}에 아이템이 없습니다:`, {
+            itemsProvided: !!itemsArray,
+            itemsType: typeof itemsArray,
+            itemsLength: itemsArray?.length,
+            isArray: Array.isArray(itemsArray)
+          });
         }
       });
     } else {
-      console.warn('⚠️ 주문에 티켓이 없습니다');
+      console.warn('⚠️ 주문에 티켓이 없습니다:', {
+        ticketsProvided: !!orderData.tickets,
+        ticketsType: typeof orderData.tickets,
+        ticketsLength: orderData.tickets?.length
+      });
     }
     
     return orderData;

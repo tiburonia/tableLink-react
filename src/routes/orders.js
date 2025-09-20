@@ -909,57 +909,97 @@ router.get('/processing/:orderId', async (req, res) => {
               try {
                 console.log(`🔍 티켓 ${ticket.id} 아이템 조회 시작`);
                 
-                // order_items 테이블에서 해당 티켓의 아이템들 조회
-                const itemsResult = await pool.query(`
-                  SELECT 
-                    oi.id,
-                    COALESCE(oi.menu_name, oi.name, '메뉴') as menu_name,
-                    COALESCE(oi.name, oi.menu_name, '메뉴') as name,
-                    COALESCE(oi.quantity, 1) as quantity,
-                    COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
-                    COALESCE(oi.item_status, oi.status, 'PENDING') as status
-                  FROM order_items oi
-                  WHERE oi.ticket_id = $1
-                  ORDER BY oi.created_at
-                `, [ticket.id]);
+                // 먼저 order_items 테이블 구조 확인
+                const orderItemsCheck = await pool.query(`
+                  SELECT column_name 
+                  FROM information_schema.columns 
+                  WHERE table_schema = 'public' AND table_name = 'order_items'
+                `);
 
-                items = itemsResult.rows;
-                console.log(`✅ 티켓 ${ticket.id} order_items 조회 결과:`, {
-                  itemCount: items.length,
-                  items: items
-                });
-                
-              } catch (itemError) {
-                console.warn(`⚠️ 티켓 ${ticket.id} order_items 조회 실패:`, itemError.message);
-                
-                // 백업 1: 주문 ID를 통한 아이템 조회
-                try {
-                  console.log(`🔄 티켓 ${ticket.id} 백업 조회 1: order_items by order_id`);
+                const orderItemColumns = orderItemsCheck.rows.map(row => row.column_name);
+                console.log(`📋 order_items 테이블 컬럼:`, orderItemColumns);
+
+                let items = [];
+
+                // 1. ticket_id로 조회 시도
+                if (orderItemColumns.includes('ticket_id')) {
+                  const itemsResult = await pool.query(`
+                    SELECT 
+                      oi.id,
+                      COALESCE(oi.menu_name, '메뉴') as menu_name,
+                      COALESCE(oi.menu_name, '메뉴') as name,
+                      COALESCE(oi.quantity, 1) as quantity,
+                      COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
+                      COALESCE(oi.item_status, 'PENDING') as status
+                    FROM order_items oi
+                    WHERE oi.ticket_id = $1
+                    ORDER BY oi.created_at
+                  `, [ticket.id]);
+
+                  items = itemsResult.rows;
+                  console.log(`✅ 티켓 ${ticket.id} ticket_id로 조회:`, {
+                    itemCount: items.length,
+                    items: items
+                  });
+                }
+
+                // 2. ticket_id로 찾지 못했으면 order_id로 조회
+                if (items.length === 0 && orderItemColumns.includes('order_id')) {
+                  console.log(`🔄 티켓 ${ticket.id} order_id로 재시도`);
+                  
                   const orderItemsResult = await pool.query(`
                     SELECT 
                       oi.id,
-                      COALESCE(oi.menu_name, oi.name, '메뉴') as menu_name,
-                      COALESCE(oi.name, oi.menu_name, '메뉴') as name,
+                      COALESCE(oi.menu_name, '메뉴') as menu_name,
+                      COALESCE(oi.menu_name, '메뉴') as name,
                       COALESCE(oi.quantity, 1) as quantity,
                       COALESCE(oi.cook_station, 'KITCHEN') as cook_station,
-                      COALESCE(oi.item_status, oi.status, 'PENDING') as status
+                      COALESCE(oi.item_status, 'PENDING') as status,
+                      oi.ticket_id
                     FROM order_items oi
                     WHERE oi.order_id = $1
                     ORDER BY oi.created_at
                   `, [ticket.order_id]);
 
-                  items = orderItemsResult.rows;
-                  console.log(`✅ 티켓 ${ticket.id} order_items by order_id 조회 결과:`, {
-                    itemCount: items.length,
-                    items: items
-                  });
+                  // 만약 여러 티켓이 있다면 해당 티켓의 아이템만 필터링
+                  const allOrderItems = orderItemsResult.rows;
                   
-                } catch (orderItemError) {
-                  console.warn(`⚠️ 티켓 ${ticket.id} order_items by order_id 조회 실패:`, orderItemError.message);
-                  
-                  // 백업 2: check_items 테이블에서 조회 시도
+                  if (allOrderItems.length > 0) {
+                    // ticket_id가 일치하는 아이템이 있으면 그것만
+                    const matchingItems = allOrderItems.filter(item => item.ticket_id === ticket.id);
+                    
+                    if (matchingItems.length > 0) {
+                      items = matchingItems;
+                      console.log(`✅ 티켓 ${ticket.id} 필터링된 아이템:`, {
+                        totalOrderItems: allOrderItems.length,
+                        matchingItems: items.length,
+                        items: items
+                      });
+                    } else {
+                      // ticket_id가 없거나 일치하지 않으면 전체 주문의 아이템을 균등분배
+                      const ticketIndex = ticketsResult.rows.findIndex(t => t.id === ticket.id);
+                      const totalTickets = ticketsResult.rows.length;
+                      const itemsPerTicket = Math.ceil(allOrderItems.length / totalTickets);
+                      const startIndex = ticketIndex * itemsPerTicket;
+                      const endIndex = Math.min(startIndex + itemsPerTicket, allOrderItems.length);
+                      
+                      items = allOrderItems.slice(startIndex, endIndex);
+                      console.log(`✅ 티켓 ${ticket.id} 균등분배 아이템:`, {
+                        ticketIndex,
+                        totalTickets,
+                        itemsPerTicket,
+                        startIndex,
+                        endIndex,
+                        items: items
+                      });
+                    }
+                  }
+                }
+
+                // 3. 여전히 없으면 check_items 테이블에서 조회
+                if (items.length === 0) {
                   try {
-                    console.log(`🔄 티켓 ${ticket.id} 백업 조회 2: check_items`);
+                    console.log(`🔄 티켓 ${ticket.id} check_items 테이블에서 조회`);
                     const checkItemsResult = await pool.query(`
                       SELECT 
                         ci.id,
@@ -979,12 +1019,14 @@ router.get('/processing/:orderId', async (req, res) => {
                       itemCount: items.length,
                       items: items
                     });
-                    
-                  } catch (checkItemError) {
-                    console.warn(`⚠️ 티켓 ${ticket.id} check_items 조회도 실패:`, checkItemError.message);
-                    items = [];
+                  } catch (checkError) {
+                    console.warn(`⚠️ check_items 조회 실패:`, checkError.message);
                   }
                 }
+                
+              } catch (itemError) {
+                console.error(`❌ 티켓 ${ticket.id} 아이템 조회 전체 실패:`, itemError.message);
+                items = [];
               }
 
               return {
