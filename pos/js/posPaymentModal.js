@@ -100,17 +100,28 @@ const POSPaymentModal = {
             modal.remove();
         }
         this.isVisible = false;
-        this.currentPaymentData = null;
+        // currentPaymentData는 null로 설정하지 않음 (재사용 가능하도록)
         this.selectedCustomerType = 'guest';
         this.guestPhoneNumber = '';
+    },
+
+    /**
+     * 완전 초기화 (모달을 완전히 닫을 때 사용)
+     */
+    reset() {
+        this.hide();
+        this.currentPaymentData = null;
     },
 
     /**
      * 모달 렌더링
      */
     render() {
-        // 기존 모달이 있으면 제거
-        this.hide();
+        // 기존 모달이 있으면 제거 (단, currentPaymentData는 유지)
+        const existingModal = document.getElementById('posPaymentModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
 
         const modal = document.createElement('div');
         modal.id = 'posPaymentModal';
@@ -130,8 +141,11 @@ const POSPaymentModal = {
      */
     getModalHTML() {
         if (!this.currentPaymentData) {
-            console.error('❌ getModalHTML: currentPaymentData가 null입니다');
-            return '<div class="error">결제 데이터를 불러올 수 없습니다.</div>';
+            console.error('❌ getModalHTML: currentPaymentData가 null입니다', {
+                isVisible: this.isVisible,
+                callerStack: new Error().stack
+            });
+            return this.getErrorHTML();
         }
 
         // 로딩 상태 처리
@@ -292,10 +306,11 @@ const POSPaymentModal = {
         }
 
         // 고객 유형 선택
-        document.querySelectorAll('.customer-type-btn').forEach(btn => {
+        const customerTypeBtns = document.querySelectorAll('.customer-type-btn');
+        customerTypeBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // 모든 버튼 비활성화
-                document.querySelectorAll('.customer-type-btn').forEach(b => {
+                customerTypeBtns.forEach(b => {
                     b.classList.remove('active');
                 });
 
@@ -303,15 +318,18 @@ const POSPaymentModal = {
                 btn.classList.add('active');
 
                 const type = btn.dataset.type;
-                this.handleCustomerTypeChange(type);
+                if (type) {
+                    this.handleCustomerTypeChange(type);
+                }
             });
         });
 
         // 결제 수단 선택
-        document.querySelectorAll('.payment-method-btn').forEach(btn => {
+        const paymentMethodBtns = document.querySelectorAll('.payment-method-btn');
+        paymentMethodBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 // 모든 버튼 비활성화
-                document.querySelectorAll('.payment-method-btn').forEach(b => {
+                paymentMethodBtns.forEach(b => {
                     b.classList.remove('active');
                 });
 
@@ -319,7 +337,9 @@ const POSPaymentModal = {
                 btn.classList.add('active');
 
                 const method = btn.dataset.method;
-                this.handlePaymentMethodChange(method);
+                if (method) {
+                    this.handlePaymentMethodChange(method);
+                }
             });
         });
 
@@ -455,12 +475,25 @@ const POSPaymentModal = {
         const cashSection = document.getElementById('cashSection');
         const paymentBtnText = document.getElementById('paymentBtnText');
 
-        if (method === 'CASH') {
-            cashSection.style.display = 'block';
-            paymentBtnText.textContent = '현금결제 진행';
-        } else {
-            cashSection.style.display = 'none';
-            paymentBtnText.textContent = '카드결제 진행';
+        if (cashSection) {
+            if (method === 'CASH') {
+                cashSection.style.display = 'block';
+            } else {
+                cashSection.style.display = 'none';
+            }
+        }
+
+        if (paymentBtnText) {
+            if (method === 'CASH') {
+                paymentBtnText.textContent = '현금결제 진행';
+            } else {
+                paymentBtnText.textContent = '카드결제 진행';
+            }
+        }
+
+        // currentPaymentData 업데이트
+        if (this.currentPaymentData) {
+            this.currentPaymentData.paymentMethod = method;
         }
     },
 
@@ -529,11 +562,13 @@ const POSPaymentModal = {
         }
 
         const received = parseInt(receivedInput.value) || 0;
-        const total = this.currentPaymentData.totalAmount;
+        const total = this.currentPaymentData.totalAmount || 0;
         const change = Math.max(0, received - total);
 
         changeElement.textContent = change.toLocaleString() + '원';
-        changeElement.style.color = change >= 0 ? '#059669' : '#dc2626';
+        if (changeElement.style) {
+            changeElement.style.color = change >= 0 ? '#059669' : '#dc2626';
+        }
     },
 
     /**
