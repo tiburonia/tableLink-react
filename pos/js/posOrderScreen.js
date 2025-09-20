@@ -1181,6 +1181,13 @@ const POSOrderScreen = {
     showPOSPaymentModal(method) {
         console.log('✨ POSPaymentModal 결제 모달 표시');
 
+        // 필수 정보 검증
+        if (!this.currentStoreId || !this.currentTableNumber) {
+            console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
+            alert('매장 또는 테이블 정보가 설정되지 않았습니다.');
+            return;
+        }
+
         // 결제할 데이터 준비
         const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const existingOrdersTotal = this.currentOrders
@@ -1189,6 +1196,12 @@ const POSOrderScreen = {
         
         const totalAmount = cartTotal + existingOrdersTotal;
         const itemCount = this.cart.length + this.currentOrders.filter(order => !order.isCart).length;
+
+        // 결제할 금액이 0인 경우 체크
+        if (totalAmount <= 0) {
+            alert('결제할 금액이 없습니다.');
+            return;
+        }
 
         // 결제 데이터 구성
         const paymentData = {

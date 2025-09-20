@@ -12,6 +12,22 @@ const POSPaymentModal = {
      * 결제 모달 표시
      */
     show(paymentData) {
+        if (!paymentData) {
+            console.error('❌ 결제 데이터가 없습니다');
+            alert('결제 정보를 불러올 수 없습니다.');
+            return;
+        }
+
+        // 필수 필드 검증
+        const requiredFields = ['totalAmount', 'itemCount', 'storeId', 'tableNumber'];
+        const missingFields = requiredFields.filter(field => paymentData[field] === undefined || paymentData[field] === null);
+        
+        if (missingFields.length > 0) {
+            console.error('❌ 필수 결제 데이터 누락:', missingFields);
+            alert('결제 정보가 완전하지 않습니다: ' + missingFields.join(', '));
+            return;
+        }
+
         this.currentPaymentData = paymentData;
         this.isVisible = true;
         this.render();
