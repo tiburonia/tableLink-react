@@ -1176,10 +1176,10 @@ const POSOrderScreen = {
     },
 
     /**
-     * POSPaymentModal을 사용한 결제 모달 표시
+     * POSPaymentModal을 사용한 결제 모달 표시 (API 기반)
      */
-    showPOSPaymentModal(method) {
-        console.log('✨ POSPaymentModal 결제 모달 표시');
+    async showPOSPaymentModal(method) {
+        console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
 
         // 필수 정보 검증
         if (!this.currentStoreId || !this.currentTableNumber) {
@@ -1188,40 +1188,164 @@ const POSOrderScreen = {
             return;
         }
 
-        // 결제할 데이터 준비
-        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const existingOrdersTotal = this.currentOrders
-            .filter(order => !order.isCart)
-            .reduce((sum, order) => sum + (order.price * order.quantity), 0);
-        
-        const totalAmount = cartTotal + existingOrdersTotal;
-        const itemCount = this.cart.length + this.currentOrders.filter(order => !order.isCart).length;
+        try {
+            // 로딩 표시
+            const loadingIndicator = this.showLoadingIndicator('결제 정보를 불러오는 중...');
 
-        // 결제할 금액이 0인 경우 체크
-        if (totalAmount <= 0) {
-            alert('결제할 금액이 없습니다.');
-            return;
+            // API 호출로 실제 결제 대상 내역 조회
+            const paymentData = await this.fetchPaymentTargetData();
+
+            // 로딩 표시 제거
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+
+            if (!paymentData) {
+                alert('결제할 내역이 없습니다.');
+                return;
+            }
+
+            console.log('💳 API로부터 받은 결제 데이터:', paymentData);
+
+            // POSPaymentModal 표시
+            if (typeof POSPaymentModal !== 'undefined') {
+                await POSPaymentModal.show(paymentData);
+            } else {
+                console.error('❌ POSPaymentModal이 로드되지 않았습니다');
+                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+            }
+
+        } catch (error) {
+            console.error('❌ 결제 정보 조회 실패:', error);
+            alert(`결제 정보를 불러올 수 없습니다: ${error.message}`);
+        }
+    },
+
+    /**
+     * API 호출로 결제 대상 데이터 조회
+     */
+    async fetchPaymentTargetData() {
+        console.log(`🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`);
+
+        try {
+            // 1. 현재 테이블의 활성 주문 조회
+            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+
+            if (!activeOrderResponse.ok) {
+                console.warn('⚠️ 활성 주문 조회 실패');
+                return null;
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
+                console.log('ℹ️ 활성 주문이 없습니다');
+                return null;
+            }
+
+            const orderId = activeOrderData.orderId;
+
+            // 2. 미지불 티켓 정보 조회
+            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+
+            if (!unpaidResponse.ok) {
+                throw new Error('미지불 티켓 조회 실패');
+            }
+
+            const unpaidData = await unpaidResponse.json();
+
+            if (!unpaidData.success || unpaidData.totalTickets === 0) {
+                console.log('ℹ️ 미지불 티켓이 없습니다');
+                return null;
+            }
+
+            // 3. 주문 상세 정보 조회 (주문 아이템들)
+            const orderItemsResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/order-items`);
+
+            let orderItems = [];
+            if (orderItemsResponse.ok) {
+                const orderItemsData = await orderItemsResponse.json();
+                if (orderItemsData.success && orderItemsData.orderItems) {
+                    orderItems = orderItemsData.orderItems;
+                }
+            }
+
+            console.log(`✅ 결제 대상 데이터 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
+
+            return {
+                totalAmount: unpaidData.totalAmount,
+                itemCount: unpaidData.totalTickets,
+                storeId: this.currentStoreId,
+                tableNumber: this.currentTableNumber,
+                orderId: orderId,
+                unpaidTickets: unpaidData.unpaidTickets,
+                orderItems: orderItems,
+                paymentMethod: method
+            };
+
+        } catch (error) {
+            console.error('❌ 결제 대상 데이터 조회 실패:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * 로딩 표시기 생성
+     */
+    showLoadingIndicator(message) {
+        const indicator = document.createElement('div');
+        indicator.className = 'loading-indicator';
+        indicator.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <span>${message}</span>
+            </div>
+        `;
+
+        indicator.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        `;
+
+        const spinner = indicator.querySelector('.loading-spinner');
+        if (spinner) {
+            spinner.style.cssText = `
+                width: 20px;
+                height: 20px;
+                border: 2px solid #ffffff40;
+                border-top: 2px solid #ffffff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            `;
         }
 
-        // 결제 데이터 구성
-        const paymentData = {
-            totalAmount: totalAmount,
-            itemCount: itemCount,
-            storeId: this.currentStoreId,
-            tableNumber: this.currentTableNumber,
-            orderId: this.getCurrentOrderId(),
-            paymentMethod: method
-        };
-
-        console.log('💳 결제 모달 데이터:', paymentData);
-
-        // POSPaymentModal 표시
-        if (typeof POSPaymentModal !== 'undefined') {
-            POSPaymentModal.show(paymentData);
-        } else {
-            console.error('❌ POSPaymentModal이 로드되지 않았습니다');
-            alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+        // 스피너 애니메이션 CSS 추가
+        if (!document.querySelector('#spinner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'spinner-styles';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
         }
+
+        document.body.appendChild(indicator);
+        return indicator;
     },
 
     /**

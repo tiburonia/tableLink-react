@@ -796,8 +796,11 @@ const POSPaymentModal = {
     async showPOSPaymentModal(method) {
         console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
 
-        // 필수 정보 검증
-        if (!this.currentStoreId || !this.currentTableNumber) {
+        // 필수 정보 검증 - POSCore에서 정보 가져오기
+        const storeId = this.currentStoreId || (typeof POSCore !== 'undefined' ? POSCore.storeId : null);
+        const tableNumber = this.currentTableNumber || (typeof POSCore !== 'undefined' ? POSCore.tableNumber : null);
+
+        if (!storeId || !tableNumber) {
             console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
             alert('매장 또는 테이블 정보가 설정되지 않았습니다.');
             return;
@@ -808,7 +811,7 @@ const POSPaymentModal = {
             const loadingToast = this.showLoadingToast('결제 정보를 불러오는 중...');
 
             // API 호출로 실제 결제 대상 내역 조회
-            const paymentData = await this.fetchPaymentTargetData();
+            const paymentData = await this.fetchPaymentTargetData(storeId, tableNumber);
 
             // 로딩 토스트 제거
             if (loadingToast) {
@@ -839,12 +842,12 @@ const POSPaymentModal = {
     /**
      * API 호출로 결제 대상 데이터 조회
      */
-    async fetchPaymentTargetData() {
-        console.log(`🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`);
+    async fetchPaymentTargetData(storeId, tableNumber) {
+        console.log(`🔍 결제 대상 데이터 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
         try {
             // 1. 현재 테이블의 활성 주문 조회
-            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
 
             if (!activeOrderResponse.ok) {
                 console.warn('⚠️ 활성 주문 조회 실패');
@@ -875,7 +878,7 @@ const POSPaymentModal = {
             }
 
             // 3. 주문 상세 정보 조회 (주문 아이템들)
-            const orderItemsResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/order-items`);
+            const orderItemsResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
 
             let orderItems = [];
             if (orderItemsResponse.ok) {
@@ -890,8 +893,8 @@ const POSPaymentModal = {
             return {
                 totalAmount: unpaidData.totalAmount,
                 itemCount: unpaidData.totalTickets,
-                storeId: this.currentStoreId,
-                tableNumber: this.currentTableNumber,
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
                 orderId: orderId,
                 unpaidTickets: unpaidData.unpaidTickets,
                 orderItems: orderItems,
