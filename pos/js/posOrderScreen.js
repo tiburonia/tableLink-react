@@ -35,7 +35,7 @@ const POSOrderScreen = {
                 currentTable: this.currentTable
             });
 
-            // 기존 주문 로드
+            // 기존 주문 로드 (통합 처리 완료까지 대기)
             await this.loadCurrentOrders(storeId, tableNumber);
 
             // 메뉴 데이터 로드
@@ -44,12 +44,17 @@ const POSOrderScreen = {
             // 세션 정보 로드 (기존 주문이 있으면 세션 정보도 함께)
             await this.loadSessionData();
 
-
+            // 모든 데이터 로드 완료 후 화면 렌더링
             const main = document.getElementById('posMain');
             main.innerHTML = `
                 ${this.renderHeader(storeInfo, tableNumber)}
                 ${this.renderMainLayout()}
             `;
+
+            console.log('🎨 최초 렌더링 완료 - 통합된 주문 데이터로 화면 표시:', {
+                통합된주문수: this.currentOrders.length,
+                카트아이템수: this.cart.length
+            });
 
             // 이벤트 리스너 설정
             this.setupEventListeners();
@@ -685,7 +690,7 @@ const POSOrderScreen = {
                 console.log(`📊 티켓 간 메뉴 통합 결과:`, {
                     원본아이템수: unpaidItems.length,
                     통합후메뉴수: this.currentOrders.length,
-                    통합비율: `${((unpaidItems.length - this.currentOrders.length) / unpaidItems.length * 100).toFixed(1)}% 압축`,
+                    통합비율: `${unpaidItems.length > 0 ? ((unpaidItems.length - this.currentOrders.length) / unpaidItems.length * 100).toFixed(1) : 0}% 압축`,
                     통합된메뉴상세: this.currentOrders.map(order => ({
                         메뉴명: order.menuName,
                         통합수량: order.quantity,
@@ -696,8 +701,10 @@ const POSOrderScreen = {
                     }))
                 });
 
-                console.log(`✅ POS 티켓 간 메뉴 통합 완료:`, {
+                console.log(`✅ POS 티켓 간 메뉴 통합 완료 - 데이터 준비됨:`, {
                     원본아이템수: unpaidItems.length,
+                    통합완료: true,
+                    this_currentOrders_length: this.currentOrders.length
                 });
             } else {
                 this.currentOrders = [];
