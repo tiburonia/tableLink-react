@@ -229,8 +229,8 @@ router.post('/process-with-customer', async (req, res) => {
       } else {
         // 새 게스트 생성
         const newGuestResult = await client.query(`
-          INSERT INTO guests (phone, total_visits, last_visit_date)
-          VALUES ($1, 1, CURRENT_TIMESTAMP)
+          INSERT INTO guests (phone, created_at)
+          VALUES ($1, CURRENT_TIMESTAMP)
           RETURNING id
         `, [guestPhone]);
 
