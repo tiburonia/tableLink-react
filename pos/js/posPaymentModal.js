@@ -793,6 +793,7 @@ const POSPaymentModal = {
                     z-index: 10000;
                     opacity: 0;
                     transition: opacity 0.3s ease;
+                    backdrop-filter: blur(4px);
                 }
 
                 .pos-payment-modal-overlay.show {
@@ -803,12 +804,13 @@ const POSPaymentModal = {
                     background: white;
                     border-radius: 20px;
                     width: 90%;
-                    max-width: 500px;
+                    max-width: 520px;
                     max-height: 90vh;
                     overflow-y: auto;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+                    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
                     transform: scale(0.9);
                     transition: transform 0.3s ease;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 }
 
                 .pos-payment-modal-overlay.show .pos-payment-modal {
@@ -821,6 +823,8 @@ const POSPaymentModal = {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-radius: 20px 20px 0 0;
                 }
 
                 .modal-header h2 {
@@ -849,18 +853,343 @@ const POSPaymentModal = {
                 .close-btn:hover {
                     background: #f1f5f9;
                     color: #374151;
+                    transform: scale(1.1);
                 }
 
                 .modal-body {
                     padding: 24px;
+                    max-height: calc(90vh - 200px);
+                    overflow-y: auto;
                 }
 
                 .modal-footer {
                     padding: 16px 24px 24px;
                     display: flex;
                     gap: 12px;
+                    background: #f8fafc;
+                    border-radius: 0 0 20px 20px;
                 }
 
+                /* 결제 요약 섹션 */
+                .payment-summary {
+                    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 20px;
+                    margin-bottom: 24px;
+                }
+
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 12px;
+                    padding: 8px 0;
+                }
+
+                .summary-row:last-child {
+                    margin-bottom: 0;
+                }
+
+                .summary-row.total {
+                    border-top: 2px solid #cbd5e1;
+                    margin-top: 16px;
+                    padding-top: 16px;
+                    font-weight: 700;
+                    font-size: 18px;
+                    color: #1e293b;
+                }
+
+                .summary-row .label {
+                    color: #64748b;
+                    font-weight: 600;
+                }
+
+                .summary-row .value {
+                    color: #1e293b;
+                    font-weight: 600;
+                }
+
+                .summary-row.total .value {
+                    color: #059669;
+                    font-size: 20px;
+                }
+
+                /* 섹션 제목 */
+                .customer-type-selection h3,
+                .guest-info-section h3,
+                .member-info-section h3,
+                .payment-methods h3,
+                .cash-section h3 {
+                    margin: 0 0 16px 0;
+                    font-size: 16px;
+                    font-weight: 700;
+                    color: #374151;
+                    padding-bottom: 8px;
+                    border-bottom: 2px solid #e5e7eb;
+                }
+
+                /* 고객 유형 선택 */
+                .customer-type-selection {
+                    margin-bottom: 24px;
+                }
+
+                .type-buttons {
+                    display: flex;
+                    gap: 12px;
+                }
+
+                .customer-type-btn {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 20px 16px;
+                    border: 2px solid #e5e7eb;
+                    background: white;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-weight: 600;
+                    color: #6b7280;
+                }
+
+                .customer-type-btn:hover {
+                    border-color: #3b82f6;
+                    background: #f0f9ff;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15);
+                }
+
+                .customer-type-btn.active {
+                    border-color: #3b82f6;
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+                }
+
+                .type-icon {
+                    font-size: 32px;
+                    margin-bottom: 4px;
+                }
+
+                /* 비회원/회원 정보 섹션 */
+                .guest-info-section,
+                .member-info-section {
+                    margin-bottom: 24px;
+                    padding: 20px;
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    border: 1px solid #e2e8f0;
+                }
+
+                .phone-input-group,
+                .member-input-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                }
+
+                .phone-input-group label,
+                .member-input-group label {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+
+                .phone-input-group input,
+                .member-input-group input {
+                    padding: 12px 16px;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    transition: border-color 0.2s;
+                    background: white;
+                }
+
+                .phone-input-group input:focus,
+                .member-input-group input:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+                }
+
+                .phone-help-text {
+                    font-size: 12px;
+                    color: #6b7280;
+                    margin-top: 4px;
+                    line-height: 1.4;
+                }
+
+                .member-search-btn {
+                    margin-top: 8px;
+                    padding: 10px 16px;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: background 0.2s;
+                }
+
+                .member-search-btn:hover {
+                    background: #2563eb;
+                }
+
+                .member-info-display {
+                    margin-top: 12px;
+                    padding: 12px;
+                    background: #ecfdf5;
+                    border: 1px solid #bbf7d0;
+                    border-radius: 8px;
+                }
+
+                .member-details {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .member-name {
+                    font-weight: 600;
+                    color: #065f46;
+                }
+
+                .member-points {
+                    font-size: 14px;
+                    color: #059669;
+                    font-weight: 600;
+                }
+
+                /* 결제 수단 선택 */
+                .payment-methods {
+                    margin-bottom: 24px;
+                }
+
+                .method-buttons {
+                    display: flex;
+                    gap: 12px;
+                }
+
+                .payment-method-btn {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 20px 16px;
+                    border: 2px solid #e5e7eb;
+                    background: white;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-weight: 600;
+                    color: #6b7280;
+                }
+
+                .payment-method-btn:hover {
+                    border-color: #059669;
+                    background: #f0fdf4;
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(5, 150, 105, 0.15);
+                }
+
+                .payment-method-btn.active {
+                    border-color: #059669;
+                    background: #dcfce7;
+                    color: #065f46;
+                    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+                }
+
+                .method-icon {
+                    font-size: 32px;
+                    margin-bottom: 4px;
+                }
+
+                /* 현금 결제 섹션 */
+                .cash-section {
+                    margin-bottom: 24px;
+                    padding: 20px;
+                    background: #fefce8;
+                    border: 1px solid #fde047;
+                    border-radius: 12px;
+                }
+
+                .cash-input-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+
+                .cash-input-group label {
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+
+                .cash-input-group input {
+                    padding: 12px 16px;
+                    border: 2px solid #fbbf24;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    transition: border-color 0.2s;
+                    background: white;
+                }
+
+                .cash-input-group input:focus {
+                    outline: none;
+                    border-color: #f59e0b;
+                    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+                }
+
+                .quick-amount-buttons {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+
+                .quick-btn {
+                    padding: 8px 12px;
+                    background: white;
+                    border: 1px solid #fbbf24;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #92400e;
+                    transition: all 0.2s;
+                }
+
+                .quick-btn:hover {
+                    background: #fef3c7;
+                    border-color: #f59e0b;
+                }
+
+                .change-display {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 16px;
+                    padding: 12px;
+                    background: white;
+                    border: 1px solid #fbbf24;
+                    border-radius: 8px;
+                }
+
+                .change-display .label {
+                    font-weight: 600;
+                    color: #92400e;
+                }
+
+                .change-display .value {
+                    font-weight: 700;
+                    font-size: 16px;
+                    color: #059669;
+                }
+
+                /* 버튼 스타일 */
                 .cancel-btn {
                     flex: 1;
                     padding: 16px 20px;
@@ -876,8 +1205,46 @@ const POSPaymentModal = {
 
                 .cancel-btn:hover {
                     background: #e2e8f0;
+                    transform: translateY(-1px);
                 }
 
+                .confirm-btn {
+                    flex: 2;
+                    padding: 16px 20px;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 4px;
+                }
+
+                .confirm-btn:hover {
+                    background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
+                }
+
+                .confirm-btn:disabled {
+                    background: #9ca3af;
+                    cursor: not-allowed;
+                    transform: none;
+                    box-shadow: none;
+                }
+
+                .confirm-btn .amount {
+                    font-size: 14px;
+                    opacity: 0.9;
+                }
+
+                /* 로딩 상태 */
                 .loading-state {
                     display: flex;
                     flex-direction: column;
@@ -897,6 +1264,19 @@ const POSPaymentModal = {
                     margin-bottom: 20px;
                 }
 
+                .loading-state h3 {
+                    margin: 0 0 8px 0;
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+
+                .loading-state p {
+                    margin: 0;
+                    color: #6b7280;
+                }
+
+                /* 에러 상태 */
                 .error-state {
                     display: flex;
                     flex-direction: column;
@@ -915,34 +1295,91 @@ const POSPaymentModal = {
                     font-size: 18px;
                     font-weight: 700;
                     color: #dc2626;
-                    margin-bottom: 8px;
+                    margin: 0 0 8px 0;
                 }
 
                 .error-message {
                     color: #6b7280;
-                    margin-bottom: 20px;
+                    margin: 0 0 20px 0;
+                    line-height: 1.5;
                 }
 
                 .retry-btn {
-                    padding: 10px 20px;
+                    padding: 12px 24px;
                     background: #3b82f6;
                     color: white;
                     border: none;
-                    border-radius: 6px;
+                    border-radius: 8px;
                     cursor: pointer;
                     font-weight: 600;
+                    transition: background 0.2s;
                 }
 
                 .retry-btn:hover {
                     background: #2563eb;
                 }
 
+                /* 애니메이션 */
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
                 }
+
+                /* 스크롤바 스타일 */
+                .pos-payment-modal::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .pos-payment-modal::-webkit-scrollbar-track {
+                    background: #f1f5f9;
+                }
+
+                .pos-payment-modal::-webkit-scrollbar-thumb {
+                    background: #cbd5e1;
+                    border-radius: 3px;
+                }
+
+                .pos-payment-modal::-webkit-scrollbar-thumb:hover {
+                    background: #94a3b8;
+                }
+
+                /* 반응형 디자인 */
+                @media (max-width: 640px) {
+                    .pos-payment-modal {
+                        width: 95%;
+                        margin: 10px;
+                    }
+
+                    .type-buttons,
+                    .method-buttons {
+                        flex-direction: column;
+                    }
+
+                    .customer-type-btn,
+                    .payment-method-btn {
+                        flex-direction: row;
+                        justify-content: flex-start;
+                        gap: 12px;
+                        padding: 16px;
+                    }
+
+                    .type-icon,
+                    .method-icon {
+                        font-size: 24px;
+                        margin-bottom: 0;
+                    }
+
+                    .modal-footer {
+                        flex-direction: column;
+                    }
+
+                    .confirm-btn {
+                        order: -1;
+                    }
+                }
             </style>
         `;
+    }
     },
 
     /**
