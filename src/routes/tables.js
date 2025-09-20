@@ -7,6 +7,36 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
+
+// 테이블별 TLL 연동 상태 확인
+router.get('/stores/:storeId/table/:tableNumber/tll-status', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`🔍 TLL 연동 상태 확인: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // 여기서는 간단히 모든 테이블을 TLL 미연동으로 처리
+    // 실제 환경에서는 테이블별 TLL 연동 설정을 확인하는 로직 필요
+    const hasTLLIntegration = false; // 기본값: TLL 미연동
+
+    res.json({
+      success: true,
+      storeId: parseInt(storeId),
+      tableNumber: parseInt(tableNumber),
+      hasTLLIntegration: hasTLLIntegration,
+      message: hasTLLIntegration ? 'TLL 연동 테이블' : 'TLL 미연동 테이블 (비회원 POS 주문 가능)'
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 연동 상태 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 연동 상태 확인 실패'
+    });
+  }
+});
+
+
 // 매장별 테이블 조회 API (현재 스키마 기반)
 router.get('/stores/:storeId', async (req, res) => {
   try {

@@ -941,6 +941,7 @@ const POSOrderScreen = {
 
     /**
      * 주문 확정 (카트 -> 서버 전송)
+     * 비회원 POS 주문 지원
      */
     async confirmOrder() {
         if (this.cart.length === 0) {
@@ -951,7 +952,7 @@ const POSOrderScreen = {
         try {
             const total = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-            if (!confirm(`${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 주문하시겠습니까?`)) {
+            if (!confirm(`${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 비회원 주문하시겠습니까?`)) {
                 return;
             }
 
@@ -965,23 +966,23 @@ const POSOrderScreen = {
                 return;
             }
 
-            console.log('📋 POS 주문 확정 시작:', {
+            console.log('📋 비회원 POS 주문 확정 시작:', {
                 storeId: storeId,
                 tableNumber: tableNumber,
                 cartItems: this.cart.length,
-                totalAmount: total
+                totalAmount: total,
+                isGuestOrder: true
             });
 
-            // 서버에 주문 전송
-            const response = await fetch('/api/pos/orders/confirm', {
+            // 비회원 주문 전용 API 사용
+            const response = await fetch('/api/pos/guest-orders/confirm', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     storeId: parseInt(storeId),
                     tableNumber: parseInt(tableNumber),
                     items: this.cart,
-                    totalAmount: total,
-                    orderType: 'POS'
+                    totalAmount: total
                 })
             });
 
@@ -1061,11 +1062,12 @@ const POSOrderScreen = {
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
             }
 
-            this.showToast(`주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
+            const orderType = result.isGuestOrder ? '비회원' : '일반';
+            this.showToast(`${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
 
         } catch (error) {
-            console.error('❌ 주문 확정 실패:', error);
-            alert(`주문 확정 실패: ${error.message}`);
+            console.error('❌ 비회원 주문 확정 실패:', error);
+            alert(`비회원 주문 확정 실패: ${error.message}`);
         }
     },
 

@@ -247,6 +247,23 @@ const POSTableMap = {
     formatOccupiedTime(occupiedSince) {
         if (!occupiedSince) return '';
         
+
+    /**
+     * TLL 연동 여부 확인
+     */
+    async checkTLLIntegration(storeId, tableNumber) {
+        try {
+            const response = await fetch(`/api/tables/stores/${storeId}/table/${tableNumber}/tll-status`);
+            const data = await response.json();
+            
+            return data.success ? data.hasTLLIntegration : false;
+        } catch (error) {
+            console.error('❌ TLL 연동 상태 확인 실패:', error);
+            return false; // 에러 시 비연동으로 간주
+        }
+    },
+
+
         const now = new Date();
         const occupied = new Date(occupiedSince);
         const diffMinutes = Math.floor((now - occupied) / (1000 * 60));
@@ -267,7 +284,20 @@ const POSTableMap = {
         try {
             console.log(`🪑 테이블 ${tableNumber} 선택`);
             
-            // 테이블 상세 정보 확인
+            // TLL 연동 여부 확인
+            const hasTLLIntegration = await this.checkTLLIntegration(POSCore.storeId, tableNumber);
+            
+            if (!hasTLLIntegration) {
+                console.log(`📱 테이블 ${tableNumber}은 TLL 미연동 - 비회원 POS 주문 모드`);
+                
+                // TLL 연동되지 않은 테이블 - 직접 주문 화면으로
+                if (confirm(`테이블 ${tableNumber}은 TLL 미연동 테이블입니다.\n비회원 POS 주문을 시작하시겠습니까?`)) {
+                    POSCore.showOrderScreen(tableNumber);
+                }
+                return;
+            }
+            
+            // TLL 연동된 테이블 - 기존 로직
             const response = await fetch(`/api/pos/stores/${POSCore.storeId}/table/${tableNumber}/session-status`);
             const data = await response.json();
             
