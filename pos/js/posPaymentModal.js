@@ -12,6 +12,8 @@ const POSPaymentModal = {
      * 결제 모달 표시
      */
     show(paymentData) {
+        console.log('🔍 결제 모달 표시 요청:', paymentData);
+        
         if (!paymentData) {
             console.error('❌ 결제 데이터가 없습니다');
             alert('결제 정보를 불러올 수 없습니다.');
@@ -23,12 +25,30 @@ const POSPaymentModal = {
         const missingFields = requiredFields.filter(field => paymentData[field] === undefined || paymentData[field] === null);
         
         if (missingFields.length > 0) {
-            console.error('❌ 필수 결제 데이터 누락:', missingFields);
+            console.error('❌ 필수 결제 데이터 누락:', missingFields, paymentData);
             alert('결제 정보가 완전하지 않습니다: ' + missingFields.join(', '));
             return;
         }
 
-        this.currentPaymentData = paymentData;
+        // 데이터 유효성 재확인
+        if (typeof paymentData.totalAmount !== 'number' || paymentData.totalAmount <= 0) {
+            console.error('❌ 결제 금액이 유효하지 않습니다:', paymentData.totalAmount);
+            alert('결제 금액이 유효하지 않습니다.');
+            return;
+        }
+
+        // 모든 검증 통과 후 데이터 설정
+        this.currentPaymentData = {
+            totalAmount: paymentData.totalAmount,
+            itemCount: paymentData.itemCount,
+            storeId: paymentData.storeId,
+            tableNumber: paymentData.tableNumber,
+            orderId: paymentData.orderId || null,
+            paymentMethod: paymentData.paymentMethod || 'CARD'
+        };
+        
+        console.log('✅ 결제 데이터 설정 완료:', this.currentPaymentData);
+        
         this.isVisible = true;
         this.render();
         this.setupEventListeners();
@@ -70,6 +90,11 @@ const POSPaymentModal = {
      * 모달 HTML 생성
      */
     getModalHTML() {
+        if (!this.currentPaymentData) {
+            console.error('❌ getModalHTML: currentPaymentData가 null입니다');
+            return '<div class="error">결제 데이터를 불러올 수 없습니다.</div>';
+        }
+
         const { totalAmount, itemCount, storeId, tableNumber } = this.currentPaymentData;
 
         return `
