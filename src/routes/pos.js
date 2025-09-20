@@ -534,9 +534,9 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
       });
     }
 
-    console.log(`📋 POS order_items 조회: 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
+    console.log(`📋 POS order_items 조회 (미지불만): 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
-    // 해당 테이블의 order_items 조회 (POS 소스, UNPAID 상태만)
+    // 해당 테이블의 order_items 조회 (POS 소스, UNPAID + OPEN 상태만 확실히 필터링)
     const result = await pool.query(`
       SELECT 
         oi.id,
@@ -549,7 +549,9 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         oi.cook_station,
         oi.ticket_id,
         oi.created_at,
-        ot.order_id
+        ot.order_id,
+        ot.paid_status,
+        o.status as order_status
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
@@ -557,9 +559,21 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         AND o.table_num = $2 
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
-        AND oi.item_status != 'CANCELLED'
+        AND o.status = 'OPEN'
+        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
       ORDER BY oi.created_at ASC
     `, [parsedStoreId, parsedTableNumber]);
+
+    console.log(`✅ POS 미지불 order_items ${result.rows.length}개 조회 완료`);
+    
+    // 디버깅용 로그 추가
+    if (result.rows.length > 0) {
+      console.log(`🔍 첫 번째 아이템 상태:`, {
+        paid_status: result.rows[0].paid_status,
+        order_status: result.rows[0].order_status,
+        item_status: result.rows[0].item_status
+      });
+    }
 
     res.json({
       success: true,

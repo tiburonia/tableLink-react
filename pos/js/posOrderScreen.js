@@ -581,15 +581,46 @@ const POSOrderScreen = {
      */
     async loadCurrentOrders(storeId, tableNumber) {
         try {
+            console.log(`🔍 POS 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
+            
             // POS 주문 로드 (order_items 기준, UNPAID 상태만)
             const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
             const data = await response.json();
 
+            console.log(`📊 POS 주문 API 응답:`, {
+                success: data.success,
+                itemCount: data.orderItems?.length || 0,
+                hasItems: !!(data.orderItems && data.orderItems.length > 0)
+            });
+
             if (data.success && data.orderItems && data.orderItems.length > 0) {
+                // 추가 필터링: 확실히 미지불 상태만
+                const unpaidItems = data.orderItems.filter(item => {
+                    const isUnpaid = item.paid_status === 'UNPAID';
+                    const isActiveOrder = item.order_status === 'OPEN';
+                    const isActiveItem = !['CANCELLED', 'REFUNDED'].includes(item.item_status);
+                    
+                    const shouldInclude = isUnpaid && isActiveOrder && isActiveItem;
+                    
+                    if (!shouldInclude) {
+                        console.log(`🚫 필터링된 아이템:`, {
+                            menu_name: item.menu_name,
+                            paid_status: item.paid_status,
+                            order_status: item.order_status,
+                            item_status: item.item_status,
+                            reason: !isUnpaid ? 'paid' : !isActiveOrder ? 'closed_order' : 'inactive_item'
+                        });
+                    }
+                    
+                    return shouldInclude;
+                });
+
+                console.log(`📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`);
+
                 // 메뉴별로 수량 통합
                 const consolidatedOrders = {};
 
-                data.orderItems.forEach(item => {
+                unpaidItems.forEach(item => {
                     const key = `${item.menu_name}_${item.unit_price}_${item.menu_id}`;
                     if (consolidatedOrders[key]) {
                         consolidatedOrders[key].quantity += item.quantity;
@@ -612,7 +643,7 @@ const POSOrderScreen = {
                 this.currentOrders = [];
             }
 
-            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 (수량 통합)`);
+            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 완료 (수량 통합)`);
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
