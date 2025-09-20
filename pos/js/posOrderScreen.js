@@ -171,7 +171,7 @@ const POSOrderScreen = {
     },
 
     /**
-     * POS 주문 아이템 렌더링 (테이블 형식)
+     * POS 주문 아이템 렌더링 (테이블 형식) - order_items 기준 수량 통합 표시
      */
     renderPOSOrderItemsModern() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
@@ -183,7 +183,7 @@ const POSOrderScreen = {
                     <tr>
                         <th class="col-menu">메뉴명</th>
                         <th class="col-price">단가</th>
-                        <th class="col-quantity">수량</th>
+                        <th class="col-quantity">수량 (통합)</th>
                         <th class="col-total">합계</th>
                         <th class="col-status">상태</th>
                     </tr>
@@ -195,12 +195,13 @@ const POSOrderScreen = {
         let tableBody = '';
 
         if (posOrders.length > 0) {
-            tableBody = posOrders.map(order => `
-                <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}">
+            tableBody = posOrders.map((order, index) => `
+                <tr class="order-row ${order.isCart ? 'cart-item' : 'db-item'}" data-order-id="${order.id}" data-menu-name="${order.menuName}">
                     <td class="col-menu">
                         <div class="menu-info">
                             <strong>${order.menuName}</strong>
-                            ${order.isCart ? '<span class="cart-badge">카트</span>' : ''}
+                            ${order.isCart ? '<span class="cart-badge">카트</span>' : '<span class="db-badge">DB</span>'}
+                            ${order.cookStation ? `<span class="cook-station-mini">${order.cookStation}</span>` : ''}
                         </div>
                     </td>
                     <td class="col-price">
@@ -217,7 +218,8 @@ const POSOrderScreen = {
                                     +
                                 </button>
                             ` : `
-                                <span class="quantity-display">${order.quantity}</span>
+                                <span class="quantity-display quantity-consolidated">${order.quantity}개</span>
+                                <span class="quantity-note">통합됨</span>
                             `}
                         </div>
                     </td>
@@ -236,7 +238,9 @@ const POSOrderScreen = {
             for (let i = 0; i < 10; i++) {
                 tableBody += `
                     <tr class="empty-row">
-                        <td class="col-menu"></td>
+                        <td class="col-menu">
+                            <div class="empty-placeholder">주문 대기 중...</div>
+                        </td>
                         <td class="col-price"></td>
                         <td class="col-quantity"></td>
                         <td class="col-total"></td>
@@ -628,33 +632,47 @@ const POSOrderScreen = {
 
                 console.log(`📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`);
 
-                // 메뉴별로 수량 통합
+                // order_items 기준으로 메뉴별 수량 통합 (같은 메뉴명 + 단가 기준)
                 const consolidatedOrders = {};
 
                 unpaidItems.forEach(item => {
-                    const key = `${item.menu_name}_${item.unit_price}_${item.menu_id}`;
-                    if (consolidatedOrders[key]) {
-                        consolidatedOrders[key].quantity += item.quantity;
+                    // 메뉴명과 단가를 기준으로 그룹핑 (더 정확한 수량 통합)
+                    const consolidationKey = `${item.menu_name}_${item.unit_price}`;
+                    
+                    if (consolidatedOrders[consolidationKey]) {
+                        // 기존 아이템에 수량 추가
+                        consolidatedOrders[consolidationKey].quantity += item.quantity;
+                        console.log(`🔄 수량 통합: ${item.menu_name} (${consolidatedOrders[consolidationKey].quantity}개)`);
                     } else {
-                        consolidatedOrders[key] = {
-                            id: item.menu_id,
+                        // 새로운 메뉴 아이템 생성
+                        consolidatedOrders[consolidationKey] = {
+                            id: item.menu_id || item.id,
                             menuName: item.menu_name,
                             price: item.unit_price,
                             quantity: item.quantity,
-                            cookingStatus: item.item_status,
+                            cookingStatus: item.item_status || 'PENDING',
                             isCart: false,
                             orderItemId: item.id,
-                            ticketId: item.ticket_id
+                            ticketId: item.ticket_id,
+                            cookStation: item.cook_station || 'KITCHEN'
                         };
+                        console.log(`➕ 새 메뉴 추가: ${item.menu_name} (${item.quantity}개)`);
                     }
                 });
 
                 this.currentOrders = Object.values(consolidatedOrders);
+                
+                console.log(`✅ POS order_items 수량 통합 완료:`, {
+                    원본아이템수: unpaidItems.length,
+                    통합후메뉴수: this.currentOrders.length,
+                    통합된메뉴들: this.currentOrders.map(item => `${item.menuName}(${item.quantity}개)`)
+                });
+                
             } else {
                 this.currentOrders = [];
             }
 
-            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 완료 (수량 통합)`);
+            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 완료 (order_items 기준 수량 통합)`);
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
