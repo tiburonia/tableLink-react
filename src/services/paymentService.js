@@ -127,13 +127,25 @@ class PaymentService {
     `, [orderData.storeId, orderData.userPk]);
 
     if (existingOrderResult.rows.length > 0) {
+      // 기존 주문에 결제가 완료되면 세션 종료
+      await client.query(`
+        UPDATE orders 
+        SET session_status = 'CLOSED',
+            session_ended = true,
+            session_ended_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [existingOrderResult.rows[0].id]);
+
+      console.log(`✅ 기존 주문 ${existingOrderResult.rows[0].id} 세션 종료 처리 완료`);
+
       return {
         orderIdToUse: existingOrderResult.rows[0].id,
         isNewOrder: false
       };
     }
 
-    // 새 주문 생성
+    // 새 주문 생성 (즉시 CLOSED 상태로 생성)
     const newOrderResult = await client.query(`
       INSERT INTO orders (
         store_id,
@@ -142,8 +154,10 @@ class PaymentService {
         session_status,
         payment_status,
         total_price,
-        table_num
-      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4)
+        table_num,
+        session_ended,
+        session_ended_at
+      ) VALUES ($1, $2, 'TLL', 'CLOSED', 'PAID', $3, $4, true, CURRENT_TIMESTAMP)
       RETURNING id
     `, [
       orderData.storeId,
@@ -151,6 +165,8 @@ class PaymentService {
       orderData.finalTotal,
       orderData.tableNumber
     ]);
+
+    console.log(`✅ 새 주문 ${newOrderResult.rows[0].id} 생성 완료 (세션 즉시 종료)`);
 
     return {
       orderIdToUse: newOrderResult.rows[0].id,

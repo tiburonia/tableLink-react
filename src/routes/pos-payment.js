@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -129,18 +128,19 @@ router.post('/process', async (req, res) => {
     const hasUnpaidTickets = parseInt(remainingUnpaidResult.rows[0].count) > 0;
 
     if (!hasUnpaidTickets) {
-      // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경
+      // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경하고 세션 종료
       await client.query(`
         UPDATE orders 
         SET payment_status = 'PAID',
+            session_status = 'CLOSED',
+            session_ended = true,
+            session_ended_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [orderId]);
 
-      console.log(`✅ 주문 ${orderId} 전체 결제 완료`);
+      console.log(`✅ 주문 ${orderId} 전체 결제 완료 및 세션 종료`);
     }
-
-    await client.query('COMMIT');
 
     // 응답 데이터 구성
     const responseData = {
@@ -373,15 +373,18 @@ router.post('/process-with-customer', async (req, res) => {
     const hasUnpaidTickets = parseInt(remainingUnpaidResult.rows[0].count) > 0;
 
     if (!hasUnpaidTickets) {
-      // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경
+      // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경하고 세션 종료
       await client.query(`
         UPDATE orders 
         SET payment_status = 'PAID',
+            session_status = 'CLOSED',
+            session_ended = true,
+            session_ended_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [orderId]);
 
-      console.log(`✅ 주문 ${orderId} 전체 결제 완료`);
+      console.log(`✅ 주문 ${orderId} 전체 결제 완료 및 세션 종료`);
     }
 
     // 7. 회원인 경우 포인트 적립
@@ -397,8 +400,8 @@ router.post('/process-with-customer', async (req, res) => {
       console.log(`🎉 회원 ${userId} 포인트 적립: ${points}P`);
     }
 
-    
-  
+
+
 
     await client.query('COMMIT');
 

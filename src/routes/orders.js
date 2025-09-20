@@ -220,6 +220,21 @@ router.post('/pay/:checkId', async (req, res) => {
       WHERE id = $3
     `, [discountAmount, finalAmount, parseInt(checkId)]);
 
+    // 해당 체크와 연관된 주문의 세션도 종료 처리
+    await client.query(`
+      UPDATE orders 
+      SET session_status = 'CLOSED',
+          session_ended = true,
+          session_ended_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id IN (
+        SELECT DISTINCT order_id 
+        FROM order_tickets ot
+        JOIN check_items ci ON ot.id = ci.ticket_id
+        WHERE ci.check_id = $1
+      )
+    `, [parseInt(checkId)]);
+
     // 5. 모든 아이템을 'served' 상태로 변경
     await client.query(`
       UPDATE check_items 
