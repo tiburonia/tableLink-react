@@ -1439,47 +1439,99 @@ const POSPaymentModal = {
     }
 };
 
-// 전역으로 등록 (안전한 등록)
-try {
-    // 기존 등록이 있는지 확인
-    if (typeof window.POSPaymentModal !== 'undefined') {
-        console.log('ℹ️ POSPaymentModal이 이미 등록되어 있습니다. 덮어쓰기를 진행합니다.');
-    }
-
-    // 전역 등록
-    window.POSPaymentModal = POSPaymentModal;
-
-    // 등록 확인
-    if (typeof window.POSPaymentModal === 'undefined') {
-        throw new Error('window.POSPaymentModal 등록 실패');
-    }
-
-    if (typeof window.POSPaymentModal.show !== 'function') {
-        throw new Error('POSPaymentModal.show 함수가 등록되지 않음');
-    }
-
-    // 등록 확인 로그
-    console.log('✅ POSPaymentModal 전역 등록 완료:', {
-        type: typeof POSPaymentModal,
-        windowType: typeof window.POSPaymentModal,
-        hasShow: typeof POSPaymentModal.show === 'function',
-        windowHasShow: typeof window.POSPaymentModal.show === 'function',
-        timestamp: new Date().toISOString()
-    });
-
-    // 추가 검증: 실제 호출 가능한지 테스트
-    if (typeof window.POSPaymentModal.show === 'function') {
-        console.log('✅ POSPaymentModal.show 함수 호출 가능 상태 확인됨');
-    }
-
-} catch (error) {
-    console.error('❌ POSPaymentModal 전역 등록 실패:', error);
+// 전역으로 등록 (더 강력한 안전장치)
+(function() {
+    'use strict';
     
-    // 폴백: 직접 전역 스코프에 할당 시도
-    try {
-        globalThis.POSPaymentModal = POSPaymentModal;
-        console.log('🔄 globalThis를 통한 POSPaymentModal 등록 시도 완료');
-    } catch (fallbackError) {
-        console.error('❌ globalThis 등록도 실패:', fallbackError);
+    console.log('🔧 POSPaymentModal 전역 등록 시작');
+    
+    // 여러 방법으로 전역 등록 시도
+    const registrationMethods = [
+        () => {
+            window.POSPaymentModal = POSPaymentModal;
+            return 'window';
+        },
+        () => {
+            globalThis.POSPaymentModal = POSPaymentModal;
+            return 'globalThis';
+        },
+        () => {
+            self.POSPaymentModal = POSPaymentModal;
+            return 'self';
+        }
+    ];
+
+    let successfulMethod = null;
+    
+    for (const method of registrationMethods) {
+        try {
+            const methodName = method();
+            
+            // 등록 검증
+            const isRegistered = 
+                (methodName === 'window' && typeof window.POSPaymentModal !== 'undefined') ||
+                (methodName === 'globalThis' && typeof globalThis.POSPaymentModal !== 'undefined') ||
+                (methodName === 'self' && typeof self.POSPaymentModal !== 'undefined');
+            
+            if (isRegistered) {
+                successfulMethod = methodName;
+                console.log(`✅ POSPaymentModal ${methodName}에 성공적으로 등록됨`);
+                break;
+            }
+        } catch (error) {
+            console.warn(`⚠️ ${method.name} 등록 실패:`, error);
+        }
     }
+
+    // 최종 검증
+    if (successfulMethod) {
+        const finalCheck = {
+            windowExists: typeof window.POSPaymentModal !== 'undefined',
+            globalThisExists: typeof globalThis.POSPaymentModal !== 'undefined',
+            selfExists: typeof self.POSPaymentModal !== 'undefined',
+            windowHasShow: typeof window.POSPaymentModal?.show === 'function',
+            globalThisHasShow: typeof globalThis.POSPaymentModal?.show === 'function',
+            selfHasShow: typeof self.POSPaymentModal?.show === 'function'
+        };
+
+        console.log('✅ POSPaymentModal 전역 등록 완료:', {
+            method: successfulMethod,
+            verification: finalCheck,
+            timestamp: new Date().toISOString()
+        });
+
+        // DOM 준비 완료 시 추가 검증
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('✅ DOM 로드 후 POSPaymentModal 재검증:', {
+                    window: typeof window.POSPaymentModal,
+                    globalThis: typeof globalThis.POSPaymentModal,
+                    hasShow: typeof window.POSPaymentModal?.show === 'function'
+                });
+            });
+        }
+
+    } else {
+        console.error('❌ 모든 POSPaymentModal 등록 방법 실패');
+        
+        // 에러 이벤트 발생
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('POSPaymentModalLoadError', {
+                detail: { error: 'POSPaymentModal 등록 실패' }
+            }));
+        }
+    }
+})();
+
+// 추가: 브라우저 호환성을 위한 폴리필
+if (typeof globalThis === 'undefined') {
+    (function() {
+        if (typeof global !== 'undefined') {
+            global.globalThis = global;
+        } else if (typeof window !== 'undefined') {
+            window.globalThis = window;
+        } else if (typeof self !== 'undefined') {
+            self.globalThis = self;
+        }
+    })();
 }

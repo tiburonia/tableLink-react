@@ -1324,68 +1324,131 @@ const POSOrderScreen = {
         }
 
         try {
-            // POSPaymentModal 로딩 확인 및 대기 (더 강력한 검증)
-            let retryCount = 0;
-            const maxRetries = 20; // 최대 2초 대기 (100ms * 20)
-
-            console.log('🔍 POSPaymentModal 로딩 상태 확인 시작');
-
-            while (retryCount < maxRetries) {
-                // window 객체에서 직접 확인
-                const isAvailable = 
-                    typeof window.POSPaymentModal !== 'undefined' && 
-                    window.POSPaymentModal && 
-                    typeof window.POSPaymentModal.show === 'function';
-
-                console.log(`🔄 POSPaymentModal 로딩 확인 (${retryCount + 1}/${maxRetries}):`, {
-                    windowPOSPaymentModal: typeof window.POSPaymentModal,
-                    globalPOSPaymentModal: typeof POSPaymentModal,
-                    hasShowMethod: window.POSPaymentModal?.show ? 'yes' : 'no',
-                    isAvailable: isAvailable
-                });
-
-                if (isAvailable) {
-                    console.log('✅ POSPaymentModal 로드 확인됨, 모달 표시 시도');
-                    
-                    // window 객체를 통해 안전하게 호출
-                    await window.POSPaymentModal.show(method);
-                    return; // 성공적으로 모달이 표시되면 함수 종료
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 100));
-                retryCount++;
-            }
-
-            // 로딩 실패 시 상세 정보 출력
-            console.error('❌ POSPaymentModal 로딩 실패:', {
-                windowPOSPaymentModal: typeof window.POSPaymentModal,
-                globalPOSPaymentModal: typeof POSPaymentModal,
-                windowKeys: Object.keys(window).filter(key => key.includes('POS')),
-                retryCount: retryCount,
-                maxRetries: maxRetries
-            });
-
-            // 사용자에게 알림 후 폴백 처리
-            console.log('🔄 결제 모달 로드 실패, 기존 결제 처리 방식으로 전환');
+            // 즉시 POSPaymentModal 사용 가능 여부 확인
+            const modalAvailability = this.checkPOSPaymentModalAvailability();
             
-            if (confirm('결제 모달을 불러올 수 없습니다. 기본 결제 처리를 진행하시겠습니까?')) {
-                await this.processPayment(method.toLowerCase());
+            if (modalAvailability.isAvailable) {
+                console.log('✅ POSPaymentModal 즉시 사용 가능');
+                await modalAvailability.modalRef.show(method);
+                return;
             }
+
+            // 사용 불가능한 경우 짧은 대기 시도
+            console.log('🔄 POSPaymentModal 로딩 대기 시작');
+            const waitResult = await this.waitForPOSPaymentModal(3000); // 3초 대기
+
+            if (waitResult.success) {
+                console.log('✅ 대기 후 POSPaymentModal 로드 완료');
+                await waitResult.modalRef.show(method);
+                return;
+            }
+
+            // 로딩 실패 시 상세 정보 출력 및 폴백 처리
+            console.error('❌ POSPaymentModal 로딩 최종 실패:', waitResult.details);
+            this.handlePaymentModalFailure(method);
 
         } catch (error) {
-            console.error('❌ 결제 모달 표시 실패:', error);
-            
-            // 에러 발생 시 사용자에게 선택권 제공
-            console.log('🔄 에러 발생, 폴백 결제 처리 옵션 제공');
-            
-            if (confirm(`결제 모달 오류가 발생했습니다.\n기본 결제 처리를 진행하시겠습니까?\n\n오류: ${error.message}`)) {
-                try {
-                    await this.processPayment(method.toLowerCase());
-                } catch (fallbackError) {
-                    console.error('❌ 폴백 결제 처리도 실패:', fallbackError);
-                    alert(`결제 처리 실패: ${fallbackError.message}\n\n페이지를 새로고침한 후 다시 시도해 주세요.`);
-                }
+            console.error('❌ 결제 모달 표시 중 오류:', error);
+            this.handlePaymentModalFailure(method, error);
+        }
+    },
+
+    /**
+     * POSPaymentModal 사용 가능 여부 즉시 확인
+     */
+    checkPOSPaymentModalAvailability() {
+        const checks = [
+            {
+                name: 'window.POSPaymentModal',
+                ref: window.POSPaymentModal,
+                hasShow: typeof window.POSPaymentModal?.show === 'function'
+            },
+            {
+                name: 'globalThis.POSPaymentModal', 
+                ref: globalThis.POSPaymentModal,
+                hasShow: typeof globalThis.POSPaymentModal?.show === 'function'
+            },
+            {
+                name: 'global POSPaymentModal',
+                ref: typeof POSPaymentModal !== 'undefined' ? POSPaymentModal : null,
+                hasShow: typeof POSPaymentModal?.show === 'function'
             }
+        ];
+
+        for (const check of checks) {
+            if (check.ref && check.hasShow) {
+                console.log(`✅ ${check.name}에서 POSPaymentModal 발견`);
+                return {
+                    isAvailable: true,
+                    modalRef: check.ref,
+                    source: check.name
+                };
+            }
+        }
+
+        return {
+            isAvailable: false,
+            checks: checks.map(c => ({
+                name: c.name,
+                exists: !!c.ref,
+                hasShow: c.hasShow
+            }))
+        };
+    },
+
+    /**
+     * POSPaymentModal 로딩 대기
+     */
+    async waitForPOSPaymentModal(timeoutMs = 3000) {
+        const startTime = Date.now();
+        const checkInterval = 100;
+        
+        while (Date.now() - startTime < timeoutMs) {
+            const availability = this.checkPOSPaymentModalAvailability();
+            
+            if (availability.isAvailable) {
+                return {
+                    success: true,
+                    modalRef: availability.modalRef,
+                    source: availability.source,
+                    waitTime: Date.now() - startTime
+                };
+            }
+
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+
+        return {
+            success: false,
+            details: {
+                timeoutReached: true,
+                waitTime: Date.now() - startTime,
+                finalCheck: this.checkPOSPaymentModalAvailability()
+            }
+        };
+    },
+
+    /**
+     * 결제 모달 로딩 실패 처리
+     */
+    handlePaymentModalFailure(method, error = null) {
+        console.log('🔄 결제 모달 실패 처리 시작');
+        
+        const errorMessage = error ? 
+            `결제 모달 오류: ${error.message}` : 
+            '결제 모달을 불러올 수 없습니다.';
+
+        const userMessage = `${errorMessage}\n\n기본 결제 처리를 진행하시겠습니까?`;
+        
+        if (confirm(userMessage)) {
+            console.log('🔄 사용자가 폴백 결제 처리 선택');
+            this.processPayment(method.toLowerCase())
+                .catch(fallbackError => {
+                    console.error('❌ 폴백 결제 처리 실패:', fallbackError);
+                    alert(`결제 처리 실패: ${fallbackError.message}\n\n시스템 관리자에게 문의하거나 페이지를 새로고침해주세요.`);
+                });
+        } else {
+            console.log('ℹ️ 사용자가 결제 취소 선택');
         }
     },
 

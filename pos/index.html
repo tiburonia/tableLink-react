@@ -22,58 +22,73 @@
     <script src="/pos/js/posOrderScreen.js"></script>
 
     <script>
-        // 모든 스크립트 로딩 완료 확인 후 초기화
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔄 DOM 로드 완료, POS 모듈 확인 중...');
-            
-            // 필수 모듈들이 로드될 때까지 대기 (더 상세한 검증)
-            let retryCount = 0;
-            const maxRetries = 30; // 최대 3초 대기
-            
-            while (retryCount < maxRetries) {
-                const moduleStatus = {
-                    POSCore: typeof POSCore !== 'undefined',
-                    POSOrderScreen: typeof POSOrderScreen !== 'undefined',
-                    POSPaymentModal: typeof POSPaymentModal !== 'undefined',
-                    POSTableMap: typeof POSTableMap !== 'undefined',
-                    windowPOSPaymentModal: typeof window.POSPaymentModal !== 'undefined',
-                    paymentModalShow: typeof window.POSPaymentModal?.show === 'function'
-                };
-
-                const allModulesLoaded = Object.values(moduleStatus).every(status => status === true);
+        // 스크립트 로딩 완료 이벤트 리스너
+        let loadedModules = new Set();
+        const requiredModules = ['POSCore', 'POSOrderScreen', 'POSPaymentModal', 'POSTableMap'];
+        
+        // 모듈 로딩 체크 함수
+        function checkModuleLoading(moduleName) {
+            if (typeof window[moduleName] !== 'undefined') {
+                loadedModules.add(moduleName);
+                console.log(`✅ ${moduleName} 로드 완료`);
                 
-                console.log(`🔄 POS 모듈 로딩 상태 (${retryCount + 1}/${maxRetries}):`, moduleStatus);
-                
-                if (allModulesLoaded) {
-                    console.log('✅ 모든 POS 모듈 로드 및 검증 완료');
-                    
-                    // 추가 검증: POSPaymentModal이 올바르게 등록되었는지 확인
-                    if (window.POSPaymentModal && typeof window.POSPaymentModal.show === 'function') {
-                        console.log('✅ POSPaymentModal 함수 검증 완료');
-                    } else {
-                        console.warn('⚠️ POSPaymentModal이 로드되었지만 show 함수가 없습니다');
-                    }
-                    
-                    break;
+                // 모든 모듈이 로드되었는지 확인
+                if (loadedModules.size === requiredModules.length) {
+                    console.log('✅ 모든 필수 모듈 로드 완료');
+                    initializePOSSystem();
                 }
-                
-                await new Promise(resolve => setTimeout(resolve, 100));
-                retryCount++;
             }
+        }
+
+        // 각 스크립트 로드 후 체크
+        function validateModuleLoading() {
+            requiredModules.forEach(moduleName => {
+                checkModuleLoading(moduleName);
+            });
+        }
+
+        // POS 시스템 초기화 함수
+        async function initializePOSSystem() {
+            console.log('🚀 POS 시스템 초기화 시작');
             
-            // 로딩 실패 시 경고
-            if (retryCount >= maxRetries) {
-                console.error('❌ 일부 POS 모듈 로딩이 완료되지 않았습니다:', {
-                    POSCore: typeof POSCore,
-                    POSOrderScreen: typeof POSOrderScreen,
-                    POSPaymentModal: typeof POSPaymentModal,
-                    POSTableMap: typeof POSTableMap,
-                    windowPOSPaymentModal: typeof window.POSPaymentModal
-                });
+            // 추가 검증: POSPaymentModal의 메서드들이 올바르게 로드되었는지 확인
+            const paymentModalValidation = {
+                exists: typeof window.POSPaymentModal !== 'undefined',
+                hasShow: typeof window.POSPaymentModal?.show === 'function',
+                hasHide: typeof window.POSPaymentModal?.hide === 'function',
+                hasRender: typeof window.POSPaymentModal?.render === 'function'
+            };
+
+            console.log('🔍 POSPaymentModal 검증 결과:', paymentModalValidation);
+
+            if (!paymentModalValidation.exists || !paymentModalValidation.hasShow) {
+                console.error('❌ POSPaymentModal이 올바르게 로드되지 않았습니다');
                 
-                alert('POS 모듈 로딩이 완료되지 않았습니다. 일부 기능에 제한이 있을 수 있습니다.');
+                // 강제 재로딩 시도
+                try {
+                    console.log('🔄 POSPaymentModal 강제 재로딩 시도');
+                    const script = document.createElement('script');
+                    script.src = '/pos/js/posPaymentModal.js';
+                    script.onload = () => {
+                        console.log('✅ POSPaymentModal 재로딩 완료');
+                        proceedWithInitialization();
+                    };
+                    script.onerror = () => {
+                        console.error('❌ POSPaymentModal 재로딩 실패');
+                        proceedWithInitialization();
+                    };
+                    document.head.appendChild(script);
+                    return;
+                } catch (error) {
+                    console.error('❌ POSPaymentModal 재로딩 중 오류:', error);
+                }
             }
-            
+
+            proceedWithInitialization();
+        }
+
+        // 실제 초기화 진행
+        function proceedWithInitialization() {
             // URL에서 매장 ID 파싱
             const urlParams = new URLSearchParams(window.location.search);
             const storeId = urlParams.get('storeId');
@@ -81,11 +96,49 @@
             if (!storeId) {
                 alert('매장 ID가 필요합니다.');
                 window.history.back();
-            } else {
-                // POS 시스템 초기화
-                console.log('🚀 POS 시스템 초기화 시작');
-                POSCore.initialize(parseInt(storeId));
+                return;
             }
+
+            // POSCore가 로드되었는지 최종 확인
+            if (typeof POSCore !== 'undefined' && typeof POSCore.initialize === 'function') {
+                console.log('🚀 POS 시스템 초기화 진행');
+                POSCore.initialize(parseInt(storeId));
+            } else {
+                console.error('❌ POSCore가 로드되지 않아 초기화 불가');
+                alert('POS 시스템을 초기화할 수 없습니다. 페이지를 새로고침해주세요.');
+            }
+        }
+
+        // DOM 로드 완료 후 실행
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🔄 DOM 로드 완료, POS 모듈 검증 시작');
+            
+            // 초기 모듈 검증
+            validateModuleLoading();
+            
+            // 일정 시간 후에도 모든 모듈이 로드되지 않았으면 강제 진행
+            setTimeout(() => {
+                if (loadedModules.size < requiredModules.length) {
+                    console.warn('⚠️ 일부 모듈 로딩이 지연되고 있습니다. 강제 진행합니다.');
+                    console.log('현재 로드된 모듈:', Array.from(loadedModules));
+                    console.log('누락된 모듈:', requiredModules.filter(m => !loadedModules.has(m)));
+                    
+                    // 누락된 모듈이 POSPaymentModal뿐이라면 경고와 함께 진행
+                    const missingModules = requiredModules.filter(m => !loadedModules.has(m));
+                    if (missingModules.length === 1 && missingModules[0] === 'POSPaymentModal') {
+                        console.warn('⚠️ POSPaymentModal만 누락됨. 결제 기능 제한과 함께 진행합니다.');
+                        alert('결제 모달 기능에 제한이 있을 수 있습니다.');
+                    }
+                    
+                    proceedWithInitialization();
+                }
+            }, 5000); // 5초 타임아웃
+        });
+
+        // POSPaymentModal 로드 에러 이벤트 리스너
+        window.addEventListener('POSPaymentModalLoadError', (event) => {
+            console.error('❌ POSPaymentModal 로드 에러 이벤트 수신:', event.detail);
+            alert('결제 모달 로딩에 실패했습니다. 결제 기능에 제한이 있을 수 있습니다.');
         });
     </script>
 </body>
