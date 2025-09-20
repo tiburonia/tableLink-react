@@ -22,7 +22,7 @@ const POSOrderScreen = {
             this.currentStoreId = parseInt(storeId);
             this.currentTableNumber = parseInt(tableNumber);
             this.currentTable = parseInt(tableNumber);
-            
+
             // POSCore에도 저장
             if (typeof POSCore !== 'undefined') {
                 POSCore.storeId = parseInt(storeId);
@@ -710,7 +710,7 @@ const POSOrderScreen = {
     },
 
     /**
-     * 결제 방법 선택
+     * 결제 수단 선택
      */
     selectPaymentMethod(method) {
         this.selectedPaymentMethod = method;
@@ -728,8 +728,8 @@ const POSOrderScreen = {
 
         console.log(`💳 결제 방법 선택: ${method}`);
 
-        // 결제 처리 (실제 결제 API 호출)
-        this.processPayment(method);
+        // 결제 모달 표시
+        this.showPaymentModal();
     },
 
     /**
@@ -1173,6 +1173,151 @@ const POSOrderScreen = {
                 btn.style.opacity = '1';
             });
         }
+    },
+
+    /**
+     * 결제 모달 표시 (신규 구현)
+     */
+    showPaymentModal() {
+        console.log('✨ 결제 모달 표시');
+
+        // 이미 모달이 존재하면 제거
+        if (document.getElementById('paymentModal')) {
+            document.getElementById('paymentModal').remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'paymentModal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>결제하기</h2>
+                    <span class="close-btn" onclick="POSOrderScreen.hidePaymentModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    ${this.renderPaymentDetails()}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="POSOrderScreen.hidePaymentModal()">취소</button>
+                    <button class="btn btn-primary" onclick="POSOrderScreen.confirmPayment()">결제 완료</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        // 모달 표시
+        setTimeout(() => {
+            modal.querySelector('.modal-content').style.transform = 'translateY(0)';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+        }, 10);
+
+        // 받은 금액 입력 필드에 이벤트 리스너 추가 (모달 내에서)
+        const receivedInput = modal.querySelector('#receivedAmount');
+        if (receivedInput) {
+            receivedInput.addEventListener('input', (e) => {
+                const received = parseInt(e.target.value) || 0;
+                const total = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const change = Math.max(0, received - total);
+                const changeElement = modal.querySelector('#changeAmount');
+                if (changeElement) {
+                    changeElement.textContent = change.toLocaleString() + '원';
+                    changeElement.className = `amount change-amount ${change > 0 ? 'positive' : ''}`;
+                }
+            });
+        }
+    },
+
+    /**
+     * 결제 모달 숨기기
+     */
+    hidePaymentModal() {
+        const modal = document.getElementById('paymentModal');
+        if (modal) {
+            modal.querySelector('.modal-content').style.transform = 'translateY(20px)';
+            modal.style.backgroundColor = 'rgba(0,0,0,0)';
+            setTimeout(() => {
+                modal.remove();
+            }, 300); // 모달 애니메이션 시간과 일치
+        }
+    },
+
+    /**
+     * 결제 모달 상세 정보 렌더링
+     */
+    renderPaymentDetails() {
+        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = cartTotal;
+        const discount = 0; // TLL 할인 로직 추가 예정
+        const total = subtotal - discount;
+
+        return `
+            <div class="payment-details-container">
+                <div class="payment-summary-modal">
+                    <div class="summary-row">
+                        <span>소계:</span>
+                        <span class="amount">${subtotal.toLocaleString()}원</span>
+                    </div>
+                    <div class="summary-row discount">
+                        <span>할인:</span>
+                        <span class="amount">-${discount.toLocaleString()}원</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>받을 금액:</span>
+                        <span class="amount">${total.toLocaleString()}원</span>
+                    </div>
+                </div>
+
+                <div class="payment-input-section">
+                    <label for="paymentMethodSelect">결제 수단:</label>
+                    <select id="paymentMethodSelect" onchange="POSOrderScreen.updateSelectedPaymentMethod(this.value)">
+                        <option value="card" ${this.selectedPaymentMethod === 'card' ? 'selected' : ''}>카드</option>
+                        <option value="cash" ${this.selectedPaymentMethod === 'cash' ? 'selected' : ''}>현금</option>
+                        <option value="mixed" ${this.selectedPaymentMethod === 'mixed' ? 'selected' : ''}>복합결제</option>
+                    </select>
+                </div>
+
+                <div class="payment-input-section">
+                    <span>받은 금액:</span>
+                    <input type="number" id="receivedAmount" placeholder="0" value="${this.selectedPaymentMethod === 'cash' ? total : ''}" />
+                    <span>거스름돈:</span>
+                    <span id="changeAmount" class="amount">${this.selectedPaymentMethod === 'cash' ? (total > 0 ? '0원' : '0원') : '0원'}</span>
+                </div>
+
+                <div class="modal-order-list">
+                    <h4>주문 내역</h4>
+                    <ul>
+                        ${this.cart.map(item => `
+                            <li>${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()}원</li>
+                        `).join('')}
+                    </ul>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 결제 모달에서 결제 수단 변경 시
+     */
+    updateSelectedPaymentMethod(method) {
+        this.selectedPaymentMethod = method;
+        const modalBody = document.querySelector('#paymentModal .modal-body');
+        if (modalBody) {
+            modalBody.innerHTML = this.renderPaymentDetails();
+        }
+    },
+
+    /**
+     * 결제 모달에서 결제 완료 버튼 클릭 시
+     */
+    confirmPayment() {
+        console.log(`✅ 결제 완료 버튼 클릭: ${this.selectedPaymentMethod}`);
+
+        // 실제 결제 처리는 processPayment 함수에서 수행
+        this.processPayment(this.selectedPaymentMethod);
+
+        // 모달 닫기
+        this.hidePaymentModal();
     },
 
     /**
