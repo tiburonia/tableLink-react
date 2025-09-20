@@ -1387,25 +1387,25 @@ const POSPaymentModal = {
      */
     getCookStationByMenu(menuName) {
         if (!menuName) return 'KITCHEN';
-        
+
         const menuLower = menuName.toLowerCase();
-        
+
         if (menuLower.includes('음료') || menuLower.includes('주스') || menuLower.includes('커피') || 
             menuLower.includes('차') || menuLower.includes('라떼') || menuLower.includes('콜라') || 
             menuLower.includes('사이다')) {
             return 'DRINK';
         }
-        
+
         if (menuLower.includes('디저트') || menuLower.includes('케이크') || menuLower.includes('아이스크림') || 
             menuLower.includes('푸딩') || menuLower.includes('과자')) {
             return 'DESSERT';
         }
-        
+
         if (menuLower.includes('사이드') || menuLower.includes('반찬') || menuLower.includes('김치') || 
             menuLower.includes('피클')) {
             return 'SIDE';
         }
-        
+
         return 'KITCHEN';
     },
 
@@ -1466,12 +1466,17 @@ const POSPaymentModal = {
     }
 };
 
+// Export for module systems if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = POSPaymentModal;
+}
+
 // 전역으로 등록 (더 강력한 안전장치)
 (function() {
     'use strict';
-    
+
     console.log('🔧 POSPaymentModal 전역 등록 시작');
-    
+
     // 여러 방법으로 전역 등록 시도
     const registrationMethods = [
         () => {
@@ -1489,17 +1494,17 @@ const POSPaymentModal = {
     ];
 
     let successfulMethod = null;
-    
+
     for (const method of registrationMethods) {
         try {
             const methodName = method();
-            
+
             // 등록 검증
             const isRegistered = 
                 (methodName === 'window' && typeof window.POSPaymentModal !== 'undefined') ||
                 (methodName === 'globalThis' && typeof globalThis.POSPaymentModal !== 'undefined') ||
                 (methodName === 'self' && typeof self.POSPaymentModal !== 'undefined');
-            
+
             if (isRegistered) {
                 successfulMethod = methodName;
                 console.log(`✅ POSPaymentModal ${methodName}에 성공적으로 등록됨`);
@@ -1540,7 +1545,7 @@ const POSPaymentModal = {
 
     } else {
         console.error('❌ 모든 POSPaymentModal 등록 방법 실패');
-        
+
         // 에러 이벤트 발생
         if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('POSPaymentModalLoadError', {
