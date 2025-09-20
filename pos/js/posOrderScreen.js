@@ -10,8 +10,6 @@ const POSOrderScreen = {
     selectedPaymentMethod: 'card',
     currentSession: null, // 현재 활성 세션 정보
     sessionItems: [], // 현재 세션의 주문 아이템
-    tllIntegrationEnabled: true, // TLL 연동 여부 (기본값: 연동)
-    tllIntegrationSelected: false, // TLL 연동 선택 완료 여부
 
     /**
      * 주문 화면 렌더링
@@ -493,12 +491,9 @@ const POSOrderScreen = {
             return 0;
         });
 
-        const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
-        const isMenuDisabled = hasTLLOrders && !this.tllIntegrationSelected;
-
         return sortedMenu.map(menu => `
-            <div class="menu-card ${menu.isHot ? 'hot-menu' : ''} ${isMenuDisabled ? 'disabled' : ''}"
-                 ${isMenuDisabled ? '' : `onclick="POSOrderScreen.addToCart(${menu.id}, '${menu.name}', ${menu.price})"`}>
+            <div class="menu-card ${menu.isHot ? 'hot-menu' : ''}"
+                 onclick="POSOrderScreen.addToCart(${menu.id}, '${menu.name}', ${menu.price})">
                 ${menu.isHot ? '<div class="hot-badge">🔥 HOT</div>' : ''}
                 <div class="menu-image">
                     ${this.getMenuIcon(menu.category)}
@@ -508,7 +503,6 @@ const POSOrderScreen = {
                     <div class="menu-price">${menu.price.toLocaleString()}원</div>
                 </div>
                 <div class="add-btn">+</div>
-                ${isMenuDisabled ? '<div class="disabled-overlay">연동 방식을 먼저 선택하세요</div>' : ''}
             </div>
         `).join('');
     },
@@ -568,8 +562,7 @@ const POSOrderScreen = {
      * TLL 사용자 정보 렌더링
      */
     renderTLLUserInfo() {
-        // TLL 주문이 없는 경우
-        if (!this.tllUserInfo || !this.tllOrders || this.tllOrders.length === 0) {
+        if (!this.tllUserInfo) {
             return `
                 <div class="tll-user-info">
                     <div class="tll-user-header">
@@ -581,45 +574,6 @@ const POSOrderScreen = {
                 </div>
             `;
         }
-
-        // TLL 주문이 있는 경우 - 연동 선택 UI 표시 (선택 완료 여부에 따라)
-        const integrationUI = this.tllIntegrationSelected ? '' : `
-            <!-- TLL 연동 선택 영역 -->
-            <div class="tll-integration-section">
-                <div class="integration-header">
-                    <span class="integration-icon">🔗</span>
-                    <span class="integration-title">POS 주문 연동 설정</span>
-                </div>
-                <div class="integration-options">
-                    <button class="integration-btn" id="tllIntegrateBtn" 
-                            onclick="POSOrderScreen.setTLLIntegration(true)" data-integrate="true">
-                        <span class="btn-icon">✅</span>
-                        <span class="btn-text">TLL 정보 연동</span>
-                        <span class="btn-desc">기존 주문에 추가</span>
-                    </button>
-                    <button class="integration-btn" id="tllSeparateBtn" 
-                            onclick="POSOrderScreen.setTLLIntegration(false)" data-integrate="false">
-                        <span class="btn-icon">🔄</span>
-                        <span class="btn-text">연동하지 않음</span>
-                        <span class="btn-desc">별도 주문 생성</span>
-                    </button>
-                </div>
-                <div class="integration-status" id="integrationStatus">
-                    <span class="status-icon">⚠️</span>
-                    <span class="status-text">연동 방식을 선택해주세요</span>
-                </div>
-            </div>
-        `;
-
-        const selectedModeUI = this.tllIntegrationSelected ? `
-            <div class="selected-integration-mode">
-                <div class="mode-icon">${this.tllIntegrationEnabled ? '✅' : '🔄'}</div>
-                <div class="mode-text">
-                    <span class="mode-title">${this.tllIntegrationEnabled ? 'TLL 정보 연동' : '별도 주문 생성'}</span>
-                    <span class="mode-desc">${this.tllIntegrationEnabled ? '기존 주문에 추가됩니다' : '비회원 주문으로 생성됩니다'}</span>
-                </div>
-            </div>
-        ` : '';
 
         return `
             <div class="tll-user-info">
@@ -644,9 +598,6 @@ const POSOrderScreen = {
                         <span class="detail-value">${(this.tllUserInfo.point || 0).toLocaleString()}P</span>
                     </div>
                 </div>
-
-                ${integrationUI}
-                ${selectedModeUI}
             </div>
         `;
     },
@@ -725,11 +676,6 @@ const POSOrderScreen = {
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
-
-            // TLL 주문이 없는 경우 연동 선택을 완료 상태로 설정
-            if (!this.tllOrders || this.tllOrders.length === 0) {
-                this.tllIntegrationSelected = true;
-            }
 
         } catch (error) {
             console.error('❌ 기존 주문 로드 실패:', error);
@@ -1118,7 +1064,7 @@ const POSOrderScreen = {
 
     /**
      * 주문 확정 (카트 -> 서버 전송)
-     * TLL 연동 여부에 따른 분기 처리
+     * 비회원 POS 주문 지원
      */
     async confirmOrder() {
         if (this.cart.length === 0) {
@@ -1128,18 +1074,8 @@ const POSOrderScreen = {
 
         try {
             const total = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-            const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
-            const willIntegrate = hasTLLOrders && this.tllIntegrationEnabled;
 
-            // 확인 메시지 생성
-            let confirmMessage;
-            if (willIntegrate) {
-                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 TLL 주문과 연동하여 추가하시겠습니까?`;
-            } else {
-                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 별도 비회원 주문으로 생성하시겠습니까?`;
-            }
-
-            if (!confirm(confirmMessage)) {
+            if (!confirm(`${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 비회원 주문하시겠습니까?`)) {
                 return;
             }
 
@@ -1153,188 +1089,109 @@ const POSOrderScreen = {
                 return;
             }
 
-            console.log('📋 POS 주문 확정 시작:', {
+            console.log('📋 비회원 POS 주문 확정 시작:', {
                 storeId: storeId,
                 tableNumber: tableNumber,
                 cartItems: this.cart.length,
                 totalAmount: total,
-                willIntegrate: willIntegrate,
-                tllIntegrationEnabled: this.tllIntegrationEnabled
+                isGuestOrder: true
             });
 
-            let result;
+            // 비회원 주문 전용 API 사용
+            const response = await fetch('/api/pos/guest-orders/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storeId: parseInt(storeId),
+                    tableNumber: parseInt(tableNumber),
+                    items: this.cart,
+                    totalAmount: total
+                })
+            });
 
-            if (willIntegrate) {
-                // TLL 연동 주문 - 기존 TLL 주문에 추가
-                result = await this.confirmTLLIntegratedOrder(storeId, tableNumber, total);
-            } else {
-                // 비회원 주문 - 별도 주문 생성
-                result = await this.confirmGuestOrder(storeId, tableNumber, total);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '주문 확정 실패');
             }
 
+            const result = await response.json();
             console.log('✅ POS 주문 확정 완료:', result);
 
-            await this.finalizeOrderProcess(result);
+            // 세션 정보 업데이트 (새 주문 ID로)
+            this.currentSession = { orderId: result.orderId, tableNumber: this.currentTable, storeId: POSCore.storeId };
+            this.sessionItems = this.cart.map(item => ({ ...item, ticketId: result.ticketId })); // 임시 ticketId
+
+            // 카트 초기화
+            this.cart = [];
+
+            // 주문 목록 새로고침 (DB에서 최신 order_items 로드)
+            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+
+            // tbody 업데이트 (카트 없이 기존 주문내역만 표시)
+            const posOrderTable = document.querySelector('.pos-order-table tbody');
+            if (posOrderTable) {
+                let tableBody = '';
+
+                if (this.currentOrders.length > 0) {
+                    tableBody = this.currentOrders.map(order => `
+                        <tr class="order-row" data-order-id="${order.id}">
+                            <td class="col-menu">
+                                <div class="menu-info">
+                                    <strong>${order.menuName}</strong>
+                                </div>
+                            </td>
+                            <td class="col-price">
+                                ${order.price.toLocaleString()}원
+                            </td>
+                            <td class="col-quantity">
+                                <div class="quantity-control-table">
+                                    <span class="quantity-display">${order.quantity}</span>
+                                </div>
+                            </td>
+                            <td class="col-total">
+                                <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                            </td>
+                            <td class="col-status">
+                                <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                                    ${this.getStatusText(order.cookingStatus)}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+
+                // 남은 빈 행들 추가
+                const remainingRows = Math.max(0, 10 - this.currentOrders.length);
+                for (let i = 0; i < remainingRows; i++) {
+                    tableBody += `
+                        <tr class="empty-row">
+                            <td class="col-menu"></td>
+                            <td class="col-price"></td>
+                            <td class="col-quantity"></td>
+                            <td class="col-total"></td>
+                            <td class="col-status"></td>
+                        </tr>
+                    `;
+                }
+
+                posOrderTable.innerHTML = tableBody;
+            }
+
+            // 결제 섹션 업데이트
+            const paymentSection = document.querySelector('.payment-section');
+            if (paymentSection) {
+                const newPaymentSection = document.createElement('div');
+                newPaymentSection.innerHTML = this.renderPaymentSection();
+                paymentSection.replaceWith(newPaymentSection.firstElementChild);
+            }
+
+            const orderType = result.isGuestOrder ? '비회원' : '일반';
+            this.showToast(`${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
 
         } catch (error) {
-            console.error('❌ POS 주문 확정 실패:', error);
-            alert(`주문 확정 실패: ${error.message}`);
+            console.error('❌ 비회원 주문 확정 실패:', error);
+            alert(`비회원 주문 확정 실패: ${error.message}`);
         }
-    },
-
-    /**
-     * TLL 통합 주문 확정
-     */
-    async confirmTLLIntegratedOrder(storeId, tableNumber, total) {
-        console.log('🔗 TLL 통합 주문 처리 시작');
-
-        // TLL 주문 연동 API 호출 (기존 TLL 주문에 POS 아이템 추가)
-        const response = await fetch('/api/tll/orders', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                check_id: this.tllOrders[0]?.order_id, // 첫 번째 TLL 주문 ID 사용
-                items: this.cart.map(item => ({
-                    menu_name: item.name,
-                    unit_price: item.price,
-                    quantity: item.quantity,
-                    cook_station: item.cook_station || 'KITCHEN'
-                })),
-                payment_method: 'LATER' // 후불
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'TLL 통합 주문 실패');
-        }
-
-        const result = await response.json();
-        return {
-            ...result,
-            isIntegratedOrder: true,
-            orderType: 'TLL 통합'
-        };
-    },
-
-    /**
-     * 비회원 주문 확정
-     */
-    async confirmGuestOrder(storeId, tableNumber, total) {
-        console.log('👤 비회원 주문 처리 시작');
-
-        // 비회원 주문 전용 API 사용
-        const response = await fetch('/api/pos/guest-orders/confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                storeId: parseInt(storeId),
-                tableNumber: parseInt(tableNumber),
-                items: this.cart,
-                totalAmount: total
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || '비회원 주문 확정 실패');
-        }
-
-        const result = await response.json();
-        return {
-            ...result,
-            isGuestOrder: true,
-            orderType: '비회원'
-        };
-    },
-
-    /**
-     * 주문 확정 후 처리
-     */
-    async finalizeOrderProcess(result) {
-        // 세션 정보 업데이트 (새 주문 ID로)
-        this.currentSession = { 
-            orderId: result.orderId || result.check_id, 
-            tableNumber: this.currentTable, 
-            storeId: POSCore.storeId 
-        };
-        this.sessionItems = this.cart.map(item => ({ ...item, ticketId: result.ticketId }));
-
-        // 카트 초기화
-        this.cart = [];
-
-        // 주문 목록 새로고침 (DB에서 최신 order_items 로드)
-        await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
-
-        // TLL 주문도 새로고침 (연동된 경우 업데이트된 내용 반영)
-        await this.loadTLLOrders(POSCore.storeId, this.currentTable);
-
-        // tbody 업데이트 (카트 없이 기존 주문내역만 표시)
-        const posOrderTable = document.querySelector('.pos-order-table tbody');
-        if (posOrderTable) {
-            let tableBody = '';
-
-            if (this.currentOrders.length > 0) {
-                tableBody = this.currentOrders.map(order => `
-                    <tr class="order-row" data-order-id="${order.id}">
-                        <td class="col-menu">
-                            <div class="menu-info">
-                                <strong>${order.menuName}</strong>
-                            </div>
-                        </td>
-                        <td class="col-price">
-                            ${order.price.toLocaleString()}원
-                        </td>
-                        <td class="col-quantity">
-                            <div class="quantity-control-table">
-                                <span class="quantity-display">${order.quantity}</span>
-                            </div>
-                        </td>
-                        <td class="col-total">
-                            <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
-                        </td>
-                        <td class="col-status">
-                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
-                                ${this.getStatusText(order.cookingStatus)}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-
-            // 남은 빈 행들 추가
-            const remainingRows = Math.max(0, 10 - this.currentOrders.length);
-            for (let i = 0; i < remainingRows; i++) {
-                tableBody += `
-                    <tr class="empty-row">
-                        <td class="col-menu"></td>
-                        <td class="col-price"></td>
-                        <td class="col-quantity"></td>
-                        <td class="col-total"></td>
-                        <td class="col-status"></td>
-                    </tr>
-                `;
-            }
-
-            posOrderTable.innerHTML = tableBody;
-        }
-
-        // 결제 섹션 업데이트
-        const paymentSection = document.querySelector('.payment-section');
-        if (paymentSection) {
-            const newPaymentSection = document.createElement('div');
-            newPaymentSection.innerHTML = this.renderPaymentSection();
-            paymentSection.replaceWith(newPaymentSection.firstElementChild);
-        }
-
-        // TLL 섹션도 업데이트
-        const tllOrderList = document.getElementById('tllOrderList');
-        if (tllOrderList) {
-            tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
-        }
-
-        const orderType = result.orderType || (result.isGuestOrder ? '비회원' : '일반');
-        this.showToast(`${orderType} 주문이 확정되었습니다 (ID: ${result.ticketId || result.check_id})`);
     },
 
     /**
@@ -2033,82 +1890,6 @@ const POSOrderScreen = {
         }
 
         console.log(`🍽️ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
-    },
-
-    /**
-     * TLL 연동 설정
-     */
-    setTLLIntegration(integrate) {
-        this.tllIntegrationEnabled = integrate;
-        this.tllIntegrationSelected = true; // 연동 방식 선택 완료
-
-        // UI 업데이트
-        const integrateBtn = document.getElementById('tllIntegrateBtn');
-        const separateBtn = document.getElementById('tllSeparateBtn');
-        const statusElement = document.getElementById('integrationStatus');
-        const integrationSection = document.querySelector('.tll-integration-section');
-
-        if (integrateBtn && separateBtn && statusElement) {
-            // 즉시 모든 버튼 비활성화 (시각적 피드백)
-            integrateBtn.disabled = true;
-            separateBtn.disabled = true;
-            integrateBtn.classList.add('processing');
-            separateBtn.classList.add('processing');
-
-            // 선택된 버튼만 active 상태로 표시
-            integrateBtn.classList.toggle('active', integrate);
-            separateBtn.classList.toggle('active', !integrate);
-
-            // 상태 텍스트 업데이트
-            if (integrate) {
-                statusElement.innerHTML = `
-                    <span class="status-icon">✅</span>
-                    <span class="status-text">TLL 주문과 연동하여 추가됩니다</span>
-                `;
-            } else {
-                statusElement.innerHTML = `
-                    <span class="status-icon">🔄</span>
-                    <span class="status-text">별도 비회원 주문으로 생성됩니다</span>
-                `;
-            }
-
-            // 즉시 연동 선택 섹션 숨김 (애니메이션 효과)
-            setTimeout(() => {
-                if (integrationSection) {
-                    integrationSection.style.transition = 'all 0.4s ease-out';
-                    integrationSection.style.opacity = '0';
-                    integrationSection.style.transform = 'translateY(-10px)';
-                    integrationSection.style.maxHeight = '0';
-                    integrationSection.style.overflow = 'hidden';
-                    integrationSection.style.marginTop = '0';
-                    integrationSection.style.paddingTop = '0';
-                    integrationSection.style.paddingBottom = '0';
-                    integrationSection.style.borderWidth = '0';
-                    
-                    // 완전히 숨김
-                    setTimeout(() => {
-                        integrationSection.style.display = 'none';
-                    }, 400);
-                }
-            }, 200);
-        }
-
-        // 메뉴 그리드 다시 렌더링 (메뉴 활성화)
-        const menuGrid = document.getElementById('menuGrid');
-        if (menuGrid) {
-            menuGrid.innerHTML = this.renderMenuGrid();
-        }
-
-        // 결제 섹션 업데이트 (선택된 모드 표시)
-        const paymentSection = document.querySelector('.payment-section');
-        if (paymentSection) {
-            const newPaymentSection = document.createElement('div');
-            newPaymentSection.innerHTML = this.renderPaymentSection();
-            paymentSection.replaceWith(newPaymentSection.firstElementChild);
-        }
-
-        console.log(`🔗 TLL 연동 설정 변경: ${integrate ? '연동' : '별도 주문'}`);
-        this.showToast(`${integrate ? 'TLL 연동' : '별도 주문'} 모드가 선택되었습니다. 이제 메뉴를 선택할 수 있습니다.`);
     },
 
     // 기타 기능들 (임시 구현)
