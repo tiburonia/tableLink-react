@@ -186,30 +186,58 @@ const POSOrderScreen = {
      * POS 주문 아이템 렌더링 (테이블 형식)
      */
     renderPOSOrderItemsModern() {
-        // 통합된 데이터 사용 확인 로깅
-        console.log('🎨 renderPOSOrderItemsModern 호출:', {
+        // 렌더링 시점에서 통합된 데이터 확인
+        console.log('🎨 renderPOSOrderItemsModern 호출 - 통합 확인:', {
             전체주문수: this.currentOrders.length,
-            통합된주문상세: this.currentOrders.map(order => ({
-                메뉴명: order.menuName,
-                수량: order.quantity,
-                티켓ID배열: order.ticketIds || [order.ticketId],
-                통합여부: order.ticketIds?.length > 1
-            }))
-        });
-
-        const posOrders = this.currentOrders.filter(order => !order.sessionId);
-
-        console.log('🎨 렌더링할 POS 주문 상세:', {
-            필터링후수량: posOrders.length,
-            렌더링데이터: posOrders.map((order, index) => ({
+            통합확인: this.currentOrders.map((order, index) => ({
                 인덱스: index,
                 메뉴명: order.menuName,
                 수량: order.quantity,
                 단가: order.price,
-                티켓ID: order.ticketId,
-                티켓ID배열: order.ticketIds,
-                다중티켓여부: order.ticketIds && order.ticketIds.length > 1,
-                상태: order.cookingStatus
+                티켓배열길이: order.ticketIds?.length || 1,
+                통합성공: order.ticketIds?.length > 1 ? '✅' : '❌'
+            }))
+        });
+
+        // 렌더링 직전 최종 중복 체크 및 강제 통합
+        const finalConsolidated = {};
+        
+        this.currentOrders.forEach(order => {
+            const key = `${order.menuName}_${order.price}`;
+            if (finalConsolidated[key]) {
+                // 중복 발견 시 수량 합치기
+                console.warn(`⚠️ 렌더링 시점 중복 발견: ${order.menuName}, 기존 ${finalConsolidated[key].quantity} + 신규 ${order.quantity}`);
+                finalConsolidated[key].quantity += order.quantity;
+                
+                // 티켓 ID 배열 합치기
+                if (order.ticketIds) {
+                    finalConsolidated[key].ticketIds = [...(finalConsolidated[key].ticketIds || []), ...order.ticketIds];
+                } else if (order.ticketId) {
+                    finalConsolidated[key].ticketIds = [...(finalConsolidated[key].ticketIds || []), order.ticketId];
+                }
+            } else {
+                // 새 항목 추가
+                finalConsolidated[key] = {
+                    ...order,
+                    ticketIds: order.ticketIds || [order.ticketId]
+                };
+            }
+        });
+
+        // 최종 통합된 데이터로 this.currentOrders 업데이트
+        this.currentOrders = Object.values(finalConsolidated);
+
+        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+
+        console.log('🎨 최종 렌더링 데이터 (강제 통합 완료):', {
+            통합후수량: posOrders.length,
+            최종데이터: posOrders.map((order, index) => ({
+                인덱스: index,
+                메뉴명: order.menuName,
+                최종수량: order.quantity,
+                단가: order.price,
+                관련티켓수: order.ticketIds?.length || 0,
+                티켓목록: order.ticketIds?.join(',') || 'none'
             }))
         });
 
