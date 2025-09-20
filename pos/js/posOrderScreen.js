@@ -199,9 +199,18 @@ const POSOrderScreen = {
 
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
 
-        console.log('🎨 렌더링할 POS 주문:', {
+        console.log('🎨 렌더링할 POS 주문 상세:', {
             필터링후수량: posOrders.length,
-            렌더링데이터: posOrders.map(order => `${order.menuName} x${order.quantity}`)
+            렌더링데이터: posOrders.map((order, index) => ({
+                인덱스: index,
+                메뉴명: order.menuName,
+                수량: order.quantity,
+                단가: order.price,
+                티켓ID: order.ticketId,
+                티켓ID배열: order.ticketIds,
+                다중티켓여부: order.ticketIds && order.ticketIds.length > 1,
+                상태: order.cookingStatus
+            }))
         });
 
         // 테이블 헤더는 항상 표시
@@ -659,12 +668,23 @@ const POSOrderScreen = {
                 // order_tickets를 넘어서 메뉴별 완전 통합 (같은 메뉴명+단가 기준)
                 const consolidatedOrders = {};
 
-                unpaidItems.forEach(item => {
+                console.log(`🔍 통합 전 아이템 목록:`, unpaidItems.map(item => ({
+                    menu_name: item.menu_name,
+                    unit_price: item.unit_price,
+                    quantity: item.quantity,
+                    ticket_id: item.ticket_id,
+                    통합키: `${item.menu_name.trim()}_${item.unit_price}`
+                })));
+
+                unpaidItems.forEach((item, index) => {
                     // 메뉴명과 단가만으로 통합 키 생성 (티켓 무관하게 통합)
                     const consolidationKey = `${item.menu_name.trim()}_${item.unit_price}`;
 
+                    console.log(`🔄 아이템 [${index}] 처리: ${item.menu_name} (키: ${consolidationKey})`);
+
                     if (consolidatedOrders[consolidationKey]) {
                         // 기존 아이템에 수량 추가 (티켓이 달라도 통합)
+                        const beforeQuantity = consolidatedOrders[consolidationKey].quantity;
                         consolidatedOrders[consolidationKey].quantity += item.quantity;
 
                         // 여러 티켓의 아이템을 통합하므로 티켓 ID 배열로 관리
@@ -685,7 +705,7 @@ const POSOrderScreen = {
                             consolidatedOrders[consolidationKey].cookingStatus = newStatus;
                         }
 
-                        console.log(`🔄 티켓 간 수량 통합: ${item.menu_name} (${consolidatedOrders[consolidationKey].quantity}개, 티켓: ${consolidatedOrders[consolidationKey].ticketIds.join(',')})`);
+                        console.log(`✅ 티켓 간 수량 통합 성공: ${item.menu_name} (${beforeQuantity} + ${item.quantity} = ${consolidatedOrders[consolidationKey].quantity}개, 티켓: ${consolidatedOrders[consolidationKey].ticketIds.join(',')})`);
                     } else {
                         // 새로운 메뉴 아이템 생성
                         consolidatedOrders[consolidationKey] = {
@@ -702,9 +722,17 @@ const POSOrderScreen = {
                             cookStation: item.cook_station || 'KITCHEN'
                         };
 
-                        console.log(`➕ 새 통합 메뉴 추가: ${item.menu_name} (수량: ${item.quantity}, 티켓: ${item.ticket_id})`);
+                        console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (수량: ${item.quantity}, 티켓: ${item.ticket_id}, 키: ${consolidationKey})`);
                     }
                 });
+
+                console.log(`📊 통합 완료 결과:`, Object.entries(consolidatedOrders).map(([key, order]) => ({
+                    통합키: key,
+                    메뉴명: order.menuName,
+                    최종수량: order.quantity,
+                    관련티켓수: order.ticketIds.length,
+                    티켓목록: order.ticketIds.join(',')
+                })));
 
                 // 통합된 주문 배열 생성
                 this.currentOrders = Object.values(consolidatedOrders);
@@ -731,19 +759,41 @@ const POSOrderScreen = {
                     통합성공예시: this.currentOrders.length > 0 ? `${this.currentOrders[0].menuName} x${this.currentOrders[0].quantity}` : '없음'
                 });
 
-                // 통합 데이터 검증
+                // 통합 데이터 검증 - 중복 체크 및 통합 성공 여부 확인
                 const 중복확인 = {};
-                this.currentOrders.forEach(order => {
+                const 통합통계 = {
+                    원본아이템수: unpaidItems.length,
+                    통합메뉴수: this.currentOrders.length,
+                    중복발견: 0,
+                    통합성공: 0
+                };
+
+                this.currentOrders.forEach((order, index) => {
                     const key = `${order.menuName}_${order.price}`;
                     if (중복확인[key]) {
+                        통합통계.중복발견++;
                         console.error('❌ 통합 실패: 중복된 메뉴 발견', {
+                            인덱스: index,
                             메뉴: order.menuName,
                             가격: order.price,
                             기존수량: 중복확인[key],
                             현재수량: order.quantity
                         });
+                    } else {
+                        통합통계.통합성공++;
+                        중복확인[key] = order.quantity;
+                        
+                        // 다중 티켓에서 통합된 메뉴 확인
+                        if (order.ticketIds && order.ticketIds.length > 1) {
+                            console.log(`🎯 다중 티켓 통합 성공: ${order.menuName} (티켓 ${order.ticketIds.length}개에서 수량 ${order.quantity}개로 통합)`);
+                        }
                     }
-                    중복확인[key] = order.quantity;
+                });
+
+                console.log(`📈 통합 통계:`, {
+                    ...통합통계,
+                    통합비율: `${((통합통계.원본아이템수 - 통합통계.통합메뉴수) / 통합통계.원본아이템수 * 100).toFixed(1)}% 압축`,
+                    성공여부: 통합통계.중복발견 === 0 ? '✅ 성공' : '❌ 실패'
                 });
             } else {
                 this.currentOrders = [];
