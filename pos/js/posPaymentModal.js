@@ -53,6 +53,13 @@ const POSPaymentModal = {
         // 모든 검증 통과 후 데이터 설정
         this.currentPaymentData = finalPaymentData;
         
+        // 데이터 설정 확인
+        if (!this.currentPaymentData || this.currentPaymentData.totalAmount <= 0) {
+            console.error('❌ 유효하지 않은 결제 데이터:', this.currentPaymentData);
+            alert('결제 정보가 유효하지 않습니다.');
+            return;
+        }
+        
         console.log('✅ 결제 데이터 설정 완료:', this.currentPaymentData);
         
         this.isVisible = true;
@@ -447,20 +454,29 @@ const POSPaymentModal = {
      */
     setupEventListeners() {
         // 모달 닫기
-        document.getElementById('closePaymentModal').addEventListener('click', () => {
-            this.hide();
-        });
+        const closeBtn = document.getElementById('closePaymentModal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.hide();
+            });
+        }
 
-        document.getElementById('cancelPayment').addEventListener('click', () => {
-            this.hide();
-        });
+        const cancelBtn = document.getElementById('cancelPayment');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                this.hide();
+            });
+        }
 
         // 모달 외부 클릭 시 닫기
-        document.getElementById('posPaymentModal').addEventListener('click', (e) => {
-            if (e.target.id === 'posPaymentModal') {
-                this.hide();
-            }
-        });
+        const modal = document.getElementById('posPaymentModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target.id === 'posPaymentModal') {
+                    this.hide();
+                }
+            });
+        }
 
         // 결제 수단 선택
         document.querySelectorAll('.payment-method-btn').forEach(btn => {
@@ -490,15 +506,21 @@ const POSPaymentModal = {
         document.querySelectorAll('.quick-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const amount = parseInt(btn.dataset.amount);
-                document.getElementById('receivedAmount').value = amount;
-                this.calculateChange();
+                const receivedAmountInput = document.getElementById('receivedAmount');
+                if (receivedAmountInput) {
+                    receivedAmountInput.value = amount;
+                    this.calculateChange();
+                }
             });
         });
 
         // 결제 확인
-        document.getElementById('confirmPayment').addEventListener('click', () => {
-            this.processPayment();
-        });
+        const confirmBtn = document.getElementById('confirmPayment');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', () => {
+                this.processPayment();
+            });
+        }
 
         // ESC 키로 모달 닫기
         document.addEventListener('keydown', (e) => {
@@ -528,11 +550,23 @@ const POSPaymentModal = {
      * 거스름돈 계산
      */
     calculateChange() {
-        const received = parseInt(document.getElementById('receivedAmount').value) || 0;
+        if (!this.currentPaymentData) {
+            console.warn('⚠️ 결제 데이터가 없어 거스름돈을 계산할 수 없습니다');
+            return;
+        }
+
+        const receivedInput = document.getElementById('receivedAmount');
+        const changeElement = document.getElementById('changeAmount');
+        
+        if (!receivedInput || !changeElement) {
+            console.warn('⚠️ 거스름돈 계산을 위한 DOM 요소를 찾을 수 없습니다');
+            return;
+        }
+
+        const received = parseInt(receivedInput.value) || 0;
         const total = this.currentPaymentData.totalAmount;
         const change = Math.max(0, received - total);
 
-        const changeElement = document.getElementById('changeAmount');
         changeElement.textContent = change.toLocaleString() + '원';
         changeElement.style.color = change >= 0 ? '#059669' : '#dc2626';
     },
