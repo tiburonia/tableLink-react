@@ -608,7 +608,6 @@ router.get('/users/:userId', async (req, res) => {
         o.table_num as table_number,
         s.id as store_id, 
         s.name as store_name, 
-        s.category as store_category,
         COUNT(ot.id) as ticket_count
       FROM orders o
       JOIN stores s ON o.store_id = s.id
@@ -865,7 +864,7 @@ router.get('/processing/:orderId', async (req, res) => {
         COALESCE(p.amount, 0) as amount,
         COALESCE(p.status, 'pending') as status,
         p.created_at,
-        p.payment_key
+        p.transaction_id as payment_key
       FROM payments p 
       WHERE p.order_id = $1 
       ORDER BY p.created_at DESC
