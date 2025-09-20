@@ -630,26 +630,32 @@ const POSOrderScreen = {
 
                 console.log(`📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`);
 
-                // order_items 기준으로 메뉴별 수량 통합 (같은 메뉴명 + 단가 기준)
+                // order_items 기준으로 메뉴별 수량 통합 (updateCartDisplay와 동일한 로직 적용)
                 const consolidatedOrders = {};
 
                 unpaidItems.forEach(item => {
-                    // 메뉴명과 단가를 기준으로 그룹핑 (더 정확한 수량 통합)
-                    const consolidationKey = `${item.menu_name}_${item.unit_price}`;
+                    // 메뉴명과 단가를 기준으로 정확한 그룹핑 키 생성
+                    const consolidationKey = `${item.menu_name.trim()}_${item.unit_price}`;
                     
                     if (consolidatedOrders[consolidationKey]) {
-                        // 기존 아이템에 수량 추가
+                        // 기존 아이템에 수량 추가 (updateCartDisplay와 동일)
                         consolidatedOrders[consolidationKey].quantity += item.quantity;
+                        
+                        // 최신 상태 정보로 업데이트
+                        if (item.item_status !== 'PENDING') {
+                            consolidatedOrders[consolidationKey].cookingStatus = item.item_status;
+                        }
+                        
                         console.log(`🔄 수량 통합: ${item.menu_name} (${consolidatedOrders[consolidationKey].quantity}개)`);
                     } else {
-                        // 새로운 메뉴 아이템 생성
+                        // 새로운 메뉴 아이템 생성 (updateCartDisplay 스타일과 일치)
                         consolidatedOrders[consolidationKey] = {
                             id: item.menu_id || item.id,
                             menuName: item.menu_name,
                             price: item.unit_price,
                             quantity: item.quantity,
                             cookingStatus: item.item_status || 'PENDING',
-                            isCart: false,
+                            isCart: false, // 기존 주문은 카트가 아님
                             orderItemId: item.id,
                             ticketId: item.ticket_id,
                             cookStation: item.cook_station || 'KITCHEN'
@@ -658,7 +664,20 @@ const POSOrderScreen = {
                     }
                 });
 
+                // 통합된 주문 배열 생성
                 this.currentOrders = Object.values(consolidatedOrders);
+                
+                // 최초 로드 시에도 수량 통합된 상태를 명시적으로 로그
+                console.log(`📊 최초 로드 수량 통합 결과:`, {
+                    원본아이템수: unpaidItems.length,
+                    통합후메뉴수: this.currentOrders.length,
+                    통합된메뉴목록: this.currentOrders.map(order => ({
+                        메뉴명: order.menuName,
+                        통합수량: order.quantity,
+                        단가: order.price,
+                        상태: order.cookingStatus
+                    }))
+                });
                 
                 console.log(`✅ POS order_items 수량 통합 완료:`, {
                     원본아이템수: unpaidItems.length,
