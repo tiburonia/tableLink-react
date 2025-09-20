@@ -925,6 +925,101 @@ router.get('/processing/:orderId', async (req, res) => {
   }
 });
 
+// 📋 현재 세션 정보 조회 API (POS 주문 화면용)
+router.get('/current-session/:storeId/:tableNumber', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`📋 현재 세션 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableNumber = parseInt(tableNumber);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID 또는 테이블 번호입니다'
+      });
+    }
+
+    // 해당 테이블의 현재 활성 주문 조회
+    const sessionResult = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        o.status,
+        o.created_at,
+        o.user_id,
+        o.guest_phone,
+        o.total_price,
+        COALESCE(u.name, '게스트') as customer_name,
+        COUNT(ot.id) as ticket_count
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND o.status = 'OPEN'
+        AND NOT COALESCE(o.session_ended, false)
+      GROUP BY o.id, u.name
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [parsedStoreId, parsedTableNumber]);
+
+    if (sessionResult.rows.length === 0) {
+      console.log(`ℹ️ 테이블 ${tableNumber}에 활성 세션 없음`);
+      return res.json({
+        success: true,
+        session: null
+      });
+    }
+
+    const session = sessionResult.rows[0];
+
+    // 세션의 주문 아이템들 조회
+    const itemsResult = await pool.query(`
+      SELECT 
+        oi.id as order_item_id,
+        oi.menu_name,
+        oi.unit_price,
+        oi.quantity,
+        oi.item_status,
+        oi.ticket_id,
+        oi.created_at
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1
+      ORDER BY oi.created_at
+    `, [session.order_id]);
+
+    const sessionData = {
+      orderId: session.order_id,
+      status: session.status,
+      createdAt: session.created_at,
+      customerId: session.user_id,
+      customerName: session.customer_name,
+      guestPhone: session.guest_phone,
+      totalPrice: session.total_price,
+      ticketCount: session.ticket_count,
+      orderItems: itemsResult.rows
+    };
+
+    console.log(`✅ 현재 세션 조회 완료: 주문 ${session.order_id}, 아이템 ${itemsResult.rows.length}개`);
+
+    res.json({
+      success: true,
+      session: sessionData
+    });
+
+  } catch (error) {
+    console.error('❌ 현재 세션 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '현재 세션 조회 실패: ' + error.message
+    });
+  }
+});
+
 // 🔚 주문 세션 종료 API
 router.put('/:orderId/end-session', async (req, res) => {
   const client = await pool.connect();
