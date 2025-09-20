@@ -217,21 +217,34 @@ function renderTicketsGrid(tickets) {
 
 // 티켓 아이템 렌더링
 function renderTicketItems(items) {
-  if (!items || items.length === 0) {
+  console.log('🍽️ renderTicketItems 호출:', { items, itemCount: items?.length });
+  
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    console.warn('⚠️ 아이템 정보가 없거나 유효하지 않음:', items);
     return '<div class="no-items">아이템 정보 없음</div>';
   }
 
   const displayItems = items.slice(0, 3);
   const remainingCount = items.length - 3;
 
+  console.log('🍽️ 표시할 아이템들:', { displayItems, remainingCount });
+
   return `
-    ${displayItems.map(item => `
-      <div class="ticket-item">
-        <span class="item-name">${item.menu_name || item.name || '메뉴'}</span>
-        <span class="item-quantity">×${item.quantity || 1}</span>
-        <span class="item-station">[${item.cook_station || 'KITCHEN'}]</span>
-      </div>
-    `).join('')}
+    ${displayItems.map((item, index) => {
+      const itemName = item?.menu_name || item?.name || '메뉴';
+      const quantity = item?.quantity || 1;
+      const cookStation = item?.cook_station || 'KITCHEN';
+      
+      console.log(`🍽️ 아이템 ${index + 1}:`, { itemName, quantity, cookStation });
+      
+      return `
+        <div class="ticket-item">
+          <span class="item-name">${itemName}</span>
+          <span class="item-quantity">×${quantity}</span>
+          <span class="item-station">[${cookStation}]</span>
+        </div>
+      `;
+    }).join('')}
     ${remainingCount > 0 ? `<div class="more-items">+${remainingCount}개 더</div>` : ''}
   `;
 }
