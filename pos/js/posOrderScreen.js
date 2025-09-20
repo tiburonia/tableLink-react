@@ -582,7 +582,7 @@ const POSOrderScreen = {
     async loadCurrentOrders(storeId, tableNumber) {
         try {
             console.log(`🔍 POS 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
-            
+
             // POS 주문 로드 (order_items 기준, UNPAID 상태만)
             const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
             const data = await response.json();
@@ -600,7 +600,7 @@ const POSOrderScreen = {
                     const isPaid = item.paid_status === 'PAID';
                     const isActiveOrder = item.order_status === 'OPEN';
                     const isActiveItem = !['CANCELLED', 'REFUNDED'].includes(item.item_status);
-                    
+
                     // PAID 상태는 무조건 제외
                     if (isPaid) {
                         console.warn(`🚫 PAID 상태 아이템 제거:`, {
@@ -610,9 +610,9 @@ const POSOrderScreen = {
                         });
                         return false;
                     }
-                    
+
                     const shouldInclude = isUnpaid && isActiveOrder && isActiveItem;
-                    
+
                     if (!shouldInclude) {
                         console.log(`🚫 필터링된 아이템:`, {
                             menu_name: item.menu_name,
@@ -622,39 +622,86 @@ const POSOrderScreen = {
                             reason: !isUnpaid ? 'not_unpaid' : !isActiveOrder ? 'closed_order' : 'inactive_item'
                         });
                     }
-                    
+
                     return shouldInclude;
                 });
 
                 console.log(`📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`);
 
-                // 메뉴별로 수량 통합
+                // order_tickets를 넘어서 메뉴별 완전 통합 (같은 메뉴명+단가 기준)
                 const consolidatedOrders = {};
 
                 unpaidItems.forEach(item => {
-                    const key = `${item.menu_name}_${item.unit_price}_${item.menu_id}`;
-                    if (consolidatedOrders[key]) {
-                        consolidatedOrders[key].quantity += item.quantity;
+                    // 메뉴명과 단가만으로 통합 키 생성 (티켓 무관하게 통합)
+                    const consolidationKey = `${item.menu_name.trim()}_${item.unit_price}`;
+
+                    if (consolidatedOrders[consolidationKey]) {
+                        // 기존 아이템에 수량 추가 (티켓이 달라도 통합)
+                        consolidatedOrders[consolidationKey].quantity += item.quantity;
+
+                        // 여러 티켓의 아이템을 통합하므로 티켓 ID 배열로 관리
+                        if (!consolidatedOrders[consolidationKey].ticketIds.includes(item.ticket_id)) {
+                            consolidatedOrders[consolidationKey].ticketIds.push(item.ticket_id);
+                        }
+
+                        // 아이템 ID 배열로 관리
+                        consolidatedOrders[consolidationKey].orderItemIds.push(item.id);
+
+                        // 최신 상태 정보로 업데이트 (READY > COOKING > PENDING 우선순위)
+                        const currentStatus = consolidatedOrders[consolidationKey].cookingStatus;
+                        const newStatus = item.item_status || 'PENDING';
+
+                        if (currentStatus === 'PENDING' && newStatus !== 'PENDING') {
+                            consolidatedOrders[consolidationKey].cookingStatus = newStatus;
+                        } else if (currentStatus === 'COOKING' && newStatus === 'READY') {
+                            consolidatedOrders[consolidationKey].cookingStatus = newStatus;
+                        }
+
+                        console.log(`🔄 티켓 간 수량 통합: ${item.menu_name} (${consolidatedOrders[consolidationKey].quantity}개, 티켓: ${consolidatedOrders[consolidationKey].ticketIds.join(',')})`);
                     } else {
-                        consolidatedOrders[key] = {
-                            id: item.menu_id,
+                        // 새로운 메뉴 아이템 생성
+                        consolidatedOrders[consolidationKey] = {
+                            id: item.menu_id || item.id,
                             menuName: item.menu_name,
                             price: item.unit_price,
                             quantity: item.quantity,
-                            cookingStatus: item.item_status,
-                            isCart: false,
-                            orderItemId: item.id,
-                            ticketId: item.ticket_id
+                            cookingStatus: item.item_status || 'PENDING',
+                            isCart: false, // 기존 주문은 카트가 아님
+                            orderItemId: item.id, // 대표 아이템 ID
+                            orderItemIds: [item.id], // 모든 아이템 ID 배열
+                            ticketId: item.ticket_id, // 대표 티켓 ID  
+                            ticketIds: [item.ticket_id], // 모든 티켓 ID 배열
+                            cookStation: item.cook_station || 'KITCHEN'
                         };
+
+                        console.log(`➕ 새 통합 메뉴 추가: ${item.menu_name} (수량: ${item.quantity}, 티켓: ${item.ticket_id})`);
                     }
                 });
 
+                // 통합된 주문 배열 생성
                 this.currentOrders = Object.values(consolidatedOrders);
+
+                // 티켓 간 통합 상세 로깅
+                console.log(`📊 티켓 간 메뉴 통합 결과:`, {
+                    원본아이템수: unpaidItems.length,
+                    통합후메뉴수: this.currentOrders.length,
+                    통합비율: `${((unpaidItems.length - this.currentOrders.length) / unpaidItems.length * 100).toFixed(1)}% 압축`,
+                    통합된메뉴상세: this.currentOrders.map(order => ({
+                        메뉴명: order.menuName,
+                        통합수량: order.quantity,
+                        단가: order.price,
+                        상태: order.cookingStatus,
+                        관련티켓수: order.ticketIds?.length || 1,
+                        티켓ID목록: order.ticketIds?.join(',') || order.ticketId
+                    }))
+                });
+
+                console.log(`✅ POS 티켓 간 메뉴 통합 완료:`, {
+                    원본아이템수: unpaidItems.length,
+                });
             } else {
                 this.currentOrders = [];
             }
-
-            console.log(`✅ POS 미지불 주문 ${this.currentOrders.length}개 로드 완료 (수량 통합)`);
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
@@ -1202,7 +1249,7 @@ const POSOrderScreen = {
                 // 잠시 대기 후 강제 새로고침 (DB 업데이트 반영 시간)
                 setTimeout(async () => {
                     console.log('🔄 결제 완료 후 강제 데이터 새로고침');
-                    
+
                     // 화면 새로고침
                     await this.refreshOrders();
 
@@ -1408,12 +1455,12 @@ const POSOrderScreen = {
         if (this.currentSession && this.currentSession.orderId) {
             return this.currentSession.orderId;
         }
-        
+
         // 기존 주문이 있으면 첫 번째 주문의 ID 사용 (임시)
         if (this.currentOrders.length > 0) {
             return this.currentOrders[0].orderItemId || null;
         }
-        
+
         return null;
     },
 
