@@ -1105,6 +1105,7 @@ function showErrorState(message) {
 function getProcessingOrderStyles() {
   return `
     <style>
+      /* 전체 컨테이너 */
       .processing-order-container {
         position: fixed;
         top: 0;
@@ -1116,101 +1117,116 @@ function getProcessingOrderStyles() {
         margin: 0 auto;
         display: flex;
         flex-direction: column;
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        background: #f8fafc;
         overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
 
+      /* 헤더 */
       .processing-header {
-        height: 80px;
-        background: white;
-        padding: 20px 16px;
+        height: 70px;
+        background: #ffffff;
+        padding: 16px 20px;
         display: flex;
         align-items: center;
         gap: 16px;
-        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid #f1f5f9;
         flex-shrink: 0;
         z-index: 100;
       }
 
       .header-back-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
         border: none;
-        background: #f1f5f9;
-        color: #475569;
+        background: #f8fafc;
+        color: #64748b;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .header-back-btn:hover {
         background: #e2e8f0;
-        color: #334155;
+        color: #475569;
       }
 
       .header-info {
         flex: 1;
+        min-width: 0;
       }
 
       .header-info h1 {
-        margin: 0 0 4px 0;
-        font-size: 20px;
+        margin: 0 0 2px 0;
+        font-size: 18px;
         font-weight: 700;
-        color: #1e293b;
-        line-height: 1.2;
+        color: #0f172a;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .header-subtitle {
         margin: 0;
-        font-size: 13px;
+        font-size: 12px;
         color: #64748b;
         font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .header-actions {
         display: flex;
         gap: 8px;
+        flex-shrink: 0;
       }
 
       .end-session-btn {
-        padding: 8px 12px;
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        padding: 8px 14px;
+        background: #ef4444;
         color: white;
         border: none;
         border-radius: 8px;
         font-size: 12px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
       }
 
       .end-session-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        background: #dc2626;
+        transform: translateY(-1px);
       }
 
+      /* 컨텐츠 */
       .processing-content {
         flex: 1;
         overflow-y: auto;
-        padding: 20px;
+        padding: 16px;
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 16px;
       }
 
+      /* 공통 섹션 */
       .order-summary-section,
-      .kitchen-status-section,
+      .order-status-section,
       .payments-section {
         background: white;
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border: 1px solid #f1f5f9;
       }
 
+      /* 요약 섹션 */
       .summary-header {
         display: flex;
         justify-content: space-between;
@@ -1220,42 +1236,44 @@ function getProcessingOrderStyles() {
 
       .summary-header h3 {
         margin: 0;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
       }
 
       .order-status {
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 11px;
         font-weight: 600;
+        text-transform: uppercase;
       }
 
-      .status-open { background: #dbeafe; color: #1d4ed8; }
-      .status-cooking { background: #fef3c7; color: #d97706; }
-      .status-ready { background: #d1fae5; color: #059669; }
+      .status-open { background: #dbeafe; color: #1e40af; }
+      .status-cooking { background: #fed7aa; color: #c2410c; }
+      .status-ready { background: #bbf7d0; color: #15803d; }
       .status-done { background: #e0e7ff; color: #6366f1; }
       .status-closed { background: #f3f4f6; color: #6b7280; }
 
       .summary-stats {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
+        gap: 12px;
       }
 
       .stat-item {
         text-align: center;
         padding: 16px 12px;
         background: #f8fafc;
-        border-radius: 12px;
+        border-radius: 10px;
+        border: 1px solid #f1f5f9;
       }
 
       .stat-label {
         display: block;
-        font-size: 12px;
+        font-size: 11px;
         color: #64748b;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
         font-weight: 500;
       }
 
@@ -1263,105 +1281,70 @@ function getProcessingOrderStyles() {
         display: block;
         font-size: 18px;
         font-weight: 700;
-        color: #1e293b;
-      }
-
-      .section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-
-      .section-header h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 700;
-        color: #1e293b;
-      }
-
-      .refresh-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
-        border: none;
-        background: #f1f5f9;
-        color: #475569;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .refresh-btn:hover {
-        background: #e2e8f0;
-        transform: rotate(90deg);
+        color: #0f172a;
       }
 
       /* 주문 현황 섹션 */
       .order-status-section {
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 20px;
       }
 
       .order-subsection {
-        background: white;
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-        border: 1px solid rgba(226, 232, 240, 0.8);
+        background: #fcfcfd;
+        border-radius: 10px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
       }
 
-      /* TLL 서브섹션 */
       .tll-subsection {
-        border-left: 4px solid #10b981;
+        border-left: 3px solid #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #f0fdf9 100%);
       }
 
-      /* POS 서브섹션 */
       .pos-subsection {
-        border-left: 4px solid #f59e0b;
+        border-left: 3px solid #f59e0b;
+        background: linear-gradient(135deg, #fffbeb 0%, #fefce8 100%);
       }
 
-      /* 서브섹션 헤더 */
       .subsection-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 2px solid #f1f5f9;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #f1f5f9;
       }
 
       .subsection-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
       }
 
       .subsection-title h4 {
         margin: 0;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
       }
 
       .status-icon {
-        font-size: 20px;
+        font-size: 16px;
       }
 
       .order-type-badge {
-        padding: 4px 8px;
-        border-radius: 12px;
-        font-size: 11px;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
       }
 
       .tll-badge {
-        background: #d1fae5;
-        color: #065f46;
+        background: #dcfce7;
+        color: #166534;
       }
 
       .pos-badge {
@@ -1370,14 +1353,14 @@ function getProcessingOrderStyles() {
       }
 
       .subsection-status {
-        font-size: 12px;
+        font-size: 11px;
         color: #64748b;
         font-weight: 500;
       }
 
       /* POS 결제 섹션 */
       .pos-payment-section {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
       }
 
       .pos-payment-section:last-child {
@@ -1388,8 +1371,8 @@ function getProcessingOrderStyles() {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 12px;
-        padding: 12px 16px;
+        margin-bottom: 10px;
+        padding: 10px 14px;
         border-radius: 8px;
         font-weight: 600;
       }
@@ -1397,68 +1380,100 @@ function getProcessingOrderStyles() {
       .unpaid-section .payment-status-header {
         background: #fef3c7;
         color: #92400e;
-        border: 1px solid #fbbf24;
+        border: 1px solid #fde68a;
       }
 
       .paid-section .payment-status-header {
-        background: #d1fae5;
-        color: #065f46;
-        border: 1px solid #10b981;
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
       }
 
       .payment-status-icon {
-        font-size: 16px;
+        font-size: 14px;
       }
 
       .payment-status-header h5 {
         margin: 0;
-        font-size: 14px;
+        font-size: 13px;
       }
 
       .payment-count {
         margin-left: auto;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.9);
         padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 12px;
+        border-radius: 10px;
+        font-size: 11px;
       }
 
       /* 티켓 그리드 */
       .tickets-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .pos-grid .order-count {
-        background: #f59e0b;
-      }
-
-      .tll-grid .order-count {
-        background: #10b981;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
 
       .ticket-card {
-        background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
+        background: white;
+        border-radius: 10px;
+        padding: 14px;
         border: 1px solid #e2e8f0;
-        transition: all 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         position: relative;
       }
 
       .ticket-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+
+      /* 티켓 타입별 스타일 */
+      .ticket-card.pos-card {
+        border-left: 3px solid #f59e0b;
+        background: linear-gradient(135deg, #fffbeb 0%, white 100%);
+      }
+
+      .ticket-card.tll-card {
+        border-left: 3px solid #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, white 100%);
+      }
+
+      /* 상태별 스타일 */
+      .ticket-card.status-cooking {
+        border-left-color: #ef4444;
+        box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.1);
+      }
+
+      .ticket-card.status-ready {
+        border-left-color: #22c55e;
+        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.1);
+      }
+
+      .ticket-card.pos-unpaid.status-ready {
+        animation: payment-attention 3s ease-in-out infinite;
+      }
+
+      @keyframes payment-attention {
+        0%, 100% { 
+          box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.1);
+        }
+        50% { 
+          box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+        }
       }
 
       /* 티켓 헤더 */
       .ticket-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
+        align-items: flex-start;
+        margin-bottom: 10px;
+      }
+
+      .ticket-id {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
       }
 
       .ticket-status-group {
@@ -1468,103 +1483,74 @@ function getProcessingOrderStyles() {
         gap: 4px;
       }
 
-      .payment-status {
+      .ticket-status {
+        padding: 3px 8px;
+        border-radius: 6px;
         font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .ticket-status.pending {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      .ticket-status.cooking {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+
+      .ticket-status.ready {
+        background: #dcfce7;
+        color: #166534;
+      }
+
+      .ticket-status.served {
+        background: #f3f4f6;
+        color: #6b7280;
+      }
+
+      /* 결제 상태 배지 */
+      .payment-status {
+        font-size: 9px;
         padding: 2px 6px;
-        border-radius: 8px;
+        border-radius: 4px;
         font-weight: 700;
         text-transform: uppercase;
       }
 
       .payment-status.paid {
-        background: #d1fae5;
-        color: #065f46;
+        background: #dcfce7;
+        color: #166534;
       }
 
       .payment-status.unpaid {
         background: #fef3c7;
         color: #92400e;
-        animation: payment-required-pulse 2s infinite;
       }
 
-      @keyframes payment-required-pulse {
-        0%, 100% {
-          background: #fef3c7;
-        }
-        50% {
-          background: #fbbf24;
-          color: white;
-        }
-      }
-
-      /* POS 카드 스타일 */
-      .ticket-card.pos-card {
-        border-left: 4px solid #f59e0b;
-        background: linear-gradient(135deg, #fefbf3 0%, #fef3c7 100%);
-      }
-
-      .ticket-card.pos-unpaid {
-        border-left-color: #f59e0b;
-        background: linear-gradient(135deg, #fefbf3 0%, #fef3c7 100%);
-      }
-
-      .ticket-card.pos-unpaid.status-ready {
-        animation: pos-payment-required 2s infinite;
-      }
-
-      @keyframes pos-payment-required {
-        0%, 100% {
-          border-left-color: #f59e0b;
-        }
-        50% {
-          border-left-color: #dc2626;
-          box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
-        }
-      }
-
-      .ticket-card.pos-paid {
-        border-left-color: #10b981;
-        background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
-      }
-
-      .ticket-card.pos-card.status-cooking {
-        border-left-color: #dc2626;
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-      }
-
-      /* TLL 카드 스타일 */
-      .ticket-card.tll-card {
-        border-left: 4px solid #10b981;
-        background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
-      }
-
-      .ticket-card.tll-card.status-cooking {
-        border-left-color: #dc2626;
-        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-        animation: tll-cooking-pulse 2s infinite;
-      }
-
-      .ticket-card.tll-card.status-ready {
-        border-left-color: #059669;
-        background: linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%);
-      }
-
-      @keyframes tll-cooking-pulse {
-        0%, 100% {
-          transform: scale(1);
-          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
-        }
-        50% {
-          transform: scale(1.02);
-          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
-        }
-      }
-
-      /* 티켓 소스 배지 */
-      .ticket-source {
+      /* 티켓 메타 정보 */
+      .ticket-meta {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 10px;
         font-size: 10px;
+        color: #64748b;
+        flex-wrap: wrap;
+      }
+
+      .ticket-order,
+      .ticket-batch {
         padding: 2px 6px;
-        border-radius: 6px;
+        background: #f8fafc;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+
+      .ticket-source {
+        padding: 2px 6px;
+        border-radius: 4px;
         font-weight: 600;
       }
 
@@ -1578,118 +1564,193 @@ function getProcessingOrderStyles() {
         color: #92400e;
       }
 
-      /* 상태 정보 스타일 */
-      .status-info {
+      /* 티켓 아이템 */
+      .ticket-items {
+        margin-bottom: 12px;
+      }
+
+      .ticket-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f8fafc;
+        gap: 8px;
+      }
+
+      .ticket-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .item-name {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+        line-height: 1.3;
+      }
+
+      .item-quantity {
         font-size: 12px;
-        padding: 6px 12px;
-        border-radius: 12px;
+        font-weight: 600;
+        color: #64748b;
+        margin-right: 4px;
+      }
+
+      .item-station {
+        font-size: 9px;
+        color: #6366f1;
+        background: #f0f4ff;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-weight: 600;
+      }
+
+      .no-items {
+        color: #9ca3af;
+        font-size: 12px;
+        text-align: center;
+        padding: 8px;
+        font-style: italic;
+      }
+
+      .more-items {
+        color: #64748b;
+        font-size: 11px;
+        text-align: center;
+        padding: 4px;
+        font-weight: 500;
+      }
+
+      /* 티켓 푸터 */
+      .ticket-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 8px;
+      }
+
+      .ticket-time {
+        font-size: 11px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      /* 상태 정보 */
+      .status-info {
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 6px;
         font-weight: 600;
         display: inline-block;
       }
 
       .status-info.cooking {
-        background: #fef2f2;
+        background: #fee2e2;
         color: #dc2626;
       }
 
       .status-info.ready {
-        background: #f0fdf4;
-        color: #16a34a;
+        background: #dcfce7;
+        color: #166534;
       }
 
       .status-info.served {
-        background: #f8fafc;
-        color: #64748b;
+        background: #f3f4f6;
+        color: #6b7280;
       }
 
       .status-info.payment-required {
         background: #fef3c7;
         color: #92400e;
-        animation: payment-info-pulse 2s infinite;
+        animation: payment-pulse 2s ease-in-out infinite;
       }
 
-      @keyframes payment-info-pulse {
+      @keyframes payment-pulse {
         0%, 100% {
           background: #fef3c7;
         }
         50% {
-          background: #fbbf24;
-          color: white;
+          background: #fde68a;
         }
       }
 
-      /* 기존 상태 스타일 (호환성) */
-      .ticket-card.status-pending {
-        border-left: 4px solid #f39c12;
-      }
-
-      .ticket-card.status-cooking {
-        border-left: 4px solid #e74c3c;
-        background: #fef7f7;
-      }
-
-      .ticket-card.status-ready {
-        border-left: 4px solid #27ae60;
-        background: #f7fef8;
-      }
-
-      .ticket-card.status-served {
-        border-left: 4px solid #6c757d;
-        background: #f8f9fa;
-        opacity: 0.7;
-      }
-
-      .tickets-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px;
-        margin-bottom: 24px;
-      }
-
-      .pos-grid .order-count {
-        background: #f59e0b;
-      }
-
-      .tll-grid .order-count {
-        background: #10b981;
-      }
-
+      /* 빈 상태 */
       .no-tickets {
         text-align: center;
-        padding: 40px 20px;
+        padding: 32px 16px;
         color: #9ca3af;
       }
 
       .no-tickets-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
+        font-size: 40px;
+        margin-bottom: 8px;
+        opacity: 0.6;
+      }
+
+      .no-tickets p {
+        font-size: 13px;
+        margin: 0;
+        font-weight: 500;
+      }
+
+      .pos-empty {
+        border: 2px dashed #fbbf24;
+        background: #fffbeb;
+        border-radius: 8px;
+      }
+
+      .tll-empty {
+        border: 2px dashed #34d399;
+        background: #f0fdf4;
+        border-radius: 8px;
+      }
+
+      /* 결제 내역 섹션 */
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .section-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .payment-summary {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
       }
 
       .payments-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
       }
 
       .payment-item {
         background: #f8fafc;
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 8px;
+        padding: 14px;
         border: 1px solid #e2e8f0;
-        margin-bottom: 12px;
         transition: all 0.2s ease;
       }
 
       .payment-item:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border-color: #cbd5e1;
       }
 
       .payment-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
 
       .payment-info {
@@ -1698,8 +1759,17 @@ function getProcessingOrderStyles() {
         gap: 4px;
       }
 
+      .payment-method {
+        font-size: 13px;
+        font-weight: 600;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
       .payment-ticket {
-        font-size: 12px;
+        font-size: 10px;
         color: #6366f1;
         font-weight: 600;
         background: #f0f4ff;
@@ -1710,178 +1780,48 @@ function getProcessingOrderStyles() {
 
       .payment-details {
         display: flex;
-        gap: 12px;
-        margin-bottom: 12px;
-        font-size: 12px;
-        color: #64748b;
-      }
-
-      .payment-status {
-        padding: 2px 8px;
-        border-radius: 12px;
+        gap: 10px;
+        margin-bottom: 8px;
         font-size: 11px;
-        font-weight: 600;
+        color: #64748b;
+        flex-wrap: wrap;
       }
 
-      .payment-status.status-completed {
-        background: #d1fae5;
-        color: #059669;
-      }
-
-      .payment-status.status-pending {
-        background: #fef3c7;
-        color: #d97706;
-      }
-
-      .payment-status.status-refunded {
-        background: #fee2e2;
-        color: #dc2626;
+      .payment-time {
+        font-weight: 500;
       }
 
       .payment-key {
-        font-family: monospace;
+        font-family: 'SF Mono', Monaco, monospace;
         font-size: 10px;
+        color: #6b7280;
+      }
+
+      .payment-amount {
+        font-size: 15px;
+        font-weight: 700;
+        color: #059669;
       }
 
       .payment-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
       }
 
       .action-btn {
-        padding: 6px 12px;
+        padding: 5px 10px;
         border: none;
         border-radius: 6px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
       }
 
-      /* 결제 상태 배지 */
-      .payment-status {
-        font-size: 10px;
-        padding: 3px 6px;
-        border-radius: 8px;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-
-      .payment-status.unpaid {
-        background: #fef3c7;
-        color: #d97706;
-      }
-
-      .payment-status.paid {
-        background: #d1fae5;
-        color: #059669;
-      }
-
-      /* 티켓 정보 */
-      .ticket-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .ticket-warning {
-        color: #dc2626;
-        font-size: 10px;
-        font-weight: 600;
-      }
-
-      .ticket-priority {
-        color: #059669;
-        font-size: 10px;
-        font-weight: 600;
-      }
-
-      /* POS 액션 버튼 */
-      .action-btn.payment-required {
-        background: #f59e0b;
-        color: white;
-        font-weight: 700;
-      }
-
-      .action-btn.payment-required:hover {
-        background: #d97706;
-      }
-
-      .action-btn.secondary {
-        background: #e5e7eb;
-        color: #6b7280;
-      }
-
-      /* TLL 액션 버튼 */
-      .action-btn.priority {
-        background: #10b981;
-        color: white;
-        font-weight: 700;
-        animation: priority-glow 2s infinite;
-      }
-
-      .action-btn.priority:hover {
-        background: #059669;
-      }
-
-      .action-btn.quick-complete {
-        background: #3b82f6;
-        color: white;
-      }
-
-      .action-btn.quick-complete:hover {
-        background: #2563eb;
-      }
-
-      .action-btn.cooking {
-        background: #dc2626;
-        color: white;
-      }
-
-      .action-btn.ready {
-        background: #059669;
-        color: white;
-      }
-
-      @keyframes priority-glow {
-        0%, 100% {
-          box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
-        }
-        50% {
-          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
-        }
-      }
-
-      /* 빈 상태 스타일 */
-      .pos-empty {
-        border: 2px dashed #f59e0b;
-        background: #fefbf3;
-      }
-
-      .tll-empty {
-        border: 2px dashed #10b981;
-        background: #f0fdf4;
-      }
-
-      .action-btn.start-cooking {
-        background: #3b82f6;
-        color: white;
-      }
-
-      .action-btn.mark-ready {
-        background: #10b981;
-        color: white;
-      }
-
-      .action-btn.served {
-        background: #6b7280;
-        color: white;
-      }
-
       .action-btn.receipt {
         background: #f3f4f6;
         color: #374151;
-        border: 1px solid #d1d5db;
+        border: 1px solid #e5e7eb;
       }
 
       .action-btn.refund {
@@ -1892,106 +1832,53 @@ function getProcessingOrderStyles() {
 
       .action-btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      .ticket-meta {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 8px;
-        font-size: 11px;
-        color: #64748b;
-      }
-
-      .ticket-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 12px;
-      }
-
-      .item-station {
-        font-size: 10px;
-        color: #6366f1;
-        background: #f0f4ff;
-        padding: 1px 4px;
-        border-radius: 3px;
       }
 
       .no-payments {
         text-align: center;
-        padding: 40px 20px;
+        padding: 32px 16px;
         color: #9ca3af;
       }
 
       .no-payments-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
+        font-size: 40px;
+        margin-bottom: 8px;
+        opacity: 0.6;
       }
 
-      .receipt-modal {
-        max-width: 400px;
-        width: 90%;
-      }
-
-      .receipt-content {
-        padding: 20px 0;
-      }
-
-      .receipt-info p {
-        margin: 8px 0;
-        padding: 4px 0;
-        border-bottom: 1px solid #f3f4f6;
-      }
-
-      .payment-method {
-        font-size: 14px;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 2px;
-      }
-
-      .payment-time {
-        font-size: 12px;
-        color: #64748b;
-      }
-
-      .payment-amount {
-        font-size: 16px;
-        font-weight: 700;
-        color: #059669;
-      }
-
-      .payment-summary {
-        font-size: 14px;
-        color: #64748b;
+      .no-payments p {
+        font-size: 13px;
+        margin: 0;
         font-weight: 500;
       }
 
+      /* 추가 주문 섹션 */
       .add-order-section {
         display: flex;
         justify-content: center;
-        padding: 20px 0;
+        padding: 16px 0 8px 0;
       }
 
       .add-order-btn {
-        padding: 16px 32px;
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        padding: 14px 28px;
+        background: #3b82f6;
         color: white;
         border: none;
-        border-radius: 12px;
-        font-size: 16px;
+        border-radius: 10px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
       }
 
       .add-order-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+        background: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
       }
 
+      /* 로딩, 종료, 에러 상태 */
       .loading-section,
       .session-ended-content,
       .error-content {
@@ -2005,13 +1892,13 @@ function getProcessingOrderStyles() {
       }
 
       .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #e2e8f0;
-        border-top: 4px solid #3b82f6;
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #3b82f6;
         border-radius: 50%;
         animation: spin 1s linear infinite;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
       }
 
       @keyframes spin {
@@ -2021,125 +1908,213 @@ function getProcessingOrderStyles() {
 
       .ended-icon,
       .error-icon {
-        font-size: 64px;
-        margin-bottom: 20px;
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.8;
       }
 
       .session-ended-content h2,
       .error-content h2 {
-        color: #1e293b;
-        margin-bottom: 12px;
-        font-size: 24px;
+        color: #0f172a;
+        margin-bottom: 8px;
+        font-size: 20px;
         font-weight: 700;
       }
 
       .session-ended-content p,
       .error-content p {
         color: #64748b;
-        margin-bottom: 32px;
-        font-size: 16px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        line-height: 1.5;
       }
 
       .ended-actions,
       .error-actions {
         display: flex;
-        gap: 16px;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
       }
 
       .btn {
-        padding: 12px 24px;
+        padding: 12px 20px;
         border: none;
         border-radius: 8px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
+        min-width: 100px;
       }
 
       .btn.primary {
-        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        background: #3b82f6;
         color: white;
       }
 
       .btn.primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        background: #2563eb;
+        transform: translateY(-1px);
       }
 
       .btn.secondary {
-        background: #f1f5f9;
-        color: #475569;
+        background: #f8fafc;
+        color: #64748b;
         border: 1px solid #e2e8f0;
       }
 
       .btn.secondary:hover {
-        background: #e2e8f0;
-        color: #334155;
+        background: #f1f5f9;
+        color: #475569;
       }
 
+      /* 모달 */
       .modal-overlay {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.4);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1000;
+        backdrop-filter: blur(2px);
       }
 
       .modal-content {
         background: white;
         border-radius: 16px;
-        padding: 32px;
-        max-width: 400px;
+        padding: 28px;
+        max-width: 380px;
         width: 90%;
         text-align: center;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        border: 1px solid #f1f5f9;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .close-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: #f8fafc;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #64748b;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .close-btn:hover {
+        background: #f1f5f9;
+        color: #475569;
       }
 
       .modal-content h3 {
-        margin: 0 0 12px 0;
-        font-size: 20px;
+        margin: 0 0 8px 0;
+        font-size: 18px;
         font-weight: 700;
-        color: #1e293b;
+        color: #0f172a;
       }
 
       .modal-content p {
-        margin: 0 0 24px 0;
+        margin: 0 0 20px 0;
         font-size: 14px;
         color: #64748b;
+        line-height: 1.5;
       }
 
       .modal-actions {
         display: flex;
-        gap: 12px;
+        gap: 10px;
         justify-content: center;
       }
 
+      .receipt-modal {
+        max-width: 400px;
+      }
+
+      .receipt-content {
+        padding: 16px 0;
+        text-align: left;
+      }
+
+      .receipt-info p {
+        margin: 6px 0;
+        padding: 6px 0;
+        border-bottom: 1px solid #f8fafc;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .receipt-info strong {
+        color: #0f172a;
+        font-weight: 600;
+      }
+
+      /* 반응형 */
       @media (max-width: 480px) {
         .processing-header {
-          padding: 16px 12px;
+          padding: 12px 16px;
+          height: 64px;
         }
 
         .processing-content {
-          padding: 16px 12px;
+          padding: 12px;
+          gap: 12px;
         }
 
         .summary-stats {
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: 1fr 1fr;
         }
 
-        .tickets-grid {
-          grid-template-columns: 1fr;
+        .stat-item:nth-child(3) {
+          grid-column: 1 / -1;
         }
 
         .ended-actions,
         .error-actions {
           flex-direction: column;
         }
+
+        .btn {
+          width: 100%;
+        }
+
+        .modal-content {
+          padding: 20px;
+          margin: 16px;
+        }
+      }
+
+      /* 스크롤바 커스텀 */
+      .processing-content::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      .processing-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .processing-content::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+
+      .processing-content::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
       }
     </style>
   `;
