@@ -148,9 +148,15 @@ async function loadOrderData(orderId) {
 function renderProcessingOrderUI(orderData) {
   const main = document.getElementById('main');
 
-  // TLL 주문과 POS 주문을 분리하여 렌더링
-  const tllTickets = orderData.tickets.filter(ticket => ticket.type === 'TLL');
-  const posTickets = orderData.tickets.filter(ticket => ticket.type === 'POS');
+  // POS와 TLL 주문을 source로 구분
+  const posTickets = orderData.tickets.filter(ticket => ticket.source === 'POS');
+  const tllTickets = orderData.tickets.filter(ticket => ticket.source === 'TLL');
+
+  // POS 주문을 결제 상태별로 구분
+  const unpaidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'UNPAID');
+  const paidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'PAID');
+
+  const hasAnyPosTickets = posTickets.length > 0;
 
   main.innerHTML = `
     <div class="processing-order-container">
@@ -199,31 +205,64 @@ function renderProcessingOrderUI(orderData) {
           </div>
         </div>
 
-        <!-- 실시간 티켓 현황 (POS/TLL 분리) -->
-        <div class="kitchen-status-section">
-          <!-- POS 주문 섹션 -->
-          <div class="subsection-header">
-            <div class="subsection-title">
-              <span class="status-icon">🛒</span>
-              <h4>POS 주문</h4>
+        <!-- 실시간 주문 현황 -->
+        <div class="order-status-section">
+          <!-- TLL 주문 섹션 (항상 표시) -->
+          <div class="order-subsection tll-subsection">
+            <div class="subsection-header">
+              <div class="subsection-title">
+                <span class="status-icon">✅</span>
+                <h4>온라인 주문 (TLL)</h4>
+                <span class="order-type-badge tll-badge">결제완료</span>
+              </div>
+              <div class="subsection-status">총 ${tllTickets.length}건</div>
             </div>
-            <div class="subsection-status">총 ${posTickets.length}건</div>
-          </div>
-          <div id="posTicketsGrid" class="tickets-grid pos-grid">
-            ${renderTicketsGrid(posTickets, 'POS')}
+            <div id="tllTicketsGrid" class="tickets-grid tll-grid">
+              ${renderTicketsGrid(tllTickets, 'TLL')}
+            </div>
           </div>
 
-          <!-- TLL 주문 섹션 -->
-          <div class="subsection-header">
-            <div class="subsection-title">
-              <span class="status-icon">✅</span>
-              <h4>TLL 주문</h4>
+          <!-- POS 주문 섹션 (POS 주문이 있을 때만 표시) -->
+          ${hasAnyPosTickets ? `
+            <div class="order-subsection pos-subsection">
+              <div class="subsection-header">
+                <div class="subsection-title">
+                  <span class="status-icon">🛒</span>
+                  <h4>매장 주문 (POS)</h4>
+                  <span class="order-type-badge pos-badge">현장주문</span>
+                </div>
+                <div class="subsection-status">총 ${posTickets.length}건</div>
+              </div>
+
+              <!-- 미결제 POS 주문 -->
+              ${unpaidPosTickets.length > 0 ? `
+                <div class="pos-payment-section unpaid-section">
+                  <div class="payment-status-header">
+                    <span class="payment-status-icon">⏳</span>
+                    <h5>결제 대기 중</h5>
+                    <span class="payment-count">${unpaidPosTickets.length}건</span>
+                  </div>
+                  <div class="tickets-grid pos-unpaid-grid">
+                    ${renderTicketsGrid(unpaidPosTickets, 'POS', 'UNPAID')}
+                  </div>
+                </div>
+              ` : ''}
+
+              <!-- 결제완료 POS 주문 -->
+              ${paidPosTickets.length > 0 ? `
+                <div class="pos-payment-section paid-section">
+                  <div class="payment-status-header">
+                    <span class="payment-status-icon">💳</span>
+                    <h5>결제 완료</h5>
+                    <span class="payment-count">${paidPosTickets.length}건</span>
+                  </div>
+                  <div class="tickets-grid pos-paid-grid">
+                    ${renderTicketsGrid(paidPosTickets, 'POS', 'PAID')}
+                  </div>
+                </div>
+              ` : ''}
             </div>
-            <div class="subsection-status">총 ${tllTickets.length}건</div>
-          </div>
-          <div id="tllTicketsGrid" class="tickets-grid tll-grid">
-            ${renderTicketsGrid(tllTickets, 'TLL')}
-          </div>
+          ` : ''}
         </div>
 
         <!-- 결제 내역 섹션 -->
@@ -256,20 +295,24 @@ function renderProcessingOrderUI(orderData) {
 }
 
 // 티켓 그리드 렌더링 (order_tickets 단위)
-// type 인자를 추가하여 POS/TLL 구분
-function renderTicketsGrid(tickets, type) {
-  console.log(`🎫 renderTicketsGrid 호출 (${type}):`, {
+// type 인자를 추가하여 POS/TLL 구분, paymentStatus 추가
+function renderTicketsGrid(tickets, type, paymentStatus = null) {
+  console.log(`🎫 renderTicketsGrid 호출 (${type}, ${paymentStatus}):`, {
     ticketsProvided: !!tickets,
     ticketCount: tickets?.length || 0,
     tickets: tickets
   });
 
   if (!tickets || tickets.length === 0) {
+    const emptyMessage = type === 'TLL' ? 
+      '온라인 주문이 없습니다' : 
+      paymentStatus === 'UNPAID' ? '결제 대기 중인 주문이 없습니다' : '결제 완료된 주문이 없습니다';
+    
     console.log(`🎫 (${type}) 티켓이 없어서 빈 상태 표시`);
     return `
-      <div class="no-tickets">
+      <div class="no-tickets ${type.toLowerCase()}-empty">
         <div class="no-tickets-icon">🍽️</div>
-        <p>아직 조리 중인 주문이 없습니다</p>
+        <p>${emptyMessage}</p>
       </div>
     `;
   }
@@ -279,11 +322,18 @@ function renderTicketsGrid(tickets, type) {
     const status = ticket.status || 'PENDING';
     const statusText = getTicketStatusText(status);
     const statusClass = status.toLowerCase();
-    const ticketTypeClass = type ? `${type.toLowerCase()}-card` : ''; // POS 또는 TLL 클래스 추가
+    const paidStatus = ticket.paid_status || 'PAID';
+    
+    // 카드 클래스 조합
+    let ticketTypeClass = type ? `${type.toLowerCase()}-card` : '';
+    if (type === 'POS' && paymentStatus) {
+      ticketTypeClass += ` pos-${paymentStatus.toLowerCase()}`;
+    }
 
-    console.log(`🎫 (${type}) 티켓 ${ticketIndex + 1} 렌더링:`, {
+    console.log(`🎫 (${type}, ${paymentStatus}) 티켓 ${ticketIndex + 1} 렌더링:`, {
       ticketId: ticketId,
       status: status,
+      paidStatus: paidStatus,
       itemsCount: ticket.items?.length || 0,
       rawItems: ticket.items
     });
@@ -293,14 +343,18 @@ function renderTicketsGrid(tickets, type) {
     console.log(`🎫 (${type}) 티켓 ${ticketId} 안전한 아이템:`, safeItems);
 
     return `
-      <div class="ticket-card ${ticketTypeClass} status-${statusClass}" data-ticket-id="${ticketId}">
+      <div class="ticket-card ${ticketTypeClass} status-${statusClass}" data-ticket-id="${ticketId}" data-payment-status="${paidStatus}">
         <div class="ticket-header">
           <span class="ticket-id">티켓 #${ticketId}</span>
-          <span class="ticket-status ${statusClass}">${statusText}</span>
+          <div class="ticket-status-group">
+            <span class="ticket-status ${statusClass}">${statusText}</span>
+            ${type === 'POS' ? `<span class="payment-status ${paidStatus.toLowerCase()}">${getPaymentStatusText(paidStatus)}</span>` : ''}
+          </div>
         </div>
         <div class="ticket-meta">
           <span class="ticket-order">주문 #${ticket.order_id}</span>
           <span class="ticket-batch">배치 ${ticket.batch_no || 1}</span>
+          ${type === 'TLL' ? '<span class="ticket-source tll-source">온라인주문</span>' : '<span class="ticket-source pos-source">매장주문</span>'}
         </div>
         <div class="ticket-items">
           ${renderTicketItems(safeItems)}
@@ -308,7 +362,7 @@ function renderTicketsGrid(tickets, type) {
         <div class="ticket-footer">
           <div class="ticket-time">${formatOrderTime(ticket.created_at)}</div>
           <div class="ticket-actions">
-            ${renderTicketActions(ticketId, status, type)}
+            ${renderTicketActions(ticketId, status, type, paidStatus)}
           </div>
         </div>
       </div>
@@ -351,26 +405,53 @@ function renderTicketItems(items) {
 }
 
 // 티켓 액션 버튼 렌더링
-function renderTicketActions(ticketId, status, type) {
-  // POS와 TLL에 따라 다른 액션 버튼을 제공할 수 있음
+function renderTicketActions(ticketId, status, type, paidStatus = 'PAID') {
   const isPos = type === 'POS';
   const isTll = type === 'TLL';
+  const isUnpaid = paidStatus === 'UNPAID';
 
+  // 고객 관점에서는 직접 조작할 수 있는 액션이 제한적
+  // 주로 상태 확인 및 문의 기능 제공
+  
   switch (status) {
     case 'PENDING':
-      if (isPos) return `<button class="action-btn cooking" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
-      if (isTll) return `<button class="action-btn priority" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
-      return `<button class="action-btn start-cooking" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
+      if (isTll) {
+        return `<span class="status-info">🕐 주문 접수됨</span>`;
+      }
+      if (isPos && isUnpaid) {
+        return `<span class="status-info payment-required">💳 결제 필요</span>`;
+      }
+      if (isPos) {
+        return `<span class="status-info">🕐 조리 대기 중</span>`;
+      }
+      return `<span class="status-info">🕐 주문 접수됨</span>`;
+      
     case 'COOKING':
-      if (isPos) return `<button class="action-btn ready" onclick="markTicketReady('${ticketId}')">완료</button>`;
-      if (isTll) return `<button class="action-btn quick-complete" onclick="markTicketReady('${ticketId}')">완료</button>`;
-      return `<button class="action-btn mark-ready" onclick="markTicketReady('${ticketId}')">완료</button>`;
+      if (isTll) {
+        return `<span class="status-info cooking">🔥 조리 중</span>`;
+      }
+      if (isPos) {
+        return `<span class="status-info cooking">🔥 조리 중</span>`;
+      }
+      return `<span class="status-info cooking">🔥 조리 중</span>`;
+      
     case 'READY':
-      if (isPos) return `<button class="action-btn payment-required" onclick="markTicketServed('${ticketId}')">서빙/결제</button>`; // POS는 서빙 및 결제 완료
-      if (isTll) return `<button class="action-btn priority" onclick="markTicketServed('${ticketId}')">서빙 완료</button>`; // TLL은 이미 결제됨
-      return `<button class="action-btn served" onclick="markTicketServed('${ticketId}')">서빙 완료</button>`;
+      if (isTll) {
+        return `<span class="status-info ready">✅ 조리 완료</span>`;
+      }
+      if (isPos && isUnpaid) {
+        return `<span class="status-info payment-required">💳 결제 후 수령</span>`;
+      }
+      if (isPos) {
+        return `<span class="status-info ready">✅ 수령 가능</span>`;
+      }
+      return `<span class="status-info ready">✅ 조리 완료</span>`;
+      
+    case 'SERVED':
+      return `<span class="status-info served">🎉 서빙 완료</span>`;
+      
     default:
-      return `<span class="status-text">${getTicketStatusText(status)}</span>`;
+      return `<span class="status-info">${getTicketStatusText(status)}</span>`;
   }
 }
 
@@ -440,6 +521,8 @@ function renderPaymentsList(payments) {
 // 결제 상태 텍스트 변환
 function getPaymentStatusText(status) {
   const statusMap = {
+    'PAID': '결제완료',
+    'UNPAID': '결제대기',
     'completed': '완료',
     'pending': '대기중',
     'failed': '실패',
@@ -690,15 +773,30 @@ function updateProcessingData(orderData) {
     elapsedTimeElement.textContent = getElapsedTime(orderData.createdAt);
   }
 
-  // 티켓 그리드 업데이트
-  const posTicketsGrid = document.getElementById('posTicketsGrid');
-  if (posTicketsGrid) {
-    posTicketsGrid.innerHTML = renderTicketsGrid(orderData.tickets.filter(ticket => ticket.type === 'POS'), 'POS');
-  }
+  // POS와 TLL 주문 분리
+  const posTickets = orderData.tickets.filter(ticket => ticket.source === 'POS');
+  const tllTickets = orderData.tickets.filter(ticket => ticket.source === 'TLL');
+  
+  // POS 주문을 결제 상태별로 구분
+  const unpaidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'UNPAID');
+  const paidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'PAID');
 
+  // TLL 티켓 그리드 업데이트
   const tllTicketsGrid = document.getElementById('tllTicketsGrid');
   if (tllTicketsGrid) {
-    tllTicketsGrid.innerHTML = renderTicketsGrid(orderData.tickets.filter(ticket => ticket.type === 'TLL'), 'TLL');
+    tllTicketsGrid.innerHTML = renderTicketsGrid(tllTickets, 'TLL');
+  }
+
+  // POS 미결제 티켓 그리드 업데이트
+  const posUnpaidGrid = document.querySelector('.pos-unpaid-grid');
+  if (posUnpaidGrid) {
+    posUnpaidGrid.innerHTML = renderTicketsGrid(unpaidPosTickets, 'POS', 'UNPAID');
+  }
+
+  // POS 결제완료 티켓 그리드 업데이트
+  const posPaidGrid = document.querySelector('.pos-paid-grid');
+  if (posPaidGrid) {
+    posPaidGrid.innerHTML = renderTicketsGrid(paidPosTickets, 'POS', 'PAID');
   }
 }
 
@@ -1201,8 +1299,14 @@ function getProcessingOrderStyles() {
         transform: rotate(90deg);
       }
 
-      /* 주방 현황 섹션 */
-      .kitchen-status-section {
+      /* 주문 현황 섹션 */
+      .order-status-section {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .order-subsection {
         background: white;
         border-radius: 16px;
         padding: 20px;
@@ -1210,18 +1314,24 @@ function getProcessingOrderStyles() {
         border: 1px solid rgba(226, 232, 240, 0.8);
       }
 
+      /* TLL 서브섹션 */
+      .tll-subsection {
+        border-left: 4px solid #10b981;
+      }
+
+      /* POS 서브섹션 */
+      .pos-subsection {
+        border-left: 4px solid #f59e0b;
+      }
+
       /* 서브섹션 헤더 */
       .subsection-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin: 20px 0 16px 0;
+        margin-bottom: 16px;
         padding-bottom: 12px;
         border-bottom: 2px solid #f1f5f9;
-      }
-
-      .subsection-header:first-child {
-        margin-top: 0;
       }
 
       .subsection-title {
@@ -1241,21 +1351,76 @@ function getProcessingOrderStyles() {
         font-size: 20px;
       }
 
-      .order-count {
-        background: #3b82f6;
-        color: white;
+      .order-type-badge {
         padding: 4px 8px;
         border-radius: 12px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 700;
-        min-width: 20px;
-        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .tll-badge {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .pos-badge {
+        background: #fef3c7;
+        color: #92400e;
       }
 
       .subsection-status {
         font-size: 12px;
         color: #64748b;
         font-weight: 500;
+      }
+
+      /* POS 결제 섹션 */
+      .pos-payment-section {
+        margin-bottom: 20px;
+      }
+
+      .pos-payment-section:last-child {
+        margin-bottom: 0;
+      }
+
+      .payment-status-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+      }
+
+      .unpaid-section .payment-status-header {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fbbf24;
+      }
+
+      .paid-section .payment-status-header {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+      }
+
+      .payment-status-icon {
+        font-size: 16px;
+      }
+
+      .payment-status-header h5 {
+        margin: 0;
+        font-size: 14px;
+      }
+
+      .payment-count {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 12px;
       }
 
       /* 티켓 그리드 */
@@ -1288,14 +1453,78 @@ function getProcessingOrderStyles() {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       }
 
+      /* 티켓 헤더 */
+      .ticket-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .ticket-status-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+      }
+
+      .payment-status {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .payment-status.paid {
+        background: #d1fae5;
+        color: #065f46;
+      }
+
+      .payment-status.unpaid {
+        background: #fef3c7;
+        color: #92400e;
+        animation: payment-required-pulse 2s infinite;
+      }
+
+      @keyframes payment-required-pulse {
+        0%, 100% {
+          background: #fef3c7;
+        }
+        50% {
+          background: #fbbf24;
+          color: white;
+        }
+      }
+
       /* POS 카드 스타일 */
       .ticket-card.pos-card {
         border-left: 4px solid #f59e0b;
         background: linear-gradient(135deg, #fefbf3 0%, #fef3c7 100%);
       }
 
-      .ticket-card.pos-card.status-pending {
+      .ticket-card.pos-unpaid {
         border-left-color: #f59e0b;
+        background: linear-gradient(135deg, #fefbf3 0%, #fef3c7 100%);
+      }
+
+      .ticket-card.pos-unpaid.status-ready {
+        animation: pos-payment-required 2s infinite;
+      }
+
+      @keyframes pos-payment-required {
+        0%, 100% {
+          border-left-color: #f59e0b;
+        }
+        50% {
+          border-left-color: #dc2626;
+          box-shadow: 0 4px 16px rgba(220, 38, 38, 0.3);
+        }
+      }
+
+      .ticket-card.pos-paid {
+        border-left-color: #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
       }
 
       .ticket-card.pos-card.status-cooking {
@@ -1303,19 +1532,10 @@ function getProcessingOrderStyles() {
         background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
       }
 
-      .ticket-card.pos-card.status-ready {
-        border-left-color: #059669;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      }
-
       /* TLL 카드 스타일 */
       .ticket-card.tll-card {
         border-left: 4px solid #10b981;
         background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
-      }
-
-      .ticket-card.tll-card.status-pending {
-        border-left-color: #10b981;
       }
 
       .ticket-card.tll-card.status-cooking {
@@ -1337,6 +1557,64 @@ function getProcessingOrderStyles() {
         50% {
           transform: scale(1.02);
           box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      /* 티켓 소스 배지 */
+      .ticket-source {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        font-weight: 600;
+      }
+
+      .tll-source {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+
+      .pos-source {
+        background: #fef3c7;
+        color: #92400e;
+      }
+
+      /* 상태 정보 스타일 */
+      .status-info {
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        display: inline-block;
+      }
+
+      .status-info.cooking {
+        background: #fef2f2;
+        color: #dc2626;
+      }
+
+      .status-info.ready {
+        background: #f0fdf4;
+        color: #16a34a;
+      }
+
+      .status-info.served {
+        background: #f8fafc;
+        color: #64748b;
+      }
+
+      .status-info.payment-required {
+        background: #fef3c7;
+        color: #92400e;
+        animation: payment-info-pulse 2s infinite;
+      }
+
+      @keyframes payment-info-pulse {
+        0%, 100% {
+          background: #fef3c7;
+        }
+        50% {
+          background: #fbbf24;
+          color: white;
         }
       }
 

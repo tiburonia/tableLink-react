@@ -810,6 +810,8 @@ router.get('/processing/:orderId', async (req, res) => {
         ot.order_id,
         COALESCE(ot.batch_no, 1) as batch_no,
         COALESCE(ot.status, 'PENDING') as status,
+        COALESCE(ot.source, 'TLL') as source,
+        COALESCE(ot.paid_status, 'PAID') as paid_status,
         ot.created_at
       FROM order_tickets ot
       WHERE ot.order_id = $1
@@ -850,6 +852,8 @@ router.get('/processing/:orderId', async (req, res) => {
           order_id: ticket.order_id,
           batch_no: ticket.batch_no,
           status: ticket.status,
+          source: ticket.source,
+          paid_status: ticket.paid_status,
           created_at: ticket.created_at,
           items: items
         };
