@@ -24,18 +24,32 @@ $$ LANGUAGE plpgsql;
 -- 1-1. 주문 세션 상태 변경 시 테이블 해제 함수
 CREATE OR REPLACE FUNCTION handle_order_session_close()
 RETURNS trigger AS $$
+DECLARE
+  updated_rows integer;
 BEGIN
   -- session_status가 OPEN에서 CLOSE로 변경되었을 때
   IF OLD.session_status = 'OPEN' AND NEW.session_status = 'CLOSE' THEN
-    -- 해당 테이블의 processing_order_id를 null로 설정
+    -- 해당 테이블의 processing_order_id를 null로 설정하고 status를 AVAILABLE로 변경
     UPDATE store_tables 
-    SET processing_order_id = NULL
+    SET 
+      processing_order_id = NULL,
+      status = 'AVAILABLE',
+      updated_at = CURRENT_TIMESTAMP
     WHERE store_id = NEW.store_id 
       AND table_number = NEW.table_num 
-      AND processing_order_id = NEW.id;
+      AND (processing_order_id = NEW.id OR processing_order_id IS NULL);
       
+    GET DIAGNOSTICS updated_rows = ROW_COUNT;
+    
     -- 로그 출력
-    RAISE NOTICE '테이블 해제: 매장 %, 테이블 %, 주문 %', NEW.store_id, NEW.table_num, NEW.id;
+    RAISE NOTICE '테이블 해제: 매장 %, 테이블 %, 주문 %, 업데이트된 행: %', 
+                 NEW.store_id, NEW.table_num, NEW.id, updated_rows;
+                 
+    -- store_tables 테이블이 없거나 해당 테이블이 없는 경우에도 처리
+    IF updated_rows = 0 THEN
+      RAISE NOTICE '경고: 매장 % 테이블 %에 해당하는 store_tables 레코드를 찾을 수 없음', 
+                   NEW.store_id, NEW.table_num;
+    END IF;
   END IF;
   
   RETURN NEW;
