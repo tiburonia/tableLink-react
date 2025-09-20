@@ -44,6 +44,12 @@ const POSOrderScreen = {
             // 세션 정보 로드 (기존 주문이 있으면 세션 정보도 함께)
             await this.loadSessionData();
 
+            console.log('✅ 모든 데이터 로드 완료 - 렌더링 직전 상태:', {
+                통합된주문수: this.currentOrders.length,
+                카트아이템수: this.cart.length,
+                현재주문상세: this.currentOrders.map(order => `${order.menuName} x${order.quantity}`).join(', ')
+            });
+
             // 모든 데이터 로드 완료 후 화면 렌더링
             const main = document.getElementById('posMain');
             main.innerHTML = `
@@ -53,7 +59,8 @@ const POSOrderScreen = {
 
             console.log('🎨 최초 렌더링 완료 - 통합된 주문 데이터로 화면 표시:', {
                 통합된주문수: this.currentOrders.length,
-                카트아이템수: this.cart.length
+                카트아이템수: this.cart.length,
+                실제렌더링된HTML포함여부: document.querySelector('.pos-order-table') !== null
             });
 
             // 이벤트 리스너 설정
@@ -179,7 +186,23 @@ const POSOrderScreen = {
      * POS 주문 아이템 렌더링 (테이블 형식)
      */
     renderPOSOrderItemsModern() {
+        // 통합된 데이터 사용 확인 로깅
+        console.log('🎨 renderPOSOrderItemsModern 호출:', {
+            전체주문수: this.currentOrders.length,
+            통합된주문상세: this.currentOrders.map(order => ({
+                메뉴명: order.menuName,
+                수량: order.quantity,
+                티켓ID배열: order.ticketIds || [order.ticketId],
+                통합여부: order.ticketIds?.length > 1
+            }))
+        });
+
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
+
+        console.log('🎨 렌더링할 POS 주문:', {
+            필터링후수량: posOrders.length,
+            렌더링데이터: posOrders.map(order => `${order.menuName} x${order.quantity}`)
+        });
 
         // 테이블 헤더는 항상 표시
         const tableHeader = `
@@ -704,7 +727,23 @@ const POSOrderScreen = {
                 console.log(`✅ POS 티켓 간 메뉴 통합 완료 - 데이터 준비됨:`, {
                     원본아이템수: unpaidItems.length,
                     통합완료: true,
-                    this_currentOrders_length: this.currentOrders.length
+                    this_currentOrders_length: this.currentOrders.length,
+                    통합성공예시: this.currentOrders.length > 0 ? `${this.currentOrders[0].menuName} x${this.currentOrders[0].quantity}` : '없음'
+                });
+
+                // 통합 데이터 검증
+                const 중복확인 = {};
+                this.currentOrders.forEach(order => {
+                    const key = `${order.menuName}_${order.price}`;
+                    if (중복확인[key]) {
+                        console.error('❌ 통합 실패: 중복된 메뉴 발견', {
+                            메뉴: order.menuName,
+                            가격: order.price,
+                            기존수량: 중복확인[key],
+                            현재수량: order.quantity
+                        });
+                    }
+                    중복확인[key] = order.quantity;
                 });
             } else {
                 this.currentOrders = [];
