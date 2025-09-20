@@ -197,20 +197,26 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 트리거 생성
+-- 트리거 생성 (안전한 재생성을 위해 모든 트리거 먼저 삭제)
+
+-- 모든 관련 트리거 삭제
+DROP TRIGGER IF EXISTS orders_kds_notify ON orders CASCADE;
+DROP TRIGGER IF EXISTS orders_session_close ON orders CASCADE;
+DROP TRIGGER IF EXISTS orders_session_status_trigger ON orders CASCADE;
+DROP TRIGGER IF EXISTS order_tickets_kds_notify ON order_tickets CASCADE;
+DROP TRIGGER IF EXISTS order_items_kds_notify ON order_items CASCADE;
+DROP TRIGGER IF EXISTS payments_kds_notify ON payments CASCADE;
+
+-- 잠시 대기 (트랜잭션 정리)
+SELECT pg_sleep(0.1);
 
 -- orders 테이블 트리거 (KDS 알림)
-DROP TRIGGER IF EXISTS orders_kds_notify ON orders;
 CREATE TRIGGER orders_kds_notify
   AFTER INSERT OR UPDATE OR DELETE ON orders
   FOR EACH ROW
   EXECUTE FUNCTION notify_kds_order_change();
 
--- orders 테이블 트리거 (세션 상태 변경 시 테이블 해제) - 강제 재생성
-DROP TRIGGER IF EXISTS orders_session_close ON orders;
-DROP TRIGGER IF EXISTS orders_session_status_trigger ON orders;
-
--- 모든 UPDATE에 대해 트리거 실행 (session_status 특정하지 않음)
+-- orders 테이블 트리거 (세션 상태 변경 시 테이블 해제)
 CREATE TRIGGER orders_session_close
   AFTER UPDATE ON orders
   FOR EACH ROW
@@ -218,21 +224,18 @@ CREATE TRIGGER orders_session_close
   EXECUTE FUNCTION handle_order_session_close();
 
 -- order_tickets 테이블 트리거 (상태 변경만 감지)
-DROP TRIGGER IF EXISTS order_tickets_kds_notify ON order_tickets;
 CREATE TRIGGER order_tickets_kds_notify
   AFTER UPDATE OF status, display_status ON order_tickets
   FOR EACH ROW
   EXECUTE FUNCTION notify_kds_ticket_change();
 
 -- order_items 테이블 트리거 (아이템 상태 변경만 감지)
-DROP TRIGGER IF EXISTS order_items_kds_notify ON order_items;
 CREATE TRIGGER order_items_kds_notify
   AFTER UPDATE OF item_status ON order_items
   FOR EACH ROW
   EXECUTE FUNCTION notify_kds_item_change();
 
 -- payments 테이블 트리거 (결제 완료 감지)
-DROP TRIGGER IF EXISTS payments_kds_notify ON payments;
 CREATE TRIGGER payments_kds_notify
   AFTER INSERT OR UPDATE OF status ON payments
   FOR EACH ROW
