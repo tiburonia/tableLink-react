@@ -78,4 +78,63 @@ router.post('/favorite/toggle', async (req, res) => {
   }
 });
 
+// 전화번호로 회원 조회
+router.get('/search-by-phone', async (req, res) => {
+  try {
+    const { phone } = req.query;
+
+    console.log(`🔍 전화번호로 회원 조회: ${phone}`);
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        error: '전화번호가 필요합니다'
+      });
+    }
+
+    // 전화번호로 회원 조회
+    const result = await pool.query(`
+      SELECT 
+        id,
+        name,
+        phone,
+        email,
+        point,
+        created_at
+      FROM users
+      WHERE phone = $1
+    `, [phone]);
+
+    if (result.rows.length === 0) {
+      console.log(`❌ 전화번호 ${phone}로 등록된 회원 없음`);
+      return res.json({
+        success: false,
+        error: '해당 전화번호로 등록된 회원을 찾을 수 없습니다'
+      });
+    }
+
+    const user = result.rows[0];
+    console.log(`✅ 회원 조회 성공: ${user.name} (ID: ${user.id})`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        point: user.point || 0,
+        createdAt: user.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 전화번호로 회원 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '회원 조회 중 오류가 발생했습니다'
+    });
+  }
+});
+
 module.exports = router;

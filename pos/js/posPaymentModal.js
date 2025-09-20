@@ -1,11 +1,14 @@
+
 /**
  * POS 결제 모달 컴포넌트
- * 회원/비회원 구분 없이 사용 가능한 전역 모달
+ * 회원/비회원 구분 및 비회원 전화번호 입력 지원
  */
 
 const POSPaymentModal = {
     currentPaymentData: null,
     isVisible: false,
+    selectedCustomerType: 'guest', // 'member' 또는 'guest'
+    guestPhoneNumber: '',
 
     /**
      * 결제 모달 표시
@@ -76,6 +79,8 @@ const POSPaymentModal = {
         }
         this.isVisible = false;
         this.currentPaymentData = null;
+        this.selectedCustomerType = 'guest';
+        this.guestPhoneNumber = '';
     },
 
     /**
@@ -130,6 +135,50 @@ const POSPaymentModal = {
                         <div class="summary-row total">
                             <span class="label">결제 금액</span>
                             <span class="value">${totalAmount.toLocaleString()}원</span>
+                        </div>
+                    </div>
+
+                    <!-- 고객 유형 선택 -->
+                    <div class="customer-type-selection">
+                        <h3>고객 유형 선택</h3>
+                        <div class="type-buttons">
+                            <button class="customer-type-btn ${this.selectedCustomerType === 'guest' ? 'active' : ''}" data-type="guest">
+                                <div class="type-icon">👤</div>
+                                <span>비회원</span>
+                            </button>
+                            <button class="customer-type-btn ${this.selectedCustomerType === 'member' ? 'active' : ''}" data-type="member">
+                                <div class="type-icon">🎫</div>
+                                <span>회원</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 비회원 전화번호 입력 (비회원 선택 시만 표시) -->
+                    <div class="guest-info-section" id="guestInfoSection" style="${this.selectedCustomerType === 'guest' ? 'display: block;' : 'display: none;'}">
+                        <h3>비회원 정보 (선택사항)</h3>
+                        <div class="phone-input-group">
+                            <label>전화번호</label>
+                            <input type="tel" id="guestPhoneInput" placeholder="010-1234-5678 (선택사항)" 
+                                   value="${this.guestPhoneNumber}" maxlength="13">
+                            <div class="phone-help-text">
+                                전화번호를 입력하시면 포인트 적립 및 주문 이력 관리가 가능합니다.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 회원 정보 입력 (회원 선택 시만 표시) -->
+                    <div class="member-info-section" id="memberInfoSection" style="${this.selectedCustomerType === 'member' ? 'display: block;' : 'display: none;'}">
+                        <h3>회원 정보</h3>
+                        <div class="member-input-group">
+                            <label>전화번호</label>
+                            <input type="tel" id="memberPhoneInput" placeholder="010-1234-5678" maxlength="13">
+                            <button class="member-search-btn" id="memberSearchBtn">회원 조회</button>
+                        </div>
+                        <div class="member-info-display" id="memberInfoDisplay" style="display: none;">
+                            <div class="member-details">
+                                <span class="member-name" id="memberName"></span>
+                                <span class="member-points" id="memberPoints"></span>
+                            </div>
                         </div>
                     </div>
 
@@ -202,7 +251,7 @@ const POSPaymentModal = {
                     border-radius: 20px;
                     width: 90%;
                     max-width: 500px;
-                    max-height: 80vh;
+                    max-height: 90vh;
                     overflow-y: auto;
                     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
                     transform: scale(0.9);
@@ -282,6 +331,9 @@ const POSPaymentModal = {
                     margin-top: 8px;
                 }
 
+                .customer-type-selection h3,
+                .guest-info-section h3,
+                .member-info-section h3,
                 .payment-methods h3,
                 .cash-section h3 {
                     margin: 0 0 16px 0;
@@ -290,12 +342,14 @@ const POSPaymentModal = {
                     color: #374151;
                 }
 
+                .type-buttons,
                 .method-buttons {
                     display: flex;
                     gap: 12px;
                     margin-bottom: 24px;
                 }
 
+                .customer-type-btn,
                 .payment-method-btn {
                     flex: 1;
                     padding: 16px 12px;
@@ -312,19 +366,105 @@ const POSPaymentModal = {
                     color: #64748b;
                 }
 
+                .customer-type-btn:hover,
                 .payment-method-btn:hover {
                     border-color: #3b82f6;
                     background: #f8fafc;
                 }
 
+                .customer-type-btn.active,
                 .payment-method-btn.active {
                     border-color: #3b82f6;
                     background: #eff6ff;
                     color: #1d4ed8;
                 }
 
+                .type-icon,
                 .method-icon {
                     font-size: 24px;
+                }
+
+                .guest-info-section,
+                .member-info-section {
+                    background: #f8fafc;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin-bottom: 24px;
+                    border: 1px solid #e2e8f0;
+                }
+
+                .phone-input-group,
+                .member-input-group {
+                    margin-bottom: 12px;
+                }
+
+                .phone-input-group label,
+                .member-input-group label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 600;
+                    color: #374151;
+                }
+
+                .phone-input-group input,
+                .member-input-group input {
+                    width: 100%;
+                    padding: 12px 16px;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 8px;
+                    font-size: 16px;
+                    margin-bottom: 8px;
+                }
+
+                .phone-input-group input:focus,
+                .member-input-group input:focus {
+                    outline: none;
+                    border-color: #3b82f6;
+                }
+
+                .phone-help-text {
+                    font-size: 12px;
+                    color: #6b7280;
+                    line-height: 1.4;
+                }
+
+                .member-search-btn {
+                    padding: 10px 16px;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    transition: all 0.2s;
+                }
+
+                .member-search-btn:hover {
+                    background: #2563eb;
+                }
+
+                .member-info-display {
+                    margin-top: 16px;
+                    padding: 16px;
+                    background: white;
+                    border-radius: 8px;
+                    border: 1px solid #d1d5db;
+                }
+
+                .member-details {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .member-name {
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .member-points {
+                    color: #059669;
+                    font-weight: 600;
                 }
 
                 .cash-section {
@@ -477,6 +617,22 @@ const POSPaymentModal = {
             });
         }
 
+        // 고객 유형 선택
+        document.querySelectorAll('.customer-type-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // 모든 버튼 비활성화
+                document.querySelectorAll('.customer-type-btn').forEach(b => {
+                    b.classList.remove('active');
+                });
+
+                // 선택된 버튼 활성화
+                btn.classList.add('active');
+
+                const type = btn.dataset.type;
+                this.handleCustomerTypeChange(type);
+            });
+        });
+
         // 결제 수단 선택
         document.querySelectorAll('.payment-method-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -492,6 +648,31 @@ const POSPaymentModal = {
                 this.handlePaymentMethodChange(method);
             });
         });
+
+        // 비회원 전화번호 입력
+        const guestPhoneInput = document.getElementById('guestPhoneInput');
+        if (guestPhoneInput) {
+            guestPhoneInput.addEventListener('input', (e) => {
+                this.guestPhoneNumber = this.formatPhoneNumber(e.target.value);
+                e.target.value = this.guestPhoneNumber;
+            });
+        }
+
+        // 회원 전화번호 입력
+        const memberPhoneInput = document.getElementById('memberPhoneInput');
+        if (memberPhoneInput) {
+            memberPhoneInput.addEventListener('input', (e) => {
+                e.target.value = this.formatPhoneNumber(e.target.value);
+            });
+        }
+
+        // 회원 조회
+        const memberSearchBtn = document.getElementById('memberSearchBtn');
+        if (memberSearchBtn) {
+            memberSearchBtn.addEventListener('click', () => {
+                this.searchMember();
+            });
+        }
 
         // 현금 결제 관련 이벤트
         const receivedInput = document.getElementById('receivedAmount');
@@ -530,6 +711,24 @@ const POSPaymentModal = {
     },
 
     /**
+     * 고객 유형 변경 처리
+     */
+    handleCustomerTypeChange(type) {
+        this.selectedCustomerType = type;
+
+        const guestSection = document.getElementById('guestInfoSection');
+        const memberSection = document.getElementById('memberInfoSection');
+
+        if (type === 'guest') {
+            guestSection.style.display = 'block';
+            memberSection.style.display = 'none';
+        } else {
+            guestSection.style.display = 'none';
+            memberSection.style.display = 'block';
+        }
+    },
+
+    /**
      * 결제 수단 변경 처리
      */
     handlePaymentMethodChange(method) {
@@ -542,6 +741,53 @@ const POSPaymentModal = {
         } else {
             cashSection.style.display = 'none';
             paymentBtnText.textContent = '카드결제 진행';
+        }
+    },
+
+    /**
+     * 전화번호 포맷팅
+     */
+    formatPhoneNumber(value) {
+        const numbers = value.replace(/[^\d]/g, '');
+        if (numbers.length <= 3) return numbers;
+        if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+        return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
+    },
+
+    /**
+     * 회원 조회
+     */
+    async searchMember() {
+        const memberPhoneInput = document.getElementById('memberPhoneInput');
+        const memberInfoDisplay = document.getElementById('memberInfoDisplay');
+        const memberName = document.getElementById('memberName');
+        const memberPoints = document.getElementById('memberPoints');
+
+        const phoneNumber = memberPhoneInput.value.trim();
+        if (!phoneNumber) {
+            alert('전화번호를 입력해주세요.');
+            return;
+        }
+
+        try {
+            console.log('🔍 회원 조회 요청:', phoneNumber);
+            
+            // 회원 조회 API 호출 (실제 구현 필요)
+            const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
+            const data = await response.json();
+
+            if (data.success && data.user) {
+                memberName.textContent = data.user.name || '회원';
+                memberPoints.textContent = `${(data.user.point || 0).toLocaleString()}P`;
+                memberInfoDisplay.style.display = 'block';
+                console.log('✅ 회원 조회 성공:', data.user);
+            } else {
+                memberInfoDisplay.style.display = 'none';
+                alert('해당 전화번호로 등록된 회원을 찾을 수 없습니다.');
+            }
+        } catch (error) {
+            console.error('❌ 회원 조회 실패:', error);
+            alert('회원 조회 중 오류가 발생했습니다.');
         }
     },
 
@@ -587,9 +833,49 @@ const POSPaymentModal = {
                 }
             }
 
+            // 비회원 전화번호 검증 (선택사항이므로 빈 값도 허용)
+            let guestPhone = null;
+            if (this.selectedCustomerType === 'guest') {
+                const phoneInput = document.getElementById('guestPhoneInput');
+                if (phoneInput && phoneInput.value.trim()) {
+                    guestPhone = phoneInput.value.trim();
+                    // 전화번호 형식 검증
+                    if (!/^010-\d{4}-\d{4}$/.test(guestPhone)) {
+                        alert('올바른 전화번호 형식을 입력해주세요. (예: 010-1234-5678)');
+                        return;
+                    }
+                }
+            }
+
+            // 회원 결제시 회원 정보 검증
+            let memberPhone = null;
+            if (this.selectedCustomerType === 'member') {
+                const memberPhoneInput = document.getElementById('memberPhoneInput');
+                const memberInfoDisplay = document.getElementById('memberInfoDisplay');
+                
+                if (!memberPhoneInput.value.trim()) {
+                    alert('회원 전화번호를 입력해주세요.');
+                    return;
+                }
+                
+                if (memberInfoDisplay.style.display === 'none') {
+                    alert('먼저 회원 조회를 진행해주세요.');
+                    return;
+                }
+                
+                memberPhone = memberPhoneInput.value.trim();
+            }
+
             // 결제 확인
+            const customerType = this.selectedCustomerType === 'member' ? '회원' : '비회원';
             const methodName = selectedMethod === 'CARD' ? '카드' : '현금';
-            if (!confirm(`${methodName} 결제를 진행하시겠습니까?\n결제 금액: ${totalAmount.toLocaleString()}원`)) {
+            const phoneInfo = this.selectedCustomerType === 'member' ? 
+                `회원 번호: ${memberPhone}` : 
+                (guestPhone ? `전화번호: ${guestPhone}` : '전화번호 없음');
+            
+            if (!confirm(`${customerType} ${methodName} 결제를 진행하시겠습니까?\n` +
+                        `결제 금액: ${totalAmount.toLocaleString()}원\n` +
+                        `${phoneInfo}`)) {
                 return;
             }
 
@@ -599,13 +885,13 @@ const POSPaymentModal = {
             confirmBtn.innerHTML = '<span>처리중...</span>';
             confirmBtn.disabled = true;
 
-            // 직접 POS 결제 API 호출 (기존 결제 로직 사용)
-            const paymentResult = await this.directProcessPayment(selectedMethod);
+            // 결제 처리 API 호출
+            const paymentResult = await this.processPaymentAPI(selectedMethod, guestPhone, memberPhone);
 
             if (paymentResult.success) {
                 console.log('✅ 결제 완료:', paymentResult);
 
-                const successMessage = `${methodName} 결제가 완료되었습니다!\n` +
+                const successMessage = `${customerType} ${methodName} 결제가 완료되었습니다!\n` +
                                      `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
                                      `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
                 alert(successMessage);
@@ -635,14 +921,21 @@ const POSPaymentModal = {
     },
 
     /**
-     * 직접 결제 처리 (기존 POS 결제 API 사용)
+     * 결제 처리 API 호출
      */
-    async directProcessPayment(paymentMethod) {
+    async processPaymentAPI(paymentMethod, guestPhone, memberPhone) {
         const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
 
-        console.log(`💳 직접 결제 처리: 주문 ${orderId}, 방법: ${paymentMethod}, 금액: ${totalAmount}`);
+        console.log(`💳 결제 처리 API 호출:`, {
+            orderId,
+            paymentMethod,
+            amount: totalAmount,
+            customerType: this.selectedCustomerType,
+            guestPhone,
+            memberPhone
+        });
 
-        const response = await fetch('/api/pos-payment/process', {
+        const response = await fetch('/api/pos-payment/process-with-customer', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -652,7 +945,10 @@ const POSPaymentModal = {
                 paymentMethod: paymentMethod.toUpperCase(),
                 amount: totalAmount,
                 storeId: storeId,
-                tableNumber: tableNumber
+                tableNumber: tableNumber,
+                customerType: this.selectedCustomerType,
+                guestPhone: guestPhone,
+                memberPhone: memberPhone
             })
         });
 
@@ -718,241 +1014,7 @@ const POSPaymentModal = {
             console.error('❌ 실제 결제 정보 조회 실패:', error);
             return null;
         }
-    },
-
-    /**
-     * 결제 API 직접 호출
-     */
-    async callPaymentAPI(paymentMethod) {
-        const { storeId, tableNumber, totalAmount, orderId } = this.currentPaymentData;
-
-        // 먼저 카트에 있는 주문들을 확정해야 하는지 확인
-        if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.cart && POSOrderScreen.cart.length > 0) {
-            console.log('📋 카트에 미확정 주문이 있음, 먼저 주문 확정 진행');
-            await POSOrderScreen.confirmOrder();
-
-            // 잠시 대기하여 주문 확정이 완료되도록 함
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        // 최신 주문 ID 가져오기
-        let finalOrderId = orderId;
-        if (!finalOrderId && typeof POSOrderScreen !== 'undefined') {
-            // 현재 테이블의 활성 주문 조회
-            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
-            if (activeOrderResponse.ok) {
-                const activeOrderData = await activeOrderResponse.json();
-                if (activeOrderData.success && activeOrderData.orderId) {
-                    finalOrderId = activeOrderData.orderId;
-                }
-            }
-        }
-
-        if (!finalOrderId) {
-            throw new Error('결제할 주문을 찾을 수 없습니다.');
-        }
-
-        const response = await fetch('/api/pos-payment/process', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                orderId: finalOrderId,
-                paymentMethod: paymentMethod,
-                amount: totalAmount,
-                storeId: storeId,
-                tableNumber: tableNumber
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || '결제 처리 실패');
-        }
-
-        const result = await response.json();
-        console.log('✅ 결제 완료:', result);
-
-        const methodName = paymentMethod === 'CARD' ? '카드' : '현금';
-        alert(`${methodName} 결제가 완료되었습니다!\n결제 금액: ${totalAmount.toLocaleString()}원`);
-
-        // 화면 새로고침 (POSOrderScreen이 있는 경우)
-        if (typeof POSOrderScreen !== 'undefined') {
-            if (POSOrderScreen.clearCart) {
-                POSOrderScreen.clearCart();
-            }
-            if (POSOrderScreen.refreshOrders) {
-                await POSOrderScreen.refreshOrders();
-            }
-        }
-
-        return result;
-    },
-
-    /**
-     * POSPaymentModal을 사용한 결제 모달 표시 (API 호출 기반)
-     */
-    async showPOSPaymentModal(method) {
-        console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
-
-        // 필수 정보 검증 - POSCore에서 정보 가져오기
-        const storeId = this.currentStoreId || (typeof POSCore !== 'undefined' ? POSCore.storeId : null);
-        const tableNumber = this.currentTableNumber || (typeof POSCore !== 'undefined' ? POSCore.tableNumber : null);
-
-        if (!storeId || !tableNumber) {
-            console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
-            alert('매장 또는 테이블 정보가 설정되지 않았습니다.');
-            return;
-        }
-
-        try {
-            // 로딩 표시
-            const loadingToast = this.showLoadingToast('결제 정보를 불러오는 중...');
-
-            // API 호출로 실제 결제 대상 내역 조회
-            const paymentData = await this.fetchPaymentTargetData(storeId, tableNumber);
-
-            // 로딩 토스트 제거
-            if (loadingToast) {
-                loadingToast.remove();
-            }
-
-            if (!paymentData) {
-                alert('결제할 내역이 없습니다.');
-                return;
-            }
-
-            console.log('💳 API로부터 받은 결제 데이터:', paymentData);
-
-            // POSPaymentModal 표시
-            if (typeof POSPaymentModal !== 'undefined') {
-                POSPaymentModal.show(paymentData);
-            } else {
-                console.error('❌ POSPaymentModal이 로드되지 않았습니다');
-                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
-            }
-
-        } catch (error) {
-            console.error('❌ 결제 정보 조회 실패:', error);
-            alert(`결제 정보를 불러올 수 없습니다: ${error.message}`);
-        }
-    },
-
-    /**
-     * API 호출로 결제 대상 데이터 조회
-     */
-    async fetchPaymentTargetData(storeId, tableNumber) {
-        console.log(`🔍 결제 대상 데이터 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
-
-        try {
-            // 1. 현재 테이블의 활성 주문 조회
-            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
-
-            if (!activeOrderResponse.ok) {
-                console.warn('⚠️ 활성 주문 조회 실패');
-                return null;
-            }
-
-            const activeOrderData = await activeOrderResponse.json();
-
-            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
-                console.log('ℹ️ 활성 주문이 없습니다');
-                return null;
-            }
-
-            const orderId = activeOrderData.orderId;
-
-            // 2. 미지불 티켓 정보 조회
-            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
-
-            if (!unpaidResponse.ok) {
-                throw new Error('미지불 티켓 조회 실패');
-            }
-
-            const unpaidData = await unpaidResponse.json();
-
-            if (!unpaidData.success || unpaidData.totalTickets === 0) {
-                console.log('ℹ️ 미지불 티켓이 없습니다');
-                return null;
-            }
-
-            // 3. 주문 상세 정보 조회 (주문 아이템들)
-            const orderItemsResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
-
-            let orderItems = [];
-            if (orderItemsResponse.ok) {
-                const orderItemsData = await orderItemsResponse.json();
-                if (orderItemsData.success && orderItemsData.orderItems) {
-                    orderItems = orderItemsData.orderItems;
-                }
-            }
-
-            console.log(`✅ 결제 대상 데이터 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
-
-            return {
-                totalAmount: unpaidData.totalAmount,
-                itemCount: unpaidData.totalTickets,
-                storeId: parseInt(storeId),
-                tableNumber: parseInt(tableNumber),
-                orderId: orderId,
-                unpaidTickets: unpaidData.unpaidTickets,
-                orderItems: orderItems,
-                paymentMethod: 'CARD'
-            };
-
-        } catch (error) {
-            console.error('❌ 결제 대상 데이터 조회 실패:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * 로딩 토스트 표시
-     */
-    showLoadingToast(message) {
-        const toast = document.createElement('div');
-        toast.className = 'loading-toast';
-        toast.innerHTML = `
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <span>${message}</span>
-            </div>
-        `;
-
-        // 스타일 추가
-        toast.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px 30px;
-            border-radius: 10px;
-            z-index: 10001;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 16px;
-            font-weight: 600;
-        `;
-
-        const loadingSpinner = toast.querySelector('.loading-spinner');
-        if (loadingSpinner) {
-            loadingSpinner.style.cssText = `
-                width: 20px;
-                height: 20px;
-                border: 2px solid #ffffff40;
-                border-top: 2px solid #ffffff;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            `;
-        }
-
-        document.body.appendChild(toast);
-        return toast;
-    },
+    }
 };
 
 // 전역으로 등록
