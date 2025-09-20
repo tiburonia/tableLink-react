@@ -16,16 +16,16 @@
     </div>
 
     <!-- POS 모듈 로드 -->
-    <script src="/pos/js/posPaymentModal.js"></script>
-    <script src="/pos/js/posTableMap.js"></script>
-    <script src="/pos/js/posOrderScreen.js"></script>
     <script src="/pos/js/posCore.js"></script>
-    
+    <script src="/pos/js/posTableMap.js"></script>
+    <script src="/pos/js/posPaymentModal.js"></script>
+    <script src="/pos/js/posOrderScreen.js"></script>
+
     <script>
         // URL에서 매장 ID 파싱
         const urlParams = new URLSearchParams(window.location.search);
         const storeId = urlParams.get('storeId');
-        
+
         if (!storeId) {
             alert('매장 ID가 필요합니다.');
             window.history.back();
