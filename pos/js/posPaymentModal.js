@@ -1383,6 +1383,33 @@ const POSPaymentModal = {
     },
 
     /**
+     * 메뉴명으로 조리 스테이션 추정
+     */
+    getCookStationByMenu(menuName) {
+        if (!menuName) return 'KITCHEN';
+        
+        const menuLower = menuName.toLowerCase();
+        
+        if (menuLower.includes('음료') || menuLower.includes('주스') || menuLower.includes('커피') || 
+            menuLower.includes('차') || menuLower.includes('라떼') || menuLower.includes('콜라') || 
+            menuLower.includes('사이다')) {
+            return 'DRINK';
+        }
+        
+        if (menuLower.includes('디저트') || menuLower.includes('케이크') || menuLower.includes('아이스크림') || 
+            menuLower.includes('푸딩') || menuLower.includes('과자')) {
+            return 'DESSERT';
+        }
+        
+        if (menuLower.includes('사이드') || menuLower.includes('반찬') || menuLower.includes('김치') || 
+            menuLower.includes('피클')) {
+            return 'SIDE';
+        }
+        
+        return 'KITCHEN';
+    },
+
+    /**
      * 실제 결제 정보 로드 (서버에서 현재 상태 조회)
      */
     async loadActualPaymentInfo(storeId, tableNumber) {
