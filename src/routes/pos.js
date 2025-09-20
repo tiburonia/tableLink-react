@@ -33,7 +33,7 @@ router.post('/orders/confirm', async (req, res) => {
 
     const existingOrderResult = await client.query(`
       SELECT id FROM orders 
-      WHERE store_id = $1 AND table_num = $2 AND status = 'OPEN'
+      WHERE store_id = $1 AND table_num = $2 AND session_status = 'OPEN'
       ORDER BY created_at DESC 
       LIMIT 1
     `, [storeId, tableNumber]);
@@ -180,7 +180,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
       SELECT id FROM orders 
       WHERE store_id = $1 
         AND table_num = $2 
-        AND status = 'OPEN'
+        AND session_status = 'OPEN'
         AND user_id IS NULL 
         AND guest_phone IS NULL
         AND source = 'POS'
@@ -209,7 +209,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
           user_id,
           guest_phone,
           source,
-          status, 
+          session_status, 
           payment_status,
           total_price,
           created_at
@@ -373,7 +373,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
         COALESCE(u.name, '포스고객') as customer_name,
         o.user_id,
         o.total_price as total_amount,
-        o.status,
+        o.session_status,
         o.created_at as opened_at,
         o.source as source_system,
         COUNT(oi.id) as item_count
@@ -383,7 +383,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
       LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
       WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
       GROUP BY st.id, o.id, u.name, o.user_id, 
-               o.total_price, o.status, o.created_at, o.source
+               o.total_price, o.session_status, o.created_at, o.source
       ORDER BY o.created_at ASC
     `, [storeId]);
 
@@ -450,7 +450,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       LEFT JOIN users u ON o.user_id = u.id
       WHERE o.store_id = $1 
         AND o.table_num = $2 
-        AND o.status = 'OPEN'
+        AND o.session_status = 'OPEN'
         AND ot.paid_status = 'UNPAID'
       ORDER BY o.created_at DESC
       LIMIT 1
@@ -542,13 +542,13 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         ot.id as ticket_id,
         ot.paid_status,
         ot.source,
-        o.status as order_status,
+        o.session_status as order_status,
         COUNT(oi.id) as item_count
       FROM order_tickets ot
       JOIN orders o ON ot.order_id = o.id
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE o.store_id = $1 AND o.table_num = $2
-      GROUP BY ot.id, ot.paid_status, ot.source, o.status
+      GROUP BY ot.id, ot.paid_status, ot.source, o.session_status
       ORDER BY ot.created_at DESC
     `, [parsedStoreId, parsedTableNumber]);
 
@@ -569,7 +569,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         oi.created_at,
         ot.order_id,
         ot.paid_status,
-        o.status as order_status
+        o.session_status as order_status
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
@@ -578,7 +578,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'  -- 반드시 미지불만
         AND ot.paid_status != 'PAID'   -- PAID 상태 명시적 배제
-        AND o.status = 'OPEN'
+        AND o.session_status = 'OPEN'
         AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
       ORDER BY oi.created_at ASC
     `, [parsedStoreId, parsedTableNumber]);
@@ -676,7 +676,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         AND o.table_num = $2 
         AND ot.source = 'TLL'
         AND oi.item_status != 'CANCELLED'
-        AND o.status != 'CANCELLED'
+        AND o.session_status != 'CANCELLED'
       ORDER BY oi.created_at DESC
     `, [parsedStoreId, parsedTableNumber]);
 
@@ -914,7 +914,7 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
       WHERE o.store_id = $1 
         AND o.table_num = $2 
         AND ot.paid_status = 'UNPAID'
-        AND o.status = 'OPEN'
+        AND o.session_status = 'OPEN'
       GROUP BY o.id, o.created_at, o.total_price
       ORDER BY o.created_at DESC
       LIMIT 1

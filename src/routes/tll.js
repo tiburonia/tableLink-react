@@ -72,10 +72,10 @@ router.post('/checks/from-qr', async (req, res) => {
 
     // 기존 활성 주문 확인 (같은 매장, 같은 사용자/게스트)
     const existingOrderResult = await client.query(`
-      SELECT id, status
+      SELECT id, session_status
       FROM orders
       WHERE store_id = $1 
-        AND status = 'OPEN'
+        AND session_status = 'OPEN'
         AND (
           (user_id = $2 AND $2 IS NOT NULL) OR 
           (guest_id = $3 AND $3 IS NOT NULL)

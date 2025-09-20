@@ -947,7 +947,7 @@ router.get('/current-session/:storeId/:tableNumber', async (req, res) => {
     const sessionResult = await pool.query(`
       SELECT 
         o.id as order_id,
-        o.status,
+        o.session_status,
         o.created_at,
         o.user_id,
         o.guest_phone,
@@ -959,7 +959,7 @@ router.get('/current-session/:storeId/:tableNumber', async (req, res) => {
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
       WHERE o.store_id = $1 
         AND o.table_num = $2 
-        AND o.status = 'OPEN'
+        AND o.session_status = 'OPEN'
         AND NOT COALESCE(o.session_ended, false)
       GROUP BY o.id, u.name
       ORDER BY o.created_at DESC
@@ -1037,9 +1037,9 @@ router.put('/:orderId/end-session', async (req, res) => {
       SET 
         session_ended = true,
         session_ended_at = CURRENT_TIMESTAMP,
-        status = CASE 
-          WHEN status = 'OPEN' THEN 'CLOSED'
-          ELSE status
+        session_status = CASE 
+          WHEN session_status = 'OPEN' THEN 'CLOSED'
+          ELSE session_status
         END,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
@@ -1061,7 +1061,7 @@ router.put('/:orderId/end-session', async (req, res) => {
       SELECT COUNT(*) as count
       FROM orders
       WHERE store_id = $1 AND table_num = $2 
-        AND status = 'OPEN' AND session_ended = false
+        AND session_status = 'OPEN' AND session_ended = false
         AND id != $3
     `, [order.store_id, order.table_num, parseInt(orderId)]);
 

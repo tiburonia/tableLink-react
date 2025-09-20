@@ -397,17 +397,8 @@ router.post('/process-with-customer', async (req, res) => {
       console.log(`🎉 회원 ${userId} 포인트 적립: ${points}P`);
     }
 
-    // 8. 게스트인 경우 방문 횟수 증가
-    if (customerType === 'guest' && guestId) {
-      await client.query(`
-        UPDATE guests 
-        SET total_visits = COALESCE(total_visits, 0) + 1,
-            last_visit_date = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `, [guestId]);
-
-      console.log(`📊 게스트 ${guestId} 방문 횟수 증가`);
-    }
+    
+  
 
     await client.query('COMMIT');
 

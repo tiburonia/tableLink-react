@@ -122,7 +122,7 @@ class PaymentService {
     // 기존 OPEN 주문 확인
     const existingOrderResult = await client.query(`
       SELECT id FROM orders 
-      WHERE store_id = $1 AND user_id = $2 AND status = 'OPEN'
+      WHERE store_id = $1 AND user_id = $2 AND session_status = 'OPEN'
       LIMIT 1
     `, [orderData.storeId, orderData.userPk]);
 
@@ -139,7 +139,7 @@ class PaymentService {
         store_id,
         user_id,
         source,
-        status,
+        session_status,
         payment_status,
         total_price,
         table_num

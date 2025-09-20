@@ -39,7 +39,7 @@ router.get('/:storeId', async (req, res) => {
       JOIN order_tickets ot ON o.id = ot.order_id
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE o.store_id = $1 
-        AND o.status = 'OPEN'
+        AND o.session_status = 'OPEN'
         AND ot.status IN ('PENDING', 'COOKING')
         AND ot.display_status != 'UNVISIBLE'
       GROUP BY o.id, ot.id, ot.status, o.table_num, o.created_at, o.source

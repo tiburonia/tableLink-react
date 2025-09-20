@@ -48,7 +48,7 @@ async function renderProcessingOrder(orderId) {
     }
 
     // 세션이 종료된 주문인지 확인
-    if (orderData.status === 'CLOSED' || orderData.session_ended) {
+    if (orderData.session_status === 'CLOSED' || orderData.session_ended) {
       showSessionEndedState(orderData);
       return;
     }
@@ -184,8 +184,8 @@ function renderProcessingOrderUI(orderData) {
           <div class="summary-card">
             <div class="summary-header">
               <h3>📊 주문 요약</h3>
-              <div class="order-status status-${orderData.status.toLowerCase()}">
-                ${getStatusText(orderData.status)}
+              <div class="order-status status-${orderData.session_status.toLowerCase()}">
+                ${getStatusText(orderData.session_status)}
               </div>
             </div>
             <div class="summary-stats">
@@ -745,11 +745,11 @@ function startRealTimeUpdates(orderId) {
     try {
       const orderData = await loadOrderData(orderId);
 
-      if (orderData && orderData.status !== 'CLOSED' && !orderData.session_ended) {
+      if (orderData && orderData.session_status !== 'CLOSED' && !orderData.session_ended) {
         updateProcessingData(orderData);
       } else {
         clearInterval(updateInterval);
-        if (orderData && (orderData.status === 'CLOSED' || orderData.session_ended)) {
+        if (orderData && (orderData.session_status === 'CLOSED' || orderData.session_ended)) {
           showSessionEndedState(orderData);
         }
       }
