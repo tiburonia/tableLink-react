@@ -2049,7 +2049,13 @@ const POSOrderScreen = {
         const integrationSection = document.querySelector('.tll-integration-section');
 
         if (integrateBtn && separateBtn && statusElement) {
-            // 버튼 활성화 상태 변경
+            // 즉시 모든 버튼 비활성화 (시각적 피드백)
+            integrateBtn.disabled = true;
+            separateBtn.disabled = true;
+            integrateBtn.classList.add('processing');
+            separateBtn.classList.add('processing');
+
+            // 선택된 버튼만 active 상태로 표시
             integrateBtn.classList.toggle('active', integrate);
             separateBtn.classList.toggle('active', !integrate);
 
@@ -2066,23 +2072,25 @@ const POSOrderScreen = {
                 `;
             }
 
-            // 2초 후 연동 선택 섹션 숨김
+            // 즉시 연동 선택 섹션 숨김 (애니메이션 효과)
             setTimeout(() => {
                 if (integrationSection) {
-                    integrationSection.style.transition = 'opacity 0.3s ease, height 0.3s ease';
+                    integrationSection.style.transition = 'all 0.4s ease-out';
                     integrationSection.style.opacity = '0';
-                    integrationSection.style.height = '0';
+                    integrationSection.style.transform = 'translateY(-10px)';
+                    integrationSection.style.maxHeight = '0';
                     integrationSection.style.overflow = 'hidden';
                     integrationSection.style.marginTop = '0';
                     integrationSection.style.paddingTop = '0';
                     integrationSection.style.paddingBottom = '0';
+                    integrationSection.style.borderWidth = '0';
                     
                     // 완전히 숨김
                     setTimeout(() => {
                         integrationSection.style.display = 'none';
-                    }, 300);
+                    }, 400);
                 }
-            }, 2000);
+            }, 200);
         }
 
         // 메뉴 그리드 다시 렌더링 (메뉴 활성화)
@@ -2091,8 +2099,16 @@ const POSOrderScreen = {
             menuGrid.innerHTML = this.renderMenuGrid();
         }
 
+        // 결제 섹션 업데이트 (선택된 모드 표시)
+        const paymentSection = document.querySelector('.payment-section');
+        if (paymentSection) {
+            const newPaymentSection = document.createElement('div');
+            newPaymentSection.innerHTML = this.renderPaymentSection();
+            paymentSection.replaceWith(newPaymentSection.firstElementChild);
+        }
+
         console.log(`🔗 TLL 연동 설정 변경: ${integrate ? '연동' : '별도 주문'}`);
-        this.showToast(`연동 방식이 선택되었습니다. 이제 메뉴를 선택할 수 있습니다.`);
+        this.showToast(`${integrate ? 'TLL 연동' : '별도 주문'} 모드가 선택되었습니다. 이제 메뉴를 선택할 수 있습니다.`);
     },
 
     // 기타 기능들 (임시 구현)
