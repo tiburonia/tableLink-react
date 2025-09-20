@@ -12,7 +12,7 @@ BEGIN
       'order_id', COALESCE(NEW.id, OLD.id),
       'store_id', COALESCE(NEW.store_id, OLD.store_id),
       'table_num', COALESCE(NEW.table_num, OLD.table_num),
-      'status', COALESCE(NEW.status, OLD.status),
+      'status', COALESCE(NEW.session_status, OLD.session_status),
       'timestamp', CURRENT_TIMESTAMP
     )::text
   );
