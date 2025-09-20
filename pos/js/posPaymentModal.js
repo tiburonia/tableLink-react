@@ -1385,9 +1385,11 @@ const POSPaymentModal = {
     /**
      * 메뉴명으로 조리 스테이션 추정
      */
-    getCookStationByMenu(menuName) {
-        if (!menuName) return 'KITCHEN';
-
+     getCookStationByMenu(menuName) {
+        if (!menuName)  {
+            return 'KITCHEN';
+        }
+    
         const menuLower = menuName.toLowerCase();
 
         if (menuLower.includes('음료') || menuLower.includes('주스') || menuLower.includes('커피') || 
@@ -1407,7 +1409,7 @@ const POSPaymentModal = {
         }
 
         return 'KITCHEN';
-    },
+    }
 
     /**
      * 실제 결제 정보 로드 (서버에서 현재 상태 조회)
