@@ -11,7 +11,7 @@ const POSPaymentModal = {
     /**
      * 결제 모달 표시
      */
-    show(paymentData) {
+    async show(paymentData) {
         console.log('🔍 결제 모달 표시 요청:', paymentData);
         
         if (!paymentData) {
@@ -37,8 +37,11 @@ const POSPaymentModal = {
             return;
         }
 
-        // 모든 검증 통과 후 데이터 설정
-        this.currentPaymentData = {
+        // 현재 테이블의 실제 결제 정보 조회
+        const actualPaymentInfo = await this.loadActualPaymentInfo(paymentData.storeId, paymentData.tableNumber);
+        
+        // 실제 결제 정보가 있으면 우선 사용, 없으면 전달받은 데이터 사용
+        const finalPaymentData = actualPaymentInfo || {
             totalAmount: paymentData.totalAmount,
             itemCount: paymentData.itemCount,
             storeId: paymentData.storeId,
@@ -46,6 +49,9 @@ const POSPaymentModal = {
             orderId: paymentData.orderId || null,
             paymentMethod: paymentData.paymentMethod || 'CARD'
         };
+
+        // 모든 검증 통과 후 데이터 설정
+        this.currentPaymentData = finalPaymentData;
         
         console.log('✅ 결제 데이터 설정 완료:', this.currentPaymentData);
         
@@ -537,7 +543,7 @@ const POSPaymentModal = {
     async processPayment() {
         try {
             const selectedMethod = document.querySelector('.payment-method-btn.active').dataset.method;
-            const { totalAmount, storeId, tableNumber } = this.currentPaymentData;
+            const { totalAmount, storeId, tableNumber, orderId } = this.currentPaymentData;
 
             // 현금 결제시 받은 금액 검증
             if (selectedMethod === 'CASH') {
@@ -560,16 +566,27 @@ const POSPaymentModal = {
             confirmBtn.innerHTML = '<span>처리중...</span>';
             confirmBtn.disabled = true;
 
-            // 기존 POS 결제 로직 호출
-            if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.processPayment) {
-                await POSOrderScreen.processPayment(selectedMethod);
-            } else {
-                // 직접 결제 API 호출
-                await this.callPaymentAPI(selectedMethod);
-            }
+            // 직접 POS 결제 API 호출 (기존 결제 로직 사용)
+            const paymentResult = await this.directProcessPayment(selectedMethod);
 
-            // 성공 시 모달 닫기
-            this.hide();
+            if (paymentResult.success) {
+                console.log('✅ 결제 완료:', paymentResult);
+                
+                const successMessage = `${methodName} 결제가 완료되었습니다!\n` +
+                                     `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
+                                     `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
+                alert(successMessage);
+
+                // POS 화면 새로고침
+                if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.refreshOrders) {
+                    await POSOrderScreen.refreshOrders();
+                }
+
+                // 모달 닫기
+                this.hide();
+            } else {
+                throw new Error(paymentResult.error || '결제 처리 실패');
+            }
 
         } catch (error) {
             console.error('❌ 결제 처리 실패:', error);
@@ -581,6 +598,92 @@ const POSPaymentModal = {
                 confirmBtn.innerHTML = originalText;
                 confirmBtn.disabled = false;
             }
+        }
+    },
+
+    /**
+     * 직접 결제 처리 (기존 POS 결제 API 사용)
+     */
+    async directProcessPayment(paymentMethod) {
+        const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
+
+        console.log(`💳 직접 결제 처리: 주문 ${orderId}, 방법: ${paymentMethod}, 금액: ${totalAmount}`);
+
+        const response = await fetch('/api/pos-payment/process', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                orderId: orderId,
+                paymentMethod: paymentMethod.toUpperCase(),
+                amount: totalAmount,
+                storeId: storeId,
+                tableNumber: tableNumber
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
+        return await response.json();
+    },
+
+    /**
+     * 실제 결제 정보 로드 (서버에서 현재 상태 조회)
+     */
+    async loadActualPaymentInfo(storeId, tableNumber) {
+        try {
+            console.log(`📋 실제 결제 정보 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+            // 1. 현재 테이블의 활성 주문 조회
+            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
+            
+            if (!activeOrderResponse.ok) {
+                console.warn('⚠️ 활성 주문 조회 실패');
+                return null;
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+            
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
+                console.log('ℹ️ 활성 주문이 없습니다');
+                return null;
+            }
+
+            const orderId = activeOrderData.orderId;
+
+            // 2. 미지불 티켓 정보 조회
+            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+            
+            if (!unpaidResponse.ok) {
+                console.warn('⚠️ 미지불 티켓 조회 실패');
+                return null;
+            }
+
+            const unpaidData = await unpaidResponse.json();
+            
+            if (!unpaidData.success || unpaidData.totalTickets === 0) {
+                console.log('ℹ️ 미지불 티켓이 없습니다');
+                return null;
+            }
+
+            console.log(`✅ 실제 결제 정보 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
+
+            return {
+                totalAmount: unpaidData.totalAmount,
+                itemCount: unpaidData.totalTickets,
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
+                orderId: orderId,
+                paymentMethod: 'CARD'
+            };
+
+        } catch (error) {
+            console.error('❌ 실제 결제 정보 조회 실패:', error);
+            return null;
         }
     },
 
