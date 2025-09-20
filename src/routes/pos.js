@@ -536,6 +536,24 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 
     console.log(`📋 POS order_items 조회 (미지불만): 매장 ${parsedStoreId}, 테이블 ${parsedTableNumber}`);
 
+    // 먼저 해당 테이블의 모든 티켓 상태 확인 (디버깅용)
+    const debugResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.paid_status,
+        ot.source,
+        o.status as order_status,
+        COUNT(oi.id) as item_count
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 AND o.table_num = $2
+      GROUP BY ot.id, ot.paid_status, ot.source, o.status
+      ORDER BY ot.created_at DESC
+    `, [parsedStoreId, parsedTableNumber]);
+
+    console.log(`🔍 테이블 ${parsedTableNumber} 모든 티켓 상태:`, debugResult.rows);
+
     // 해당 테이블의 order_items 조회 (POS 소스, UNPAID + OPEN 상태만 확실히 필터링)
     const result = await pool.query(`
       SELECT 
@@ -558,27 +576,52 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
       WHERE o.store_id = $1 
         AND o.table_num = $2 
         AND ot.source = 'POS'
-        AND ot.paid_status = 'UNPAID'
+        AND ot.paid_status = 'UNPAID'  -- 반드시 미지불만
+        AND ot.paid_status != 'PAID'   -- PAID 상태 명시적 배제
         AND o.status = 'OPEN'
         AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
       ORDER BY oi.created_at ASC
     `, [parsedStoreId, parsedTableNumber]);
 
-    console.log(`✅ POS 미지불 order_items ${result.rows.length}개 조회 완료`);
+    // 결과에서 PAID 상태 완전 제거 (이중 체크)
+    const filteredResults = result.rows.filter(item => {
+      const isPaid = item.paid_status === 'PAID';
+      if (isPaid) {
+        console.warn(`⚠️ PAID 상태 아이템 발견 및 제거:`, {
+          ticket_id: item.ticket_id,
+          menu_name: item.menu_name,
+          paid_status: item.paid_status
+        });
+      }
+      return !isPaid && item.paid_status === 'UNPAID';
+    });
+
+    console.log(`✅ POS 미지불 order_items ${filteredResults.length}개 조회 완료 (원본: ${result.rows.length}개)`);
     
     // 디버깅용 로그 추가
-    if (result.rows.length > 0) {
+    if (filteredResults.length > 0) {
       console.log(`🔍 첫 번째 아이템 상태:`, {
-        paid_status: result.rows[0].paid_status,
-        order_status: result.rows[0].order_status,
-        item_status: result.rows[0].item_status
+        paid_status: filteredResults[0].paid_status,
+        order_status: filteredResults[0].order_status,
+        item_status: filteredResults[0].item_status
       });
     }
 
+    // 각 아이템의 결제 상태 확인
+    filteredResults.forEach((item, index) => {
+      if (item.paid_status !== 'UNPAID') {
+        console.error(`❌ 비미지불 아이템 발견 [${index}]:`, {
+          menu_name: item.menu_name,
+          paid_status: item.paid_status,
+          ticket_id: item.ticket_id
+        });
+      }
+    });
+
     res.json({
       success: true,
-      orderItems: result.rows,
-      count: result.rows.length
+      orderItems: filteredResults,
+      count: filteredResults.length
     });
 
   } catch (error) {

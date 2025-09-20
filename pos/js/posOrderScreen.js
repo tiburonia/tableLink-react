@@ -594,11 +594,22 @@ const POSOrderScreen = {
             });
 
             if (data.success && data.orderItems && data.orderItems.length > 0) {
-                // 추가 필터링: 확실히 미지불 상태만
+                // 추가 필터링: 확실히 미지불 상태만 (PAID 상태 완전 배제)
                 const unpaidItems = data.orderItems.filter(item => {
                     const isUnpaid = item.paid_status === 'UNPAID';
+                    const isPaid = item.paid_status === 'PAID';
                     const isActiveOrder = item.order_status === 'OPEN';
                     const isActiveItem = !['CANCELLED', 'REFUNDED'].includes(item.item_status);
+                    
+                    // PAID 상태는 무조건 제외
+                    if (isPaid) {
+                        console.warn(`🚫 PAID 상태 아이템 제거:`, {
+                            menu_name: item.menu_name,
+                            paid_status: item.paid_status,
+                            ticket_id: item.ticket_id
+                        });
+                        return false;
+                    }
                     
                     const shouldInclude = isUnpaid && isActiveOrder && isActiveItem;
                     
@@ -608,7 +619,7 @@ const POSOrderScreen = {
                             paid_status: item.paid_status,
                             order_status: item.order_status,
                             item_status: item.item_status,
-                            reason: !isUnpaid ? 'paid' : !isActiveOrder ? 'closed_order' : 'inactive_item'
+                            reason: !isUnpaid ? 'not_unpaid' : !isActiveOrder ? 'closed_order' : 'inactive_item'
                         });
                     }
                     
@@ -1183,11 +1194,21 @@ const POSOrderScreen = {
                 // 장바구니 초기화
                 this.clearCart();
 
-                // 화면 새로고침
-                await this.refreshOrders();
+                // 기존 주문 데이터 초기화 (캐시 제거)
+                this.currentOrders = [];
+                this.tllOrders = [];
+                this.tllUserInfo = null;
 
-                // 결제 완료 후 화면 재렌더링
-                await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+                // 잠시 대기 후 강제 새로고침 (DB 업데이트 반영 시간)
+                setTimeout(async () => {
+                    console.log('🔄 결제 완료 후 강제 데이터 새로고침');
+                    
+                    // 화면 새로고침
+                    await this.refreshOrders();
+
+                    // 결제 완료 후 화면 재렌더링
+                    await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+                }, 1000);
 
             } else {
                 throw new Error(paymentResult.error || '결제 처리 실패');
