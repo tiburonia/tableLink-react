@@ -1,4 +1,3 @@
-
 /**
  * POS 결제 모달 컴포넌트
  * 회원/비회원 구분 및 비회원 전화번호 입력 지원
@@ -13,21 +12,33 @@ const POSPaymentModal = {
     /**
      * 결제 모달 표시
      */
-    async show(initialData) {
-        console.log('🔍 결제 모달 표시 요청:', initialData);
+    async show(paymentMethod = 'CARD') {
+        console.log('🔍 결제 모달 표시 요청 (API 기반):', paymentMethod);
 
-        // 기본 데이터 설정 (API 호출 전에도 모달을 렌더링할 수 있도록)
-        this.currentPaymentData = initialData || {
+        // POSOrderScreen에서 현재 테이블 정보 가져오기
+        const storeId = POSCore?.storeId || window.POSOrderScreen?.currentStoreId;
+        const tableNumber = POSCore?.tableNumber || window.POSOrderScreen?.currentTableNumber;
+
+        if (!storeId || !tableNumber) {
+            console.error('❌ 매장 ID 또는 테이블 번호를 찾을 수 없습니다');
+            alert('매장 또는 테이블 정보를 찾을 수 없습니다. 다시 시도해 주세요.');
+            return;
+        }
+
+        // 초기 로딩 상태로 currentPaymentData 설정
+        this.currentPaymentData = {
             totalAmount: 0,
             itemCount: 0,
-            storeId: null,
-            tableNumber: null,
+            storeId: parseInt(storeId),
+            tableNumber: parseInt(tableNumber),
             orderId: null,
-            paymentMethod: 'CARD',
+            paymentMethod: paymentMethod,
             isLoading: true
         };
 
         this.isVisible = true;
+
+        console.log('📋 초기 로딩 상태로 설정:', this.currentPaymentData);
 
         // 모달 먼저 렌더링 (로딩 상태로)
         this.render();
@@ -35,33 +46,29 @@ const POSPaymentModal = {
 
         // API 호출로 실제 결제 정보 로드
         try {
-            if (initialData && initialData.storeId && initialData.tableNumber) {
-                console.log('📡 실제 결제 정보 API 호출 시작');
-                
-                const actualPaymentInfo = await this.loadActualPaymentInfo(initialData.storeId, initialData.tableNumber);
-                
-                if (actualPaymentInfo) {
-                    // API로부터 받은 실제 데이터로 업데이트
-                    this.currentPaymentData = {
-                        ...actualPaymentInfo,
-                        paymentMethod: initialData.paymentMethod || 'CARD',
-                        isLoading: false
-                    };
-                    
-                    console.log('✅ 실제 결제 정보 로드 완료:', this.currentPaymentData);
-                } else {
-                    // API 응답이 없을 경우 초기 데이터 사용
-                    this.currentPaymentData = {
-                        ...initialData,
-                        isLoading: false
-                    };
-                    
-                    console.log('ℹ️ 초기 데이터 사용:', this.currentPaymentData);
-                }
+            console.log('📡 결제 대상 데이터 API 호출 시작');
+
+            const actualPaymentInfo = await this.loadActualPaymentInfo(storeId, tableNumber);
+
+            if (actualPaymentInfo) {
+                // API로부터 받은 실제 데이터로 업데이트
+                this.currentPaymentData = {
+                    ...actualPaymentInfo,
+                    paymentMethod: paymentMethod,
+                    isLoading: false
+                };
+
+                console.log('✅ 실제 결제 정보 로드 완료:', this.currentPaymentData);
             } else {
-                // 초기 데이터가 불완전한 경우
-                this.currentPaymentData.isLoading = false;
-                console.warn('⚠️ 초기 데이터가 불완전하여 API 호출을 건너뜀');
+                // API 응답이 없을 경우 (결제할 내역이 없음)
+                this.currentPaymentData = {
+                    ...this.currentPaymentData,
+                    isLoading: false,
+                    hasError: true,
+                    errorMessage: '결제할 주문이 없습니다.'
+                };
+
+                console.log('ℹ️ 결제할 주문이 없음');
             }
 
             // 데이터 로드 후 모달 재렌더링
@@ -70,14 +77,14 @@ const POSPaymentModal = {
 
         } catch (error) {
             console.error('❌ 결제 정보 API 로드 실패:', error);
-            
+
             this.currentPaymentData = {
                 ...this.currentPaymentData,
                 isLoading: false,
                 hasError: true,
                 errorMessage: error.message
             };
-            
+
             // 에러 상태로 모달 재렌더링
             this.render();
             this.setupEventListeners();
@@ -211,11 +218,11 @@ const POSPaymentModal = {
                     <div class="payment-methods">
                         <h3>결제 수단 선택</h3>
                         <div class="method-buttons">
-                            <button class="payment-method-btn active" data-method="CARD">
+                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === 'CARD' ? 'active' : ''}" data-method="CARD">
                                 <div class="method-icon">💳</div>
                                 <span>카드결제</span>
                             </button>
-                            <button class="payment-method-btn" data-method="CASH">
+                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === 'CASH' ? 'active' : ''}" data-method="CASH">
                                 <div class="method-icon">💵</div>
                                 <span>현금결제</span>
                             </button>
@@ -223,7 +230,7 @@ const POSPaymentModal = {
                     </div>
 
                     <!-- 현금 결제 시 거스름돈 계산 -->
-                    <div class="cash-section" id="cashSection" style="display: none;">
+                    <div class="cash-section" id="cashSection" style="${this.currentPaymentData.paymentMethod === 'CASH' ? 'display: block;' : 'display: none;'}">
                         <h3>현금 결제</h3>
                         <div class="cash-input-group">
                             <label>받은 금액</label>
@@ -245,7 +252,7 @@ const POSPaymentModal = {
                 <div class="modal-footer">
                     <button class="cancel-btn" id="cancelPayment">취소</button>
                     <button class="confirm-btn" id="confirmPayment">
-                        <span id="paymentBtnText">카드결제 진행</span>
+                        <span id="paymentBtnText">${this.currentPaymentData.paymentMethod === 'CARD' ? '카드결제 진행' : '현금결제 진행'}</span>
                         <span class="amount">${totalAmount.toLocaleString()}원</span>
                     </button>
                 </div>
@@ -374,7 +381,7 @@ const POSPaymentModal = {
         if (retryBtn) {
             retryBtn.addEventListener('click', async () => {
                 console.log('🔄 결제 정보 재시도');
-                
+
                 // 로딩 상태로 변경
                 this.currentPaymentData.isLoading = true;
                 this.currentPaymentData.hasError = false;
@@ -387,7 +394,7 @@ const POSPaymentModal = {
                         this.currentPaymentData.storeId, 
                         this.currentPaymentData.tableNumber
                     );
-                    
+
                     if (actualPaymentInfo) {
                         this.currentPaymentData = {
                             ...actualPaymentInfo,
@@ -397,10 +404,10 @@ const POSPaymentModal = {
                     } else {
                         this.currentPaymentData.isLoading = false;
                     }
-                    
+
                     this.render();
                     this.setupEventListeners();
-                    
+
                 } catch (error) {
                     console.error('❌ 재시도 실패:', error);
                     this.currentPaymentData = {
@@ -484,7 +491,7 @@ const POSPaymentModal = {
 
         try {
             console.log('🔍 회원 조회 요청:', phoneNumber);
-            
+
             // 회원 조회 API 호출 (실제 구현 필요)
             const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
             const data = await response.json();
@@ -565,17 +572,17 @@ const POSPaymentModal = {
             if (this.selectedCustomerType === 'member') {
                 const memberPhoneInput = document.getElementById('memberPhoneInput');
                 const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-                
+
                 if (!memberPhoneInput.value.trim()) {
                     alert('회원 전화번호를 입력해주세요.');
                     return;
                 }
-                
+
                 if (memberInfoDisplay.style.display === 'none') {
                     alert('먼저 회원 조회를 진행해주세요.');
                     return;
                 }
-                
+
                 memberPhone = memberPhoneInput.value.trim();
             }
 
@@ -585,7 +592,7 @@ const POSPaymentModal = {
             const phoneInfo = this.selectedCustomerType === 'member' ? 
                 `회원 번호: ${memberPhone}` : 
                 (guestPhone ? `전화번호: ${guestPhone}` : '전화번호 없음');
-            
+
             if (!confirm(`${customerType} ${methodName} 결제를 진행하시겠습니까?\n` +
                         `결제 금액: ${totalAmount.toLocaleString()}원\n` +
                         `${phoneInfo}`)) {

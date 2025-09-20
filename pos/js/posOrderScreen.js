@@ -1322,35 +1322,17 @@ const POSOrderScreen = {
         }
 
         try {
-            // 로딩 표시
-            const loadingIndicator = this.showLoadingIndicator('결제 정보를 불러오는 중...');
-
-            // API 호출로 실제 결제 대상 내역 조회
-            const paymentData = await this.fetchPaymentTargetData(method);
-
-            // 로딩 표시 제거
-            if (loadingIndicator) {
-                loadingIndicator.remove();
-            }
-
-            if (!paymentData) {
-                alert('결제할 내역이 없습니다.');
-                return;
-            }
-
-            console.log('💳 API로부터 받은 결제 데이터:', paymentData);
-
-            // POSPaymentModal 표시
+            // POSPaymentModal 표시 (API는 모달 내에서 호출)
             if (typeof POSPaymentModal !== 'undefined') {
-                await POSPaymentModal.show(paymentData);
+                await POSPaymentModal.show(method);
             } else {
                 console.error('❌ POSPaymentModal이 로드되지 않았습니다');
                 alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
             }
 
         } catch (error) {
-            console.error('❌ 결제 정보 조회 실패:', error);
-            alert(`결제 정보를 불러올 수 없습니다: ${error.message}`);
+            console.error('❌ 결제 모달 표시 실패:', error);
+            alert(`결제 모달을 표시할 수 없습니다: ${error.message}`);
         }
     },
 
