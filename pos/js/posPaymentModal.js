@@ -1,4 +1,3 @@
-
 /**
  * POS 결제 모달 컴포넌트
  * 회원/비회원 구분 없이 사용 가능한 전역 모달
@@ -13,7 +12,7 @@ const POSPaymentModal = {
      */
     async show(paymentData) {
         console.log('🔍 결제 모달 표시 요청:', paymentData);
-        
+
         if (!paymentData) {
             console.error('❌ 결제 데이터가 없습니다');
             alert('결제 정보를 불러올 수 없습니다.');
@@ -23,7 +22,7 @@ const POSPaymentModal = {
         // 필수 필드 검증
         const requiredFields = ['totalAmount', 'itemCount', 'storeId', 'tableNumber'];
         const missingFields = requiredFields.filter(field => paymentData[field] === undefined || paymentData[field] === null);
-        
+
         if (missingFields.length > 0) {
             console.error('❌ 필수 결제 데이터 누락:', missingFields, paymentData);
             alert('결제 정보가 완전하지 않습니다: ' + missingFields.join(', '));
@@ -39,7 +38,7 @@ const POSPaymentModal = {
 
         // 현재 테이블의 실제 결제 정보 조회
         const actualPaymentInfo = await this.loadActualPaymentInfo(paymentData.storeId, paymentData.tableNumber);
-        
+
         // 실제 결제 정보가 있으면 우선 사용, 없으면 전달받은 데이터 사용
         const finalPaymentData = actualPaymentInfo || {
             totalAmount: paymentData.totalAmount,
@@ -52,16 +51,16 @@ const POSPaymentModal = {
 
         // 모든 검증 통과 후 데이터 설정
         this.currentPaymentData = finalPaymentData;
-        
+
         // 데이터 설정 확인
         if (!this.currentPaymentData || this.currentPaymentData.totalAmount <= 0) {
             console.error('❌ 유효하지 않은 결제 데이터:', this.currentPaymentData);
             alert('결제 정보가 유효하지 않습니다.');
             return;
         }
-        
+
         console.log('✅ 결제 데이터 설정 완료:', this.currentPaymentData);
-        
+
         this.isVisible = true;
         this.render();
         this.setupEventListeners();
@@ -557,7 +556,7 @@ const POSPaymentModal = {
 
         const receivedInput = document.getElementById('receivedAmount');
         const changeElement = document.getElementById('changeAmount');
-        
+
         if (!receivedInput || !changeElement) {
             console.warn('⚠️ 거스름돈 계산을 위한 DOM 요소를 찾을 수 없습니다');
             return;
@@ -605,7 +604,7 @@ const POSPaymentModal = {
 
             if (paymentResult.success) {
                 console.log('✅ 결제 완료:', paymentResult);
-                
+
                 const successMessage = `${methodName} 결제가 완료되었습니다!\n` +
                                      `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
                                      `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
@@ -674,14 +673,14 @@ const POSPaymentModal = {
 
             // 1. 현재 테이블의 활성 주문 조회
             const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
-            
+
             if (!activeOrderResponse.ok) {
                 console.warn('⚠️ 활성 주문 조회 실패');
                 return null;
             }
 
             const activeOrderData = await activeOrderResponse.json();
-            
+
             if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
                 console.log('ℹ️ 활성 주문이 없습니다');
                 return null;
@@ -691,14 +690,14 @@ const POSPaymentModal = {
 
             // 2. 미지불 티켓 정보 조회
             const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
-            
+
             if (!unpaidResponse.ok) {
                 console.warn('⚠️ 미지불 티켓 조회 실패');
                 return null;
             }
 
             const unpaidData = await unpaidResponse.json();
-            
+
             if (!unpaidData.success || unpaidData.totalTickets === 0) {
                 console.log('ℹ️ 미지불 티켓이 없습니다');
                 return null;
@@ -731,7 +730,7 @@ const POSPaymentModal = {
         if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.cart && POSOrderScreen.cart.length > 0) {
             console.log('📋 카트에 미확정 주문이 있음, 먼저 주문 확정 진행');
             await POSOrderScreen.confirmOrder();
-            
+
             // 잠시 대기하여 주문 확정이 완료되도록 함
             await new Promise(resolve => setTimeout(resolve, 1000));
         }
@@ -789,7 +788,168 @@ const POSPaymentModal = {
         }
 
         return result;
-    }
+    },
+
+    /**
+     * POSPaymentModal을 사용한 결제 모달 표시 (API 호출 기반)
+     */
+    async showPOSPaymentModal(method) {
+        console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
+
+        // 필수 정보 검증
+        if (!this.currentStoreId || !this.currentTableNumber) {
+            console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
+            alert('매장 또는 테이블 정보가 설정되지 않았습니다.');
+            return;
+        }
+
+        try {
+            // 로딩 표시
+            const loadingToast = this.showLoadingToast('결제 정보를 불러오는 중...');
+
+            // API 호출로 실제 결제 대상 내역 조회
+            const paymentData = await this.fetchPaymentTargetData();
+
+            // 로딩 토스트 제거
+            if (loadingToast) {
+                loadingToast.remove();
+            }
+
+            if (!paymentData) {
+                alert('결제할 내역이 없습니다.');
+                return;
+            }
+
+            console.log('💳 API로부터 받은 결제 데이터:', paymentData);
+
+            // POSPaymentModal 표시
+            if (typeof POSPaymentModal !== 'undefined') {
+                POSPaymentModal.show(paymentData);
+            } else {
+                console.error('❌ POSPaymentModal이 로드되지 않았습니다');
+                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+            }
+
+        } catch (error) {
+            console.error('❌ 결제 정보 조회 실패:', error);
+            alert(`결제 정보를 불러올 수 없습니다: ${error.message}`);
+        }
+    },
+
+    /**
+     * API 호출로 결제 대상 데이터 조회
+     */
+    async fetchPaymentTargetData() {
+        console.log(`🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`);
+
+        try {
+            // 1. 현재 테이블의 활성 주문 조회
+            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+
+            if (!activeOrderResponse.ok) {
+                console.warn('⚠️ 활성 주문 조회 실패');
+                return null;
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
+                console.log('ℹ️ 활성 주문이 없습니다');
+                return null;
+            }
+
+            const orderId = activeOrderData.orderId;
+
+            // 2. 미지불 티켓 정보 조회
+            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+
+            if (!unpaidResponse.ok) {
+                throw new Error('미지불 티켓 조회 실패');
+            }
+
+            const unpaidData = await unpaidResponse.json();
+
+            if (!unpaidData.success || unpaidData.totalTickets === 0) {
+                console.log('ℹ️ 미지불 티켓이 없습니다');
+                return null;
+            }
+
+            // 3. 주문 상세 정보 조회 (주문 아이템들)
+            const orderItemsResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/order-items`);
+
+            let orderItems = [];
+            if (orderItemsResponse.ok) {
+                const orderItemsData = await orderItemsResponse.json();
+                if (orderItemsData.success && orderItemsData.orderItems) {
+                    orderItems = orderItemsData.orderItems;
+                }
+            }
+
+            console.log(`✅ 결제 대상 데이터 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
+
+            return {
+                totalAmount: unpaidData.totalAmount,
+                itemCount: unpaidData.totalTickets,
+                storeId: this.currentStoreId,
+                tableNumber: this.currentTableNumber,
+                orderId: orderId,
+                unpaidTickets: unpaidData.unpaidTickets,
+                orderItems: orderItems,
+                paymentMethod: 'CARD'
+            };
+
+        } catch (error) {
+            console.error('❌ 결제 대상 데이터 조회 실패:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * 로딩 토스트 표시
+     */
+    showLoadingToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'loading-toast';
+        toast.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <span>${message}</span>
+            </div>
+        `;
+
+        // 스타일 추가
+        toast.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        `;
+
+        const loadingSpinner = toast.querySelector('.loading-spinner');
+        if (loadingSpinner) {
+            loadingSpinner.style.cssText = `
+                width: 20px;
+                height: 20px;
+                border: 2px solid #ffffff40;
+                border-top: 2px solid #ffffff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            `;
+        }
+
+        document.body.appendChild(toast);
+        return toast;
+    },
 };
 
 // 전역으로 등록
