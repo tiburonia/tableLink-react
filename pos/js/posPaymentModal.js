@@ -549,13 +549,39 @@ const POSPaymentModal = {
     async callPaymentAPI(paymentMethod) {
         const { storeId, tableNumber, totalAmount, orderId } = this.currentPaymentData;
 
+        // 먼저 카트에 있는 주문들을 확정해야 하는지 확인
+        if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.cart && POSOrderScreen.cart.length > 0) {
+            console.log('📋 카트에 미확정 주문이 있음, 먼저 주문 확정 진행');
+            await POSOrderScreen.confirmOrder();
+            
+            // 잠시 대기하여 주문 확정이 완료되도록 함
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // 최신 주문 ID 가져오기
+        let finalOrderId = orderId;
+        if (!finalOrderId && typeof POSOrderScreen !== 'undefined') {
+            // 현재 테이블의 활성 주문 조회
+            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
+            if (activeOrderResponse.ok) {
+                const activeOrderData = await activeOrderResponse.json();
+                if (activeOrderData.success && activeOrderData.orderId) {
+                    finalOrderId = activeOrderData.orderId;
+                }
+            }
+        }
+
+        if (!finalOrderId) {
+            throw new Error('결제할 주문을 찾을 수 없습니다.');
+        }
+
         const response = await fetch('/api/pos-payment/process', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                orderId: orderId,
+                orderId: finalOrderId,
                 paymentMethod: paymentMethod,
                 amount: totalAmount,
                 storeId: storeId,
@@ -575,8 +601,13 @@ const POSPaymentModal = {
         alert(`${methodName} 결제가 완료되었습니다!\n결제 금액: ${totalAmount.toLocaleString()}원`);
 
         // 화면 새로고침 (POSOrderScreen이 있는 경우)
-        if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.refreshOrders) {
-            await POSOrderScreen.refreshOrders();
+        if (typeof POSOrderScreen !== 'undefined') {
+            if (POSOrderScreen.clearCart) {
+                POSOrderScreen.clearCart();
+            }
+            if (POSOrderScreen.refreshOrders) {
+                await POSOrderScreen.refreshOrders();
+            }
         }
 
         return result;

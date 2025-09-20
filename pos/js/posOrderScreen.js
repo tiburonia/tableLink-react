@@ -728,8 +728,8 @@ const POSOrderScreen = {
 
         console.log(`💳 결제 방법 선택: ${method}`);
 
-        // 결제 모달 표시
-        this.showPaymentModal();
+        // POSPaymentModal을 사용하여 결제 모달 표시
+        this.showPOSPaymentModal(method);
     },
 
     /**
@@ -1176,56 +1176,64 @@ const POSOrderScreen = {
     },
 
     /**
-     * 결제 모달 표시 (신규 구현)
+     * POSPaymentModal을 사용한 결제 모달 표시
+     */
+    showPOSPaymentModal(method) {
+        console.log('✨ POSPaymentModal 결제 모달 표시');
+
+        // 결제할 데이터 준비
+        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const existingOrdersTotal = this.currentOrders
+            .filter(order => !order.isCart)
+            .reduce((sum, order) => sum + (order.price * order.quantity), 0);
+        
+        const totalAmount = cartTotal + existingOrdersTotal;
+        const itemCount = this.cart.length + this.currentOrders.filter(order => !order.isCart).length;
+
+        // 결제 데이터 구성
+        const paymentData = {
+            totalAmount: totalAmount,
+            itemCount: itemCount,
+            storeId: this.currentStoreId,
+            tableNumber: this.currentTableNumber,
+            orderId: this.getCurrentOrderId(),
+            paymentMethod: method
+        };
+
+        console.log('💳 결제 모달 데이터:', paymentData);
+
+        // POSPaymentModal 표시
+        if (typeof POSPaymentModal !== 'undefined') {
+            POSPaymentModal.show(paymentData);
+        } else {
+            console.error('❌ POSPaymentModal이 로드되지 않았습니다');
+            alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+        }
+    },
+
+    /**
+     * 현재 주문 ID 가져오기
+     */
+    getCurrentOrderId() {
+        // 현재 세션이 있으면 해당 주문 ID 사용
+        if (this.currentSession && this.currentSession.orderId) {
+            return this.currentSession.orderId;
+        }
+        
+        // 기존 주문이 있으면 첫 번째 주문의 ID 사용 (임시)
+        if (this.currentOrders.length > 0) {
+            return this.currentOrders[0].orderItemId || null;
+        }
+        
+        return null;
+    },
+
+    /**
+     * 결제 모달 표시 (기존 호환성용)
      */
     showPaymentModal() {
-        console.log('✨ 결제 모달 표시');
-
-        // 이미 모달이 존재하면 제거
-        if (document.getElementById('paymentModal')) {
-            document.getElementById('paymentModal').remove();
-        }
-
-        const modal = document.createElement('div');
-        modal.id = 'paymentModal';
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>결제하기</h2>
-                    <span class="close-btn" onclick="POSOrderScreen.hidePaymentModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    ${this.renderPaymentDetails()}
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="POSOrderScreen.hidePaymentModal()">취소</button>
-                    <button class="btn btn-primary" onclick="POSOrderScreen.confirmPayment()">결제 완료</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // 모달 표시
-        setTimeout(() => {
-            modal.querySelector('.modal-content').style.transform = 'translateY(0)';
-            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
-        }, 10);
-
-        // 받은 금액 입력 필드에 이벤트 리스너 추가 (모달 내에서)
-        const receivedInput = modal.querySelector('#receivedAmount');
-        if (receivedInput) {
-            receivedInput.addEventListener('input', (e) => {
-                const received = parseInt(e.target.value) || 0;
-                const total = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                const change = Math.max(0, received - total);
-                const changeElement = modal.querySelector('#changeAmount');
-                if (changeElement) {
-                    changeElement.textContent = change.toLocaleString() + '원';
-                    changeElement.className = `amount change-amount ${change > 0 ? 'positive' : ''}`;
-                }
-            });
-        }
+        console.log('✨ 기존 결제 모달 표시 (POSPaymentModal로 리다이렉트)');
+        this.showPOSPaymentModal(this.selectedPaymentMethod || 'card');
     },
 
     /**
