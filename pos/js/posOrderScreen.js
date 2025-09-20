@@ -582,7 +582,45 @@ const POSOrderScreen = {
             `;
         }
 
-        // TLL 주문이 있는 경우 - 연동 선택 UI 표시
+        // TLL 주문이 있는 경우 - 연동 선택 UI 표시 (선택 완료 여부에 따라)
+        const integrationUI = this.tllIntegrationSelected ? '' : `
+            <!-- TLL 연동 선택 영역 -->
+            <div class="tll-integration-section">
+                <div class="integration-header">
+                    <span class="integration-icon">🔗</span>
+                    <span class="integration-title">POS 주문 연동 설정</span>
+                </div>
+                <div class="integration-options">
+                    <button class="integration-btn" id="tllIntegrateBtn" 
+                            onclick="POSOrderScreen.setTLLIntegration(true)" data-integrate="true">
+                        <span class="btn-icon">✅</span>
+                        <span class="btn-text">TLL 정보 연동</span>
+                        <span class="btn-desc">기존 주문에 추가</span>
+                    </button>
+                    <button class="integration-btn" id="tllSeparateBtn" 
+                            onclick="POSOrderScreen.setTLLIntegration(false)" data-integrate="false">
+                        <span class="btn-icon">🔄</span>
+                        <span class="btn-text">연동하지 않음</span>
+                        <span class="btn-desc">별도 주문 생성</span>
+                    </button>
+                </div>
+                <div class="integration-status" id="integrationStatus">
+                    <span class="status-icon">⚠️</span>
+                    <span class="status-text">연동 방식을 선택해주세요</span>
+                </div>
+            </div>
+        `;
+
+        const selectedModeUI = this.tllIntegrationSelected ? `
+            <div class="selected-integration-mode">
+                <div class="mode-icon">${this.tllIntegrationEnabled ? '✅' : '🔄'}</div>
+                <div class="mode-text">
+                    <span class="mode-title">${this.tllIntegrationEnabled ? 'TLL 정보 연동' : '별도 주문 생성'}</span>
+                    <span class="mode-desc">${this.tllIntegrationEnabled ? '기존 주문에 추가됩니다' : '비회원 주문으로 생성됩니다'}</span>
+                </div>
+            </div>
+        ` : '';
+
         return `
             <div class="tll-user-info">
                 <div class="tll-user-header">
@@ -607,31 +645,8 @@ const POSOrderScreen = {
                     </div>
                 </div>
 
-                <!-- TLL 연동 선택 영역 -->
-                <div class="tll-integration-section">
-                    <div class="integration-header">
-                        <span class="integration-icon">🔗</span>
-                        <span class="integration-title">POS 주문 연동 설정</span>
-                    </div>
-                    <div class="integration-options">
-                        <button class="integration-btn" id="tllIntegrateBtn" 
-                                onclick="POSOrderScreen.setTLLIntegration(true)" data-integrate="true">
-                            <span class="btn-icon">✅</span>
-                            <span class="btn-text">TLL 정보 연동</span>
-                            <span class="btn-desc">기존 주문에 추가</span>
-                        </button>
-                        <button class="integration-btn" id="tllSeparateBtn" 
-                                onclick="POSOrderScreen.setTLLIntegration(false)" data-integrate="false">
-                            <span class="btn-icon">🔄</span>
-                            <span class="btn-text">연동하지 않음</span>
-                            <span class="btn-desc">별도 주문 생성</span>
-                        </button>
-                    </div>
-                    <div class="integration-status" id="integrationStatus">
-                        <span class="status-icon">⚠️</span>
-                        <span class="status-text">연동 방식을 선택해주세요</span>
-                    </div>
-                </div>
+                ${integrationUI}
+                ${selectedModeUI}
             </div>
         `;
     },
@@ -2031,6 +2046,7 @@ const POSOrderScreen = {
         const integrateBtn = document.getElementById('tllIntegrateBtn');
         const separateBtn = document.getElementById('tllSeparateBtn');
         const statusElement = document.getElementById('integrationStatus');
+        const integrationSection = document.querySelector('.tll-integration-section');
 
         if (integrateBtn && separateBtn && statusElement) {
             // 버튼 활성화 상태 변경
@@ -2049,6 +2065,24 @@ const POSOrderScreen = {
                     <span class="status-text">별도 비회원 주문으로 생성됩니다</span>
                 `;
             }
+
+            // 2초 후 연동 선택 섹션 숨김
+            setTimeout(() => {
+                if (integrationSection) {
+                    integrationSection.style.transition = 'opacity 0.3s ease, height 0.3s ease';
+                    integrationSection.style.opacity = '0';
+                    integrationSection.style.height = '0';
+                    integrationSection.style.overflow = 'hidden';
+                    integrationSection.style.marginTop = '0';
+                    integrationSection.style.paddingTop = '0';
+                    integrationSection.style.paddingBottom = '0';
+                    
+                    // 완전히 숨김
+                    setTimeout(() => {
+                        integrationSection.style.display = 'none';
+                    }, 300);
+                }
+            }, 2000);
         }
 
         // 메뉴 그리드 다시 렌더링 (메뉴 활성화)
