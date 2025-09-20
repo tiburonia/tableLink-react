@@ -1324,41 +1324,67 @@ const POSOrderScreen = {
         }
 
         try {
-            // POSPaymentModal 로딩 확인 및 대기
+            // POSPaymentModal 로딩 확인 및 대기 (더 강력한 검증)
             let retryCount = 0;
-            const maxRetries = 10; // 최대 1초 대기 (100ms * 10)
+            const maxRetries = 20; // 최대 2초 대기 (100ms * 20)
 
-            while (typeof POSPaymentModal === 'undefined' && retryCount < maxRetries) {
-                console.log(`🔄 POSPaymentModal 로딩 대기 중... (${retryCount + 1}/${maxRetries})`);
+            console.log('🔍 POSPaymentModal 로딩 상태 확인 시작');
+
+            while (retryCount < maxRetries) {
+                // window 객체에서 직접 확인
+                const isAvailable = 
+                    typeof window.POSPaymentModal !== 'undefined' && 
+                    window.POSPaymentModal && 
+                    typeof window.POSPaymentModal.show === 'function';
+
+                console.log(`🔄 POSPaymentModal 로딩 확인 (${retryCount + 1}/${maxRetries}):`, {
+                    windowPOSPaymentModal: typeof window.POSPaymentModal,
+                    globalPOSPaymentModal: typeof POSPaymentModal,
+                    hasShowMethod: window.POSPaymentModal?.show ? 'yes' : 'no',
+                    isAvailable: isAvailable
+                });
+
+                if (isAvailable) {
+                    console.log('✅ POSPaymentModal 로드 확인됨, 모달 표시 시도');
+                    
+                    // window 객체를 통해 안전하게 호출
+                    await window.POSPaymentModal.show(method);
+                    return; // 성공적으로 모달이 표시되면 함수 종료
+                }
+
                 await new Promise(resolve => setTimeout(resolve, 100));
                 retryCount++;
             }
 
-            if (typeof POSPaymentModal !== 'undefined' && POSPaymentModal.show) {
-                console.log('✅ POSPaymentModal 로드 확인됨, 모달 표시');
-                await POSPaymentModal.show(method);
-            } else {
-                console.error('❌ POSPaymentModal 로딩 실패 또는 show 메서드 없음:', {
-                    POSPaymentModalType: typeof POSPaymentModal,
-                    hasShowMethod: POSPaymentModal?.show ? 'yes' : 'no',
-                    retryCount: retryCount
-                });
-                
-                // 폴백: 기존 결제 처리 방식 사용
-                console.log('🔄 폴백: 기존 결제 처리 방식 사용');
+            // 로딩 실패 시 상세 정보 출력
+            console.error('❌ POSPaymentModal 로딩 실패:', {
+                windowPOSPaymentModal: typeof window.POSPaymentModal,
+                globalPOSPaymentModal: typeof POSPaymentModal,
+                windowKeys: Object.keys(window).filter(key => key.includes('POS')),
+                retryCount: retryCount,
+                maxRetries: maxRetries
+            });
+
+            // 사용자에게 알림 후 폴백 처리
+            console.log('🔄 결제 모달 로드 실패, 기존 결제 처리 방식으로 전환');
+            
+            if (confirm('결제 모달을 불러올 수 없습니다. 기본 결제 처리를 진행하시겠습니까?')) {
                 await this.processPayment(method.toLowerCase());
             }
 
         } catch (error) {
             console.error('❌ 결제 모달 표시 실패:', error);
             
-            // 폴백: 기존 결제 처리 방식 사용
-            console.log('🔄 에러 발생, 폴백: 기존 결제 처리 방식 사용');
-            try {
-                await this.processPayment(method.toLowerCase());
-            } catch (fallbackError) {
-                console.error('❌ 폴백 결제 처리도 실패:', fallbackError);
-                alert(`결제 처리 실패: ${fallbackError.message}`);
+            // 에러 발생 시 사용자에게 선택권 제공
+            console.log('🔄 에러 발생, 폴백 결제 처리 옵션 제공');
+            
+            if (confirm(`결제 모달 오류가 발생했습니다.\n기본 결제 처리를 진행하시겠습니까?\n\n오류: ${error.message}`)) {
+                try {
+                    await this.processPayment(method.toLowerCase());
+                } catch (fallbackError) {
+                    console.error('❌ 폴백 결제 처리도 실패:', fallbackError);
+                    alert(`결제 처리 실패: ${fallbackError.message}\n\n페이지를 새로고침한 후 다시 시도해 주세요.`);
+                }
             }
         }
     },

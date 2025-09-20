@@ -1439,12 +1439,47 @@ const POSPaymentModal = {
     }
 };
 
-// 전역으로 등록
-window.POSPaymentModal = POSPaymentModal;
+// 전역으로 등록 (안전한 등록)
+try {
+    // 기존 등록이 있는지 확인
+    if (typeof window.POSPaymentModal !== 'undefined') {
+        console.log('ℹ️ POSPaymentModal이 이미 등록되어 있습니다. 덮어쓰기를 진행합니다.');
+    }
 
-// 등록 확인 로그
-console.log('✅ POSPaymentModal 전역 등록 완료:', {
-    type: typeof POSPaymentModal,
-    hasShow: typeof POSPaymentModal.show === 'function',
-    timestamp: new Date().toISOString()
-});
+    // 전역 등록
+    window.POSPaymentModal = POSPaymentModal;
+
+    // 등록 확인
+    if (typeof window.POSPaymentModal === 'undefined') {
+        throw new Error('window.POSPaymentModal 등록 실패');
+    }
+
+    if (typeof window.POSPaymentModal.show !== 'function') {
+        throw new Error('POSPaymentModal.show 함수가 등록되지 않음');
+    }
+
+    // 등록 확인 로그
+    console.log('✅ POSPaymentModal 전역 등록 완료:', {
+        type: typeof POSPaymentModal,
+        windowType: typeof window.POSPaymentModal,
+        hasShow: typeof POSPaymentModal.show === 'function',
+        windowHasShow: typeof window.POSPaymentModal.show === 'function',
+        timestamp: new Date().toISOString()
+    });
+
+    // 추가 검증: 실제 호출 가능한지 테스트
+    if (typeof window.POSPaymentModal.show === 'function') {
+        console.log('✅ POSPaymentModal.show 함수 호출 가능 상태 확인됨');
+    }
+
+} catch (error) {
+    console.error('❌ POSPaymentModal 전역 등록 실패:', error);
+    
+    // 폴백: 직접 전역 스코프에 할당 시도
+    try {
+        globalThis.POSPaymentModal = POSPaymentModal;
+        console.log('🔄 globalThis를 통한 POSPaymentModal 등록 시도 완료');
+    } catch (fallbackError) {
+        console.error('❌ globalThis 등록도 실패:', fallbackError);
+    }
+}
