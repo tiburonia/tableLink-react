@@ -183,7 +183,7 @@ const POSOrderScreen = {
                     <tr>
                         <th class="col-menu">메뉴명</th>
                         <th class="col-price">단가</th>
-                        <th class="col-quantity">수량 (통합)</th>
+                        <th class="col-quantity">수량</th>
                         <th class="col-total">합계</th>
                         <th class="col-status">상태</th>
                     </tr>
@@ -196,12 +196,11 @@ const POSOrderScreen = {
 
         if (posOrders.length > 0) {
             tableBody = posOrders.map((order, index) => `
-                <tr class="order-row ${order.isCart ? 'cart-item' : 'db-item'}" data-order-id="${order.id}" data-menu-name="${order.menuName}">
+                <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}" data-menu-name="${order.menuName}">
                     <td class="col-menu">
                         <div class="menu-info">
                             <strong>${order.menuName}</strong>
-                            ${order.isCart ? '<span class="cart-badge">카트</span>' : '<span class="db-badge">DB</span>'}
-                            ${order.cookStation ? `<span class="cook-station-mini">${order.cookStation}</span>` : ''}
+                            ${order.isCart ? '<span class="cart-badge">카트</span>' : ''}
                         </div>
                     </td>
                     <td class="col-price">
@@ -218,8 +217,7 @@ const POSOrderScreen = {
                                     +
                                 </button>
                             ` : `
-                                <span class="quantity-display quantity-consolidated">${order.quantity}개</span>
-                                <span class="quantity-note">통합됨</span>
+                                <span class="quantity-display-integrated">${order.quantity}개</span>
                             `}
                         </div>
                     </td>
@@ -895,7 +893,7 @@ const POSOrderScreen = {
                                         +
                                     </button>
                                 ` : `
-                                    <span class="quantity-display">${order.quantity}</span>
+                                    <span class="quantity-display-integrated">${order.quantity}개</span>
                                 `}
                             </div>
                         </td>
@@ -1082,7 +1080,7 @@ const POSOrderScreen = {
                             </td>
                             <td class="col-quantity">
                                 <div class="quantity-control-table">
-                                    <span class="quantity-display">${order.quantity}</span>
+                                    <span class="quantity-display-integrated">${order.quantity}개</span>
                                 </div>
                             </td>
                             <td class="col-total">

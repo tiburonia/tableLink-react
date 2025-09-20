@@ -1981,45 +1981,18 @@ body {
     border: 1px solid #10b981;
 }
 
-/* POS 테이블 스타일 추가 - 수량 통합 표시 */
-.quantity-consolidated {
+/* POS 테이블 수량 통합 표시 스타일 */
+.quantity-display-integrated {
     font-weight: 700;
     color: #059669;
-    background: #d1fae5;
-    padding: 4px 8px;
-    border-radius: 6px;
+    background: #ecfdf5;
+    padding: 6px 12px;
+    border-radius: 8px;
     font-size: 14px;
-}
-
-.quantity-note {
-    font-size: 10px;
-    color: #6b7280;
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 4px;
-}
-
-/* DB 아이템 배지 */
-.db-badge {
-    background: #dbeafe;
-    color: #1e40af;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: 600;
-    margin-left: 8px;
-}
-
-/* 조리 스테이션 미니 배지 */
-.cook-station-mini {
-    background: #fef3c7;
-    color: #92400e;
-    font-size: 9px;
-    padding: 1px 4px;
-    border-radius: 3px;
-    font-weight: 500;
-    margin-left: 4px;
+    border: 1px solid #10b981;
+    display: inline-block;
+    min-width: 60px;
+    text-align: center;
 }
 
 /* 빈 플레이스홀더 */
