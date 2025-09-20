@@ -69,7 +69,7 @@ async function renderProcessingOrder(orderId) {
 async function loadOrderData(orderId) {
   try {
     console.log('📋 주문 데이터 로드 시작:', orderId);
-    
+
     const response = await fetch(`/api/orders/processing/${orderId}`);
 
     if (!response.ok) {
@@ -77,13 +77,13 @@ async function loadOrderData(orderId) {
     }
 
     const data = await response.json();
-    
+
     console.log('📋 API 응답 전체 데이터:', data);
-    
+
     if (!data.success) {
       throw new Error(data.error || '주문 데이터 조회 실패');
     }
-    
+
     const orderData = data.order;
     console.log('📋 파싱된 주문 데이터:', {
       id: orderData.id,
@@ -92,13 +92,13 @@ async function loadOrderData(orderId) {
       ticketCount: orderData.tickets?.length || 0,
       tickets: orderData.tickets
     });
-    
+
     // 각 티켓의 아이템 정보 상세 로그
     if (orderData.tickets && orderData.tickets.length > 0) {
       orderData.tickets.forEach((ticket, index) => {
         const ticketId = ticket.ticket_id || ticket.id;
         const itemsArray = ticket.items;
-        
+
         console.log(`🎫 티켓 ${index + 1} (ID: ${ticketId}):`, {
           ticket_id: ticketId,
           order_id: ticket.order_id,
@@ -107,7 +107,7 @@ async function loadOrderData(orderId) {
           itemsType: Array.isArray(itemsArray) ? 'array' : typeof itemsArray,
           rawItems: itemsArray
         });
-        
+
         if (itemsArray && Array.isArray(itemsArray) && itemsArray.length > 0) {
           itemsArray.forEach((item, itemIndex) => {
             console.log(`  🍽️ 아이템 ${itemIndex + 1}:`, {
@@ -135,7 +135,7 @@ async function loadOrderData(orderId) {
         ticketsLength: orderData.tickets?.length
       });
     }
-    
+
     return orderData;
 
   } catch (error) {
@@ -147,6 +147,10 @@ async function loadOrderData(orderId) {
 // 주문 진행 UI 렌더링
 function renderProcessingOrderUI(orderData) {
   const main = document.getElementById('main');
+
+  // TLL 주문과 POS 주문을 분리하여 렌더링
+  const tllTickets = orderData.tickets.filter(ticket => ticket.type === 'TLL');
+  const posTickets = orderData.tickets.filter(ticket => ticket.type === 'POS');
 
   main.innerHTML = `
     <div class="processing-order-container">
@@ -195,14 +199,30 @@ function renderProcessingOrderUI(orderData) {
           </div>
         </div>
 
-        <!-- 실시간 티켓 현황 -->
-        <div class="tickets-section">
-          <div class="section-header">
-            <h3>🎫 실시간 주방 현황</h3>
-            <button class="refresh-btn" onclick="refreshTickets()">🔄</button>
+        <!-- 실시간 티켓 현황 (POS/TLL 분리) -->
+        <div class="kitchen-status-section">
+          <!-- POS 주문 섹션 -->
+          <div class="subsection-header">
+            <div class="subsection-title">
+              <span class="status-icon">🛒</span>
+              <h4>POS 주문</h4>
+            </div>
+            <div class="subsection-status">총 ${posTickets.length}건</div>
           </div>
-          <div id="ticketsGrid" class="tickets-grid">
-            ${renderTicketsGrid(orderData.tickets)}
+          <div id="posTicketsGrid" class="tickets-grid pos-grid">
+            ${renderTicketsGrid(posTickets, 'POS')}
+          </div>
+
+          <!-- TLL 주문 섹션 -->
+          <div class="subsection-header">
+            <div class="subsection-title">
+              <span class="status-icon">✅</span>
+              <h4>TLL 주문</h4>
+            </div>
+            <div class="subsection-status">총 ${tllTickets.length}건</div>
+          </div>
+          <div id="tllTicketsGrid" class="tickets-grid tll-grid">
+            ${renderTicketsGrid(tllTickets, 'TLL')}
           </div>
         </div>
 
@@ -236,15 +256,16 @@ function renderProcessingOrderUI(orderData) {
 }
 
 // 티켓 그리드 렌더링 (order_tickets 단위)
-function renderTicketsGrid(tickets) {
-  console.log('🎫 renderTicketsGrid 호출:', {
+// type 인자를 추가하여 POS/TLL 구분
+function renderTicketsGrid(tickets, type) {
+  console.log(`🎫 renderTicketsGrid 호출 (${type}):`, {
     ticketsProvided: !!tickets,
     ticketCount: tickets?.length || 0,
     tickets: tickets
   });
-  
+
   if (!tickets || tickets.length === 0) {
-    console.log('🎫 티켓이 없어서 빈 상태 표시');
+    console.log(`🎫 (${type}) 티켓이 없어서 빈 상태 표시`);
     return `
       <div class="no-tickets">
         <div class="no-tickets-icon">🍽️</div>
@@ -258,8 +279,9 @@ function renderTicketsGrid(tickets) {
     const status = ticket.status || 'PENDING';
     const statusText = getTicketStatusText(status);
     const statusClass = status.toLowerCase();
-    
-    console.log(`🎫 티켓 ${ticketIndex + 1} 렌더링:`, {
+    const ticketTypeClass = type ? `${type.toLowerCase()}-card` : ''; // POS 또는 TLL 클래스 추가
+
+    console.log(`🎫 (${type}) 티켓 ${ticketIndex + 1} 렌더링:`, {
       ticketId: ticketId,
       status: status,
       itemsCount: ticket.items?.length || 0,
@@ -268,10 +290,10 @@ function renderTicketsGrid(tickets) {
 
     // 아이템 데이터 안전성 확인
     const safeItems = Array.isArray(ticket.items) ? ticket.items : [];
-    console.log(`🎫 티켓 ${ticketId} 안전한 아이템:`, safeItems);
+    console.log(`🎫 (${type}) 티켓 ${ticketId} 안전한 아이템:`, safeItems);
 
     return `
-      <div class="ticket-card status-${statusClass}" data-ticket-id="${ticketId}">
+      <div class="ticket-card ${ticketTypeClass} status-${statusClass}" data-ticket-id="${ticketId}">
         <div class="ticket-header">
           <span class="ticket-id">티켓 #${ticketId}</span>
           <span class="ticket-status ${statusClass}">${statusText}</span>
@@ -286,7 +308,7 @@ function renderTicketsGrid(tickets) {
         <div class="ticket-footer">
           <div class="ticket-time">${formatOrderTime(ticket.created_at)}</div>
           <div class="ticket-actions">
-            ${renderTicketActions(ticketId, status)}
+            ${renderTicketActions(ticketId, status, type)}
           </div>
         </div>
       </div>
@@ -297,7 +319,7 @@ function renderTicketsGrid(tickets) {
 // 티켓 아이템 렌더링
 function renderTicketItems(items) {
   console.log('🍽️ renderTicketItems 호출:', { items, itemCount: items?.length });
-  
+
   if (!items || !Array.isArray(items) || items.length === 0) {
     console.warn('⚠️ 아이템 정보가 없거나 유효하지 않음:', items);
     return '<div class="no-items">아이템 정보 없음</div>';
@@ -313,9 +335,9 @@ function renderTicketItems(items) {
       const itemName = item?.menu_name || item?.name || '메뉴';
       const quantity = item?.quantity || 1;
       const cookStation = item?.cook_station || 'KITCHEN';
-      
+
       console.log(`🍽️ 아이템 ${index + 1}:`, { itemName, quantity, cookStation });
-      
+
       return `
         <div class="ticket-item">
           <span class="item-name">${itemName}</span>
@@ -329,13 +351,23 @@ function renderTicketItems(items) {
 }
 
 // 티켓 액션 버튼 렌더링
-function renderTicketActions(ticketId, status) {
+function renderTicketActions(ticketId, status, type) {
+  // POS와 TLL에 따라 다른 액션 버튼을 제공할 수 있음
+  const isPos = type === 'POS';
+  const isTll = type === 'TLL';
+
   switch (status) {
     case 'PENDING':
+      if (isPos) return `<button class="action-btn cooking" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
+      if (isTll) return `<button class="action-btn priority" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
       return `<button class="action-btn start-cooking" onclick="startTicketCooking('${ticketId}')">조리 시작</button>`;
     case 'COOKING':
+      if (isPos) return `<button class="action-btn ready" onclick="markTicketReady('${ticketId}')">완료</button>`;
+      if (isTll) return `<button class="action-btn quick-complete" onclick="markTicketReady('${ticketId}')">완료</button>`;
       return `<button class="action-btn mark-ready" onclick="markTicketReady('${ticketId}')">완료</button>`;
     case 'READY':
+      if (isPos) return `<button class="action-btn payment-required" onclick="markTicketServed('${ticketId}')">서빙/결제</button>`; // POS는 서빙 및 결제 완료
+      if (isTll) return `<button class="action-btn priority" onclick="markTicketServed('${ticketId}')">서빙 완료</button>`; // TLL은 이미 결제됨
       return `<button class="action-btn served" onclick="markTicketServed('${ticketId}')">서빙 완료</button>`;
     default:
       return `<span class="status-text">${getTicketStatusText(status)}</span>`;
@@ -346,7 +378,7 @@ function renderTicketActions(ticketId, status) {
 function getTicketStatusText(status) {
   const statusMap = {
     'PENDING': '대기중',
-    'COOKING': '조리중', 
+    'COOKING': '조리중',
     'READY': '완료',
     'SERVED': '서빙완료',
     'CANCELLED': '취소됨'
@@ -374,7 +406,7 @@ function renderPaymentsList(payments) {
         <div class="payment-header">
           <div class="payment-info">
             <div class="payment-method">
-              ${getPaymentMethodIcon(payment.method || payment.payment_method)} 
+              ${getPaymentMethodIcon(payment.method || payment.payment_method)}
               ${payment.method || payment.payment_method || 'CARD'}
             </div>
             ${ticketId ? `<div class="payment-ticket">티켓 #${ticketId}</div>` : ''}
@@ -582,9 +614,9 @@ async function addNewOrder(storeId, tableNumber) {
 
     // renderOrderScreen으로 이동 (기존 세션 유지)
     console.log('🔄 주문 화면으로 이동 중...');
-    await renderOrderScreen(storeInfo, tableNumber, { 
+    await renderOrderScreen(storeInfo, tableNumber, {
       continuingSession: true,
-      previousOrderId: window.currentOrderId 
+      previousOrderId: window.currentOrderId
     });
 
   } catch (error) {
@@ -659,9 +691,14 @@ function updateProcessingData(orderData) {
   }
 
   // 티켓 그리드 업데이트
-  const ticketsGrid = document.getElementById('ticketsGrid');
-  if (ticketsGrid) {
-    ticketsGrid.innerHTML = renderTicketsGrid(orderData.tickets);
+  const posTicketsGrid = document.getElementById('posTicketsGrid');
+  if (posTicketsGrid) {
+    posTicketsGrid.innerHTML = renderTicketsGrid(orderData.tickets.filter(ticket => ticket.type === 'POS'), 'POS');
+  }
+
+  const tllTicketsGrid = document.getElementById('tllTicketsGrid');
+  if (tllTicketsGrid) {
+    tllTicketsGrid.innerHTML = renderTicketsGrid(orderData.tickets.filter(ticket => ticket.type === 'TLL'), 'TLL');
   }
 }
 
@@ -773,7 +810,8 @@ function updateTicketCard(ticketId, status) {
   if (!ticketCard) return;
 
   // 상태 클래스 업데이트
-  ticketCard.className = `ticket-card status-${status.toLowerCase()}`;
+  ticketCard.className = `ticket-card ${ticketCard.classList.contains('pos-card') ? 'pos-card' : ''} ${ticketCard.classList.contains('tll-card') ? 'tll-card' : ''} status-${status.toLowerCase()}`;
+
 
   // 상태 텍스트 업데이트
   const statusElement = ticketCard.querySelector('.ticket-status');
@@ -785,9 +823,13 @@ function updateTicketCard(ticketId, status) {
   // 액션 버튼 업데이트
   const actionsElement = ticketCard.querySelector('.ticket-actions');
   if (actionsElement) {
-    actionsElement.innerHTML = renderTicketActions(ticketId, status);
+    // 현재 티켓의 타입을 알아내서 renderTicketActions에 전달해야 함
+    const isPosCard = ticketCard.classList.contains('pos-card');
+    const type = isPosCard ? 'POS' : 'TLL';
+    actionsElement.innerHTML = renderTicketActions(ticketId, status, type);
   }
 }
+
 
 function removeTicketCard(ticketId) {
   const ticketCard = document.querySelector(`[data-ticket-id="${ticketId}"]`);
@@ -873,9 +915,9 @@ function showError(message) {
 // 유틸리티 함수들
 function formatOrderTime(dateString) {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 }
 
@@ -1062,7 +1104,7 @@ function getProcessingOrderStyles() {
       }
 
       .order-summary-section,
-      .tickets-section,
+      .kitchen-status-section,
       .payments-section {
         background: white;
         border-radius: 16px;
@@ -1159,10 +1201,77 @@ function getProcessingOrderStyles() {
         transform: rotate(90deg);
       }
 
+      /* 주방 현황 섹션 */
+      .kitchen-status-section {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+        border: 1px solid rgba(226, 232, 240, 0.8);
+      }
+
+      /* 서브섹션 헤더 */
+      .subsection-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 20px 0 16px 0;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #f1f5f9;
+      }
+
+      .subsection-header:first-child {
+        margin-top: 0;
+      }
+
+      .subsection-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .subsection-title h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .status-icon {
+        font-size: 20px;
+      }
+
+      .order-count {
+        background: #3b82f6;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 700;
+        min-width: 20px;
+        text-align: center;
+      }
+
+      .subsection-status {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+      }
+
+      /* 티켓 그리드 */
       .tickets-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .pos-grid .order-count {
+        background: #f59e0b;
+      }
+
+      .tll-grid .order-count {
+        background: #10b981;
       }
 
       .ticket-card {
@@ -1179,6 +1288,59 @@ function getProcessingOrderStyles() {
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
       }
 
+      /* POS 카드 스타일 */
+      .ticket-card.pos-card {
+        border-left: 4px solid #f59e0b;
+        background: linear-gradient(135deg, #fefbf3 0%, #fef3c7 100%);
+      }
+
+      .ticket-card.pos-card.status-pending {
+        border-left-color: #f59e0b;
+      }
+
+      .ticket-card.pos-card.status-cooking {
+        border-left-color: #dc2626;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+      }
+
+      .ticket-card.pos-card.status-ready {
+        border-left-color: #059669;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+      }
+
+      /* TLL 카드 스타일 */
+      .ticket-card.tll-card {
+        border-left: 4px solid #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #d1fae5 100%);
+      }
+
+      .ticket-card.tll-card.status-pending {
+        border-left-color: #10b981;
+      }
+
+      .ticket-card.tll-card.status-cooking {
+        border-left-color: #dc2626;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        animation: tll-cooking-pulse 2s infinite;
+      }
+
+      .ticket-card.tll-card.status-ready {
+        border-left-color: #059669;
+        background: linear-gradient(135deg, #ecfdf5 0%, #a7f3d0 100%);
+      }
+
+      @keyframes tll-cooking-pulse {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+        }
+        50% {
+          transform: scale(1.02);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+        }
+      }
+
+      /* 기존 상태 스타일 (호환성) */
       .ticket-card.status-pending {
         border-left: 4px solid #f39c12;
       }
@@ -1199,58 +1361,19 @@ function getProcessingOrderStyles() {
         opacity: 0.7;
       }
 
-      .ticket-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
+      .tickets-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+        margin-bottom: 24px;
       }
 
-      .ticket-id {
-        font-size: 14px;
-        font-weight: 700;
-        color: #1e293b;
+      .pos-grid .order-count {
+        background: #f59e0b;
       }
 
-      .ticket-status {
-        font-size: 11px;
-        padding: 2px 8px;
-        border-radius: 6px;
-        background: #e2e8f0;
-        color: #475569;
-        font-weight: 600;
-      }
-
-      .ticket-items {
-        margin-bottom: 8px;
-      }
-
-      .ticket-item {
-        display: flex;
-        justify-content: space-between;
-        font-size: 13px;
-        color: #475569;
-        margin-bottom: 4px;
-      }
-
-      .item-name {
-        flex: 1;
-      }
-
-      .item-quantity {
-        color: #64748b;
-        font-weight: 600;
-      }
-
-      .more-items {
-        font-size: 12px;
-        color: #9ca3af;
-        font-style: italic;
-      }
-
-      .ticket-time {
-        font-size: 11px;
-        color: #9ca3af;
+      .tll-grid .order-count {
+        background: #10b981;
       }
 
       .no-tickets {
@@ -1355,6 +1478,111 @@ function getProcessingOrderStyles() {
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s ease;
+      }
+
+      /* 결제 상태 배지 */
+      .payment-status {
+        font-size: 10px;
+        padding: 3px 6px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .payment-status.unpaid {
+        background: #fef3c7;
+        color: #d97706;
+      }
+
+      .payment-status.paid {
+        background: #d1fae5;
+        color: #059669;
+      }
+
+      /* 티켓 정보 */
+      .ticket-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .ticket-warning {
+        color: #dc2626;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      .ticket-priority {
+        color: #059669;
+        font-size: 10px;
+        font-weight: 600;
+      }
+
+      /* POS 액션 버튼 */
+      .action-btn.payment-required {
+        background: #f59e0b;
+        color: white;
+        font-weight: 700;
+      }
+
+      .action-btn.payment-required:hover {
+        background: #d97706;
+      }
+
+      .action-btn.secondary {
+        background: #e5e7eb;
+        color: #6b7280;
+      }
+
+      /* TLL 액션 버튼 */
+      .action-btn.priority {
+        background: #10b981;
+        color: white;
+        font-weight: 700;
+        animation: priority-glow 2s infinite;
+      }
+
+      .action-btn.priority:hover {
+        background: #059669;
+      }
+
+      .action-btn.quick-complete {
+        background: #3b82f6;
+        color: white;
+      }
+
+      .action-btn.quick-complete:hover {
+        background: #2563eb;
+      }
+
+      .action-btn.cooking {
+        background: #dc2626;
+        color: white;
+      }
+
+      .action-btn.ready {
+        background: #059669;
+        color: white;
+      }
+
+      @keyframes priority-glow {
+        0%, 100% {
+          box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+        }
+        50% {
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+        }
+      }
+
+      /* 빈 상태 스타일 */
+      .pos-empty {
+        border: 2px dashed #f59e0b;
+        background: #fefbf3;
+      }
+
+      .tll-empty {
+        border: 2px dashed #10b981;
+        background: #f0fdf4;
       }
 
       .action-btn.start-cooking {
