@@ -21,13 +21,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 1-1. 주문 세션 상태 변경 시 로그만 남기는 함수 (store_tables 업데이트는 API에서 직접 처리)
+-- 1-1. 주문 세션 상태 변경 시 로그만 남기는 함수 (store_tables 업데이트는 각 API에서 직접 처리)
+-- TLL 세션: toss/confirm 라우트에서 처리
+-- POS 세션: pos-payment 라우트에서 처리
 CREATE OR REPLACE FUNCTION handle_order_session_close()
 RETURNS trigger AS $$
 BEGIN
   -- session_status가 OPEN에서 CLOSE로 변경되었을 때 로그만 기록
   IF (OLD.session_status IS NULL OR OLD.session_status = 'OPEN') AND NEW.session_status = 'CLOSE' THEN
-    RAISE NOTICE '주문 세션 종료: 주문 % (매장: %, 테이블: %) %->%', 
+    RAISE NOTICE 'TLL/POS 세션 종료 감지: 주문 % (매장: %, 테이블: %) %->% - store_tables는 각 API에서 처리됨', 
                  NEW.id, NEW.store_id, NEW.table_num, OLD.session_status, NEW.session_status;
   END IF;
   
@@ -148,13 +150,14 @@ EXCEPTION
 END
 $$;
 
--- 2. orders 테이블 세션 상태 변경 트리거 삭제 (API에서 직접 처리)
+-- 2. orders 테이블 세션 상태 변경 트리거 삭제 (TLL: toss/confirm, POS: pos-payment에서 직접 처리)
 DO $$
 BEGIN
     DROP TRIGGER IF EXISTS orders_session_close ON orders;
     DROP TRIGGER IF EXISTS orders_session_status_trigger ON orders;
+    DROP TRIGGER IF EXISTS orders_tll_session_end ON orders;
     
-    RAISE NOTICE '✅ orders 세션 상태 변경 트리거 삭제 완료 (API에서 직접 처리)';
+    RAISE NOTICE '✅ orders 세션 상태 변경 트리거 삭제 완료 (TLL: toss/confirm, POS: pos-payment에서 직접 처리)';
 EXCEPTION
     WHEN OTHERS THEN
         RAISE NOTICE '❌ orders 트리거 삭제 실패: %', SQLERRM;
