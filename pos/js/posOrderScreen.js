@@ -2049,6 +2049,9 @@ const POSOrderScreen = {
             this.tllOrders = [];
             this.tllUserInfo = null;
 
+            // TLL 주문 새로고침 실행
+            await this.refreshTLLOrders();
+
             // UI 업데이트
             await this.refreshOrders();
 
