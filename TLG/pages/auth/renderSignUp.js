@@ -558,9 +558,12 @@ function renderSignUp() {
                 autocomplete="username"
                 maxlength="20"
               >
+              <button type="button" class="input-action-btn" id="checkIdBtn" disabled>
+                중복확인
+              </button>
             </div>
             <div class="input-status" id="userIdStatus"></div>
-            <div class="form-hint">영문과 숫자만 사용 가능합니다 (중복확인 자동처리)</div>
+            <div class="form-hint">영문과 숫자만 사용 가능합니다 (중복확인 필요)</div>
           </div>
 
           <div class="form-group">
@@ -631,9 +634,12 @@ function renderSignUp() {
                 autocomplete="tel"
                 maxlength="13"
               >
+              <button type="button" class="input-action-btn" id="checkPhoneBtn" style="display: none;" disabled>
+                중복확인
+              </button>
             </div>
             <div class="input-status" id="userPhoneStatus"></div>
-            <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다 (중복확인 자동처리)</div>
+            <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다 (중복확인 필요)</div>
           </div>
 
           <button type="submit" class="signup-btn" id="signupBtn" disabled>
@@ -767,7 +773,22 @@ function renderSignUp() {
     },
 
     updateSubmitButton() {
-      const allValid = Object.values(validation).every(field => field.isValid);
+      // 필수 필드: userId, password, passwordConfirm이 모두 유효해야 함
+      // 선택 필드: name, phone은 입력했다면 유효해야 함
+      const requiredFieldsValid = validation.userId.isValid && 
+                                  validation.password.isValid && 
+                                  validation.passwordConfirm.isValid;
+      
+      // 아이디 중복확인이 필요한 경우 체크
+      const userIdChecked = !validation.userId.isValid || validation.userId.isChecked;
+      
+      // 전화번호가 입력된 경우 중복확인 체크
+      const phoneValue = elements.userPhone.value.trim();
+      const phoneChecked = !phoneValue || !validation.phone.isValid || validation.phone.isChecked;
+      
+      const allValid = requiredFieldsValid && userIdChecked && phoneChecked && 
+                       validation.name.isValid && validation.phone.isValid;
+      
       elements.signupBtn.disabled = !allValid;
     },
 
@@ -799,7 +820,10 @@ function renderSignUp() {
 
       validation.userId.isValid = result.isValid;
       validation.userId.isChecked = false;
-      elements.checkIdBtn.disabled = !result.isValid;
+      
+      if (elements.checkIdBtn) {
+        elements.checkIdBtn.disabled = !result.isValid;
+      }
 
       if (result.message) {
         utils.showStatus('userId', result.message, result.isValid ? 'info' : 'error', 
@@ -950,8 +974,10 @@ function renderSignUp() {
       validation.phone.isValid = result.isValid;
       validation.phone.isChecked = false;
 
-      elements.checkPhoneBtn.style.display = formatted ? 'block' : 'none';
-      elements.checkPhoneBtn.disabled = !result.isValid;
+      if (elements.checkPhoneBtn) {
+        elements.checkPhoneBtn.style.display = formatted ? 'block' : 'none';
+        elements.checkPhoneBtn.disabled = !result.isValid;
+      }
 
       if (result.message) {
         utils.showStatus('userPhone', result.message, result.isValid ? 'info' : 'error',
