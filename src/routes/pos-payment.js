@@ -271,11 +271,14 @@ router.post('/process-with-customer', async (req, res) => {
 
         console.log(`🔍 회원 ID로 조회 성공: ${memberResult.rows[0].name}`);
       } else if (memberPhone) {
-        // memberPhone으로 조회
+        // memberPhone으로 조회 (하이픈 제거하여 조회)
+        const cleanMemberPhone = memberPhone.replace(/[-\s]/g, '');
+        console.log(`📱 회원 전화번호 정규화: ${memberPhone} → ${cleanMemberPhone}`);
+        
         memberResult = await client.query(`
           SELECT id, name, point, phone FROM users 
           WHERE phone = $1
-        `, [memberPhone]);
+        `, [cleanMemberPhone]);
 
         if (memberResult.rows.length === 0) {
           await client.query('ROLLBACK');

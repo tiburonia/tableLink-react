@@ -530,6 +530,7 @@ const POSPaymentModal = {
         try {
             console.log('🔍 회원 조회 요청:', phoneNumber);
 
+            // 전화번호 정규화 (하이픈 포함하여 전송)
             const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
             const data = await response.json();
 

@@ -92,6 +92,10 @@ router.get('/search-by-phone', async (req, res) => {
       });
     }
 
+    // 전화번호에서 하이픈 제거 (DB에는 하이픈 없이 저장됨)
+    const cleanPhone = phone.replace(/[-\s]/g, '');
+    console.log(`📱 정규화된 전화번호: ${phone} → ${cleanPhone}`);
+
     // 전화번호로 회원 조회
     const result = await pool.query(`
       SELECT 
@@ -99,10 +103,11 @@ router.get('/search-by-phone', async (req, res) => {
         name,
         phone,
         email,
+        point,
         created_at
       FROM users
       WHERE phone = $1
-    `, [phone]);
+    `, [cleanPhone]);
 
     if (result.rows.length === 0) {
       console.log(`❌ 전화번호 ${phone}로 등록된 회원 없음`);

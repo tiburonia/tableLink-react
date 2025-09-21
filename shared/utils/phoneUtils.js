@@ -54,9 +54,20 @@ function getPhoneDigits(phone) {
   return phone.replace(/\D/g, '');
 }
 
+/**
+ * DB 조회용 전화번호 정규화 (하이픈, 공백 제거)
+ * @param {string} phone - 원본 전화번호
+ * @returns {string} - 정규화된 전화번호
+ */
+function normalizePhoneForDB(phone) {
+  if (!phone) return '';
+  return phone.replace(/[-\s]/g, '');
+}
+
 module.exports = {
   normalizePhone,
   validatePhone,
   maskPhone,
-  getPhoneDigits
+  getPhoneDigits,
+  normalizePhoneForDB
 };
