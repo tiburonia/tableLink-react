@@ -286,6 +286,12 @@ async function renderLogin() {
 
         ${createQuickAccess()}
 
+        <!-- 회원가입 링크 -->
+        <div class="signup-link">
+          <p class="signup-text">아직 계정이 없으신가요?</p>
+          <button type="button" class="signup-btn" id="goToSignUpBtn">회원가입하기</button>
+        </div>
+
         <!-- 푸터 -->
         <div class="login-footer">
           <p class="footer-text">© 2025 TableLink. 모든 권리 보유.</p>
@@ -295,6 +301,34 @@ async function renderLogin() {
       // 이벤트 리스너 설정
       setupLoginFormEvents();
       setupQuickAccessEvents();
+
+      // 회원가입 버튼 이벤트 리스너
+      const goToSignUpBtn = document.getElementById('goToSignUpBtn');
+      if (goToSignUpBtn) {
+        goToSignUpBtn.addEventListener('click', () => {
+          // renderSignUp 함수 로드 및 실행
+          if (typeof renderSignUp === 'function') {
+            renderSignUp();
+          } else if (typeof window.renderSignUp === 'function') {
+            window.renderSignUp();
+          } else {
+            // renderSignUp 스크립트 동적 로드
+            const script = document.createElement('script');
+            script.src = '/TLG/pages/auth/renderSignUp.js';
+            script.onload = () => {
+              if (typeof window.renderSignUp === 'function') {
+                window.renderSignUp();
+              } else {
+                alert('회원가입 페이지를 불러올 수 없습니다.');
+              }
+            };
+            script.onerror = () => {
+              alert('회원가입 페이지를 불러올 수 없습니다.');
+            };
+            document.head.appendChild(script);
+          }
+        });
+      }
     }
   }, 800);
 

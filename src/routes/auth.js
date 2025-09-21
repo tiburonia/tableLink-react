@@ -197,6 +197,142 @@ async function handleLogin(req, res) {
   if (!id || !pw) {
     return res.status(400).json({ 
       success: false, 
+
+
+// 📝 회원가입 (비회원 -> 회원)
+router.post('/users/signup', async (req, res) => {
+  try {
+    const { id, pw, name, phone } = req.body;
+
+    // 필수 필드 검증
+    if (!id || !pw) {
+      return res.status(400).json({
+        success: false,
+        error: '아이디와 비밀번호는 필수입니다'
+      });
+    }
+
+    // 아이디 중복 확인
+    const existingUser = await pool.query(
+      'SELECT id FROM users WHERE id = $1',
+      [id]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        error: '이미 사용중인 아이디입니다'
+      });
+    }
+
+    // 전화번호 중복 확인 (전화번호가 있는 경우)
+    if (phone) {
+      const existingPhone = await pool.query(
+        'SELECT id FROM users WHERE phone = $1',
+        [phone]
+      );
+
+      if (existingPhone.rows.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: '이미 등록된 전화번호입니다'
+        });
+      }
+    }
+
+    // 새 사용자 생성
+    const result = await pool.query(`
+      INSERT INTO users (id, pw, name, phone, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      RETURNING id, name, phone, created_at
+    `, [id, pw, name || null, phone || null]);
+
+    const newUser = result.rows[0];
+
+    console.log(`✅ 회원가입 성공: ${newUser.id} (${newUser.name})`);
+
+    res.json({
+      success: true,
+      message: '회원가입이 완료되었습니다',
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        phone: newUser.phone,
+        createdAt: newUser.created_at
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 회원가입 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '회원가입 처리 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 📝 아이디 중복 확인
+router.post('/users/check-id', async (req, res) => {
+  try {
+    const { id } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        error: '아이디를 입력해주세요'
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT id FROM users WHERE id = $1',
+      [id]
+    );
+
+    res.json({
+      success: true,
+      available: result.rows.length === 0
+    });
+
+  } catch (error) {
+    console.error('❌ 아이디 중복 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '아이디 중복 확인 중 오류가 발생했습니다'
+    });
+  }
+});
+
+// 📝 전화번호 중복 확인
+router.post('/users/check-phone', async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        error: '전화번호를 입력해주세요'
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT id FROM users WHERE phone = $1',
+      [phone]
+    );
+
+    res.json({
+      success: true,
+      available: result.rows.length === 0
+    });
+
+  } catch (error) {
+    console.error('❌ 전화번호 중복 확인 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '전화번호 중복 확인 중 오류가 발생했습니다'
+    });
+  }
+});
+
       error: '아이디와 비밀번호를 입력해주세요' 
     });
   }
