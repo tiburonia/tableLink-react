@@ -109,9 +109,11 @@ const POSTableMap = {
         
         return `
             <div class="order-summary">
-                <div class="order-count">${table.orderCount}개 주문</div>
+                <div class="order-header">
+                    <div class="order-count">${table.orderCount}개 주문</div>
+                    <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
+                </div>
                 <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
-                <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
                 ${orderItemsHTML}
             </div>
         `;
@@ -125,27 +127,28 @@ const POSTableMap = {
             return '';
         }
 
-        // 최대 3개 아이템만 표시
-        const displayItems = orderItems.slice(0, 3);
-        const hasMore = orderItems.length > 3;
+        // 최대 2개 아이템만 표시 (사진의 레이아웃에 맞게)
+        const displayItems = orderItems.slice(0, 2);
+        const hasMore = orderItems.length > 2;
 
-        const itemsHTML = displayItems.map(item => `
-            <div class="order-item-detail">
-                <span class="item-name">${item.menuName}</span>
-                <span class="item-quantity">×${item.quantity}</span>
-            </div>
-        `).join('');
-
-        const moreHTML = hasMore ? `
-            <div class="order-item-more">
-                +${orderItems.length - 3}개 더
-            </div>
-        ` : '';
+        let itemsText = '';
+        if (displayItems.length > 0) {
+            const firstItem = displayItems[0];
+            itemsText = `${firstItem.menuName} ${firstItem.quantity}개`;
+            
+            if (hasMore) {
+                const remainingCount = orderItems.length - 1;
+                itemsText += ` 외 ${remainingCount}개`;
+            } else if (displayItems.length > 1) {
+                // 2개만 있는 경우
+                const secondItem = displayItems[1];
+                itemsText = `${firstItem.menuName} ${firstItem.quantity}개\n${secondItem.menuName} ${secondItem.quantity}개`;
+            }
+        }
 
         return `
             <div class="order-items-list">
-                ${itemsHTML}
-                ${moreHTML}
+                <div class="order-items-text">${itemsText}</div>
             </div>
         `;
     },

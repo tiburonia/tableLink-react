@@ -1607,30 +1607,38 @@ body {
 .order-summary {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    height: 100%;
+    padding: 8px;
     gap: 4px;
 }
 
-.order-count {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 2px;
-}
-
-.order-amount {
-    font-size: 16px;
-    font-weight: 700;
-    color: #3b82f6;
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 4px;
 }
 
+.order-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
 .order-time {
-    font-size: 11px;
+    font-size: 10px;
     color: #6b7280;
     background: rgba(0, 0, 0, 0.05);
-    padding: 2px 6px;
+    padding: 2px 4px;
     border-radius: 4px;
+}
+
+.order-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #3b82f6;
+    text-align: center;
+    margin-bottom: 8px;
 }
 
 /* 빈 테이블 내용 */
@@ -1664,44 +1672,25 @@ body {
 
 /* 주문 아이템 상세 정보 스타일 */
 .order-items-list {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    max-height: 60px;
-    overflow: hidden;
-}
-
-.order-item-detail {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 10px;
-    margin-bottom: 2px;
-    color: #6b7280;
-    line-height: 1.2;
-}
-
-.order-item-detail .item-name {
     flex: 1;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-right: 4px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 6px;
 }
 
-.order-item-detail .item-quantity {
-    font-weight: 600;
+.order-items-text {
+    font-size: 10px;
     color: #374151;
-    flex-shrink: 0;
-}
-
-.order-item-more {
-    font-size: 9px;
-    color: #9ca3af;
-    text-align: center;
-    margin-top: 4px;
-    font-weight: 500;
+    line-height: 1.4;
+    text-align: left;
+    white-space: pre-line;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    word-break: keep-all;
 }
 
 /* 테이블 상태별 아이템 스타일 */
