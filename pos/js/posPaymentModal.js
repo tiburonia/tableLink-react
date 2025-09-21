@@ -6,8 +6,8 @@
 const POSPaymentModal = {
     currentPaymentData: null,
     isVisible: false,
-    selectedCustomerType: 'guest', // 'member' 또는 'guest'
-    guestPhoneNumber: '',
+    selectedCustomerType: "guest", // 'member' 또는 'guest'
+    guestPhoneNumber: "",
     selectedMember: null, // 선택된 회원 정보
     selectedMemberId: null, // 선택된 회원 ID
 
@@ -15,15 +15,19 @@ const POSPaymentModal = {
      * 결제 모달 표시
      */
     async show(paymentMethod = null) {
-        console.log('🔍 결제 모달 표시 요청 (API 기반):', paymentMethod);
+        console.log("🔍 결제 모달 표시 요청 (API 기반):", paymentMethod);
 
         // POSOrderScreen에서 현재 테이블 정보 가져오기
-        const storeId = POSCore?.storeId || window.POSOrderScreen?.currentStoreId;
-        const tableNumber = POSCore?.tableNumber || window.POSOrderScreen?.currentTableNumber;
+        const storeId =
+            POSCore?.storeId || window.POSOrderScreen?.currentStoreId;
+        const tableNumber =
+            POSCore?.tableNumber || window.POSOrderScreen?.currentTableNumber;
 
         if (!storeId || !tableNumber) {
-            console.error('❌ 매장 ID 또는 테이블 번호를 찾을 수 없습니다');
-            alert('매장 또는 테이블 정보를 찾을 수 없습니다. 다시 시도해 주세요.');
+            console.error("❌ 매장 ID 또는 테이블 번호를 찾을 수 없습니다");
+            alert(
+                "매장 또는 테이블 정보를 찾을 수 없습니다. 다시 시도해 주세요.",
+            );
             return;
         }
 
@@ -35,12 +39,12 @@ const POSPaymentModal = {
             tableNumber: parseInt(tableNumber),
             orderId: null,
             paymentMethod: null,
-            isLoading: true
+            isLoading: true,
         };
 
         this.isVisible = true;
 
-        console.log('📋 초기 로딩 상태로 설정:', this.currentPaymentData);
+        console.log("📋 초기 로딩 상태로 설정:", this.currentPaymentData);
 
         // 모달 먼저 렌더링 (로딩 상태로)
         this.render();
@@ -48,43 +52,48 @@ const POSPaymentModal = {
 
         // API 호출로 실제 결제 정보 로드
         try {
-            console.log('📡 결제 대상 데이터 API 호출 시작');
+            console.log("📡 결제 대상 데이터 API 호출 시작");
 
-            const actualPaymentInfo = await this.loadActualPaymentInfo(storeId, tableNumber);
+            const actualPaymentInfo = await this.loadActualPaymentInfo(
+                storeId,
+                tableNumber,
+            );
 
             if (actualPaymentInfo) {
                 // API로부터 받은 실제 데이터로 업데이트 (결제 방식은 선택되지 않은 상태 유지)
                 this.currentPaymentData = {
                     ...actualPaymentInfo,
                     paymentMethod: null,
-                    isLoading: false
+                    isLoading: false,
                 };
 
-                console.log('✅ 실제 결제 정보 로드 완료:', this.currentPaymentData);
+                console.log(
+                    "✅ 실제 결제 정보 로드 완료:",
+                    this.currentPaymentData,
+                );
             } else {
                 // API 응답이 없을 경우 (결제할 내역이 없음)
                 this.currentPaymentData = {
                     ...this.currentPaymentData,
                     isLoading: false,
                     hasError: true,
-                    errorMessage: '결제할 주문이 없습니다.'
+                    errorMessage: "결제할 주문이 없습니다.",
                 };
 
-                console.log('ℹ️ 결제할 주문이 없음');
+                console.log("ℹ️ 결제할 주문이 없음");
             }
 
             // 데이터 로드 후 모달 재렌더링
             this.render();
             this.setupEventListeners();
-
         } catch (error) {
-            console.error('❌ 결제 정보 API 로드 실패:', error);
+            console.error("❌ 결제 정보 API 로드 실패:", error);
 
             this.currentPaymentData = {
                 ...this.currentPaymentData,
                 isLoading: false,
                 hasError: true,
-                errorMessage: error.message
+                errorMessage: error.message,
             };
 
             // 에러 상태로 모달 재렌더링
@@ -97,14 +106,14 @@ const POSPaymentModal = {
      * 결제 모달 숨김
      */
     hide() {
-        const modal = document.getElementById('posPaymentModal');
+        const modal = document.getElementById("posPaymentModal");
         if (modal) {
             modal.remove();
         }
         this.isVisible = false;
         // currentPaymentData는 null로 설정하지 않음 (재사용 가능하도록)
-        this.selectedCustomerType = 'guest';
-        this.guestPhoneNumber = '';
+        this.selectedCustomerType = "guest";
+        this.guestPhoneNumber = "";
     },
 
     /**
@@ -122,21 +131,21 @@ const POSPaymentModal = {
      */
     render() {
         // 기존 모달이 있으면 제거 (단, currentPaymentData는 유지)
-        const existingModal = document.getElementById('posPaymentModal');
+        const existingModal = document.getElementById("posPaymentModal");
         if (existingModal) {
             existingModal.remove();
         }
 
-        const modal = document.createElement('div');
-        modal.id = 'posPaymentModal';
-        modal.className = 'pos-payment-modal-overlay';
+        const modal = document.createElement("div");
+        modal.id = "posPaymentModal";
+        modal.className = "pos-payment-modal-overlay";
         modal.innerHTML = this.getModalHTML();
 
         document.body.appendChild(modal);
 
         // 애니메이션을 위한 지연
         setTimeout(() => {
-            modal.classList.add('show');
+            modal.classList.add("show");
         }, 10);
     },
 
@@ -145,9 +154,9 @@ const POSPaymentModal = {
      */
     getModalHTML() {
         if (!this.currentPaymentData) {
-            console.error('❌ getModalHTML: currentPaymentData가 null입니다', {
+            console.error("❌ getModalHTML: currentPaymentData가 null입니다", {
                 isVisible: this.isVisible,
-                callerStack: new Error().stack
+                callerStack: new Error().stack,
             });
             return this.getErrorHTML();
         }
@@ -162,7 +171,8 @@ const POSPaymentModal = {
             return this.getErrorHTML();
         }
 
-        const { totalAmount, itemCount, storeId, tableNumber } = this.currentPaymentData;
+        const { totalAmount, itemCount, storeId, tableNumber } =
+            this.currentPaymentData;
 
         return `
             <div class="pos-payment-modal">
@@ -192,11 +202,11 @@ const POSPaymentModal = {
                     <div class="customer-type-selection">
                         <h3>고객 유형 선택</h3>
                         <div class="type-buttons">
-                            <button class="customer-type-btn ${this.selectedCustomerType === 'guest' ? 'active' : ''}" data-type="guest">
+                            <button class="customer-type-btn ${this.selectedCustomerType === "guest" ? "active" : ""}" data-type="guest">
                                 <div class="type-icon">👤</div>
                                 <span>비회원</span>
                             </button>
-                            <button class="customer-type-btn ${this.selectedCustomerType === 'member' ? 'active' : ''}" data-type="member">
+                            <button class="customer-type-btn ${this.selectedCustomerType === "member" ? "active" : ""}" data-type="member">
                                 <div class="type-icon">🎫</div>
                                 <span>회원</span>
                             </button>
@@ -204,7 +214,7 @@ const POSPaymentModal = {
                     </div>
 
                     <!-- 비회원 전화번호 입력 (비회원 선택 시만 표시) -->
-                    <div class="guest-info-section" id="guestInfoSection" style="${this.selectedCustomerType === 'guest' ? 'display: block;' : 'display: none;'}">
+                    <div class="guest-info-section" id="guestInfoSection" style="${this.selectedCustomerType === "guest" ? "display: block;" : "display: none;"}">
                         <h3>비회원 정보 (선택사항)</h3>
                         <div class="phone-input-group">
                             <label>전화번호</label>
@@ -217,7 +227,7 @@ const POSPaymentModal = {
                     </div>
 
                     <!-- 회원 정보 입력 (회원 선택 시만 표시) -->
-                    <div class="member-info-section" id="memberInfoSection" style="${this.selectedCustomerType === 'member' ? 'display: block;' : 'display: none;'}">
+                    <div class="member-info-section" id="memberInfoSection" style="${this.selectedCustomerType === "member" ? "display: block;" : "display: none;"}">
                         <h3>회원 정보</h3>
                         <div class="member-input-group">
                             <label>전화번호</label>
@@ -232,23 +242,27 @@ const POSPaymentModal = {
                     <!-- 결제 수단 선택 -->
                     <div class="payment-methods">
                         <h3>결제 수단 선택 <span class="required-indicator">*</span></h3>
-                        <div class="method-buttons">
-                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === 'CARD' ? 'active' : ''}" data-method="CARD">
+                        <div class="method-buttons">                                                                              
+                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === "CARD" ? "active" : ""}" data-method="CARD">
                                 <div class="method-icon">💳</div>
                                 <span>카드결제</span>
-                            </button>
-                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === 'CASH' ? 'active' : ''}" data-method="CASH">
+                            </button>                                                                                                  <!-- 현금 결제는 현재 미구현 상태 -->
+                            <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === "CASH" ? "active" : ""}" data-method="CASH" disabled>
                                 <div class="method-icon">💵</div>
-                                <span>현금결제</span>
+                                <span>
+                                현금결제<br>(미구현 상태)
+                                </span>
                             </button>
                         </div>
-                        ${!this.currentPaymentData.paymentMethod ? 
-                            '<div class="payment-method-notice">💡 결제 수단을 선택해주세요</div>' : ''
+                        ${
+                            !this.currentPaymentData.paymentMethod
+                                ? '<div class="payment-method-notice">💡 결제 수단을 선택해주세요</div>'
+                                : ""
                         }
                     </div>
 
                     <!-- 현금 결제 시 거스름돈 계산 -->
-                    <div class="cash-section" id="cashSection" style="${this.currentPaymentData.paymentMethod === 'CASH' ? 'display: block;' : 'display: none;'}">
+                    <div class="cash-section" id="cashSection" style="${this.currentPaymentData.paymentMethod === "CASH" ? "display: block;" : "display: none;"}">
                         <h3>현금 결제</h3>
                         <div class="cash-input-group">
                             <label>받은 금액</label>
@@ -269,12 +283,18 @@ const POSPaymentModal = {
 
                 <div class="modal-footer">
                     <button class="cancel-btn" id="cancelPayment">취소</button>
-                    <button class="confirm-btn ${!this.currentPaymentData.paymentMethod ? 'disabled' : ''}" 
+                    <button class="confirm-btn ${!this.currentPaymentData.paymentMethod ? "disabled" : ""}" 
                             id="confirmPayment" 
-                            ${!this.currentPaymentData.paymentMethod ? 'disabled' : ''}>
+                            ${!this.currentPaymentData.paymentMethod ? "disabled" : ""}>
                         <span id="paymentBtnText">
-                            ${!this.currentPaymentData.paymentMethod ? '결제 수단을 선택해주세요' : 
-                              this.currentPaymentData.paymentMethod === 'CARD' ? '카드결제 진행' : '현금결제 진행'}
+                            ${
+                                !this.currentPaymentData.paymentMethod
+                                    ? "결제 수단을 선택해주세요"
+                                    : this.currentPaymentData.paymentMethod ===
+                                        "CARD"
+                                      ? "카드결제 진행"
+                                      : "현금결제 진행"
+                            }
                         </span>
                         <span class="amount">${totalAmount.toLocaleString()}원</span>
                     </button>
@@ -290,41 +310,42 @@ const POSPaymentModal = {
      */
     setupEventListeners() {
         // 모달 닫기
-        const closeBtn = document.getElementById('closePaymentModal');
+        const closeBtn = document.getElementById("closePaymentModal");
         if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
+            closeBtn.addEventListener("click", () => {
                 this.hide();
             });
         }
 
-        const cancelBtn = document.getElementById('cancelPayment');
+        const cancelBtn = document.getElementById("cancelPayment");
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
+            cancelBtn.addEventListener("click", () => {
                 this.hide();
             });
         }
 
         // 모달 외부 클릭 시 닫기
-        const modal = document.getElementById('posPaymentModal');
+        const modal = document.getElementById("posPaymentModal");
         if (modal) {
-            modal.addEventListener('click', (e) => {
-                if (e.target.id === 'posPaymentModal') {
+            modal.addEventListener("click", (e) => {
+                if (e.target.id === "posPaymentModal") {
                     this.hide();
                 }
             });
         }
 
         // 고객 유형 선택
-        const customerTypeBtns = document.querySelectorAll('.customer-type-btn');
-        customerTypeBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        const customerTypeBtns =
+            document.querySelectorAll(".customer-type-btn");
+        customerTypeBtns.forEach((btn) => {
+            btn.addEventListener("click", (e) => {
                 // 모든 버튼 비활성화
-                customerTypeBtns.forEach(b => {
-                    b.classList.remove('active');
+                customerTypeBtns.forEach((b) => {
+                    b.classList.remove("active");
                 });
 
                 // 선택된 버튼 활성화
-                btn.classList.add('active');
+                btn.classList.add("active");
 
                 const type = btn.dataset.type;
                 if (type) {
@@ -334,16 +355,18 @@ const POSPaymentModal = {
         });
 
         // 결제 수단 선택
-        const paymentMethodBtns = document.querySelectorAll('.payment-method-btn');
-        paymentMethodBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        const paymentMethodBtns = document.querySelectorAll(
+            ".payment-method-btn",
+        );
+        paymentMethodBtns.forEach((btn) => {
+            btn.addEventListener("click", (e) => {
                 // 모든 버튼 비활성화
-                paymentMethodBtns.forEach(b => {
-                    b.classList.remove('active');
+                paymentMethodBtns.forEach((b) => {
+                    b.classList.remove("active");
                 });
 
                 // 선택된 버튼 활성화
-                btn.classList.add('active');
+                btn.classList.add("active");
 
                 const method = btn.dataset.method;
                 if (method) {
@@ -353,43 +376,44 @@ const POSPaymentModal = {
         });
 
         // 비회원 전화번호 입력
-        const guestPhoneInput = document.getElementById('guestPhoneInput');
+        const guestPhoneInput = document.getElementById("guestPhoneInput");
         if (guestPhoneInput) {
-            guestPhoneInput.addEventListener('input', (e) => {
+            guestPhoneInput.addEventListener("input", (e) => {
                 this.guestPhoneNumber = this.formatPhoneNumber(e.target.value);
                 e.target.value = this.guestPhoneNumber;
             });
         }
 
         // 회원 전화번호 입력
-        const memberPhoneInput = document.getElementById('memberPhoneInput');
+        const memberPhoneInput = document.getElementById("memberPhoneInput");
         if (memberPhoneInput) {
-            memberPhoneInput.addEventListener('input', (e) => {
+            memberPhoneInput.addEventListener("input", (e) => {
                 e.target.value = this.formatPhoneNumber(e.target.value);
             });
         }
 
         // 회원 조회
-        const memberSearchBtn = document.getElementById('memberSearchBtn');
+        const memberSearchBtn = document.getElementById("memberSearchBtn");
         if (memberSearchBtn) {
-            memberSearchBtn.addEventListener('click', () => {
+            memberSearchBtn.addEventListener("click", () => {
                 this.searchMember();
             });
         }
 
         // 현금 결제 관련 이벤트
-        const receivedInput = document.getElementById('receivedAmount');
+        const receivedInput = document.getElementById("receivedAmount");
         if (receivedInput) {
-            receivedInput.addEventListener('input', () => {
+            receivedInput.addEventListener("input", () => {
                 this.calculateChange();
             });
         }
 
         // 빠른 금액 버튼
-        document.querySelectorAll('.quick-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
+        document.querySelectorAll(".quick-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
                 const amount = parseInt(btn.dataset.amount);
-                const receivedAmountInput = document.getElementById('receivedAmount');
+                const receivedAmountInput =
+                    document.getElementById("receivedAmount");
                 if (receivedAmountInput) {
                     receivedAmountInput.value = amount;
                     this.calculateChange();
@@ -398,18 +422,18 @@ const POSPaymentModal = {
         });
 
         // 결제 확인
-        const confirmBtn = document.getElementById('confirmPayment');
+        const confirmBtn = document.getElementById("confirmPayment");
         if (confirmBtn) {
-            confirmBtn.addEventListener('click', () => {
+            confirmBtn.addEventListener("click", () => {
                 this.processPayment();
             });
         }
 
         // 재시도 버튼 (에러 상태일 때)
-        const retryBtn = document.getElementById('retryLoadPayment');
+        const retryBtn = document.getElementById("retryLoadPayment");
         if (retryBtn) {
-            retryBtn.addEventListener('click', async () => {
-                console.log('🔄 결제 정보 재시도');
+            retryBtn.addEventListener("click", async () => {
+                console.log("🔄 결제 정보 재시도");
 
                 // 로딩 상태로 변경
                 this.currentPaymentData.isLoading = true;
@@ -420,15 +444,16 @@ const POSPaymentModal = {
                 // API 재호출
                 try {
                     const actualPaymentInfo = await this.loadActualPaymentInfo(
-                        this.currentPaymentData.storeId, 
-                        this.currentPaymentData.tableNumber
+                        this.currentPaymentData.storeId,
+                        this.currentPaymentData.tableNumber,
                     );
 
                     if (actualPaymentInfo) {
                         this.currentPaymentData = {
                             ...actualPaymentInfo,
-                            paymentMethod: this.currentPaymentData.paymentMethod || 'CARD',
-                            isLoading: false
+                            paymentMethod:
+                                this.currentPaymentData.paymentMethod || "CARD",
+                            isLoading: false,
                         };
                     } else {
                         this.currentPaymentData.isLoading = false;
@@ -436,14 +461,13 @@ const POSPaymentModal = {
 
                     this.render();
                     this.setupEventListeners();
-
                 } catch (error) {
-                    console.error('❌ 재시도 실패:', error);
+                    console.error("❌ 재시도 실패:", error);
                     this.currentPaymentData = {
                         ...this.currentPaymentData,
                         isLoading: false,
                         hasError: true,
-                        errorMessage: error.message
+                        errorMessage: error.message,
                     };
                     this.render();
                     this.setupEventListeners();
@@ -452,8 +476,8 @@ const POSPaymentModal = {
         }
 
         // ESC 키로 모달 닫기
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape" && this.isVisible) {
                 this.hide();
             }
         });
@@ -465,15 +489,15 @@ const POSPaymentModal = {
     handleCustomerTypeChange(type) {
         this.selectedCustomerType = type;
 
-        const guestSection = document.getElementById('guestInfoSection');
-        const memberSection = document.getElementById('memberInfoSection');
+        const guestSection = document.getElementById("guestInfoSection");
+        const memberSection = document.getElementById("memberInfoSection");
 
-        if (type === 'guest') {
-            guestSection.style.display = 'block';
-            memberSection.style.display = 'none';
+        if (type === "guest") {
+            guestSection.style.display = "block";
+            memberSection.style.display = "none";
         } else {
-            guestSection.style.display = 'none';
-            memberSection.style.display = 'block';
+            guestSection.style.display = "none";
+            memberSection.style.display = "block";
         }
     },
 
@@ -481,40 +505,42 @@ const POSPaymentModal = {
      * 결제 수단 변경 처리
      */
     handlePaymentMethodChange(method) {
-        const cashSection = document.getElementById('cashSection');
-        const paymentBtnText = document.getElementById('paymentBtnText');
-        const confirmBtn = document.getElementById('confirmPayment');
-        const paymentMethodNotice = document.querySelector('.payment-method-notice');
+        const cashSection = document.getElementById("cashSection");
+        const paymentBtnText = document.getElementById("paymentBtnText");
+        const confirmBtn = document.getElementById("confirmPayment");
+        const paymentMethodNotice = document.querySelector(
+            ".payment-method-notice",
+        );
 
         // 현금 섹션 표시/숨김
         if (cashSection) {
-            if (method === 'CASH') {
-                cashSection.style.display = 'block';
+            if (method === "CASH") {
+                cashSection.style.display = "block";
             } else {
-                cashSection.style.display = 'none';
+                cashSection.style.display = "none";
             }
         }
 
         // 결제 버튼 텍스트 및 상태 업데이트
         if (paymentBtnText && confirmBtn) {
-            if (method === 'CASH') {
-                paymentBtnText.textContent = '현금결제 진행';
-                confirmBtn.classList.remove('disabled');
+            if (method === "CASH") {
+                paymentBtnText.textContent = "현금결제 진행";
+                confirmBtn.classList.remove("disabled");
                 confirmBtn.disabled = false;
-            } else if (method === 'CARD') {
-                paymentBtnText.textContent = '카드결제 진행';
-                confirmBtn.classList.remove('disabled');
+            } else if (method === "CARD") {
+                paymentBtnText.textContent = "카드결제 진행";
+                confirmBtn.classList.remove("disabled");
                 confirmBtn.disabled = false;
             } else {
-                paymentBtnText.textContent = '결제 수단을 선택해주세요';
-                confirmBtn.classList.add('disabled');
+                paymentBtnText.textContent = "결제 수단을 선택해주세요";
+                confirmBtn.classList.add("disabled");
                 confirmBtn.disabled = true;
             }
         }
 
         // 안내 메시지 숨김
         if (paymentMethodNotice) {
-            paymentMethodNotice.style.display = 'none';
+            paymentMethodNotice.style.display = "none";
         }
 
         // currentPaymentData 업데이트
@@ -522,16 +548,17 @@ const POSPaymentModal = {
             this.currentPaymentData.paymentMethod = method;
         }
 
-        console.log('💳 결제 수단 변경:', method);
+        console.log("💳 결제 수단 변경:", method);
     },
 
     /**
      * 전화번호 포맷팅
      */
     formatPhoneNumber(value) {
-        const numbers = value.replace(/[^\d]/g, '');
+        const numbers = value.replace(/[^\d]/g, "");
         if (numbers.length <= 3) return numbers;
-        if (numbers.length <= 7) return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
+        if (numbers.length <= 7)
+            return `${numbers.slice(0, 3)}-${numbers.slice(3)}`;
         return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`;
     },
 
@@ -539,49 +566,51 @@ const POSPaymentModal = {
      * 회원 조회
      */
     async searchMember() {
-        const memberPhoneInput = document.getElementById('memberPhoneInput');
-        const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-        const memberSearchBtn = document.getElementById('memberSearchBtn');
+        const memberPhoneInput = document.getElementById("memberPhoneInput");
+        const memberInfoDisplay = document.getElementById("memberInfoDisplay");
+        const memberSearchBtn = document.getElementById("memberSearchBtn");
 
         const phoneNumber = memberPhoneInput.value.trim();
         if (!phoneNumber) {
-            alert('전화번호를 입력해주세요.');
+            alert("전화번호를 입력해주세요.");
             return;
         }
 
         // 로딩 상태로 변경
         const originalText = memberSearchBtn.textContent;
-        memberSearchBtn.textContent = '조회중...';
+        memberSearchBtn.textContent = "조회중...";
         memberSearchBtn.disabled = true;
 
         try {
-            console.log('🔍 회원 조회 요청:', phoneNumber);
+            console.log("🔍 회원 조회 요청:", phoneNumber);
 
             // 전화번호 정규화 (하이픈 포함하여 전송)
-            const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
+            const response = await fetch(
+                `/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`,
+            );
             const data = await response.json();
 
             if (data.success && data.user) {
                 // 회원 정보를 저장
                 this.selectedMember = data.user;
-                
+
                 // 회원 정보 카드 UI 생성
                 this.renderMemberInfoCard(data.user);
-                memberInfoDisplay.style.display = 'block';
-                
-                console.log('✅ 회원 조회 성공:', data.user);
+                memberInfoDisplay.style.display = "block";
+
+                console.log("✅ 회원 조회 성공:", data.user);
             } else {
                 this.selectedMember = null;
-                memberInfoDisplay.style.display = 'none';
-                memberInfoDisplay.innerHTML = '';
-                alert('해당 전화번호로 등록된 회원을 찾을 수 없습니다.');
+                memberInfoDisplay.style.display = "none";
+                memberInfoDisplay.innerHTML = "";
+                alert("해당 전화번호로 등록된 회원을 찾을 수 없습니다.");
             }
         } catch (error) {
-            console.error('❌ 회원 조회 실패:', error);
+            console.error("❌ 회원 조회 실패:", error);
             this.selectedMember = null;
-            memberInfoDisplay.style.display = 'none';
-            memberInfoDisplay.innerHTML = '';
-            alert('회원 조회 중 오류가 발생했습니다.');
+            memberInfoDisplay.style.display = "none";
+            memberInfoDisplay.innerHTML = "";
+            alert("회원 조회 중 오류가 발생했습니다.");
         } finally {
             // 버튼 상태 복원
             memberSearchBtn.textContent = originalText;
@@ -593,18 +622,18 @@ const POSPaymentModal = {
      * 회원 정보 카드 UI 렌더링
      */
     renderMemberInfoCard(user) {
-        const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-        
+        const memberInfoDisplay = document.getElementById("memberInfoDisplay");
+
         memberInfoDisplay.innerHTML = `
-            <div class="member-card ${this.selectedMemberId === user.id ? 'selected' : ''}" 
+            <div class="member-card ${this.selectedMemberId === user.id ? "selected" : ""}" 
                  data-member-id="${user.id}" 
                  onclick="POSPaymentModal.selectMember(${user.id})">
                 <div class="member-card-header">
                     <div class="member-avatar">
-                        <span class="member-initial">${user.name ? user.name.charAt(0) : '회'}</span>
+                        <span class="member-initial">${user.name ? user.name.charAt(0) : "회"}</span>
                     </div>
                     <div class="member-info">
-                        <div class="member-name">${user.name || '회원'}</div>
+                        <div class="member-name">${user.name || "회원"}</div>
                         <div class="member-phone">${user.phone}</div>
                     </div>
                     <div class="member-status">
@@ -620,7 +649,7 @@ const POSPaymentModal = {
                         </div>
                         <div class="stat-item">
                             <div class="stat-label">가입일</div>
-                            <div class="stat-value">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</div>
+                            <div class="stat-value">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "-"}</div>
                         </div>
                     </div>
                     
@@ -629,11 +658,13 @@ const POSPaymentModal = {
                             <span class="benefit-icon">🎯</span>
                             <span class="benefit-text">결제 시 1% 포인트 적립</span>
                         </div>
-                        ${user.point >= 1000 ? 
-                            `<div class="benefit-item">
+                        ${
+                            user.point >= 1000
+                                ? `<div class="benefit-item">
                                 <span class="benefit-icon">💰</span>
                                 <span class="benefit-text">포인트 사용 가능</span>
-                            </div>` : ''
+                            </div>`
+                                : ""
                         }
                     </div>
                 </div>
@@ -655,19 +686,22 @@ const POSPaymentModal = {
         // 현재 선택된 회원과 같은 경우 선택 취소
         if (this.selectedMemberId === memberId) {
             this.selectedMemberId = null;
-            console.log('👤 회원 선택 취소:', memberId);
+            console.log("👤 회원 선택 취소:", memberId);
         } else {
             this.selectedMemberId = memberId;
-            console.log('👤 회원 선택:', memberId);
+            console.log("👤 회원 선택:", memberId);
         }
-        
+
         // 모든 회원 카드의 선택 상태 업데이트
-        document.querySelectorAll('.member-card').forEach(card => {
+        document.querySelectorAll(".member-card").forEach((card) => {
             const cardMemberId = parseInt(card.dataset.memberId);
-            if (cardMemberId === memberId && this.selectedMemberId === memberId) {
-                card.classList.add('selected');
+            if (
+                cardMemberId === memberId &&
+                this.selectedMemberId === memberId
+            ) {
+                card.classList.add("selected");
             } else {
-                card.classList.remove('selected');
+                card.classList.remove("selected");
             }
         });
     },
@@ -677,15 +711,15 @@ const POSPaymentModal = {
      */
     calculateChange() {
         if (!this.currentPaymentData) {
-            console.warn('⚠️ 결제 데이터가 없어 거스름돈을 계산할 수 없습니다');
+            console.warn("⚠️ 결제 데이터가 없어 거스름돈을 계산할 수 없습니다");
             return;
         }
 
-        const receivedInput = document.getElementById('receivedAmount');
-        const changeElement = document.getElementById('changeAmount');
+        const receivedInput = document.getElementById("receivedAmount");
+        const changeElement = document.getElementById("changeAmount");
 
         if (!receivedInput || !changeElement) {
-            console.warn('⚠️ 거스름돈 계산을 위한 DOM 요소를 찾을 수 없습니다');
+            console.warn("⚠️ 거스름돈 계산을 위한 DOM 요소를 찾을 수 없습니다");
             return;
         }
 
@@ -693,9 +727,9 @@ const POSPaymentModal = {
         const total = this.currentPaymentData.totalAmount || 0;
         const change = Math.max(0, received - total);
 
-        changeElement.textContent = change.toLocaleString() + '원';
+        changeElement.textContent = change.toLocaleString() + "원";
         if (changeElement.style) {
-            changeElement.style.color = change >= 0 ? '#059669' : '#dc2626';
+            changeElement.style.color = change >= 0 ? "#059669" : "#dc2626";
         }
     },
 
@@ -705,33 +739,40 @@ const POSPaymentModal = {
     async processPayment() {
         try {
             // 결제 방식 선택 여부 확인
-            const selectedMethodBtn = document.querySelector('.payment-method-btn.active');
+            const selectedMethodBtn = document.querySelector(
+                ".payment-method-btn.active",
+            );
             if (!selectedMethodBtn) {
-                alert('결제 수단을 선택해주세요.');
+                alert("결제 수단을 선택해주세요.");
                 return;
             }
 
             const selectedMethod = selectedMethodBtn.dataset.method;
-            const { totalAmount, storeId, tableNumber, orderId } = this.currentPaymentData;
+            const { totalAmount, storeId, tableNumber, orderId } =
+                this.currentPaymentData;
 
             // 현금 결제시 받은 금액 검증
-            if (selectedMethod === 'CASH') {
-                const receivedAmount = parseInt(document.getElementById('receivedAmount').value) || 0;
+            if (selectedMethod === "CASH") {
+                const receivedAmount =
+                    parseInt(document.getElementById("receivedAmount").value) ||
+                    0;
                 if (receivedAmount < totalAmount) {
-                    alert('받은 금액이 결제 금액보다 적습니다.');
+                    alert("받은 금액이 결제 금액보다 적습니다.");
                     return;
                 }
             }
 
             // 비회원 전화번호 검증 (선택사항이므로 빈 값도 허용)
             let guestPhone = null;
-            if (this.selectedCustomerType === 'guest') {
-                const phoneInput = document.getElementById('guestPhoneInput');
+            if (this.selectedCustomerType === "guest") {
+                const phoneInput = document.getElementById("guestPhoneInput");
                 if (phoneInput && phoneInput.value.trim()) {
                     guestPhone = phoneInput.value.trim();
                     // 전화번호 형식 검증
                     if (!/^010-\d{4}-\d{4}$/.test(guestPhone)) {
-                        alert('올바른 전화번호 형식을 입력해주세요. (예: 010-1234-5678)');
+                        alert(
+                            "올바른 전화번호 형식을 입력해주세요. (예: 010-1234-5678)",
+                        );
                         return;
                     }
                 }
@@ -740,21 +781,26 @@ const POSPaymentModal = {
             // 회원 결제시 회원 정보 검증
             let memberPhone = null;
             let memberId = null;
-            if (this.selectedCustomerType === 'member') {
+            if (this.selectedCustomerType === "member") {
                 if (!this.selectedMember || !this.selectedMemberId) {
-                    alert('먼저 회원을 조회하고 선택해주세요.');
+                    alert("먼저 회원을 조회하고 선택해주세요.");
                     return;
                 }
 
-                const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-                if (memberInfoDisplay.style.display === 'none') {
-                    alert('회원 정보가 표시되지 않았습니다. 다시 조회해주세요.');
+                const memberInfoDisplay =
+                    document.getElementById("memberInfoDisplay");
+                if (memberInfoDisplay.style.display === "none") {
+                    alert(
+                        "회원 정보가 표시되지 않았습니다. 다시 조회해주세요.",
+                    );
                     return;
                 }
 
-                const selectedCard = document.querySelector('.member-card.selected');
+                const selectedCard = document.querySelector(
+                    ".member-card.selected",
+                );
                 if (!selectedCard) {
-                    alert('회원 카드를 선택해주세요.');
+                    alert("회원 카드를 선택해주세요.");
                     return;
                 }
 
@@ -763,52 +809,76 @@ const POSPaymentModal = {
             }
 
             // 결제 확인
-            const customerType = this.selectedCustomerType === 'member' ? '회원' : '비회원';
-            const methodName = selectedMethod === 'CARD' ? '카드' : '현금';
-            const phoneInfo = this.selectedCustomerType === 'member' ? 
-                `회원 번호: ${memberPhone}` : 
-                (guestPhone ? `전화번호: ${guestPhone}` : '전화번호 없음');
+            const customerType =
+                this.selectedCustomerType === "member" ? "회원" : "비회원";
+            const methodName = selectedMethod === "CARD" ? "카드" : "현금";
+            const phoneInfo =
+                this.selectedCustomerType === "member"
+                    ? `회원 번호: ${memberPhone}`
+                    : guestPhone
+                      ? `전화번호: ${guestPhone}`
+                      : "전화번호 없음";
 
-            if (!confirm(`${customerType} ${methodName} 결제를 진행하시겠습니까?\n` +
+            if (
+                !confirm(
+                    `${customerType} ${methodName} 결제를 진행하시겠습니까?\n` +
                         `결제 금액: ${totalAmount.toLocaleString()}원\n` +
-                        `${phoneInfo}`)) {
+                        `${phoneInfo}`,
+                )
+            ) {
                 return;
             }
 
             // 로딩 상태로 변경
-            const confirmBtn = document.getElementById('confirmPayment');
+            const confirmBtn = document.getElementById("confirmPayment");
             const originalText = confirmBtn.innerHTML;
-            confirmBtn.innerHTML = '<span>처리중...</span>';
+            confirmBtn.innerHTML = "<span>처리중...</span>";
             confirmBtn.disabled = true;
 
             // 결제 처리 API 호출
-            const paymentResult = await this.processPaymentAPI(selectedMethod, guestPhone, memberPhone, memberId);
+            const paymentResult = await this.processPaymentAPI(
+                selectedMethod,
+                guestPhone,
+                memberPhone,
+                memberId,
+            );
 
             if (paymentResult.success) {
-                console.log('✅ 결제 완료:', paymentResult);
+                console.log("✅ 결제 완료:", paymentResult);
 
-                const successMessage = `${customerType} ${methodName} 결제가 완료되었습니다!\n` +
-                                     `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
-                                     `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
+                const successMessage =
+                    `${customerType} ${methodName} 결제가 완료되었습니다!\n` +
+                    `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
+                    `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
                 alert(successMessage);
 
                 // POS 화면 새로고침
-                if (typeof POSOrderScreen !== 'undefined' && POSOrderScreen.refreshOrders) {
+                if (
+                    typeof POSOrderScreen !== "undefined" &&
+                    POSOrderScreen.refreshOrders
+                ) {
                     await POSOrderScreen.refreshOrders();
                 }
 
                 // 모달 닫기
                 this.hide();
-            } else {
-                throw new Error(paymentResult.error || '결제 처리 실패');
-            }
 
+                //결제 성공 시 테이블 맵 화면 전환
+
+                if (typeof POSCore !== "undefined" && POSCore.showTableMap) {
+                    setTimeout(() => {
+                        POSCore.showTableMap();
+                    }, 2000);
+                }
+            } else {
+                throw new Error(paymentResult.error || "결제 처리 실패");
+            }
         } catch (error) {
-            console.error('❌ 결제 처리 실패:', error);
-            alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+            console.error("❌ 결제 처리 실패:", error);
+            alert("결제 처리 중 오류가 발생했습니다: " + error.message);
 
             // 버튼 상태 복원
-            const confirmBtn = document.getElementById('confirmPayment');
+            const confirmBtn = document.getElementById("confirmPayment");
             if (confirmBtn) {
                 confirmBtn.innerHTML = originalText;
                 confirmBtn.disabled = false;
@@ -820,7 +890,8 @@ const POSPaymentModal = {
      * 결제 처리 API 호출
      */
     async processPaymentAPI(paymentMethod, guestPhone, memberPhone, memberId) {
-        const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
+        const { orderId, totalAmount, storeId, tableNumber } =
+            this.currentPaymentData;
 
         console.log(`💳 결제 처리 API 호출:`, {
             orderId,
@@ -829,13 +900,13 @@ const POSPaymentModal = {
             customerType: this.selectedCustomerType,
             guestPhone,
             memberPhone,
-            memberId
+            memberId,
         });
 
-        const response = await fetch('/api/pos-payment/process-with-customer', {
-            method: 'POST',
+        const response = await fetch("/api/pos-payment/process-with-customer", {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json",
             },
             body: JSON.stringify({
                 orderId: orderId,
@@ -846,8 +917,8 @@ const POSPaymentModal = {
                 customerType: this.selectedCustomerType,
                 guestPhone: guestPhone,
                 memberPhone: memberPhone,
-                memberId: memberId
-            })
+                memberId: memberId,
+            }),
         });
 
         if (!response.ok) {
@@ -902,7 +973,7 @@ const POSPaymentModal = {
                         <div class="error-icon">⚠️</div>
                         <h3 class="error-title">결제 정보 로드 실패</h3>
                         <p class="error-message">
-                            ${this.currentPaymentData.errorMessage || '결제 정보를 불러올 수 없습니다.'}
+                            ${this.currentPaymentData.errorMessage || "결제 정보를 불러올 수 없습니다."}
                         </p>
                         <button class="retry-btn" id="retryLoadPayment">다시 시도</button>
                     </div>
@@ -1683,41 +1754,49 @@ const POSPaymentModal = {
      */
     async loadActualPaymentInfo(storeId, tableNumber) {
         try {
-            console.log(`📋 실제 결제 정보 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+            console.log(
+                `📋 실제 결제 정보 조회: 매장 ${storeId}, 테이블 ${tableNumber}`,
+            );
 
             // 1. 현재 테이블의 활성 주문 조회
-            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
+            const activeOrderResponse = await fetch(
+                `/api/pos/stores/${storeId}/table/${tableNumber}/active-order`,
+            );
 
             if (!activeOrderResponse.ok) {
-                console.warn('⚠️ 활성 주문 조회 실패');
+                console.warn("⚠️ 활성 주문 조회 실패");
                 return null;
             }
 
             const activeOrderData = await activeOrderResponse.json();
 
             if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
-                console.log('ℹ️ 활성 주문이 없습니다');
+                console.log("ℹ️ 활성 주문이 없습니다");
                 return null;
             }
 
             const orderId = activeOrderData.orderId;
 
             // 2. 미지불 티켓 정보 조회
-            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+            const unpaidResponse = await fetch(
+                `/api/pos-payment/unpaid-tickets/${orderId}`,
+            );
 
             if (!unpaidResponse.ok) {
-                console.warn('⚠️ 미지불 티켓 조회 실패');
+                console.warn("⚠️ 미지불 티켓 조회 실패");
                 return null;
             }
 
             const unpaidData = await unpaidResponse.json();
 
             if (!unpaidData.success || unpaidData.totalTickets === 0) {
-                console.log('ℹ️ 미지불 티켓이 없습니다');
+                console.log("ℹ️ 미지불 티켓이 없습니다");
                 return null;
             }
 
-            console.log(`✅ 실제 결제 정보 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
+            console.log(
+                `✅ 실제 결제 정보 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`,
+            );
 
             return {
                 totalAmount: unpaidData.totalAmount,
@@ -1725,41 +1804,40 @@ const POSPaymentModal = {
                 storeId: parseInt(storeId),
                 tableNumber: parseInt(tableNumber),
                 orderId: orderId,
-                paymentMethod: null
+                paymentMethod: null,
             };
-
         } catch (error) {
-            console.error('❌ 실제 결제 정보 조회 실패:', error);
+            console.error("❌ 실제 결제 정보 조회 실패:", error);
             return null;
         }
-    }
+    },
 };
 
 // Export for module systems if needed
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
     module.exports = POSPaymentModal;
 }
 
 // 전역으로 등록 (더 강력한 안전장치)
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
-    console.log('🔧 POSPaymentModal 전역 등록 시작');
+    console.log("🔧 POSPaymentModal 전역 등록 시작");
 
     // 여러 방법으로 전역 등록 시도
     const registrationMethods = [
         () => {
             window.POSPaymentModal = POSPaymentModal;
-            return 'window';
+            return "window";
         },
         () => {
             globalThis.POSPaymentModal = POSPaymentModal;
-            return 'globalThis';
+            return "globalThis";
         },
         () => {
             self.POSPaymentModal = POSPaymentModal;
-            return 'self';
-        }
+            return "self";
+        },
     ];
 
     let successfulMethod = null;
@@ -1769,14 +1847,19 @@ if (typeof module !== 'undefined' && module.exports) {
             const methodName = method();
 
             // 등록 검증
-            const isRegistered = 
-                (methodName === 'window' && typeof window.POSPaymentModal !== 'undefined') ||
-                (methodName === 'globalThis' && typeof globalThis.POSPaymentModal !== 'undefined') ||
-                (methodName === 'self' && typeof self.POSPaymentModal !== 'undefined');
+            const isRegistered =
+                (methodName === "window" &&
+                    typeof window.POSPaymentModal !== "undefined") ||
+                (methodName === "globalThis" &&
+                    typeof globalThis.POSPaymentModal !== "undefined") ||
+                (methodName === "self" &&
+                    typeof self.POSPaymentModal !== "undefined");
 
             if (isRegistered) {
                 successfulMethod = methodName;
-                console.log(`✅ POSPaymentModal ${methodName}에 성공적으로 등록됨`);
+                console.log(
+                    `✅ POSPaymentModal ${methodName}에 성공적으로 등록됨`,
+                );
                 break;
             }
         } catch (error) {
@@ -1787,51 +1870,53 @@ if (typeof module !== 'undefined' && module.exports) {
     // 최종 검증
     if (successfulMethod) {
         const finalCheck = {
-            windowExists: typeof window.POSPaymentModal !== 'undefined',
-            globalThisExists: typeof globalThis.POSPaymentModal !== 'undefined',
-            selfExists: typeof self.POSPaymentModal !== 'undefined',
-            windowHasShow: typeof window.POSPaymentModal?.show === 'function',
-            globalThisHasShow: typeof globalThis.POSPaymentModal?.show === 'function',
-            selfHasShow: typeof self.POSPaymentModal?.show === 'function'
+            windowExists: typeof window.POSPaymentModal !== "undefined",
+            globalThisExists: typeof globalThis.POSPaymentModal !== "undefined",
+            selfExists: typeof self.POSPaymentModal !== "undefined",
+            windowHasShow: typeof window.POSPaymentModal?.show === "function",
+            globalThisHasShow:
+                typeof globalThis.POSPaymentModal?.show === "function",
+            selfHasShow: typeof self.POSPaymentModal?.show === "function",
         };
 
-        console.log('✅ POSPaymentModal 전역 등록 완료:', {
+        console.log("✅ POSPaymentModal 전역 등록 완료:", {
             method: successfulMethod,
             verification: finalCheck,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
         });
 
         // DOM 준비 완료 시 추가 검증
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('✅ DOM 로드 후 POSPaymentModal 재검증:', {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => {
+                console.log("✅ DOM 로드 후 POSPaymentModal 재검증:", {
                     window: typeof window.POSPaymentModal,
                     globalThis: typeof globalThis.POSPaymentModal,
-                    hasShow: typeof window.POSPaymentModal?.show === 'function'
+                    hasShow: typeof window.POSPaymentModal?.show === "function",
                 });
             });
         }
-
     } else {
-        console.error('❌ 모든 POSPaymentModal 등록 방법 실패');
+        console.error("❌ 모든 POSPaymentModal 등록 방법 실패");
 
         // 에러 이벤트 발생
-        if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('POSPaymentModalLoadError', {
-                detail: { error: 'POSPaymentModal 등록 실패' }
-            }));
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(
+                new CustomEvent("POSPaymentModalLoadError", {
+                    detail: { error: "POSPaymentModal 등록 실패" },
+                }),
+            );
         }
     }
 })();
 
 // 추가: 브라우저 호환성을 위한 폴리필
-if (typeof globalThis === 'undefined') {
-    (function() {
-        if (typeof global !== 'undefined') {
+if (typeof globalThis === "undefined") {
+    (function () {
+        if (typeof global !== "undefined") {
             global.globalThis = global;
-        } else if (typeof window !== 'undefined') {
+        } else if (typeof window !== "undefined") {
             window.globalThis = window;
-        } else if (typeof self !== 'undefined') {
+        } else if (typeof self !== "undefined") {
             self.globalThis = self;
         }
     })();
