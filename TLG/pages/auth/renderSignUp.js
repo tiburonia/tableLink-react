@@ -651,7 +651,7 @@ function renderSignUp() {
         </form>
 
         <div class="login-link">
-          <p class="login-text">이미 계정이 있으신가요?</p>
+          <p class="login-text" id="goToLoginBtn">이미 계정이 있으신가요?</p>
           <button type="button" class="login-btn" id="goToLoginBtn">로그인하기</button>
         </div>
       </div>
