@@ -80,40 +80,48 @@ const POSTableMap = {
     },
 
     /**
-     * 테이블 카드 렌더링
+     * 테이블 카드 렌더링 (OK POS 스타일)
      */
     renderTableCard(table) {
         const statusClass = this.getTableStatusClass(table);
-        const statusIcon = this.getTableStatusIcon(table);
 
         return `
             <div class="table-card ${statusClass}" 
                  data-table-number="${table.tableNumber}"
                  onclick="POSTableMap.selectTable(${table.tableNumber})">
                 
-                <div class="table-header">
-                    <span class="table-number">${table.tableNumber}</span>
-                    ${table.isFromTLG ? '<span class="tlg-badge">📱</span>' : ""}
-                </div>
+                <!-- 좌측 상단 테이블 번호 -->
+                <div class="table-number-small">${table.tableNumber}</div>
                 
-                <div class="table-icon">
-                    ${statusIcon}
+                <!-- 카드 내용 -->
+                <div class="table-content">
+                    ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
                 </div>
-                
-                <div class="table-status">
-                    ${this.getTableStatusText(table)}
-                </div>
-                
-                ${
-                    table.isOccupied
-                        ? `
-                    <div class="table-info">
-                        <div class="occupied-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
-                        <div class="table-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
-                    </div>
-                `
-                        : ""
-                }
+            </div>
+        `;
+    },
+
+    /**
+     * 점유된 테이블 내용 렌더링
+     */
+    renderOccupiedContent(table) {
+        return `
+            <div class="order-summary">
+                <div class="order-count">${table.orderCount}개 주문</div>
+                <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
+                <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
+            </div>
+        `;
+    },
+
+    /**
+     * 빈 테이블 내용 렌더링
+     */
+    renderEmptyContent() {
+        return `
+            <div class="empty-table">
+                <div class="empty-icon">🪑</div>
+                <div class="empty-text">빈자리</div>
             </div>
         `;
     },
