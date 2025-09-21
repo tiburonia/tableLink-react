@@ -110,46 +110,58 @@ const POSTableMap = {
         return `
             <div class="order-summary">
                 <div class="order-header">
+                    <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
                     <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
                 </div>
-                <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
                 ${orderItemsHTML}
             </div>
         `;
     },
 
     /**
-     * 주문 아이템 목록 렌더링
+     * 주문 아이템 목록 렌더링 (격자 형태)
      */
     renderOrderItemsList(orderItems) {
         if (!orderItems || orderItems.length === 0) {
             return '';
         }
 
-        // 최대 2개 아이템만 표시 (사진의 레이아웃에 맞게)
-        const displayItems = orderItems.slice(0, 2);
-        const hasMore = orderItems.length > 2;
+        // 최대 4개 아이템 표시 (격자에 맞게)
+        const displayItems = orderItems.slice(0, 4);
+        const hasMore = orderItems.length > 4;
 
-        let itemsText = '';
-        if (displayItems.length > 0) {
-            const firstItem = displayItems[0];
-            itemsText = `${firstItem.menuName} ${firstItem.quantity}개`;
-            
-            if (hasMore) {
-                const remainingCount = orderItems.length - 1;
-                itemsText += ` 외 ${remainingCount}개`;
-            } else if (displayItems.length > 1) {
-                // 2개만 있는 경우
-                const secondItem = displayItems[1];
-                itemsText = `${firstItem.menuName} ${firstItem.quantity}개\n${secondItem.menuName} ${secondItem.quantity}개`;
-            }
-        }
+        const itemsHTML = displayItems.map(item => {
+            const truncatedName = this.truncateMenuName(item.menuName, 6);
+            return `
+                <div class="order-item-grid">
+                    <span class="item-name">${truncatedName}</span>
+                    <span class="item-quantity">${item.quantity}개</span>
+                </div>
+            `;
+        }).join('');
+
+        const moreHTML = hasMore ? `
+            <div class="order-item-grid more-items">
+                <span class="item-name">외 ${orderItems.length - 4}개</span>
+                <span class="item-quantity"></span>
+            </div>
+        ` : '';
 
         return `
-            <div class="order-items-list">
-                <div class="order-items-text">${itemsText}</div>
+            <div class="order-items-grid">
+                ${itemsHTML}
+                ${moreHTML}
             </div>
         `;
+    },
+
+    /**
+     * 메뉴 이름 축약
+     */
+    truncateMenuName(menuName, maxLength) {
+        if (!menuName) return '';
+        if (menuName.length <= maxLength) return menuName;
+        return menuName.substring(0, maxLength) + '...';
     },
 
     /**

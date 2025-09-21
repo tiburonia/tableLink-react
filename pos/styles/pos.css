@@ -1609,14 +1609,14 @@ body {
     flex-direction: column;
     height: 100%;
     padding: 8px;
-    gap: 4px;
+    gap: 6px;
 }
 
 .order-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .order-count {
@@ -1626,19 +1626,18 @@ body {
 }
 
 .order-time {
-    font-size: 10px;
+    font-size: 9px;
     color: #6b7280;
     background: rgba(0, 0, 0, 0.05);
     padding: 2px 4px;
-    border-radius: 4px;
+    border-radius: 3px;
+    line-height: 1;
 }
 
 .order-amount {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: #3b82f6;
-    text-align: center;
-    margin-bottom: 8px;
 }
 
 /* 빈 테이블 내용 */
@@ -1670,27 +1669,47 @@ body {
     color: #10b981;
 }
 
-/* 주문 아이템 상세 정보 스타일 */
-.order-items-list {
+/* 주문 아이템 격자 스타일 */
+.order-items-grid {
     flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
     padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.order-items-text {
-    font-size: 10px;
+.order-item-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1px 0;
+    font-size: 9px;
+    line-height: 1.2;
+}
+
+.order-item-grid .item-name {
     color: #374151;
-    line-height: 1.4;
+    font-weight: 500;
+    flex: 1;
     text-align: left;
-    white-space: pre-line;
     overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    word-break: keep-all;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.order-item-grid .item-quantity {
+    color: #6b7280;
+    font-weight: 600;
+    font-size: 8px;
+    margin-left: 4px;
+    flex-shrink: 0;
+}
+
+.order-item-grid.more-items .item-name {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 8px;
 }
 
 /* 테이블 상태별 아이템 스타일 */
