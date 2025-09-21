@@ -110,7 +110,6 @@ const POSTableMap = {
         return `
             <div class="order-summary">
                 <div class="order-header">
-                    <div class="order-count">${table.orderCount}개 주문</div>
                     <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
                 </div>
                 <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
