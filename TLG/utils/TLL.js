@@ -566,7 +566,7 @@ window.TLL = async function TLL(preselectedStore = null) {
     try {
       console.log(`🔍 TLL - 매장 검색: "${query}"`);
 
-      const response = await fetch(`/api/stores/search/${encodeURIComponent(query)}`, {
+      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}&limit=20`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
