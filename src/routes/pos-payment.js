@@ -17,8 +17,8 @@ router.post('/process', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { 
-      orderId, 
+    const {
+      orderId,
       paymentMethod, // 'CARD' 또는 'CASH'
       amount,
       storeId,
@@ -38,7 +38,7 @@ router.post('/process', async (req, res) => {
 
     // 1. 해당 주문의 UNPAID POS 티켓들 조회
     const unpaidTicketsResult = await client.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.order_id,
         ot.batch_no,
@@ -46,8 +46,8 @@ router.post('/process', async (req, res) => {
         COUNT(oi.id) as item_count
       FROM order_tickets ot
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE ot.order_id = $1 
-        AND ot.source = 'POS' 
+      WHERE ot.order_id = $1
+        AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
       GROUP BY ot.id, ot.order_id, ot.batch_no, ot.table_num
       ORDER BY ot.created_at ASC
@@ -81,7 +81,7 @@ router.post('/process', async (req, res) => {
       paymentMethod,
       amount,
       `POS_${paymentMethod}_${Date.now()}`, // POS 전용 transaction_id
-      JSON.stringify({ 
+      JSON.stringify({
         source: 'POS',
         method: paymentMethod,
         processed_at: new Date().toISOString(),
@@ -107,11 +107,11 @@ router.post('/process', async (req, res) => {
 
     // 4. 모든 UNPAID 티켓을 PAID로 변경
     const updateResult = await client.query(`
-      UPDATE order_tickets 
+      UPDATE order_tickets
       SET paid_status = 'PAID',
           updated_at = CURRENT_TIMESTAMP
-      WHERE order_id = $1 
-        AND source = 'POS' 
+      WHERE order_id = $1
+        AND source = 'POS'
         AND paid_status = 'UNPAID'
       RETURNING id, batch_no
     `, [orderId]);
@@ -128,9 +128,14 @@ router.post('/process', async (req, res) => {
     const hasUnpaidTickets = parseInt(remainingUnpaidResult.rows[0].count) > 0;
 
     if (!hasUnpaidTickets) {
+      // 주문 정보 조회
+      const orderInfoResult = await client.query(`
+        SELECT store_id, table_num FROM orders WHERE id = $1
+      `, [orderId]);
+
       // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경하고 세션 종료
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET payment_status = 'PAID',
             session_status = 'CLOSED',
             session_ended = true,
@@ -139,8 +144,65 @@ router.post('/process', async (req, res) => {
         WHERE id = $1
       `, [orderId]);
 
+      // store_tables 직접 업데이트 (세션 종료 시)
+      if (orderInfoResult.rows.length > 0) {
+        const { store_id, table_num } = orderInfoResult.rows[0];
+        let tableUpdated = false;
+
+        // 방법 1: id 필드로 매칭
+        const tableUpdateResult1 = await client.query(`
+          UPDATE store_tables
+          SET
+            processing_order_id = NULL,
+            status = 'AVAILABLE',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND id = $2
+        `, [store_id, table_num]);
+
+        if (tableUpdateResult1.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ POS 결제 완료 후 테이블 해제 (id 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+        } else {
+          // 방법 2: table_number 필드로 매칭
+          const tableUpdateResult2 = await client.query(`
+            UPDATE store_tables
+            SET
+              processing_order_id = NULL,
+              status = 'AVAILABLE',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND table_number = $2
+          `, [store_id, table_num]);
+
+          if (tableUpdateResult2.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ POS 결제 완료 후 테이블 해제 (table_number 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+          } else {
+            // 방법 3: processing_order_id로 매칭
+            const tableUpdateResult3 = await client.query(`
+              UPDATE store_tables
+              SET
+                processing_order_id = NULL,
+                status = 'AVAILABLE',
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND processing_order_id = $2
+            `, [store_id, orderId]);
+
+            if (tableUpdateResult3.rowCount > 0) {
+              tableUpdated = true;
+              console.log(`🍽️ POS 결제 완료 후 테이블 해제 (processing_order_id 매칭): 매장 ${store_id}, 주문 ${orderId}`);
+            }
+          }
+        }
+
+        if (!tableUpdated) {
+          console.warn(`⚠️ POS 결제 완료 후 store_tables 업데이트 실패: 매장 ${store_id}, 테이블 ${table_num}, 주문 ${orderId}`);
+        }
+      }
+
       console.log(`✅ 주문 ${orderId} 전체 결제 완료 및 세션 종료`);
     }
+
+    await client.query('COMMIT');
 
     // 응답 데이터 구성
     const responseData = {
@@ -181,8 +243,8 @@ router.post('/process-with-customer', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { 
-      orderId, 
+    const {
+      orderId,
       paymentMethod, // 'CARD' 또는 'CASH'
       amount,
       storeId,
@@ -241,7 +303,7 @@ router.post('/process-with-customer', async (req, res) => {
 
       // 주문에 게스트 정보 업데이트
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET guest_phone = $1
         WHERE id = $2
       `, [guestPhone, orderId]);
@@ -257,7 +319,7 @@ router.post('/process-with-customer', async (req, res) => {
       if (memberId) {
         // memberId가 있으면 ID로 직접 조회
         memberResult = await client.query(`
-          SELECT id, name, phone FROM users 
+          SELECT id, name, phone FROM users
           WHERE id = $1
         `, [memberId]);
 
@@ -274,9 +336,9 @@ router.post('/process-with-customer', async (req, res) => {
         // memberPhone으로 조회 (하이픈 제거하여 조회)
         const cleanMemberPhone = memberPhone.replace(/[-\s]/g, '');
         console.log(`📱 회원 전화번호 정규화: ${memberPhone} → ${cleanMemberPhone}`);
-        
+
         memberResult = await client.query(`
-          SELECT id, name, point, phone FROM users 
+          SELECT id, name, point, phone FROM users
           WHERE phone = $1
         `, [cleanMemberPhone]);
 
@@ -302,7 +364,7 @@ router.post('/process-with-customer', async (req, res) => {
 
       // 주문에 회원 정보 업데이트
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET user_id = $1
         WHERE id = $2
       `, [userId, orderId]);
@@ -312,7 +374,7 @@ router.post('/process-with-customer', async (req, res) => {
 
     // 2. 해당 주문의 UNPAID POS 티켓들 조회
     const unpaidTicketsResult = await client.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.order_id,
         ot.batch_no,
@@ -320,8 +382,8 @@ router.post('/process-with-customer', async (req, res) => {
         COUNT(oi.id) as item_count
       FROM order_tickets ot
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE ot.order_id = $1 
-        AND ot.source = 'POS' 
+      WHERE ot.order_id = $1
+        AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
       GROUP BY ot.id, ot.order_id, ot.batch_no, ot.table_num
       ORDER BY ot.created_at ASC
@@ -355,7 +417,7 @@ router.post('/process-with-customer', async (req, res) => {
       paymentMethod,
       amount,
       `POS_${paymentMethod}_${Date.now()}`, // POS 전용 transaction_id
-      JSON.stringify({ 
+      JSON.stringify({
         source: 'POS',
         method: paymentMethod,
         processed_at: new Date().toISOString(),
@@ -384,11 +446,11 @@ router.post('/process-with-customer', async (req, res) => {
 
     // 5. 모든 UNPAID 티켓을 PAID로 변경
     const updateResult = await client.query(`
-      UPDATE order_tickets 
+      UPDATE order_tickets
       SET paid_status = 'PAID',
           updated_at = CURRENT_TIMESTAMP
-      WHERE order_id = $1 
-        AND source = 'POS' 
+      WHERE order_id = $1
+        AND source = 'POS'
         AND paid_status = 'UNPAID'
       RETURNING id, batch_no
     `, [orderId]);
@@ -405,9 +467,14 @@ router.post('/process-with-customer', async (req, res) => {
     const hasUnpaidTickets = parseInt(remainingUnpaidResult.rows[0].count) > 0;
 
     if (!hasUnpaidTickets) {
+      // 주문 정보 조회
+      const orderInfoResult = await client.query(`
+        SELECT store_id, table_num FROM orders WHERE id = $1
+      `, [orderId]);
+
       // 모든 티켓이 결제되었으면 주문 상태를 PAID로 변경하고 세션 종료
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET payment_status = 'PAID',
             session_status = 'CLOSED',
             session_ended = true,
@@ -416,12 +483,63 @@ router.post('/process-with-customer', async (req, res) => {
         WHERE id = $1
       `, [orderId]);
 
+      // store_tables 직접 업데이트 (세션 종료 시)
+      if (orderInfoResult.rows.length > 0) {
+        const { store_id, table_num } = orderInfoResult.rows[0];
+        let tableUpdated = false;
+
+        // 방법 1: id 필드로 매칭
+        const tableUpdateResult1 = await client.query(`
+          UPDATE store_tables
+          SET
+            processing_order_id = NULL,
+            status = 'AVAILABLE',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND id = $2
+        `, [store_id, table_num]);
+
+        if (tableUpdateResult1.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (id 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+        } else {
+          // 방법 2: table_number 필드로 매칭
+          const tableUpdateResult2 = await client.query(`
+            UPDATE store_tables
+            SET
+              processing_order_id = NULL,
+              status = 'AVAILABLE',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND table_number = $2
+          `, [store_id, table_num]);
+
+          if (tableUpdateResult2.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (table_number 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+          } else {
+            // 방법 3: processing_order_id로 매칭
+            const tableUpdateResult3 = await client.query(`
+              UPDATE store_tables
+              SET
+                processing_order_id = NULL,
+                status = 'AVAILABLE',
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND processing_order_id = $2
+            `, [store_id, orderId]);
+
+            if (tableUpdateResult3.rowCount > 0) {
+              tableUpdated = true;
+              console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (processing_order_id 매칭): 매장 ${store_id}, 주문 ${orderId}`);
+            }
+          }
+        }
+
+        if (!tableUpdated) {
+          console.warn(`⚠️ POS 회원/비회원 결제 완료 후 store_tables 업데이트 실패: 매장 ${store_id}, 테이블 ${table_num}, 주문 ${orderId}`);
+        }
+      }
+
       console.log(`✅ 주문 ${orderId} 전체 결제 완료 및 세션 종료`);
     }
-
-  
-
-
 
     await client.query('COMMIT');
 
@@ -470,7 +588,7 @@ router.get('/unpaid-tickets/:orderId', async (req, res) => {
     console.log(`🔍 주문 ${orderId} 미지불 티켓 조회`);
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.batch_no,
         ot.table_num,
@@ -479,8 +597,8 @@ router.get('/unpaid-tickets/:orderId', async (req, res) => {
         COALESCE(SUM(oi.total_price), 0) as ticket_amount
       FROM order_tickets ot
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE ot.order_id = $1 
-        AND ot.source = 'POS' 
+      WHERE ot.order_id = $1
+        AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
       GROUP BY ot.id, ot.batch_no, ot.table_num, ot.created_at
       ORDER BY ot.created_at ASC
@@ -517,7 +635,7 @@ router.get('/status/:orderId', async (req, res) => {
 
     // 주문 정보와 결제 내역 조회
     const orderResult = await pool.query(`
-      SELECT 
+      SELECT
         o.id,
         o.store_id,
         o.table_num,
@@ -543,7 +661,7 @@ router.get('/status/:orderId', async (req, res) => {
 
     // 결제 내역 조회
     const paymentsResult = await pool.query(`
-      SELECT 
+      SELECT
         p.id,
         p.method,
         p.amount,
@@ -560,7 +678,7 @@ router.get('/status/:orderId', async (req, res) => {
 
     // 티켓별 결제 상태 조회
     const ticketsResult = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.batch_no,
         ot.paid_status,

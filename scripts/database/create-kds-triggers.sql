@@ -21,81 +21,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 1-1. 주문 세션 상태 변경 시 테이블 해제 함수
+-- 1-1. 주문 세션 상태 변경 시 로그만 남기는 함수 (store_tables 업데이트는 API에서 직접 처리)
 CREATE OR REPLACE FUNCTION handle_order_session_close()
 RETURNS trigger AS $$
-DECLARE
-  updated_rows integer;
-  table_exists boolean;
 BEGIN
-  -- session_status가 OPEN에서 CLOSE로 변경되었을 때 (더 넓은 조건)
+  -- session_status가 OPEN에서 CLOSE로 변경되었을 때 로그만 기록
   IF (OLD.session_status IS NULL OR OLD.session_status = 'OPEN') AND NEW.session_status = 'CLOSE' THEN
-    
-    -- 디버깅 로그
-    RAISE NOTICE '트리거 실행: 주문 % 세션 상태 변경 %->% (매장: %, 테이블: %)', 
-                 NEW.id, OLD.session_status, NEW.session_status, NEW.store_id, NEW.table_num;
-    
-    -- store_tables 테이블 존재 여부 확인
-    SELECT EXISTS (
-      SELECT 1 FROM information_schema.tables 
-      WHERE table_schema = 'public' AND table_name = 'store_tables'
-    ) INTO table_exists;
-    
-    IF table_exists THEN
-      -- 여러 방식으로 테이블 해제 시도
-      -- 방법 1: table_number로 매칭 (id 필드)
-      UPDATE store_tables 
-      SET 
-        processing_order_id = NULL,
-        status = 'AVAILABLE',
-        updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = NEW.store_id 
-        AND id = NEW.table_num;
-        
-      GET DIAGNOSTICS updated_rows = ROW_COUNT;
-      RAISE NOTICE '방법1(id=%): 업데이트된 행 %개', NEW.table_num, updated_rows;
-      
-      -- 방법 2: table_number 필드로 매칭 (필드가 존재하는 경우)
-      IF updated_rows = 0 THEN
-        UPDATE store_tables 
-        SET 
-          processing_order_id = NULL,
-          status = 'AVAILABLE',
-          updated_at = CURRENT_TIMESTAMP
-        WHERE store_id = NEW.store_id 
-          AND table_number = NEW.table_num;
-          
-        GET DIAGNOSTICS updated_rows = ROW_COUNT;
-        RAISE NOTICE '방법2(table_number=%): 업데이트된 행 %개', NEW.table_num, updated_rows;
-      END IF;
-      
-      -- 방법 3: processing_order_id로 매칭
-      IF updated_rows = 0 THEN
-        UPDATE store_tables 
-        SET 
-          processing_order_id = NULL,
-          status = 'AVAILABLE',
-          updated_at = CURRENT_TIMESTAMP
-        WHERE store_id = NEW.store_id 
-          AND processing_order_id = NEW.id;
-          
-        GET DIAGNOSTICS updated_rows = ROW_COUNT;
-        RAISE NOTICE '방법3(processing_order_id=%): 업데이트된 행 %개', NEW.id, updated_rows;
-      END IF;
-      
-      -- 최종 결과 로그
-      IF updated_rows > 0 THEN
-        RAISE NOTICE '✅ 테이블 해제 완료: 매장 %, 테이블 %, 주문 %, 업데이트 %행', 
-                     NEW.store_id, NEW.table_num, NEW.id, updated_rows;
-      ELSE
-        RAISE NOTICE '⚠️ 테이블 해제 실패: 매장 % 테이블 %에 해당하는 store_tables 레코드 없음', 
-                     NEW.store_id, NEW.table_num;
-      END IF;
-    ELSE
-      RAISE NOTICE '⚠️ store_tables 테이블이 존재하지 않음';
-    END IF;
-  ELSE
-    RAISE NOTICE 'ℹ️ 트리거 조건 불일치: %->% (주문 %)', OLD.session_status, NEW.session_status, NEW.id;
+    RAISE NOTICE '주문 세션 종료: 주문 % (매장: %, 테이블: %) %->%', 
+                 NEW.id, NEW.store_id, NEW.table_num, OLD.session_status, NEW.session_status;
   END IF;
   
   RETURN NEW;
@@ -215,22 +148,16 @@ EXCEPTION
 END
 $$;
 
--- 2. orders 테이블 세션 상태 변경 트리거
+-- 2. orders 테이블 세션 상태 변경 트리거 삭제 (API에서 직접 처리)
 DO $$
 BEGIN
     DROP TRIGGER IF EXISTS orders_session_close ON orders;
     DROP TRIGGER IF EXISTS orders_session_status_trigger ON orders;
     
-    CREATE TRIGGER orders_session_close
-      AFTER UPDATE ON orders
-      FOR EACH ROW
-      WHEN (OLD.session_status IS DISTINCT FROM NEW.session_status)
-      EXECUTE FUNCTION handle_order_session_close();
-    
-    RAISE NOTICE '✅ orders_session_close 트리거 생성 완료';
+    RAISE NOTICE '✅ orders 세션 상태 변경 트리거 삭제 완료 (API에서 직접 처리)';
 EXCEPTION
     WHEN OTHERS THEN
-        RAISE NOTICE '❌ orders_session_close 트리거 생성 실패: %', SQLERRM;
+        RAISE NOTICE '❌ orders 트리거 삭제 실패: %', SQLERRM;
 END
 $$;
 

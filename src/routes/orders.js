@@ -1083,14 +1083,57 @@ router.put('/:orderId/end-session', async (req, res) => {
     const hasActiveOrders = parseInt(activeOrdersResult.rows[0].count) > 0;
 
     if (!hasActiveOrders) {
-      await client.query(`
+      // store_tables 직접 업데이트 (여러 방식으로 시도)
+      let tableUpdated = false;
+
+      // 방법 1: id 필드로 매칭
+      const tableUpdateResult1 = await client.query(`
         UPDATE store_tables
         SET 
-          status = 'AVAILABLE'
+          processing_order_id = NULL,
+          status = 'AVAILABLE',
+          updated_at = CURRENT_TIMESTAMP
         WHERE store_id = $1 AND id = $2
       `, [order.store_id, order.table_num]);
 
-      console.log(`🍽️ 테이블 ${order.table_num} 해제 완료`);
+      if (tableUpdateResult1.rowCount > 0) {
+        tableUpdated = true;
+        console.log(`🍽️ 테이블 해제 완료 (id 매칭): 매장 ${order.store_id}, 테이블 ${order.table_num}`);
+      } else {
+        // 방법 2: table_number 필드로 매칭
+        const tableUpdateResult2 = await client.query(`
+          UPDATE store_tables
+          SET 
+            processing_order_id = NULL,
+            status = 'AVAILABLE',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND table_number = $2
+        `, [order.store_id, order.table_num]);
+
+        if (tableUpdateResult2.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ 테이블 해제 완료 (table_number 매칭): 매장 ${order.store_id}, 테이블 ${order.table_num}`);
+        } else {
+          // 방법 3: processing_order_id로 매칭
+          const tableUpdateResult3 = await client.query(`
+            UPDATE store_tables
+            SET 
+              processing_order_id = NULL,
+              status = 'AVAILABLE',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND processing_order_id = $2
+          `, [order.store_id, parseInt(orderId)]);
+
+          if (tableUpdateResult3.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ 테이블 해제 완료 (processing_order_id 매칭): 매장 ${order.store_id}, 주문 ${orderId}`);
+          }
+        }
+      }
+
+      if (!tableUpdated) {
+        console.warn(`⚠️ store_tables 업데이트 실패: 매장 ${order.store_id}, 테이블 ${order.table_num}, 주문 ${orderId}`);
+      }
     }
 
     await client.query('COMMIT');
@@ -1232,7 +1275,7 @@ router.get('/:orderId/review-status', async (req, res) => {
 // 📋 비회원 POS 주문 생성
 router.post('/pos-guest', async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const {
       storeId,
@@ -1256,7 +1299,7 @@ router.post('/pos-guest', async (req, res) => {
     const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     // 1. orders 테이블에 주문 생성 (guest_phone는 null로 설정)
-    const orderResult = await client.query(`
+    const orderResult = await pool.query(`
       INSERT INTO orders (
         store_id,
         table_num,
@@ -1272,7 +1315,7 @@ router.post('/pos-guest', async (req, res) => {
     console.log(`✅ 비회원 주문 생성: ${orderId}`);
 
     // 2. order_tickets 테이블에 티켓 생성 (POS 소스, UNPAID 상태)
-    const ticketResult = await client.query(`
+    const ticketResult = await pool.query(`
       INSERT INTO order_tickets (
         order_id,
         batch_no,
