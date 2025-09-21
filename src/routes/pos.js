@@ -676,7 +676,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         AND o.table_num = $2 
         AND ot.source = 'TLL'
         AND oi.item_status != 'CANCELLED'
-        AND o.session_status != 'CANCELLED'
+        AND o.session_status = 'OPEN'
       ORDER BY oi.created_at DESC
     `, [parsedStoreId, parsedTableNumber]);
 
