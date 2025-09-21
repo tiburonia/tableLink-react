@@ -565,10 +565,11 @@ function setupEventListeners(orderData) {
       console.warn('⚠️ endSessionBtn 요소를 찾을 수 없습니다');
     }
 
-    // 추가 주문
+    // 추가 주문 - store_tables.id를 전달
     const addOrderBtn = document.getElementById('addOrderBtn');
     if (addOrderBtn) {
       addOrderBtn.addEventListener('click', () => {
+        // orderData.tableNumber는 실제로 store_tables.id 값
         addNewOrder(orderData.storeId, orderData.tableNumber);
       });
     } else {
@@ -673,9 +674,9 @@ function showSessionEndedState(orderData) {
 }
 
 // 추가 주문 처리
-async function addNewOrder(storeId, tableNumber) {
+async function addNewOrder(storeId, tableId) {
   try {
-    console.log(`➕ 추가 주문 요청 - 매장 ID: ${storeId}, 테이블: ${tableNumber}`);
+    console.log(`➕ 추가 주문 요청 - 매장 ID: ${storeId}, 테이블 ID: ${tableId}`);
 
     // 매장 정보 조회
     const storeInfo = await fetchStoreInfo(storeId);
@@ -721,7 +722,7 @@ async function addNewOrder(storeId, tableNumber) {
 
     // renderOrderScreen으로 이동 (기존 세션 유지)
     console.log('🔄 주문 화면으로 이동 중...');
-    await renderOrderScreen(storeInfo, tableNumber, {
+    await renderOrderScreen(storeInfo, tableId, {
       continuingSession: true,
       previousOrderId: window.currentOrderId
     });
