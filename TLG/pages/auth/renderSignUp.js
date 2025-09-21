@@ -660,7 +660,7 @@ function renderSignUp() {
     </div>
   `;
 
-  // DOM 요소 참조
+  // DOM 요소 참조 (안전한 확인)
   const elements = {
     form: document.getElementById('signupForm'),
     userId: document.getElementById('userId'),
@@ -674,6 +674,15 @@ function renderSignUp() {
     goToLoginBtn: document.getElementById('goToLoginBtn'),
     loadingOverlay: document.getElementById('loadingOverlay')
   };
+
+  // DOM 요소들이 모두 존재하는지 확인
+  const requiredElements = ['form', 'userId', 'userPassword', 'userPasswordConfirm', 'userName', 'userPhone', 'signupBtn', 'goToLoginBtn', 'loadingOverlay'];
+  const missingElements = requiredElements.filter(key => !elements[key]);
+  
+  if (missingElements.length > 0) {
+    console.error('❌ 필수 DOM 요소를 찾을 수 없음:', missingElements);
+    return;
+  }
 
   // 유효성 검사 상태
   const validation = {
@@ -783,7 +792,8 @@ function renderSignUp() {
   // 이벤트 리스너 설정
   const setupEventListeners = () => {
     // 아이디 유효성 검사
-    elements.userId.addEventListener('input', () => {
+    if (elements.userId) {
+      elements.userId.addEventListener('input', () => {
       const userId = elements.userId.value.trim();
       const result = utils.validateUserId(userId);
 
@@ -799,10 +809,14 @@ function renderSignUp() {
       }
 
       utils.updateSubmitButton();
-    });
+      });
+    } else {
+      console.error('❌ userId 요소를 찾을 수 없음');
+    }
 
     // 아이디 중복 확인
-    elements.checkIdBtn.addEventListener('click', async () => {
+    if (elements.checkIdBtn) {
+      elements.checkIdBtn.addEventListener('click', async () => {
       const userId = elements.userId.value.trim();
       const result = utils.validateUserId(userId);
 
@@ -843,10 +857,14 @@ function renderSignUp() {
         elements.checkIdBtn.textContent = '아이디 중복확인';
         utils.updateSubmitButton();
       }
-    });
+      });
+    } else {
+      console.error('❌ checkIdBtn 요소를 찾을 수 없음');
+    }
 
     // 비밀번호 유효성 검사
-    elements.userPassword.addEventListener('input', () => {
+    if (elements.userPassword) {
+      elements.userPassword.addEventListener('input', () => {
       const password = elements.userPassword.value;
       const result = utils.validatePassword(password);
 
@@ -873,10 +891,14 @@ function renderSignUp() {
       }
 
       utils.updateSubmitButton();
-    });
+      });
+    } else {
+      console.error('❌ userPassword 요소를 찾을 수 없음');
+    }
 
     // 비밀번호 확인
-    elements.userPasswordConfirm.addEventListener('input', () => {
+    if (elements.userPasswordConfirm) {
+      elements.userPasswordConfirm.addEventListener('input', () => {
       const password = elements.userPassword.value;
       const confirmPassword = elements.userPasswordConfirm.value;
 
@@ -892,10 +914,14 @@ function renderSignUp() {
       }
 
       utils.updateSubmitButton();
-    });
+      });
+    } else {
+      console.error('❌ userPasswordConfirm 요소를 찾을 수 없음');
+    }
 
     // 이름 유효성 검사
-    elements.userName.addEventListener('input', () => {
+    if (elements.userName) {
+      elements.userName.addEventListener('input', () => {
       const name = elements.userName.value.trim();
       const result = utils.validateName(name);
 
@@ -909,10 +935,14 @@ function renderSignUp() {
       }
 
       utils.updateSubmitButton();
-    });
+      });
+    } else {
+      console.error('❌ userName 요소를 찾을 수 없음');
+    }
 
     // 전화번호 포매팅 및 유효성 검사
-    elements.userPhone.addEventListener('input', (e) => {
+    if (elements.userPhone) {
+      elements.userPhone.addEventListener('input', (e) => {
       const formatted = utils.formatPhone(e.target.value);
       e.target.value = formatted;
 
@@ -931,10 +961,14 @@ function renderSignUp() {
       }
 
       utils.updateSubmitButton();
-    });
+      });
+    } else {
+      console.error('❌ userPhone 요소를 찾을 수 없음');
+    }
 
     // 전화번호 중복 확인
-    elements.checkPhoneBtn.addEventListener('click', async () => {
+    if (elements.checkPhoneBtn) {
+      elements.checkPhoneBtn.addEventListener('click', async () => {
       const phone = elements.userPhone.value.trim();
       const result = utils.validatePhone(phone);
 
@@ -975,10 +1009,14 @@ function renderSignUp() {
         elements.checkPhoneBtn.textContent = '전화번호 중복확인';
         utils.updateSubmitButton();
       }
-    });
+      });
+    } else {
+      console.error('❌ checkPhoneBtn 요소를 찾을 수 없음');
+    }
 
     // 폼 제출
-    elements.form.addEventListener('submit', async (e) => {
+    if (elements.form) {
+      elements.form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
       const formData = {
@@ -1026,10 +1064,14 @@ function renderSignUp() {
         utils.showLoading(false);
         alert(error.message || '회원가입 중 오류가 발생했습니다. 다시 시도해주세요.');
       }
-    });
+      });
+    } else {
+      console.error('❌ form 요소를 찾을 수 없음');
+    }
 
     // 로그인 페이지로 이동
-    elements.goToLoginBtn.addEventListener('click', () => {
+    if (elements.goToLoginBtn) {
+      elements.goToLoginBtn.addEventListener('click', () => {
       if (typeof renderLogin === 'function') {
         renderLogin();
       } else if (typeof window.renderLogin === 'function') {
@@ -1049,7 +1091,10 @@ function renderSignUp() {
         };
         document.head.appendChild(script);
       }
-    });
+      });
+    } else {
+      console.error('❌ goToLoginBtn 요소를 찾을 수 없음');
+    }
   };
 
   // 초기화
