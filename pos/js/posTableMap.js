@@ -105,11 +105,47 @@ const POSTableMap = {
      * 점유된 테이블 내용 렌더링
      */
     renderOccupiedContent(table) {
+        const orderItemsHTML = this.renderOrderItemsList(table.orderItems || []);
+        
         return `
             <div class="order-summary">
                 <div class="order-count">${table.orderCount}개 주문</div>
                 <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
                 <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
+                ${orderItemsHTML}
+            </div>
+        `;
+    },
+
+    /**
+     * 주문 아이템 목록 렌더링
+     */
+    renderOrderItemsList(orderItems) {
+        if (!orderItems || orderItems.length === 0) {
+            return '';
+        }
+
+        // 최대 3개 아이템만 표시
+        const displayItems = orderItems.slice(0, 3);
+        const hasMore = orderItems.length > 3;
+
+        const itemsHTML = displayItems.map(item => `
+            <div class="order-item-detail">
+                <span class="item-name">${item.menuName}</span>
+                <span class="item-quantity">×${item.quantity}</span>
+            </div>
+        `).join('');
+
+        const moreHTML = hasMore ? `
+            <div class="order-item-more">
+                +${orderItems.length - 3}개 더
+            </div>
+        ` : '';
+
+        return `
+            <div class="order-items-list">
+                ${itemsHTML}
+                ${moreHTML}
             </div>
         `;
     },
@@ -194,36 +230,82 @@ const POSTableMap = {
             );
             const ordersData = await ordersResponse.json();
 
-            // 실제 DB 테이블만 처리
-            const tables = tablesData.tables.map((dbTable) => {
-                const activeOrder = ordersData.success
-                    ? ordersData.activeOrders.find(
-                          (order) => order.tableNumber === dbTable.tableNumber,
-                      )
-                    : null;
+            // 각 테이블별 주문 아이템 상세 정보 로드
+            const tablesWithDetails = await Promise.all(
+                tablesData.tables.map(async (dbTable) => {
+                    const activeOrder = ordersData.success
+                        ? ordersData.activeOrders.find(
+                              (order) => order.tableNumber === dbTable.tableNumber,
+                          )
+                        : null;
 
-                return {
-                    tableNumber: dbTable.tableNumber,
-                    capacity: dbTable.capacity || 4,
-                    isActive: dbTable.isActive !== false,
-                    isOccupied: !!activeOrder,
-                    totalAmount: activeOrder?.totalAmount || 0,
-                    orderCount: activeOrder?.itemCount || 0,
-                    isFromTLG: activeOrder?.sourceSystem === "TLL",
-                    occupiedSince: activeOrder?.openedAt,
-                    checkId: activeOrder?.checkId,
-                };
-            });
+                    let orderItems = [];
+                    if (activeOrder) {
+                        try {
+                            // 해당 테이블의 주문 아이템 상세 정보 조회
+                            const itemsResponse = await fetch(
+                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`
+                            );
+                            const itemsData = await itemsResponse.json();
+                            
+                            if (itemsData.success && itemsData.orderItems) {
+                                // 메뉴별로 수량 통합
+                                const consolidatedItems = this.consolidateOrderItems(itemsData.orderItems);
+                                orderItems = consolidatedItems;
+                            }
+                        } catch (error) {
+                            console.error(`❌ 테이블 ${dbTable.tableNumber} 주문 아이템 로드 실패:`, error);
+                        }
+                    }
+
+                    return {
+                        tableNumber: dbTable.tableNumber,
+                        capacity: dbTable.capacity || 4,
+                        isActive: dbTable.isActive !== false,
+                        isOccupied: !!activeOrder,
+                        totalAmount: activeOrder?.totalAmount || 0,
+                        orderCount: activeOrder?.itemCount || 0,
+                        isFromTLG: activeOrder?.sourceSystem === "TLL",
+                        occupiedSince: activeOrder?.openedAt,
+                        checkId: activeOrder?.checkId,
+                        orderItems: orderItems, // 주문 아이템 상세 정보 추가
+                    };
+                })
+            );
 
             // 테이블 번호순으로 정렬
-            tables.sort((a, b) => a.tableNumber - b.tableNumber);
+            tablesWithDetails.sort((a, b) => a.tableNumber - b.tableNumber);
 
-            console.log(`✅ 실제 테이블 ${tables.length}개 로드 완료`);
-            return tables;
+            console.log(`✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (상세 정보 포함)`);
+            return tablesWithDetails;
         } catch (error) {
             console.error("❌ 테이블 정보 로드 실패:", error);
             return [];
         }
+    },
+
+    /**
+     * 주문 아이템 통합 (메뉴명과 단가로 그룹화)
+     */
+    consolidateOrderItems(orderItems) {
+        const consolidated = {};
+        
+        orderItems.forEach(item => {
+            const key = `${item.menu_name}_${item.unit_price}`;
+            
+            if (consolidated[key]) {
+                consolidated[key].quantity += item.quantity;
+            } else {
+                consolidated[key] = {
+                    menuName: item.menu_name,
+                    price: item.unit_price,
+                    quantity: item.quantity,
+                    cookStation: item.cook_station || 'KITCHEN'
+                };
+            }
+        });
+        
+        return Object.values(consolidated);
     },
 
     /**
