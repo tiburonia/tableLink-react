@@ -189,7 +189,8 @@ router.post('/process-with-customer', async (req, res) => {
       tableNumber,
       customerType, // 'member' 또는 'guest'
       guestPhone, // 비회원 전화번호 (선택사항)
-      memberPhone // 회원 전화번호
+      memberPhone, // 회원 전화번호
+      memberId // 회원 ID
     } = req.body;
 
     console.log(`💳 POS 회원/비회원 결제 처리 시작:`, {
@@ -247,26 +248,54 @@ router.post('/process-with-customer', async (req, res) => {
 
       console.log(`✅ 주문 ${orderId}에 게스트 전화번호 ${guestPhone} 연결`);
 
-    } else if (customerType === 'member' && memberPhone) {
-      // 회원 처리
-      console.log(`🎫 회원 전화번호 처리: ${memberPhone}`);
+    } else if (customerType === 'member' && (memberId || memberPhone)) {
+      // 회원 처리 - memberId 우선, 없으면 memberPhone으로 조회
+      console.log(`🎫 회원 처리 시작: memberId=${memberId}, memberPhone=${memberPhone}`);
 
-      // 회원 조회
-      const memberResult = await client.query(`
-        SELECT id, name, point FROM users 
-        WHERE phone = $1
-      `, [memberPhone]);
+      let memberResult;
 
-      if (memberResult.rows.length === 0) {
+      if (memberId) {
+        // memberId가 있으면 ID로 직접 조회
+        memberResult = await client.query(`
+          SELECT id, name, point, phone FROM users 
+          WHERE id = $1
+        `, [memberId]);
+
+        if (memberResult.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            error: '해당 회원 ID로 등록된 회원을 찾을 수 없습니다'
+          });
+        }
+
+        console.log(`🔍 회원 ID로 조회 성공: ${memberResult.rows[0].name}`);
+      } else if (memberPhone) {
+        // memberPhone으로 조회
+        memberResult = await client.query(`
+          SELECT id, name, point, phone FROM users 
+          WHERE phone = $1
+        `, [memberPhone]);
+
+        if (memberResult.rows.length === 0) {
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            error: '해당 전화번호로 등록된 회원을 찾을 수 없습니다'
+          });
+        }
+
+        console.log(`🔍 전화번호로 조회 성공: ${memberResult.rows[0].name}`);
+      } else {
         await client.query('ROLLBACK');
-        return res.status(404).json({
+        return res.status(400).json({
           success: false,
-          error: '해당 전화번호로 등록된 회원을 찾을 수 없습니다'
+          error: '회원 ID 또는 전화번호가 필요합니다'
         });
       }
 
       userId = memberResult.rows[0].id;
-      console.log(`🔍 회원 발견: ID ${userId}, 이름: ${memberResult.rows[0].name}`);
+      console.log(`🔍 회원 발견: ID ${userId}, 이름: ${memberResult.rows[0].name}, 포인트: ${memberResult.rows[0].point}`);
 
       // 주문에 회원 정보 업데이트
       await client.query(`

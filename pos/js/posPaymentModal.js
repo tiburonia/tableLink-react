@@ -8,6 +8,8 @@ const POSPaymentModal = {
     isVisible: false,
     selectedCustomerType: 'guest', // 'member' 또는 'guest'
     guestPhoneNumber: '',
+    selectedMember: null, // 선택된 회원 정보
+    selectedMemberId: null, // 선택된 회원 ID
 
     /**
      * 결제 모달 표시
@@ -111,6 +113,8 @@ const POSPaymentModal = {
     reset() {
         this.hide();
         this.currentPaymentData = null;
+        this.selectedMember = null;
+        this.selectedMemberId = null;
     },
 
     /**
@@ -221,10 +225,7 @@ const POSPaymentModal = {
                             <button class="member-search-btn" id="memberSearchBtn">회원 조회</button>
                         </div>
                         <div class="member-info-display" id="memberInfoDisplay" style="display: none;">
-                            <div class="member-details">
-                                <span class="member-name" id="memberName"></span>
-                                <span class="member-points" id="memberPoints"></span>
-                            </div>
+                            <!-- 회원 정보 카드가 여기에 동적으로 생성됩니다 -->
                         </div>
                     </div>
 
@@ -513,8 +514,7 @@ const POSPaymentModal = {
     async searchMember() {
         const memberPhoneInput = document.getElementById('memberPhoneInput');
         const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-        const memberName = document.getElementById('memberName');
-        const memberPoints = document.getElementById('memberPoints');
+        const memberSearchBtn = document.getElementById('memberSearchBtn');
 
         const phoneNumber = memberPhoneInput.value.trim();
         if (!phoneNumber) {
@@ -522,26 +522,120 @@ const POSPaymentModal = {
             return;
         }
 
+        // 로딩 상태로 변경
+        const originalText = memberSearchBtn.textContent;
+        memberSearchBtn.textContent = '조회중...';
+        memberSearchBtn.disabled = true;
+
         try {
             console.log('🔍 회원 조회 요청:', phoneNumber);
 
-            // 회원 조회 API 호출 (실제 구현 필요)
             const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
             const data = await response.json();
 
             if (data.success && data.user) {
-                memberName.textContent = data.user.name || '회원';
-                memberPoints.textContent = `${(data.user.point || 0).toLocaleString()}P`;
+                // 회원 정보를 저장
+                this.selectedMember = data.user;
+                
+                // 회원 정보 카드 UI 생성
+                this.renderMemberInfoCard(data.user);
                 memberInfoDisplay.style.display = 'block';
+                
                 console.log('✅ 회원 조회 성공:', data.user);
             } else {
+                this.selectedMember = null;
                 memberInfoDisplay.style.display = 'none';
+                memberInfoDisplay.innerHTML = '';
                 alert('해당 전화번호로 등록된 회원을 찾을 수 없습니다.');
             }
         } catch (error) {
             console.error('❌ 회원 조회 실패:', error);
+            this.selectedMember = null;
+            memberInfoDisplay.style.display = 'none';
+            memberInfoDisplay.innerHTML = '';
             alert('회원 조회 중 오류가 발생했습니다.');
+        } finally {
+            // 버튼 상태 복원
+            memberSearchBtn.textContent = originalText;
+            memberSearchBtn.disabled = false;
         }
+    },
+
+    /**
+     * 회원 정보 카드 UI 렌더링
+     */
+    renderMemberInfoCard(user) {
+        const memberInfoDisplay = document.getElementById('memberInfoDisplay');
+        
+        memberInfoDisplay.innerHTML = `
+            <div class="member-card ${this.selectedMemberId === user.id ? 'selected' : ''}" 
+                 data-member-id="${user.id}" 
+                 onclick="POSPaymentModal.selectMember(${user.id})">
+                <div class="member-card-header">
+                    <div class="member-avatar">
+                        <span class="member-initial">${user.name ? user.name.charAt(0) : '회'}</span>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">${user.name || '회원'}</div>
+                        <div class="member-phone">${user.phone}</div>
+                    </div>
+                    <div class="member-status">
+                        <span class="status-badge member">회원</span>
+                    </div>
+                </div>
+                
+                <div class="member-card-body">
+                    <div class="member-stats">
+                        <div class="stat-item">
+                            <div class="stat-label">보유 포인트</div>
+                            <div class="stat-value points">${(user.point || 0).toLocaleString()}P</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">가입일</div>
+                            <div class="stat-value">${user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="member-benefits">
+                        <div class="benefit-item">
+                            <span class="benefit-icon">🎯</span>
+                            <span class="benefit-text">결제 시 1% 포인트 적립</span>
+                        </div>
+                        ${user.point >= 1000 ? 
+                            `<div class="benefit-item">
+                                <span class="benefit-icon">💰</span>
+                                <span class="benefit-text">포인트 사용 가능</span>
+                            </div>` : ''
+                        }
+                    </div>
+                </div>
+                
+                <div class="member-card-footer">
+                    <div class="selection-indicator">
+                        <span class="check-icon">✓</span>
+                        <span class="selection-text">선택됨</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 회원 선택
+     */
+    selectMember(memberId) {
+        this.selectedMemberId = memberId;
+        
+        // 모든 회원 카드의 선택 상태 업데이트
+        document.querySelectorAll('.member-card').forEach(card => {
+            if (parseInt(card.dataset.memberId) === memberId) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+        
+        console.log('👤 회원 선택:', memberId);
     },
 
     /**
@@ -604,21 +698,27 @@ const POSPaymentModal = {
 
             // 회원 결제시 회원 정보 검증
             let memberPhone = null;
+            let memberId = null;
             if (this.selectedCustomerType === 'member') {
-                const memberPhoneInput = document.getElementById('memberPhoneInput');
+                if (!this.selectedMember || !this.selectedMemberId) {
+                    alert('먼저 회원을 조회하고 선택해주세요.');
+                    return;
+                }
+
                 const memberInfoDisplay = document.getElementById('memberInfoDisplay');
-
-                if (!memberPhoneInput.value.trim()) {
-                    alert('회원 전화번호를 입력해주세요.');
-                    return;
-                }
-
                 if (memberInfoDisplay.style.display === 'none') {
-                    alert('먼저 회원 조회를 진행해주세요.');
+                    alert('회원 정보가 표시되지 않았습니다. 다시 조회해주세요.');
                     return;
                 }
 
-                memberPhone = memberPhoneInput.value.trim();
+                const selectedCard = document.querySelector('.member-card.selected');
+                if (!selectedCard) {
+                    alert('회원 카드를 선택해주세요.');
+                    return;
+                }
+
+                memberPhone = this.selectedMember.phone;
+                memberId = this.selectedMemberId;
             }
 
             // 결제 확인
@@ -641,7 +741,7 @@ const POSPaymentModal = {
             confirmBtn.disabled = true;
 
             // 결제 처리 API 호출
-            const paymentResult = await this.processPaymentAPI(selectedMethod, guestPhone, memberPhone);
+            const paymentResult = await this.processPaymentAPI(selectedMethod, guestPhone, memberPhone, memberId);
 
             if (paymentResult.success) {
                 console.log('✅ 결제 완료:', paymentResult);
@@ -678,7 +778,7 @@ const POSPaymentModal = {
     /**
      * 결제 처리 API 호출
      */
-    async processPaymentAPI(paymentMethod, guestPhone, memberPhone) {
+    async processPaymentAPI(paymentMethod, guestPhone, memberPhone, memberId) {
         const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
 
         console.log(`💳 결제 처리 API 호출:`, {
@@ -687,7 +787,8 @@ const POSPaymentModal = {
             amount: totalAmount,
             customerType: this.selectedCustomerType,
             guestPhone,
-            memberPhone
+            memberPhone,
+            memberId
         });
 
         const response = await fetch('/api/pos-payment/process-with-customer', {
@@ -703,7 +804,8 @@ const POSPaymentModal = {
                 tableNumber: tableNumber,
                 customerType: this.selectedCustomerType,
                 guestPhone: guestPhone,
-                memberPhone: memberPhone
+                memberPhone: memberPhone,
+                memberId: memberId
             })
         });
 
@@ -1040,27 +1142,158 @@ const POSPaymentModal = {
 
                 .member-info-display {
                     margin-top: 12px;
-                    padding: 12px;
-                    background: #ecfdf5;
-                    border: 1px solid #bbf7d0;
-                    border-radius: 8px;
                 }
 
-                .member-details {
+                .member-card {
+                    background: white;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 12px;
+                    padding: 16px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    position: relative;
+                }
+
+                .member-card:hover {
+                    border-color: #3b82f6;
+                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+                }
+
+                .member-card.selected {
+                    border-color: #059669;
+                    background: #f0fdf4;
+                    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+                }
+
+                .member-card-header {
                     display: flex;
-                    justify-content: space-between;
                     align-items: center;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                }
+
+                .member-avatar {
+                    width: 40px;
+                    height: 40px;
+                    background: #3b82f6;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: 600;
+                    font-size: 16px;
+                }
+
+                .member-info {
+                    flex: 1;
                 }
 
                 .member-name {
                     font-weight: 600;
-                    color: #065f46;
+                    color: #1f2937;
+                    font-size: 16px;
+                    margin-bottom: 2px;
                 }
 
-                .member-points {
+                .member-phone {
+                    color: #6b7280;
                     font-size: 14px;
-                    color: #059669;
+                }
+
+                .member-status .status-badge {
+                    background: #dbeafe;
+                    color: #1d4ed8;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-size: 12px;
                     font-weight: 600;
+                }
+
+                .member-card-body {
+                    margin-bottom: 12px;
+                }
+
+                .member-stats {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 16px;
+                    margin-bottom: 12px;
+                }
+
+                .stat-item {
+                    text-align: center;
+                }
+
+                .stat-label {
+                    font-size: 12px;
+                    color: #6b7280;
+                    margin-bottom: 4px;
+                }
+
+                .stat-value {
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .stat-value.points {
+                    color: #059669;
+                    font-size: 16px;
+                }
+
+                .member-benefits {
+                    padding: 8px 0;
+                    border-top: 1px solid #f3f4f6;
+                }
+
+                .benefit-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 12px;
+                    color: #4b5563;
+                    margin-bottom: 4px;
+                }
+
+                .benefit-item:last-child {
+                    margin-bottom: 0;
+                }
+
+                .benefit-icon {
+                    font-size: 14px;
+                }
+
+                .member-card-footer {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .member-card.selected .member-card-footer {
+                    opacity: 1;
+                }
+
+                .selection-indicator {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    color: #059669;
+                    font-size: 12px;
+                    font-weight: 600;
+                }
+
+                .check-icon {
+                    background: #059669;
+                    color: white;
+                    border-radius: 50%;
+                    width: 16px;
+                    height: 16px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 10px;
                 }
 
                 /* 결제 수단 선택 */
