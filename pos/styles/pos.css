@@ -1769,44 +1769,96 @@ body {
     }
 }
 
-/* TLL 사용자 정보 스타일 */
+/* TLL 사용자 정보 영역 스타일링 */
 .tll-user-info {
   background: #f8f9fa;
-  border: 1px solid #dee2e6;
+  border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 16px;
+  padding: 16px;
+  margin-top: 16px;
 }
 
 .tll-user-header {
   font-weight: 600;
   color: #495057;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-size: 14px;
 }
 
-.tll-user-details .user-detail-row {
+.tll-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.user-detail-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 4px;
+  align-items: center;
   font-size: 13px;
 }
 
-.tll-user-details .detail-label {
+.detail-label {
   color: #6c757d;
   font-weight: 500;
 }
 
-.tll-user-details .detail-value {
-  color: #495057;
+.detail-value {
+  color: #212529;
   font-weight: 600;
 }
 
 .no-tll-user {
+  text-align: center;
   color: #6c757d;
   font-style: italic;
-  text-align: center;
-  padding: 8px;
+}
+
+/* TLL 액션 버튼 */
+.tll-action-buttons {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.tll-action-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tll-action-btn.end-session {
+  background: #dc3545;
+  color: white;
+}
+
+.tll-action-btn.end-session:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+}
+
+.tll-action-btn.end-session:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+}
+
+.tll-action-btn .btn-icon {
+  font-size: 16px;
+}
+
+.tll-action-btn .btn-text {
+  font-size: 13px;
 }
 
 /* TLL 주문 영역 스타일 */

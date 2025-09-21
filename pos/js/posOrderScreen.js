@@ -598,6 +598,12 @@ const POSOrderScreen = {
                         <span class="detail-value">${(this.tllUserInfo.point || 0).toLocaleString()}P</span>
                     </div>
                 </div>
+                <div class="tll-action-buttons">
+                    <button class="tll-action-btn end-session" onclick="POSOrderScreen.endTLLSession()">
+                        <span class="btn-icon">🔚</span>
+                        <span class="btn-text">TLL 세션 종료</span>
+                    </button>
+                </div>
             </div>
         `;
     },
@@ -1988,6 +1994,71 @@ const POSOrderScreen = {
         }
 
         console.log(`🍽️ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
+    },
+
+    /**
+     * TLL 세션 종료
+     */
+    async endTLLSession() {
+        try {
+            // 활성 TLL 주문이 있는지 확인
+            if (!this.tllOrders || this.tllOrders.length === 0) {
+                alert('종료할 TLL 세션이 없습니다.');
+                return;
+            }
+
+            // 첫 번째 TLL 주문에서 orderId 가져오기
+            const orderId = this.tllOrders[0].order_id;
+
+            if (!orderId) {
+                console.error('❌ TLL 주문 ID를 찾을 수 없습니다');
+                alert('TLL 주문 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            const confirmMessage = `TLL 세션을 종료하시겠습니까?\n\n` +
+                                 `• 사용자: ${this.tllUserInfo?.name || '게스트'}\n` +
+                                 `• 주문 수: ${this.tllOrders.length}개\n` +
+                                 `• 주문 ID: ${orderId}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log(`🔚 TLL 세션 종료 요청: 주문 ID ${orderId}`);
+
+            const response = await fetch(`/api/orders/${orderId}/end-session`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'TLL 세션 종료 실패');
+            }
+
+            const result = await response.json();
+            console.log('✅ TLL 세션 종료 완료:', result);
+
+            // 성공 메시지
+            alert(`✅ TLL 세션이 종료되었습니다.\n주문 ID: ${orderId}`);
+
+            // TLL 관련 데이터 초기화
+            this.tllOrders = [];
+            this.tllUserInfo = null;
+
+            // UI 업데이트
+            await this.refreshOrders();
+
+            // 화면 새로고침으로 완전 초기화
+            await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+
+        } catch (error) {
+            console.error('❌ TLL 세션 종료 실패:', error);
+            alert(`TLL 세션 종료 중 오류가 발생했습니다:\n${error.message}`);
+        }
     },
 
     // 기타 기능들 (임시 구현)
