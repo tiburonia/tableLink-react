@@ -1541,7 +1541,6 @@ body {
     height: calc(100vh - 160px);
     flex: 1;
     margin: 0 auto;
-    max-width: calc(100vh - 160px);
     aspect-ratio: 1;
 }
 
