@@ -852,19 +852,31 @@ const POSPaymentModal = {
                     `처리된 티켓: ${paymentResult.totalTicketsPaid}개`;
                 alert(successMessage);
 
-                // POS 화면 새로고침
-                if (
-                    typeof POSOrderScreen !== "undefined" &&
-                    POSOrderScreen.refreshOrders
-                ) {
-                    await POSOrderScreen.refreshOrders();
+                // POS 화면 새로고침 (결제 완료 후 데이터 강제 갱신)
+                if (typeof POSOrderScreen !== "undefined") {
+                    console.log('🔄 결제 완료 후 POS 주문 데이터 강제 새로고침');
+                    
+                    // 기존 주문 데이터 완전 초기화
+                    POSOrderScreen.currentOrders = [];
+                    POSOrderScreen.cart = [];
+                    
+                    // 새로운 주문 데이터 로드
+                    if (POSOrderScreen.refreshOrders) {
+                        await POSOrderScreen.refreshOrders();
+                    }
+                    
+                    // 추가 안전장치: 직접 데이터 재로드
+                    if (POSOrderScreen.loadCurrentOrders && POSCore.storeId && this.currentPaymentData.tableNumber) {
+                        await POSOrderScreen.loadCurrentOrders(POSCore.storeId, this.currentPaymentData.tableNumber);
+                    }
+                    
+                    console.log('✅ POS 주문 데이터 새로고침 완료');
                 }
 
                 // 모달 닫기
                 this.hide();
 
                 //결제 성공 시 테이블 맵 화면 전환
-
                 if (typeof POSCore !== "undefined" && POSCore.showTableMap) {
                     setTimeout(() => {
                         POSCore.showTableMap();

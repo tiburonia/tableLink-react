@@ -1010,28 +1010,48 @@ const POSOrderScreen = {
     },
 
     /**
-     * 주문 새로고침
+     * 주문 새로고침 (결제 완료 후 확실한 데이터 갱신)
      */
     async refreshOrders() {
-        await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
-
-        // 카트가 있으면 카트 표시, 없으면 기존 주문 표시
-        if (this.cart.length > 0) {
-            await this.updateCartDisplay();
-        } else {
-            const posOrderList = document.getElementById('posOrderList');
-            if (posOrderList) {
-                posOrderList.innerHTML = this.renderPOSOrderItemsModern();
-            }
+        console.log('🔄 주문 새로고침 시작 - 기존 데이터 초기화');
+        
+        // 기존 데이터 완전 초기화
+        this.currentOrders = [];
+        this.cart = [];
+        this.tllOrders = [];
+        this.tllUserInfo = null;
+        
+        // 새로운 데이터 로드
+        if (POSCore.storeId && this.currentTable) {
+            console.log(`📡 새 데이터 로드: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`);
+            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
         }
 
-        // 결제 섹션도 업데이트
+        // UI 업데이트
+        const posOrderList = document.getElementById('posOrderList');
+        if (posOrderList) {
+            posOrderList.innerHTML = this.renderPOSOrderItemsModern();
+            console.log(`✅ POS 주문 목록 UI 업데이트 완료: ${this.currentOrders.length}개 주문`);
+        }
+
+        // TLL 주문 목록 업데이트
+        const tllOrderList = document.getElementById('tllOrderList');
+        if (tllOrderList) {
+            tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
+        }
+
+        // 주문 대시보드 업데이트 (카운트 반영)
+        this.updateOrderDashboard();
+
+        // 결제 섹션 업데이트
         const paymentSection = document.querySelector('.payment-section');
         if (paymentSection) {
             const newPaymentSection = document.createElement('div');
             newPaymentSection.innerHTML = this.renderPaymentSection();
             paymentSection.replaceWith(newPaymentSection.firstElementChild);
         }
+        
+        console.log(`✅ 주문 새로고침 완료 - POS: ${this.currentOrders.length}개, TLL: ${this.tllOrders?.length || 0}개`);
     },
 
     /**
@@ -1830,27 +1850,50 @@ const POSOrderScreen = {
     },
 
     /**
-     * 주문 대시보드 업데이트
+     * 주문 대시보드 업데이트 (확실한 카운트 반영)
      */
     updateOrderDashboard() {
         const posOrders = this.currentOrders.filter(order => !order.sessionId);
         const tllOrderCount = this.tllOrders?.length || 0;
+
+        console.log(`📊 대시보드 업데이트: POS ${posOrders.length}개, TLL ${tllOrderCount}개`);
 
         // 카운트 업데이트
         const posCard = document.querySelector('.pos-card .count');
         const tllCard = document.querySelector('.tll-card .count');
         const totalCard = document.querySelector('.total-card .count');
 
-        if (posCard) posCard.textContent = `${posOrders.length}건`;
-        if (tllCard) tllCard.textContent = `${tllOrderCount}건`;
-        if (totalCard) totalCard.textContent = `${posOrders.length + tllOrderCount}건`;
+        if (posCard) {
+            posCard.textContent = `${posOrders.length}건`;
+            console.log(`✅ POS 카드 카운트 업데이트: ${posOrders.length}건`);
+        }
+        if (tllCard) {
+            tllCard.textContent = `${tllOrderCount}건`;
+            console.log(`✅ TLL 카드 카운트 업데이트: ${tllOrderCount}건`);
+        }
+        if (totalCard) {
+            totalCard.textContent = `${posOrders.length + tllOrderCount}건`;
+            console.log(`✅ 전체 카드 카운트 업데이트: ${posOrders.length + tllOrderCount}건`);
+        }
 
-        // 탭 텍스트 업데이트
+        // 탭 텍스트 업데이트 (강제 업데이트)
         const posTab = document.querySelector('.order-tab[data-tab="pos"]');
         const tllTab = document.querySelector('.order-tab[data-tab="tll"]');
 
-        if (posTab) posTab.textContent = `💻 POS 주문 (${posOrders.length})`;
-        if (tllTab) tllTab.textContent = `📱 TLL 주문 (${tllOrderCount})`;
+        if (posTab) {
+            posTab.textContent = `💻 POS 주문 (${posOrders.length})`;
+            console.log(`✅ POS 탭 텍스트 업데이트: ${posOrders.length}개`);
+        }
+        if (tllTab) {
+            tllTab.textContent = `📱 TLL 주문 (${tllOrderCount})`;
+            console.log(`✅ TLL 탭 텍스트 업데이트: ${tllOrderCount}개`);
+        }
+
+        // 헤더의 주문 카운트도 업데이트 (있다면)
+        const headerOrderCount = document.querySelector('.header-order-count');
+        if (headerOrderCount) {
+            headerOrderCount.textContent = `${posOrders.length + tllOrderCount}`;
+        }
     },
 
     getMenuIcon(category) {
