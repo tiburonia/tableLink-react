@@ -99,7 +99,6 @@ router.get('/search-by-phone', async (req, res) => {
         name,
         phone,
         email,
-        point,
         created_at
       FROM users
       WHERE phone = $1
