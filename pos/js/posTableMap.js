@@ -113,7 +113,9 @@ const POSTableMap = {
         return `
             <div class="receipt-card">
                 <div class="receipt-header">
-                    <div class="receipt-subtitle">${sourceText}</div>
+                    <div class="receipt-header-left">
+                        <div class="receipt-subtitle">${sourceText}</div>
+                    </div>
                     <div class="receipt-time">${occupiedTime}</div>
                 </div>
                 
@@ -123,7 +125,7 @@ const POSTableMap = {
                 
                 <div class="receipt-footer">
                     <div class="receipt-total">
-                        ${(table.totalAmount || 0).toLocaleString()}
+                        ${(table.totalAmount || 0).toLocaleString()}원
                     </div>
                 </div>
             </div>
