@@ -118,12 +118,7 @@ const POSTableMap = {
      * 빈 테이블 내용 렌더링
      */
     renderEmptyContent() {
-        return `
-            <div class="empty-table">
-                <div class="empty-icon">🪑</div>
-                <div class="empty-text">빈자리</div>
-            </div>
-        `;
+        return ``;
     },
 
     /**

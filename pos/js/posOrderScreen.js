@@ -1196,6 +1196,12 @@ const POSOrderScreen = {
             const orderType = result.isGuestOrder ? '비회원' : '일반';
             this.showToast(`${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
 
+            console.log('✅ 주문 확정 후 화면 전환')
+            // 주문 완료 후 테이블 맵 화면 전환
+            setTimeout(() => {
+                POSCore.showTableMap();
+            }, 2000)
+
         } catch (error) {
             console.error('❌ 비회원 주문 확정 실패:', error);
             alert(`비회원 주문 확정 실패: ${error.message}`);
