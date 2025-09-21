@@ -618,7 +618,7 @@ router.get('/users/:userId', async (req, res) => {
       SELECT 
         o.id, 
         o.total_price, 
-        COALESCE(o.status, 'OPEN') as status,
+        COALESCE(o.session_status, 'OPEN') as session_status,
         o.created_at,
         o.table_num as table_number,
         s.id as store_id, 
@@ -799,7 +799,7 @@ router.get('/processing/:orderId', async (req, res) => {
         o.id,
         o.store_id,
         COALESCE(o.table_num, 1) as table_number,
-        COALESCE(o.status, 'OPEN') as status,
+        COALESCE(o.session_status, 'OPEN') as session_status,
         o.created_at,
         COALESCE(o.session_ended, false) as session_ended,
         COALESCE(o.total_price, 0) as base_amount,

@@ -431,7 +431,6 @@ body {
 .order-list-modern {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
     min-height: 200px;
     background: #ffffff;
     border: 1px solid #e5e7eb;

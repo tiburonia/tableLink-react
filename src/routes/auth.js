@@ -377,7 +377,7 @@ router.get('/users/favorites/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    const userCheck = await pool.query('SELECT user_id FROM users WHERE id = $1', [userId]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
     }

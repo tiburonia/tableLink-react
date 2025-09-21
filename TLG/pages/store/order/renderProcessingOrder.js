@@ -48,7 +48,7 @@ async function renderProcessingOrder(orderId) {
     }
 
     // 세션이 종료된 주문인지 확인
-    if (orderData.session_status === 'CLOSED' || orderData.session_ended) {
+    if ((orderData.session_status || 'OPEN') === 'CLOSED' || orderData.session_ended) {
       showSessionEndedState(orderData);
       return;
     }
@@ -184,8 +184,8 @@ function renderProcessingOrderUI(orderData) {
           <div class="summary-card">
             <div class="summary-header">
               <h3>📊 주문 요약</h3>
-              <div class="order-status status-${orderData.session_status.toLowerCase()}">
-                ${getStatusText(orderData.session_status)}
+              <div class="order-status status-${(orderData.session_status || 'OPEN').toLowerCase()}">
+                ${getStatusText(orderData.session_status || 'OPEN')}
               </div>
             </div>
             <div class="summary-stats">
@@ -291,7 +291,10 @@ function renderProcessingOrderUI(orderData) {
   `;
 
   // 이벤트 리스너 등록
-  setupEventListeners(orderData);
+  // DOM 요소가 완전히 렌더링된 후 이벤트 리스너 설정
+  setTimeout(() => {
+    setupEventListeners(orderData);
+  }, 100);
 }
 
 // 티켓 그리드 렌더링 (order_tickets 단위)
@@ -534,27 +537,48 @@ function getPaymentStatusText(status) {
 
 // 이벤트 리스너 설정
 function setupEventListeners(orderData) {
-  // 뒤로 가기
-  document.getElementById('backBtn').addEventListener('click', () => {
-    if (window.previousScreen === 'renderNotification') {
-      renderNotification();
-    } else if (window.previousScreen === 'renderOrderScreen' && window.previousScreenParams) {
-      // 추가 주문에서 돌아온 경우 다시 처리 중인 주문 화면으로
-      renderProcessingOrder(window.previousScreenParams.orderId);
+  try {
+    // 뒤로 가기
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        if (window.previousScreen === 'renderNotification') {
+          renderNotification();
+        } else if (window.previousScreen === 'renderOrderScreen' && window.previousScreenParams) {
+          // 추가 주문에서 돌아온 경우 다시 처리 중인 주문 화면으로
+          renderProcessingOrder(window.previousScreenParams.orderId);
+        } else {
+          renderMyPage();
+        }
+      });
     } else {
-      renderMyPage();
+      console.warn('⚠️ backBtn 요소를 찾을 수 없습니다');
     }
-  });
 
-  // 세션 종료
-  document.getElementById('endSessionBtn').addEventListener('click', () => {
-    showEndSessionConfirm(orderData.id);
-  });
+    // 세션 종료
+    const endSessionBtn = document.getElementById('endSessionBtn');
+    if (endSessionBtn) {
+      endSessionBtn.addEventListener('click', () => {
+        showEndSessionConfirm(orderData.id);
+      });
+    } else {
+      console.warn('⚠️ endSessionBtn 요소를 찾을 수 없습니다');
+    }
 
-  // 추가 주문
-  document.getElementById('addOrderBtn').addEventListener('click', () => {
-    addNewOrder(orderData.storeId, orderData.tableNumber);
-  });
+    // 추가 주문
+    const addOrderBtn = document.getElementById('addOrderBtn');
+    if (addOrderBtn) {
+      addOrderBtn.addEventListener('click', () => {
+        addNewOrder(orderData.storeId, orderData.tableNumber);
+      });
+    } else {
+      console.warn('⚠️ addOrderBtn 요소를 찾을 수 없습니다');
+    }
+
+    console.log('✅ 이벤트 리스너 설정 완료');
+  } catch (error) {
+    console.error('❌ 이벤트 설정 중 오류:', error);
+  }
 }
 
 // 세션 종료 확인 다이얼로그
@@ -745,11 +769,11 @@ function startRealTimeUpdates(orderId) {
     try {
       const orderData = await loadOrderData(orderId);
 
-      if (orderData && orderData.session_status !== 'CLOSED' && !orderData.session_ended) {
+      if (orderData && (orderData.session_status || 'OPEN') !== 'CLOSED' && !orderData.session_ended) {
         updateProcessingData(orderData);
       } else {
         clearInterval(updateInterval);
-        if (orderData && (orderData.session_status === 'CLOSED' || orderData.session_ended)) {
+        if (orderData && ((orderData.session_status || 'OPEN') === 'CLOSED' || orderData.session_ended)) {
           showSessionEndedState(orderData);
         }
       }
