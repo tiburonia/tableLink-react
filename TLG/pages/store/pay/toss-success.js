@@ -19,15 +19,35 @@ function getUrlParams() {
 
 // TableLink 메인으로 이동
 function goBack() {
-  console.log('🔄 TableLink 메인으로 이동');
+  console.log('🔄 TableLink 지도 화면으로 이동');
 
   if (window.opener) {
-    // 새 창에서 열린 경우
-    window.opener.location.href = '/';
-    window.close();
+    // 새 창에서 열린 경우 - 부모 창에서 renderMap 실행
+    try {
+      if (window.opener.renderMap && typeof window.opener.renderMap === 'function') {
+        window.opener.renderMap();
+      } else {
+        window.opener.location.href = '/';
+      }
+      window.close();
+    } catch (error) {
+      console.error('❌ 부모 창 제어 실패:', error);
+      window.opener.location.href = '/';
+      window.close();
+    }
   } else {
-    // 같은 창에서 리다이렉트된 경우
-    window.location.href = '/';
+    // 같은 창에서 리다이렉트된 경우 - 직접 renderMap 실행
+    try {
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        // renderMap 함수가 없으면 메인 페이지로 이동
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('❌ renderMap 실행 실패:', error);
+      window.location.href = '/';
+    }
   }
 }
 

@@ -636,8 +636,18 @@ window.handleTossPaymentSuccess = async function(data) {
     // 성공 알림
     alert(`✅ 결제가 완료되었습니다!\n주문번호: ${orderId}\n결제금액: ₩${parseInt(amount).toLocaleString()}`);
 
-    // 메인 화면으로 이동
-    renderMap();
+    // 지도 화면으로 이동 (로그인 상태 유지)
+    try {
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        console.error('❌ renderMap 함수를 찾을 수 없음');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('❌ renderMap 실행 실패:', error);
+      window.location.reload();
+    }
 
   } catch (error) {
     console.error('❌ 결제 처리 실패:', error);
