@@ -649,21 +649,27 @@ const POSPaymentModal = {
     },
 
     /**
-     * 회원 선택
+     * 회원 선택/선택 취소 (토글)
      */
     selectMember(memberId) {
-        this.selectedMemberId = memberId;
+        // 현재 선택된 회원과 같은 경우 선택 취소
+        if (this.selectedMemberId === memberId) {
+            this.selectedMemberId = null;
+            console.log('👤 회원 선택 취소:', memberId);
+        } else {
+            this.selectedMemberId = memberId;
+            console.log('👤 회원 선택:', memberId);
+        }
         
         // 모든 회원 카드의 선택 상태 업데이트
         document.querySelectorAll('.member-card').forEach(card => {
-            if (parseInt(card.dataset.memberId) === memberId) {
+            const cardMemberId = parseInt(card.dataset.memberId);
+            if (cardMemberId === memberId && this.selectedMemberId === memberId) {
                 card.classList.add('selected');
             } else {
                 card.classList.remove('selected');
             }
         });
-        
-        console.log('👤 회원 선택:', memberId);
     },
 
     /**
