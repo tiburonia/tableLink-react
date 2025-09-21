@@ -310,57 +310,67 @@ async function renderLogin() {
       setupLoginFormEvents();
       setupQuickAccessEvents();
 
+      // 회원가입 버튼 공통 핸들러 함수
+      const handleSignUpClick = async (e) => {
+        e.preventDefault();
+        console.log('🔄 회원가입 페이지로 이동 중...');
+        
+        try {
+          // renderSignUp 함수가 이미 로드되어 있는지 확인
+          if (typeof window.renderSignUp === 'function') {
+            console.log('✅ renderSignUp 함수 발견, 실행');
+            window.renderSignUp();
+            return;
+          }
+
+          console.log('🔄 renderSignUp 스크립트 동적 로드 시도');
+          
+          // renderSignUp 스크립트를 동적으로 로드
+          const script = document.createElement('script');
+          script.src = '/TLG/pages/auth/renderSignUp.js';
+          
+          const scriptLoadPromise = new Promise((resolve, reject) => {
+            script.onload = () => {
+              console.log('✅ renderSignUp.js 스크립트 로드 완료');
+              resolve();
+            };
+            script.onerror = (error) => {
+              console.error('❌ renderSignUp.js 스크립트 로드 실패:', error);
+              reject(error);
+            };
+          });
+          
+          document.head.appendChild(script);
+          await scriptLoadPromise;
+          
+          // 로드 후 함수 실행
+          if (typeof window.renderSignUp === 'function') {
+            console.log('✅ renderSignUp 함수 로드 완료, 실행');
+            window.renderSignUp();
+          } else {
+            throw new Error('renderSignUp 함수를 찾을 수 없습니다.');
+          }
+          
+        } catch (error) {
+          console.error('❌ 회원가입 페이지 로드 실패:', error);
+          alert('회원가입 페이지를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.');
+        }
+      };
+
       // 회원가입 링크 버튼 이벤트 리스너
       const signupCtaBtn = document.getElementById('signupCtaBtn');
       const goToSignUpBtn = document.getElementById('goToSignUpBtn');
+      
+      if (signupCtaBtn) {
+        console.log('✅ 회원가입 CTA 버튼 찾음:', signupCtaBtn);
+        signupCtaBtn.addEventListener('click', handleSignUpClick);
+      } else {
+        console.error('❌ 회원가입 CTA 버튼을 찾을 수 없음');
+      }
+      
       if (goToSignUpBtn) {
         console.log('✅ 회원가입 버튼 찾음:', goToSignUpBtn);
-        
-        goToSignUpBtn.addEventListener('click', async (e) => {
-          e.preventDefault();
-          console.log('🔄 회원가입 페이지로 이동 중...');
-          
-          try {
-            // renderSignUp 함수가 이미 로드되어 있는지 확인
-            if (typeof window.renderSignUp === 'function') {
-              console.log('✅ renderSignUp 함수 발견, 실행');
-              window.renderSignUp();
-              return;
-            }
-
-            console.log('🔄 renderSignUp 스크립트 동적 로드 시도');
-            
-            // renderSignUp 스크립트를 동적으로 로드
-            const script = document.createElement('script');
-            script.src = '/TLG/pages/auth/renderSignUp.js';
-            
-            const scriptLoadPromise = new Promise((resolve, reject) => {
-              script.onload = () => {
-                console.log('✅ renderSignUp.js 스크립트 로드 완료');
-                resolve();
-              };
-              script.onerror = (error) => {
-                console.error('❌ renderSignUp.js 스크립트 로드 실패:', error);
-                reject(error);
-              };
-            });
-            
-            document.head.appendChild(script);
-            await scriptLoadPromise;
-            
-            // 로드 후 함수 실행
-            if (typeof window.renderSignUp === 'function') {
-              console.log('✅ renderSignUp 함수 로드 완료, 실행');
-              window.renderSignUp();
-            } else {
-              throw new Error('renderSignUp 함수를 찾을 수 없습니다.');
-            }
-            
-          } catch (error) {
-            console.error('❌ 회원가입 페이지 로드 실패:', error);
-            alert('회원가입 페이지를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.');
-          }
-        });
+        goToSignUpBtn.addEventListener('click', handleSignUpClick);
       } else {
         console.error('❌ 회원가입 버튼을 찾을 수 없음');
       }
