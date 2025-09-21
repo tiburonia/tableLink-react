@@ -93,27 +93,39 @@ const POSTableMap = {
                 <!-- 좌측 상단 테이블 번호 -->
                 <div class="table-number-small">${table.tableNumber}</div>
                 
-                <!-- 카드 내용 -->
-                <div class="table-content">
-                    ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
-                </div>
+                <!-- 중앙 아이콘 및 상태 텍스트 -->
+                ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
+                
             </div>
         `;
     },
 
     /**
-     * 점유된 테이블 내용 렌더링
+     * 점유된 테이블 내용 렌더링 (영수증 스타일)
      */
     renderOccupiedContent(table) {
-        const orderItemsHTML = this.renderOrderItemsList(table.orderItems || []);
-        
+        const orderItemsHTML = this.renderReceiptOrderItems(
+            table.orderItems || [],
+        );
+        const sourceText = table.isFromTLG ? "TLL 주문" : "POS 주문";
+        const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
+
         return `
-            <div class="order-summary">
-                <div class="order-header">
-                    <div class="order-amount">${(table.totalAmount || 0).toLocaleString()}원</div>
-                    <div class="order-time">${this.formatOccupiedTime(table.occupiedSince)}</div>
+            <div class="receipt-card">
+                <div class="receipt-header">
+                    <div class="receipt-subtitle">${sourceText}</div>
+                    <div class="receipt-time">${occupiedTime}</div>
                 </div>
-                ${orderItemsHTML}
+                
+                <div class="receipt-body">
+                    ${orderItemsHTML}
+                </div>
+                
+                <div class="receipt-footer">
+                    <div class="receipt-total">
+                        ${(table.totalAmount || 0).toLocaleString()}
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -123,29 +135,33 @@ const POSTableMap = {
      */
     renderOrderItemsList(orderItems) {
         if (!orderItems || orderItems.length === 0) {
-            return '';
+            return "";
         }
 
         // 최대 4개 아이템 표시 (격자에 맞게)
         const displayItems = orderItems.slice(0, 4);
         const hasMore = orderItems.length > 4;
 
-        const itemsHTML = displayItems.map(item => {
-            const truncatedName = this.truncateMenuName(item.menuName, 6);
-            return `
+        const itemsHTML = displayItems
+            .map((item) => {
+                const truncatedName = this.truncateMenuName(item.menuName, 6);
+                return `
                 <div class="order-item-grid">
                     <span class="item-name">${truncatedName}</span>
                     <span class="item-quantity">${item.quantity}개</span>
                 </div>
             `;
-        }).join('');
+            })
+            .join("");
 
-        const moreHTML = hasMore ? `
+        const moreHTML = hasMore
+            ? `
             <div class="order-item-grid more-items">
                 <span class="item-name">외 ${orderItems.length - 4}개</span>
                 <span class="item-quantity"></span>
             </div>
-        ` : '';
+        `
+            : "";
 
         return `
             <div class="order-items-grid">
@@ -156,12 +172,57 @@ const POSTableMap = {
     },
 
     /**
+     * 영수증 스타일 주문 아이템 렌더링
+     */
+    renderReceiptOrderItems(orderItems) {
+        if (!orderItems || orderItems.length === 0) {
+            return `
+                <div class="receipt-empty">
+                    <div class="receipt-empty-text">주문 없음</div>
+                </div>
+            `;
+        }
+
+        // 최대 3개 아이템 표시
+        const displayItems = orderItems.slice(0, 3);
+        const hasMore = orderItems.length > 3;
+
+        const itemsHTML = displayItems
+            .map((item) => {
+                const truncatedName = this.truncateMenuName(item.menuName, 8);
+                return `
+                <div class="receipt-item">
+                    <div class="receipt-item-name">${truncatedName}</div>
+                    <div class="receipt-item-qty">× ${item.quantity}</div>
+                </div>
+            `;
+            })
+            .join("");
+
+        const moreHTML = hasMore
+            ? `
+            <div class="receipt-item receipt-more">
+                <div class="receipt-item-name">외 ${orderItems.length - 3}개</div>
+                <div class="receipt-item-qty"></div>
+            </div>
+        `
+            : "";
+
+        return `
+            <div class="receipt-items">
+                ${itemsHTML}
+                ${moreHTML}
+            </div>
+        `;
+    },
+
+    /**
      * 메뉴 이름 축약
      */
     truncateMenuName(menuName, maxLength) {
-        if (!menuName) return '';
+        if (!menuName) return "";
         if (menuName.length <= maxLength) return menuName;
-        return menuName.substring(0, maxLength) + '...';
+        return menuName.substring(0, maxLength) + "...";
     },
 
     /**
@@ -249,7 +310,8 @@ const POSTableMap = {
                 tablesData.tables.map(async (dbTable) => {
                     const activeOrder = ordersData.success
                         ? ordersData.activeOrders.find(
-                              (order) => order.tableNumber === dbTable.tableNumber,
+                              (order) =>
+                                  order.tableNumber === dbTable.tableNumber,
                           )
                         : null;
 
@@ -258,17 +320,23 @@ const POSTableMap = {
                         try {
                             // 해당 테이블의 주문 아이템 상세 정보 조회
                             const itemsResponse = await fetch(
-                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`
+                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
                             );
                             const itemsData = await itemsResponse.json();
-                            
+
                             if (itemsData.success && itemsData.orderItems) {
                                 // 메뉴별로 수량 통합
-                                const consolidatedItems = this.consolidateOrderItems(itemsData.orderItems);
+                                const consolidatedItems =
+                                    this.consolidateOrderItems(
+                                        itemsData.orderItems,
+                                    );
                                 orderItems = consolidatedItems;
                             }
                         } catch (error) {
-                            console.error(`❌ 테이블 ${dbTable.tableNumber} 주문 아이템 로드 실패:`, error);
+                            console.error(
+                                `❌ 테이블 ${dbTable.tableNumber} 주문 아이템 로드 실패:`,
+                                error,
+                            );
                         }
                     }
 
@@ -284,13 +352,15 @@ const POSTableMap = {
                         checkId: activeOrder?.checkId,
                         orderItems: orderItems, // 주문 아이템 상세 정보 추가
                     };
-                })
+                }),
             );
 
             // 테이블 번호순으로 정렬
             tablesWithDetails.sort((a, b) => a.tableNumber - b.tableNumber);
 
-            console.log(`✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (상세 정보 포함)`);
+            console.log(
+                `✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (상세 정보 포함)`,
+            );
             return tablesWithDetails;
         } catch (error) {
             console.error("❌ 테이블 정보 로드 실패:", error);
@@ -303,10 +373,10 @@ const POSTableMap = {
      */
     consolidateOrderItems(orderItems) {
         const consolidated = {};
-        
-        orderItems.forEach(item => {
+
+        orderItems.forEach((item) => {
             const key = `${item.menu_name}_${item.unit_price}`;
-            
+
             if (consolidated[key]) {
                 consolidated[key].quantity += item.quantity;
             } else {
@@ -314,11 +384,11 @@ const POSTableMap = {
                     menuName: item.menu_name,
                     price: item.unit_price,
                     quantity: item.quantity,
-                    cookStation: item.cook_station || 'KITCHEN'
+                    cookStation: item.cook_station || "KITCHEN",
                 };
             }
         });
-        
+
         return Object.values(consolidated);
     },
 
