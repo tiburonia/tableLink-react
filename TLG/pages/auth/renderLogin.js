@@ -284,6 +284,44 @@ async function renderLogin() {
           <span class="divider-text">또는</span>
         </div>
 
+        <!-- 회원가입 섹션 -->
+        <div class="signup-section">
+          <div class="signup-card">
+            <div class="signup-card-header">
+              <div class="signup-card-icon">✨</div>
+              <h3 class="signup-card-title">TableLink가 처음이신가요?</h3>
+              <p class="signup-card-subtitle">무료로 가입하고 편리한 주문 서비스를 경험해보세요</p>
+            </div>
+            
+            <div class="signup-benefits">
+              <div class="benefit-item">
+                <span class="benefit-icon">🎯</span>
+                <span class="benefit-text">빠른 QR 주문</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-icon">💰</span>
+                <span class="benefit-text">포인트 적립</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-icon">⭐</span>
+                <span class="benefit-text">매장 즐겨찾기</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-icon">🔔</span>
+                <span class="benefit-text">주문 알림</span>
+              </div>
+            </div>
+
+            <button type="button" class="signup-cta-btn" id="signupCtaBtn">
+              <span class="signup-cta-icon">🚀</span>
+              <div class="signup-cta-content">
+                <span class="signup-cta-title">무료 회원가입</span>
+                <span class="signup-cta-desc">30초면 완료</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
         ${createQuickAccess()}
 
         <!-- 회원가입 링크 -->
@@ -302,7 +340,82 @@ async function renderLogin() {
       setupLoginFormEvents();
       setupQuickAccessEvents();
 
-      // 회원가입 버튼 이벤트 리스너
+      // 회원가입 CTA 버튼 이벤트 리스너
+      const signupCtaBtn = document.getElementById('signupCtaBtn');
+      if (signupCtaBtn) {
+        console.log('✅ 회원가입 CTA 버튼 찾음:', signupCtaBtn);
+        
+        signupCtaBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          console.log('🔄 회원가입 페이지로 이동 중... (CTA)');
+          
+          // 버튼 로딩 상태로 변경
+          signupCtaBtn.disabled = true;
+          signupCtaBtn.innerHTML = `
+            <span class="signup-cta-icon">⏳</span>
+            <div class="signup-cta-content">
+              <span class="signup-cta-title">로딩 중...</span>
+              <span class="signup-cta-desc">잠시만 기다리세요</span>
+            </div>
+          `;
+          
+          try {
+            // renderSignUp 함수가 이미 로드되어 있는지 확인
+            if (typeof window.renderSignUp === 'function') {
+              console.log('✅ renderSignUp 함수 발견, 실행');
+              window.renderSignUp();
+              return;
+            }
+
+            console.log('🔄 renderSignUp 스크립트 동적 로드 시도');
+            
+            // renderSignUp 스크립트를 동적으로 로드
+            const script = document.createElement('script');
+            script.src = '/TLG/pages/auth/renderSignUp.js';
+            
+            const scriptLoadPromise = new Promise((resolve, reject) => {
+              script.onload = () => {
+                console.log('✅ renderSignUp.js 스크립트 로드 완료');
+                resolve();
+              };
+              script.onerror = (error) => {
+                console.error('❌ renderSignUp.js 스크립트 로드 실패:', error);
+                reject(error);
+              };
+            });
+            
+            document.head.appendChild(script);
+            await scriptLoadPromise;
+            
+            // 로드 후 함수 실행
+            if (typeof window.renderSignUp === 'function') {
+              console.log('✅ renderSignUp 함수 로드 완료, 실행');
+              window.renderSignUp();
+            } else {
+              throw new Error('renderSignUp 함수를 찾을 수 없습니다.');
+            }
+            
+          } catch (error) {
+            console.error('❌ 회원가입 페이지 로드 실패:', error);
+            
+            // 버튼 원래 상태로 복구
+            signupCtaBtn.disabled = false;
+            signupCtaBtn.innerHTML = `
+              <span class="signup-cta-icon">🚀</span>
+              <div class="signup-cta-content">
+                <span class="signup-cta-title">무료 회원가입</span>
+                <span class="signup-cta-desc">30초면 완료</span>
+              </div>
+            `;
+            
+            alert('회원가입 페이지를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.');
+          }
+        });
+      } else {
+        console.error('❌ 회원가입 CTA 버튼을 찾을 수 없음');
+      }
+
+      // 기존 회원가입 버튼 이벤트 리스너
       const goToSignUpBtn = document.getElementById('goToSignUpBtn');
       if (goToSignUpBtn) {
         console.log('✅ 회원가입 버튼 찾음:', goToSignUpBtn);
