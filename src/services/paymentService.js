@@ -119,32 +119,8 @@ class PaymentService {
    * 기존 주문 확인 또는 새 주문 생성
    */
   async getOrCreateOrder(client, orderData) {
-    // 기존 OPEN 주문 확인
-    const existingOrderResult = await client.query(`
-      SELECT id FROM orders 
-      WHERE store_id = $1 AND user_id = $2 AND session_status = 'OPEN'
-      LIMIT 1
-    `, [orderData.storeId, orderData.userPk]);
-
-    if (existingOrderResult.rows.length > 0) {
-      // 기존 주문에 결제가 완료되면 세션 종료
-      await client.query(`
-        UPDATE orders 
-        SET session_status = 'CLOSED',
-            session_ended = true,
-            session_ended_at = CURRENT_TIMESTAMP,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1
-      `, [existingOrderResult.rows[0].id]);
-
-      console.log(`✅ 기존 주문 ${existingOrderResult.rows[0].id} 세션 종료 처리 완료`);
-
-      return {
-        orderIdToUse: existingOrderResult.rows[0].id,
-        isNewOrder: false
-      };
-    }
-
+    
+   
     // 새 주문 생성 (즉시 CLOSED 상태로 생성)
     const newOrderResult = await client.query(`
       INSERT INTO orders (
@@ -157,7 +133,7 @@ class PaymentService {
         table_num,
         session_ended,
         session_ended_at
-      ) VALUES ($1, $2, 'TLL', 'CLOSED', 'PAID', $3, $4, true, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false, CURRENT_TIMESTAMP)
       RETURNING id
     `, [
       orderData.storeId,
