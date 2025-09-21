@@ -257,7 +257,7 @@ router.post('/process-with-customer', async (req, res) => {
       if (memberId) {
         // memberId가 있으면 ID로 직접 조회
         memberResult = await client.query(`
-          SELECT id, name, point, phone FROM users 
+          SELECT id, name, phone FROM users 
           WHERE id = $1
         `, [memberId]);
 
@@ -419,19 +419,7 @@ router.post('/process-with-customer', async (req, res) => {
       console.log(`✅ 주문 ${orderId} 전체 결제 완료 및 세션 종료`);
     }
 
-    // 7. 회원인 경우 포인트 적립
-    if (customerType === 'member' && userId) {
-      const points = Math.floor(amount * 0.01); // 1% 포인트 적립
-
-      await client.query(`
-        UPDATE users 
-        SET point = COALESCE(point, 0) + $1
-        WHERE id = $2
-      `, [points, userId]);
-
-      console.log(`🎉 회원 ${userId} 포인트 적립: ${points}P`);
-    }
-
+  
 
 
 
