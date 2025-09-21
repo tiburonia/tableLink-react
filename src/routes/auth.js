@@ -22,7 +22,7 @@ router.post('/users/check-id', async (req, res) => {
   }
 
   try {
-    const result = await pool.query('SELECT id FROM users WHERE id = $1', [id.trim()]);
+    const result = await pool.query('SELECT user_id FROM users WHERE user_id = $1', [id.trim()]);
 
     if (result.rows.length > 0) {
       console.log(`❌ 아이디 중복: ${id}`);
@@ -52,7 +52,7 @@ router.post('/users/check-phone', async (req, res) => {
   }
 
   try {
-    const result = await pool.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
+    const result = await pool.query('SELECT user_id FROM users WHERE phone = $1', [phone.trim()]);
 
     if (result.rows.length > 0) {
       console.log(`❌ 전화번호 중복: ${phone}`);
@@ -75,113 +75,87 @@ router.post('/users/signup', async (req, res) => {
     const { id, pw, name, phone } = req.body;
 
     if (!id || !pw) {
-      return res.status(400).json({ error: '아이디와 비밀번호는 필수입니다' });
+      return res.status(400).json({ 
+        success: false,
+        error: '아이디와 비밀번호는 필수입니다' 
+      });
     }
 
     if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-      return res.status(400).json({ error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
+      return res.status(400).json({ 
+        success: false,
+        error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' 
+      });
     }
 
     if (pw.length < 4) {
-      return res.status(400).json({ error: '비밀번호는 최소 4자 이상이어야 합니다' });
+      return res.status(400).json({ 
+        success: false,
+        error: '비밀번호는 최소 4자 이상이어야 합니다' 
+      });
     }
 
     if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
-      return res.status(400).json({ error: '전화번호 형식이 올바르지 않습니다' });
+      return res.status(400).json({ 
+        success: false,
+        error: '전화번호 형식이 올바르지 않습니다' 
+      });
     }
 
     await client.query('BEGIN');
 
     const cleanedData = {
-      id: id.trim(),
-      pw: pw.trim(),
+      user_id: id.trim(),
+      user_pw: pw.trim(),
       name: name ? name.trim() : null,
       phone: phone ? phone.trim() : null
     };
 
-    // 회원 생성
-    await client.query(`
+    // 실제 users 테이블 스키마에 맞춰 회원 생성
+    const result = await client.query(`
       INSERT INTO users (
-        id, pw, name, phone, 
-        email_notifications, sms_notifications, push_notifications
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        user_id, user_pw, name, phone, 
+        email, address, birth, gender
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, user_id, name, phone
     `, [
-      cleanedData.id, 
-      cleanedData.pw, 
+      cleanedData.user_id, 
+      cleanedData.user_pw, 
       cleanedData.name, 
       cleanedData.phone,
-      true, true, false
+      null, null, null, null
     ]);
 
-    console.log(`✅ 새 사용자 가입: ${cleanedData.id} (${cleanedData.name || '익명'})`);
-
-    // 🔄 전화번호가 있는 경우 기존 게스트 주문 자동 연결
-    let transferredChecks = 0;
-
-    if (cleanedData.phone) {
-      console.log(`🔍 전화번호 ${cleanedData.phone}로 기존 게스트 주문 확인 중...`);
-
-      // 게스트 체크들을 회원으로 이전
-      const transferResult = await client.query(`
-        UPDATE checks 
-        SET user_id = $1, guest_phone = NULL
-        WHERE guest_phone = $2 AND status = 'closed'
-        RETURNING id, store_id, final_amount
-      `, [cleanedData.id, cleanedData.phone]);
-
-      transferredChecks = transferResult.rows.length;
-
-      // 매장별 통계 정보 생성
-      if (transferResult.rows.length > 0) {
-        const statsData = {};
-        for (const check of transferResult.rows) {
-          const storeId = check.store_id;
-          if (!statsData[storeId]) {
-            statsData[storeId] = { totalSpent: 0, visitCount: 0, points: 0 };
-          }
-          statsData[storeId].totalSpent += check.final_amount;
-          statsData[storeId].visitCount += 1;
-          statsData[storeId].points += Math.floor(check.final_amount * 0.01);
-        }
-
-        for (const [storeId, stats] of Object.entries(statsData)) {
-          await client.query(`
-            INSERT INTO user_store_stats (user_id, store_id, points, total_spent, visit_count)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [cleanedData.id, parseInt(storeId), stats.points, stats.totalSpent, stats.visitCount]);
-        }
-
-        console.log(`✅ ${Object.keys(statsData).length}개 매장 통계 정보 생성 완료`);
-      }
-
-      // 게스트 데이터 삭제
-      if (transferredChecks > 0) {
-        await client.query('DELETE FROM guests WHERE phone = $1', [cleanedData.phone]);
-        console.log(`🗑️ 게스트 데이터 정리 완료: ${cleanedData.phone}`);
-      }
-
-      console.log(`🔄 게스트 주문 자동 연결 완료 - 체크: ${transferredChecks}개`);
-    }
+    const newUser = result.rows[0];
+    console.log(`✅ 새 사용자 가입: ${newUser.user_id} (${newUser.name || '익명'})`);
 
     await client.query('COMMIT');
 
     res.json({ 
       success: true, 
-      message: '회원가입 성공',
-      transferredData: cleanedData.phone ? {
-        transferredChecks,
-        phone: cleanedData.phone
-      } : null
+      message: '회원가입이 완료되었습니다',
+      user: {
+        id: newUser.user_id,
+        userId: newUser.id,
+        name: newUser.name,
+        phone: newUser.phone
+      }
     });
 
   } catch (error) {
     await client.query('ROLLBACK');
 
     if (error.code === '23505') {
-      res.status(409).json({ error: '이미 존재하는 아이디 또는 전화번호입니다' });
+      res.status(409).json({ 
+        success: false,
+        error: '이미 존재하는 아이디 또는 전화번호입니다' 
+      });
     } else {
       console.error('회원가입 실패:', error);
-      res.status(500).json({ error: '회원가입 처리 중 오류가 발생했습니다' });
+      res.status(500).json({ 
+        success: false,
+        error: '회원가입 처리 중 오류가 발생했습니다' 
+      });
     }
   } finally {
     client.release();
@@ -199,139 +173,7 @@ async function handleLogin(req, res) {
       success: false, 
 
 
-// 📝 회원가입 (비회원 -> 회원)
-router.post('/users/signup', async (req, res) => {
-  try {
-    const { id, pw, name, phone } = req.body;
 
-    // 필수 필드 검증
-    if (!id || !pw) {
-      return res.status(400).json({
-        success: false,
-        error: '아이디와 비밀번호는 필수입니다'
-      });
-    }
-
-    // 아이디 중복 확인
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE id = $1',
-      [id]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        error: '이미 사용중인 아이디입니다'
-      });
-    }
-
-    // 전화번호 중복 확인 (전화번호가 있는 경우)
-    if (phone) {
-      const existingPhone = await pool.query(
-        'SELECT id FROM users WHERE phone = $1',
-        [phone]
-      );
-
-      if (existingPhone.rows.length > 0) {
-        return res.status(409).json({
-          success: false,
-          error: '이미 등록된 전화번호입니다'
-        });
-      }
-    }
-
-    // 새 사용자 생성
-    const result = await pool.query(`
-      INSERT INTO users (id, pw, name, phone, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      RETURNING id, name, phone, created_at
-    `, [id, pw, name || null, phone || null]);
-
-    const newUser = result.rows[0];
-
-    console.log(`✅ 회원가입 성공: ${newUser.id} (${newUser.name})`);
-
-    res.json({
-      success: true,
-      message: '회원가입이 완료되었습니다',
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        phone: newUser.phone,
-        createdAt: newUser.created_at
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ 회원가입 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '회원가입 처리 중 오류가 발생했습니다'
-    });
-  }
-});
-
-// 📝 아이디 중복 확인
-router.post('/users/check-id', async (req, res) => {
-  try {
-    const { id } = req.body;
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        error: '아이디를 입력해주세요'
-      });
-    }
-
-    const result = await pool.query(
-      'SELECT id FROM users WHERE id = $1',
-      [id]
-    );
-
-    res.json({
-      success: true,
-      available: result.rows.length === 0
-    });
-
-  } catch (error) {
-    console.error('❌ 아이디 중복 확인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '아이디 중복 확인 중 오류가 발생했습니다'
-    });
-  }
-});
-
-// 📝 전화번호 중복 확인
-router.post('/users/check-phone', async (req, res) => {
-  try {
-    const { phone } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        error: '전화번호를 입력해주세요'
-      });
-    }
-
-    const result = await pool.query(
-      'SELECT id FROM users WHERE phone = $1',
-      [phone]
-    );
-
-    res.json({
-      success: true,
-      available: result.rows.length === 0
-    });
-
-  } catch (error) {
-    console.error('❌ 전화번호 중복 확인 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: '전화번호 중복 확인 중 오류가 발생했습니다'
-    });
-  }
-});
 
       error: '아이디와 비밀번호를 입력해주세요' 
     });
