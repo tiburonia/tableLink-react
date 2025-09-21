@@ -453,11 +453,17 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 초기화
   if (preselectedStore) {
     console.log(`🏪 TLL - 매장 미리 선택됨: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
-    // 전역에서도 확인
     window.preselectedStoreForTLL = preselectedStore;
-  } else if (window.preselectedStoreForTLL) {
-    preselectedStore = window.preselectedStoreForTLL;
-    console.log(`🏪 TLL - 전역 매장 정보 사용: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
+  } else {
+    // 여러 전역 변수에서 매장 정보 찾기
+    preselectedStore = window.preselectedStoreForTLL || 
+                      window.selectedStore || 
+                      window.currentStoreForTLL || 
+                      window.currentStore;
+    
+    if (preselectedStore) {
+      console.log(`🏪 TLL - 전역 매장 정보 사용: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
+    }
   }
 
   const storeSearchInput = document.getElementById('storeSearchInput');
@@ -474,43 +480,65 @@ window.TLL = async function TLL(preselectedStore = null) {
   }
 
   // 미리 선택된 매장이 있다면 DOM 요소 초기화 후 자동 선택
-  if (preselectedStore) {
+  if (preselectedStore && preselectedStore.id && preselectedStore.name) {
     console.log(`🎯 TLL - 매장 자동 선택 시작: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
     
     // DOM 완전 렌더링 후 매장 자동 선택
     const autoSelectStore = () => {
       console.log('🔄 매장 자동 선택 시도 중...');
       
+      // DOM 요소 존재 확인
+      const storeSearchInput = document.getElementById('storeSearchInput');
+      const selectedStoreDiv = document.getElementById('selectedStore');
+      const selectedStoreName = document.getElementById('selectedStoreName');
+      
+      if (!storeSearchInput || !selectedStoreDiv || !selectedStoreName) {
+        console.warn('⚠️ DOM 요소가 아직 준비되지 않음, 재시도...');
+        setTimeout(autoSelectStore, 100);
+        return;
+      }
+      
       if (typeof window.selectStore === 'function') {
         console.log('✅ selectStore 함수 발견, 매장 자동 선택 실행');
         window.selectStore(preselectedStore.id, preselectedStore.name);
         
-        // 추가 검증: 선택이 제대로 되었는지 확인
+        // UI 강제 업데이트 (selectStore가 완료되지 않을 경우 대비)
         setTimeout(() => {
-          const selectedStoreDiv = document.getElementById('selectedStore');
-          const selectedStoreName = document.getElementById('selectedStoreName');
-          
-          if (selectedStoreDiv && selectedStoreName) {
-            if (selectedStoreDiv.style.display === 'block' && selectedStoreName.textContent === preselectedStore.name) {
-              console.log('✅ 매장 자동 선택 성공 확인');
-            } else {
-              console.warn('⚠️ 매장 자동 선택이 UI에 반영되지 않음, 재시도');
-              window.selectStore(preselectedStore.id, preselectedStore.name);
+          if (selectedStoreDiv.style.display !== 'block') {
+            console.log('🔧 UI 강제 업데이트 실행');
+            storeSearchInput.value = preselectedStore.name;
+            selectedStoreDiv.style.display = 'block';
+            selectedStoreName.textContent = preselectedStore.name;
+            
+            // 테이블 셀렉트 활성화
+            const tableSelect = document.getElementById('tableSelect');
+            if (tableSelect) {
+              tableSelect.disabled = false;
+              // 기본 테이블 옵션 설정
+              const defaultOptions = [
+                '<option value="">테이블을 선택하세요</option>',
+                '<option value="1">1번</option>',
+                '<option value="2">2번</option>',
+                '<option value="3">3번</option>',
+                '<option value="4">4번</option>',
+                '<option value="5">5번</option>'
+              ].join('');
+              tableSelect.innerHTML = defaultOptions;
             }
+            console.log('✅ 매장 정보 UI 강제 업데이트 완료');
           }
-        }, 500);
+        }, 800);
         
       } else {
         console.error('❌ selectStore 함수를 찾을 수 없음, 재시도 중...');
-        // 함수가 아직 로드되지 않았을 수 있으므로 재시도
         setTimeout(autoSelectStore, 200);
       }
     };
     
-    // 초기 시도
+    // 단계적 시도 (DOM 로딩 시간 고려)
     setTimeout(autoSelectStore, 100);
-    // 백업 시도 (혹시 첫 번째가 실패할 경우)
-    setTimeout(autoSelectStore, 500);
+    setTimeout(autoSelectStore, 300);
+    setTimeout(autoSelectStore, 600);
   }
 
   // 매장 검색 이벤트
@@ -674,9 +702,18 @@ function handleTossPaymentFailure(data) {
     console.log(`🏪 TLL - 매장 선택: ${storeName} (ID: ${storeId})`);
 
     try {
-      // 먼저 매장 정보 조회
-      console.log(`🔍 매장 ${storeId} 기본 정보 조회 중...`);
-      const storeResponse = await fetch(`/api/stores/${storeId}`, {
+      // 매장 ID 정규화
+      const normalizedStoreId = parseInt(storeId);
+      
+      if (!normalizedStoreId || !storeName) {
+        console.error('❌ 유효하지 않은 매장 정보:', { storeId, storeName });
+        alert('유효하지 않은 매장 정보입니다.');
+        return;
+      }
+
+      // 매장 정보 조회
+      console.log(`🔍 매장 ${normalizedStoreId} 기본 정보 조회 중...`);
+      const storeResponse = await fetch(`/api/stores/${normalizedStoreId}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
@@ -686,7 +723,11 @@ function handleTossPaymentFailure(data) {
       if (storeResponse.ok) {
         const storeData = await storeResponse.json();
         if (storeData.success && storeData.store) {
-          selectedStore = storeData.store;
+          selectedStore = {
+            ...storeData.store,
+            id: normalizedStoreId,
+            store_id: normalizedStoreId
+          };
           console.log(`✅ 매장 기본 정보 로드 완료: ${selectedStore.name}`);
         }
       }
@@ -694,16 +735,21 @@ function handleTossPaymentFailure(data) {
       // 매장 정보가 없으면 기본값 설정
       if (!selectedStore) {
         selectedStore = { 
-          id: parseInt(storeId), 
+          id: normalizedStoreId,
+          store_id: normalizedStoreId,
           name: storeName, 
           menu: [],
-          isOpen: true 
+          isOpen: true,
+          category: '기타',
+          address: '주소 정보 없음'
         };
         console.log(`⚠️ 매장 정보 없음, 기본값 사용: ${storeName}`);
       }
 
-      // 전역에 선택된 매장 저장
+      // 전역에 선택된 매장 저장 (여러 변수로 중복 저장)
       window.selectedStore = selectedStore;
+      window.preselectedStoreForTLL = selectedStore;
+      window.currentStoreForTLL = selectedStore;
 
       // UI 업데이트
       storeSearchInput.value = storeName;
