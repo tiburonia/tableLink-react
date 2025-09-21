@@ -109,9 +109,10 @@ const POSTableMap = {
         );
         const sourceText = table.isFromTLG ? "TLL 주문" : "POS 주문";
         const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
+        const orderSourceClass = table.isFromTLG ? "tll-order" : "pos-order";
 
         return `
-            <div class="receipt-card">
+            <div class="receipt-card ${orderSourceClass}">
                 <div class="receipt-header">
                     <div class="receipt-header-left">
                         <div class="receipt-subtitle">${sourceText}</div>
