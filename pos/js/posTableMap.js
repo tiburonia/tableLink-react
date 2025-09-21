@@ -320,19 +320,46 @@ const POSTableMap = {
                     let orderItems = [];
                     if (activeOrder) {
                         try {
-                            // 해당 테이블의 주문 아이템 상세 정보 조회
-                            const itemsResponse = await fetch(
-                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
-                            );
-                            const itemsData = await itemsResponse.json();
+                            if (activeOrder.sourceSystem === 'TLL') {
+                                // TLL 주문의 경우 TLL 주문 API 사용
+                                console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}`);
+                                const tllItemsResponse = await fetch(
+                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/tll-orders`,
+                                );
+                                const tllItemsData = await tllItemsResponse.json();
 
-                            if (itemsData.success && itemsData.orderItems) {
-                                // 메뉴별로 수량 통합
-                                const consolidatedItems =
-                                    this.consolidateOrderItems(
-                                        itemsData.orderItems,
-                                    );
-                                orderItems = consolidatedItems;
+                                if (tllItemsData.success && tllItemsData.tllOrders) {
+                                    // TLL 주문 데이터를 POS 형식으로 변환 후 수량 통합
+                                    const convertedItems = tllItemsData.tllOrders.map(item => ({
+                                        id: item.id,
+                                        menu_id: item.menu_id || item.id,
+                                        menu_name: item.menu_name,
+                                        unit_price: item.unit_price,
+                                        quantity: item.quantity,
+                                        total_price: item.total_price,
+                                        cook_station: item.cook_station || 'KITCHEN',
+                                        item_status: item.item_status || 'READY'
+                                    }));
+                                    
+                                    const consolidatedItems = this.consolidateOrderItems(convertedItems);
+                                    orderItems = consolidatedItems;
+                                    console.log(`✅ TLL 주문 아이템 통합 완료: ${convertedItems.length}개 → ${consolidatedItems.length}개`);
+                                }
+                            } else {
+                                // POS 주문의 경우 기존 로직 사용
+                                const itemsResponse = await fetch(
+                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
+                                );
+                                const itemsData = await itemsResponse.json();
+
+                                if (itemsData.success && itemsData.orderItems) {
+                                    // 메뉴별로 수량 통합
+                                    const consolidatedItems =
+                                        this.consolidateOrderItems(
+                                            itemsData.orderItems,
+                                        );
+                                    orderItems = consolidatedItems;
+                                }
                             }
                         } catch (error) {
                             console.error(
