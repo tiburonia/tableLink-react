@@ -305,27 +305,42 @@ async function renderLogin() {
       // 회원가입 버튼 이벤트 리스너
       const goToSignUpBtn = document.getElementById('goToSignUpBtn');
       if (goToSignUpBtn) {
-        goToSignUpBtn.addEventListener('click', () => {
-          // renderSignUp 함수 로드 및 실행
-          if (typeof renderSignUp === 'function') {
-            renderSignUp();
-          } else if (typeof window.renderSignUp === 'function') {
-            window.renderSignUp();
-          } else {
-            // renderSignUp 스크립트 동적 로드
+        goToSignUpBtn.addEventListener('click', async () => {
+          console.log('🔄 회원가입 페이지로 이동 중...');
+          
+          try {
+            // renderSignUp 함수가 이미 로드되어 있는지 확인
+            if (typeof renderSignUp === 'function') {
+              renderSignUp();
+              return;
+            } else if (typeof window.renderSignUp === 'function') {
+              window.renderSignUp();
+              return;
+            }
+
+            // renderSignUp 스크립트를 동적으로 로드
             const script = document.createElement('script');
             script.src = '/TLG/pages/auth/renderSignUp.js';
-            script.onload = () => {
-              if (typeof window.renderSignUp === 'function') {
-                window.renderSignUp();
-              } else {
-                alert('회원가입 페이지를 불러올 수 없습니다.');
-              }
-            };
-            script.onerror = () => {
-              alert('회원가입 페이지를 불러올 수 없습니다.');
-            };
+            
+            const scriptLoadPromise = new Promise((resolve, reject) => {
+              script.onload = resolve;
+              script.onerror = reject;
+            });
+            
             document.head.appendChild(script);
+            await scriptLoadPromise;
+            
+            // 로드 후 함수 실행
+            if (typeof window.renderSignUp === 'function') {
+              console.log('✅ renderSignUp 스크립트 로드 완료');
+              window.renderSignUp();
+            } else {
+              throw new Error('renderSignUp 함수를 찾을 수 없습니다.');
+            }
+            
+          } catch (error) {
+            console.error('❌ 회원가입 페이지 로드 실패:', error);
+            alert('회원가입 페이지를 불러올 수 없습니다. 새로고침 후 다시 시도해주세요.');
           }
         });
       }

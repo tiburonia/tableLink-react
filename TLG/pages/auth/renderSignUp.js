@@ -1059,7 +1059,14 @@ function renderSignUp() {
   console.log('✅ 새로운 회원가입 화면 렌더링 완료');
 }
 
-// 전역 함수로 등록
+// 전역 함수로 등록 (export도 함께 지원)
 if (typeof window !== 'undefined') {
   window.renderSignUp = renderSignUp;
+}
+
+// ES6 모듈 export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = renderSignUp;
+} else if (typeof exports !== 'undefined') {
+  exports.renderSignUp = renderSignUp;
 }
