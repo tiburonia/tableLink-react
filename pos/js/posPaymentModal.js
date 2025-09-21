@@ -14,7 +14,7 @@ const POSPaymentModal = {
     /**
      * 결제 모달 표시
      */
-    async show(paymentMethod = 'CARD') {
+    async show(paymentMethod = null) {
         console.log('🔍 결제 모달 표시 요청 (API 기반):', paymentMethod);
 
         // POSOrderScreen에서 현재 테이블 정보 가져오기
@@ -27,14 +27,14 @@ const POSPaymentModal = {
             return;
         }
 
-        // 초기 로딩 상태로 currentPaymentData 설정
+        // 초기 로딩 상태로 currentPaymentData 설정 (결제 방식 선택되지 않음)
         this.currentPaymentData = {
             totalAmount: 0,
             itemCount: 0,
             storeId: parseInt(storeId),
             tableNumber: parseInt(tableNumber),
             orderId: null,
-            paymentMethod: paymentMethod,
+            paymentMethod: null,
             isLoading: true
         };
 
@@ -53,10 +53,10 @@ const POSPaymentModal = {
             const actualPaymentInfo = await this.loadActualPaymentInfo(storeId, tableNumber);
 
             if (actualPaymentInfo) {
-                // API로부터 받은 실제 데이터로 업데이트
+                // API로부터 받은 실제 데이터로 업데이트 (결제 방식은 선택되지 않은 상태 유지)
                 this.currentPaymentData = {
                     ...actualPaymentInfo,
-                    paymentMethod: paymentMethod,
+                    paymentMethod: null,
                     isLoading: false
                 };
 
@@ -231,7 +231,7 @@ const POSPaymentModal = {
 
                     <!-- 결제 수단 선택 -->
                     <div class="payment-methods">
-                        <h3>결제 수단 선택</h3>
+                        <h3>결제 수단 선택 <span class="required-indicator">*</span></h3>
                         <div class="method-buttons">
                             <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === 'CARD' ? 'active' : ''}" data-method="CARD">
                                 <div class="method-icon">💳</div>
@@ -242,6 +242,9 @@ const POSPaymentModal = {
                                 <span>현금결제</span>
                             </button>
                         </div>
+                        ${!this.currentPaymentData.paymentMethod ? 
+                            '<div class="payment-method-notice">💡 결제 수단을 선택해주세요</div>' : ''
+                        }
                     </div>
 
                     <!-- 현금 결제 시 거스름돈 계산 -->
@@ -266,8 +269,13 @@ const POSPaymentModal = {
 
                 <div class="modal-footer">
                     <button class="cancel-btn" id="cancelPayment">취소</button>
-                    <button class="confirm-btn" id="confirmPayment">
-                        <span id="paymentBtnText">${this.currentPaymentData.paymentMethod === 'CARD' ? '카드결제 진행' : '현금결제 진행'}</span>
+                    <button class="confirm-btn ${!this.currentPaymentData.paymentMethod ? 'disabled' : ''}" 
+                            id="confirmPayment" 
+                            ${!this.currentPaymentData.paymentMethod ? 'disabled' : ''}>
+                        <span id="paymentBtnText">
+                            ${!this.currentPaymentData.paymentMethod ? '결제 수단을 선택해주세요' : 
+                              this.currentPaymentData.paymentMethod === 'CARD' ? '카드결제 진행' : '현금결제 진행'}
+                        </span>
                         <span class="amount">${totalAmount.toLocaleString()}원</span>
                     </button>
                 </div>
@@ -475,7 +483,10 @@ const POSPaymentModal = {
     handlePaymentMethodChange(method) {
         const cashSection = document.getElementById('cashSection');
         const paymentBtnText = document.getElementById('paymentBtnText');
+        const confirmBtn = document.getElementById('confirmPayment');
+        const paymentMethodNotice = document.querySelector('.payment-method-notice');
 
+        // 현금 섹션 표시/숨김
         if (cashSection) {
             if (method === 'CASH') {
                 cashSection.style.display = 'block';
@@ -484,18 +495,34 @@ const POSPaymentModal = {
             }
         }
 
-        if (paymentBtnText) {
+        // 결제 버튼 텍스트 및 상태 업데이트
+        if (paymentBtnText && confirmBtn) {
             if (method === 'CASH') {
                 paymentBtnText.textContent = '현금결제 진행';
-            } else {
+                confirmBtn.classList.remove('disabled');
+                confirmBtn.disabled = false;
+            } else if (method === 'CARD') {
                 paymentBtnText.textContent = '카드결제 진행';
+                confirmBtn.classList.remove('disabled');
+                confirmBtn.disabled = false;
+            } else {
+                paymentBtnText.textContent = '결제 수단을 선택해주세요';
+                confirmBtn.classList.add('disabled');
+                confirmBtn.disabled = true;
             }
+        }
+
+        // 안내 메시지 숨김
+        if (paymentMethodNotice) {
+            paymentMethodNotice.style.display = 'none';
         }
 
         // currentPaymentData 업데이트
         if (this.currentPaymentData) {
             this.currentPaymentData.paymentMethod = method;
         }
+
+        console.log('💳 결제 수단 변경:', method);
     },
 
     /**
@@ -671,7 +698,14 @@ const POSPaymentModal = {
      */
     async processPayment() {
         try {
-            const selectedMethod = document.querySelector('.payment-method-btn.active').dataset.method;
+            // 결제 방식 선택 여부 확인
+            const selectedMethodBtn = document.querySelector('.payment-method-btn.active');
+            if (!selectedMethodBtn) {
+                alert('결제 수단을 선택해주세요.');
+                return;
+            }
+
+            const selectedMethod = selectedMethodBtn.dataset.method;
             const { totalAmount, storeId, tableNumber, orderId } = this.currentPaymentData;
 
             // 현금 결제시 받은 금액 검증
@@ -1466,11 +1500,34 @@ const POSPaymentModal = {
                     box-shadow: 0 6px 16px rgba(5, 150, 105, 0.35);
                 }
 
-                .confirm-btn:disabled {
-                    background: #9ca3af;
-                    cursor: not-allowed;
-                    transform: none;
-                    box-shadow: none;
+                .confirm-btn:disabled,
+                .confirm-btn.disabled {
+                    background: #d1d5db !important;
+                    color: #9ca3af !important;
+                    cursor: not-allowed !important;
+                    transform: none !important;
+                    box-shadow: none !important;
+                    opacity: 0.6;
+                }
+
+                /* 필수 표시 */
+                .required-indicator {
+                    color: #dc2626;
+                    font-weight: 700;
+                    margin-left: 4px;
+                }
+
+                /* 결제 수단 선택 안내 */
+                .payment-method-notice {
+                    background: #fef3c7;
+                    border: 1px solid #fbbf24;
+                    border-radius: 8px;
+                    padding: 12px 16px;
+                    margin-top: 12px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: #92400e;
+                    text-align: center;
                 }
 
                 .confirm-btn .amount {
@@ -1662,7 +1719,7 @@ const POSPaymentModal = {
                 storeId: parseInt(storeId),
                 tableNumber: parseInt(tableNumber),
                 orderId: orderId,
-                paymentMethod: 'CARD'
+                paymentMethod: null
             };
 
         } catch (error) {
