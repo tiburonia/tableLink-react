@@ -121,7 +121,7 @@ class PaymentService {
   async getOrCreateOrder(client, orderData) {
     
    
-    // 새 주문 생성 (즉시 CLOSED 상태로 생성)
+    // 새 주문 생성 (즉시 OPEN 상태로 생성)
     const newOrderResult = await client.query(`
       INSERT INTO orders (
         store_id,

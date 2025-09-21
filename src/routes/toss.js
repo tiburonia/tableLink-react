@@ -327,7 +327,7 @@ router.post('/confirm', async (req, res) => {
       try {
         await tableUpdateClient.query(`
           UPDATE store_tables 
-          SET processing_order_id = $1
+          SET processing_order_id = $1 , status = 'OCCUPIED'
           WHERE store_id = $2 AND id = $3
         `, [result.orderId, pendingPayment.store_id, pendingPayment.table_number]);
         
