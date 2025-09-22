@@ -243,13 +243,13 @@ router.post('/pay/:checkId', async (req, res) => {
       WHERE check_id = $1 AND status != 'canceled'
     `, [parseInt(checkId)]);
 
-    // 6. 테이블 해제
+    // 6. 테이블 해제 (올바른 필드 매핑 사용)
     await client.query(`
       UPDATE store_tables 
-      SET is_occupied = false,
-          occupied_since = NULL,
-          auto_release_source = NULL
-      WHERE store_id = $1 AND table_number = $2
+      SET processing_order_id = NULL,
+          status = 'AVAILABLE',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE store_id = $1 AND id = $2
     `, [check.store_id, check.table_number]);
 
     // 7. 사용자 통계 업데이트 (회원인 경우)

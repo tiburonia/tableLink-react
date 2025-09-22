@@ -101,6 +101,21 @@ router.post('/checks/from-qr', async (req, res) => {
 
       orderId = newOrderResult.rows[0].id;
       console.log(`✅ TLL 새 주문 ${orderId} 생성 완료 (테이블 ${tableNumber})`);
+
+      // 테이블에 processing_order_id 설정 및 상태 업데이트
+      const tableUpdateResult = await client.query(`
+        UPDATE store_tables 
+        SET processing_order_id = $1,
+            status = 'OCCUPIED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE store_id = $2 AND id = $3
+      `, [orderId, storeId, tableNumber]);
+
+      if (tableUpdateResult.rowCount > 0) {
+        console.log(`✅ 테이블 ${tableNumber} processing_order_id 설정 완료: ${orderId}`);
+      } else {
+        console.warn(`⚠️ 테이블 ${tableNumber} 업데이트 실패 - 테이블이 존재하지 않음`);
+      }
     }
 
     await client.query('COMMIT');
@@ -363,9 +378,27 @@ router.post('/payments/confirm', async (req, res) => {
       SET
         status = 'COMPLETED',
         payment_status = 'PAID',
+        session_status = 'CLOSED',
+        session_ended = true,
+        session_ended_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, [check_id]);
+
+    // 테이블 해제 처리 (processing_order_id를 NULL로 설정)
+    const tableReleaseResult = await client.query(`
+      UPDATE store_tables 
+      SET processing_order_id = NULL,
+          status = 'AVAILABLE',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE store_id = $1 AND processing_order_id = $2
+    `, [order.store_id, check_id]);
+
+    if (tableReleaseResult.rowCount > 0) {
+      console.log(`✅ TLL 결제 완료 - 테이블 해제 완료: 매장 ${order.store_id}, 주문 ${check_id}`);
+    } else {
+      console.log(`ℹ️ TLL 결제 완료 - 해제할 테이블 없음: 매장 ${order.store_id}, 주문 ${check_id}`);
+    }
 
     await client.query('COMMIT');
 
