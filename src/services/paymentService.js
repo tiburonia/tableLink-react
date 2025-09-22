@@ -56,6 +56,58 @@ class PaymentService {
         providerResponse: tossResult
       });
 
+      // 6. TLL 결제 완료 시 store_tables 해제 (세션이 즉시 종료되므로)
+      let tableUpdated = false;
+
+      // 방법 1: id 필드로 매칭
+      const tableUpdateResult1 = await client.query(`
+        UPDATE store_tables
+        SET
+          processing_order_id = NULL,
+          status = 'AVAILABLE',
+          updated_at = CURRENT_TIMESTAMP
+        WHERE store_id = $1 AND id = $2
+      `, [orderData.storeId, orderData.tableNumber]);
+
+      if (tableUpdateResult1.rowCount > 0) {
+        tableUpdated = true;
+        console.log(`🍽️ TLL 결제 완료 후 테이블 해제 (id 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}`);
+      } else {
+        // 방법 2: table_number 필드로 매칭
+        const tableUpdateResult2 = await client.query(`
+          UPDATE store_tables
+          SET
+            processing_order_id = NULL,
+            status = 'AVAILABLE',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND table_number = $2
+        `, [orderData.storeId, orderData.tableNumber]);
+
+        if (tableUpdateResult2.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ TLL 결제 완료 후 테이블 해제 (table_number 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}`);
+        } else {
+          // 방법 3: processing_order_id로 매칭
+          const tableUpdateResult3 = await client.query(`
+            UPDATE store_tables
+            SET
+              processing_order_id = NULL,
+              status = 'AVAILABLE',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND processing_order_id = $2
+          `, [orderData.storeId, orderIdToUse]);
+
+          if (tableUpdateResult3.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ TLL 결제 완료 후 테이블 해제 (processing_order_id 매칭): 매장 ${orderData.storeId}, 주문 ${orderIdToUse}`);
+          }
+        }
+      }
+
+      if (!tableUpdated) {
+        console.warn(`⚠️ TLL 결제 완료 후 store_tables 업데이트 실패: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+      }
+
       await client.query('COMMIT');
 
       console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
