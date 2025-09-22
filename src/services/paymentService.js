@@ -56,25 +56,13 @@ class PaymentService {
         providerResponse: tossResult
       });
 
-      // 6. TLL 결제 완료 시 store_tables 점유 설정
+      // 6. TLL 결제 완료 시 store_tables 점유 설정 (새 주문인 경우만)
       let tableUpdated = false;
 
-      // 방법 1: id 필드로 매칭
-      const tableUpdateResult1 = await client.query(`
-        UPDATE store_tables
-        SET
-          processing_order_id = $3,
-          status = 'OCCUPIED',
-          updated_at = CURRENT_TIMESTAMP
-        WHERE store_id = $1 AND id = $2
-      `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
-
-      if (tableUpdateResult1.rowCount > 0) {
-        tableUpdated = true;
-        console.log(`🍽️ TLL 결제 완료 후 테이블 점유 (id 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
-      } else {
-        // 방법 2: table_number 필드로 매칭
-        const tableUpdateResult2 = await client.query(`
+      if (isNewOrder) {
+        // 새 주문인 경우: processing_order_id 설정 및 점유 상태로 변경
+        // 방법 1: id 필드로 매칭
+        const tableUpdateResult1 = await client.query(`
           UPDATE store_tables
           SET
             processing_order_id = $3,
@@ -83,14 +71,32 @@ class PaymentService {
           WHERE store_id = $1 AND id = $2
         `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
-        if (tableUpdateResult2.rowCount > 0) {
+        if (tableUpdateResult1.rowCount > 0) {
           tableUpdated = true;
-          console.log(`🍽️ TLL 결제 완료 후 테이블 점유 (table_number 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
-        }
-      }
+          console.log(`🍽️ TLL 새 주문 - 테이블 점유 (id 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+        } else {
+          // 방법 2: table_number 필드로 매칭
+          const tableUpdateResult2 = await client.query(`
+            UPDATE store_tables
+            SET
+              processing_order_id = $3,
+              status = 'OCCUPIED',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND table_number = $2
+          `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
-      if (!tableUpdated) {
-        console.warn(`⚠️ TLL 결제 완료 후 store_tables 업데이트 실패: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+          if (tableUpdateResult2.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ TLL 새 주문 - 테이블 점유 (table_number 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+          }
+        }
+
+        if (!tableUpdated) {
+          console.warn(`⚠️ TLL 새 주문 - store_tables 업데이트 실패: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+        }
+      } else {
+        console.log(`ℹ️ TLL 추가 주문 - store_tables 업데이트 생략: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+        tableUpdated = true; // 추가 주문은 테이블 상태를 변경하지 않으므로 성공으로 처리
       }
 
       await client.query('COMMIT');

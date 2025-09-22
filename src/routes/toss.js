@@ -140,7 +140,7 @@ router.post('/prepare', async (req, res) => {
 });
 
 /**
- * 토스페이먼츠 클라이언트 키 반환
+ * 토스페이이먼츠 클라이언트 키 반환
  */
 router.get('/client-key', (req, res) => {
   try {
@@ -219,7 +219,7 @@ router.post('/confirm', async (req, res) => {
       orderData: orderData ? '객체 존재' : '없음'
     });
 
-    // 토스페이먼츠 API로 결제 승인 요청
+    // 토스페이이먼츠 API로 결제 승인 요청
     const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
     const authHeader = Buffer.from(secretKey + ':').toString('base64');
 
@@ -253,7 +253,7 @@ router.post('/confirm', async (req, res) => {
       throw new Error(tossResult.message || '토스페이먼츠 승인 실패');
     }
 
-    console.log('✅ 토스페이먼츠 승인 성공:', tossResult);
+    console.log('✅ 토스페이이먼츠 승인 성공:', tossResult);
 
     // 주문 타입 확인 (TLL vs 일반 주문)
     const isTLLOrder = orderId.startsWith('TLL_');
@@ -322,7 +322,7 @@ router.post('/confirm', async (req, res) => {
         }
       });
 
-      
+
 
       // pending_payments 상태 업데이트
       const updateClient = await pool.connect();
@@ -354,14 +354,47 @@ router.post('/confirm', async (req, res) => {
             SET processing_order_id = $1, status = 'OCCUPIED'
             WHERE store_id = $2 AND id = $3
           `, [orderIdToUse, pendingPayment.store_id, pendingPayment.table_number]);
-          
+
           console.log(`✅ 새 TLL 주문 - store_tables 점유: 테이블 ${pendingPayment.table_number} -> 주문 ${orderIdToUse}`);
         }
 
-        // TLL 결제 완료 시 store_tables 해제 처리 (TLL 세션 종료)
-        console.log(`🔚 TLL 결제 완료 - 테이블 해제 처리 시작: 테이블 ${pendingPayment.table_number}`);
-        
-        
+        // TLL 세션 종료 시 store_tables 해제 (다른 활성 주문 확인)
+        const tableReleaseClient = await pool.connect();
+        try {
+          // 먼저 해당 테이블에 다른 활성 주문이 있는지 확인
+          const otherActiveOrdersResult = await tableReleaseClient.query(`
+            SELECT COUNT(*) as count 
+            FROM orders o
+            JOIN order_tickets ot ON o.id = ot.order_id
+            WHERE o.store_id = $1 
+              AND o.table_num = $2 
+              AND o.session_status = 'OPEN'
+              AND ot.paid_status = 'UNPAID'
+              AND o.id != $3
+          `, [pendingPayment.store_id, pendingPayment.table_number, result.orderId]);
+
+          const hasOtherActiveOrders = parseInt(otherActiveOrdersResult.rows[0].count) > 0;
+
+          if (hasOtherActiveOrders) {
+            console.log(`🔄 TLL 세션 종료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number} (현재 주문 ${result.orderId})`);
+          } else {
+            // 다른 활성 주문이 없으면 테이블 해제
+            const tableUpdateResult = await tableReleaseClient.query(`
+              UPDATE store_tables 
+              SET processing_order_id = NULL, status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [pendingPayment.store_id, pendingPayment.table_number]);
+
+            if (tableUpdateResult.rowCount > 0) {
+              console.log(`✅ TLL 세션 종료 - 테이블 해제: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
+            } else {
+              console.log(`ℹ️ TLL 세션 종료 - 해제할 테이블 없음: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
+            }
+          }
+        } finally {
+          tableReleaseClient.release();
+        }
+
       } catch (updateError) {
         console.error('❌ TLL store_tables 업데이트 실패:', updateError);
       } finally {
@@ -450,7 +483,7 @@ router.post('/confirm', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
+    console.error('❌ 토스페이이먼츠 결제 승인 실패:', error);
 
     if (!res.headersSent) {
       res.status(500).json({
