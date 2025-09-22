@@ -43,11 +43,11 @@ const POSTableMap = {
                         <span class="employee-name">매니저</span>
                     </div>
                 </div>
-                
+
                 <div class="top-bar-center">
                     <div class="current-time" id="currentTime">2024.01.27 (토) 22:31:45</div>
                 </div>
-                
+
                 <div class="top-bar-right">
                     <button class="top-btn" onclick="POSTableMap.showOrderStatus()">
                         📊 주문현황
@@ -89,13 +89,13 @@ const POSTableMap = {
             <div class="table-card ${statusClass}" 
                  data-table-number="${table.tableNumber}"
                  onclick="POSTableMap.selectTable(${table.tableNumber})">
-                
+
                 <!-- 좌측 상단 테이블 번호 -->
                 <div class="table-number-small">${table.tableNumber}</div>
-                
+
                 <!-- 중앙 아이콘 및 상태 텍스트 -->
                 ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
-                
+
             </div>
         `;
     },
@@ -119,11 +119,11 @@ const POSTableMap = {
                     </div>
                     <div class="receipt-time">${occupiedTime}</div>
                 </div>
-                
+
                 <div class="receipt-body">
                     ${orderItemsHTML}
                 </div>
-                
+
                 <div class="receipt-footer">
                     <div class="receipt-total">
                         ${(table.totalAmount || 0).toLocaleString()}원
@@ -253,7 +253,7 @@ const POSTableMap = {
                         단체
                     </button>
                 </div>
-                
+
                 <div style="margin-bottom: 24px;">
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">영수증/출력</h3>
                     <button class="side-btn" onclick="POSTableMap.receiptManagement()" style="width: 100%; background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 8px; text-align: center; transition: all 0.2s;">
@@ -263,7 +263,7 @@ const POSTableMap = {
                         재출력
                     </button>
                 </div>
-                
+
                 <div style="margin-bottom: 24px;">
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">현황/시스템</h3>
                     <button class="side-btn" onclick="POSTableMap.showSalesStatus()" style="width: 100%; background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 8px; text-align: center; transition: all 0.2s;">
@@ -273,7 +273,7 @@ const POSTableMap = {
                         ⚙️ 설정
                     </button>
                 </div>
-                
+
                 <div>
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">시스템</h3>
                     <button class="side-btn logout-btn" onclick="POSTableMap.logout()" style="width: 100%; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s;">
@@ -341,7 +341,7 @@ const POSTableMap = {
                                         cook_station: item.cook_station || 'KITCHEN',
                                         item_status: item.item_status || 'READY'
                                     }));
-                                    
+
                                     const consolidatedItems = this.consolidateOrderItems(convertedItems);
                                     orderItems = consolidatedItems;
                                     console.log(`✅ TLL 주문 아이템 통합 완료: ${convertedItems.length}개 → ${consolidatedItems.length}개`);

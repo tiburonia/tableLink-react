@@ -163,14 +163,50 @@ router.post('/process', async (req, res) => {
 
       if (hasOtherActiveOrders) {
         console.log(`🔄 POS 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${storeId}, 테이블 ${tableNumber}, 현재 주문 ${orderId}`);
-        tableUpdated = true; // 의도적으로 테이블을 그대로 두는 것이므로 성공으로 처리
+
+        // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id
+          FROM store_tables
+          WHERE store_id = $1 AND id = $2
+        `, [storeId, tableNumber]);
+
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+
+          if (currentTable.processing_order_id === orderId) {
+            // 메인 주문이 완료된 경우, spare를 main으로 이동
+            await client.query(`
+              UPDATE store_tables
+              SET
+                processing_order_id = spare_processing_order_id,
+                spare_processing_order_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [storeId, tableNumber]);
+            console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${tableNumber}`);
+          } else if (currentTable.spare_processing_order_id === orderId) {
+            // 보조 주문이 완료된 경우, spare만 해제
+            await client.query(`
+              UPDATE store_tables
+              SET
+                spare_processing_order_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [storeId, tableNumber]);
+            console.log(`🔄 POS 결제 완료 - 보조 주문만 해제: 테이블 ${tableNumber}`);
+          }
+        }
+
+        tableUpdated = true;
       } else {
-        // 다른 활성 주문이 없으면 테이블 해제
+        // 다른 활성 주문이 없으면 테이블 완전 해제
         // 방법 1: id 필드로 매칭
         const tableUpdateResult1 = await client.query(`
           UPDATE store_tables
           SET
             processing_order_id = NULL,
+            spare_processing_order_id = NULL,
             status = 'AVAILABLE',
             updated_at = CURRENT_TIMESTAMP
           WHERE store_id = $1 AND id = $2
@@ -178,13 +214,14 @@ router.post('/process', async (req, res) => {
 
         if (tableUpdateResult1.rowCount > 0) {
           tableUpdated = true;
-          console.log(`🍽️ POS 결제 완료 후 테이블 해제 (id 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
+          console.log(`🍽️ POS 결제 완료 후 테이블 완전 해제 (id 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
         } else {
           // 방법 2: table_number 필드로 매칭
           const tableUpdateResult2 = await client.query(`
             UPDATE store_tables
             SET
               processing_order_id = NULL,
+              spare_processing_order_id = NULL,
               status = 'AVAILABLE',
               updated_at = CURRENT_TIMESTAMP
             WHERE store_id = $1 AND table_number = $2
@@ -192,21 +229,22 @@ router.post('/process', async (req, res) => {
 
           if (tableUpdateResult2.rowCount > 0) {
             tableUpdated = true;
-            console.log(`🍽️ POS 결제 완료 후 테이블 해제 (table_number 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
+            console.log(`🍽️ POS 결제 완료 후 테이블 완전 해제 (table_number 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
           } else {
             // 방법 3: processing_order_id로 매칭
             const tableUpdateResult3 = await client.query(`
               UPDATE store_tables
               SET
-                processing_order_id = NULL,
-                status = 'AVAILABLE',
+                processing_order_id = CASE WHEN processing_order_id = $2 THEN spare_processing_order_id ELSE processing_order_id END,
+                spare_processing_order_id = CASE WHEN spare_processing_order_id = $2 THEN NULL ELSE spare_processing_order_id END,
+                status = CASE WHEN processing_order_id = $2 AND spare_processing_order_id IS NULL THEN 'AVAILABLE' ELSE status END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $1 AND processing_order_id = $2
+              WHERE store_id = $1 AND (processing_order_id = $2 OR spare_processing_order_id = $2)
             `, [storeId, orderId]);
 
             if (tableUpdateResult3.rowCount > 0) {
               tableUpdated = true;
-              console.log(`🍽️ POS 결제 완료 후 테이블 해제 (processing_order_id 매칭): 매장 ${storeId}, 주문 ${orderId}`);
+              console.log(`🍽️ POS 결제 완료 후 주문별 해제 처리: 매장 ${storeId}, 주문 ${orderId}`);
             }
           }
         }
@@ -522,14 +560,50 @@ router.post('/process-with-customer', async (req, res) => {
 
         if (hasOtherActiveOrders) {
           console.log(`🔄 POS 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${store_id}, 테이블 ${table_num}, 현재 주문 ${orderId}`);
-          tableUpdated = true; // 의도적으로 테이블을 그대로 두는 것이므로 성공으로 처리
+
+          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
+          const currentTableResult = await client.query(`
+            SELECT processing_order_id, spare_processing_order_id
+            FROM store_tables
+            WHERE store_id = $1 AND id = $2
+          `, [store_id, table_num]);
+
+          if (currentTableResult.rows.length > 0) {
+            const currentTable = currentTableResult.rows[0];
+
+            if (currentTable.processing_order_id === orderId) {
+              // 메인 주문이 완료된 경우, spare를 main으로 이동
+              await client.query(`
+                UPDATE store_tables
+                SET
+                  processing_order_id = spare_processing_order_id,
+                  spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${table_num}`);
+            } else if (currentTable.spare_processing_order_id === orderId) {
+              // 보조 주문이 완료된 경우, spare만 해제
+              await client.query(`
+                UPDATE store_tables
+                SET
+                  spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`🔄 POS 결제 완료 - 보조 주문만 해제: 테이블 ${table_num}`);
+            }
+          }
+
+          tableUpdated = true;
         } else {
-          // 다른 활성 주문이 없으면 테이블 해제
+          // 다른 활성 주문이 없으면 테이블 완전 해제
           // 방법 1: id 필드로 매칭
           const tableUpdateResult1 = await client.query(`
             UPDATE store_tables
             SET
               processing_order_id = NULL,
+              spare_processing_order_id = NULL,
               status = 'AVAILABLE',
               updated_at = CURRENT_TIMESTAMP
             WHERE store_id = $1 AND id = $2
@@ -537,13 +611,14 @@ router.post('/process-with-customer', async (req, res) => {
 
           if (tableUpdateResult1.rowCount > 0) {
             tableUpdated = true;
-            console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (id 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+            console.log(`🍽️ POS 결제 완료 후 테이블 완전 해제 (id 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
           } else {
             // 방법 2: table_number 필드로 매칭
             const tableUpdateResult2 = await client.query(`
               UPDATE store_tables
               SET
                 processing_order_id = NULL,
+                spare_processing_order_id = NULL,
                 status = 'AVAILABLE',
                 updated_at = CURRENT_TIMESTAMP
               WHERE store_id = $1 AND table_number = $2
@@ -551,28 +626,29 @@ router.post('/process-with-customer', async (req, res) => {
 
             if (tableUpdateResult2.rowCount > 0) {
               tableUpdated = true;
-              console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (table_number 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
+              console.log(`🍽️ POS 결제 완료 후 테이블 완전 해제 (table_number 매칭): 매장 ${store_id}, 테이블 ${table_num}`);
             } else {
               // 방법 3: processing_order_id로 매칭
               const tableUpdateResult3 = await client.query(`
                 UPDATE store_tables
                 SET
-                  processing_order_id = NULL,
-                  status = 'AVAILABLE',
+                  processing_order_id = CASE WHEN processing_order_id = $2 THEN spare_processing_order_id ELSE processing_order_id END,
+                  spare_processing_order_id = CASE WHEN spare_processing_order_id = $2 THEN NULL ELSE spare_processing_order_id END,
+                  status = CASE WHEN processing_order_id = $2 AND spare_processing_order_id IS NULL THEN 'AVAILABLE' ELSE status END,
                   updated_at = CURRENT_TIMESTAMP
-              WHERE store_id = $1 AND processing_order_id = $2
+                WHERE store_id = $1 AND (processing_order_id = $2 OR spare_processing_order_id = $2)
               `, [store_id, orderId]);
 
               if (tableUpdateResult3.rowCount > 0) {
                 tableUpdated = true;
-                console.log(`🍽️ POS 회원/비회원 결제 완료 후 테이블 해제 (processing_order_id 매칭): 매장 ${store_id}, 주문 ${orderId}`);
+                console.log(`🍽️ POS 결제 완료 후 주문별 해제 처리: 매장 ${store_id}, 주문 ${orderId}`);
               }
             }
           }
         }
 
         if (!tableUpdated) {
-          console.warn(`⚠️ POS 회원/비회원 결제 완료 후 store_tables 업데이트 실패: 매장 ${store_id}, 테이블 ${table_num}, 주문 ${orderId}`);
+          console.warn(`⚠️ POS 결제 완료 후 store_tables 업데이트 실패: 매장 ${store_id}, 테이블 ${table_num}, 주문 ${orderId}`);
         }
       }
 
