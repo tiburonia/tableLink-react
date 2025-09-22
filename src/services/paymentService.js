@@ -168,7 +168,7 @@ class PaymentService {
         payment_status,
         total_price,
         table_num,
-        session_ended,
+        session_ended
       ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false)
       RETURNING id
     `, [
