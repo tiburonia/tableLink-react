@@ -357,11 +357,11 @@ router.post('/confirm', async (req, res) => {
           const releaseResult = await tableUpdateClient.query(`
             UPDATE store_tables
             SET 
-              processing_order_id = NULL,
-              status = 'AVAILABLE',
+              processing_order_id = $3,
+              status = 'OCCUPIED',
               updated_at = CURRENT_TIMESTAMP
             WHERE store_id = $1 AND id = $2
-          `, [pendingPayment.store_id, pendingPayment.table_number]);
+          `, [pendingPayment.store_id, pendingPayment.table_number,result.orderId]);
 
           if (releaseResult.rowCount > 0) {
             console.log(`✅ TLL 세션 종료 - 테이블 해제 완료: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
