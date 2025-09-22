@@ -793,7 +793,7 @@ router.get('/processing/:orderId', async (req, res) => {
 
     const parsedOrderId = parseInt(orderId);
 
-    // 주문 기본 정보 조회
+    // 주문 기본 정보 조회 (세션 상태 정보 포함)
     const orderResult = await pool.query(`
       SELECT 
         o.id,
@@ -802,6 +802,7 @@ router.get('/processing/:orderId', async (req, res) => {
         COALESCE(o.session_status, 'OPEN') as session_status,
         o.created_at,
         COALESCE(o.session_ended, false) as session_ended,
+        o.session_ended_at,
         COALESCE(o.total_price, 0) as base_amount,
         COALESCE(s.name, '알 수 없는 매장') as store_name
       FROM orders o
@@ -909,8 +910,10 @@ router.get('/processing/:orderId', async (req, res) => {
       storeName: order.store_name,
       tableNumber: order.table_number,
       status: order.status,
+      session_status: order.session_status,
       createdAt: order.created_at,
       sessionEnded: order.session_ended,
+      session_ended_at: order.session_ended_at,
       totalOrders: ticketsWithItems.length,
       totalAmount: totalAmount,
       tickets: ticketsWithItems,

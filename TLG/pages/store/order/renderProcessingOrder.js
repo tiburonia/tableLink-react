@@ -47,8 +47,16 @@ async function renderProcessingOrder(orderId) {
       return;
     }
 
-    // 세션이 종료된 주문인지 확인
-    if (orderData.session_status === 'CLOSED') {
+    // 세션이 종료된 주문인지 확인 (여러 조건 체크)
+    const sessionStatus = orderData.session_status || 'OPEN';
+    const sessionEnded = orderData.session_ended === true || orderData.session_ended === 'true';
+
+    if (sessionStatus === 'CLOSED' || sessionEnded || orderData.session_ended_at) {
+      console.log(`⚠️ 접근 차단: 주문 ${orderId}의 세션이 종료됨`, {
+        session_status: sessionStatus,
+        session_ended: sessionEnded,
+        session_ended_at: orderData.session_ended_at
+      });
       showSessionEndedState(orderData);
       return;
     }
@@ -310,7 +318,7 @@ function renderTicketsGrid(tickets, type, paymentStatus = null) {
     const emptyMessage = type === 'TLL' ? 
       '온라인 주문이 없습니다' : 
       paymentStatus === 'UNPAID' ? '결제 대기 중인 주문이 없습니다' : '결제 완료된 주문이 없습니다';
-    
+
     console.log(`🎫 (${type}) 티켓이 없어서 빈 상태 표시`);
     return `
       <div class="no-tickets ${type.toLowerCase()}-empty">
@@ -326,7 +334,7 @@ function renderTicketsGrid(tickets, type, paymentStatus = null) {
     const statusText = getTicketStatusText(status);
     const statusClass = status.toLowerCase();
     const paidStatus = ticket.paid_status || 'PAID';
-    
+
     // 카드 클래스 조합
     let ticketTypeClass = type ? `${type.toLowerCase()}-card` : '';
     if (type === 'POS' && paymentStatus) {
@@ -415,7 +423,7 @@ function renderTicketActions(ticketId, status, type, paidStatus = 'PAID') {
 
   // 고객 관점에서는 직접 조작할 수 있는 액션이 제한적
   // 주로 상태 확인 및 문의 기능 제공
-  
+
   switch (status) {
     case 'PENDING':
       if (isTll) {
@@ -428,7 +436,7 @@ function renderTicketActions(ticketId, status, type, paidStatus = 'PAID') {
         return `<span class="status-info">🕐 조리 대기 중</span>`;
       }
       return `<span class="status-info">🕐 주문 접수됨</span>`;
-      
+
     case 'COOKING':
       if (isTll) {
         return `<span class="status-info cooking">🔥 조리 중</span>`;
@@ -437,7 +445,7 @@ function renderTicketActions(ticketId, status, type, paidStatus = 'PAID') {
         return `<span class="status-info cooking">🔥 조리 중</span>`;
       }
       return `<span class="status-info cooking">🔥 조리 중</span>`;
-      
+
     case 'READY':
       if (isTll) {
         return `<span class="status-info ready">✅ 조리 완료</span>`;
@@ -449,10 +457,10 @@ function renderTicketActions(ticketId, status, type, paidStatus = 'PAID') {
         return `<span class="status-info ready">✅ 수령 가능</span>`;
       }
       return `<span class="status-info ready">✅ 조리 완료</span>`;
-      
+
     case 'SERVED':
       return `<span class="status-info served">🎉 서빙 완료</span>`;
-      
+
     default:
       return `<span class="status-info">${getTicketStatusText(status)}</span>`;
   }
@@ -770,13 +778,28 @@ function startRealTimeUpdates(orderId) {
     try {
       const orderData = await loadOrderData(orderId);
 
-      if (orderData && (orderData.session_status || 'OPEN') !== 'CLOSED' && !orderData.session_ended) {
-        updateProcessingData(orderData);
-      } else {
-        clearInterval(updateInterval);
-        if (orderData && ((orderData.session_status || 'OPEN') === 'CLOSED' || orderData.session_ended)) {
+      if (orderData) {
+        const sessionStatus = orderData.session_status || 'OPEN';
+        const sessionEnded = orderData.session_ended === true || orderData.session_ended === 'true';
+
+        // 세션이 활성 상태인지 확인
+        const isSessionActive = sessionStatus !== 'CLOSED' && 
+                              !sessionEnded && 
+                              !orderData.session_ended_at;
+
+        if (isSessionActive) {
+          updateProcessingData(orderData);
+        } else {
+          console.log(`🔚 실시간 업데이트 중단: 주문 ${orderId} 세션 종료됨`, {
+            session_status: sessionStatus,
+            session_ended: sessionEnded,
+            session_ended_at: orderData.session_ended_at
+          });
+          clearInterval(updateInterval);
           showSessionEndedState(orderData);
         }
+      } else {
+        clearInterval(updateInterval);
       }
 
     } catch (error) {
@@ -801,7 +824,7 @@ function updateProcessingData(orderData) {
   // POS와 TLL 주문 분리
   const posTickets = orderData.tickets.filter(ticket => ticket.source === 'POS');
   const tllTickets = orderData.tickets.filter(ticket => ticket.source === 'TLL');
-  
+
   // POS 주문을 결제 상태별로 구분
   const unpaidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'UNPAID');
   const paidPosTickets = posTickets.filter(ticket => ticket.paid_status === 'PAID');
