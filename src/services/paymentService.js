@@ -169,8 +169,7 @@ class PaymentService {
         total_price,
         table_num,
         session_ended,
-        session_ended_at
-      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false)
       RETURNING id
     `, [
       orderData.storeId,
