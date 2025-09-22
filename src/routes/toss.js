@@ -361,38 +361,6 @@ router.post('/confirm', async (req, res) => {
         // TLL 결제 완료 시 store_tables 해제 처리 (TLL 세션 종료)
         console.log(`🔚 TLL 결제 완료 - 테이블 해제 처리 시작: 테이블 ${pendingPayment.table_number}`);
         
-        // 해당 테이블의 다른 활성 주문이 있는지 확인
-        const activeOrdersResult = await tableUpdateClient.query(`
-          SELECT COUNT(*) as count
-          FROM orders o
-          JOIN order_tickets ot ON o.id = ot.order_id
-          WHERE o.store_id = $1 AND o.table_num = $2 
-            AND o.session_status = 'OPEN' 
-            AND ot.paid_status = 'UNPAID'
-            AND o.id != $3
-        `, [pendingPayment.store_id, pendingPayment.table_number, orderIdToUse]);
-
-        const hasOtherActiveOrders = parseInt(activeOrdersResult.rows[0].count) > 0;
-
-        if (!hasOtherActiveOrders) {
-          // 다른 활성 주문이 없으면 테이블 해제
-          const releaseResult = await tableUpdateClient.query(`
-            UPDATE store_tables
-            SET 
-              processing_order_id = NULL,
-              status = 'AVAILABLE',
-              updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $1 AND id = $2
-          `, [pendingPayment.store_id, pendingPayment.table_number]);
-
-          if (releaseResult.rowCount > 0) {
-            console.log(`✅ TLL 세션 종료 - 테이블 해제 완료: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-          } else {
-            console.warn(`⚠️ TLL 세션 종료 - 테이블 해제 실패: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-          }
-        } else {
-          console.log(`ℹ️ TLL 세션 종료 - 다른 활성 주문 존재로 테이블 유지: 테이블 ${pendingPayment.table_number} (활성 주문 ${hasOtherActiveOrders}개)`);
-        }
         
       } catch (updateError) {
         console.error('❌ TLL store_tables 업데이트 실패:', updateError);

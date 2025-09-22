@@ -48,7 +48,7 @@ async function renderProcessingOrder(orderId) {
     }
 
     // 세션이 종료된 주문인지 확인
-    if ((orderData.session_status || 'OPEN') === 'CLOSED' || orderData.session_ended) {
+    if (orderData.session_status === 'CLOSED') {
       showSessionEndedState(orderData);
       return;
     }
