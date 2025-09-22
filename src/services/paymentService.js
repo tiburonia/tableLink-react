@@ -60,57 +60,23 @@ class PaymentService {
       let tableUpdated = false;
 
       if (isNewOrder) {
-        // 새 주문인 경우: processing_order_id 또는 spare_processing_order_id 설정
-        
-        // 먼저 현재 테이블 상태 확인
-        const currentTableResult = await client.query(`
-          SELECT processing_order_id, spare_processing_order_id, status
-          FROM store_tables
+        // 새 주문인 경우: processing_order_id 설정 및 점유 상태로 변경
+        // 방법 1: id 필드로 매칭
+        const tableUpdateResult1 = await client.query(`
+          UPDATE store_tables
+          SET
+            processing_order_id = $3,
+            status = 'OCCUPIED',
+            updated_at = CURRENT_TIMESTAMP
           WHERE store_id = $1 AND id = $2
-        `, [orderData.storeId, orderData.tableNumber]);
+        `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
-        if (currentTableResult.rows.length > 0) {
-          const currentTable = currentTableResult.rows[0];
-          const hasMainOrder = currentTable.processing_order_id !== null;
-          const hasSpareOrder = currentTable.spare_processing_order_id !== null;
-
-          if (!hasMainOrder) {
-            // processing_order_id가 비어있으면 메인 주문으로 설정
-            const tableUpdateResult = await client.query(`
-              UPDATE store_tables
-              SET
-                processing_order_id = $3,
-                status = 'OCCUPIED',
-                updated_at = CURRENT_TIMESTAMP
-              WHERE store_id = $1 AND id = $2
-            `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
-
-            if (tableUpdateResult.rowCount > 0) {
-              tableUpdated = true;
-              console.log(`🍽️ TLL 새 주문 - 메인 주문으로 테이블 점유: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
-            }
-          } else if (!hasSpareOrder) {
-            // processing_order_id는 있지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
-            const tableUpdateResult = await client.query(`
-              UPDATE store_tables
-              SET
-                spare_processing_order_id = $3,
-                updated_at = CURRENT_TIMESTAMP
-              WHERE store_id = $1 AND id = $2
-            `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
-
-            if (tableUpdateResult.rowCount > 0) {
-              tableUpdated = true;
-              console.log(`🍽️ TLL 새 주문 - 보조 주문으로 설정: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
-            }
-          } else {
-            // 두 슬롯이 모두 차있는 경우
-            console.warn(`⚠️ TLL 새 주문 - 테이블에 이미 2개 주문 존재: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}`);
-            tableUpdated = true; // 에러로 처리하지 않고 계속 진행
-          }
+        if (tableUpdateResult1.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ TLL 새 주문 - 테이블 점유 (id 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
         } else {
-          // table_number 필드로 재시도
-          const tableUpdateResult = await client.query(`
+          // 방법 2: table_number 필드로 매칭
+          const tableUpdateResult2 = await client.query(`
             UPDATE store_tables
             SET
               processing_order_id = $3,
@@ -119,7 +85,7 @@ class PaymentService {
             WHERE store_id = $1 AND table_number = $2
           `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
-          if (tableUpdateResult.rowCount > 0) {
+          if (tableUpdateResult2.rowCount > 0) {
             tableUpdated = true;
             console.log(`🍽️ TLL 새 주문 - 테이블 점유 (table_number 매칭): 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
           }
