@@ -10,6 +10,11 @@ const POSPaymentModal = {
     guestPhoneNumber: "",
     selectedMember: null, // 선택된 회원 정보
     selectedMemberId: null, // 선택된 회원 ID
+    
+    // TLL 연동 관련
+    tllIntegrationData: null, // TLL 연동 정보
+    integrationChoice: null, // 'integrate' 또는 'separate'
+    isMenuDisabled: false, // 메뉴 비활성화 상태
 
     /**
      * 결제 모달 표시
@@ -71,6 +76,9 @@ const POSPaymentModal = {
                     "✅ 실제 결제 정보 로드 완료:",
                     this.currentPaymentData,
                 );
+
+                // TLL 연동 확인
+                await this.checkTLLIntegration(storeId, tableNumber);
             } else {
                 // API 응답이 없을 경우 (결제할 내역이 없음)
                 this.currentPaymentData = {
@@ -239,8 +247,40 @@ const POSPaymentModal = {
                         </div>
                     </div>
 
+                    <!-- TLL 연동 선택 (TLL 주문이 있을 때만 표시) -->
+                    ${this.tllIntegrationData?.hasExistingTLLOrder ? `
+                        <div class="tll-integration-section">
+                            <h3>주문 연동 설정 <span class="required-indicator">*</span></h3>
+                            <div class="integration-info">
+                                <div class="existing-tll-info">
+                                    <span class="info-label">📱 기존 TLL 주문:</span>
+                                    <span class="info-value">주문번호 ${this.tllIntegrationData.existingTLLOrder.orderId} (₩${this.tllIntegrationData.existingTLLOrder.totalPrice?.toLocaleString()})</span>
+                                </div>
+                            </div>
+                            <div class="integration-choices">
+                                <button class="integration-choice-btn ${this.integrationChoice === 'integrate' ? 'active' : ''}" data-choice="integrate">
+                                    <div class="choice-icon">🔗</div>
+                                    <div class="choice-content">
+                                        <span class="choice-title">연동</span>
+                                        <span class="choice-desc">기존 TLL 주문에 추가</span>
+                                    </div>
+                                </button>
+                                <button class="integration-choice-btn ${this.integrationChoice === 'separate' ? 'active' : ''}" data-choice="separate">
+                                    <div class="choice-icon">🔀</div>
+                                    <div class="choice-content">
+                                        <span class="choice-title">별도 주문</span>
+                                        <span class="choice-desc">독립적인 POS 주문</span>
+                                    </div>
+                                </button>
+                            </div>
+                            <div class="integration-notice">
+                                ${!this.integrationChoice ? '<div class="integration-warning">💡 연동 방식을 선택해주세요</div>' : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <!-- 결제 수단 선택 -->
-                    <div class="payment-methods">
+                    <div class="payment-methods" style="${this.tllIntegrationData?.hasExistingTLLOrder && !this.integrationChoice ? 'opacity: 0.5; pointer-events: none;' : ''}">
                         <h3>결제 수단 선택 <span class="required-indicator">*</span></h3>
                         <div class="method-buttons">                                                                              
                             <button class="payment-method-btn ${this.currentPaymentData.paymentMethod === "CARD" ? "active" : ""}" data-method="CARD">
@@ -417,6 +457,17 @@ const POSPaymentModal = {
                 if (receivedAmountInput) {
                     receivedAmountInput.value = amount;
                     this.calculateChange();
+                }
+            });
+        });
+
+        // TLL 연동 선택
+        const integrationChoiceBtns = document.querySelectorAll('.integration-choice-btn');
+        integrationChoiceBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const choice = btn.dataset.choice;
+                if (choice) {
+                    this.handleIntegrationChoice(choice);
                 }
             });
         });
@@ -1599,6 +1650,136 @@ const POSPaymentModal = {
                     opacity: 0.6;
                 }
 
+                /* TLL 연동 섹션 스타일 */
+                .tll-integration-section {
+                    margin: 20px 0;
+                    padding: 20px;
+                    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+                    border: 2px solid #0ea5e9;
+                    border-radius: 12px;
+                }
+
+                .tll-integration-section h3 {
+                    color: #0c4a6e;
+                    margin-bottom: 15px;
+                    font-size: 18px;
+                    font-weight: 700;
+                }
+
+                .integration-info {
+                    margin-bottom: 15px;
+                    padding: 12px;
+                    background: rgba(255, 255, 255, 0.7);
+                    border-radius: 8px;
+                }
+
+                .existing-tll-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                }
+
+                .info-label {
+                    font-weight: 600;
+                    color: #0c4a6e;
+                }
+
+                .info-value {
+                    font-weight: 700;
+                    color: #0369a1;
+                }
+
+                .integration-choices {
+                    display: flex;
+                    gap: 12px;
+                    margin-bottom: 15px;
+                }
+
+                .integration-choice-btn {
+                    flex: 1;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 16px;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                    background: white;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    font-size: 14px;
+                }
+
+                .integration-choice-btn:hover {
+                    border-color: #0ea5e9;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+                }
+
+                .integration-choice-btn.active {
+                    border-color: #0ea5e9;
+                    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+                    color: white;
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+                }
+
+                .choice-icon {
+                    font-size: 24px;
+                    flex-shrink: 0;
+                }
+
+                .choice-content {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 4px;
+                }
+
+                .choice-title {
+                    font-weight: 700;
+                    font-size: 16px;
+                }
+
+                .choice-desc {
+                    font-size: 12px;
+                    opacity: 0.8;
+                }
+
+                .integration-notice {
+                    min-height: 30px;
+                }
+
+                .integration-warning {
+                    padding: 8px 12px;
+                    background: rgba(251, 191, 36, 0.1);
+                    border: 1px solid #f59e0b;
+                    border-radius: 6px;
+                    color: #92400e;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+
+                .integration-success {
+                    padding: 8px 12px;
+                    background: rgba(34, 197, 94, 0.1);
+                    border: 1px solid #22c55e;
+                    border-radius: 6px;
+                    color: #166534;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+
+                .integration-separate {
+                    padding: 8px 12px;
+                    background: rgba(99, 102, 241, 0.1);
+                    border: 1px solid #6366f1;
+                    border-radius: 6px;
+                    color: #3730a3;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+
                 /* 필수 표시 */
                 .required-indicator {
                     color: #dc2626;
@@ -1821,6 +2002,118 @@ const POSPaymentModal = {
         } catch (error) {
             console.error("❌ 실제 결제 정보 조회 실패:", error);
             return null;
+        }
+    },
+
+    /**
+     * TLL 연동 가능 여부 확인
+     */
+    async checkTLLIntegration(storeId, tableNumber) {
+        try {
+            console.log(`🔗 TLL 연동 확인: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/tll-integration-check`);
+            
+            if (!response.ok) {
+                throw new Error(`TLL 연동 확인 실패: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            if (result.success) {
+                this.tllIntegrationData = result;
+                
+                if (result.hasExistingTLLOrder) {
+                    console.log(`✅ TLL 연동 가능: 기존 TLL 주문 ${result.existingTLLOrder.orderId} 발견`);
+                    this.isMenuDisabled = true; // 메뉴 비활성화
+                } else {
+                    console.log(`ℹ️ TLL 연동 불가: 해당 테이블에 활성 TLL 주문 없음`);
+                    this.isMenuDisabled = false;
+                }
+            } else {
+                console.error('❌ TLL 연동 확인 API 오류:', result.error);
+                this.tllIntegrationData = null;
+                this.isMenuDisabled = false;
+            }
+
+        } catch (error) {
+            console.error('❌ TLL 연동 확인 실패:', error);
+            this.tllIntegrationData = null;
+            this.isMenuDisabled = false;
+        }
+    },
+
+    /**
+     * TLL 연동 선택 처리
+     */
+    handleIntegrationChoice(choice) {
+        this.integrationChoice = choice;
+        console.log(`🔗 TLL 연동 선택: ${choice}`);
+        
+        // UI 업데이트
+        const integrationButtons = document.querySelectorAll('.integration-choice-btn');
+        integrationButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.choice === choice) {
+                btn.classList.add('active');
+            }
+        });
+
+        // 결제 방법 선택 섹션 활성화
+        const paymentMethodsSection = document.querySelector('.payment-methods');
+        if (paymentMethodsSection) {
+            paymentMethodsSection.style.opacity = '1';
+            paymentMethodsSection.style.pointerEvents = 'auto';
+        }
+
+        // 안내 메시지 업데이트
+        const integrationNotice = document.querySelector('.integration-notice');
+        if (integrationNotice) {
+            if (choice === 'integrate') {
+                integrationNotice.innerHTML = '<div class="integration-success">✅ 기존 TLL 주문과 연동됩니다</div>';
+            } else {
+                integrationNotice.innerHTML = '<div class="integration-separate">🔀 별도 주문으로 처리됩니다</div>';
+            }
+        }
+    },
+
+    /**
+     * TLL 연동 처리
+     */
+    async processTLLIntegration(items, totalAmount) {
+        if (!this.tllIntegrationData || !this.tllIntegrationData.hasExistingTLLOrder) {
+            throw new Error('TLL 연동 데이터가 없습니다');
+        }
+
+        const { storeId, tableNumber } = this.currentPaymentData;
+
+        try {
+            console.log(`🔗 TLL 연동 처리 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/tll-integration`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    items: items,
+                    totalAmount: totalAmount
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'TLL 연동 처리 실패');
+            }
+
+            const result = await response.json();
+            console.log(`✅ TLL 연동 처리 완료:`, result);
+
+            return result;
+
+        } catch (error) {
+            console.error('❌ TLL 연동 처리 실패:', error);
+            throw error;
         }
     },
 };
