@@ -254,7 +254,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
       const currentTableResult = await client.query(`
         SELECT processing_order_id, spare_processing_order_id
         FROM store_tables
-        WHERE store_id = $1 AND (id = $2 OR table_number = $2)
+        WHERE store_id = $1 AND id = $2 
       `, [storeId, tableNumber]);
 
       if (currentTableResult.rows.length > 0) {
@@ -269,7 +269,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
             SET processing_order_id = $1,
                 status = 'OCCUPIED',
                 updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND (id = $3 OR table_number = $3)
+            WHERE store_id = $2 AND id = $3 
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
         } else if (!hasSpareOrder) {
@@ -279,7 +279,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
             SET spare_processing_order_id = $1,
                 status = 'OCCUPIED',
                 updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND (id = $3 OR table_number = $3)
+            WHERE store_id = $2 AND id = $3 
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
         } else {
