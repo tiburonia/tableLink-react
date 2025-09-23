@@ -167,82 +167,71 @@ router.post('/process', async (req, res) => {
         if (hasOtherActiveOrders) {
           console.log(`🔄 POS 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${store_id}, 테이블 ${table_num}, 현재 주문 ${orderId}`);
 
-          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
+          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 처리
           const currentTableResult = await client.query(`
             SELECT processing_order_id, spare_processing_order_id
             FROM store_tables
-            WHERE store_id = $1 AND id = $2
+            WHERE store_id = $1 AND (id = $2 OR table_number = $2)
           `, [store_id, table_num]);
 
           let tableFieldUpdated = false;
 
           if (currentTableResult.rows.length > 0) {
             const currentTable = currentTableResult.rows[0];
+            const processingOrderId = parseInt(currentTable.processing_order_id);
+            const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+            const currentOrderId = parseInt(orderId);
 
-            if (parseInt(currentTable.processing_order_id) === parseInt(orderId)) {
-              // 메인 주문이 완료된 경우, spare를 main으로 이동
+            if (spareOrderId === currentOrderId) {
+              // Case 1: spare_processing_order_id에 현재 주문이 있는 경우
+              // spare를 processing으로 이동하고 spare는 null 처리 (status는 업데이트하지 않음)
               await client.query(`
                 UPDATE store_tables
                 SET
                   processing_order_id = spare_processing_order_id,
                   spare_processing_order_id = NULL,
                   updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
+                WHERE store_id = $1 AND (id = $2 OR table_number = $2)
               `, [store_id, table_num]);
-              console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${table_num} (주문 ${orderId})`);
+              console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동 (status 유지): 테이블 ${table_num}, 주문 ${orderId}`);
               tableFieldUpdated = true;
-            } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(orderId)) {
-              // 보조 주문이 완료된 경우, spare만 해제
-              await client.query(`
-                UPDATE store_tables
-                SET
-                  spare_processing_order_id = NULL,
-                  updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
-              `, [store_id, table_num]);
-              console.log(`🔄 POS 결제 완료 - 보조 주문만 해제: 테이블 ${table_num} (주문 ${orderId})`);
-              tableFieldUpdated = true;
-            }
-          }
-
-          // id 매칭이 안된 경우 table_number로 재시도
-          if (!tableFieldUpdated) {
-            const currentTableResult2 = await client.query(`
-              SELECT processing_order_id, spare_processing_order_id
-              FROM store_tables
-              WHERE store_id = $1 AND table_number = $2
-            `, [store_id, table_num]);
-
-            if (currentTableResult2.rows.length > 0) {
-              const currentTable = currentTableResult2.rows[0];
-
-              if (parseInt(currentTable.processing_order_id) === parseInt(orderId)) {
+            } else if (processingOrderId === currentOrderId) {
+              // Case 2: processing_order_id에 현재 주문이 있는 경우
+              if (currentTable.spare_processing_order_id !== null) {
+                // spare가 존재하면 spare를 processing으로 이동하고 spare는 null 처리
                 await client.query(`
                   UPDATE store_tables
                   SET
                     processing_order_id = spare_processing_order_id,
                     spare_processing_order_id = NULL,
                     updated_at = CURRENT_TIMESTAMP
-                  WHERE store_id = $1 AND table_number = $2
+                  WHERE store_id = $1 AND (id = $2 OR table_number = $2)
                 `, [store_id, table_num]);
-                console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동 (table_number 매칭): 테이블 ${table_num}`);
+                console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${table_num}, 완료된 주문 ${orderId}, 새 메인 주문 ${currentTable.spare_processing_order_id}`);
                 tableFieldUpdated = true;
-              } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(orderId)) {
+              } else {
+                // spare가 없으면 processing을 null 처리하고 status를 AVAILABLE로 변경
                 await client.query(`
                   UPDATE store_tables
                   SET
+                    processing_order_id = NULL,
                     spare_processing_order_id = NULL,
+                    status = 'AVAILABLE',
                     updated_at = CURRENT_TIMESTAMP
-                  WHERE store_id = $1 AND table_number = $2
+                  WHERE store_id = $1 AND (id = $2 OR table_number = $2)
                 `, [store_id, table_num]);
-                console.log(`🔄 POS 결제 완료 - 보조 주문만 해제 (table_number 매칭): 테이블 ${table_num}`);
+                console.log(`🔄 POS 결제 완료 - 테이블 완전 해제: 테이블 ${table_num}, 주문 ${orderId}`);
                 tableFieldUpdated = true;
               }
+            } else {
+              console.warn(`⚠️ POS 결제 완료 - 해당 주문 ${orderId}이 테이블 ${table_num}의 processing_order_id(${processingOrderId}) 또는 spare_processing_order_id(${spareOrderId})에 매칭되지 않음`);
             }
+          } else {
+            console.error(`❌ POS 결제 완료 - 테이블 ${table_num}을 store_tables에서 찾을 수 없음`);
           }
 
           if (!tableFieldUpdated) {
-            console.warn(`⚠️ POS 결제 완료 - 해당 주문 ${orderId}이 테이블 ${table_num}의 어떤 필드에도 매칭되지 않음`);
+            console.warn(`⚠️ POS 결제 완료 - 테이블 ${table_num} 업데이트 실패 또는 주문 ${orderId} 매칭 실패`);
           }
         } else {
           // 다른 활성 주문이 없으면 테이블 완전 해제
@@ -607,82 +596,71 @@ router.post('/process-with-customer', async (req, res) => {
         if (hasOtherActiveOrders) {
           console.log(`🔄 POS 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${store_id}, 테이블 ${table_num}, 현재 주문 ${orderId}`);
 
-          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
+          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 처리
           const currentTableResult = await client.query(`
             SELECT processing_order_id, spare_processing_order_id
             FROM store_tables
-            WHERE store_id = $1 AND id = $2
+            WHERE store_id = $1 AND (id = $2 OR table_number = $2)
           `, [store_id, table_num]);
 
           let tableFieldUpdated = false;
 
           if (currentTableResult.rows.length > 0) {
             const currentTable = currentTableResult.rows[0];
+            const processingOrderId = parseInt(currentTable.processing_order_id);
+            const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+            const currentOrderId = parseInt(orderId);
 
-            if (parseInt(currentTable.processing_order_id) === parseInt(orderId)) {
-              // 메인 주문이 완료된 경우, spare를 main으로 이동
+            if (spareOrderId === currentOrderId) {
+              // Case 1: spare_processing_order_id에 현재 주문이 있는 경우
+              // spare를 processing으로 이동하고 spare는 null 처리 (status는 업데이트하지 않음)
               await client.query(`
                 UPDATE store_tables
                 SET
                   processing_order_id = spare_processing_order_id,
                   spare_processing_order_id = NULL,
                   updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
+                WHERE store_id = $1 AND (id = $2 OR table_number = $2)
               `, [store_id, table_num]);
-              console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${table_num} (주문 ${orderId})`);
+              console.log(`🔄 회원/비회원 POS 결제 완료 - 보조 주문을 메인으로 이동 (status 유지): 테이블 ${table_num}, 주문 ${orderId}`);
               tableFieldUpdated = true;
-            } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(orderId)) {
-              // 보조 주문이 완료된 경우, spare만 해제
-              await client.query(`
-                UPDATE store_tables
-                SET
-                  spare_processing_order_id = NULL,
-                  updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
-              `, [store_id, table_num]);
-              console.log(`🔄 POS 결제 완료 - 보조 주문만 해제: 테이블 ${table_num} (주문 ${orderId})`);
-              tableFieldUpdated = true;
-            }
-          }
-
-          // id 매칭이 안된 경우 table_number로 재시도
-          if (!tableFieldUpdated) {
-            const currentTableResult2 = await client.query(`
-              SELECT processing_order_id, spare_processing_order_id
-              FROM store_tables
-              WHERE store_id = $1 AND table_number = $2
-            `, [store_id, table_num]);
-
-            if (currentTableResult2.rows.length > 0) {
-              const currentTable = currentTableResult2.rows[0];
-
-              if (parseInt(currentTable.processing_order_id) === parseInt(orderId)) {
+            } else if (processingOrderId === currentOrderId) {
+              // Case 2: processing_order_id에 현재 주문이 있는 경우
+              if (currentTable.spare_processing_order_id !== null) {
+                // spare가 존재하면 spare를 processing으로 이동하고 spare는 null 처리
                 await client.query(`
                   UPDATE store_tables
                   SET
                     processing_order_id = spare_processing_order_id,
                     spare_processing_order_id = NULL,
                     updated_at = CURRENT_TIMESTAMP
-                  WHERE store_id = $1 AND table_number = $2
+                  WHERE store_id = $1 AND (id = $2 OR table_number = $2)
                 `, [store_id, table_num]);
-                console.log(`🔄 POS 결제 완료 - 보조 주문을 메인으로 이동 (table_number 매칭): 테이블 ${table_num}`);
+                console.log(`🔄 회원/비회원 POS 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${table_num}, 완료된 주문 ${orderId}, 새 메인 주문 ${currentTable.spare_processing_order_id}`);
                 tableFieldUpdated = true;
-              } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(orderId)) {
+              } else {
+                // spare가 없으면 processing을 null 처리하고 status를 AVAILABLE로 변경
                 await client.query(`
                   UPDATE store_tables
                   SET
+                    processing_order_id = NULL,
                     spare_processing_order_id = NULL,
+                    status = 'AVAILABLE',
                     updated_at = CURRENT_TIMESTAMP
-                  WHERE store_id = $1 AND table_number = $2
+                  WHERE store_id = $1 AND (id = $2 OR table_number = $2)
                 `, [store_id, table_num]);
-                console.log(`🔄 POS 결제 완료 - 보조 주문만 해제 (table_number 매칭): 테이블 ${table_num}`);
+                console.log(`🔄 회원/비회원 POS 결제 완료 - 테이블 완전 해제: 테이블 ${table_num}, 주문 ${orderId}`);
                 tableFieldUpdated = true;
               }
+            } else {
+              console.warn(`⚠️ 회원/비회원 POS 결제 완료 - 해당 주문 ${orderId}이 테이블 ${table_num}의 processing_order_id(${processingOrderId}) 또는 spare_processing_order_id(${spareOrderId})에 매칭되지 않음`);
             }
+          } else {
+            console.error(`❌ 회원/비회원 POS 결제 완료 - 테이블 ${table_num}을 store_tables에서 찾을 수 없음`);
           }
 
           if (!tableFieldUpdated) {
-            console.warn(`⚠️ POS 결제 완료 - 해당 주문 ${orderId}이 테이블 ${table_num}의 어떤 필드에도 매칭되지 않음`);
+            console.warn(`⚠️ 회원/비회원 POS 결제 완료 - 테이블 ${table_num} 업데이트 실패 또는 주문 ${orderId} 매칭 실패`);
           }
         } else {
           // 다른 활성 주문이 없으면 테이블 완전 해제
