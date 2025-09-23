@@ -116,7 +116,7 @@ class PaymentService {
               processing_order_id = $3,
               status = 'OCCUPIED',
               updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $1 AND table_number = $2
+            WHERE store_id = $1 AND id = $2
           `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
           if (tableUpdateResult.rowCount > 0) {
