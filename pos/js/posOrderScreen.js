@@ -559,10 +559,14 @@ const POSOrderScreen = {
     },
 
     /**
-     * TLL 사용자 정보 렌더링
+     * TLL 사용자 정보 렌더링 (연동 버튼 포함)
      */
     renderTLLUserInfo() {
-        if (!this.tllUserInfo) {
+        const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
+        const hasPOSOrders = this.currentOrders && this.currentOrders.filter(order => !order.sessionId).length > 0;
+        
+        // TLL 주문이 없으면 기본 UI 표시
+        if (!hasTLLOrders) {
             return `
                 <div class="tll-user-info">
                     <div class="tll-user-header">
@@ -575,29 +579,73 @@ const POSOrderScreen = {
             `;
         }
 
+        // TLL 주문이 있는 경우 사용자 정보와 연동 버튼 표시
         return `
             <div class="tll-user-info">
                 <div class="tll-user-header">
                     <span>📱 TLL 연동 사용자</span>
+                    <div class="tll-status-indicator">
+                        <span class="status-dot active"></span>
+                        <span class="status-text">활성</span>
+                    </div>
                 </div>
+                
                 <div class="tll-user-details">
                     <div class="user-detail-row">
                         <span class="detail-label">이름:</span>
-                        <span class="detail-value">${this.tllUserInfo.name || '게스트'}</span>
+                        <span class="detail-value">${this.tllUserInfo?.name || '게스트'}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">연락처:</span>
-                        <span class="detail-value">${this.tllUserInfo.phone || this.tllUserInfo.guest_phone || '-'}</span>
+                        <span class="detail-value">${this.tllUserInfo?.phone || this.tllUserInfo?.guest_phone || '-'}</span>
                     </div>
                     <div class="user-detail-row">
-                        <span class="detail-label">주문 시간:</span>
-                        <span class="detail-value">${this.tllUserInfo.created_at ? new Date(this.tllUserInfo.created_at).toLocaleTimeString() : '-'}</span>
+                        <span class="detail-label">TLL 주문:</span>
+                        <span class="detail-value">${this.tllOrders.length}개</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">포인트:</span>
-                        <span class="detail-value">${(this.tllUserInfo.point || 0).toLocaleString()}P</span>
+                        <span class="detail-value">${(this.tllUserInfo?.point || 0).toLocaleString()}P</span>
                     </div>
                 </div>
+
+                <!-- TLL-POS 연동 섹션 -->
+                <div class="tll-integration-section">
+                    <h4 class="integration-title">🔗 주문 연동 관리</h4>
+                    
+                    <div class="integration-status">
+                        <div class="status-row">
+                            <span class="status-label">POS 주문:</span>
+                            <span class="status-value ${hasPOSOrders ? 'has-orders' : 'no-orders'}">
+                                ${hasPOSOrders ? `${this.currentOrders.filter(order => !order.sessionId).length}개` : '없음'}
+                            </span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">TLL 주문:</span>
+                            <span class="status-value has-orders">${this.tllOrders.length}개</span>
+                        </div>
+                    </div>
+
+                    ${hasPOSOrders ? `
+                        <div class="integration-actions">
+                            <button class="integration-btn integrate" 
+                                    onclick="POSOrderScreen.integratePOSWithTLL()"
+                                    title="POS 주문을 TLL 주문에 연동합니다">
+                                <span class="btn-icon">🔗</span>
+                                <span class="btn-text">POS 주문 연동</span>
+                            </button>
+                            <div class="integration-help">
+                                <small>💡 POS 주문을 TLL 세션에 추가합니다</small>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="no-pos-orders">
+                            <small>💡 연동할 POS 주문이 없습니다</small>
+                        </div>
+                    `}
+                </div>
+
+                <!-- 기존 TLL 액션 버튼 -->
                 <div class="tll-action-buttons">
                     <button class="tll-action-btn end-session" onclick="POSOrderScreen.endTLLSession()">
                         <span class="btn-icon">🔚</span>
@@ -2043,6 +2091,82 @@ const POSOrderScreen = {
         }
 
         console.log(`🍽️ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
+    },
+
+    /**
+     * POS 주문을 TLL 주문에 연동
+     */
+    async integratePOSWithTLL() {
+        try {
+            // 필요한 데이터 검증
+            if (!this.tllOrders || this.tllOrders.length === 0) {
+                alert('연동할 TLL 주문이 없습니다.');
+                return;
+            }
+
+            const posOrders = this.currentOrders.filter(order => !order.sessionId);
+            if (!posOrders || posOrders.length === 0) {
+                alert('연동할 POS 주문이 없습니다.');
+                return;
+            }
+
+            // TLL 주문 ID 가져오기
+            const tllOrderId = this.tllOrders[0].order_id;
+            if (!tllOrderId) {
+                alert('TLL 주문 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            // 확인 메시지
+            const confirmMessage = `POS 주문을 TLL 주문에 연동하시겠습니까?\n\n` +
+                                 `• TLL 사용자: ${this.tllUserInfo?.name || '게스트'}\n` +
+                                 `• POS 주문: ${posOrders.length}개\n` +
+                                 `• TLL 주문: ${this.tllOrders.length}개\n\n` +
+                                 `연동 후 POS 주문이 TLL 세션에 포함됩니다.`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log(`🔗 POS-TLL 연동 요청: TLL 주문 ID ${tllOrderId}`);
+
+            // API 호출
+            const response = await fetch('/api/pos/integrate-with-tll', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    storeId: this.currentStoreId,
+                    tableNumber: this.currentTableNumber,
+                    tllOrderId: tllOrderId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'POS-TLL 연동 실패');
+            }
+
+            const result = await response.json();
+            console.log('✅ POS-TLL 연동 완료:', result);
+
+            // 성공 메시지
+            alert(`✅ POS 주문이 TLL 세션에 연동되었습니다!\n\n` +
+                  `• 연동된 POS 주문: ${result.integratedOrdersCount}개\n` +
+                  `• 총 주문 금액: ${result.totalAmount.toLocaleString()}원`);
+
+            // 데이터 새로고침
+            await this.refreshOrders();
+            await this.refreshTLLOrders();
+
+            // UI 업데이트
+            await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+
+        } catch (error) {
+            console.error('❌ POS-TLL 연동 실패:', error);
+            alert(`POS-TLL 연동 중 오류가 발생했습니다:\n${error.message}`);
+        }
     },
 
     /**

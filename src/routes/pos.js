@@ -1013,6 +1013,161 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
   }
 });
 
+/**
+ * [POST] /integrate-with-tll - POS 주문을 TLL 주문에 연동
+ */
+router.post('/integrate-with-tll', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { storeId, tableNumber, tllOrderId } = req.body;
+
+    console.log(`🔗 POS-TLL 연동 요청: 매장 ${storeId}, 테이블 ${tableNumber}, TLL 주문 ${tllOrderId}`);
+
+    if (!storeId || !tableNumber || !tllOrderId) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. TLL 주문 존재 여부 확인
+    const tllOrderResult = await client.query(`
+      SELECT id, store_id, table_num, total_price
+      FROM orders
+      WHERE id = $1 AND store_id = $2 AND table_num = $3 AND source = 'TLL'
+    `, [tllOrderId, storeId, tableNumber]);
+
+    if (tllOrderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: 'TLL 주문을 찾을 수 없습니다'
+      });
+    }
+
+    // 2. 해당 테이블의 POS 주문 (UNPAID) 조회
+    const posOrderResult = await client.query(`
+      SELECT DISTINCT o.id, o.total_price
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND o.source = 'POS'
+        AND ot.paid_status = 'UNPAID'
+        AND o.session_status = 'OPEN'
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [storeId, tableNumber]);
+
+    if (posOrderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        error: '연동할 POS 주문을 찾을 수 없습니다'
+      });
+    }
+
+    const posOrderId = posOrderResult.rows[0].id;
+    const posOrderTotal = posOrderResult.rows[0].total_price;
+
+    console.log(`📋 연동 대상: POS 주문 ${posOrderId} → TLL 주문 ${tllOrderId}`);
+
+    // 3. POS 주문의 모든 order_tickets를 TLL 주문으로 이동
+    const moveTicketsResult = await client.query(`
+      UPDATE order_tickets
+      SET order_id = $1, 
+          source = 'POS',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE order_id = $2
+      RETURNING id, batch_no
+    `, [tllOrderId, posOrderId]);
+
+    console.log(`🎫 ${moveTicketsResult.rows.length}개 티켓 이동 완료`);
+
+    // 4. POS 주문의 모든 order_items를 TLL 주문으로 이동
+    const moveItemsResult = await client.query(`
+      UPDATE order_items
+      SET order_id = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE order_id = $2
+      RETURNING id, menu_name, quantity
+    `, [tllOrderId, posOrderId]);
+
+    console.log(`🍽️ ${moveItemsResult.rows.length}개 아이템 이동 완료`);
+
+    // 5. TLL 주문 총액 업데이트
+    const newTotalAmount = (tllOrderResult.rows[0].total_price || 0) + (posOrderTotal || 0);
+    await client.query(`
+      UPDATE orders
+      SET total_price = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [newTotalAmount, tllOrderId]);
+
+    // 6. 기존 POS 주문 삭제 (티켓과 아이템이 모두 이동되었으므로)
+    await client.query(`
+      DELETE FROM orders WHERE id = $1
+    `, [posOrderId]);
+
+    // 7. store_tables에서 processing_order_id를 spare_processing_order_id로 이동
+    const currentTableResult = await client.query(`
+      SELECT processing_order_id, spare_processing_order_id
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [storeId, tableNumber]);
+
+    if (currentTableResult.rows.length > 0) {
+      const currentTable = currentTableResult.rows[0];
+
+      if (parseInt(currentTable.processing_order_id) === parseInt(posOrderId)) {
+        // 메인 주문이 연동된 경우
+        await client.query(`
+          UPDATE store_tables
+          SET spare_processing_order_id = $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $2 AND id = $3
+        `, [tllOrderId, storeId, tableNumber]);
+        console.log(`📋 메인 주문 ${posOrderId} → TLL 주문 ${tllOrderId}로 spare_processing_order_id 설정`);
+      } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(posOrderId)) {
+        // 보조 주문이 연동된 경우
+        await client.query(`
+          UPDATE store_tables
+          SET spare_processing_order_id = $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $2 AND id = $3
+        `, [tllOrderId, storeId, tableNumber]);
+        console.log(`📋 보조 주문 ${posOrderId} → TLL 주문 ${tllOrderId}로 spare_processing_order_id 유지`);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ POS-TLL 연동 완료: ${moveItemsResult.rows.length}개 아이템, 총액 ${newTotalAmount}원`);
+
+    res.json({
+      success: true,
+      message: 'POS 주문이 TLL 주문에 성공적으로 연동되었습니다',
+      tllOrderId: tllOrderId,
+      integratedOrdersCount: moveItemsResult.rows.length,
+      totalAmount: newTotalAmount,
+      ticketsCount: moveTicketsResult.rows.length
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS-TLL 연동 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS-TLL 연동 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
 // 기본 메뉴 데이터
 function getDefaultMenu() {
   return [
