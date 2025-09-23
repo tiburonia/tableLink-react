@@ -253,7 +253,7 @@ router.post('/confirm', async (req, res) => {
       throw new Error(tossResult.message || '토스페이먼츠 승인 실패');
     }
 
-    console.log('✅ 토스페이이먼츠 승인 성공:', tossResult);
+    console.log('✅ 토스페이먼츠 승인 성공:', tossResult);
 
     // 주문 타입 확인 (TLL vs 일반 주문)
     const isTLLOrder = orderId.startsWith('TLL_');
@@ -376,7 +376,7 @@ router.post('/confirm', async (req, res) => {
 
         if (hasOtherActiveOrders) {
           console.log(`🔄 TLL 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-          
+
           // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
           const currentTableResult = await sessionEndClient.query(`
             SELECT processing_order_id, spare_processing_order_id
@@ -386,7 +386,7 @@ router.post('/confirm', async (req, res) => {
 
           if (currentTableResult.rows.length > 0) {
             const currentTable = currentTableResult.rows[0];
-            
+
             if (parseInt(currentTable.processing_order_id) === parseInt(orderIdToUse)) {
               // 메인 주문이 완료된 경우, spare를 main으로 이동
               await sessionEndClient.query(`
@@ -413,18 +413,8 @@ router.post('/confirm', async (req, res) => {
             }
           }
         } else {
-          // 다른 활성 주문이 없으면 테이블 완전 해제
-          const tableReleaseResult = await sessionEndClient.query(`
-            UPDATE store_tables 
-            SET processing_order_id = NULL, spare_processing_order_id = NULL, status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $1 AND id = $2
-          `, [pendingPayment.store_id, pendingPayment.table_number]);
-
-          if (tableReleaseResult.rowCount > 0) {
-            console.log(`✅ TLL 결제 완료 - 테이블 완전 해제: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-          } else {
-            console.log(`ℹ️ TLL 결제 완료 - 해제할 테이블 없음: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-          }
+          // TLL은 결제 후 세션이 시작되므로 테이블을 해제하지 않고 점유 상태를 유지
+          console.log(`🍽️ TLL 결제 완료 - 세션 진행 중으로 테이블 점유 상태 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
         }
 
       } catch (sessionError) {
@@ -515,7 +505,7 @@ router.post('/confirm', async (req, res) => {
     }
 
   } catch (error) {
-    console.error('❌ 토스페이이먼츠 결제 승인 실패:', error);
+    console.error('❌ 토스페이먼츠 결제 승인 실패:', error);
 
     if (!res.headersSent) {
       res.status(500).json({
