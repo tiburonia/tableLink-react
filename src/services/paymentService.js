@@ -56,21 +56,27 @@ class PaymentService {
         providerResponse: tossResult
       });
 
-      // 6. TLL 새 주문 시 store_tables에 주문 ID 등록
-      if (isNewOrder) {
-        try {
-          // 현재 테이블 상태 확인
-          const currentTableResult = await client.query(`
-            SELECT processing_order_id, spare_processing_order_id, status
-            FROM store_tables
-            WHERE store_id = $1 AND id = $2
-          `, [orderData.storeId, orderData.tableNumber]);
+      // 6. TLL 주문 시 store_tables에 주문 ID 등록 (새 주문이든 기존 주문에 추가든 항상 수행)
+      try {
+        // 현재 테이블 상태 확인
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id, status
+          FROM store_tables
+          WHERE store_id = $1 AND id = $2
+        `, [orderData.storeId, orderData.tableNumber]);
 
-          if (currentTableResult.rows.length > 0) {
-            const currentTable = currentTableResult.rows[0];
-            const hasMainOrder = currentTable.processing_order_id !== null;
-            const hasSpareOrder = currentTable.spare_processing_order_id !== null;
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+          const hasMainOrder = currentTable.processing_order_id !== null;
+          const hasSpareOrder = currentTable.spare_processing_order_id !== null;
 
+          // 현재 주문이 이미 테이블에 등록되어 있는지 확인
+          const isAlreadyRegistered = (
+            parseInt(currentTable.processing_order_id) === parseInt(orderIdToUse) ||
+            parseInt(currentTable.spare_processing_order_id) === parseInt(orderIdToUse)
+          );
+
+          if (!isAlreadyRegistered) {
             if (!hasMainOrder) {
               // processing_order_id가 비어있으면 메인 주문으로 설정
               const tableUpdateResult = await client.query(`
@@ -83,7 +89,7 @@ class PaymentService {
               `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
               if (tableUpdateResult.rowCount > 0) {
-                console.log(`🍽️ TLL 새 주문 - 메인 슬롯 설정: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+                console.log(`🍽️ TLL 주문 - 메인 슬롯 설정: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
               }
             } else if (!hasSpareOrder) {
               // 메인 슬롯이 차있고 보조 슬롯이 비어있으면 보조 주문으로 설정
@@ -91,24 +97,35 @@ class PaymentService {
                 UPDATE store_tables
                 SET
                   spare_processing_order_id = $3,
+                  status = 'OCCUPIED',
                   updated_at = CURRENT_TIMESTAMP
                 WHERE store_id = $1 AND id = $2
               `, [orderData.storeId, orderData.tableNumber, orderIdToUse]);
 
               if (tableUpdateResult.rowCount > 0) {
-                console.log(`🍽️ TLL 새 주문 - 보조 슬롯 설정: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+                console.log(`🍽️ TLL 주문 - 보조 슬롯 설정: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
               }
             } else {
               // 두 슬롯이 모두 차있는 경우
-              console.warn(`⚠️ TLL 새 주문 - 테이블에 이미 2개 주문 존재: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber} (주문 ${orderIdToUse}은 별도 처리)`);
+              console.warn(`⚠️ TLL 주문 - 테이블에 이미 2개 주문 존재: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber} (현재: ${currentTable.processing_order_id}, ${currentTable.spare_processing_order_id}, 신규: ${orderIdToUse})`);
             }
           } else {
-            // 테이블 레코드가 없는 경우 (예외 상황)
-            console.warn(`⚠️ TLL 새 주문 - store_tables 레코드 없음: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}`);
+            console.log(`ℹ️ TLL 주문 - 이미 테이블에 등록된 주문: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`);
+            // 테이블 상태를 OCCUPIED로 확실히 설정
+            await client.query(`
+              UPDATE store_tables
+              SET 
+                status = 'OCCUPIED',
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [orderData.storeId, orderData.tableNumber]);
           }
-        } catch (tableError) {
-          console.error(`❌ TLL store_tables 업데이트 실패: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`, tableError);
+        } else {
+          // 테이블 레코드가 없는 경우 (예외 상황)
+          console.warn(`⚠️ TLL 주문 - store_tables 레코드 없음: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}`);
         }
+      } catch (tableError) {
+        console.error(`❌ TLL store_tables 업데이트 실패: 매장 ${orderData.storeId}, 테이블 ${orderData.tableNumber}, 주문 ${orderIdToUse}`, tableError);
       }
 
       await client.query('COMMIT');

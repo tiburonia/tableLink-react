@@ -344,14 +344,14 @@ router.post('/confirm', async (req, res) => {
       const orderIdToUse = result.orderId;
       const paymentData = { paymentKey, finalTotal: result.amount, paymentId };
 
-      // TLL 결제 완료 시 세션 종료 처리 (store_tables 업데이트는 paymentService에서 처리됨)
-      console.log(`✅ TLL 결제 완료 - 세션 종료 처리: 주문 ${orderIdToUse}, 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
+      // TLL 결제 완료 시 세션 시작 처리
+      console.log(`✅ TLL 결제 완료 - 세션 시작: 주문 ${orderIdToUse}, 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
 
-      // 세션 종료 처리를 위한 별도 로직
-      const sessionEndClient = await pool.connect();
+      // 세션 시작 처리를 위한 별도 로직
+      const sessionStartClient = await pool.connect();
       try {
-        // 주문 세션 종료 처리
-        await sessionEndClient.query(`
+        // 주문 세션 시작 처리
+        await sessionStartClient.query(`
           UPDATE orders
           SET 
             session_status = 'OPEN',
@@ -360,67 +360,25 @@ router.post('/confirm', async (req, res) => {
           WHERE id = $1
         `, [orderIdToUse]);
 
-        console.log(`✅ TLL 주문 세션 종료 처리 완료: 주문 ${orderIdToUse}`);
+        console.log(`✅ TLL 주문 세션 시작 처리 완료: 주문 ${orderIdToUse}`);
 
-        // 해당 테이블에 다른 활성 주문이 있는지 확인
-        const otherActiveOrdersResult = await sessionEndClient.query(`
-          SELECT COUNT(*) as count 
-          FROM orders o
-          WHERE o.store_id = $1 
-            AND o.table_num = $2 
-            AND o.session_status = 'OPEN'
-            AND o.id != $3
-        `, [pendingPayment.store_id, pendingPayment.table_number, orderIdToUse]);
-
-        const hasOtherActiveOrders = parseInt(otherActiveOrdersResult.rows[0].count) > 0;
-
-        if (hasOtherActiveOrders) {
-          console.log(`🔄 TLL 결제 완료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-
-          // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
-          const currentTableResult = await sessionEndClient.query(`
-            SELECT processing_order_id, spare_processing_order_id
-            FROM store_tables
-            WHERE store_id = $1 AND id = $2
-          `, [pendingPayment.store_id, pendingPayment.table_number]);
-
-          if (currentTableResult.rows.length > 0) {
-            const currentTable = currentTableResult.rows[0];
-
-            if (parseInt(currentTable.processing_order_id) === parseInt(orderIdToUse)) {
-              // 메인 주문이 완료된 경우, spare를 main으로 이동
-              await sessionEndClient.query(`
-                UPDATE store_tables
-                SET
-                  processing_order_id = spare_processing_order_id,
-                  spare_processing_order_id = NULL,
-                  updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
-              `, [pendingPayment.store_id, pendingPayment.table_number]);
-              console.log(`🔄 TLL 결제 완료 - 보조 주문을 메인으로 이동: 테이블 ${pendingPayment.table_number} (주문 ${orderIdToUse})`);
-            } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(orderIdToUse)) {
-              // 보조 주문이 완료된 경우, spare만 해제
-              await sessionEndClient.query(`
-                UPDATE store_tables
-                SET
-                  spare_processing_order_id = NULL,
-                  updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
-              `, [pendingPayment.store_id, pendingPayment.table_number]);
-              console.log(`🔄 TLL 결제 완료 - 보조 주문만 해제: 테이블 ${pendingPayment.table_number} (주문 ${orderIdToUse})`);
-            } else {
-              console.warn(`⚠️ TLL 결제 완료 - 해당 주문 ${orderIdToUse}이 테이블 ${pendingPayment.table_number}의 어떤 필드에도 매칭되지 않음`);
-            }
-          }
-        } else {
-          // TLL은 결제 후 세션이 시작되므로 테이블을 해제하지 않고 점유 상태를 유지
-          console.log(`🍽️ TLL 결제 완료 - 세션 진행 중으로 테이블 점유 상태 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
-        }
+        // TLL 결제는 세션 시작이므로 테이블 점유 상태를 유지
+        // paymentService에서 이미 store_tables에 processing_order_id 또는 spare_processing_order_id가 설정됨
+        console.log(`🍽️ TLL 결제 완료 - 세션 진행 중으로 테이블 점유 상태 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
+        
+        // 테이블 상태를 OCCUPIED로 확실히 설정
+        await sessionStartClient.query(`
+          UPDATE store_tables
+          SET 
+            status = 'OCCUPIED',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND id = $2
+        `, [pendingPayment.store_id, pendingPayment.table_number]);
 
       } catch (sessionError) {
-        console.error('❌ TLL 세션 종료 처리 실패:', sessionError);
+        console.error('❌ TLL 세션 시작 처리 실패:', sessionError);
       } finally {
-        sessionEndClient.release();
+        sessionStartClient.release();
       }
 
       if (isNewOrder) {
