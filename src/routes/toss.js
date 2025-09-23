@@ -377,16 +377,52 @@ router.post('/confirm', async (req, res) => {
 
           if (hasOtherActiveOrders) {
             console.log(`🔄 TLL 세션 종료 - 다른 활성 주문 존재로 테이블 유지: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number} (현재 주문 ${result.orderId})`);
+            
+            // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 해당 필드만 해제
+            const currentTableResult = await tableReleaseClient.query(`
+              SELECT processing_order_id, spare_processing_order_id
+              FROM store_tables
+              WHERE store_id = $1 AND id = $2
+            `, [pendingPayment.store_id, pendingPayment.table_number]);
+
+            if (currentTableResult.rows.length > 0) {
+              const currentTable = currentTableResult.rows[0];
+              
+              if (parseInt(currentTable.processing_order_id) === parseInt(result.orderId)) {
+                // 메인 주문이 완료된 경우, spare를 main으로 이동
+                await tableReleaseClient.query(`
+                  UPDATE store_tables
+                  SET
+                    processing_order_id = spare_processing_order_id,
+                    spare_processing_order_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                  WHERE store_id = $1 AND id = $2
+                `, [pendingPayment.store_id, pendingPayment.table_number]);
+                console.log(`🔄 TLL 세션 종료 - 보조 주문을 메인으로 이동: 테이블 ${pendingPayment.table_number} (주문 ${result.orderId})`);
+              } else if (parseInt(currentTable.spare_processing_order_id) === parseInt(result.orderId)) {
+                // 보조 주문이 완료된 경우, spare만 해제
+                await tableReleaseClient.query(`
+                  UPDATE store_tables
+                  SET
+                    spare_processing_order_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                  WHERE store_id = $1 AND id = $2
+                `, [pendingPayment.store_id, pendingPayment.table_number]);
+                console.log(`🔄 TLL 세션 종료 - 보조 주문만 해제: 테이블 ${pendingPayment.table_number} (주문 ${result.orderId})`);
+              } else {
+                console.warn(`⚠️ TLL 세션 종료 - 해당 주문 ${result.orderId}이 테이블 ${pendingPayment.table_number}의 어떤 필드에도 매칭되지 않음`);
+              }
+            }
           } else {
-            // 다른 활성 주문이 없으면 테이블 해제
+            // 다른 활성 주문이 없으면 테이블 완전 해제
             const tableUpdateResult = await tableReleaseClient.query(`
               UPDATE store_tables 
-              SET processing_order_id = NULL, status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
+              SET processing_order_id = NULL, spare_processing_order_id = NULL, status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
               WHERE store_id = $1 AND id = $2
             `, [pendingPayment.store_id, pendingPayment.table_number]);
 
             if (tableUpdateResult.rowCount > 0) {
-              console.log(`✅ TLL 세션 종료 - 테이블 해제: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
+              console.log(`✅ TLL 세션 종료 - 테이블 완전 해제: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
             } else {
               console.log(`ℹ️ TLL 세션 종료 - 해제할 테이블 없음: 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
             }
