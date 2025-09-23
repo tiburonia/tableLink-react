@@ -354,9 +354,8 @@ router.post('/confirm', async (req, res) => {
         await sessionEndClient.query(`
           UPDATE orders
           SET 
-            session_status = 'CLOSED',
-            session_ended = true,
-            session_ended_at = CURRENT_TIMESTAMP,
+            session_status = 'OPEN',
+            session_ended = false,
             updated_at = CURRENT_TIMESTAMP
           WHERE id = $1
         `, [orderIdToUse]);
