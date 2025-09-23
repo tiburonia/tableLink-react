@@ -2020,7 +2020,7 @@ body {
 
 /* TLL 사용자 정보 영역 스타일링 */
 .tll-user-info {
-  background: #f8fafca;
+  background: #f8f9fa;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   padding: 16px;
@@ -2028,41 +2028,10 @@ body {
 }
 
 .tll-user-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   font-weight: 600;
   color: #495057;
   margin-bottom: 12px;
   font-size: 14px;
-}
-
-.tll-status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #28a745;
-}
-
-.status-dot.active {
-  background: #28a745;
-  animation: pulse 2s infinite;
-}
-
-.status-dot.integrated {
-  background: #007bff;
-}
-
-.status-text {
-  font-weight: 500;
-  color: #495057;
 }
 
 .tll-user-details {
@@ -2089,215 +2058,10 @@ body {
   font-weight: 600;
 }
 
-.detail-value.integrated {
-  color: #007bff;
-  font-weight: 700;
-}
-
-.detail-value.separate {
-  color: #6c757d;
-}
-
 .no-tll-user {
   text-align: center;
   color: #6c757d;
   font-style: italic;
-}
-
-/* 개선된 TLL 통합 섹션 */
-.tll-integration-section-v2 {
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  padding: 16px;
-  margin-top: 16px;
-}
-
-.integration-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.integration-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #495057;
-  margin: 0;
-}
-
-.title-icon {
-  font-size: 16px;
-}
-
-.integration-badge {
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.integration-badge.integrated {
-  background: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-.integration-badge.separate {
-  background: #fff3cd;
-  color: #856404;
-  border: 1px solid #ffeaa7;
-}
-
-.integration-details {
-  margin-bottom: 16px;
-}
-
-.order-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.order-type {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-}
-
-.type-icon {
-  font-size: 20px;
-}
-
-.type-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6c757d;
-}
-
-.type-count {
-  font-size: 11px;
-  font-weight: 700;
-  color: #495057;
-}
-
-.order-connector {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  padding: 0 12px;
-}
-
-.order-connector.connected {
-  color: #28a745;
-  animation: pulse 1.5s infinite;
-}
-
-.order-connector.separate {
-  color: #6c757d;
-}
-
-.integration-actions-v2 {
-  margin-top: 16px;
-}
-
-.integration-btn-v2 {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 8px;
-}
-
-.integration-btn-v2.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
-}
-
-.integration-btn-v2.primary:hover {
-  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
-}
-
-.integration-btn-v2.secondary {
-  background: #6c757d;
-  color: white;
-}
-
-.integration-btn-v2.secondary:hover {
-  background: #545b62;
-  transform: translateY(-1px);
-}
-
-.integration-description {
-  text-align: center;
-  padding: 8px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.integration-description {
-  background: #e3f2fd;
-  color: #1976d2;
-}
-
-.integration-description.success {
-  background: #e8f5e8;
-  color: #2e7d32;
-}
-
-.no-pos-orders {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px;
-  text-align: center;
-  color: #6c757d;
-}
-
-.empty-icon {
-  font-size: 24px;
-  opacity: 0.7;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 /* TLL 액션 버튼 */

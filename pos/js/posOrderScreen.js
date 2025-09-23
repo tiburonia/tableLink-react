@@ -559,14 +559,10 @@ const POSOrderScreen = {
     },
 
     /**
-     * TLL 사용자 정보 렌더링 (개선된 연동 버튼 포함)
+     * TLL 사용자 정보 렌더링
      */
     renderTLLUserInfo() {
-        const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
-        const hasPOSOrders = this.currentOrders && this.currentOrders.filter(order => !order.sessionId).length > 0;
-        
-        // TLL 주문이 없으면 기본 UI 표시
-        if (!hasTLLOrders) {
+        if (!this.tllUserInfo) {
             return `
                 <div class="tll-user-info">
                     <div class="tll-user-header">
@@ -579,102 +575,29 @@ const POSOrderScreen = {
             `;
         }
 
-        // 연동 상태 확인 (orders.source가 'MIXED'인지 확인)
-        const isIntegrated = this.checkIfIntegrated();
-
-        // TLL 주문이 있는 경우 사용자 정보와 연동 버튼 표시
         return `
             <div class="tll-user-info">
                 <div class="tll-user-header">
                     <span>📱 TLL 연동 사용자</span>
-                    <div class="tll-status-indicator">
-                        <span class="status-dot ${isIntegrated ? 'integrated' : 'active'}"></span>
-                        <span class="status-text">${isIntegrated ? '연동됨' : '활성'}</span>
-                    </div>
                 </div>
-                
                 <div class="tll-user-details">
                     <div class="user-detail-row">
                         <span class="detail-label">이름:</span>
-                        <span class="detail-value">${this.tllUserInfo?.name || '게스트'}</span>
+                        <span class="detail-value">${this.tllUserInfo.name || '게스트'}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">연락처:</span>
-                        <span class="detail-value">${this.tllUserInfo?.phone || this.tllUserInfo?.guest_phone || '-'}</span>
+                        <span class="detail-value">${this.tllUserInfo.phone || this.tllUserInfo.guest_phone || '-'}</span>
                     </div>
                     <div class="user-detail-row">
-                        <span class="detail-label">주문 상태:</span>
-                        <span class="detail-value ${isIntegrated ? 'integrated' : 'separate'}">
-                            ${isIntegrated ? '통합 주문' : '분리 주문'}
-                        </span>
+                        <span class="detail-label">주문 시간:</span>
+                        <span class="detail-value">${this.tllUserInfo.created_at ? new Date(this.tllUserInfo.created_at).toLocaleTimeString() : '-'}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">포인트:</span>
-                        <span class="detail-value">${(this.tllUserInfo?.point || 0).toLocaleString()}P</span>
+                        <span class="detail-value">${(this.tllUserInfo.point || 0).toLocaleString()}P</span>
                     </div>
                 </div>
-
-                <!-- 개선된 TLL-POS 연동 섹션 -->
-                <div class="tll-integration-section-v2">
-                    <div class="integration-header">
-                        <h4 class="integration-title">
-                            <span class="title-icon">🔗</span>
-                            <span>주문 통합 관리</span>
-                        </h4>
-                        <div class="integration-badge ${isIntegrated ? 'integrated' : 'separate'}">
-                            ${isIntegrated ? '통합 모드' : '분리 모드'}
-                        </div>
-                    </div>
-                    
-                    <div class="integration-details">
-                        <div class="order-summary">
-                            <div class="order-type tll">
-                                <span class="type-icon">📱</span>
-                                <span class="type-label">TLL</span>
-                                <span class="type-count">${this.tllOrders.length}개</span>
-                            </div>
-                            <div class="order-connector ${isIntegrated ? 'connected' : 'separate'}">
-                                ${isIntegrated ? '⚡' : '➡️'}
-                            </div>
-                            <div class="order-type pos">
-                                <span class="type-icon">💻</span>
-                                <span class="type-label">POS</span>
-                                <span class="type-count">${hasPOSOrders ? this.currentOrders.filter(order => !order.sessionId).length + '개' : '없음'}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="integration-actions-v2">
-                        ${!isIntegrated && hasPOSOrders ? `
-                            <button class="integration-btn-v2 primary integrate" 
-                                    onclick="POSOrderScreen.integrateWithTLLOrder()"
-                                    title="POS 주문을 TLL 주문과 통합합니다">
-                                <span class="btn-icon">🔗</span>
-                                <span class="btn-text">주문 통합</span>
-                            </button>
-                            <div class="integration-description">
-                                <small>💡 POS 주문을 TLL 주문과 통합하여 하나의 계산서로 처리됩니다</small>
-                            </div>
-                        ` : isIntegrated ? `
-                            <button class="integration-btn-v2 secondary disconnect" 
-                                    onclick="POSOrderScreen.disconnectFromTLLOrder()"
-                                    title="통합된 주문을 분리합니다">
-                                <span class="btn-icon">🔗</span>
-                                <span class="btn-text">연동 해제</span>
-                            </button>
-                            <div class="integration-description success">
-                                <small>✅ 주문이 통합되었습니다. 하나의 계산서로 처리됩니다</small>
-                            </div>
-                        ` : `
-                            <div class="no-pos-orders">
-                                <span class="empty-icon">📝</span>
-                                <small>연동할 POS 주문이 없습니다</small>
-                            </div>
-                        `}
-                    </div>
-                </div>
-
-                <!-- 기존 TLL 액션 버튼 -->
                 <div class="tll-action-buttons">
                     <button class="tll-action-btn end-session" onclick="POSOrderScreen.endTLLSession()">
                         <span class="btn-icon">🔚</span>
@@ -852,11 +775,9 @@ const POSOrderScreen = {
             if (data.success) {
                 this.tllOrders = data.tllOrders || [];
                 this.tllUserInfo = data.userInfo || null;
-                this.tllOrderSource = data.orderSource || 'TLL'; // 주문 소스 정보 저장
 
                 console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
                 console.log(`👤 TLL 사용자 정보:`, this.tllUserInfo?.name || '없음');
-                console.log(`📋 TLL 주문 소스:`, this.tllOrderSource);
 
                 // TLL 주문 세부 정보 로깅
                 if (this.tllOrders.length > 0) {
@@ -2122,118 +2043,6 @@ const POSOrderScreen = {
         }
 
         console.log(`🍽️ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
-    },
-
-    /**
-     * 연동 상태 확인 (orders.source가 'MIXED'인지 확인)
-     */
-    checkIfIntegrated() {
-        // TLL 주문 정보에서 source 확인
-        if (this.tllOrders && this.tllOrders.length > 0) {
-            // 첫 번째 TLL 주문의 source가 'MIXED'인지 확인
-            return this.tllOrderSource === 'MIXED';
-        }
-        return false;
-    },
-
-    /**
-     * POS 주문을 TLL 주문과 통합 (개선된 버전)
-     */
-    async integrateWithTLLOrder() {
-        try {
-            // 필요한 데이터 검증
-            if (!this.tllOrders || this.tllOrders.length === 0) {
-                alert('통합할 TLL 주문이 없습니다.');
-                return;
-            }
-
-            const posOrders = this.currentOrders.filter(order => !order.sessionId);
-            if (!posOrders || posOrders.length === 0) {
-                alert('통합할 POS 주문이 없습니다.');
-                return;
-            }
-
-            // 이미 통합된 상태인지 확인
-            if (this.checkIfIntegrated()) {
-                alert('이미 통합된 주문입니다.');
-                return;
-            }
-
-            // TLL 주문 ID 가져오기
-            const tllOrderId = this.tllOrders[0].order_id;
-            if (!tllOrderId) {
-                alert('TLL 주문 정보를 찾을 수 없습니다.');
-                return;
-            }
-
-            // 확인 메시지
-            const confirmMessage = `주문을 통합하시겠습니까?\n\n` +
-                                 `📱 TLL 사용자: ${this.tllUserInfo?.name || '게스트'}\n` +
-                                 `💻 POS 주문: ${posOrders.length}개\n` +
-                                 `📱 TLL 주문: ${this.tllOrders.length}개\n\n` +
-                                 `통합 후 하나의 계산서로 처리됩니다.`;
-
-            if (!confirm(confirmMessage)) {
-                return;
-            }
-
-            console.log(`🔗 주문 통합 요청: TLL 주문 ID ${tllOrderId}`);
-
-            // API 호출 - 새로운 통합 엔드포인트
-            const response = await fetch('/api/pos/integrate-orders', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    storeId: this.currentStoreId,
-                    tableNumber: this.currentTableNumber,
-                    tllOrderId: tllOrderId,
-                    integrationMode: 'MIXED'
-                })
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || '주문 통합 실패');
-            }
-
-            const result = await response.json();
-            console.log('✅ 주문 통합 완료:', result);
-
-            // 성공 메시지
-            alert(`✅ 주문이 통합되었습니다!\n\n` +
-                  `• 통합된 POS 주문: ${result.integratedOrdersCount}개\n` +
-                  `• 총 주문 금액: ${result.totalAmount.toLocaleString()}원\n` +
-                  `• 주문 상태: 통합 주문 (MIXED)`);
-
-            // 데이터 새로고침
-            await this.refreshOrders();
-            await this.refreshTLLOrders();
-
-            // UI 업데이트
-            await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
-
-        } catch (error) {
-            console.error('❌ 주문 통합 실패:', error);
-            alert(`주문 통합 중 오류가 발생했습니다:\n${error.message}`);
-        }
-    },
-
-    /**
-     * 통합된 주문 연동 해제 (추후 구현 예정)
-     */
-    async disconnectFromTLLOrder() {
-        alert('연동 해제 기능은 추후 구현 예정입니다.');
-        // TODO: 연동 해제 로직 구현
-    },
-
-    /**
-     * POS 주문을 TLL 주문에 연동 (기존 호환성용)
-     */
-    async integratePOSWithTLL() {
-        // 새로운 통합 함수로 리다이렉트
-        return this.integrateWithTLLOrder();
     },
 
     /**
