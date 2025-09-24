@@ -460,7 +460,7 @@ window.TLL = async function TLL(preselectedStore = null) {
                       window.selectedStore || 
                       window.currentStoreForTLL || 
                       window.currentStore;
-    
+
     if (preselectedStore) {
       console.log(`🏪 TLL - 전역 매장 정보 사용: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
     }
@@ -482,26 +482,34 @@ window.TLL = async function TLL(preselectedStore = null) {
   // 미리 선택된 매장이 있다면 DOM 요소 초기화 후 자동 선택
   if (preselectedStore && preselectedStore.id && preselectedStore.name) {
     console.log(`🎯 TLL - 매장 자동 선택 시작: ${preselectedStore.name} (ID: ${preselectedStore.id})`);
-    
-    // DOM 완전 렌더링 후 매장 자동 선택
-    const autoSelectStore = () => {
-      console.log('🔄 매장 자동 선택 시도 중...');
-      
-      // DOM 요소 존재 확인
+
+    // DOM 로딩 완료를 기다리는 함수
+    const autoSelectStore = (retryCount = 0) => {
+      console.log('🔄 매장 자동 선택 시도 중...', `(${retryCount + 1}번째 시도)`);
+
+      // 최대 50번 재시도 (5초)
+      if (retryCount >= 50) {
+        console.error('❌ DOM 요소 로딩 시간 초과 - 매장 자동 선택 중단');
+        return;
+      }
+
+      // DOM 요소가 준비되지 않았다면 재시도
+      // '필요한_DOM_선택자'는 실제 DOM 요소의 선택자로 대체되어야 합니다.
+      // 여기서는 예시로 storeSearchInput, selectedStoreDiv, selectedStoreName을 사용합니다.
       const storeSearchInput = document.getElementById('storeSearchInput');
       const selectedStoreDiv = document.getElementById('selectedStore');
       const selectedStoreName = document.getElementById('selectedStoreName');
-      
+
       if (!storeSearchInput || !selectedStoreDiv || !selectedStoreName) {
-        console.warn('⚠️ DOM 요소가 아직 준비되지 않음, 재시도...');
-        setTimeout(autoSelectStore, 100);
+        console.warn('⚠️ DOM 요소가 아직 준비되지 않음, 재시도...', `(${retryCount + 1}/50)`);
+        setTimeout(() => autoSelectStore(retryCount + 1), 100);
         return;
       }
-      
+
       if (typeof window.selectStore === 'function') {
         console.log('✅ selectStore 함수 발견, 매장 자동 선택 실행');
         window.selectStore(preselectedStore.id, preselectedStore.name);
-        
+
         // UI 강제 업데이트 (selectStore가 완료되지 않을 경우 대비)
         setTimeout(() => {
           if (selectedStoreDiv.style.display !== 'block') {
@@ -509,7 +517,7 @@ window.TLL = async function TLL(preselectedStore = null) {
             storeSearchInput.value = preselectedStore.name;
             selectedStoreDiv.style.display = 'block';
             selectedStoreName.textContent = preselectedStore.name;
-            
+
             // 테이블 셀렉트 활성화
             const tableSelect = document.getElementById('tableSelect');
             if (tableSelect) {
@@ -528,17 +536,20 @@ window.TLL = async function TLL(preselectedStore = null) {
             console.log('✅ 매장 정보 UI 강제 업데이트 완료');
           }
         }, 800);
-        
+
       } else {
         console.error('❌ selectStore 함수를 찾을 수 없음, 재시도 중...');
-        setTimeout(autoSelectStore, 200);
+        setTimeout(() => autoSelectStore(retryCount + 1), 200);
       }
     };
-    
-    // 단계적 시도 (DOM 로딩 시간 고려)
-    setTimeout(autoSelectStore, 100);
-    setTimeout(autoSelectStore, 300);
-    setTimeout(autoSelectStore, 600);
+
+    // DOM이 완전히 로드된 후 매장 자동 선택 실행
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoSelectStore);
+    } else {
+      // 이미 로드된 경우 바로 실행
+      autoSelectStore();
+    }
   }
 
   // 매장 검색 이벤트
@@ -714,7 +725,7 @@ function handleTossPaymentFailure(data) {
     try {
       // 매장 ID 정규화
       const normalizedStoreId = parseInt(storeId);
-      
+
       if (!normalizedStoreId || !storeName) {
         console.error('❌ 유효하지 않은 매장 정보:', { storeId, storeName });
         alert('유효하지 않은 매장 정보입니다.');
@@ -1024,13 +1035,13 @@ async function initApp() {
 // TLL 함수를 전역에 안전하게 등록
 (function() {
   console.log('🔧 TLL 함수 전역 등록 시작...');
-  
+
   // 함수가 이미 정의되었는지 확인
   if (typeof window.TLL === 'function') {
     console.log('✅ TLL 함수가 이미 등록되어 있음');
     return;
   }
-  
+
   // TLL 함수 등록 확인
   if (typeof TLL !== 'undefined') {
     window.TLL = TLL;
