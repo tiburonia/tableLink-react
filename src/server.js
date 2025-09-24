@@ -356,6 +356,19 @@ io.on('connection', (socket) => {
     });
   });
 
+  // POS 룸 조인
+  socket.on('join-pos', (storeId) => {
+    const roomName = `pos:${storeId}`;
+    socket.join(roomName);
+
+    console.log(`🏪 POS 룸 조인: ${socket.id} -> ${roomName}`);
+
+    socket.emit('joined-pos', {
+      storeId,
+      message: `매장 ${storeId} POS에 연결되었습니다`
+    });
+  });
+
   // KRP 룸 조인
   socket.on('join-krp', (storeId) => {
     const roomName = `krp:${storeId}`;

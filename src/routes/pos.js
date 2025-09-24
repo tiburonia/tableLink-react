@@ -162,6 +162,32 @@ router.post('/orders/confirm', async (req, res) => {
 
     console.log(`✅ POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
 
+    // WebSocket으로 새 주문 알림 브로드캐스트
+    if (global.io) {
+      global.io.to(`pos:${storeId}`).emit('new-order', {
+        orderId: orderId,
+        ticketId: ticketId,
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        totalAmount: totalAmount,
+        timestamp: new Date().toISOString()
+      });
+
+      // KDS에도 알림
+      global.io.to(`kds:${storeId}`).emit('kds-update', {
+        type: 'new-order',
+        data: {
+          orderId: orderId,
+          ticketId: ticketId,
+          storeId: parseInt(storeId),
+          tableNumber: parseInt(tableNumber),
+          source: 'POS'
+        }
+      });
+
+      console.log(`📡 새 POS 주문 WebSocket 브로드캐스트: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    }
+
     res.json({
       success: true,
       orderId: orderId,

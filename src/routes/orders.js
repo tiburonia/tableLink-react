@@ -664,7 +664,7 @@ router.put('/:orderId/end-session', async (req, res) => {
     const order = updateResult.rows[0];
 
     // 해당 테이블 해제 (다른 활성 주문이 없는 경우)
-    const activeOrdersResult = await client.query(`
+    const activeOrdersResult = await pool.query(`
       SELECT COUNT(*) as count 
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
@@ -698,7 +698,7 @@ router.put('/:orderId/end-session', async (req, res) => {
           // Case 1: spare_processing_order_id에 현재 주문이 있는 경우
           // spare를 null로 처리 (status는 업데이트하지 않음)
           console.log(`🔍 spare_processing_order_id 처리 전: processing_order_id=${processingOrderId}, spare_processing_order_id=${spareOrderId}, 현재주문=${currentOrderId}`);
-          
+
           const updateResult = await client.query(`
             UPDATE store_tables
             SET
@@ -707,7 +707,7 @@ router.put('/:orderId/end-session', async (req, res) => {
             WHERE store_id = $1 AND id = $2 
             RETURNING processing_order_id, spare_processing_order_id
           `, [order.store_id, order.table_num]);
-          
+
           if (updateResult.rowCount > 0) {
             const updatedRow = updateResult.rows[0];
             console.log(`✅ spare_processing_order_id 처리 완료 - 보조 주문을 삭제 (status 유지): 테이블 ${order.table_num}, 주문 ${orderId}`);
@@ -719,7 +719,7 @@ router.put('/:orderId/end-session', async (req, res) => {
         } else if (processingOrderId === currentOrderId) {
           // Case 2: processing_order_id에 현재 주문이 있는 경우
           console.log(`🔍 processing_order_id 처리 전: processing_order_id=${processingOrderId}, spare_processing_order_id=${spareOrderId}, 현재주문=${currentOrderId}`);
-          
+
           if (currentTable.spare_processing_order_id !== null) {
             // spare가 존재하면 spare를 processing으로 이동하고 spare는 null 처리
             const updateResult = await client.query(`
@@ -731,7 +731,7 @@ router.put('/:orderId/end-session', async (req, res) => {
               WHERE store_id = $1 AND id = $2
               RETURNING processing_order_id, spare_processing_order_id
             `, [order.store_id, order.table_num]);
-            
+
             if (updateResult.rowCount > 0) {
               const updatedRow = updateResult.rows[0];
               console.log(`✅ processing_order_id 처리 완료 - 보조 주문을 메인으로 이동: 테이블 ${order.table_num}, 완료된 주문 ${orderId}, 새 메인 주문 ${updatedRow.processing_order_id}`);
@@ -752,7 +752,7 @@ router.put('/:orderId/end-session', async (req, res) => {
               WHERE store_id = $1 AND id = $2
               RETURNING processing_order_id, spare_processing_order_id, status
             `, [order.store_id, order.table_num]);
-            
+
             if (updateResult.rowCount > 0) {
               const updatedRow = updateResult.rows[0];
               console.log(`✅ processing_order_id 처리 완료 - 테이블 완전 해제: 테이블 ${order.table_num}, 주문 ${orderId}`);
@@ -832,11 +832,24 @@ router.put('/:orderId/end-session', async (req, res) => {
 
     await client.query('COMMIT');
 
+    console.log(`✅ 주문 ${orderId} 세션 종료 완료`);
+
+    // WebSocket으로 주문 완료 알림 브로드캐스트
+    if (global.io && order.store_id && order.table_num) {
+      global.io.to(`pos:${order.store_id}`).emit('order-completed', {
+        orderId: orderId,
+        storeId: order.store_id,
+        tableNumber: order.table_num,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`📡 주문 완료 WebSocket 브로드캐스트: 매장 ${order.store_id}, 테이블 ${order.table_num}`);
+    }
+
     res.json({
       success: true,
-      message: '주문 세션이 종료되었습니다',
-      orderId: parseInt(orderId),
-      tableReleased: !hasOtherActiveOrders
+      message: '주문 세션이 성공적으로 종료되었습니다',
+      orderId: orderId
     });
 
   } catch (error) {

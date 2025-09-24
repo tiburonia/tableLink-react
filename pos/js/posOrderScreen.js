@@ -71,6 +71,8 @@ const POSOrderScreen = {
 
             // 이벤트 리스너 설정
             this.setupEventListeners();
+            // TLL 주문 WebSocket 초기화
+            this.initTLLWebSocket();
         } catch (error) {
             console.error("❌ 주문 화면 렌더링 실패:", error);
             POSCore.showError("주문 화면을 불러올 수 없습니다.");
@@ -212,7 +214,7 @@ const POSOrderScreen = {
             })),
         });
 
-        // 테 ��블 헤더는 항상 표시
+        // 테 블 헤더는 항상 표시
         const tableHeader = `
             <table class="pos-order-table">
                 <thead>
@@ -1978,43 +1980,38 @@ const POSOrderScreen = {
     },
 
     /**
-     * TLL 주문 새로고침
+     * TLL 주문 새로고침 (WebSocket 기반)
      */
     async refreshTLLOrders() {
         try {
             console.log("🔄 TLL 주문 새로고침 시작");
-            console.log(
-                `📍 현재 정보: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`,
-            );
 
-            if (!POSCore.storeId || !this.currentTable) {
-                console.error("❌ 매장 ID 또는 테이블 정보가 없습니다");
-                this.showToast("매장 또는 테이블 정보가 없습니다");
+            // 사용자 정보가 있는지 확인
+            if (!this.currentUser || !this.currentUser.id) {
+                console.log("ℹ️ 사용자 정보 없음 - TLL 주문 새로고침 생략");
                 return;
             }
 
-            await this.loadTLLOrders(POSCore.storeId, this.currentTable);
+            const response = await fetch(
+                `/api/pos/stores/${this.storeId}/table/${this.tableNumber}/tll-orders`,
+            );
+            const data = await response.json();
+
+            if (data.success) {
+                this.tllOrders = data.tllOrders || [];
+                this.tllUserInfo = data.userInfo || null;
+
+                console.log(
+                    `✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`,
+                );
+            } else {
+                console.warn("⚠️ TLL 주문 조회 실패:", data.error);
+                this.tllOrders = [];
+                this.tllUserInfo = null;
+            }
 
             // UI 업데이트
-            const tllOrderList = document.getElementById("tllOrderList");
-            if (tllOrderList) {
-                tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
-                console.log(
-                    `✅ TLL 주문 목록 UI 업데이트: ${this.tllOrders?.length || 0}개 주문`,
-                );
-            }
-
-            // 대시보드 카드 업데이트
-            this.updateOrderDashboard();
-
-            // 결제 섹션 업데이트 (사용자 정보 반영)
-            const paymentSection = document.querySelector(".payment-section");
-            if (paymentSection) {
-                const newPaymentSection = document.createElement("div");
-                newPaymentSection.innerHTML = this.renderPaymentSection();
-                paymentSection.replaceWith(newPaymentSection.firstElementChild);
-                console.log("✅ 결제 섹션 업데이트 완료");
-            }
+            this.updateTLLOrdersUI();
 
             this.showToast(
                 `TLL 주문 새로고침 완료 (${this.tllOrders?.length || 0}개)`,
@@ -2025,6 +2022,57 @@ const POSOrderScreen = {
                 "TLL 주문 새로고침에 실패했습니다: " + error.message,
             );
         }
+    },
+
+    /**
+     * TLL 주문 UI 업데이트 (분리된 메서드)
+     */
+    updateTLLOrdersUI() {
+        // TLL 주문 목록 업데이트
+        const tllContainer = document.querySelector("#tllOrderContent .order-list-modern"); // Changed selector to be more specific
+        if (tllContainer) {
+            tllContainer.innerHTML = this.renderTLLOrderItemsModern();
+            console.log(
+                `✅ TLL 주문 목록 UI 업데이트: ${this.tllOrders?.length || 0}개 주문`,
+            );
+        }
+
+        // 대시보드 카드 업데이트
+        this.updateOrderDashboard();
+
+        // 결제 섹션 업데이트 (사용자 정보 반영)
+        const paymentSection = document.querySelector(".payment-section");
+        if (paymentSection) {
+            const newPaymentSection = document.createElement("div");
+            newPaymentSection.innerHTML = this.renderPaymentSection();
+            paymentSection.replaceWith(newPaymentSection.firstElementChild);
+            console.log("✅ 결제 섹션 업데이트 완료");
+        }
+    },
+
+    /**
+     * WebSocket 실시간 업데이트 초기화
+     */
+    initTLLWebSocket() {
+        if (!window.POSTableMap || !window.POSTableMap.socket) {
+            console.warn("⚠️ POS WebSocket이 초기화되지 않음");
+            return;
+        }
+
+        const socket = window.POSTableMap.socket;
+
+        // TLL 주문 업데이트 이벤트
+        socket.on('tll-order-updated', (data) => {
+            const { storeId, tableNumber } = data;
+
+            if (parseInt(storeId) === parseInt(this.currentStoreId) &&
+                parseInt(tableNumber) === parseInt(this.currentTableNumber)) {
+                console.log('🔄 TLL 주문 실시간 업데이트:', data);
+                this.refreshTLLOrders();
+            }
+        });
+
+        console.log('✅ TLL WebSocket 이벤트 리스너 등록 완료');
     },
 
     /**

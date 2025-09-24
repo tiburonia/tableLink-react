@@ -49,6 +49,7 @@ const POSTableMap = {
                 </div>
                 
                 <div class="top-bar-right">
+                    <div class="connection-status" id="connectionStatus">🔴 연결중</div>
                     <button class="top-btn" onclick="POSTableMap.showOrderStatus()">
                         📊 주문현황
                     </button>
@@ -718,18 +719,211 @@ const POSTableMap = {
     },
 
     /**
-     * 실시간 업데이트 시작
+     * 실시간 업데이트 시작 (WebSocket 기반)
      */
     startRealtimeUpdates(storeId) {
-        // 30초마다 테이블 상태 업데이트
-        setInterval(async () => {
-            try {
-                const tables = await this.loadTables(storeId);
-                this.updateTableGrid(tables);
-            } catch (error) {
-                console.error("❌ 실시간 업데이트 실패:", error);
+        this.initWebSocket(storeId);
+        
+        // 백업용 주기적 업데이트 (WebSocket 연결 실패 시)
+        this.backupUpdateInterval = setInterval(async () => {
+            if (!this.socket || !this.socket.connected) {
+                console.warn("⚠️ WebSocket 연결 없음 - 백업 폴링 사용");
+                try {
+                    const tables = await this.loadTables(storeId);
+                    this.updateTableGrid(tables);
+                } catch (error) {
+                    console.error("❌ 백업 업데이트 실패:", error);
+                }
             }
-        }, 30000);
+        }, 60000); // 1분마다만 백업 체크
+    },
+
+    /**
+     * POS WebSocket 연결 초기화
+     */
+    initWebSocket(storeId) {
+        try {
+            console.log('🔌 POS WebSocket 연결 시작');
+            
+            this.socket = io({
+                path: '/socket.io'
+            });
+
+            this.socket.on('connect', () => {
+                console.log('✅ POS WebSocket 연결됨');
+                this.socket.emit('join-pos', storeId);
+                this.connectionStatus = true;
+                this.updateConnectionUI(true);
+            });
+
+            this.socket.on('disconnect', () => {
+                console.log('❌ POS WebSocket 연결 해제');
+                this.connectionStatus = false;
+                this.updateConnectionUI(false);
+            });
+
+            // 테이블 상태 변경 이벤트
+            this.socket.on('table-status-changed', (data) => {
+                console.log('🔄 테이블 상태 변경:', data);
+                this.handleTableStatusChange(data);
+            });
+
+            // 새 주문 이벤트
+            this.socket.on('new-order', (data) => {
+                console.log('🆕 새 주문:', data);
+                this.handleNewOrder(data);
+            });
+
+            // 주문 완료 이벤트
+            this.socket.on('order-completed', (data) => {
+                console.log('✅ 주문 완료:', data);
+                this.handleOrderCompleted(data);
+            });
+
+            // 주문 업데이트 이벤트
+            this.socket.on('order-updated', (data) => {
+                console.log('🔄 주문 업데이트:', data);
+                this.handleOrderUpdate(data);
+            });
+
+        } catch (error) {
+            console.error('❌ POS WebSocket 초기화 실패:', error);
+        }
+    },
+
+    /**
+     * 테이블 상태 변경 처리
+     */
+    async handleTableStatusChange(data) {
+        const { tableNumber, isOccupied, storeId } = data;
+        
+        if (parseInt(storeId) !== parseInt(POSCore.storeId)) {
+            return; // 다른 매장의 이벤트는 무시
+        }
+
+        // 전체 테이블 정보 다시 로드
+        try {
+            const tables = await this.loadTables(POSCore.storeId);
+            this.updateTableGrid(tables);
+            console.log(`🔄 테이블 ${tableNumber} 상태 변경으로 그리드 업데이트`);
+        } catch (error) {
+            console.error('❌ 테이블 상태 변경 처리 실패:', error);
+        }
+    },
+
+    /**
+     * 새 주문 처리
+     */
+    async handleNewOrder(data) {
+        const { storeId, tableNumber } = data;
+        
+        if (parseInt(storeId) !== parseInt(POSCore.storeId)) {
+            return;
+        }
+
+        // 해당 테이블만 업데이트
+        try {
+            const tables = await this.loadTables(POSCore.storeId);
+            this.updateTableGrid(tables);
+            
+            // 알림 표시
+            this.showOrderNotification(`테이블 ${tableNumber}에 새 주문이 접수되었습니다.`);
+        } catch (error) {
+            console.error('❌ 새 주문 처리 실패:', error);
+        }
+    },
+
+    /**
+     * 주문 완료 처리
+     */
+    async handleOrderCompleted(data) {
+        const { storeId, tableNumber } = data;
+        
+        if (parseInt(storeId) !== parseInt(POSCore.storeId)) {
+            return;
+        }
+
+        try {
+            const tables = await this.loadTables(POSCore.storeId);
+            this.updateTableGrid(tables);
+            
+            this.showOrderNotification(`테이블 ${tableNumber} 주문이 완료되었습니다.`);
+        } catch (error) {
+            console.error('❌ 주문 완료 처리 실패:', error);
+        }
+    },
+
+    /**
+     * 주문 업데이트 처리
+     */
+    async handleOrderUpdate(data) {
+        const { storeId } = data;
+        
+        if (parseInt(storeId) !== parseInt(POSCore.storeId)) {
+            return;
+        }
+
+        try {
+            const tables = await this.loadTables(POSCore.storeId);
+            this.updateTableGrid(tables);
+        } catch (error) {
+            console.error('❌ 주문 업데이트 처리 실패:', error);
+        }
+    },
+
+    /**
+     * 연결 상태 UI 업데이트
+     */
+    updateConnectionUI(isConnected) {
+        // 연결 상태 표시 요소가 있다면 업데이트
+        const statusElement = document.querySelector('.connection-status');
+        if (statusElement) {
+            statusElement.textContent = isConnected ? '🟢 실시간 연결' : '🔴 연결 끊김';
+            statusElement.className = `connection-status ${isConnected ? 'connected' : 'disconnected'}`;
+        }
+    },
+
+    /**
+     * 주문 알림 표시
+     */
+    showOrderNotification(message) {
+        // 간단한 토스트 알림
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    },
+
+    /**
+     * WebSocket 연결 정리
+     */
+    cleanup() {
+        if (this.socket) {
+            this.socket.disconnect();
+            this.socket = null;
+        }
+        
+        if (this.backupUpdateInterval) {
+            clearInterval(this.backupUpdateInterval);
+            this.backupUpdateInterval = null;
+        }
     },
 
     /**
