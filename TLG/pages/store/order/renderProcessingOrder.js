@@ -730,10 +730,7 @@ async function addNewOrder(storeId, tableId) {
 
     // renderOrderScreen으로 이동 (기존 세션 유지)
     console.log('🔄 주문 화면으로 이동 중...');
-    await renderOrderScreen(storeInfo, tableId, {
-      continuingSession: true,
-      previousOrderId: window.currentOrderId
-    });
+    await renderOrderScreen(storeInfo, `${tableId}번 테이블`, tableId);
 
   } catch (error) {
     console.error('❌ 추가 주문 실패:', error);
