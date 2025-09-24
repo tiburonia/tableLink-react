@@ -722,20 +722,22 @@ const POSTableMap = {
      * 실시간 업데이트 시작 (WebSocket 기반)
      */
     startRealtimeUpdates(storeId) {
+        // WebSocket 연결 시도
         this.initWebSocket(storeId);
         
-        // 백업용 주기적 업데이트 (WebSocket 연결 실패 시)
-        this.backupUpdateInterval = setInterval(async () => {
-            if (!this.socket || !this.socket.connected) {
-                console.warn("⚠️ WebSocket 연결 없음 - 백업 폴링 사용");
-                try {
-                    const tables = await this.loadTables(storeId);
-                    this.updateTableGrid(tables);
-                } catch (error) {
-                    console.error("❌ 백업 업데이트 실패:", error);
+        // 주기적 업데이트 (WebSocket 보완 또는 대체용)
+        this.updateInterval = setInterval(async () => {
+            try {
+                const tables = await this.loadTables(storeId);
+                this.updateTableGrid(tables);
+                
+                if (!this.socket || !this.socket.connected) {
+                    console.log("🔄 폴링 모드로 테이블 상태 업데이트");
                 }
+            } catch (error) {
+                console.error("❌ 테이블 업데이트 실패:", error);
             }
-        }, 60000); // 1분마다만 백업 체크
+        }, 30000); // 30초마다 업데이트
     },
 
     /**
@@ -744,6 +746,12 @@ const POSTableMap = {
     initWebSocket(storeId) {
         try {
             console.log('🔌 POS WebSocket 연결 시작');
+            
+            // Socket.IO 클라이언트가 로드되었는지 확인
+            if (typeof io === 'undefined') {
+                console.warn('⚠️ Socket.IO 클라이언트가 로드되지 않음 - 폴링 모드로 전환');
+                return;
+            }
             
             this.socket = io({
                 path: '/socket.io'
@@ -920,9 +928,9 @@ const POSTableMap = {
             this.socket = null;
         }
         
-        if (this.backupUpdateInterval) {
-            clearInterval(this.backupUpdateInterval);
-            this.backupUpdateInterval = null;
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
         }
     },
 

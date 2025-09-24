@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TableLink POS 시스템</title>
+    <title>POS 시스템</title>
+</head>
+<body>
+    <!-- Socket.IO 클라이언트 -->
+    <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="/pos/styles/pos.css">
 </head>
 <body>
@@ -25,13 +29,13 @@
         // 스크립트 로딩 완료 이벤트 리스너
         let loadedModules = new Set();
         const requiredModules = ['POSCore', 'POSOrderScreen', 'POSPaymentModal', 'POSTableMap'];
-        
+
         // 모듈 로딩 체크 함수
         function checkModuleLoading(moduleName) {
             if (typeof window[moduleName] !== 'undefined') {
                 loadedModules.add(moduleName);
                 console.log(`✅ ${moduleName} 로드 완료`);
-                
+
                 // 모든 모듈이 로드되었는지 확인
                 if (loadedModules.size === requiredModules.length) {
                     console.log('✅ 모든 필수 모듈 로드 완료');
@@ -50,7 +54,7 @@
         // POS 시스템 초기화 함수
         async function initializePOSSystem() {
             console.log('🚀 POS 시스템 초기화 시작');
-            
+
             // 추가 검증: POSPaymentModal의 메서드들이 올바르게 로드되었는지 확인
             const paymentModalValidation = {
                 exists: typeof window.POSPaymentModal !== 'undefined',
@@ -63,7 +67,7 @@
 
             if (!paymentModalValidation.exists || !paymentModalValidation.hasShow) {
                 console.error('❌ POSPaymentModal이 올바르게 로드되지 않았습니다');
-                
+
                 // 강제 재로딩 시도
                 try {
                     console.log('🔄 POSPaymentModal 강제 재로딩 시도');
@@ -112,24 +116,24 @@
         // DOM 로드 완료 후 실행
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🔄 DOM 로드 완료, POS 모듈 검증 시작');
-            
+
             // 초기 모듈 검증
             validateModuleLoading();
-            
+
             // 일정 시간 후에도 모든 모듈이 로드되지 않았으면 강제 진행
             setTimeout(() => {
                 if (loadedModules.size < requiredModules.length) {
                     console.warn('⚠️ 일부 모듈 로딩이 지연되고 있습니다. 강제 진행합니다.');
                     console.log('현재 로드된 모듈:', Array.from(loadedModules));
                     console.log('누락된 모듈:', requiredModules.filter(m => !loadedModules.has(m)));
-                    
+
                     // 누락된 모듈이 POSPaymentModal뿐이라면 경고와 함께 진행
                     const missingModules = requiredModules.filter(m => !loadedModules.has(m));
                     if (missingModules.length === 1 && missingModules[0] === 'POSPaymentModal') {
                         console.warn('⚠️ POSPaymentModal만 누락됨. 결제 기능 제한과 함께 진행합니다.');
                         alert('결제 모달 기능에 제한이 있을 수 있습니다.');
                     }
-                    
+
                     proceedWithInitialization();
                 }
             }, 5000); // 5초 타임아웃
