@@ -419,15 +419,16 @@ router.get('/stores/:storeId/menu', async (req, res) => {
 });
 
 /**
- * [GET] /stores/:storeId/orders/active - 매장의 활성 주문들
+ * [GET] /stores/:storeId/orders/active - 매장의 활성 주문들 (교차 주문 지원)
  */
 router.get('/stores/:storeId/orders/active', async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    console.log(`📊 매장 ${storeId} 활성 주문 조회 (store_tables.processing_order_id 기반)`);
+    console.log(`📊 매장 ${storeId} 활성 주문 조회 (교차 주문 지원)`);
 
-    const result = await pool.query(`
+    // 메인 주문 조회
+    const mainOrdersResult = await pool.query(`
       SELECT 
         st.id as table_number,
         o.id as order_id,
@@ -437,30 +438,88 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
         o.session_status,
         o.created_at as opened_at,
         o.source as source_system,
-        COUNT(oi.id) as item_count
+        COUNT(oi.id) as item_count,
+        'main' as order_type,
+        st.spare_processing_order_id
       FROM store_tables st
       JOIN orders o ON st.processing_order_id = o.id
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
       WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
       GROUP BY st.id, o.id, u.name, o.user_id, 
-               o.total_price, o.session_status, o.created_at, o.source
-      ORDER BY o.created_at ASC
+               o.total_price, o.session_status, o.created_at, o.source, st.spare_processing_order_id
     `, [storeId]);
 
-    const activeOrders = result.rows.map(row => ({
-      checkId: row.order_id, // order_id를 checkId로 사용
-      tableNumber: row.table_number,
-      customerName: row.customer_name,
-      isGuest: !row.user_id,
-      totalAmount: row.total_amount || 0,
-      status: row.status,
-      openedAt: row.opened_at,
-      sourceSystem: row.source_system,
-      itemCount: parseInt(row.item_count)
-    }));
+    // 보조 주문 조회
+    const spareOrdersResult = await pool.query(`
+      SELECT 
+        st.id as table_number,
+        o.id as order_id,
+        COALESCE(u.name, '포스고객') as customer_name,
+        o.user_id,
+        o.total_price as total_amount,
+        o.session_status,
+        o.created_at as opened_at,
+        o.source as source_system,
+        COUNT(oi.id) as item_count,
+        'spare' as order_type
+      FROM store_tables st
+      JOIN orders o ON st.spare_processing_order_id = o.id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.spare_processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id, 
+               o.total_price, o.session_status, o.created_at, o.source
+    `, [storeId]);
 
-    console.log(`✅ 매장 ${storeId} 활성 주문 ${activeOrders.length}개 조회 완료`);
+    // 결과 통합 및 교차 주문 표시
+    const activeOrders = [];
+
+    // 메인 주문 처리
+    mainOrdersResult.rows.forEach(row => {
+      const hasSpareOrder = row.spare_processing_order_id !== null;
+      
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'main',
+        isCrossOrder: hasSpareOrder // 교차 주문 여부
+      });
+    });
+
+    // 보조 주문 처리
+    spareOrdersResult.rows.forEach(row => {
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'spare',
+        isCrossOrder: true // 보조 주문은 항상 교차 주문
+      });
+    });
+
+    // 테이블 번호와 주문 생성 시간으로 정렬
+    activeOrders.sort((a, b) => {
+      if (a.tableNumber !== b.tableNumber) {
+        return a.tableNumber - b.tableNumber;
+      }
+      return new Date(a.openedAt) - new Date(b.openedAt);
+    });
+
+    console.log(`✅ 매장 ${storeId} 활성 주문 ${activeOrders.length}개 조회 완료 (교차 주문 포함)`);
 
     res.json({
       success: true,

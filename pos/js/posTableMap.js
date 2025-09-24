@@ -80,7 +80,7 @@ const POSTableMap = {
     },
 
     /**
-     * 테이블 카드 렌더링 (OK POS 스타일)
+     * 테이블 카드 렌더링 (교차 주문 지원)
      */
     renderTableCard(table) {
         const statusClass = this.getTableStatusClass(table);
@@ -101,36 +101,136 @@ const POSTableMap = {
     },
 
     /**
-     * 점유된 테이블 내용 렌더링 (영수증 스타일)
+     * 점유된 테이블 내용 렌더링 (교차 주문 지원)
      */
     renderOccupiedContent(table) {
-        const orderItemsHTML = this.renderReceiptOrderItems(
-            table.orderItems || [],
-        );
-        const sourceText = table.isFromTLG ? "TLL 주문" : "POS 주문";
-        const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
-        const orderSourceClass = table.isFromTLG ? "tll-order" : "pos-order";
+        if (table.hasCrossOrders) {
+            // 교차 주문인 경우
+            return this.renderCrossOrderContent(table);
+        } else {
+            // 단일 주문인 경우 (기존 로직)
+            const orderItemsHTML = this.renderReceiptOrderItems(
+                table.orderItems || [],
+            );
+            const sourceText = table.isFromTLG ? "TLL 주문" : "POS 주문";
+            const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
+            const orderSourceClass = table.isFromTLG ? "tll-order" : "pos-order";
+
+            return `
+                <div class="receipt-card ${orderSourceClass}">
+                    <div class="receipt-header">
+                        <div class="receipt-header-left">
+                            <div class="receipt-subtitle">${sourceText}</div>
+                        </div>
+                        <div class="receipt-time">${occupiedTime}</div>
+                    </div>
+                    
+                    <div class="receipt-body">
+                        ${orderItemsHTML}
+                    </div>
+                    
+                    <div class="receipt-footer">
+                        <div class="receipt-total">
+                            ${(table.totalAmount || 0).toLocaleString()}원
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    },
+
+    /**
+     * 교차 주문 컨텐츠 렌더링
+     */
+    renderCrossOrderContent(table) {
+        const mainOrder = table.mainOrder;
+        const spareOrder = table.spareOrder;
+        
+        // 메인 주문 정보
+        const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
+        const mainTime = this.formatOccupiedTime(mainOrder?.openedAt);
+        
+        // 보조 주문 정보
+        const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
+        const spareTime = this.formatOccupiedTime(spareOrder?.openedAt);
+
+        // 주문별 아이템 분리
+        const mainItems = table.orderItems.filter(item => item.orderType === 'main' || !item.orderType);
+        const spareItems = table.orderItems.filter(item => item.orderType === 'spare');
 
         return `
-            <div class="receipt-card ${orderSourceClass}">
+            <div class="receipt-card cross-order">
                 <div class="receipt-header">
                     <div class="receipt-header-left">
-                        <div class="receipt-subtitle">${sourceText}</div>
+                        <div class="receipt-subtitle">교차 주문</div>
                     </div>
-                    <div class="receipt-time">${occupiedTime}</div>
+                    <div class="receipt-time">${mainTime}</div>
                 </div>
                 
-                <div class="receipt-body">
-                    ${orderItemsHTML}
+                <div class="receipt-body cross-order-body">
+                    <!-- 메인 주문 -->
+                    <div class="cross-order-section main-order">
+                        <div class="cross-order-header">
+                            <span class="order-badge main-badge">${mainSourceText}</span>
+                            <span class="order-amount">${(mainOrder?.totalAmount || 0).toLocaleString()}원</span>
+                        </div>
+                        <div class="cross-order-items">
+                            ${this.renderCrossOrderItems(mainItems, 2)}
+                        </div>
+                    </div>
+                    
+                    <!-- 구분선 -->
+                    <div class="cross-order-divider"></div>
+                    
+                    <!-- 보조 주문 -->
+                    <div class="cross-order-section spare-order">
+                        <div class="cross-order-header">
+                            <span class="order-badge spare-badge">${spareSourceText}</span>
+                            <span class="order-amount">${(spareOrder?.totalAmount || 0).toLocaleString()}원</span>
+                        </div>
+                        <div class="cross-order-items">
+                            ${this.renderCrossOrderItems(spareItems, 2)}
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="receipt-footer">
-                    <div class="receipt-total">
-                        ${(table.totalAmount || 0).toLocaleString()}원
+                    <div class="receipt-total cross-total">
+                        총 ${(table.totalAmount || 0).toLocaleString()}원
                     </div>
                 </div>
             </div>
         `;
+    },
+
+    /**
+     * 교차 주문용 아이템 렌더링
+     */
+    renderCrossOrderItems(orderItems, maxItems = 2) {
+        if (!orderItems || orderItems.length === 0) {
+            return `<div class="cross-order-empty">주문 없음</div>`;
+        }
+
+        const displayItems = orderItems.slice(0, maxItems);
+        const hasMore = orderItems.length > maxItems;
+
+        const itemsHTML = displayItems
+            .map((item) => {
+                const truncatedName = this.truncateMenuName(item.menuName, 6);
+                return `
+                <div class="cross-order-item">
+                    <span class="item-name">${truncatedName}</span>
+                    <span class="item-quantity">×${item.quantity}</span>
+                </div>
+            `;
+            })
+            .join("");
+
+        const moreHTML = hasMore
+            ? `<div class="cross-order-item more">외 ${orderItems.length - maxItems}개</div>`
+            : "";
+
+        return itemsHTML + moreHTML;
     },
 
     /**
@@ -285,7 +385,7 @@ const POSTableMap = {
     },
 
     /**
-     * 테이블 정보 로드
+     * 테이블 정보 로드 (교차 주문 지원)
      */
     async loadTables(storeId) {
         try {
@@ -302,36 +402,54 @@ const POSTableMap = {
                 return [];
             }
 
-            // 활성 주문 정보 조회
+            // 활성 주문 정보 조회 (교차 주문 포함)
             const ordersResponse = await fetch(
                 `/api/pos/stores/${storeId}/orders/active`,
             );
             const ordersData = await ordersResponse.json();
 
-            // 각 테이블별 주문 아이템 상세 정보 로드
+            // 각 테이블별 주문 정보 처리
             const tablesWithDetails = await Promise.all(
                 tablesData.tables.map(async (dbTable) => {
-                    const activeOrder = ordersData.success
-                        ? ordersData.activeOrders.find(
-                              (order) =>
-                                  order.tableNumber === dbTable.tableNumber,
+                    // 해당 테이블의 모든 주문 찾기 (메인 + 보조)
+                    const tableOrders = ordersData.success
+                        ? ordersData.activeOrders.filter(
+                              (order) => order.tableNumber === dbTable.tableNumber,
                           )
-                        : null;
+                        : [];
 
-                    let orderItems = [];
-                    if (activeOrder) {
+                    // 교차 주문 여부 확인
+                    const hasCrossOrders = tableOrders.length > 1;
+                    const mainOrder = tableOrders.find(order => order.orderType === 'main');
+                    const spareOrder = tableOrders.find(order => order.orderType === 'spare');
+
+                    // 기본적으로 메인 주문 정보 사용, 없으면 첫 번째 주문
+                    const primaryOrder = mainOrder || tableOrders[0];
+
+                    let allOrderItems = [];
+                    let totalAmount = 0;
+                    let totalItemCount = 0;
+
+                    // 모든 주문의 아이템 통합
+                    for (const order of tableOrders) {
                         try {
-                            if (activeOrder.sourceSystem === 'TLL') {
+                            let orderItems = [];
+                            
+                            if (order.sourceSystem === 'TLL') {
                                 // TLL 주문의 경우 TLL 주문 API 사용
-                                console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}`);
+                                console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}, 주문 ${order.checkId}`);
                                 const tllItemsResponse = await fetch(
                                     `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/tll-orders`,
                                 );
                                 const tllItemsData = await tllItemsResponse.json();
 
                                 if (tllItemsData.success && tllItemsData.tllOrders) {
-                                    // TLL 주문 데이터를 POS 형식으로 변환 후 수량 통합
-                                    const convertedItems = tllItemsData.tllOrders.map(item => ({
+                                    // 해당 주문의 아이템만 필터링
+                                    const orderSpecificItems = tllItemsData.tllOrders.filter(item => 
+                                        item.order_id === order.checkId
+                                    );
+                                    
+                                    const convertedItems = orderSpecificItems.map(item => ({
                                         id: item.id,
                                         menu_id: item.menu_id || item.id,
                                         menu_name: item.menu_name,
@@ -339,12 +457,11 @@ const POSTableMap = {
                                         quantity: item.quantity,
                                         total_price: item.total_price,
                                         cook_station: item.cook_station || 'KITCHEN',
-                                        item_status: item.item_status || 'READY'
+                                        item_status: item.item_status || 'READY',
+                                        order_type: order.orderType
                                     }));
                                     
-                                    const consolidatedItems = this.consolidateOrderItems(convertedItems);
-                                    orderItems = consolidatedItems;
-                                    console.log(`✅ TLL 주문 아이템 통합 완료: ${convertedItems.length}개 → ${consolidatedItems.length}개`);
+                                    orderItems = convertedItems;
                                 }
                             } else {
                                 // POS 주문의 경우 기존 로직 사용
@@ -354,33 +471,51 @@ const POSTableMap = {
                                 const itemsData = await itemsResponse.json();
 
                                 if (itemsData.success && itemsData.orderItems) {
-                                    // 메뉴별로 수량 통합
-                                    const consolidatedItems =
-                                        this.consolidateOrderItems(
-                                            itemsData.orderItems,
-                                        );
-                                    orderItems = consolidatedItems;
+                                    // 해당 주문의 아이템만 필터링
+                                    const orderSpecificItems = itemsData.orderItems.filter(item => 
+                                        item.order_id === order.checkId
+                                    );
+                                    
+                                    orderItems = orderSpecificItems.map(item => ({
+                                        ...item,
+                                        order_type: order.orderType
+                                    }));
                                 }
                             }
+
+                            allOrderItems.push(...orderItems);
+                            totalAmount += order.totalAmount || 0;
+                            totalItemCount += order.itemCount || 0;
+
                         } catch (error) {
                             console.error(
-                                `❌ 테이블 ${dbTable.tableNumber} 주문 아이템 로드 실패:`,
+                                `❌ 테이블 ${dbTable.tableNumber} 주문 ${order.checkId} 아이템 로드 실패:`,
                                 error,
                             );
                         }
                     }
 
+                    // 메뉴별로 수량 통합 (교차 주문의 경우 구분 표시)
+                    const consolidatedItems = hasCrossOrders 
+                        ? this.consolidateOrderItemsWithType(allOrderItems)
+                        : this.consolidateOrderItems(allOrderItems);
+
                     return {
                         tableNumber: dbTable.tableNumber,
                         capacity: dbTable.capacity || 4,
                         isActive: dbTable.isActive !== false,
-                        isOccupied: !!activeOrder,
-                        totalAmount: activeOrder?.totalAmount || 0,
-                        orderCount: activeOrder?.itemCount || 0,
-                        isFromTLG: activeOrder?.sourceSystem === "TLL",
-                        occupiedSince: activeOrder?.openedAt,
-                        checkId: activeOrder?.checkId,
-                        orderItems: orderItems, // 주문 아이템 상세 정보 추가
+                        isOccupied: tableOrders.length > 0,
+                        totalAmount: totalAmount,
+                        orderCount: totalItemCount,
+                        isFromTLG: primaryOrder?.sourceSystem === "TLL",
+                        occupiedSince: primaryOrder?.openedAt,
+                        checkId: primaryOrder?.checkId,
+                        orderItems: consolidatedItems,
+                        // 교차 주문 관련 정보 추가
+                        hasCrossOrders: hasCrossOrders,
+                        mainOrder: mainOrder,
+                        spareOrder: spareOrder,
+                        allOrders: tableOrders
                     };
                 }),
             );
@@ -389,7 +524,7 @@ const POSTableMap = {
             tablesWithDetails.sort((a, b) => a.tableNumber - b.tableNumber);
 
             console.log(
-                `✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (상세 정보 포함)`,
+                `✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (교차 주문 지원)`,
             );
             return tablesWithDetails;
         } catch (error) {
@@ -423,10 +558,36 @@ const POSTableMap = {
     },
 
     /**
-     * 테이블 상태 클래스 반환
+     * 교차 주문용 아이템 통합 (주문 타입별로 구분)
+     */
+    consolidateOrderItemsWithType(orderItems) {
+        const consolidated = {};
+
+        orderItems.forEach((item) => {
+            const key = `${item.menu_name}_${item.unit_price}_${item.order_type || 'main'}`;
+
+            if (consolidated[key]) {
+                consolidated[key].quantity += item.quantity;
+            } else {
+                consolidated[key] = {
+                    menuName: item.menu_name,
+                    price: item.unit_price,
+                    quantity: item.quantity,
+                    cookStation: item.cook_station || "KITCHEN",
+                    orderType: item.order_type || 'main'
+                };
+            }
+        });
+
+        return Object.values(consolidated);
+    },
+
+    /**
+     * 테이블 상태 클래스 반환 (교차 주문 지원)
      */
     getTableStatusClass(table) {
         if (!table.isOccupied) return "status-empty";
+        if (table.hasCrossOrders) return "status-cross-order";
         if (table.isFromTLG) return "status-tlg";
         return "status-occupied";
     },
