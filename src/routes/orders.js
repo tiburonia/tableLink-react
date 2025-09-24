@@ -836,7 +836,7 @@ router.put('/:orderId/end-session', async (req, res) => {
       success: true,
       message: '주문 세션이 종료되었습니다',
       orderId: parseInt(orderId),
-      tableReleased: !hasActiveOrders
+      tableReleased: !hasOtherActiveOrders
     });
 
   } catch (error) {
