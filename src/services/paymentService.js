@@ -191,31 +191,65 @@ class PaymentService {
    * 기존 주문 확인 또는 새 주문 생성
    */
   async getOrCreateOrder(client, orderData) {
-    // 새 주문 생성 (OPEN 상태로 생성하여 주문 처리 후 CLOSED로 변경)
-    const newOrderResult = await client.query(`
-      INSERT INTO orders (
-        store_id,
-        user_id,
-        source,
-        session_status,
-        payment_status,
-        total_price,
-        table_num,
-        session_ended
-      ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false)
-      RETURNING id
-    `, [
-      orderData.storeId,
-      orderData.userPk,
-      orderData.finalTotal,
-      orderData.tableNumber
-    ]);
+    // 기존 활성 주문 확인
+    const existingOrderResult = await client.query(`
+      SELECT id, session_status, created_at
+      FROM orders
+      WHERE store_id = $1 
+        AND table_num = $2 
+        AND user_id = $3
+        AND session_status = 'OPEN'
+        AND NOT COALESCE(session_ended, false)
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [orderData.storeId, orderData.tableNumber, orderData.userPk]);
 
-    console.log(`✅ 새 TLL 주문 ${newOrderResult.rows[0].id} 생성 완료 (OPEN 상태)`);
+    let orderIdToUse;
+    let isNewOrder = false;
+
+    if (existingOrderResult.rows.length > 0) {
+      // 기존 주문에 추가
+      orderIdToUse = existingOrderResult.rows[0].id;
+      console.log(`🔄 기존 주문에 추가: ${orderIdToUse}`);
+      
+      // 기존 주문의 총액 업데이트
+      await client.query(`
+        UPDATE orders 
+        SET total_price = total_price + $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [orderData.finalTotal, orderIdToUse]);
+      
+    } else {
+      // 새 주문 생성
+      const newOrderResult = await client.query(`
+        INSERT INTO orders (
+          store_id,
+          user_id,
+          source,
+          session_status,
+          payment_status,
+          total_price,
+          table_num,
+          session_ended,
+          created_at,
+          updated_at
+        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        RETURNING id
+      `, [
+        orderData.storeId,
+        orderData.userPk,
+        orderData.finalTotal,
+        orderData.tableNumber
+      ]);
+
+      orderIdToUse = newOrderResult.rows[0].id;
+      isNewOrder = true;
+      console.log(`✅ 새 주문 생성: ${orderIdToUse}`);
+    }
 
     return {
-      orderIdToUse: newOrderResult.rows[0].id,
-      isNewOrder: true
+      orderIdToUse,
+      isNewOrder
     };
   }
 
