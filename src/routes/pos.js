@@ -427,8 +427,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
 
     console.log(`📊 매장 ${storeId} 활성 주문 조회 (store_tables.processing_order_id 기반)`);
 
-    // 메인 주문 조회 (processing_order_id)
-    const mainOrdersResult = await pool.query(`
+    const result = await pool.query(`
       SELECT 
         st.id as table_number,
         o.id as order_id,
@@ -438,8 +437,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
         o.session_status,
         o.created_at as opened_at,
         o.source as source_system,
-        COUNT(oi.id) as item_count,
-        'main' as order_type
+        COUNT(oi.id) as item_count
       FROM store_tables st
       JOIN orders o ON st.processing_order_id = o.id
       LEFT JOIN users u ON o.user_id = u.id
@@ -447,36 +445,8 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
       WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
       GROUP BY st.id, o.id, u.name, o.user_id, 
                o.total_price, o.session_status, o.created_at, o.source
+      ORDER BY o.created_at ASC
     `, [storeId]);
-
-    // 보조 주문 조회 (spare_processing_order_id)
-    const spareOrdersResult = await pool.query(`
-      SELECT 
-        st.id as table_number,
-        o.id as order_id,
-        COALESCE(u.name, '포스고객') as customer_name,
-        o.user_id,
-        o.total_price as total_amount,
-        o.session_status,
-        o.created_at as opened_at,
-        o.source as source_system,
-        COUNT(oi.id) as item_count,
-        'spare' as order_type
-      FROM store_tables st
-      JOIN orders o ON st.spare_processing_order_id = o.id
-      LEFT JOIN users u ON o.user_id = u.id
-      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
-      WHERE st.store_id = $1 AND st.spare_processing_order_id IS NOT NULL
-      GROUP BY st.id, o.id, u.name, o.user_id, 
-               o.total_price, o.session_status, o.created_at, o.source
-    `, [storeId]);
-
-    // 모든 주문 결합
-    const result = { 
-      rows: [...mainOrdersResult.rows, ...spareOrdersResult.rows].sort((a, b) => 
-        new Date(a.opened_at) - new Date(b.opened_at)
-      ) 
-    };
 
     const activeOrders = result.rows.map(row => ({
       checkId: row.order_id, // order_id를 checkId로 사용
