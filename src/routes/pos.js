@@ -162,6 +162,11 @@ router.post('/orders/confirm', async (req, res) => {
 
     console.log(`✅ POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
 
+    // SSE 브로드캐스트
+    if (global.broadcastPOSTableUpdate) {
+      global.broadcastPOSTableUpdate(storeId, tableNumber);
+    }
+
     res.json({
       success: true,
       orderId: orderId,
@@ -342,6 +347,11 @@ router.post('/guest-orders/confirm', async (req, res) => {
     await client.query('COMMIT');
 
     console.log(`✅ 비회원 POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
+
+    // SSE 브로드캐스트
+    if (global.broadcastPOSTableUpdate) {
+      global.broadcastPOSTableUpdate(storeId, tableNumber);
+    }
 
     res.json({
       success: true,

@@ -718,18 +718,110 @@ const POSTableMap = {
     },
 
     /**
-     * 실시간 업데이트 시작
+     * 실시간 업데이트 시작 (SSE 방식)
      */
     startRealtimeUpdates(storeId) {
-        // 30초마다 테이블 상태 업데이트
-        setInterval(async () => {
-            try {
-                const tables = await this.loadTables(storeId);
-                this.updateTableGrid(tables);
-            } catch (error) {
-                console.error("❌ 실시간 업데이트 실패:", error);
+        this.initSSE(storeId);
+    },
+
+    /**
+     * SSE 연결 초기화
+     */
+    initSSE(storeId) {
+        try {
+            console.log(`📡 POS SSE 연결 시작: 매장 ${storeId}`);
+            
+            // 기존 SSE 연결이 있으면 종료
+            if (this.sseConnection) {
+                this.sseConnection.close();
+                this.sseConnection = null;
             }
-        }, 30000);
+
+            // 새 SSE 연결 생성
+            this.sseConnection = new EventSource(`/api/sse/pos/${storeId}`);
+
+            // 연결 성공
+            this.sseConnection.onopen = () => {
+                console.log(`✅ POS SSE 연결 성공: 매장 ${storeId}`);
+            };
+
+            // 메시지 수신
+            this.sseConnection.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('📡 POS SSE 메시지 수신:', data.type);
+                    
+                    switch (data.type) {
+                        case 'connected':
+                            console.log('🔗 POS SSE 연결 확인:', data.topic);
+                            break;
+                        case 'heartbeat':
+                            // 하트비트는 로그 생략
+                            break;
+                        case 'table_update':
+                            this.handleTableUpdate(data.data);
+                            break;
+                        default:
+                            console.log('📨 POS SSE 기타 메시지:', data);
+                    }
+                } catch (error) {
+                    console.error('❌ POS SSE 메시지 파싱 실패:', error);
+                }
+            };
+
+            // 연결 오류
+            this.sseConnection.onerror = (error) => {
+                console.error('❌ POS SSE 연결 오류:', error);
+                
+                // 3초 후 재연결 시도
+                setTimeout(() => {
+                    if (this.sseConnection && this.sseConnection.readyState === EventSource.CLOSED) {
+                        console.log('🔄 POS SSE 재연결 시도...');
+                        this.initSSE(storeId);
+                    }
+                }, 3000);
+            };
+
+            // 연결 종료
+            this.sseConnection.addEventListener('close', () => {
+                console.log('📡 POS SSE 연결 종료');
+            });
+
+        } catch (error) {
+            console.error('❌ POS SSE 초기화 실패:', error);
+            
+            // 폴백: 30초 후 재시도
+            setTimeout(() => {
+                this.initSSE(storeId);
+            }, 30000);
+        }
+    },
+
+    /**
+     * 테이블 업데이트 처리
+     */
+    async handleTableUpdate(updateData) {
+        try {
+            console.log(`🔄 테이블 업데이트 수신: ${updateData.tables?.length || 0}개 테이블`);
+            
+            // 전체 테이블 데이터 다시 로드 (기존 로직 유지)
+            const tables = await this.loadTables(updateData.storeId);
+            this.updateTableGrid(tables);
+            
+        } catch (error) {
+            console.error('❌ 테이블 업데이트 처리 실패:', error);
+        }
+    },
+
+    /**
+     * SSE 연결 종료
+     */
+    closeSSE() {
+        if (this.sseConnection) {
+            this.sseConnection.close();
+            this.sseConnection = null;
+            console.log('📡 POS SSE 연결 수동 종료');
+        }
     },
 
     /**
@@ -800,6 +892,8 @@ const POSTableMap = {
     },
     logout() {
         if (confirm("POS를 종료하시겠습니까?")) {
+            // SSE 연결 정리
+            this.closeSSE();
             window.location.href = "/";
         }
     },

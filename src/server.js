@@ -151,7 +151,11 @@ try {
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes); // KRP 라우트 등록
 
-  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters, krp, kds)');
+  // SSE 라우트 추가
+  const sseRoutes = require('./routes/sse');
+  app.use('/api/sse', sseRoutes);
+
+  console.log('✅ 새 시스템 라우터 로드 완료 (auth, stores, orders, reviews, tables, cart, regular-levels, audit, tll, toss, stores-clusters, krp, kds, sse)');
 } catch (error) {
   console.error('❌ 라우터 로드 실패:', error);
   console.error('세부 내용:', error.message);

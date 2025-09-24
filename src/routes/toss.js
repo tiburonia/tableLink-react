@@ -409,6 +409,11 @@ router.post('/confirm', async (req, res) => {
 
       console.log('✅ TLL 결제 성공 처리 완료 (이벤트 기반)');
 
+      // SSE 브로드캐스트
+      if (global.broadcastPOSTableUpdate) {
+        global.broadcastPOSTableUpdate(pendingPayment.store_id, pendingPayment.table_number);
+      }
+
       res.json({
         success: true,
         orderId: orderIdToUse,
