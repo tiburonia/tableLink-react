@@ -1712,28 +1712,19 @@ body {
 .cross-order-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 12px 0;
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    gap: 8px;
+    padding: 4px 0;
 }
 
 .cross-order-section {
     flex: 1;
-    padding: 8px 12px;
-    border-radius: 6px;
-    background: rgba(248, 250, 252, 0.5);
 }
 
 .cross-order-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    margin-bottom: 4px;
 }
 
 .order-badge {
@@ -1801,24 +1792,9 @@ body {
 }
 
 .cross-order-divider {
-    height: 2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.5) 50%, transparent 100%);
-    margin: 8px 0;
-    border-radius: 1px;
-    position: relative;
-}
-
-.cross-order-divider::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    background: rgba(245, 158, 11, 0.2);
-    border-radius: 50%;
-    border: 2px solid rgba(245, 158, 11, 0.4);
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.3) 50%, transparent 100%);
+    margin: 2px 0;
 }
 
 .order-amount {
@@ -1849,14 +1825,10 @@ body {
 .receipt-header {
     position: relative;
     z-index: 1;
-    text-align: center;
-    margin-bottom: 20px;
-    border-bottom: 2px dashed #64748b;
-    padding-bottom: 16px;
-    background: rgba(248, 250, 252, 0.5);
-    margin: -20px -20px 20px -20px;
-    padding: 16px 20px;
-    border-radius: 12px 12px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
 }
 
 .receipt-header-left {
@@ -1865,10 +1837,10 @@ body {
 }
 
 .receipt-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 8px;
-    color: #1a202c;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #000000;
 }
 
 .receipt-subtitle {
@@ -1900,12 +1872,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-height: 60px;
-    padding: 16px 0;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    margin-bottom: 16px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    min-height: 40px;
 }
 
 .receipt-items {
@@ -1960,13 +1927,8 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: flex-end;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 2px solid #e2e8f0;
-    background: rgba(248, 250, 252, 0.3);
-    margin: 16px -20px -20px -20px;
-    padding: 16px 20px;
-    border-radius: 0 0 12px 12px;
+    margin-top: 8px;
+    padding-top: 8px;
 }
 
 .receipt-total {
