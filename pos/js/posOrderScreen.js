@@ -7,7 +7,7 @@ const POSOrderScreen = {
     currentOrders: [],
     menuData: [],
     cart: [], // 프론트엔드 카트 시스템
-    selectedPaymentMethod: 'card',
+    selectedPaymentMethod: "card",
     currentSession: null, // 현재 활성 세션 정보
     sessionItems: [], // 현재 세션의 주문 아이템
 
@@ -24,15 +24,15 @@ const POSOrderScreen = {
             this.currentTable = parseInt(tableNumber);
 
             // POSCore에도 저장
-            if (typeof POSCore !== 'undefined') {
+            if (typeof POSCore !== "undefined") {
                 POSCore.storeId = parseInt(storeId);
                 POSCore.tableNumber = parseInt(tableNumber);
             }
 
-            console.log('📋 POS 주문 화면 초기화:', {
+            console.log("📋 POS 주문 화면 초기화:", {
                 storeId: this.currentStoreId,
                 tableNumber: this.currentTableNumber,
-                currentTable: this.currentTable
+                currentTable: this.currentTable,
             });
 
             // 기존 주문 로드 (통합 처리 완료까지 대기)
@@ -44,31 +44,36 @@ const POSOrderScreen = {
             // 세션 정보 로드 (기존 주문이 있으면 세션 정보도 함께)
             await this.loadSessionData();
 
-            console.log('✅ 모든 데이터 로드 완료 - 렌더링 직전 상태:', {
+            console.log("✅ 모든 데이터 로드 완료 - 렌더링 직전 상태:", {
                 통합된주문수: this.currentOrders.length,
                 카트아이템수: this.cart.length,
-                현재주문상세: this.currentOrders.map(order => `${order.menuName} x${order.quantity}`).join(', ')
+                현재주문상세: this.currentOrders
+                    .map((order) => `${order.menuName} x${order.quantity}`)
+                    .join(", "),
             });
 
             // 모든 데이터 로드 완료 후 화면 렌더링
-            const main = document.getElementById('posMain');
+            const main = document.getElementById("posMain");
             main.innerHTML = `
                 ${this.renderHeader(storeInfo, tableNumber)}
                 ${this.renderMainLayout()}
             `;
 
-            console.log('🎨 최초 렌더링 완료 - 통합된 주문 데이터로 화면 표시:', {
-                통합된주문수: this.currentOrders.length,
-                카트아이템수: this.cart.length,
-                실제렌더링된HTML포함여부: document.querySelector('.pos-order-table') !== null
-            });
+            console.log(
+                "🎨 최초 렌더링 완료 - 통합된 주문 데이터로 화면 표시:",
+                {
+                    통합된주문수: this.currentOrders.length,
+                    카트아이템수: this.cart.length,
+                    실제렌더링된HTML포함여부:
+                        document.querySelector(".pos-order-table") !== null,
+                },
+            );
 
             // 이벤트 리스너 설정
             this.setupEventListeners();
-
         } catch (error) {
-            console.error('❌ 주문 화면 렌더링 실패:', error);
-            POSCore.showError('주문 화면을 불러올 수 없습니다.');
+            console.error("❌ 주문 화면 렌더링 실패:", error);
+            POSCore.showError("주문 화면을 불러올 수 없습니다.");
         }
     },
 
@@ -76,13 +81,13 @@ const POSOrderScreen = {
      * 헤더 렌더링 (전역 네비게이션)
      */
     renderHeader(storeInfo, tableNumber) {
-        const currentTime = new Date().toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            weekday: 'short',
-            hour: '2-digit',
-            minute: '2-digit'
+        const currentTime = new Date().toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            weekday: "short",
+            hour: "2-digit",
+            minute: "2-digit",
         });
 
         return `
@@ -144,7 +149,9 @@ const POSOrderScreen = {
      * 주문 내역 섹션 (카드 기반 모던 디자인)
      */
     renderOrderSection() {
-        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+        const posOrders = this.currentOrders.filter(
+            (order) => !order.sessionId,
+        );
         const tllOrderCount = this.tllOrders?.length || 0;
 
         return `
@@ -187,9 +194,11 @@ const POSOrderScreen = {
      */
     renderPOSOrderItemsModern() {
         // 이미 통합된 데이터 사용 (재통합하지 않음)
-        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+        const posOrders = this.currentOrders.filter(
+            (order) => !order.sessionId,
+        );
 
-        console.log('🎨 렌더링 시점 데이터 확인:', {
+        console.log("🎨 렌더링 시점 데이터 확인:", {
             전체주문수: this.currentOrders.length,
             POS주문수: posOrders.length,
             렌더링데이터: posOrders.map((order, index) => ({
@@ -198,11 +207,12 @@ const POSOrderScreen = {
                 수량: order.quantity,
                 단가: order.price,
                 관련티켓수: order.ticketIds?.length || 1,
-                통합상태: order.ticketIds?.length > 1 ? '다중티켓통합됨' : '단일티켓'
-            }))
+                통합상태:
+                    order.ticketIds?.length > 1 ? "다중티켓통합됨" : "단일티켓",
+            })),
         });
 
-        // 테이블 헤더는 항상 표시
+        // 테 ��블 헤더는 항상 표시
         const tableHeader = `
             <table class="pos-order-table">
                 <thead>
@@ -218,15 +228,17 @@ const POSOrderScreen = {
         `;
 
         // 주문이 있으면 주문 데이터, 없으면 빈 행들로 채움
-        let tableBody = '';
+        let tableBody = "";
 
         if (posOrders.length > 0) {
-            tableBody = posOrders.map(order => `
-                <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}">
+            tableBody = posOrders
+                .map(
+                    (order) => `
+                <tr class="order-row ${order.isCart ? "cart-item" : ""}" data-order-id="${order.id}">
                     <td class="col-menu">
                         <div class="menu-info">
                             <strong>${order.menuName}</strong>
-                            ${order.isCart ? '<span class="cart-badge">카트</span>' : ''}
+                            ${order.isCart ? '<span class="cart-badge">카트</span>' : ""}
                         </div>
                     </td>
                     <td class="col-price">
@@ -234,7 +246,9 @@ const POSOrderScreen = {
                     </td>
                     <td class="col-quantity">
                         <div class="quantity-control-table">
-                            ${order.isCart ? `
+                            ${
+                                order.isCart
+                                    ? `
                                 <button class="qty-btn minus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
                                     −
                                 </button>
@@ -242,21 +256,25 @@ const POSOrderScreen = {
                                 <button class="qty-btn plus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
                                     +
                                 </button>
-                            ` : `
+                            `
+                                    : `
                                 <span class="quantity-display">${order.quantity}</span>
-                            `}
+                            `
+                            }
                         </div>
                     </td>
                     <td class="col-total">
                         <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
                     </td>
                     <td class="col-status">
-                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
                             ${this.getStatusText(order.cookingStatus)}
                         </span>
                     </td>
                 </tr>
-            `).join('');
+            `,
+                )
+                .join("");
         } else {
             // 빈 행들로 기본 프레임 유지 (10개 빈 행)
             for (let i = 0; i < 10; i++) {
@@ -304,7 +322,7 @@ const POSOrderScreen = {
         // 메뉴별로 수량 통합
         const consolidatedOrders = {};
 
-        this.tllOrders.forEach(order => {
+        this.tllOrders.forEach((order) => {
             const key = `${order.menu_name}_${order.unit_price}`;
             if (consolidatedOrders[key]) {
                 consolidatedOrders[key].quantity += order.quantity;
@@ -317,14 +335,16 @@ const POSOrderScreen = {
                     total_price: order.total_price,
                     item_status: order.item_status,
                     cook_station: order.cook_station,
-                    order_id: order.order_id
+                    order_id: order.order_id,
                 };
             }
         });
 
         const consolidatedOrdersList = Object.values(consolidatedOrders);
 
-        return consolidatedOrdersList.map(order => `
+        return consolidatedOrdersList
+            .map(
+                (order) => `
             <div class="order-card tll-order-card" data-order-id="${order.order_id}">
                 <div class="order-card-header">
                     <div class="menu-info">
@@ -332,10 +352,10 @@ const POSOrderScreen = {
                         <span class="menu-price">${order.unit_price.toLocaleString()}원</span>
                     </div>
                     <div class="order-status-group">
-                        <span class="cook-station-badge station-${order.cook_station?.toLowerCase() || 'kitchen'}">
+                        <span class="cook-station-badge station-${order.cook_station?.toLowerCase() || "kitchen"}">
                             ${this.getCookStationText(order.cook_station)}
                         </span>
-                        <span class="status-badge status-${order.item_status?.toLowerCase() || 'pending'}">
+                        <span class="status-badge status-${order.item_status?.toLowerCase() || "pending"}">
                             ${this.getStatusText(order.item_status)}
                         </span>
                     </div>
@@ -359,11 +379,13 @@ const POSOrderScreen = {
                         <span>TLL 앱 주문</span>
                     </div>
                     <div class="order-time">
-                        ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        ${new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                 </div>
             </div>
-        `).join('');
+        `,
+            )
+            .join("");
     },
 
     /**
@@ -378,7 +400,10 @@ const POSOrderScreen = {
      */
     renderPaymentSection() {
         // 카트 아이템들만 결제 계산에 포함
-        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const cartTotal = this.cart.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0,
+        );
         const subtotal = cartTotal;
         const discount = 0; // TLL 할인 로직 추가 예정
         const total = subtotal - discount;
@@ -462,26 +487,34 @@ const POSOrderScreen = {
      * 메뉴 카테고리 렌더링
      */
     renderMenuCategories() {
-        const categories = [...new Set(this.menuData.map(menu => menu.category || '일반'))];
+        const categories = [
+            ...new Set(this.menuData.map((menu) => menu.category || "일반")),
+        ];
 
-        return categories.map((category, index) => `
-            <button class="category-tab ${index === 0 ? 'active' : ''}"
+        return categories
+            .map(
+                (category, index) => `
+            <button class="category-tab ${index === 0 ? "active" : ""}"
                     data-category="${category}"
                     onclick="POSOrderScreen.selectCategory('${category}')">
                 ${category}
             </button>
-        `).join('');
+        `,
+            )
+            .join("");
     },
 
     /**
      * 메뉴 그리드 렌더링 (큰 버튼)
      */
     renderMenuGrid(selectedCategory = null) {
-        const categories = [...new Set(this.menuData.map(menu => menu.category || '일반'))];
+        const categories = [
+            ...new Set(this.menuData.map((menu) => menu.category || "일반")),
+        ];
         const activeCategory = selectedCategory || categories[0];
 
-        const filteredMenu = this.menuData.filter(menu =>
-            (menu.category || '일반') === activeCategory
+        const filteredMenu = this.menuData.filter(
+            (menu) => (menu.category || "일반") === activeCategory,
         );
 
         // 핫메뉴 우선 정렬
@@ -491,10 +524,12 @@ const POSOrderScreen = {
             return 0;
         });
 
-        return sortedMenu.map(menu => `
-            <div class="menu-card ${menu.isHot ? 'hot-menu' : ''}"
+        return sortedMenu
+            .map(
+                (menu) => `
+            <div class="menu-card ${menu.isHot ? "hot-menu" : ""}"
                  onclick="POSOrderScreen.addToCart(${menu.id}, '${menu.name}', ${menu.price})">
-                ${menu.isHot ? '<div class="hot-badge">🔥 HOT</div>' : ''}
+                ${menu.isHot ? '<div class="hot-badge">🔥 HOT</div>' : ""}
                 <div class="menu-image">
                     ${this.getMenuIcon(menu.category)}
                 </div>
@@ -504,7 +539,9 @@ const POSOrderScreen = {
                 </div>
                 <div class="add-btn">+</div>
             </div>
-        `).join('');
+        `,
+            )
+            .join("");
     },
 
     /**
@@ -518,19 +555,19 @@ const POSOrderScreen = {
                 </div>
 
                 <div class="payment-methods-grid">
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'card' ? 'active' : ''}" id="cardPaymentBtn"
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === "card" ? "active" : ""}" id="cardPaymentBtn"
                             onclick="POSOrderScreen.selectPaymentMethod('card')">
                         <div class="method-icon">💳</div>
                         <div class="method-name">카드</div>
                     </button>
 
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'cash' ? 'active' : ''}" id="cashPaymentBtn"
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === "cash" ? "active" : ""}" id="cashPaymentBtn"
                             onclick="POSOrderScreen.selectPaymentMethod('cash')">
                         <div class="method-icon">💵</div>
                         <div class="method-name">현금</div>
                     </button>
 
-                    <button class="payment-method-btn ${this.selectedPaymentMethod === 'mixed' ? 'active' : ''}"
+                    <button class="payment-method-btn ${this.selectedPaymentMethod === "mixed" ? "active" : ""}"
                             onclick="POSOrderScreen.selectPaymentMethod('mixed')">
                         <div class="method-icon">🔄</div>
                         <div class="method-name">복합결제</div>
@@ -583,15 +620,15 @@ const POSOrderScreen = {
                 <div class="tll-user-details">
                     <div class="user-detail-row">
                         <span class="detail-label">이름:</span>
-                        <span class="detail-value">${this.tllUserInfo.name || '게스트'}</span>
+                        <span class="detail-value">${this.tllUserInfo.name || "게스트"}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">연락처:</span>
-                        <span class="detail-value">${this.tllUserInfo.phone || this.tllUserInfo.guest_phone || '-'}</span>
+                        <span class="detail-value">${this.tllUserInfo.phone || this.tllUserInfo.guest_phone || "-"}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">주문 시간:</span>
-                        <span class="detail-value">${this.tllUserInfo.created_at ? new Date(this.tllUserInfo.created_at).toLocaleTimeString() : '-'}</span>
+                        <span class="detail-value">${this.tllUserInfo.created_at ? new Date(this.tllUserInfo.created_at).toLocaleTimeString() : "-"}</span>
                     </div>
                     <div class="user-detail-row">
                         <span class="detail-label">포인트:</span>
@@ -613,40 +650,47 @@ const POSOrderScreen = {
      */
     async loadCurrentOrders(storeId, tableNumber) {
         try {
-            console.log(`🔍 POS 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
+            console.log(
+                `🔍 POS 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`,
+            );
 
             // 기존 데이터 완전 초기화 (중복 방지)
             this.currentOrders = [];
 
             // POS 주문 로드 (order_items 기준, UNPAID 상태만)
-            const response = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/order-items`);
+            const response = await fetch(
+                `/api/pos/stores/${storeId}/table/${tableNumber}/order-items`,
+            );
             const data = await response.json();
 
             console.log(`📊 POS 주문 API 응답:`, {
                 success: data.success,
                 itemCount: data.orderItems?.length || 0,
-                hasItems: !!(data.orderItems && data.orderItems.length > 0)
+                hasItems: !!(data.orderItems && data.orderItems.length > 0),
             });
 
             if (data.success && data.orderItems && data.orderItems.length > 0) {
                 // 추가 필터링: 확실히 미지불 상태만 (PAID 상태 완전 배제)
-                const unpaidItems = data.orderItems.filter(item => {
-                    const isUnpaid = item.paid_status === 'UNPAID';
-                    const isPaid = item.paid_status === 'PAID';
-                    const isActiveOrder = item.order_status === 'OPEN';
-                    const isActiveItem = !['CANCELLED', 'REFUNDED'].includes(item.item_status);
+                const unpaidItems = data.orderItems.filter((item) => {
+                    const isUnpaid = item.paid_status === "UNPAID";
+                    const isPaid = item.paid_status === "PAID";
+                    const isActiveOrder = item.order_status === "OPEN";
+                    const isActiveItem = !["CANCELLED", "REFUNDED"].includes(
+                        item.item_status,
+                    );
 
                     // PAID 상태는 무조건 제외
                     if (isPaid) {
                         console.warn(`🚫 PAID 상태 아이템 제거:`, {
                             menu_name: item.menu_name,
                             paid_status: item.paid_status,
-                            ticket_id: item.ticket_id
+                            ticket_id: item.ticket_id,
                         });
                         return false;
                     }
 
-                    const shouldInclude = isUnpaid && isActiveOrder && isActiveItem;
+                    const shouldInclude =
+                        isUnpaid && isActiveOrder && isActiveItem;
 
                     if (!shouldInclude) {
                         console.log(`🚫 필터링된 아이템:`, {
@@ -654,14 +698,20 @@ const POSOrderScreen = {
                             paid_status: item.paid_status,
                             order_status: item.order_status,
                             item_status: item.item_status,
-                            reason: !isUnpaid ? 'not_unpaid' : !isActiveOrder ? 'closed_order' : 'inactive_item'
+                            reason: !isUnpaid
+                                ? "not_unpaid"
+                                : !isActiveOrder
+                                  ? "closed_order"
+                                  : "inactive_item",
                         });
                     }
 
                     return shouldInclude;
                 });
 
-                console.log(`📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`);
+                console.log(
+                    `📋 필터링 결과: ${data.orderItems.length}개 → ${unpaidItems.length}개 (미지불만)`,
+                );
 
                 // 완전 통합 처리
                 this.currentOrders = this.consolidateOrderItems(unpaidItems);
@@ -669,11 +719,11 @@ const POSOrderScreen = {
                 console.log(`✅ 통합 완료 - 최종 결과:`, {
                     원본아이템수: unpaidItems.length,
                     통합후메뉴수: this.currentOrders.length,
-                    통합데이터: this.currentOrders.map(order => ({
+                    통합데이터: this.currentOrders.map((order) => ({
                         메뉴명: order.menuName,
                         수량: order.quantity,
-                        관련티켓수: order.ticketIds?.length || 1
-                    }))
+                        관련티켓수: order.ticketIds?.length || 1,
+                    })),
                 });
             } else {
                 this.currentOrders = [];
@@ -682,9 +732,8 @@ const POSOrderScreen = {
 
             // TLL 주문 로드
             await this.loadTLLOrders(storeId, tableNumber);
-
         } catch (error) {
-            console.error('❌ 기존 주문 로드 실패:', error);
+            console.error("❌ 기존 주문 로드 실패:", error);
             this.currentOrders = [];
         }
     },
@@ -693,7 +742,9 @@ const POSOrderScreen = {
      * 주문 아이템 통합 처리 (중복 방지 강화)
      */
     consolidateOrderItems(unpaidItems) {
-        console.log(`🔄 주문 아이템 통합 처리 시작: ${unpaidItems.length}개 아이템`);
+        console.log(
+            `🔄 주문 아이템 통합 처리 시작: ${unpaidItems.length}개 아이템`,
+        );
 
         const consolidatedOrders = {};
         const processedKeys = new Set(); // 중복 방지용
@@ -708,8 +759,14 @@ const POSOrderScreen = {
                 consolidatedOrders[consolidationKey].quantity += item.quantity;
 
                 // 티켓 ID 중복 방지하면서 추가
-                if (!consolidatedOrders[consolidationKey].ticketIds.includes(item.ticket_id)) {
-                    consolidatedOrders[consolidationKey].ticketIds.push(item.ticket_id);
+                if (
+                    !consolidatedOrders[consolidationKey].ticketIds.includes(
+                        item.ticket_id,
+                    )
+                ) {
+                    consolidatedOrders[consolidationKey].ticketIds.push(
+                        item.ticket_id,
+                    );
                 }
 
                 // 아이템 ID 추가
@@ -722,16 +779,18 @@ const POSOrderScreen = {
                     menuName: item.menu_name,
                     price: item.unit_price,
                     quantity: item.quantity,
-                    cookingStatus: item.item_status || 'PENDING',
+                    cookingStatus: item.item_status || "PENDING",
                     isCart: false,
                     orderItemId: item.id,
                     orderItemIds: [item.id],
                     ticketId: item.ticket_id,
                     ticketIds: [item.ticket_id],
-                    cookStation: item.cook_station || 'KITCHEN'
+                    cookStation: item.cook_station || "KITCHEN",
                 };
 
-                console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (키: ${consolidationKey})`);
+                console.log(
+                    `➕ 새 통합 메뉴 생성: ${item.menu_name} (키: ${consolidationKey})`,
+                );
             }
         });
 
@@ -739,7 +798,7 @@ const POSOrderScreen = {
 
         // 최종 중복 검증
         const finalCheck = {};
-        consolidatedArray.forEach(order => {
+        consolidatedArray.forEach((order) => {
             const checkKey = `${order.menuName}_${order.price}`;
             if (finalCheck[checkKey]) {
                 console.error(`❌ 최종 검증에서 중복 발견: ${checkKey}`);
@@ -748,7 +807,9 @@ const POSOrderScreen = {
             }
         });
 
-        console.log(`✅ 통합 처리 완료: ${unpaidItems.length}개 → ${consolidatedArray.length}개`);
+        console.log(
+            `✅ 통합 처리 완료: ${unpaidItems.length}개 → ${consolidatedArray.length}개`,
+        );
         return consolidatedArray;
     },
 
@@ -757,7 +818,9 @@ const POSOrderScreen = {
      */
     async loadTLLOrders(storeId, tableNumber) {
         try {
-            console.log(`🔍 TLL 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
+            console.log(
+                `🔍 TLL 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`,
+            );
 
             const url = `/api/pos/stores/${storeId}/table/${tableNumber}/tll-orders`;
             console.log(`📡 TLL 주문 API 호출: ${url}`);
@@ -766,7 +829,9 @@ const POSOrderScreen = {
 
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`API 요청 실패 (${response.status}): ${errorText}`);
+                throw new Error(
+                    `API 요청 실패 (${response.status}): ${errorText}`,
+                );
             }
 
             const data = await response.json();
@@ -777,25 +842,30 @@ const POSOrderScreen = {
                 this.tllUserInfo = data.userInfo || null;
 
                 console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
-                console.log(`👤 TLL 사용자 정보:`, this.tllUserInfo?.name || '없음');
+                console.log(
+                    `👤 TLL 사용자 정보:`,
+                    this.tllUserInfo?.name || "없음",
+                );
 
                 // TLL 주문 세부 정보 로깅
                 if (this.tllOrders.length > 0) {
-                    console.log(`📋 TLL 주문 첫 번째 아이템:`, this.tllOrders[0]);
+                    console.log(
+                        `📋 TLL 주문 첫 번째 아이템:`,
+                        this.tllOrders[0],
+                    );
                 }
             } else {
-                console.warn('⚠️ TLL 주문 API 응답이 실패 상태:', data.error);
+                console.warn("⚠️ TLL 주문 API 응답이 실패 상태:", data.error);
                 this.tllOrders = [];
                 this.tllUserInfo = null;
             }
-
         } catch (error) {
-            console.error('❌ TLL 주문 로드 실패:', error);
-            console.error('❌ 에러 상세:', {
+            console.error("❌ TLL 주문 로드 실패:", error);
+            console.error("❌ 에러 상세:", {
                 message: error.message,
                 stack: error.stack,
                 storeId,
-                tableNumber
+                tableNumber,
             });
             this.tllOrders = [];
             this.tllUserInfo = null;
@@ -811,18 +881,17 @@ const POSOrderScreen = {
             const data = await response.json();
 
             if (data.success) {
-                this.menuData = data.menu.map(menu => ({
+                this.menuData = data.menu.map((menu) => ({
                     ...menu,
-                    isHot: Math.random() > 0.7 // 임시 핫메뉴 로직
+                    isHot: Math.random() > 0.7, // 임시 핫메뉴 로직
                 }));
             } else {
                 this.menuData = this.getDefaultMenu();
             }
 
             console.log(`✅ 메뉴 ${this.menuData.length}개 로드`);
-
         } catch (error) {
-            console.error('❌ 메뉴 데이터 로드 실패:', error);
+            console.error("❌ 메뉴 데이터 로드 실패:", error);
             this.menuData = this.getDefaultMenu();
         }
     },
@@ -831,11 +900,12 @@ const POSOrderScreen = {
      * 카테고리 선택
      */
     selectCategory(category) {
-        document.querySelectorAll('.category-tab').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.category === category);
+        document.querySelectorAll(".category-tab").forEach((btn) => {
+            btn.classList.toggle("active", btn.dataset.category === category);
         });
 
-        document.getElementById('menuGrid').innerHTML = this.renderMenuGrid(category);
+        document.getElementById("menuGrid").innerHTML =
+            this.renderMenuGrid(category);
     },
 
     /**
@@ -845,14 +915,14 @@ const POSOrderScreen = {
         this.selectedPaymentMethod = method;
 
         // 모든 버튼 비활성화
-        document.querySelectorAll('.payment-method-btn').forEach(btn => {
-            btn.classList.remove('active');
+        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
+            btn.classList.remove("active");
         });
 
         // 선택된 버튼 활성화
         const selectedBtn = document.getElementById(`${method}PaymentBtn`);
         if (selectedBtn) {
-            selectedBtn.classList.add('active');
+            selectedBtn.classList.add("active");
         }
 
         console.log(`💳 결제 방법 선택: ${method}`);
@@ -866,7 +936,13 @@ const POSOrderScreen = {
     /**
      * 장바구니에 추가 (프론트엔드 카트 관리)
      */
-    async addToCart(menuId, menuName, price, storeId = null, cookStation = null) {
+    async addToCart(
+        menuId,
+        menuName,
+        price,
+        storeId = null,
+        cookStation = null,
+    ) {
         try {
             // 파라미터로 받은 값들 우선 사용, 없으면 기본값 설정
             const finalStoreId = storeId || POSCore.storeId;
@@ -874,19 +950,29 @@ const POSOrderScreen = {
             let finalCookStation = cookStation;
             if (!finalCookStation) {
                 // 메뉴 데이터에서 cook_station 정보 가져오기
-                const menuItem = this.menuData.find(menu => menu.id === menuId);
-                finalCookStation = menuItem?.cook_station || menuItem?.category || this.getCookStationByMenu(menuName);
+                const menuItem = this.menuData.find(
+                    (menu) => menu.id === menuId,
+                );
+                finalCookStation =
+                    menuItem?.cook_station ||
+                    menuItem?.category ||
+                    this.getCookStationByMenu(menuName);
             }
 
             // 기존 카트에서 같은 메뉴 찾기
-            const existingItem = this.cart.find(item =>
-                item.id === menuId && item.name === menuName && item.price === price
+            const existingItem = this.cart.find(
+                (item) =>
+                    item.id === menuId &&
+                    item.name === menuName &&
+                    item.price === price,
             );
 
             if (existingItem) {
                 // 기존 아이템 수량 증가
                 existingItem.quantity += 1;
-                console.log(`🔄 카트 수량 증가: ${menuName} (${existingItem.quantity}개)`);
+                console.log(
+                    `🔄 카트 수량 증가: ${menuName} (${existingItem.quantity}개)`,
+                );
             } else {
                 // 새 아이템 추가
                 this.cart.push({
@@ -896,23 +982,23 @@ const POSOrderScreen = {
                     price: price,
                     quantity: 1,
                     store_id: finalStoreId, // 파라미터로 받은 매장 ID 사용
-                    cook_station: finalCookStation // 파라미터로 받은 조리스테이션 사용
+                    cook_station: finalCookStation, // 파라미터로 받은 조리스테이션 사용
                 });
-                console.log(`➕ 카트 새 아이템 추가: ${menuName} (매장: ${finalStoreId}, 조리스테이션: ${finalCookStation})`);
+                console.log(
+                    `➕ 카트 새 아이템 추가: ${menuName} (매장: ${finalStoreId}, 조리스테이션: ${finalCookStation})`,
+                );
             }
 
             // UI 업데이트 (테이블 선택 여부와 관계없이)
             await this.updateCartDisplay();
             this.showToast(`${menuName} 카트에 추가됨`);
-
         } catch (error) {
-            console.error('❌ 카트 추가 실패:', error);
+            console.error("❌ 카트 추가 실패:", error);
             // 에러가 발생해도 카트에는 추가되도록 처리
-            console.log('⚠️ API 호출 실패했지만 카트 업데이트는 계속 진행');
+            console.log("⚠️ API 호출 실패했지만 카트 업데이트는 계속 진행");
             this.showToast(`${menuName} 카트에 추가됨 (오프라인 모드)`);
         }
     },
-
 
     /**
      * 카트 표시 업데이트 (기존 주문내역 + 카트 순차적 표시)
@@ -929,27 +1015,29 @@ const POSOrderScreen = {
             menuName: item.name,
             price: item.price,
             quantity: item.quantity,
-            cookingStatus: 'CART',
+            cookingStatus: "CART",
             isCart: true,
-            originalCartIndex: index
+            originalCartIndex: index,
         }));
 
         // 기존 주문내역을 먼저 표시하고, 그 다음에 카트 아이템들 표시
         const allOrders = [...this.currentOrders, ...cartOrders];
 
         // tbody만 업데이트 (테이블 구조 유지)
-        const posOrderTable = document.querySelector('.pos-order-table tbody');
+        const posOrderTable = document.querySelector(".pos-order-table tbody");
         if (posOrderTable) {
-            let tableBody = '';
+            let tableBody = "";
 
             // 모든 주문 (기존 + 카트) 순차적 표시
             if (allOrders.length > 0) {
-                tableBody = allOrders.map(order => `
-                    <tr class="order-row ${order.isCart ? 'cart-item' : ''}" data-order-id="${order.id}">
+                tableBody = allOrders
+                    .map(
+                        (order) => `
+                    <tr class="order-row ${order.isCart ? "cart-item" : ""}" data-order-id="${order.id}">
                         <td class="col-menu">
                             <div class="menu-info">
                                 <strong>${order.menuName}</strong>
-                                ${order.isCart ? '<span class="cart-badge">카트</span>' : ''}
+                                ${order.isCart ? '<span class="cart-badge">카트</span>' : ""}
                             </div>
                         </td>
                         <td class="col-price">
@@ -957,7 +1045,9 @@ const POSOrderScreen = {
                         </td>
                         <td class="col-quantity">
                             <div class="quantity-control-table">
-                                ${order.isCart ? `
+                                ${
+                                    order.isCart
+                                        ? `
                                     <button class="qty-btn minus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
                                         −
                                     </button>
@@ -965,21 +1055,25 @@ const POSOrderScreen = {
                                     <button class="qty-btn plus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
                                         +
                                     </button>
-                                ` : `
+                                `
+                                        : `
                                     <span class="quantity-display">${order.quantity}</span>
-                                `}
+                                `
+                                }
                             </div>
                         </td>
                         <td class="col-total">
                             <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
                         </td>
                         <td class="col-status">
-                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
                                 ${this.getStatusText(order.cookingStatus)}
                             </span>
                         </td>
                     </tr>
-                `).join('');
+                `,
+                    )
+                    .join("");
             }
 
             // 남은 빈 행들 추가 (총 10행 유지)
@@ -1001,9 +1095,9 @@ const POSOrderScreen = {
         }
 
         // 결제 섹션 업데이트 (카트 아이템들만 계산에 포함)
-        const paymentSection = document.querySelector('.payment-section');
+        const paymentSection = document.querySelector(".payment-section");
         if (paymentSection) {
-            const newPaymentSection = document.createElement('div');
+            const newPaymentSection = document.createElement("div");
             newPaymentSection.innerHTML = this.renderPaymentSection();
             paymentSection.replaceWith(newPaymentSection.firstElementChild);
         }
@@ -1013,29 +1107,33 @@ const POSOrderScreen = {
      * 주문 새로고침 (결제 완료 후 확실한 데이터 갱신)
      */
     async refreshOrders() {
-        console.log('🔄 주문 새로고침 시작 - 기존 데이터 초기화');
-        
+        console.log("🔄 주문 새로고침 시작 - 기존 데이터 초기화");
+
         // 기존 데이터 완전 초기화
         this.currentOrders = [];
         this.cart = [];
         this.tllOrders = [];
         this.tllUserInfo = null;
-        
+
         // 새로운 데이터 로드
         if (POSCore.storeId && this.currentTable) {
-            console.log(`📡 새 데이터 로드: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`);
+            console.log(
+                `📡 새 데이터 로드: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`,
+            );
             await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
         }
 
         // UI 업데이트
-        const posOrderList = document.getElementById('posOrderList');
+        const posOrderList = document.getElementById("posOrderList");
         if (posOrderList) {
             posOrderList.innerHTML = this.renderPOSOrderItemsModern();
-            console.log(`✅ POS 주문 목록 UI 업데이트 완료: ${this.currentOrders.length}개 주문`);
+            console.log(
+                `✅ POS 주문 목록 UI 업데이트 완료: ${this.currentOrders.length}개 주문`,
+            );
         }
 
         // TLL 주문 목록 업데이트
-        const tllOrderList = document.getElementById('tllOrderList');
+        const tllOrderList = document.getElementById("tllOrderList");
         if (tllOrderList) {
             tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
         }
@@ -1044,14 +1142,16 @@ const POSOrderScreen = {
         this.updateOrderDashboard();
 
         // 결제 섹션 업데이트
-        const paymentSection = document.querySelector('.payment-section');
+        const paymentSection = document.querySelector(".payment-section");
         if (paymentSection) {
-            const newPaymentSection = document.createElement('div');
+            const newPaymentSection = document.createElement("div");
             newPaymentSection.innerHTML = this.renderPaymentSection();
             paymentSection.replaceWith(newPaymentSection.firstElementChild);
         }
-        
-        console.log(`✅ 주문 새로고침 완료 - POS: ${this.currentOrders.length}개, TLL: ${this.tllOrders?.length || 0}개`);
+
+        console.log(
+            `✅ 주문 새로고침 완료 - POS: ${this.currentOrders.length}개, TLL: ${this.tllOrders?.length || 0}개`,
+        );
     },
 
     /**
@@ -1096,14 +1196,21 @@ const POSOrderScreen = {
      */
     async confirmOrder() {
         if (this.cart.length === 0) {
-            alert('주문할 메뉴가 없습니다.');
+            alert("주문할 메뉴가 없습니다.");
             return;
         }
 
         try {
-            const total = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const total = this.cart.reduce(
+                (sum, item) => sum + item.price * item.quantity,
+                0,
+            );
 
-            if (!confirm(`${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 비회원 주문하시겠습니까?`)) {
+            if (
+                !confirm(
+                    `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 비회원 주문하시겠습니까?`,
+                )
+            ) {
                 return;
             }
 
@@ -1112,42 +1219,49 @@ const POSOrderScreen = {
             const tableNumber = this.currentTableNumber || this.currentTable;
 
             if (!storeId || !tableNumber) {
-                alert('매장 ID 또는 테이블 번호가 설정되지 않았습니다.');
-                console.error('❌ 필수 정보 누락:', { storeId, tableNumber });
+                alert("매장 ID 또는 테이블 번호가 설정되지 않았습니다.");
+                console.error("❌ 필수 정보 누락:", { storeId, tableNumber });
                 return;
             }
 
-            console.log('📋 비회원 POS 주문 확정 시작:', {
+            console.log("📋 비회원 POS 주문 확정 시작:", {
                 storeId: storeId,
                 tableNumber: tableNumber,
                 cartItems: this.cart.length,
                 totalAmount: total,
-                isGuestOrder: true
+                isGuestOrder: true,
             });
 
             // 비회원 주문 전용 API 사용
-            const response = await fetch('/api/pos/guest-orders/confirm', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch("/api/pos/guest-orders/confirm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     storeId: parseInt(storeId),
                     tableNumber: parseInt(tableNumber),
                     items: this.cart,
-                    totalAmount: total
-                })
+                    totalAmount: total,
+                }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || '주문 확정 실패');
+                throw new Error(errorData.error || "주문 확정 실패");
             }
 
             const result = await response.json();
-            console.log('✅ POS 주문 확정 완료:', result);
+            console.log("✅ POS 주문 확정 완료:", result);
 
             // 세션 정보 업데이트 (새 주문 ID로)
-            this.currentSession = { orderId: result.orderId, tableNumber: this.currentTable, storeId: POSCore.storeId };
-            this.sessionItems = this.cart.map(item => ({ ...item, ticketId: result.ticketId })); // 임시 ticketId
+            this.currentSession = {
+                orderId: result.orderId,
+                tableNumber: this.currentTable,
+                storeId: POSCore.storeId,
+            };
+            this.sessionItems = this.cart.map((item) => ({
+                ...item,
+                ticketId: result.ticketId,
+            })); // 임시 ticketId
 
             // 카트 초기화
             this.cart = [];
@@ -1156,12 +1270,16 @@ const POSOrderScreen = {
             await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
 
             // tbody 업데이트 (카트 없이 기존 주문내역만 표시)
-            const posOrderTable = document.querySelector('.pos-order-table tbody');
+            const posOrderTable = document.querySelector(
+                ".pos-order-table tbody",
+            );
             if (posOrderTable) {
-                let tableBody = '';
+                let tableBody = "";
 
                 if (this.currentOrders.length > 0) {
-                    tableBody = this.currentOrders.map(order => `
+                    tableBody = this.currentOrders
+                        .map(
+                            (order) => `
                         <tr class="order-row" data-order-id="${order.id}">
                             <td class="col-menu">
                                 <div class="menu-info">
@@ -1180,16 +1298,21 @@ const POSOrderScreen = {
                                 <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
                             </td>
                             <td class="col-status">
-                                <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
+                                <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
                                     ${this.getStatusText(order.cookingStatus)}
                                 </span>
                             </td>
                         </tr>
-                    `).join('');
+                    `,
+                        )
+                        .join("");
                 }
 
                 // 남은 빈 행들 추가
-                const remainingRows = Math.max(0, 10 - this.currentOrders.length);
+                const remainingRows = Math.max(
+                    0,
+                    10 - this.currentOrders.length,
+                );
                 for (let i = 0; i < remainingRows; i++) {
                     tableBody += `
                         <tr class="empty-row">
@@ -1206,24 +1329,25 @@ const POSOrderScreen = {
             }
 
             // 결제 섹션 업데이트
-            const paymentSection = document.querySelector('.payment-section');
+            const paymentSection = document.querySelector(".payment-section");
             if (paymentSection) {
-                const newPaymentSection = document.createElement('div');
+                const newPaymentSection = document.createElement("div");
                 newPaymentSection.innerHTML = this.renderPaymentSection();
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
             }
 
-            const orderType = result.isGuestOrder ? '비회원' : '일반';
-            this.showToast(`${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`);
+            const orderType = result.isGuestOrder ? "비회원" : "일반";
+            this.showToast(
+                `${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`,
+            );
 
-            console.log('✅ 주문 확정 후 화면 전환')
+            console.log("✅ 주문 확정 후 화면 전환");
             // 주문 완료 후 테이블 맵 화면 전환
             setTimeout(() => {
                 POSCore.showTableMap();
-            }, 2000)
-
+            }, 2000);
         } catch (error) {
-            console.error('❌ 비회원 주문 확정 실패:', error);
+            console.error("❌ 비회원 주문 확정 실패:", error);
             alert(`비회원 주문 확정 실패: ${error.message}`);
         }
     },
@@ -1236,33 +1360,44 @@ const POSOrderScreen = {
 
         try {
             // 결제 버튼 비활성화
-            const paymentBtns = document.querySelectorAll('.payment-method-btn');
-            paymentBtns.forEach(btn => {
+            const paymentBtns = document.querySelectorAll(
+                ".payment-method-btn",
+            );
+            paymentBtns.forEach((btn) => {
                 btn.disabled = true;
-                btn.style.opacity = '0.5';
+                btn.style.opacity = "0.5";
             });
 
             // 1. 현재 테이블의 미지불 티켓 조회 (storeId와 tableNumber 기반)
             if (!this.currentStoreId || !this.currentTableNumber) {
-                alert('매장 또는 테이블 정보가 없습니다.');
+                alert("매장 또는 테이블 정보가 없습니다.");
                 return;
             }
 
             // 먼저 현재 테이블의 활성 주문을 찾아서 orderId 확인
-            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+            const activeOrderResponse = await fetch(
+                `/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`,
+            );
 
             if (!activeOrderResponse.ok) {
                 const errorText = await activeOrderResponse.text();
-                console.error(`❌ 활성 주문 조회 실패 (${activeOrderResponse.status}):`, errorText);
-                alert('활성 주문을 조회할 수 없습니다.');
+                console.error(
+                    `❌ 활성 주문 조회 실패 (${activeOrderResponse.status}):`,
+                    errorText,
+                );
+                alert("활성 주문을 조회할 수 없습니다.");
                 return;
             }
 
             const activeOrderData = await activeOrderResponse.json();
-            console.log('📋 활성 주문 조회 응답:', activeOrderData);
+            console.log("📋 활성 주문 조회 응답:", activeOrderData);
 
-            if (!activeOrderData.success || !activeOrderData.hasActiveOrder || !activeOrderData.orderId) {
-                alert('결제할 활성 주문이 없습니다.');
+            if (
+                !activeOrderData.success ||
+                !activeOrderData.hasActiveOrder ||
+                !activeOrderData.orderId
+            ) {
+                alert("결제할 활성 주문이 없습니다.");
                 return;
             }
 
@@ -1270,41 +1405,47 @@ const POSOrderScreen = {
             console.log(`📋 결제 대상 주문 ID: ${orderId}`);
 
             // 2. 미지불 티켓 조회
-            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+            const unpaidResponse = await fetch(
+                `/api/pos-payment/unpaid-tickets/${orderId}`,
+            );
             const unpaidData = await unpaidResponse.json();
 
             if (!unpaidData.success || unpaidData.totalTickets === 0) {
-                alert('결제할 미지불 티켓이 없습니다.');
+                alert("결제할 미지불 티켓이 없습니다.");
                 return;
             }
 
-            console.log(`📋 결제할 티켓: ${unpaidData.totalTickets}개, 총 금액: ${unpaidData.totalAmount}원`);
+            console.log(
+                `📋 결제할 티켓: ${unpaidData.totalTickets}개, 총 금액: ${unpaidData.totalAmount}원`,
+            );
 
             // 3. 결제 처리 요청
-            const paymentResponse = await fetch('/api/pos-payment/process', {
-                method: 'POST',
+            const paymentResponse = await fetch("/api/pos-payment/process", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json'
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
                     orderId: orderId,
                     paymentMethod: method.toUpperCase(),
                     amount: unpaidData.totalAmount,
                     storeId: this.currentStoreId,
-                    tableNumber: this.currentTableNumber
-                })
+                    tableNumber: this.currentTableNumber,
+                }),
             });
 
             const paymentResult = await paymentResponse.json();
 
             if (paymentResult.success) {
                 // 결제 성공
-                console.log('✅ 결제 완료:', paymentResult);
+                console.log("✅ 결제 완료:", paymentResult);
 
-                const methodName = method === 'card' ? '카드' : '현금';
-                alert(`${methodName} 결제가 완료되었습니다!\n` +
-                      `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
-                      `처리된 티켓: ${paymentResult.totalTicketsPaid}개`);
+                const methodName = method === "card" ? "카드" : "현금";
+                alert(
+                    `${methodName} 결제가 완료되었습니다!\n` +
+                        `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
+                        `처리된 티켓: ${paymentResult.totalTicketsPaid}개`,
+                );
 
                 // 장바구니 초기화
                 this.clearCart();
@@ -1316,28 +1457,32 @@ const POSOrderScreen = {
 
                 // 잠시 대기 후 강제 새로고침 (DB 업데이트 반영 시간)
                 setTimeout(async () => {
-                    console.log('🔄 결제 완료 후 강제 데이터 새로고침');
+                    console.log("🔄 결제 완료 후 강제 데이터 새로고침");
 
                     // 화면 새로고침
                     await this.refreshOrders();
 
                     // 결제 완료 후 화면 재렌더링
-                    await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+                    await this.render(
+                        this.currentStoreId,
+                        { name: "매장" },
+                        this.currentTableNumber,
+                    );
                 }, 1000);
-
             } else {
-                throw new Error(paymentResult.error || '결제 처리 실패');
+                throw new Error(paymentResult.error || "결제 처리 실패");
             }
-
         } catch (error) {
-            console.error('❌ 결제 처리 실패:', error);
+            console.error("❌ 결제 처리 실패:", error);
             alert(`결제 처리 중 오류가 발생했습니다:\n${error.message}`);
         } finally {
             // 결제 버튼 다시 활성화
-            const paymentBtns = document.querySelectorAll('.payment-method-btn');
-            paymentBtns.forEach(btn => {
+            const paymentBtns = document.querySelectorAll(
+                ".payment-method-btn",
+            );
+            paymentBtns.forEach((btn) => {
                 btn.disabled = false;
-                btn.style.opacity = '1';
+                btn.style.opacity = "1";
             });
         }
     },
@@ -1346,41 +1491,43 @@ const POSOrderScreen = {
      * POSPaymentModal을 사용한 결제 모달 표시 (API 기반)
      */
     async showPOSPaymentModal(method) {
-        console.log('✨ POSPaymentModal 결제 모달 표시 (API 기반)');
+        console.log("✨ POSPaymentModal 결제 모달 표시 (API 기반)");
 
         // 필수 정보 검증
         if (!this.currentStoreId || !this.currentTableNumber) {
-            console.error('❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다');
-            alert('매장 또는 테이블 정보가 설정되지 않았습니다.');
+            console.error("❌ 매장 ID 또는 테이블 번호가 설정되지 않았습니다");
+            alert("매장 또는 테이블 정보가 설정되지 않았습니다.");
             return;
         }
 
         try {
             // 즉시 POSPaymentModal 사용 가능 여부 확인
             const modalAvailability = this.checkPOSPaymentModalAvailability();
-            
+
             if (modalAvailability.isAvailable) {
-                console.log('✅ POSPaymentModal 즉시 사용 가능');
+                console.log("✅ POSPaymentModal 즉시 사용 가능");
                 await modalAvailability.modalRef.show(method);
                 return;
             }
 
             // 사용 불가능한 경우 짧은 대기 시도
-            console.log('🔄 POSPaymentModal 로딩 대기 시작');
+            console.log("🔄 POSPaymentModal 로딩 대기 시작");
             const waitResult = await this.waitForPOSPaymentModal(3000); // 3초 대기
 
             if (waitResult.success) {
-                console.log('✅ 대기 후 POSPaymentModal 로드 완료');
+                console.log("✅ 대기 후 POSPaymentModal 로드 완료");
                 await waitResult.modalRef.show(method);
                 return;
             }
 
             // 로딩 실패 시 상세 정보 출력 및 폴백 처리
-            console.error('❌ POSPaymentModal 로딩 최종 실패:', waitResult.details);
+            console.error(
+                "❌ POSPaymentModal 로딩 최종 실패:",
+                waitResult.details,
+            );
             this.handlePaymentModalFailure(method);
-
         } catch (error) {
-            console.error('❌ 결제 모달 표시 중 오류:', error);
+            console.error("❌ 결제 모달 표시 중 오류:", error);
             this.handlePaymentModalFailure(method, error);
         }
     },
@@ -1391,20 +1538,23 @@ const POSOrderScreen = {
     checkPOSPaymentModalAvailability() {
         const checks = [
             {
-                name: 'window.POSPaymentModal',
+                name: "window.POSPaymentModal",
                 ref: window.POSPaymentModal,
-                hasShow: typeof window.POSPaymentModal?.show === 'function'
+                hasShow: typeof window.POSPaymentModal?.show === "function",
             },
             {
-                name: 'globalThis.POSPaymentModal', 
+                name: "globalThis.POSPaymentModal",
                 ref: globalThis.POSPaymentModal,
-                hasShow: typeof globalThis.POSPaymentModal?.show === 'function'
+                hasShow: typeof globalThis.POSPaymentModal?.show === "function",
             },
             {
-                name: 'global POSPaymentModal',
-                ref: typeof POSPaymentModal !== 'undefined' ? POSPaymentModal : null,
-                hasShow: typeof POSPaymentModal?.show === 'function'
-            }
+                name: "global POSPaymentModal",
+                ref:
+                    typeof POSPaymentModal !== "undefined"
+                        ? POSPaymentModal
+                        : null,
+                hasShow: typeof POSPaymentModal?.show === "function",
+            },
         ];
 
         for (const check of checks) {
@@ -1413,18 +1563,18 @@ const POSOrderScreen = {
                 return {
                     isAvailable: true,
                     modalRef: check.ref,
-                    source: check.name
+                    source: check.name,
                 };
             }
         }
 
         return {
             isAvailable: false,
-            checks: checks.map(c => ({
+            checks: checks.map((c) => ({
                 name: c.name,
                 exists: !!c.ref,
-                hasShow: c.hasShow
-            }))
+                hasShow: c.hasShow,
+            })),
         };
     },
 
@@ -1434,20 +1584,20 @@ const POSOrderScreen = {
     async waitForPOSPaymentModal(timeoutMs = 3000) {
         const startTime = Date.now();
         const checkInterval = 100;
-        
+
         while (Date.now() - startTime < timeoutMs) {
             const availability = this.checkPOSPaymentModalAvailability();
-            
+
             if (availability.isAvailable) {
                 return {
                     success: true,
                     modalRef: availability.modalRef,
                     source: availability.source,
-                    waitTime: Date.now() - startTime
+                    waitTime: Date.now() - startTime,
                 };
             }
 
-            await new Promise(resolve => setTimeout(resolve, checkInterval));
+            await new Promise((resolve) => setTimeout(resolve, checkInterval));
         }
 
         return {
@@ -1455,8 +1605,8 @@ const POSOrderScreen = {
             details: {
                 timeoutReached: true,
                 waitTime: Date.now() - startTime,
-                finalCheck: this.checkPOSPaymentModalAvailability()
-            }
+                finalCheck: this.checkPOSPaymentModalAvailability(),
+            },
         };
     },
 
@@ -1464,66 +1614,75 @@ const POSOrderScreen = {
      * 결제 모달 로딩 실패 처리
      */
     handlePaymentModalFailure(method, error = null) {
-        console.log('🔄 결제 모달 실패 처리 시작');
-        
-        const errorMessage = error ? 
-            `결제 모달 오류: ${error.message}` : 
-            '결제 모달을 불러올 수 없습니다.';
+        console.log("🔄 결제 모달 실패 처리 시작");
+
+        const errorMessage = error
+            ? `결제 모달 오류: ${error.message}`
+            : "결제 모달을 불러올 수 없습니다.";
 
         const userMessage = `${errorMessage}\n\n기본 결제 처리를 진행하시겠습니까?`;
-        
+
         if (confirm(userMessage)) {
-            console.log('🔄 사용자가 폴백 결제 처리 선택');
-            this.processPayment(method.toLowerCase())
-                .catch(fallbackError => {
-                    console.error('❌ 폴백 결제 처리 실패:', fallbackError);
-                    alert(`결제 처리 실패: ${fallbackError.message}\n\n시스템 관리자에게 문의하거나 페이지를 새로고침해주세요.`);
-                });
+            console.log("🔄 사용자가 폴백 결제 처리 선택");
+            this.processPayment(method.toLowerCase()).catch((fallbackError) => {
+                console.error("❌ 폴백 결제 처리 실패:", fallbackError);
+                alert(
+                    `결제 처리 실패: ${fallbackError.message}\n\n시스템 관리자에게 문의하거나 페이지를 새로고침해주세요.`,
+                );
+            });
         } else {
-            console.log('ℹ️ 사용자가 결제 취소 선택');
+            console.log("ℹ️ 사용자가 결제 취소 선택");
         }
     },
 
     /**
      * API 호출로 결제 대상 데이터 조회
      */
-    async fetchPaymentTargetData(method = 'card') {
-        console.log(`🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`);
+    async fetchPaymentTargetData(method = "card") {
+        console.log(
+            `🔍 결제 대상 데이터 조회: 매장 ${this.currentStoreId}, 테이블 ${this.currentTableNumber}`,
+        );
 
         try {
             // 1. 현재 테이블의 활성 주문 조회
-            const activeOrderResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`);
+            const activeOrderResponse = await fetch(
+                `/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`,
+            );
 
             if (!activeOrderResponse.ok) {
-                console.warn('⚠️ 활성 주문 조회 실패');
+                console.warn("⚠️ 활성 주문 조회 실패");
                 return null;
             }
 
             const activeOrderData = await activeOrderResponse.json();
 
             if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
-                console.log('ℹ️ 활성 주문이 없습니다');
+                console.log("ℹ️ 활성 주문이 없습니다");
                 return null;
             }
 
             const orderId = activeOrderData.orderId;
 
             // 2. 미지불 티켓 정보 조회
-            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+            const unpaidResponse = await fetch(
+                `/api/pos-payment/unpaid-tickets/${orderId}`,
+            );
 
             if (!unpaidResponse.ok) {
-                throw new Error('미지불 티켓 조회 실패');
+                throw new Error("미지불 티켓 조회 실패");
             }
 
             const unpaidData = await unpaidResponse.json();
 
             if (!unpaidData.success || unpaidData.totalTickets === 0) {
-                console.log('ℹ️ 미지불 티켓이 없습니다');
+                console.log("ℹ️ 미지불 티켓이 없습니다");
                 return null;
             }
 
             // 3. 주문 상세 정보 조회 (주문 아이템들)
-            const orderItemsResponse = await fetch(`/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/order-items`);
+            const orderItemsResponse = await fetch(
+                `/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/order-items`,
+            );
 
             let orderItems = [];
             if (orderItemsResponse.ok) {
@@ -1533,7 +1692,9 @@ const POSOrderScreen = {
                 }
             }
 
-            console.log(`✅ 결제 대상 데이터 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`);
+            console.log(
+                `✅ 결제 대상 데이터 조회 완료: ${unpaidData.totalTickets}개 티켓, ${unpaidData.totalAmount}원`,
+            );
 
             return {
                 totalAmount: unpaidData.totalAmount,
@@ -1543,11 +1704,10 @@ const POSOrderScreen = {
                 orderId: orderId,
                 unpaidTickets: unpaidData.unpaidTickets,
                 orderItems: orderItems,
-                paymentMethod: method.toUpperCase()
+                paymentMethod: method.toUpperCase(),
             };
-
         } catch (error) {
-            console.error('❌ 결제 대상 데이터 조회 실패:', error);
+            console.error("❌ 결제 대상 데이터 조회 실패:", error);
             throw error;
         }
     },
@@ -1556,8 +1716,8 @@ const POSOrderScreen = {
      * 로딩 표시기 생성
      */
     showLoadingIndicator(message) {
-        const indicator = document.createElement('div');
-        indicator.className = 'loading-indicator';
+        const indicator = document.createElement("div");
+        indicator.className = "loading-indicator";
         indicator.innerHTML = `
             <div class="loading-content">
                 <div class="loading-spinner"></div>
@@ -1582,7 +1742,7 @@ const POSOrderScreen = {
             font-weight: 600;
         `;
 
-        const spinner = indicator.querySelector('.loading-spinner');
+        const spinner = indicator.querySelector(".loading-spinner");
         if (spinner) {
             spinner.style.cssText = `
                 width: 20px;
@@ -1595,9 +1755,9 @@ const POSOrderScreen = {
         }
 
         // 스피너 애니메이션 CSS 추가
-        if (!document.querySelector('#spinner-styles')) {
-            const style = document.createElement('style');
-            style.id = 'spinner-styles';
+        if (!document.querySelector("#spinner-styles")) {
+            const style = document.createElement("style");
+            style.id = "spinner-styles";
             style.textContent = `
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
@@ -1632,18 +1792,19 @@ const POSOrderScreen = {
      * 결제 모달 표시 (기존 호환성용)
      */
     showPaymentModal() {
-        console.log('✨ 기존 결제 모달 표시 (POSPaymentModal로 리다이렉트)');
-        this.showPOSPaymentModal(this.selectedPaymentMethod || 'card');
+        console.log("✨ 기존 결제 모달 표시 (POSPaymentModal로 리다이렉트)");
+        this.showPOSPaymentModal(this.selectedPaymentMethod || "card");
     },
 
     /**
      * 결제 모달 숨기기
      */
     hidePaymentModal() {
-        const modal = document.getElementById('paymentModal');
+        const modal = document.getElementById("paymentModal");
         if (modal) {
-            modal.querySelector('.modal-content').style.transform = 'translateY(20px)';
-            modal.style.backgroundColor = 'rgba(0,0,0,0)';
+            modal.querySelector(".modal-content").style.transform =
+                "translateY(20px)";
+            modal.style.backgroundColor = "rgba(0,0,0,0)";
             setTimeout(() => {
                 modal.remove();
             }, 300); // 모달 애니메이션 시간과 일치
@@ -1654,7 +1815,10 @@ const POSOrderScreen = {
      * 결제 모달 상세 정보 렌더링
      */
     renderPaymentDetails() {
-        const cartTotal = this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const cartTotal = this.cart.reduce(
+            (sum, item) => sum + item.price * item.quantity,
+            0,
+        );
         const subtotal = cartTotal;
         const discount = 0; // TLL 할인 로직 추가 예정
         const total = subtotal - discount;
@@ -1679,25 +1843,29 @@ const POSOrderScreen = {
                 <div class="payment-input-section">
                     <label for="paymentMethodSelect">결제 수단:</label>
                     <select id="paymentMethodSelect" onchange="POSOrderScreen.updateSelectedPaymentMethod(this.value)">
-                        <option value="card" ${this.selectedPaymentMethod === 'card' ? 'selected' : ''}>카드</option>
-                        <option value="cash" ${this.selectedPaymentMethod === 'cash' ? 'selected' : ''}>현금</option>
-                        <option value="mixed" ${this.selectedPaymentMethod === 'mixed' ? 'selected' : ''}>복합결제</option>
+                        <option value="card" ${this.selectedPaymentMethod === "card" ? "selected" : ""}>카드</option>
+                        <option value="cash" ${this.selectedPaymentMethod === "cash" ? "selected" : ""}>현금</option>
+                        <option value="mixed" ${this.selectedPaymentMethod === "mixed" ? "selected" : ""}>복합결제</option>
                     </select>
                 </div>
 
                 <div class="payment-input-section">
                     <span>받은 금액:</span>
-                    <input type="number" id="receivedAmount" placeholder="0" value="${this.selectedPaymentMethod === 'cash' ? total : ''}" />
+                    <input type="number" id="receivedAmount" placeholder="0" value="${this.selectedPaymentMethod === "cash" ? total : ""}" />
                     <span>거스름돈:</span>
-                    <span id="changeAmount" class="amount">${this.selectedPaymentMethod === 'cash' ? (total > 0 ? '0원' : '0원') : '0원'}</span>
+                    <span id="changeAmount" class="amount">${this.selectedPaymentMethod === "cash" ? (total > 0 ? "0원" : "0원") : "0원"}</span>
                 </div>
 
                 <div class="modal-order-list">
                     <h4>주문 내역</h4>
                     <ul>
-                        ${this.cart.map(item => `
+                        ${this.cart
+                            .map(
+                                (item) => `
                             <li>${item.name} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()}원</li>
-                        `).join('')}
+                        `,
+                            )
+                            .join("")}
                     </ul>
                 </div>
             </div>
@@ -1709,7 +1877,7 @@ const POSOrderScreen = {
      */
     updateSelectedPaymentMethod(method) {
         this.selectedPaymentMethod = method;
-        const modalBody = document.querySelector('#paymentModal .modal-body');
+        const modalBody = document.querySelector("#paymentModal .modal-body");
         if (modalBody) {
             modalBody.innerHTML = this.renderPaymentDetails();
         }
@@ -1732,13 +1900,13 @@ const POSOrderScreen = {
      * 토스트 메시지 표시
      */
     showToast(message) {
-        const toast = document.createElement('div');
-        toast.className = 'toast-message';
+        const toast = document.createElement("div");
+        toast.className = "toast-message";
         toast.textContent = message;
         document.body.appendChild(toast);
 
         setTimeout(() => {
-            toast.classList.add('show');
+            toast.classList.add("show");
         }, 100);
 
         setTimeout(() => {
@@ -1751,15 +1919,15 @@ const POSOrderScreen = {
      */
     getStatusText(status) {
         const statusMap = {
-            'PENDING': '대기',
-            'COOKING': '조리중',
-            'READY': '완료',
-            'SERVED': '서빙완료',
-            'COMPLETED': '완료',
-            'CANCELLED': '취소됨',
-            'CART': '카트'
+            PENDING: "대기",
+            COOKING: "조리중",
+            READY: "완료",
+            SERVED: "서빙완료",
+            COMPLETED: "완료",
+            CANCELLED: "취소됨",
+            CART: "카트",
         };
-        return statusMap[status] || '대기';
+        return statusMap[status] || "대기";
     },
 
     /**
@@ -1768,7 +1936,7 @@ const POSOrderScreen = {
     clearCart() {
         this.cart = [];
         this.updateCartDisplay(); // 카트 표시 업데이트
-        this.showToast('카트가 비워졌습니다');
+        this.showToast("카트가 비워졌습니다");
     },
 
     /**
@@ -1776,12 +1944,12 @@ const POSOrderScreen = {
      */
     getCookStationText(cookStation) {
         const stationMap = {
-            'KITCHEN': '주방',
-            'DRINK': '음료',
-            'DESSERT': '디저트',
-            'SIDE': '사이드'
+            KITCHEN: "주방",
+            DRINK: "음료",
+            DESSERT: "디저트",
+            SIDE: "사이드",
         };
-        return stationMap[cookStation] || '주방';
+        return stationMap[cookStation] || "주방";
     },
 
     /**
@@ -1789,13 +1957,16 @@ const POSOrderScreen = {
      */
     switchOrderTab(tabType) {
         // 탭 버튼 활성화 상태 변경
-        document.querySelectorAll('.order-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabType);
+        document.querySelectorAll(".order-tab").forEach((tab) => {
+            tab.classList.toggle("active", tab.dataset.tab === tabType);
         });
 
         // 컨텐츠 영역 표시/숨김
-        document.querySelectorAll('.order-content').forEach(content => {
-            content.classList.toggle('active', content.id === `${tabType}OrderContent`);
+        document.querySelectorAll(".order-content").forEach((content) => {
+            content.classList.toggle(
+                "active",
+                content.id === `${tabType}OrderContent`,
+            );
         });
     },
 
@@ -1803,7 +1974,7 @@ const POSOrderScreen = {
      * 주문 편집 (추후 구현)
      */
     editOrder(orderId) {
-        alert('주문 편집 기능은 추후 구현 예정입니다.');
+        alert("주문 편집 기능은 추후 구현 예정입니다.");
     },
 
     /**
@@ -1811,41 +1982,48 @@ const POSOrderScreen = {
      */
     async refreshTLLOrders() {
         try {
-            console.log('🔄 TLL 주문 새로고침 시작');
-            console.log(`📍 현재 정보: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`);
+            console.log("🔄 TLL 주문 새로고침 시작");
+            console.log(
+                `📍 현재 정보: 매장 ${POSCore.storeId}, 테이블 ${this.currentTable}`,
+            );
 
             if (!POSCore.storeId || !this.currentTable) {
-                console.error('❌ 매장 ID 또는 테이블 정보가 없습니다');
-                this.showToast('매장 또는 테이블 정보가 없습니다');
+                console.error("❌ 매장 ID 또는 테이블 정보가 없습니다");
+                this.showToast("매장 또는 테이블 정보가 없습니다");
                 return;
             }
 
             await this.loadTLLOrders(POSCore.storeId, this.currentTable);
 
             // UI 업데이트
-            const tllOrderList = document.getElementById('tllOrderList');
+            const tllOrderList = document.getElementById("tllOrderList");
             if (tllOrderList) {
                 tllOrderList.innerHTML = this.renderTLLOrderItemsModern();
-                console.log(`✅ TLL 주문 목록 UI 업데이트: ${this.tllOrders?.length || 0}개 주문`);
+                console.log(
+                    `✅ TLL 주문 목록 UI 업데이트: ${this.tllOrders?.length || 0}개 주문`,
+                );
             }
 
             // 대시보드 카드 업데이트
             this.updateOrderDashboard();
 
             // 결제 섹션 업데이트 (사용자 정보 반영)
-            const paymentSection = document.querySelector('.payment-section');
+            const paymentSection = document.querySelector(".payment-section");
             if (paymentSection) {
-                const newPaymentSection = document.createElement('div');
+                const newPaymentSection = document.createElement("div");
                 newPaymentSection.innerHTML = this.renderPaymentSection();
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
-                console.log('✅ 결제 섹션 업데이트 완료');
+                console.log("✅ 결제 섹션 업데이트 완료");
             }
 
-            this.showToast(`TLL 주문 새로고침 완료 (${this.tllOrders?.length || 0}개)`);
-
+            this.showToast(
+                `TLL 주문 새로고침 완료 (${this.tllOrders?.length || 0}개)`,
+            );
         } catch (error) {
-            console.error('❌ TLL 주문 새로고침 실패:', error);
-            this.showToast('TLL 주문 새로고침에 실패했습니다: ' + error.message);
+            console.error("❌ TLL 주문 새로고침 실패:", error);
+            this.showToast(
+                "TLL 주문 새로고침에 실패했습니다: " + error.message,
+            );
         }
     },
 
@@ -1853,15 +2031,19 @@ const POSOrderScreen = {
      * 주문 대시보드 업데이트 (확실한 카운트 반영)
      */
     updateOrderDashboard() {
-        const posOrders = this.currentOrders.filter(order => !order.sessionId);
+        const posOrders = this.currentOrders.filter(
+            (order) => !order.sessionId,
+        );
         const tllOrderCount = this.tllOrders?.length || 0;
 
-        console.log(`📊 대시보드 업데이트: POS ${posOrders.length}개, TLL ${tllOrderCount}개`);
+        console.log(
+            `📊 대시보드 업데이트: POS ${posOrders.length}개, TLL ${tllOrderCount}개`,
+        );
 
         // 카운트 업데이트
-        const posCard = document.querySelector('.pos-card .count');
-        const tllCard = document.querySelector('.tll-card .count');
-        const totalCard = document.querySelector('.total-card .count');
+        const posCard = document.querySelector(".pos-card .count");
+        const tllCard = document.querySelector(".tll-card .count");
+        const totalCard = document.querySelector(".total-card .count");
 
         if (posCard) {
             posCard.textContent = `${posOrders.length}건`;
@@ -1873,7 +2055,9 @@ const POSOrderScreen = {
         }
         if (totalCard) {
             totalCard.textContent = `${posOrders.length + tllOrderCount}건`;
-            console.log(`✅ 전체 카드 카운트 업데이트: ${posOrders.length + tllOrderCount}건`);
+            console.log(
+                `✅ 전체 카드 카운트 업데이트: ${posOrders.length + tllOrderCount}건`,
+            );
         }
 
         // 탭 텍스트 업데이트 (강제 업데이트)
@@ -1890,7 +2074,7 @@ const POSOrderScreen = {
         }
 
         // 헤더의 주문 카운트도 업데이트 (있다면)
-        const headerOrderCount = document.querySelector('.header-order-count');
+        const headerOrderCount = document.querySelector(".header-order-count");
         if (headerOrderCount) {
             headerOrderCount.textContent = `${posOrders.length + tllOrderCount}`;
         }
@@ -1898,35 +2082,35 @@ const POSOrderScreen = {
 
     getMenuIcon(category) {
         const icons = {
-            '찌개류': '🍲',
-            '구이류': '🥩',
-            '밥류': '🍚',
-            '면류': '🍜',
-            '음료': '🥤',
-            '기타': '🍽️'
+            찌개류: "🍲",
+            구이류: "🥩",
+            밥류: "🍚",
+            면류: "🍜",
+            음료: "🥤",
+            기타: "🍽️",
         };
-        return icons[category] || '🍽️';
+        return icons[category] || "🍽️";
     },
 
     getPaymentMethodName() {
         const names = {
-            'cash': '현금',
-            'card': '카드',
-            'mixed': '복합결제',
-            'tlpay': 'TL Pay',
-            'simple': '간편결제'
+            cash: "현금",
+            card: "카드",
+            mixed: "복합결제",
+            tlpay: "TL Pay",
+            simple: "간편결제",
         };
-        return names[this.selectedPaymentMethod] || '카드';
+        return names[this.selectedPaymentMethod] || "카드";
     },
 
     getDefaultMenu() {
         return [
-            { id: 1, name: '김치찌개', price: 8000, category: '찌개류' },
-            { id: 2, name: '된장찌개', price: 7000, category: '찌개류' },
-            { id: 3, name: '불고기', price: 15000, category: '구이류' },
-            { id: 4, name: '비빔밥', price: 9000, category: '밥류' },
-            { id: 5, name: '콜라', price: 2000, category: '음료' },
-            { id: 6, name: '사이다', price: 2000, category: '음료' }
+            { id: 1, name: "김치찌개", price: 8000, category: "찌개류" },
+            { id: 2, name: "된장찌개", price: 7000, category: "찌개류" },
+            { id: 3, name: "불고기", price: 15000, category: "구이류" },
+            { id: 4, name: "비빔밥", price: 9000, category: "밥류" },
+            { id: 5, name: "콜라", price: 2000, category: "음료" },
+            { id: 6, name: "사이다", price: 2000, category: "음료" },
         ];
     },
 
@@ -1935,18 +2119,21 @@ const POSOrderScreen = {
      */
     setupEventListeners() {
         // 받은 금액 입력 시 거스름돈 계산
-        const receivedInput = document.getElementById('receivedAmount');
+        const receivedInput = document.getElementById("receivedAmount");
         if (receivedInput) {
-            receivedInput.addEventListener('input', (e) => {
+            receivedInput.addEventListener("input", (e) => {
                 const received = parseInt(e.target.value) || 0;
                 // 현재 결제할 총 금액 (카트 아이템 기준)
-                const total = this.cart.reduce((sum, order) => sum + (order.price * order.quantity), 0);
+                const total = this.cart.reduce(
+                    (sum, order) => sum + order.price * order.quantity,
+                    0,
+                );
                 const change = Math.max(0, received - total);
 
-                const changeElement = document.getElementById('changeAmount');
+                const changeElement = document.getElementById("changeAmount");
                 if (changeElement) {
-                    changeElement.textContent = change.toLocaleString() + '원';
-                    changeElement.className = `amount change-amount ${change > 0 ? 'positive' : ''}`;
+                    changeElement.textContent = change.toLocaleString() + "원";
+                    changeElement.className = `amount change-amount ${change > 0 ? "positive" : ""}`;
                 }
             });
         }
@@ -1966,37 +2153,40 @@ const POSOrderScreen = {
      */
     async endCurrentSession() {
         if (!this.currentSession || !this.currentSession.orderId) {
-            console.log('종료할 세션이 없습니다.');
+            console.log("종료할 세션이 없습니다.");
             return;
         }
 
         try {
             // 서버에 세션 종료 요청
-            const response = await fetch(`/api/orders/${this.currentSession.orderId}/end-session`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
+            const response = await fetch(
+                `/api/orders/${this.currentSession.orderId}/end-session`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
 
             const result = await response.json();
 
             if (result.success) {
-                console.log(`✅ 세션 종료 완료: 주문 ${this.currentSession.orderId}`);
+                console.log(
+                    `✅ 세션 종료 완료: 주문 ${this.currentSession.orderId}`,
+                );
 
                 // 로컬 세션 정보 초기화
                 this.currentSession = null;
                 this.sessionItems = [];
 
                 // 테이블 상태 업데이트
-                this.updateTableStatus(this.currentTableNumber, 'available');
-
+                this.updateTableStatus(this.currentTableNumber, "available");
             } else {
-                console.error('❌ 세션 종료 실패:', result.error);
+                console.error("❌ 세션 종료 실패:", result.error);
             }
-
         } catch (error) {
-            console.error('❌ 세션 종료 요청 실패:', error);
+            console.error("❌ 세션 종료 요청 실패:", error);
         }
     },
 
@@ -2007,27 +2197,29 @@ const POSOrderScreen = {
         if (!this.currentTable) return; // 테이블이 선택되지 않았으면 로드 안함
 
         try {
-            const response = await fetch(`/api/orders/current-session/${POSCore.storeId}/${this.currentTable}`);
+            const response = await fetch(
+                `/api/orders/current-session/${POSCore.storeId}/${this.currentTable}`,
+            );
             const data = await response.json();
 
             if (data.success && data.session) {
                 this.currentSession = data.session;
                 this.sessionItems = data.session.orderItems || [];
-                console.log('✅ 세션 데이터 로드:', this.currentSession);
+                console.log("✅ 세션 데이터 로드:", this.currentSession);
 
                 // 세션 정보는 별도로 저장 (currentOrders 덮어쓰지 않음)
                 // currentOrders는 이미 consolidateOrderItems에서 통합 처리되었으므로 유지
 
                 // 테이블 상태 업데이트 (예: 'occupied')
-                this.updateTableStatus(this.currentTable, 'occupied');
+                this.updateTableStatus(this.currentTable, "occupied");
             } else {
                 this.currentSession = null;
                 this.sessionItems = [];
                 // 테이블 상태 업데이트 (예: 'available')
-                this.updateTableStatus(this.currentTable, 'available');
+                this.updateTableStatus(this.currentTable, "available");
             }
         } catch (error) {
-            console.error('❌ 세션 데이터 로드 실패:', error);
+            console.error("❌ 세션 데이터 로드 실패:", error);
             this.currentSession = null;
             this.sessionItems = [];
         }
@@ -2038,7 +2230,10 @@ const POSOrderScreen = {
      */
     updateTableStatus(tableNumber, status) {
         // 테이블맵 화면이 있다면 해당 테이블 상태 업데이트
-        if (window.POSTableMap && typeof window.POSTableMap.updateTableStatus === 'function') {
+        if (
+            window.POSTableMap &&
+            typeof window.POSTableMap.updateTableStatus === "function"
+        ) {
             window.POSTableMap.updateTableStatus(tableNumber, status);
         }
 
@@ -2052,7 +2247,7 @@ const POSOrderScreen = {
         try {
             // 활성 TLL 주문이 있는지 확인
             if (!this.tllOrders || this.tllOrders.length === 0) {
-                alert('종료할 TLL 세션이 없습니다.');
+                alert("종료할 TLL 세션이 없습니다.");
                 return;
             }
 
@@ -2060,15 +2255,16 @@ const POSOrderScreen = {
             const orderId = this.tllOrders[0].order_id;
 
             if (!orderId) {
-                console.error('❌ TLL 주문 ID를 찾을 수 없습니다');
-                alert('TLL 주문 정보를 찾을 수 없습니다.');
+                console.error("❌ TLL 주문 ID를 찾을 수 없습니다");
+                alert("TLL 주문 정보를 찾을 수 없습니다.");
                 return;
             }
 
-            const confirmMessage = `TLL 세션을 종료하시겠습니까?\n\n` +
-                                 `• 사용자: ${this.tllUserInfo?.name || '게스트'}\n` +
-                                 `• 주문 수: ${this.tllOrders.length}개\n` +
-                                 `• 주문 ID: ${orderId}`;
+            const confirmMessage =
+                `TLL 세션을 종료하시겠습니까?\n\n` +
+                `• 사용자: ${this.tllUserInfo?.name || "게스트"}\n` +
+                `• 주문 수: ${this.tllOrders.length}개\n` +
+                `• 주문 ID: ${orderId}`;
 
             if (!confirm(confirmMessage)) {
                 return;
@@ -2077,19 +2273,19 @@ const POSOrderScreen = {
             console.log(`🔚 TLL 세션 종료 요청: 주문 ID ${orderId}`);
 
             const response = await fetch(`/api/orders/${orderId}/end-session`, {
-                method: 'PUT',
+                method: "PUT",
                 headers: {
-                    'Content-Type': 'application/json'
-                }
+                    "Content-Type": "application/json",
+                },
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'TLL 세션 종료 실패');
+                throw new Error(errorData.error || "TLL 세션 종료 실패");
             }
 
             const result = await response.json();
-            console.log('✅ TLL 세션 종료 완료:', result);
+            console.log("✅ TLL 세션 종료 완료:", result);
 
             // 성공 메시지
             alert(`✅ TLL 세션이 종료되었습니다.\n주문 ID: ${orderId}`);
@@ -2105,36 +2301,66 @@ const POSOrderScreen = {
             await this.refreshOrders();
 
             // 화면 새로고침으로 완전 초기화
-            await this.render(this.currentStoreId, { name: '매장' }, this.currentTableNumber);
+            await this.render(
+                this.currentStoreId,
+                { name: "매장" },
+                this.currentTableNumber,
+            );
 
+            // 테이블맵으로 자동 전환
+            setTimeout(() => {
+                POSCore.showTableMap();
+            }, 1500);
         } catch (error) {
-            console.error('❌ TLL 세션 종료 실패:', error);
+            console.error("❌ TLL 세션 종료 실패:", error);
             alert(`TLL 세션 종료 중 오류가 발생했습니다:\n${error.message}`);
         }
     },
 
     // 기타 기능들 (임시 구현)
-    showKitchenDisplay() { alert('주방출력 기능 (추후 구현)'); },
-    showSalesStatus() { alert('매출현황 기능 (추후 구현)'); },
-    showNotifications() { alert('알림 기능 (추후 구현)'); },
-    changeQuantity(orderId, change) { alert('수량변경 기능 (추후 구현)'); },
-    removeOrder(orderId) { alert('주문삭제 기능 (추후 구현)'); },
-    cancelAllOrders() { alert('전체취소 기능 (추후 구현)'); },
-    cancelSelectedOrders() { alert('선택취소 기능 (추후 구현)'); },
-    addToOrder() { alert('주문추가 기능 (추후 구현)'); },
+    showKitchenDisplay() {
+        alert("주방출력 기능 (추후 구현)");
+    },
+    showSalesStatus() {
+        alert("매출현황 기능 (추후 구현)");
+    },
+    showNotifications() {
+        alert("알림 기능 (추후 구현)");
+    },
+    changeQuantity(orderId, change) {
+        alert("수량변경 기능 (추후 구현)");
+    },
+    removeOrder(orderId) {
+        alert("주문삭제 기능 (추후 구현)");
+    },
+    cancelAllOrders() {
+        alert("전체취소 기능 (추후 구현)");
+    },
+    cancelSelectedOrders() {
+        alert("선택취소 기능 (추후 구현)");
+    },
+    addToOrder() {
+        alert("주문추가 기능 (추후 구현)");
+    },
 
     // 새로운 결제 기능들
-    showOrderHistory() { alert('주문 내역 관리 기능 (추후 구현)'); },
-    showDutchPay() { alert('더치페이 기능 (추후 구현)'); },
-    showReceiptManagement() { alert('영수증 관리 기능 (추후 구현)'); },
+    showOrderHistory() {
+        alert("주문 내역 관리 기능 (추후 구현)");
+    },
+    showDutchPay() {
+        alert("더치페이 기능 (추후 구현)");
+    },
+    showReceiptManagement() {
+        alert("영수증 관리 기능 (추후 구현)");
+    },
 
     // 컨트롤 바 기능들
     addQuantityToSelected() {
-        alert('선택된 주문의 수량 증가 기능 (추후 구현)');
+        alert("선택된 주문의 수량 증가 기능 (추후 구현)");
     },
     minusQuantityFromSelected() {
-        alert('선택된 주문의 수량 감소 기능 (추후 구현)');
-    }
+        alert("선택된 주문의 수량 감소 기능 (추후 구현)");
+    },
 };
 
 // 전역 함수로 등록
