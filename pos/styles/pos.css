@@ -1565,20 +1565,39 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 테이블 상태별 색상 */
+/* 테이블 상태별 스타일 */
 .table-card.status-empty {
-    border-color: #d1d5db;
-    background: #ffffff;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    color: #6c757d;
 }
 
 .table-card.status-occupied {
-    border-color: #3b82f6;
-    background: #eff6ff;
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    color: #856404;
 }
 
 .table-card.status-tlg {
-    border-color: #10b981;
-    background: #ecfdf5;
+    background: #d1ecf1;
+    border: 2px solid #17a2b8;
+    color: #0c5460;
+}
+
+.table-card.status-cross-orders {
+    background: linear-gradient(135deg, #fff3cd, #f8d7da);
+    border: 2px solid #fd7e14;
+    color: #721c24;
+    position: relative;
+}
+
+.table-card.status-cross-orders::before {
+    content: "⚡";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    font-size: 12px;
+    color: #fd7e14;
 }
 
 /* 좌측 상단 테이블 번호 */
@@ -2284,4 +2303,122 @@ body {
     background: #ecfdf5;
     color: #065f46;
     border: 1px solid #10b981;
+}
+
+/* 영수증 스타일 주문 카드 */
+.receipt-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 8px;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+/* 교차 주문 스타일 */
+.receipt-card.cross-orders {
+    background: linear-gradient(135deg, #fff3cd, #f8d7da);
+    border: 2px solid #fd7e14;
+}
+
+.cross-order-types {
+    font-size: 9px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.cross-order-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.cross-order-section {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 4px;
+    padding: 4px;
+    border-left: 3px solid transparent;
+}
+
+.cross-order-section.main-order {
+    border-left-color: #007bff;
+}
+
+.cross-order-section.spare-order {
+    border-left-color: #28a745;
+}
+
+.cross-order-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.order-badge {
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 600;
+    color: white;
+}
+
+.order-badge.main-badge {
+    background: #007bff;
+}
+
+.order-badge.spare-badge {
+    background: #28a745;
+}
+
+.cross-order-total {
+    font-size: 9px;
+    font-weight: 600;
+    text-align: right;
+    color: #495057;
+    margin-top: 2px;
+}
+
+.receipt-total.cross-total {
+    font-weight: 700;
+    color: #dc3545;
+    border-top: 1px solid #dee2e6;
+    padding-top: 3px;
+}
+
+/* 미니 영수증 아이템 */
+.mini-receipt-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mini-receipt-item {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #6c757d;
+}
+
+.mini-item-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.mini-item-qty {
+    font-weight: 600;
+}
+
+.mini-receipt-empty {
+    font-size: 8px;
+    color: #adb5bd;
+    text-align: center;
+    padding: 2px 0;
+}
+
+.mini-receipt-more {
+    font-size: 8px;
+    color: #6c757d;
+    text-align: center;
+    font-style: italic;
 }
