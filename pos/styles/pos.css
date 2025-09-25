@@ -1580,10 +1580,34 @@ body {
     background: #ecfdf5;
 }
 
+/* 교차 주문 테이블 카드 스타일 */
 .table-card.status-cross-order {
-    border-color: #f59e0b;
-    background: #fffbeb;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
+    background: linear-gradient(145deg, #fff7ed, #fed7aa);
+    border: 2px solid #fb923c;
+    box-shadow: 0 8px 25px rgba(251, 146, 60, 0.15);
+}
+
+/* TLL 연동 교차주문 테이블 카드 스타일 */
+.table-card.status-tll-mixed-order {
+    background: linear-gradient(145deg, #f0f9ff, #bae6fd);
+    border: 2px solid #0ea5e9;
+    box-shadow: 0 8px 25px rgba(14, 165, 233, 0.15);
+    position: relative;
+}
+
+/* TLL 연동 교차주문 표시 배지 */
+.table-card.status-tll-mixed-order::before {
+    content: "🔗 TLL연동";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #0ea5e9;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: bold;
+    z-index: 10;
 }
 
 /* 좌측 상단 테이블 번호 */
@@ -1706,6 +1730,39 @@ body {
     background: #fffbeb;
     box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
     border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* TLL 연동 교차주문 카드 스타일 */
+.receipt-card.tll-mixed-order {
+    border-left: 4px solid #0ea5e9;
+}
+
+.receipt-card.tll-mixed-order .receipt-subtitle {
+    color: #0369a1;
+    font-weight: 600;
+}
+
+.tll-mixed-notice {
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.mixed-notice-text {
+    color: #1e40af;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.receipt-total.tll-mixed-total {
+    background: linear-gradient(135deg, #0ea5e9, #0369a1);
+    color: white;
+    border-radius: 6px;
+    padding: 8px;
+    font-weight: 700;
 }
 
 .cross-order-body {

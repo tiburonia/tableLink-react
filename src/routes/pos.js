@@ -1138,7 +1138,7 @@ router.put('/orders/:orderId/enable-mixed', async (req, res) => {
       WHERE id = $1
     `, [orderId]);
 
-   
+
 
     console.log(`✅ TLL 연동 활성화 완료: 주문 ID ${orderId}`);
 
@@ -1287,6 +1287,187 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
     res.status(500).json({
       success: false,
       error: '활성 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/table/:tableNumber/status - 테이블 상태 조회 (TLL 연동 교차주문 확인용)
+ */
+router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`🔍 테이블 상태 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    // store_tables에서 해당 테이블의 주문 상태 조회
+    const tableResult = await pool.query(`
+      SELECT
+        id,
+        processing_order_id,
+        spare_processing_order_id,
+        status,
+        updated_at
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '테이블을 찾을 수 없습니다'
+      });
+    }
+
+    const table = tableResult.rows[0];
+
+    // TLL 연동 교차주문 여부 판단
+    const isTLLMixedOrder = (
+      table.processing_order_id !== null &&
+      table.spare_processing_order_id !== null &&
+      table.processing_order_id === table.spare_processing_order_id
+    );
+
+    console.log(`✅ 테이블 ${tableNumber} 상태 조회 완료:`, {
+      processing_order_id: table.processing_order_id,
+      spare_processing_order_id: table.spare_processing_order_id,
+      isTLLMixedOrder: isTLLMixedOrder
+    });
+
+    res.json({
+      success: true,
+      table: {
+        id: table.id,
+        processing_order_id: table.processing_order_id,
+        spare_processing_order_id: table.spare_processing_order_id,
+        status: table.status,
+        updated_at: table.updated_at,
+        isTLLMixedOrder: isTLLMixedOrder
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ 테이블 상태 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '테이블 상태 조회 실패'
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/orders/active - 활성 주문 조회 (교차 주문 지원)
+ */
+router.get('/stores/:storeId/orders/active', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`📊 매장 ${storeId} 활성 주문 조회 (교차 주문 지원)`);
+
+    // 메인 주문 조회
+    const mainOrdersResult = await pool.query(`
+      SELECT
+        st.id as table_number,
+        o.id as order_id,
+        COALESCE(u.name, '포스고객') as customer_name,
+        o.user_id,
+        o.total_price as total_amount,
+        o.session_status,
+        o.created_at as opened_at,
+        o.source as source_system,
+        COUNT(oi.id) as item_count,
+        'main' as order_type,
+        st.spare_processing_order_id
+      FROM store_tables st
+      JOIN orders o ON st.processing_order_id = o.id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id,
+               o.total_price, o.session_status, o.created_at, o.source, st.spare_processing_order_id
+    `, [storeId]);
+
+    // 보조 주문 조회
+    const spareOrdersResult = await pool.query(`
+      SELECT
+        st.id as table_number,
+        o.id as order_id,
+        COALESCE(u.name, '포스고객') as customer_name,
+        o.user_id,
+        o.total_price as total_amount,
+        o.session_status,
+        o.created_at as opened_at,
+        o.source as source_system,
+        COUNT(oi.id) as item_count,
+        'spare' as order_type
+      FROM store_tables st
+      JOIN orders o ON st.spare_processing_order_id = o.id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.spare_processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id,
+               o.total_price, o.session_status, o.created_at, o.source
+    `, [storeId]);
+
+    // 결과 통합 및 교차 주문 표시
+    const activeOrders = [];
+
+    // 메인 주문 처리
+    mainOrdersResult.rows.forEach(row => {
+      const hasSpareOrder = row.spare_processing_order_id !== null;
+
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'main',
+        isCrossOrder: hasSpareOrder // 교차 주문 여부
+      });
+    });
+
+    // 보조 주문 처리
+    spareOrdersResult.rows.forEach(row => {
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'spare',
+        isCrossOrder: true // 보조 주문은 항상 교차 주문
+      });
+    });
+
+    // 테이블 번호와 주문 생성 시간으로 정렬
+    activeOrders.sort((a, b) => {
+      if (a.tableNumber !== b.tableNumber) {
+        return a.tableNumber - b.tableNumber;
+      }
+      return new Date(a.openedAt) - new Date(b.openedAt);
+    });
+
+    console.log(`✅ 매장 ${storeId} 활성 주문 ${activeOrders.length}개 조회 완료 (교차 주문 포함)`);
+
+    res.json({
+      success: true,
+      activeOrders: activeOrders
+    });
+
+  } catch (error) {
+    console.error('❌ 활성 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '활성 주문 조회 실패'
     });
   }
 });
