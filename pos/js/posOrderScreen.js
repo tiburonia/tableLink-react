@@ -636,6 +636,7 @@ const POSOrderScreen = {
                     </div>
                 </div>
                 <div class="tll-action-buttons">
+                    ${this.renderTLLConnectionButton()}
                     <button class="tll-action-btn end-session" onclick="POSOrderScreen.endTLLSession()">
                         <span class="btn-icon">🔚</span>
                         <span class="btn-text">TLL 세션 종료</span>
@@ -643,6 +644,43 @@ const POSOrderScreen = {
                 </div>
             </div>
         `;
+    },
+
+    /**
+     * TLL 연동 버튼 렌더링
+     */
+    renderTLLConnectionButton() {
+        // 현재 TLL 주문의 is_mixed 상태 확인
+        const isMixed = this.checkTLLOrderMixedStatus();
+        
+        if (isMixed) {
+            return `
+                <button class="tll-action-btn tll-connect disabled" disabled>
+                    <span class="btn-icon">✅</span>
+                    <span class="btn-text">TLL 연동 완료</span>
+                </button>
+            `;
+        } else {
+            return `
+                <button class="tll-action-btn tll-connect" onclick="POSOrderScreen.enableTLLConnection()">
+                    <span class="btn-icon">🔗</span>
+                    <span class="btn-text">TLL 연동</span>
+                </button>
+            `;
+        }
+    },
+
+    /**
+     * TLL 주문의 is_mixed 상태 확인
+     */
+    checkTLLOrderMixedStatus() {
+        if (!this.tllOrders || this.tllOrders.length === 0) {
+            return false;
+        }
+        
+        // TLL 주문이 있으면 해당 주문의 is_mixed 상태를 확인 (추후 API에서 받아올 예정)
+        // 현재는 임시로 false 반환
+        return this.tllOrderMixedStatus || false;
     },
 
     /**
@@ -1192,7 +1230,7 @@ const POSOrderScreen = {
 
     /**
      * 주문 확정 (카트 -> 서버 전송)
-     * 비회원 POS 주문 지원
+     * 비회원 POS 주문 지원 + TLL 연동 지원
      */
     async confirmOrder() {
         if (this.cart.length === 0) {
@@ -1206,11 +1244,22 @@ const POSOrderScreen = {
                 0,
             );
 
-            if (
-                !confirm(
-                    `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 비회원 주문하시겠습니까?`,
-                )
-            ) {
+            // TLL 연동 상태 확인
+            const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
+            const isTLLMixed = this.checkTLLOrderMixedStatus();
+            
+            let confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 주문하시겠습니까?`;
+            
+            if (hasTLLOrders && isTLLMixed) {
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 기존 TLL 주문에 추가하시겠습니까?\n\n` +
+                               `• 기존 TLL 주문과 함께 하나의 계산서로 처리됩니다`;
+            } else if (hasTLLOrders && !isTLLMixed) {
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 별도 주문으로 생성하시겠습니까?\n\n` +
+                               `• TLL 주문과 별도의 계산서로 처리됩니다\n` +
+                               `• TLL 연동을 원하시면 먼저 "TLL 연동" 버튼을 클릭하세요`;
+            }
+
+            if (!confirm(confirmMessage)) {
                 return;
             }
 
@@ -1224,24 +1273,39 @@ const POSOrderScreen = {
                 return;
             }
 
-            console.log("📋 비회원 POS 주문 확정 시작:", {
+            console.log("📋 POS 주문 확정 시작:", {
                 storeId: storeId,
                 tableNumber: tableNumber,
                 cartItems: this.cart.length,
                 totalAmount: total,
-                isGuestOrder: true,
+                hasTLLOrders: hasTLLOrders,
+                isTLLMixed: isTLLMixed,
             });
 
-            // 비회원 주문 전용 API 사용
-            const response = await fetch("/api/pos/guest-orders/confirm", {
+            // TLL 연동 상태에 따라 다른 API 사용
+            let apiEndpoint = "/api/pos/guest-orders/confirm";
+            let requestBody = {
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
+                items: this.cart,
+                totalAmount: total,
+            };
+
+            if (hasTLLOrders && isTLLMixed) {
+                // TLL 연동된 경우: 기존 주문에 추가
+                apiEndpoint = "/api/pos/orders/confirm";
+                requestBody.mergeWithExisting = true;
+                requestBody.existingOrderId = this.tllOrders[0].order_id;
+                console.log("🔗 TLL 연동 주문으로 처리: 기존 주문에 추가");
+            } else {
+                // TLL 미연동 또는 TLL 없는 경우: 새 주문 생성
+                console.log("📝 별도 POS 주문으로 처리");
+            }
+
+            const response = await fetch(apiEndpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    storeId: parseInt(storeId),
-                    tableNumber: parseInt(tableNumber),
-                    items: this.cart,
-                    totalAmount: total,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -2238,6 +2302,67 @@ const POSOrderScreen = {
         }
 
         console.log(`🍽️ 테이블 ${tableNumber} 상태 업데이트: ${status}`);
+    },
+
+    /**
+     * TLL 연동 활성화
+     */
+    async enableTLLConnection() {
+        try {
+            if (!this.tllOrders || this.tllOrders.length === 0) {
+                alert('연동할 TLL 주문이 없습니다.');
+                return;
+            }
+
+            // 첫 번째 TLL 주문에서 orderId 가져오기
+            const orderId = this.tllOrders[0].order_id;
+
+            if (!orderId) {
+                console.error('❌ TLL 주문 ID를 찾을 수 없습니다');
+                alert('TLL 주문 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            const confirmMessage = 
+                `TLL 연동을 활성화하시겠습니까?\n\n` +
+                `• 활성화 후 이 테이블에서 POS 주문을 추가하면\n` +
+                `• 기존 TLL 주문과 합쳐져서 하나의 계산서로 처리됩니다\n` +
+                `• 주문 ID: ${orderId}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log(`🔗 TLL 연동 활성화 요청: 주문 ID ${orderId}`);
+
+            const response = await fetch(`/api/pos/orders/${orderId}/enable-mixed`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'TLL 연동 활성화 실패');
+            }
+
+            const result = await response.json();
+            console.log('✅ TLL 연동 활성화 완료:', result);
+
+            // 성공 메시지
+            alert(`✅ TLL 연동이 활성화되었습니다.\n주문 ID: ${orderId}`);
+
+            // 상태 업데이트
+            this.tllOrderMixedStatus = true;
+
+            // UI 새로고침
+            await this.refreshOrders();
+
+        } catch (error) {
+            console.error('❌ TLL 연동 활성화 실패:', error);
+            alert(`TLL 연동 활성화 중 오류가 발생했습니다:\n${error.message}`);
+        }
     },
 
     /**

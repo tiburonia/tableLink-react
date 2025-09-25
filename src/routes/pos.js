@@ -10,12 +10,22 @@ const pool = require('../db/pool');
 /**
  * [POST] /orders/confirm - POS 주문 확정 (카트 -> order_tickets/order_items 생성)
  * 비회원 포스 주문 지원 (user_id, guest_phone NULL)
+ * TLL 연동 지원 (mergeWithExisting)
  */
 router.post('/orders/confirm', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { storeId, tableNumber, items, totalAmount, orderType, isGuestOrder = true } = req.body;
+    const { 
+      storeId, 
+      tableNumber, 
+      items, 
+      totalAmount, 
+      orderType, 
+      isGuestOrder = true,
+      mergeWithExisting = false,
+      existingOrderId = null
+    } = req.body;
 
     console.log(`🛒 POS 주문 확정: 매장 ${storeId}, 테이블 ${tableNumber}, ${items.length}개 아이템 (비회원: ${isGuestOrder})`);
 
@@ -28,20 +38,44 @@ router.post('/orders/confirm', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // 1. 해당 테이블의 활성 주문 확인 또는 생성
+    // 1. TLL 연동 여부에 따른 주문 처리
     let orderId;
 
-    const existingOrderResult = await client.query(`
-      SELECT id FROM orders 
-      WHERE store_id = $1 AND table_num = $2 AND session_status = 'OPEN'
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `, [storeId, tableNumber]);
+    if (mergeWithExisting && existingOrderId) {
+      // TLL 연동: 기존 주문에 추가
+      console.log(`🔗 TLL 연동 주문: 기존 주문 ${existingOrderId}에 POS 주문 추가`);
 
-    if (existingOrderResult.rows.length > 0) {
-      // 기존 주문에 추가
-      orderId = existingOrderResult.rows[0].id;
-      console.log(`📋 기존 주문 ${orderId}에 추가`);
+      // 기존 주문 존재 및 is_mixed 상태 확인
+      const existingOrderCheck = await client.query(`
+        SELECT id, is_mixed, session_status, source, total_price
+        FROM orders 
+        WHERE id = $1 AND session_status = 'OPEN'
+      `, [existingOrderId]);
+
+      if (existingOrderCheck.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: '연동할 기존 주문을 찾을 수 없습니다'
+        });
+      }
+
+      const existingOrder = existingOrderCheck.rows[0];
+
+      if (!existingOrder.is_mixed) {
+        return res.status(400).json({
+          success: false,
+          error: '해당 주문은 연동이 활성화되지 않았습니다'
+        });
+      }
+
+      if (existingOrder.source !== 'TLL') {
+        return res.status(400).json({
+          success: false,
+          error: 'TLL 주문이 아닙니다'
+        });
+      }
+
+      orderId = existingOrderId;
 
       // 기존 주문 금액 업데이트
       await client.query(`
@@ -50,7 +84,30 @@ router.post('/orders/confirm', async (req, res) => {
             updated_at = NOW()
         WHERE id = $2
       `, [totalAmount, orderId]);
+
+      console.log(`✅ TLL 연동 주문에 POS 주문 추가: 주문 ${orderId}, 추가 금액 ${totalAmount}원`);
     } else {
+      // 일반 처리: 해당 테이블의 활성 주문 확인 또는 생성
+      const existingOrderResult = await client.query(`
+        SELECT id FROM orders 
+        WHERE store_id = $1 AND table_num = $2 AND session_status = 'OPEN'
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `, [storeId, tableNumber]);
+
+      if (existingOrderResult.rows.length > 0) {
+        // 기존 주문에 추가
+        orderId = existingOrderResult.rows[0].id;
+        console.log(`📋 기존 주문 ${orderId}에 추가`);
+
+        // 기존 주문 금액 업데이트
+        await client.query(`
+          UPDATE orders 
+          SET total_price = COALESCE(total_price, 0) + $1,
+              updated_at = NOW()
+          WHERE id = $2
+        `, [totalAmount, orderId]);
+      } else {
       // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
       const orderResult = await client.query(`
         INSERT INTO orders (
@@ -172,7 +229,8 @@ router.post('/orders/confirm', async (req, res) => {
       orderId: orderId,
       ticketId: ticketId,
       batchNo: batchNo,
-      message: '주문이 성공적으로 확정되었습니다'
+      isMergedWithTLL: mergeWithExisting && existingOrderId ? true : false,
+      message: mergeWithExisting ? 'TLL 주문에 POS 주문이 추가되었습니다' : '주문이 성공적으로 확정되었습니다'
     });
 
   } catch (error) {
@@ -1013,6 +1071,101 @@ router.post('/orders', async (req, res) => {
 });
 
 
+
+/**
+ * [PUT] /orders/:orderId/enable-mixed - TLL 주문의 is_mixed 상태를 true로 변경
+ */
+router.put('/orders/:orderId/enable-mixed', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🔗 TLL 연동 활성화: 주문 ID ${orderId}`);
+
+    // 파라미터 검증
+    const parsedOrderId = parseInt(orderId);
+    if (isNaN(parsedOrderId)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 주문 ID입니다'
+      });
+    }
+
+    // 주문 존재 확인 및 TLL 소스 검증
+    const orderCheckResult = await pool.query(`
+      SELECT o.id, o.source, o.session_status, o.is_mixed
+      FROM orders o
+      WHERE o.id = $1
+    `, [parsedOrderId]);
+
+    if (orderCheckResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
+    }
+
+    const order = orderCheckResult.rows[0];
+
+    if (order.source !== 'TLL') {
+      return res.status(400).json({
+        success: false,
+        error: 'TLL 주문이 아닙니다'
+      });
+    }
+
+    if (order.session_status !== 'OPEN') {
+      return res.status(400).json({
+        success: false,
+        error: '활성 주문이 아닙니다'
+      });
+    }
+
+    if (order.is_mixed) {
+      return res.status(200).json({
+        success: true,
+        message: '이미 연동이 활성화된 주문입니다',
+        orderId: parsedOrderId,
+        is_mixed: true
+      });
+    }
+
+    // is_mixed를 true로 업데이트
+    const updateResult = await pool.query(`
+      UPDATE orders
+      SET 
+        is_mixed = true,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING id, is_mixed, updated_at
+    `, [parsedOrderId]);
+
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: '주문 업데이트에 실패했습니다'
+      });
+    }
+
+    const updatedOrder = updateResult.rows[0];
+
+    console.log(`✅ TLL 연동 활성화 완료: 주문 ID ${parsedOrderId}, is_mixed: ${updatedOrder.is_mixed}`);
+
+    res.json({
+      success: true,
+      message: 'TLL 연동이 활성화되었습니다',
+      orderId: parsedOrderId,
+      is_mixed: updatedOrder.is_mixed,
+      updated_at: updatedOrder.updated_at
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 연동 활성화 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 연동 활성화 중 오류가 발생했습니다: ' + error.message
+    });
+  }
+});
 
 /**
  * [GET] /stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
