@@ -43,11 +43,11 @@ const POSTableMap = {
                         <span class="employee-name">매니저</span>
                     </div>
                 </div>
-                
+
                 <div class="top-bar-center">
                     <div class="current-time" id="currentTime">2024.01.27 (토) 22:31:45</div>
                 </div>
-                
+
                 <div class="top-bar-right">
                     <button class="top-btn" onclick="POSTableMap.showOrderStatus()">
                         📊 주문현황
@@ -89,13 +89,13 @@ const POSTableMap = {
             <div class="table-card ${statusClass}" 
                  data-table-number="${table.tableNumber}"
                  onclick="POSTableMap.selectTable(${table.tableNumber})">
-                
+
                 <!-- 좌측 상단 테이블 번호 -->
                 <div class="table-number-small">${table.tableNumber}</div>
-                
+
                 <!-- 중앙 아이콘 및 상태 텍스트 -->
                 ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
-                
+
             </div>
         `;
     },
@@ -124,11 +124,11 @@ const POSTableMap = {
                         </div>
                         <div class="receipt-time">${occupiedTime}</div>
                     </div>
-                    
+
                     <div class="receipt-body">
                         ${orderItemsHTML}
                     </div>
-                    
+
                     <div class="receipt-footer">
                         <div class="receipt-total">
                             ${(table.totalAmount || 0).toLocaleString()}원
@@ -145,11 +145,11 @@ const POSTableMap = {
     renderCrossOrderContent(table) {
         const mainOrder = table.mainOrder;
         const spareOrder = table.spareOrder;
-        
+
         // 메인 주문 정보
         const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
         const mainTime = this.formatOccupiedTime(mainOrder?.openedAt);
-        
+
         // 보조 주문 정보
         const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
         const spareTime = this.formatOccupiedTime(spareOrder?.openedAt);
@@ -166,7 +166,7 @@ const POSTableMap = {
                     </div>
                     <div class="receipt-time">${mainTime}</div>
                 </div>
-                
+
                 <div class="receipt-body cross-order-body">
                     <!-- 메인 주문 -->
                     <div class="cross-order-section main-order">
@@ -178,10 +178,10 @@ const POSTableMap = {
                             ${this.renderCrossOrderItems(mainItems, 2)}
                         </div>
                     </div>
-                    
+
                     <!-- 구분선 -->
                     <div class="cross-order-divider"></div>
-                    
+
                     <!-- 보조 주문 -->
                     <div class="cross-order-section spare-order">
                         <div class="cross-order-header">
@@ -193,7 +193,7 @@ const POSTableMap = {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="receipt-footer">
                     <div class="receipt-total cross-total">
                         총 ${(table.totalAmount || 0).toLocaleString()}원
@@ -353,7 +353,7 @@ const POSTableMap = {
                         단체
                     </button>
                 </div>
-                
+
                 <div style="margin-bottom: 24px;">
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">영수증/출력</h3>
                     <button class="side-btn" onclick="POSTableMap.receiptManagement()" style="width: 100%; background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 8px; text-align: center; transition: all 0.2s;">
@@ -363,7 +363,7 @@ const POSTableMap = {
                         재출력
                     </button>
                 </div>
-                
+
                 <div style="margin-bottom: 24px;">
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">현황/시스템</h3>
                     <button class="side-btn" onclick="POSTableMap.showSalesStatus()" style="width: 100%; background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; margin-bottom: 8px; text-align: center; transition: all 0.2s;">
@@ -373,7 +373,7 @@ const POSTableMap = {
                         ⚙️ 설정
                     </button>
                 </div>
-                
+
                 <div>
                     <h3 style="font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">시스템</h3>
                     <button class="side-btn logout-btn" onclick="POSTableMap.logout()" style="width: 100%; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; text-align: center; transition: all 0.2s;">
@@ -434,7 +434,7 @@ const POSTableMap = {
                     for (const order of tableOrders) {
                         try {
                             let orderItems = [];
-                            
+
                             if (order.sourceSystem === 'TLL') {
                                 // TLL 주문의 경우 TLL 주문 API 사용
                                 console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}, 주문 ${order.checkId}`);
@@ -444,11 +444,13 @@ const POSTableMap = {
                                 const tllItemsData = await tllItemsResponse.json();
 
                                 if (tllItemsData.success && tllItemsData.tllOrders) {
-                                    // 해당 주문의 아이템만 필터링
-                                    const orderSpecificItems = tllItemsData.tllOrders.filter(item => 
-                                        item.order_id === order.checkId
-                                    );
-                                    
+                                    // 해당 주문의 아이템만 필터링 (ticket 레벨에서 구별)
+                                    const orderSpecificItems = tllItemsData.tllOrders.filter(item => {
+                                        // 주문 ID와 소스 모두 확인
+                                        return item.order_id === order.checkId && 
+                                               (item.ticket_source === 'TLL' || item.order_source === 'TLL');
+                                    });
+
                                     const convertedItems = orderSpecificItems.map(item => ({
                                         id: item.id,
                                         menu_id: item.menu_id || item.id,
@@ -458,27 +460,32 @@ const POSTableMap = {
                                         total_price: item.total_price,
                                         cook_station: item.cook_station || 'KITCHEN',
                                         item_status: item.item_status || 'READY',
-                                        order_type: order.orderType
+                                        order_type: order.orderType,
+                                        source_type: 'TLL'
                                     }));
-                                    
+
                                     orderItems = convertedItems;
                                 }
                             } else {
-                                // POS 주문의 경우 기존 로직 사용
+                                // POS 주문의 경우 기존 로직 사용 (ticket 소스 구별 강화)
                                 const itemsResponse = await fetch(
-                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
+                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items?source=POS`,
                                 );
                                 const itemsData = await itemsResponse.json();
 
                                 if (itemsData.success && itemsData.orderItems) {
-                                    // 해당 주문의 아이템만 필터링
-                                    const orderSpecificItems = itemsData.orderItems.filter(item => 
-                                        item.order_id === order.checkId
-                                    );
-                                    
+                                    // 해당 주문의 POS 티켓 아이템만 필터링
+                                    const orderSpecificItems = itemsData.orderItems.filter(item => {
+                                        return item.order_id === order.checkId && 
+                                               (item.ticket_source === 'POS' || 
+                                                (item.order_source === 'POS' && !item.ticket_source) ||
+                                                (!item.ticket_source && !item.order_source)); // 기본값 처리
+                                    });
+
                                     orderItems = orderSpecificItems.map(item => ({
                                         ...item,
-                                        order_type: order.orderType
+                                        order_type: order.orderType,
+                                        source_type: 'POS'
                                     }));
                                 }
                             }
@@ -574,7 +581,7 @@ const POSTableMap = {
                     price: item.unit_price,
                     quantity: item.quantity,
                     cookStation: item.cook_station || "KITCHEN",
-                    orderType: item.order_type || 'main'
+                    orderType: item.orderType
                 };
             }
         });
@@ -730,7 +737,7 @@ const POSTableMap = {
     initSSE(storeId) {
         try {
             console.log(`📡 POS SSE 연결 시작: 매장 ${storeId}`);
-            
+
             // 기존 SSE 연결이 있으면 종료
             if (this.sseConnection) {
                 this.sseConnection.close();
@@ -750,7 +757,7 @@ const POSTableMap = {
                 try {
                     const data = JSON.parse(event.data);
                     console.log('📡 POS SSE 메시지 수신:', data.type);
-                    
+
                     switch (data.type) {
                         case 'connected':
                             console.log('🔗 POS SSE 연결 확인:', data.topic);
@@ -772,7 +779,7 @@ const POSTableMap = {
             // 연결 오류
             this.sseConnection.onerror = (error) => {
                 console.error('❌ POS SSE 연결 오류:', error);
-                
+
                 // 3초 후 재연결 시도
                 setTimeout(() => {
                     if (this.sseConnection && this.sseConnection.readyState === EventSource.CLOSED) {
@@ -789,7 +796,7 @@ const POSTableMap = {
 
         } catch (error) {
             console.error('❌ POS SSE 초기화 실패:', error);
-            
+
             // 폴백: 30초 후 재시도
             setTimeout(() => {
                 this.initSSE(storeId);
@@ -803,11 +810,11 @@ const POSTableMap = {
     async handleTableUpdate(updateData) {
         try {
             console.log(`🔄 테이블 업데이트 수신: ${updateData.tables?.length || 0}개 테이블`);
-            
+
             // 전체 테이블 데이터 다시 로드 (기존 로직 유지)
             const tables = await this.loadTables(updateData.storeId);
             this.updateTableGrid(tables);
-            
+
         } catch (error) {
             console.error('❌ 테이블 업데이트 처리 실패:', error);
         }
