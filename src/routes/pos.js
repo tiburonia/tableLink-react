@@ -547,7 +547,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
     // 메인 주문 처리
     mainOrdersResult.rows.forEach(row => {
       const hasSpareOrder = row.spare_processing_order_id !== null;
-      
+
       activeOrders.push({
         checkId: row.order_id,
         tableNumber: row.table_number,
@@ -786,7 +786,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
     });
 
     console.log(`✅ POS 미지불 order_items ${filteredResults.length}개 조회 완료 (원본: ${result.rows.length}개)`);
-    
+
     // 디버깅용 로그 추가
     if (filteredResults.length > 0) {
       console.log(`🔍 첫 번째 아이템 상태:`, {
@@ -1077,35 +1077,37 @@ router.post('/orders', async (req, res) => {
  * [PUT] /orders/:orderId/enable-mixed - TLL 주문의 is_mixed 상태를 true로 변경
  */
 router.put('/orders/:orderId/enable-mixed', async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const { orderId } = req.params;
 
-    console.log(`🔗 TLL 연동 활성화: 주문 ID ${orderId}`);
+    console.log(`🔗 TLL 연동 활성화 요청: 주문 ID ${orderId}`);
 
-    // 파라미터 검증
-    const parsedOrderId = parseInt(orderId);
-    if (isNaN(parsedOrderId)) {
+    if (!orderId) {
       return res.status(400).json({
         success: false,
-        error: '유효하지 않은 주문 ID입니다'
+        error: '주문 ID가 필요합니다'
       });
     }
 
-    // 주문 존재 확인 및 TLL 소스 검증
-    const orderCheckResult = await pool.query(`
-      SELECT o.id, o.source, o.session_status, o.is_mixed
-      FROM orders o
-      WHERE o.id = $1
-    `, [parsedOrderId]);
+    await client.query('BEGIN');
 
-    if (orderCheckResult.rows.length === 0) {
+    // 주문 존재 및 상태 확인
+    const orderCheck = await client.query(`
+      SELECT id, source, session_status, is_mixed
+      FROM orders 
+      WHERE id = $1
+    `, [orderId]);
+
+    if (orderCheck.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: '주문을 찾을 수 없습니다'
       });
     }
 
-    const order = orderCheckResult.rows[0];
+    const order = orderCheck.rows[0];
 
     if (order.source !== 'TLL') {
       return res.status(400).json({
@@ -1117,53 +1119,95 @@ router.put('/orders/:orderId/enable-mixed', async (req, res) => {
     if (order.session_status !== 'OPEN') {
       return res.status(400).json({
         success: false,
-        error: '활성 주문이 아닙니다'
+        error: '종료된 주문은 연동할 수 없습니다'
       });
     }
 
     if (order.is_mixed) {
-      return res.status(200).json({
-        success: true,
-        message: '이미 연동이 활성화된 주문입니다',
-        orderId: parsedOrderId,
-        is_mixed: true
+      return res.status(400).json({
+        success: false,
+        error: '이미 연동이 활성화된 주문입니다'
       });
     }
 
     // is_mixed를 true로 업데이트
-    const updateResult = await pool.query(`
-      UPDATE orders
-      SET 
-        is_mixed = true,
-        updated_at = CURRENT_TIMESTAMP
+    await client.query(`
+      UPDATE orders 
+      SET is_mixed = true, updated_at = NOW()
       WHERE id = $1
-      RETURNING id, is_mixed, updated_at
-    `, [parsedOrderId]);
+    `, [orderId]);
 
-    if (updateResult.rows.length === 0) {
-      return res.status(500).json({
-        success: false,
-        error: '주문 업데이트에 실패했습니다'
-      });
-    }
+    await client.query('COMMIT');
 
-    const updatedOrder = updateResult.rows[0];
-
-    console.log(`✅ TLL 연동 활성화 완료: 주문 ID ${parsedOrderId}, is_mixed: ${updatedOrder.is_mixed}`);
+    console.log(`✅ TLL 연동 활성화 완료: 주문 ID ${orderId}`);
 
     res.json({
       success: true,
-      message: 'TLL 연동이 활성화되었습니다',
-      orderId: parsedOrderId,
-      is_mixed: updatedOrder.is_mixed,
-      updated_at: updatedOrder.updated_at
+      orderId: parseInt(orderId),
+      is_mixed: true,
+      message: 'TLL 연동이 활성화되었습니다'
     });
 
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('❌ TLL 연동 활성화 실패:', error);
     res.status(500).json({
       success: false,
       error: 'TLL 연동 활성화 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * [GET] /orders/:orderId/mixed-status - TLL 주문의 is_mixed 상태 조회
+ */
+router.get('/orders/:orderId/mixed-status', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    console.log(`🔍 TLL 주문 ${orderId} is_mixed 상태 조회`);
+
+    if (!orderId) {
+      return res.status(400).json({
+        success: false,
+        error: '주문 ID가 필요합니다'
+      });
+    }
+
+    const result = await pool.query(`
+      SELECT id, source, session_status, is_mixed, created_at, updated_at
+      FROM orders 
+      WHERE id = $1
+    `, [orderId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주문을 찾을 수 없습니다'
+      });
+    }
+
+    const order = result.rows[0];
+
+    console.log(`✅ TLL 주문 ${orderId} 상태 조회 완료: is_mixed=${order.is_mixed}`);
+
+    res.json({
+      success: true,
+      orderId: parseInt(orderId),
+      source: order.source,
+      session_status: order.session_status,
+      is_mixed: order.is_mixed,
+      created_at: order.created_at,
+      updated_at: order.updated_at
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 주문 상태 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 주문 상태 조회 중 오류가 발생했습니다: ' + error.message
     });
   }
 });

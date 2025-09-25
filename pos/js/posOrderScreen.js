@@ -671,16 +671,61 @@ const POSOrderScreen = {
     },
 
     /**
-     * TLL 주문의 is_mixed 상태 확인
+     * TLL 주문의 is_mixed 상태 확인 (API에서 실제 조회)
      */
     checkTLLOrderMixedStatus() {
         if (!this.tllOrders || this.tllOrders.length === 0) {
             return false;
         }
 
-        // TLL 주문이 있으면 해당 주문의 is_mixed 상태를 확인 (추후 API에서 받아올 예정)
-        // 현재는 임시로 false 반환
-        return this.tllOrderMixedStatus || false;
+        // TLL 주문에서 is_mixed 상태 확인 (첫 번째 주문의 상태 사용)
+        const firstTLLOrder = this.tllOrders[0];
+        return firstTLLOrder.is_mixed === true;
+    },
+
+    /**
+     * TLL 주문 데이터를 실제 API에서 다시 조회하여 is_mixed 상태 업데이트
+     */
+    async refreshTLLOrderMixedStatus() {
+        try {
+            if (!this.tllOrders || this.tllOrders.length === 0) {
+                return false;
+            }
+
+            const orderId = this.tllOrders[0].order_id;
+
+            console.log(`🔍 TLL 주문 ${orderId}의 is_mixed 상태 새로고침`);
+
+            const response = await fetch(`/api/pos/orders/${orderId}/mixed-status`);
+
+            if (!response.ok) {
+                console.warn(`⚠️ TLL 주문 상태 조회 실패 (${response.status})`);
+                return this.checkTLLOrderMixedStatus(); // 기존 값 사용
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                // TLL 주문 데이터의 is_mixed 상태 업데이트
+                if (this.tllOrders && this.tllOrders.length > 0) {
+                    this.tllOrders.forEach(order => {
+                        if (order.order_id === orderId) {
+                            order.is_mixed = data.is_mixed;
+                        }
+                    });
+                }
+
+                console.log(`✅ TLL 주문 ${orderId} is_mixed 상태 업데이트: ${data.is_mixed}`);
+                return data.is_mixed;
+            } else {
+                console.warn(`⚠️ TLL 주문 상태 응답 실패: ${data.error}`);
+                return this.checkTLLOrderMixedStatus(); // 기존 값 사용
+            }
+
+        } catch (error) {
+            console.error('❌ TLL 주문 상태 새로고침 실패:', error);
+            return this.checkTLLOrderMixedStatus(); // 기존 값 사용
+        }
     },
 
     /**
@@ -1252,12 +1297,14 @@ const POSOrderScreen = {
             let confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 주문하시겠습니까?`;
 
             if (hasTLLOrders && isTLLMixed) {
-                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 기존 TLL 주문에 추가하시겠습니까?\n\n` +
-                               `• 기존 TLL 주문과 함께 하나의 계산서로 처리됩니다`;
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 기존 TLL 주문에 추가하시겠습니까?
+
+• 기존 TLL 주문과 함께 하나의 계산서로 처리됩니다`;
             } else if (hasTLLOrders && !isTLLMixed) {
-                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 별도 주문으로 생성하시겠습니까?\n\n` +
-                               `• TLL 주문과 별도의 계산서로 처리됩니다\n` +
-                               `• TLL 연동을 원하시면 먼저 "TLL 연동" 버튼을 클릭하세요`;
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 별도 주문으로 생성하시겠습니까?
+
+• TLL 주문과 별도의 계산서로 처리됩니다
+• TLL 연동을 원하시면 먼저 "TLL 연동" 버튼을 클릭하세요`;
             }
 
             if (!confirm(confirmMessage)) {
@@ -1507,9 +1554,10 @@ const POSOrderScreen = {
 
                 const methodName = method === "card" ? "카드" : "현금";
                 alert(
-                    `${methodName} 결제가 완료되었습니다!\n` +
-                        `결제 금액: ${paymentResult.amount.toLocaleString()}원\n` +
-                        `처리된 티켓: ${paymentResult.totalTicketsPaid}개`,
+                    `${methodName} 결제가 완료되었습니다!
+
+결제 금액: ${paymentResult.amount.toLocaleString()}원
+처리된 티켓: ${paymentResult.totalTicketsPaid}개`,
                 );
 
                 // 장바구니 초기화
@@ -1685,14 +1733,18 @@ const POSOrderScreen = {
             ? `결제 모달 오류: ${error.message}`
             : "결제 모달을 불러올 수 없습니다.";
 
-        const userMessage = `${errorMessage}\n\n기본 결제 처리를 진행하시겠습니까?`;
+        const userMessage = `${errorMessage}
+
+기본 결제 처리를 진행하시겠습니까?`;
 
         if (confirm(userMessage)) {
             console.log("🔄 사용자가 폴백 결제 처리 선택");
             this.processPayment(method.toLowerCase()).catch((fallbackError) => {
                 console.error("❌ 폴백 결제 처리 실패:", fallbackError);
                 alert(
-                    `결제 처리 실패: ${fallbackError.message}\n\n시스템 관리자에게 문의하거나 페이지를 새로고침해주세요.`,
+                    `결제 처리 실패: ${fallbackError.message}
+
+시스템 관리자에게 문의하거나 페이지를 새로고침해주세요.`,
                 );
             });
         } else {
@@ -2325,10 +2377,11 @@ const POSOrderScreen = {
             }
 
             const confirmMessage =
-                `TLL 연동을 활성화하시겠습니까?\n\n` +
-                `• 활성화 후 이 테이블에서 POS 주문을 추가하면\n` +
-                `• 기존 TLL 주문과 합쳐져서 하나의 계산서로 처리됩니다\n` +
-                `• 주문 ID: ${orderId}`;
+                `TLL 연동을 활성화하시겠습니까?
+
+• 활성화 후 이 테이블에서 POS 주문을 추가하면
+• 기존 TLL 주문과 합쳐져서 하나의 계산서로 처리됩니다
+• 주문 ID: ${orderId}`;
 
             if (!confirm(confirmMessage)) {
                 return;
@@ -2352,7 +2405,8 @@ const POSOrderScreen = {
             console.log('✅ TLL 연동 활성화 완료:', result);
 
             // 성공 메시지
-            alert(`✅ TLL 연동이 활성화되었습니다.\n주문 ID: ${orderId}`);
+            alert(`✅ TLL 연동이 활성화되었습니다.
+주문 ID: ${orderId}`);
 
             // 상태 업데이트
             this.tllOrderMixedStatus = true;
@@ -2387,10 +2441,11 @@ const POSOrderScreen = {
             }
 
             const confirmMessage =
-                `TLL 세션을 종료하시겠습니까?\n\n` +
-                `• 사용자: ${this.tllUserInfo?.name || "게스트"}\n` +
-                `• 주문 수: ${this.tllOrders.length}개\n` +
-                `• 주문 ID: ${orderId}`;
+                `TLL 세션을 종료하시겠습니까?
+
+• 사용자: ${this.tllUserInfo?.name || "게스트"}
+• 주문 수: ${this.tllOrders.length}개
+• 주문 ID: ${orderId}`;
 
             if (!confirm(confirmMessage)) {
                 return;
@@ -2414,7 +2469,8 @@ const POSOrderScreen = {
             console.log("✅ TLL 세션 종료 완료:", result);
 
             // 성공 메시지
-            alert(`✅ TLL 세션이 종료되었습니다.\n주문 ID: ${orderId}`);
+            alert(`✅ TLL 세션이 종료되었습니다.
+주문 ID: ${orderId}`);
 
             // TLL 관련 데이터 초기화
             this.tllOrders = [];
