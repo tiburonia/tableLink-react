@@ -1225,6 +1225,141 @@ router.get('/orders/:orderId/mixed-status', async (req, res) => {
 });
 
 /**
+ * [GET] /stores/:storeId/table/:tableId/shared-order - POI=SPOI인 경우 order_tickets source별 그룹핑 조회
+ */
+router.get('/stores/:storeId/table/:tableId/shared-order', async (req, res) => {
+  try {
+    const { storeId, tableId } = req.params;
+
+    console.log(`🔍 테이블 ${tableId} 공유 주문 source별 그룹핑 조회`);
+
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableId = parseInt(tableId);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableId)) {
+      return res.status(400).json({
+        success: false,
+        error: `유효하지 않은 파라미터: storeId=${storeId}, tableId=${tableId}`
+      });
+    }
+
+    // 테이블 상태 조회 (POI=SPOI 확인)
+    const tableResult = await pool.query(`
+      SELECT processing_order_id, spare_processing_order_id, status
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [parsedStoreId, parsedTableId]);
+
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '테이블을 찾을 수 없습니다'
+      });
+    }
+
+    const table = tableResult.rows[0];
+    const { processing_order_id, spare_processing_order_id } = table;
+
+    // POI=SPOI 확인
+    if (!processing_order_id || processing_order_id !== spare_processing_order_id) {
+      return res.json({
+        success: true,
+        isSharedOrder: false,
+        message: 'POI와 SPOI가 다르거나 비어있음'
+      });
+    }
+
+    const sharedOrderId = processing_order_id;
+    console.log(`✅ 공유 주문 감지: 주문 ID ${sharedOrderId}`);
+
+    // order_tickets를 source별로 그룹핑하여 조회
+    const ticketsResult = await pool.query(`
+      SELECT
+        ot.id as ticket_id,
+        ot.source,
+        ot.paid_status,
+        ot.created_at as ticket_created_at,
+        oi.id as item_id,
+        oi.menu_name,
+        oi.quantity,
+        oi.unit_price,
+        oi.total_price,
+        oi.item_status,
+        oi.cook_station
+      FROM order_tickets ot
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE ot.order_id = $1
+        AND oi.item_status != 'CANCELLED'
+      ORDER BY ot.source, ot.created_at, oi.created_at
+    `, [sharedOrderId]);
+
+    if (ticketsResult.rows.length === 0) {
+      return res.json({
+        success: true,
+        isSharedOrder: true,
+        sharedOrderId: sharedOrderId,
+        sourceGroups: {}
+      });
+    }
+
+    // source별로 그룹핑
+    const sourceGroups = {};
+    let totalAmount = 0;
+
+    for (const row of ticketsResult.rows) {
+      const source = row.source;
+      
+      if (!sourceGroups[source]) {
+        sourceGroups[source] = {
+          source: source,
+          items: [],
+          totalAmount: 0,
+          itemCount: 0
+        };
+      }
+
+      const item = {
+        id: row.item_id,
+        ticketId: row.ticket_id,
+        menuName: row.menu_name,
+        quantity: row.quantity,
+        unitPrice: row.unit_price,
+        totalPrice: row.total_price,
+        itemStatus: row.item_status,
+        cookStation: row.cook_station,
+        paidStatus: row.paid_status,
+        ticketCreatedAt: row.ticket_created_at,
+        ticket_source: source  // 프론트엔드 호환용
+      };
+
+      sourceGroups[source].items.push(item);
+      sourceGroups[source].totalAmount += row.total_price || 0;
+      sourceGroups[source].itemCount += 1;
+      totalAmount += row.total_price || 0;
+    }
+
+    console.log(`✅ 공유 주문 source별 그룹핑 완료: ${Object.keys(sourceGroups).length}개 source, 총 ${totalAmount}원`);
+
+    res.json({
+      success: true,
+      isSharedOrder: true,
+      sharedOrderId: sharedOrderId,
+      sourceGroups: sourceGroups,
+      totalAmount: totalAmount,
+      totalItemCount: ticketsResult.rows.length
+    });
+
+  } catch (error) {
+    console.error('❌ 공유 주문 source별 그룹핑 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '공유 주문 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
  * [GET] /stores/:storeId/table/:tableNumber/active-order - 현재 테이블의 활성 주문 조회
  */
 router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) => {
