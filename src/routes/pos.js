@@ -108,61 +108,62 @@ router.post('/orders/confirm', async (req, res) => {
           WHERE id = $2
         `, [totalAmount, orderId]);
       } else {
-      // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
-      const orderResult = await client.query(`
-        INSERT INTO orders (
-          store_id, 
-          table_num,
-          user_id,
-          guest_phone,
-          source,
-          status, 
-          payment_status,
-          total_price,
-          created_at
-        ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', $3, NOW())
-        RETURNING id
-      `, [storeId, tableNumber, totalAmount]);
+        // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
+        const orderResult = await client.query(`
+          INSERT INTO orders (
+            store_id, 
+            table_num,
+            user_id,
+            guest_phone,
+            source,
+            status, 
+            payment_status,
+            total_price,
+            created_at
+          ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', $3, NOW())
+          RETURNING id
+        `, [storeId, tableNumber, totalAmount]);
 
-      orderId = orderResult.rows[0].id;
-      console.log(`📋 새 비회원 POS 주문 ${orderId} 생성 (user_id: NULL, guest_phone: NULL)`);
+        orderId = orderResult.rows[0].id;
+        console.log(`📋 새 비회원 POS 주문 ${orderId} 생성 (user_id: NULL, guest_phone: NULL)`);
 
-      // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트
-      const currentTableResult = await client.query(`
-        SELECT processing_order_id, spare_processing_order_id
-        FROM store_tables
-        WHERE store_id = $1 AND (id = $2 OR table_number = $2)
-      `, [storeId, tableNumber]);
+        // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id
+          FROM store_tables
+          WHERE store_id = $1 AND (id = $2 OR table_number = $2)
+        `, [storeId, tableNumber]);
 
-      if (currentTableResult.rows.length > 0) {
-        const currentTable = currentTableResult.rows[0];
-        const hasMainOrder = currentTable.processing_order_id !== null;
-        const hasSpareOrder = currentTable.spare_processing_order_id !== null;
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+          const hasMainOrder = currentTable.processing_order_id !== null;
+          const hasSpareOrder = currentTable.spare_processing_order_id !== null;
 
-        if (!hasMainOrder) {
-          // processing_order_id가 비어있으면 메인 주문으로 설정
-          await client.query(`
-            UPDATE store_tables 
-            SET processing_order_id = $1,
-                status = 'OCCUPIED',
-                updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND (id = $3 OR table_number = $3)
-          `, [orderId, storeId, tableNumber]);
-          console.log(`📋 POS 새 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
-        } else if (!hasSpareOrder) {
-          // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
-          await client.query(`
-            UPDATE store_tables 
-            SET spare_processing_order_id = $1,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND (id = $3 OR table_number = $3)
-          `, [orderId, storeId, tableNumber]);
-          console.log(`📋 POS 새 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
+          if (!hasMainOrder) {
+            // processing_order_id가 비어있으면 메인 주문으로 설정
+            await client.query(`
+              UPDATE store_tables 
+              SET processing_order_id = $1,
+                  status = 'OCCUPIED',
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $2 AND (id = $3 OR table_number = $3)
+            `, [orderId, storeId, tableNumber]);
+            console.log(`📋 POS 새 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
+          } else if (!hasSpareOrder) {
+            // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
+            await client.query(`
+              UPDATE store_tables 
+              SET spare_processing_order_id = $1,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $2 AND (id = $3 OR table_number = $3)
+            `, [orderId, storeId, tableNumber]);
+            console.log(`📋 POS 새 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
+          } else {
+            console.warn(`⚠️ POS 새 주문 - 테이블에 이미 2개 주문 존재: 테이블 ${tableNumber}, 메인: ${currentTable.processing_order_id}, 보조: ${currentTable.spare_processing_order_id}`);
+          }
         } else {
-          console.warn(`⚠️ POS 새 주문 - 테이블에 이미 2개 주문 존재: 테이블 ${tableNumber}, 메인: ${currentTable.processing_order_id}, 보조: ${currentTable.spare_processing_order_id}`);
+          console.error(`❌ POS 새 주문 - 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
         }
-      } else {
-        console.error(`❌ POS 새 주문 - 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
       }
     }
 

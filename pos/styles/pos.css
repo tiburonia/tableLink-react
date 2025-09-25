@@ -1782,14 +1782,6 @@ body {
     justify-content: center;
 }
 
-.cross-order-empty {
-    text-align: center;
-    font-size: 8px;
-    color: #6b7280;
-    font-style: italic;
-    padding: 4px 0;
-}
-
 .cross-order-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.3) 50%, transparent 100%);

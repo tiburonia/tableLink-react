@@ -212,7 +212,7 @@ const POSOrderScreen = {
             })),
         });
 
-        // 테 ��블 헤더는 항상 표시
+        // 테이블 헤더는 항상 표시
         const tableHeader = `
             <table class="pos-order-table">
                 <thead>
@@ -652,7 +652,7 @@ const POSOrderScreen = {
     renderTLLConnectionButton() {
         // 현재 TLL 주문의 is_mixed 상태 확인
         const isMixed = this.checkTLLOrderMixedStatus();
-        
+
         if (isMixed) {
             return `
                 <button class="tll-action-btn tll-connect disabled" disabled>
@@ -677,7 +677,7 @@ const POSOrderScreen = {
         if (!this.tllOrders || this.tllOrders.length === 0) {
             return false;
         }
-        
+
         // TLL 주문이 있으면 해당 주문의 is_mixed 상태를 확인 (추후 API에서 받아올 예정)
         // 현재는 임시로 false 반환
         return this.tllOrderMixedStatus || false;
@@ -736,11 +736,12 @@ const POSOrderScreen = {
                             paid_status: item.paid_status,
                             order_status: item.order_status,
                             item_status: item.item_status,
-                            reason: !isUnpaid
-                                ? "not_unpaid"
-                                : !isActiveOrder
-                                  ? "closed_order"
-                                  : "inactive_item",
+                            reason:
+                                !isUnpaid
+                                    ? "not_unpaid"
+                                    : !isActiveOrder
+                                      ? "closed_order"
+                                      : "inactive_item",
                         });
                     }
 
@@ -1233,12 +1234,12 @@ const POSOrderScreen = {
      * 비회원 POS 주문 지원 + TLL 연동 지원
      */
     async confirmOrder() {
-        if (this.cart.length === 0) {
-            alert("주문할 메뉴가 없습니다.");
-            return;
-        }
-
         try {
+            if (this.cart.length === 0) {
+                alert("주문할 메뉴가 없습니다.");
+                return;
+            }
+
             const total = this.cart.reduce(
                 (sum, item) => sum + item.price * item.quantity,
                 0,
@@ -1247,9 +1248,9 @@ const POSOrderScreen = {
             // TLL 연동 상태 확인
             const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
             const isTLLMixed = this.checkTLLOrderMixedStatus();
-            
+
             let confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 주문하시겠습니까?`;
-            
+
             if (hasTLLOrders && isTLLMixed) {
                 confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 기존 TLL 주문에 추가하시겠습니까?\n\n` +
                                `• 기존 TLL 주문과 함께 하나의 계산서로 처리됩니다`;
@@ -2323,7 +2324,7 @@ const POSOrderScreen = {
                 return;
             }
 
-            const confirmMessage = 
+            const confirmMessage =
                 `TLL 연동을 활성화하시겠습니까?\n\n` +
                 `• 활성화 후 이 테이블에서 POS 주문을 추가하면\n` +
                 `• 기존 TLL 주문과 합쳐져서 하나의 계산서로 처리됩니다\n` +
