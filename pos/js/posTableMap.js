@@ -206,21 +206,35 @@ const POSTableMap = {
             openedAt: table.occupiedSince
         };
 
-        // 아이템들을 main/spare 타입으로 변환 (menuName 필드 보장)
-        const convertedTllItems = tllItems.map(item => ({
-            ...item,
-            orderType: 'main',
-            menuName: item.menuName || item.menu_name || '메뉴명 없음',
+        // 아이템들을 main/spare 타입으로 변환 및 중복 제거
+        const consolidatedTllItems = this.consolidateOrderItems(tllItems.map(item => ({
+            menu_name: item.menuName || item.menu_name || '메뉴명 없음',
+            unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
             quantity: item.quantity || 1,
-            totalPrice: item.totalPrice || item.total_price || 0
+            cook_station: item.cook_station || 'KITCHEN'
+        })));
+
+        const consolidatedPosItems = this.consolidateOrderItems(posItems.map(item => ({
+            menu_name: item.menuName || item.menu_name || '메뉴명 없음',
+            unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
+            quantity: item.quantity || 1,
+            cook_station: item.cook_station || 'KITCHEN'
+        })));
+
+        const convertedTllItems = consolidatedTllItems.map(item => ({
+            orderType: 'main',
+            menuName: item.menuName,
+            quantity: item.quantity,
+            totalPrice: item.price * item.quantity,
+            ticket_source: 'TLL'
         }));
 
-        const convertedPosItems = posItems.map(item => ({
-            ...item,
+        const convertedPosItems = consolidatedPosItems.map(item => ({
             orderType: 'spare',
-            menuName: item.menuName || item.menu_name || '메뉴명 없음',
-            quantity: item.quantity || 1,
-            totalPrice: item.totalPrice || item.total_price || 0
+            menuName: item.menuName,
+            quantity: item.quantity,
+            totalPrice: item.price * item.quantity,
+            ticket_source: 'POS'
         }));
 
         const result = {
@@ -293,7 +307,7 @@ const POSTableMap = {
                 ` : ''}
 
                 <div class="receipt-body cross-order-body">
-                    <!-- 메인 주문 -->
+                    <!-- 메인 주문 (TLL) -->
                     <div class="cross-order-section ${isTLLMixed ? 'tll-section' : 'main-order'}">
                         <div class="cross-order-header">
                             <span class="${mainBadgeClass}">${mainSourceText}</span>
@@ -304,17 +318,17 @@ const POSTableMap = {
                         </div>
                     </div>
 
-                    <!-- 구분선 -->
-                    <div class="cross-order-divider"></div>
+                    <!-- 구분선 (양쪽 모두 주문이 있을 때만 표시) -->
+                    ${mainItems.length > 0 && spareItems.length > 0 ? '<div class="cross-order-divider"></div>' : ''}
 
-                    <!-- 보조 주문 -->
+                    <!-- 보조 주문 (POS) -->
                     <div class="cross-order-section ${isTLLMixed ? 'pos-section' : 'spare-order'}">
                         <div class="cross-order-header">
                             <span class="${spareBadgeClass}">${spareSourceText}</span>
                             <span class="order-amount">${(spareOrder?.totalAmount || 0).toLocaleString()}원</span>
                         </div>
                         <div class="cross-order-items">
-                            ${this.renderCrossOrderItems(spareItems, 2)}
+                            ${spareItems.length > 0 ? this.renderCrossOrderItems(spareItems, 2) : '<div class="cross-order-empty">추가 주문 대기중</div>'}
                         </div>
                     </div>
                 </div>
@@ -336,8 +350,11 @@ const POSTableMap = {
             return `<div class="cross-order-empty">주문 없음</div>`;
         }
 
-        const displayItems = orderItems.slice(0, maxItems);
-        const hasMore = orderItems.length > maxItems;
+        // 메뉴별로 수량 통합 (중복 제거)
+        const consolidatedItems = this.consolidateOrderItems(orderItems);
+        
+        const displayItems = consolidatedItems.slice(0, maxItems);
+        const hasMore = consolidatedItems.length > maxItems;
 
         const itemsHTML = displayItems
             .map((item) => {
@@ -352,7 +369,7 @@ const POSTableMap = {
             .join("");
 
         const moreHTML = hasMore
-            ? `<div class="cross-order-item more">외 ${orderItems.length - maxItems}개</div>`
+            ? `<div class="cross-order-item more">외 ${consolidatedItems.length - maxItems}개</div>`
             : "";
 
         return itemsHTML + moreHTML;
