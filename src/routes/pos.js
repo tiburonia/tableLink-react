@@ -997,100 +997,6 @@ router.post('/orders', async (req, res) => {
         table_num,
         source,
         status,
-
-
-/**
- * [GET] /stores/:storeId/table/:tableId/mixed-order-items - TLL 연동 교차주문 아이템 조회
- */
-router.get('/stores/:storeId/table/:tableId/mixed-order-items', async (req, res) => {
-  try {
-    const { storeId, tableId } = req.params;
-
-    console.log(`🔗 TLL 연동 교차주문 아이템 조회: 매장 ${storeId}, 테이블 ${tableId}`);
-
-    // 파라미터 검증
-    const parsedStoreId = parseInt(storeId);
-    const parsedTableId = parseInt(tableId);
-
-    if (isNaN(parsedStoreId) || isNaN(parsedTableId)) {
-      return res.status(400).json({
-        success: false,
-        error: '유효하지 않은 매장 ID 또는 테이블 ID입니다'
-      });
-    }
-
-    // 테이블 상태 확인 (TLL 연동 교차주문인지 검증)
-    const tableResult = await pool.query(`
-      SELECT processing_order_id, spare_processing_order_id
-      FROM store_tables
-      WHERE store_id = $1 AND id = $2
-    `, [parsedStoreId, parsedTableId]);
-
-    if (tableResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: '테이블을 찾을 수 없습니다'
-      });
-    }
-
-    const table = tableResult.rows[0];
-    const orderId = table.processing_order_id;
-
-    // TLL 연동 교차주문 검증
-    const isTLLMixed = (
-      table.processing_order_id !== null &&
-      table.spare_processing_order_id !== null &&
-      parseInt(table.processing_order_id) === parseInt(table.spare_processing_order_id)
-    );
-
-    if (!isTLLMixed) {
-      return res.status(400).json({
-        success: false,
-        error: 'TLL 연동 교차주문이 아닙니다'
-      });
-    }
-
-    // 해당 주문의 모든 티켓과 아이템 조회 (ticket_source로 구분)
-    const result = await pool.query(`
-      SELECT 
-        oi.id,
-        oi.menu_name,
-        oi.unit_price,
-        oi.quantity,
-        oi.total_price,
-        oi.cook_station,
-        oi.item_status,
-        ot.source as ticket_source,
-        oi.created_at
-      FROM order_items oi
-      JOIN order_tickets ot ON oi.ticket_id = ot.id
-      WHERE ot.order_id = $1
-        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
-      ORDER BY ot.source, oi.created_at
-    `, [orderId]);
-
-    // 총 금액 계산
-    const totalAmount = result.rows.reduce((sum, item) => sum + (item.total_price || 0), 0);
-
-    console.log(`✅ TLL 연동 교차주문 아이템 조회 완료: ${result.rows.length}개 아이템, 총액 ${totalAmount}원`);
-
-    res.json({
-      success: true,
-      orderItems: result.rows,
-      totalAmount: totalAmount,
-      orderId: orderId,
-      isTLLMixed: true
-    });
-
-  } catch (error) {
-    console.error('❌ TLL 연동 교차주문 아이템 조회 실패:', error);
-    res.status(500).json({
-      success: false,
-      error: 'TLL 연동 교차주문 아이템 조회 실패: ' + error.message
-    });
-  }
-});
-
         payment_status,
         total_price,
         created_at
@@ -1682,6 +1588,98 @@ router.get('/stores/:storeId/table/:tableNumber/mixed-order-items', async (req, 
         tllAmount: tllItems.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0),
         posAmount: posItems.reduce((sum, item) => sum + (parseFloat(item.total_price) || 0), 0)
       }
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 연동 교차주문 아이템 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 연동 교차주문 아이템 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/table/:tableId/mixed-order-items - TLL 연동 교차주문 아이템 조회
+ */
+router.get('/stores/:storeId/table/:tableId/mixed-order-items', async (req, res) => {
+  try {
+    const { storeId, tableId } = req.params;
+
+    console.log(`🔗 TLL 연동 교차주문 아이템 조회: 매장 ${storeId}, 테이블 ${tableId}`);
+
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableId = parseInt(tableId);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableId)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID 또는 테이블 ID입니다'
+      });
+    }
+
+    // 테이블 상태 확인 (TLL 연동 교차주문인지 검증)
+    const tableResult = await pool.query(`
+      SELECT processing_order_id, spare_processing_order_id
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [parsedStoreId, parsedTableId]);
+
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '테이블을 찾을 수 없습니다'
+      });
+    }
+
+    const table = tableResult.rows[0];
+    const orderId = table.processing_order_id;
+
+    // TLL 연동 교차주문 검증
+    const isTLLMixed = (
+      table.processing_order_id !== null &&
+      table.spare_processing_order_id !== null &&
+      parseInt(table.processing_order_id) === parseInt(table.spare_processing_order_id)
+    );
+
+    if (!isTLLMixed) {
+      return res.status(400).json({
+        success: false,
+        error: 'TLL 연동 교차주문이 아닙니다'
+      });
+    }
+
+    // 해당 주문의 모든 티켓과 아이템 조회 (ticket_source로 구분)
+    const result = await pool.query(`
+      SELECT 
+        oi.id,
+        oi.menu_name,
+        oi.unit_price,
+        oi.quantity,
+        oi.total_price,
+        oi.cook_station,
+        oi.item_status,
+        ot.source as ticket_source,
+        oi.created_at
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1
+        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+      ORDER BY ot.source, oi.created_at
+    `, [orderId]);
+
+    // 총 금액 계산
+    const totalAmount = result.rows.reduce((sum, item) => sum + (item.total_price || 0), 0);
+
+    console.log(`✅ TLL 연동 교차주문 아이템 조회 완료: ${result.rows.length}개 아이템, 총액 ${totalAmount}원`);
+
+    res.json({
+      success: true,
+      orderItems: result.rows,
+      totalAmount: totalAmount,
+      orderId: orderId,
+      isTLLMixed: true
     });
 
   } catch (error) {
