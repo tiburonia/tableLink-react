@@ -1300,16 +1300,17 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
 
     console.log(`🔍 테이블 상태 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
-    // store_tables에서 해당 테이블의 주문 상태 조회
+    // store_tables에서 해당 테이블의 주문 상태 조회 (id 또는 table_number로 검색)
     const tableResult = await pool.query(`
       SELECT
         id,
+        table_number,
         processing_order_id,
         spare_processing_order_id,
         status,
         updated_at
       FROM store_tables
-      WHERE store_id = $1 AND id = $2
+      WHERE store_id = $1 AND (id = $2 OR table_number = $2)
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     if (tableResult.rows.length === 0) {

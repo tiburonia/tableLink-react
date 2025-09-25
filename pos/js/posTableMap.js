@@ -503,11 +503,13 @@ const POSTableMap = {
 
                     // TLL 연동 교차주문 확인 (processing_order_id = spare_processing_order_id인 경우)
                     let hasTLLMixedOrder = false;
+                    let tableStatusData = null;
+                    
                     try {
-                        // store_tables에서 해당 테이블의 주문 ID 상태 확인
-                        const tableStatusResponse = await fetch(`/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/status`);
+                        // store_tables에서 해당 테이블의 주문 ID 상태 확인 (테이블 ID 사용)
+                        const tableStatusResponse = await fetch(`/api/pos/stores/${storeId}/table/${dbTable.id}/status`);
                         if (tableStatusResponse.ok) {
-                            const tableStatusData = await tableStatusResponse.json();
+                            tableStatusData = await tableStatusResponse.json();
                             if (tableStatusData.success && tableStatusData.table) {
                                 const { processing_order_id, spare_processing_order_id } = tableStatusData.table;
                                 hasTLLMixedOrder = (
@@ -517,12 +519,12 @@ const POSTableMap = {
                                 );
 
                                 if (hasTLLMixedOrder) {
-                                    console.log(`🔗 TLL 연동 교차주문 감지: 테이블 ${dbTable.tableNumber}, 주문 ID ${processing_order_id}`);
+                                    console.log(`🔗 TLL 연동 교차주문 감지: 테이블 ${dbTable.tableNumber} (ID: ${dbTable.id}), 주문 ID ${processing_order_id}`);
                                 }
                             }
                         }
                     } catch (error) {
-                        console.warn(`⚠️ 테이블 ${dbTable.tableNumber} TLL 연동 상태 확인 실패:`, error.message);
+                        console.warn(`⚠️ 테이블 ${dbTable.tableNumber} (ID: ${dbTable.id}) TLL 연동 상태 확인 실패:`, error.message);
                     }
 
                     const hasCrossOrders = hasPhysicalCrossOrders || hasLogicalMixedOrder || hasTLLMixedOrder;
@@ -553,7 +555,7 @@ const POSTableMap = {
                         try {
                             // 해당 주문의 모든 티켓과 아이템 조회 (source별 분리용)
                             const mixedOrderResponse = await fetch(
-                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/mixed-order-items`,
+                                `/api/pos/stores/${storeId}/table/${dbTable.id}/mixed-order-items`,
                             );
                             
                             if (mixedOrderResponse.ok) {
@@ -614,9 +616,9 @@ const POSTableMap = {
 
                                 if (order.sourceSystem === 'TLL') {
                                     // TLL 주문의 경우 TLL 주문 API 사용
-                                    console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}, 주문 ${order.checkId}`);
+                                    console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber} (ID: ${dbTable.id}), 주문 ${order.checkId}`);
                                     const tllItemsResponse = await fetch(
-                                        `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/tll-orders`,
+                                        `/api/pos/stores/${storeId}/table/${dbTable.id}/tll-orders`,
                                     );
                                     const tllItemsData = await tllItemsResponse.json();
 
@@ -643,7 +645,7 @@ const POSTableMap = {
                                 } else {
                                     // POS 주문의 경우 기존 로직 사용
                                     const itemsResponse = await fetch(
-                                        `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
+                                        `/api/pos/stores/${storeId}/table/${dbTable.id}/order-items`,
                                     );
                                     const itemsData = await itemsResponse.json();
 
