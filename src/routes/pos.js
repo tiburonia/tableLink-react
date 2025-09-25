@@ -1138,9 +1138,20 @@ router.put('/orders/:orderId/enable-mixed', async (req, res) => {
       WHERE id = $1
     `, [orderId]);
 
-    await client.query('COMMIT');
+   
 
     console.log(`✅ TLL 연동 활성화 완료: 주문 ID ${orderId}`);
+
+    //spare_processing_order_id 업데이트
+    await client.query(`
+      UPDATE store_tables
+      SET spare_processing_order_id = $1, updated_at = NOW()
+      WHERE processing_order_id = $1
+      `, [orderId]);
+
+     await client.query('COMMIT');
+
+     console.log(`✅ SPOI 업데이트 완료: 주문 ID ${orderId}`);
 
     res.json({
       success: true,
