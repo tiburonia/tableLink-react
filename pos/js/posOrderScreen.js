@@ -650,19 +650,19 @@ const POSOrderScreen = {
      * TLL 연동 버튼 렌더링
      */
     renderTLLConnectionButton() {
-        // 현재 TLL 주문의 is_mixed 상태 확인
+        // 현재 TLL 주문의 is_mixed 상태 확인 (캐시된 값 사용)
         const isMixed = this.checkTLLOrderMixedStatus();
 
         if (isMixed) {
             return `
-                <button class="tll-action-btn tll-connect disabled" disabled>
+                <button class="tll-action-btn tll-connect disabled" disabled data-mixed="true">
                     <span class="btn-icon">✅</span>
                     <span class="btn-text">TLL 연동 완료</span>
                 </button>
             `;
         } else {
             return `
-                <button class="tll-action-btn tll-connect" onclick="POSOrderScreen.enableTLLConnection()">
+                <button class="tll-action-btn tll-connect" onclick="POSOrderScreen.enableTLLConnection()" data-mixed="false">
                     <span class="btn-icon">🔗</span>
                     <span class="btn-text">TLL 연동</span>
                 </button>
@@ -687,7 +687,15 @@ const POSOrderScreen = {
      * TLL 주문의 is_mixed 상태를 실제 API에서 다시 조회하여 is_mixed 상태 업데이트
      */
     async refreshTLLOrderMixedStatus() {
+        // 이미 새로고침 중이면 대기
+        if (this._refreshingTLLStatus) {
+            console.log('🔄 TLL 상태 새로고침이 이미 진행 중, 대기...');
+            return this.checkTLLOrderMixedStatus();
+        }
+
         try {
+            this._refreshingTLLStatus = true;
+
             if (!this.tllOrders || this.tllOrders.length === 0) {
                 return false;
             }
@@ -717,8 +725,10 @@ const POSOrderScreen = {
 
                 console.log(`✅ TLL 주문 ${orderId} is_mixed 상태 업데이트: ${data.is_mixed}`);
 
-                // UI도 함께 업데이트
-                this.updateTLLConnectionButton(data.is_mixed);
+                // UI 업데이트는 새로고침 완료 후에만 실행
+                setTimeout(() => {
+                    this.updateTLLConnectionButton(data.is_mixed);
+                }, 100);
 
                 return data.is_mixed;
             } else {
@@ -729,20 +739,41 @@ const POSOrderScreen = {
         } catch (error) {
             console.error('❌ TLL 주문 상태 새로고침 실패:', error);
             return this.checkTLLOrderMixedStatus(); // 기존 값 사용
+        } finally {
+            this._refreshingTLLStatus = false;
         }
     },
 
     /**
-     * TLL 연동 버튼 UI 업데이트
+     * TLL 연동 버튼 UI 업데이트 (중복 업데이트 방지)
      */
     updateTLLConnectionButton(isMixed) {
         const tllConnectBtn = document.querySelector('.tll-action-btn.tll-connect');
 
-        if (!tllConnectBtn) return;
+        if (!tllConnectBtn) {
+            console.log('⚠️ TLL 연동 버튼을 찾을 수 없음');
+            return;
+        }
+
+        // 현재 버튼 상태와 새 상태가 같으면 업데이트 하지 않음
+        const currentMixed = tllConnectBtn.getAttribute('data-mixed') === 'true';
+        if (currentMixed === isMixed) {
+            console.log(`ℹ️ TLL 버튼 상태 동일함 (is_mixed: ${isMixed}), 업데이트 건너뜀`);
+            return;
+        }
+
+        // 업데이트 진행 중 플래그 설정
+        if (tllConnectBtn.dataset.updating === 'true') {
+            console.log('🔄 TLL 버튼 업데이트가 이미 진행 중, 건너뜀');
+            return;
+        }
+
+        tllConnectBtn.dataset.updating = 'true';
 
         if (isMixed) {
             tllConnectBtn.classList.add('disabled');
             tllConnectBtn.disabled = true;
+            tllConnectBtn.setAttribute('data-mixed', 'true');
             tllConnectBtn.innerHTML = `
                 <span class="btn-icon">✅</span>
                 <span class="btn-text">TLL 연동 완료</span>
@@ -751,12 +782,18 @@ const POSOrderScreen = {
         } else {
             tllConnectBtn.classList.remove('disabled');
             tllConnectBtn.disabled = false;
+            tllConnectBtn.setAttribute('data-mixed', 'false');
             tllConnectBtn.innerHTML = `
                 <span class="btn-icon">🔗</span>
                 <span class="btn-text">TLL 연동</span>
             `;
             console.log('🔗 TLL 연동 버튼 활성화 (is_mixed: false)');
         }
+
+        // 업데이트 완료 후 플래그 해제
+        setTimeout(() => {
+            tllConnectBtn.dataset.updating = 'false';
+        }, 100);
     },
 
     /**
@@ -956,20 +993,16 @@ const POSOrderScreen = {
                 this.tllOrders = data.tllOrders || [];
                 this.tllUserInfo = data.userInfo || null;
 
-                // TLL 주문이 로드되면 is_mixed 상태를 확인하여 버튼 상태 업데이트
+                // TLL 주문이 로드되면 is_mixed 상태를 확인 (UI 업데이트는 렌더링 후에만)
                 if (this.tllOrders && this.tllOrders.length > 0) {
                     const isMixed = this.checkTLLOrderMixedStatus();
                     console.log(`🔍 TLL 주문 로드 후 is_mixed 상태: ${isMixed}`);
                     
-                    // 약간의 지연을 두고 UI 업데이트 (DOM 렌더링 완료 대기)
-                    setTimeout(() => {
-                        this.updateTLLConnectionButton(isMixed);
-                    }, 100);
+                    // 캐시된 상태만 업데이트, UI 업데이트는 별도로 처리
+                    this._cachedTLLMixedStatus = isMixed;
                 } else {
-                    // TLL 주문이 없으면 버튼 비활성화 상태로 설정
-                    setTimeout(() => {
-                        this.updateTLLConnectionButton(false);
-                    }, 100);
+                    // TLL 주문이 없으면 캐시 초기화
+                    this._cachedTLLMixedStatus = false;
                 }
 
                 console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
@@ -2181,12 +2214,20 @@ const POSOrderScreen = {
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
                 console.log("✅ 결제 섹션 업데이트 완료");
                 
-                // 버튼 상태 재동기화
+                // 버튼 상태 재동기화 (중복 방지)
                 if (this.tllOrders && this.tllOrders.length > 0) {
                     const isMixed = this.checkTLLOrderMixedStatus();
+                    this._cachedTLLMixedStatus = isMixed;
+                    
+                    // 약간의 지연을 두고 UI 업데이트 (DOM 안정성 보장)
                     setTimeout(() => {
                         this.updateTLLConnectionButton(isMixed);
-                    }, 100);
+                    }, 150);
+                } else {
+                    this._cachedTLLMixedStatus = false;
+                    setTimeout(() => {
+                        this.updateTLLConnectionButton(false);
+                    }, 150);
                 }
             }
 
@@ -2481,11 +2522,16 @@ const POSOrderScreen = {
                 });
             }
 
+            // 캐시 상태 즉시 업데이트
+            this._cachedTLLMixedStatus = true;
+
             // UI 즉시 업데이트
             this.updateTLLConnectionButton(true);
 
-            // 전체 새로고침
-            await this.refreshOrders();
+            // 전체 새로고침 (UI 중복 업데이트 방지)
+            setTimeout(async () => {
+                await this.refreshOrders();
+            }, 200);
 
         } catch (error) {
             console.error('❌ TLL 연동 활성화 실패:', error);
