@@ -143,14 +143,13 @@ const POSTableMap = {
      * 교차 주문 컨텐츠 렌더링 (TLL 연동 교차주문 지원)
      */
     renderCrossOrderContent(table) {
-        // TLL 연동 교차주문인지 확인
-        const isTLLMixedOrder = table.orderItems.some(item => 
-            item.order_type === 'tll_mixed' || item.order_type === 'pos_mixed'
-        );
-
-        if (isTLLMixedOrder) {
+        // POI=SPOI 공유 주문인지 확인 (새로운 방식)
+        if (table.isSharedOrder) {
+            console.log(`🔗 공유 주문 렌더링: 테이블 ${table.tableNumber}`);
             return this.renderTLLMixedOrderContent(table);
         } else {
+            // 기존 교차주문 방식 (POI≠SPOI)
+            console.log(`📋 일반 교차주문 렌더링: 테이블 ${table.tableNumber}`);
             return this.renderRegularCrossOrderContent(table);
         }
     },
@@ -548,52 +547,44 @@ const POSTableMap = {
                     let totalAmount = 0;
                     let totalItemCount = 0;
 
-                    // TLL 연동 교차주문 특별 처리
+                    // TLL 연동 교차주문 특별 처리 (POI=SPOI)
                     if (hasTLLMixedOrder) {
                         console.log(`🔗 TLL 연동 교차주문 아이템 로드: 테이블 ${dbTable.tableNumber}`);
                         
                         try {
-                            // 해당 주문의 모든 티켓과 아이템 조회 (정확한 테이블 ID 사용)
-                            const mixedOrderResponse = await fetch(
-                                `/api/pos/stores/${storeId}/table/${dbTable.id}/mixed-order-items`,
+                            // 새로운 공유 주문 API 사용 (order_tickets source별 그룹핑)
+                            const sharedOrderResponse = await fetch(
+                                `/api/pos/stores/${storeId}/table/${dbTable.id}/shared-order`,
                             );
                             
-                            if (mixedOrderResponse.ok) {
-                                const mixedOrderData = await mixedOrderResponse.json();
+                            if (sharedOrderResponse.ok) {
+                                const sharedOrderData = await sharedOrderResponse.json();
                                 
-                                if (mixedOrderData.success && mixedOrderData.orderItems) {
-                                    // source별로 아이템 분리
-                                    const tllItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'TLL');
-                                    const posItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'POS');
+                                if (sharedOrderData.success && sharedOrderData.isSharedOrder && sharedOrderData.sourceGroups) {
+                                    const { sourceGroups } = sharedOrderData;
                                     
-                                    console.log(`🔗 TLL 연동 교차주문 아이템 분리: 테이블 ${dbTable.tableNumber}, TLL ${tllItems.length}개, POS ${posItems.length}개`);
+                                    console.log(`🔗 공유 주문 source별 그룹핑 완료: 테이블 ${dbTable.tableNumber}`, Object.keys(sourceGroups));
                                     
-                                    // TLL 아이템 처리
-                                    const tllOrderItems = tllItems.map(item => ({
-                                        id: item.id,
-                                        menuName: item.menu_name,
-                                        price: item.unit_price,
-                                        quantity: item.quantity,
-                                        totalPrice: item.total_price,
-                                        cookStation: item.cook_station || 'KITCHEN',
-                                        orderType: 'tll_mixed',
-                                        ticket_source: 'TLL'
-                                    }));
+                                    // 각 source별 아이템들을 하나의 배열로 합치면서 ticket_source 정보 유지
+                                    allOrderItems = [];
                                     
-                                    // POS 아이템 처리
-                                    const posOrderItems = posItems.map(item => ({
-                                        id: item.id,
-                                        menuName: item.menu_name,
-                                        price: item.unit_price,
-                                        quantity: item.quantity,
-                                        totalPrice: item.total_price,
-                                        cookStation: item.cook_station || 'KITCHEN',
-                                        orderType: 'pos_mixed',
-                                        ticket_source: 'POS'
-                                    }));
+                                    Object.entries(sourceGroups).forEach(([source, group]) => {
+                                        const sourceItems = group.items.map(item => ({
+                                            id: item.id,
+                                            menuName: item.menuName,
+                                            price: item.unitPrice,
+                                            quantity: item.quantity,
+                                            totalPrice: item.totalPrice,
+                                            cookStation: item.cookStation || 'KITCHEN',
+                                            orderType: `${source.toLowerCase()}_mixed`,  // 'tll_mixed' or 'pos_mixed'
+                                            ticket_source: source,  // 'TLL' or 'POS'
+                                            total_price: item.totalPrice  // API 호환용
+                                        }));
+                                        
+                                        allOrderItems.push(...sourceItems);
+                                    });
                                     
-                                    allOrderItems = [...tllOrderItems, ...posOrderItems];
-                                    totalAmount = mixedOrderData.totalAmount || 0;
+                                    totalAmount = sharedOrderData.totalAmount || 0;
                                     totalItemCount = allOrderItems.length;
                                     
                                     console.log(`✅ TLL 연동 교차주문 데이터 처리 완료: 테이블 ${dbTable.tableNumber}, 총 ${totalItemCount}개 아이템, ${totalAmount}원`);
@@ -691,6 +682,7 @@ const POSTableMap = {
                         orderItems: consolidatedItems,
                         // 교차 주문 관련 정보 추가
                         hasCrossOrders: hasCrossOrders,
+                        isSharedOrder: hasTLLMixedOrder,  // POI=SPOI 공유 주문 플래그 추가
                         mainOrder: mainOrder,
                         spareOrder: spareOrder,
                         allOrders: tableOrders
@@ -766,12 +758,8 @@ const POSTableMap = {
     getTableStatusClass(table) {
         if (!table.isOccupied) return "status-empty";
         
-        // TLL 연동 교차주문 확인
-        const isTLLMixedOrder = table.orderItems && table.orderItems.some(item => 
-            item.order_type === 'tll_mixed' || item.order_type === 'pos_mixed'
-        );
-        
-        if (isTLLMixedOrder) return "status-tll-mixed-order";
+        // POI=SPOI 공유 주문 확인 (새로운 방식)
+        if (table.isSharedOrder) return "status-tll-mixed-order";
         if (table.hasCrossOrders) return "status-cross-order";
         if (table.isFromTLG) return "status-tlg";
         return "status-occupied";
