@@ -140,9 +140,88 @@ const POSTableMap = {
     },
 
     /**
-     * 교차 주문 컨텐츠 렌더링
+     * 교차 주문 컨텐츠 렌더링 (TLL 연동 교차주문 지원)
      */
     renderCrossOrderContent(table) {
+        // TLL 연동 교차주문인지 확인
+        const isTLLMixedOrder = table.orderItems.some(item => 
+            item.order_type === 'tll_mixed' || item.order_type === 'pos_mixed'
+        );
+
+        if (isTLLMixedOrder) {
+            return this.renderTLLMixedOrderContent(table);
+        } else {
+            return this.renderRegularCrossOrderContent(table);
+        }
+    },
+
+    /**
+     * TLL 연동 교차주문 컨텐츠 렌더링
+     */
+    renderTLLMixedOrderContent(table) {
+        // ticket_source별로 아이템 분리
+        const tllItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
+        const posItems = table.orderItems.filter(item => item.ticket_source === 'POS');
+
+        // 각 소스별 금액 계산
+        const tllAmount = tllItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+        const posAmount = posItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+
+        const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
+
+        return `
+            <div class="receipt-card tll-mixed-order">
+                <div class="receipt-header">
+                    <div class="receipt-header-left">
+                        <div class="receipt-subtitle">🔗 TLL연동</div>
+                    </div>
+                    <div class="receipt-time">${occupiedTime}</div>
+                </div>
+
+                <div class="tll-mixed-notice">
+                    <div class="mixed-notice-text">TLL + POS 연동주문</div>
+                </div>
+
+                <div class="receipt-body cross-order-body">
+                    <!-- TLL 섹션 -->
+                    <div class="cross-order-section tll-section">
+                        <div class="cross-order-header">
+                            <span class="order-badge tll-badge">TLL</span>
+                            <span class="order-amount">${tllAmount.toLocaleString()}원</span>
+                        </div>
+                        <div class="cross-order-items">
+                            ${this.renderCrossOrderItems(tllItems, 2)}
+                        </div>
+                    </div>
+
+                    <!-- 구분선 -->
+                    <div class="cross-order-divider"></div>
+
+                    <!-- POS 섹션 -->
+                    <div class="cross-order-section pos-section">
+                        <div class="cross-order-header">
+                            <span class="order-badge pos-badge">POS</span>
+                            <span class="order-amount">${posAmount.toLocaleString()}원</span>
+                        </div>
+                        <div class="cross-order-items">
+                            ${this.renderCrossOrderItems(posItems, 2)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="receipt-footer">
+                    <div class="receipt-total tll-mixed-total">
+                        총 ${(table.totalAmount || 0).toLocaleString()}원
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 일반 교차주문 컨텐츠 렌더링 (기존 로직)
+     */
+    renderRegularCrossOrderContent(table) {
         const mainOrder = table.mainOrder;
         const spareOrder = table.spareOrder;
 
@@ -467,26 +546,28 @@ const POSTableMap = {
                     let totalAmount = 0;
                     let totalItemCount = 0;
 
-                    // 모든 주문의 아이템 통합
-                    for (const order of tableOrders) {
+                    // TLL 연동 교차주문 특별 처리
+                    if (hasTLLMixedOrder) {
+                        console.log(`🔗 TLL 연동 교차주문 아이템 로드: 테이블 ${dbTable.tableNumber}`);
+                        
                         try {
-                            let orderItems = [];
-
-                            if (order.sourceSystem === 'TLL') {
-                                // TLL 주문의 경우 TLL 주문 API 사용
-                                console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}, 주문 ${order.checkId}`);
-                                const tllItemsResponse = await fetch(
-                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/tll-orders`,
-                                );
-                                const tllItemsData = await tllItemsResponse.json();
-
-                                if (tllItemsData.success && tllItemsData.tllOrders) {
-                                    // 해당 주문의 아이템만 필터링
-                                    const orderSpecificItems = tllItemsData.tllOrders.filter(item => 
-                                        item.order_id === order.checkId
-                                    );
-
-                                    const convertedItems = orderSpecificItems.map(item => ({
+                            // 해당 주문의 모든 티켓과 아이템 조회 (source별 분리용)
+                            const mixedOrderResponse = await fetch(
+                                `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/mixed-order-items`,
+                            );
+                            
+                            if (mixedOrderResponse.ok) {
+                                const mixedOrderData = await mixedOrderResponse.json();
+                                
+                                if (mixedOrderData.success && mixedOrderData.orderItems) {
+                                    // source별로 아이템 분리
+                                    const tllItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'TLL');
+                                    const posItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'POS');
+                                    
+                                    console.log(`🔗 TLL 연동 교차주문 아이템 분리: TLL ${tllItems.length}개, POS ${posItems.length}개`);
+                                    
+                                    // TLL 아이템 처리
+                                    const tllOrderItems = tllItems.map(item => ({
                                         id: item.id,
                                         menu_id: item.menu_id || item.id,
                                         menu_name: item.menu_name,
@@ -495,40 +576,100 @@ const POSTableMap = {
                                         total_price: item.total_price,
                                         cook_station: item.cook_station || 'KITCHEN',
                                         item_status: item.item_status || 'READY',
-                                        order_type: order.orderType
+                                        order_type: 'tll_mixed',
+                                        ticket_source: 'TLL'
                                     }));
-
-                                    orderItems = convertedItems;
-                                }
-                            } else {
-                                // POS 주문의 경우 기존 로직 사용
-                                const itemsResponse = await fetch(
-                                    `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
-                                );
-                                const itemsData = await itemsResponse.json();
-
-                                if (itemsData.success && itemsData.orderItems) {
-                                    // 해당 주문의 아이템만 필터링
-                                    const orderSpecificItems = itemsData.orderItems.filter(item => 
-                                        item.order_id === order.checkId
-                                    );
-
-                                    orderItems = orderSpecificItems.map(item => ({
-                                        ...item,
-                                        order_type: order.orderType
+                                    
+                                    // POS 아이템 처리
+                                    const posOrderItems = posItems.map(item => ({
+                                        id: item.id,
+                                        menu_id: item.menu_id || item.id,
+                                        menu_name: item.menu_name,
+                                        unit_price: item.unit_price,
+                                        quantity: item.quantity,
+                                        total_price: item.total_price,
+                                        cook_station: item.cook_station || 'KITCHEN',
+                                        item_status: item.item_status || 'READY',
+                                        order_type: 'pos_mixed',
+                                        ticket_source: 'POS'
                                     }));
+                                    
+                                    allOrderItems = [...tllOrderItems, ...posOrderItems];
+                                    totalAmount = mixedOrderData.totalAmount || 0;
+                                    totalItemCount = allOrderItems.length;
                                 }
                             }
-
-                            allOrderItems.push(...orderItems);
-                            totalAmount += order.totalAmount || 0;
-                            totalItemCount += order.itemCount || 0;
-
                         } catch (error) {
-                            console.error(
-                                `❌ 테이블 ${dbTable.tableNumber} 주문 ${order.checkId} 아이템 로드 실패:`,
-                                error,
-                            );
+                            console.error(`❌ TLL 연동 교차주문 아이템 로드 실패: 테이블 ${dbTable.tableNumber}`, error);
+                            // 에러 시 기존 로직으로 fallback
+                            allOrderItems = [];
+                            totalAmount = 0;
+                            totalItemCount = 0;
+                        }
+                    } else {
+                        // 기존 교차주문 또는 일반 주문 처리
+                        for (const order of tableOrders) {
+                            try {
+                                let orderItems = [];
+
+                                if (order.sourceSystem === 'TLL') {
+                                    // TLL 주문의 경우 TLL 주문 API 사용
+                                    console.log(`📱 TLL 주문 아이템 조회: 테이블 ${dbTable.tableNumber}, 주문 ${order.checkId}`);
+                                    const tllItemsResponse = await fetch(
+                                        `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/tll-orders`,
+                                    );
+                                    const tllItemsData = await tllItemsResponse.json();
+
+                                    if (tllItemsData.success && tllItemsData.tllOrders) {
+                                        // 해당 주문의 아이템만 필터링
+                                        const orderSpecificItems = tllItemsData.tllOrders.filter(item => 
+                                            item.order_id === order.checkId
+                                        );
+
+                                        const convertedItems = orderSpecificItems.map(item => ({
+                                            id: item.id,
+                                            menu_id: item.menu_id || item.id,
+                                            menu_name: item.menu_name,
+                                            unit_price: item.unit_price,
+                                            quantity: item.quantity,
+                                            total_price: item.total_price,
+                                            cook_station: item.cook_station || 'KITCHEN',
+                                            item_status: item.item_status || 'READY',
+                                            order_type: order.orderType
+                                        }));
+
+                                        orderItems = convertedItems;
+                                    }
+                                } else {
+                                    // POS 주문의 경우 기존 로직 사용
+                                    const itemsResponse = await fetch(
+                                        `/api/pos/stores/${storeId}/table/${dbTable.tableNumber}/order-items`,
+                                    );
+                                    const itemsData = await itemsResponse.json();
+
+                                    if (itemsData.success && itemsData.orderItems) {
+                                        // 해당 주문의 아이템만 필터링
+                                        const orderSpecificItems = itemsData.orderItems.filter(item => 
+                                            item.order_id === order.checkId
+                                        );
+
+                                        orderItems = orderSpecificItems.map(item => ({
+                                            ...item,
+                                            order_type: order.orderType
+                                        }));
+                                    }
+                                }
+
+                                allOrderItems.push(...orderItems);
+                                totalAmount += order.totalAmount || 0;
+                                totalItemCount += order.itemCount || 0;
+
+                            } catch (error) {
+                                console.error(
+                                    `❌ 테이블 ${dbTable.tableNumber} 주문 ${order.checkId} 아이템 로드 실패:`,
+                                    error,
+                                );
+                            }
                         }
                     }
 
@@ -620,10 +761,17 @@ const POSTableMap = {
     },
 
     /**
-     * 테이블 상태 클래스 반환 (교차 주문 지원)
+     * 테이블 상태 클래스 반환 (TLL 연동 교차 주문 지원)
      */
     getTableStatusClass(table) {
         if (!table.isOccupied) return "status-empty";
+        
+        // TLL 연동 교차주문 확인
+        const isTLLMixedOrder = table.orderItems && table.orderItems.some(item => 
+            item.order_type === 'tll_mixed' || item.order_type === 'pos_mixed'
+        );
+        
+        if (isTLLMixedOrder) return "status-tll-mixed-order";
         if (table.hasCrossOrders) return "status-cross-order";
         if (table.isFromTLG) return "status-tlg";
         return "status-occupied";

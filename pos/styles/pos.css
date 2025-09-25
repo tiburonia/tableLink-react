@@ -1803,6 +1803,18 @@ body {
     border: 1px solid #86efac;
 }
 
+.order-badge.tll-badge {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.order-badge.pos-badge {
+    background: #f0fdf4;
+    color: #065f46;
+    border: 1px solid #86efac;
+}
+
 .cross-order-items {
     display: flex;
     flex-direction: column;
