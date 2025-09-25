@@ -506,7 +506,7 @@ const POSTableMap = {
                     let tableStatusData = null;
                     
                     try {
-                        // store_tables에서 해당 테이블의 주문 ID 상태 확인 (테이블 ID 사용)
+                        // store_tables에서 해당 테이블의 주문 ID 상태 확인 (실제 DB의 ID 사용)
                         const tableStatusResponse = await fetch(`/api/pos/stores/${storeId}/table/${dbTable.id}/status`);
                         if (tableStatusResponse.ok) {
                             tableStatusData = await tableStatusResponse.json();
@@ -519,12 +519,12 @@ const POSTableMap = {
                                 );
 
                                 if (hasTLLMixedOrder) {
-                                    console.log(`🔗 TLL 연동 교차주문 감지: 테이블 ${dbTable.tableNumber} (ID: ${dbTable.id}), 주문 ID ${processing_order_id}`);
+                                    console.log(`🔗 TLL 연동 교차주문 감지: 테이블 ${dbTable.tableNumber}, 주문 ID ${processing_order_id}`);
                                 }
                             }
                         }
                     } catch (error) {
-                        console.warn(`⚠️ 테이블 ${dbTable.tableNumber} (ID: ${dbTable.id}) TLL 연동 상태 확인 실패:`, error.message);
+                        console.warn(`⚠️ 테이블 ${dbTable.tableNumber} TLL 연동 상태 확인 실패:`, error.message);
                     }
 
                     const hasCrossOrders = hasPhysicalCrossOrders || hasLogicalMixedOrder || hasTLLMixedOrder;
@@ -553,7 +553,7 @@ const POSTableMap = {
                         console.log(`🔗 TLL 연동 교차주문 아이템 로드: 테이블 ${dbTable.tableNumber}`);
                         
                         try {
-                            // 해당 주문의 모든 티켓과 아이템 조회 (source별 분리용)
+                            // 해당 주문의 모든 티켓과 아이템 조회 (정확한 테이블 ID 사용)
                             const mixedOrderResponse = await fetch(
                                 `/api/pos/stores/${storeId}/table/${dbTable.id}/mixed-order-items`,
                             );
@@ -566,39 +566,37 @@ const POSTableMap = {
                                     const tllItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'TLL');
                                     const posItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'POS');
                                     
-                                    console.log(`🔗 TLL 연동 교차주문 아이템 분리: TLL ${tllItems.length}개, POS ${posItems.length}개`);
+                                    console.log(`🔗 TLL 연동 교차주문 아이템 분리: 테이블 ${dbTable.tableNumber}, TLL ${tllItems.length}개, POS ${posItems.length}개`);
                                     
                                     // TLL 아이템 처리
                                     const tllOrderItems = tllItems.map(item => ({
                                         id: item.id,
-                                        menu_id: item.menu_id || item.id,
-                                        menu_name: item.menu_name,
-                                        unit_price: item.unit_price,
+                                        menuName: item.menu_name,
+                                        price: item.unit_price,
                                         quantity: item.quantity,
-                                        total_price: item.total_price,
-                                        cook_station: item.cook_station || 'KITCHEN',
-                                        item_status: item.item_status || 'READY',
-                                        order_type: 'tll_mixed',
+                                        totalPrice: item.total_price,
+                                        cookStation: item.cook_station || 'KITCHEN',
+                                        orderType: 'tll_mixed',
                                         ticket_source: 'TLL'
                                     }));
                                     
                                     // POS 아이템 처리
                                     const posOrderItems = posItems.map(item => ({
                                         id: item.id,
-                                        menu_id: item.menu_id || item.id,
-                                        menu_name: item.menu_name,
-                                        unit_price: item.unit_price,
+                                        menuName: item.menu_name,
+                                        price: item.unit_price,
                                         quantity: item.quantity,
-                                        total_price: item.total_price,
-                                        cook_station: item.cook_station || 'KITCHEN',
-                                        item_status: item.item_status || 'READY',
-                                        order_type: 'pos_mixed',
+                                        totalPrice: item.total_price,
+                                        cookStation: item.cook_station || 'KITCHEN',
+                                        orderType: 'pos_mixed',
                                         ticket_source: 'POS'
                                     }));
                                     
                                     allOrderItems = [...tllOrderItems, ...posOrderItems];
                                     totalAmount = mixedOrderData.totalAmount || 0;
                                     totalItemCount = allOrderItems.length;
+                                    
+                                    console.log(`✅ TLL 연동 교차주문 데이터 처리 완료: 테이블 ${dbTable.tableNumber}, 총 ${totalItemCount}개 아이템, ${totalAmount}원`);
                                 }
                             }
                         } catch (error) {
