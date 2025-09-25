@@ -16,12 +16,12 @@ router.post('/orders/confirm', async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { 
-      storeId, 
-      tableNumber, 
-      items, 
-      totalAmount, 
-      orderType, 
+    const {
+      storeId,
+      tableNumber,
+      items,
+      totalAmount,
+      orderType,
       isGuestOrder = true,
       mergeWithExisting = false,
       existingOrderId = null
@@ -48,7 +48,7 @@ router.post('/orders/confirm', async (req, res) => {
       // 기존 주문 존재 및 is_mixed 상태 확인
       const existingOrderCheck = await client.query(`
         SELECT id, is_mixed, session_status, source, total_price
-        FROM orders 
+        FROM orders
         WHERE id = $1 AND session_status = 'OPEN'
       `, [existingOrderId]);
 
@@ -79,7 +79,7 @@ router.post('/orders/confirm', async (req, res) => {
 
       // 기존 주문 금액 업데이트
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET total_price = COALESCE(total_price, 0) + $1,
             updated_at = NOW()
         WHERE id = $2
@@ -89,9 +89,9 @@ router.post('/orders/confirm', async (req, res) => {
     } else {
       // 일반 처리: 해당 테이블의 활성 주문 확인 또는 생성
       const existingOrderResult = await client.query(`
-        SELECT id FROM orders 
+        SELECT id FROM orders
         WHERE store_id = $1 AND table_num = $2 AND session_status = 'OPEN'
-        ORDER BY created_at DESC 
+        ORDER BY created_at DESC
         LIMIT 1
       `, [storeId, tableNumber]);
 
@@ -102,7 +102,7 @@ router.post('/orders/confirm', async (req, res) => {
 
         // 기존 주문 금액 업데이트
         await client.query(`
-          UPDATE orders 
+          UPDATE orders
           SET total_price = COALESCE(total_price, 0) + $1,
               updated_at = NOW()
           WHERE id = $2
@@ -111,12 +111,12 @@ router.post('/orders/confirm', async (req, res) => {
         // 새 주문 생성 (비회원 POS 주문: user_id, guest_phone NULL)
         const orderResult = await client.query(`
           INSERT INTO orders (
-            store_id, 
+            store_id,
             table_num,
             user_id,
             guest_phone,
             source,
-            status, 
+            status,
             payment_status,
             total_price,
             created_at
@@ -142,7 +142,7 @@ router.post('/orders/confirm', async (req, res) => {
           if (!hasMainOrder) {
             // processing_order_id가 비어있으면 메인 주문으로 설정
             await client.query(`
-              UPDATE store_tables 
+              UPDATE store_tables
               SET processing_order_id = $1,
                   status = 'OCCUPIED',
                   updated_at = CURRENT_TIMESTAMP
@@ -152,7 +152,7 @@ router.post('/orders/confirm', async (req, res) => {
           } else if (!hasSpareOrder) {
             // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
             await client.query(`
-              UPDATE store_tables 
+              UPDATE store_tables
               SET spare_processing_order_id = $1,
                   updated_at = CURRENT_TIMESTAMP
               WHERE store_id = $2 AND (id = $3 OR table_number = $3)
@@ -179,7 +179,7 @@ router.post('/orders/confirm', async (req, res) => {
         table_num,
         created_at,
         paid_status
-      ) VALUES ($1, $2, 
+      ) VALUES ($1, $2,
         (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
         'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
       RETURNING id, batch_no
@@ -271,14 +271,14 @@ router.post('/guest-orders/confirm', async (req, res) => {
     let orderId;
 
     const existingOrderResult = await client.query(`
-      SELECT id FROM orders 
-      WHERE store_id = $1 
-        AND table_num = $2 
+      SELECT id FROM orders
+      WHERE store_id = $1
+        AND table_num = $2
         AND session_status = 'OPEN'
-        AND user_id IS NULL 
+        AND user_id IS NULL
         AND guest_phone IS NULL
         AND source = 'POS'
-      ORDER BY created_at DESC 
+      ORDER BY created_at DESC
       LIMIT 1
     `, [storeId, tableNumber]);
 
@@ -289,7 +289,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
 
       // 기존 주문 금액 업데이트
       await client.query(`
-        UPDATE orders 
+        UPDATE orders
         SET total_price = COALESCE(total_price, 0) + $1,
             updated_at = NOW()
         WHERE id = $2
@@ -298,12 +298,12 @@ router.post('/guest-orders/confirm', async (req, res) => {
       // 새 비회원 주문 생성
       const orderResult = await client.query(`
         INSERT INTO orders (
-          store_id, 
+          store_id,
           table_num,
           user_id,
           guest_phone,
           source,
-          session_status, 
+          session_status,
           payment_status,
           total_price,
           created_at
@@ -318,7 +318,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
       const currentTableResult = await client.query(`
         SELECT processing_order_id, spare_processing_order_id
         FROM store_tables
-        WHERE store_id = $1 AND id = $2 
+        WHERE store_id = $1 AND id = $2
       `, [storeId, tableNumber]);
 
       if (currentTableResult.rows.length > 0) {
@@ -329,21 +329,21 @@ router.post('/guest-orders/confirm', async (req, res) => {
         if (!hasMainOrder) {
           // processing_order_id가 비어있으면 메인 주문으로 설정
           await client.query(`
-            UPDATE store_tables 
+            UPDATE store_tables
             SET processing_order_id = $1,
                 status = 'OCCUPIED',
                 updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND id = $3 
+            WHERE store_id = $2 AND id = $3
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
         } else if (!hasSpareOrder) {
           // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
           await client.query(`
-            UPDATE store_tables 
+            UPDATE store_tables
             SET spare_processing_order_id = $1,
                 status = 'OCCUPIED',
                 updated_at = CURRENT_TIMESTAMP
-            WHERE store_id = $2 AND id = $3 
+            WHERE store_id = $2 AND id = $3
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
         } else {
@@ -366,7 +366,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
         table_num,
         created_at,
         paid_status
-      ) VALUES ($1, $2, 
+      ) VALUES ($1, $2,
         (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
         'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
       RETURNING id, batch_no
@@ -457,7 +457,7 @@ router.get('/stores/:storeId/menu', async (req, res) => {
 
     // store_menu 테이블에서 메뉴 조회
     const menuResult = await pool.query(`
-      SELECT 
+      SELECT
         id,
         name,
         price,
@@ -498,7 +498,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
 
     // 메인 주문 조회
     const mainOrdersResult = await pool.query(`
-      SELECT 
+      SELECT
         st.id as table_number,
         o.id as order_id,
         COALESCE(u.name, '포스고객') as customer_name,
@@ -515,13 +515,13 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
       WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
-      GROUP BY st.id, o.id, u.name, o.user_id, 
+      GROUP BY st.id, o.id, u.name, o.user_id,
                o.total_price, o.session_status, o.created_at, o.source, st.spare_processing_order_id
     `, [storeId]);
 
     // 보조 주문 조회
     const spareOrdersResult = await pool.query(`
-      SELECT 
+      SELECT
         st.id as table_number,
         o.id as order_id,
         COALESCE(u.name, '포스고객') as customer_name,
@@ -537,7 +537,7 @@ router.get('/stores/:storeId/orders/active', async (req, res) => {
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
       WHERE st.store_id = $1 AND st.spare_processing_order_id IS NOT NULL
-      GROUP BY st.id, o.id, u.name, o.user_id, 
+      GROUP BY st.id, o.id, u.name, o.user_id,
                o.total_price, o.session_status, o.created_at, o.source
     `, [storeId]);
 
@@ -626,7 +626,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
 
     // 해당 테이블의 활성 주문들 조회 (UNPAID 상태만)
     const ordersResult = await pool.query(`
-      SELECT 
+      SELECT
         o.id as order_id,
         ot.id as ticket_id,
         o.status,
@@ -637,8 +637,8 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       LEFT JOIN users u ON o.user_id = u.id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND o.session_status = 'OPEN'
         AND ot.paid_status = 'UNPAID'
       ORDER BY o.created_at DESC
@@ -658,7 +658,7 @@ router.get('/stores/:storeId/table/:tableNumber/all-orders', async (req, res) =>
 
     // 주문 아이템들 조회
     const itemsResult = await pool.query(`
-      SELECT 
+      SELECT
         oi.id,
         oi.menu_name as "menuName",
         oi.unit_price as price,
@@ -727,7 +727,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 
     // 먼저 해당 테이블의 모든 티켓 상태 확인 (디버깅용)
     const debugResult = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.paid_status,
         ot.source,
@@ -745,7 +745,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 
     // 해당 테이블의 order_items 조회 (POS 소스, UNPAID + OPEN 상태만 확실히 필터링)
     const result = await pool.query(`
-      SELECT 
+      SELECT
         oi.id,
         oi.menu_id,
         oi.menu_name,
@@ -762,8 +762,8 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'  -- 반드시 미지불만
         AND ot.paid_status != 'PAID'   -- PAID 상태 명시적 배제
@@ -844,7 +844,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
 
     // TLL 주문 조회 (order_items 기준으로 조회, TLL 소스의 모든 상태)
     const tllOrdersResult = await pool.query(`
-      SELECT 
+      SELECT
         oi.id,
         oi.menu_name,
         oi.quantity,
@@ -861,8 +861,8 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND ot.source = 'TLL'
         AND oi.item_status != 'CANCELLED'
         AND o.session_status = 'OPEN'
@@ -927,7 +927,7 @@ router.get('/stores/:storeId/table/:tableNumber/session-status', async (req, res
     console.log(`🔍 테이블 ${tableNumber} 세션 상태 확인 (매장 ${storeId})`);
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         o.id,
         o.status,
         o.created_at,
@@ -992,10 +992,10 @@ router.post('/orders', async (req, res) => {
     // 1. orders 테이블에 주문 생성
     const orderResult = await client.query(`
       INSERT INTO orders (
-        store_id, 
+        store_id,
         table_num,
         source,
-        status, 
+        status,
         payment_status,
         total_price,
         created_at
@@ -1096,7 +1096,7 @@ router.put('/orders/:orderId/enable-mixed', async (req, res) => {
     // 주문 존재 및 상태 확인
     const orderCheck = await client.query(`
       SELECT id, source, session_status, is_mixed
-      FROM orders 
+      FROM orders
       WHERE id = $1
     `, [orderId]);
 
@@ -1132,7 +1132,7 @@ router.put('/orders/:orderId/enable-mixed', async (req, res) => {
 
     // is_mixed를 true로 업데이트
     await client.query(`
-      UPDATE orders 
+      UPDATE orders
       SET is_mixed = true, updated_at = NOW()
       WHERE id = $1
     `, [orderId]);
@@ -1167,7 +1167,7 @@ router.get('/orders/:orderId/mixed-status', async (req, res) => {
   try {
     const { orderId } = req.params;
 
-    console.log(`🔍 TLL 주문 ${orderId} is_mixed 상태 조회`);
+    console.log(`🔍 TLL 주문 ${orderId}의 is_mixed 상태 조회`);
 
     if (!orderId) {
       return res.status(400).json({
@@ -1178,7 +1178,7 @@ router.get('/orders/:orderId/mixed-status', async (req, res) => {
 
     const result = await pool.query(`
       SELECT id, source, session_status, is_mixed, created_at, updated_at
-      FROM orders 
+      FROM orders
       WHERE id = $1
     `, [orderId]);
 
@@ -1239,8 +1239,8 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id AND oi.item_status != 'CANCELLED'
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND ot.paid_status = 'UNPAID'
         AND o.session_status = 'OPEN'
       GROUP BY o.id, o.created_at, o.total_price
