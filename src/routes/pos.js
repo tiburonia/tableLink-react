@@ -1304,13 +1304,13 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
     const tableResult = await pool.query(`
       SELECT
         id,
-        table_number,
+        table_name,
         processing_order_id,
         spare_processing_order_id,
         status,
         updated_at
       FROM store_tables
-      WHERE store_id = $1 AND (id = $2 OR table_number = $2)
+      WHERE store_id = $1 AND id = $2
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     if (tableResult.rows.length === 0) {
