@@ -743,23 +743,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
 
     console.log(`🔍 테이블 ${parsedTableNumber} 모든 티켓 상태:`, debugResult.rows);
 
-    // 해당 테이블의 교차주문 상태 먼저 확인
-    const crossOrderCheck = await pool.query(`
-      SELECT 
-        o.id as order_id,
-        o.source as order_source,
-        o.is_mixed,
-        COUNT(DISTINCT ot.source) as ticket_source_count,
-        STRING_AGG(DISTINCT ot.source, ', ') as ticket_sources
-      FROM orders o
-      JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1 AND o.table_num = $2 AND o.session_status = 'OPEN'
-      GROUP BY o.id, o.source, o.is_mixed
-    `, [parsedStoreId, parsedTableNumber]);
-
-    console.log(`🔍 교차주문 상태 확인:`, crossOrderCheck.rows);
-
-    // 해당 테이블의 order_items 조회 (소스별 명확한 구별 포함)
+    // 해당 테이블의 order_items 조회 (POS 소스, UNPAID + OPEN 상태만 확실히 필터링)
     const result = await pool.query(`
       SELECT
         oi.id,
@@ -774,16 +758,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         oi.created_at,
         ot.order_id,
         ot.paid_status,
-        ot.source as ticket_source,
-        o.source as order_source,
-        o.is_mixed,
-        o.session_status as order_status,
-        CASE 
-          WHEN o.is_mixed = true THEN 'mixed'
-          WHEN ot.source = 'TLL' THEN 'tll_only'
-          WHEN ot.source = 'POS' THEN 'pos_only'
-          ELSE 'unknown'
-        END as order_type_classification
+        o.session_status as order_status
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
