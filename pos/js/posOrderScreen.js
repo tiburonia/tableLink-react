@@ -959,10 +959,17 @@ const POSOrderScreen = {
                 // TLL 주문이 로드되면 is_mixed 상태를 확인하여 버튼 상태 업데이트
                 if (this.tllOrders && this.tllOrders.length > 0) {
                     const isMixed = this.checkTLLOrderMixedStatus();
-                    this.updateTLLConnectionButton(isMixed);
+                    console.log(`🔍 TLL 주문 로드 후 is_mixed 상태: ${isMixed}`);
+                    
+                    // 약간의 지연을 두고 UI 업데이트 (DOM 렌더링 완료 대기)
+                    setTimeout(() => {
+                        this.updateTLLConnectionButton(isMixed);
+                    }, 100);
                 } else {
                     // TLL 주문이 없으면 버튼 비활성화 상태로 설정
-                    this.updateTLLConnectionButton(false);
+                    setTimeout(() => {
+                        this.updateTLLConnectionButton(false);
+                    }, 100);
                 }
 
                 console.log(`✅ TLL 주문 ${this.tllOrders.length}개 로드 완료`);
@@ -2173,6 +2180,14 @@ const POSOrderScreen = {
                 newPaymentSection.innerHTML = this.renderPaymentSection();
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
                 console.log("✅ 결제 섹션 업데이트 완료");
+                
+                // 버튼 상태 재동기화
+                if (this.tllOrders && this.tllOrders.length > 0) {
+                    const isMixed = this.checkTLLOrderMixedStatus();
+                    setTimeout(() => {
+                        this.updateTLLConnectionButton(isMixed);
+                    }, 100);
+                }
             }
 
             this.showToast(
@@ -2409,6 +2424,13 @@ const POSOrderScreen = {
                 return;
             }
 
+            // 실시간 상태 체크
+            const currentMixedStatus = await this.refreshTLLOrderMixedStatus();
+            if (currentMixedStatus) {
+                alert('이미 연동이 활성화된 주문입니다.');
+                return;
+            }
+
             // 첫 번째 TLL 주문에서 orderId 가져오기
             const orderId = this.tllOrders[0].order_id;
 
@@ -2450,10 +2472,19 @@ const POSOrderScreen = {
             alert(`✅ TLL 연동이 활성화되었습니다.
 주문 ID: ${orderId}`);
 
-            // 상태 업데이트
-            this.tllOrderMixedStatus = true;
+            // TLL 주문 데이터의 is_mixed 상태 업데이트
+            if (this.tllOrders && this.tllOrders.length > 0) {
+                this.tllOrders.forEach(order => {
+                    if (order.order_id === orderId) {
+                        order.is_mixed = true;
+                    }
+                });
+            }
 
-            // UI 새로고침
+            // UI 즉시 업데이트
+            this.updateTLLConnectionButton(true);
+
+            // 전체 새로고침
             await this.refreshOrders();
 
         } catch (error) {
