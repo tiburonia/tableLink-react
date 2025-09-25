@@ -149,16 +149,18 @@ const POSTableMap = {
         );
 
         if (isTLLMixedOrder) {
-            return this.renderTLLMixedOrderContent(table);
+            // TLL 연동 교차주문을 위한 파라미터 구성
+            const tllMixedParams = this.prepareTLLMixedOrderParams(table);
+            return this.renderRegularCrossOrderContent(tllMixedParams);
         } else {
             return this.renderRegularCrossOrderContent(table);
         }
     },
 
     /**
-     * TLL 연동 교차주문 컨텐츠 렌더링
+     * TLL 연동 교차주문을 위한 파라미터 준비
      */
-    renderTLLMixedOrderContent(table) {
+    prepareTLLMixedOrderParams(table) {
         // ticket_source별로 아이템 분리
         const tllItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
         const posItems = table.orderItems.filter(item => item.ticket_source === 'POS');
@@ -167,63 +169,42 @@ const POSTableMap = {
         const tllAmount = tllItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
         const posAmount = posItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
 
-        const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
+        // 가짜 mainOrder와 spareOrder 생성 (기존 함수와 호환되도록)
+        const mockMainOrder = {
+            sourceSystem: 'TLL',
+            totalAmount: tllAmount,
+            openedAt: table.occupiedSince
+        };
 
-        return `
-            <div class="receipt-card tll-mixed-order">
-                <div class="receipt-header">
-                    <div class="receipt-header-left">
-                        <div class="receipt-subtitle">🔗 TLL연동</div>
-                    </div>
-                    <div class="receipt-time">${occupiedTime}</div>
-                </div>
+        const mockSpareOrder = {
+            sourceSystem: 'POS',
+            totalAmount: posAmount,
+            openedAt: table.occupiedSince
+        };
 
-                <div class="tll-mixed-notice">
-                    <div class="mixed-notice-text">TLL + POS 연동주문</div>
-                </div>
+        // 아이템들을 main/spare 타입으로 변환
+        const convertedTllItems = tllItems.map(item => ({ ...item, orderType: 'main' }));
+        const convertedPosItems = posItems.map(item => ({ ...item, orderType: 'spare' }));
 
-                <div class="receipt-body cross-order-body">
-                    <!-- TLL 섹션 -->
-                    <div class="cross-order-section tll-section">
-                        <div class="cross-order-header">
-                            <span class="order-badge tll-badge">TLL</span>
-                            <span class="order-amount">${tllAmount.toLocaleString()}원</span>
-                        </div>
-                        <div class="cross-order-items">
-                            ${this.renderCrossOrderItems(tllItems, 2)}
-                        </div>
-                    </div>
-
-                    <!-- 구분선 -->
-                    <div class="cross-order-divider"></div>
-
-                    <!-- POS 섹션 -->
-                    <div class="cross-order-section pos-section">
-                        <div class="cross-order-header">
-                            <span class="order-badge pos-badge">POS</span>
-                            <span class="order-amount">${posAmount.toLocaleString()}원</span>
-                        </div>
-                        <div class="cross-order-items">
-                            ${this.renderCrossOrderItems(posItems, 2)}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="receipt-footer">
-                    <div class="receipt-total tll-mixed-total">
-                        총 ${(table.totalAmount || 0).toLocaleString()}원
-                    </div>
-                </div>
-            </div>
-        `;
+        return {
+            ...table,
+            mainOrder: mockMainOrder,
+            spareOrder: mockSpareOrder,
+            orderItems: [...convertedTllItems, ...convertedPosItems],
+            // TLL 연동임을 표시하는 플래그 추가
+            isTLLMixed: true
+        };
     },
 
     /**
-     * 일반 교차주문 컨텐츠 렌더링 (기존 로직)
+     * 일반 교차주문 컨텐츠 렌더링 (TLL 연동 교차주문도 지원)
      */
     renderRegularCrossOrderContent(table) {
         const mainOrder = table.mainOrder;
         const spareOrder = table.spareOrder;
+
+        // TLL 연동 교차주문인지 확인
+        const isTLLMixed = table.isTLLMixed || false;
 
         // 메인 주문 정보
         const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
@@ -237,20 +218,35 @@ const POSTableMap = {
         const mainItems = table.orderItems.filter(item => item.orderType === 'main' || !item.orderType);
         const spareItems = table.orderItems.filter(item => item.orderType === 'spare');
 
+        // TLL 연동인 경우 다른 스타일과 제목 사용
+        const cardClass = isTLLMixed ? "receipt-card tll-mixed-order" : "receipt-card cross-order";
+        const subtitle = isTLLMixed ? "🔗 TLL연동" : "교차 주문";
+        const totalClass = isTLLMixed ? "receipt-total tll-mixed-total" : "receipt-total cross-total";
+        
+        // TLL 연동인 경우 배지 스타일 변경
+        const mainBadgeClass = isTLLMixed ? "order-badge tll-badge" : "order-badge main-badge";
+        const spareBadgeClass = isTLLMixed ? "order-badge pos-badge" : "order-badge spare-badge";
+
         return `
-            <div class="receipt-card cross-order">
+            <div class="${cardClass}">
                 <div class="receipt-header">
                     <div class="receipt-header-left">
-                        <div class="receipt-subtitle">교차 주문</div>
+                        <div class="receipt-subtitle">${subtitle}</div>
                     </div>
                     <div class="receipt-time">${mainTime}</div>
                 </div>
 
+                ${isTLLMixed ? `
+                <div class="tll-mixed-notice">
+                    <div class="mixed-notice-text">TLL + POS 연동주문</div>
+                </div>
+                ` : ''}
+
                 <div class="receipt-body cross-order-body">
                     <!-- 메인 주문 -->
-                    <div class="cross-order-section main-order">
+                    <div class="cross-order-section ${isTLLMixed ? 'tll-section' : 'main-order'}">
                         <div class="cross-order-header">
-                            <span class="order-badge main-badge">${mainSourceText}</span>
+                            <span class="${mainBadgeClass}">${mainSourceText}</span>
                             <span class="order-amount">${(mainOrder?.totalAmount || 0).toLocaleString()}원</span>
                         </div>
                         <div class="cross-order-items">
@@ -262,9 +258,9 @@ const POSTableMap = {
                     <div class="cross-order-divider"></div>
 
                     <!-- 보조 주문 -->
-                    <div class="cross-order-section spare-order">
+                    <div class="cross-order-section ${isTLLMixed ? 'pos-section' : 'spare-order'}">
                         <div class="cross-order-header">
-                            <span class="order-badge spare-badge">${spareSourceText}</span>
+                            <span class="${spareBadgeClass}">${spareSourceText}</span>
                             <span class="order-amount">${(spareOrder?.totalAmount || 0).toLocaleString()}원</span>
                         </div>
                         <div class="cross-order-items">
@@ -274,7 +270,7 @@ const POSTableMap = {
                 </div>
 
                 <div class="receipt-footer">
-                    <div class="receipt-total cross-total">
+                    <div class="${totalClass}">
                         총 ${(table.totalAmount || 0).toLocaleString()}원
                     </div>
                 </div>
