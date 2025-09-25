@@ -675,12 +675,22 @@ const POSOrderScreen = {
      */
     checkTLLOrderMixedStatus() {
         if (!this.tllOrders || this.tllOrders.length === 0) {
+            console.log('🔍 TLL 주문 없음, is_mixed: false');
             return false;
         }
 
         // TLL 주문에서 is_mixed 상태 확인 (첫 번째 주문의 상태 사용)
         const firstTLLOrder = this.tllOrders[0];
-        return firstTLLOrder.is_mixed === true;
+        const isMixed = Boolean(firstTLLOrder.is_mixed);
+        
+        console.log(`🔍 TLL 주문 is_mixed 상태 확인:`, {
+            orderId: firstTLLOrder.order_id,
+            is_mixed_raw: firstTLLOrder.is_mixed,
+            is_mixed_boolean: isMixed,
+            total_orders: this.tllOrders.length
+        });
+        
+        return isMixed;
     },
 
     /**
@@ -778,6 +788,9 @@ const POSOrderScreen = {
                 <span class="btn-icon">✅</span>
                 <span class="btn-text">TLL 연동 완료</span>
             `;
+            // 비활성화된 버튼에서 onclick 이벤트 제거
+            tllConnectBtn.removeAttribute('onclick');
+            tllConnectBtn.onclick = null;
             console.log('✅ TLL 연동 버튼 비활성화 (is_mixed: true)');
         } else {
             tllConnectBtn.classList.remove('disabled');
@@ -787,6 +800,9 @@ const POSOrderScreen = {
                 <span class="btn-icon">🔗</span>
                 <span class="btn-text">TLL 연동</span>
             `;
+            // 활성화된 버튼에 onclick 이벤트 재설정
+            tllConnectBtn.setAttribute('onclick', 'POSOrderScreen.enableTLLConnection()');
+            tllConnectBtn.onclick = () => POSOrderScreen.enableTLLConnection();
             console.log('🔗 TLL 연동 버튼 활성화 (is_mixed: false)');
         }
 

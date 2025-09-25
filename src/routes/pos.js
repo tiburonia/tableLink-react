@@ -857,7 +857,8 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
         ot.created_at as ticket_created_at,
         o.user_id,
         o.guest_phone,
-        o.created_at as order_created_at
+        o.created_at as order_created_at,
+        o.is_mixed
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
