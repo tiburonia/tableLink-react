@@ -83,24 +83,26 @@ router.get('/stores/:storeId', async (req, res) => {
 
     console.log(`📊 매장 ${storeId} store_tables에서 ${storeTablesResult.rows.length}개 테이블 발견`)
 
-    // checks 테이블에서 현재 오픈된 체크(점유중인 테이블) 조회
-    let openChecks = [];
+    // orders 테이블에서 현재 활성 주문(점유중인 테이블) 조회
+    let activeOrders = [];
     try {
-      const openChecksResult = await pool.query(`
+      const activeOrdersResult = await pool.query(`
         SELECT 
-          table_number,
-          opened_at,
-          user_id,
-          guest_phone
-        FROM checks 
-        WHERE store_id = $1 AND status = 'open'
-        ORDER BY table_number ASC
+          o.table_num as table_number,
+          o.created_at as opened_at,
+          o.user_id,
+          o.guest_phone
+        FROM orders o
+        WHERE o.store_id = $1 
+          AND o.session_status = 'OPEN'
+          AND NOT COALESCE(o.session_ended, false)
+        ORDER BY o.table_num ASC
       `, [parsedStoreId]);
 
-      openChecks = openChecksResult.rows;
-      console.log(`📊 매장 ${storeId} 오픈된 체크 ${openChecks.length}개`);
-    } catch (checkError) {
-      console.warn(`⚠️ 체크 조회 실패, 빈 배열로 처리:`, checkError.message);
+      activeOrders = activeOrdersResult.rows;
+      console.log(`📊 매장 ${storeId} 활성 주문 ${activeOrders.length}개`);
+    } catch (orderError) {
+      console.warn(`⚠️ 활성 주문 조회 실패, 빈 배열로 처리:`, orderError.message);
     }
 
     // store_tables 데이터를 기반으로 테이블 생성
@@ -110,16 +112,16 @@ router.get('/stores/:storeId', async (req, res) => {
       // store_tables에 데이터가 있으면 실제 테이블 정보 사용
       for (const storeTable of storeTablesResult.rows) {
         const tableNumber = storeTable.id; // store_tables의 id를 table_number로 사용
-        const openCheck = openChecks.find(check => check.table_number === tableNumber);
+        const activeOrder = activeOrders.find(order => order.table_number === tableNumber);
 
         tables.push({
           id: tableNumber,
           tableNumber: tableNumber,
           tableName: storeTable.table_name || `${tableNumber}번`,
           seats: storeTable.seats || 4,
-          isOccupied: !!openCheck,
-          occupiedSince: openCheck ? openCheck.opened_at : null,
-          occupiedBy: openCheck ? (openCheck.user_id || openCheck.guest_phone) : null
+          isOccupied: !!activeOrder,
+          occupiedSince: activeOrder ? activeOrder.opened_at : null,
+          occupiedBy: activeOrder ? (activeOrder.user_id || activeOrder.guest_phone) : null
         });
       }
       console.log(`✅ store_tables 기반으로 ${tables.length}개 테이블 생성`);
@@ -127,16 +129,16 @@ router.get('/stores/:storeId', async (req, res) => {
       // store_tables에 데이터가 없으면 기본 5개 테이블 생성
       console.warn(`⚠️ 매장 ${storeId}에 store_tables 데이터가 없어 기본 5개 테이블 생성`);
       for (let i = 1; i <= 5; i++) {
-        const openCheck = openChecks.find(check => check.table_number === i);
+        const activeOrder = activeOrders.find(order => order.table_number === i);
 
         tables.push({
           id: i,
           tableNumber: i,
           tableName: `${i}번`,
           seats: 4,
-          isOccupied: !!openCheck,
-          occupiedSince: openCheck ? openCheck.opened_at : null,
-          occupiedBy: openCheck ? (openCheck.user_id || openCheck.guest_phone) : null
+          isOccupied: !!activeOrder,
+          occupiedSince: activeOrder ? activeOrder.opened_at : null,
+          occupiedBy: activeOrder ? (activeOrder.user_id || activeOrder.guest_phone) : null
         });
       }
     }
