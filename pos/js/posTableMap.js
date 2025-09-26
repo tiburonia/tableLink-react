@@ -234,17 +234,17 @@ const POSTableMap = {
 
         const convertedTllItems = consolidatedTllItems.map(item => ({
             orderType: 'main',
-            menuName: item.menuName,
-            quantity: item.quantity,
-            totalPrice: item.price * item.quantity,
+            menuName: item.menuName || item.menu_name || '메뉴명 없음',
+            quantity: item.quantity || 1,
+            totalPrice: (item.price || item.unit_price || 0) * (item.quantity || 1),
             ticket_source: 'TLL'
         }));
 
         const convertedPosItems = consolidatedPosItems.map(item => ({
-            orderType: 'spare',
-            menuName: item.menuName,
-            quantity: item.quantity,
-            totalPrice: item.price * item.quantity,
+            orderType: 'spare', 
+            menuName: item.menuName || item.menu_name || '메뉴명 없음',
+            quantity: item.quantity || 1,
+            totalPrice: (item.price || item.unit_price || 0) * (item.quantity || 1),
             ticket_source: 'POS'
         }));
 
@@ -281,6 +281,14 @@ const POSTableMap = {
         // TLL 연동 교차주문인지 확인
         const isTLLMixed = table.isTLLMixed || false;
 
+        console.log(`🎨 교차주문 컨텐츠 렌더링: 테이블 ${table.tableNumber}`, {
+            isTLLMixed: isTLLMixed,
+            orderItems수: table.orderItems?.length || 0,
+            mainOrder: mainOrder,
+            spareOrder: spareOrder,
+            orderItems: table.orderItems
+        });
+
         // 메인 주문 정보
         const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
         const mainTime = this.formatOccupiedTime(mainOrder?.openedAt);
@@ -289,13 +297,34 @@ const POSTableMap = {
         const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
         const spareTime = this.formatOccupiedTime(spareOrder?.openedAt);
 
-        // 주문별 아이템 분리
-        const mainItems = table.orderItems.filter(item => item.orderType === 'main' || !item.orderType);
-        const spareItems = table.orderItems.filter(item => item.orderType === 'spare');
+        // 주문별 아이템 분리 (TLL 연동의 경우 ticket_source로도 확인)
+        let mainItems = [];
+        let spareItems = [];
+
+        if (isTLLMixed) {
+            // TLL 연동 교차주문: ticket_source 기준으로 분리
+            mainItems = table.orderItems.filter(item => 
+                item.orderType === 'main' || item.ticket_source === 'TLL'
+            );
+            spareItems = table.orderItems.filter(item => 
+                item.orderType === 'spare' || item.ticket_source === 'POS'
+            );
+        } else {
+            // 일반 교차주문: orderType 기준으로 분리
+            mainItems = table.orderItems.filter(item => item.orderType === 'main' || !item.orderType);
+            spareItems = table.orderItems.filter(item => item.orderType === 'spare');
+        }
+
+        console.log(`🔍 아이템 분리 결과: 테이블 ${table.tableNumber}`, {
+            mainItems수: mainItems.length,
+            spareItems수: spareItems.length,
+            mainItems: mainItems.map(item => ({ name: item.menuName, qty: item.quantity, source: item.ticket_source || item.orderType })),
+            spareItems: spareItems.map(item => ({ name: item.menuName, qty: item.quantity, source: item.ticket_source || item.orderType }))
+        });
 
         // TLL 연동인 경우 다른 스타일과 제목 사용
         const cardClass = isTLLMixed ? "receipt-card tll-mixed-order" : "receipt-card cross-order";
-        const subtitle = isTLLMixed ? "🔗 TLL연동" : "교차 주문";
+        const subtitle = isTLLMixed ? "🔗 TLL연동 교차주문" : "교차 주문";
         const totalClass = isTLLMixed ? "receipt-total tll-mixed-total" : "receipt-total cross-total";
         
         // TLL 연동인 경우 배지 스타일 변경
@@ -357,23 +386,38 @@ const POSTableMap = {
      * 교차 주문용 아이템 렌더링
      */
     renderCrossOrderItems(orderItems, maxItems = 2) {
+        console.log(`🎨 교차주문 아이템 렌더링:`, {
+            orderItems수: orderItems?.length || 0,
+            maxItems: maxItems,
+            orderItems: orderItems
+        });
+
         if (!orderItems || orderItems.length === 0) {
+            console.log(`⚠️ 주문 아이템이 비어있음`);
             return `<div class="cross-order-empty">주문 없음</div>`;
         }
 
         // 메뉴별로 수량 통합 (중복 제거)
         const consolidatedItems = this.consolidateOrderItems(orderItems);
         
+        console.log(`✅ 아이템 통합 완료:`, {
+            원본수: orderItems.length,
+            통합후수: consolidatedItems.length,
+            통합아이템: consolidatedItems.map(item => ({ name: item.menuName, qty: item.quantity }))
+        });
+        
         const displayItems = consolidatedItems.slice(0, maxItems);
         const hasMore = consolidatedItems.length > maxItems;
 
         const itemsHTML = displayItems
             .map((item) => {
-                const truncatedName = this.truncateMenuName(item.menuName, 6);
+                const menuName = item.menuName || item.menu_name || '메뉴명 없음';
+                const quantity = item.quantity || 1;
+                const truncatedName = this.truncateMenuName(menuName, 6);
                 return `
                 <div class="cross-order-item">
                     <span class="item-name">${truncatedName}</span>
-                    <span class="item-quantity">×${item.quantity}</span>
+                    <span class="item-quantity">×${quantity}</span>
                 </div>
             `;
             })
@@ -383,7 +427,10 @@ const POSTableMap = {
             ? `<div class="cross-order-item more">외 ${consolidatedItems.length - maxItems}개</div>`
             : "";
 
-        return itemsHTML + moreHTML;
+        const result = itemsHTML + moreHTML;
+        console.log(`🎨 최종 렌더링 HTML:`, result);
+        
+        return result;
     },
 
     /**
