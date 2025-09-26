@@ -94,6 +94,10 @@ const TableMapDataProcessor = {
                                     const tllItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'TLL');
                                     const posItems = mixedOrderData.orderItems.filter(item => item.ticket_source === 'POS');
                                     
+                                    // 티켓별로 그룹핑
+                                    const tllTickets = this.groupItemsByTicket(tllItems, 'TLL');
+                                    const posTickets = this.groupItemsByTicket(posItems, 'POS');
+                                    
                                     const tllOrderItems = tllItems.map(item => ({
                                         id: item.id,
                                         menuName: item.menu_name,
@@ -102,7 +106,8 @@ const TableMapDataProcessor = {
                                         totalPrice: item.total_price,
                                         cookStation: item.cook_station || 'KITCHEN',
                                         orderType: 'tll_mixed',
-                                        ticket_source: 'TLL'
+                                        ticket_source: 'TLL',
+                                        ticket_id: item.ticket_id
                                     }));
                                     
                                     const posOrderItems = posItems.map(item => ({
@@ -113,12 +118,28 @@ const TableMapDataProcessor = {
                                         totalPrice: item.total_price,
                                         cookStation: item.cook_station || 'KITCHEN',
                                         orderType: 'pos_mixed',
-                                        ticket_source: 'POS'
+                                        ticket_source: 'POS',
+                                        ticket_id: item.ticket_id
                                     }));
                                     
                                     allOrderItems = [...tllOrderItems, ...posOrderItems];
                                     totalAmount = mixedOrderData.totalAmount || 0;
                                     totalItemCount = allOrderItems.length;
+                                    
+                                    // 티켓 정보 저장
+                                    processedMainOrder = {
+                                        sourceSystem: 'TLL',
+                                        totalAmount: mixedOrderData.statistics?.tllAmount || 0,
+                                        openedAt: primaryOrder?.openedAt,
+                                        tickets: tllTickets
+                                    };
+                                    
+                                    processedSpareOrder = {
+                                        sourceSystem: 'POS', 
+                                        totalAmount: mixedOrderData.statistics?.posAmount || 0,
+                                        openedAt: primaryOrder?.openedAt,
+                                        tickets: posTickets
+                                    };
                                 }
                             }
                         } catch (error) {
@@ -128,9 +149,11 @@ const TableMapDataProcessor = {
                             totalItemCount = 0;
                         }
                     } else {
+                        // 일반 교차주문 처리
                         for (const order of tableOrders) {
                             try {
                                 let orderItems = [];
+                                let orderTickets = [];
 
                                 if (order.sourceSystem === 'TLL') {
                                     const tllItemsResponse = await fetch(
@@ -152,10 +175,12 @@ const TableMapDataProcessor = {
                                             total_price: item.total_price,
                                             cook_station: item.cook_station || 'KITCHEN',
                                             item_status: item.item_status || 'READY',
-                                            order_type: order.orderType
+                                            order_type: order.orderType,
+                                            ticket_id: item.ticket_id
                                         }));
 
                                         orderItems = convertedItems;
+                                        orderTickets = this.groupItemsByTicket(orderSpecificItems, 'TLL');
                                     }
                                 } else {
                                     const itemsResponse = await fetch(
@@ -172,12 +197,27 @@ const TableMapDataProcessor = {
                                             ...item,
                                             order_type: order.orderType
                                         }));
+                                        
+                                        orderTickets = this.groupItemsByTicket(orderSpecificItems, 'POS');
                                     }
                                 }
 
                                 allOrderItems.push(...orderItems);
                                 totalAmount += order.totalAmount || 0;
                                 totalItemCount += order.itemCount || 0;
+
+                                // 주문별 티켓 정보 저장
+                                if (order.orderType === 'main') {
+                                    processedMainOrder = {
+                                        ...processedMainOrder,
+                                        tickets: orderTickets
+                                    };
+                                } else if (order.orderType === 'spare') {
+                                    processedSpareOrder = {
+                                        ...processedSpareOrder,
+                                        tickets: orderTickets
+                                    };
+                                }
 
                             } catch (error) {
                                 console.error(
@@ -270,6 +310,34 @@ const TableMapDataProcessor = {
         });
 
         return Object.values(consolidated);
+    },
+
+    /**
+     * 티켓별 아이템 그룹핑
+     */
+    groupItemsByTicket(items, source) {
+        const ticketGroups = {};
+        
+        items.forEach(item => {
+            const ticketId = item.ticket_id;
+            
+            if (!ticketGroups[ticketId]) {
+                ticketGroups[ticketId] = {
+                    ticketId: ticketId,
+                    source: source,
+                    items: [],
+                    totalAmount: 0,
+                    itemCount: 0,
+                    createdAt: item.created_at
+                };
+            }
+            
+            ticketGroups[ticketId].items.push(item);
+            ticketGroups[ticketId].totalAmount += item.total_price || 0;
+            ticketGroups[ticketId].itemCount += 1;
+        });
+        
+        return Object.values(ticketGroups);
     },
 
     /**
