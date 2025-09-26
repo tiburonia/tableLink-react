@@ -289,15 +289,30 @@ const POSTableMap = {
             orderItems: table.orderItems
         });
 
+        // 주문 정보 안전성 검사
+        if (!table.orderItems || table.orderItems.length === 0) {
+            console.warn(`⚠️ 교차주문 아이템이 없음: 테이블 ${table.tableNumber}`);
+            return `
+                <div class="receipt-card cross-order">
+                    <div class="receipt-header">
+                        <div class="receipt-subtitle">교차 주문</div>
+                    </div>
+                    <div class="receipt-body">
+                        <div class="cross-order-empty">주문 데이터를 불러오는 중...</div>
+                    </div>
+                </div>
+            `;
+        }
+
         // 메인 주문 정보
         const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
-        const mainTime = this.formatOccupiedTime(mainOrder?.openedAt);
+        const mainTime = this.formatOccupiedTime(mainOrder?.openedAt || table.occupiedSince);
 
-        // 보조 주문 정보
+        // 보조 주문 정보  
         const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
-        const spareTime = this.formatOccupiedTime(spareOrder?.openedAt);
+        const spareTime = this.formatOccupiedTime(spareOrder?.openedAt || table.occupiedSince);
 
-        // 주문별 아이템 분리 (TLL 연동의 경우 ticket_source로도 확인)
+        // 주문별 아이템 분리
         let mainItems = [];
         let spareItems = [];
 
@@ -311,23 +326,37 @@ const POSTableMap = {
             );
         } else {
             // 일반 교차주문: orderType 기준으로 분리
-            mainItems = table.orderItems.filter(item => item.orderType === 'main' || !item.orderType);
-            spareItems = table.orderItems.filter(item => item.orderType === 'spare');
+            mainItems = table.orderItems.filter(item => 
+                item.orderType === 'main' || item.order_type === 'main' || (!item.orderType && !item.order_type)
+            );
+            spareItems = table.orderItems.filter(item => 
+                item.orderType === 'spare' || item.order_type === 'spare'
+            );
         }
 
         console.log(`🔍 아이템 분리 결과: 테이블 ${table.tableNumber}`, {
             mainItems수: mainItems.length,
             spareItems수: spareItems.length,
-            mainItems: mainItems.map(item => ({ name: item.menuName, qty: item.quantity, source: item.ticket_source || item.orderType })),
-            spareItems: spareItems.map(item => ({ name: item.menuName, qty: item.quantity, source: item.ticket_source || item.orderType }))
+            mainItems: mainItems.map(item => ({ 
+                name: item.menuName || item.menu_name, 
+                qty: item.quantity, 
+                type: item.orderType || item.order_type,
+                source: item.ticket_source 
+            })),
+            spareItems: spareItems.map(item => ({ 
+                name: item.menuName || item.menu_name, 
+                qty: item.quantity, 
+                type: item.orderType || item.order_type,
+                source: item.ticket_source 
+            }))
         });
 
-        // TLL 연동인 경우 다른 스타일과 제목 사용
+        // 스타일 및 제목 설정
         const cardClass = isTLLMixed ? "receipt-card tll-mixed-order" : "receipt-card cross-order";
         const subtitle = isTLLMixed ? "🔗 TLL연동 교차주문" : "교차 주문";
         const totalClass = isTLLMixed ? "receipt-total tll-mixed-total" : "receipt-total cross-total";
         
-        // TLL 연동인 경우 배지 스타일 변경
+        // 배지 스타일 설정
         const mainBadgeClass = isTLLMixed ? "order-badge tll-badge" : "order-badge main-badge";
         const spareBadgeClass = isTLLMixed ? "order-badge pos-badge" : "order-badge spare-badge";
 
@@ -347,21 +376,21 @@ const POSTableMap = {
                 ` : ''}
 
                 <div class="receipt-body cross-order-body">
-                    <!-- 메인 주문 (TLL) -->
+                    <!-- 메인 주문 -->
                     <div class="cross-order-section ${isTLLMixed ? 'tll-section' : 'main-order'}">
                         <div class="cross-order-header">
                             <span class="${mainBadgeClass}">${mainSourceText}</span>
                             <span class="order-amount">${(mainOrder?.totalAmount || 0).toLocaleString()}원</span>
                         </div>
                         <div class="cross-order-items">
-                            ${this.renderCrossOrderItems(mainItems, 2)}
+                            ${mainItems.length > 0 ? this.renderCrossOrderItems(mainItems, 2) : '<div class="cross-order-empty">주문 없음</div>'}
                         </div>
                     </div>
 
                     <!-- 구분선 (양쪽 모두 주문이 있을 때만 표시) -->
                     ${mainItems.length > 0 && spareItems.length > 0 ? '<div class="cross-order-divider"></div>' : ''}
 
-                    <!-- 보조 주문 (POS) -->
+                    <!-- 보조 주문 -->
                     <div class="cross-order-section ${isTLLMixed ? 'pos-section' : 'spare-order'}">
                         <div class="cross-order-header">
                             <span class="${spareBadgeClass}">${spareSourceText}</span>
@@ -397,11 +426,19 @@ const POSTableMap = {
             return `<div class="cross-order-empty">주문 없음</div>`;
         }
 
-        // 메뉴별로 수량 통합 (중복 제거)
-        const consolidatedItems = this.consolidateOrderItems(orderItems);
+        // 메뉴별로 수량 통합 (중복 제거) - 필드명 정규화
+        const normalizedItems = orderItems.map(item => ({
+            menuName: item.menuName || item.menu_name || '메뉴명 없음',
+            quantity: item.quantity || 1,
+            price: item.price || item.unit_price || 0,
+            cookStation: item.cookStation || item.cook_station || 'KITCHEN'
+        }));
+
+        const consolidatedItems = this.consolidateOrderItems(normalizedItems);
         
         console.log(`✅ 아이템 통합 완료:`, {
             원본수: orderItems.length,
+            정규화수: normalizedItems.length,
             통합후수: consolidatedItems.length,
             통합아이템: consolidatedItems.map(item => ({ name: item.menuName, qty: item.quantity }))
         });
@@ -411,7 +448,7 @@ const POSTableMap = {
 
         const itemsHTML = displayItems
             .map((item) => {
-                const menuName = item.menuName || item.menu_name || '메뉴명 없음';
+                const menuName = item.menuName || '메뉴명 없음';
                 const quantity = item.quantity || 1;
                 const truncatedName = this.truncateMenuName(menuName, 6);
                 return `
@@ -428,7 +465,7 @@ const POSTableMap = {
             : "";
 
         const result = itemsHTML + moreHTML;
-        console.log(`🎨 최종 렌더링 HTML:`, result);
+        console.log(`🎨 최종 렌더링 HTML 생성 완료`);
         
         return result;
     },
