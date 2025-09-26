@@ -39,34 +39,7 @@ const TableMapManager = {
         }
     },
 
-    /**
-     * 새 세션 시작
-     */
-    async startNewSession(tableNumber) {
-        try {
-            const response = await fetch(
-                `/api/pos/stores/${POSCore.storeId}/table/${tableNumber}/acquire-lock`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        lockBy: "POS",
-                        lockDuration: 1800000,
-                    }),
-                },
-            );
-
-            if (response.ok) {
-                POSCore.showOrderScreen(tableNumber);
-            } else {
-                const errorData = await response.json();
-                alert(errorData.error || "테이블을 사용할 수 없습니다.");
-            }
-        } catch (error) {
-            console.error("❌ 새 세션 시작 실패:", error);
-            alert("세션을 시작할 수 없습니다.");
-        }
-    },
+   
 
     /**
      * 실시간 업데이트 시작 (SSE 방식)
