@@ -17,14 +17,21 @@
 
     <!-- POS 모듈 로드 -->
     <script src="/pos/js/posCore.js"></script>
+    
+    <!-- POS 테이블맵 모듈들 -->
+    <script src="/pos/js/modules/tableMapRenderer.js"></script>
+    <script src="/pos/js/modules/crossOrderRenderer.js"></script>
+    <script src="/pos/js/modules/tableMapDataProcessor.js"></script>
+    <script src="/pos/js/modules/tableMapManager.js"></script>
     <script src="/pos/js/posTableMap.js"></script>
+    
     <script src="/pos/js/posPaymentModal.js"></script>
     <script src="/pos/js/posOrderScreen.js"></script>
 
     <script>
         // 스크립트 로딩 완료 이벤트 리스너
         let loadedModules = new Set();
-        const requiredModules = ['POSCore', 'POSOrderScreen', 'POSPaymentModal', 'POSTableMap'];
+        const requiredModules = ['POSCore', 'POSOrderScreen', 'POSPaymentModal', 'POSTableMap', 'TableMapRenderer', 'CrossOrderRenderer', 'TableMapDataProcessor', 'TableMapManager'];
         
         // 모듈 로딩 체크 함수
         function checkModuleLoading(moduleName) {
