@@ -178,20 +178,31 @@ const POSTableMap = {
             };
         }
 
-        // ticket_source별로 아이템 분리
-        const tllItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
-        const posItems = table.orderItems.filter(item => item.ticket_source === 'POS');
+        // order_tickets 단위로 그룹핑 (ticket_source별로)
+        const ticketGroups = {};
+        
+        table.orderItems.forEach(item => {
+            const ticketSource = item.ticket_source || 'UNKNOWN';
+            if (!ticketGroups[ticketSource]) {
+                ticketGroups[ticketSource] = [];
+            }
+            ticketGroups[ticketSource].push(item);
+        });
 
-        console.log(`🔗 TLL 연동 교차주문 아이템 분리: 테이블 ${table.tableNumber}`, {
-            TLL아이템: tllItems.length,
-            POS아이템: posItems.length,
-            tllItems: tllItems,
-            posItems: posItems
+        const tllTicketItems = ticketGroups['TLL'] || [];
+        const posTicketItems = ticketGroups['POS'] || [];
+
+        console.log(`🔗 TLL 연동 교차주문 티켓별 그룹핑: 테이블 ${table.tableNumber}`, {
+            TLL티켓아이템: tllTicketItems.length,
+            POS티켓아이템: posTicketItems.length,
+            티켓그룹: Object.keys(ticketGroups),
+            tllTicketItems: tllTicketItems,
+            posTicketItems: posTicketItems
         });
 
         // 각 소스별 금액 계산
-        const tllAmount = tllItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
-        const posAmount = posItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
+        const tllAmount = tllTicketItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
+        const posAmount = posTicketItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
 
         // 가짜 mainOrder와 spareOrder 생성 (기존 함수와 호환되도록)
         const mockMainOrder = {
@@ -206,15 +217,15 @@ const POSTableMap = {
             openedAt: table.occupiedSince
         };
 
-        // 아이템들을 main/spare 타입으로 변환 및 중복 제거
-        const consolidatedTllItems = this.consolidateOrderItems(tllItems.map(item => ({
+        // 티켓별 아이템들을 메뉴 단위로 통합하고 main/spare 타입으로 변환
+        const consolidatedTllItems = this.consolidateOrderItems(tllTicketItems.map(item => ({
             menu_name: item.menuName || item.menu_name || '메뉴명 없음',
             unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
             quantity: item.quantity || 1,
             cook_station: item.cook_station || 'KITCHEN'
         })));
 
-        const consolidatedPosItems = this.consolidateOrderItems(posItems.map(item => ({
+        const consolidatedPosItems = this.consolidateOrderItems(posTicketItems.map(item => ({
             menu_name: item.menuName || item.menu_name || '메뉴명 없음',
             unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
             quantity: item.quantity || 1,
