@@ -183,6 +183,9 @@ const TableMapDataProcessor = {
                         }
                     } else {
                         // 일반 교차주문 처리
+
+
+                        ///////////////////////////////////////////////
                         for (const order of tableOrders) {
                             try {
                                 let orderItems = [];
