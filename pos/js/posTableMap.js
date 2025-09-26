@@ -163,7 +163,11 @@ const POSTableMap = {
     prepareTLLMixedOrderParams(table) {
         console.log(`🔗 TLL 연동 교차주문 파라미터 준비: 테이블 ${table.tableNumber}`, {
             원본orderItems: table.orderItems?.length || 0,
-            orderItems: table.orderItems
+            원본테이블정보: {
+                tableNumber: table.tableNumber,
+                totalAmount: table.totalAmount,
+                occupiedSince: table.occupiedSince
+            }
         });
 
         // orderItems가 없거나 비어있는 경우 처리
@@ -178,93 +182,93 @@ const POSTableMap = {
             };
         }
 
-        // order_tickets 단위로 그룹핑 (ticket_source별로)
-        const ticketGroups = {};
-        
-        table.orderItems.forEach(item => {
-            const ticketSource = item.ticket_source || 'UNKNOWN';
-            if (!ticketGroups[ticketSource]) {
-                ticketGroups[ticketSource] = [];
-            }
-            ticketGroups[ticketSource].push(item);
+        // ticket_source별로 아이템 분리
+        const tllTicketItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
+        const posTicketItems = table.orderItems.filter(item => item.ticket_source === 'POS');
+
+        console.log(`🔗 TLL 연동 교차주문 티켓별 분리: 테이블 ${table.tableNumber}`, {
+            TLL아이템수: tllTicketItems.length,
+            POS아이템수: posTicketItems.length,
+            TLL아이템상세: tllTicketItems.map(item => ({
+                menu_name: item.menuName || item.menu_name,
+                quantity: item.quantity,
+                price: item.price || item.unit_price || item.totalPrice || item.total_price
+            })),
+            POS아이템상세: posTicketItems.map(item => ({
+                menu_name: item.menuName || item.menu_name,
+                quantity: item.quantity,
+                price: item.price || item.unit_price || item.totalPrice || item.total_price
+            }))
         });
 
-        const tllTicketItems = ticketGroups['TLL'] || [];
-        const posTicketItems = ticketGroups['POS'] || [];
+        // 각 소스별 금액 계산 (여러 필드에서 가격 정보 추출)
+        const tllAmount = tllTicketItems.reduce((sum, item) => {
+            const price = item.totalPrice || item.total_price || (item.price || item.unit_price || 0) * (item.quantity || 1);
+            return sum + price;
+        }, 0);
 
-        console.log(`🔗 TLL 연동 교차주문 티켓별 그룹핑: 테이블 ${table.tableNumber}`, {
-            TLL티켓아이템: tllTicketItems.length,
-            POS티켓아이템: posTicketItems.length,
-            티켓그룹: Object.keys(ticketGroups),
-            tllTicketItems: tllTicketItems,
-            posTicketItems: posTicketItems
-        });
+        const posAmount = posTicketItems.reduce((sum, item) => {
+            const price = item.totalPrice || item.total_price || (item.price || item.unit_price || 0) * (item.quantity || 1);
+            return sum + price;
+        }, 0);
 
-        // 각 소스별 금액 계산
-        const tllAmount = tllTicketItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
-        const posAmount = posTicketItems.reduce((sum, item) => sum + (item.totalPrice || item.total_price || 0), 0);
-
-        // 가짜 mainOrder와 spareOrder 생성 (기존 함수와 호환되도록)
-        const mockMainOrder = {
+        // mainOrder와 spareOrder 객체 생성
+        const mainOrder = {
             sourceSystem: 'TLL',
             totalAmount: tllAmount,
-            openedAt: table.occupiedSince
+            openedAt: table.occupiedSince || new Date().toISOString()
         };
 
-        const mockSpareOrder = {
+        const spareOrder = {
             sourceSystem: 'POS',
             totalAmount: posAmount,
-            openedAt: table.occupiedSince
+            openedAt: table.occupiedSince || new Date().toISOString()
         };
 
-        // 티켓별 아이템들을 메뉴 단위로 통합하고 main/spare 타입으로 변환
-        const consolidatedTllItems = this.consolidateOrderItems(tllTicketItems.map(item => ({
-            menu_name: item.menuName || item.menu_name || '메뉴명 없음',
-            unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
-            quantity: item.quantity || 1,
-            cook_station: item.cook_station || 'KITCHEN'
-        })));
-
-        const consolidatedPosItems = this.consolidateOrderItems(posTicketItems.map(item => ({
-            menu_name: item.menuName || item.menu_name || '메뉴명 없음',
-            unit_price: item.price || item.unit_price || item.totalPrice || item.total_price || 0,
-            quantity: item.quantity || 1,
-            cook_station: item.cook_station || 'KITCHEN'
-        })));
-
-        const convertedTllItems = consolidatedTllItems.map(item => ({
+        // 아이템들을 통합된 형태로 변환 (필드명 정규화)
+        const convertedTllItems = tllTicketItems.map(item => ({
             orderType: 'main',
             menuName: item.menuName || item.menu_name || '메뉴명 없음',
             quantity: item.quantity || 1,
-            totalPrice: (item.price || item.unit_price || 0) * (item.quantity || 1),
-            ticket_source: 'TLL'
+            price: item.price || item.unit_price || 0,
+            totalPrice: item.totalPrice || item.total_price || (item.price || item.unit_price || 0) * (item.quantity || 1),
+            ticket_source: 'TLL',
+            cookStation: item.cook_station || 'KITCHEN'
         }));
 
-        const convertedPosItems = consolidatedPosItems.map(item => ({
-            orderType: 'spare', 
+        const convertedPosItems = posTicketItems.map(item => ({
+            orderType: 'spare',
             menuName: item.menuName || item.menu_name || '메뉴명 없음',
             quantity: item.quantity || 1,
-            totalPrice: (item.price || item.unit_price || 0) * (item.quantity || 1),
-            ticket_source: 'POS'
+            price: item.price || item.unit_price || 0,
+            totalPrice: item.totalPrice || item.total_price || (item.price || item.unit_price || 0) * (item.quantity || 1),
+            ticket_source: 'POS',
+            cookStation: item.cook_station || 'KITCHEN'
         }));
 
+        // 최종 결과 객체 구성
         const result = {
             ...table,
-            mainOrder: mockMainOrder,
-            spareOrder: mockSpareOrder,
+            mainOrder: mainOrder,
+            spareOrder: spareOrder,
             orderItems: [...convertedTllItems, ...convertedPosItems],
-            // TLL 연동임을 표시하는 플래그 추가
-            isTLLMixed: true
+            totalAmount: tllAmount + posAmount, // 전체 금액 재계산
+            isTLLMixed: true // TLL 연동 플래그
         };
 
         console.log(`✅ TLL 연동 교차주문 파라미터 준비 완료: 테이블 ${table.tableNumber}`, {
-            총아이템수: result.orderItems.length,
             TLL금액: tllAmount,
             POS금액: posAmount,
-            변환된아이템: result.orderItems.map(item => ({ 
+            전체금액: result.totalAmount,
+            변환된아이템수: result.orderItems.length,
+            mainOrder: result.mainOrder,
+            spareOrder: result.spareOrder,
+            변환된아이템상세: result.orderItems.map(item => ({ 
                 name: item.menuName, 
                 type: item.orderType, 
-                source: item.ticket_source 
+                source: item.ticket_source,
+                price: item.price,
+                totalPrice: item.totalPrice
             }))
         });
 
@@ -275,18 +279,12 @@ const POSTableMap = {
      * 일반 교차주문 컨텐츠 렌더링 (TLL 연동 교차주문도 지원)
      */
     renderRegularCrossOrderContent(table) {
-        const mainOrder = table.mainOrder;
-        const spareOrder = table.spareOrder;
-
-        // TLL 연동 교차주문인지 확인
-        const isTLLMixed = table.isTLLMixed || false;
-
-        console.log(`🎨 교차주문 컨텐츠 렌더링: 테이블 ${table.tableNumber}`, {
-            isTLLMixed: isTLLMixed,
+        console.log(`🎨 교차주문 컨텐츠 렌더링 시작: 테이블 ${table.tableNumber}`, {
+            원본테이블데이터: table,
             orderItems수: table.orderItems?.length || 0,
-            mainOrder: mainOrder,
-            spareOrder: spareOrder,
-            orderItems: table.orderItems
+            mainOrder존재: !!table.mainOrder,
+            spareOrder존재: !!table.spareOrder,
+            isTLLMixed: table.isTLLMixed
         });
 
         // 주문 정보 안전성 검사
@@ -304,13 +302,58 @@ const POSTableMap = {
             `;
         }
 
-        // 메인 주문 정보
-        const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
-        const mainTime = this.formatOccupiedTime(mainOrder?.openedAt || table.occupiedSince);
+        // TLL 연동 교차주문인지 확인
+        const isTLLMixed = table.isTLLMixed || false;
 
-        // 보조 주문 정보  
-        const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
-        const spareTime = this.formatOccupiedTime(spareOrder?.openedAt || table.occupiedSince);
+        // 주문 데이터 정규화 - mainOrder와 spareOrder가 없으면 기본값 생성
+        let mainOrder = table.mainOrder;
+        let spareOrder = table.spareOrder;
+
+        if (!mainOrder || !spareOrder) {
+            console.log(`📝 누락된 주문 객체 생성: mainOrder=${!!mainOrder}, spareOrder=${!!spareOrder}`);
+            
+            if (isTLLMixed) {
+                // TLL 연동 교차주문: ticket_source 기준으로 분리하여 주문 객체 생성
+                const tllItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
+                const posItems = table.orderItems.filter(item => item.ticket_source === 'POS');
+                
+                const tllAmount = tllItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
+                const posAmount = posItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
+                
+                mainOrder = {
+                    sourceSystem: 'TLL',
+                    totalAmount: tllAmount,
+                    openedAt: table.occupiedSince
+                };
+                spareOrder = {
+                    sourceSystem: 'POS', 
+                    totalAmount: posAmount,
+                    openedAt: table.occupiedSince
+                };
+            } else {
+                // 일반 교차주문: orderType 기준으로 분리하여 주문 객체 생성
+                const mainItems = table.orderItems.filter(item => 
+                    item.orderType === 'main' || item.order_type === 'main' || (!item.orderType && !item.order_type)
+                );
+                const spareItems = table.orderItems.filter(item => 
+                    item.orderType === 'spare' || item.order_type === 'spare'
+                );
+                
+                const mainAmount = mainItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
+                const spareAmount = spareItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
+                
+                mainOrder = {
+                    sourceSystem: 'POS',
+                    totalAmount: mainAmount,
+                    openedAt: table.occupiedSince
+                };
+                spareOrder = {
+                    sourceSystem: 'POS',
+                    totalAmount: spareAmount, 
+                    openedAt: table.occupiedSince
+                };
+            }
+        }
 
         // 주문별 아이템 분리
         let mainItems = [];
@@ -337,19 +380,26 @@ const POSTableMap = {
         console.log(`🔍 아이템 분리 결과: 테이블 ${table.tableNumber}`, {
             mainItems수: mainItems.length,
             spareItems수: spareItems.length,
-            mainItems: mainItems.map(item => ({ 
+            mainOrder: mainOrder,
+            spareOrder: spareOrder,
+            mainItems상세: mainItems.map(item => ({ 
                 name: item.menuName || item.menu_name, 
                 qty: item.quantity, 
                 type: item.orderType || item.order_type,
                 source: item.ticket_source 
             })),
-            spareItems: spareItems.map(item => ({ 
+            spareItems상세: spareItems.map(item => ({ 
                 name: item.menuName || item.menu_name, 
                 qty: item.quantity, 
                 type: item.orderType || item.order_type,
                 source: item.ticket_source 
             }))
         });
+
+        // 메인/보조 주문 정보 설정
+        const mainSourceText = mainOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
+        const mainTime = this.formatOccupiedTime(mainOrder?.openedAt || table.occupiedSince);
+        const spareSourceText = spareOrder?.sourceSystem === 'TLL' ? "TLL" : "POS";
 
         // 스타일 및 제목 설정
         const cardClass = isTLLMixed ? "receipt-card tll-mixed-order" : "receipt-card cross-order";
@@ -360,7 +410,7 @@ const POSTableMap = {
         const mainBadgeClass = isTLLMixed ? "order-badge tll-badge" : "order-badge main-badge";
         const spareBadgeClass = isTLLMixed ? "order-badge pos-badge" : "order-badge spare-badge";
 
-        return `
+        const result = `
             <div class="${cardClass}">
                 <div class="receipt-header">
                     <div class="receipt-header-left">
@@ -409,6 +459,14 @@ const POSTableMap = {
                 </div>
             </div>
         `;
+
+        console.log(`✅ 교차주문 HTML 생성 완료: 테이블 ${table.tableNumber}`, {
+            HTML길이: result.length,
+            mainItems수: mainItems.length,
+            spareItems수: spareItems.length
+        });
+
+        return result;
     },
 
     /**
@@ -693,11 +751,42 @@ const POSTableMap = {
                         TLL연동혼합: hasTLLMixedOrder,
                         최종판정: hasCrossOrders,
                         주문수: tableOrders.length,
-                        혼합주문: tableOrders.filter(o => o.is_mixed).map(o => o.order_id)
+                        혼합주문: tableOrders.filter(o => o.is_mixed).map(o => o.order_id),
+                        tableOrders상세: tableOrders.map(o => ({
+                            orderId: o.checkId,
+                            orderType: o.orderType,
+                            sourceSystem: o.sourceSystem,
+                            totalAmount: o.totalAmount
+                        }))
                     });
 
+                    // 주문 타입별로 분리 (main/spare 구분)
                     const mainOrder = tableOrders.find(order => order.orderType === 'main');
                     const spareOrder = tableOrders.find(order => order.orderType === 'spare');
+
+                    // 일반 교차주문의 경우 mainOrder/spareOrder 객체 보강
+                    let processedMainOrder = mainOrder;
+                    let processedSpareOrder = spareOrder;
+
+                    if (hasPhysicalCrossOrders && !hasTLLMixedOrder) {
+                        // 물리적 교차주문: 각 주문에 대한 정보 보강
+                        if (mainOrder) {
+                            processedMainOrder = {
+                                ...mainOrder,
+                                sourceSystem: mainOrder.sourceSystem || 'POS',
+                                totalAmount: mainOrder.totalAmount || 0,
+                                openedAt: mainOrder.openedAt || new Date().toISOString()
+                            };
+                        }
+                        if (spareOrder) {
+                            processedSpareOrder = {
+                                ...spareOrder,
+                                sourceSystem: spareOrder.sourceSystem || 'POS',
+                                totalAmount: spareOrder.totalAmount || 0,
+                                openedAt: spareOrder.openedAt || new Date().toISOString()
+                            };
+                        }
+                    }
 
                     // 기본적으로 메인 주문 정보 사용, 없으면 첫 번째 주문
                     const primaryOrder = mainOrder || tableOrders[0];
@@ -836,8 +925,10 @@ const POSTableMap = {
                         ? this.consolidateOrderItemsWithType(allOrderItems)
                         : this.consolidateOrderItems(allOrderItems);
 
-                    return {
+                    // 최종 테이블 객체 구성
+                    const tableResult = {
                         tableNumber: dbTable.tableNumber,
+                        id: dbTable.id, // 테이블 ID 추가
                         capacity: dbTable.capacity || 4,
                         isActive: dbTable.isActive !== false,
                         isOccupied: tableOrders.length > 0,
@@ -847,12 +938,25 @@ const POSTableMap = {
                         occupiedSince: primaryOrder?.openedAt,
                         checkId: primaryOrder?.checkId,
                         orderItems: consolidatedItems,
-                        // 교차 주문 관련 정보 추가
+                        // 교차 주문 관련 정보
                         hasCrossOrders: hasCrossOrders,
-                        mainOrder: mainOrder,
-                        spareOrder: spareOrder,
-                        allOrders: tableOrders
+                        mainOrder: processedMainOrder,
+                        spareOrder: processedSpareOrder,
+                        allOrders: tableOrders,
+                        // TLL 연동 교차주문 플래그
+                        isTLLMixed: hasTLLMixedOrder
                     };
+
+                    console.log(`✅ 테이블 ${dbTable.tableNumber} 최종 객체 구성:`, {
+                        hasCrossOrders: tableResult.hasCrossOrders,
+                        isTLLMixed: tableResult.isTLLMixed,
+                        mainOrder존재: !!tableResult.mainOrder,
+                        spareOrder존재: !!tableResult.spareOrder,
+                        orderItems수: tableResult.orderItems.length,
+                        totalAmount: tableResult.totalAmount
+                    });
+
+                    return tableResult;
                 }),
             );
 
