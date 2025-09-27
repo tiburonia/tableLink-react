@@ -2068,12 +2068,13 @@ router.post('/orders/modify-quantity', async (req, res) => {
     res.json({
       success: true,
       orderId: orderId,
-      oldTicketId: oldTicketId,
+      oldTicketIds: canceledTicketIds,
       newTicketId: newTicketId,
       menuName: menuName,
       oldQuantity: currentQuantity,
       newQuantity: newQuantity,
       hasOtherItems: hasOtherItems,
+      processedTickets: allTicketsWithMenuResult.rows.length,
       message: '주문 수정이 완료되었습니다'
     });
 
