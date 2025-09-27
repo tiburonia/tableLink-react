@@ -401,6 +401,25 @@ const OrderModificationManager = {
             }
         });
 
+        // pending-addition과 new-menu-item 클래스를 가진 행들 제거
+        const pendingRows = document.querySelectorAll('.pos-order-table tr.pending-addition, .pos-order-table tr.new-menu-item');
+        pendingRows.forEach(row => {
+            console.log('🗑️ pending/new-menu 행 제거:', row.dataset.menuId);
+            row.remove();
+        });
+
+        // currentOrders에서도 임시 추가된 항목들 제거
+        if (window.POSOrderScreen && window.POSOrderScreen.currentOrders) {
+            const originalLength = window.POSOrderScreen.currentOrders.length;
+            window.POSOrderScreen.currentOrders = window.POSOrderScreen.currentOrders.filter(order => 
+                !order.isNewMenu && !order.isPendingAddition
+            );
+            const removedCount = originalLength - window.POSOrderScreen.currentOrders.length;
+            if (removedCount > 0) {
+                console.log(`🗑️ currentOrders에서 ${removedCount}개 임시 항목 제거`);
+            }
+        }
+
         // 누적된 수정사항 초기화
         this.pendingModifications = [];
 
@@ -413,6 +432,13 @@ const OrderModificationManager = {
         if (summary) {
             summary.remove();
         }
+
+        // UI 새로고침
+        setTimeout(() => {
+            if (window.POSOrderScreen && typeof window.POSOrderScreen.refreshOrders === 'function') {
+                window.POSOrderScreen.refreshOrders();
+            }
+        }, 100);
     },
 
     /**

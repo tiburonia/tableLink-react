@@ -1685,13 +1685,39 @@ const POSOrderScreen = {
     cancelSelectedOrders() {
         // 누적된 수정사항이 있으면 모든 수정사항 취소
         if (this.pendingModifications.length > 0) {
-            this.cancelAllPendingModifications();
+            OrderModificationManager.cancelAllPendingModifications();
             return;
         }
 
         // 단일 선택된 주문이 있으면 해당 주문 편집 취소
         if (this.selectedOrder) {
             this.cancelOrderEdit();
+            return;
+        }
+
+        // pending-addition이나 new-menu-item 행들이 있으면 제거
+        const pendingRows = document.querySelectorAll('.pos-order-table tr.pending-addition, .pos-order-table tr.new-menu-item');
+        if (pendingRows.length > 0) {
+            console.log(`🗑️ ${pendingRows.length}개 pending/new-menu 행 제거`);
+            pendingRows.forEach(row => row.remove());
+
+            // currentOrders에서도 임시 추가된 항목들 제거
+            if (this.currentOrders) {
+                const originalLength = this.currentOrders.length;
+                this.currentOrders = this.currentOrders.filter(order => 
+                    !order.isNewMenu && !order.isPendingAddition
+                );
+                const removedCount = originalLength - this.currentOrders.length;
+                if (removedCount > 0) {
+                    console.log(`🗑️ currentOrders에서 ${removedCount}개 임시 항목 제거`);
+                }
+            }
+
+            // UI 새로고침
+            setTimeout(() => {
+                this.refreshOrders();
+            }, 100);
+            
             return;
         }
 
@@ -2082,20 +2108,46 @@ const POSOrderScreen = {
 
         console.log('🚫 주문 수정 취소');
 
-        // 화면상 변경사항 복원
-        const quantityDisplay = this.selectedOrder.rowElement.querySelector('.quantity-display');
-        if (quantityDisplay) {
-            const originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
-            quantityDisplay.textContent = originalQuantity;
-            quantityDisplay.classList.remove('modified');
-        }
+        // pending-addition이나 new-menu-item인 경우 행 자체를 제거
+        if (this.selectedOrder.rowElement && 
+            (this.selectedOrder.rowElement.classList.contains('pending-addition') || 
+             this.selectedOrder.rowElement.classList.contains('new-menu-item'))) {
+            
+            console.log('🗑️ pending/new-menu 행 제거:', this.selectedOrder.menuName);
+            this.selectedOrder.rowElement.remove();
 
-        // 행 스타일 복원
-        this.selectedOrder.rowElement.classList.remove('will-be-removed', 'selected');
+            // currentOrders에서도 해당 항목 제거
+            if (this.currentOrders) {
+                const originalLength = this.currentOrders.length;
+                this.currentOrders = this.currentOrders.filter(order => 
+                    !(order.isNewMenu || order.isPendingAddition || order.id === this.selectedOrder.orderId)
+                );
+                const removedCount = originalLength - this.currentOrders.length;
+                if (removedCount > 0) {
+                    console.log(`🗑️ currentOrders에서 ${removedCount}개 임시 항목 제거`);
+                }
+            }
+        } else {
+            // 일반 주문인 경우 화면상 변경사항 복원
+            const quantityDisplay = this.selectedOrder.rowElement.querySelector('.quantity-display');
+            if (quantityDisplay) {
+                const originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
+                quantityDisplay.textContent = originalQuantity;
+                quantityDisplay.classList.remove('modified');
+            }
+
+            // 행 스타일 복원
+            this.selectedOrder.rowElement.classList.remove('will-be-removed', 'selected');
+        }
 
         // 편집 모드 해제
         this.selectedOrder = null;
         this.updateEditModeUI(false);
+
+        // UI 새로고침 (pending/new-menu 항목이 제거된 경우)
+        setTimeout(() => {
+            this.refreshOrders();
+        }, 100);
     },
 
     /**
