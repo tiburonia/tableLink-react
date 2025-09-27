@@ -337,7 +337,7 @@ const POSOrderScreen = {
     async loadCurrentOrders(storeId, tableNumber) {
         try {
             console.log(`🔍 POS 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
-            
+
             // 기존 데이터 완전 초기화 (중복 방지)
             this.currentOrders = [];
 
@@ -367,7 +367,7 @@ const POSOrderScreen = {
             console.log(`🔍 TLL 주문 로드 시작: 매장 ${storeId}, 테이블 ${tableNumber}`);
 
             const { tllOrders, tllUserInfo } = await OrderDataManager.loadTLLOrders(storeId, tableNumber);
-            
+
             this.tllOrders = tllOrders;
             this.tllUserInfo = tllUserInfo;
 
@@ -881,8 +881,8 @@ const POSOrderScreen = {
                         // 새 메뉴 선택 (기존 order-row selected 클래스 사용)
                         newMenuRow.classList.add('order-row', 'selected');
 
-                        // 선택된 주문 정보 저장
-                        this.selectedOrder = {
+                        // OrderModificationManager의 selectedOrder 설정
+                        OrderModificationManager.selectedOrder = {
                             orderId: newMenuItem.id,
                             menuId: parseInt(menuId),
                             menuName: menuName,
@@ -891,6 +891,9 @@ const POSOrderScreen = {
                             rowElement: newMenuRow,
                             modified: true
                         };
+
+                        // 로컬 selectedOrder도 동기화
+                        this.selectedOrder = OrderModificationManager.selectedOrder;
 
                         console.log(`✅ 새 메뉴 자동 선택: ${menuName} (수량: ${newQuantity})`);
                     }
@@ -1715,7 +1718,7 @@ const POSOrderScreen = {
             setTimeout(() => {
                 this.refreshOrders();
             }, 100);
-            
+
             return;
         }
 
@@ -2110,7 +2113,7 @@ const POSOrderScreen = {
         if (this.selectedOrder.rowElement && 
             (this.selectedOrder.rowElement.classList.contains('pending-addition') || 
              this.selectedOrder.rowElement.classList.contains('new-menu-item'))) {
-            
+
             console.log('🗑️ pending/new-menu 행 제거:', this.selectedOrder.menuName);
             this.selectedOrder.rowElement.remove();
 
