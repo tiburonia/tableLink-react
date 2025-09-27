@@ -1112,13 +1112,13 @@ const POSOrderScreen = {
         console.log(`✅ ${method} 결제 선택됨 - 결제 모달 표시`);
 
         // 즉시 결제 모달 표시 (TLL 연동 감지 포함)
-        await this.showPaymentModal(method);
+        await this.showUnifiedPaymentModal(method);
     },
 
     /**
      * 통합 결제 모달 표시 (TLL 연동 감지 포함)
      */
-    async showPaymentModal(method = null) {
+    async showUnifiedPaymentModal(method = null) {
         try {
             console.log(`🔍 통합 결제 모달 표시 시작 (method: ${method})`);
 
@@ -2197,10 +2197,9 @@ const POSOrderScreen = {
      * 결제 모달 표시 (기존 호환성용)
      */
     showPaymentModal() {
-        console.log("✨ 기존 결제 모달 표시 (POSPaymentModal로 리다이렉트)");
-        // this.showPOSPaymentModal(this.selectedPaymentMethod || "card");
-        // 통합 결제 모달 함수로 대체
-        this.showPaymentModal(this.selectedPaymentMethod || "card");
+        console.log("✨ 기존 결제 모달 표시 (통합 결제 모달로 리다이렉트)");
+        // 무한 재귀 방지: 직접 통합 결제 모달 함수 호출
+        return this.showUnifiedPaymentModal(this.selectedPaymentMethod || "card");
     },
 
     /**
