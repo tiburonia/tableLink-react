@@ -109,6 +109,7 @@ try {
   // 새로운 POS 통합 시스템 라우터
   const posRoutes = require('./routes/pos');
   const posPaymentRoutes = require('./routes/pos-payment'); // POS 결제 라우터 추가
+  const posPaymentTLLRoutes = require('./routes/pos-payment-tll'); // TLL 연동 POS 결제 라우터 추가
   const tllRoutes = require('./routes/tll'); // TLL 라우터 추가
   const krpRoutes = require('./routes/krp'); // KRP 라우터 추가
   const kdsRoutes = require('./routes/kds'); // KDS 라우터 추가
@@ -130,6 +131,7 @@ try {
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/pos-payment', posPaymentRoutes); // POS 결제 라우터 등록
+  app.use('/api/pos-payment-tll', posPaymentTLLRoutes); // TLL 연동 POS 결제 라우터 등록
   app.use('/api/tll', tllRoutes); // TLL 라우터 경로 등록
   app.use('/api/kds', kdsRoutes); // KDS 라우터 경로 등록
   app.use('/api/payments', krpRoutes); // KRP 라우터 경로 변경
@@ -576,6 +578,7 @@ app.use('/api/toss', require('./routes/toss'));
 app.use('/api/tll', require('./routes/tll'));
 app.use('/api/pos', require('./routes/pos'));
 app.use('/api/pos-payment', require('./routes/pos-payment'));
+app.use('/api/pos-payment-tll', require('./routes/pos-payment-tll'));
 app.use('/api/kds', require('./routes/kds'));
 app.use('/api/krp', require('./routes/krp'));
 

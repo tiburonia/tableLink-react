@@ -915,7 +915,17 @@ const POSPaymentModal = {
             memberId,
         });
 
-        const response = await fetch("/api/pos-payment/process-with-customer", {
+        // 1. TLL 연동 주문 여부 확인
+        const isTLLIntegration = await this.checkTLLIntegration(storeId, tableNumber, orderId);
+        
+        // 2. TLL 연동 주문이면 전용 API 사용
+        const apiEndpoint = isTLLIntegration 
+            ? "/api/pos-payment-tll/process"
+            : "/api/pos-payment/process-with-customer";
+
+        console.log(`🔗 ${isTLLIntegration ? 'TLL 연동' : '일반'} 결제 API 사용: ${apiEndpoint}`);
+
+        const response = await fetch(apiEndpoint, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -939,6 +949,37 @@ const POSPaymentModal = {
         }
 
         return await response.json();
+    },
+
+    /**
+     * TLL 연동 주문 여부 확인
+     */
+    async checkTLLIntegration(storeId, tableNumber, orderId) {
+        try {
+            const response = await fetch(
+                `/api/pos-payment-tll/validate/${orderId}?storeId=${storeId}&tableNumber=${tableNumber}`
+            );
+            
+            if (!response.ok) {
+                console.warn('⚠️ TLL 연동 확인 실패, 일반 결제로 처리');
+                return false;
+            }
+            
+            const data = await response.json();
+            const isTLLIntegration = data.success && data.isTLLIntegration && data.canProcessPOSPayment;
+            
+            console.log(`🔍 TLL 연동 확인 결과:`, {
+                isTLLIntegration,
+                canProcessPOSPayment: data.canProcessPOSPayment,
+                hasPOSUnpaidTickets: data.hasPOSUnpaidTickets,
+                hasTLLPaidTickets: data.hasTLLPaidTickets
+            });
+            
+            return isTLLIntegration;
+        } catch (error) {
+            console.warn('⚠️ TLL 연동 확인 중 오류:', error);
+            return false;
+        }
     },
 
     /**
