@@ -2611,9 +2611,44 @@ const POSOrderScreen = {
     },
 
     /**
-     * 메뉴 이름으로 조리 스테이션 추정
+     * 메뉴 이름으로 조리 스테이션 조회 (실제 데이터 사용)
      */
     getCookStationByMenu(menuName) {
+        console.log(`🔍 cook_station 조회: ${menuName}`);
+        
+        // 1. 메뉴 데이터에서 해당 메뉴의 cook_station 찾기
+        if (this.menuData && Array.isArray(this.menuData)) {
+            const menuItem = this.menuData.find(menu => 
+                menu.name && menu.name.trim() === menuName.trim()
+            );
+            
+            if (menuItem && menuItem.cook_station) {
+                console.log(`✅ 메뉴 데이터에서 cook_station 발견: ${menuName} → ${menuItem.cook_station}`);
+                return menuItem.cook_station;
+            }
+            
+            // cook_station이 없으면 category 필드 사용 (호환성)
+            if (menuItem && menuItem.category) {
+                console.log(`✅ 메뉴 데이터에서 category 사용: ${menuName} → ${menuItem.category}`);
+                return menuItem.category;
+            }
+        }
+
+        // 2. 현재 주문에서 해당 메뉴의 cook_station 찾기
+        if (this.currentOrders && Array.isArray(this.currentOrders)) {
+            const orderItem = this.currentOrders.find(order => 
+                order.menuName && order.menuName.trim() === menuName.trim()
+            );
+            
+            if (orderItem && orderItem.cookStation) {
+                console.log(`✅ 현재 주문에서 cook_station 발견: ${menuName} → ${orderItem.cookStation}`);
+                return orderItem.cookStation;
+            }
+        }
+
+        // 3. 폴백: 키워드 기반 추정 (기존 로직)
+        console.log(`⚠️ 실제 데이터에서 cook_station을 찾을 수 없어 키워드 기반 추정 사용: ${menuName}`);
+        
         const menuNameLower = menuName.toLowerCase();
         
         // 음료 관련 키워드
@@ -2635,6 +2670,7 @@ const POSOrderScreen = {
         }
 
         // 기본값은 주방
+        console.log(`🏠 기본값 사용: ${menuName} → KITCHEN`);
         return 'KITCHEN';
     },
 
