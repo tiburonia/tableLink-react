@@ -235,51 +235,52 @@ const POSOrderScreen = {
             tableBody = posOrders
                 .map(
                     (order) => `
-                <tr class="order-row ${order.isCart ? "cart-item" : ""}" 
-                    data-order-id="${order.id}" 
-                    data-menu-id="${order.menuId || order.id}"
-                    onclick="POSOrderScreen.toggleOrderRowSelection(${order.id}, '${order.menuName}', ${order.quantity})"
-                    style="cursor: pointer;">
-                    <td class="col-menu">
-                        <div class="menu-info">
-                            <strong>${order.menuName}</strong>
-                            ${order.isCart ? '<span class="cart-badge">카트</span>' : ""}
-                        </div>
-                    </td>
-                    <td class="col-price">
-                        ${order.price.toLocaleString()}원
-                    </td>
-                    <td class="col-quantity">
-                        <div class="quantity-control-table">
-                            ${
-                                order.isCart
-                                    ? `
-                                <button class="qty-btn minus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
-                                    −
-                                </button>
-                                <span class="quantity-display">${order.quantity}</span>
-                                <button class="qty-btn plus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
-                                    +
-                                </button>
-                            `
-                                    : `
-                                <span class="quantity-display">${order.quantity}</span>
-                            `
-                            }
-                        </div>
-                    </td>
-                    <td class="col-total">
-                        <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
-                    </td>
-                    <td class="col-status">
-                        <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
-                            ${this.getStatusText(order.cookingStatus)}
-                        </span>
-                    </td>
-                </tr>
-            `,
-                )
-                .join("");
+                    <tr class="order-row ${order.isCart ? "cart-item" : ""} ${order.isNewMenu ? "new-menu-item" : ""}" 
+                        data-order-id="${order.id}" 
+                        data-menu-id="${order.menuId || order.id}"
+                        onclick="POSOrderScreen.toggleOrderRowSelection(${order.id}, '${order.menuName}', ${order.quantity})"
+                        style="cursor: pointer;">
+                        <td class="col-menu">
+                            <div class="menu-info">
+                                <strong>${order.menuName}</strong>
+                                ${order.isCart ? '<span class="cart-badge">카트</span>' : ""}
+                                ${order.isNewMenu ? '<span class="new-menu-badge">신규</span>' : ""}
+                            </div>
+                        </td>
+                        <td class="col-price">
+                            ${order.price.toLocaleString()}원
+                        </td>
+                        <td class="col-quantity">
+                            <div class="quantity-control-table">
+                                ${
+                                    order.isCart
+                                        ? `
+                                    <button class="qty-btn minus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
+                                        −
+                                    </button>
+                                    <span class="quantity-display">${order.quantity}</span>
+                                    <button class="qty-btn plus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
+                                        +
+                                    </button>
+                                `
+                                        : `
+                                    <span class="quantity-display">${order.quantity}</span>
+                                `
+                                }
+                            </div>
+                        </td>
+                        <td class="col-total">
+                            <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                        </td>
+                        <td class="col-status">
+                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
+                                ${this.getStatusText(order.cookingStatus)}
+                            </span>
+                        </td>
+                    </tr>
+                `,
+                    )
+                    .join("");
         } else {
             // 빈 행들로 기본 프레임 유지 (10개 빈 행)
             for (let i = 0; i < 10; i++) {
@@ -1505,7 +1506,21 @@ const POSOrderScreen = {
                     }
                 } else {
                     // 새로운 메뉴인 경우 일시적으로 카트에 추가하여 표시
-                    const cartItem = {
+                    // isNewMenu 플래그 추가
+                    const cartOrderItem = {
+                        id: `temp_${menuId}`, // 임시 ID
+                        menuId: menuId,
+                        menuName: menuName,
+                        price: price,
+                        quantity: 1,
+                        cookingStatus: "CART",
+                        isCart: true,
+                        originalCartIndex: this.cart.length, // 임시 인덱스
+                        isNewMenu: true // 새로운 메뉴 표시 플래그
+                    };
+
+                    this.currentOrders.push(cartOrderItem);
+                    this.cart.push({ // 실제 카트에도 추가
                         id: menuId,
                         menuId: menuId,
                         name: menuName,
@@ -1513,44 +1528,7 @@ const POSOrderScreen = {
                         quantity: 1,
                         store_id: storeId || POSCore.storeId,
                         cook_station: cookStation || this.getCookStationByMenu(menuName),
-                    };
-
-                    // 기존 카트에서 같은 메뉴 찾기
-                    const existingCartItem = this.cart.find(
-                        (item) =>
-                            item.id === menuId &&
-                            item.name === menuName &&
-                            item.price === price,
-                    );
-
-                    if (existingCartItem) {
-                        existingCartItem.quantity += 1;
-                    } else {
-                        this.cart.push(cartItem);
-                    }
-
-                    // 주문수정 상태에서는 카트 아이템을 currentOrders에도 추가하여 바로 표시
-                    const cartOrderItem = {
-                        id: `cart_${menuId}`,
-                        menuId: menuId,
-                        menuName: menuName,
-                        price: price,
-                        quantity: 1,
-                        cookingStatus: "CART",
-                        isCart: true,
-                        originalCartIndex: this.cart.length - 1
-                    };
-
-                    // currentOrders에서 같은 카트 아이템 찾기
-                    const existingOrderItem = this.currentOrders.find(order => 
-                        order.isCart && order.menuId === menuId && order.menuName === menuName
-                    );
-
-                    if (existingOrderItem) {
-                        existingOrderItem.quantity += 1;
-                    } else {
-                        this.currentOrders.push(cartOrderItem);
-                    }
+                    });
 
                     // UI 즉시 업데이트
                     const posOrderList = document.getElementById("posOrderList");
@@ -1645,9 +1623,11 @@ const POSOrderScreen = {
             cookingStatus: "CART",
             isCart: true,
             originalCartIndex: index,
+            isNewMenu: true, // 카트 아이템은 모두 신규 메뉴로 표시
         }));
 
         // 기존 주문내역을 먼저 표시하고, 그 다음에 카트 아이템들 표시
+        // this.currentOrders는 이미 consolidateOrderItems에 의해 통합된 데이터
         const allOrders = [...this.currentOrders, ...cartOrders];
 
         // tbody만 업데이트 (테이블 구조 유지)
@@ -1660,11 +1640,12 @@ const POSOrderScreen = {
                 tableBody = allOrders
                     .map(
                         (order) => `
-                    <tr class="order-row ${order.isCart ? "cart-item" : ""}" data-order-id="${order.id}">
+                    <tr class="order-row ${order.isCart ? "cart-item" : ""} ${order.isNewMenu ? "new-menu-item" : ""}" data-order-id="${order.id}">
                         <td class="col-menu">
                             <div class="menu-info">
                                 <strong>${order.menuName}</strong>
                                 ${order.isCart ? '<span class="cart-badge">카트</span>' : ""}
+                                ${order.isNewMenu ? '<span class="new-menu-badge">신규</span>' : ""}
                             </div>
                         </td>
                         <td class="col-price">

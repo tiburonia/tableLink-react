@@ -2689,6 +2689,22 @@ body {
     margin-left: 8px;
 }
 
+/* 새 메뉴 아이템 스타일 */
+.pos-order-table .new-menu-item {
+    background: #f0fdf4;
+    border-left: 3px solid #22c55e;
+}
+
+.pos-order-table .new-menu-item:hover {
+    background: #dcfce7;
+}
+
+.status-badge.status-new_menu {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #22c55e;
+}
+
 .action-btn.primary {
     background: #10b981;
     color: white;
