@@ -216,16 +216,7 @@ const OrderModificationManager = {
         if (isEditMode && (this.selectedOrder || this.pendingModifications.length > 0)) {
             // 수정 모드 활성화
             if (minusBtn) {
-                // Removed 'active' class addition as per user request
-                // minusBtn.classList.add('active');
-
-                if (this.selectedOrder) {
-                    const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
-                    const currentQty = this.selectedOrder.quantity;
-                    minusBtn.textContent = `- ${this.selectedOrder.menuName} (${originalQty}→${currentQty})`;
-                } else {
-                    minusBtn.textContent = `수량 감소 (${this.pendingModifications.length}개 수정중)`;
-                }
+                minusBtn.textContent = '-';
                 minusBtn.disabled = false;
             }
 
