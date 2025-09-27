@@ -50,7 +50,7 @@ router.post('/process', async (req, res) => {
     const tableStatusResult = await client.query(`
       SELECT processing_order_id, spare_processing_order_id
       FROM store_tables
-      WHERE store_id = $1 AND id = $2
+      WHERE store_id = $1 AND table_number = $2
     `, [storeId, tableNumber]);
 
     if (tableStatusResult.rows.length === 0) {
@@ -257,7 +257,7 @@ router.post('/process', async (req, res) => {
         spare_processing_order_id = NULL,
         status = 'AVAILABLE',
         updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $1 AND id = $2
+      WHERE store_id = $1 AND table_number = $2
       RETURNING processing_order_id, spare_processing_order_id, status
     `, [storeId, tableNumber]);
 
@@ -320,7 +320,7 @@ router.get('/validate/:orderId', async (req, res) => {
     const tableStatusResult = await pool.query(`
       SELECT processing_order_id, spare_processing_order_id, status
       FROM store_tables
-      WHERE store_id = $1 AND id = $2
+      WHERE store_id = $1 AND table_number = $2
     `, [storeId, tableNumber]);
 
     if (tableStatusResult.rows.length === 0) {
