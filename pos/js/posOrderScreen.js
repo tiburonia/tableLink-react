@@ -1,8 +1,21 @@
 replit_final_file>
 /**
  * POS 주문 화면 (OK POS 스타일 - 2분할 구조)
+ * 모듈 분리 후 메인 화면 관리자
  */
 
+// 모듈 의존성 체크
+if (typeof OrderDataManager === 'undefined') {
+    console.error('❌ OrderDataManager 모듈이 로드되지 않았습니다');
+}
+if (typeof OrderUIRenderer === 'undefined') {
+    console.error('❌ OrderUIRenderer 모듈이 로드되지 않았습니다');
+}
+if (typeof OrderModificationManager === 'undefined') {
+    console.error('❌ OrderModificationManager 모듈이 로드되지 않았습니다');
+}
+
+// 전역 스코프에서 POSOrderScreen 객체 정의
 const POSOrderScreen = {
     currentTable: null,
     currentOrders: [],
