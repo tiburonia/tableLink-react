@@ -96,7 +96,7 @@ const OrderModificationManager = {
         this.updateEditModeUI(true);
 
         // 수정사항 요약 표시 업데이트
-        this.updatePendingModificationsSummary();
+        // this.updatePendingModificationsSummary(); // This line is removed as per the user's request
     },
 
     /**
@@ -135,7 +135,7 @@ const OrderModificationManager = {
         this.updateEditModeUI(true);
 
         // 수정사항 요약 표시 업데이트
-        this.updatePendingModificationsSummary();
+        // this.updatePendingModificationsSummary(); // This line is removed as per the user's request
     },
 
     /**
@@ -216,7 +216,8 @@ const OrderModificationManager = {
         if (isEditMode && (this.selectedOrder || this.pendingModifications.length > 0)) {
             // 수정 모드 활성화
             if (minusBtn) {
-                minusBtn.classList.add('active');
+                // Removed 'active' class addition as per user request
+                // minusBtn.classList.add('active');
 
                 if (this.selectedOrder) {
                     const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
@@ -243,7 +244,8 @@ const OrderModificationManager = {
         } else {
             // 일반 모드로 복원
             if (minusBtn) {
-                minusBtn.classList.remove('active');
+                // Removed 'active' class removal as it's no longer added
+                // minusBtn.classList.remove('active');
                 minusBtn.textContent = '-';
                 minusBtn.disabled = true;
             }
@@ -304,59 +306,11 @@ const OrderModificationManager = {
     },
 
     /**
-     * 수정사항 요약 표시 업데이트
+     * 수정사항 요약 표시 업데이트 - This entire function is removed as per user request.
      */
-    updatePendingModificationsSummary() {
-        // 기존 요약 제거
-        const existingSummary = document.querySelector('.pending-modifications-summary');
-        if (existingSummary) {
-            existingSummary.remove();
-        }
-
-        // 수정사항이 없으면 요약 표시 안함
-        if (this.pendingModifications.length === 0) {
-            return;
-        }
-
-        // 수정사항을 증가/감소로 분류
-        const { decreaseModifications, increaseModifications } = this.categorizeModifications();
-
-        // 새로운 요약 생성
-        const summary = document.createElement('div');
-        summary.className = 'pending-modifications-summary';
-
-        const modificationsText = [
-            ...decreaseModifications.map(mod => {
-                if (mod.newQuantity === 0) {
-                    return `🗑️ ${mod.menuName}: 삭제 (${mod.originalQuantity}개 → 0개)`;
-                } else {
-                    return `📉 ${mod.menuName}: ${mod.changeAmount}개 감소 (${mod.originalQuantity}개 → ${mod.newQuantity}개)`;
-                }
-            }),
-            ...increaseModifications.map(mod => 
-                `📈 ${mod.menuName}: ${Math.abs(mod.changeAmount)}개 증가 (${mod.originalQuantity}개 → ${mod.newQuantity}개)`
-            )
-        ].join('\n');
-
-        const decreaseCount = decreaseModifications.length;
-        const increaseCount = increaseModifications.length;
-        const totalCount = this.pendingModifications.length;
-
-        summary.innerHTML = `
-            <div class="summary-header">📝 수정 예정 사항 (${totalCount}개)</div>
-            <div class="summary-stats">
-                <span class="decrease-count">📉 감소: ${decreaseCount}개</span>
-                <span class="increase-count">📈 증가: ${increaseCount}개</span>
-            </div>
-            <div class="summary-content">${modificationsText.replace(/\n/g, '<br>')}</div>
-            <div class="summary-actions">
-                <button class="cancel-all-btn" onclick="OrderModificationManager.cancelAllPendingModifications()">전체 취소</button>
-                <button class="confirm-all-btn" onclick="OrderModificationManager.confirmAllPendingModifications()">수정 확정</button>
-            </div>
-        `;
-
-        document.body.appendChild(summary);
-    },
+    // updatePendingModificationsSummary() {
+    //     // ... removed content ...
+    // },
 
     /**
      * 수정사항을 증가/감소로 분류
@@ -448,11 +402,11 @@ const OrderModificationManager = {
         this.selectedOrder = null;
         this.updateEditModeUI(false);
 
-        // 요약 제거
-        const summary = document.querySelector('.pending-modifications-summary');
-        if (summary) {
-            summary.remove();
-        }
+        // 요약 제거 - Removed as per user request.
+        // const summary = document.querySelector('.pending-modifications-summary');
+        // if (summary) {
+        //     summary.remove();
+        // }
 
         // UI 새로고침
         setTimeout(() => {
@@ -486,7 +440,7 @@ const OrderModificationManager = {
             const { decreaseModifications, increaseModifications } = this.categorizeModifications();
 
             // 확인 메시지 생성
-            const modificationsSummary = [
+            const modificationsText = [
                 ...decreaseModifications.map(mod => {
                     if (mod.newQuantity === 0) {
                         return `• ${mod.menuName}: 삭제 (${mod.originalQuantity}개 → 0개)`;
@@ -499,7 +453,7 @@ const OrderModificationManager = {
                 )
             ].join('\n');
 
-            const confirmMessage = `다음 수정사항을 확정하시겠습니까?\n\n${modificationsSummary}`;
+            const confirmMessage = `다음 수정사항을 확정하시겠습니까?\n\n${modificationsText}`;
 
             if (!confirm(confirmMessage)) {
                 console.log('🚫 사용자가 다중 주문 수정을 취소했습니다.');
@@ -701,14 +655,12 @@ const OrderModificationManager = {
      * 모든 수정사항 초기화
      */
     resetAllModifications() {
+        // 누적된 수정사항 초기화
         this.pendingModifications = [];
+
+        // 편집 모드 해제
         this.selectedOrder = null;
         this.updateEditModeUI(false);
-
-        const summary = document.querySelector('.pending-modifications-summary');
-        if (summary) {
-            summary.remove();
-        }
     },
 
     /**

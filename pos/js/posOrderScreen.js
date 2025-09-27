@@ -930,9 +930,6 @@ const POSOrderScreen = {
                 }
             }, 150); // DOM 업데이트와 렌더링이 완료된 후 실행
 
-            // 수정사항 요약 업데이트
-            this.updatePendingModificationsSummary();
-
             // 편집 모드 UI 업데이트
             this.updateEditModeUI(true);
 
@@ -1860,12 +1857,7 @@ const POSOrderScreen = {
         return 0;
     },
 
-    /**
-     * 수정사항 요약 표시 업데이트 - OrderModificationManager로 위임
-     */
-    updatePendingModificationsSummary() {
-        return OrderModificationManager.updatePendingModificationsSummary();
-    },
+    
 
     /**
      * 모든 누적된 수정사항 취소 - OrderModificationManager로 위임
