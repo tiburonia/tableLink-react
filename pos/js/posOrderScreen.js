@@ -1109,9 +1109,28 @@ const POSOrderScreen = {
             selectedBtn.classList.add('active');
         }
 
-        console.log(`✅ ${method} 결제 선택됨 - 결제 모달 표시`);
+        console.log(`✅ ${method} 결제 선택됨 - TLL 연동 우선 감지`);
 
-        // 즉시 결제 모달 표시 (TLL 연동 감지 포함)
+        // 1. 먼저 TLL 연동 주문 여부를 즉시 확인
+        const isTLLIntegration = await this.checkTLLIntegrationImmediate();
+
+        if (isTLLIntegration) {
+            console.log('🔗 TLL 연동 주문 감지됨 - POSTLLPaymentModal 직접 호출');
+            
+            // TLL 연동이면 바로 POSTLLPaymentModal 호출
+            if (typeof POSTLLPaymentModal !== 'undefined') {
+                await POSTLLPaymentModal.show();
+                return; // 일반 결제 모달로 진행하지 않음
+            } else {
+                console.error('❌ POSTLLPaymentModal을 찾을 수 없습니다');
+                alert('TLL 연동 결제 모달을 불러올 수 없습니다.');
+                return;
+            }
+        }
+
+        console.log('ℹ️ 일반 POS 주문 - 기본 결제 모달 호출');
+
+        // 2. 일반 주문인 경우 기존 통합 모달 호출
         await this.showUnifiedPaymentModal(method);
     },
 
@@ -1241,6 +1260,114 @@ const POSOrderScreen = {
         } catch (error) {
             console.error("❌ 폴백 결제 처리 실패:", error);
             alert("결제 처리 중 오류가 발생했습니다: " + error.message);
+        }
+    },
+
+    /**
+     * TLL 연동을 즉시 감지하는 메서드 (selectPaymentMethod 전용)
+     */
+    async checkTLLIntegrationImmediate() {
+        try {
+            const storeId = this.currentStoreId;
+            const tableNumber = this.currentTableNumber;
+
+            if (!storeId || !tableNumber) {
+                console.warn('⚠️ 매장 ID 또는 테이블 번호가 없음');
+                return false;
+            }
+
+            console.log(`🔍 TLL 연동 즉시 감지 시작: 매장=${storeId}, 테이블=${tableNumber}`);
+
+            // 1. 활성 주문 조회
+            const activeOrderResponse = await fetch(
+                `/api/pos/stores/${storeId}/table/${tableNumber}/active-order`
+            );
+
+            if (!activeOrderResponse.ok) {
+                console.warn('⚠️ 활성 주문 조회 실패');
+                return false;
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
+                console.log('ℹ️ 활성 주문 없음');
+                return false;
+            }
+
+            const orderId = activeOrderData.orderId;
+
+            // 2. 테이블 상태 확인 (POI=SPOI 여부)
+            const tableStatusResponse = await fetch(
+                `/api/pos/stores/${storeId}/table/${tableNumber}/status`
+            );
+
+            if (!tableStatusResponse.ok) {
+                console.warn('⚠️ 테이블 상태 확인 실패');
+                return false;
+            }
+
+            const tableStatusData = await tableStatusResponse.json();
+
+            if (!tableStatusData.success || !tableStatusData.table) {
+                console.warn('⚠️ 테이블 정보가 없음');
+                return false;
+            }
+
+            const { processing_order_id, spare_processing_order_id, isTLLMixedOrder } = tableStatusData.table;
+
+            // POI = SPOI = 현재 주문 ID 확인
+            const isSharedOrder = (
+                processing_order_id !== null &&
+                spare_processing_order_id !== null &&
+                parseInt(processing_order_id) === parseInt(spare_processing_order_id) &&
+                parseInt(processing_order_id) === parseInt(orderId)
+            );
+
+            console.log(`📊 테이블 상태 즉시 확인:`, {
+                processing_order_id,
+                spare_processing_order_id,
+                current_order_id: orderId,
+                isSharedOrder,
+                isTLLMixedOrder
+            });
+
+            if (!isSharedOrder) {
+                console.log('ℹ️ TLL 연동 주문이 아님 (POI≠SPOI 또는 주문 ID 불일치)');
+                return false;
+            }
+
+            // 3. TLL 연동 결제 유효성 확인
+            const validationResponse = await fetch(
+                `/api/pos-payment-tll/validate/${orderId}?storeId=${storeId}&tableNumber=${tableNumber}`
+            );
+
+            if (!validationResponse.ok) {
+                console.warn('⚠️ TLL 연동 결제 유효성 확인 실패');
+                return false;
+            }
+
+            const validationData = await validationResponse.json();
+            const canProcessTLLPayment = (
+                validationData.success &&
+                validationData.isTLLIntegration &&
+                validationData.canProcessPOSPayment &&
+                validationData.hasPOSUnpaidTickets &&
+                validationData.hasTLLPaidTickets
+            );
+
+            console.log(`🔍 TLL 연동 유효성 즉시 확인:`, {
+                isTLLIntegration: validationData.isTLLIntegration,
+                canProcessPOSPayment: validationData.canProcessPOSPayment,
+                hasPOSUnpaidTickets: validationData.hasPOSUnpaidTickets,
+                hasTLLPaidTickets: validationData.hasTLLPaidTickets,
+                canProcessTLLPayment
+            });
+
+            return canProcessTLLPayment;
+
+        } catch (error) {
+            console.error('❌ TLL 연동 즉시 감지 중 오류:', error);
+            return false;
         }
     },
 
