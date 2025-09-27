@@ -506,116 +506,87 @@ const OrderModificationManager = {
     },
 
     /**
-     * 감소 수정 처리
+     * 감소 수정 처리 (batch 알고리즘 사용)
      */
     async processDecreaseModification(modification) {
-        const { menuId, menuName, originalQuantity, newQuantity } = modification;
+        const { menuId, menuName, originalQuantity, newQuantity, changeAmount } = modification;
 
-        console.log(`🔄 ${menuName} 감소 처리 시작: ${originalQuantity} → ${newQuantity}`);
+        console.log(`🔄 batch 알고리즘 ${menuName} 감소 처리: ${originalQuantity} → ${newQuantity} (차감: ${changeAmount})`);
 
-        let remainingQuantity = originalQuantity;
-        let menuSuccessCount = 0;
-
-        while (remainingQuantity > newQuantity && remainingQuantity > 0) {
-            try {
-                const requestData = {
-                    storeId: parseInt(window.POSOrderScreen?.currentStoreId),
-                    tableNumber: parseInt(window.POSOrderScreen?.currentTableNumber),
-                    menuId: parseInt(menuId),
-                    menuName: menuName,
-                    currentQuantity: remainingQuantity
-                };
-
-                console.log(`📤 ${menuName} 수량 감소 API 호출 (${remainingQuantity} → ${remainingQuantity - 1})`);
-
-                const response = await fetch('/api/pos/orders/modify-quantity', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestData),
-                });
-
-                if (!response.ok) {
-                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                    try {
-                        const errorData = await response.json();
-                        errorMessage = errorData.error || errorMessage;
-                    } catch (parseError) {
-                        console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
+        try {
+            // batch API를 사용하여 한 번에 처리
+            const requestBody = {
+                storeId: parseInt(window.POSOrderScreen?.currentStoreId),
+                tableNumber: parseInt(window.POSOrderScreen?.currentTableNumber),
+                modifications: {
+                    add: {},
+                    remove: {
+                        [menuName]: changeAmount // changeAmount만큼 감소
                     }
-                    throw new Error(errorMessage);
                 }
+            };
 
-                const result = await response.json();
-                console.log(`✅ ${menuName} 수량 감소 완료 (${remainingQuantity} → ${remainingQuantity - 1})`);
+            console.log(`📤 batch 감소 요청:`, requestBody);
 
-                remainingQuantity--;
-                menuSuccessCount++;
+            const response = await fetch('/api/pos/orders/modify-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+            });
 
-                // API 호출 간 짧은 지연
-                if (remainingQuantity > newQuantity) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
                 }
-
-            } catch (stepError) {
-                console.error(`❌ ${menuName} 수량 감소 실패 (${remainingQuantity}개 처리 중):`, stepError);
-                return {
-                    successCount: menuSuccessCount,
-                    error: `${menuName}: ${menuSuccessCount}번 성공 후 실패 - ${stepError.message}`
-                };
+                throw new Error(errorMessage);
             }
-        }
 
-        console.log(`✅ ${menuName} 감소 처리 완료: ${menuSuccessCount}번 성공`);
-        return { successCount: menuSuccessCount };
+            const result = await response.json();
+            console.log(`✅ batch ${menuName} 감소 완료:`, result);
+
+            return { 
+                successCount: changeAmount, // 실제 차감된 수량
+                result: result 
+            };
+
+        } catch (error) {
+            console.error(`❌ batch ${menuName} 감소 실패:`, error);
+            return {
+                successCount: 0,
+                error: `${menuName}: batch 감소 실패 - ${error.message}`
+            };
+        }
     },
 
     /**
-     * 증가 수정 처리
+     * 증가 수정 처리 (batch 알고리즘 사용)
      */
     async processIncreaseModifications(increaseModifications) {
-        console.log(`📈 증가 수정 처리 시작: ${increaseModifications.length}개 메뉴`);
-
-        // 증가하는 메뉴들을 카트 아이템 형태로 변환
-        const increaseItems = increaseModifications.map(mod => ({
-            id: mod.menuId,
-            menuId: mod.menuId,
-            name: mod.menuName,
-            price: mod.price,
-            quantity: Math.abs(mod.changeAmount), // 증가 수량
-            store_id: window.POSOrderScreen?.currentStoreId,
-            cook_station: this.getMenuCookStation(mod.menuId)
-        }));
-
-        console.log(`📋 증가 아이템 생성:`, increaseItems);
+        console.log(`📈 batch 알고리즘 증가 수정 처리: ${increaseModifications.length}개 메뉴`);
 
         try {
-            // TLL 연동 상태 확인
-            const hasTLLOrders = window.POSOrderScreen?.tllOrders && window.POSOrderScreen.tllOrders.length > 0;
-            const isTLLMixed = window.POSOrderScreen?.checkTLLOrderMixedStatus();
+            // 증가 수정사항을 batch API 형태로 변환
+            const addModifications = {};
+            increaseModifications.forEach(mod => {
+                addModifications[mod.menuName] = Math.abs(mod.changeAmount);
+            });
 
-            const total = increaseItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-            // TLL 연동 상태에 따라 다른 API 사용
-            let apiEndpoint = "/api/pos/guest-orders/confirm";
-            let requestBody = {
+            const requestBody = {
                 storeId: parseInt(window.POSOrderScreen?.currentStoreId),
                 tableNumber: parseInt(window.POSOrderScreen?.currentTableNumber),
-                items: increaseItems,
-                totalAmount: total,
+                modifications: {
+                    add: addModifications,
+                    remove: {}
+                }
             };
 
-            if (hasTLLOrders && isTLLMixed) {
-                // TLL 연동된 경우: 기존 주문에 추가
-                apiEndpoint = "/api/pos/orders/confirm";
-                requestBody.mergeWithExisting = true;
-                requestBody.existingOrderId = window.POSOrderScreen.tllOrders[0].order_id;
-                console.log("🔗 TLL 연동 증가 주문으로 처리: 기존 주문에 추가");
-            } else {
-                // TLL 미연동 또는 TLL 없는 경우: 새 주문 생성
-                console.log("📝 별도 POS 증가 주문으로 처리");
-            }
+            console.log(`📋 batch 증가 요청:`, requestBody);
 
-            const response = await fetch(apiEndpoint, {
+            const response = await fetch("/api/pos/orders/modify-batch", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(requestBody),
@@ -623,16 +594,16 @@ const OrderModificationManager = {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || "증가 주문 생성 실패");
+                throw new Error(errorData.error || "batch 증가 처리 실패");
             }
 
             const result = await response.json();
-            console.log("✅ 증가 주문 생성 완료:", result);
+            console.log("✅ batch 증가 처리 완료:", result);
 
             return { success: true, result };
 
         } catch (error) {
-            console.error('❌ 증가 수정 처리 실패:', error);
+            console.error('❌ batch 증가 처리 실패:', error);
             return { success: false, error: error.message };
         }
     },
