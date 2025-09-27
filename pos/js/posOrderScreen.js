@@ -1723,6 +1723,37 @@ const POSOrderScreen = {
             return;
         }
 
+        // 편집 모드 상태 확인 (확인 버튼이 edit-mode 상태이거나 표시기가 있는 경우)
+        const confirmBtn = document.querySelector('#confirmOrder');
+        const isEditModeActive = (confirmBtn && confirmBtn.classList.contains('edit-mode')) ||
+                                document.querySelector('.edit-mode-indicator') ||
+                                document.querySelector('.control-btn.quantity-minus:not([disabled])');
+
+        if (isEditModeActive) {
+            console.log('🚫 편집 모드 강제 종료 (수정 내역 없음)');
+
+            // 편집 모드 UI 상태 초기화
+            this.updateEditModeUI(false);
+
+            // 선택된 주문 해제
+            document.querySelectorAll('.pos-order-table tr').forEach(row => {
+                row.classList.remove('selected', 'order-row-selected');
+            });
+
+            // 편집 상태 초기화
+            this.selectedOrder = null;
+            this.pendingModifications = [];
+
+            // OrderModificationManager도 동기화
+            if (typeof OrderModificationManager !== 'undefined') {
+                OrderModificationManager.selectedOrder = null;
+                OrderModificationManager.pendingModifications = [];
+            }
+
+            this.showToast("편집 모드가 종료되었습니다");
+            return;
+        }
+
         // 임시 ID를 가진 행들이 있으면 제거
         const tempRows = document.querySelectorAll('.pos-order-table tr[data-order-id^="temp_"]');
         if (tempRows.length > 0) {
@@ -1741,7 +1772,7 @@ const POSOrderScreen = {
                 }
             }
 
-            // UI 새로고침
+            // UI 새로고침 및 테이블맵 이동
             setTimeout(() => {
                 this.refreshOrders();
             }, 100);
@@ -1857,7 +1888,7 @@ const POSOrderScreen = {
         return 0;
     },
 
-    
+
 
     /**
      * 모든 누적된 수정사항 취소 - OrderModificationManager로 위임

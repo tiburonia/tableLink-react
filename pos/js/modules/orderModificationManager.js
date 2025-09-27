@@ -221,12 +221,7 @@ const OrderModificationManager = {
             }
 
             if (confirmBtn) {
-                const pendingCount = this.pendingModifications.length;
-                if (pendingCount > 0) {
-                    confirmBtn.querySelector('.method-name').textContent = `수정확정 (${pendingCount})`;
-                } else {
-                    confirmBtn.querySelector('.method-name').textContent = '수정확정';
-                }
+                confirmBtn.querySelector('.method-name').textContent = '주문';
                 confirmBtn.classList.add('edit-mode');
             }
 
