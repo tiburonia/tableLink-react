@@ -1649,7 +1649,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
 
     // 1. 현재 테이블의 활성 주문 조회
     const activeOrderResult = await client.query(`
-      SELECT DISTINCT o.id as order_id
+      SELECT DISTINCT o.id as order_id, o.created_at
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       WHERE o.store_id = $1
