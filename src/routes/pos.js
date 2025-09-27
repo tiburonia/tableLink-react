@@ -1457,17 +1457,44 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
 
     const table = tableResult.rows[0];
 
-    // TLL 연동 교차주문 여부 판단
+    // TLL 연동 교차주문 여부 판단 (POI = SPOI이고 둘 다 null이 아님)
     const isTLLMixedOrder = (
       table.processing_order_id !== null &&
       table.spare_processing_order_id !== null &&
-      table.processing_order_id === table.spare_processing_order_id
+      parseInt(table.processing_order_id) === parseInt(table.spare_processing_order_id)
     );
+
+    // 추가 검증: 해당 주문이 실제로 is_mixed = true인지 확인
+    let isActuallyMixed = false;
+    if (isTLLMixedOrder && table.processing_order_id) {
+      try {
+        const orderCheckResult = await pool.query(`
+          SELECT is_mixed, source, session_status
+          FROM orders
+          WHERE id = $1
+        `, [table.processing_order_id]);
+        
+        if (orderCheckResult.rows.length > 0) {
+          const order = orderCheckResult.rows[0];
+          isActuallyMixed = (
+            order.is_mixed === true &&
+            order.source === 'TLL' &&
+            order.session_status === 'OPEN'
+          );
+        }
+      } catch (error) {
+        console.warn(`⚠️ 주문 is_mixed 상태 확인 실패: ${table.processing_order_id}`, error);
+      }
+    }
+
+    const finalTLLMixedStatus = isTLLMixedOrder && isActuallyMixed;
 
     console.log(`✅ 테이블 ${tableNumber} 상태 조회 완료:`, {
       processing_order_id: table.processing_order_id,
       spare_processing_order_id: table.spare_processing_order_id,
-      isTLLMixedOrder: isTLLMixedOrder
+      isTLLMixedOrder: isTLLMixedOrder,
+      isActuallyMixed: isActuallyMixed,
+      finalTLLMixedStatus: finalTLLMixedStatus
     });
 
     res.json({
@@ -1478,7 +1505,7 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
         spare_processing_order_id: table.spare_processing_order_id,
         status: table.status,
         updated_at: table.updated_at,
-        isTLLMixedOrder: isTLLMixedOrder
+        isTLLMixedOrder: finalTLLMixedStatus
       }
     });
 

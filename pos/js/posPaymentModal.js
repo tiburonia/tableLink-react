@@ -965,28 +965,79 @@ const POSPaymentModal = {
      */
     async checkTLLIntegration(storeId, tableNumber, orderId) {
         try {
-            const response = await fetch(
-                `/api/pos-payment-tll/validate/${orderId}?storeId=${storeId}&tableNumber=${tableNumber}`
+            console.log(`🔍 TLL 연동 확인 시작: 매장=${storeId}, 테이블=${tableNumber}, 주문=${orderId}`);
+            
+            // 1. 먼저 테이블 상태 확인 (POI=SPOI 여부)
+            const tableStatusResponse = await fetch(
+                `/api/pos/stores/${storeId}/table/${tableNumber}/status`
             );
             
-            if (!response.ok) {
-                console.warn('⚠️ TLL 연동 확인 실패, 일반 결제로 처리');
+            if (!tableStatusResponse.ok) {
+                console.warn('⚠️ 테이블 상태 확인 실패, 일반 결제로 처리');
                 return false;
             }
             
-            const data = await response.json();
-            const isTLLIntegration = data.success && data.isTLLIntegration && data.canProcessPOSPayment;
+            const tableStatusData = await tableStatusResponse.json();
             
-            console.log(`🔍 TLL 연동 확인 결과:`, {
-                isTLLIntegration,
-                canProcessPOSPayment: data.canProcessPOSPayment,
-                hasPOSUnpaidTickets: data.hasPOSUnpaidTickets,
-                hasTLLPaidTickets: data.hasTLLPaidTickets
+            if (!tableStatusData.success || !tableStatusData.table) {
+                console.warn('⚠️ 테이블 정보가 없음, 일반 결제로 처리');
+                return false;
+            }
+            
+            const { processing_order_id, spare_processing_order_id, isTLLMixedOrder } = tableStatusData.table;
+            
+            // POI = SPOI = 현재 주문 ID 확인
+            const isSharedOrder = (
+                processing_order_id !== null &&
+                spare_processing_order_id !== null &&
+                parseInt(processing_order_id) === parseInt(spare_processing_order_id) &&
+                parseInt(processing_order_id) === parseInt(orderId)
+            );
+            
+            console.log(`📊 테이블 상태:`, {
+                processing_order_id,
+                spare_processing_order_id,
+                current_order_id: orderId,
+                isSharedOrder,
+                isTLLMixedOrder
+            });
+            
+            if (!isSharedOrder) {
+                console.log('ℹ️ TLL 연동 주문이 아님 (POI≠SPOI 또는 주문 ID 불일치)');
+                return false;
+            }
+            
+            // 2. TLL 연동 결제 유효성 확인
+            const validationResponse = await fetch(
+                `/api/pos-payment-tll/validate/${orderId}?storeId=${storeId}&tableNumber=${tableNumber}`
+            );
+            
+            if (!validationResponse.ok) {
+                console.warn('⚠️ TLL 연동 결제 유효성 확인 실패');
+                return false;
+            }
+            
+            const validationData = await validationResponse.json();
+            const canProcessTLLPayment = (
+                validationData.success &&
+                validationData.isTLLIntegration &&
+                validationData.canProcessPOSPayment &&
+                validationData.hasPOSUnpaidTickets &&
+                validationData.hasTLLPaidTickets
+            );
+            
+            console.log(`🔍 TLL 연동 유효성 확인:`, {
+                isTLLIntegration: validationData.isTLLIntegration,
+                canProcessPOSPayment: validationData.canProcessPOSPayment,
+                hasPOSUnpaidTickets: validationData.hasPOSUnpaidTickets,
+                hasTLLPaidTickets: validationData.hasTLLPaidTickets,
+                posUnpaidAmount: validationData.posUnpaidAmount,
+                canProcessTLLPayment
             });
             
             // TLL 연동 주문이면 전용 모달 표시
-            if (isTLLIntegration) {
-                console.log('🔗 TLL 연동 주문 감지 - 전용 결제 모달 표시');
+            if (canProcessTLLPayment) {
+                console.log('🔗 TLL 연동 주문 감지 - 전용 결제 모달로 전환');
                 
                 // 기존 모달 숨김
                 this.hide();
@@ -1002,9 +1053,11 @@ const POSPaymentModal = {
                 return true; // TLL 연동으로 처리됨을 표시
             }
             
+            console.log('ℹ️ TLL 연동 조건 미충족, 일반 결제로 처리');
             return false;
+            
         } catch (error) {
-            console.warn('⚠️ TLL 연동 확인 중 오류:', error);
+            console.error('❌ TLL 연동 확인 중 오류:', error);
             return false;
         }
     },

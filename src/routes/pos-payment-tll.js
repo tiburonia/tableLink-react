@@ -362,13 +362,64 @@ router.get('/validate/:orderId', async (req, res) => {
 
     const hasTLLPaidTickets = parseInt(tllPaidResult.rows[0].count) > 0;
 
+    // 3. POS 미지불 금액 계산
+    let posUnpaidAmount = 0;
+    let posUnpaidTickets = 0;
+    
+    if (hasPOSUnpaidTickets) {
+      const posAmountResult = await pool.query(`
+        SELECT 
+          COUNT(*) as ticket_count,
+          COALESCE(SUM(oi.total_price), 0) as total_amount
+        FROM order_tickets ot
+        JOIN order_items oi ON ot.id = oi.ticket_id
+        WHERE ot.order_id = $1
+          AND ot.source = 'POS'
+          AND ot.paid_status = 'UNPAID'
+          AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+      `, [orderId]);
+      
+      if (posAmountResult.rows.length > 0) {
+        posUnpaidTickets = parseInt(posAmountResult.rows[0].ticket_count) || 0;
+        posUnpaidAmount = parseInt(posAmountResult.rows[0].total_amount) || 0;
+      }
+    }
+
+    // 4. 주문의 is_mixed 상태 확인
+    const orderMixedResult = await pool.query(`
+      SELECT is_mixed, source, session_status
+      FROM orders
+      WHERE id = $1
+    `, [orderId]);
+    
+    let isOrderMixed = false;
+    let orderSource = null;
+    if (orderMixedResult.rows.length > 0) {
+      const order = orderMixedResult.rows[0];
+      isOrderMixed = order.is_mixed === true;
+      orderSource = order.source;
+    }
+
+    const finalCanProcess = (
+      isTLLIntegration &&
+      hasPOSUnpaidTickets &&
+      hasTLLPaidTickets &&
+      isOrderMixed &&
+      orderSource === 'TLL' &&
+      posUnpaidAmount > 0
+    );
+
     const validationResult = {
       success: true,
       orderId: parseInt(orderId),
       isTLLIntegration: isTLLIntegration,
       hasPOSUnpaidTickets: hasPOSUnpaidTickets,
       hasTLLPaidTickets: hasTLLPaidTickets,
-      canProcessPOSPayment: isTLLIntegration && hasPOSUnpaidTickets && hasTLLPaidTickets,
+      posUnpaidTickets: posUnpaidTickets,
+      posUnpaidAmount: posUnpaidAmount,
+      isOrderMixed: isOrderMixed,
+      orderSource: orderSource,
+      canProcessPOSPayment: finalCanProcess,
       tableStatus: {
         processing_order_id: processingOrderId,
         spare_processing_order_id: spareOrderId,

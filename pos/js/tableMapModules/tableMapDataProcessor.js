@@ -36,12 +36,22 @@ const TableMapDataProcessor = {
                         if (tableStatusResponse.ok) {
                             tableStatusData = await tableStatusResponse.json();
                             if (tableStatusData.success && tableStatusData.table) {
-                                const { processing_order_id, spare_processing_order_id } = tableStatusData.table;
+                                const { processing_order_id, spare_processing_order_id, isTLLMixedOrder } = tableStatusData.table;
+                                
+                                // POI = SPOI이고 둘 다 null이 아닌 경우만 TLL 연동으로 판단
                                 hasTLLMixedOrder = (
                                     processing_order_id !== null && 
                                     spare_processing_order_id !== null &&
-                                    parseInt(processing_order_id) === parseInt(spare_processing_order_id)
+                                    parseInt(processing_order_id) === parseInt(spare_processing_order_id) &&
+                                    isTLLMixedOrder === true // API에서 제공하는 플래그도 확인
                                 );
+                                
+                                console.log(`🔍 테이블 ${dbTable.tableNumber} TLL 연동 상태:`, {
+                                    processing_order_id,
+                                    spare_processing_order_id,
+                                    isTLLMixedOrder,
+                                    hasTLLMixedOrder
+                                });
                             }
                         }
                     } catch (error) {
