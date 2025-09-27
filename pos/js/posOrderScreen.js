@@ -2611,6 +2611,34 @@ const POSOrderScreen = {
     },
 
     /**
+     * 메뉴 이름으로 조리 스테이션 추정
+     */
+    getCookStationByMenu(menuName) {
+        const menuNameLower = menuName.toLowerCase();
+        
+        // 음료 관련 키워드
+        const drinkKeywords = ['콜라', '사이다', '음료', '주스', '커피', '차', '라떼', '아메리카노', '물', '맥주', '소주', 'drink', 'coffee', 'tea', 'juice', 'cola', 'beer'];
+        if (drinkKeywords.some(keyword => menuNameLower.includes(keyword.toLowerCase()))) {
+            return 'DRINK';
+        }
+
+        // 디저트 관련 키워드
+        const dessertKeywords = ['케이크', '아이스크림', '빙수', '떡', '과자', 'cake', 'ice', 'dessert'];
+        if (dessertKeywords.some(keyword => menuNameLower.includes(keyword.toLowerCase()))) {
+            return 'DESSERT';
+        }
+
+        // 사이드 관련 키워드
+        const sideKeywords = ['샐러드', '김치', '반찬', '무', '피클', 'side', 'salad'];
+        if (sideKeywords.some(keyword => menuNameLower.includes(keyword.toLowerCase()))) {
+            return 'SIDE';
+        }
+
+        // 기본값은 주방
+        return 'KITCHEN';
+    },
+
+    /**
      * 주문 탭 전환
      */
     switchOrderTab(tabType) {
