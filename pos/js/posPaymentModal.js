@@ -843,6 +843,12 @@ const POSPaymentModal = {
                 memberId,
             );
 
+            // TLL 연동 모달로 전환된 경우
+            if (paymentResult.success && paymentResult.redirectedToTLLModal) {
+                console.log('🔗 TLL 연동 전용 모달로 전환됨');
+                return; // 더 이상 진행하지 않음
+            }
+
             if (paymentResult.success) {
                 console.log("✅ 결제 완료:", paymentResult);
 
@@ -915,15 +921,18 @@ const POSPaymentModal = {
             memberId,
         });
 
-        // 1. TLL 연동 주문 여부 확인
+        // 1. TLL 연동 주문 여부 확인 및 전용 모달 전환
         const isTLLIntegration = await this.checkTLLIntegration(storeId, tableNumber, orderId);
         
-        // 2. TLL 연동 주문이면 전용 API 사용
-        const apiEndpoint = isTLLIntegration 
-            ? "/api/pos-payment-tll/process"
-            : "/api/pos-payment/process-with-customer";
+        // TLL 연동이면 이미 전용 모달로 전환되었으므로 여기서 중단
+        if (isTLLIntegration) {
+            return { success: true, redirectedToTLLModal: true };
+        }
+        
+        // 2. 일반 POS 결제 진행
+        const apiEndpoint = "/api/pos-payment/process-with-customer";
 
-        console.log(`🔗 ${isTLLIntegration ? 'TLL 연동' : '일반'} 결제 API 사용: ${apiEndpoint}`);
+        console.log(`💳 일반 POS 결제 API 사용: ${apiEndpoint}`);
 
         const response = await fetch(apiEndpoint, {
             method: "POST",
@@ -952,7 +961,7 @@ const POSPaymentModal = {
     },
 
     /**
-     * TLL 연동 주문 여부 확인
+     * TLL 연동 주문 여부 확인 및 전용 모달 표시
      */
     async checkTLLIntegration(storeId, tableNumber, orderId) {
         try {
@@ -975,7 +984,25 @@ const POSPaymentModal = {
                 hasTLLPaidTickets: data.hasTLLPaidTickets
             });
             
-            return isTLLIntegration;
+            // TLL 연동 주문이면 전용 모달 표시
+            if (isTLLIntegration) {
+                console.log('🔗 TLL 연동 주문 감지 - 전용 결제 모달 표시');
+                
+                // 기존 모달 숨김
+                this.hide();
+                
+                // TLL 전용 모달 표시
+                if (typeof POSTLLPaymentModal !== 'undefined') {
+                    await POSTLLPaymentModal.show();
+                } else {
+                    console.error('❌ POSTLLPaymentModal을 찾을 수 없습니다');
+                    alert('TLL 연동 결제 모달을 불러올 수 없습니다.');
+                }
+                
+                return true; // TLL 연동으로 처리됨을 표시
+            }
+            
+            return false;
         } catch (error) {
             console.warn('⚠️ TLL 연동 확인 중 오류:', error);
             return false;
