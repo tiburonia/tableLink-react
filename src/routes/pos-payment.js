@@ -160,6 +160,7 @@ router.post('/process-with-customer', async (req, res) => {
       WHERE ot.order_id = $1
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
+        AND ot.status != 'CANCELED'
       GROUP BY ot.id, ot.order_id, ot.batch_no, ot.table_num
       ORDER BY ot.created_at ASC
     `, [orderId]);
@@ -491,6 +492,7 @@ router.get('/unpaid-tickets/:orderId', async (req, res) => {
       WHERE ot.order_id = $1
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
+        AND ot.status != 'CANCELED'
       GROUP BY ot.id, ot.batch_no, ot.table_num, ot.created_at
       ORDER BY ot.created_at ASC
     `, [orderId]);

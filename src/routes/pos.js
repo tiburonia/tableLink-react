@@ -1389,6 +1389,7 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
       WHERE o.store_id = $1
         AND o.table_num = $2
         AND ot.paid_status = 'UNPAID'
+        AND ot.status != 'CANCELED'
         AND o.session_status = 'OPEN'
       GROUP BY o.id, o.created_at, o.total_price
       ORDER BY o.created_at DESC
