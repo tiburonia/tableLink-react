@@ -15,10 +15,13 @@
         </div>
     </div>
 
-    <!-- POS 모듈 로드 -->
-    <script src="/pos/js/posCore.js"></script>
+    <!-- POS Modules (load first) -->
+    <script src="/pos/js/modules/orderDataManager.js"></script>
+    <script src="/pos/js/modules/orderUIRenderer.js"></script>
+    <script src="/pos/js/modules/orderModificationManager.js"></script>
 
-    <!-- POS 테이블맵 모듈들 -->
+    <!-- Core POS Scripts (load after modules) -->
+    <script src="/pos/js/posCore.js"></script>
     <script src="/pos/js/tableMapModules/tableMapRenderer.js"></script>
     <script src="/pos/js/tableMapModules/crossOrderRenderer.js"></script>
     <script src="/pos/js/tableMapModules/tableMapDataProcessor.js"></script>
