@@ -1,4 +1,3 @@
-replit_final_file>
 /**
  * POS 주문 화면 (OK POS 스타일 - 2분할 구조)
  * 모듈 분리 후 메인 화면 관리자
