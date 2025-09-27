@@ -3153,10 +3153,28 @@ const POSOrderScreen = {
 
         try {
             const { menuId, menuName, quantity: newQuantity } = this.selectedOrder;
+            
+            console.log(`🔧 주문 수정 확정 시작:`, {
+                menuId,
+                menuName,
+                newQuantity,
+                storeId: this.currentStoreId,
+                tableNumber: this.currentTableNumber
+            });
+
+            // 기본 정보 검증
+            if (!this.currentStoreId || !this.currentTableNumber) {
+                throw new Error('매장 정보 또는 테이블 정보가 없습니다.');
+            }
+
             const originalQuantity = this.getOriginalQuantity(menuId);
 
             if (originalQuantity === null) {
-                throw new Error('원본 수량을 찾을 수 없습니다.');
+                throw new Error(`원본 수량을 찾을 수 없습니다. menuId: ${menuId}`);
+            }
+
+            if (originalQuantity <= 0) {
+                throw new Error(`유효하지 않은 원본 수량입니다: ${originalQuantity}`);
             }
 
             console.log(`🔧 주문 수정 확정: ${menuName} (${originalQuantity} → ${newQuantity})`);
@@ -3167,8 +3185,20 @@ const POSOrderScreen = {
                 : `${menuName}의 수량을 ${originalQuantity}개에서 ${newQuantity}개로 변경하시겠습니까?`;
 
             if (!confirm(confirmMessage)) {
+                console.log('🚫 사용자가 주문 수정을 취소했습니다.');
                 return;
             }
+
+            // API 요청 데이터 준비
+            const requestData = {
+                storeId: parseInt(this.currentStoreId),
+                tableNumber: parseInt(this.currentTableNumber),
+                menuId: parseInt(menuId),
+                menuName: menuName,
+                currentQuantity: originalQuantity
+            };
+
+            console.log('📤 API 요청 데이터:', requestData);
 
             // API 호출
             const response = await fetch('/api/pos/orders/modify-quantity', {
@@ -3176,18 +3206,20 @@ const POSOrderScreen = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    storeId: this.currentStoreId,
-                    tableNumber: this.currentTableNumber,
-                    menuId: menuId,
-                    menuName: menuName,
-                    currentQuantity: originalQuantity
-                }),
+                body: JSON.stringify(requestData),
             });
 
+            console.log(`📡 API 응답 상태: ${response.status} ${response.statusText}`);
+
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || '주문 수정 실패');
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
@@ -3205,11 +3237,25 @@ const POSOrderScreen = {
             this.updateEditModeUI(false);
 
             // 주문 목록 새로고침
+            console.log('🔄 주문 목록 새로고침 시작...');
             await this.refreshOrders();
+            console.log('✅ 주문 목록 새로고침 완료');
 
         } catch (error) {
             console.error('❌ 주문 수정 실패:', error);
-            alert(`주문 수정 중 오류가 발생했습니다: ${error.message}`);
+            console.error('❌ 에러 스택:', error.stack);
+            
+            // 사용자에게 친화적인 에러 메시지 제공
+            let userMessage = '주문 수정 중 오류가 발생했습니다.';
+            if (error.message.includes('원본 수량')) {
+                userMessage = '주문 정보를 찾을 수 없습니다. 페이지를 새로고침 후 다시 시도해주세요.';
+            } else if (error.message.includes('HTTP 4')) {
+                userMessage = '잘못된 요청입니다. 주문 정보를 확인해주세요.';
+            } else if (error.message.includes('HTTP 5')) {
+                userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            }
+            
+            alert(`${userMessage}\n\n기술적 오류: ${error.message}`);
         }
     },
 
@@ -3217,12 +3263,51 @@ const POSOrderScreen = {
      * 원본 수량 가져오기 (수정 전 DB 기준)
      */
     getOriginalQuantity(menuId) {
-        // currentOrders에서 해당 메뉴의 원본 수량 찾기
-        const originalOrder = this.currentOrders.find(order => 
-            (order.id === parseInt(menuId) || order.menuId === parseInt(menuId)) && !order.isCart
+        console.log(`🔍 원본 수량 조회: menuId=${menuId}, currentOrders 개수=${this.currentOrders.length}`);
+        
+        if (!this.currentOrders || this.currentOrders.length === 0) {
+            console.warn('⚠️ currentOrders가 비어있음');
+            return null;
+        }
+        
+        // 다양한 방식으로 매칭 시도
+        let originalOrder = null;
+        const targetMenuId = parseInt(menuId);
+        
+        // 1차 시도: menuId 기준
+        originalOrder = this.currentOrders.find(order => 
+            order.menuId === targetMenuId && !order.isCart
         );
         
-        return originalOrder ? originalOrder.quantity : null;
+        // 2차 시도: id 기준  
+        if (!originalOrder) {
+            originalOrder = this.currentOrders.find(order => 
+                order.id === targetMenuId && !order.isCart
+            );
+        }
+        
+        // 3차 시도: menu_id 기준 (백엔드 필드명)
+        if (!originalOrder) {
+            originalOrder = this.currentOrders.find(order => 
+                order.menu_id === targetMenuId && !order.isCart
+            );
+        }
+        
+        if (originalOrder) {
+            console.log(`✅ 원본 수량 발견: ${originalOrder.menuName || originalOrder.menu_name} = ${originalOrder.quantity}개`);
+            return originalOrder.quantity;
+        } else {
+            console.error(`❌ 원본 수량을 찾을 수 없음: menuId=${menuId}`);
+            console.log('📋 현재 주문 목록:', this.currentOrders.map(order => ({
+                id: order.id,
+                menuId: order.menuId,
+                menu_id: order.menu_id,
+                menuName: order.menuName || order.menu_name,
+                quantity: order.quantity,
+                isCart: order.isCart
+            })));
+            return null;
+        }
     },
 
     /**
