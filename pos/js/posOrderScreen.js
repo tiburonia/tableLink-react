@@ -1432,8 +1432,8 @@ const POSOrderScreen = {
         cookStation = null,
     ) {
         try {
-            // 주문수정 상태 확인
-            const isInEditMode = this.selectedOrder || this.pendingModifications.length > 0;
+            // 주문수정 상태 확인 (pendingModifications 또는 선택된 주문이 있으면 수정 모드)
+            const isInEditMode = this.pendingModifications.length > 0 || this.selectedOrder;
 
             if (isInEditMode) {
                 // 주문수정 상태에서는 수정내역에 증가로 추가
@@ -1444,7 +1444,7 @@ const POSOrderScreen = {
                 const existingOrder = this.currentOrders.find(order => 
                     (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && 
                     order.menuName === menuName && 
-                    !order.isCart
+                    !order.isCart && !order.isNewMenu
                 );
 
                 if (existingOrder) {
@@ -1463,9 +1463,11 @@ const POSOrderScreen = {
                 if (existingModification) {
                     // 기존 수정사항이 있으면 1개 증가
                     newQuantity = existingModification.newQuantity + 1;
+                    console.log(`🔄 기존 수정사항 업데이트: ${menuName} (${existingModification.newQuantity} → ${newQuantity})`);
                 } else {
                     // 새로운 수정사항이면 원본 수량 + 1
                     newQuantity = originalQuantity + 1;
+                    console.log(`➕ 새로운 수정사항 생성: ${menuName} (${originalQuantity} → ${newQuantity})`);
                 }
 
                 // 수정사항을 누적 배열에 추가/업데이트
@@ -1478,27 +1480,38 @@ const POSOrderScreen = {
                 );
 
                 // UI에서 해당 메뉴가 이미 표시되어 있다면 업데이트
-                const existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                let existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                
                 if (existingRow) {
+                    // 기존 메뉴 행이 있는 경우 수량 업데이트
                     this.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
+                    console.log(`🔄 기존 메뉴 행 수량 업데이트: ${menuName} → ${newQuantity}개`);
+
+                    // 해당 행을 선택 상태로 만들기
+                    document.querySelectorAll('.pos-order-table tr').forEach(row => {
+                        row.classList.remove('selected');
+                    });
+                    existingRow.classList.add('selected');
 
                     // 선택된 주문 정보 업데이트
-                    if (this.selectedOrder && this.selectedOrder.menuId === parseInt(menuId)) {
-                        this.selectedOrder.quantity = newQuantity;
-                        this.selectedOrder.modified = true;
-                        if (!this.selectedOrder.originalQuantity) {
-                            this.selectedOrder.originalQuantity = originalQuantity;
-                        }
-                    }
+                    this.selectedOrder = {
+                        orderId: existingRow.dataset.orderId,
+                        menuId: parseInt(menuId),
+                        menuName: menuName,
+                        quantity: newQuantity,
+                        originalQuantity: originalQuantity,
+                        rowElement: existingRow,
+                        modified: true
+                    };
+
                 } else {
-                    // 새로운 메뉴인 경우 일시적으로 currentOrders에 추가하여 표시
-                    // isNewMenu 플래그 추가
+                    // 새로운 메뉴인 경우 임시로 currentOrders에 추가하여 UI에 표시
                     const newMenuItem = {
                         id: `temp_${Date.now()}`, // 임시 ID
-                        menuId: menuId,
+                        menuId: parseInt(menuId),
                         menuName: menuName,
                         price: price,
-                        quantity: 1,
+                        quantity: newQuantity, // 수정된 수량으로 표시
                         cookingStatus: "PENDING",
                         isNewMenu: true, // 새로운 메뉴 표시 플래그
                         isPendingAddition: true, // 추가 예정 플래그
@@ -1512,6 +1525,8 @@ const POSOrderScreen = {
                     if (posOrderList) {
                         posOrderList.innerHTML = this.renderPOSOrderItemsModern();
                     }
+
+                    console.log(`➕ 새 메뉴 임시 추가: ${menuName} (수량: ${newQuantity})`);
 
                     // 새로 추가된 메뉴를 자동으로 선택된 상태로 만들기
                     setTimeout(() => {
@@ -1528,17 +1543,15 @@ const POSOrderScreen = {
                             // 선택된 주문 정보 저장
                             this.selectedOrder = {
                                 orderId: newMenuItem.id,
-                                menuId: menuId,
+                                menuId: parseInt(menuId),
                                 menuName: menuName,
-                                quantity: 1,
+                                quantity: newQuantity,
                                 originalQuantity: 0, // 새 메뉴이므로 원본 수량은 0
-                                rowElement: newMenuRow
+                                rowElement: newMenuRow,
+                                modified: true
                             };
 
-                            // 편집 모드 UI 업데이트
-                            this.updateEditModeUI(true);
-
-                            console.log(`✅ 새 메뉴 자동 선택: ${menuName}`);
+                            console.log(`✅ 새 메뉴 자동 선택: ${menuName} (수량: ${newQuantity})`);
                         }
                     }, 100); // DOM 업데이트 후 실행
                 }
@@ -1549,7 +1562,7 @@ const POSOrderScreen = {
                 // 편집 모드 UI 업데이트
                 this.updateEditModeUI(true);
 
-                this.showToast(`${menuName} 수정내역에 추가됨 (+1개)`);
+                this.showToast(`${menuName} 수정내역에 추가됨 (+1개, 총 ${newQuantity}개)`);
 
                 console.log(`📈 수정내역 누적 완료: ${menuName} (원본: ${originalQuantity} → 새로운: ${newQuantity})`);
                 return;
