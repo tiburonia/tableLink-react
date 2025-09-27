@@ -2658,15 +2658,7 @@ router.post('/orders/modify', async (req, res) => {
 
       console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
 
-      // 새 티켓 생성 (취소된 티켓들도 포함하여 batch_no 계산)
-      const nextBatchNoResult = await client.query(`
-        SELECT COALESCE(MAX(batch_no), 0) + 1 as next_batch_no
-        FROM order_tickets 
-        WHERE order_id = $1
-      `, [orderId]);
-
-      const nextBatchNo = nextBatchNoResult.rows[0].next_batch_no;
-
+      // 새 티켓 생성 (사용자 알고리즘: 수정 주문시 batch_no 동일 유지, version 증가)
       const newTicketResult = await client.query(`
         INSERT INTO order_tickets (
           order_id,
@@ -2681,12 +2673,14 @@ router.post('/orders/modify', async (req, res) => {
           paid_status
         ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
         RETURNING id, batch_no, version
-      `, [orderId, storeId, nextBatchNo, 1, tableNumber]);
+      `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
 
       const newTicketId = newTicketResult.rows[0].id;
       const newVersion = newTicketResult.rows[0].version;
+      const newBatchNo = newTicketResult.rows[0].batch_no;
 
-      console.log(`➕ 새 티켓 생성: ${newTicketId} (batch: ${nextBatchNo}, version: ${newVersion})`);
+      console.log(`➕ 새 버전 티켓 생성: ${newTicketId} (batch: ${newBatchNo}, version: ${newVersion})`);
+      console.log(`🔄 수정 주문 알고리즘: batch_no=${oldBatchNo}→${newBatchNo}, version=${oldVersion}→${newVersion}`);
 
       // 기존 티켓의 다른 아이템들을 새 티켓에 복사 (수정 대상 메뉴 제외)
       const otherItemsResult = await client.query(`
