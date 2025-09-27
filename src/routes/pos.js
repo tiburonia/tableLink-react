@@ -1497,6 +1497,164 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
       finalTLLMixedStatus: finalTLLMixedStatus
     });
 
+
+
+/**
+ * 단일 수량 감소 처리 헬퍼 함수
+ */
+async function processSingleQuantityDecrease(client, storeId, tableNumber, menuId, menuName, currentQuantity) {
+  try {
+    // 1. 현재 테이블의 활성 주문 조회
+    const activeOrderResult = await client.query(`
+      SELECT DISTINCT o.id as order_id, o.created_at
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1
+        AND o.table_num = $2
+        AND ot.paid_status = 'UNPAID'
+        AND o.session_status = 'OPEN'
+        AND ot.source = 'POS'
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    if (activeOrderResult.rows.length === 0) {
+      return {
+        success: false,
+        error: '수정할 활성 주문이 없습니다'
+      };
+    }
+
+    const orderId = activeOrderResult.rows[0].order_id;
+
+    // 2. 해당 메뉴가 포함된 최신 티켓 조회
+    const latestTicketResult = await client.query(`
+      SELECT ot.id as ticket_id, ot.batch_no, ot.version
+      FROM order_tickets ot
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE ot.order_id = $1
+        AND oi.menu_id = $2
+        AND ot.source = 'POS'
+        AND ot.paid_status = 'UNPAID'
+        AND oi.item_status != 'CANCELED'
+      ORDER BY ot.batch_no DESC, ot.version DESC
+      LIMIT 1
+    `, [orderId, parseInt(menuId)]);
+
+    if (latestTicketResult.rows.length === 0) {
+      return {
+        success: false,
+        error: '해당 메뉴의 활성 티켓을 찾을 수 없습니다'
+      };
+    }
+
+    const { ticket_id: oldTicketId, batch_no: oldBatchNo, version: oldVersion } = latestTicketResult.rows[0];
+
+    // 3. 기존 티켓의 모든 아이템들을 CANCELLED 처리
+    await client.query(`
+      UPDATE order_items
+      SET item_status = 'CANCELED', updated_at = NOW()
+      WHERE ticket_id = $1
+    `, [oldTicketId]);
+
+    await client.query(`
+      UPDATE order_tickets
+      SET status = 'CANCELED', updated_at = NOW()
+      WHERE id = $1
+    `, [oldTicketId]);
+
+    // 4. 새 티켓 생성
+    const newTicketResult = await client.query(`
+      INSERT INTO order_tickets (
+        order_id,
+        store_id,
+        batch_no,
+        version,
+        status,
+        payment_type,
+        source,
+        table_num,
+        created_at,
+        paid_status
+      ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
+      RETURNING id, batch_no, version
+    `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
+
+    const newTicketId = newTicketResult.rows[0].id;
+
+    // 5. 기존 아이템들을 새 티켓에 복사 (수량 처리)
+    const allItemsResult = await client.query(`
+      SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
+      FROM order_items
+      WHERE ticket_id = $1
+        AND item_status = 'CANCELED'
+      ORDER BY created_at ASC
+    `, [oldTicketId]);
+
+    const newQuantity = currentQuantity - 1;
+    let hasOtherItems = false;
+
+    for (const item of allItemsResult.rows) {
+      if (parseInt(item.menu_id) === parseInt(menuId)) {
+        // 타겟 메뉴 처리
+        if (newQuantity > 0) {
+          await client.query(`
+            INSERT INTO order_items (
+              ticket_id, menu_id, menu_name, unit_price, quantity, 
+              total_price, cook_station, item_status, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())
+          `, [
+            newTicketId, item.menu_id, item.menu_name, item.unit_price,
+            newQuantity, item.unit_price * newQuantity, item.cook_station
+          ]);
+          hasOtherItems = true;
+        }
+      } else {
+        // 다른 메뉴들은 그대로 복사
+        await client.query(`
+          INSERT INTO order_items (
+            ticket_id, menu_id, menu_name, unit_price, quantity, 
+            total_price, cook_station, item_status, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())
+        `, [
+          newTicketId, item.menu_id, item.menu_name, item.unit_price,
+          item.quantity, item.total_price, item.cook_station
+        ]);
+        hasOtherItems = true;
+      }
+    }
+
+    // 6. 새 티켓에 아이템이 없으면 티켓도 삭제
+    if (!hasOtherItems) {
+      await client.query(`
+        UPDATE order_tickets
+        SET status = 'CANCELED', updated_at = NOW()
+        WHERE id = $1
+      `, [newTicketId]);
+    }
+
+    return {
+      success: true,
+      orderId: orderId,
+      oldTicketId: oldTicketId,
+      newTicketId: newTicketId,
+      newQuantity: newQuantity,
+      hasOtherItems: hasOtherItems
+    };
+
+  } catch (error) {
+    console.error('❌ 단일 수량 감소 처리 실패:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// 헬퍼 함수를 router 객체에 추가
+router.processSingleQuantityDecrease = processSingleQuantityDecrease;
+
+
     res.json({
       success: true,
       table: {
@@ -1839,6 +1997,119 @@ router.post('/orders/modify-quantity', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '주문 수정 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * [POST] /orders/modify-multiple - POS 다중 메뉴 수정 API
+ */
+router.post('/orders/modify-multiple', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { storeId, tableNumber, modifications } = req.body;
+
+    console.log(`🔧 POS 다중 메뉴 수정 요청: 매장 ${storeId}, 테이블 ${tableNumber}, ${modifications.length}개 수정사항`);
+
+    // 입력 검증
+    if (!storeId || !tableNumber || !modifications || !Array.isArray(modifications) || modifications.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    const results = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    // 각 수정사항을 순차적으로 처리
+    for (const modification of modifications) {
+      try {
+        const { menuId, menuName, currentQuantity, newQuantity } = modification;
+
+        console.log(`🔧 메뉴 수정: ${menuName} (${currentQuantity} → ${newQuantity})`);
+
+        // 수량 변화가 없으면 건너뛰기
+        if (currentQuantity === newQuantity) {
+          console.log(`ℹ️ 수량 변화 없음, 건너뛰기: ${menuName}`);
+          continue;
+        }
+
+        // 수량 증가는 지원하지 않음
+        if (newQuantity > currentQuantity) {
+          throw new Error(`수량 증가는 지원하지 않습니다: ${menuName}`);
+        }
+
+        // 다중 수량 감소 처리
+        let remainingQuantity = currentQuantity;
+        while (remainingQuantity > newQuantity && remainingQuantity > 0) {
+          // 단일 수량 감소 API 내부 로직 재사용
+          const singleResult = await this.processSingleQuantityDecrease(
+            client, 
+            storeId, 
+            tableNumber, 
+            menuId, 
+            menuName, 
+            remainingQuantity
+          );
+
+          if (!singleResult.success) {
+            throw new Error(singleResult.error);
+          }
+
+          remainingQuantity--;
+        }
+
+        results.push({
+          menuId,
+          menuName,
+          originalQuantity: currentQuantity,
+          newQuantity: remainingQuantity,
+          success: true,
+          decreaseCount: currentQuantity - remainingQuantity
+        });
+
+        successCount++;
+
+      } catch (error) {
+        console.error(`❌ 메뉴 수정 실패: ${modification.menuName}`, error);
+        results.push({
+          menuId: modification.menuId,
+          menuName: modification.menuName,
+          success: false,
+          error: error.message
+        });
+        errorCount++;
+      }
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ POS 다중 메뉴 수정 완료: 성공 ${successCount}개, 실패 ${errorCount}개`);
+
+    res.json({
+      success: errorCount === 0,
+      message: `총 ${modifications.length}개 메뉴 중 ${successCount}개 성공, ${errorCount}개 실패`,
+      results: results,
+      summary: {
+        totalRequested: modifications.length,
+        successCount: successCount,
+        errorCount: errorCount
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 다중 메뉴 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '다중 메뉴 수정 중 오류가 발생했습니다: ' + error.message
     });
   } finally {
     client.release();

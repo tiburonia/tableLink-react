@@ -3048,7 +3048,9 @@ const POSOrderScreen = {
             // 수정 모드 활성화
             if (minusBtn) {
                 minusBtn.classList.add('active');
-                minusBtn.textContent = `- (${this.selectedOrder.menuName})`;
+                const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
+                const currentQty = this.selectedOrder.quantity;
+                minusBtn.textContent = `- ${this.selectedOrder.menuName} (${originalQty}→${currentQty})`;
                 minusBtn.disabled = false;
             }
 
@@ -3084,9 +3086,29 @@ const POSOrderScreen = {
         // 기존 표시기 제거
         this.hideEditModeIndicator();
 
+        const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
+        const currentQty = this.selectedOrder.quantity;
+        const changeAmount = originalQty - currentQty;
+        
+        let statusText;
+        let statusIcon;
+        if (currentQty === 0) {
+            statusText = `삭제 예정`;
+            statusIcon = '🗑️';
+        } else if (changeAmount > 0) {
+            statusText = `${changeAmount}개 감소 (${originalQty}→${currentQty})`;
+            statusIcon = '📉';
+        } else if (changeAmount < 0) {
+            statusText = `${Math.abs(changeAmount)}개 증가 (${originalQty}→${currentQty})`;
+            statusIcon = '📈';
+        } else {
+            statusText = `변경사항 없음 (${currentQty}개)`;
+            statusIcon = '📝';
+        }
+
         const indicator = document.createElement('div');
         indicator.className = 'edit-mode-indicator';
-        indicator.innerHTML = `📝 수정 모드: ${this.selectedOrder.menuName} (${this.selectedOrder.quantity}개)`;
+        indicator.innerHTML = `${statusIcon} ${this.selectedOrder.menuName}: ${statusText}`;
         document.body.appendChild(indicator);
     },
 
@@ -3110,6 +3132,8 @@ const POSOrderScreen = {
         }
 
         const currentQuantity = this.selectedOrder.quantity;
+        
+        // 수량이 1 이하인 경우 삭제 확인
         if (currentQuantity <= 1) {
             if (!confirm(`${this.selectedOrder.menuName}을(를) 완전히 삭제하시겠습니까?`)) {
                 return;
@@ -3124,21 +3148,35 @@ const POSOrderScreen = {
             if (newQuantity > 0) {
                 quantityDisplay.textContent = newQuantity;
                 quantityDisplay.classList.add('modified');
+                // 수량 감소 애니메이션 효과
+                quantityDisplay.style.backgroundColor = '#fef2f2';
+                quantityDisplay.style.color = '#dc2626';
+                setTimeout(() => {
+                    quantityDisplay.style.backgroundColor = '#f9fafb';
+                    quantityDisplay.style.color = '#374151';
+                }, 500);
             } else {
                 // 수량이 0이면 행을 삭제 예정으로 표시
                 this.selectedOrder.rowElement.classList.add('will-be-removed');
                 quantityDisplay.textContent = '0';
                 quantityDisplay.classList.add('modified');
+                quantityDisplay.style.backgroundColor = '#fee2e2';
+                quantityDisplay.style.color = '#dc2626';
             }
+        }
+
+        // 원본 수량도 기록 (처음 수정할 때만)
+        if (!this.selectedOrder.originalQuantity) {
+            this.selectedOrder.originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
         }
 
         // 선택된 주문 정보 업데이트
         this.selectedOrder.quantity = newQuantity;
         this.selectedOrder.modified = true;
 
-        console.log(`📉 수량 감소: ${this.selectedOrder.menuName} (${currentQuantity} → ${newQuantity})`);
+        console.log(`📉 수량 감소: ${this.selectedOrder.menuName} (${currentQuantity} → ${newQuantity}), 원본: ${this.selectedOrder.originalQuantity}`);
 
-        // UI 상태 업데이트
+        // UI 상태 업데이트 (수량 변화 표시)
         this.updateEditModeUI(true);
     },
 
@@ -3152,11 +3190,12 @@ const POSOrderScreen = {
         }
 
         try {
-            const { menuId, menuName, quantity: newQuantity } = this.selectedOrder;
+            const { menuId, menuName, quantity: newQuantity, originalQuantity } = this.selectedOrder;
             
             console.log(`🔧 주문 수정 확정 시작:`, {
                 menuId,
                 menuName,
+                originalQuantity,
                 newQuantity,
                 storeId: this.currentStoreId,
                 tableNumber: this.currentTableNumber
@@ -3167,68 +3206,103 @@ const POSOrderScreen = {
                 throw new Error('매장 정보 또는 테이블 정보가 없습니다.');
             }
 
-            const originalQuantity = this.getOriginalQuantity(menuId);
+            // 원본 수량 확인 (저장된 값 또는 DB에서 조회)
+            const finalOriginalQuantity = originalQuantity || this.getOriginalQuantity(menuId);
 
-            if (originalQuantity === null) {
-                throw new Error(`원본 수량을 찾을 수 없습니다. menuId: ${menuId}`);
+            if (finalOriginalQuantity === null || finalOriginalQuantity <= 0) {
+                throw new Error(`유효하지 않은 원본 수량입니다: ${finalOriginalQuantity}`);
             }
 
-            if (originalQuantity <= 0) {
-                throw new Error(`유효하지 않은 원본 수량입니다: ${originalQuantity}`);
+            // 수량 변화가 없으면 취소
+            if (finalOriginalQuantity === newQuantity) {
+                console.log('ℹ️ 수량 변화가 없어서 수정을 취소합니다.');
+                this.cancelOrderEdit();
+                return;
             }
 
-            console.log(`🔧 주문 수정 확정: ${menuName} (${originalQuantity} → ${newQuantity})`);
+            console.log(`🔧 주문 수정 확정: ${menuName} (${finalOriginalQuantity} → ${newQuantity})`);
 
             // 확인 메시지
-            const confirmMessage = newQuantity === 0 
-                ? `${menuName}을(를) 완전히 삭제하시겠습니까?`
-                : `${menuName}의 수량을 ${originalQuantity}개에서 ${newQuantity}개로 변경하시겠습니까?`;
+            let confirmMessage;
+            if (newQuantity === 0) {
+                confirmMessage = `${menuName}을(를) 완전히 삭제하시겠습니까?`;
+            } else if (newQuantity < finalOriginalQuantity) {
+                const decreaseAmount = finalOriginalQuantity - newQuantity;
+                confirmMessage = `${menuName}의 수량을 ${decreaseAmount}개 감소시켜 ${finalOriginalQuantity}개에서 ${newQuantity}개로 변경하시겠습니까?`;
+            } else {
+                confirmMessage = `${menuName}의 수량을 ${finalOriginalQuantity}개에서 ${newQuantity}개로 변경하시겠습니까?`;
+            }
 
             if (!confirm(confirmMessage)) {
                 console.log('🚫 사용자가 주문 수정을 취소했습니다.');
                 return;
             }
 
-            // API 요청 데이터 준비
-            const requestData = {
-                storeId: parseInt(this.currentStoreId),
-                tableNumber: parseInt(this.currentTableNumber),
-                menuId: parseInt(menuId),
-                menuName: menuName,
-                currentQuantity: originalQuantity
-            };
+            // 다중 수량 감소 처리 - 여러 번 API 호출
+            let remainingQuantity = finalOriginalQuantity;
+            let successCount = 0;
+            const targetQuantity = newQuantity;
+            
+            console.log(`🔄 다중 수량 감소 시작: ${finalOriginalQuantity} → ${targetQuantity}`);
 
-            console.log('📤 API 요청 데이터:', requestData);
-
-            // API 호출
-            const response = await fetch('/api/pos/orders/modify-quantity', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData),
-            });
-
-            console.log(`📡 API 응답 상태: ${response.status} ${response.statusText}`);
-
-            if (!response.ok) {
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            while (remainingQuantity > targetQuantity && remainingQuantity > 0) {
                 try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
-                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
+                    const requestData = {
+                        storeId: parseInt(this.currentStoreId),
+                        tableNumber: parseInt(this.currentTableNumber),
+                        menuId: parseInt(menuId),
+                        menuName: menuName,
+                        currentQuantity: remainingQuantity
+                    };
+
+                    console.log(`📤 수량 감소 API 호출 (${remainingQuantity} → ${remainingQuantity - 1}):`, requestData);
+
+                    const response = await fetch('/api/pos/orders/modify-quantity', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestData),
+                    });
+
+                    if (!response.ok) {
+                        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.error || errorMessage;
+                        } catch (parseError) {
+                            console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
+                        }
+                        throw new Error(errorMessage);
+                    }
+
+                    const result = await response.json();
+                    console.log(`✅ 수량 감소 완료 (${remainingQuantity} → ${remainingQuantity - 1}):`, result);
+
+                    remainingQuantity--;
+                    successCount++;
+
+                    // 과도한 API 호출 방지를 위한 짧은 지연
+                    if (remainingQuantity > targetQuantity) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+
+                } catch (stepError) {
+                    console.error(`❌ 수량 감소 실패 (${remainingQuantity}개 처리 중):`, stepError);
+                    throw new Error(`${successCount}번 성공 후 실패: ${stepError.message}`);
                 }
-                throw new Error(errorMessage);
             }
 
-            const result = await response.json();
-            console.log('✅ 주문 수정 완료:', result);
+            console.log(`✅ 전체 주문 수정 완료: ${successCount}번 수량 감소 성공`);
 
             // 성공 메시지
-            const successMessage = newQuantity === 0 
-                ? `${menuName}이(가) 삭제되었습니다.`
-                : `${menuName}의 수량이 ${newQuantity}개로 변경되었습니다.`;
+            let successMessage;
+            if (targetQuantity === 0) {
+                successMessage = `${menuName}이(가) 완전히 삭제되었습니다.`;
+            } else {
+                const decreaseAmount = finalOriginalQuantity - targetQuantity;
+                successMessage = `${menuName}의 수량이 ${decreaseAmount}개 감소되어 ${targetQuantity}개로 변경되었습니다.`;
+            }
             
             this.showToast(successMessage);
 
@@ -3253,6 +3327,8 @@ const POSOrderScreen = {
                 userMessage = '잘못된 요청입니다. 주문 정보를 확인해주세요.';
             } else if (error.message.includes('HTTP 5')) {
                 userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+            } else if (error.message.includes('번 성공 후 실패')) {
+                userMessage = `수량 수정이 부분적으로 완료되었습니다. ${error.message}`;
             }
             
             alert(`${userMessage}\n\n기술적 오류: ${error.message}`);
