@@ -1445,7 +1445,104 @@ const POSOrderScreen = {
         cookStation = null,
     ) {
         try {
-            // 파라미터로 받은 값들 우선 사용, 없으면 기본값 설정
+            // 주문수정 상태 확인
+            const isInEditMode = this.selectedOrder || this.pendingModifications.length > 0;
+
+            if (isInEditMode) {
+                // 주문수정 상태에서는 수정내역에 증가로 추가
+                console.log(`📈 주문수정 상태에서 메뉴 추가: ${menuName}`);
+                
+                // 현재 해당 메뉴의 원본 수량 확인
+                let originalQuantity = 0;
+                const existingOrder = this.currentOrders.find(order => 
+                    (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && 
+                    order.menuName === menuName && 
+                    !order.isCart
+                );
+
+                if (existingOrder) {
+                    originalQuantity = existingOrder.quantity;
+                } else {
+                    // 기존 주문에 없는 새로운 메뉴라면 원본 수량은 0
+                    originalQuantity = 0;
+                }
+
+                // 기존 수정사항에서 해당 메뉴 찾기
+                const existingModification = this.pendingModifications.find(mod => 
+                    mod.menuId === parseInt(menuId) && mod.menuName === menuName
+                );
+
+                let newQuantity;
+                if (existingModification) {
+                    // 기존 수정사항이 있으면 1개 증가
+                    newQuantity = existingModification.newQuantity + 1;
+                } else {
+                    // 새로운 수정사항이면 원본 수량 + 1
+                    newQuantity = originalQuantity + 1;
+                }
+
+                // 수정사항을 누적 배열에 추가/업데이트
+                this.addToPendingModifications(
+                    parseInt(menuId), 
+                    menuName, 
+                    originalQuantity, 
+                    newQuantity, 
+                    'plus'
+                );
+
+                // UI에서 해당 메뉴가 이미 표시되어 있다면 업데이트
+                const existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                if (existingRow) {
+                    this.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
+                    
+                    // 선택된 주문 정보 업데이트
+                    if (this.selectedOrder && this.selectedOrder.menuId === parseInt(menuId)) {
+                        this.selectedOrder.quantity = newQuantity;
+                        this.selectedOrder.modified = true;
+                        if (!this.selectedOrder.originalQuantity) {
+                            this.selectedOrder.originalQuantity = originalQuantity;
+                        }
+                    }
+                } else {
+                    // 새로운 메뉴인 경우 일시적으로 카트에 추가하여 표시
+                    const cartItem = {
+                        id: menuId,
+                        menuId: menuId,
+                        name: menuName,
+                        price: price,
+                        quantity: 1,
+                        store_id: storeId || POSCore.storeId,
+                        cook_station: cookStation || this.getCookStationByMenu(menuName),
+                    };
+                    
+                    // 기존 카트에서 같은 메뉴 찾기
+                    const existingCartItem = this.cart.find(
+                        (item) =>
+                            item.id === menuId &&
+                            item.name === menuName &&
+                            item.price === price,
+                    );
+
+                    if (existingCartItem) {
+                        existingCartItem.quantity += 1;
+                    } else {
+                        this.cart.push(cartItem);
+                    }
+                }
+
+                // 수정사항 요약 업데이트
+                this.updatePendingModificationsSummary();
+
+                // 편집 모드 UI 업데이트
+                this.updateEditModeUI(true);
+
+                this.showToast(`${menuName} 수정내역에 추가됨 (+1개)`);
+                
+                console.log(`📈 수정내역 누적 완료: ${menuName} (원본: ${originalQuantity} → 새로운: ${newQuantity})`);
+                return;
+            }
+
+            // 일반 모드에서는 기존 로직 수행
             const finalStoreId = storeId || POSCore.storeId;
 
             let finalCookStation = cookStation;
