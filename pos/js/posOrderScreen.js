@@ -1696,6 +1696,12 @@ const POSOrderScreen = {
      * 비회원 POS 주문 지원 + TLL 연동 지원
      */
     async confirmOrder() {
+        // 편집 모드인 경우 수정 확정으로 처리
+        if (this.selectedOrder && this.selectedOrder.modified) {
+            return this.confirmOrderEdit();
+        }
+
+        // 기존 주문 확정 로직 (카트 -> 서버 전송)
         try {
             if (this.cart.length === 0) {
                 alert("주문할 메뉴가 없습니다.");
@@ -3004,13 +3010,23 @@ const POSOrderScreen = {
         alert("선택된 주문의 수량 감소 기능 (추후 구현)");
     },
 
-    // 주문 행 선택 및 수정 기능
+    /**
+     * 주문 행 선택 및 수정 기능 (다중 수정 지원)
+     */
     toggleOrderRowSelection(orderId, menuName, quantity) {
         console.log(`🎯 주문 행 선택: Order ID ${orderId}, Menu: ${menuName}, Quantity: ${quantity}`);
 
         const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
         if (!rowElement) {
             console.warn(`⚠️ 주문 행을 찾을 수 없음: ${orderId}`);
+            return;
+        }
+
+        // 현재 행이 이미 선택되어 있으면 선택 해제
+        if (rowElement.classList.contains('selected')) {
+            rowElement.classList.remove('selected');
+            this.selectedOrder = null;
+            this.updateEditModeUI(false);
             return;
         }
 
@@ -3028,6 +3044,7 @@ const POSOrderScreen = {
             menuId: rowElement.dataset.menuId || orderId, // menu_id 가져오기
             menuName: menuName,
             quantity: quantity,
+            originalQuantity: this.getOriginalQuantity(rowElement.dataset.menuId || orderId),
             rowElement: rowElement
         };
 
@@ -3043,7 +3060,7 @@ const POSOrderScreen = {
     updateEditModeUI(isEditMode) {
         const minusBtn = document.querySelector('.control-btn.quantity-minus');
         const confirmBtn = document.getElementById('confirmOrder');
-        
+
         if (isEditMode && this.selectedOrder) {
             // 수정 모드 활성화
             if (minusBtn) {
@@ -3089,7 +3106,7 @@ const POSOrderScreen = {
         const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
         const currentQty = this.selectedOrder.quantity;
         const changeAmount = originalQty - currentQty;
-        
+
         let statusText;
         let statusIcon;
         if (currentQty === 0) {
@@ -3132,7 +3149,7 @@ const POSOrderScreen = {
         }
 
         const currentQuantity = this.selectedOrder.quantity;
-        
+
         // 수량이 1 이하인 경우 삭제 확인
         if (currentQuantity <= 1) {
             if (!confirm(`${this.selectedOrder.menuName}을(를) 완전히 삭제하시겠습니까?`)) {
@@ -3191,7 +3208,7 @@ const POSOrderScreen = {
 
         try {
             const { menuId, menuName, quantity: newQuantity, originalQuantity } = this.selectedOrder;
-            
+
             console.log(`🔧 주문 수정 확정 시작:`, {
                 menuId,
                 menuName,
@@ -3242,7 +3259,7 @@ const POSOrderScreen = {
             let remainingQuantity = finalOriginalQuantity;
             let successCount = 0;
             const targetQuantity = newQuantity;
-            
+
             console.log(`🔄 다중 수량 감소 시작: ${finalOriginalQuantity} → ${targetQuantity}`);
 
             while (remainingQuantity > targetQuantity && remainingQuantity > 0) {
@@ -3303,7 +3320,7 @@ const POSOrderScreen = {
                 const decreaseAmount = finalOriginalQuantity - targetQuantity;
                 successMessage = `${menuName}의 수량이 ${decreaseAmount}개 감소되어 ${targetQuantity}개로 변경되었습니다.`;
             }
-            
+
             this.showToast(successMessage);
 
             // 편집 모드 해제
@@ -3318,7 +3335,7 @@ const POSOrderScreen = {
         } catch (error) {
             console.error('❌ 주문 수정 실패:', error);
             console.error('❌ 에러 스택:', error.stack);
-            
+
             // 사용자에게 친화적인 에러 메시지 제공
             let userMessage = '주문 수정 중 오류가 발생했습니다.';
             if (error.message.includes('원본 수량')) {
@@ -3330,7 +3347,7 @@ const POSOrderScreen = {
             } else if (error.message.includes('번 성공 후 실패')) {
                 userMessage = `수량 수정이 부분적으로 완료되었습니다. ${error.message}`;
             }
-            
+
             alert(`${userMessage}\n\n기술적 오류: ${error.message}`);
         }
     },
@@ -3340,35 +3357,35 @@ const POSOrderScreen = {
      */
     getOriginalQuantity(menuId) {
         console.log(`🔍 원본 수량 조회: menuId=${menuId}, currentOrders 개수=${this.currentOrders.length}`);
-        
+
         if (!this.currentOrders || this.currentOrders.length === 0) {
             console.warn('⚠️ currentOrders가 비어있음');
             return null;
         }
-        
+
         // 다양한 방식으로 매칭 시도
         let originalOrder = null;
         const targetMenuId = parseInt(menuId);
-        
+
         // 1차 시도: menuId 기준
         originalOrder = this.currentOrders.find(order => 
             order.menuId === targetMenuId && !order.isCart
         );
-        
+
         // 2차 시도: id 기준  
         if (!originalOrder) {
             originalOrder = this.currentOrders.find(order => 
                 order.id === targetMenuId && !order.isCart
             );
         }
-        
+
         // 3차 시도: menu_id 기준 (백엔드 필드명)
         if (!originalOrder) {
             originalOrder = this.currentOrders.find(order => 
                 order.menu_id === targetMenuId && !order.isCart
             );
         }
-        
+
         if (originalOrder) {
             console.log(`✅ 원본 수량 발견: ${originalOrder.menuName || originalOrder.menu_name} = ${originalOrder.quantity}개`);
             return originalOrder.quantity;
