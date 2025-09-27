@@ -1422,7 +1422,7 @@ const POSOrderScreen = {
     },
 
     /**
-     * 메뉴에 주문 추가 (주문수정 모드로 자동 전환)
+     * 메뉴 카드 클릭 시 주문수정 모드 자동 활성화 및 +수정 처리
      */
     async addToOrder(
         menuId,
@@ -1432,12 +1432,17 @@ const POSOrderScreen = {
         cookStation = null,
     ) {
         try {
-            console.log(`🔄 메뉴 클릭으로 주문수정 모드 진입: ${menuName}`);
+            console.log(`🎯 메뉴 카드 클릭: ${menuName} (주문수정 모드 처리)`);
 
-            // 주문수정 모드로 자동 전환
-            if (this.pendingModifications.length === 0 && !this.selectedOrder) {
-                console.log(`📝 주문수정 모드 자동 활성화`);
-                this.showToast(`주문수정 모드가 활성화되었습니다`);
+            // 주문수정 상태 확인 및 자동 활성화
+            const isEditModeActive = this.pendingModifications.length > 0 || this.selectedOrder;
+            
+            if (!isEditModeActive) {
+                console.log(`📝 주문수정 모드 자동 활성화: ${menuName} 클릭`);
+                this.showToast(`📝 주문수정 모드 활성화: ${menuName} +1개 추가`);
+            } else {
+                console.log(`✅ 주문수정 모드 이미 활성화됨: ${menuName} +1개 추가`);
+                this.showToast(`➕ ${menuName} +1개 추가됨`);
             }
 
             // 현재 해당 메뉴의 원본 수량 확인
