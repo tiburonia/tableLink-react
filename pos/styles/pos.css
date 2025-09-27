@@ -2699,6 +2699,13 @@ body {
     background: #dcfce7;
 }
 
+/* 새 메뉴가 선택된 상태 */
+.pos-order-table .new-menu-item.selected {
+    background: #dcfce7 !important;
+    border-left: 4px solid #16a34a;
+    box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
+}
+
 .status-badge.status-new_menu {
     background: #dcfce7;
     color: #166534;

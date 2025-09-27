@@ -1535,6 +1535,35 @@ const POSOrderScreen = {
                     if (posOrderList) {
                         posOrderList.innerHTML = this.renderPOSOrderItemsModern();
                     }
+
+                    // 새로 추가된 메뉴를 자동으로 선택된 상태로 만들기
+                    setTimeout(() => {
+                        const newMenuRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                        if (newMenuRow) {
+                            // 기존 선택 해제
+                            document.querySelectorAll('.pos-order-table tr').forEach(row => {
+                                row.classList.remove('selected');
+                            });
+                            
+                            // 새 메뉴 선택
+                            newMenuRow.classList.add('selected');
+                            
+                            // 선택된 주문 정보 저장
+                            this.selectedOrder = {
+                                orderId: cartOrderItem.id,
+                                menuId: menuId,
+                                menuName: menuName,
+                                quantity: 1,
+                                originalQuantity: 0, // 새 메뉴이므로 원본 수량은 0
+                                rowElement: newMenuRow
+                            };
+                            
+                            // 편집 모드 UI 업데이트
+                            this.updateEditModeUI(true);
+                            
+                            console.log(`✅ 새 메뉴 자동 선택: ${menuName}`);
+                        }
+                    }, 100); // DOM 업데이트 후 실행
                 }
 
                 // 수정사항 요약 업데이트
