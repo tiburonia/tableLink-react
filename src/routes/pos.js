@@ -768,7 +768,7 @@ router.get('/stores/:storeId/table/:tableNumber/order-items', async (req, res) =
         AND ot.paid_status = 'UNPAID'  -- 반드시 미지불만
         AND ot.paid_status != 'PAID'   -- PAID 상태 명시적 배제
         AND o.session_status = 'OPEN'
-        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+        AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
       ORDER BY oi.created_at ASC
     `, [parsedStoreId, parsedTableNumber]);
 
@@ -865,7 +865,7 @@ router.get('/stores/:storeId/table/:tableNumber/tll-orders', async (req, res) =>
       WHERE o.store_id = $1
         AND o.table_num = $2
         AND ot.source = 'TLL'
-        AND oi.item_status != 'CANCELLED'
+        AND oi.item_status != 'CANCELED'
         AND o.session_status = 'OPEN'
       ORDER BY oi.created_at DESC
     `, [parsedStoreId, parsedTableNumber]);
@@ -1290,7 +1290,7 @@ router.get('/stores/:storeId/table/:tableId/shared-order', async (req, res) => {
       FROM order_tickets ot
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE ot.order_id = $1
-        AND oi.item_status != 'CANCELLED'
+        AND oi.item_status != 'CANCELED'
       ORDER BY ot.source, ot.created_at, oi.created_at
     `, [sharedOrderId]);
 
@@ -1309,7 +1309,7 @@ router.get('/stores/:storeId/table/:tableId/shared-order', async (req, res) => {
 
     for (const row of ticketsResult.rows) {
       const source = row.source;
-      
+
       if (!sourceGroups[source]) {
         sourceGroups[source] = {
           source: source,
@@ -1385,7 +1385,7 @@ router.get('/stores/:storeId/table/:tableNumber/active-order', async (req, res) 
              COUNT(oi.id) as item_count
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN order_items oi ON ot.id = oi.ticket_id AND oi.item_status != 'CANCELLED'
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id AND oi.item_status != 'CANCELED'
       WHERE o.store_id = $1
         AND o.table_num = $2
         AND ot.paid_status = 'UNPAID'
@@ -1473,7 +1473,7 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
           FROM orders
           WHERE id = $1
         `, [table.processing_order_id]);
-        
+
         if (orderCheckResult.rows.length > 0) {
           const order = orderCheckResult.rows[0];
           isActuallyMixed = (
@@ -1586,7 +1586,7 @@ router.get('/stores/:storeId/table/:tableNumber/mixed-order-items', async (req, 
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       WHERE oi.order_id = $1
-        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+        AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
         AND ot.table_num = $2
       ORDER BY ot.source, oi.created_at ASC
     `, [orderId, parsedTableNumber]);
@@ -1680,7 +1680,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
         AND oi.menu_id = $2
         AND ot.source = 'POS'
         AND ot.paid_status = 'UNPAID'
-        AND oi.item_status != 'CANCELLED'
+        AND oi.item_status != 'CANCELED'
       ORDER BY ot.batch_no DESC, ot.version DESC
       LIMIT 1
     `, [orderId, parseInt(menuId)]);
@@ -1697,11 +1697,11 @@ router.post('/orders/modify-quantity', async (req, res) => {
     // 3. 기존 티켓의 모든 아이템들을 CANCELLED 처리
     await client.query(`
       UPDATE order_items
-      SET item_status = 'CANCELLED', updated_at = NOW()
+      SET item_status = 'CANCELED', updated_at = NOW()
       WHERE ticket_id = $1
     `, [oldTicketId]);
 
-    console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELLED 처리`);
+    console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
 
     // 4. 새 티켓 생성 (version 증가, batch_no 동일)
     const newTicketResult = await client.query(`
@@ -1730,7 +1730,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
       SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
       FROM order_items
       WHERE ticket_id = $1
-        AND item_status = 'CANCELLED'
+        AND item_status = 'CANCELED'
       ORDER BY created_at ASC
     `, [oldTicketId]);
 
@@ -1915,11 +1915,11 @@ router.post('/orders/modify', async (req, res) => {
       // 기존 티켓의 모든 아이템들을 CANCELLED 처리
       await client.query(`
         UPDATE order_items
-        SET item_status = 'CANCELLED', updated_at = NOW()
+        SET item_status = 'CANCELED', updated_at = NOW()
         WHERE ticket_id = $1
       `, [oldTicketId]);
 
-      console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELLED 처리`);
+      console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
 
       // 새 티켓 생성 (version 증가)
       const newTicketResult = await client.query(`
@@ -1949,7 +1949,7 @@ router.post('/orders/modify', async (req, res) => {
         FROM order_items
         WHERE ticket_id = $1
           AND menu_name != $2
-          AND item_status = 'CANCELLED'
+          AND item_status = 'CANCELED'
       `, [oldTicketId, menuName]);
 
       for (const otherItem of otherItemsResult.rows) {
@@ -2129,7 +2129,7 @@ router.get('/stores/:storeId/table/:tableId/mixed-order-items', async (req, res)
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       WHERE ot.order_id = $1
-        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+        AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
       ORDER BY ot.source, oi.created_at
     `, [orderId]);
 
