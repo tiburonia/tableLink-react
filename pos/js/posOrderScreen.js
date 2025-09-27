@@ -682,14 +682,14 @@ const POSOrderScreen = {
         // TLL 주문에서 is_mixed 상태 확인 (첫 번째 주문의 상태 사용)
         const firstTLLOrder = this.tllOrders[0];
         const isMixed = Boolean(firstTLLOrder.is_mixed);
-        
+
         console.log(`🔍 TLL 주문 is_mixed 상태 확인:`, {
             orderId: firstTLLOrder.order_id,
             is_mixed_raw: firstTLLOrder.is_mixed,
             is_mixed_boolean: isMixed,
             total_orders: this.tllOrders.length
         });
-        
+
         return isMixed;
     },
 
@@ -1013,7 +1013,7 @@ const POSOrderScreen = {
                 if (this.tllOrders && this.tllOrders.length > 0) {
                     const isMixed = this.checkTLLOrderMixedStatus();
                     console.log(`🔍 TLL 주문 로드 후 is_mixed 상태: ${isMixed}`);
-                    
+
                     // 캐시된 상태만 업데이트, UI 업데이트는 별도로 처리
                     this._cachedTLLMixedStatus = isMixed;
                 } else {
@@ -1091,28 +1091,214 @@ const POSOrderScreen = {
     },
 
     /**
-     * 결제 수단 선택
+     * 결제 수단 선택 및 결제 처리 시작
      */
-    selectPaymentMethod(method) {
+    async selectPaymentMethod(method) {
+        console.log(`💳 결제 수단 선택: ${method}`);
+
         this.selectedPaymentMethod = method;
 
         // 모든 버튼 비활성화
-        document.querySelectorAll(".payment-method-btn").forEach((btn) => {
-            btn.classList.remove("active");
+        document.querySelectorAll('.payment-method-btn').forEach(btn => {
+            btn.classList.remove('active');
         });
 
         // 선택된 버튼 활성화
         const selectedBtn = document.getElementById(`${method}PaymentBtn`);
         if (selectedBtn) {
-            selectedBtn.classList.add("active");
+            selectedBtn.classList.add('active');
         }
 
-        console.log(`💳 결제 방법 선택: ${method}`);
+        console.log(`✅ ${method} 결제 선택됨 - 결제 모달 표시`);
 
-        // 약간의 지연을 두고 결제 모달 표시 (UI 업데이트 완료 대기)
-        setTimeout(() => {
-            this.showPOSPaymentModal(method);
-        }, 50);
+        // 즉시 결제 모달 표시 (TLL 연동 감지 포함)
+        await this.showPaymentModal(method);
+    },
+
+    /**
+     * 통합 결제 모달 표시 (TLL 연동 감지 포함)
+     */
+    async showPaymentModal(method = null) {
+        try {
+            console.log(`🔍 통합 결제 모달 표시 시작 (method: ${method})`);
+
+            // POSPaymentModal 존재 확인
+            if (typeof POSPaymentModal === 'undefined') {
+                console.error('❌ POSPaymentModal을 찾을 수 없습니다');
+                alert('결제 모달을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
+                return;
+            }
+
+            // 결제 모달 표시 (내부에서 TLL 연동 감지 수행)
+            await POSPaymentModal.show(method);
+
+        } catch (error) {
+            console.error('❌ 결제 모달 표시 실패:', error);
+
+            // 폴백: 기존 직접 결제 방식 사용
+            console.log('🔄 폴백: 기존 결제 방식 사용');
+            if (method) {
+                await this.processPaymentFallback(method);
+            } else {
+                alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+    },
+
+    /**
+     * 폴백용 직접 결제 처리 (TLL 연동 감지 포함)
+     */
+    async processPaymentFallback(method) {
+        try {
+            console.log(`💳 폴백 ${method} 결제 처리 시작`);
+
+            if (!this.currentStoreId || !this.currentTableNumber) {
+                alert("매장 또는 테이블 정보가 없습니다.");
+                return;
+            }
+
+            // 1. 활성 주문 조회
+            const activeOrderResponse = await fetch(
+                `/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/active-order`,
+            );
+
+            if (!activeOrderResponse.ok) {
+                throw new Error('활성 주문을 조회할 수 없습니다');
+            }
+
+            const activeOrderData = await activeOrderResponse.json();
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) {
+                alert("결제할 활성 주문이 없습니다.");
+                return;
+            }
+
+            const orderId = activeOrderData.orderId;
+
+            // 2. TLL 연동 여부 확인
+            const isTLLIntegration = await this.checkTLLIntegrationFallback(orderId);
+
+            if (isTLLIntegration) {
+                console.log('🔗 TLL 연동 주문 감지 - TLL 전용 모달로 전환');
+
+                if (typeof POSTLLPaymentModal !== 'undefined') {
+                    await POSTLLPaymentModal.show();
+                    return;
+                } else {
+                    console.error('❌ POSTLLPaymentModal을 찾을 수 없습니다');
+                    alert('TLL 연동 결제 모달을 불러올 수 없습니다.');
+                    return;
+                }
+            }
+
+            // 3. 일반 POS 결제 진행
+            const unpaidResponse = await fetch(
+                `/api/pos-payment/unpaid-tickets/${orderId}`,
+            );
+            const unpaidData = await unpaidResponse.json();
+
+            if (!unpaidData.success || unpaidData.totalTickets === 0) {
+                alert("결제할 미지불 티켓이 없습니다.");
+                return;
+            }
+
+            // 간단한 결제 확인
+            if (!confirm(
+                `${method.toUpperCase()} 결제를 진행하시겠습니까?\n` +
+                `결제 금액: ${unpaidData.totalAmount.toLocaleString()}원\n` +
+                `처리할 티켓: ${unpaidData.totalTickets}개`
+            )) {
+                return;
+            }
+
+            // 4. 결제 처리 (비회원 기본)
+            const paymentResponse = await fetch("/api/pos-payment/process-with-customer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    orderId: orderId,
+                    paymentMethod: method.toUpperCase(),
+                    amount: unpaidData.totalAmount,
+                    storeId: this.currentStoreId,
+                    tableNumber: this.currentTableNumber,
+                    customerType: 'guest' // 폴백에서는 기본적으로 비회원 처리
+                }),
+            });
+
+            const paymentResult = await paymentResponse.json();
+
+            if (paymentResult.success) {
+                alert(`${method.toUpperCase()} 결제가 완료되었습니다!\n금액: ${paymentResult.amount.toLocaleString()}원`);
+
+                // 화면 새로고침 및 테이블맵 이동
+                await this.refreshOrders();
+                setTimeout(() => {
+                    POSCore.showTableMap();
+                }, 2000);
+            } else {
+                throw new Error(paymentResult.error || "결제 처리 실패");
+            }
+
+        } catch (error) {
+            console.error("❌ 폴백 결제 처리 실패:", error);
+            alert("결제 처리 중 오류가 발생했습니다: " + error.message);
+        }
+    },
+
+    /**
+     * 폴백용 TLL 연동 확인
+     */
+    async checkTLLIntegrationFallback(orderId) {
+        try {
+            // 테이블 상태 확인
+            const tableStatusResponse = await fetch(
+                `/api/pos/stores/${this.currentStoreId}/table/${this.currentTableNumber}/status`
+            );
+
+            if (!tableStatusResponse.ok) {
+                return false;
+            }
+
+            const tableStatusData = await tableStatusResponse.json();
+
+            if (!tableStatusData.success || !tableStatusData.table) {
+                return false;
+            }
+
+            const { processing_order_id, spare_processing_order_id } = tableStatusData.table;
+
+            // POI = SPOI = 현재 주문 ID 확인
+            const isSharedOrder = (
+                processing_order_id !== null &&
+                spare_processing_order_id !== null &&
+                parseInt(processing_order_id) === parseInt(spare_processing_order_id) &&
+                parseInt(processing_order_id) === parseInt(orderId)
+            );
+
+            if (!isSharedOrder) {
+                return false;
+            }
+
+            // TLL 연동 유효성 확인
+            const validationResponse = await fetch(
+                `/api/pos-payment-tll/validate/${orderId}?storeId=${this.currentStoreId}&tableNumber=${this.currentTableNumber}`
+            );
+
+            if (!validationResponse.ok) {
+                return false;
+            }
+
+            const validationData = await validationResponse.json();
+
+            return (
+                validationData.success &&
+                validationData.isTLLIntegration &&
+                validationData.canProcessPOSPayment
+            );
+
+        } catch (error) {
+            console.warn('⚠️ TLL 연동 확인 중 오류:', error);
+            return false;
+        }
     },
 
     /**
@@ -1736,7 +1922,7 @@ const POSOrderScreen = {
                 "❌ POSPaymentModal 로딩 최종 실패:",
                 waitResult.details,
             );
-            this.handlePaymentModalFailure(method);
+            this.handlePaymentModalFailure(method, waitResult.details);
         } catch (error) {
             console.error("❌ 결제 모달 표시 중 오류:", error);
             this.handlePaymentModalFailure(method, error);
@@ -1824,12 +2010,15 @@ const POSOrderScreen = {
     /**
      * 결제 모달 로딩 실패 처리
      */
-    handlePaymentModalFailure(method, error = null) {
-        console.log("🔄 결제 모달 실패 처리 시작");
+    handlePaymentModalFailure(method, details) {
+        console.log("🔄 결제 모달 실패 처리 시작", { details });
 
-        const errorMessage = error
-            ? `결제 모달 오류: ${error.message}`
-            : "결제 모달을 불러올 수 없습니다.";
+        const errorMessage =
+            details instanceof Error
+                ? details.message
+                : typeof details === "string"
+                  ? details
+                  : "결제 모달을 불러올 수 없습니다.";
 
         const userMessage = `${errorMessage}
 
@@ -1837,7 +2026,7 @@ const POSOrderScreen = {
 
         if (confirm(userMessage)) {
             console.log("🔄 사용자가 폴백 결제 처리 선택");
-            this.processPayment(method.toLowerCase()).catch((fallbackError) => {
+            this.processPaymentFallback(method).catch((fallbackError) => {
                 console.error("❌ 폴백 결제 처리 실패:", fallbackError);
                 alert(
                     `결제 처리 실패: ${fallbackError.message}
@@ -1849,6 +2038,7 @@ const POSOrderScreen = {
             console.log("ℹ️ 사용자가 결제 취소 선택");
         }
     },
+
 
     /**
      * API 호출로 결제 대상 데이터 조회
@@ -2008,7 +2198,9 @@ const POSOrderScreen = {
      */
     showPaymentModal() {
         console.log("✨ 기존 결제 모달 표시 (POSPaymentModal로 리다이렉트)");
-        this.showPOSPaymentModal(this.selectedPaymentMethod || "card");
+        // this.showPOSPaymentModal(this.selectedPaymentMethod || "card");
+        // 통합 결제 모달 함수로 대체
+        this.showPaymentModal(this.selectedPaymentMethod || "card");
     },
 
     /**
@@ -2105,7 +2297,8 @@ const POSOrderScreen = {
         console.log(`✅ 결제 완료 버튼 클릭: ${this.selectedPaymentMethod}`);
 
         // 실제 결제 처리는 processPayment 함수에서 수행
-        this.processPayment(this.selectedPaymentMethod);
+        // this.processPayment(this.selectedPaymentMethod); // 기존 방식
+        this.showPaymentModal(this.selectedPaymentMethod); // 통합 모달 호출
 
         // 모달 닫기
         this.hidePaymentModal();
@@ -2229,12 +2422,12 @@ const POSOrderScreen = {
                 newPaymentSection.innerHTML = this.renderPaymentSection();
                 paymentSection.replaceWith(newPaymentSection.firstElementChild);
                 console.log("✅ 결제 섹션 업데이트 완료");
-                
+
                 // 버튼 상태 재동기화 (중복 방지)
                 if (this.tllOrders && this.tllOrders.length > 0) {
                     const isMixed = this.checkTLLOrderMixedStatus();
                     this._cachedTLLMixedStatus = isMixed;
-                    
+
                     // 약간의 지연을 두고 UI 업데이트 (DOM 안정성 보장)
                     setTimeout(() => {
                         this.updateTLLConnectionButton(isMixed);
