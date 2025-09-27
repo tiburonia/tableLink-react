@@ -157,7 +157,7 @@ const OrderUIRenderer = {
         if (posOrders.length > 0) {
             tableBody = posOrders
                 .map(order => `
-                    <tr class="order-row ${order.isPendingAddition ? "pending-addition" : ""} ${order.isNewMenu ? "new-menu-item" : ""}" 
+                    <tr class="order-row" 
                         data-order-id="${order.id}" 
                         data-menu-id="${order.menuId || order.id}"
                         onclick="OrderModificationManager.toggleOrderRowSelection('${order.id}', '${order.menuName}', ${order.quantity})"
@@ -165,8 +165,6 @@ const OrderUIRenderer = {
                         <td class="col-menu">
                             <div class="menu-info">
                                 <strong>${order.menuName}</strong>
-                                ${order.isPendingAddition ? '<span class="pending-badge">추가예정</span>' : ""}
-                                ${order.isNewMenu ? '<span class="new-menu-badge">신규</span>' : ""}
                             </div>
                         </td>
                         <td class="col-price">

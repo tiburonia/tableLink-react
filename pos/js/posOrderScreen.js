@@ -856,8 +856,6 @@ const POSOrderScreen = {
                     price: price,
                     quantity: newQuantity, // 수정된 수량으로 표시
                     cookingStatus: "PENDING",
-                    isNewMenu: true, // 새로운 메뉴 표시 플래그
-                    isPendingAddition: true, // 추가 예정 플래그
                     originalQuantity: 0, // 새 메뉴이므로 원본 수량은 0
                 };
 
@@ -1695,17 +1693,17 @@ const POSOrderScreen = {
             return;
         }
 
-        // pending-addition이나 new-menu-item 행들이 있으면 제거
-        const pendingRows = document.querySelectorAll('.pos-order-table tr.pending-addition, .pos-order-table tr.new-menu-item');
-        if (pendingRows.length > 0) {
-            console.log(`🗑️ ${pendingRows.length}개 pending/new-menu 행 제거`);
-            pendingRows.forEach(row => row.remove());
+        // 임시 ID를 가진 행들이 있으면 제거
+        const tempRows = document.querySelectorAll('.pos-order-table tr[data-order-id^="temp_"]');
+        if (tempRows.length > 0) {
+            console.log(`🗑️ ${tempRows.length}개 임시 메뉴 행 제거`);
+            tempRows.forEach(row => row.remove());
 
             // currentOrders에서도 임시 추가된 항목들 제거
             if (this.currentOrders) {
                 const originalLength = this.currentOrders.length;
                 this.currentOrders = this.currentOrders.filter(order => 
-                    !order.isNewMenu && !order.isPendingAddition
+                    !String(order.id).startsWith('temp_')
                 );
                 const removedCount = originalLength - this.currentOrders.length;
                 if (removedCount > 0) {
