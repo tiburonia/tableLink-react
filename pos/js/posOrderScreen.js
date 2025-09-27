@@ -3004,8 +3004,12 @@ const POSOrderScreen = {
         alert("선택된 주문의 수량 감소 기능 (추후 구현)");
     },
 
-    // 주문 행 선택 및 수정 기능
-    toggleOrderRowSelection(orderId, menuName, quantity) {
+    // 다중 선택 관리
+    selectedOrders: [], // 복수 선택된 주문들
+    isMultiSelectMode: false, // 다중 선택 모드 여부
+
+    // 주문 행 선택 및 수정 기능 (다중 선택 지원)
+    toggleOrderRowSelection(orderId, menuName, quantity, event = null) {
         console.log(`🎯 주문 행 선택: Order ID ${orderId}, Menu: ${menuName}, Quantity: ${quantity}`);
 
         const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
@@ -3014,64 +3018,122 @@ const POSOrderScreen = {
             return;
         }
 
-        // 기존 선택 해제
-        document.querySelectorAll('.pos-order-table tr').forEach(row => {
-            row.classList.remove('selected');
+        // Ctrl 키 또는 Cmd 키가 눌린 경우 다중 선택 모드
+        const isMultiSelect = event && (event.ctrlKey || event.metaKey);
+
+        if (isMultiSelect) {
+            this.isMultiSelectMode = true;
+            this.toggleMultipleSelection(orderId, menuName, quantity, rowElement);
+        } else {
+            // 단일 선택 모드
+            this.isMultiSelectMode = false;
+            this.setSingleSelection(orderId, menuName, quantity, rowElement);
+        }
+
+        console.log(`✅ 선택 완료:`, {
+            isMultiSelectMode: this.isMultiSelectMode,
+            selectedCount: this.isMultiSelectMode ? this.selectedOrders.length : 1,
+            selectedItems: this.isMultiSelectMode ? this.selectedOrders.map(o => o.menuName) : [menuName]
         });
-
-        // 현재 행 선택
-        rowElement.classList.add('selected');
-
-        // 선택된 주문 정보 저장
-        this.selectedOrder = {
-            orderId: orderId,
-            menuId: rowElement.dataset.menuId || orderId, // menu_id 가져오기
-            menuName: menuName,
-            quantity: quantity,
-            rowElement: rowElement
-        };
-
-        console.log(`✅ 주문 선택됨:`, this.selectedOrder);
 
         // UI 상태 업데이트
         this.updateEditModeUI(true);
     },
 
     /**
-     * 편집 모드 UI 상태 업데이트
+     * 단일 선택 설정
+     */
+    setSingleSelection(orderId, menuName, quantity, rowElement) {
+        // 기존 선택 해제
+        document.querySelectorAll('.pos-order-table tr').forEach(row => {
+            row.classList.remove('selected', 'multi-selected');
+        });
+        this.selectedOrders = [];
+
+        // 현재 행 선택
+        rowElement.classList.add('selected');
+
+        // 선택된 주문 정보 저장 (기존 방식 유지)
+        this.selectedOrder = {
+            orderId: orderId,
+            menuId: rowElement.dataset.menuId || orderId,
+            menuName: menuName,
+            quantity: quantity,
+            originalQuantity: this.getOriginalQuantity(rowElement.dataset.menuId || orderId),
+            rowElement: rowElement
+        };
+    },
+
+    /**
+     * 다중 선택 토글
+     */
+    toggleMultipleSelection(orderId, menuName, quantity, rowElement) {
+        const existingIndex = this.selectedOrders.findIndex(order => order.orderId === orderId);
+
+        if (existingIndex >= 0) {
+            // 이미 선택된 경우 선택 해제
+            this.selectedOrders.splice(existingIndex, 1);
+            rowElement.classList.remove('multi-selected');
+            console.log(`➖ 선택 해제: ${menuName}`);
+        } else {
+            // 새로 선택
+            const menuId = rowElement.dataset.menuId || orderId;
+            const orderInfo = {
+                orderId: orderId,
+                menuId: menuId,
+                menuName: menuName,
+                quantity: quantity,
+                originalQuantity: this.getOriginalQuantity(menuId),
+                rowElement: rowElement
+            };
+            
+            this.selectedOrders.push(orderInfo);
+            rowElement.classList.add('multi-selected');
+            console.log(`➕ 새 선택 추가: ${menuName}`);
+        }
+
+        // 다중 선택이 없으면 단일 모드로 전환
+        if (this.selectedOrders.length === 0) {
+            this.isMultiSelectMode = false;
+        } else if (this.selectedOrders.length === 1) {
+            // 하나만 선택된 경우 단일 선택으로 전환
+            this.selectedOrder = this.selectedOrders[0];
+            this.selectedOrders[0].rowElement.classList.remove('multi-selected');
+            this.selectedOrders[0].rowElement.classList.add('selected');
+            this.selectedOrders = [];
+            this.isMultiSelectMode = false;
+        }
+    },
+
+    /**
+     * 편집 모드 UI 상태 업데이트 - 단일 및 다중 선택 지원
      */
     updateEditModeUI(isEditMode) {
         const minusBtn = document.querySelector('.control-btn.quantity-minus');
         const confirmBtn = document.getElementById('confirmOrder');
         
-        if (isEditMode && this.selectedOrder) {
-            // 수정 모드 활성화
-            if (minusBtn) {
-                minusBtn.classList.add('active');
-                const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
-                const currentQty = this.selectedOrder.quantity;
-                minusBtn.textContent = `- ${this.selectedOrder.menuName} (${originalQty}→${currentQty})`;
-                minusBtn.disabled = false;
+        if (isEditMode) {
+            if (this.isMultiSelectMode && this.selectedOrders.length > 0) {
+                // 다중 선택 모드
+                this.updateMultiSelectEditMode(minusBtn, confirmBtn);
+            } else if (this.selectedOrder) {
+                // 단일 선택 모드
+                this.updateSingleSelectEditMode(minusBtn, confirmBtn);
             }
-
-            if (confirmBtn) {
-                confirmBtn.querySelector('.method-name').textContent = '수정확정';
-                confirmBtn.classList.add('edit-mode');
-            }
-
+            
             // 편집 모드 표시기 추가
             this.showEditModeIndicator();
         } else {
             // 일반 모드로 복원
             if (minusBtn) {
-                minusBtn.classList.remove('active');
+                minusBtn.classList.remove('active', 'multi-active');
                 minusBtn.textContent = '-';
                 minusBtn.disabled = true;
             }
 
             if (confirmBtn) {
                 confirmBtn.querySelector('.method-name').textContent = '주문';
-                confirmBtn.classList.remove('edit-mode');
+                confirmBtn.classList.remove('edit-mode', 'multi-edit-mode');
             }
 
             // 편집 모드 표시기 제거
@@ -3080,12 +3142,63 @@ const POSOrderScreen = {
     },
 
     /**
-     * 편집 모드 표시기 표시
+     * 단일 선택 편집 모드 UI 업데이트
+     */
+    updateSingleSelectEditMode(minusBtn, confirmBtn) {
+        if (minusBtn) {
+            minusBtn.classList.add('active');
+            minusBtn.classList.remove('multi-active');
+            const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
+            const currentQty = this.selectedOrder.quantity;
+            minusBtn.textContent = `- ${this.selectedOrder.menuName} (${originalQty}→${currentQty})`;
+            minusBtn.disabled = false;
+        }
+
+        if (confirmBtn) {
+            confirmBtn.querySelector('.method-name').textContent = '수정확정';
+            confirmBtn.classList.add('edit-mode');
+            confirmBtn.classList.remove('multi-edit-mode');
+        }
+    },
+
+    /**
+     * 다중 선택 편집 모드 UI 업데이트
+     */
+    updateMultiSelectEditMode(minusBtn, confirmBtn) {
+        if (minusBtn) {
+            minusBtn.classList.add('multi-active');
+            minusBtn.classList.remove('active');
+            const modifiedCount = this.selectedOrders.filter(order => order.modified).length;
+            minusBtn.textContent = `- 다중수정 (${this.selectedOrders.length}개 선택, ${modifiedCount}개 수정됨)`;
+            minusBtn.disabled = false;
+        }
+
+        if (confirmBtn) {
+            const modifiedCount = this.selectedOrders.filter(order => order.modified).length;
+            confirmBtn.querySelector('.method-name').textContent = `다중수정확정 (${modifiedCount})`;
+            confirmBtn.classList.add('multi-edit-mode');
+            confirmBtn.classList.remove('edit-mode');
+        }
+    },
+
+    /**
+     * 편집 모드 표시기 표시 - 단일 및 다중 지원
      */
     showEditModeIndicator() {
         // 기존 표시기 제거
         this.hideEditModeIndicator();
 
+        if (this.isMultiSelectMode && this.selectedOrders.length > 0) {
+            this.showMultiSelectModeIndicator();
+        } else if (this.selectedOrder) {
+            this.showSingleSelectModeIndicator();
+        }
+    },
+
+    /**
+     * 단일 선택 모드 표시기
+     */
+    showSingleSelectModeIndicator() {
         const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
         const currentQty = this.selectedOrder.quantity;
         const changeAmount = originalQty - currentQty;
@@ -3113,6 +3226,58 @@ const POSOrderScreen = {
     },
 
     /**
+     * 다중 선택 모드 표시기
+     */
+    showMultiSelectModeIndicator() {
+        const modifiedOrders = this.selectedOrders.filter(order => order.modified);
+        
+        let statusText;
+        let statusIcon;
+        
+        if (modifiedOrders.length === 0) {
+            statusText = `다중 선택 (${this.selectedOrders.length}개) - 변경사항 없음`;
+            statusIcon = '📋';
+        } else {
+            const deleteCount = modifiedOrders.filter(order => order.quantity === 0).length;
+            const decreaseCount = modifiedOrders.filter(order => order.quantity > 0).length;
+            
+            if (deleteCount > 0 && decreaseCount > 0) {
+                statusText = `다중 수정 (${modifiedOrders.length}개) - 삭제: ${deleteCount}개, 감소: ${decreaseCount}개`;
+                statusIcon = '📊';
+            } else if (deleteCount > 0) {
+                statusText = `다중 삭제 (${deleteCount}개)`;
+                statusIcon = '🗑️';
+            } else {
+                statusText = `다중 감소 (${decreaseCount}개)`;
+                statusIcon = '📉';
+            }
+        }
+
+        const indicator = document.createElement('div');
+        indicator.className = 'edit-mode-indicator multi-select';
+        indicator.innerHTML = `${statusIcon} ${statusText}`;
+        
+        // 다중 선택 모드는 더 상세한 정보 표시
+        if (modifiedOrders.length > 0) {
+            const detailsHTML = modifiedOrders.map(order => {
+                const originalQty = order.originalQuantity || this.getOriginalQuantity(order.menuId);
+                const currentQty = order.quantity;
+                
+                if (currentQty === 0) {
+                    return `<div class="indicator-detail">🗑️ ${order.menuName} (${originalQty}개 삭제)</div>`;
+                } else {
+                    const change = originalQty - currentQty;
+                    return `<div class="indicator-detail">📉 ${order.menuName} (${originalQty}→${currentQty}, -${change})</div>`;
+                }
+            }).join('');
+            
+            indicator.innerHTML += `<div class="indicator-details">${detailsHTML}</div>`;
+        }
+        
+        document.body.appendChild(indicator);
+    },
+
+    /**
      * 편집 모드 표시기 숨김
      */
     hideEditModeIndicator() {
@@ -3123,14 +3288,22 @@ const POSOrderScreen = {
     },
 
     /**
-     * 선택된 주문의 수량 감소 (화면상에서만)
+     * 선택된 주문의 수량 감소 (화면상에서만) - 단일 및 다중 지원
      */
     minusQuantityFromSelected() {
-        if (!this.selectedOrder) {
+        if (this.isMultiSelectMode && this.selectedOrders.length > 0) {
+            this.minusQuantityFromMultipleSelected();
+        } else if (this.selectedOrder) {
+            this.minusQuantityFromSingleSelected();
+        } else {
             alert('수정할 주문을 먼저 선택해주세요.');
-            return;
         }
+    },
 
+    /**
+     * 단일 선택된 주문의 수량 감소
+     */
+    minusQuantityFromSingleSelected() {
         const currentQuantity = this.selectedOrder.quantity;
         
         // 수량이 1 이하인 경우 삭제 확인
@@ -3143,7 +3316,78 @@ const POSOrderScreen = {
         const newQuantity = Math.max(0, currentQuantity - 1);
 
         // 화면상 수량 업데이트
-        const quantityDisplay = this.selectedOrder.rowElement.querySelector('.quantity-display');
+        this.updateRowQuantityDisplay(this.selectedOrder, newQuantity);
+
+        // 원본 수량도 기록 (처음 수정할 때만)
+        if (!this.selectedOrder.originalQuantity) {
+            this.selectedOrder.originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
+        }
+
+        // 선택된 주문 정보 업데이트
+        this.selectedOrder.quantity = newQuantity;
+        this.selectedOrder.modified = true;
+
+        console.log(`📉 단일 수량 감소: ${this.selectedOrder.menuName} (${currentQuantity} → ${newQuantity}), 원본: ${this.selectedOrder.originalQuantity}`);
+
+        // UI 상태 업데이트
+        this.updateEditModeUI(true);
+    },
+
+    /**
+     * 다중 선택된 주문들의 수량 감소
+     */
+    minusQuantityFromMultipleSelected() {
+        // 수량이 1인 메뉴들 확인
+        const willBeDeletedMenus = this.selectedOrders.filter(order => order.quantity <= 1);
+        
+        if (willBeDeletedMenus.length > 0) {
+            const deleteMenuNames = willBeDeletedMenus.map(order => order.menuName).join(', ');
+            if (!confirm(`다음 메뉴들이 완전히 삭제됩니다:\n${deleteMenuNames}\n\n계속하시겠습니까?`)) {
+                return;
+            }
+        }
+
+        let modifiedCount = 0;
+
+        // 각 선택된 주문의 수량을 1씩 감소
+        this.selectedOrders.forEach(order => {
+            const currentQuantity = order.quantity;
+            const newQuantity = Math.max(0, currentQuantity - 1);
+
+            if (currentQuantity !== newQuantity) {
+                // 화면상 수량 업데이트
+                this.updateRowQuantityDisplay(order, newQuantity);
+
+                // 원본 수량 기록 (처음 수정할 때만)
+                if (!order.originalQuantity) {
+                    order.originalQuantity = this.getOriginalQuantity(order.menuId);
+                }
+
+                // 주문 정보 업데이트
+                order.quantity = newQuantity;
+                order.modified = true;
+                modifiedCount++;
+
+                console.log(`📉 다중 수량 감소: ${order.menuName} (${currentQuantity} → ${newQuantity}), 원본: ${order.originalQuantity}`);
+            }
+        });
+
+        if (modifiedCount > 0) {
+            console.log(`✅ 다중 수량 감소 완료: ${modifiedCount}개 메뉴 수정됨`);
+            this.showToast(`${modifiedCount}개 메뉴 수량이 감소되었습니다.`);
+        } else {
+            console.log(`ℹ️ 수정된 메뉴가 없습니다.`);
+        }
+
+        // UI 상태 업데이트
+        this.updateEditModeUI(true);
+    },
+
+    /**
+     * 주문 행의 수량 표시 업데이트
+     */
+    updateRowQuantityDisplay(order, newQuantity) {
+        const quantityDisplay = order.rowElement.querySelector('.quantity-display');
         if (quantityDisplay) {
             if (newQuantity > 0) {
                 quantityDisplay.textContent = newQuantity;
@@ -3157,42 +3401,41 @@ const POSOrderScreen = {
                 }, 500);
             } else {
                 // 수량이 0이면 행을 삭제 예정으로 표시
-                this.selectedOrder.rowElement.classList.add('will-be-removed');
+                order.rowElement.classList.add('will-be-removed');
                 quantityDisplay.textContent = '0';
                 quantityDisplay.classList.add('modified');
                 quantityDisplay.style.backgroundColor = '#fee2e2';
                 quantityDisplay.style.color = '#dc2626';
             }
         }
-
-        // 원본 수량도 기록 (처음 수정할 때만)
-        if (!this.selectedOrder.originalQuantity) {
-            this.selectedOrder.originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
-        }
-
-        // 선택된 주문 정보 업데이트
-        this.selectedOrder.quantity = newQuantity;
-        this.selectedOrder.modified = true;
-
-        console.log(`📉 수량 감소: ${this.selectedOrder.menuName} (${currentQuantity} → ${newQuantity}), 원본: ${this.selectedOrder.originalQuantity}`);
-
-        // UI 상태 업데이트 (수량 변화 표시)
-        this.updateEditModeUI(true);
     },
 
     /**
-     * 주문 수정 확정 (API 호출)
+     * 주문 수정 확정 (API 호출) - 단일 및 다중 지원
      */
     async confirmOrderEdit() {
+        // 다중 선택 모드인지 확인
+        if (this.isMultiSelectMode && this.selectedOrders.length > 0) {
+            return this.confirmMultipleOrderEdit();
+        }
+
+        // 단일 선택 모드
         if (!this.selectedOrder || !this.selectedOrder.modified) {
             console.log('ℹ️ 수정할 내용이 없습니다.');
             return this.confirmOrder(); // 일반 주문 확정으로 진행
         }
 
+        return this.confirmSingleOrderEdit();
+    },
+
+    /**
+     * 단일 주문 수정 확정
+     */
+    async confirmSingleOrderEdit() {
         try {
             const { menuId, menuName, quantity: newQuantity, originalQuantity } = this.selectedOrder;
             
-            console.log(`🔧 주문 수정 확정 시작:`, {
+            console.log(`🔧 단일 주문 수정 확정 시작:`, {
                 menuId,
                 menuName,
                 originalQuantity,
@@ -3220,7 +3463,7 @@ const POSOrderScreen = {
                 return;
             }
 
-            console.log(`🔧 주문 수정 확정: ${menuName} (${finalOriginalQuantity} → ${newQuantity})`);
+            console.log(`🔧 단일 주문 수정 확정: ${menuName} (${finalOriginalQuantity} → ${newQuantity})`);
 
             // 확인 메시지
             let confirmMessage;
@@ -3238,73 +3481,57 @@ const POSOrderScreen = {
                 return;
             }
 
-            // 다중 수량 감소 처리 - 여러 번 API 호출
-            let remainingQuantity = finalOriginalQuantity;
-            let successCount = 0;
-            const targetQuantity = newQuantity;
-            
-            console.log(`🔄 다중 수량 감소 시작: ${finalOriginalQuantity} → ${targetQuantity}`);
+            // 단일 메뉴 수정 API 호출
+            const modifications = [{
+                menuId: parseInt(menuId),
+                menuName: menuName,
+                currentQuantity: finalOriginalQuantity,
+                newQuantity: newQuantity,
+                action: newQuantity === 0 ? 'delete' : 'decrease'
+            }];
 
-            while (remainingQuantity > targetQuantity && remainingQuantity > 0) {
+            const response = await fetch('/api/pos/orders/modify-multiple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storeId: parseInt(this.currentStoreId),
+                    tableNumber: parseInt(this.currentTableNumber),
+                    modifications: modifications
+                }),
+            });
+
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
                 try {
-                    const requestData = {
-                        storeId: parseInt(this.currentStoreId),
-                        tableNumber: parseInt(this.currentTableNumber),
-                        menuId: parseInt(menuId),
-                        menuName: menuName,
-                        currentQuantity: remainingQuantity
-                    };
-
-                    console.log(`📤 수량 감소 API 호출 (${remainingQuantity} → ${remainingQuantity - 1}):`, requestData);
-
-                    const response = await fetch('/api/pos/orders/modify-quantity', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(requestData),
-                    });
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.error || errorMessage;
-                        } catch (parseError) {
-                            console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
-                        }
-                        throw new Error(errorMessage);
-                    }
-
-                    const result = await response.json();
-                    console.log(`✅ 수량 감소 완료 (${remainingQuantity} → ${remainingQuantity - 1}):`, result);
-
-                    remainingQuantity--;
-                    successCount++;
-
-                    // 과도한 API 호출 방지를 위한 짧은 지연
-                    if (remainingQuantity > targetQuantity) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-
-                } catch (stepError) {
-                    console.error(`❌ 수량 감소 실패 (${remainingQuantity}개 처리 중):`, stepError);
-                    throw new Error(`${successCount}번 성공 후 실패: ${stepError.message}`);
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
                 }
+                throw new Error(errorMessage);
             }
 
-            console.log(`✅ 전체 주문 수정 완료: ${successCount}번 수량 감소 성공`);
+            const result = await response.json();
+            console.log(`✅ 단일 주문 수정 완료:`, result);
 
-            // 성공 메시지
-            let successMessage;
-            if (targetQuantity === 0) {
-                successMessage = `${menuName}이(가) 완전히 삭제되었습니다.`;
+            if (result.success) {
+                const modificationResult = result.results[0];
+                if (modificationResult.success) {
+                    let successMessage;
+                    if (modificationResult.newQuantity === 0) {
+                        successMessage = `${menuName}이(가) 완전히 삭제되었습니다.`;
+                    } else {
+                        successMessage = `${menuName}의 수량이 ${modificationResult.originalQuantity}개에서 ${modificationResult.newQuantity}개로 변경되었습니다.`;
+                    }
+                    this.showToast(successMessage);
+                } else {
+                    throw new Error(modificationResult.error || '수정 실패');
+                }
             } else {
-                const decreaseAmount = finalOriginalQuantity - targetQuantity;
-                successMessage = `${menuName}의 수량이 ${decreaseAmount}개 감소되어 ${targetQuantity}개로 변경되었습니다.`;
+                throw new Error(result.message || '수정 실패');
             }
-            
-            this.showToast(successMessage);
 
             // 편집 모드 해제
             this.selectedOrder = null;
@@ -3316,7 +3543,7 @@ const POSOrderScreen = {
             console.log('✅ 주문 목록 새로고침 완료');
 
         } catch (error) {
-            console.error('❌ 주문 수정 실패:', error);
+            console.error('❌ 단일 주문 수정 실패:', error);
             console.error('❌ 에러 스택:', error.stack);
             
             // 사용자에게 친화적인 에러 메시지 제공
@@ -3327,8 +3554,131 @@ const POSOrderScreen = {
                 userMessage = '잘못된 요청입니다. 주문 정보를 확인해주세요.';
             } else if (error.message.includes('HTTP 5')) {
                 userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
-            } else if (error.message.includes('번 성공 후 실패')) {
-                userMessage = `수량 수정이 부분적으로 완료되었습니다. ${error.message}`;
+            }
+            
+            alert(`${userMessage}\n\n기술적 오류: ${error.message}`);
+        }
+    },
+
+    /**
+     * 다중 주문 수정 확정
+     */
+    async confirmMultipleOrderEdit() {
+        try {
+            console.log(`🔧 다중 주문 수정 확정 시작: ${this.selectedOrders.length}개 메뉴`);
+
+            if (!this.currentStoreId || !this.currentTableNumber) {
+                throw new Error('매장 정보 또는 테이블 정보가 없습니다.');
+            }
+
+            // 수정된 메뉴만 필터링
+            const modifiedOrders = this.selectedOrders.filter(order => order.modified);
+
+            if (modifiedOrders.length === 0) {
+                console.log('ℹ️ 수정할 내용이 없습니다.');
+                this.cancelOrderEdit();
+                return;
+            }
+
+            // 확인 메시지 생성
+            const modificationSummary = modifiedOrders.map(order => {
+                const originalQuantity = order.originalQuantity || this.getOriginalQuantity(order.menuId);
+                const newQuantity = order.quantity;
+                
+                if (newQuantity === 0) {
+                    return `• ${order.menuName}: 삭제 (${originalQuantity}개)`;
+                } else {
+                    const change = originalQuantity - newQuantity;
+                    return `• ${order.menuName}: ${originalQuantity}개 → ${newQuantity}개 (${change}개 감소)`;
+                }
+            }).join('\n');
+
+            const confirmMessage = `다음 ${modifiedOrders.length}개 메뉴를 수정하시겠습니까?\n\n${modificationSummary}`;
+
+            if (!confirm(confirmMessage)) {
+                console.log('🚫 사용자가 다중 주문 수정을 취소했습니다.');
+                return;
+            }
+
+            // 수정사항 배열 생성
+            const modifications = modifiedOrders.map(order => {
+                const originalQuantity = order.originalQuantity || this.getOriginalQuantity(order.menuId);
+                
+                return {
+                    menuId: parseInt(order.menuId),
+                    menuName: order.menuName,
+                    currentQuantity: originalQuantity,
+                    newQuantity: order.quantity,
+                    action: order.quantity === 0 ? 'delete' : 'decrease'
+                };
+            });
+
+            console.log(`📤 다중 수정 API 요청:`, modifications);
+
+            // 다중 수정 API 호출
+            const response = await fetch('/api/pos/orders/modify-multiple', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storeId: parseInt(this.currentStoreId),
+                    tableNumber: parseInt(this.currentTableNumber),
+                    modifications: modifications
+                }),
+            });
+
+            if (!response.ok) {
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.error || errorMessage;
+                } catch (parseError) {
+                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
+                }
+                throw new Error(errorMessage);
+            }
+
+            const result = await response.json();
+            console.log(`✅ 다중 주문 수정 완료:`, result);
+
+            // 결과 처리
+            if (result.success) {
+                this.showToast(`${result.summary.successCount}개 메뉴 수정 완료!`);
+            } else if (result.summary.partialSuccess) {
+                this.showToast(`부분 성공: ${result.summary.successCount}개 성공, ${result.summary.errorCount}개 실패`);
+            } else {
+                throw new Error(`모든 수정 실패: ${result.message}`);
+            }
+
+            // 상세 결과 로그 출력
+            result.results.forEach((modResult, index) => {
+                if (modResult.success) {
+                    console.log(`✅ ${modResult.menuName}: ${modResult.originalQuantity} → ${modResult.newQuantity}`);
+                } else {
+                    console.error(`❌ ${modResult.menuName}: ${modResult.error}`);
+                }
+            });
+
+            // 편집 모드 해제
+            this.selectedOrders = [];
+            this.isMultiSelectMode = false;
+            this.updateEditModeUI(false);
+
+            // 주문 목록 새로고침
+            console.log('🔄 주문 목록 새로고침 시작...');
+            await this.refreshOrders();
+            console.log('✅ 주문 목록 새로고침 완료');
+
+        } catch (error) {
+            console.error('❌ 다중 주문 수정 실패:', error);
+            console.error('❌ 에러 스택:', error.stack);
+            
+            let userMessage = '다중 주문 수정 중 오류가 발생했습니다.';
+            if (error.message.includes('HTTP 4')) {
+                userMessage = '잘못된 요청입니다. 선택된 메뉴 정보를 확인해주세요.';
+            } else if (error.message.includes('HTTP 5')) {
+                userMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
             }
             
             alert(`${userMessage}\n\n기술적 오류: ${error.message}`);
