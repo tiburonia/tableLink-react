@@ -2015,7 +2015,6 @@ router.post('/orders/modify-quantity', async (req, res) => {
         ot.id as ticket_id,
         ot.batch_no,
         ot.version,
-        ot.source,
         oi.id as item_id,
         oi.menu_name,
         oi.quantity
@@ -2059,7 +2058,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
 
     // 4. 각 영향받은 티켓 처리
     for (const ticketToProcess of ticketsToProcess) {
-      const { ticket_id, batch_no, version, source, newQuantity } = ticketToProcess;
+      const { ticket_id, batch_no, version, newQuantity } = ticketToProcess;
 
       // 4-1. 기존 티켓과 아이템들을 CANCELED 처리
       await client.query(`
@@ -2099,20 +2098,19 @@ router.post('/orders/modify-quantity', async (req, res) => {
           batch_no,
           version,
           status,
+          payment_type,
           source,
           table_num,
           created_at,
-          paid_status,
-          payment_type
-        ) VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, NOW(), 'UNPAID', 'POSTPAID')
+          paid_status
+        ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
         RETURNING id
       `, [
         orderId,
-        parseInt(storeId),
+        storeId,
         batch_no,
         (version || 1) + 1,
-        source || 'POS',
-        parseInt(tableNumber)
+        tableNumber
       ]);
 
       const newTicketId = newTicketResult.rows[0].id;
@@ -2124,6 +2122,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
             INSERT INTO order_items (
               order_id,
               ticket_id,
+              menu_id,
               menu_name,
               unit_price,
               quantity,
@@ -2131,18 +2130,17 @@ router.post('/orders/modify-quantity', async (req, res) => {
               item_status,
               cook_station,
               created_at,
-              menu_id,
               store_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8, $9)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, NOW(), $9)
           `, [
             orderId,
             newTicketId,
+            item.menu_id,
             item.menu_name,
             item.unit_price,
             item.final_quantity,
             item.unit_price * item.final_quantity,
-            item.cook_station || 'KITCHEN',
-            item.menu_id,
+            item.cook_station,
             item.store_id
           ]);
         }
@@ -2227,7 +2225,7 @@ router.post('/orders/modify-multiple', async (req, res) => {
         let remainingQuantity = currentQuantity;
         while (remainingQuantity > newQuantity && remainingQuantity > 0) {
           // 단일 수량 감소 API 내부 로직 재사용
-          const singleResult = await this.processSingleQuantityDecrease(
+          const singleResult = await router.processSingleQuantityDecrease( // Use router.processSingleQuantityDecrease
             client, 
             storeId, 
             tableNumber, 
@@ -2383,7 +2381,7 @@ router.post('/orders/modify-batch', async (req, res) => {
 
         if (menuResult.rows.length > 0) {
           const menu = menuResult.rows[0];
-          
+
           await client.query(`
             INSERT INTO order_items (
               order_id,
@@ -2504,7 +2502,7 @@ router.post('/orders/modify-batch', async (req, res) => {
         // 모든 아이템을 새 티켓에 복사 (타겟 메뉴는 수정된 수량으로)
         for (const item of allItemsResult.rows) {
           let finalQty = item.quantity;
-          
+
           // 타겟 메뉴인 경우 수정된 수량 적용
           if (item.menu_name === menuName) {
             finalQty = newQty;
