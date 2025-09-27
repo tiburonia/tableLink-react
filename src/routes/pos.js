@@ -1934,7 +1934,15 @@ router.post('/orders/modify-quantity', async (req, res) => {
       console.log(`❌ 티켓 ${ticketId} CANCELED 처리`);
     }
 
-    // 4. 새 티켓 생성 (batch_no의 version 증가)
+    // 4. 새 티켓 생성 (취소된 티켓들도 포함하여 batch_no 계산)
+    const nextBatchNoResult = await client.query(`
+      SELECT COALESCE(MAX(batch_no), 0) + 1 as next_batch_no
+      FROM order_tickets 
+      WHERE order_id = $1
+    `, [orderId]);
+
+    const nextBatchNo = nextBatchNoResult.rows[0].next_batch_no;
+
     const newTicketResult = await client.query(`
       INSERT INTO order_tickets (
         order_id,
@@ -1949,7 +1957,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
         paid_status
       ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
       RETURNING id, batch_no, version
-    `, [orderId, storeId, targetBatchNo, (targetVersion || 0) + 1, tableNumber]);
+    `, [orderId, storeId, nextBatchNo, 1, tableNumber]);
 
     const newTicketId = newTicketResult.rows[0].id;
     const newVersion = newTicketResult.rows[0].version;
@@ -2287,7 +2295,15 @@ router.post('/orders/modify', async (req, res) => {
 
       console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
 
-      // 새 티켓 생성 (version 증가)
+      // 새 티켓 생성 (취소된 티켓들도 포함하여 batch_no 계산)
+      const nextBatchNoResult = await client.query(`
+        SELECT COALESCE(MAX(batch_no), 0) + 1 as next_batch_no
+        FROM order_tickets 
+        WHERE order_id = $1
+      `, [orderId]);
+
+      const nextBatchNo = nextBatchNoResult.rows[0].next_batch_no;
+
       const newTicketResult = await client.query(`
         INSERT INTO order_tickets (
           order_id,
@@ -2302,7 +2318,7 @@ router.post('/orders/modify', async (req, res) => {
           paid_status
         ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
         RETURNING id, batch_no, version
-      `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
+      `, [orderId, storeId, nextBatchNo, 1, tableNumber]);
 
       const newTicketId = newTicketResult.rows[0].id;
       const newVersion = newTicketResult.rows[0].version;

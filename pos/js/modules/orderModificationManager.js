@@ -342,7 +342,7 @@ const OrderModificationManager = {
         });
 
         // 임시 ID를 가진 새로운 메뉴인 경우 행 자체를 제거
-        if (this.selectedOrder && this.selectedOrder.rowElement && 
+        if (this.selectedOrder && this.selectedOrder.rowElement &&
             String(this.selectedOrder.orderId).startsWith('temp_')) {
 
             console.log('🗑️ 임시 메뉴 행 제거:', this.selectedOrder.menuName);
@@ -351,7 +351,7 @@ const OrderModificationManager = {
             // currentOrders에서도 해당 항목 제거
             if (window.POSOrderScreen && window.POSOrderScreen.currentOrders) {
                 const originalLength = window.POSOrderScreen.currentOrders.length;
-                window.POSOrderScreen.currentOrders = window.POSOrderScreen.currentOrders.filter(order => 
+                window.POSOrderScreen.currentOrders = window.POSOrderScreen.currentOrders.filter(order =>
                     order.id !== this.selectedOrder.orderId
                 );
                 const removedCount = originalLength - window.POSOrderScreen.currentOrders.length;
@@ -370,7 +370,7 @@ const OrderModificationManager = {
             // currentOrders에서도 임시 추가된 항목들 제거
             if (window.POSOrderScreen && window.POSOrderScreen.currentOrders) {
                 const originalLength = window.POSOrderScreen.currentOrders.length;
-                window.POSOrderScreen.currentOrders = window.POSOrderScreen.currentOrders.filter(order => 
+                window.POSOrderScreen.currentOrders = window.POSOrderScreen.currentOrders.filter(order =>
                     !order.isNewMenu && !order.isPendingAddition
                 );
                 const removedCount = originalLength - window.POSOrderScreen.currentOrders.length;
@@ -434,7 +434,7 @@ const OrderModificationManager = {
                         return `• ${mod.menuName}: ${mod.changeAmount}개 감소 (${mod.originalQuantity}개 → ${mod.newQuantity}개)`;
                     }
                 }),
-                ...increaseModifications.map(mod => 
+                ...increaseModifications.map(mod =>
                     `• ${mod.menuName}: ${Math.abs(mod.changeAmount)}개 증가 (${mod.originalQuantity}개 → ${mod.newQuantity}개)`
                 )
             ].join('\n');
