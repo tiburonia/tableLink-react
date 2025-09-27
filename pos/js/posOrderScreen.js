@@ -900,6 +900,36 @@ const POSOrderScreen = {
                 }, 100); // DOM 업데이트 후 실행
             }
 
+            // 기존 메뉴든 새 메뉴든 모두 선택 처리 (공통 로직)
+            setTimeout(() => {
+                const targetRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                if (targetRow) {
+                    // 기존 선택 해제
+                    document.querySelectorAll('.pos-order-table tr').forEach(row => {
+                        row.classList.remove('selected', 'order-row-selected');
+                    });
+
+                    // 해당 메뉴 선택
+                    targetRow.classList.add('order-row', 'selected');
+
+                    // OrderModificationManager의 selectedOrder 설정
+                    OrderModificationManager.selectedOrder = {
+                        orderId: targetRow.dataset.orderId || `menu_${menuId}`,
+                        menuId: parseInt(menuId),
+                        menuName: menuName,
+                        quantity: newQuantity,
+                        originalQuantity: originalQuantity,
+                        rowElement: targetRow,
+                        modified: true
+                    };
+
+                    // 로컬 selectedOrder도 동기화
+                    this.selectedOrder = OrderModificationManager.selectedOrder;
+
+                    console.log(`✅ 메뉴 카드 클릭 후 자동 선택: ${menuName} (수량: ${newQuantity})`);
+                }
+            }, 150); // DOM 업데이트와 렌더링이 완료된 후 실행
+
             // 수정사항 요약 업데이트
             this.updatePendingModificationsSummary();
 
