@@ -834,7 +834,7 @@ const POSOrderScreen = {
                 document.querySelectorAll('.pos-order-table tr').forEach(row => {
                     row.classList.remove('selected', 'order-row-selected');
                 });
-                existingRow.classList.add('order-row-selected');
+                existingRow.classList.add('order-row', 'selected');
 
                 // 선택된 주문 정보 업데이트
                 this.selectedOrder = {
@@ -878,8 +878,8 @@ const POSOrderScreen = {
                             row.classList.remove('selected', 'order-row-selected');
                         });
 
-                        // 새 메뉴 선택 (order-row-selected 클래스 사용)
-                        newMenuRow.classList.add('order-row-selected');
+                        // 새 메뉴 선택 (기존 order-row selected 클래스 사용)
+                        newMenuRow.classList.add('order-row', 'selected');
 
                         // 선택된 주문 정보 저장
                         this.selectedOrder = {

@@ -570,8 +570,13 @@ body {
 
 /* 선택된 주문 행 */
 .order-row.selected {
-    background-color: #dbeafe !important;
+    background: #dbeafe !important;
     border-left: 4px solid #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.order-row.selected:hover {
+    background: #bfdbfe !important;
 }
 
 /* 삭제 예정 행 */

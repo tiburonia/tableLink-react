@@ -23,8 +23,7 @@ const OrderModificationManager = {
 
         // 현재 행이 이미 선택되어 있으면 선택 해제
         if (rowElement.classList.contains('selected')) {
-            rowElement.classList.remove('selected');
-            rowElement.classList.remove('order-row-selected'); // Remove order-row-selected class
+            rowElement.classList.remove('selected', 'order-row-selected');
             this.selectedOrder = null;
             this.updateEditModeUI(false);
             return;
@@ -32,13 +31,11 @@ const OrderModificationManager = {
 
         // 기존 선택 해제
         document.querySelectorAll('.pos-order-table tr').forEach(row => {
-            row.classList.remove('selected');
-            row.classList.remove('order-row-selected'); // Remove order-row-selected class from all rows
+            row.classList.remove('selected', 'order-row-selected');
         });
 
         // 현재 행 선택
-        rowElement.classList.add('selected');
-        rowElement.classList.add('order-row-selected'); // Add order-row-selected class
+        rowElement.classList.add('order-row', 'selected');
 
         // 선택된 주문 정보 저장
         this.selectedOrder = {
