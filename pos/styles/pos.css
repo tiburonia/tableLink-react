@@ -2723,6 +2723,17 @@ body {
     border-left: 4px solid #3b82f6;
 }
 
+/* order-row-selected 클래스 스타일 */
+.pos-order-table .order-row-selected {
+    background: #dbeafe !important;
+    border-left: 4px solid #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.15);
+}
+
+.pos-order-table .order-row-selected:hover {
+    background: #bfdbfe !important;
+}
+
 .status-badge.status-new_menu {
     background: #fef3c7;
     color: #92400e;

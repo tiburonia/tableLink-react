@@ -832,9 +832,9 @@ const POSOrderScreen = {
 
                 // 해당 행을 선택 상태로 만들기
                 document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                    row.classList.remove('selected');
+                    row.classList.remove('selected', 'order-row-selected');
                 });
-                existingRow.classList.add('selected');
+                existingRow.classList.add('order-row-selected');
 
                 // 선택된 주문 정보 업데이트
                 this.selectedOrder = {
@@ -875,11 +875,11 @@ const POSOrderScreen = {
                     if (newMenuRow) {
                         // 기존 선택 해제
                         document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                            row.classList.remove('selected');
+                            row.classList.remove('selected', 'order-row-selected');
                         });
 
-                        // 새 메뉴 선택
-                        newMenuRow.classList.add('selected');
+                        // 새 메뉴 선택 (order-row-selected 클래스 사용)
+                        newMenuRow.classList.add('order-row-selected');
 
                         // 선택된 주문 정보 저장
                         this.selectedOrder = {
