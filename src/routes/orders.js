@@ -966,6 +966,62 @@ router.get('/:orderId/review-status', async (req, res) => {
   }
 });
 
+/**
+ * 주문 총 금액 재계산 및 업데이트
+ */
+async function updateOrderTotalAmount(client, orderId) {
+  try {
+    console.log(`💰 주문 ${orderId} 총 금액 재계산 시작`);
+
+    // 해당 주문의 모든 아이템 총액 계산
+    const totalResult = await client.query(`
+      SELECT 
+        COALESCE(SUM(oi.unit_price * oi.quantity), 0) as item_total
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1 
+        AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+        AND ot.status NOT IN ('CANCELLED')
+    `, [orderId]);
+
+    const itemTotal = parseInt(totalResult.rows[0].item_total) || 0;
+
+    // 할인 금액 계산 (order_adjustments 테이블에서)
+    const adjustmentResult = await client.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_adjustment
+      FROM order_adjustments
+      WHERE order_id = $1
+    `, [orderId]);
+
+    const totalAdjustment = parseInt(adjustmentResult.rows[0].total_adjustment) || 0;
+    const finalAmount = Math.max(0, itemTotal + totalAdjustment);
+
+    // orders 테이블 업데이트 (total_price와 total_amount 둘 다)
+    const updateResult = await client.query(`
+      UPDATE orders
+      SET 
+        total_price = $2,
+        total_amount = $2,
+        subtotal = $3,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING total_price, total_amount, subtotal
+    `, [orderId, finalAmount, itemTotal]);
+
+    if (updateResult.rows.length > 0) {
+      console.log(`✅ 주문 ${orderId} 총 금액 업데이트 완료: ${finalAmount}원 (아이템: ${itemTotal}원, 조정: ${totalAdjustment}원)`);
+      return finalAmount;
+    } else {
+      console.warn(`⚠️ 주문 ${orderId}를 찾을 수 없음`);
+      return null;
+    }
+
+  } catch (error) {
+    console.error(`❌ 주문 ${orderId} 총 금액 업데이트 실패:`, error);
+    throw error;
+  }
+}
+
 // 📋 비회원 POS 주문 생성
 router.post('/pos-guest', async (req, res) => {
   const client = await pool.connect();

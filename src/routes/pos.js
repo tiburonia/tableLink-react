@@ -1554,20 +1554,20 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
 
     // 전체 메뉴 수량 계산 및 검증
     const totalMenuQuantity = allTicketsWithMenuResult.rows.reduce((sum, row) => sum + row.item_quantity, 0);
-    
+
     if (totalMenuQuantity !== currentQuantity) {
       console.warn(`⚠️ 헬퍼함수 수량 불일치: DB ${totalMenuQuantity}개 vs 요청 ${currentQuantity}개`);
     }
 
     const newQuantity = Math.max(0, currentQuantity - 1);
-    
+
     // 가장 높은 batch_no를 가진 티켓 선택
     const targetTicket = allTicketsWithMenuResult.rows[0];
     const { batch_no: targetBatchNo, version: targetVersion } = targetTicket;
 
     // 3. 모든 관련 티켓을 CANCELED 처리
     const canceledTicketIds = allTicketsWithMenuResult.rows.map(row => row.ticket_id);
-    
+
     for (const ticketId of canceledTicketIds) {
       await client.query(`
         UPDATE order_items
@@ -1612,10 +1612,10 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
 
     // 메뉴별로 수량 통합
     const menuItemsMap = {};
-    
+
     for (const item of allCanceledItemsResult.rows) {
       const menuKey = `${item.menu_id}_${item.unit_price}`;
-      
+
       if (!menuItemsMap[menuKey]) {
         menuItemsMap[menuKey] = {
           menu_id: item.menu_id,
@@ -1625,7 +1625,7 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
           total_quantity: 0
         };
       }
-      
+
       menuItemsMap[menuKey].total_quantity += item.quantity;
     }
 
@@ -1731,7 +1731,7 @@ router.get('/stores/:storeId/table/:tableNumber/mixed-order-items', async (req, 
     if (isNaN(parsedStoreId) || isNaN(parsedTableNumber)) {
       return res.status(400).json({
         success: false,
-        error: `유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`
+        error: '유효하지 않은 매장 ID 또는 테이블 ID입니다'
       });
     }
 
@@ -1894,7 +1894,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
     }
 
     console.log(`📋 발견된 메뉴 관련 티켓: ${allTicketsWithMenuResult.rows.length}개`);
-    
+
     // 전체 메뉴 수량 계산
     const totalMenuQuantity = allTicketsWithMenuResult.rows.reduce((sum, row) => sum + row.item_quantity, 0);
     console.log(`📊 전체 메뉴 수량: ${totalMenuQuantity}개, 요청된 현재 수량: ${currentQuantity}개`);
@@ -1915,7 +1915,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
 
     // 3. 모든 관련 티켓을 CANCELED 처리
     const canceledTicketIds = allTicketsWithMenuResult.rows.map(row => row.ticket_id);
-    
+
     for (const ticketId of canceledTicketIds) {
       // 티켓의 모든 아이템을 CANCELED 처리
       await client.query(`
@@ -1934,7 +1934,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
       console.log(`❌ 티켓 ${ticketId} CANCELED 처리`);
     }
 
-    // 4. 새 티켓 생성 (가장 높은 batch_no의 version 증가)
+    // 4. 새 티켓 생성 (batch_no의 version 증가)
     const newTicketResult = await client.query(`
       INSERT INTO order_tickets (
         order_id,
@@ -1969,10 +1969,10 @@ router.post('/orders/modify-quantity', async (req, res) => {
 
     // 메뉴별로 수량 통합 처리
     const menuItemsMap = {};
-    
+
     for (const item of allCanceledItemsResult.rows) {
       const menuKey = `${item.menu_id}_${item.unit_price}`;
-      
+
       if (!menuItemsMap[menuKey]) {
         menuItemsMap[menuKey] = {
           menu_id: item.menu_id,
@@ -1982,7 +1982,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
           total_quantity: 0
         };
       }
-      
+
       menuItemsMap[menuKey].total_quantity += item.quantity;
     }
 
@@ -2399,6 +2399,35 @@ router.post('/orders/modify', async (req, res) => {
         newQuantity: newQuantity,
         action: action
       });
+    }
+
+    // 주문 총 금액 자동 업데이트
+    try {
+      const totalResult = await client.query(`
+        SELECT 
+          COALESCE(SUM(oi.unit_price * oi.quantity), 0) as item_total
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+          AND ot.status NOT IN ('CANCELLED')
+      `, [orderId]);
+
+      const itemTotal = parseInt(totalResult.rows[0].item_total) || 0;
+
+      await client.query(`
+        UPDATE orders
+        SET 
+          total_price = $2,
+          total_amount = $2,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [orderId, itemTotal]);
+
+      console.log(`✅ 주문 ${orderId} 수정 후 총 금액 업데이트: ${itemTotal}원`);
+    } catch (updateError) {
+      console.warn(`⚠️ 주문 ${orderId} 총 금액 자동 업데이트 실패:`, updateError.message);
+      // 트랜잭션을 롤백하지 않고 경고만 로그
     }
 
     await client.query('COMMIT');
