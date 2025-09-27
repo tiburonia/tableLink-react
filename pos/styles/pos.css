@@ -695,7 +695,11 @@ body {
 
 .pending-modifications-summary .confirm-all-btn:hover {
     background: #059669;
-}, 0, 0, 0.3);
+}
+.pending-modifications-summary .summary-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 
 /* 대기 중인 수정사항 표시 */
@@ -2668,13 +2672,21 @@ body {
 }
 
 .cart-badge {
-    background: #10b981;
-    color: white;
     font-size: 10px;
     padding: 2px 6px;
-    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 4px;
     margin-left: 8px;
-    font-weight: 600;
+}
+
+.new-menu-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: #10b981;
+    color: white;
+    border-radius: 4px;
+    margin-left: 8px;
 }
 
 .action-btn.primary {

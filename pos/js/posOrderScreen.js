@@ -1451,7 +1451,7 @@ const POSOrderScreen = {
             if (isInEditMode) {
                 // 주문수정 상태에서는 수정내역에 증가로 추가
                 console.log(`📈 주문수정 상태에서 메뉴 추가: ${menuName}`);
-                
+
                 // 현재 해당 메뉴의 원본 수량 확인
                 let originalQuantity = 0;
                 const existingOrder = this.currentOrders.find(order => 
@@ -1494,7 +1494,7 @@ const POSOrderScreen = {
                 const existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
                 if (existingRow) {
                     this.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
-                    
+
                     // 선택된 주문 정보 업데이트
                     if (this.selectedOrder && this.selectedOrder.menuId === parseInt(menuId)) {
                         this.selectedOrder.quantity = newQuantity;
@@ -1514,7 +1514,7 @@ const POSOrderScreen = {
                         store_id: storeId || POSCore.storeId,
                         cook_station: cookStation || this.getCookStationByMenu(menuName),
                     };
-                    
+
                     // 기존 카트에서 같은 메뉴 찾기
                     const existingCartItem = this.cart.find(
                         (item) =>
@@ -1528,6 +1528,35 @@ const POSOrderScreen = {
                     } else {
                         this.cart.push(cartItem);
                     }
+
+                    // 주문수정 상태에서는 카트 아이템을 currentOrders에도 추가하여 바로 표시
+                    const cartOrderItem = {
+                        id: `cart_${menuId}`,
+                        menuId: menuId,
+                        menuName: menuName,
+                        price: price,
+                        quantity: 1,
+                        cookingStatus: "CART",
+                        isCart: true,
+                        originalCartIndex: this.cart.length - 1
+                    };
+
+                    // currentOrders에서 같은 카트 아이템 찾기
+                    const existingOrderItem = this.currentOrders.find(order => 
+                        order.isCart && order.menuId === menuId && order.menuName === menuName
+                    );
+
+                    if (existingOrderItem) {
+                        existingOrderItem.quantity += 1;
+                    } else {
+                        this.currentOrders.push(cartOrderItem);
+                    }
+
+                    // UI 즉시 업데이트
+                    const posOrderList = document.getElementById("posOrderList");
+                    if (posOrderList) {
+                        posOrderList.innerHTML = this.renderPOSOrderItemsModern();
+                    }
                 }
 
                 // 수정사항 요약 업데이트
@@ -1537,7 +1566,7 @@ const POSOrderScreen = {
                 this.updateEditModeUI(true);
 
                 this.showToast(`${menuName} 수정내역에 추가됨 (+1개)`);
-                
+
                 console.log(`📈 수정내역 누적 완료: ${menuName} (원본: ${originalQuantity} → 새로운: ${newQuantity})`);
                 return;
             }
@@ -1793,7 +1822,12 @@ const POSOrderScreen = {
      * 비회원 POS 주문 지원 + TLL 연동 지원
      */
     async confirmOrder() {
-        // 편집 모드인 경우 수정 확정으로 처리
+        // 다중 수정사항이 있는 경우 다중 수정 확정으로 처리
+        if (this.pendingModifications.length > 0) {
+            return this.confirmAllPendingModifications();
+        }
+
+        // 단일 편집 모드인 경우 기존 수정 확정으로 처리
         if (this.selectedOrder && this.selectedOrder.modified) {
             return this.confirmOrderEdit();
         }
@@ -3174,7 +3208,7 @@ const POSOrderScreen = {
             // 수정 모드 활성화
             if (minusBtn) {
                 minusBtn.classList.add('active');
-                
+
                 if (this.selectedOrder) {
                     const originalQty = this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId);
                     const currentQty = this.selectedOrder.quantity;
@@ -3419,7 +3453,7 @@ const POSOrderScreen = {
         const orderItem = this.currentOrders.find(order => 
             (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && !order.isCart
         );
-        
+
         if (orderItem) {
             return orderItem.price;
         }
@@ -3455,7 +3489,7 @@ const POSOrderScreen = {
         // 새로운 요약 생성
         const summary = document.createElement('div');
         summary.className = 'pending-modifications-summary';
-        
+
         const modificationsText = [
             ...decreaseModifications.map(mod => {
                 if (mod.newQuantity === 0) {
@@ -3503,8 +3537,6 @@ const POSOrderScreen = {
                 if (quantityDisplay) {
                     quantityDisplay.textContent = mod.originalQuantity;
                     quantityDisplay.classList.remove('modified');
-                    quantityDisplay.style.backgroundColor = '';
-                    quantityDisplay.style.color = '';
                 }
                 rowElement.classList.remove('will-be-removed', 'selected');
             }
@@ -3605,7 +3637,7 @@ const POSOrderScreen = {
 
             // 결과 메시지 생성
             let resultMessage = `다중 주문 수정 완료!\n\n✅ 성공: ${totalSuccessCount}개 처리`;
-            
+
             if (totalFailureCount > 0) {
                 resultMessage += `\n❌ 실패: ${totalFailureCount}건\n\n실패 상세:\n${failureDetails.join('\n')}`;
             }
@@ -3658,7 +3690,7 @@ const POSOrderScreen = {
         });
 
         console.log(`📊 수정사항 분류 완료: 감소 ${decreaseModifications.length}개, 증가 ${increaseModifications.length}개`);
-        
+
         return { decreaseModifications, increaseModifications };
     },
 
@@ -3667,7 +3699,7 @@ const POSOrderScreen = {
      */
     async processDecreaseModification(modification) {
         const { menuId, menuName, originalQuantity, newQuantity } = modification;
-        
+
         console.log(`🔄 ${menuName} 감소 처리 시작: ${originalQuantity} → ${newQuantity}`);
 
         let remainingQuantity = originalQuantity;
@@ -3804,7 +3836,7 @@ const POSOrderScreen = {
         const orderItem = this.currentOrders.find(order => 
             (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && !order.isCart
         );
-        
+
         if (orderItem) {
             return orderItem.cookStation || 'KITCHEN';
         }
