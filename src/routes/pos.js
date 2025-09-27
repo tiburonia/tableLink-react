@@ -1701,6 +1701,13 @@ router.post('/orders/modify-quantity', async (req, res) => {
       WHERE ticket_id = $1
     `, [oldTicketId]);
 
+    // 기존 티켓 CACELED 처리
+    await client.query(`
+      UPDATE order_tickets
+      SET status = 'CANCELED', updated_at = NOW()
+      WHERE id = $1
+    `, [oldTicketId]);
+
     console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
 
     // 4. 새 티켓 생성 (version 증가, batch_no 동일)
