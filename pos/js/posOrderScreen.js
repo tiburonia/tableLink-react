@@ -574,7 +574,8 @@ const POSOrderScreen = {
                     </button>
 
                     <button class="payment-method-btn"
-                            onclick="POSOrderScreen.confirmOrder()">
+                            onclick="POSOrderScreen.confirmOrder()"
+                            id="confirmOrder">
                         <div class="method-icon">📋</div>
                         <div class="method-name">주문</div>
                     </button>
