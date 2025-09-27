@@ -84,21 +84,20 @@ const OrderDataManager = {
     },
 
     /**
-     * 주문 아이템 통합 처리 (중복 방지 강화)
+     * 주문 아이템 통합 처리 (수량 초기화 이슈 수정)
      */
     consolidateOrderItems(unpaidItems) {
         console.log(`🔄 주문 아이템 통합 처리 시작: ${unpaidItems.length}개 아이템`);
 
         const consolidatedOrders = {};
-        const processedKeys = new Set(); // 중복 방지용
 
         unpaidItems.forEach((item, index) => {
             // 메뉴명과 단가만으로 통합 키 생성 (티켓 무관하게 통합)
             const consolidationKey = `${item.menu_name.trim()}_${item.unit_price}`;
 
-            // 이미 처리된 키인지 확인
-            if (processedKeys.has(consolidationKey)) {
-                console.log(`🔄 기존 키에 수량 추가: ${consolidationKey}`);
+            if (consolidatedOrders[consolidationKey]) {
+                // 기존 키에 수량 누적 (기존 수량 + 새로운 수량)
+                console.log(`🔄 기존 키에 수량 추가: ${consolidationKey} (${consolidatedOrders[consolidationKey].quantity} + ${item.quantity})`);
                 consolidatedOrders[consolidationKey].quantity += item.quantity;
 
                 // 티켓 ID 중복 방지하면서 추가
@@ -109,13 +108,13 @@ const OrderDataManager = {
                 // 아이템 ID 추가
                 consolidatedOrders[consolidationKey].orderItemIds.push(item.id);
             } else {
-                // 새로운 통합 키 생성
-                processedKeys.add(consolidationKey);
+                // 새로운 통합 키 생성 (수량을 정확히 item.quantity로 설정)
                 consolidatedOrders[consolidationKey] = {
                     id: item.menu_id || item.id,
+                    menuId: item.menu_id || item.id, // menuId 필드 추가
                     menuName: item.menu_name,
                     price: item.unit_price,
-                    quantity: item.quantity,
+                    quantity: item.quantity, // 원본 수량 그대로 사용 (1로 초기화 방지)
                     cookingStatus: item.item_status || "PENDING",
                     isCart: false,
                     orderItemId: item.id,
@@ -125,25 +124,29 @@ const OrderDataManager = {
                     cookStation: item.cook_station || "KITCHEN",
                 };
 
-                console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (키: ${consolidationKey})`);
+                console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (수량: ${item.quantity}, 키: ${consolidationKey})`);
             }
         });
 
         const consolidatedArray = Object.values(consolidatedOrders);
 
-        // 최종 중복 검증
-        const finalCheck = {};
-        consolidatedArray.forEach((order) => {
-            const checkKey = `${order.menuName}_${order.price}`;
-            if (finalCheck[checkKey]) {
-                console.error(`❌ 최종 검증에서 중복 발견: ${checkKey}`);
-            } else {
-                finalCheck[checkKey] = true;
+        // 최종 검증: 수량이 0 이하인 항목 제거
+        const validatedArray = consolidatedArray.filter(order => {
+            if (order.quantity <= 0) {
+                console.warn(`⚠️ 수량이 0 이하인 메뉴 제거: ${order.menuName} (수량: ${order.quantity})`);
+                return false;
             }
+            return true;
         });
 
-        console.log(`✅ 통합 처리 완료: ${unpaidItems.length}개 → ${consolidatedArray.length}개`);
-        return consolidatedArray;
+        console.log(`✅ 통합 처리 완료: ${unpaidItems.length}개 아이템 → ${validatedArray.length}개 메뉴`);
+        console.log(`📊 통합 결과:`, validatedArray.map(order => ({
+            메뉴명: order.menuName,
+            수량: order.quantity,
+            단가: order.price
+        })));
+
+        return validatedArray;
     },
 
     /**
