@@ -234,7 +234,11 @@ const POSOrderScreen = {
             tableBody = posOrders
                 .map(
                     (order) => `
-                <tr class="order-row ${order.isCart ? "cart-item" : ""}" data-order-id="${order.id}">
+                <tr class="order-row ${order.isCart ? "cart-item" : ""}" 
+                    data-order-id="${order.id}" 
+                    data-menu-id="${order.id}"
+                    onclick="POSOrderScreen.toggleOrderRowSelection(${order.id}, '${order.menuName}', ${order.quantity})"
+                    style="cursor: pointer;">
                     <td class="col-menu">
                         <div class="menu-info">
                             <strong>${order.menuName}</strong>
@@ -249,11 +253,11 @@ const POSOrderScreen = {
                             ${
                                 order.isCart
                                     ? `
-                                <button class="qty-btn minus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
+                                <button class="qty-btn minus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, -1)">
                                     −
                                 </button>
                                 <span class="quantity-display">${order.quantity}</span>
-                                <button class="qty-btn plus" onclick="POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
+                                <button class="qty-btn plus" onclick="event.stopPropagation(); POSOrderScreen.changeCartQuantity(${order.originalCartIndex}, 1)">
                                     +
                                 </button>
                             `
@@ -1117,7 +1121,7 @@ const POSOrderScreen = {
 
         if (isTLLIntegration) {
             console.log('🔗 TLL 연동 주문 감지됨 - POSTLLPaymentModal 직접 호출');
-            
+
             // TLL 연동이면 바로 POSTLLPaymentModal 호출
             if (typeof POSTLLPaymentModal !== 'undefined') {
                 await POSTLLPaymentModal.show();
@@ -2998,6 +3002,35 @@ const POSOrderScreen = {
     minusQuantityFromSelected() {
         alert("선택된 주문의 수량 감소 기능 (추후 구현)");
     },
+
+    // 주문 행 선택 및 수정 기능
+    toggleOrderRowSelection(orderId, menuName, quantity) {
+        console.log(`Row clicked: Order ID ${orderId}, Menu: ${menuName}, Quantity: ${quantity}`);
+
+        const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
+        if (!rowElement) return;
+
+        // 선택 상태 토글
+        rowElement.classList.toggle('selected');
+
+        // 선택된 행이 있으면 수정 모달 표시 (또는 다른 UI 변경)
+        const selectedRows = document.querySelectorAll('.pos-order-table tr.selected');
+        if (selectedRows.length > 0) {
+            console.log(`${selectedRows.length}개 행 선택됨`);
+            // TODO: 수정 모달 표시 또는 다른 UI 활성화
+            // 예: POSOrderScreen.showOrderEditModal(orderId, menuName, quantity);
+        } else {
+            console.log('선택된 행 없음');
+            // TODO: 수정 관련 UI 비활성화
+        }
+    },
+
+    // TODO: 주문 수정 모달 관련 함수 추후 구현
+    // showOrderEditModal(orderId, menuName, quantity) { ... },
+    // updateOrderQuantity(orderId, newQuantity) { ... },
+    // removeOrderItem(orderId) { ... },
+    // confirmOrderEdit() { ... },
+    // cancelOrderEdit() { ... },
 };
 
 // 전역 함수로 등록
