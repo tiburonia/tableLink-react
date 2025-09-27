@@ -2120,4 +2120,3 @@ const POSOrderScreen = {
 
 // 전역 함수로 등록
 window.POSOrderScreen = POSOrderScreen;
-</replit_final_file>
