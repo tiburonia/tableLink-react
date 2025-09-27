@@ -1527,9 +1527,13 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
 
     const orderId = activeOrderResult.rows[0].order_id;
 
-    // 2. 해당 메뉴가 포함된 최신 티켓 조회
-    const latestTicketResult = await client.query(`
-      SELECT ot.id as ticket_id, ot.batch_no, ot.version
+    // 2. 해당 메뉴가 포함된 모든 티켓 조회 (다중 티켓 처리)
+    const allTicketsWithMenuResult = await client.query(`
+      SELECT DISTINCT 
+        ot.id as ticket_id, 
+        ot.batch_no, 
+        ot.version,
+        oi.quantity as item_quantity
       FROM order_tickets ot
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE ot.order_id = $1
@@ -1538,32 +1542,46 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
         AND ot.paid_status = 'UNPAID'
         AND oi.item_status != 'CANCELED'
       ORDER BY ot.batch_no DESC, ot.version DESC
-      LIMIT 1
     `, [orderId, parseInt(menuId)]);
 
-    if (latestTicketResult.rows.length === 0) {
+    if (allTicketsWithMenuResult.rows.length === 0) {
       return {
         success: false,
         error: '해당 메뉴의 활성 티켓을 찾을 수 없습니다'
       };
     }
 
-    const { ticket_id: oldTicketId, batch_no: oldBatchNo, version: oldVersion } = latestTicketResult.rows[0];
+    // 전체 메뉴 수량 계산 및 검증
+    const totalMenuQuantity = allTicketsWithMenuResult.rows.reduce((sum, row) => sum + row.item_quantity, 0);
+    
+    if (totalMenuQuantity !== currentQuantity) {
+      console.warn(`⚠️ 헬퍼함수 수량 불일치: DB ${totalMenuQuantity}개 vs 요청 ${currentQuantity}개`);
+    }
 
-    // 3. 기존 티켓의 모든 아이템들을 CANCELLED 처리
-    await client.query(`
-      UPDATE order_items
-      SET item_status = 'CANCELED', updated_at = NOW()
-      WHERE ticket_id = $1
-    `, [oldTicketId]);
+    const newQuantity = Math.max(0, currentQuantity - 1);
+    
+    // 가장 높은 batch_no를 가진 티켓 선택
+    const targetTicket = allTicketsWithMenuResult.rows[0];
+    const { batch_no: targetBatchNo, version: targetVersion } = targetTicket;
 
-    await client.query(`
-      UPDATE order_tickets
-      SET status = 'CANCELED', updated_at = NOW()
-      WHERE id = $1
-    `, [oldTicketId]);
+    // 3. 모든 관련 티켓을 CANCELED 처리
+    const canceledTicketIds = allTicketsWithMenuResult.rows.map(row => row.ticket_id);
+    
+    for (const ticketId of canceledTicketIds) {
+      await client.query(`
+        UPDATE order_items
+        SET item_status = 'CANCELED', updated_at = NOW()
+        WHERE ticket_id = $1
+      `, [ticketId]);
 
-    // 4. 새 티켓 생성
+      await client.query(`
+        UPDATE order_tickets
+        SET status = 'CANCELED', updated_at = NOW()
+        WHERE id = $1
+      `, [ticketId]);
+    }
+
+    // 4. 새 통합 티켓 생성
     const newTicketResult = await client.query(`
       INSERT INTO order_tickets (
         order_id,
@@ -1578,25 +1596,44 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
         paid_status
       ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
       RETURNING id, batch_no, version
-    `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
+    `, [orderId, storeId, targetBatchNo, (targetVersion || 0) + 1, tableNumber]);
 
     const newTicketId = newTicketResult.rows[0].id;
 
-    // 5. 기존 아이템들을 새 티켓에 복사 (수량 처리)
-    const allItemsResult = await client.query(`
+    // 5. 모든 CANCELED 아이템들을 통합하여 새 티켓에 복사
+    const allCanceledItemsResult = await client.query(`
       SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
       FROM order_items
-      WHERE ticket_id = $1
+      WHERE ticket_id = ANY($1)
         AND item_status = 'CANCELED'
-      ORDER BY created_at ASC
-    `, [oldTicketId]);
+      ORDER BY menu_id, created_at ASC
+    `, [canceledTicketIds]);
 
-    const newQuantity = currentQuantity - 1;
+    // 메뉴별로 수량 통합
+    const menuItemsMap = {};
+    
+    for (const item of allCanceledItemsResult.rows) {
+      const menuKey = `${item.menu_id}_${item.unit_price}`;
+      
+      if (!menuItemsMap[menuKey]) {
+        menuItemsMap[menuKey] = {
+          menu_id: item.menu_id,
+          menu_name: item.menu_name,
+          unit_price: item.unit_price,
+          cook_station: item.cook_station,
+          total_quantity: 0
+        };
+      }
+      
+      menuItemsMap[menuKey].total_quantity += item.quantity;
+    }
+
     let hasOtherItems = false;
 
-    for (const item of allItemsResult.rows) {
-      if (parseInt(item.menu_id) === parseInt(menuId)) {
-        // 타겟 메뉴 처리
+    // 통합된 아이템들을 새 티켓에 추가
+    for (const [menuKey, menuData] of Object.entries(menuItemsMap)) {
+      if (parseInt(menuData.menu_id) === parseInt(menuId)) {
+        // 타겟 메뉴 처리 (수량 감소)
         if (newQuantity > 0) {
           await client.query(`
             INSERT INTO order_items (
@@ -1604,21 +1641,21 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
               total_price, cook_station, item_status, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())
           `, [
-            newTicketId, item.menu_id, item.menu_name, item.unit_price,
-            newQuantity, item.unit_price * newQuantity, item.cook_station
+            newTicketId, menuData.menu_id, menuData.menu_name, menuData.unit_price,
+            newQuantity, menuData.unit_price * newQuantity, menuData.cook_station
           ]);
           hasOtherItems = true;
         }
       } else {
-        // 다른 메뉴들은 그대로 복사
+        // 다른 메뉴들은 통합된 수량으로 복사
         await client.query(`
           INSERT INTO order_items (
             ticket_id, menu_id, menu_name, unit_price, quantity, 
             total_price, cook_station, item_status, created_at
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', NOW())
         `, [
-          newTicketId, item.menu_id, item.menu_name, item.unit_price,
-          item.quantity, item.total_price, item.cook_station
+          newTicketId, menuData.menu_id, menuData.menu_name, menuData.unit_price,
+          menuData.total_quantity, menuData.unit_price * menuData.total_quantity, menuData.cook_station
         ]);
         hasOtherItems = true;
       }
@@ -1636,10 +1673,11 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
     return {
       success: true,
       orderId: orderId,
-      oldTicketId: oldTicketId,
+      oldTicketIds: canceledTicketIds,
       newTicketId: newTicketId,
       newQuantity: newQuantity,
-      hasOtherItems: hasOtherItems
+      hasOtherItems: hasOtherItems,
+      processedTickets: allTicketsWithMenuResult.rows.length
     };
 
   } catch (error) {
@@ -1829,9 +1867,14 @@ router.post('/orders/modify-quantity', async (req, res) => {
     const orderId = activeOrderResult.rows[0].order_id;
     console.log(`📋 수정 대상 주문 ID: ${orderId}`);
 
-    // 2. 해당 메뉴가 포함된 최신 티켓 조회 (menu_id 기준)
-    const latestTicketResult = await client.query(`
-      SELECT ot.id as ticket_id, ot.batch_no, ot.version
+    // 2. 해당 메뉴가 포함된 모든 티켓 조회 (다중 티켓 처리)
+    const allTicketsWithMenuResult = await client.query(`
+      SELECT DISTINCT 
+        ot.id as ticket_id, 
+        ot.batch_no, 
+        ot.version,
+        oi.quantity as item_quantity,
+        oi.id as item_id
       FROM order_tickets ot
       JOIN order_items oi ON ot.id = oi.ticket_id
       WHERE ot.order_id = $1
@@ -1840,35 +1883,57 @@ router.post('/orders/modify-quantity', async (req, res) => {
         AND ot.paid_status = 'UNPAID'
         AND oi.item_status != 'CANCELED'
       ORDER BY ot.batch_no DESC, ot.version DESC
-      LIMIT 1
     `, [orderId, parseInt(menuId)]);
 
-    if (latestTicketResult.rows.length === 0) {
+    if (allTicketsWithMenuResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: '해당 메뉴의 활성 티켓을 찾을 수 없습니다'
       });
     }
 
-    const { ticket_id: oldTicketId, batch_no: oldBatchNo, version: oldVersion } = latestTicketResult.rows[0];
+    console.log(`📋 발견된 메뉴 관련 티켓: ${allTicketsWithMenuResult.rows.length}개`);
+    
+    // 전체 메뉴 수량 계산
+    const totalMenuQuantity = allTicketsWithMenuResult.rows.reduce((sum, row) => sum + row.item_quantity, 0);
+    console.log(`📊 전체 메뉴 수량: ${totalMenuQuantity}개, 요청된 현재 수량: ${currentQuantity}개`);
 
-    // 3. 기존 티켓의 모든 아이템들을 CANCELLED 처리
-    await client.query(`
-      UPDATE order_items
-      SET item_status = 'CANCELED', updated_at = NOW()
-      WHERE ticket_id = $1
-    `, [oldTicketId]);
+    // 수량 검증
+    if (totalMenuQuantity !== currentQuantity) {
+      console.warn(`⚠️ 수량 불일치: DB ${totalMenuQuantity}개 vs 요청 ${currentQuantity}개`);
+    }
 
-    // 기존 티켓 CACELED 처리
-    await client.query(`
-      UPDATE order_tickets
-      SET status = 'CANCELED', updated_at = NOW()
-      WHERE id = $1
-    `, [oldTicketId]);
+    const newQuantity = Math.max(0, currentQuantity - 1);
+    console.log(`🎯 수정 목표: ${currentQuantity} → ${newQuantity}`);
 
-    console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
+    // 가장 높은 batch_no를 가진 티켓 선택 (최신 티켓)
+    const targetTicket = allTicketsWithMenuResult.rows[0];
+    const { ticket_id: targetTicketId, batch_no: targetBatchNo, version: targetVersion } = targetTicket;
 
-    // 4. 새 티켓 생성 (version 증가, batch_no 동일)
+    console.log(`🎯 타겟 티켓: ${targetTicketId} (batch: ${targetBatchNo}, version: ${targetVersion})`);
+
+    // 3. 모든 관련 티켓을 CANCELED 처리
+    const canceledTicketIds = allTicketsWithMenuResult.rows.map(row => row.ticket_id);
+    
+    for (const ticketId of canceledTicketIds) {
+      // 티켓의 모든 아이템을 CANCELED 처리
+      await client.query(`
+        UPDATE order_items
+        SET item_status = 'CANCELED', updated_at = NOW()
+        WHERE ticket_id = $1
+      `, [ticketId]);
+
+      // 티켓 자체도 CANCELED 처리
+      await client.query(`
+        UPDATE order_tickets
+        SET status = 'CANCELED', updated_at = NOW()
+        WHERE id = $1
+      `, [ticketId]);
+
+      console.log(`❌ 티켓 ${ticketId} CANCELED 처리`);
+    }
+
+    // 4. 새 티켓 생성 (가장 높은 batch_no의 version 증가)
     const newTicketResult = await client.query(`
       INSERT INTO order_tickets (
         order_id,
@@ -1883,30 +1948,50 @@ router.post('/orders/modify-quantity', async (req, res) => {
         paid_status
       ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
       RETURNING id, batch_no, version
-    `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
+    `, [orderId, storeId, targetBatchNo, (targetVersion || 0) + 1, tableNumber]);
 
     const newTicketId = newTicketResult.rows[0].id;
     const newVersion = newTicketResult.rows[0].version;
 
-    console.log(`➕ 새 티켓 생성: ${newTicketId} (batch: ${oldBatchNo}, version: ${newVersion})`);
+    console.log(`➕ 새 통합 티켓 생성: ${newTicketId} (batch: ${targetBatchNo}, version: ${newVersion})`);
 
-    // 5. 기존 티켓의 모든 아이템들을 새 티켓에 복사 (단, 타겟 메뉴는 수량 감소 또는 제외)
-    const allItemsResult = await client.query(`
+    // 5. 모든 CANCELED 티켓의 아이템들을 새 티켓에 통합 복사
+    const allCanceledItemsResult = await client.query(`
       SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
       FROM order_items
-      WHERE ticket_id = $1
+      WHERE ticket_id = ANY($1)
         AND item_status = 'CANCELED'
-      ORDER BY created_at ASC
-    `, [oldTicketId]);
+      ORDER BY menu_id, created_at ASC
+    `, [canceledTicketIds]);
+
+    console.log(`📋 통합할 아이템: ${allCanceledItemsResult.rows.length}개`);
+
+    // 메뉴별로 수량 통합 처리
+    const menuItemsMap = {};
+    
+    for (const item of allCanceledItemsResult.rows) {
+      const menuKey = `${item.menu_id}_${item.unit_price}`;
+      
+      if (!menuItemsMap[menuKey]) {
+        menuItemsMap[menuKey] = {
+          menu_id: item.menu_id,
+          menu_name: item.menu_name,
+          unit_price: item.unit_price,
+          cook_station: item.cook_station,
+          total_quantity: 0
+        };
+      }
+      
+      menuItemsMap[menuKey].total_quantity += item.quantity;
+    }
 
     let hasOtherItems = false;
-    const newQuantity = currentQuantity - 1;
 
-    for (const item of allItemsResult.rows) {
-      if (parseInt(item.menu_id) === parseInt(menuId)) {
-        // 타겟 메뉴 처리
+    // 통합된 아이템들을 새 티켓에 추가
+    for (const [menuKey, menuData] of Object.entries(menuItemsMap)) {
+      if (parseInt(menuData.menu_id) === parseInt(menuId)) {
+        // 타겟 메뉴 처리 (수량 감소 적용)
         if (newQuantity > 0) {
-          // 수량 감소하여 추가
           await client.query(`
             INSERT INTO order_items (
               order_id,
@@ -1924,22 +2009,22 @@ router.post('/orders/modify-quantity', async (req, res) => {
           `, [
             orderId,
             newTicketId,
-            item.menu_id,
-            item.menu_name,
-            item.unit_price,
+            menuData.menu_id,
+            menuData.menu_name,
+            menuData.unit_price,
             newQuantity,
-            item.unit_price * newQuantity,
-            item.cook_station,
+            menuData.unit_price * newQuantity,
+            menuData.cook_station,
             storeId
           ]);
 
-          console.log(`✅ 수정된 메뉴 추가: ${item.menu_name} (${newQuantity}개)`);
+          console.log(`✅ 수정된 메뉴 추가: ${menuData.menu_name} (${menuData.total_quantity} → ${newQuantity}개)`);
           hasOtherItems = true;
         } else {
-          console.log(`🗑️ 메뉴 완전 삭제: ${item.menu_name}`);
+          console.log(`🗑️ 메뉴 완전 삭제: ${menuData.menu_name} (${menuData.total_quantity}개)`);
         }
       } else {
-        // 다른 메뉴들은 그대로 복사
+        // 다른 메뉴들은 통합된 수량으로 복사
         await client.query(`
           INSERT INTO order_items (
             order_id,
@@ -1957,15 +2042,16 @@ router.post('/orders/modify-quantity', async (req, res) => {
         `, [
           orderId,
           newTicketId,
-          item.menu_id,
-          item.menu_name,
-          item.unit_price,
-          item.quantity,
-          item.total_price,
-          item.cook_station,
+          menuData.menu_id,
+          menuData.menu_name,
+          menuData.unit_price,
+          menuData.total_quantity,
+          menuData.unit_price * menuData.total_quantity,
+          menuData.cook_station,
           storeId
         ]);
 
+        console.log(`✅ 다른 메뉴 통합 복사: ${menuData.menu_name} (${menuData.total_quantity}개)`);
         hasOtherItems = true;
       }
     }
