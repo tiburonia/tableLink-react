@@ -10,6 +10,7 @@ const POSOrderScreen = {
     selectedPaymentMethod: "card",
     currentSession: null, // 현재 활성 세션 정보
     sessionItems: [], // 현재 세션의 주문 아이템
+    selectedOrder: null, // 선택된 주문 (수정용)
 
     /**
      * 주문 화면 렌더링
@@ -236,7 +237,7 @@ const POSOrderScreen = {
                     (order) => `
                 <tr class="order-row ${order.isCart ? "cart-item" : ""}" 
                     data-order-id="${order.id}" 
-                    data-menu-id="${order.id}"
+                    data-menu-id="${order.menuId || order.id}"
                     onclick="POSOrderScreen.toggleOrderRowSelection(${order.id}, '${order.menuName}', ${order.quantity})"
                     style="cursor: pointer;">
                     <td class="col-menu">
@@ -3005,32 +3006,443 @@ const POSOrderScreen = {
 
     // 주문 행 선택 및 수정 기능
     toggleOrderRowSelection(orderId, menuName, quantity) {
-        console.log(`Row clicked: Order ID ${orderId}, Menu: ${menuName}, Quantity: ${quantity}`);
+        console.log(`🎯 주문 행 선택: Order ID ${orderId}, Menu: ${menuName}, Quantity: ${quantity}`);
 
         const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
-        if (!rowElement) return;
+        if (!rowElement) {
+            console.warn(`⚠️ 주문 행을 찾을 수 없음: ${orderId}`);
+            return;
+        }
 
-        // 선택 상태 토글
-        rowElement.classList.toggle('selected');
+        // 기존 선택 해제
+        document.querySelectorAll('.pos-order-table tr').forEach(row => {
+            row.classList.remove('selected');
+        });
 
-        // 선택된 행이 있으면 수정 모달 표시 (또는 다른 UI 변경)
-        const selectedRows = document.querySelectorAll('.pos-order-table tr.selected');
-        if (selectedRows.length > 0) {
-            console.log(`${selectedRows.length}개 행 선택됨`);
-            // TODO: 수정 모달 표시 또는 다른 UI 활성화
-            // 예: POSOrderScreen.showOrderEditModal(orderId, menuName, quantity);
+        // 현재 행 선택
+        rowElement.classList.add('selected');
+
+        // 선택된 주문 정보 저장
+        this.selectedOrder = {
+            orderId: orderId,
+            menuId: rowElement.dataset.menuId || orderId, // menu_id 가져오기
+            menuName: menuName,
+            quantity: quantity,
+            rowElement: rowElement
+        };
+
+        console.log(`✅ 주문 선택됨:`, this.selectedOrder);
+
+        // UI 상태 업데이트
+        this.updateEditModeUI(true);
+    },
+
+    /**
+     * 편집 모드 UI 상태 업데이트
+     */
+    updateEditModeUI(isEditMode) {
+        const minusBtn = document.querySelector('.control-btn.quantity-minus');
+        const confirmBtn = document.getElementById('confirmOrder');
+        
+        if (isEditMode && this.selectedOrder) {
+            // 수정 모드 활성화
+            if (minusBtn) {
+                minusBtn.classList.add('active');
+                minusBtn.textContent = `- (${this.selectedOrder.menuName})`;
+                minusBtn.disabled = false;
+            }
+
+            if (confirmBtn) {
+                confirmBtn.querySelector('.method-name').textContent = '수정확정';
+                confirmBtn.classList.add('edit-mode');
+            }
+
+            // 편집 모드 표시기 추가
+            this.showEditModeIndicator();
         } else {
-            console.log('선택된 행 없음');
-            // TODO: 수정 관련 UI 비활성화
+            // 일반 모드로 복원
+            if (minusBtn) {
+                minusBtn.classList.remove('active');
+                minusBtn.textContent = '-';
+                minusBtn.disabled = true;
+            }
+
+            if (confirmBtn) {
+                confirmBtn.querySelector('.method-name').textContent = '주문';
+                confirmBtn.classList.remove('edit-mode');
+            }
+
+            // 편집 모드 표시기 제거
+            this.hideEditModeIndicator();
         }
     },
 
-    // TODO: 주문 수정 모달 관련 함수 추후 구현
-    // showOrderEditModal(orderId, menuName, quantity) { ... },
-    // updateOrderQuantity(orderId, newQuantity) { ... },
-    // removeOrderItem(orderId) { ... },
-    // confirmOrderEdit() { ... },
-    // cancelOrderEdit() { ... },
+    /**
+     * 편집 모드 표시기 표시
+     */
+    showEditModeIndicator() {
+        // 기존 표시기 제거
+        this.hideEditModeIndicator();
+
+        const indicator = document.createElement('div');
+        indicator.className = 'edit-mode-indicator';
+        indicator.innerHTML = `📝 수정 모드: ${this.selectedOrder.menuName} (${this.selectedOrder.quantity}개)`;
+        document.body.appendChild(indicator);
+    },
+
+    /**
+     * 편집 모드 표시기 숨김
+     */
+    hideEditModeIndicator() {
+        const existingIndicator = document.querySelector('.edit-mode-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+    },
+
+    /**
+     * 선택된 주문의 수량 감소 (화면상에서만)
+     */
+    minusQuantityFromSelected() {
+        if (!this.selectedOrder) {
+            alert('수정할 주문을 먼저 선택해주세요.');
+            return;
+        }
+
+        const currentQuantity = this.selectedOrder.quantity;
+        if (currentQuantity <= 1) {
+            if (!confirm(`${this.selectedOrder.menuName}을(를) 완전히 삭제하시겠습니까?`)) {
+                return;
+            }
+        }
+
+        const newQuantity = Math.max(0, currentQuantity - 1);
+
+        // 화면상 수량 업데이트
+        const quantityDisplay = this.selectedOrder.rowElement.querySelector('.quantity-display');
+        if (quantityDisplay) {
+            if (newQuantity > 0) {
+                quantityDisplay.textContent = newQuantity;
+                quantityDisplay.classList.add('modified');
+            } else {
+                // 수량이 0이면 행을 삭제 예정으로 표시
+                this.selectedOrder.rowElement.classList.add('will-be-removed');
+                quantityDisplay.textContent = '0';
+                quantityDisplay.classList.add('modified');
+            }
+        }
+
+        // 선택된 주문 정보 업데이트
+        this.selectedOrder.quantity = newQuantity;
+        this.selectedOrder.modified = true;
+
+        console.log(`📉 수량 감소: ${this.selectedOrder.menuName} (${currentQuantity} → ${newQuantity})`);
+
+        // UI 상태 업데이트
+        this.updateEditModeUI(true);
+    },
+
+    /**
+     * 주문 수정 확정 (API 호출)
+     */
+    async confirmOrderEdit() {
+        if (!this.selectedOrder || !this.selectedOrder.modified) {
+            console.log('ℹ️ 수정할 내용이 없습니다.');
+            return this.confirmOrder(); // 일반 주문 확정으로 진행
+        }
+
+        try {
+            const { menuId, menuName, quantity: newQuantity } = this.selectedOrder;
+            const originalQuantity = this.getOriginalQuantity(menuId);
+
+            if (originalQuantity === null) {
+                throw new Error('원본 수량을 찾을 수 없습니다.');
+            }
+
+            console.log(`🔧 주문 수정 확정: ${menuName} (${originalQuantity} → ${newQuantity})`);
+
+            // 확인 메시지
+            const confirmMessage = newQuantity === 0 
+                ? `${menuName}을(를) 완전히 삭제하시겠습니까?`
+                : `${menuName}의 수량을 ${originalQuantity}개에서 ${newQuantity}개로 변경하시겠습니까?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // API 호출
+            const response = await fetch('/api/pos/orders/modify-quantity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    storeId: this.currentStoreId,
+                    tableNumber: this.currentTableNumber,
+                    menuId: menuId,
+                    menuName: menuName,
+                    currentQuantity: originalQuantity
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '주문 수정 실패');
+            }
+
+            const result = await response.json();
+            console.log('✅ 주문 수정 완료:', result);
+
+            // 성공 메시지
+            const successMessage = newQuantity === 0 
+                ? `${menuName}이(가) 삭제되었습니다.`
+                : `${menuName}의 수량이 ${newQuantity}개로 변경되었습니다.`;
+            
+            this.showToast(successMessage);
+
+            // 편집 모드 해제
+            this.selectedOrder = null;
+            this.updateEditModeUI(false);
+
+            // 주문 목록 새로고침
+            await this.refreshOrders();
+
+        } catch (error) {
+            console.error('❌ 주문 수정 실패:', error);
+            alert(`주문 수정 중 오류가 발생했습니다: ${error.message}`);
+        }
+    },
+
+    /**
+     * 원본 수량 가져오기 (수정 전 DB 기준)
+     */
+    getOriginalQuantity(menuId) {
+        // currentOrders에서 해당 메뉴의 원본 수량 찾기
+        const originalOrder = this.currentOrders.find(order => 
+            (order.id === parseInt(menuId) || order.menuId === parseInt(menuId)) && !order.isCart
+        );
+        
+        return originalOrder ? originalOrder.quantity : null;
+    },
+
+    /**
+     * 주문 수정 취소
+     */
+    cancelOrderEdit() {
+        if (!this.selectedOrder) return;
+
+        console.log('🚫 주문 수정 취소');
+
+        // 화면상 변경사항 복원
+        const quantityDisplay = this.selectedOrder.rowElement.querySelector('.quantity-display');
+        if (quantityDisplay) {
+            const originalQuantity = this.getOriginalQuantity(this.selectedOrder.menuId);
+            quantityDisplay.textContent = originalQuantity;
+            quantityDisplay.classList.remove('modified');
+        }
+
+        // 행 스타일 복원
+        this.selectedOrder.rowElement.classList.remove('will-be-removed', 'selected');
+
+        // 편집 모드 해제
+        this.selectedOrder = null;
+        this.updateEditModeUI(false);
+    },
+
+    /**
+     * confirmOrder 메서드 수정 (편집 모드 감지)
+     */
+    async confirmOrder() {
+        // 편집 모드인 경우 수정 확정으로 처리
+        if (this.selectedOrder && this.selectedOrder.modified) {
+            return this.confirmOrderEdit();
+        }
+
+        // 기존 주문 확정 로직 (카트 -> 서버 전송)
+        try {
+            if (this.cart.length === 0) {
+                alert("주문할 메뉴가 없습니다.");
+                return;
+            }
+
+            const total = this.cart.reduce(
+                (sum, item) => sum + item.price * item.quantity,
+                0,
+            );
+
+            // TLL 연동 상태 확인
+            const hasTLLOrders = this.tllOrders && this.tllOrders.length > 0;
+            const isTLLMixed = this.checkTLLOrderMixedStatus();
+
+            let confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 주문하시겠습니까?`;
+
+            if (hasTLLOrders && isTLLMixed) {
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 기존 TLL 주문에 추가하시겠습니까?
+
+• 기존 TLL 주문과 함께 하나의 계산서로 처리됩니다`;
+            } else if (hasTLLOrders && !isTLLMixed) {
+                confirmMessage = `${this.cart.length}개 메뉴, 총 ${total.toLocaleString()}원을 별도 주문으로 생성하시겠습니까?
+
+• TLL 주문과 별도의 계산서로 처리됩니다
+• TLL 연동을 원하시면 먼저 "TLL 연동" 버튼을 클릭하세요`;
+            }
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // 필수 정보 검증 및 설정
+            const storeId = this.currentStoreId || POSCore.storeId;
+            const tableNumber = this.currentTableNumber || this.currentTable;
+
+            if (!storeId || !tableNumber) {
+                alert("매장 ID 또는 테이블 번호가 설정되지 않았습니다.");
+                console.error("❌ 필수 정보 누락:", { storeId, tableNumber });
+                return;
+            }
+
+            console.log("📋 POS 주문 확정 시작:", {
+                storeId: storeId,
+                tableNumber: tableNumber,
+                cartItems: this.cart.length,
+                totalAmount: total,
+                hasTLLOrders: hasTLLOrders,
+                isTLLMixed: isTLLMixed,
+            });
+
+            // TLL 연동 상태에 따라 다른 API 사용
+            let apiEndpoint = "/api/pos/guest-orders/confirm";
+            let requestBody = {
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
+                items: this.cart,
+                totalAmount: total,
+            };
+
+            if (hasTLLOrders && isTLLMixed) {
+                // TLL 연동된 경우: 기존 주문에 추가
+                apiEndpoint = "/api/pos/orders/confirm";
+                requestBody.mergeWithExisting = true;
+                requestBody.existingOrderId = this.tllOrders[0].order_id;
+                console.log("🔗 TLL 연동 주문으로 처리: 기존 주문에 추가");
+            } else {
+                // TLL 미연동 또는 TLL 없는 경우: 새 주문 생성
+                console.log("📝 별도 POS 주문으로 처리");
+            }
+
+            const response = await fetch(apiEndpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "주문 확정 실패");
+            }
+
+            const result = await response.json();
+            console.log("✅ POS 주문 확정 완료:", result);
+
+            // 세션 정보 업데이트 (새 주문 ID로)
+            this.currentSession = {
+                orderId: result.orderId,
+                tableNumber: this.currentTable,
+                storeId: POSCore.storeId,
+            };
+            this.sessionItems = this.cart.map((item) => ({
+                ...item,
+                ticketId: result.ticketId,
+            })); // 임시 ticketId
+
+            // 카트 초기화
+            this.cart = [];
+
+            // 주문 목록 새로고침 (DB에서 최신 order_items 로드)
+            await this.loadCurrentOrders(POSCore.storeId, this.currentTable);
+
+            // tbody 업데이트 (카트 없이 기존 주문내역만 표시)
+            const posOrderTable = document.querySelector(
+                ".pos-order-table tbody",
+            );
+            if (posOrderTable) {
+                let tableBody = "";
+
+                if (this.currentOrders.length > 0) {
+                    tableBody = this.currentOrders
+                        .map(
+                            (order) => `
+                        <tr class="order-row" data-order-id="${order.id}">
+                            <td class="col-menu">
+                                <div class="menu-info">
+                                    <strong>${order.menuName}</strong>
+                                </div>
+                            </td>
+                            <td class="col-price">
+                                ${order.price.toLocaleString()}원
+                            </td>
+                            <td class="col-quantity">
+                                <div class="quantity-control-table">
+                                    <span class="quantity-display">${order.quantity}</span>
+                                </div>
+                            </td>
+                            <td class="col-total">
+                                <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                            </td>
+                            <td class="col-status">
+                                <span class="status-badge status-${order.cookingStatus?.toLowerCase() || "pending"}">
+                                    ${this.getStatusText(order.cookingStatus)}
+                                </span>
+                            </td>
+                        </tr>
+                    `,
+                        )
+                        .join("");
+                }
+
+                // 남은 빈 행들 추가
+                const remainingRows = Math.max(
+                    0,
+                    10 - this.currentOrders.length,
+                );
+                for (let i = 0; i < remainingRows; i++) {
+                    tableBody += `
+                        <tr class="empty-row">
+                            <td class="col-menu"></td>
+                            <td class="col-price"></td>
+                            <td class="col-quantity"></td>
+                            <td class="col-total"></td>
+                            <td class="col-status"></td>
+                        </tr>
+                    `;
+                }
+
+                posOrderTable.innerHTML = tableBody;
+            }
+
+            // 결제 섹션 업데이트
+            const paymentSection = document.querySelector(".payment-section");
+            if (paymentSection) {
+                const newPaymentSection = document.createElement("div");
+                newPaymentSection.innerHTML = this.renderPaymentSection();
+                paymentSection.replaceWith(newPaymentSection.firstElementChild);
+            }
+
+            const orderType = result.isGuestOrder ? "비회원" : "일반";
+            this.showToast(
+                `${orderType} 주문이 확정되었습니다 (티켓 ID: ${result.ticketId})`,
+            );
+
+            console.log("✅ 주문 확정 후 화면 전환");
+            // 주문 완료 후 테이블 맵 화면 전환
+            setTimeout(() => {
+                POSCore.showTableMap();
+            }, 2000);
+        } catch (error) {
+            console.error("❌ 비회원 주문 확정 실패:", error);
+            alert(`비회원 주문 확정 실패: ${error.message}`);
+        }
+    },
 };
 
 // 전역 함수로 등록

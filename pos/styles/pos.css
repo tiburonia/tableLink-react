@@ -2490,6 +2490,16 @@ body {
 }
 
 /* 주문 수정 관련 스타일 */
+.order-row.selected {
+    background: #fef3c7 !important;
+    border-left: 4px solid #f59e0b;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+.order-row.selected:hover {
+    background: #fde68a !important;
+}
+
 .order-row.selected-for-edit {
     background: #fef3c7 !important;
     border-left: 4px solid #f59e0b;
@@ -2523,6 +2533,18 @@ body {
     font-weight: 600;
     z-index: 1000;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 /* 수정된 수량 표시 */
@@ -2532,6 +2554,19 @@ body {
     background: #fef3c7;
     padding: 2px 6px;
     border-radius: 4px;
+    animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 /* 컨트롤 버튼 활성화 상태 */
@@ -2540,6 +2575,12 @@ body {
     border-color: #fca5a5;
     color: #dc2626;
     box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+    font-weight: 700;
+}
+
+.control-btn.quantity-minus.active:hover {
+    background: #fecaca;
+    border-color: #f87171;
 }
 
 /* 확정 버튼 수정 모드 */
@@ -2547,9 +2588,25 @@ body {
     background: #f59e0b;
     border-color: #d97706;
     color: white;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
 }
 
 .payment-method-btn.edit-mode:hover {
     background: #d97706;
     border-color: #b45309;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(245, 158, 11, 0.4);
+}
+
+.payment-method-btn.edit-mode .method-icon {
+    animation: editPulse 2s infinite;
+}
+
+@keyframes editPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
 }
