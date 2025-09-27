@@ -3082,7 +3082,20 @@ const POSOrderScreen = {
         alert("전체취소 기능 (추후 구현)");
     },
     cancelSelectedOrders() {
-        alert("선택취소 기능 (추후 구현)");
+        // 누적된 수정사항이 있으면 모든 수정사항 취소
+        if (this.pendingModifications.length > 0) {
+            this.cancelAllPendingModifications();
+            return;
+        }
+
+        // 단일 선택된 주문이 있으면 해당 주문 편집 취소
+        if (this.selectedOrder) {
+            this.cancelOrderEdit();
+            return;
+        }
+
+        // 아무것도 선택되지 않은 경우
+        alert("취소할 선택된 주문이 없습니다.");
     },
     addToOrder() {
         alert("주문추가 기능 (추후 구현)");
