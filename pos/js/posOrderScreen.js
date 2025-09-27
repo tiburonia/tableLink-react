@@ -895,7 +895,16 @@ const POSOrderScreen = {
                         // 로컬 selectedOrder도 동기화
                         this.selectedOrder = OrderModificationManager.selectedOrder;
 
-                        console.log(`✅ 새 메뉴 자동 선택: ${menuName} (수량: ${newQuantity})`);
+                        // 새로 추가된 행에 클릭 이벤트 리스너 추가
+                        newMenuRow.addEventListener('click', () => {
+                            OrderModificationManager.toggleOrderRowSelection(
+                                newMenuItem.id,
+                                menuName,
+                                newQuantity
+                            );
+                        });
+
+                        console.log(`✅ 새 메뉴 자동 선택 및 이벤트 리스너 설정: ${menuName} (수량: ${newQuantity})`);
                     }
                 }, 100); // DOM 업데이트 후 실행
             }
