@@ -128,9 +128,9 @@ router.post('/orders/confirm', async (req, res) => {
         orderId = orderResult.rows[0].id;
         console.log(`📋 새 비회원 POS 주문 ${orderId} 생성 (user_id: NULL, guest_phone: NULL)`);
 
-        // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트
+        // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트 (이중 주문 처리 로직)
         const currentTableResult = await client.query(`
-          SELECT processing_order_id, spare_processing_order_id
+          SELECT processing_order_id, spare_processing_order_id, status
           FROM store_tables
           WHERE store_id = $1 AND (id = $2 OR table_number = $2)
         `, [storeId, tableNumber]);
@@ -140,6 +140,7 @@ router.post('/orders/confirm', async (req, res) => {
           const hasMainOrder = currentTable.processing_order_id !== null;
           const hasSpareOrder = currentTable.spare_processing_order_id !== null;
 
+          // 레거시 시스템과 동일한 이중 주문 처리 로직
           if (!hasMainOrder) {
             // processing_order_id가 비어있으면 메인 주문으로 설정
             await client.query(`
@@ -151,7 +152,7 @@ router.post('/orders/confirm', async (req, res) => {
             `, [orderId, storeId, tableNumber]);
             console.log(`📋 POS 새 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
           } else if (!hasSpareOrder) {
-            // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
+            // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정 (2개 주문까지 허용)
             await client.query(`
               UPDATE store_tables
               SET spare_processing_order_id = $1,
@@ -160,10 +161,26 @@ router.post('/orders/confirm', async (req, res) => {
             `, [orderId, storeId, tableNumber]);
             console.log(`📋 POS 새 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
           } else {
-            console.warn(`⚠️ POS 새 주문 - 테이블에 이미 2개 주문 존재: 테이블 ${tableNumber}, 메인: ${currentTable.processing_order_id}, 보조: ${currentTable.spare_processing_order_id}`);
+            // 레거시 시스템과 동일: 2개 주문 초과 시 경고만 출력하고 처리하지 않음
+            console.warn(`⚠️ POS 새 주문 - 테이블에 이미 2개 주문 존재, 추가 주문 거부: 테이블 ${tableNumber}, 메인: ${currentTable.processing_order_id}, 보조: ${currentTable.spare_processing_order_id}`);
+            await client.query('ROLLBACK');
+            return res.status(409).json({
+              success: false,
+              error: '해당 테이블에 이미 2개의 활성 주문이 존재합니다. 더 이상 주문을 받을 수 없습니다.',
+              tableStatus: {
+                processing_order_id: currentTable.processing_order_id,
+                spare_processing_order_id: currentTable.spare_processing_order_id
+              }
+            });
           }
         } else {
+          // 테이블을 찾을 수 없는 경우 에러 로깅
           console.error(`❌ POS 새 주문 - 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
+          await client.query('ROLLBACK');
+          return res.status(404).json({
+            success: false,
+            error: '테이블을 찾을 수 없습니다'
+          });
         }
       }
     }
@@ -221,9 +238,16 @@ router.post('/orders/confirm', async (req, res) => {
 
     console.log(`✅ POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
 
-    // SSE 브로드캐스트
+    // SSE 브로드캐스트 (레거시 호환성)
     if (global.broadcastPOSTableUpdate) {
-      global.broadcastPOSTableUpdate(storeId, tableNumber);
+      try {
+        await global.broadcastPOSTableUpdate(storeId, tableNumber);
+        console.log(`📡 SSE 테이블 업데이트 브로드캐스트 완료: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      } catch (sseError) {
+        console.warn('⚠️ SSE 브로드캐스트 실패:', sseError.message);
+      }
+    } else {
+      console.warn('⚠️ global.broadcastPOSTableUpdate 함수가 등록되지 않음');
     }
 
     res.json({
@@ -232,6 +256,7 @@ router.post('/orders/confirm', async (req, res) => {
       ticketId: ticketId,
       batchNo: batchNo,
       isMergedWithTLL: mergeWithExisting && existingOrderId ? true : false,
+      isGuestOrder: !mergeWithExisting,
       message: mergeWithExisting ? 'TLL 주문에 POS 주문이 추가되었습니다' : '주문이 성공적으로 확정되었습니다'
     });
 
@@ -315,9 +340,9 @@ router.post('/guest-orders/confirm', async (req, res) => {
       orderId = orderResult.rows[0].id;
       console.log(`📋 새 비회원 POS 주문 ${orderId} 생성`);
 
-      // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트
+      // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트 (이중 주문 처리 로직)
       const currentTableResult = await client.query(`
-        SELECT processing_order_id, spare_processing_order_id
+        SELECT processing_order_id, spare_processing_order_id, status
         FROM store_tables
         WHERE store_id = $1 AND id = $2
       `, [storeId, tableNumber]);
@@ -327,6 +352,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
         const hasMainOrder = currentTable.processing_order_id !== null;
         const hasSpareOrder = currentTable.spare_processing_order_id !== null;
 
+        // 레거시 시스템과 동일한 이중 주문 처리 로직
         if (!hasMainOrder) {
           // processing_order_id가 비어있으면 메인 주문으로 설정
           await client.query(`
@@ -338,7 +364,7 @@ router.post('/guest-orders/confirm', async (req, res) => {
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 메인 주문으로 설정: 테이블 ${tableNumber}, 주문 ${orderId}`);
         } else if (!hasSpareOrder) {
-          // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정
+          // processing_order_id가 존재하지만 spare_processing_order_id가 비어있으면 보조 주문으로 설정 (2개 주문까지 허용)
           await client.query(`
             UPDATE store_tables
             SET spare_processing_order_id = $1,
@@ -348,10 +374,26 @@ router.post('/guest-orders/confirm', async (req, res) => {
           `, [orderId, storeId, tableNumber]);
           console.log(`📋 비회원 POS 주문 - 보조 주문으로 설정: 테이블 ${tableNumber}, 기존 메인 주문 ${currentTable.processing_order_id}, 새 보조 주문 ${orderId}`);
         } else {
-          console.warn(`⚠️ 비회원 POS 주문 - 테이블에 이미 2개 주문 존재: 테이블 ${tableNumber}`);
+          // 레거시 시스템과 동일: 2개 주문 초과 시 경고 및 처리 거부
+          console.warn(`⚠️ 비회원 POS 주문 - 테이블에 이미 2개 주문 존재, 추가 주문 거부: 테이블 ${tableNumber}`);
+          await client.query('ROLLBACK');
+          return res.status(409).json({
+            success: false,
+            error: '해당 테이블에 이미 2개의 활성 주문이 존재합니다. 더 이상 주문을 받을 수 없습니다.',
+            tableStatus: {
+              processing_order_id: currentTable.processing_order_id,
+              spare_processing_order_id: currentTable.spare_processing_order_id
+            }
+          });
         }
       } else {
+        // 테이블을 찾을 수 없는 경우 에러 로깅 및 응답
         console.error(`❌ 비회원 POS 주문 - 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
+        await client.query('ROLLBACK');
+        return res.status(404).json({
+          success: false,
+          error: '테이블을 찾을 수 없습니다'
+        });
       }
     }
 
@@ -408,9 +450,16 @@ router.post('/guest-orders/confirm', async (req, res) => {
 
     console.log(`✅ 비회원 POS 주문 확정 완료: 주문 ID ${orderId}, 티켓 ID ${ticketId}, 배치 ${batchNo}`);
 
-    // SSE 브로드캐스트
+    // SSE 브로드캐스트 (레거시 호환성)
     if (global.broadcastPOSTableUpdate) {
-      global.broadcastPOSTableUpdate(storeId, tableNumber);
+      try {
+        await global.broadcastPOSTableUpdate(storeId, tableNumber);
+        console.log(`📡 SSE 테이블 업데이트 브로드캐스트 완료: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      } catch (sseError) {
+        console.warn('⚠️ SSE 브로드캐스트 실패:', sseError.message);
+      }
+    } else {
+      console.warn('⚠️ global.broadcastPOSTableUpdate 함수가 등록되지 않음');
     }
 
     res.json({
