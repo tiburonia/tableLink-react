@@ -2047,127 +2047,228 @@ router.post('/orders/modify-batch', async (req, res) => {
           AND oi.item_status != 'CANCELED'
           AND ot.paid_status = 'UNPAID'
           AND ot.source = 'POS'
-        ORDER BY ot.batch_no DESC, ot.version DESC
+        ORDER BY ot.batch_no DESC, ot.created_at DESC
       `, [orderId, menuName]);
-
-      if (ticketsResult.rows.length === 0) {
-        console.warn(`⚠️ ${menuName} 감소 대상 티켓 없음`);
-        continue;
-      }
-
-      // 각 티켓에서 차감 처리 (사용자 알고리즘 준수)
-      const processedTickets = new Set(); // 중복 처리 방지
 
       for (const ticket of ticketsResult.rows) {
         if (remaining <= 0) break;
 
-        // 이미 처리된 티켓은 건너뛰기
-        if (processedTickets.has(ticket.ticket_id)) continue;
-        processedTickets.add(ticket.ticket_id);
+        const reduceQty = Math.min(remaining, ticket.quantity);
+        const newQty = ticket.quantity - reduceQty;
 
-        // 1. 해당 티켓에서 타겟 메뉴의 oldQty 확인
-        const oldQty = ticket.quantity;
+        if (newQty > 0) {
+          // 수량 감소
+          await client.query(`
+            UPDATE order_items
+            SET quantity = $1, total_price = $2, updated_at = NOW()
+            WHERE id = $3
+          `, [newQty, newQty * ticket.unit_price, ticket.item_id]);
 
-        // 2. deduct = min(oldQty, remaining) 계산
-        const deduct = Math.min(oldQty, remaining);
-        const newQty = oldQty - deduct;
-        remaining -= deduct;
+          console.log(`📉 ${menuName} ${reduceQty}개 감소: ${ticket.quantity} → ${newQty}`);
+        } else {
+          // 완전 제거 (CANCELED 상태로 변경)
+          await client.query(`
+            UPDATE order_items
+            SET item_status = 'CANCELED', updated_at = NOW()
+            WHERE id = $1
+          `, [ticket.item_id]);
 
-        console.log(`🔄 티켓 ${ticket.ticket_id} (batch: ${ticket.batch_no}, v${ticket.version}): ${menuName} ${oldQty} → ${newQty} (차감: ${deduct})`);
-
-        // 3. 기존 티켓 전체를 CANCELED 처리
-        await client.query(`
-          UPDATE order_items 
-          SET item_status = 'CANCELED', updated_at = NOW()
-          WHERE ticket_id = $1
-        `, [ticket.ticket_id]);
-
-        await client.query(`
-          UPDATE order_tickets 
-          SET status = 'CANCELED', updated_at = NOW()
-          WHERE id = $1
-        `, [ticket.ticket_id]);
-
-        // 4. 해당 티켓의 모든 아이템 정보 조회 (CANCELED 상태에서)
-        const allItemsResult = await client.query(`
-          SELECT 
-            menu_id,
-            menu_name, 
-            unit_price,
-            quantity,
-            cook_station
-          FROM order_items
-          WHERE ticket_id = $1 AND item_status = 'CANCELED'
-        `, [ticket.ticket_id]);
-
-        // 5. 새 version 티켓 생성 (같은 batch_no, version+1)
-        const newVersionTicketResult = await client.query(`
-          INSERT INTO order_tickets (
-            order_id,
-            store_id,
-            batch_no,
-            version,
-            status,
-            payment_type,
-            source,
-            table_num,
-            created_at,
-            paid_status
-          ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
-          RETURNING id
-        `, [orderId, storeId, ticket.batch_no, ticket.version + 1, tableNumber]);
-
-        const newVersionTicketId = newVersionTicketResult.rows[0].id;
-
-        // 6. 모든 아이템을 새 티켓에 복사
-        for (const item of allItemsResult.rows) {
-          let finalQty = item.quantity;
-
-          // 타겟 메뉴인 경우: newQty 사용
-          if (item.menu_name === menuName) {
-            finalQty = newQty;
-          }
-          // 다른 메뉴들: 원래 수량 그대로 복사
-
-          // 수량이 0보다 큰 경우만 새 티켓에 추가
-          if (finalQty > 0) {
-            await client.query(`
-              INSERT INTO order_items (
-                order_id,
-                ticket_id,
-                menu_id,
-                menu_name,
-                unit_price,
-                quantity,
-                total_price,
-                item_status,
-                cook_station,
-                created_at,
-                store_id
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, NOW(), $9)
-            `, [
-              orderId,
-              newVersionTicketId,
-              item.menu_id,
-              item.menu_name,
-              item.unit_price,
-              finalQty,
-              item.unit_price * finalQty,
-              item.cook_station,
-              storeId
-            ]);
-          }
+          console.log(`🗑️ ${menuName} 완전 제거: ${ticket.quantity}개 canceled`);
         }
 
-        console.log(`✅ 새 버전 티켓 생성: ${newVersionTicketId} (batch: ${ticket.batch_no}, version: ${ticket.version + 1})`);
+        remaining -= reduceQty;
       }
 
       if (remaining > 0) {
-        console.warn(`⚠️ ${menuName} ${remaining}개 차감 실패 (재고 부족)`);
+        console.warn(`⚠️ ${menuName} ${remaining}개 감소 실패 - 재고 부족`);
       }
     }
 
-    // 4. 주문 총액 업데이트
+    // 4. 주문 완전 취소 확인 및 처리
+    // 모든 order_items의 item_status가 CANCELED인지 확인
+    const remainingItemsResult = await client.query(`
+      SELECT COUNT(*) as count
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1
+        AND oi.item_status != 'CANCELED'
+        AND ot.status != 'CANCELED'
+    `, [orderId]);
+
+    const hasRemainingItems = parseInt(remainingItemsResult.rows[0].count) > 0;
+
+    if (!hasRemainingItems) {
+      console.log(`❌ 주문 ${orderId} 완전 취소 - 모든 아이템이 CANCELED 상태`);
+
+      // 모든 order_tickets을 CANCELED로 변경
+      await client.query(`
+        UPDATE order_tickets
+        SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = $1 AND status != 'CANCELED'
+      `, [orderId]);
+
+      // orders.session_status를 CANCELED로 변경
+      await client.query(`
+        UPDATE orders
+        SET session_status = 'CANCELED', updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [orderId]);
+
+      console.log(`❌ 주문 ${orderId} 세션 상태를 CANCELED로 변경`);
+
+      // store_tables 상태 업데이트 (첨부된 파일 로직 적용)
+      const otherActiveOrdersResult = await client.query(`
+        SELECT COUNT(*) as count 
+        FROM orders o
+        JOIN order_tickets ot ON o.id = ot.order_id
+        WHERE o.store_id = $1 
+          AND o.table_num = $2 
+          AND o.session_status = 'OPEN'
+          AND o.id != $3
+      `, [storeId, tableNumber, orderId]);
+
+      const hasOtherActiveOrders = parseInt(otherActiveOrdersResult.rows[0].count) > 0;
+
+      if (hasOtherActiveOrders) {
+        console.log(`🔄 주문 취소 - 다른 활성 주문 존재로 테이블 유지: 매장 ${storeId}, 테이블 ${tableNumber}, 취소된 주문 ${orderId}`);
+
+        // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 처리
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id
+          FROM store_tables
+          WHERE store_id = $1 AND id = $2
+        `, [storeId, tableNumber]);
+
+        let tableFieldUpdated = false;
+
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+          const processingOrderId = parseInt(currentTable.processing_order_id);
+          const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+          const currentOrderId = parseInt(orderId);
+
+          if (spareOrderId === currentOrderId) {
+            // Case 1: spare_processing_order_id에 현재 주문이 있는 경우
+            const updateResult = await client.query(`
+              UPDATE store_tables
+              SET
+                spare_processing_order_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2 
+              RETURNING processing_order_id, spare_processing_order_id
+            `, [storeId, tableNumber]);
+
+            if (updateResult.rowCount > 0) {
+              const updatedRow = updateResult.rows[0];
+              console.log(`✅ spare_processing_order_id 처리 완료 - 보조 주문 취소: 테이블 ${tableNumber}, 주문 ${orderId}`);
+              console.log(`📋 업데이트 후: processing_order_id=${updatedRow.processing_order_id}, spare_processing_order_id=${updatedRow.spare_processing_order_id}`);
+              tableFieldUpdated = true;
+            }
+          } else if (processingOrderId === currentOrderId) {
+            // Case 2: processing_order_id에 현재 주문이 있는 경우
+            if (currentTable.spare_processing_order_id !== null) {
+              // spare가 존재하면 spare를 processing으로 이동하고 spare는 null 처리
+              const updateResult = await client.query(`
+                UPDATE store_tables
+                SET
+                  processing_order_id = spare_processing_order_id,
+                  spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+                RETURNING processing_order_id, spare_processing_order_id
+              `, [storeId, tableNumber]);
+
+              if (updateResult.rowCount > 0) {
+                const updatedRow = updateResult.rows[0];
+                console.log(`✅ processing_order_id 처리 완료 - 보조 주문을 메인으로 이동: 테이블 ${tableNumber}, 취소된 주문 ${orderId}, 새 메인 주문 ${updatedRow.processing_order_id}`);
+                tableFieldUpdated = true;
+              }
+            } else {
+              // spare가 없으면 processing을 null 처리하고 status를 AVAILABLE로 변경
+              const updateResult = await client.query(`
+                UPDATE store_tables
+                SET
+                  processing_order_id = NULL,
+                  spare_processing_order_id = NULL,
+                  status = 'AVAILABLE',
+                  updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+                RETURNING processing_order_id, spare_processing_order_id, status
+              `, [storeId, tableNumber]);
+
+              if (updateResult.rowCount > 0) {
+                const updatedRow = updateResult.rows[0];
+                console.log(`✅ processing_order_id 처리 완료 - 테이블 완전 해제: 테이블 ${tableNumber}, 주문 ${orderId}`);
+                tableFieldUpdated = true;
+              }
+            }
+          }
+        }
+
+        if (!tableFieldUpdated) {
+          console.warn(`⚠️ 주문 취소 - 테이블 ${tableNumber} 업데이트 실패 또는 주문 ${orderId} 매칭 실패`);
+        }
+      } else {
+        // 다른 활성 주문이 없으면 테이블 완전 해제
+        let tableUpdated = false;
+
+        // 방법 1: id 필드로 매칭
+        const tableUpdateResult1 = await client.query(`
+          UPDATE store_tables
+          SET
+            processing_order_id = NULL,
+            spare_processing_order_id = NULL,
+            status = 'AVAILABLE',
+            updated_at = CURRENT_TIMESTAMP
+          WHERE store_id = $1 AND id = $2
+        `, [storeId, tableNumber]);
+
+        if (tableUpdateResult1.rowCount > 0) {
+          tableUpdated = true;
+          console.log(`🍽️ 주문 취소 후 테이블 완전 해제 (id 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
+        } else {
+          // 방법 2: table_number 필드로 매칭
+          const tableUpdateResult2 = await client.query(`
+            UPDATE store_tables
+            SET
+              processing_order_id = NULL,
+              spare_processing_order_id = NULL,
+              status = 'AVAILABLE',
+              updated_at = CURRENT_TIMESTAMP
+            WHERE store_id = $1 AND table_number = $2
+          `, [storeId, tableNumber]);
+
+          if (tableUpdateResult2.rowCount > 0) {
+            tableUpdated = true;
+            console.log(`🍽️ 주문 취소 후 테이블 완전 해제 (table_number 매칭): 매장 ${storeId}, 테이블 ${tableNumber}`);
+          } else {
+            // 방법 3: processing_order_id로 매칭
+            const tableUpdateResult3 = await client.query(`
+              UPDATE store_tables
+              SET
+                processing_order_id = CASE WHEN processing_order_id = $2 THEN spare_processing_order_id ELSE processing_order_id END,
+                spare_processing_order_id = CASE WHEN spare_processing_order_id = $2 THEN NULL ELSE spare_processing_order_id END,
+                status = CASE WHEN processing_order_id = $2 AND spare_processing_order_id IS NULL THEN 'AVAILABLE' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND (processing_order_id = $2 OR spare_processing_order_id = $2)
+            `, [storeId, orderId]);
+
+            if (tableUpdateResult3.rowCount > 0) {
+              tableUpdated = true;
+              console.log(`🍽️ 주문 취소 후 주문별 해제 처리: 매장 ${storeId}, 주문 ${orderId}`);
+            }
+          }
+        }
+
+        if (!tableUpdated) {
+          console.warn(`⚠️ 주문 취소 후 store_tables 업데이트 실패: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
+        }
+      }
+
+      console.log(`❌ 주문 ${orderId} 완전 취소 처리 완료`);
+    }
+
+    // 5. 주문 총액 업데이트
     await updateOrderTotalAmount(client, orderId);
 
     await client.query('COMMIT');
