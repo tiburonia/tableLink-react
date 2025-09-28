@@ -235,7 +235,7 @@ const POSOrderScreen = {
 
         try {
             const { currentSession, sessionItems } = await OrderSessionManager.loadSessionData(
-                POSCore.storeId, 
+                POSCore.storeId,
                 this.currentTable
             );
             // 세션 데이터는 OrderSessionManager가 관리
@@ -581,31 +581,37 @@ const POSOrderScreen = {
     },
 
     /**
-     * 수정 관리 메서드들 - OrderModificationManager로 위임 (리팩토링)
+     * 수정 관리 메서드들 - OrderModificationManager로 위임 (통합 상태 관리 기반)
      */
     toggleOrderRowSelection(orderId, menuName, quantity) {
         return OrderModificationManager.toggleOrderRowSelection(orderId, menuName, quantity);
-    },
-
-    updateEditModeUI(isEditMode) {
-        return OrderModificationManager.updateEditModeUI(isEditMode);
-    },
-
-    minusQuantityFromSelected() {
-        return OrderModificationManager.minusQuantityFromSelected();
     },
 
     addQuantityToSelected() {
         return OrderModificationManager.addQuantityToSelected();
     },
 
-    // 하위 호환성을 위한 래퍼 메서드들
-    cancelAllPendingModifications() {
+    minusQuantityFromSelected() {
+        return OrderModificationManager.minusQuantityFromSelected();
+    },
+
+    cancelAllChanges() {
         return OrderModificationManager.cancelAllChanges();
     },
 
-    async confirmAllPendingModifications() {
+    confirmAllChanges() {
         return OrderModificationManager.confirmAllChanges();
+    },
+
+    /**
+     * 상태 관리자 상태 확인 메서드들
+     */
+    hasUnsavedChanges() {
+        return OrderStateManager?.hasUnsavedChanges() || false;
+    },
+
+    isInEditMode() {
+        return OrderStateManager?.isInEditMode() || false;
     },
 
     /**
@@ -643,7 +649,7 @@ const POSOrderScreen = {
      * 헬퍼 메서드들
      */
     getMenuPrice(menuId) {
-        const orderItem = this.currentOrders.find(order => 
+        const orderItem = this.currentOrders.find(order =>
             (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && !order.isCart
         );
 
@@ -661,7 +667,7 @@ const POSOrderScreen = {
     },
 
     getMenuCookStation(menuId) {
-        const orderItem = this.currentOrders.find(order => 
+        const orderItem = this.currentOrders.find(order =>
             (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && !order.isCart
         );
 
@@ -688,7 +694,7 @@ const POSOrderScreen = {
 
         // OrderModificationManager의 통합된 로직 사용
         const existingOrder = OrderModificationManager.findExistingOrder(menuId, menuName);
-        
+
         if (existingOrder) {
             console.log(`✅ 원본 수량 발견: ${existingOrder.menuName} = ${existingOrder.quantity}개`);
             return existingOrder.quantity;
@@ -710,7 +716,7 @@ const POSOrderScreen = {
         return;
     },
 
-    
+
 
     /**
      * 기타 기능들
