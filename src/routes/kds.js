@@ -734,4 +734,181 @@ router.get('/:storeId/table/:tableNumber/tickets', async (req, res) => {
   }
 });
 
+// 🔍 KDS 티켓 상세 정보 조회 API
+router.get('/tickets/:ticketId/details', async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { storeId } = req.query;
+
+    console.log(`🔍 KDS 티켓 ${ticketId} 상세 정보 조회 (매장: ${storeId})`);
+
+    // 파라미터 검증
+    if (!storeId) {
+      return res.status(400).json({
+        success: false,
+        error: '매장 ID가 필요합니다'
+      });
+    }
+
+    // 티켓 상세 정보 조회
+    const ticketResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.order_id,
+        ot.batch_no,
+        ot.status,
+        ot.created_at,
+        ot.updated_at,
+        o.table_num as table_number,
+        o.store_id,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'total_price', oi.total_price,
+            'status', oi.item_status,
+            'item_status', oi.item_status,
+            'cook_station', oi.cook_station,
+            'notes', oi.notes
+          )
+        ) as items
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE ot.id = $1 
+        AND o.store_id = $2
+        AND ot.status NOT IN ('DONE', 'COMPLETED', 'SERVED')
+      GROUP BY ot.id, ot.order_id, ot.batch_no, ot.status, ot.created_at, ot.updated_at, o.table_num, o.store_id
+    `, [parseInt(ticketId), parseInt(storeId)]);
+
+    if (ticketResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '티켓을 찾을 수 없거나 이미 완료된 티켓입니다'
+      });
+    }
+
+    const ticket = ticketResult.rows[0];
+
+    // 주방 아이템만 필터링
+    const kitchenItems = (ticket.items || []).filter(item => {
+      if (!item.id) return false;
+      const cookStation = item.cook_station || 'KITCHEN';
+      return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+    });
+
+    if (kitchenItems.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '주방 아이템이 없는 티켓입니다'
+      });
+    }
+
+    const responseTicket = {
+      ...ticket,
+      items: kitchenItems,
+      check_id: ticket.ticket_id,
+      id: ticket.ticket_id,
+      customer_name: `테이블 ${ticket.table_number}`,
+      source: 'POS'
+    };
+
+    console.log(`✅ 티켓 ${ticketId} 상세 정보 반환: ${kitchenItems.length}개 주방 아이템`);
+
+    res.json({
+      success: true,
+      ticket: responseTicket
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 티켓 상세 정보 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '티켓 상세 정보 조회 실패: ' + error.message
+    });
+  }
+});
+
+// 🔍 KDS 테이블별 활성 티켓 조회 API
+router.get('/:storeId/table/:tableNumber/tickets', async (req, res) => {
+  try {
+    const { storeId, tableNumber } = req.params;
+
+    console.log(`🔍 KDS 테이블 ${tableNumber} 활성 티켓 조회 (매장: ${storeId})`);
+
+    // 테이블의 모든 활성 티켓 조회
+    const ticketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.order_id,
+        ot.batch_no,
+        ot.status,
+        ot.created_at,
+        ot.updated_at,
+        o.table_num as table_number,
+        o.store_id,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'total_price', oi.total_price,
+            'status', oi.item_status,
+            'item_status', oi.item_status,
+            'cook_station', oi.cook_station,
+            'notes', oi.notes
+          )
+        ) as items
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2
+        AND ot.status NOT IN ('DONE', 'COMPLETED', 'SERVED')
+        AND o.session_status = 'OPEN'
+      GROUP BY ot.id, ot.order_id, ot.batch_no, ot.status, ot.created_at, ot.updated_at, o.table_num, o.store_id
+      ORDER BY ot.created_at ASC
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    const tickets = ticketsResult.rows.map(ticket => {
+      // 주방 아이템만 필터링
+      const kitchenItems = (ticket.items || []).filter(item => {
+        if (!item.id) return false;
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      return {
+        ...ticket,
+        items: kitchenItems,
+        check_id: ticket.ticket_id,
+        id: ticket.ticket_id,
+        customer_name: `테이블 ${ticket.table_number}`,
+        source: 'POS'
+      };
+    }).filter(ticket => ticket.items.length > 0); // 주방 아이템이 있는 티켓만
+
+    console.log(`✅ 테이블 ${tableNumber} 활성 티켓 ${tickets.length}개 반환`);
+
+    res.json({
+      success: true,
+      tickets: tickets,
+      tableNumber: parseInt(tableNumber),
+      storeId: parseInt(storeId)
+    });
+
+  } catch (error) {
+    console.error('❌ KDS 테이블 티켓 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '테이블 티켓 조회 실패: ' + error.message
+    });
+  }
+});
+
 module.exports = router;
