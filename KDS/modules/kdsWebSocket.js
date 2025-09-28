@@ -66,6 +66,18 @@
           }
         });
 
+        // 티켓 수정 이벤트
+        socket.on('ticket-modified', (data) => {
+          console.log('🔄 티켓 수정 이벤트 수신:', data);
+          this.handleTicketModified(data);
+        });
+
+        // 티켓 취소 이벤트
+        socket.on('ticket-canceled', (data) => {
+          console.log('❌ 티켓 취소 이벤트 수신:', data);
+          this.handleTicketCanceled(data);
+        });
+
         socket.on('ticket.created', (ticket) => {
           console.log('🎫 새 티켓 생성:', ticket);
           this.handleTicketCreated(ticket);
@@ -564,18 +576,25 @@
     },
 
     /**
-     * 티켓 업데이트 처리 - 상태 변경 시 재정렬 적용
+     * 티켓 업데이트 처리 - 캔슬 티켓 반짝임 교체 및 실시간 업데이트 개선
      */
     handleTicketUpdated(ticket) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
       const actualStatus = (ticket.status || '').toUpperCase();
+      const batchNo = ticket.batch_no;
 
-      console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}`);
+      console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}, batch_no: ${batchNo}`);
 
       // 완료된 티켓은 즉시 제거 처리
       if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
         console.log(`✅ WebSocket: 완료된 티켓 ${ticketId} 감지 - 제거 및 재정렬`);
         return this.handleTicketCompleted({ ticket_id: ticketId });
+      }
+
+      // 캔슬된 티켓 처리 - 반짝임 효과와 함께 교체
+      if (['CANCELED', 'CANCELLED'].includes(actualStatus)) {
+        console.log(`❌ 캔슬된 티켓 ${ticketId} 처리 시작 - 반짝임 효과 적용`);
+        return this.handleTicketCanceled(ticket);
       }
 
       const existingTicket = KDSState.getTicket(ticketId);
@@ -584,18 +603,36 @@
         return this.handleTicketCreated(ticket);
       }
 
+      // 버전 확인 (batch_no 변경 감지)
+      const oldBatchNo = existingTicket.batch_no;
+      const newBatchNo = ticket.batch_no || oldBatchNo;
+      const batchChanged = oldBatchNo !== newBatchNo;
+
       // 기존 상태와 새 상태 비교
       const oldStatus = (existingTicket.status || 'PENDING').toUpperCase();
       const newStatus = (ticket.status || existingTicket.status || 'PENDING').toUpperCase();
       const statusChanged = oldStatus !== newStatus;
 
-      console.log(`📊 티켓 ${ticketId} 상태 변경: ${oldStatus} → ${newStatus} (변경: ${statusChanged})`);
+      console.log(`📊 티켓 ${ticketId} 변경 감지:`, {
+        status: `${oldStatus} → ${newStatus}`,
+        batch: `${oldBatchNo} → ${newBatchNo}`,
+        statusChanged,
+        batchChanged
+      });
+
+      // 주방 아이템 필터링 및 검증
+      const kitchenItems = (ticket.items || existingTicket.items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
 
       // 업데이트된 티켓 데이터 생성
       const updatedTicket = {
         ...existingTicket,
         ...ticket,
         status: newStatus,
+        batch_no: newBatchNo,
+        items: kitchenItems,
         updated_at: ticket.updated_at || new Date().toISOString()
       };
 
@@ -608,13 +645,228 @@
         }));
       }
 
+      // 아이템이 없는 경우 처리
+      if (kitchenItems.length === 0) {
+        console.log(`🍽️ 티켓 ${ticketId}에 주방 아이템이 없음 - 제거 처리`);
+        KDSState.removeTicket(ticketId);
+        this._triggerFullGridRerender('no_kitchen_items');
+        return;
+      }
+
       // 상태에 업데이트된 티켓 저장
       KDSState.setTicket(ticketId, updatedTicket);
 
-      // 모든 티켓 업데이트에서 전체 Grid 재렌더링
-      this._triggerFullGridRerender('ticket_updated');
+      // batch 변경 또는 상태 변경 시 반짝임 교체 효과
+      if (batchChanged || statusChanged) {
+        console.log(`✨ 티켓 ${ticketId} 반짝임 교체 - batch변경: ${batchChanged}, 상태변경: ${statusChanged}`);
+        this._triggerTicketSparkleUpdate(ticketId, updatedTicket);
+      } else {
+        // 일반 업데이트
+        this._triggerFullGridRerender('ticket_updated');
+      }
 
       console.log(`✅ 티켓 ${ticketId} 업데이트 처리 완료`);
+    },
+
+    /**
+     * 캔슬된 티켓 처리 - 반짝임 효과 후 제거 또는 교체
+     */
+    handleTicketCanceled(ticket) {
+      const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
+      
+      console.log(`❌ 캔슬된 티켓 ${ticketId} 처리 시작`);
+
+      // 주방 아이템 필터링
+      const kitchenItems = (ticket.items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      // 아이템이 전혀 없다면 그리드 업데이트
+      if (kitchenItems.length === 0) {
+        console.log(`🗑️ 캔슬된 티켓 ${ticketId} - 주방 아이템 없음, 완전 제거`);
+        
+        // 상태에서 제거
+        KDSState.removeTicket(ticketId);
+        
+        // 즉시 반짝임 효과 후 제거
+        this._triggerCanceledTicketRemoval(ticketId);
+        
+        return;
+      }
+
+      // 아이템이 있다면 업데이트된 티켓으로 교체
+      console.log(`🔄 캔슬된 티켓 ${ticketId} - ${kitchenItems.length}개 주방 아이템 있음, 업데이트된 티켓으로 교체`);
+
+      const updatedTicket = {
+        ...ticket,
+        items: kitchenItems,
+        status: 'PENDING', // 캔슬 후 새로운 상태로 설정
+        updated_at: new Date().toISOString()
+      };
+
+      // 상태에 업데이트된 티켓 저장
+      KDSState.setTicket(ticketId, updatedTicket);
+
+      // 반짝임 교체 효과
+      this._triggerTicketSparkleUpdate(ticketId, updatedTicket);
+    },
+
+    /**
+     * 티켓 반짝임 교체 효과
+     */
+    _triggerTicketSparkleUpdate(ticketId, updatedTicket) {
+      console.log(`✨ 티켓 ${ticketId} 반짝임 교체 시작`);
+
+      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (!cardElement) {
+        console.log(`ℹ️ 티켓 ${ticketId} 카드를 찾을 수 없음 - 전체 Grid 재렌더링`);
+        this._triggerFullGridRerender('sparkle_fallback');
+        return;
+      }
+
+      const slotElement = cardElement.closest('.grid-slot');
+      if (!slotElement) {
+        console.log(`ℹ️ 티켓 ${ticketId} 슬롯을 찾을 수 없음 - 전체 Grid 재렌더링`);
+        this._triggerFullGridRerender('sparkle_fallback');
+        return;
+      }
+
+      // 반짝임 효과 적용
+      cardElement.style.transition = 'all 0.3s ease';
+      cardElement.style.animation = 'sparkle 0.6s ease-in-out';
+      
+      // CSS 키프레임 추가 (한 번만)
+      if (!document.getElementById('sparkle-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'sparkle-keyframes';
+        style.textContent = `
+          @keyframes sparkle {
+            0% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 215, 0, 0); }
+            25% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+            50% { transform: scale(1.1); box-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+            75% { transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+            100% { transform: scale(1); box-shadow: 0 0 0 rgba(255, 215, 0, 0); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // 0.6초 후 새 카드로 교체
+      setTimeout(() => {
+        if (window.KDSUIRenderer && typeof window.KDSUIRenderer.createOrderCardHTML === 'function') {
+          const newCardHTML = window.KDSUIRenderer.createOrderCardHTML(updatedTicket);
+          
+          // 페이드 아웃
+          cardElement.style.opacity = '0';
+          cardElement.style.transform = 'scale(0.9)';
+          
+          setTimeout(() => {
+            // 새 카드 삽입
+            slotElement.innerHTML = newCardHTML;
+            
+            // 페이드 인
+            const newCard = slotElement.querySelector('.order-card');
+            if (newCard) {
+              newCard.style.opacity = '0';
+              newCard.style.transform = 'scale(0.9)';
+              
+              requestAnimationFrame(() => {
+                newCard.style.transition = 'all 0.3s ease';
+                newCard.style.opacity = '1';
+                newCard.style.transform = 'scale(1)';
+              });
+            }
+            
+            console.log(`✅ 티켓 ${ticketId} 반짝임 교체 완료`);
+          }, 200);
+        } else {
+          // 백업: 전체 Grid 재렌더링
+          console.log(`🔄 UI 렌더러 없음 - 전체 Grid 재렌더링으로 대체`);
+          this._triggerFullGridRerender('sparkle_complete');
+        }
+      }, 600);
+    },
+
+    /**
+     * 캔슬된 티켓 제거 효과
+     */
+    _triggerCanceledTicketRemoval(ticketId) {
+      console.log(`🗑️ 캔슬된 티켓 ${ticketId} 제거 효과 시작`);
+
+      const cardElement = document.querySelector(`[data-ticket-id="${ticketId}"]`);
+      if (!cardElement) {
+        console.log(`ℹ️ 티켓 ${ticketId} 카드를 찾을 수 없음 - 전체 Grid 재렌더링`);
+        this._triggerFullGridRerender('cancel_removal');
+        return;
+      }
+
+      // 반짝임 + 페이드아웃 효과
+      cardElement.style.transition = 'all 0.4s ease';
+      cardElement.style.animation = 'cancelFlash 0.8s ease-in-out';
+      
+      // 캔슬 키프레임 추가
+      if (!document.getElementById('cancel-keyframes')) {
+        const style = document.createElement('style');
+        style.id = 'cancel-keyframes';
+        style.textContent = `
+          @keyframes cancelFlash {
+            0% { transform: scale(1); background-color: inherit; }
+            25% { transform: scale(1.02); background-color: rgba(255, 0, 0, 0.2); }
+            50% { transform: scale(1.05); background-color: rgba(255, 0, 0, 0.4); }
+            75% { transform: scale(1.02); background-color: rgba(255, 0, 0, 0.2); }
+            100% { transform: scale(0.8); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // 0.8초 후 완전히 제거하고 Grid 업데이트
+      setTimeout(() => {
+        this._triggerFullGridRerender('cancel_complete');
+        console.log(`✅ 캔슬된 티켓 ${ticketId} 제거 완료`);
+      }, 800);
+    },
+
+    /**
+     * 티켓 수정 처리 (WebSocket 이벤트)
+     */
+    handleTicketModified(data) {
+      const ticketId = data.ticket_id;
+      const batchNo = data.batch_no;
+      const items = data.items || [];
+
+      console.log(`🔄 티켓 수정 처리: ${ticketId}, batch_no: ${batchNo}, 아이템: ${items.length}개`);
+
+      // 기존 티켓 조회
+      const existingTicket = KDSState.getTicket(ticketId);
+      
+      // 수정된 티켓 데이터 생성
+      const modifiedTicket = {
+        ...existingTicket,
+        ticket_id: ticketId,
+        id: data.order_id || existingTicket?.id,
+        check_id: ticketId,
+        batch_no: batchNo,
+        status: 'PENDING', // 수정 후 대기 상태
+        items: items,
+        updated_at: data.timestamp || new Date().toISOString()
+      };
+
+      // 아이템이 없으면 제거
+      if (items.length === 0) {
+        console.log(`🗑️ 수정된 티켓 ${ticketId}에 주방 아이템 없음 - 제거 처리`);
+        KDSState.removeTicket(ticketId);
+        this._triggerCanceledTicketRemoval(ticketId);
+        return;
+      }
+
+      // 상태에 저장
+      KDSState.setTicket(ticketId, modifiedTicket);
+
+      // 반짝임 교체 효과
+      console.log(`✨ 티켓 ${ticketId} 수정으로 인한 반짝임 교체`);
+      this._triggerTicketSparkleUpdate(ticketId, modifiedTicket);
     },
 
     /**

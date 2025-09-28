@@ -24,6 +24,12 @@ class KDSService {
 
     // 주문 상태 변경 이벤트 처리
     eventBus.on('order.statusChanged', this.handleOrderStatusChanged.bind(this));
+
+    // 주문 수정 이벤트 처리 (batch 변경)
+    eventBus.on('order.modified', this.handleOrderModified.bind(this));
+
+    // 주문 취소 이벤트 처리
+    eventBus.on('order.canceled', this.handleOrderCanceled.bind(this));
   }
 
   /**
@@ -146,6 +152,119 @@ class KDSService {
 
     } catch (error) {
       console.error('❌ KDS: 주문 상태 변경 처리 실패:', error);
+    }
+  }
+
+  /**
+   * 주문 수정 처리 (batch 변경 포함)
+   */
+  async handleOrderModified(modifyData) {
+    try {
+      console.log('🔄 KDS: 주문 수정 처리 (batch 변경)', modifyData);
+
+      const { orderId, ticketId, storeId, batchNo, items, modifications } = modifyData;
+
+      // 주방 관련 아이템만 필터링
+      const kitchenItems = (items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      console.log(`🍳 KDS: 티켓 ${ticketId} 수정 - 전체 ${items?.length || 0}개 → 주방 ${kitchenItems.length}개`);
+
+      // KDS 업데이트 데이터 생성
+      const kdsUpdateData = {
+        order_id: orderId,
+        ticket_id: ticketId,
+        batch_no: batchNo,
+        status: 'PENDING', // 수정 후 대기 상태로 리셋
+        items: kitchenItems.map(item => ({
+          id: item.id || Math.random().toString(36).substr(2, 9),
+          menuName: item.name || item.menu_name,
+          menu_name: item.name || item.menu_name,
+          quantity: item.quantity || 1,
+          status: 'PENDING',
+          item_status: 'PENDING',
+          cook_station: item.cook_station || 'KITCHEN',
+          notes: item.notes || '',
+          created_at: new Date().toISOString()
+        })),
+        modifications: modifications,
+        timestamp: new Date().toISOString()
+      };
+
+      // WebSocket 브로드캐스트
+      await this.broadcastToKDS(storeId, 'ticket-modified', kdsUpdateData);
+
+      // PostgreSQL NOTIFY
+      await this.sendPostgreSQLNotify('kds_updates', {
+        type: 'ticket_modified',
+        store_id: storeId,
+        ticket_id: ticketId,
+        order_id: orderId,
+        batch_no: batchNo,
+        kitchen_items_count: kitchenItems.length,
+        modification_type: modifications?.type || 'batch_update',
+        timestamp: Date.now()
+      });
+
+      console.log(`✅ KDS: 주문 수정 처리 완료 - ${kitchenItems.length}개 주방 아이템`);
+      return { success: true, ticketId, kitchenItemsCount: kitchenItems.length };
+
+    } catch (error) {
+      console.error('❌ KDS: 주문 수정 처리 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 주문 취소 처리
+   */
+  async handleOrderCanceled(cancelData) {
+    try {
+      console.log('❌ KDS: 주문 취소 처리', cancelData);
+
+      const { orderId, ticketId, storeId, items, reason } = cancelData;
+
+      // 주방 관련 아이템만 필터링
+      const kitchenItems = (items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      console.log(`❌ KDS: 티켓 ${ticketId} 취소 - 주방 아이템 ${kitchenItems.length}개`);
+
+      // KDS 취소 데이터 생성
+      const kdsCancelData = {
+        order_id: orderId,
+        ticket_id: ticketId,
+        status: 'CANCELED',
+        items: kitchenItems,
+        kitchen_items_count: kitchenItems.length,
+        reason: reason || 'canceled',
+        timestamp: new Date().toISOString()
+      };
+
+      // WebSocket 브로드캐스트 (반짝임 효과 트리거)
+      await this.broadcastToKDS(storeId, 'ticket-canceled', kdsCancelData);
+
+      // PostgreSQL NOTIFY
+      await this.sendPostgreSQLNotify('kds_updates', {
+        type: 'ticket_canceled',
+        store_id: storeId,
+        ticket_id: ticketId,
+        order_id: orderId,
+        kitchen_items_count: kitchenItems.length,
+        has_kitchen_items: kitchenItems.length > 0,
+        timestamp: Date.now()
+      });
+
+      console.log(`✅ KDS: 주문 취소 처리 완료 - ${kitchenItems.length > 0 ? '반짝임 교체' : '완전 제거'}`);
+      return { success: true, ticketId, removed: kitchenItems.length === 0 };
+
+    } catch (error) {
+      console.error('❌ KDS: 주문 취소 처리 실패:', error);
+      throw error;
     }
   }
 
