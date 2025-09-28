@@ -2499,6 +2499,9 @@ router.post('/orders/modify-batch', async (req, res) => {
 
       orderId = newOrderResult.rows[0].id;
       console.log(`✅ 새 주문 생성 완료: ${orderId}`);
+
+      // store_tables의 processing_order_id 또는 spare_processing_order_id 업데이트
+    //  await client.query( ``)
     } else {
       orderId = activeOrderResult.rows[0].order_id;
       console.log(`📋 기존 활성 주문 사용: ${orderId}`);
