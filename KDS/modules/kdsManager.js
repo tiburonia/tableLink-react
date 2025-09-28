@@ -588,11 +588,40 @@
     },
 
     /**
+     * 디버그 정보 출력
+     */
+    showDebugInfo() {
+      console.log('🔍 KDS 디버그 정보:', {
+        storeId: KDSState.storeId,
+        totalTickets: KDSState.tickets.size,
+        activeTickets: KDSState.getActiveTickets().length,
+        completedTickets: KDSState.getCompletedTickets().length,
+        isConnected: KDSState.isConnected,
+        currentTab: KDSState.currentTab,
+        socketConnected: KDSState.socket?.connected,
+        timestamp: new Date().toISOString()
+      });
+
+      // 각 티켓의 상세 정보
+      KDSState.tickets.forEach((ticket, id) => {
+        console.log(`🎫 티켓 ${id}:`, {
+          status: ticket.status,
+          table: ticket.table_number,
+          items: ticket.items?.length || 0,
+          created: ticket.created_at
+        });
+      });
+    },
+
+    /**
      * 새로고침 - 상태 기반 로딩 (Grid 레이아웃 적용)
      */
     async refresh() {
       try {
         console.log('🔄 KDS 새로고침 시작 - 상태 기반 로딩');
+        
+        // 디버그 정보 출력
+        this.showDebugInfo();
 
         const refreshBtn = document.querySelector('.refresh-btn');
         if (refreshBtn) {

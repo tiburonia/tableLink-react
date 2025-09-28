@@ -37,7 +37,11 @@ class KDSService {
    */
   async handleNewOrder(orderData) {
     try {
-      console.log('🍳 KDS: 새 주문 처리 시작', orderData);
+      console.log('🍳 KDS: 새 주문 처리 시작', {
+        ...orderData,
+        timestamp: new Date().toISOString(),
+        source: 'kdsService'
+      });
 
       const { orderId, ticketId, storeId, tableNumber, items, batchNo } = orderData;
 

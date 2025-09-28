@@ -13,7 +13,7 @@ router.get('/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
 
-    console.log(`🍳 KDS 주문 목록 조회 - 매장 ${storeId}`);
+    console.log(`🍳 KDS 주문 목록 조회 - 매장 ${storeId} (${new Date().toISOString()})`);
 
     const result = await pool.query(`
       SELECT 

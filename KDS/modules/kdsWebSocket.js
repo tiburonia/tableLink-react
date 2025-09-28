@@ -599,6 +599,31 @@
         return;
       }
 
+      // 중복 처리 방지 - 짧은 시간 내 같은 티켓 ID 처리 중복 체크
+      if (!this._processingTickets) {
+        this._processingTickets = new Map();
+      }
+
+      const lastProcessTime = this._processingTickets.get(ticketIdStr);
+      const now = Date.now();
+
+      if (lastProcessTime && (now - lastProcessTime) < 1000) {
+        console.log(`⏭️ 티켓 ${ticketIdStr} 1초 내 중복 처리 방지 - 무시`);
+        return;
+      }
+
+      this._processingTickets.set(ticketIdStr, now);
+
+      // 404 오류 방지 - 블랙리스트 관리
+      if (!this._blacklistedTickets) {
+        this._blacklistedTickets = new Set();
+      }
+
+      if (this._blacklistedTickets.has(ticketIdStr)) {
+        console.log(`🚫 블랙리스트된 티켓 ${ticketIdStr} - 처리 스킵`);
+        return;
+      }
+
       // 완료된 티켓은 즉시 제거 처리
       if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
         console.log(`✅ WebSocket: 완료된 티켓 ${ticketIdStr} 감지 - 제거 및 재정렬`);
@@ -631,7 +656,7 @@
         return this.handleTicketCreated(ticket);
       } else if (!existingTicket && isRecursionPrevention) {
         console.log(`🔄 재귀 방지 모드 - 티켓 ${ticketIdStr} 직접 생성 처리`);
-        
+
         // 주방 아이템 필터링
         const kitchenItems = (ticket.items || []).filter(item => {
           const cookStation = item.cook_station || 'KITCHEN';
@@ -1240,7 +1265,7 @@
 
         if (response.status === 404) {
           console.log(`ℹ️ 티켓 ${ticketId}이 존재하지 않음 (404) - 이미 완료되었거나 삭제됨`);
-          
+
           // 404인 경우 상태에서 해당 티켓 제거 (있다면)
           const existingTicket = KDSState.getTicket(ticketId);
           if (existingTicket) {
@@ -1248,6 +1273,14 @@
             KDSState.removeTicket(ticketId);
             this._triggerFullGridRerender('ticket_not_found');
           }
+
+          // 404 에러 발생 시 해당 티켓을 블랙리스트에 추가
+          if (!this._blacklistedTickets) {
+            this._blacklistedTickets = new Set();
+          }
+          this._blacklistedTickets.add(ticketId);
+          console.log(`🚫 티켓 ${ticketId}을 404 블랙리스트에 추가`);
+
           return;
         }
 

@@ -243,7 +243,21 @@ async function handleOrderNotification(payload) {
 async function handleTicketNotification(payload) {
   const { action, ticket_id, order_id, store_id, status } = payload;
 
+  console.log(`📡 처리할 티켓 알림:`, {
+    action,
+    ticket_id,
+    order_id, 
+    store_id,
+    status,
+    timestamp: new Date().toISOString()
+  });
+
   if (global.io && store_id) {
+    const kdsRoom = `kds:${store_id}`;
+    const connectedClients = global.io.sockets.adapter.rooms.get(kdsRoom)?.size || 0;
+    
+    console.log(`📡 KDS 브로드캐스트: 룸 ${kdsRoom}에 ${connectedClients}개 클라이언트 연결됨`);
+    
     global.io.to(`kds:${store_id}`).emit('kds-update', {
       type: 'db_ticket_change',
       data: {
