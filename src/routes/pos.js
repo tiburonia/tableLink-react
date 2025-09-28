@@ -2445,17 +2445,27 @@ router.post('/orders/modify-batch', async (req, res) => {
         continue;
       }
 
-      // 각 티켓에서 차감 처리
+      // 각 티켓에서 차감 처리 (사용자 알고리즘 준수)
+      const processedTickets = new Set(); // 중복 처리 방지
+      
       for (const ticket of ticketsResult.rows) {
         if (remaining <= 0) break;
+        
+        // 이미 처리된 티켓은 건너뛰기
+        if (processedTickets.has(ticket.ticket_id)) continue;
+        processedTickets.add(ticket.ticket_id);
 
-        const deductQty = Math.min(ticket.quantity, remaining);
-        const newQty = ticket.quantity - deductQty;
-        remaining -= deductQty;
+        // 1. 해당 티켓에서 타겟 메뉴의 oldQty 확인
+        const oldQty = ticket.quantity;
+        
+        // 2. deduct = min(oldQty, remaining) 계산
+        const deduct = Math.min(oldQty, remaining);
+        const newQty = oldQty - deduct;
+        remaining -= deduct;
 
-        console.log(`🔄 티켓 ${ticket.ticket_id}: ${ticket.quantity} → ${newQty} (차감: ${deductQty})`);
+        console.log(`🔄 티켓 ${ticket.ticket_id} (batch: ${ticket.batch_no}, v${ticket.version}): ${menuName} ${oldQty} → ${newQty} (차감: ${deduct})`);
 
-        // 기존 티켓의 모든 아이템들을 CANCELED 처리
+        // 3. 기존 티켓 전체를 CANCELED 처리
         await client.query(`
           UPDATE order_items 
           SET item_status = 'CANCELED', updated_at = NOW()
@@ -2468,7 +2478,7 @@ router.post('/orders/modify-batch', async (req, res) => {
           WHERE id = $1
         `, [ticket.ticket_id]);
 
-        // 해당 티켓의 모든 아이템 정보 조회 (CANCELED 상태)
+        // 4. 해당 티켓의 모든 아이템 정보 조회 (CANCELED 상태에서)
         const allItemsResult = await client.query(`
           SELECT 
             menu_id,
@@ -2480,7 +2490,7 @@ router.post('/orders/modify-batch', async (req, res) => {
           WHERE ticket_id = $1 AND item_status = 'CANCELED'
         `, [ticket.ticket_id]);
 
-        // 수정된 내용으로 새 버전 티켓 생성
+        // 5. 새 version 티켓 생성 (같은 batch_no, version+1)
         const newVersionTicketResult = await client.query(`
           INSERT INTO order_tickets (
             order_id,
@@ -2499,16 +2509,17 @@ router.post('/orders/modify-batch', async (req, res) => {
 
         const newVersionTicketId = newVersionTicketResult.rows[0].id;
 
-        // 모든 아이템을 새 티켓에 복사 (타겟 메뉴는 수정된 수량으로)
+        // 6. 모든 아이템을 새 티켓에 복사
         for (const item of allItemsResult.rows) {
           let finalQty = item.quantity;
 
-          // 타겟 메뉴인 경우 수정된 수량 적용
+          // 타겟 메뉴인 경우: newQty 사용
           if (item.menu_name === menuName) {
             finalQty = newQty;
           }
+          // 다른 메뉴들: 원래 수량 그대로 복사
 
-          // 수량이 0보다 큰 경우만 추가
+          // 수량이 0보다 큰 경우만 새 티켓에 추가
           if (finalQty > 0) {
             await client.query(`
               INSERT INTO order_items (
