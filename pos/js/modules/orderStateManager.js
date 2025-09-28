@@ -187,8 +187,7 @@ const OrderStateManager = {
     selectOrder(orderId, menuName, quantity, rowElement) {
         console.log(`🎯 주문 선택: ${menuName} (ID: ${orderId})`);
 
-        // 기존 선택 해제
-        this.clearSelection();
+
 
         // 메뉴 정보 찾기
         const originalOrder = this.state.originalOrders.get(menuName);
@@ -340,7 +339,8 @@ const OrderStateManager = {
             row.style.borderLeft = '';
             row.style.boxShadow = '';
         });
-    },
+    }
+    ,
 
     /**
      * 표시용 주문 데이터 생성
