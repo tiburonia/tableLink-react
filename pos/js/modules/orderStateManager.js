@@ -368,22 +368,19 @@ const OrderStateManager = {
 
         // 2. 변경사항 적용
         this.state.pendingChanges.forEach((change, menuName) => {
-            if (change.newQuantity > 0) {
-                displayOrders.set(menuName, {
-                    id: change.menuId,
-                    menuId: change.menuId,
-                    menuName: change.menuName,
-                    price: change.price,
-                    quantity: change.newQuantity,
-                    cookingStatus: 'PENDING',
-                    isOriginal: change.originalQuantity > 0,
-                    isModified: true,
-                    originalQuantity: change.originalQuantity
-                });
-            } else {
-                // 수량이 0이면 삭제
-                displayOrders.delete(menuName);
-            }
+            // 수량이 0이어도 표시 목록에 유지 (삭제 예정으로 표시)
+            displayOrders.set(menuName, {
+                id: change.menuId,
+                menuId: change.menuId,
+                menuName: change.menuName,
+                price: change.price,
+                quantity: change.newQuantity,
+                cookingStatus: change.newQuantity === 0 ? 'CANCELLED' : 'PENDING',
+                isOriginal: change.originalQuantity > 0,
+                isModified: true,
+                originalQuantity: change.originalQuantity,
+                willBeDeleted: change.newQuantity === 0
+            });
         });
 
         return Array.from(displayOrders.values());
@@ -432,6 +429,7 @@ const OrderStateManager = {
                     ticketIds: []
                 });
             } else {
+                // 수량이 0인 경우에만 원본 데이터에서 삭제
                 this.state.originalOrders.delete(menuName);
             }
         });

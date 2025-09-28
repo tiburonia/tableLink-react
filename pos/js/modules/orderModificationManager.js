@@ -282,7 +282,7 @@ const OrderModificationManager = {
         if (orders.length > 0) {
             tableBody = orders.map(order => {
                 const isModified = order.isModified;
-                const willBeDeleted = isModified && order.quantity === 0;
+                const willBeDeleted = order.willBeDeleted || (isModified && order.quantity === 0);
                 const isZeroQuantity = order.quantity === 0;
 
                 return `
