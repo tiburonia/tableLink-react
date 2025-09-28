@@ -514,10 +514,18 @@ const OrderModificationManager = {
         console.log(`🔄 batch 알고리즘 ${menuName} 감소 처리: ${originalQuantity} → ${newQuantity} (차감: ${changeAmount})`);
 
         try {
+            // storeId와 tableNumber 유효성 검사
+            const storeId = window.POSOrderScreen?.currentStoreId;
+            const tableNumber = window.POSOrderScreen?.currentTableNumber;
+            
+            if (!storeId || !tableNumber) {
+                throw new Error(`필수 정보 누락: storeId=${storeId}, tableNumber=${tableNumber}. POS 시스템이 제대로 초기화되지 않았습니다.`);
+            }
+
             // batch API를 사용하여 한 번에 처리
             const requestBody = {
-                storeId: parseInt(window.POSOrderScreen?.currentStoreId),
-                tableNumber: parseInt(window.POSOrderScreen?.currentTableNumber),
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
                 modifications: {
                     add: {},
                     remove: {
@@ -527,6 +535,11 @@ const OrderModificationManager = {
             };
 
             console.log(`📤 batch 감소 요청:`, requestBody);
+            console.log(`🔍 POSOrderScreen 상태:`, {
+                currentStoreId: window.POSOrderScreen?.currentStoreId,
+                currentTableNumber: window.POSOrderScreen?.currentTableNumber,
+                POSOrderScreen존재여부: !!window.POSOrderScreen
+            });
 
             const response = await fetch('/api/pos/orders/modify-batch', {
                 method: 'POST',
@@ -575,9 +588,17 @@ const OrderModificationManager = {
                 addModifications[mod.menuName] = Math.abs(mod.changeAmount);
             });
 
+            // storeId와 tableNumber 유효성 검사
+            const storeId = window.POSOrderScreen?.currentStoreId;
+            const tableNumber = window.POSOrderScreen?.currentTableNumber;
+            
+            if (!storeId || !tableNumber) {
+                throw new Error(`필수 정보 누락: storeId=${storeId}, tableNumber=${tableNumber}. POS 시스템이 제대로 초기화되지 않았습니다.`);
+            }
+
             const requestBody = {
-                storeId: parseInt(window.POSOrderScreen?.currentStoreId),
-                tableNumber: parseInt(window.POSOrderScreen?.currentTableNumber),
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
                 modifications: {
                     add: addModifications,
                     remove: {}
@@ -585,6 +606,11 @@ const OrderModificationManager = {
             };
 
             console.log(`📋 batch 증가 요청:`, requestBody);
+            console.log(`🔍 POSOrderScreen 상태:`, {
+                currentStoreId: window.POSOrderScreen?.currentStoreId,
+                currentTableNumber: window.POSOrderScreen?.currentTableNumber,
+                POSOrderScreen존재여부: !!window.POSOrderScreen
+            });
 
             const response = await fetch("/api/pos/orders/modify-batch", {
                 method: "POST",
