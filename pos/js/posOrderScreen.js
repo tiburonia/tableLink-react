@@ -25,6 +25,9 @@ if (typeof OrderPaymentManager === 'undefined') {
 if (typeof OrderUtilityManager === 'undefined') {
     console.error('❌ OrderUtilityManager 모듈이 로드되지 않았습니다');
 }
+if (typeof OrderStateManager === 'undefined') {
+    console.error('❌ OrderStateManager 모듈이 로드되지 않았습니다');
+}
 
 // 전역 스코프에서 POSOrderScreen 객체 정의
 const POSOrderScreen = {
@@ -380,11 +383,11 @@ const POSOrderScreen = {
             // OrderModificationManager의 통합 로직 사용
             OrderModificationManager.addMenuItem(menuId, menuName, price, 1);
 
-            OrderUtilityManager.showToast(`${menuName} +1개 추가됨`);
+            this.showToast(`${menuName} +1개 추가됨`);
 
         } catch (error) {
             console.error("❌ 주문 추가 실패:", error);
-            alert(`주문 추가 중 오류가 발생했습니다: ${error.message}`);
+            this.showToast(`주문 추가 중 오류가 발생했습니다: ${error.message}`, 'error');
         }
     },
 
