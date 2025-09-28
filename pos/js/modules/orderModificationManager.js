@@ -347,11 +347,10 @@ const OrderModificationManager = {
         if (orders.length > 0) {
             tableBody = orders.map(order => {
                 const isModified = order.isModified;
-                const modifiedClass = isModified ? 'modified-row' : '';
                 const willBeDeleted = isModified && order.quantity === 0;
 
                 return `
-                    <tr class="order-row ${modifiedClass} ${willBeDeleted ? 'will-be-removed' : ''}" 
+                    <tr class="order-row ${willBeDeleted ? 'will-be-removed' : ''}" 
                         data-order-id="${order.id}" 
                         data-menu-id="${order.menuId}"
                         data-menu-name="${order.menuName}"

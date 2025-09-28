@@ -446,11 +446,7 @@ body {
     font-size: 14px;
 }
 
-/* 수정된 주문 행 스타일 */
-.pos-order-table .modified-row {
-    background-color: #fef3cd;
-    border-left: 4px solid #ffc107;
-}
+
 
 .pos-order-table .will-be-removed {
     background-color: #f8d7da;
