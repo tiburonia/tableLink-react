@@ -2150,60 +2150,155 @@ router.post('/orders/modify-quantity', async (req, res) => {
     // 5. 주문 총액 업데이트
     await updateOrderTotalAmount(client, orderId);
 
+    // 6. 수정 후 아이템이 남아있는지 확인 (POS 주문만, is_mixed가 아닌 경우만)
+    const remainingItemsResult = await client.query(`
+      SELECT COUNT(*) as item_count, o.source, COALESCE(o.is_mixed, false) as is_mixed
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      JOIN orders o ON ot.order_id = o.id
+      WHERE ot.order_id = $1 
+        AND oi.item_status != 'CANCELED'
+        AND ot.status != 'CANCELED'
+        AND ot.paid_status = 'UNPAID'
+      GROUP BY o.source, o.is_mixed
+    `, [orderId]);
+
+    const shouldDeleteOrder = remainingItemsResult.rows.length > 0 &&
+                             parseInt(remainingItemsResult.rows[0].item_count) === 0 &&
+                             remainingItemsResult.rows[0].source === 'POS' &&
+                             !remainingItemsResult.rows[0].is_mixed;
+
+    if (shouldDeleteOrder) {
+      console.log(`🗑️ 주문 ${orderId}에 아이템이 없어 삭제 처리 시작`);
+
+      // store_tables 업데이트 후 주문 삭제
+      const orderInfoResult = await client.query(`
+        SELECT store_id, table_num FROM orders WHERE id = $1
+      `, [orderId]);
+
+      if (orderInfoResult.rows.length > 0) {
+        const { store_id, table_num } = orderInfoResult.rows[0];
+
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id
+          FROM store_tables
+          WHERE store_id = $1 AND id = $2
+        `, [store_id, table_num]);
+
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+          const processingOrderId = parseInt(currentTable.processing_order_id);
+          const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+          const currentOrderId = parseInt(orderId);
+
+          if (spareOrderId === currentOrderId) {
+            await client.query(`
+              UPDATE store_tables
+              SET spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [store_id, table_num]);
+            console.log(`✅ spare_processing_order_id 해제: 테이블 ${table_num}`);
+
+          } else if (processingOrderId === currentOrderId) {
+            if (currentTable.spare_processing_order_id !== null) {
+              await client.query(`
+                UPDATE store_tables
+                SET processing_order_id = spare_processing_order_id,
+                    spare_processing_order_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`✅ processing_order_id 이동: 테이블 ${table_num}`);
+            } else {
+              await client.query(`
+                UPDATE store_tables
+                SET processing_order_id = NULL,
+                    spare_processing_order_id = NULL,
+                    status = 'AVAILABLE',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`✅ 테이블 완전 해제: 테이블 ${table_num}`);
+            }
+          }
+        }
+
+        await client.query(`DELETE FROM orders WHERE id = $1`, [orderId]);
+        console.log(`🗑️ 주문 ${orderId} 완전 삭제 완료`);
+      }
+    }
+
     await client.query('COMMIT');
 
     const newTotalQuantity = currentQuantity - 1;
-    console.log(`✅ batch 알고리즘 수량 수정 완료: ${menuName} (${currentQuantity} → ${newTotalQuantity})`);
-
-    // KDS 이벤트 발생
-    try {
-      // 수정된 주문의 모든 아이템 조회
-      const modifiedItemsResult = await pool.query(`
-        SELECT 
-          oi.id,
-          oi.menu_name as name,
-          oi.quantity,
-          oi.unit_price as price,
-          oi.cook_station,
-          oi.menu_id
-        FROM order_items oi
-        JOIN order_tickets ot ON oi.ticket_id = ot.id
-        WHERE ot.order_id = $1 
-          AND oi.item_status != 'CANCELED'
-          AND ot.status != 'CANCELED'
-          AND ot.paid_status = 'UNPAID'
-        ORDER BY oi.created_at DESC
-      `, [orderId]);
-
-      const kdsEventData = {
+    
+    if (shouldDeleteOrder) {
+      console.log(`✅ 주문 삭제 완료: 주문 ID ${orderId} (아이템 없음으로 인한 삭제)`);
+      
+      res.json({
+        success: true,
+        message: `${menuName} 수량 감소 후 아이템이 없어 주문이 삭제되었습니다`,
         orderId: orderId,
-        ticketId: null,
-        storeId: parseInt(storeId),
-        tableNumber: parseInt(tableNumber),
-        items: modifiedItemsResult.rows,
-        modifications: {
-          type: 'quantity_decrease',
-          menuName: menuName,
-          oldQuantity: currentQuantity,
-          newQuantity: newTotalQuantity,
-          algorithm: 'batch_based'
-        }
-      };
+        orderDeleted: true,
+        oldQuantity: currentQuantity,
+        newQuantity: 0,
+        menuName: menuName,
+        algorithm: 'batch_based'
+      });
+    } else {
+      console.log(`✅ batch 알고리즘 수량 수정 완료: ${menuName} (${currentQuantity} → ${newTotalQuantity})`);
 
-      eventBus.emit('order.modified', kdsEventData);
-      console.log(`📡 KDS 이벤트 발생: 수량 수정 완료 (${menuName}: ${currentQuantity} → ${newTotalQuantity})`);
-    } catch (kdsError) {
-      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+      // KDS 이벤트 발생
+      try {
+        // 수정된 주문의 모든 아이템 조회
+        const modifiedItemsResult = await pool.query(`
+          SELECT 
+            oi.id,
+            oi.menu_name as name,
+            oi.quantity,
+            oi.unit_price as price,
+            oi.cook_station,
+            oi.menu_id
+          FROM order_items oi
+          JOIN order_tickets ot ON oi.ticket_id = ot.id
+          WHERE ot.order_id = $1 
+            AND oi.item_status != 'CANCELED'
+            AND ot.status != 'CANCELED'
+            AND ot.paid_status = 'UNPAID'
+          ORDER BY oi.created_at DESC
+        `, [orderId]);
+
+        const kdsEventData = {
+          orderId: orderId,
+          ticketId: null,
+          storeId: parseInt(storeId),
+          tableNumber: parseInt(tableNumber),
+          items: modifiedItemsResult.rows,
+          modifications: {
+            type: 'quantity_decrease',
+            menuName: menuName,
+            oldQuantity: currentQuantity,
+            newQuantity: newTotalQuantity,
+            algorithm: 'batch_based'
+          }
+        };
+
+        eventBus.emit('order.modified', kdsEventData);
+        console.log(`📡 KDS 이벤트 발생: 수량 수정 완료 (${menuName}: ${currentQuantity} → ${newTotalQuantity})`);
+      } catch (kdsError) {
+        console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+      }
+
+      res.json({
+        success: true,
+        message: `${menuName} 수량이 1개 감소되었습니다 (batch 알고리즘)`,
+        oldQuantity: currentQuantity,
+        newQuantity: newTotalQuantity,
+        menuName: menuName,
+        algorithm: 'batch_based'
+      });
     }
-
-    res.json({
-      success: true,
-      message: `${menuName} 수량이 1개 감소되었습니다 (batch 알고리즘)`,
-      oldQuantity: currentQuantity,
-      newQuantity: newTotalQuantity,
-      menuName: menuName,
-      algorithm: 'batch_based'
-    });
 
   } catch (error) {
     await client.query('ROLLBACK');
@@ -2951,60 +3046,157 @@ router.post('/orders/modify', async (req, res) => {
       // 트랜잭션을 롤백하지 않고 경고만 로그
     }
 
-    await client.query('COMMIT');
+    // 수정 후 아이템이 남아있는지 확인 (POS 주문만, is_mixed가 아닌 경우만)
+    const remainingItemsResult = await client.query(`
+      SELECT COUNT(*) as item_count, o.source, COALESCE(o.is_mixed, false) as is_mixed
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      JOIN orders o ON ot.order_id = o.id
+      WHERE ot.order_id = $1 
+        AND oi.item_status != 'CANCELED'
+        AND ot.status != 'CANCELED'
+        AND ot.paid_status = 'UNPAID'
+      GROUP BY o.source, o.is_mixed
+    `, [orderId]);
 
-    console.log(`✅ POS 주문 수정 완료: 주문 ID ${orderId}, ${modificationResults.length}개 메뉴 수정`);
+    const shouldDeleteOrder = remainingItemsResult.rows.length > 0 &&
+                             parseInt(remainingItemsResult.rows[0].item_count) === 0 &&
+                             remainingItemsResult.rows[0].source === 'POS' &&
+                             !remainingItemsResult.rows[0].is_mixed;
 
-    // KDS 이벤트 발생
-    try {
-      // 수정된 주문의 현재 아이템들 조회
-      const currentItemsResult = await pool.query(`
-        SELECT 
-          oi.id,
-          oi.menu_name as name,
-          oi.quantity,
-          oi.unit_price as price,
-          oi.cook_station,
-          oi.menu_id
-        FROM order_items oi
-        JOIN order_tickets ot ON oi.ticket_id = ot.id
-        WHERE ot.order_id = $1 
-          AND oi.item_status != 'CANCELED'
-          AND ot.status != 'CANCELED'
-          AND ot.paid_status = 'UNPAID'
-        ORDER BY oi.created_at DESC
+    if (shouldDeleteOrder) {
+      console.log(`🗑️ 주문 ${orderId}에 아이템이 없어 삭제 처리 시작`);
+
+      // 1. store_tables 업데이트 (결제 로직과 동일)
+      const orderInfoResult = await client.query(`
+        SELECT store_id, table_num FROM orders WHERE id = $1
       `, [orderId]);
 
-      const kdsEventData = {
-        orderId: orderId,
-        ticketId: null,
-        storeId: parseInt(storeId),
-        tableNumber: parseInt(tableNumber),
-        items: currentItemsResult.rows,
-        modifications: {
-          type: 'order_modification',
-          results: modificationResults,
-          modifiedCount: modificationResults.length
-        }
-      };
+      if (orderInfoResult.rows.length > 0) {
+        const { store_id, table_num } = orderInfoResult.rows[0];
 
-      eventBus.emit('order.modified', kdsEventData);
-      console.log(`📡 KDS 이벤트 발생: 주문 수정 완료 (${modificationResults.length}개 메뉴 수정)`);
-    } catch (kdsError) {
-      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+        // 현재 주문이 processing_order_id인지 spare_processing_order_id인지 확인하여 처리
+        const currentTableResult = await client.query(`
+          SELECT processing_order_id, spare_processing_order_id
+          FROM store_tables
+          WHERE store_id = $1 AND id = $2
+        `, [store_id, table_num]);
+
+        if (currentTableResult.rows.length > 0) {
+          const currentTable = currentTableResult.rows[0];
+          const processingOrderId = parseInt(currentTable.processing_order_id);
+          const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+          const currentOrderId = parseInt(orderId);
+
+          if (spareOrderId === currentOrderId) {
+            // spare_processing_order_id에 있는 경우 - spare를 null로 처리
+            await client.query(`
+              UPDATE store_tables
+              SET spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
+              WHERE store_id = $1 AND id = $2
+            `, [store_id, table_num]);
+            console.log(`✅ spare_processing_order_id 해제: 테이블 ${table_num}, 주문 ${orderId}`);
+
+          } else if (processingOrderId === currentOrderId) {
+            // processing_order_id에 있는 경우
+            if (currentTable.spare_processing_order_id !== null) {
+              // spare가 있으면 spare를 processing으로 이동
+              await client.query(`
+                UPDATE store_tables
+                SET processing_order_id = spare_processing_order_id,
+                    spare_processing_order_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`✅ processing_order_id 이동: 테이블 ${table_num}, 완료된 주문 ${orderId}`);
+
+            } else {
+              // spare가 없으면 테이블 완전 해제
+              await client.query(`
+                UPDATE store_tables
+                SET processing_order_id = NULL,
+                    spare_processing_order_id = NULL,
+                    status = 'AVAILABLE',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+              console.log(`✅ 테이블 완전 해제: 테이블 ${table_num}, 주문 ${orderId}`);
+            }
+          }
+        }
+
+        // 2. orders 레코드 삭제 (CASCADE로 관련 레코드들도 함께 삭제됨)
+        await client.query(`DELETE FROM orders WHERE id = $1`, [orderId]);
+        console.log(`🗑️ 주문 ${orderId} 완전 삭제 완료`);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    if (shouldDeleteOrder) {
+      console.log(`✅ 주문 삭제 완료: 주문 ID ${orderId} (아이템 없음으로 인한 삭제)`);
+      
+      res.json({
+        success: true,
+        orderId: orderId,
+        orderDeleted: true,
+        message: '주문 수정 완료 후 아이템이 없어 주문이 삭제되었습니다'
+      });
+    } else {
+      console.log(`✅ POS 주문 수정 완료: 주문 ID ${orderId}, ${modificationResults.length}개 메뉴 수정`);
+
+      // KDS 이벤트 발생
+      try {
+        // 수정된 주문의 현재 아이템들 조회
+        const currentItemsResult = await pool.query(`
+          SELECT 
+            oi.id,
+            oi.menu_name as name,
+            oi.quantity,
+            oi.unit_price as price,
+            oi.cook_station,
+            oi.menu_id
+          FROM order_items oi
+          JOIN order_tickets ot ON oi.ticket_id = ot.id
+          WHERE ot.order_id = $1 
+            AND oi.item_status != 'CANCELED'
+            AND ot.status != 'CANCELED'
+            AND ot.paid_status = 'UNPAID'
+          ORDER BY oi.created_at DESC
+        `, [orderId]);
+
+        const kdsEventData = {
+          orderId: orderId,
+          ticketId: null,
+          storeId: parseInt(storeId),
+          tableNumber: parseInt(tableNumber),
+          items: currentItemsResult.rows,
+          modifications: {
+            type: 'order_modification',
+            results: modificationResults,
+            modifiedCount: modificationResults.length
+          }
+        };
+
+        eventBus.emit('order.modified', kdsEventData);
+        console.log(`📡 KDS 이벤트 발생: 주문 수정 완료 (${modificationResults.length}개 메뉴 수정)`);
+      } catch (kdsError) {
+        console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+      }
+
+      res.json({
+        success: true,
+        orderId: orderId,
+        modifications: modificationResults,
+        message: '주문 수정이 완료되었습니다'
+      });
     }
 
     // SSE 브로드캐스트
     if (global.broadcastPOSTableUpdate) {
       global.broadcastPOSTableUpdate(storeId, tableNumber);
     }
-
-    res.json({
-      success: true,
-      orderId: orderId,
-      modifications: modificationResults,
-      message: '주문 수정이 완료되었습니다'
-    });
 
   } catch (error) {
     await client.query('ROLLBACK');
