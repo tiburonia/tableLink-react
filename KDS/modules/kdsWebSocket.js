@@ -578,12 +578,25 @@
     /**
      * 티켓 업데이트 처리 - 캔슬 티켓 반짝임 교체 및 실시간 업데이트 개선
      */
-    handleTicketUpdated(ticket) {
+    async handleTicketUpdated(ticket) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
       const actualStatus = (ticket.status || '').toUpperCase();
       const batchNo = ticket.batch_no;
+      const tableNumber = ticket.table_number;
 
       console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}, batch_no: ${batchNo}`);
+
+      // 티켓 ID가 유효하지 않은 경우 처리
+      if (!ticketId || ticketId === 'undefined' || ticketId.startsWith('unknown_')) {
+        console.warn(`⚠️ 유효하지 않은 티켓 ID: ${ticketId}`);
+        
+        // 테이블 번호가 있으면 해당 테이블의 실제 데이터 조회
+        if (tableNumber && KDSState.storeId) {
+          console.log(`🔍 테이블 ${tableNumber} 실제 티켓 데이터 조회 시도`);
+          await this._fetchTableTickets(tableNumber);
+        }
+        return;
+      }
 
       // 완료된 티켓은 즉시 제거 처리
       if (['DONE', 'COMPLETED', 'SERVED'].includes(actualStatus)) {
@@ -600,6 +613,14 @@
       const existingTicket = KDSState.getTicket(ticketId);
       if (!existingTicket) {
         console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketId}`);
+        
+        // 티켓에 아이템 정보가 없으면 서버에서 조회
+        if (!ticket.items || ticket.items.length === 0) {
+          console.log(`🔍 티켓 ${ticketId} 아이템 정보 없음 - 서버에서 조회`);
+          await this._fetchTicketDetails(ticketId, tableNumber);
+          return;
+        }
+        
         return this.handleTicketCreated(ticket);
       }
 
@@ -1017,30 +1038,107 @@
     handleDBNotification(data) {
       console.log('📡 DB 알림 수신:', data);
 
+      // 데이터 검증
+      if (!data || !data.data) {
+        console.warn('⚠️ DB 알림 데이터가 비어있음:', data);
+        return;
+      }
+
+      const { data: notificationData } = data;
+
       switch (data.type) {
         case 'db_order_change':
         case 'db_ticket_change':
+          // 티켓 ID 검증
+          const ticketId = notificationData.ticket_id || notificationData.id || notificationData.order_id;
+          
+          if (!ticketId) {
+            console.warn('⚠️ DB 알림에서 티켓 ID를 찾을 수 없음:', notificationData);
+            
+            // 티켓 ID가 없으면 전체 데이터 새로고침 시도
+            if (notificationData.table_number && KDSState.storeId) {
+              console.log(`🔄 티켓 ID 없음 - 테이블 ${notificationData.table_number} 전체 새로고침 시도`);
+              this._refreshTableData(notificationData.table_number);
+            }
+            return;
+          }
+
+          // 상태 검증 및 정규화
+          const status = (notificationData.status || 'PENDING').toUpperCase();
+          
+          console.log(`🔄 DB 티켓 변경: ${ticketId}, 상태: ${status}`);
+
           this.handleTicketUpdated({
-            ticket_id: data.data.ticket_id,
-            status: data.data.status,
+            ticket_id: ticketId,
+            id: ticketId,
+            check_id: ticketId,
+            status: status,
+            batch_no: notificationData.batch_no,
+            table_number: notificationData.table_number,
             source: 'db_trigger'
           });
           break;
 
         case 'db_item_change':
-          console.log('🍽️ DB 아이템 변경 처리:', data.data);
+          console.log('🍽️ DB 아이템 변경 처리:', notificationData);
+          
+          const itemTicketId = notificationData.ticket_id || notificationData.id;
+          const itemId = notificationData.item_id;
+          
+          if (!itemTicketId || !itemId) {
+            console.warn('⚠️ DB 아이템 변경에서 필수 ID 누락:', notificationData);
+            return;
+          }
+
           this.handleItemUpdated({
-            ticket_id: data.data.ticket_id,
-            item_id: data.data.item_id,
-            item_status: data.data.item_status,
+            ticket_id: itemTicketId,
+            item_id: itemId,
+            item_status: notificationData.item_status || 'PENDING',
             source: 'db_trigger'
           });
           break;
 
         case 'db_payment_change':
           // 결제 완료 이벤트는 로그만 남기고 KDS에서는 처리하지 않음
-          console.log(`💳 결제 완료 알림 수신: 테이블 ${data.data.table_number} (KDS 처리 생략)`);
+          console.log(`💳 결제 완료 알림 수신: 테이블 ${notificationData.table_number} (KDS 처리 생략)`);
           break;
+
+        default:
+          console.warn(`⚠️ 알 수 없는 DB 알림 타입: ${data.type}`);
+      }
+    },
+
+    /**
+     * 테이블 데이터 전체 새로고침
+     */
+    async _refreshTableData(tableNumber) {
+      try {
+        if (!KDSState.storeId || !tableNumber) return;
+
+        console.log(`🔄 테이블 ${tableNumber} 데이터 새로고침 시작`);
+
+        const response = await fetch(
+          `/api/orders/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
+        );
+
+        if (!response.ok) {
+          throw new Error(`테이블 데이터 조회 실패: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.tickets) {
+          // 받은 티켓들을 처리
+          result.tickets.forEach(ticket => {
+            console.log(`🎫 테이블 ${tableNumber} 티켓 새로고침: ${ticket.ticket_id}`);
+            this.handleTicketUpdated(ticket);
+          });
+
+          console.log(`✅ 테이블 ${tableNumber} 데이터 새로고침 완료: ${result.tickets.length}개 티켓`);
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ 테이블 ${tableNumber} 데이터 새로고침 실패:`, error);
       }
     },
 
@@ -1065,6 +1163,100 @@
           window.KDSUIRenderer.updateTicketCounts();
         }
       }, 100);
+    },
+
+    /**
+     * 티켓 상세 정보 조회
+     */
+    async _fetchTicketDetails(ticketId, tableNumber) {
+      try {
+        if (!KDSState.storeId) {
+          console.warn('⚠️ 매장 ID가 없어서 티켓 상세 조회 불가');
+          return;
+        }
+
+        console.log(`🔍 티켓 ${ticketId} 상세 정보 조회 시작`);
+
+        const response = await fetch(
+          `/api/orders/kds/tickets/${ticketId}/details?storeId=${KDSState.storeId}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`티켓 상세 조회 실패: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.ticket) {
+          console.log(`✅ 티켓 ${ticketId} 상세 정보 조회 성공`);
+          
+          // 조회된 상세 정보로 티켓 생성 처리
+          this.handleTicketCreated(result.ticket);
+        } else {
+          throw new Error('티켓 상세 정보가 없음');
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ 티켓 ${ticketId} 상세 정보 조회 실패:`, error);
+        
+        // 실패하면 테이블 전체 새로고침 시도
+        if (tableNumber) {
+          await this._fetchTableTickets(tableNumber);
+        }
+      }
+    },
+
+    /**
+     * 테이블의 모든 티켓 조회
+     */
+    async _fetchTableTickets(tableNumber) {
+      try {
+        if (!KDSState.storeId || !tableNumber) return;
+
+        console.log(`🔍 테이블 ${tableNumber} 모든 티켓 조회 시작`);
+
+        const response = await fetch(
+          `/api/orders/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
+        );
+
+        if (!response.ok) {
+          throw new Error(`테이블 티켓 조회 실패: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success && result.tickets) {
+          console.log(`✅ 테이블 ${tableNumber} 티켓 조회 성공: ${result.tickets.length}개`);
+          
+          // 조회된 티켓들을 처리
+          result.tickets.forEach(ticket => {
+            // 주방 아이템이 있는 티켓만 처리
+            const kitchenItems = (ticket.items || []).filter(item => {
+              const cookStation = item.cook_station || 'KITCHEN';
+              return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+            });
+
+            if (kitchenItems.length > 0) {
+              console.log(`🎫 테이블 ${tableNumber} 주방 티켓 처리: ${ticket.ticket_id} (${kitchenItems.length}개 아이템)`);
+              this.handleTicketCreated({
+                ...ticket,
+                items: kitchenItems
+              });
+            } else {
+              console.log(`ℹ️ 테이블 ${tableNumber} 티켓 ${ticket.ticket_id}에 주방 아이템 없음 - 스킵`);
+            }
+          });
+
+          // 전체 Grid 재렌더링
+          this._triggerFullGridRerender('table_tickets_refreshed');
+
+        } else {
+          console.log(`ℹ️ 테이블 ${tableNumber}에 활성 티켓이 없음`);
+        }
+
+      } catch (error) {
+        console.warn(`⚠️ 테이블 ${tableNumber} 티켓 조회 실패:`, error);
+      }
     },
 
     /**
