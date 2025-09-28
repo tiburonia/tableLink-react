@@ -448,7 +448,10 @@ const POSOrderScreen = {
             paymentSection.replaceWith(newPaymentSection.firstElementChild);
         }
 
-        this.updateEditModeUI(false);
+        // OrderModificationManager의 편집 모드 UI 업데이트 호출
+        if (typeof OrderModificationManager !== 'undefined') {
+            OrderModificationManager.updateEditModeUI(false);
+        }
 
         console.log(`✅ 주문 새로고침 완료 - POS: ${this.currentOrders.length}개, TLL: ${this.tllOrders?.length || 0}개`);
     },
@@ -797,6 +800,15 @@ const POSOrderScreen = {
     },
     showReceiptManagement() {
         alert("영수증 관리 기능 (추후 구현)");
+    },
+
+    /**
+     * 편집 모드 UI 업데이트 (OrderModificationManager로 위임)
+     */
+    updateEditModeUI(isActive) {
+        if (typeof OrderModificationManager !== 'undefined') {
+            OrderModificationManager.updateEditModeUI(isActive);
+        }
     }
 };
 

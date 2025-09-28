@@ -144,14 +144,14 @@ const OrderModificationManager = {
         const currentQuantity = pendingChange ? pendingChange.newQuantity : selected.originalQuantity;
 
         if (currentQuantity <= 1) {
-            if (!confirm(`${selected.menuName}을(를) 완전히 삭제하시겠습니까?`)) {
+            if (!confirm(`${selected.menuName}을(를) 0개로 만들어 주문에서 제외하시겠습니까?`)) {
                 return;
             }
         }
 
         console.log(`📉 선택된 주문 수량 감소: ${selected.menuName}`);
 
-        // 수량 감소
+        // 수량 감소 (0까지 허용)
         const result = OrderStateManager.updateMenuQuantity(
             selected.menuId,
             selected.menuName,
@@ -283,9 +283,10 @@ const OrderModificationManager = {
             tableBody = orders.map(order => {
                 const isModified = order.isModified;
                 const willBeDeleted = isModified && order.quantity === 0;
+                const isZeroQuantity = order.quantity === 0;
 
                 return `
-                    <tr class="order-row ${willBeDeleted ? 'will-be-removed' : ''}"
+                    <tr class="order-row ${willBeDeleted ? 'will-be-removed' : ''} ${isZeroQuantity ? 'zero-quantity' : ''}"
                         data-order-id="${order.id}"
                         data-menu-id="${order.menuId}"
                         data-menu-name="${order.menuName}"
@@ -294,6 +295,7 @@ const OrderModificationManager = {
                         <td class="col-menu">
                             <div class="menu-info">
                                 <strong>${order.menuName}</strong>
+                                ${isZeroQuantity ? '<span class="zero-indicator">(삭제 예정)</span>' : ''}
                             </div>
                         </td>
                         <td class="col-price">
@@ -301,15 +303,15 @@ const OrderModificationManager = {
                         </td>
                         <td class="col-quantity">
                             <div class="quantity-control-table">
-                                <span class="quantity-display">${order.quantity}</span>
+                                <span class="quantity-display ${isZeroQuantity ? 'zero' : ''}">${order.quantity}</span>
                             </div>
                         </td>
                         <td class="col-total">
-                            <strong>${(order.price * order.quantity).toLocaleString()}원</strong>
+                            <strong class="${isZeroQuantity ? 'zero' : ''}">${(order.price * order.quantity).toLocaleString()}원</strong>
                         </td>
                         <td class="col-status">
-                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'}">
-                                ${this.getStatusText(order.cookingStatus)}
+                            <span class="status-badge status-${order.cookingStatus?.toLowerCase() || 'pending'} ${isZeroQuantity ? 'status-cancelled' : ''}">
+                                ${isZeroQuantity ? '삭제예정' : this.getStatusText(order.cookingStatus)}
                             </span>
                         </td>
                     </tr>
