@@ -161,11 +161,11 @@
         return;
       }
 
-      // 중복 티켓 확인
+      // 중복 티켓 확인 - 재귀 방지
       const existingTicket = KDSState.getTicket(ticketId);
       if (existingTicket) {
-        console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 업데이트로 처리`);
-        return this.handleTicketUpdated(ticket);
+        console.log(`ℹ️ 티켓 ${ticketId}는 이미 존재함 - 재귀 방지 모드로 업데이트 처리`);
+        return this.handleTicketUpdated(ticket, true);
       }
 
       // 주방 관련 아이템만 필터링
@@ -578,13 +578,13 @@
     /**
      * 티켓 업데이트 처리 - 캔슬 티켓 반짝임 교체 및 실시간 업데이트 개선
      */
-    async handleTicketUpdated(ticket) {
+    async handleTicketUpdated(ticket, isRecursionPrevention = false) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
       const actualStatus = (ticket.status || '').toUpperCase();
       const batchNo = ticket.batch_no;
       const tableNumber = ticket.table_number;
 
-      console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}, batch_no: ${batchNo}`);
+      console.log(`🔄 티켓 업데이트 이벤트: ${ticketId}, 상태: ${actualStatus}, batch_no: ${batchNo}, 재귀방지: ${isRecursionPrevention}`);
 
       // 티켓 ID를 문자열로 변환 및 유효성 검사
       const ticketIdStr = String(ticketId);
@@ -612,7 +612,7 @@
       }
 
       const existingTicket = KDSState.getTicket(ticketIdStr);
-      if (!existingTicket) {
+      if (!existingTicket && !isRecursionPrevention) {
         console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketIdStr}`);
 
         // 티켓에 아이템 정보가 없으면 서버에서 조회
@@ -623,6 +623,43 @@
         }
 
         return this.handleTicketCreated(ticket);
+      } else if (!existingTicket && isRecursionPrevention) {
+        console.log(`🔄 재귀 방지 모드 - 티켓 ${ticketIdStr} 직접 생성 처리`);
+        
+        // 주방 아이템 필터링
+        const kitchenItems = (ticket.items || []).filter(item => {
+          const cookStation = item.cook_station || 'KITCHEN';
+          return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+        });
+
+        if (kitchenItems.length === 0) {
+          console.log(`ℹ️ 티켓 ${ticketIdStr}에 주방 아이템이 없음 - 처리 스킵`);
+          return;
+        }
+
+        // 정규화된 티켓 직접 생성
+        const normalizedTicket = {
+          ...ticket,
+          ticket_id: ticketIdStr,
+          check_id: ticketIdStr,
+          id: ticketIdStr,
+          batch_no: batchNo || 1,
+          table_number: tableNumber || ticket.table_num || 'N/A',
+          table_num: ticket.table_num || tableNumber || 'N/A',
+          customer_name: ticket.customer_name || `테이블 ${tableNumber || ticket.table_num}`,
+          items: kitchenItems,
+          status: actualStatus,
+          source: ticket.source || 'POS',
+          created_at: ticket.created_at || new Date().toISOString()
+        };
+
+        // 상태에 티켓 저장
+        KDSState.setTicket(ticketIdStr, normalizedTicket);
+        console.log(`💾 재귀 방지 모드 - 티켓 ${ticketIdStr} 직접 저장 완료`);
+
+        // 전체 Grid 재렌더링
+        this._triggerFullGridRerender('recursion_prevention_create');
+        return;
       }
 
       // 버전 확인 (batch_no 변경 감지)
