@@ -2414,7 +2414,7 @@ router.post('/orders/modify-batch', async (req, res) => {
     await client.query('BEGIN');
 
     // 1. 현재 테이블의 활성 주문 조회
-    const activeOrderResult = await client.query(`
+    const activeOrderResult = await pool.query(`
       SELECT DISTINCT o.id as order_id, o.created_at
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
@@ -2766,7 +2766,7 @@ router.post('/orders/modify', async (req, res) => {
     await client.query('BEGIN');
 
     // 1. 현재 테이블의 활성 주문 조회
-    const activeOrderResult = await client.query(`
+    const activeOrderResult = await pool.query(`
       SELECT DISTINCT o.id as order_id, o.created_at, o.total_price
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
@@ -2798,7 +2798,7 @@ router.post('/orders/modify', async (req, res) => {
       console.log(`🔧 메뉴 수정 처리: ${menuName} (${currentQuantity} → ${newQuantity})`);
 
       // 해당 메뉴의 최신 티켓 조회 (batch_no 최대값)
-      const latestTicketResult = await client.query(`
+      const latestTicketResult = await pool.query(`
         SELECT ot.id as ticket_id, ot.batch_no, ot.version
         FROM order_tickets ot
         JOIN order_items oi ON ot.id = oi.ticket_id
@@ -2852,7 +2852,7 @@ router.post('/orders/modify', async (req, res) => {
       console.log(`🔄 수정 주문 알고리즘: batch_no=${oldBatchNo}→${newBatchNo}, version=${oldVersion}→${newVersion}`);
 
       // 기존 티켓의 다른 아이템들을 새 티켓에 복사 (수정 대상 메뉴 제외)
-      const otherItemsResult = await client.query(`
+      const otherItemsResult = await pool.query(`
         SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
         FROM order_items
         WHERE ticket_id = $1
@@ -2891,7 +2891,7 @@ router.post('/orders/modify', async (req, res) => {
       // 수정된 메뉴를 새 티켓에 추가 (수량이 0이 아닌 경우만)
       if (newQuantity > 0) {
         // 원본 아이템 정보 조회
-        const originalItemResult = await client.query(`
+        const originalItemResult = await pool.query(`
           SELECT menu_id, unit_price, cook_station
           FROM order_items
           WHERE ticket_id = $1 AND menu_name = $2
@@ -3012,6 +3012,411 @@ router.post('/orders/modify', async (req, res) => {
     res.status(500).json({
       success: false,
       error: '주문 수정 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/table/:tableId/mixed-order-items - TLL 연동 교차주문 아이템 조회
+ */
+router.get('/stores/:storeId/table/:tableId/mixed-order-items', async (req, res) => {
+  try {
+    const { storeId, tableId } = req.params;
+
+    console.log(`🔗 TLL 연동 교차주문 아이템 조회: 매장 ${storeId}, 테이블 ${tableId}`);
+
+    // 파라미터 검증
+    const parsedStoreId = parseInt(storeId);
+    const parsedTableId = parseInt(tableId);
+
+    if (isNaN(parsedStoreId) || isNaN(parsedTableId)) {
+      return res.status(400).json({
+        success: false,
+        error: '유효하지 않은 매장 ID 또는 테이블 ID입니다'
+      });
+    }
+
+    // 테이블 상태 확인 (TLL 연동 교차주문인지 검증)
+    const tableResult = await pool.query(`
+      SELECT processing_order_id, spare_processing_order_id
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [parsedStoreId, parsedTableId]);
+
+    if (tableResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '테이블을 찾을 수 없습니다'
+      });
+    }
+
+    const table = tableResult.rows[0];
+    const orderId = table.processing_order_id;
+
+    // TLL 연동 교차주문 검증
+    const isTLLMixed = (
+      table.processing_order_id !== null &&
+      table.spare_processing_order_id !== null &&
+      parseInt(table.processing_order_id) === parseInt(table.spare_processing_order_id)
+    );
+
+    if (!isTLLMixed) {
+      return res.status(400).json({
+        success: false,
+        error: 'TLL 연동 교차주문이 아닙니다'
+      });
+    }
+
+    // 해당 주문의 모든 티켓과 아이템 조회 (ticket_source로 구분)
+    const result = await pool.query(`
+      SELECT 
+        oi.id,
+        oi.menu_name,
+        oi.unit_price,
+        oi.quantity,
+        oi.total_price,
+        oi.cook_station,
+        oi.item_status,
+        ot.source as ticket_source,
+        oi.created_at
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1
+        AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
+      ORDER BY ot.source, oi.created_at
+    `, [orderId]);
+
+    // 총 금액 계산
+    const totalAmount = result.rows.reduce((sum, item) => sum + (item.total_price || 0), 0);
+
+    console.log(`✅ TLL 연동 교차주문 아이템 조회 완료: ${result.rows.length}개 아이템, 총액 ${totalAmount}원`);
+
+    res.json({
+      success: true,
+      orderItems: result.rows,
+      totalAmount: totalAmount,
+      orderId: orderId,
+      isTLLMixed: true
+    });
+
+  } catch (error) {
+    console.error('❌ TLL 연동 교차주문 아이템 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'TLL 연동 교차주문 아이템 조회 실패: ' + error.message
+    });
+  }
+});
+
+/**
+ * [GET] /stores/:storeId/orders/active - 활성 주문 조회 (교차 주문 지원)
+ */
+router.get('/stores/:storeId/orders/active', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+
+    console.log(`📊 매장 ${storeId} 활성 주문 조회 (교차 주문 지원)`);
+
+    // 메인 주문 조회
+    const mainOrdersResult = await pool.query(`
+      SELECT
+        st.id as table_number,
+        o.id as order_id,
+        COALESCE(u.name, '포스고객') as customer_name,
+        o.user_id,
+        o.total_price as total_amount,
+        o.session_status,
+        o.created_at as opened_at,
+        o.source as source_system,
+        COUNT(oi.id) as item_count,
+        'main' as order_type,
+        st.spare_processing_order_id
+      FROM store_tables st
+      JOIN orders o ON st.processing_order_id = o.id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id,
+               o.total_price, o.session_status, o.created_at, o.source, st.spare_processing_order_id
+    `, [storeId]);
+
+    // 보조 주문 조회
+    const spareOrdersResult = await pool.query(`
+      SELECT
+        st.id as table_number,
+        o.id as order_id,
+        COALESCE(u.name, '포스고객') as customer_name,
+        o.user_id,
+        o.total_price as total_amount,
+        o.session_status,
+        o.created_at as opened_at,
+        o.source as source_system,
+        COUNT(oi.id) as item_count,
+        'spare' as order_type
+      FROM store_tables st
+      JOIN orders o ON st.spare_processing_order_id = o.id
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status != 'CANCELED'
+      WHERE st.store_id = $1 AND st.spare_processing_order_id IS NOT NULL
+      GROUP BY st.id, o.id, u.name, o.user_id,
+               o.total_price, o.session_status, o.created_at, o.source
+    `, [storeId]);
+
+    // 결과 통합 및 교차 주문 표시
+    const activeOrders = [];
+
+    // 메인 주문 처리
+    mainOrdersResult.rows.forEach(row => {
+      const hasSpareOrder = row.spare_processing_order_id !== null;
+
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'main',
+        isCrossOrder: hasSpareOrder // 교차 주문 여부
+      });
+    });
+
+    // 보조 주문 처리
+    spareOrdersResult.rows.forEach(row => {
+      activeOrders.push({
+        checkId: row.order_id,
+        tableNumber: row.table_number,
+        customerName: row.customer_name,
+        isGuest: !row.user_id,
+        totalAmount: row.total_amount || 0,
+        status: row.status,
+        openedAt: row.opened_at,
+        sourceSystem: row.source_system,
+        itemCount: parseInt(row.item_count),
+        orderType: 'spare',
+        isCrossOrder: true // 보조 주문은 항상 교차 주문
+      });
+    });
+
+    // 테이블 번호와 주문 생성 시간으로 정렬
+    activeOrders.sort((a, b) => {
+      if (a.tableNumber !== b.tableNumber) {
+        return a.tableNumber - b.tableNumber;
+      }
+      return new Date(a.openedAt) - new Date(b.openedAt);
+    });
+
+    console.log(`✅ 매장 ${storeId} 활성 주문 ${activeOrders.length}개 조회 완료 (교차 주문 포함)`);
+
+    res.json({
+      success: true,
+      activeOrders: activeOrders
+    });
+
+  } catch (error) {
+    console.error('❌ 활성 주문 조회 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '활성 주문 조회 실패'
+    });
+  }
+});
+
+/**
+ * [POST] /orders/create - POS 주문 생성 (TLL 연동 고려)
+ */
+router.post('/orders/create', async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { storeId, tableNumber, items, notes } = req.body;
+
+    console.log(`🛒 POS 주문 생성 요청:`, {
+      storeId,
+      tableNumber,
+      itemCount: items?.length
+    });
+
+    if (!storeId || !tableNumber || !items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다 (storeId, tableNumber, items 필요)'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 기존 활성 주문 확인 (TLL 주문 우선 검색)
+    const existingOrderResult = await client.query(`
+      SELECT id, source, user_id, guest_id, is_mixed, session_status
+      FROM orders
+      WHERE store_id = $1 
+        AND table_num = $2 
+        AND session_status = 'OPEN'
+      ORDER BY 
+        CASE WHEN source = 'TLL' THEN 1 ELSE 2 END,
+        created_at DESC
+      LIMIT 1
+    `, [storeId, tableNumber]);
+
+    let orderId;
+    let isNewOrder = false;
+    let isTLLIntegration = false;
+
+    if (existingOrderResult.rows.length > 0) {
+      const existingOrder = existingOrderResult.rows[0];
+      orderId = existingOrder.id;
+      isTLLIntegration = (existingOrder.source === 'TLL');
+
+      console.log(`🔄 기존 주문 ${orderId} 사용 (source: ${existingOrder.source}, TLL연동: ${isTLLIntegration})`);
+
+      // TLL 주문에 POS 아이템 추가하는 경우 is_mixed 플래그 설정
+      if (isTLLIntegration && !existingOrder.is_mixed) {
+        await client.query(`
+          UPDATE orders 
+          SET is_mixed = true, updated_at = NOW()
+          WHERE id = $1
+        `, [orderId]);
+
+        console.log(`🔗 TLL 주문 ${orderId}에 is_mixed 플래그 설정`);
+      }
+    } else {
+      // 새 주문 생성 (TLL 주문이 없는 경우)
+      const newOrderResult = await client.query(`
+        INSERT INTO orders (
+          store_id, table_num, source, status, payment_status, session_status,
+          total_price, is_mixed, created_at, updated_at
+        ) VALUES ($1, $2, 'POS', 'OPEN', 'UNPAID', 'OPEN', 0, false, NOW(), NOW())
+        RETURNING id
+      `, [storeId, tableNumber]);
+
+      orderId = newOrderResult.rows[0].id;
+      isNewOrder = true;
+      console.log(`✅ 새 POS 주문 ${orderId} 생성`);
+    }
+
+    // order_tickets 테이블에 티켓 생성
+    const ticketResult = await client.query(`
+      INSERT INTO order_tickets (
+        order_id,
+        store_id,
+        batch_no,
+        status,
+        payment_type,
+        source,
+        table_num,
+        created_at,
+        paid_status
+      ) VALUES ($1, $2,
+        (SELECT COALESCE(MAX(batch_no), 0) + 1 FROM order_tickets WHERE order_id = $1),
+        'PENDING', 'POSTPAID', 'POS', $3, NOW(), 'UNPAID')
+      RETURNING id, batch_no
+    `, [orderId, storeId, tableNumber]);
+
+    const ticketId = ticketResult.rows[0].id;
+    const batchNo = ticketResult.rows[0].batch_no;
+
+    // order_items 테이블에 주문 아이템들 생성
+    for (const item of items) {
+      await client.query(`
+        INSERT INTO order_items (
+          order_id,
+          ticket_id,
+          menu_name,
+          unit_price,
+          quantity,
+          total_price,
+          item_status,
+          cook_station,
+          created_at,
+          menu_id,
+          store_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', $7, NOW(), $8, $9)
+      `, [
+        orderId,
+        ticketId,
+        item.name,
+        item.price,
+        item.quantity,
+        item.price * item.quantity,
+        item.cook_station || 'KITCHEN',
+        item.id,
+        storeId
+      ]);
+    }
+
+    // store_tables 업데이트 (TLL 연동 고려)
+    if (isNewOrder) {
+      // 새 주문인 경우에만 processing_order_id 설정
+      const tableUpdateResult = await client.query(`
+        UPDATE store_tables
+        SET processing_order_id = $1,
+            status = 'OCCUPIED',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE store_id = $2 AND id = $3
+      `, [orderId, storeId, tableNumber]);
+
+      if (tableUpdateResult.rowCount === 0) {
+        console.warn(`⚠️ store_tables 업데이트 실패 - 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      } else {
+        console.log(`✅ store_tables 업데이트 완료: 매장 ${storeId}, 테이블 ${tableNumber} -> 주문 ${orderId}`);
+      }
+    } else if (isTLLIntegration) {
+      // TLL 연동인 경우 spare_processing_order_id 설정 (POI = SPOI 패턴)
+      const tableUpdateResult = await client.query(`
+        UPDATE store_tables
+        SET spare_processing_order_id = processing_order_id,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE store_id = $1 AND id = $2 AND processing_order_id = $3
+      `, [storeId, tableNumber, orderId]);
+
+      if (tableUpdateResult.rowCount > 0) {
+        console.log(`🔗 TLL 연동: spare_processing_order_id 설정 완료 (POI=SPOI=${orderId})`);
+      } else {
+        console.warn(`⚠️ TLL 연동: spare_processing_order_id 설정 실패 - 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
+      }
+    }
+
+    await client.query('COMMIT');
+
+    // 이벤트 발생: 새 주문 생성됨 (TLL 연동 정보 포함)
+    eventBus.emit('order.created', {
+      orderId: orderId,
+      ticketId: ticketId,
+      storeId: parseInt(storeId),
+      tableNumber: parseInt(tableNumber),
+      items: items,
+      batchNo: batchNo,
+      isTLLIntegration: isTLLIntegration,
+      isNewOrder: isNewOrder
+    });
+
+    // SSE 브로드캐스트
+    if (global.broadcastPOSTableUpdate) {
+      global.broadcastPOSTableUpdate(storeId, tableNumber);
+    }
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      ticketId: ticketId,
+      batchNo: batchNo,
+      isTLLIntegration: isTLLIntegration,
+      isNewOrder: isNewOrder,
+      message: isTLLIntegration ? 'TLL 주문에 POS 주문이 추가되었습니다' : '주문이 성공적으로 생성되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 주문 생성 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: 'POS 주문 생성 실패: ' + error.message
     });
   } finally {
     client.release();
