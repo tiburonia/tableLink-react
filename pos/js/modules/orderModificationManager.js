@@ -1,7 +1,8 @@
+
 /**
- * 주문 수정 관리 모듈 (통합 상태 관리 기반)
- * - OrderStateManager를 통한 중앙 집중식 상태 관리
- * - 일관된 로직과 명확한 책임 분리
+ * 주문 수정 관리 모듈 (v2.0)
+ * - OrderStateManager v2.0 기반
+ * - addToOrder와 toggleOrderRowSelection 통합 지원
  */
 
 const OrderModificationManager = {
@@ -9,7 +10,7 @@ const OrderModificationManager = {
      * 초기화
      */
     initialize() {
-        console.log('🔧 OrderModificationManager 초기화 (통합 상태 관리 기반)');
+        console.log('🔧 OrderModificationManager v2.0 초기화');
 
         // 상태 관리자 초기화
         OrderStateManager.initialize();
@@ -28,11 +29,12 @@ const OrderModificationManager = {
         console.log(`🔄 상태 변경 감지: ${event.type}`, event.data);
 
         switch (event.type) {
-            case 'QUANTITY_UPDATED':
-            case 'ORDER_SELECTED':
+            case 'MENU_ADDED_WITH_SELECTION':
+            case 'ROW_SELECTION_TOGGLED':
             case 'SELECTION_CLEARED':
             case 'CHANGES_CONFIRMED':
             case 'CHANGES_CANCELLED':
+            case 'EDIT_MODE_EXITED':
                 this.updateOrderDisplay();
                 this.updateEditModeUI(event.state.isEditMode);
                 break;
@@ -44,32 +46,41 @@ const OrderModificationManager = {
     },
 
     /**
-     * 메뉴 추가/수량 증가
+     * 메뉴 추가 (addToOrder용)
+     * - 편집모드 전환 + 자동 선택
      */
     addMenuItem(menuId, menuName, price, quantity = 1) {
-        console.log(`📝 메뉴 추가/증가: ${menuName} +${quantity}개`);
+        console.log(`📝 메뉴 추가 (편집모드+선택): ${menuName} +${quantity}개`);
 
-        const result = OrderStateManager.updateMenuQuantity(
-            menuId,
-            menuName,
-            price,
-            quantity,
-            'add'
-        );
-
-        // 추가된 메뉴 행을 자동으로 선택
-        setTimeout(() => {
-            this.autoSelectMenuRow(menuId, menuName, result.newQuantity);
-        }, 100);
+        const result = OrderStateManager.addMenuWithSelection(menuId, menuName, price, quantity);
 
         console.log(`✅ 메뉴 추가 완료: ${menuName} (${result.originalQuantity} → ${result.newQuantity})`);
+        return result;
+    },
+
+    /**
+     * 주문 행 선택 토글 (toggleOrderRowSelection용)
+     * - 편집모드 전환 + 선택 토글
+     */
+    toggleOrderRowSelection(orderId, menuName, quantity) {
+        console.log(`🎯 주문 행 선택 토글 (편집모드): ${menuName} (ID: ${orderId})`);
+
+        // 행 요소 찾기
+        const rowElement = this.findOrderRowElement(orderId, menuName);
+
+        if (!rowElement) {
+            console.warn(`⚠️ 주문 행을 찾을 수 없음: orderId=${orderId}, menuName=${menuName}`);
+            return false;
+        }
+
+        return OrderStateManager.toggleRowSelection(orderId, menuName, quantity, rowElement);
     },
 
     /**
      * 선택된 주문 수량 증가
      */
     addQuantityToSelected() {
-        console.log(`📈 수량 증가 요청`);
+        console.log(`📈 선택된 주문 수량 증가`);
 
         const selectedOrder = OrderStateManager.getSelectedOrder();
 
@@ -84,14 +95,29 @@ const OrderModificationManager = {
         const selected = OrderStateManager.getSelectedOrder();
         console.log(`📈 선택된 주문 수량 증가: ${selected.menuName}`);
 
-        this.addMenuItem(selected.menuId, selected.menuName, selected.price, 1);
+        // 기존 메뉴에 수량만 추가 (편집모드는 이미 활성화됨)
+        const result = OrderStateManager.updateMenuQuantity(
+            selected.menuId,
+            selected.menuName,
+            selected.price,
+            1,
+            'add'
+        );
+
+        // 상태 변경 알림
+        OrderStateManager.notifyStateChange('QUANTITY_UPDATED', {
+            menuName: selected.menuName,
+            originalQuantity: result.originalQuantity,
+            newQuantity: result.newQuantity,
+            changeType: 'add'
+        });
     },
 
     /**
      * 선택된 주문 수량 감소
      */
     minusQuantityFromSelected() {
-        console.log(`📉 수량 감소 요청`);
+        console.log(`📉 선택된 주문 수량 감소`);
 
         const selectedOrder = OrderStateManager.getSelectedOrder();
 
@@ -104,10 +130,10 @@ const OrderModificationManager = {
         }
 
         const selected = OrderStateManager.getSelectedOrder();
-        const currentState = OrderStateManager.getState();
+        const state = OrderStateManager.getState();
 
         // 현재 수량 확인
-        const pendingChange = currentState.pendingChanges.get(selected.menuName);
+        const pendingChange = state.pendingChanges.get(selected.menuName);
         const currentQuantity = pendingChange ? pendingChange.newQuantity : selected.originalQuantity;
 
         if (currentQuantity <= 1) {
@@ -118,38 +144,22 @@ const OrderModificationManager = {
 
         console.log(`📉 선택된 주문 수량 감소: ${selected.menuName}`);
 
-        OrderStateManager.updateMenuQuantity(
+        // 수량 감소
+        const result = OrderStateManager.updateMenuQuantity(
             selected.menuId,
             selected.menuName,
             selected.price,
             -1,
             'minus'
         );
-    },
 
-    /**
-     * 주문 행 선택 토글
-     */
-    toggleOrderRowSelection(orderId, menuName, quantity) {
-        console.log(`🎯 주문 행 선택 토글: ${menuName} (ID: ${orderId})`);
-
-        // 행 요소 찾기
-        const rowElement = this.findOrderRowElement(orderId, menuName);
-
-        if (!rowElement) {
-            console.warn(`⚠️ 주문 행을 찾을 수 없음: orderId=${orderId}, menuName=${menuName}`);
-            return false;
-        }
-
-        // 이미 선택된 행이면 선택 해제
-        if (rowElement.classList.contains('selected')) {
-            console.log(`🔄 기존 선택 해제: ${menuName}`);
-            OrderStateManager.clearSelection();
-            return false;
-        }
-
-        // 새로운 행 선택
-        return OrderStateManager.selectOrder(orderId, menuName, quantity, rowElement);
+        // 상태 변경 알림
+        OrderStateManager.notifyStateChange('QUANTITY_UPDATED', {
+            menuName: selected.menuName,
+            originalQuantity: result.originalQuantity,
+            newQuantity: result.newQuantity,
+            changeType: 'minus'
+        });
     },
 
     /**
@@ -192,22 +202,6 @@ const OrderModificationManager = {
     },
 
     /**
-     * 메뉴 행 자동 선택
-     */
-    autoSelectMenuRow(menuId, menuName, quantity) {
-        console.log(`🎯 자동 선택 시도: ${menuName}`);
-
-        const orderId = menuId;
-        const selectionResult = this.toggleOrderRowSelection(orderId, menuName, quantity);
-
-        if (!selectionResult) {
-            console.warn(`⚠️ 자동 선택 실패: ${menuName}`);
-        } else {
-            console.log(`✅ 자동 선택 성공: ${menuName}`);
-        }
-    },
-
-    /**
      * 주문 표시 업데이트
      */
     updateOrderDisplay() {
@@ -220,7 +214,25 @@ const OrderModificationManager = {
         // UI 렌더링
         posOrderList.innerHTML = this.renderOrderTable(displayOrders);
 
+        // 선택 상태 복원
+        this.restoreSelectionUI();
+
         console.log(`🔄 주문 표시 업데이트 완료: ${displayOrders.length}개 항목`);
+    },
+
+    /**
+     * 선택 상태 UI 복원
+     */
+    restoreSelectionUI() {
+        const selectedOrder = OrderStateManager.getSelectedOrder();
+        if (selectedOrder) {
+            const rowElement = this.findOrderRowElement(selectedOrder.orderId, selectedOrder.menuName);
+            if (rowElement) {
+                OrderStateManager.applySelectionUI(rowElement);
+                // 상태 매니저의 rowElement 참조 업데이트
+                OrderStateManager.state.selectedRowElement = rowElement;
+            }
+        }
     },
 
     /**
@@ -317,17 +329,19 @@ const OrderModificationManager = {
             isEditMode: state.isEditMode
         });
 
-        if (isActive && (state.hasSelection || state.totalPendingChanges > 0)) {
+        if (isActive) {
             // 편집 모드 활성화
             if (minusBtn) {
-                minusBtn.disabled = false;
-                minusBtn.style.opacity = '1';
-                minusBtn.classList.add('active');
+                minusBtn.disabled = !state.hasSelection; // 선택이 있을 때만 활성화
+                minusBtn.style.opacity = state.hasSelection ? '1' : '0.5';
+                if (state.hasSelection) {
+                    minusBtn.classList.add('active');
+                }
             }
 
             if (addBtn) {
-                addBtn.disabled = false;
-                addBtn.style.opacity = '1';
+                addBtn.disabled = !state.hasSelection; // 선택이 있을 때만 활성화
+                addBtn.style.opacity = state.hasSelection ? '1' : '0.5';
             }
 
             if (confirmBtn) {
@@ -371,26 +385,36 @@ const OrderModificationManager = {
         this.hideEditModeIndicator();
 
         const state = OrderStateManager.getState();
-        if (state.totalPendingChanges === 0) return;
+        if (state.totalPendingChanges === 0 && !state.hasSelection) return;
 
-        const pendingChanges = OrderStateManager.getPendingChanges();
-        const changesText = Array.from(pendingChanges.values())
-            .map(change => {
-                const diff = change.newQuantity - change.originalQuantity;
-                if (change.newQuantity === 0) {
-                    return `${change.menuName}: 삭제`;
-                } else if (diff > 0) {
-                    return `${change.menuName}: +${diff}개`;
-                } else if (diff < 0) {
-                    return `${change.menuName}: ${diff}개`;
-                }
-                return `${change.menuName}: 변경없음`;
-            })
-            .join(', ');
+        let indicatorText = "📝 편집모드";
+
+        if (state.hasSelection) {
+            indicatorText += ` | 선택: ${state.selectedOrder.menuName}`;
+        }
+
+        if (state.totalPendingChanges > 0) {
+            const pendingChanges = OrderStateManager.getPendingChanges();
+            const changesText = Array.from(pendingChanges.values())
+                .map(change => {
+                    const diff = change.newQuantity - change.originalQuantity;
+                    if (change.newQuantity === 0) {
+                        return `${change.menuName}: 삭제`;
+                    } else if (diff > 0) {
+                        return `${change.menuName}: +${diff}개`;
+                    } else if (diff < 0) {
+                        return `${change.menuName}: ${diff}개`;
+                    }
+                    return `${change.menuName}: 변경없음`;
+                })
+                .join(', ');
+
+            indicatorText += ` | 변경: ${changesText}`;
+        }
 
         const indicator = document.createElement('div');
         indicator.className = 'edit-mode-indicator';
-        indicator.innerHTML = `📝 ${state.totalPendingChanges}개 변경사항: ${changesText}`;
+        indicator.innerHTML = indicatorText;
         document.body.appendChild(indicator);
     },
 
