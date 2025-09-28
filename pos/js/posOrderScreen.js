@@ -458,15 +458,27 @@ const POSOrderScreen = {
                     isNewMenu: true
                 };
 
-                this.currentOrders.push(newMenuItem);
+                // currentOrders 보호: 깊은 복사로 기존 데이터 보존
+                const protectedCurrentOrders = this.currentOrders.map(order => ({
+                    ...order,
+                    quantity: order.quantity // 수량 명시적 보존
+                }));
+
+                // 새 메뉴 추가
+                this.currentOrders = [...protectedCurrentOrders, newMenuItem];
+
+                console.log(`➕ 새 메뉴 임시 추가: ${menuName} (수량: ${newQuantity})`);
+                console.log(`📊 currentOrders 상태 보호 확인:`, this.currentOrders.map(order => ({
+                    메뉴명: order.menuName,
+                    수량: order.quantity,
+                    임시여부: order.isNewMenu ? 'Y' : 'N'
+                })));
 
                 // UI 다시 렌더링
                 const posOrderList = document.getElementById("posOrderList");
                 if (posOrderList) {
                     posOrderList.innerHTML = OrderUIRenderer.renderPOSOrderItemsModern();
                 }
-
-                console.log(`➕ 새 메뉴 임시 추가: ${menuName} (수량: ${newQuantity})`);
 
                 // 새로 추가된 행 선택
                 setTimeout(() => {
@@ -848,23 +860,43 @@ const POSOrderScreen = {
     },
 
     cancelSelectedOrders() {
+        console.log('🚫 선택된 주문 취소 시작');
+
+        // 1순위: 누적된 수정사항이 있으면 모든 수정사항 취소
         if (this.pendingModifications.length > 0) {
+            console.log(`🔄 누적된 수정사항 ${this.pendingModifications.length}개 취소`);
             OrderModificationManager.cancelAllPendingModifications();
+            OrderUtilityManager.showToast(`${this.pendingModifications.length}개 수정사항이 취소되었습니다`);
             return;
         }
 
+        // 2순위: 선택된 주문이 있으면 선택 해제
         if (this.selectedOrder) {
-            this.cancelOrderEdit();
+            console.log('🔄 선택된 주문 해제');
+            
+            // 선택 상태 해제
+            document.querySelectorAll('.pos-order-table tr').forEach(row => {
+                row.classList.remove('selected', 'order-row-selected');
+            });
+
+            this.selectedOrder = null;
+            if (typeof OrderModificationManager !== 'undefined') {
+                OrderModificationManager.selectedOrder = null;
+            }
+
+            this.updateEditModeUI(false);
+            OrderUtilityManager.showToast("선택이 해제되었습니다");
             return;
         }
 
+        // 3순위: 편집 모드가 활성화되어 있으면 강제 종료
         const confirmBtn = document.querySelector('#confirmOrder');
         const isEditModeActive = (confirmBtn && confirmBtn.classList.contains('edit-mode')) ||
                                 document.querySelector('.edit-mode-indicator') ||
                                 document.querySelector('.control-btn.quantity-minus:not([disabled])');
 
         if (isEditModeActive) {
-            console.log('🚫 편집 모드 강제 종료 (수정 내역 없음)');
+            console.log('🚫 편집 모드 강제 종료');
 
             this.updateEditModeUI(false);
 
@@ -884,30 +916,66 @@ const POSOrderScreen = {
             return;
         }
 
+        // 4순위: 임시 메뉴 행들 제거
         const tempRows = document.querySelectorAll('.pos-order-table tr[data-order-id^="temp_"]');
         if (tempRows.length > 0) {
-            console.log(`🗑️ ${tempRows.length}개 임시 메뉴 행 제거`);
-            tempRows.forEach(row => row.remove());
+            console.log(`🗑️ ${tempRows.length}개 임시 메뉴 행 제거 시작`);
+            
+            // 임시 행들의 메뉴명 수집 (로깅용)
+            const tempMenuNames = Array.from(tempRows).map(row => {
+                const menuNameElement = row.querySelector('.menu-info strong');
+                return menuNameElement ? menuNameElement.textContent.trim() : 'Unknown';
+            });
 
+            console.log(`🗑️ 제거할 임시 메뉴들:`, tempMenuNames);
+
+            // DOM에서 임시 행들 제거
+            tempRows.forEach((row, index) => {
+                console.log(`🗑️ 임시 행 제거 [${index + 1}/${tempRows.length}]: ${tempMenuNames[index]}`);
+                row.remove();
+            });
+
+            // currentOrders 배열에서 임시 아이템들 제거
             if (this.currentOrders) {
                 const originalLength = this.currentOrders.length;
-                this.currentOrders = this.currentOrders.filter(order => 
-                    !String(order.id).startsWith('temp_')
-                );
+                
+                // 임시 ID를 가진 항목들과 isNewMenu 플래그를 가진 항목들 제거
+                this.currentOrders = this.currentOrders.filter(order => {
+                    const isTemporary = String(order.id).startsWith('temp_') || order.isNewMenu;
+                    if (isTemporary) {
+                        console.log(`🗑️ currentOrders에서 임시 항목 제거: ${order.menuName} (ID: ${order.id})`);
+                    }
+                    return !isTemporary;
+                });
+
                 const removedCount = originalLength - this.currentOrders.length;
-                if (removedCount > 0) {
-                    console.log(`🗑️ currentOrders에서 ${removedCount}개 임시 항목 제거`);
-                }
+                console.log(`🗑️ currentOrders 정리 완료: ${originalLength}개 → ${this.currentOrders.length}개 (${removedCount}개 제거)`);
             }
 
+            // UI 상태 초기화
+            this.selectedOrder = null;
+            this.pendingModifications = [];
+            if (typeof OrderModificationManager !== 'undefined') {
+                OrderModificationManager.selectedOrder = null;
+                OrderModificationManager.pendingModifications = [];
+            }
+
+            this.updateEditModeUI(false);
+
+            OrderUtilityManager.showToast(`${tempRows.length}개 임시 메뉴가 제거되었습니다`);
+
+            // 전체 주문 새로고침
             setTimeout(() => {
+                console.log('🔄 임시 메뉴 제거 후 주문 새로고침');
                 this.refreshOrders();
-            }, 100);
+            }, 200);
 
             return;
         }
 
-        alert("취소할 선택된 주문이 없습니다.");
+        // 5순위: 취소할 것이 없음
+        console.log('ℹ️ 취소할 선택된 주문이나 수정사항이 없음');
+        OrderUtilityManager.showToast("취소할 내용이 없습니다");
     },
 
     // 임시 기능들

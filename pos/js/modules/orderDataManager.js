@@ -84,7 +84,7 @@ const OrderDataManager = {
     },
 
     /**
-     * 주문 아이템 통합 처리 (수량 초기화 이슈 수정)
+     * 주문 아이템 통합 처리 (수량 누적 버그 수정)
      */
     consolidateOrderItems(unpaidItems) {
         console.log(`🔄 주문 아이템 통합 처리 시작: ${unpaidItems.length}개 아이템`);
@@ -94,27 +94,35 @@ const OrderDataManager = {
         unpaidItems.forEach((item, index) => {
             // 메뉴명과 단가만으로 통합 키 생성 (티켓 무관하게 통합)
             const consolidationKey = `${item.menu_name.trim()}_${item.unit_price}`;
+            
+            // 아이템 수량 검증 (0 이하면 1로 보정)
+            const itemQuantity = (item.quantity && item.quantity > 0) ? item.quantity : 1;
+            
+            console.log(`📋 아이템 처리 [${index + 1}/${unpaidItems.length}]: ${item.menu_name} (수량: ${itemQuantity}, 키: ${consolidationKey})`);
 
             if (consolidatedOrders[consolidationKey]) {
                 // 기존 키에 수량 누적 (기존 수량 + 새로운 수량)
-                console.log(`🔄 기존 키에 수량 추가: ${consolidationKey} (${consolidatedOrders[consolidationKey].quantity} + ${item.quantity})`);
-                consolidatedOrders[consolidationKey].quantity += item.quantity;
+                const previousQuantity = consolidatedOrders[consolidationKey].quantity;
+                consolidatedOrders[consolidationKey].quantity += itemQuantity;
+                
+                console.log(`🔄 기존 키에 수량 누적: ${consolidationKey} (${previousQuantity} + ${itemQuantity} = ${consolidatedOrders[consolidationKey].quantity})`);
 
                 // 티켓 ID 중복 방지하면서 추가
                 if (!consolidatedOrders[consolidationKey].ticketIds.includes(item.ticket_id)) {
                     consolidatedOrders[consolidationKey].ticketIds.push(item.ticket_id);
+                    console.log(`📝 티켓 ID 추가: ${item.ticket_id}`);
                 }
 
                 // 아이템 ID 추가
                 consolidatedOrders[consolidationKey].orderItemIds.push(item.id);
             } else {
-                // 새로운 통합 키 생성 (수량을 정확히 item.quantity로 설정)
+                // 새로운 통합 키 생성 (수량을 정확히 itemQuantity로 설정)
                 consolidatedOrders[consolidationKey] = {
                     id: item.menu_id || item.id,
                     menuId: item.menu_id || item.id, // menuId 필드 추가
                     menuName: item.menu_name,
                     price: item.unit_price,
-                    quantity: item.quantity, // 원본 수량 그대로 사용 (1로 초기화 방지)
+                    quantity: itemQuantity, // 검증된 수량 사용
                     cookingStatus: item.item_status || "PENDING",
                     isCart: false,
                     orderItemId: item.id,
@@ -124,13 +132,18 @@ const OrderDataManager = {
                     cookStation: item.cook_station || "KITCHEN",
                 };
 
-                console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (수량: ${item.quantity}, 키: ${consolidationKey})`);
+                console.log(`➕ 새 통합 메뉴 생성: ${item.menu_name} (수량: ${itemQuantity}, 키: ${consolidationKey})`);
             }
         });
 
         const consolidatedArray = Object.values(consolidatedOrders);
 
-        // 최종 검증: 수량이 0 이하인 항목 제거
+        // 최종 검증 및 디버깅
+        console.log(`🔍 통합 전후 비교:`);
+        console.log(`   - 원본 아이템 총 수량: ${unpaidItems.reduce((sum, item) => sum + (item.quantity || 1), 0)}개`);
+        console.log(`   - 통합 후 총 수량: ${consolidatedArray.reduce((sum, order) => sum + order.quantity, 0)}개`);
+
+        // 수량이 0 이하인 항목 제거
         const validatedArray = consolidatedArray.filter(order => {
             if (order.quantity <= 0) {
                 console.warn(`⚠️ 수량이 0 이하인 메뉴 제거: ${order.menuName} (수량: ${order.quantity})`);
@@ -140,10 +153,11 @@ const OrderDataManager = {
         });
 
         console.log(`✅ 통합 처리 완료: ${unpaidItems.length}개 아이템 → ${validatedArray.length}개 메뉴`);
-        console.log(`📊 통합 결과:`, validatedArray.map(order => ({
+        console.log(`📊 최종 통합 결과:`, validatedArray.map(order => ({
             메뉴명: order.menuName,
             수량: order.quantity,
-            단가: order.price
+            단가: order.price,
+            관련티켓수: order.ticketIds.length
         })));
 
         return validatedArray;
