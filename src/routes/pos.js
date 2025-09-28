@@ -1601,7 +1601,7 @@ async function processSingleQuantityDecrease(client, storeId, tableNumber, menuI
     const newTicketId = newTicketResult.rows[0].id;
 
     // 5. 모든 CANCELED 아이템들을 통합하여 새 티켓에 복사
-    const allCanceledItemsResult = await client.query(`
+    const allCanceledItemsResult = await pool.query(`
       SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
       FROM order_items
       WHERE ticket_id = ANY($1)
@@ -1768,14 +1768,12 @@ router.get('/stores/:storeId/table/:tableNumber/mixed-order-items', async (req, 
     const mixedOrderItemsResult = await pool.query(`
       SELECT
         oi.id,
-        oi.menu_id,
         oi.menu_name,
         oi.unit_price,
         oi.quantity,
         oi.total_price,
-        oi.item_status,
         oi.cook_station,
-        oi.created_at,
+        oi.item_status,
         ot.source as ticket_source,
         ot.id as ticket_id,
         ot.paid_status
@@ -2156,7 +2154,7 @@ router.post('/orders/modify-quantity', async (req, res) => {
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       JOIN orders o ON ot.order_id = o.id
-      WHERE ot.order_id = $1 
+      WHERE o.id = $1 
         AND oi.item_status != 'CANCELED'
         AND ot.status != 'CANCELED'
         AND ot.paid_status = 'UNPAID'
@@ -2232,10 +2230,10 @@ router.post('/orders/modify-quantity', async (req, res) => {
     await client.query('COMMIT');
 
     const newTotalQuantity = currentQuantity - 1;
-    
+
     if (shouldDeleteOrder) {
       console.log(`✅ 주문 삭제 완료: 주문 ID ${orderId} (아이템 없음으로 인한 삭제)`);
-      
+
       res.json({
         success: true,
         message: `${menuName} 수량 감소 후 아이템이 없어 주문이 삭제되었습니다`,
@@ -2679,16 +2677,16 @@ router.post('/orders/modify-batch', async (req, res) => {
 
         // 3. 기존 티켓 전체를 CANCELED 처리
         await client.query(`
-          UPDATE order_items 
-          SET item_status = 'CANCELED', updated_at = NOW()
-          WHERE ticket_id = $1
+          UPDATE order_tickets SET status = 'CANCELED', updated_at = NOW() 
+          WHERE id = $1
         `, [ticket.ticket_id]);
 
         await client.query(`
-          UPDATE order_tickets 
-          SET status = 'CANCELED', updated_at = NOW()
-          WHERE id = $1
+          UPDATE order_items SET item_status = 'CANCELED', updated_at = NOW() 
+          WHERE ticket_id = $1
         `, [ticket.ticket_id]);
+
+        console.log(`❌ 기존 티켓 ${ticket.ticket_id} CANCELED 처리`);
 
         // 4. 해당 티켓의 모든 아이템 정보 조회 (CANCELED 상태에서)
         const allItemsResult = await client.query(`
@@ -3089,46 +3087,55 @@ router.post('/orders/modify', async (req, res) => {
           const currentOrderId = parseInt(orderId);
 
           if (spareOrderId === currentOrderId) {
-            // spare_processing_order_id에 있는 경우 - spare를 null로 처리
+            // Case 1: spare_processing_order_id에 현재 주문이 있는 경우
+            console.log(`🔍 spare_processing_order_id 처리: ${currentOrderId}`);
+
             await client.query(`
               UPDATE store_tables
-              SET spare_processing_order_id = NULL,
-                  updated_at = CURRENT_TIMESTAMP
+              SET
+                spare_processing_order_id = NULL,
+                updated_at = CURRENT_TIMESTAMP
               WHERE store_id = $1 AND id = $2
             `, [store_id, table_num]);
-            console.log(`✅ spare_processing_order_id 해제: 테이블 ${table_num}, 주문 ${orderId}`);
+
+            console.log(`✅ spare_processing_order_id 업데이트 완료`);
 
           } else if (processingOrderId === currentOrderId) {
-            // processing_order_id에 있는 경우
-            if (currentTable.spare_processing_order_id !== null) {
-              // spare가 있으면 spare를 processing으로 이동
-              await client.query(`
-                UPDATE store_tables
-                SET processing_order_id = spare_processing_order_id,
-                    spare_processing_order_id = NULL,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE store_id = $1 AND id = $2
-              `, [store_id, table_num]);
-              console.log(`✅ processing_order_id 이동: 테이블 ${table_num}, 완료된 주문 ${orderId}`);
+            // Case 2: processing_order_id에 현재 주문이 있는 경우
+            console.log(`🔍 processing_order_id 처리: ${currentOrderId}`);
 
-            } else {
-              // spare가 없으면 테이블 완전 해제
+            if (currentTable.spare_processing_order_id !== null) {
+              // spare가 존재하면 spare를 processing으로 이동
               await client.query(`
                 UPDATE store_tables
-                SET processing_order_id = NULL,
-                    spare_processing_order_id = NULL,
-                    status = 'AVAILABLE',
-                    updated_at = CURRENT_TIMESTAMP
+                SET
+                  processing_order_id = spare_processing_order_id,
+                  spare_processing_order_id = NULL,
+                  updated_at = CURRENT_TIMESTAMP
                 WHERE store_id = $1 AND id = $2
               `, [store_id, table_num]);
-              console.log(`✅ 테이블 완전 해제: 테이블 ${table_num}, 주문 ${orderId}`);
+
+              console.log(`✅ processing_order_id 처리 완료 - 보조 주문을 메인으로 이동`);
+            } else {
+              // spare가 없으면 processing을 null 처리하고 status를 AVAILABLE로 변경
+              await client.query(`
+                UPDATE store_tables
+                SET
+                  processing_order_id = NULL,
+                  spare_processing_order_id = NULL,
+                  status = 'AVAILABLE',
+                  updated_at = CURRENT_TIMESTAMP
+                WHERE store_id = $1 AND id = $2
+              `, [store_id, table_num]);
+
+              console.log(`✅ processing_order_id 처리 완료 - 테이블 완전 해제`);
             }
           }
         }
 
-        // 2. orders 레코드 삭제 (CASCADE로 관련 레코드들도 함께 삭제됨)
+        // orders 레코드 삭제
         await client.query(`DELETE FROM orders WHERE id = $1`, [orderId]);
-        console.log(`🗑️ 주문 ${orderId} 완전 삭제 완료`);
+        console.log(`🗑️ orders 레코드 삭제 완료: ${orderId}`);
       }
     }
 
@@ -3136,7 +3143,7 @@ router.post('/orders/modify', async (req, res) => {
 
     if (shouldDeleteOrder) {
       console.log(`✅ 주문 삭제 완료: 주문 ID ${orderId} (아이템 없음으로 인한 삭제)`);
-      
+
       res.json({
         success: true,
         orderId: orderId,
