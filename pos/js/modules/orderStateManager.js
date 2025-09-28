@@ -90,6 +90,10 @@ const OrderStateManager = {
      */
     addMenuWithSelection(menuId, menuName, price, quantityDelta = 1) {
         console.log(`🎯 메뉴 추가 with 자동선택: ${menuName} (+${quantityDelta})`);
+        console.log(`🔍 addMenuWithSelection 호출 전 상태:`, {
+            hasSelectedOrder: !!this.state.selectedOrder,
+            selectedOrderMenuName: this.state.selectedOrder?.menuName
+        });
 
         // 1. 수량 업데이트
         const result = this.updateMenuQuantity(menuId, menuName, price, quantityDelta, 'add');
@@ -99,6 +103,11 @@ const OrderStateManager = {
 
         // 3. 해당 메뉴 자동 선택 (비동기)
         setTimeout(() => {
+            console.log(`🔍 자동 선택 시작 전 상태:`, {
+                hasSelectedOrder: !!this.state.selectedOrder,
+                selectedOrderMenuName: this.state.selectedOrder?.menuName,
+                willSelectMenuName: menuName
+            });
             this.selectOrderByMenuName(menuName, result.newQuantity);
         }, 50);
 
@@ -119,6 +128,13 @@ const OrderStateManager = {
      */
     toggleRowSelection(orderId, menuName, quantity, rowElement = null) {
         console.log(`🎯 행 선택 토글: ${menuName} (편집모드 전환)`);
+        console.log(`🔍 현재 상태 디버깅:`, {
+            hasSelectedOrder: !!this.state.selectedOrder,
+            selectedOrderMenuName: this.state.selectedOrder?.menuName,
+            clickedMenuName: menuName,
+            isEqual: this.state.selectedOrder?.menuName === menuName,
+            selectedOrderFull: this.state.selectedOrder
+        });
 
         // 1. 편집모드 전환
         this.state.isEditMode = true;
@@ -255,12 +271,27 @@ const OrderStateManager = {
     clearSelection() {
         if (this.state.selectedOrder) {
             console.log(`🔄 선택 해제: ${this.state.selectedOrder.menuName}`);
+        } else {
+            console.log(`🔄 선택 해제: 이미 선택된 항목이 없음`);
         }
+
+        const beforeState = {
+            selectedOrder: this.state.selectedOrder,
+            selectedRowElement: this.state.selectedRowElement
+        };
 
         this.state.selectedOrder = null;
         this.state.selectedRowElement = null;
         // 편집모드는 변경사항이 있으면 유지
         this.state.isEditMode = this.state.hasUnsavedChanges;
+
+        console.log(`🔄 선택 해제 완료:`, {
+            before: beforeState,
+            after: {
+                selectedOrder: this.state.selectedOrder,
+                selectedRowElement: this.state.selectedRowElement
+            }
+        });
 
         // UI 선택 상태 해제
         this.clearUISelection();
