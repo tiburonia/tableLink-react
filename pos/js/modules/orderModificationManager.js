@@ -224,6 +224,7 @@ const OrderModificationManager = {
 
         // 새로운 행 선택
         rowElement.classList.add('selected');
+        console.log(`🎨 selected 클래스 추가됨:`, rowElement.classList.contains('selected'));
 
         // 메뉴 ID 추출 (data-menu-id 또는 orderId 사용)
         const menuId = rowElement.dataset.menuId || orderId;
@@ -245,8 +246,15 @@ const OrderModificationManager = {
         
         console.log(`✅ 주문 선택 완료 및 상태 설정:`, {
             selectedOrder: this.selectedOrder,
-            isEditMode: this.isEditMode
+            isEditMode: this.isEditMode,
+            selectedClass: rowElement.classList.contains('selected')
         });
+
+        // CSS 클래스 강제 적용 확인
+        setTimeout(() => {
+            const stillSelected = document.querySelector(`.pos-order-table tr.selected`);
+            console.log(`🔍 선택 상태 유지 확인:`, stillSelected ? '유지됨' : '해제됨');
+        }, 100);
 
         return true;
     },

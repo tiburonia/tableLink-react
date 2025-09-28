@@ -517,6 +517,17 @@ body {
     background: #f8fafc;
 }
 
+/* 주문 행 선택 상태 스타일 */
+.pos-order-table tbody tr.order-row.selected {
+    background: #dbeafe !important;
+    border-left: 4px solid #3b82f6;
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.pos-order-table tbody tr.selected:hover {
+    background: #bfdbfe !important;
+}
+
 .pos-order-table tbody tr.empty-row {
     background: #fafafa;
 }
