@@ -274,7 +274,7 @@
 
         if (!emptySlot) {
           console.log('⚠️ 1-9번 슬롯에 빈 공간이 없음 - 추가 불가');
-          
+
           // 각 슬롯 상태 재확인
           for (let i = 1; i <= 9; i++) {
             const slot = allSlots.find(s => parseInt(s.dataset.slot) === i);
@@ -285,7 +285,7 @@
               console.log(`슬롯 ${i} 상세: 빈슬롯=${isEmpty}, 카드=${hasCard}, 티켓ID=${cardTicketId}`);
             }
           }
-          
+
           return false;
         }
 
@@ -297,8 +297,8 @@
         }
 
         // 카드 HTML 생성
-        const cardHTML = window.KDSUIRenderer ? 
-          window.KDSUIRenderer.createOrderCardHTML(ticket) : 
+        const cardHTML = window.KDSUIRenderer ?
+          window.KDSUIRenderer.createOrderCardHTML(ticket) :
           this._createSimpleCardHTML(ticket);
 
         console.log(`🎨 티켓 ${ticketId} 카드 HTML 생성 완료 - 슬롯 ${emptySlot.dataset.slot}에 삽입`);
@@ -324,11 +324,11 @@
         });
 
         console.log(`✅ 티켓 ${ticketId} HTML 슬롯 ${emptySlot.dataset.slot}에 성공적으로 추가`);
-        
+
         // 추가 후 그리드 상태 확인
         setTimeout(() => {
           const finalSlots = Array.from(gridContainer.children);
-          const occupiedCount = finalSlots.filter(slot => 
+          const occupiedCount = finalSlots.filter(slot =>
             parseInt(slot.dataset.slot) <= 9 && slot.querySelector('.order-card')
           ).length;
           console.log(`🔍 카드 추가 후 상태: 1-9번 슬롯 중 ${occupiedCount}개 점유`);
@@ -590,7 +590,7 @@
       const ticketIdStr = String(ticketId);
       if (!ticketId || ticketIdStr === 'undefined' || ticketIdStr.startsWith('unknown_')) {
         console.warn(`⚠️ 유효하지 않은 티켓 ID: ${ticketId}`);
-        
+
         // 테이블 번호가 있으면 해당 테이블의 실제 데이터 조회
         if (tableNumber && KDSState.storeId) {
           console.log(`🔍 테이블 ${tableNumber} 실제 티켓 데이터 조회 시도`);
@@ -614,14 +614,14 @@
       const existingTicket = KDSState.getTicket(ticketIdStr);
       if (!existingTicket) {
         console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketIdStr}`);
-        
+
         // 티켓에 아이템 정보가 없으면 서버에서 조회
         if (!ticket.items || ticket.items.length === 0) {
           console.log(`🔍 티켓 ${ticketIdStr} 아이템 정보 없음 - 서버에서 조회`);
           await this._fetchTicketDetails(ticketIdStr, tableNumber);
           return;
         }
-        
+
         return this.handleTicketCreated(ticket);
       }
 
@@ -695,7 +695,7 @@
      */
     handleTicketCanceled(ticket) {
       const ticketId = ticket.ticket_id || ticket.check_id || ticket.id;
-      
+
       console.log(`❌ 캔슬된 티켓 ${ticketId} 처리 시작`);
 
       // 주방 아이템 필터링
@@ -707,13 +707,13 @@
       // 아이템이 전혀 없다면 그리드 업데이트
       if (kitchenItems.length === 0) {
         console.log(`🗑️ 캔슬된 티켓 ${ticketId} - 주방 아이템 없음, 완전 제거`);
-        
+
         // 상태에서 제거
         KDSState.removeTicket(ticketId);
-        
+
         // 즉시 반짝임 효과 후 제거
         this._triggerCanceledTicketRemoval(ticketId);
-        
+
         return;
       }
 
@@ -757,7 +757,7 @@
       // 반짝임 효과 적용
       cardElement.style.transition = 'all 0.3s ease';
       cardElement.style.animation = 'sparkle 0.6s ease-in-out';
-      
+
       // CSS 키프레임 추가 (한 번만)
       if (!document.getElementById('sparkle-keyframes')) {
         const style = document.createElement('style');
@@ -778,34 +778,34 @@
       setTimeout(() => {
         if (window.KDSUIRenderer && typeof window.KDSUIRenderer.createOrderCardHTML === 'function') {
           const newCardHTML = window.KDSUIRenderer.createOrderCardHTML(updatedTicket);
-          
+
           // 페이드 아웃
           cardElement.style.opacity = '0';
           cardElement.style.transform = 'scale(0.9)';
-          
+
           setTimeout(() => {
             // 새 카드 삽입
             slotElement.innerHTML = newCardHTML;
-            
+
             // 페이드 인
             const newCard = slotElement.querySelector('.order-card');
             if (newCard) {
               newCard.style.opacity = '0';
               newCard.style.transform = 'scale(0.9)';
-              
+
               requestAnimationFrame(() => {
                 newCard.style.transition = 'all 0.3s ease';
                 newCard.style.opacity = '1';
                 newCard.style.transform = 'scale(1)';
               });
             }
-            
+
             console.log(`✅ 티켓 ${ticketId} 반짝임 교체 완료`);
           }, 200);
         } else {
           // 백업: 전체 Grid 재렌더링
           console.log(`🔄 UI 렌더러 없음 - 전체 Grid 재렌더링으로 대체`);
-          this._triggerFullGridRerender('sparkle_complete');
+          this._triggerFullGridRerender('sparkle_fallback');
         }
       }, 600);
     },
@@ -826,7 +826,7 @@
       // 반짝임 + 페이드아웃 효과
       cardElement.style.transition = 'all 0.4s ease';
       cardElement.style.animation = 'cancelFlash 0.8s ease-in-out';
-      
+
       // 캔슬 키프레임 추가
       if (!document.getElementById('cancel-keyframes')) {
         const style = document.createElement('style');
@@ -862,7 +862,7 @@
 
       // 기존 티켓 조회
       const existingTicket = KDSState.getTicket(ticketId);
-      
+
       // 수정된 티켓 데이터 생성
       const modifiedTicket = {
         ...existingTicket,
@@ -979,7 +979,7 @@
           console.log('🔄 KDS 백업 동기화 시작');
 
           const response = await fetch(
-            `/api/orders/kds/${storeId}/sync?lastSyncAt=${encodeURIComponent(lastSyncAt)}`
+            `/api/kds/${storeId}/sync?lastSyncAt=${encodeURIComponent(lastSyncAt)}`
           );
 
           if (!response.ok) {
@@ -1052,10 +1052,10 @@
         case 'db_ticket_change':
           // 티켓 ID 검증
           const ticketId = notificationData.ticket_id || notificationData.id || notificationData.order_id;
-          
+
           if (!ticketId) {
             console.warn('⚠️ DB 알림에서 티켓 ID를 찾을 수 없음:', notificationData);
-            
+
             // 티켓 ID가 없으면 전체 데이터 새로고침 시도
             if (notificationData.table_number && KDSState.storeId) {
               console.log(`🔄 티켓 ID 없음 - 테이블 ${notificationData.table_number} 전체 새로고침 시도`);
@@ -1066,7 +1066,7 @@
 
           // 상태 검증 및 정규화
           const status = (notificationData.status || 'PENDING').toUpperCase();
-          
+
           console.log(`🔄 DB 티켓 변경: ${ticketId}, 상태: ${status}`);
 
           this.handleTicketUpdated({
@@ -1082,10 +1082,10 @@
 
         case 'db_item_change':
           console.log('🍽️ DB 아이템 변경 처리:', notificationData);
-          
+
           const itemTicketId = notificationData.ticket_id || notificationData.id;
           const itemId = notificationData.item_id;
-          
+
           if (!itemTicketId || !itemId) {
             console.warn('⚠️ DB 아이템 변경에서 필수 ID 누락:', notificationData);
             return;
@@ -1119,7 +1119,7 @@
         console.log(`🔄 테이블 ${tableNumber} 데이터 새로고침 시작`);
 
         const response = await fetch(
-          `/api/orders/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
+          `/api/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
         );
 
         if (!response.ok) {
@@ -1154,7 +1154,7 @@
           window.KDSUIRenderer.triggerGridReorder(reason);
         } else if (window.KDSUIRenderer && typeof window.KDSUIRenderer.renderKDSGrid === 'function') {
           // 백업: 직접 재렌더링
-          const currentTickets = KDSState.currentTab === 'active' ? 
+          const currentTickets = KDSState.currentTab === 'active' ?
             KDSState.getActiveTickets() : KDSState.getCompletedTickets();
           window.KDSUIRenderer.renderKDSGrid(currentTickets);
         }
@@ -1179,7 +1179,7 @@
         console.log(`🔍 티켓 ${ticketId} 상세 정보 조회 시작`);
 
         const response = await fetch(
-          `/api/orders/kds/tickets/${ticketId}/details?storeId=${KDSState.storeId}`
+          `/api/kds/tickets/${ticketId}/details?storeId=${KDSState.storeId}`
         );
 
         if (!response.ok) {
@@ -1190,7 +1190,7 @@
 
         if (result.success && result.ticket) {
           console.log(`✅ 티켓 ${ticketId} 상세 정보 조회 성공`);
-          
+
           // 조회된 상세 정보로 티켓 생성 처리
           this.handleTicketCreated(result.ticket);
         } else {
@@ -1199,7 +1199,7 @@
 
       } catch (error) {
         console.warn(`⚠️ 티켓 ${ticketId} 상세 정보 조회 실패:`, error);
-        
+
         // 실패하면 테이블 전체 새로고침 시도
         if (tableNumber) {
           await this._fetchTableTickets(tableNumber);
@@ -1217,7 +1217,7 @@
         console.log(`🔍 테이블 ${tableNumber} 모든 티켓 조회 시작`);
 
         const response = await fetch(
-          `/api/orders/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
+          `/api/kds/${KDSState.storeId}/table/${tableNumber}/tickets`
         );
 
         if (!response.ok) {
@@ -1228,7 +1228,7 @@
 
         if (result.success && result.tickets) {
           console.log(`✅ 테이블 ${tableNumber} 티켓 조회 성공: ${result.tickets.length}개`);
-          
+
           // 조회된 티켓들을 처리
           result.tickets.forEach(ticket => {
             // 주방 아이템이 있는 티켓만 처리
