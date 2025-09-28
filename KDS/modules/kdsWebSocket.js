@@ -615,6 +615,12 @@
       if (!existingTicket && !isRecursionPrevention) {
         console.log(`ℹ️ 기존 티켓이 없음 - 새 티켓으로 생성: ${ticketIdStr}`);
 
+        // 완료된 상태의 티켓은 API 조회하지 않음
+        if (['DONE', 'COMPLETED', 'SERVED', 'CANCELED', 'CANCELLED'].includes(actualStatus)) {
+          console.log(`🚫 완료/취소된 상태의 티켓 ${ticketIdStr} - API 조회 스킵`);
+          return;
+        }
+
         // 티켓에 아이템 정보가 없으면 서버에서 조회
         if (!ticket.items || ticket.items.length === 0) {
           console.log(`🔍 티켓 ${ticketIdStr} 아이템 정보 없음 - 서버에서 조회`);
@@ -1106,6 +1112,19 @@
 
           console.log(`🔄 DB 티켓 변경: ${ticketId}, 상태: ${status}`);
 
+          // 완료/취소된 상태의 경우 기존 티켓이 있다면 제거만 수행
+          if (['DONE', 'COMPLETED', 'SERVED', 'CANCELED', 'CANCELLED'].includes(status)) {
+            const existingTicket = KDSState.getTicket(ticketId);
+            if (existingTicket) {
+              console.log(`🗑️ DB 알림으로 완료/취소된 티켓 ${ticketId} 제거`);
+              KDSState.removeTicket(ticketId);
+              this._triggerFullGridRerender('db_ticket_completed');
+            } else {
+              console.log(`ℹ️ 완료/취소된 티켓 ${ticketId}이 이미 상태에 없음 - 무시`);
+            }
+            return;
+          }
+
           this.handleTicketUpdated({
             ticket_id: ticketId,
             id: ticketId,
@@ -1219,6 +1238,19 @@
           `/api/kds/tickets/${ticketId}/details?storeId=${KDSState.storeId}`
         );
 
+        if (response.status === 404) {
+          console.log(`ℹ️ 티켓 ${ticketId}이 존재하지 않음 (404) - 이미 완료되었거나 삭제됨`);
+          
+          // 404인 경우 상태에서 해당 티켓 제거 (있다면)
+          const existingTicket = KDSState.getTicket(ticketId);
+          if (existingTicket) {
+            console.log(`🗑️ 존재하지 않는 티켓 ${ticketId} 상태에서 제거`);
+            KDSState.removeTicket(ticketId);
+            this._triggerFullGridRerender('ticket_not_found');
+          }
+          return;
+        }
+
         if (!response.ok) {
           throw new Error(`티켓 상세 조회 실패: ${response.status}`);
         }
@@ -1237,8 +1269,9 @@
       } catch (error) {
         console.warn(`⚠️ 티켓 ${ticketId} 상세 정보 조회 실패:`, error);
 
-        // 실패하면 테이블 전체 새로고침 시도
-        if (tableNumber) {
+        // 404가 아닌 다른 오류인 경우에만 테이블 전체 새로고침 시도
+        if (tableNumber && !error.message.includes('404')) {
+          console.log(`🔄 404가 아닌 오류 - 테이블 ${tableNumber} 전체 새로고침 시도`);
           await this._fetchTableTickets(tableNumber);
         }
       }
