@@ -31,8 +31,6 @@ router.get('/:storeId', async (req, res) => {
             'quantity', oi.quantity,
             'status', oi.item_status,
             'orderedAt', oi.created_at,
-            'kitchenNotes', COALESCE(oi.notes, ''),
-            'priority', 0,
             'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
           ) ORDER BY oi.created_at
         ) as items
