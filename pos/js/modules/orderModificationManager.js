@@ -183,21 +183,17 @@ const OrderModificationManager = {
         // 다양한 선택자로 행 찾기 시도
         let rowElement = null;
         
-        // 1차: data-order-id와 data-menu-name으로 찾기
-        rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"][data-menu-name="${menuName}"]`);
+        // 1차: data-order-id와 data-menu-name으로 찾기 (정확한 매칭)
+        rowElement = document.querySelector(`.pos-order-table tr.order-row[data-order-id="${orderId}"]`);
         
-        // 2차: data-order-id만으로 찾기
-        if (!rowElement) {
-            rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
-        }
-        
-        // 3차: 메뉴명으로 찾기 (텍스트 매칭)
+        // 2차: 메뉴명으로 찾기 (텍스트 매칭)
         if (!rowElement) {
             const allRows = document.querySelectorAll('.pos-order-table tr.order-row');
             for (const row of allRows) {
                 const menuText = row.querySelector('.menu-info strong')?.textContent?.trim();
                 if (menuText === menuName) {
                     rowElement = row;
+                    console.log(`🎯 메뉴명으로 행 발견: ${menuName}`);
                     break;
                 }
             }
@@ -222,9 +218,15 @@ const OrderModificationManager = {
         // 기존 선택 해제
         this.clearSelection();
 
-        // 새로운 행 선택
+        // 새로운 행 선택 및 강제 CSS 적용
         rowElement.classList.add('selected');
-        console.log(`🎨 selected 클래스 추가됨:`, rowElement.classList.contains('selected'));
+        
+        // CSS 강제 적용을 위한 스타일 직접 설정
+        rowElement.style.background = '#dbeafe';
+        rowElement.style.borderLeft = '4px solid #3b82f6';
+        rowElement.style.boxShadow = 'inset 0 0 0 1px rgba(59, 130, 246, 0.2)';
+        
+        console.log(`🎨 selected 클래스 및 스타일 강제 적용됨`);
 
         // 메뉴 ID 추출 (data-menu-id 또는 orderId 사용)
         const menuId = rowElement.dataset.menuId || orderId;
@@ -247,14 +249,12 @@ const OrderModificationManager = {
         console.log(`✅ 주문 선택 완료 및 상태 설정:`, {
             selectedOrder: this.selectedOrder,
             isEditMode: this.isEditMode,
-            selectedClass: rowElement.classList.contains('selected')
+            selectedClass: rowElement.classList.contains('selected'),
+            appliedStyles: {
+                background: rowElement.style.background,
+                borderLeft: rowElement.style.borderLeft
+            }
         });
-
-        // CSS 클래스 강제 적용 확인
-        setTimeout(() => {
-            const stillSelected = document.querySelector(`.pos-order-table tr.selected`);
-            console.log(`🔍 선택 상태 유지 확인:`, stillSelected ? '유지됨' : '해제됨');
-        }, 100);
 
         return true;
     },
@@ -265,8 +265,13 @@ const OrderModificationManager = {
     clearSelection() {
         document.querySelectorAll('.pos-order-table tr').forEach(row => {
             row.classList.remove('selected');
+            // 인라인 스타일도 제거
+            row.style.background = '';
+            row.style.borderLeft = '';
+            row.style.boxShadow = '';
         });
         this.selectedOrder = null;
+        console.log(`🧹 모든 선택 상태 및 스타일 해제 완료`);
     },
 
     /**
@@ -283,12 +288,27 @@ const OrderModificationManager = {
     updateEditModeUI(isActive) {
         const minusBtn = document.querySelector('.control-btn.quantity-minus');
         const confirmBtn = document.getElementById('confirmOrder');
+        const addBtn = document.querySelector('.control-btn.quantity-add');
+
+        console.log(`🎛️ 편집 모드 UI 업데이트: ${isActive ? '활성화' : '비활성화'}`, {
+            selectedOrder: !!this.selectedOrder,
+            pendingChanges: this.pendingChanges.size,
+            isEditMode: this.isEditMode
+        });
 
         if (isActive && (this.selectedOrder || this.pendingChanges.size > 0)) {
             // 편집 모드 활성화
             if (minusBtn) {
                 minusBtn.disabled = false;
                 minusBtn.style.opacity = '1';
+                minusBtn.classList.add('active');
+                console.log(`➖ 빼기 버튼 활성화`);
+            }
+
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.style.opacity = '1';
+                console.log(`➕ 더하기 버튼 활성화`);
             }
 
             if (confirmBtn) {
@@ -297,6 +317,7 @@ const OrderModificationManager = {
                     methodName.textContent = this.pendingChanges.size > 0 ? '확정' : '주문';
                 }
                 confirmBtn.classList.add('edit-mode');
+                console.log(`✅ 확정 버튼 편집 모드로 변경`);
             }
 
             // 편집 상태 표시
@@ -306,6 +327,14 @@ const OrderModificationManager = {
             if (minusBtn) {
                 minusBtn.disabled = true;
                 minusBtn.style.opacity = '0.5';
+                minusBtn.classList.remove('active');
+                console.log(`➖ 빼기 버튼 비활성화`);
+            }
+
+            if (addBtn) {
+                addBtn.disabled = false;
+                addBtn.style.opacity = '1';
+                console.log(`➕ 더하기 버튼은 항상 활성화 유지`);
             }
 
             if (confirmBtn) {
@@ -314,6 +343,7 @@ const OrderModificationManager = {
                     methodName.textContent = '주문';
                 }
                 confirmBtn.classList.remove('edit-mode');
+                console.log(`📋 확정 버튼 일반 모드로 변경`);
             }
 
             // 편집 상태 표시 제거

@@ -517,15 +517,24 @@ body {
     background: #f8fafc;
 }
 
-/* 주문 행 선택 상태 스타일 */
-.pos-order-table tbody tr.order-row.selected {
+/* 주문 행 선택 상태 스타일 - 우선순위 강화 */
+.pos-order-table tbody tr.order-row.selected,
+.pos-order-table tbody tr.selected {
     background: #dbeafe !important;
-    border-left: 4px solid #3b82f6;
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+    border-left: 4px solid #3b82f6 !important;
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+    position: relative;
 }
 
+.pos-order-table tbody tr.order-row.selected:hover,
 .pos-order-table tbody tr.selected:hover {
     background: #bfdbfe !important;
+    border-left: 4px solid #2563eb !important;
+}
+
+/* 선택된 행의 모든 td에도 배경 적용 */
+.pos-order-table tbody tr.selected td {
+    background: inherit !important;
 }
 
 .pos-order-table tbody tr.empty-row {
