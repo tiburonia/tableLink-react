@@ -454,15 +454,7 @@ body {
     opacity: 0.8;
 }
 
-.modified-badge {
-    display: inline-block;
-    background-color: #17a2b8;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 8px;
-}
+
 
 /* 편집 모드 표시기 */
 .edit-mode-indicator {

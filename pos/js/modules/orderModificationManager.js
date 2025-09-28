@@ -135,16 +135,18 @@ const OrderModificationManager = {
      * 주문 행 선택
      */
     toggleOrderRowSelection(orderId, menuName, quantity) {
-        console.log(`🎯 주문 행 선택: ${menuName}`);
+        console.log(`🎯 주문 행 선택: ${menuName} (ID: ${orderId})`);
 
-        const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
+        // 정확한 선택자로 행 찾기
+        const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"][data-menu-name="${menuName}"]`);
         if (!rowElement) {
-            console.warn(`⚠️ 주문 행을 찾을 수 없음: ${orderId}`);
+            console.warn(`⚠️ 주문 행을 찾을 수 없음: orderId=${orderId}, menuName=${menuName}`);
             return;
         }
 
         // 이미 선택된 행이면 선택 해제
         if (rowElement.classList.contains('selected')) {
+            console.log(`🔄 기존 선택 해제: ${menuName}`);
             this.clearSelection();
             return;
         }
@@ -155,19 +157,31 @@ const OrderModificationManager = {
         // 새로운 행 선택
         rowElement.classList.add('selected');
 
+        // 메뉴 ID 추출 (data-menu-id 또는 orderId 사용)
+        const menuId = rowElement.dataset.menuId || orderId;
+        const price = this.getMenuPrice(menuId);
+
         // 선택된 주문 정보 설정
         this.selectedOrder = {
             orderId: orderId,
-            menuId: rowElement.dataset.menuId || orderId,
+            menuId: parseInt(menuId),
             menuName: menuName,
             quantity: quantity,
-            originalQuantity: this.getOriginalQuantity(rowElement.dataset.menuId || orderId, menuName),
+            originalQuantity: this.getOriginalQuantity(menuId, menuName),
             rowElement: rowElement,
-            price: this.getMenuPrice(rowElement.dataset.menuId || orderId)
+            price: price
         };
 
+        // 편집 모드 활성화
         this.activateEditMode();
-        console.log(`✅ 주문 선택됨:`, this.selectedOrder);
+        
+        console.log(`✅ 주문 선택 완료:`, {
+            orderId: this.selectedOrder.orderId,
+            menuId: this.selectedOrder.menuId,
+            menuName: this.selectedOrder.menuName,
+            quantity: this.selectedOrder.quantity,
+            price: this.selectedOrder.price
+        });
     },
 
     /**
@@ -377,7 +391,6 @@ const OrderModificationManager = {
                         <td class="col-menu">
                             <div class="menu-info">
                                 <strong>${order.menuName}</strong>
-                                ${isModified ? '<span class="modified-badge">수정됨</span>' : ''}
                             </div>
                         </td>
                         <td class="col-price">
