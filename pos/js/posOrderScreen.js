@@ -54,10 +54,19 @@ const POSOrderScreen = {
     },
 
     get pendingModifications() {
-        return OrderModificationManager.pendingModifications;
+        // 하위 호환성을 위해 Map을 Array로 변환
+        return Array.from(OrderModificationManager.pendingChanges.values());
     },
     set pendingModifications(value) {
-        OrderModificationManager.pendingModifications = value;
+        // 하위 호환성을 위해 Array를 Map으로 변환
+        OrderModificationManager.pendingChanges.clear();
+        if (Array.isArray(value)) {
+            value.forEach(item => {
+                if (item.menuName) {
+                    OrderModificationManager.pendingChanges.set(item.menuName, item);
+                }
+            });
+        }
     },
 
     /**
@@ -362,157 +371,16 @@ const POSOrderScreen = {
     },
 
     /**
-     * 주문 관련 메서드들
+     * 주문 관련 메서드들 (단순화된 버전)
      */
     async addToOrder(menuId, menuName, price, storeId = null, cookStation = null) {
         try {
-            console.log(`🎯 메뉴 카드 클릭: ${menuName} (ID: ${menuId}) - 주문수정 모드 처리`);
+            console.log(`🎯 메뉴 추가: ${menuName} (ID: ${menuId})`);
 
-            const isEditModeActive = this.pendingModifications.length > 0 || this.selectedOrder;
+            // OrderModificationManager의 통합 로직 사용
+            OrderModificationManager.addMenuItem(menuId, menuName, price, 1);
 
-            if (!isEditModeActive) {
-                console.log(`📝 주문수정 모드 자동 활성화: ${menuName} 클릭`);
-                OrderUtilityManager.showToast(`📝 주문수정 모드 활성화: ${menuName} +1개 추가`);
-            } else {
-                console.log(`✅ 주문수정 모드 이미 활성화됨: ${menuName} +1개 추가`);
-                OrderUtilityManager.showToast(`➕ ${menuName} +1개 추가됨`);
-            }
-
-            // OrderModificationManager의 통합된 로직 사용
-            const existingOrder = OrderModificationManager.findExistingOrder(menuId, menuName);
-            let originalQuantity = existingOrder ? existingOrder.quantity : 0;
-
-            console.log(`🔍 기존 주문 검색 결과: ${existingOrder ? '발견' : '없음'}, 원본 수량: ${originalQuantity}`);
-
-            // 기존 수정사항에서 해당 메뉴 찾기
-            const existingModification = this.pendingModifications.find(mod => 
-                mod.menuName === menuName
-            );
-
-            let newQuantity;
-            if (existingModification) {
-                newQuantity = existingModification.newQuantity + 1;
-                console.log(`🔄 기존 수정사항 업데이트: ${menuName} (${existingModification.newQuantity} → ${newQuantity})`);
-            } else {
-                newQuantity = originalQuantity + 1;
-                console.log(`➕ 새로운 수정사항 생성: ${menuName} (${originalQuantity} → ${newQuantity})`);
-            }
-
-            // 수정사항을 누적 배열에 추가/업데이트
-            this.addToPendingModifications(
-                parseInt(menuId), 
-                menuName, 
-                originalQuantity, 
-                newQuantity, 
-                'plus'
-            );
-
-            // UI 업데이트 처리
-            let existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
-            
-            // 메뉴명으로도 검색 (ID가 다를 수 있음)
-            if (!existingRow) {
-                const allRows = document.querySelectorAll('.pos-order-table tr[data-order-id]');
-                for (const row of allRows) {
-                    const rowMenuName = row.querySelector('.menu-info strong')?.textContent?.trim();
-                    if (rowMenuName === menuName) {
-                        existingRow = row;
-                        break;
-                    }
-                }
-            }
-
-            if (existingRow) {
-                OrderModificationManager.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
-                console.log(`🔄 기존 메뉴 행 수량 업데이트: ${menuName} → ${newQuantity}개`);
-
-                // 행 선택
-                document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                    row.classList.remove('selected', 'order-row-selected');
-                });
-                existingRow.classList.add('order-row', 'selected');
-
-                // 선택된 주문 정보 업데이트
-                this.selectedOrder = {
-                    orderId: existingRow.dataset.orderId || existingOrder?.id,
-                    menuId: parseInt(menuId),
-                    menuName: menuName,
-                    quantity: newQuantity,
-                    originalQuantity: originalQuantity,
-                    rowElement: existingRow,
-                    modified: true
-                };
-
-                OrderModificationManager.selectedOrder = this.selectedOrder;
-
-            } else {
-                // 새로운 메뉴인 경우 임시로 currentOrders에 추가
-                const newMenuItem = {
-                    id: `temp_${Date.now()}`,
-                    menuId: parseInt(menuId),
-                    menuName: menuName,
-                    price: price,
-                    quantity: newQuantity,
-                    cookingStatus: "PENDING",
-                    originalQuantity: 0,
-                    isNewMenu: true
-                };
-
-                // currentOrders 보호: 깊은 복사로 기존 데이터 보존
-                const protectedCurrentOrders = this.currentOrders.map(order => ({
-                    ...order,
-                    quantity: order.quantity // 수량 명시적 보존
-                }));
-
-                // 새 메뉴 추가
-                this.currentOrders = [...protectedCurrentOrders, newMenuItem];
-
-                console.log(`➕ 새 메뉴 임시 추가: ${menuName} (수량: ${newQuantity})`);
-                console.log(`📊 currentOrders 상태 보호 확인:`, this.currentOrders.map(order => ({
-                    메뉴명: order.menuName,
-                    수량: order.quantity,
-                    임시여부: order.isNewMenu ? 'Y' : 'N'
-                })));
-
-                // UI 다시 렌더링
-                const posOrderList = document.getElementById("posOrderList");
-                if (posOrderList) {
-                    posOrderList.innerHTML = OrderUIRenderer.renderPOSOrderItemsModern();
-                }
-
-                // 새로 추가된 행 선택
-                setTimeout(() => {
-                    const newMenuRow = document.querySelector(`.pos-order-table tr[data-order-id="${newMenuItem.id}"]`);
-                    if (newMenuRow) {
-                        document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                            row.classList.remove('selected', 'order-row-selected');
-                        });
-
-                        newMenuRow.classList.add('order-row', 'selected');
-
-                        this.selectedOrder = {
-                            orderId: newMenuItem.id,
-                            menuId: parseInt(menuId),
-                            menuName: menuName,
-                            quantity: newQuantity,
-                            originalQuantity: 0,
-                            rowElement: newMenuRow,
-                            modified: true
-                        };
-
-                        OrderModificationManager.selectedOrder = this.selectedOrder;
-
-                        console.log(`✅ 새 메뉴 자동 선택: ${menuName} (수량: ${newQuantity})`);
-                    }
-                }, 100);
-            }
-
-            // 편집 모드 UI 업데이트
-            this.updateEditModeUI(true);
-
-            OrderUtilityManager.showToast(`${menuName} 수정내역에 추가됨 (+1개, 총 ${newQuantity}개)`);
-
-            console.log(`📈 수정내역 누적 완료: ${menuName} (원본: ${originalQuantity} → 새로운: ${newQuantity})`);
+            OrderUtilityManager.showToast(`${menuName} +1개 추가됨`);
 
         } catch (error) {
             console.error("❌ 주문 추가 실패:", error);
@@ -713,7 +581,7 @@ const POSOrderScreen = {
     },
 
     /**
-     * 수정 관리 메서드들 - OrderModificationManager로 위임
+     * 수정 관리 메서드들 - OrderModificationManager로 위임 (리팩토링)
      */
     toggleOrderRowSelection(orderId, menuName, quantity) {
         return OrderModificationManager.toggleOrderRowSelection(orderId, menuName, quantity);
@@ -731,20 +599,13 @@ const POSOrderScreen = {
         return OrderModificationManager.addQuantityToSelected();
     },
 
-    updateOrderRowDisplay(rowElement, newQuantity, action) {
-        return OrderModificationManager.updateOrderRowDisplay(rowElement, newQuantity, action);
-    },
-
-    addToPendingModifications(menuId, menuName, originalQuantity, newQuantity, actionType = 'auto') {
-        return OrderModificationManager.addToPendingModifications(menuId, menuName, originalQuantity, newQuantity, actionType);
-    },
-
+    // 하위 호환성을 위한 래퍼 메서드들
     cancelAllPendingModifications() {
-        return OrderModificationManager.cancelAllPendingModifications();
+        return OrderModificationManager.cancelAllChanges();
     },
 
     async confirmAllPendingModifications() {
-        return OrderModificationManager.confirmAllPendingModifications();
+        return OrderModificationManager.confirmAllChanges();
     },
 
     /**
@@ -838,11 +699,11 @@ const POSOrderScreen = {
     },
 
     /**
-     * 주문 확정 메서드
+     * 주문 확정 메서드 (단순화)
      */
     async confirmOrder() {
-        if (this.pendingModifications.length > 0) {
-            return this.confirmAllPendingModifications();
+        if (OrderModificationManager.pendingChanges.size > 0) {
+            return OrderModificationManager.confirmAllChanges();
         }
 
         alert("주문할 내용이 없습니다. 메뉴를 선택해주세요.");
@@ -862,118 +723,13 @@ const POSOrderScreen = {
     cancelSelectedOrders() {
         console.log('🚫 선택된 주문 취소 시작');
 
-        // 1순위: 누적된 수정사항이 있으면 모든 수정사항 취소
-        if (this.pendingModifications.length > 0) {
-            console.log(`🔄 누적된 수정사항 ${this.pendingModifications.length}개 취소`);
-            OrderModificationManager.cancelAllPendingModifications();
-            OrderUtilityManager.showToast(`${this.pendingModifications.length}개 수정사항이 취소되었습니다`);
+        // OrderModificationManager의 통합 취소 로직 사용
+        if (OrderModificationManager.pendingChanges.size > 0 || OrderModificationManager.selectedOrder) {
+            OrderModificationManager.cancelAllChanges();
             return;
         }
 
-        // 2순위: 선택된 주문이 있으면 선택 해제
-        if (this.selectedOrder) {
-            console.log('🔄 선택된 주문 해제');
-            
-            // 선택 상태 해제
-            document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                row.classList.remove('selected', 'order-row-selected');
-            });
-
-            this.selectedOrder = null;
-            if (typeof OrderModificationManager !== 'undefined') {
-                OrderModificationManager.selectedOrder = null;
-            }
-
-            this.updateEditModeUI(false);
-            OrderUtilityManager.showToast("선택이 해제되었습니다");
-            return;
-        }
-
-        // 3순위: 편집 모드가 활성화되어 있으면 강제 종료
-        const confirmBtn = document.querySelector('#confirmOrder');
-        const isEditModeActive = (confirmBtn && confirmBtn.classList.contains('edit-mode')) ||
-                                document.querySelector('.edit-mode-indicator') ||
-                                document.querySelector('.control-btn.quantity-minus:not([disabled])');
-
-        if (isEditModeActive) {
-            console.log('🚫 편집 모드 강제 종료');
-
-            this.updateEditModeUI(false);
-
-            document.querySelectorAll('.pos-order-table tr').forEach(row => {
-                row.classList.remove('selected', 'order-row-selected');
-            });
-
-            this.selectedOrder = null;
-            this.pendingModifications = [];
-
-            if (typeof OrderModificationManager !== 'undefined') {
-                OrderModificationManager.selectedOrder = null;
-                OrderModificationManager.pendingModifications = [];
-            }
-
-            OrderUtilityManager.showToast("편집 모드가 종료되었습니다");
-            return;
-        }
-
-        // 4순위: 임시 메뉴 행들 제거
-        const tempRows = document.querySelectorAll('.pos-order-table tr[data-order-id^="temp_"]');
-        if (tempRows.length > 0) {
-            console.log(`🗑️ ${tempRows.length}개 임시 메뉴 행 제거 시작`);
-            
-            // 임시 행들의 메뉴명 수집 (로깅용)
-            const tempMenuNames = Array.from(tempRows).map(row => {
-                const menuNameElement = row.querySelector('.menu-info strong');
-                return menuNameElement ? menuNameElement.textContent.trim() : 'Unknown';
-            });
-
-            console.log(`🗑️ 제거할 임시 메뉴들:`, tempMenuNames);
-
-            // DOM에서 임시 행들 제거
-            tempRows.forEach((row, index) => {
-                console.log(`🗑️ 임시 행 제거 [${index + 1}/${tempRows.length}]: ${tempMenuNames[index]}`);
-                row.remove();
-            });
-
-            // currentOrders 배열에서 임시 아이템들 제거
-            if (this.currentOrders) {
-                const originalLength = this.currentOrders.length;
-                
-                // 임시 ID를 가진 항목들과 isNewMenu 플래그를 가진 항목들 제거
-                this.currentOrders = this.currentOrders.filter(order => {
-                    const isTemporary = String(order.id).startsWith('temp_') || order.isNewMenu;
-                    if (isTemporary) {
-                        console.log(`🗑️ currentOrders에서 임시 항목 제거: ${order.menuName} (ID: ${order.id})`);
-                    }
-                    return !isTemporary;
-                });
-
-                const removedCount = originalLength - this.currentOrders.length;
-                console.log(`🗑️ currentOrders 정리 완료: ${originalLength}개 → ${this.currentOrders.length}개 (${removedCount}개 제거)`);
-            }
-
-            // UI 상태 초기화
-            this.selectedOrder = null;
-            this.pendingModifications = [];
-            if (typeof OrderModificationManager !== 'undefined') {
-                OrderModificationManager.selectedOrder = null;
-                OrderModificationManager.pendingModifications = [];
-            }
-
-            this.updateEditModeUI(false);
-
-            OrderUtilityManager.showToast(`${tempRows.length}개 임시 메뉴가 제거되었습니다`);
-
-            // 전체 주문 새로고침
-            setTimeout(() => {
-                console.log('🔄 임시 메뉴 제거 후 주문 새로고침');
-                this.refreshOrders();
-            }, 200);
-
-            return;
-        }
-
-        // 5순위: 취소할 것이 없음
+        // 취소할 것이 없음
         console.log('ℹ️ 취소할 선택된 주문이나 수정사항이 없음');
         OrderUtilityManager.showToast("취소할 내용이 없습니다");
     },
