@@ -64,9 +64,28 @@ const OrderModificationManager = {
      * 선택된 주문 수량 증가
      */
     addQuantityToSelected() {
+        console.log(`📈 수량 증가 요청 - 현재 선택된 주문:`, this.selectedOrder);
+        
         if (!this.selectedOrder) {
-            alert('수정할 주문을 먼저 선택해주세요.');
-            return;
+            console.warn('⚠️ 선택된 주문이 없음 - 자동 선택 시도');
+            // 현재 표시된 주문 중 첫 번째를 자동 선택
+            const firstOrderRow = document.querySelector('.pos-order-table tr.order-row');
+            if (firstOrderRow) {
+                const orderId = firstOrderRow.dataset.orderId;
+                const menuName = firstOrderRow.querySelector('.menu-info strong')?.textContent?.trim();
+                const quantity = parseInt(firstOrderRow.querySelector('.quantity-display')?.textContent) || 1;
+                
+                console.log(`🔄 첫 번째 주문 자동 선택: ${menuName}`);
+                this.toggleOrderRowSelection(orderId, menuName, quantity);
+                
+                if (!this.selectedOrder) {
+                    alert('수정할 주문을 먼저 선택해주세요.');
+                    return;
+                }
+            } else {
+                alert('수정할 주문을 먼저 선택해주세요.');
+                return;
+            }
         }
 
         console.log(`📈 선택된 주문 수량 증가: ${this.selectedOrder.menuName}`);
@@ -84,9 +103,28 @@ const OrderModificationManager = {
      * 선택된 주문 수량 감소
      */
     minusQuantityFromSelected() {
+        console.log(`📉 수량 감소 요청 - 현재 선택된 주문:`, this.selectedOrder);
+        
         if (!this.selectedOrder) {
-            alert('수정할 주문을 먼저 선택해주세요.');
-            return;
+            console.warn('⚠️ 선택된 주문이 없음 - 자동 선택 시도');
+            // 현재 표시된 주문 중 첫 번째를 자동 선택
+            const firstOrderRow = document.querySelector('.pos-order-table tr.order-row');
+            if (firstOrderRow) {
+                const orderId = firstOrderRow.dataset.orderId;
+                const menuName = firstOrderRow.querySelector('.menu-info strong')?.textContent?.trim();
+                const quantity = parseInt(firstOrderRow.querySelector('.quantity-display')?.textContent) || 1;
+                
+                console.log(`🔄 첫 번째 주문 자동 선택: ${menuName}`);
+                this.toggleOrderRowSelection(orderId, menuName, quantity);
+                
+                if (!this.selectedOrder) {
+                    alert('수정할 주문을 먼저 선택해주세요.');
+                    return;
+                }
+            } else {
+                alert('수정할 주문을 먼저 선택해주세요.');
+                return;
+            }
         }
 
         console.log(`📉 선택된 주문 수량 감소: ${this.selectedOrder.menuName}`);
@@ -140,7 +178,7 @@ const OrderModificationManager = {
      * 주문 행 선택
      */
     toggleOrderRowSelection(orderId, menuName, quantity) {
-        console.log(`🎯 주문 행 선택: ${menuName} (ID: ${orderId})`);
+        console.log(`🎯 주문 행 선택 시작: ${menuName} (ID: ${orderId})`);
 
         // 다양한 선택자로 행 찾기 시도
         let rowElement = null;
@@ -171,14 +209,14 @@ const OrderModificationManager = {
             document.querySelectorAll('.pos-order-table tr.order-row').forEach((row, index) => {
                 console.log(`- 행 ${index}: orderId=${row.dataset.orderId}, menuName=${row.querySelector('.menu-info strong')?.textContent}`);
             });
-            return;
+            return false;
         }
 
         // 이미 선택된 행이면 선택 해제
         if (rowElement.classList.contains('selected')) {
             console.log(`🔄 기존 선택 해제: ${menuName}`);
             this.clearSelection();
-            return;
+            return false;
         }
 
         // 기존 선택 해제
@@ -191,7 +229,7 @@ const OrderModificationManager = {
         const menuId = rowElement.dataset.menuId || orderId;
         const price = this.getMenuPrice(menuId);
 
-        // 선택된 주문 정보 설정
+        // 선택된 주문 정보 설정 - 즉시 설정하여 상태 동기화
         this.selectedOrder = {
             orderId: orderId,
             menuId: parseInt(menuId),
@@ -205,13 +243,12 @@ const OrderModificationManager = {
         // 편집 모드 활성화
         this.activateEditMode();
         
-        console.log(`✅ 주문 선택 완료:`, {
-            orderId: this.selectedOrder.orderId,
-            menuId: this.selectedOrder.menuId,
-            menuName: this.selectedOrder.menuName,
-            quantity: this.selectedOrder.quantity,
-            price: this.selectedOrder.price
+        console.log(`✅ 주문 선택 완료 및 상태 설정:`, {
+            selectedOrder: this.selectedOrder,
+            isEditMode: this.isEditMode
         });
+
+        return true;
     },
 
     /**
@@ -619,8 +656,14 @@ const OrderModificationManager = {
         const existingOrder = this.findExistingOrder(menuId, menuName);
         const orderId = existingOrder ? existingOrder.id : menuId;
         
-        // toggleOrderRowSelection 호출
-        this.toggleOrderRowSelection(orderId, menuName, quantity);
+        // toggleOrderRowSelection 호출 및 결과 확인
+        const selectionResult = this.toggleOrderRowSelection(orderId, menuName, quantity);
+        
+        if (!selectionResult) {
+            console.warn(`⚠️ 자동 선택 실패: ${menuName}`);
+        } else {
+            console.log(`✅ 자동 선택 성공: ${menuName}, selectedOrder 설정 완료`);
+        }
     },
 
     /**
