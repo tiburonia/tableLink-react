@@ -2085,20 +2085,19 @@ router.post('/orders/modify-batch', async (req, res) => {
     }
 
     // 4. 주문 완전 취소 확인 및 처리
-    // 모든 order_items의 item_status가 CANCELED인지 확인
-    const remainingItemsResult = await client.query(`
+    // order_items 테이블에 해당 주문의 레코드가 완전히 0개인지 확인
+    const totalItemsResult = await client.query(`
       SELECT COUNT(*) as count
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       WHERE ot.order_id = $1
-        AND oi.item_status != 'CANCELED'
         AND ot.status != 'CANCELED'
     `, [orderId]);
 
-    const hasRemainingItems = parseInt(remainingItemsResult.rows[0].count) > 0;
+    const hasTotalItems = parseInt(totalItemsResult.rows[0].count) > 0;
 
-    if (!hasRemainingItems) {
-      console.log(`❌ 주문 ${orderId} 완전 취소 - 모든 아이템이 CANCELED 상태`);
+    if (!hasTotalItems) {
+      console.log(`❌ 주문 ${orderId} 완전 취소 - order_items 레코드가 0개`);
 
       // 모든 order_tickets을 CANCELED로 변경
       await client.query(`
