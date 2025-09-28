@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../db/pool');
+const eventBus = require('../utils/eventBus');
 
 /**
  * 새로운 POS 시스템 API (orders, order_tickets, order_items 스키마 사용)
@@ -2154,6 +2155,47 @@ router.post('/orders/modify-quantity', async (req, res) => {
     const newTotalQuantity = currentQuantity - 1;
     console.log(`✅ batch 알고리즘 수량 수정 완료: ${menuName} (${currentQuantity} → ${newTotalQuantity})`);
 
+    // KDS 이벤트 발생
+    try {
+      // 수정된 주문의 모든 아이템 조회
+      const modifiedItemsResult = await pool.query(`
+        SELECT 
+          oi.id,
+          oi.menu_name as name,
+          oi.quantity,
+          oi.unit_price as price,
+          oi.cook_station,
+          oi.menu_id
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status != 'CANCELED'
+          AND ot.status != 'CANCELED'
+          AND ot.paid_status = 'UNPAID'
+        ORDER BY oi.created_at DESC
+      `, [orderId]);
+
+      const kdsEventData = {
+        orderId: orderId,
+        ticketId: null,
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        items: modifiedItemsResult.rows,
+        modifications: {
+          type: 'quantity_decrease',
+          menuName: menuName,
+          oldQuantity: currentQuantity,
+          newQuantity: newTotalQuantity,
+          algorithm: 'batch_based'
+        }
+      };
+
+      eventBus.emit('order.modified', kdsEventData);
+      console.log(`📡 KDS 이벤트 발생: 수량 수정 완료 (${menuName}: ${currentQuantity} → ${newTotalQuantity})`);
+    } catch (kdsError) {
+      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+    }
+
     res.json({
       success: true,
       message: `${menuName} 수량이 1개 감소되었습니다 (batch 알고리즘)`,
@@ -2264,6 +2306,66 @@ router.post('/orders/modify-multiple', async (req, res) => {
     await client.query('COMMIT');
 
     console.log(`✅ POS 다중 메뉴 수정 완료: 성공 ${successCount}개, 실패 ${errorCount}개`);
+
+    // KDS 이벤트 발생 (성공한 수정사항만)
+    if (successCount > 0) {
+      try {
+        // 수정된 주문의 현재 상태 조회
+        const activeOrderResult = await pool.query(`
+          SELECT DISTINCT o.id as order_id
+          FROM orders o
+          JOIN order_tickets ot ON o.id = ot.order_id
+          WHERE o.store_id = $1 
+            AND o.table_num = $2 
+            AND ot.paid_status = 'UNPAID'
+            AND o.session_status = 'OPEN'
+            AND ot.source = 'POS'
+          ORDER BY o.created_at DESC
+          LIMIT 1
+        `, [parseInt(storeId), parseInt(tableNumber)]);
+
+        if (activeOrderResult.rows.length > 0) {
+          const orderId = activeOrderResult.rows[0].order_id;
+
+          // 현재 활성 아이템들 조회
+          const currentItemsResult = await pool.query(`
+            SELECT 
+              oi.id,
+              oi.menu_name as name,
+              oi.quantity,
+              oi.unit_price as price,
+              oi.cook_station,
+              oi.menu_id
+            FROM order_items oi
+            JOIN order_tickets ot ON oi.ticket_id = ot.id
+            WHERE ot.order_id = $1 
+              AND oi.item_status != 'CANCELED'
+              AND ot.status != 'CANCELED'
+              AND ot.paid_status = 'UNPAID'
+            ORDER BY oi.created_at DESC
+          `, [orderId]);
+
+          const kdsEventData = {
+            orderId: orderId,
+            ticketId: null,
+            storeId: parseInt(storeId),
+            tableNumber: parseInt(tableNumber),
+            items: currentItemsResult.rows,
+            modifications: {
+              type: 'multiple_menu_update',
+              results: results.filter(r => r.success),
+              successCount: successCount,
+              totalRequested: modifications.length
+            }
+          };
+
+          eventBus.emit('order.modified', kdsEventData);
+          console.log(`📡 KDS 이벤트 발생: 다중 메뉴 수정 완료 (성공 ${successCount}개)`);
+        }
+      } catch (kdsError) {
+        console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+      }
+    }
 
     res.json({
       success: errorCount === 0,
@@ -2579,6 +2681,47 @@ router.post('/orders/modify-batch', async (req, res) => {
 
     console.log(`✅ batch 알고리즘 수정 완료: 주문 ${orderId}`);
 
+    // KDS 이벤트 발생
+    try {
+      // 수정된 주문의 모든 아이템 조회
+      const modifiedItemsResult = await pool.query(`
+        SELECT 
+          oi.id,
+          oi.menu_name as name,
+          oi.quantity,
+          oi.unit_price as price,
+          oi.cook_station,
+          oi.menu_id
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status != 'CANCELED'
+          AND ot.status != 'CANCELED'
+          AND ot.paid_status = 'UNPAID'
+        ORDER BY oi.created_at DESC
+      `, [orderId]);
+
+      const kdsEventData = {
+        orderId: orderId,
+        ticketId: null, // batch 수정이므로 특정 티켓 ID 없음
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        batchNo: null, // batch 수정
+        items: modifiedItemsResult.rows,
+        modifications: {
+          type: 'batch_update',
+          added: Object.keys(add).length,
+          removed: Object.keys(remove).length,
+          details: { add, remove }
+        }
+      };
+
+      eventBus.emit('order.modified', kdsEventData);
+      console.log(`📡 KDS 이벤트 발생: batch 알고리즘 수정 완료 (주문 ${orderId})`);
+    } catch (kdsError) {
+      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+    }
+
     res.json({
       success: true,
       orderId: orderId,
@@ -2811,6 +2954,45 @@ router.post('/orders/modify', async (req, res) => {
     await client.query('COMMIT');
 
     console.log(`✅ POS 주문 수정 완료: 주문 ID ${orderId}, ${modificationResults.length}개 메뉴 수정`);
+
+    // KDS 이벤트 발생
+    try {
+      // 수정된 주문의 현재 아이템들 조회
+      const currentItemsResult = await pool.query(`
+        SELECT 
+          oi.id,
+          oi.menu_name as name,
+          oi.quantity,
+          oi.unit_price as price,
+          oi.cook_station,
+          oi.menu_id
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status != 'CANCELED'
+          AND ot.status != 'CANCELED'
+          AND ot.paid_status = 'UNPAID'
+        ORDER BY oi.created_at DESC
+      `, [orderId]);
+
+      const kdsEventData = {
+        orderId: orderId,
+        ticketId: null,
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        items: currentItemsResult.rows,
+        modifications: {
+          type: 'order_modification',
+          results: modificationResults,
+          modifiedCount: modificationResults.length
+        }
+      };
+
+      eventBus.emit('order.modified', kdsEventData);
+      console.log(`📡 KDS 이벤트 발생: 주문 수정 완료 (${modificationResults.length}개 메뉴 수정)`);
+    } catch (kdsError) {
+      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+    }
 
     // SSE 브로드캐스트
     if (global.broadcastPOSTableUpdate) {
