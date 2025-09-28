@@ -76,8 +76,8 @@ const OrderModificationManager = {
         const newQuantity = Math.max(0, currentQuantity - 1);
 
         // 원본 수량 확인 (처음 수정할 때만)
-        if (!this.selectedOrder.originalQuantity) {
-            this.selectedOrder.originalQuantity = this.getOriginalQuantity(menuId);
+        if (this.selectedOrder.originalQuantity === undefined) {
+            this.selectedOrder.originalQuantity = this.getOriginalQuantity(menuId, menuName);
         }
 
         // 수정사항을 누적 배열에 추가/업데이트
@@ -90,13 +90,13 @@ const OrderModificationManager = {
         this.selectedOrder.quantity = newQuantity;
         this.selectedOrder.modified = true;
 
+        // currentOrders에서도 해당 아이템의 수량 업데이트 (UI 동기화)
+        this.updateCurrentOrdersQuantity(menuId, menuName, newQuantity);
+
         console.log(`📉 수량 감소 누적: ${menuName} (${currentQuantity} → ${newQuantity}), 원본: ${this.selectedOrder.originalQuantity}`);
 
         // UI 상태 업데이트
         this.updateEditModeUI(true);
-
-        // 수정사항 요약 표시 업데이트
-        // this.updatePendingModificationsSummary(); // This line is removed as per the user's request
     },
 
     /**
@@ -115,8 +115,8 @@ const OrderModificationManager = {
         const newQuantity = currentQuantity + 1;
 
         // 원본 수량 확인 (처음 수정할 때만)
-        if (!this.selectedOrder.originalQuantity) {
-            this.selectedOrder.originalQuantity = this.getOriginalQuantity(menuId);
+        if (this.selectedOrder.originalQuantity === undefined) {
+            this.selectedOrder.originalQuantity = this.getOriginalQuantity(menuId, menuName);
         }
 
         // 수정사항을 누적 배열에 추가/업데이트
@@ -129,13 +129,13 @@ const OrderModificationManager = {
         this.selectedOrder.quantity = newQuantity;
         this.selectedOrder.modified = true;
 
+        // currentOrders에서도 해당 아이템의 수량 업데이트 (UI 동기화)
+        this.updateCurrentOrdersQuantity(menuId, menuName, newQuantity);
+
         console.log(`📈 수량 증가 누적: ${menuName} (${currentQuantity} → ${newQuantity}), 원본: ${this.selectedOrder.originalQuantity}`);
 
         // UI 상태 업데이트
         this.updateEditModeUI(true);
-
-        // 수정사항 요약 표시 업데이트
-        // this.updatePendingModificationsSummary(); // This line is removed as per the user's request
     },
 
     /**
@@ -494,6 +494,73 @@ const OrderModificationManager = {
         this.pendingModifications = [];
         this.selectedOrder = null;
         this.updateEditModeUI(false);
+    },
+
+    /**
+     * currentOrders 배열에서 해당 메뉴의 수량 업데이트 (UI 동기화용)
+     */
+    updateCurrentOrdersQuantity(menuId, menuName, newQuantity) {
+        const posOrderScreen = window.POSOrderScreen;
+        if (!posOrderScreen || !posOrderScreen.currentOrders) return;
+
+        // 메뉴명으로 우선 검색
+        let targetOrder = posOrderScreen.currentOrders.find(order => 
+            order.menuName === menuName && !order.isCart && !order.isNewMenu
+        );
+
+        // 메뉴ID로 검색 (fallback)
+        if (!targetOrder) {
+            targetOrder = posOrderScreen.currentOrders.find(order => 
+                (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && 
+                !order.isCart && !order.isNewMenu
+            );
+        }
+
+        if (targetOrder) {
+            targetOrder.quantity = newQuantity;
+            console.log(`🔄 currentOrders 수량 동기화: ${menuName} → ${newQuantity}개`);
+        }
+    },
+
+    /**
+     * 기존 메뉴 찾기 (통합된 로직)
+     */
+    findExistingOrder(menuId, menuName) {
+        const posOrderScreen = window.POSOrderScreen;
+        if (!posOrderScreen || !posOrderScreen.currentOrders) return null;
+
+        const targetMenuId = parseInt(menuId);
+
+        // 1순위: menuId와 menuName 모두 매칭
+        let existingOrder = posOrderScreen.currentOrders.find(order => 
+            order.menuId === targetMenuId && 
+            order.menuName === menuName && 
+            !order.isCart && !order.isNewMenu
+        );
+
+        // 2순위: menuName만 매칭
+        if (!existingOrder) {
+            existingOrder = posOrderScreen.currentOrders.find(order => 
+                order.menuName === menuName && 
+                !order.isCart && !order.isNewMenu
+            );
+        }
+
+        // 3순위: menuId만 매칭
+        if (!existingOrder) {
+            existingOrder = posOrderScreen.currentOrders.find(order => 
+                order.menuId === targetMenuId && !order.isCart && !order.isNewMenu
+            );
+        }
+
+        // 4순위: order.id와 menuId 매칭
+        if (!existingOrder) {
+            existingOrder = posOrderScreen.currentOrders.find(order => 
+                order.id === targetMenuId && !order.isCart && !order.isNewMenu
+            );
+        }
+
+        return existingOrder;
     },
 
     /**

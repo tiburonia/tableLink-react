@@ -378,58 +378,13 @@ const POSOrderScreen = {
                 OrderUtilityManager.showToast(`➕ ${menuName} +1개 추가됨`);
             }
 
-            // 현재 해당 메뉴의 원본 수량 확인 (개선된 로직)
-            let originalQuantity = 0;
-            const targetMenuId = parseInt(menuId);
-            
-            console.log(`🔍 원본 수량 검색 시작: menuId=${targetMenuId}, menuName="${menuName}"`);
-            console.log(`📋 현재 주문 목록:`, this.currentOrders.map(order => ({
-                id: order.id,
-                menuId: order.menuId,
-                menuName: order.menuName,
-                quantity: order.quantity,
-                isCart: order.isCart,
-                isNewMenu: order.isNewMenu
-            })));
+            // OrderModificationManager의 통합된 로직 사용
+            const existingOrder = OrderModificationManager.findExistingOrder(menuId, menuName);
+            let originalQuantity = existingOrder ? existingOrder.quantity : 0;
 
-            // 1순위: menuId와 menuName 모두 매칭
-            let existingOrder = this.currentOrders.find(order => 
-                order.menuId === targetMenuId && 
-                order.menuName === menuName && 
-                !order.isCart && !order.isNewMenu
-            );
+            console.log(`🔍 기존 주문 검색 결과: ${existingOrder ? '발견' : '없음'}, 원본 수량: ${originalQuantity}`);
 
-            // 2순위: menuName만 매칭 (같은 메뉴지만 ID가 다를 수 있음)
-            if (!existingOrder) {
-                existingOrder = this.currentOrders.find(order => 
-                    order.menuName === menuName && 
-                    !order.isCart && !order.isNewMenu
-                );
-                if (existingOrder) {
-                    console.log(`🔍 메뉴명으로 매칭됨: ${menuName} (기존 ID: ${existingOrder.menuId}, 새 ID: ${targetMenuId})`);
-                }
-            }
-
-            // 3순위: order.id와 menuId 매칭 (레거시 호환)
-            if (!existingOrder) {
-                existingOrder = this.currentOrders.find(order => 
-                    order.id === targetMenuId && 
-                    !order.isCart && !order.isNewMenu
-                );
-                if (existingOrder) {
-                    console.log(`🔍 order.id로 매칭됨: ID ${targetMenuId}`);
-                }
-            }
-
-            if (existingOrder) {
-                originalQuantity = existingOrder.quantity;
-                console.log(`✅ 원본 수량 발견: ${menuName} = ${originalQuantity}개`);
-            } else {
-                originalQuantity = 0;
-                console.log(`📝 새 메뉴: ${menuName} (원본 수량: 0)`);
-            }
-
-            // 기존 수정사항에서 해당 메뉴 찾기 (menuName 기준)
+            // 기존 수정사항에서 해당 메뉴 찾기
             const existingModification = this.pendingModifications.find(mod => 
                 mod.menuName === menuName
             );
@@ -454,18 +409,32 @@ const POSOrderScreen = {
 
             // UI 업데이트 처리
             let existingRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+            
+            // 메뉴명으로도 검색 (ID가 다를 수 있음)
+            if (!existingRow) {
+                const allRows = document.querySelectorAll('.pos-order-table tr[data-order-id]');
+                for (const row of allRows) {
+                    const rowMenuName = row.querySelector('.menu-info strong')?.textContent?.trim();
+                    if (rowMenuName === menuName) {
+                        existingRow = row;
+                        break;
+                    }
+                }
+            }
 
             if (existingRow) {
-                this.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
+                OrderModificationManager.updateOrderRowDisplay(existingRow, newQuantity, 'plus');
                 console.log(`🔄 기존 메뉴 행 수량 업데이트: ${menuName} → ${newQuantity}개`);
 
+                // 행 선택
                 document.querySelectorAll('.pos-order-table tr').forEach(row => {
                     row.classList.remove('selected', 'order-row-selected');
                 });
                 existingRow.classList.add('order-row', 'selected');
 
+                // 선택된 주문 정보 업데이트
                 this.selectedOrder = {
-                    orderId: existingRow.dataset.orderId,
+                    orderId: existingRow.dataset.orderId || existingOrder?.id,
                     menuId: parseInt(menuId),
                     menuName: menuName,
                     quantity: newQuantity,
@@ -473,6 +442,8 @@ const POSOrderScreen = {
                     rowElement: existingRow,
                     modified: true
                 };
+
+                OrderModificationManager.selectedOrder = this.selectedOrder;
 
             } else {
                 // 새로운 메뉴인 경우 임시로 currentOrders에 추가
@@ -484,10 +455,12 @@ const POSOrderScreen = {
                     quantity: newQuantity,
                     cookingStatus: "PENDING",
                     originalQuantity: 0,
+                    isNewMenu: true
                 };
 
                 this.currentOrders.push(newMenuItem);
 
+                // UI 다시 렌더링
                 const posOrderList = document.getElementById("posOrderList");
                 if (posOrderList) {
                     posOrderList.innerHTML = OrderUIRenderer.renderPOSOrderItemsModern();
@@ -495,8 +468,9 @@ const POSOrderScreen = {
 
                 console.log(`➕ 새 메뉴 임시 추가: ${menuName} (수량: ${newQuantity})`);
 
+                // 새로 추가된 행 선택
                 setTimeout(() => {
-                    const newMenuRow = document.querySelector(`.pos-order-table tr[data-menu-id="${menuId}"]`);
+                    const newMenuRow = document.querySelector(`.pos-order-table tr[data-order-id="${newMenuItem.id}"]`);
                     if (newMenuRow) {
                         document.querySelectorAll('.pos-order-table tr').forEach(row => {
                             row.classList.remove('selected', 'order-row-selected');
@@ -504,7 +478,7 @@ const POSOrderScreen = {
 
                         newMenuRow.classList.add('order-row', 'selected');
 
-                        OrderModificationManager.selectedOrder = {
+                        this.selectedOrder = {
                             orderId: newMenuItem.id,
                             menuId: parseInt(menuId),
                             menuName: menuName,
@@ -514,7 +488,7 @@ const POSOrderScreen = {
                             modified: true
                         };
 
-                        this.selectedOrder = OrderModificationManager.selectedOrder;
+                        OrderModificationManager.selectedOrder = this.selectedOrder;
 
                         console.log(`✅ 새 메뉴 자동 선택: ${menuName} (수량: ${newQuantity})`);
                     }
@@ -839,64 +813,12 @@ const POSOrderScreen = {
             return 0;
         }
 
-        let originalOrder = null;
-        const targetMenuId = parseInt(menuId);
-
-        // 1순위: menuId와 menuName 모두 매칭 (가장 정확)
-        if (menuName) {
-            originalOrder = this.currentOrders.find(order => 
-                order.menuId === targetMenuId && 
-                order.menuName === menuName && 
-                !order.isCart && !order.isNewMenu
-            );
-            
-            if (originalOrder) {
-                console.log(`✅ [1순위] menuId + menuName 매칭: ${originalOrder.menuName} = ${originalOrder.quantity}개`);
-                return originalOrder.quantity;
-            }
-        }
-
-        // 2순위: menuName만 매칭 (ID가 다를 수 있지만 같은 메뉴)
-        if (menuName) {
-            originalOrder = this.currentOrders.find(order => 
-                order.menuName === menuName && 
-                !order.isCart && !order.isNewMenu
-            );
-            
-            if (originalOrder) {
-                console.log(`✅ [2순위] menuName 매칭: ${originalOrder.menuName} = ${originalOrder.quantity}개 (ID 차이: ${originalOrder.menuId} vs ${targetMenuId})`);
-                return originalOrder.quantity;
-            }
-        }
-
-        // 3순위: menuId만 매칭
-        originalOrder = this.currentOrders.find(order => 
-            order.menuId === targetMenuId && !order.isCart && !order.isNewMenu
-        );
-
-        if (originalOrder) {
-            console.log(`✅ [3순위] menuId 매칭: ${originalOrder.menuName || 'Unknown'} = ${originalOrder.quantity}개`);
-            return originalOrder.quantity;
-        }
-
-        // 4순위: order.id와 menuId 매칭 (레거시 호환)
-        originalOrder = this.currentOrders.find(order => 
-            order.id === targetMenuId && !order.isCart && !order.isNewMenu
-        );
-
-        if (originalOrder) {
-            console.log(`✅ [4순위] order.id 매칭: ${originalOrder.menuName || 'Unknown'} = ${originalOrder.quantity}개`);
-            return originalOrder.quantity;
-        }
-
-        // 5순위: menu_id 필드 매칭 (다른 스키마 호환)
-        originalOrder = this.currentOrders.find(order => 
-            order.menu_id === targetMenuId && !order.isCart && !order.isNewMenu
-        );
-
-        if (originalOrder) {
-            console.log(`✅ [5순위] menu_id 매칭: ${originalOrder.menuName || originalOrder.menu_name || 'Unknown'} = ${originalOrder.quantity}개`);
-            return originalOrder.quantity;
+        // OrderModificationManager의 통합된 로직 사용
+        const existingOrder = OrderModificationManager.findExistingOrder(menuId, menuName);
+        
+        if (existingOrder) {
+            console.log(`✅ 원본 수량 발견: ${existingOrder.menuName} = ${existingOrder.quantity}개`);
+            return existingOrder.quantity;
         }
 
         console.log(`ℹ️ 원본 수량을 찾을 수 없음: menuId=${menuId}, menuName="${menuName}" - 새 메뉴로 간주`);
