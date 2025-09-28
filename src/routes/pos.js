@@ -2316,7 +2316,7 @@ router.post('/orders/modify-batch', async (req, res) => {
 
     // 1. 현재 테이블의 활성 주문 조회
     const activeOrderResult = await client.query(`
-      SELECT DISTINCT o.id as order_id
+      SELECT DISTINCT o.id as order_id, o.created_at
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       WHERE o.store_id = $1 
@@ -2328,15 +2328,34 @@ router.post('/orders/modify-batch', async (req, res) => {
       LIMIT 1
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
+    let orderId;
+    
     if (activeOrderResult.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({
-        success: false,
-        error: '활성 주문을 찾을 수 없습니다'
-      });
+      // 활성 주문이 없는 경우 새로운 주문 생성 (첫 주문 상황)
+      console.log(`📋 활성 주문이 없음 - 새 주문 생성: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      
+      const newOrderResult = await client.query(`
+        INSERT INTO orders (
+          store_id,
+          table_num,
+          user_id,
+          guest_phone,
+          source,
+          status,
+          payment_status,
+          total_price,
+          session_status,
+          created_at
+        ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', 0, 'OPEN', NOW())
+        RETURNING id
+      `, [storeId, tableNumber]);
+      
+      orderId = newOrderResult.rows[0].id;
+      console.log(`✅ 새 주문 생성 완료: ${orderId}`);
+    } else {
+      orderId = activeOrderResult.rows[0].order_id;
+      console.log(`📋 기존 활성 주문 사용: ${orderId}`);
     }
-
-    const orderId = activeOrderResult.rows[0].order_id;
 
     // 2. 추가 주문 처리 (새 batch 생성)
     if (Object.keys(add).length > 0) {
