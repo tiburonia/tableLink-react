@@ -20,6 +20,7 @@ router.get('/:storeId', async (req, res) => {
         o.id as order_id,
         ot.id as ticket_id,
         ot.status as ticket_status,
+        ot.batch_no,
         o.table_num,
         o.created_at,
         o.source,
@@ -30,7 +31,7 @@ router.get('/:storeId', async (req, res) => {
             'quantity', oi.quantity,
             'status', oi.item_status,
             'orderedAt', oi.created_at,
-            'kitchenNotes', '',
+            'kitchenNotes', COALESCE(oi.notes, ''),
             'priority', 0,
             'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
           ) ORDER BY oi.created_at
@@ -41,9 +42,12 @@ router.get('/:storeId', async (req, res) => {
       WHERE o.store_id = $1 
         AND o.session_status = 'OPEN'
         AND ot.status IN ('PENDING', 'COOKING')
-        AND ot.display_status != 'UNVISIBLE'
-      GROUP BY o.id, ot.id, ot.status, o.table_num, o.created_at, o.source
-      ORDER BY o.created_at ASC
+        AND COALESCE(ot.display_status, 'VISIBLE') != 'UNVISIBLE'
+        AND oi.cook_station IN ('KITCHEN', 'GRILL', 'FRY', 'COLD_STATION')
+      GROUP BY o.id, ot.id, ot.status, ot.batch_no, o.table_num, o.created_at, o.source
+      ORDER BY 
+        CASE WHEN ot.status = 'COOKING' THEN 1 ELSE 2 END,
+        ot.id ASC
     `, [parseInt(storeId)]);
 
     // renderKDS.js에서 기대하는 형태로 변환 - 정확한 상태 반영
@@ -51,12 +55,17 @@ router.get('/:storeId', async (req, res) => {
       check_id: order.ticket_id,
       id: order.order_id,
       ticket_id: order.ticket_id,
+      batch_no: order.batch_no || 1,
       customer_name: order.customer_name || `테이블 ${order.table_num}`,
       table_number: order.table_num,
+      table_num: order.table_num,
       status: order.ticket_status?.toUpperCase() || 'PENDING', // DB의 실제 ticket 상태 사용
       created_at: order.created_at,
       updated_at: order.created_at,
-      items: order.items || []
+      source: order.source || 'POS',
+      items: (order.items || []).filter(item => 
+        ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(item.cook_station)
+      )
     }));
 
     res.json({

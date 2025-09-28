@@ -1498,8 +1498,6 @@ router.get('/stores/:storeId/table/:tableNumber/status', async (req, res) => {
       finalTLLMixedStatus: finalTLLMixedStatus
     });
 
-
-
 /**
  * 단일 수량 감소 처리 헬퍼 함수
  */
@@ -2328,11 +2326,11 @@ router.post('/orders/modify-batch', async (req, res) => {
     `, [parseInt(storeId), parseInt(tableNumber)]);
 
     let orderId;
-    
+
     if (activeOrderResult.rows.length === 0) {
       // 활성 주문이 없는 경우 새로운 주문 생성 (첫 주문 상황)
       console.log(`📋 활성 주문이 없음 - 새 주문 생성: 매장 ${storeId}, 테이블 ${tableNumber}`);
-      
+
       const newOrderResult = await client.query(`
         INSERT INTO orders (
           store_id,
@@ -2347,7 +2345,7 @@ router.post('/orders/modify-batch', async (req, res) => {
         ) VALUES ($1, $2, NULL, NULL, 'POS', 'UNPAID', 0, 'OPEN', NOW())
         RETURNING id
       `, [storeId, tableNumber]);
-      
+
       orderId = newOrderResult.rows[0].id;
       console.log(`✅ 새 주문 생성 완료: ${orderId}`);
     } else {
@@ -2464,17 +2462,17 @@ router.post('/orders/modify-batch', async (req, res) => {
 
       // 각 티켓에서 차감 처리 (사용자 알고리즘 준수)
       const processedTickets = new Set(); // 중복 처리 방지
-      
+
       for (const ticket of ticketsResult.rows) {
         if (remaining <= 0) break;
-        
+
         // 이미 처리된 티켓은 건너뛰기
         if (processedTickets.has(ticket.ticket_id)) continue;
         processedTickets.add(ticket.ticket_id);
 
         // 1. 해당 티켓에서 타겟 메뉴의 oldQty 확인
         const oldQty = ticket.quantity;
-        
+
         // 2. deduct = min(oldQty, remaining) 계산
         const deduct = Math.min(oldQty, remaining);
         const newQty = oldQty - deduct;

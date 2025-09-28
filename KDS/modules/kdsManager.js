@@ -143,11 +143,26 @@
 
             return false;
           }
+
+          // 주방 아이템이 없는 티켓도 제거
+          const kitchenItems = (ticket.items || []).filter(item => {
+            const cookStation = item.cook_station || 'KITCHEN';
+            return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+          });
+
+          if (kitchenItems.length === 0) {
+            const ticketId = this._extractSafeTicketId(ticket);
+            console.log(`🍽️ 주방 아이템이 없는 티켓 제거: ${ticketId}`);
+            KDSState.removeTicket(ticketId);
+            removedTickets.push(ticketId);
+            return false;
+          }
+
           return true;
         });
 
         if (originalCount !== tickets.length) {
-          console.log(`🧹 완료된 티켓 제거: ${originalCount} → ${tickets.length}개`);
+          console.log(`🧹 필터링된 티켓 제거: ${originalCount} → ${tickets.length}개`);
           console.log(`🗑️ 제거된 티켓 ID들:`, removedTickets);
 
           // 탭 카운트 즉시 업데이트

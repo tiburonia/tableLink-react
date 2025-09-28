@@ -156,6 +156,17 @@
         return this.handleTicketUpdated(ticket);
       }
 
+      // 주방 관련 아이템만 필터링
+      const kitchenItems = (ticket.items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
+
+      if (kitchenItems.length === 0) {
+        console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - KDS 처리 스킵`);
+        return;
+      }
+
       // DB에서 온 실제 상태를 정규화하여 보존
       const actualStatus = (ticket.status || 'PENDING').toUpperCase();
 
@@ -165,10 +176,13 @@
         ticket_id: ticket.ticket_id || ticketId,
         check_id: ticket.check_id || ticketId,
         id: ticket.id || ticket.ticket_id || ticketId,
+        batch_no: ticket.batch_no || 1,
         table_number: ticket.table_number || ticket.table_num || 'N/A',
+        table_num: ticket.table_num || ticket.table_number || 'N/A',
         customer_name: ticket.customer_name || `테이블 ${ticket.table_number || ticket.table_num}`,
-        items: ticket.items || [],
+        items: kitchenItems,
         status: actualStatus,
+        source: ticket.source || 'POS',
         created_at: ticket.created_at || new Date().toISOString()
       };
 
@@ -177,12 +191,14 @@
         ...item,
         status: actualStatus === 'COOKING' ? 'COOKING' : (item.status || 'PENDING'),
         item_status: actualStatus === 'COOKING' ? 'COOKING' : (item.item_status || 'PENDING'),
-        cook_station: item.cook_station || 'KITCHEN'
+        cook_station: item.cook_station || 'KITCHEN',
+        menuName: item.menuName || item.menu_name || '메뉴',
+        quantity: item.quantity || 1
       }));
 
       // 상태에 티켓 저장
       KDSState.setTicket(ticketId, normalizedTicket);
-      console.log(`💾 티켓 ${ticketId} 저장 완료 - 총 ${KDSState.tickets.size}개 티켓`);
+      console.log(`💾 티켓 ${ticketId} 저장 완료 - ${kitchenItems.length}개 주방 아이템, 총 ${KDSState.tickets.size}개 티켓`);
 
       // 전체 Grid 재렌더링
       this._triggerFullGridRerender('new_ticket');

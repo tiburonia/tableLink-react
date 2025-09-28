@@ -35,11 +35,16 @@ class KDSService {
 
       const { orderId, ticketId, storeId, tableNumber, items, batchNo } = orderData;
 
-      // 모든 아이템을 KDS로 전송 (프론트엔드에서 필터링)
-      console.log(`🍳 KDS: 티켓 ${ticketId}에 총 ${items.length}개 아이템 전송 (프론트엔드 필터링)`);
+      // 주방 관련 아이템만 필터링
+      const kitchenItems = (items || []).filter(item => {
+        const cookStation = item.cook_station || 'KITCHEN';
+        return ['KITCHEN', 'GRILL', 'FRY', 'COLD_STATION'].includes(cookStation);
+      });
 
-      if (items.length === 0) {
-        console.log(`ℹ️ 티켓 ${ticketId}에 아이템이 없음 - KDS 처리 스킵`);
+      console.log(`🍳 KDS: 티켓 ${ticketId} 아이템 필터링 - 전체 ${items.length}개 → 주방 ${kitchenItems.length}개`);
+
+      if (kitchenItems.length === 0) {
+        console.log(`ℹ️ 티켓 ${ticketId}에 주방 아이템이 없음 - KDS 처리 스킵`);
         return { success: true, ticketId, skipped: true };
       }
 
@@ -51,22 +56,25 @@ class KDSService {
         batch_no: batchNo || 1,
         customer_name: `테이블 ${tableNumber}`,
         table_number: tableNumber,
-        status: 'pending',
+        table_num: tableNumber,
+        status: 'PENDING',
+        source: 'POS',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        items: items.map(item => ({
-          id: Math.random().toString(36).substr(2, 9),
-          menuName: item.name,
-          menu_name: item.name,
+        items: kitchenItems.map(item => ({
+          id: item.id || Math.random().toString(36).substr(2, 9),
+          menuName: item.name || item.menu_name,
+          menu_name: item.name || item.menu_name,
           quantity: item.quantity || 1,
-          status: 'pending',
+          status: 'PENDING',
+          item_status: 'PENDING',
           cook_station: item.cook_station || 'KITCHEN',
           notes: item.notes || '',
           created_at: new Date().toISOString()
         }))
       };
 
-      console.log(`🍳 KDS 티켓 데이터 생성: ${items.length}개 전체 아이템`, kdsTicketData);
+      console.log(`🍳 KDS 티켓 데이터 생성: ${kitchenItems.length}개 주방 아이템`, kdsTicketData);
 
       // WebSocket 브로드캐스트 (기존 카드 유지하며 새 카드 추가)
       await this.broadcastToKDS(storeId, 'new-order', kdsTicketData);
@@ -78,14 +86,15 @@ class KDSService {
         ticket_id: ticketId,
         order_id: orderId,
         batch_no: batchNo || 1,
-        source_system: 'TLL',
+        source_system: 'POS',
         table_number: tableNumber,
+        kitchen_items_count: kitchenItems.length,
         total_items_count: items.length,
         timestamp: Date.now()
       });
 
-      console.log(`✅ KDS: 새 주문 처리 완료 - ${items.length}개 전체 아이템`);
-      return { success: true, ticketId, totalItemsCount: items.length };
+      console.log(`✅ KDS: 새 주문 처리 완료 - ${kitchenItems.length}개 주방 아이템`);
+      return { success: true, ticketId, kitchenItemsCount: kitchenItems.length };
 
     } catch (error) {
       console.error('❌ KDS: 새 주문 처리 실패:', error);
