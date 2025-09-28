@@ -446,100 +446,30 @@ const OrderModificationManager = {
                 return;
             }
 
-            let totalSuccessCount = 0;
-            let totalFailureCount = 0;
-            const failureDetails = [];
+            // batch 알고리즘으로 모든 수정사항을 한 번에 처리
+            const addModifications = {};
+            const removeModifications = {};
 
-            // 1. 먼저 감소 수정 처리
-            for (const modification of decreaseModifications) {
-                try {
-                    const result = await this.processDecreaseModification(modification);
-                    totalSuccessCount += result.successCount;
-                    if (result.error) {
-                        failureDetails.push(result.error);
-                        totalFailureCount++;
-                    }
-                } catch (error) {
-                    console.error(`❌ ${modification.menuName} 감소 처리 실패:`, error);
-                    failureDetails.push(`${modification.menuName}: 감소 실패 - ${error.message}`);
-                    totalFailureCount++;
-                }
-            }
+            // 증가 수정사항을 add에 추가
+            increaseModifications.forEach(mod => {
+                addModifications[mod.menuName] = Math.abs(mod.changeAmount);
+            });
 
-            // 2. 그 다음 증가 수정 처리
-            if (increaseModifications.length > 0) {
-                try {
-                    const result = await this.processIncreaseModifications(increaseModifications);
-                    if (result.success) {
-                        totalSuccessCount += increaseModifications.length;
-                        console.log(`✅ 증가 수정 완료: ${increaseModifications.length}개 메뉴`);
-                    } else {
-                        failureDetails.push(`증가 수정 실패: ${result.error}`);
-                        totalFailureCount += increaseModifications.length;
-                    }
-                } catch (error) {
-                    console.error(`❌ 증가 수정 전체 실패:`, error);
-                    failureDetails.push(`증가 수정 실패: ${error.message}`);
-                    totalFailureCount += increaseModifications.length;
-                }
-            }
+            // 감소 수정사항을 remove에 추가
+            decreaseModifications.forEach(mod => {
+                removeModifications[mod.menuName] = mod.changeAmount;
+            });
 
-            // 결과 메시지 생성
-            let resultMessage = `다중 주문 수정 완료!\n\n✅ 성공: ${totalSuccessCount}개 처리`;
-
-            if (totalFailureCount > 0) {
-                resultMessage += `\n❌ 실패: ${totalFailureCount}건\n\n실패 상세:\n${failureDetails.join('\n')}`;
-            }
-
-            alert(resultMessage);
-
-            // 성공한 항목이 있으면 초기화 및 새로고침
-            if (totalSuccessCount > 0) {
-                this.resetAllModifications();
-                await window.POSOrderScreen?.refreshOrders();
-            }
-
-        } catch (error) {
-            console.error('❌ 다중 주문 수정 전체 실패:', error);
-            alert(`다중 주문 수정 중 전체 오류가 발생했습니다:\n${error.message}`);
-        }
-    },
-
-    /**
-     * 감소 수정 처리 (batch 알고리즘 사용)
-     */
-    async processDecreaseModification(modification) {
-        const { menuId, menuName, originalQuantity, newQuantity, changeAmount } = modification;
-
-        console.log(`🔄 batch 알고리즘 ${menuName} 감소 처리: ${originalQuantity} → ${newQuantity} (차감: ${changeAmount})`);
-
-        try {
-            // storeId와 tableNumber 유효성 검사
-            const storeId = window.POSOrderScreen?.currentStoreId;
-            const tableNumber = window.POSOrderScreen?.currentTableNumber;
-            
-            if (!storeId || !tableNumber) {
-                throw new Error(`필수 정보 누락: storeId=${storeId}, tableNumber=${tableNumber}. POS 시스템이 제대로 초기화되지 않았습니다.`);
-            }
-
-            // batch API를 사용하여 한 번에 처리
             const requestBody = {
                 storeId: parseInt(storeId),
                 tableNumber: parseInt(tableNumber),
                 modifications: {
-                    add: {},
-                    remove: {
-                        [menuName]: changeAmount // changeAmount만큼 감소
-                    }
+                    add: addModifications,
+                    remove: removeModifications
                 }
             };
 
-            console.log(`📤 batch 감소 요청:`, requestBody);
-            console.log(`🔍 POSOrderScreen 상태:`, {
-                currentStoreId: window.POSOrderScreen?.currentStoreId,
-                currentTableNumber: window.POSOrderScreen?.currentTableNumber,
-                POSOrderScreen존재여부: !!window.POSOrderScreen
-            });
+            console.log(`📤 batch 수정 요청:`, requestBody);
 
             const response = await fetch('/api/pos/orders/modify-batch', {
                 method: 'POST',
@@ -548,91 +478,26 @@ const OrderModificationManager = {
             });
 
             if (!response.ok) {
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
-                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
-                }
-                throw new Error(errorMessage);
-            }
-
-            const result = await response.json();
-            console.log(`✅ batch ${menuName} 감소 완료:`, result);
-
-            return { 
-                successCount: changeAmount, // 실제 차감된 수량
-                result: result 
-            };
-
-        } catch (error) {
-            console.error(`❌ batch ${menuName} 감소 실패:`, error);
-            return {
-                successCount: 0,
-                error: `${menuName}: batch 감소 실패 - ${error.message}`
-            };
-        }
-    },
-
-    /**
-     * 증가 수정 처리 (batch 알고리즘 사용)
-     */
-    async processIncreaseModifications(increaseModifications) {
-        console.log(`📈 batch 알고리즘 증가 수정 처리: ${increaseModifications.length}개 메뉴`);
-
-        try {
-            // 증가 수정사항을 batch API 형태로 변환
-            const addModifications = {};
-            increaseModifications.forEach(mod => {
-                addModifications[mod.menuName] = Math.abs(mod.changeAmount);
-            });
-
-            // storeId와 tableNumber 유효성 검사
-            const storeId = window.POSOrderScreen?.currentStoreId;
-            const tableNumber = window.POSOrderScreen?.currentTableNumber;
-            
-            if (!storeId || !tableNumber) {
-                throw new Error(`필수 정보 누락: storeId=${storeId}, tableNumber=${tableNumber}. POS 시스템이 제대로 초기화되지 않았습니다.`);
-            }
-
-            const requestBody = {
-                storeId: parseInt(storeId),
-                tableNumber: parseInt(tableNumber),
-                modifications: {
-                    add: addModifications,
-                    remove: {}
-                }
-            };
-
-            console.log(`📋 batch 증가 요청:`, requestBody);
-            console.log(`🔍 POSOrderScreen 상태:`, {
-                currentStoreId: window.POSOrderScreen?.currentStoreId,
-                currentTableNumber: window.POSOrderScreen?.currentTableNumber,
-                POSOrderScreen존재여부: !!window.POSOrderScreen
-            });
-
-            const response = await fetch("/api/pos/orders/modify-batch", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || "batch 증가 처리 실패");
+                throw new Error(errorData.error || 'batch 수정 처리 실패');
             }
 
             const result = await response.json();
-            console.log("✅ batch 증가 처리 완료:", result);
+            console.log(`✅ batch 수정 완료:`, result);
 
-            return { success: true, result };
+            alert(`다중 주문 수정 완료!\n\n✅ 성공: ${this.pendingModifications.length}개 처리`);
+
+            // 초기화 및 새로고침
+            this.resetAllModifications();
+            await window.POSOrderScreen?.refreshOrders();
 
         } catch (error) {
-            console.error('❌ batch 증가 처리 실패:', error);
-            return { success: false, error: error.message };
+            console.error('❌ 다중 주문 수정 전체 실패:', error);
+            alert(`다중 주문 수정 중 전체 오류가 발생했습니다:\n${error.message}`);
         }
     },
+
+    
 
     /**
      * 모든 수정사항 초기화
