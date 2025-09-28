@@ -774,6 +774,7 @@ const POSOrderScreen = {
             return;
         }
 
+        OrderStateManager.clearUISelection()
         // 취소할 것이 없음
         console.log('ℹ️ 취소할 선택된 주문이나 수정사항이 없음');
         OrderUtilityManager.showToast("취소할 내용이 없습니다");

@@ -449,6 +449,8 @@ const OrderStateManager = {
     /**
      * 변경사항 취소
      */
+
+    
     cancelChanges() {
         console.log(`🚫 변경사항 취소: ${this.state.pendingChanges.size}개`);
         
