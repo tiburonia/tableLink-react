@@ -124,7 +124,7 @@ const OrderStateManager = {
     /**
      * 주문 행 선택 토글 (toggleOrderRowSelection용)
      * - 편집모드로 전환
-     * - 선택 상태 토글
+     * - 선택 상태 토글 (하지만 편집모드에서는 선택 유지)
      */
     toggleRowSelection(orderId, menuName, quantity, rowElement = null) {
         console.log(`🎯 행 선택 토글: ${menuName} (편집모드 전환)`);
@@ -133,20 +133,29 @@ const OrderStateManager = {
             selectedOrderMenuName: this.state.selectedOrder?.menuName,
             clickedMenuName: menuName,
             isEqual: this.state.selectedOrder?.menuName === menuName,
-            selectedOrderFull: this.state.selectedOrder
+            selectedOrderFull: this.state.selectedOrder,
+            isEditMode: this.state.isEditMode
         });
 
         // 1. 편집모드 전환
         this.state.isEditMode = true;
 
-        // 2. 이미 선택된 행이면 선택 해제
+        // 2. 이미 선택된 행을 다시 클릭한 경우
         if (this.state.selectedOrder && this.state.selectedOrder.menuName === menuName) {
-            console.log(`🔄 기존 선택 해제: ${menuName}`);
-            this.clearSelection();
-            // 편집모드는 변경사항이 있으면 유지
-            this.state.isEditMode = this.state.hasUnsavedChanges;
-            this.notifyStateChange('SELECTION_CLEARED');
-            return false;
+            console.log(`ℹ️ 이미 선택된 주문 재클릭: ${menuName} - 선택 상태 유지`);
+            
+            // 편집모드에서는 선택 해제하지 않고 선택 상태 유지
+            // UI만 다시 적용해서 시각적 피드백 제공
+            if (rowElement) {
+                this.applySelectionUI(rowElement);
+            }
+            
+            this.notifyStateChange('ROW_SELECTION_MAINTAINED', {
+                orderId,
+                menuName,
+                quantity
+            });
+            return true;
         }
 
         // 3. 새로운 행 선택
@@ -533,6 +542,18 @@ const OrderStateManager = {
         this.clearSelection();
         this.state.isEditMode = false;
         this.notifyStateChange('EDIT_MODE_EXITED');
+    },
+
+    /**
+     * 선택 해제 (명시적 호출용)
+     */
+    clearCurrentSelection() {
+        console.log('🔄 명시적 선택 해제 요청');
+        this.clearSelection();
+        // 편집모드는 변경사항이 있으면 유지
+        this.state.isEditMode = this.state.hasUnsavedChanges;
+        this.notifyStateChange('SELECTION_CLEARED');
+        return true;
     }
 };
 

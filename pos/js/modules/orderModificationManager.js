@@ -31,6 +31,7 @@ const OrderModificationManager = {
         switch (event.type) {
             case 'MENU_ADDED_WITH_SELECTION':
             case 'ROW_SELECTION_TOGGLED':
+            case 'ROW_SELECTION_MAINTAINED':
             case 'SELECTION_CLEARED':
             case 'CHANGES_CONFIRMED':
             case 'CHANGES_CANCELLED':
