@@ -52,6 +52,11 @@ const OrderModificationManager = {
         this.updateOrderDisplay();
         this.activateEditMode();
 
+        // 추가된 메뉴 행을 자동으로 선택
+        setTimeout(() => {
+            this.autoSelectMenuRow(menuId, menuName, newQuantity);
+        }, 100);
+
         console.log(`✅ 메뉴 추가 완료: ${menuName} (${originalQuantity} → ${newQuantity})`);
     },
 
@@ -137,10 +142,35 @@ const OrderModificationManager = {
     toggleOrderRowSelection(orderId, menuName, quantity) {
         console.log(`🎯 주문 행 선택: ${menuName} (ID: ${orderId})`);
 
-        // 정확한 선택자로 행 찾기
-        const rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"][data-menu-name="${menuName}"]`);
+        // 다양한 선택자로 행 찾기 시도
+        let rowElement = null;
+        
+        // 1차: data-order-id와 data-menu-name으로 찾기
+        rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"][data-menu-name="${menuName}"]`);
+        
+        // 2차: data-order-id만으로 찾기
+        if (!rowElement) {
+            rowElement = document.querySelector(`.pos-order-table tr[data-order-id="${orderId}"]`);
+        }
+        
+        // 3차: 메뉴명으로 찾기 (텍스트 매칭)
+        if (!rowElement) {
+            const allRows = document.querySelectorAll('.pos-order-table tr.order-row');
+            for (const row of allRows) {
+                const menuText = row.querySelector('.menu-info strong')?.textContent?.trim();
+                if (menuText === menuName) {
+                    rowElement = row;
+                    break;
+                }
+            }
+        }
+
         if (!rowElement) {
             console.warn(`⚠️ 주문 행을 찾을 수 없음: orderId=${orderId}, menuName=${menuName}`);
+            console.log('🔍 현재 DOM에서 사용 가능한 주문 행들:');
+            document.querySelectorAll('.pos-order-table tr.order-row').forEach((row, index) => {
+                console.log(`- 행 ${index}: orderId=${row.dataset.orderId}, menuName=${row.querySelector('.menu-info strong')?.textContent}`);
+            });
             return;
         }
 
@@ -577,6 +607,20 @@ const OrderModificationManager = {
         this.clearSelection();
         this.isEditMode = false;
         this.updateEditModeUI(false);
+    },
+
+    /**
+     * 메뉴 행 자동 선택 (addMenuItem 후 호출)
+     */
+    autoSelectMenuRow(menuId, menuName, quantity) {
+        console.log(`🎯 자동 선택 시도: ${menuName}`);
+        
+        // 기존 주문에서 orderId 찾기
+        const existingOrder = this.findExistingOrder(menuId, menuName);
+        const orderId = existingOrder ? existingOrder.id : menuId;
+        
+        // toggleOrderRowSelection 호출
+        this.toggleOrderRowSelection(orderId, menuName, quantity);
     },
 
     /**
