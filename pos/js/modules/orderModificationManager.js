@@ -142,14 +142,17 @@ const OrderModificationManager = {
      * 수정사항을 누적 배열에 추가/업데이트
      */
     addToPendingModifications(menuId, menuName, originalQuantity, newQuantity, actionType = 'auto') {
-        const existingIndex = this.pendingModifications.findIndex(mod => mod.menuId === menuId);
+        // 메뉴명 기준으로 기존 수정사항 찾기 (더 정확한 매칭)
+        const existingIndex = this.pendingModifications.findIndex(mod => 
+            mod.menuName === menuName
+        );
 
         if (existingIndex >= 0) {
             // 기존 수정사항 업데이트
             this.pendingModifications[existingIndex].newQuantity = newQuantity;
-            this.pendingModifications[existingIndex].changeAmount = originalQuantity - newQuantity;
+            this.pendingModifications[existingIndex].changeAmount = this.pendingModifications[existingIndex].originalQuantity - newQuantity;
             this.pendingModifications[existingIndex].actionType = actionType;
-            console.log(`🔄 기존 수정사항 업데이트: ${menuName} (원본: ${originalQuantity} → 새로운: ${newQuantity})`);
+            console.log(`🔄 기존 수정사항 업데이트: ${menuName} (원본: ${this.pendingModifications[existingIndex].originalQuantity} → 새로운: ${newQuantity})`);
         } else {
             // 새로운 수정사항 추가
             this.pendingModifications.push({
@@ -496,8 +499,8 @@ const OrderModificationManager = {
     /**
      * 헬퍼 함수들
      */
-    getOriginalQuantity(menuId) {
-        return window.POSOrderScreen?.getOriginalQuantity(menuId);
+    getOriginalQuantity(menuId, menuName = null) {
+        return window.POSOrderScreen?.getOriginalQuantity(menuId, menuName) || 0;
     },
 
     getMenuPrice(menuId) {

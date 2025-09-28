@@ -366,7 +366,7 @@ const POSOrderScreen = {
      */
     async addToOrder(menuId, menuName, price, storeId = null, cookStation = null) {
         try {
-            console.log(`🎯 메뉴 카드 클릭: ${menuName} (주문수정 모드 처리)`);
+            console.log(`🎯 메뉴 카드 클릭: ${menuName} (ID: ${menuId}) - 주문수정 모드 처리`);
 
             const isEditModeActive = this.pendingModifications.length > 0 || this.selectedOrder;
 
@@ -378,23 +378,60 @@ const POSOrderScreen = {
                 OrderUtilityManager.showToast(`➕ ${menuName} +1개 추가됨`);
             }
 
-            // 현재 해당 메뉴의 원본 수량 확인
+            // 현재 해당 메뉴의 원본 수량 확인 (개선된 로직)
             let originalQuantity = 0;
-            const existingOrder = this.currentOrders.find(order => 
-                (order.menuId === parseInt(menuId) || order.id === parseInt(menuId)) && 
+            const targetMenuId = parseInt(menuId);
+            
+            console.log(`🔍 원본 수량 검색 시작: menuId=${targetMenuId}, menuName="${menuName}"`);
+            console.log(`📋 현재 주문 목록:`, this.currentOrders.map(order => ({
+                id: order.id,
+                menuId: order.menuId,
+                menuName: order.menuName,
+                quantity: order.quantity,
+                isCart: order.isCart,
+                isNewMenu: order.isNewMenu
+            })));
+
+            // 1순위: menuId와 menuName 모두 매칭
+            let existingOrder = this.currentOrders.find(order => 
+                order.menuId === targetMenuId && 
                 order.menuName === menuName && 
                 !order.isCart && !order.isNewMenu
             );
 
-            if (existingOrder) {
-                originalQuantity = existingOrder.quantity;
-            } else {
-                originalQuantity = 0;
+            // 2순위: menuName만 매칭 (같은 메뉴지만 ID가 다를 수 있음)
+            if (!existingOrder) {
+                existingOrder = this.currentOrders.find(order => 
+                    order.menuName === menuName && 
+                    !order.isCart && !order.isNewMenu
+                );
+                if (existingOrder) {
+                    console.log(`🔍 메뉴명으로 매칭됨: ${menuName} (기존 ID: ${existingOrder.menuId}, 새 ID: ${targetMenuId})`);
+                }
             }
 
-            // 기존 수정사항에서 해당 메뉴 찾기
+            // 3순위: order.id와 menuId 매칭 (레거시 호환)
+            if (!existingOrder) {
+                existingOrder = this.currentOrders.find(order => 
+                    order.id === targetMenuId && 
+                    !order.isCart && !order.isNewMenu
+                );
+                if (existingOrder) {
+                    console.log(`🔍 order.id로 매칭됨: ID ${targetMenuId}`);
+                }
+            }
+
+            if (existingOrder) {
+                originalQuantity = existingOrder.quantity;
+                console.log(`✅ 원본 수량 발견: ${menuName} = ${originalQuantity}개`);
+            } else {
+                originalQuantity = 0;
+                console.log(`📝 새 메뉴: ${menuName} (원본 수량: 0)`);
+            }
+
+            // 기존 수정사항에서 해당 메뉴 찾기 (menuName 기준)
             const existingModification = this.pendingModifications.find(mod => 
-                mod.menuId === parseInt(menuId) && mod.menuName === menuName
+                mod.menuName === menuName
             );
 
             let newQuantity;
@@ -794,40 +831,76 @@ const POSOrderScreen = {
         return 'KITCHEN';
     },
 
-    getOriginalQuantity(menuId) {
-        console.log(`🔍 원본 수량 조회: menuId=${menuId}, currentOrders 개수=${this.currentOrders.length}`);
+    getOriginalQuantity(menuId, menuName = null) {
+        console.log(`🔍 원본 수량 조회: menuId=${menuId}, menuName="${menuName}", currentOrders 개수=${this.currentOrders.length}`);
 
         if (!this.currentOrders || this.currentOrders.length === 0) {
             console.warn('⚠️ currentOrders가 비어있음');
-            return null;
+            return 0;
         }
 
         let originalOrder = null;
         const targetMenuId = parseInt(menuId);
 
+        // 1순위: menuId와 menuName 모두 매칭 (가장 정확)
+        if (menuName) {
+            originalOrder = this.currentOrders.find(order => 
+                order.menuId === targetMenuId && 
+                order.menuName === menuName && 
+                !order.isCart && !order.isNewMenu
+            );
+            
+            if (originalOrder) {
+                console.log(`✅ [1순위] menuId + menuName 매칭: ${originalOrder.menuName} = ${originalOrder.quantity}개`);
+                return originalOrder.quantity;
+            }
+        }
+
+        // 2순위: menuName만 매칭 (ID가 다를 수 있지만 같은 메뉴)
+        if (menuName) {
+            originalOrder = this.currentOrders.find(order => 
+                order.menuName === menuName && 
+                !order.isCart && !order.isNewMenu
+            );
+            
+            if (originalOrder) {
+                console.log(`✅ [2순위] menuName 매칭: ${originalOrder.menuName} = ${originalOrder.quantity}개 (ID 차이: ${originalOrder.menuId} vs ${targetMenuId})`);
+                return originalOrder.quantity;
+            }
+        }
+
+        // 3순위: menuId만 매칭
         originalOrder = this.currentOrders.find(order => 
-            order.menuId === targetMenuId && !order.isCart
+            order.menuId === targetMenuId && !order.isCart && !order.isNewMenu
         );
 
-        if (!originalOrder) {
-            originalOrder = this.currentOrders.find(order => 
-                order.id === targetMenuId && !order.isCart
-            );
+        if (originalOrder) {
+            console.log(`✅ [3순위] menuId 매칭: ${originalOrder.menuName || 'Unknown'} = ${originalOrder.quantity}개`);
+            return originalOrder.quantity;
         }
 
-        if (!originalOrder) {
-            originalOrder = this.currentOrders.find(order => 
-                order.menu_id === targetMenuId && !order.isCart
-            );
-        }
+        // 4순위: order.id와 menuId 매칭 (레거시 호환)
+        originalOrder = this.currentOrders.find(order => 
+            order.id === targetMenuId && !order.isCart && !order.isNewMenu
+        );
 
         if (originalOrder) {
-            console.log(`✅ 원본 수량 발견: ${originalOrder.menuName || originalOrder.menu_name} = ${originalOrder.quantity}개`);
+            console.log(`✅ [4순위] order.id 매칭: ${originalOrder.menuName || 'Unknown'} = ${originalOrder.quantity}개`);
             return originalOrder.quantity;
-        } else {
-            console.error(`❌ 원본 수량을 찾을 수 없음: menuId=${menuId}`);
-            return null;
         }
+
+        // 5순위: menu_id 필드 매칭 (다른 스키마 호환)
+        originalOrder = this.currentOrders.find(order => 
+            order.menu_id === targetMenuId && !order.isCart && !order.isNewMenu
+        );
+
+        if (originalOrder) {
+            console.log(`✅ [5순위] menu_id 매칭: ${originalOrder.menuName || originalOrder.menu_name || 'Unknown'} = ${originalOrder.quantity}개`);
+            return originalOrder.quantity;
+        }
+
+        console.log(`ℹ️ 원본 수량을 찾을 수 없음: menuId=${menuId}, menuName="${menuName}" - 새 메뉴로 간주`);
+        return 0;
     },
 
     /**
