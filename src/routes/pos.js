@@ -1958,7 +1958,6 @@ async function updateOrderTotalAmount(client, orderId) {
     UPDATE orders
     SET 
       total_price = $2,
-      total_amount = $2,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = $1
   `, [orderId, itemTotal]);
@@ -2341,12 +2340,11 @@ router.post('/orders/modify-batch', async (req, res) => {
           user_id,
           guest_phone,
           source,
-          status,
           payment_status,
           total_price,
           session_status,
           created_at
-        ) VALUES ($1, $2, NULL, NULL, 'POS', 'OPEN', 'PENDING', 0, 'OPEN', NOW())
+        ) VALUES ($1, $2, NULL, NULL, 'POS', 'UNPAID', 0, 'OPEN', NOW())
         RETURNING id
       `, [storeId, tableNumber]);
       
