@@ -403,18 +403,17 @@ const OrderModificationManager = {
     },
 
     /**
-     * 모든 누적된 수정사항 확정
+     * 모든 누적된 수정사항 확정 (batch 알고리즘만 사용)
      */
     async confirmAllPendingModifications() {
         if (this.pendingModifications.length === 0) {
             console.log('ℹ️ 확정할 수정사항이 없습니다.');
-            return window.POSOrderScreen?.confirmOrder(); // 일반 주문 확정으로 진행
+            return window.POSOrderScreen?.confirmOrder();
         }
 
         try {
-            console.log(`🔧 다중 주문 수정 확정 시작: ${this.pendingModifications.length}개 메뉴`);
+            console.log(`🔧 batch 주문 수정 확정 시작: ${this.pendingModifications.length}개 메뉴`);
 
-            // 기본 정보 검증
             const storeId = window.POSOrderScreen?.currentStoreId;
             const tableNumber = window.POSOrderScreen?.currentTableNumber;
 
@@ -422,7 +421,7 @@ const OrderModificationManager = {
                 throw new Error('매장 정보 또는 테이블 정보가 없습니다.');
             }
 
-            // 수정사항을 증가/감소로 분류하고 통합
+            // 수정사항을 증가/감소로 분류
             const { decreaseModifications, increaseModifications } = this.categorizeModifications();
 
             // 확인 메시지 생성
@@ -439,42 +438,31 @@ const OrderModificationManager = {
                 )
             ].join('\n');
 
-            const confirmMessage = `다음 수정사항을 확정하시겠습니까?\n\n${modificationsText}`;
-
-            if (!confirm(confirmMessage)) {
-                console.log('🚫 사용자가 다중 주문 수정을 취소했습니다.');
+            if (!confirm(`다음 수정사항을 확정하시겠습니까?\n\n${modificationsText}`)) {
+                console.log('🚫 사용자가 주문 수정을 취소했습니다.');
                 return;
             }
 
-            // batch 알고리즘으로 모든 수정사항을 한 번에 처리
+            // batch 알고리즘용 데이터 구성
             const addModifications = {};
             const removeModifications = {};
 
-            // 증가 수정사항을 add에 추가
             increaseModifications.forEach(mod => {
                 addModifications[mod.menuName] = Math.abs(mod.changeAmount);
             });
 
-            // 감소 수정사항을 remove에 추가
             decreaseModifications.forEach(mod => {
                 removeModifications[mod.menuName] = mod.changeAmount;
             });
 
-            const requestBody = {
-                storeId: parseInt(storeId),
-                tableNumber: parseInt(tableNumber),
-                modifications: {
-                    add: addModifications,
-                    remove: removeModifications
-                }
-            };
-
-            console.log(`📤 batch 수정 요청:`, requestBody);
-
             const response = await fetch('/api/pos/orders/modify-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody),
+                body: JSON.stringify({
+                    storeId: parseInt(storeId),
+                    tableNumber: parseInt(tableNumber),
+                    modifications: { add: addModifications, remove: removeModifications }
+                }),
             });
 
             if (!response.ok) {
@@ -485,28 +473,22 @@ const OrderModificationManager = {
             const result = await response.json();
             console.log(`✅ batch 수정 완료:`, result);
 
-            alert(`다중 주문 수정 완료!\n\n✅ 성공: ${this.pendingModifications.length}개 처리`);
+            alert(`주문 수정 완료!\n\n✅ 성공: ${this.pendingModifications.length}개 처리`);
 
-            // 초기화 및 새로고침
             this.resetAllModifications();
             await window.POSOrderScreen?.refreshOrders();
 
         } catch (error) {
-            console.error('❌ 다중 주문 수정 전체 실패:', error);
-            alert(`다중 주문 수정 중 전체 오류가 발생했습니다:\n${error.message}`);
+            console.error('❌ 주문 수정 실패:', error);
+            alert(`주문 수정 중 오류가 발생했습니다:\n${error.message}`);
         }
     },
-
-    
 
     /**
      * 모든 수정사항 초기화
      */
     resetAllModifications() {
-        // 누적된 수정사항 초기화
         this.pendingModifications = [];
-
-        // 편집 모드 해제
         this.selectedOrder = null;
         this.updateEditModeUI(false);
     },
