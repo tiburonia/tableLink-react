@@ -57,18 +57,25 @@ const POSOrderScreen = {
     },
 
     get pendingModifications() {
-        // 하위 호환성을 위해 Map을 Array로 변환
-        return Array.from(OrderModificationManager.pendingChanges.values());
+        // 하위 호환성을 위해 Map을 Array로 변환 (안전한 접근)
+        const pendingChanges = OrderModificationManager?.pendingChanges;
+        if (pendingChanges && typeof pendingChanges.values === 'function') {
+            return Array.from(pendingChanges.values());
+        }
+        return [];
     },
     set pendingModifications(value) {
-        // 하위 호환성을 위해 Array를 Map으로 변환
-        OrderModificationManager.pendingChanges.clear();
-        if (Array.isArray(value)) {
-            value.forEach(item => {
-                if (item.menuName) {
-                    OrderModificationManager.pendingChanges.set(item.menuName, item);
-                }
-            });
+        // 하위 호환성을 위해 Array를 Map으로 변환 (안전한 접근)
+        const pendingChanges = OrderModificationManager?.pendingChanges;
+        if (pendingChanges && typeof pendingChanges.clear === 'function') {
+            pendingChanges.clear();
+            if (Array.isArray(value)) {
+                value.forEach(item => {
+                    if (item.menuName && typeof pendingChanges.set === 'function') {
+                        pendingChanges.set(item.menuName, item);
+                    }
+                });
+            }
         }
     },
 
@@ -754,9 +761,13 @@ const POSOrderScreen = {
     cancelSelectedOrders() {
         console.log('🚫 선택된 주문 취소 시작');
 
-        // OrderModificationManager의 통합 취소 로직 사용
-        if (OrderModificationManager.pendingChanges.size > 0 || OrderModificationManager.selectedOrder) {
-            OrderModificationManager.cancelAllChanges();
+        // OrderModificationManager의 통합 취소 로직 사용 (안전한 접근)
+        const pendingChanges = OrderModificationManager?.pendingChanges;
+        const hasPendingChanges = pendingChanges && typeof pendingChanges.size === 'number' ? pendingChanges.size > 0 : false;
+        const hasSelectedOrder = OrderModificationManager?.selectedOrder;
+
+        if (hasPendingChanges || hasSelectedOrder) {
+            OrderModificationManager?.cancelAllChanges();
             return;
         }
 

@@ -6,6 +6,11 @@
  */
 
 const OrderModificationManager = {
+    // pendingChanges 속성 명시적 정의 (하위 호환성)
+    get pendingChanges() {
+        return OrderStateManager?.getPendingChanges() || new Map();
+    },
+
     /**
      * 초기화
      */
