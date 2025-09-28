@@ -367,9 +367,7 @@ const OrderModificationManager = {
                         </td>
                         <td class="col-quantity">
                             <div class="quantity-control-table">
-                                <span class="quantity-display ${isModified ? 'modified' : ''}">${order.quantity}</span>
-                                ${isModified && order.originalQuantity !== undefined ? 
-                                    `<span class="original-quantity">(원본: ${order.originalQuantity})</span>` : ''}
+                                <span class="quantity-display">${order.quantity}</span>
                             </div>
                         </td>
                         <td class="col-total">

@@ -464,17 +464,6 @@ body {
     margin-left: 8px;
 }
 
-.quantity-display.modified {
-    font-weight: bold;
-    color: #856404;
-}
-
-.original-quantity {
-    font-size: 11px;
-    color: #6c757d;
-    margin-left: 4px;
-}
-
 /* 편집 모드 표시기 */
 .edit-mode-indicator {
     position: fixed;
@@ -601,18 +590,6 @@ body {
     border: 1px solid #e5e7eb;
     border-radius: 6px;
     padding: 2px 6px;
-}
-
-/* 수정된 수량 표시 */
-.quantity-display.modified {
-    font-weight: 900;
-    animation: quantityChange 0.5s ease-in-out;
-}
-
-@keyframes quantityChange {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
 }
 
 /* 선택된 주문 행 */
@@ -2752,27 +2729,7 @@ body {
     }
 }
 
-/* 수정된 수량 표시 */
-.quantity-display.modified {
-    color: #f59e0b !important;
-    font-weight: 700;
-    background: #fef3c7;
-    padding: 2px 6px;
-    border-radius: 4px;
-    animation: pulse 0.5s ease-in-out;
-}
 
-@keyframes pulse {
-    0% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-    100% {
-        transform: scale(1);
-    }
-}
 
 /* 컨트롤 버튼 활성화 상태 */
 .control-btn.quantity-minus.active {
