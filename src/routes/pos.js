@@ -2266,7 +2266,178 @@ router.post('/orders/modify-quantity', async (req, res) => {
   }
 });
 
+/**
+ * [POST] /orders/modify-multiple - POS 다중 메뉴 수정 API
+ */
+router.post('/orders/modify-multiple', async (req, res) => {
+  const client = await pool.connect();
 
+  try {
+    const { storeId, tableNumber, modifications } = req.body;
+
+    console.log(`🔧 POS 다중 메뉴 수정 요청: 매장 ${storeId}, 테이블 ${tableNumber}, ${modifications.length}개 수정사항`);
+
+    // 입력 검증
+    if (!storeId || !tableNumber || !modifications || !Array.isArray(modifications) || modifications.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    const results = [];
+    let successCount = 0;
+    let errorCount = 0;
+
+    // 각 수정사항을 순차적으로 처리
+    for (const modification of modifications) {
+      try {
+        const { menuId, menuName, currentQuantity, newQuantity } = modification;
+
+        console.log(`🔧 메뉴 수정: ${menuName} (${currentQuantity} → ${newQuantity})`);
+
+        // 수량 변화가 없으면 건너뛰기
+        if (currentQuantity === newQuantity) {
+          console.log(`ℹ️ 수량 변화 없음, 건너뛰기: ${menuName}`);
+          continue;
+        }
+
+        // 수량 증가는 지원하지 않음
+        if (newQuantity > currentQuantity) {
+          throw new Error(`수량 증가는 지원하지 않습니다: ${menuName}`);
+        }
+
+        // 다중 수량 감소 처리
+        let remainingQuantity = currentQuantity;
+        while (remainingQuantity > newQuantity && remainingQuantity > 0) {
+          // 단일 수량 감소 API 내부 로직 재사용
+          const singleResult = await router.processSingleQuantityDecrease( // Use router.processSingleQuantityDecrease
+            client, 
+            storeId, 
+            tableNumber, 
+            menuId, 
+            menuName, 
+            remainingQuantity
+          );
+
+          if (!singleResult.success) {
+            throw new Error(singleResult.error);
+          }
+
+          remainingQuantity--;
+        }
+
+        results.push({
+          menuId,
+          menuName,
+          originalQuantity: currentQuantity,
+          newQuantity: remainingQuantity,
+          success: true,
+          decreaseCount: currentQuantity - remainingQuantity
+        });
+
+        successCount++;
+
+      } catch (error) {
+        console.error(`❌ 메뉴 수정 실패: ${modification.menuName}`, error);
+        results.push({
+          menuId: modification.menuId,
+          menuName: modification.menuName,
+          success: false,
+          error: error.message
+        });
+        errorCount++;
+      }
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ POS 다중 메뉴 수정 완료: 성공 ${successCount}개, 실패 ${errorCount}개`);
+
+    // KDS 이벤트 발생 (성공한 수정사항만)
+    if (successCount > 0) {
+      try {
+        // 수정된 주문의 현재 상태 조회
+        const activeOrderResult = await pool.query(`
+          SELECT DISTINCT o.id as order_id
+          FROM orders o
+          JOIN order_tickets ot ON o.id = ot.order_id
+          WHERE o.store_id = $1 
+            AND o.table_num = $2 
+            AND ot.paid_status = 'UNPAID'
+            AND o.session_status = 'OPEN'
+            AND ot.source = 'POS'
+          ORDER BY o.created_at DESC
+          LIMIT 1
+        `, [parseInt(storeId), parseInt(tableNumber)]);
+
+        if (activeOrderResult.rows.length > 0) {
+          const orderId = activeOrderResult.rows[0].order_id;
+
+          // 현재 활성 아이템들 조회
+          const currentItemsResult = await pool.query(`
+            SELECT 
+              oi.id,
+              oi.menu_name as name,
+              oi.quantity,
+              oi.unit_price as price,
+              oi.cook_station,
+              oi.menu_id
+            FROM order_items oi
+            JOIN order_tickets ot ON oi.ticket_id = ot.id
+            WHERE ot.order_id = $1 
+              AND oi.item_status != 'CANCELED'
+              AND ot.status != 'CANCELED'
+              AND ot.paid_status = 'UNPAID'
+            ORDER BY oi.created_at DESC
+          `, [orderId]);
+
+          const kdsEventData = {
+            orderId: orderId,
+            ticketId: null,
+            storeId: parseInt(storeId),
+            tableNumber: parseInt(tableNumber),
+            items: currentItemsResult.rows,
+            modifications: {
+              type: 'multiple_menu_update',
+              results: results.filter(r => r.success),
+              successCount: successCount,
+              totalRequested: modifications.length
+            }
+          };
+
+          eventBus.emit('order.modified', kdsEventData);
+          console.log(`📡 KDS 이벤트 발생: 다중 메뉴 수정 완료 (성공 ${successCount}개)`);
+        }
+      } catch (kdsError) {
+        console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+      }
+    }
+
+    res.json({
+      success: errorCount === 0,
+      message: `총 ${modifications.length}개 메뉴 중 ${successCount}개 성공, ${errorCount}개 실패`,
+      results: results,
+      summary: {
+        totalRequested: modifications.length,
+        successCount: successCount,
+        errorCount: errorCount
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 다중 메뉴 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '다중 메뉴 수정 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
 
 /**
  * [POST] /orders/modify-batch - POS 주문 수정 (batch 알고리즘)
@@ -2625,7 +2796,279 @@ router.post('/orders/modify-batch', async (req, res) => {
   }
 });
 
+/**
+ * [POST] /orders/modify - POS 주문 수정 (수량 감소/삭제 전용)
+ */
+router.post('/orders/modify', async (req, res) => {
+  const client = await pool.connect();
 
+  try {
+    const { storeId, tableNumber, modifications } = req.body;
+
+    console.log(`🔧 POS 주문 수정 요청: 매장 ${storeId}, 테이블 ${tableNumber}, ${modifications.length}개 수정사항`);
+
+    // 입력 검증
+    if (!storeId || !tableNumber || !modifications || !Array.isArray(modifications) || modifications.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: '필수 정보가 누락되었습니다'
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. 현재 테이블의 활성 주문 조회
+    const activeOrderResult = await client.query(`
+      SELECT DISTINCT o.id as order_id, o.created_at, o.total_price
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1
+        AND o.table_num = $2
+        AND ot.paid_status = 'UNPAID'
+        AND o.session_status = 'OPEN'
+        AND ot.source = 'POS'
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [parseInt(storeId), parseInt(tableNumber)]);
+
+    if (activeOrderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: '수정할 활성 주문이 없습니다'
+      });
+    }
+
+    const orderId = activeOrderResult.rows[0].order_id;
+    console.log(`📋 수정 대상 주문 ID: ${orderId}`);
+
+    // 2. 각 메뉴 수정사항 처리
+    const modificationResults = [];
+
+    for (const modification of modifications) {
+      const { menuName, currentQuantity, newQuantity, action } = modification;
+
+      console.log(`🔧 메뉴 수정 처리: ${menuName} (${currentQuantity} → ${newQuantity})`);
+
+      // 해당 메뉴의 최신 티켓 조회 (batch_no 최대값)
+      const latestTicketResult = await client.query(`
+        SELECT ot.id as ticket_id, ot.batch_no, ot.version
+        FROM order_tickets ot
+        JOIN order_items oi ON ot.id = oi.ticket_id
+        WHERE ot.order_id = $1
+          AND oi.menu_name = $2
+          AND ot.source = 'POS'
+          AND ot.paid_status = 'UNPAID'
+        ORDER BY ot.batch_no DESC, ot.version DESC
+        LIMIT 1
+      `, [orderId, menuName]);
+
+      if (latestTicketResult.rows.length === 0) {
+        console.warn(`⚠️ 메뉴 ${menuName}의 활성 티켓을 찾을 수 없음`);
+        continue;
+      }
+
+      const latestTicket = latestTicketResult.rows[0];
+      const { ticket_id: oldTicketId, batch_no: oldBatchNo, version: oldVersion } = latestTicket;
+
+      // 기존 티켓의 모든 아이템들을 CANCELLED 처리
+      await client.query(`
+        UPDATE order_items
+        SET item_status = 'CANCELED', updated_at = NOW()
+        WHERE ticket_id = $1
+      `, [oldTicketId]);
+
+      console.log(`❌ 기존 티켓 ${oldTicketId}의 모든 아이템 CANCELED 처리`);
+
+      // 새 티켓 생성 (사용자 알고리즘: 수정 주문시 batch_no 동일 유지, version 증가)
+      const newTicketResult = await client.query(`
+        INSERT INTO order_tickets (
+          order_id,
+          store_id,
+          batch_no,
+          version,
+          status,
+          payment_type,
+          source,
+          table_num,
+          created_at,
+          paid_status
+        ) VALUES ($1, $2, $3, $4, 'PENDING', 'POSTPAID', 'POS', $5, NOW(), 'UNPAID')
+        RETURNING id, batch_no, version
+      `, [orderId, storeId, oldBatchNo, (oldVersion || 0) + 1, tableNumber]);
+
+      const newTicketId = newTicketResult.rows[0].id;
+      const newVersion = newTicketResult.rows[0].version;
+      const newBatchNo = newTicketResult.rows[0].batch_no;
+
+      console.log(`➕ 새 버전 티켓 생성: ${newTicketId} (batch: ${newBatchNo}, version: ${newVersion})`);
+      console.log(`🔄 수정 주문 알고리즘: batch_no=${oldBatchNo}→${newBatchNo}, version=${oldVersion}→${newVersion}`);
+
+      // 기존 티켓의 다른 아이템들을 새 티켓에 복사 (수정 대상 메뉴 제외)
+      const otherItemsResult = await client.query(`
+        SELECT menu_id, menu_name, unit_price, quantity, total_price, cook_station
+        FROM order_items
+        WHERE ticket_id = $1
+          AND menu_name != $2
+          AND item_status = 'CANCELED'
+      `, [oldTicketId, menuName]);
+
+      for (const otherItem of otherItemsResult.rows) {
+        await client.query(`
+          INSERT INTO order_items (
+            order_id,
+            ticket_id,
+            menu_id,
+            menu_name,
+            unit_price,
+            quantity,
+            total_price,
+            item_status,
+            cook_station,
+            created_at,
+            store_id
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, NOW(), $9)
+        `, [
+          orderId,
+          newTicketId,
+          otherItem.menu_id,
+          otherItem.menu_name,
+          otherItem.unit_price,
+          otherItem.quantity,
+          otherItem.total_price,
+          otherItem.cook_station,
+          storeId
+        ]);
+      }
+
+      // 수정된 메뉴를 새 티켓에 추가 (수량이 0이 아닌 경우만)
+      if (newQuantity > 0) {
+        // 원본 아이템 정보 조회
+        const originalItemResult = await client.query(`
+          SELECT menu_id, unit_price, cook_station
+          FROM order_items
+          WHERE ticket_id = $1 AND menu_name = $2
+          LIMIT 1
+        `, [oldTicketId, menuName]);
+
+        if (originalItemResult.rows.length > 0) {
+          const originalItem = originalItemResult.rows[0];
+
+          await client.query(`
+            INSERT INTO order_items (
+              order_id,
+              ticket_id,
+              menu_id,
+              menu_name,
+              unit_price,
+              quantity,
+              total_price,
+              item_status,
+              cook_station,
+              created_at,
+              store_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', $8, NOW(), $9)
+          `, [
+            orderId,
+            newTicketId,
+            originalItem.menu_id,
+            menuName,
+            originalItem.unit_price,
+            newQuantity,
+            originalItem.unit_price * newQuantity,
+            originalItem.cook_station,
+            storeId
+          ]);
+
+          console.log(`✅ 수정된 메뉴 추가: ${menuName} (${newQuantity}개)`);
+        }
+      } else {
+        console.log(`🗑️ 메뉴 완전 삭제: ${menuName}`);
+      }
+
+      modificationResults.push({
+        menuName: menuName,
+        oldTicketId: oldTicketId,
+        newTicketId: newTicketId,
+        oldQuantity: currentQuantity,
+        newQuantity: newQuantity,
+        action: action
+      });
+    }
+
+    // 주문 총 금액 자동 업데이트
+    try {
+      await updateOrderTotalAmount(client, orderId);
+    } catch (updateError) {
+      console.warn(`⚠️ 주문 ${orderId} 총 금액 자동 업데이트 실패:`, updateError.message);
+      // 트랜잭션을 롤백하지 않고 경고만 로그
+    }
+
+    await client.query('COMMIT');
+
+    console.log(`✅ POS 주문 수정 완료: 주문 ID ${orderId}, ${modificationResults.length}개 메뉴 수정`);
+
+    // KDS 이벤트 발생
+    try {
+      // 수정된 주문의 현재 아이템들 조회
+      const currentItemsResult = await pool.query(`
+        SELECT 
+          oi.id,
+          oi.menu_name as name,
+          oi.quantity,
+          oi.unit_price as price,
+          oi.cook_station,
+          oi.menu_id
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status != 'CANCELED'
+          AND ot.status != 'CANCELED'
+          AND ot.paid_status = 'UNPAID'
+        ORDER BY oi.created_at DESC
+      `, [orderId]);
+
+      const kdsEventData = {
+        orderId: orderId,
+        ticketId: null,
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        items: currentItemsResult.rows,
+        modifications: {
+          type: 'order_modification',
+          results: modificationResults,
+          modifiedCount: modificationResults.length
+        }
+      };
+
+      eventBus.emit('order.modified', kdsEventData);
+      console.log(`📡 KDS 이벤트 발생: 주문 수정 완료 (${modificationResults.length}개 메뉴 수정)`);
+    } catch (kdsError) {
+      console.warn('⚠️ KDS 이벤트 발생 실패:', kdsError.message);
+    }
+
+    // SSE 브로드캐스트
+    if (global.broadcastPOSTableUpdate) {
+      global.broadcastPOSTableUpdate(storeId, tableNumber);
+    }
+
+    res.json({
+      success: true,
+      orderId: orderId,
+      modifications: modificationResults,
+      message: '주문 수정이 완료되었습니다'
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ POS 주문 수정 실패:', error);
+    res.status(500).json({
+      success: false,
+      error: '주문 수정 중 오류가 발생했습니다: ' + error.message
+    });
+  } finally {
+    client.release();
+  }
+});
 
 /**
  * [GET] /stores/:storeId/table/:tableId/mixed-order-items - TLL 연동 교차주문 아이템 조회
