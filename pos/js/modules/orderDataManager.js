@@ -334,44 +334,7 @@ const OrderDataManager = {
     /**
      * 주문 수량 수정 API 호출
      */
-    async modifyOrderQuantity(storeId, tableNumber, menuId, menuName, currentQuantity) {
-        try {
-            const requestData = {
-                storeId: parseInt(storeId),
-                tableNumber: parseInt(tableNumber),
-                menuId: parseInt(menuId),
-                menuName: menuName,
-                currentQuantity: currentQuantity
-            };
-
-            console.log(`📤 수량 수정 API 호출:`, requestData);
-
-            const response = await fetch('/api/pos/orders/modify-quantity', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestData),
-            });
-
-            if (!response.ok) {
-                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-                try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.error || errorMessage;
-                } catch (parseError) {
-                    console.warn('⚠️ 에러 응답 파싱 실패:', parseError);
-                }
-                throw new Error(errorMessage);
-            }
-
-            const result = await response.json();
-            console.log(`✅ 수량 수정 완료:`, result);
-
-            return { success: true, result };
-        } catch (error) {
-            console.error('❌ 수량 수정 실패:', error);
-            return { success: false, error: error.message };
-        }
-    },
+    
 
     /**
      * 기본 메뉴 데이터
