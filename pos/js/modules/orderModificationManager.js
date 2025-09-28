@@ -64,8 +64,15 @@ const OrderModificationManager = {
             return;
         }
 
-        const { menuName, price } = this.selectedOrder;
-        this.addMenuItem(this.selectedOrder.menuId, menuName, price, 1);
+        console.log(`📈 선택된 주문 수량 증가: ${this.selectedOrder.menuName}`);
+        
+        // addMenuItem 메서드를 직접 호출하여 일관성 유지
+        this.addMenuItem(
+            this.selectedOrder.menuId, 
+            this.selectedOrder.menuName, 
+            this.selectedOrder.price || this.getMenuPrice(this.selectedOrder.menuId), 
+            1
+        );
     },
 
     /**
@@ -77,9 +84,19 @@ const OrderModificationManager = {
             return;
         }
 
+        console.log(`📉 선택된 주문 수량 감소: ${this.selectedOrder.menuName}`);
+
         const menuName = this.selectedOrder.menuName;
+        const menuId = this.selectedOrder.menuId;
+        const price = this.selectedOrder.price || this.getMenuPrice(menuId);
+
+        // 기존 주문에서 원본 수량 찾기
+        const existingOrder = this.findExistingOrder(menuId, menuName);
+        const originalQuantity = existingOrder ? existingOrder.quantity : 0;
+
+        // 현재 변경사항에서 현재 수량 가져오기
         const currentChange = this.pendingChanges.get(menuName);
-        const currentQuantity = currentChange ? currentChange.newQuantity : this.selectedOrder.quantity;
+        const currentQuantity = currentChange ? currentChange.newQuantity : originalQuantity;
 
         if (currentQuantity <= 1) {
             if (!confirm(`${menuName}을(를) 완전히 삭제하시겠습니까?`)) {
@@ -89,20 +106,21 @@ const OrderModificationManager = {
 
         const newQuantity = Math.max(0, currentQuantity - 1);
 
-        // 변경사항 저장
+        // 변경사항 저장 (addMenuItem과 동일한 로직)
         this.setPendingChange(menuName, {
-            menuId: this.selectedOrder.menuId,
+            menuId: parseInt(menuId),
             menuName: menuName,
-            price: this.selectedOrder.price || this.getMenuPrice(this.selectedOrder.menuId),
-            originalQuantity: this.selectedOrder.originalQuantity || this.getOriginalQuantity(this.selectedOrder.menuId, menuName),
+            price: price,
+            originalQuantity: originalQuantity,
             newQuantity: newQuantity,
             changeType: 'minus'
         });
 
         // UI 업데이트
         this.updateOrderDisplay();
+        this.activateEditMode();
 
-        console.log(`📉 수량 감소: ${menuName} → ${newQuantity}개`);
+        console.log(`✅ 수량 감소 완료: ${menuName} (${originalQuantity} → ${newQuantity})`);
     },
 
     /**
