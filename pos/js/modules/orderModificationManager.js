@@ -32,6 +32,7 @@ const OrderModificationManager = {
             case 'MENU_ADDED_WITH_SELECTION':
             case 'ROW_SELECTION_TOGGLED':
             case 'ROW_SELECTION_MAINTAINED':
+            case 'QUANTITY_UPDATED':
             case 'SELECTION_CLEARED':
             case 'CHANGES_CONFIRMED':
             case 'CHANGES_CANCELLED':
@@ -207,18 +208,35 @@ const OrderModificationManager = {
      */
     updateOrderDisplay() {
         const posOrderList = document.getElementById("posOrderList");
-        if (!posOrderList) return;
+        if (!posOrderList) {
+            console.warn('⚠️ posOrderList 요소를 찾을 수 없음');
+            return;
+        }
 
-        // 상태 관리자에서 표시용 데이터 가져오기
-        const displayOrders = OrderStateManager.generateDisplayOrders();
+        try {
+            // 상태 관리자에서 표시용 데이터 가져오기
+            const displayOrders = OrderStateManager?.generateDisplayOrders() || [];
 
-        // UI 렌더링
-        posOrderList.innerHTML = this.renderOrderTable(displayOrders);
+            // UI 렌더링
+            posOrderList.innerHTML = this.renderOrderTable(displayOrders);
 
-        // 선택 상태 복원
-        this.restoreSelectionUI();
+            // 선택 상태 복원 (약간의 지연 후)
+            setTimeout(() => {
+                this.restoreSelectionUI();
+            }, 10);
 
-        console.log(`🔄 주문 표시 업데이트 완료: ${displayOrders.length}개 항목`);
+            console.log(`🔄 주문 표시 업데이트 완료: ${displayOrders.length}개 항목`);
+
+            // POSOrderScreen의 currentOrders도 동기화
+            if (window.POSOrderScreen && displayOrders.length > 0) {
+                // 기존 currentOrders에서 카트가 아닌 항목들을 표시 주문으로 교체
+                const nonCartOrders = window.POSOrderScreen.currentOrders?.filter(order => order.isCart || order.sessionId) || [];
+                window.POSOrderScreen.currentOrders = [...displayOrders, ...nonCartOrders];
+            }
+
+        } catch (error) {
+            console.error('❌ 주문 표시 업데이트 실패:', error);
+        }
     },
 
     /**

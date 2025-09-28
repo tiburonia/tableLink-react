@@ -121,6 +121,12 @@ const POSOrderScreen = {
             // 이벤트 리스너 설정
             OrderEventManager.setupEventListeners();
 
+            // OrderModificationManager 초기화 및 원본 데이터 설정
+            if (typeof OrderModificationManager !== 'undefined') {
+                OrderModificationManager.initialize();
+                OrderModificationManager.setOriginalOrders(this.currentOrders);
+            }
+
         } catch (error) {
             console.error("❌ 주문 화면 렌더링 실패:", error);
             POSCore.showError("주문 화면을 불러올 수 없습니다.");
@@ -188,6 +194,11 @@ const POSOrderScreen = {
             this.currentOrders = [];
             this.currentOrders = await OrderDataManager.loadCurrentOrders(storeId, tableNumber);
             await this.loadTLLOrders(storeId, tableNumber);
+
+            // OrderModificationManager에 원본 주문 데이터 설정
+            if (typeof OrderModificationManager !== 'undefined' && this.currentOrders) {
+                OrderModificationManager.setOriginalOrders(this.currentOrders);
+            }
 
         } catch (error) {
             console.error("❌ 기존 주문 로드 실패:", error);
@@ -711,8 +722,19 @@ const POSOrderScreen = {
      * 주문 확정 메서드 (단순화)
      */
     async confirmOrder() {
-        if (OrderModificationManager.pendingChanges.size > 0) {
+        // OrderStateManager를 통해 안전하게 pendingChanges 확인
+        const state = OrderStateManager?.getState();
+        const hasPendingChanges = state?.totalPendingChanges > 0;
+
+        if (hasPendingChanges) {
             return OrderModificationManager.confirmAllChanges();
+        }
+
+        // 카트에 아이템이 있는지 확인
+        if (this.cart && this.cart.length > 0) {
+            // 카트 아이템 주문 처리 로직 (기존 방식)
+            alert("카트 주문 기능은 추후 구현됩니다.");
+            return;
         }
 
         alert("주문할 내용이 없습니다. 메뉴를 선택해주세요.");
