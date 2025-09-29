@@ -53,13 +53,36 @@ function errorHandler(error, req, res, next) {
     };
   }
 
-  console.error('❌ 에러 발생:', {
-    url: req.originalUrl,
-    method: req.method,
-    statusCode,
-    message: error.message,
-    code: error.code
-  });
+  // 상세한 에러 로깅 (개발/운영 환경 모두)
+  console.error('\n=== 📍 에러 발생 ===');
+  console.error(`🌐 URL: ${req.method} ${req.originalUrl}`);
+  console.error(`📊 Status: ${statusCode}`);
+  console.error(`💬 Message: ${error.message}`);
+  console.error(`🔍 Code: ${error.code || 'N/A'}`);
+  
+  // PostgreSQL 상세 에러 정보
+  if (error.detail) {
+    console.error(`📋 Detail: ${error.detail}`);
+  }
+  if (error.hint) {
+    console.error(`💡 Hint: ${error.hint}`);
+  }
+  if (error.position) {
+    console.error(`📍 Position: ${error.position}`);
+  }
+  
+  // 스택 트레이스 출력 (항상)
+  if (error.stack) {
+    console.error('📚 Stack Trace:');
+    console.error(error.stack);
+  }
+  
+  // 요청 본문 로깅 (POST/PUT 요청시)
+  if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+    console.error('📦 Request Body:', JSON.stringify(req.body, null, 2));
+  }
+  
+  console.error('=== 📍 에러 종료 ===\n');
 
   res.status(statusCode).json(response);
 }

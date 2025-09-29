@@ -1,4 +1,3 @@
-
 const orderRepository = require('../repositories/orderRepository');
 const tableRepository = require('../repositories/tableRepository');
 const eventBus = require('../utils/eventBus');
@@ -33,7 +32,7 @@ class OrderService {
     }
 
     const orderItems = await orderRepository.getPOSOrderItems(storeId, tableNumber);
-    
+
     // PAID 상태 완전 제거 (이중 체크)
     const filteredResults = orderItems.filter(item => {
       const isPaid = item.paid_status === 'PAID';
@@ -62,12 +61,12 @@ class OrderService {
     }
 
     const tllOrders = await orderRepository.getTLLOrders(storeId, tableNumber);
-    
+
     // 사용자 정보 조회
     let userInfo = null;
     if (tllOrders.length > 0) {
       const firstOrder = tllOrders[0];
-      
+
       if (firstOrder.user_id) {
         userInfo = await orderRepository.getUserById(firstOrder.user_id);
       } else if (firstOrder.guest_phone) {
@@ -99,7 +98,7 @@ class OrderService {
     }
 
     const client = await orderRepository.getClient();
-    
+
     try {
       await client.query('BEGIN');
 
@@ -161,9 +160,9 @@ class OrderService {
 
       // 1. 활성 주문 조회 또는 생성
       let orderId = await orderRepository.getActiveOrderId(client, storeId, tableNumber);
-      
+
       if (!orderId) {
-        orderId = await this.createNewPOSOrder(client, storeId, tableNumber);
+        orderId = this.createNewPOSOrder(client, storeId, tableNumber);
       }
 
       // 2. 추가 주문 처리
@@ -200,6 +199,13 @@ class OrderService {
 
     } catch (error) {
       await client.query('ROLLBACK');
+      console.error('❌ modifyBatch 트랜잭션 실패:', {
+        storeId,
+        tableNumber,
+        modifications,
+        error: error.message,
+        stack: error.stack
+      });
       throw error;
     } finally {
       client.release();
@@ -359,7 +365,7 @@ class OrderService {
     }
 
     const tickets = await orderRepository.getOrderTicketsBySource(processing_order_id);
-    
+
     if (tickets.length === 0) {
       return {
         isSharedOrder: true,
@@ -483,7 +489,7 @@ class OrderService {
   async getSessionStatus(storeId, tableNumber) {
     const sessions = await orderRepository.getActiveSessions(storeId, tableNumber);
     const hasActiveSession = sessions.length > 0;
-    
+
     const sessionInfo = hasActiveSession ? {
       orderId: sessions[0].id,
       status: sessions[0].status,
@@ -579,7 +585,7 @@ class OrderService {
     await orderRepository.cancelOrder(client, orderId);
 
     const hasOtherOrders = await orderRepository.hasOtherActiveOrders(client, storeId, tableNumber, orderId);
-    
+
     if (hasOtherOrders) {
       await this.updateTableAfterCancellation(client, storeId, tableNumber, orderId);
     } else {
@@ -592,7 +598,7 @@ class OrderService {
    */
   async updateTableAfterCancellation(client, storeId, tableNumber, cancelledOrderId) {
     const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
-    
+
     if (currentTable) {
       const processingOrderId = parseInt(currentTable.processing_order_id);
       const spareOrderId = parseInt(currentTable.spare_processing_order_id);
@@ -615,7 +621,7 @@ class OrderService {
    */
   async updateStoreTable(client, storeId, tableNumber, orderId) {
     const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
-    
+
     if (currentTable) {
       const hasMainOrder = currentTable.processing_order_id !== null;
       const hasSpareOrder = currentTable.spare_processing_order_id !== null;

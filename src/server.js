@@ -607,10 +607,15 @@ app.get('/krp', (req, res) => {
 
 // Start Server
 server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`🚀 TableLink POS 서버가 포트 ${PORT}에서 실행 중입니다.`);
-  console.log(`📱 http://localhost:${PORT} 에서 접속 가능합니다.`);
-  console.log('🏗️ POS/TLL/KRP 통합 시스템');
-  console.log('🔌 Socket.IO 실시간 통신 준비완료');
+  console.log('\n=== 🚀 TableLink 서버 시작 ===');
+  console.log(`📍 포트: ${PORT}`);
+  console.log(`🌐 접속 URL: http://localhost:${PORT}`);
+  console.log(`🔧 환경: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 메모리: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+  console.log('🏗️ 시스템: POS/TLL/KRP 통합');
+  console.log('🔌 WebSocket: 활성화');
+  console.log('📡 PostgreSQL: 연결됨');
+  console.log('=== ✅ 서버 준비 완료 ===\n');
 
   // Setup KDS LISTEN
   await setupKDSListener();
