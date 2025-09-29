@@ -162,8 +162,15 @@ class OrderService {
       let orderId = await orderRepository.getActiveOrderId(client, storeId, tableNumber);
 
       if (!orderId) {
-        orderId = this.createNewPOSOrder(client, storeId, tableNumber);
+        orderId = await this.createNewPOSOrder(client, storeId, tableNumber);
       }
+
+      // orderId 검증
+      if (!orderId || isNaN(orderId)) {
+        throw new Error(`Invalid orderId: ${orderId}`);
+      }
+
+      orderId = parseInt(orderId);
 
       // 2. 추가 주문 처리
       if (Object.keys(add).length > 0) {
@@ -511,17 +518,32 @@ class OrderService {
    * 새 POS 주문 생성
    */
   async createNewPOSOrder(client, storeId, tableNumber) {
-    const orderId = await orderRepository.createOrder(client, {
-      storeId,
-      tableNumber,
-      source: 'POS',
-      totalPrice: 0
-    });
+    try {
+      const orderId = await orderRepository.createOrder(client, {
+        storeId,
+        tableNumber,
+        source: 'POS',
+        totalPrice: 0
+      });
 
-    // store_tables 업데이트
-    await this.updateStoreTable(client, storeId, tableNumber, orderId);
+      if (!orderId) {
+        throw new Error('Failed to create order - no orderId returned');
+      }
 
-    return orderId;
+      console.log(`✅ 새 POS 주문 생성: orderId=${orderId}, 매장=${storeId}, 테이블=${tableNumber}`);
+
+      // store_tables 업데이트
+      await this.updateStoreTable(client, storeId, tableNumber, orderId);
+
+      return parseInt(orderId);
+    } catch (error) {
+      console.error('❌ createNewPOSOrder 실패:', {
+        storeId,
+        tableNumber,
+        error: error.message
+      });
+      throw error;
+    }
   }
 
   /**

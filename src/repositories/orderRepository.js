@@ -1,4 +1,3 @@
-
 const pool = require('../db/pool');
 
 /**
@@ -19,7 +18,7 @@ class OrderRepository {
     const result = await pool.query(`
       SELECT id, name FROM stores WHERE id = $1
     `, [storeId]);
-    
+
     return result.rows.length > 0 ? result.rows[0] : null;
   }
 
@@ -129,7 +128,7 @@ class OrderRepository {
    */
   async createOrder(client, orderData) {
     const { storeId, tableNumber, source, totalPrice } = orderData;
-    
+
     const result = await client.query(`
       INSERT INTO orders (
         store_id,
@@ -151,7 +150,7 @@ class OrderRepository {
    */
   async createTicket(client, ticketData) {
     const { orderId, storeId, tableNumber, batchNo = 1, source } = ticketData;
-    
+
     const result = await client.query(`
       INSERT INTO order_tickets (
         order_id,
@@ -175,7 +174,7 @@ class OrderRepository {
    */
   async createOrderItem(client, itemData) {
     const { orderId, ticketId, menuId, menuName, unitPrice, quantity, options, cookStation, storeId } = itemData;
-    
+
     await client.query(`
       INSERT INTO order_items (
         order_id,
@@ -229,20 +228,25 @@ class OrderRepository {
    * 다음 배치 번호 조회
    */
   async getNextBatchNo(client, orderId) {
-    const result = await client.query(`
-      SELECT COALESCE(MAX(batch_no), 0) + 1 AS next_batch 
-      FROM order_tickets 
-      WHERE order_id = $1
-    `, [orderId]);
+    // orderId 파라미터 검증
+    if (!orderId || isNaN(orderId)) {
+      throw new Error(`Invalid orderId for getNextBatchNo: ${orderId}`);
+    }
 
-    return result.rows[0].next_batch;
+    const result = await client.query(`
+      SELECT COALESCE(MAX(batch_no), 0) + 1 as next_batch_no
+      FROM order_tickets
+      WHERE order_id = $1
+    `, [parseInt(orderId)]);
+
+    return result.rows[0].next_batch_no;
   }
 
   /**
    * 메뉴 이름으로 조회
    */
   async getMenuByName(client, storeId, menuName) {
-    const result = await client.query(`
+    const result = await pool.query(`
       SELECT id, price, cook_station 
       FROM store_menu 
       WHERE store_id = $1 AND name = $2
@@ -367,7 +371,7 @@ class OrderRepository {
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       WHERE ot.order_id = $1 
         AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
-        AND ot.status NOT IN ('CANCELLED')
+        AND oi.status NOT IN ('CANCELLED')
     `, [orderId]);
 
     const itemTotal = parseFloat(totalResult.rows[0].item_total) || 0;
