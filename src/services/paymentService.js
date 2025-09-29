@@ -241,11 +241,8 @@ class PaymentService {
       } else {
         console.log(`ℹ️ TLL 주문 - 이미 테이블에 등록된 주문: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
         // 테이블 상태를 OCCUPIED로 확실히 설정
-        await client.query(`
-          UPDATE store_tables
-          SET status = 'OCCUPIED', updated_at = CURRENT_TIMESTAMP
-          WHERE store_id = $1 AND id = $2
-        `, [storeId, tableNumber]);
+        await tableRepository.setTableOccupied(storeId, tableNumber);
+        ;
       }
 
     } catch (error) {

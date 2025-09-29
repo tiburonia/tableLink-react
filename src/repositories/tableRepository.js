@@ -114,6 +114,17 @@ class TableRepository {
       WHERE store_id = $1 AND id = $2
     `, [storeId, tableNumber]);
   }
+
+  /**
+   * 테이블 상태 OCCUPIED 반복 설정
+   */
+  async setTableOccupied(storeId, tableNumber){
+    await pool.query(`
+      UPDATE store_tables
+      SET status = 'OCCUPIED', updated_at = CURRENT_TIMESTAMP
+      WHERE store_id = $1 AND id = $2
+    `, [storeId, tableNumber])
+  }
 }
 
 module.exports = new TableRepository();
