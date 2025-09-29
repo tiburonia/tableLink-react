@@ -257,12 +257,16 @@ class PaymentService {
    * 배치 번호 계산
    */
   async calculateBatchNumber(client, orderId) {
-    const result = await client.query(`
-      SELECT COUNT(*) as count FROM order_tickets 
+    // 새 batch_no 생성
+    const newBatchResult = await client.query(`
+      SELECT COALESCE(MAX(batch_no), 0) + 1 AS next_batch 
+      FROM order_tickets 
       WHERE order_id = $1
     `, [orderId]);
+    const nextBatchNo = newBatchResult.rows[0].next_batch;
 
-    return parseInt(result.rows[0].count) + 1;
+    return parseInt(nextBatchNo)
+
   }
 
   /**
