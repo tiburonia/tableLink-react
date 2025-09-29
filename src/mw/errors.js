@@ -12,6 +12,11 @@ function notFound(req, res, next) {
  * 에러 핸들러 미들웨어
  */
 function errorHandler(error, req, res, next) {
+  // 이미 응답이 전송된 경우 Express 기본 에러 핸들러로 위임
+  if (res.headersSent) {
+    return next(error);
+  }
+
   let statusCode = res.statusCode !== 200 ? res.statusCode : 500;
   
   // PostgreSQL 에러 코드 매핑

@@ -164,7 +164,18 @@ try {
   // 일부 라우터 로드 실패해도 서버는 계속 실행
 }
 
-// Error Handling
+// Unhandled Promise Rejection 방지
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // 서버를 종료하지 않고 에러만 로깅
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // 서버를 종료하지 않고 에러만 로깅
+});
+
+// Error Handling Middleware (라우터들 다음에 위치해야 함)
 app.use(notFound);
 app.use(errorHandler);
 
@@ -580,21 +591,7 @@ global.broadcastKDSUpdate = (storeId, event, data) => {
   console.log(`📡 KDS 브로드캐스트: ${roomName} -> ${event}`, data);
 };
 
-// 라우터 설정
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/stores', require('./routes/stores'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/reviews', require('./routes/reviews'));
-app.use('/api/regular-levels', require('./routes/regular-levels'));
-app.use('/api/tables', require('./routes/tables'));
-app.use('/api/toss', require('./routes/toss'));
-app.use('/api/tll', require('./routes/tll'));
-app.use('/api/pos', require('./routes/pos'));
-app.use('/api/pos-payment', require('./routes/pos-payment'));
-app.use('/api/pos-payment-tll', require('./routes/pos-payment-tll'));
-app.use('/api/kds', require('./routes/kds'));
-app.use('/api/krp', require('./routes/krp'));
+// 중복 라우터 제거 (위에서 이미 등록됨)
 
 // KRP 진입을 위한 루트 라우트 설정 (예시)
 // 실제 KRP UI를 제공하는 라우트를 여기에 추가해야 합니다.
