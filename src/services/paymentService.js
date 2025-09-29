@@ -48,7 +48,11 @@ class PaymentService {
         items: orderData.items
       });
 
-      // 5. 결제 정보 저장
+      // 5. 주문 총 금액 재계산 (서버 사이드 검증)
+      const recalculatedTotal = await this.updateOrderTotalAmount(client, orderIdToUse);
+      console.log(`💰 TLL 주문 ${orderIdToUse} 금액 재계산: 요청 ${orderData.finalTotal}원 → 실제 ${recalculatedTotal}원`);
+
+      // 6. 결제 정보 저장
       const paymentId = await this.createPaymentRecord(client, {
         orderId: orderIdToUse,
         amount: orderData.finalTotal,
@@ -56,7 +60,7 @@ class PaymentService {
         providerResponse: tossResult
       });
 
-      // 6. TLL 주문 시 store_tables에 주문 ID 등록 (새 주문이든 기존 주문에 추가든 항상 수행)
+      // 7. TLL 주문 시 store_tables에 주문 ID 등록 (새 주문이든 기존 주문에 추가든 항상 수행)
       try {
         // 현재 테이블 상태 확인
         const currentTableResult = await client.query(`
@@ -212,13 +216,6 @@ class PaymentService {
       orderIdToUse = existingOrderResult.rows[0].id;
       console.log(`🔄 기존 주문에 추가: ${orderIdToUse}`);
       
-      // 기존 주문의 총액 업데이트
-      await client.query(`
-        UPDATE orders 
-        SET total_price = total_price + $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2
-      `, [orderData.finalTotal, orderIdToUse]);
-      
     } else {
       // 새 주문 생성
       const newOrderResult = await client.query(`
@@ -233,12 +230,11 @@ class PaymentService {
           session_ended,
           created_at,
           updated_at
-        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', $3, $4, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ) VALUES ($1, $2, 'TLL', 'OPEN', 'PAID', 0, $3, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         RETURNING id
       `, [
         orderData.storeId,
         orderData.userPk,
-        orderData.finalTotal,
         orderData.tableNumber
       ]);
 
@@ -379,6 +375,40 @@ class PaymentService {
     console.log(`✅ 결제 정보 저장 완료: payment ${paymentId}, payment_details ${ticketsResult.rows.length}개`);
     
     return paymentId;
+  }
+
+  /**
+   * 주문 총 금액 재계산 및 업데이트
+   */
+  async updateOrderTotalAmount(client, orderId) {
+    try {
+      const totalResult = await client.query(`
+        SELECT 
+          COALESCE(SUM(oi.unit_price * oi.quantity), 0) as item_total
+        FROM order_items oi
+        JOIN order_tickets ot ON oi.ticket_id = ot.id
+        WHERE ot.order_id = $1 
+          AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
+          AND ot.status NOT IN ('CANCELLED')
+      `, [orderId]);
+
+      const itemTotal = parseFloat(totalResult.rows[0].item_total) || 0;
+
+      await client.query(`
+        UPDATE orders
+        SET 
+          total_price = $2,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [orderId, itemTotal]);
+
+      console.log(`✅ 주문 ${orderId} 총 금액 업데이트: ${itemTotal}원`);
+      
+      return itemTotal;
+    } catch (error) {
+      console.error(`❌ 주문 ${orderId} 총 금액 재계산 실패:`, error);
+      throw error;
+    }
   }
 
   /**

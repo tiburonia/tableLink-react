@@ -344,6 +344,17 @@ router.post('/confirm', async (req, res) => {
       const orderIdToUse = result.orderId;
       const paymentData = { paymentKey, finalTotal: result.amount, paymentId };
 
+      // 추가 금액 재계산 (이중 보안)
+      const recalculationClient = await pool.connect();
+      try {
+        const finalRecalculatedTotal = await paymentService.updateOrderTotalAmount(recalculationClient, orderIdToUse);
+        console.log(`🔄 TLL 토스 확인: 최종 금액 재계산 완료 - 주문 ${orderIdToUse}: ${finalRecalculatedTotal}원`);
+      } catch (recalcError) {
+        console.warn(`⚠️ TLL 토스 확인: 최종 금액 재계산 실패 - 주문 ${orderIdToUse}:`, recalcError.message);
+      } finally {
+        recalculationClient.release();
+      }
+
       // TLL 결제 완료 시 세션 시작 처리
       console.log(`✅ TLL 결제 완료 - 세션 시작: 주문 ${orderIdToUse}, 매장 ${pendingPayment.store_id}, 테이블 ${pendingPayment.table_number}`);
 
