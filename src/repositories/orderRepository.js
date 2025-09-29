@@ -135,12 +135,11 @@ class OrderRepository {
         store_id,
         table_num,
         source,
-        status,
+        session_status,
         payment_status,
         total_price,
-        session_status,
         created_at
-      ) VALUES ($1, $2, $3, 'OPEN', 'PENDING', $4, 'OPEN', NOW())
+      ) VALUES ($1, $2, $3, 'OPEN', 'PENDING', $4, NOW())
       RETURNING id
     `, [storeId, tableNumber, source, totalPrice]);
 
