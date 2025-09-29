@@ -211,7 +211,7 @@ class OrderRepository {
    */
   async getActiveOrderId(client, storeId, tableNumber) {
     const result = await client.query(`
-      SELECT DISTINCT o.id
+      SELECT DISTINCT o.id, o.created_at
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
       WHERE o.store_id = $1 
