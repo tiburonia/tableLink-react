@@ -511,6 +511,147 @@ class PaymentService {
       // 알림 실패가 전체 결제를 방해하지 않도록 에러를 throw하지 않음
     }
   }
+
+  /**
+   * 토스 결제 준비
+   */
+  async prepareTossPayment(prepareData) {
+    const client = await pool.connect();
+
+    try {
+      const { storeId, tableNumber, userId, userPk, orderData, amount } = prepareData;
+
+      console.log('💳 결제 서비스: 토스 결제 준비 시작', {
+        storeId,
+        tableNumber,
+        userId,
+        userPk,
+        amount
+      });
+
+      // 고유한 orderId 생성 (UUID 형태)
+      const orderId = `toss_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // pending_payments에 저장
+      await client.query(`
+        INSERT INTO pending_payments (
+          order_id, user_id, user_pk, store_id, table_number, 
+          order_data, amount, status, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', CURRENT_TIMESTAMP)
+      `, [
+        orderId,
+        userId,
+        userPk,
+        storeId,
+        tableNumber,
+        JSON.stringify(orderData),
+        parseInt(amount)
+      ]);
+
+      console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
+
+      return { orderId };
+
+    } catch (error) {
+      console.error('❌ 결제 준비 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * 토스 결제 승인
+   */
+  async confirmTossPayment(confirmData) {
+    const { paymentKey, orderId, amount } = confirmData;
+
+    try {
+      console.log('🔄 결제 서비스: 토스 결제 승인 시작', { paymentKey, orderId, amount });
+
+      // pending_payments에서 주문 데이터 조회
+      const client = await pool.connect();
+      let pendingPayment;
+
+      try {
+        const pendingResult = await client.query(`
+          SELECT * FROM pending_payments
+          WHERE order_id = $1 AND status = 'PENDING'
+        `, [orderId]);
+
+        if (pendingResult.rows.length === 0) {
+          throw new Error('대기 중인 결제를 찾을 수 없습니다');
+        }
+
+        pendingPayment = pendingResult.rows[0];
+      } finally {
+        client.release();
+      }
+
+      // 토스페이먼츠 API 승인 요청
+      const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
+      const authHeader = Buffer.from(secretKey + ':').toString('base64');
+
+      const tossResponse = await fetch('https://api.tosspayments.com/v1/payments/confirm', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          paymentKey,
+          orderId,
+          amount: parseInt(amount)
+        })
+      });
+
+      const tossResult = await tossResponse.json();
+
+      if (!tossResponse.ok) {
+        // 이미 처리된 결제인 경우 성공으로 처리
+        if (tossResult.code === 'ALREADY_PROCESSED_PAYMENT') {
+          console.log('⚠️ 이미 처리된 결제 - 성공으로 처리');
+          return {
+            success: true,
+            message: '이미 처리된 결제입니다',
+            alreadyProcessed: true
+          };
+        }
+        throw new Error(tossResult.message || '토스페이먼츠 승인 실패');
+      }
+
+      console.log('✅ 토스페이먼츠 승인 성공:', tossResult);
+
+      // 주문 및 결제 처리 (기존 TLL 로직 사용)
+      const orderData = pendingPayment.order_data;
+      const result = await this.processTLLOrder({
+        orderId: pendingPayment.order_id,
+        amount: pendingPayment.amount,
+        paymentKey,
+        tossResult,
+        orderData,
+        notificationMetadata: {}
+      });
+
+      // pending_payments 상태 업데이트
+      const updateClient = await pool.connect();
+      try {
+        await updateClient.query(`
+          UPDATE pending_payments
+          SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+          WHERE order_id = $1
+        `, [orderId]);
+      } finally {
+        updateClient.release();
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ 결제 서비스: 토스 결제 승인 실패:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PaymentService();
