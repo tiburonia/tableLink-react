@@ -385,6 +385,241 @@ class PaymentService {
 
     return result;
   }
+
+  /**
+   * POS 결제 처리 (회원/비회원 분기)
+   */
+  async processPOSPaymentWithCustomer(paymentData) {
+    const client = await pool.connect();
+
+    try {
+      const {
+        orderId,
+        paymentMethod,
+        amount,
+        storeId,
+        tableNumber,
+        customerType,
+        guestPhone,
+        memberPhone,
+        memberId
+      } = paymentData;
+
+      console.log(`💳 결제 서비스: POS 회원/비회원 결제 처리`, {
+        orderId,
+        paymentMethod,
+        amount,
+        customerType
+      });
+
+      await client.query('BEGIN');
+
+      let guestId = null;
+      let userId = null;
+
+      // 1. 고객 유형별 처리
+      if (customerType === 'guest' && guestPhone) {
+        guestId = await this.processGuestCustomer(client, guestPhone, orderId);
+      } else if (customerType === 'member' && (memberId || memberPhone)) {
+        userId = await this.processMemberCustomer(client, memberId, memberPhone, orderId);
+      }
+
+      // 2. 미지불 티켓 조회
+      const unpaidTickets = await paymentRepository.getUnpaidTickets(client, orderId, 'POS');
+
+      if (unpaidTickets.length === 0) {
+        await client.query('ROLLBACK');
+        throw new Error('결제할 미지불 티켓이 없습니다');
+      }
+
+      // 3. 결제 레코드 생성
+      const paymentId = await paymentRepository.createPaymentRecord(client, {
+        orderId,
+        method: paymentMethod,
+        amount,
+        transactionId: `POS_${paymentMethod}_${Date.now()}`,
+        providerResponse: {
+          source: 'POS',
+          method: paymentMethod,
+          processed_at: new Date().toISOString(),
+          pos_payment: true,
+          customer_type: customerType,
+          guest_phone: guestPhone,
+          member_phone: memberPhone
+        }
+      });
+
+      // 4. 결제 세부 정보 생성
+      await paymentRepository.createPaymentDetailsForTickets(client, paymentId, orderId, unpaidTickets);
+
+      // 5. 티켓 상태 업데이트
+      const updatedTickets = await paymentRepository.updateTicketsToPaid(client, orderId, 'POS');
+
+      // 6. 주문 상태 및 테이블 처리
+      const orderFullyPaid = await this.handleOrderCompletion(client, orderId, storeId, tableNumber);
+
+      await client.query('COMMIT');
+
+      return {
+        success: true,
+        paymentId,
+        orderId,
+        paymentMethod,
+        amount,
+        customerType,
+        guestPhone,
+        memberPhone,
+        paidTickets: updatedTickets,
+        totalTicketsPaid: updatedTickets.length,
+        orderFullyPaid,
+        message: `${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제가 완료되었습니다 (${updatedTickets.length}개 티켓)`
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ 결제 서비스: POS 결제 처리 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * 비회원 고객 처리
+   */
+  async processGuestCustomer(client, guestPhone, orderId) {
+    console.log(`👤 비회원 전화번호 처리: ${guestPhone}`);
+
+    // 기존 리포지토리 활용 (없으면 새로 생성)
+    let guestId = await paymentRepository.findGuestByPhone(client, guestPhone);
+
+    if (!guestId) {
+      guestId = await paymentRepository.createGuest(client, guestPhone);
+      console.log(`✅ 새 게스트 생성: ID ${guestId}`);
+    } else {
+      console.log(`🔍 기존 게스트 발견: ID ${guestId}`);
+    }
+
+    // 주문에 게스트 정보 연결
+    await orderRepository.updateOrderGuestInfo(client, orderId, guestPhone);
+
+    return guestId;
+  }
+
+  /**
+   * 회원 고객 처리
+   */
+  async processMemberCustomer(client, memberId, memberPhone, orderId) {
+    console.log(`🎫 회원 처리: memberId=${memberId}, memberPhone=${memberPhone}`);
+
+    let member;
+
+    if (memberId) {
+      member = await paymentRepository.findMemberById(client, memberId);
+    } else if (memberPhone) {
+      const cleanPhone = memberPhone.replace(/[-\s]/g, '');
+      member = await paymentRepository.findMemberByPhone(client, cleanPhone);
+    }
+
+    if (!member) {
+      throw new Error('해당 회원을 찾을 수 없습니다');
+    }
+
+    console.log(`🔍 회원 발견: ID ${member.id}, 이름: ${member.name}`);
+
+    // 주문에 회원 정보 연결
+    await orderRepository.updateOrderMemberInfo(client, orderId, member.id);
+
+    return member.id;
+  }
+
+  /**
+   * 주문 완료 처리
+   */
+  async handleOrderCompletion(client, orderId, storeId, tableNumber) {
+    // 남은 미지불 티켓 확인
+    const remainingUnpaid = await paymentRepository.countUnpaidTickets(client, orderId);
+
+    if (remainingUnpaid === 0) {
+      // 주문 상태 업데이트
+      await orderRepository.markOrderAsPaid(client, orderId);
+
+      // 테이블 해제 처리
+      await this.handleTableRelease(client, storeId, tableNumber, orderId);
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 테이블 해제 처리
+   */
+  async handleTableRelease(client, storeId, tableNumber, completedOrderId) {
+    try {
+      // 다른 활성 주문 확인
+      const hasOtherActiveOrders = await orderRepository.hasOtherActiveOrders(client, storeId, tableNumber, completedOrderId);
+
+      if (hasOtherActiveOrders) {
+        // 현재 주문을 테이블에서 제거하고 다른 주문 유지
+        await tableRepository.removeOrderFromTable(client, storeId, tableNumber, completedOrderId);
+      } else {
+        // 테이블 완전 해제
+        await tableRepository.releaseTable(client, storeId, tableNumber);
+      }
+
+      console.log(`🍽️ 테이블 처리 완료: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
+    } catch (error) {
+      console.error(`❌ 테이블 해제 처리 실패: 매장 ${storeId}, 테이블 ${tableNumber}`, error);
+    }
+  }
+
+  /**
+   * 미지불 티켓 조회
+   */
+  async getUnpaidTickets(orderId) {
+    const unpaidTickets = await paymentRepository.getUnpaidTickets(null, orderId, 'POS');
+    const totalAmount = unpaidTickets.reduce((sum, ticket) => sum + parseInt(ticket.ticket_amount || 0), 0);
+
+    return {
+      unpaidTickets,
+      totalTickets: unpaidTickets.length,
+      totalAmount
+    };
+  }
+
+  /**
+   * 주문 결제 상태 조회
+   */
+  async getOrderPaymentStatus(orderId) {
+    // 주문 정보 조회
+    const order = await paymentRepository.getOrderInfo(orderId);
+
+    if (!order) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    // 결제 내역 조회
+    const payments = await paymentRepository.getPaymentHistory(orderId);
+
+    // 티켓 상태 조회
+    const tickets = await paymentRepository.getTicketStatus(orderId);
+
+    return {
+      order,
+      payments,
+      tickets,
+      summary: {
+        totalPayments: payments.length,
+        totalPaidAmount: payments.reduce((sum, p) => sum + parseInt(p.amount), 0),
+        totalTickets: tickets.length,
+        paidTickets: tickets.filter(t => t.paid_status === 'PAID').length,
+        unpaidTickets: tickets.filter(t => t.paid_status === 'UNPAID').length
+      }
+    };
+  }
 }
 
 module.exports = new PaymentService();

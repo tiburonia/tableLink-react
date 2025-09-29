@@ -567,6 +567,59 @@ class OrderRepository {
 
     return result.rows;
   }
+/**
+   * 주문에 게스트 전화번호 업데이트
+   */
+  async updateOrderGuestInfo(client, orderId, guestPhone) {
+    await client.query(`
+      UPDATE orders
+      SET guest_phone = $1
+      WHERE id = $2
+    `, [guestPhone, orderId]);
+  }
+
+  /**
+   * 주문에 회원 정보 업데이트
+   */
+  async updateOrderMemberInfo(client, orderId, userId) {
+    await client.query(`
+      UPDATE orders
+      SET user_id = $1
+      WHERE id = $2
+    `, [userId, orderId]);
+  }
+
+  /**
+   * 주문을 결제 완료 상태로 변경
+   */
+  async markOrderAsPaid(client, orderId) {
+    await client.query(`
+      UPDATE orders
+      SET payment_status = 'PAID',
+          session_status = 'CLOSED',
+          session_ended = true,
+          session_ended_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [orderId]);
+  }
+
+  /**
+   * 다른 활성 주문 존재 여부 확인
+   */
+  async hasOtherActiveOrders(client, storeId, tableNumber, excludeOrderId) {
+    const result = await client.query(`
+      SELECT COUNT(*) as count 
+      FROM orders o
+      JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND o.session_status = 'OPEN'
+        AND o.id != $3
+    `, [storeId, tableNumber, excludeOrderId]);
+
+    return parseInt(result.rows[0].count) > 0;
+  }
 }
 
 module.exports = new OrderRepository();
