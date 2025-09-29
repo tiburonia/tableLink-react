@@ -371,7 +371,7 @@ class OrderRepository {
       JOIN order_tickets ot ON oi.ticket_id = ot.id
       WHERE ot.order_id = $1 
         AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
-        AND oi.status NOT IN ('CANCELLED')
+        AND ot.status NOT IN ('CANCELLED')
     `, [orderId]);
 
     const itemTotal = parseFloat(totalResult.rows[0].item_total) || 0;
