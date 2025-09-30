@@ -567,6 +567,492 @@ class OrderRepository {
 
     return result.rows;
   }
+
+  /**
+   * 매장별 일일 통계 조회
+   */
+  async getDailyStats(storeId, date) {
+    const result = await pool.query(`
+      SELECT 
+        COUNT(DISTINCT o.id) as total_orders,
+        COALESCE(SUM(p.amount), 0) as total_revenue,
+        COUNT(DISTINCT COALESCE(o.user_id, o.guest_phone)) as total_customers,
+        COUNT(CASE WHEN p.method = 'CASH' THEN 1 END) as cash_orders,
+        COUNT(CASE WHEN p.method = 'CARD' THEN 1 END) as card_orders,
+        COUNT(CASE WHEN p.method = 'TOSS' THEN 1 END) as toss_orders
+      FROM orders o
+      LEFT JOIN payments p ON o.id = p.order_id
+      WHERE o.store_id = $1 
+        AND DATE(o.created_at) = $2
+        AND o.status != 'CANCELLED'
+        AND (p.status = 'completed' OR p.status IS NULL)
+    `, [storeId, date]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 주문 상태 업데이트
+   */
+  async updateOrderStatus(orderId, statusData) {
+    const { status, cookingStatus } = statusData;
+
+    const updateFields = [];
+    const values = [];
+    let paramCount = 1;
+
+    if (status) {
+      updateFields.push(`status = $${paramCount}`);
+      values.push(status);
+      paramCount++;
+    }
+
+    if (cookingStatus) {
+      updateFields.push(`cooking_status = $${paramCount}`);
+      values.push(cookingStatus);
+      paramCount++;
+    }
+
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(parseInt(orderId));
+
+    const updateResult = await pool.query(`
+      UPDATE orders 
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramCount}
+      RETURNING id, status, cooking_status, updated_at
+    `, values);
+
+    return updateResult.rows.length > 0 ? updateResult.rows[0] : null;
+  }
+
+  /**
+   * 주문과 아이템 조회
+   */
+  async getOrderWithItems(orderId) {
+    const orderResult = await pool.query(`
+      SELECT 
+        o.*,
+        s.name as store_name,
+        s.category as store_category,
+        u.name as user_name
+      FROM orders o
+      JOIN stores s ON o.store_id = s.id
+      LEFT JOIN users u ON o.user_id = u.id
+      WHERE o.id = $1
+    `, [orderId]);
+
+    if (orderResult.rows.length === 0) {
+      return null;
+    }
+
+    const order = orderResult.rows[0];
+
+    // 주문 항목들 조회
+    const itemsResult = await pool.query(`
+      SELECT 
+        oi.*,
+        m.name as menu_name,
+        m.category as menu_category
+      FROM order_items oi
+      LEFT JOIN menus m ON oi.menu_id = m.id
+      WHERE oi.order_id = $1
+      ORDER BY oi.id
+    `, [orderId]);
+
+    return {
+      ...order,
+      items: itemsResult.rows.map(item => ({
+        ...item,
+        options: typeof item.options === 'string' ? JSON.parse(item.options) : (item.options || {})
+      }))
+    };
+  }
+
+  /**
+   * 사용자 주문 목록 조회
+   */
+  async getUserOrders(userId, options) {
+    const { limit, offset, status } = options;
+
+    let whereClause = 'WHERE o.user_id = $1';
+    const queryParams = [userId];
+
+    if (status) {
+      whereClause += ' AND o.status = $2';
+      queryParams.push(status);
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        o.id, 
+        o.total_price, 
+        COALESCE(o.session_status, 'OPEN') as session_status,
+        o.created_at,
+        o.table_num as table_number,
+        s.id as store_id, 
+        s.name as store_name, 
+        COUNT(ot.id) as ticket_count
+      FROM orders o
+      JOIN stores s ON o.store_id = s.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      ${whereClause}
+      GROUP BY o.id, s.id, s.name, s.category
+      ORDER BY o.created_at DESC
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+    `, [...queryParams, limit, offset]);
+
+    return result.rows;
+  }
+
+  /**
+   * 매장 주문 목록 조회
+   */
+  async getStoreOrders(storeId, options) {
+    const { limit, offset, status, cookingStatus, date } = options;
+
+    let whereClause = 'WHERE o.store_id = $1';
+    const queryParams = [storeId];
+    let paramCount = 2;
+
+    if (status) {
+      whereClause += ` AND o.status = $${paramCount}`;
+      queryParams.push(status);
+      paramCount++;
+    }
+
+    if (cookingStatus) {
+      whereClause += ` AND o.cooking_status = $${paramCount}`;
+      queryParams.push(cookingStatus);
+      paramCount++;
+    }
+
+    if (date) {
+      whereClause += ` AND DATE(o.created_at) = $${paramCount}`;
+      queryParams.push(date);
+      paramCount++;
+    }
+
+    const result = await pool.query(`
+      SELECT 
+        o.*,
+        COALESCE(u.name, '게스트') as customer_name,
+        COALESCE(u.phone, o.guest_phone) as customer_phone,
+        COUNT(ot.id) as ticket_count
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      ${whereClause}
+      GROUP BY o.id, u.name, u.phone
+      ORDER BY o.created_at DESC
+      LIMIT $${paramCount} OFFSET $${paramCount + 1}
+    `, [...queryParams, limit, offset]);
+
+    return result.rows;
+  }
+
+  /**
+   * 주문과 관련 아이템 삭제
+   */
+  async deleteOrderWithItems(orderId) {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // 주문 항목들 먼저 삭제
+      await client.query('DELETE FROM order_items WHERE order_id = $1', [orderId]);
+
+      // 주문 티켓들 삭제
+      await client.query('DELETE FROM order_tickets WHERE order_id = $1', [orderId]);
+
+      // 주문 삭제
+      await client.query('DELETE FROM orders WHERE id = $1', [orderId]);
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * 주문 진행 상황 조회
+   */
+  async getOrderProgress(orderId) {
+    // 주문 기본 정보 조회
+    const orderResult = await pool.query(`
+      SELECT 
+        o.id,
+        o.store_id,
+        COALESCE(o.table_num, 1) as table_number,
+        COALESCE(o.session_status, 'OPEN') as session_status,
+        o.created_at,
+        COALESCE(o.session_ended, false) as session_ended,
+        o.session_ended_at,
+        COALESCE(o.total_price, 0) as base_amount,
+        COALESCE(s.name, '알 수 없는 매장') as store_name
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.id = $1
+    `, [orderId]);
+
+    if (orderResult.rows.length === 0) {
+      return null;
+    }
+
+    const order = orderResult.rows[0];
+
+    // 티켓과 아이템 정보 조회
+    const ticketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.order_id,
+        COALESCE(ot.batch_no, 1) as batch_no,
+        COALESCE(ot.status, 'PENDING') as status,
+        COALESCE(ot.source, 'TLL') as source,
+        COALESCE(ot.paid_status, 'PAID') as paid_status,
+        ot.created_at,
+        json_agg(
+          json_build_object(
+            'id', oi.id,
+            'menu_name', COALESCE(oi.menu_name, '메뉴'),
+            'name', COALESCE(oi.menu_name, '메뉴'),
+            'quantity', COALESCE(oi.quantity, 1),
+            'unit_price', COALESCE(oi.unit_price, 0),
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN'),
+            'status', COALESCE(oi.item_status, 'PENDING'),
+            'options', COALESCE(oi.options, '{}')
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM order_tickets ot
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE ot.order_id = $1
+      GROUP BY ot.id, ot.order_id, ot.batch_no, ot.status, ot.source, ot.paid_status, ot.created_at
+      ORDER BY ot.created_at DESC
+    `, [orderId]);
+
+    // 결제 내역 조회
+    const paymentsResult = await pool.query(`
+      SELECT 
+        p.id,
+        COALESCE(p.method, 'UNKNOWN') as method,
+        COALESCE(p.amount, 0) as amount,
+        COALESCE(p.status, 'pending') as status,
+        p.created_at,
+        p.transaction_id as payment_key
+      FROM payments p 
+      WHERE p.order_id = $1 
+      ORDER BY p.created_at DESC
+    `, [orderId]);
+
+    const tickets = ticketsResult.rows.map(ticket => ({
+      ticket_id: ticket.ticket_id,
+      id: ticket.ticket_id,
+      order_id: ticket.order_id,
+      batch_no: ticket.batch_no,
+      status: ticket.status,
+      source: ticket.source,
+      paid_status: ticket.paid_status,
+      created_at: ticket.created_at,
+      items: ticket.items.filter(item => item.id !== null).map(item => ({
+        ...item,
+        options: typeof item.options === 'string' ? JSON.parse(item.options) : (item.options || {})
+      }))
+    }));
+
+    const payments = paymentsResult.rows.map(payment => ({
+      id: payment.id,
+      method: payment.method?.toString().toUpperCase() || 'UNKNOWN',
+      amount: parseInt(payment.amount) || 0,
+      status: payment.status,
+      createdAt: payment.created_at,
+      payment_key: payment.payment_key,
+      ticket_ids: []
+    }));
+
+    const paidAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+    const totalAmount = paidAmount > 0 ? paidAmount : parseInt(order.base_amount) || 0;
+
+    return {
+      id: order.id,
+      storeId: order.store_id,
+      storeName: order.store_name,
+      tableNumber: order.table_number,
+      status: order.status,
+      session_status: order.session_status,
+      createdAt: order.created_at,
+      sessionEnded: order.session_ended,
+      session_ended_at: order.session_ended_at,
+      totalOrders: tickets.length,
+      totalAmount: totalAmount,
+      tickets: tickets,
+      payments: payments
+    };
+  }
+
+  /**
+   * 현재 세션 정보 조회
+   */
+  async getCurrentSession(storeId, tableNumber) {
+    const sessionResult = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        o.session_status,
+        o.created_at,
+        o.user_id,
+        o.guest_phone,
+        o.total_price,
+        COALESCE(u.name, '게스트') as customer_name,
+        COUNT(ot.id) as ticket_count
+      FROM orders o
+      LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      WHERE o.store_id = $1 
+        AND o.table_num = $2 
+        AND o.session_status = 'OPEN'
+        AND NOT COALESCE(o.session_ended, false)
+      GROUP BY o.id, u.name
+      ORDER BY o.created_at DESC
+      LIMIT 1
+    `, [storeId, tableNumber]);
+
+    if (sessionResult.rows.length === 0) {
+      return null;
+    }
+
+    const session = sessionResult.rows[0];
+
+    // 세션의 주문 아이템들 조회
+    const itemsResult = await pool.query(`
+      SELECT 
+        oi.id as order_item_id,
+        oi.menu_name,
+        oi.unit_price,
+        oi.quantity,
+        oi.item_status,
+        oi.ticket_id,
+        oi.created_at
+      FROM order_items oi
+      JOIN order_tickets ot ON oi.ticket_id = ot.id
+      WHERE ot.order_id = $1
+      ORDER BY oi.created_at
+    `, [session.order_id]);
+
+    return {
+      orderId: session.order_id,
+      status: session.status,
+      createdAt: session.created_at,
+      customerId: session.user_id,
+      customerName: session.customer_name,
+      guestPhone: session.guest_phone,
+      totalPrice: session.total_price,
+      ticketCount: session.ticket_count,
+      orderItems: itemsResult.rows
+    };
+  }
+
+  /**
+   * 주문 세션 종료
+   */
+  async endOrderSession(client, orderId) {
+    const updateResult = await client.query(`
+      UPDATE orders
+      SET 
+        session_ended = true,
+        session_ended_at = CURRENT_TIMESTAMP,
+        session_status = CASE 
+          WHEN session_status = 'OPEN' THEN 'CLOSED'
+          ELSE session_status
+        END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [orderId]);
+
+    return updateResult.rows.length > 0 ? updateResult.rows[0] : null;
+  }
+
+  /**
+   * KDS 변경사항 조회
+   */
+  async getKDSChanges(storeId, syncTimestamp) {
+    // 업데이트된 티켓들 조회
+    const updatedTicketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.status,
+        ot.order_id,
+        ot.batch_no,
+        ot.updated_at,
+        o.table_num as table_number,
+        o.created_at,
+        array_agg(
+          json_build_object(
+            'id', oi.id,
+            'menuName', oi.menu_name,
+            'quantity', oi.quantity,
+            'status', COALESCE(oi.item_status, 'PENDING'),
+            'item_status', COALESCE(oi.item_status, 'PENDING'),
+            'cook_station', COALESCE(oi.cook_station, 'KITCHEN')
+          ) ORDER BY oi.created_at
+        ) as items
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
+      WHERE o.store_id = $1 
+        AND ot.updated_at > $2
+        AND ot.display_status != 'UNVISIBLE'
+      GROUP BY ot.id, ot.status, ot.order_id, ot.batch_no, ot.updated_at, o.table_num, o.created_at
+      ORDER BY ot.updated_at ASC
+    `, [storeId, syncTimestamp]);
+
+    // 삭제된 티켓들 조회
+    const deletedTicketsResult = await pool.query(`
+      SELECT 
+        ot.id as ticket_id,
+        ot.updated_at
+      FROM order_tickets ot
+      JOIN orders o ON ot.order_id = o.id
+      WHERE o.store_id = $1 
+        AND ot.updated_at > $2
+        AND ot.display_status = 'UNVISIBLE'
+    `, [storeId, syncTimestamp]);
+
+    return {
+      updated: updatedTicketsResult.rows.map(ticket => ({
+        ticket_id: ticket.ticket_id,
+        id: ticket.ticket_id,
+        check_id: ticket.ticket_id,
+        order_id: ticket.order_id,
+        table_number: ticket.table_number,
+        status: ticket.status?.toUpperCase() || 'PENDING',
+        created_at: ticket.created_at,
+        updated_at: ticket.updated_at,
+        items: ticket.items || []
+      })),
+      deleted: deletedTicketsResult.rows.map(ticket => ({
+        ticket_id: ticket.ticket_id,
+        updated_at: ticket.updated_at
+      }))
+    };
+  }
+
+  /**
+   * 리뷰 상태 확인
+   */
+  async getReviewStatus(orderId) {
+    const result = await pool.query(`
+      SELECT COUNT(*) as count
+      FROM reviews r
+      JOIN orders o ON r.store_id = o.store_id AND r.user_id = o.user_id
+      WHERE o.id = $1
+    `, [orderId]);
+
+    return parseInt(result.rows[0].count) > 0;
+  }
 /**
    * 주문에 게스트 전화번호 업데이트
    */

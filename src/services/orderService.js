@@ -7,6 +7,273 @@ const eventBus = require('../utils/eventBus');
  */
 class OrderService {
   /**
+   * 매장별 일일 통계 조회
+   */
+  async getDailyStats(storeId, date) {
+    const stats = await orderRepository.getDailyStats(storeId, date);
+    
+    return {
+      date: date,
+      totalRevenue: parseInt(stats.total_revenue),
+      totalOrders: parseInt(stats.total_orders),
+      totalCustomers: parseInt(stats.total_customers),
+      cashRevenue: parseInt(stats.cash_orders) > 0 ? parseInt(stats.total_revenue) / parseInt(stats.total_orders) * parseInt(stats.cash_orders) : 0,
+      cardRevenue: parseInt(stats.card_orders) > 0 ? parseInt(stats.total_revenue) / parseInt(stats.total_orders) * parseInt(stats.card_orders) : 0,
+      tossRevenue: parseInt(stats.toss_orders) > 0 ? parseInt(stats.total_revenue) / parseInt(stats.total_orders) * parseInt(stats.toss_orders) : 0
+    };
+  }
+
+  /**
+   * 주문 상태 업데이트
+   */
+  async updateOrderStatus(orderId, statusData) {
+    const { status, cookingStatus } = statusData;
+
+    if (!status && !cookingStatus) {
+      throw new Error('업데이트할 상태 정보가 필요합니다');
+    }
+
+    const updatedOrder = await orderRepository.updateOrderStatus(orderId, { status, cookingStatus });
+
+    if (!updatedOrder) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    console.log(`🔄 주문 상태 업데이트: 주문 ID ${orderId}, 상태: ${updatedOrder.status}, 조리상태: ${updatedOrder.cooking_status}`);
+
+    return updatedOrder;
+  }
+
+  /**
+   * 단일 주문 조회
+   */
+  async getOrderById(orderId) {
+    const order = await orderRepository.getOrderWithItems(orderId);
+
+    if (!order) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    return order;
+  }
+
+  /**
+   * 사용자 주문 목록 조회
+   */
+  async getUserOrders(userId, options = {}) {
+    const { limit = 20, offset = 0, status } = options;
+    return await orderRepository.getUserOrders(userId, { limit, offset, status });
+  }
+
+  /**
+   * 매장 주문 목록 조회
+   */
+  async getStoreOrders(storeId, options = {}) {
+    const { limit = 50, offset = 0, status, cookingStatus, date } = options;
+    return await orderRepository.getStoreOrders(storeId, { limit, offset, status, cookingStatus, date });
+  }
+
+  /**
+   * 주문 삭제
+   */
+  async deleteOrder(orderId) {
+    const order = await orderRepository.getOrderById(null, orderId);
+
+    if (!order) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    if (order.status === 'completed') {
+      throw new Error('완료된 주문은 삭제할 수 없습니다');
+    }
+
+    await orderRepository.deleteOrderWithItems(orderId);
+
+    console.log(`🗑️ 주문 삭제 완료: 주문 ID ${orderId}`);
+  }
+
+  /**
+   * 주문 진행 상황 조회
+   */
+  async getOrderProgress(orderId) {
+    if (!orderId || isNaN(orderId)) {
+      throw new Error('유효하지 않은 주문 ID입니다');
+    }
+
+    const orderProgress = await orderRepository.getOrderProgress(orderId);
+
+    if (!orderProgress) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    return orderProgress;
+  }
+
+  /**
+   * 현재 세션 정보 조회
+   */
+  async getCurrentSession(storeId, tableNumber) {
+    if (isNaN(storeId) || isNaN(tableNumber)) {
+      throw new Error('유효하지 않은 매장 ID 또는 테이블 번호입니다');
+    }
+
+    const session = await orderRepository.getCurrentSession(storeId, tableNumber);
+    return session;
+  }
+
+  /**
+   * 주문 세션 종료
+   */
+  async endSession(orderId) {
+    const order = await orderRepository.getOrderById(null, orderId);
+
+    if (!order) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    const client = await orderRepository.getClient();
+
+    try {
+      await client.query('BEGIN');
+
+      // 주문 세션 종료 처리
+      await orderRepository.endOrderSession(client, orderId);
+
+      // 테이블 상태 관리
+      const hasOtherOrders = await orderRepository.hasOtherActiveOrders(client, order.store_id, order.table_num, orderId);
+      let tableReleased = false;
+
+      if (hasOtherOrders) {
+        await this.updateTableAfterSessionEnd(client, order.store_id, order.table_num, orderId);
+      } else {
+        await tableRepository.clearTable(client, order.store_id, order.table_num);
+        tableReleased = true;
+      }
+
+      await client.query('COMMIT');
+
+      return { tableReleased };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * KDS 동기화
+   */
+  async syncKDS(storeId, lastSyncAt) {
+    const syncTimestamp = lastSyncAt ? new Date(lastSyncAt) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    console.log(`🔄 KDS 동기화 요청: 매장 ${storeId}, 마지막 동기화: ${lastSyncAt}`);
+
+    const changes = await orderRepository.getKDSChanges(storeId, syncTimestamp);
+
+    console.log(`✅ KDS 동기화 완료: 업데이트 ${changes.updated.length}개, 삭제 ${changes.deleted.length}개`);
+
+    return changes;
+  }
+
+  /**
+   * 주문별 리뷰 상태 확인
+   */
+  async getReviewStatus(orderId) {
+    return await orderRepository.getReviewStatus(orderId);
+  }
+
+  /**
+   * 비회원 POS 주문 생성
+   */
+  async createGuestPOSOrder(orderData) {
+    const { storeId, tableNumber, orderItems, notes } = orderData;
+
+    const client = await orderRepository.getClient();
+
+    try {
+      await client.query('BEGIN');
+
+      // 총 금액 계산
+      const totalAmount = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      // 주문 생성
+      const orderId = await orderRepository.createOrder(client, {
+        storeId,
+        tableNumber,
+        source: 'POS',
+        totalPrice: totalAmount,
+        notes,
+        guestPhone: null
+      });
+
+      // 티켓 생성
+      const ticketId = await orderRepository.createTicket(client, {
+        orderId,
+        storeId,
+        tableNumber,
+        source: 'POS',
+        paidStatus: 'UNPAID'
+      });
+
+      // 주문 아이템들 생성
+      for (const item of orderItems) {
+        await orderRepository.createOrderItem(client, {
+          orderId,
+          ticketId,
+          menuName: item.menuName,
+          unitPrice: item.price,
+          quantity: item.quantity,
+          cookStation: item.cookStation || 'KITCHEN'
+        });
+      }
+
+      await client.query('COMMIT');
+
+      console.log(`✅ 비회원 POS 주문 생성 완료: 주문 ${orderId}, 티켓 ${ticketId}, 아이템 ${orderItems.length}개`);
+
+      return {
+        id: orderId,
+        ticketId: ticketId,
+        totalAmount: totalAmount,
+        itemCount: orderItems.length,
+        createdAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  // ============ 프라이빗 메서드들 ============
+
+  /**
+   * 세션 종료 후 테이블 상태 업데이트
+   */
+  async updateTableAfterSessionEnd(client, storeId, tableNumber, endedOrderId) {
+    const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
+
+    if (currentTable) {
+      const processingOrderId = parseInt(currentTable.processing_order_id);
+      const spareOrderId = parseInt(currentTable.spare_processing_order_id);
+      const currentOrderId = parseInt(endedOrderId);
+
+      if (spareOrderId === currentOrderId) {
+        await tableRepository.clearSpareOrder(client, storeId, tableNumber);
+      } else if (processingOrderId === currentOrderId) {
+        if (currentTable.spare_processing_order_id !== null) {
+          await tableRepository.moveSpareToMain(client, storeId, tableNumber);
+        } else {
+          await tableRepository.clearTable(client, storeId, tableNumber);
+        }
+      }
+    }
+  }
+  /**
    * 매장 메뉴 조회
    */
   async getStoreMenu(storeId) {
