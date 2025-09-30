@@ -137,3 +137,136 @@
 </body>
 
 </html>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TableLink - 새로운 TLG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .version-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">TableLink</div>
+        <div class="subtitle">새로운 TLG 시스템을 준비중입니다</div>
+        
+        <div class="buttons">
+            <button class="btn btn-primary" onclick="startNewTLG()">
+                새로운 TLG 시작하기
+            </button>
+            <a href="/legacy.html" class="btn btn-secondary">
+                기존 시스템으로 이동
+            </a>
+        </div>
+        
+        <div class="version-info">
+            <div>새로운 TLG v2.0 (개발중)</div>
+            <div>기존 시스템은 /legacy.html에서 이용 가능합니다</div>
+        </div>
+    </div>
+
+    <script>
+        function startNewTLG() {
+            // 새로운 TLG 시스템 초기화
+            console.log('🚀 새로운 TLG 시스템 시작');
+            
+            // 향후 새로운 TLG 로직이 들어갈 자리
+            alert('새로운 TLG 시스템을 준비중입니다.\n현재는 기존 시스템을 이용해주세요.');
+            
+            // 임시로 기존 시스템으로 리다이렉트
+            window.location.href = '/legacy.html';
+        }
+        
+        // 페이지 로드 시 환영 메시지
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('✅ 새로운 TLG 메인 페이지 로드 완료');
+            console.log('🔄 기존 시스템: /legacy.html');
+        });
+    </script>
+</body>
+</html>

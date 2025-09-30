@@ -39,9 +39,14 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
 
-// 루트 경로를 레거시 index.html로 리다이렉트
+// 루트 경로를 새로운 index.html로 서빙
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// 기존 시스템 접근을 위한 레거시 라우트
+app.get('/legacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/legacy.html'));
 });
 
 // Health Check
