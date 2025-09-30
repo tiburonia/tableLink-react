@@ -124,7 +124,7 @@ function initializeApp() {
             }
           });
       }
-      }
+    }
     } else {
       console.log('ℹ️ 저장된 사용자 정보 없음 - 로그인 화면 표시');
       // 기존 잘못된 데이터 정리
