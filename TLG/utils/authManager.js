@@ -92,13 +92,38 @@ function initializeApp() {
 
       // 사용자가 로그인되어 있으면 메인 화면으로
       console.log('🏠 로그인 상태 확인됨 - 메인 화면으로 이동');
-      if (typeof renderMap === 'function') {
+      
+      // renderMap 함수 안전하게 호출
+      if (typeof window.renderMap === 'function') {
+        console.log('✅ 전역 renderMap 함수 발견, 실행 중...');
+        window.renderMap();
+      } else if (typeof renderMap === 'function') {
+        console.log('✅ renderMap 함수 발견, 실행 중...');
         renderMap();
       } else {
-        console.warn('⚠️ renderMap 함수를 찾을 수 없음 - 로그인 화면으로');
-        if (typeof renderLogin === 'function') {
-          renderLogin();
-        }
+        console.warn('⚠️ renderMap 함수를 찾을 수 없음 - 동적 로드 시도');
+        
+        // renderMap 모듈 동적 로드 시도
+        import('/TLG/pages/main/renderMap.js')
+          .then(() => {
+            console.log('✅ renderMap 모듈 동적 로드 완료');
+            if (typeof window.renderMap === 'function') {
+              window.renderMap();
+            } else {
+              throw new Error('renderMap 함수를 찾을 수 없음');
+            }
+          })
+          .catch(error => {
+            console.error('❌ renderMap 동적 로드 실패:', error);
+            console.log('🔄 폴백: 로그인 화면으로 이동');
+            if (typeof renderLogin === 'function') {
+              renderLogin();
+            } else {
+              console.error('❌ renderLogin 함수도 찾을 수 없음');
+              document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">앱을 로딩하는 중...</div>';
+            }
+          });
+      }
       }
     } else {
       console.log('ℹ️ 저장된 사용자 정보 없음 - 로그인 화면 표시');
