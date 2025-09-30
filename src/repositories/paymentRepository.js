@@ -9,9 +9,7 @@ class PaymentRepository {
    * pending_payments에 결제 대기 정보 저장
    */
   async createPendingPayment(client, paymentData) {
-    const { orderId, userId, storeId, userPK, tableNumber, orderData, amount } = paymentData;
-
-  
+    const { orderId, userId, userPK, storeId, tableNumber, orderData, amount } = paymentData;
 
     await client.query(`
       INSERT INTO pending_payments (
@@ -21,7 +19,7 @@ class PaymentRepository {
     `, [
       orderId,
       userId,
-      userPk,
+      userPK,
       storeId,
       tableNumber,
       JSON.stringify(orderData),

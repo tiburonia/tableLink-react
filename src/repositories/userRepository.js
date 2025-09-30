@@ -19,4 +19,4 @@ class UserRepository {
   
 }
 
-module.export = new UserRepository()
+module.exports = new UserRepository();
