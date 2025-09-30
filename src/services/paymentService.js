@@ -70,6 +70,9 @@ class PaymentService {
       // 8. TLL 주문 시 store_tables에 주문 ID 등록
       await this.updateTableProcessingOrder(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
 
+      //8. TLL 주문 시 talbe_orders에 레코드 생성 (점진적으로 하자)
+      await tableRepository.createTableOrder(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
+
       await client.query('COMMIT');
 
       console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);

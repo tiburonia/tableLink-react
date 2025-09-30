@@ -187,6 +187,17 @@ class TableRepository {
 
     console.log(`🍽️ 테이블 완전 해제: 매장 ${storeId}, 테이블 ${tableNumber}`);
   }
+  /**
+   * table_orders 레코드 생성 
+   */
+  async createTableOrder(client, orderId, tableId){
+    await client.query(`
+      INSERT INTO table_orders (order_id, table_id, linked_at)
+      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+    `, [orderId, tableId, storeId])
+  }
 }
+
+
 
 module.exports = new TableRepository();
