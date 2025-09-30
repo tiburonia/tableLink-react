@@ -83,7 +83,7 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
 
     // cook_station을 jsonb 형태로 전송하도록 수정
     const prepareData = {
-      userId: parseInt(userInfo.userId), // users.id PK를 정수로 전달
+      userPK: parseInt(userInfo.userId), // users.id PK를 정수로 전달
       storeId: orderData.storeId || store?.id || store?.store_id,
       storeName: orderData.storeName || orderData.store || store?.name,
       tableNumber: orderData.tableNum || 1,
@@ -138,8 +138,6 @@ async function confirmPay(orderData, pointsUsed, store, currentOrder, finalAmoun
         }
       },
       amount: parseInt(finalAmount),
-      usedPoint: parseInt(pointsUsed) || 0,
-      couponDiscount: parseInt(couponDiscount) || 0,
       paymentMethod: paymentMethod || '카드'
     };
 

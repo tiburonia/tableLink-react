@@ -12,7 +12,7 @@ class TossController {
    */
   async prepare(req, res) {
     try {
-      const { storeId, tableNumber, userId, userPk, orderData, amount } = req.body;
+      const { storeId, tableNumber, userPK, orderData, amount } = req.body;
 
       if (!storeId || !tableNumber || !orderData || !amount) {
         return res.status(400).json({
@@ -24,8 +24,7 @@ class TossController {
       const result = await paymentService.prepareTossPayment({
         storeId: parseInt(storeId),
         tableNumber: parseInt(tableNumber),
-        userId: userId || null,
-        userPk: userPk || null,
+        userPK: parseInt(userPK),
         orderData,
         amount: parseInt(amount)
       });

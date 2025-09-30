@@ -10,6 +10,7 @@ const pool = require('../db/pool');
 const orderRepository = require('../repositories/orderRepository');
 const tableRepository = require('../repositories/tableRepository');
 const paymentRepository = require('../repositories/paymentRepository');
+const userRepository = require('../repositories/userRepository');
 
 class PaymentService {
   /**
@@ -277,18 +278,21 @@ class PaymentService {
     const client = await pool.connect();
 
     try {
-      const { storeId, tableNumber, userId, userPk, orderData, amount } = prepareData;
+      const { storeId, tableNumber, userPK, orderData, amount } = prepareData;
 
       console.log('💳 결제 서비스: 토스 결제 준비 시작', {
-        storeId, tableNumber, userId, userPk, amount
+        storeId, tableNumber, userPK, amount
       });
 
       // 고유한 orderId 생성
       const orderId = `toss_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+      //유저 pk값 조회
+      const userID = await userRepository.getUserById(userPK).row[0].user_id;
+
       // pending_payments에 저장
       await paymentRepository.createPendingPayment(client, {
-        orderId, userId, userPk, storeId, tableNumber, orderData, amount
+        orderId, userID, userPK, storeId, tableNumber, orderData, amount
       });
 
       console.log('✅ 결제 준비 완료 - pending_payments에 저장:', orderId);
