@@ -30,7 +30,14 @@ async function renderMap() {
 // 기존 호환성을 위한 전역 함수 등록
 window.renderMap = renderMap;
 
-// 모듈 기본 내보내기
+// 모듈 기본 내보내기 (ES6 모듈 시스템)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = renderMap;
+} else if (typeof window !== 'undefined') {
+  window.renderMap = renderMap;
+}
+
+// ES6 export (모듈 지원 환경에서)
 export default renderMap;
 
-console.log('✅ 리팩토링된 renderMap 모듈 로드 완료');
+console.log('✅ 리팩토링된 renderMap 모듈 로드 완료 (호환성 향상)');

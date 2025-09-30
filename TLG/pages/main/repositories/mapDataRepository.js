@@ -98,3 +98,8 @@ export const mapDataRepository = {
     return await response.json();
   }
 };
+
+// 전역 등록 (호환성을 위해)
+if (typeof window !== 'undefined') {
+  window.mapDataRepository = mapDataRepository;
+}

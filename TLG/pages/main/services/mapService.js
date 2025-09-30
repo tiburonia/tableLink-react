@@ -1,5 +1,13 @@
 
-import { mapDataRepository } from '../repositories/mapDataRepository.js';
+// 모듈 임포트 (조건부)
+let mapDataRepository;
+
+try {
+  const repoModule = await import('../repositories/mapDataRepository.js');
+  mapDataRepository = repoModule.mapDataRepository;
+} catch (error) {
+  console.warn('⚠️ mapDataRepository 모듈 임포트 실패:', error);
+}
 
 /**
  * 지도 비즈니스 로직 서비스
@@ -212,3 +220,8 @@ export const mapService = {
     };
   }
 };
+
+// 전역 등록 (호환성을 위해)
+if (typeof window !== 'undefined') {
+  window.mapService = mapService;
+}

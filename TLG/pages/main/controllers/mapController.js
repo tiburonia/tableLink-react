@@ -1,6 +1,19 @@
 
-import { mapService } from '../services/mapService.js';
-import { mapView } from '../views/mapView.js';
+// 모듈 임포트 (조건부)
+let mapService, mapView;
+
+try {
+  // ES6 모듈 임포트 시도
+  const serviceModule = await import('../services/mapService.js');
+  const viewModule = await import('../views/mapView.js');
+  mapService = serviceModule.mapService;
+  mapView = viewModule.mapView;
+} catch (error) {
+  console.warn('⚠️ ES6 모듈 임포트 실패, 전역 객체 사용:', error);
+  // 전역 객체에서 가져오기 (폴백)
+  mapService = window.mapService;
+  mapView = window.mapView;
+}
 
 /**
  * 지도 컨트롤러 - 이벤트 처리 및 흐름 제어
