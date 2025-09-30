@@ -1,0 +1,402 @@
+TLG 레이어드 아키텍처 (Vanilla JS, ES Modules)
+0) 최상위 구조
+TLG/
+  index.html
+  /app
+    main.js              # 앱 진입점 (부트스트랩)
+    router.js            # 해시 라우터
+    events.js            # 전역 이벤트 버스 (pub/sub)
+    constants.js         # 상수, enum
+  /core
+    http.js              # fetch 래퍼 (에러/토큰/재시도)
+    storage.js           # localStorage/sessionStorage 래퍼
+    validator.js         # 입력 검증 유틸
+    formatters.js        # 날짜/금액/문자 포매터
+  /state
+    appState.js          # 전역 상태 (유저/위치/장바구니 등)
+    createStore.js       # 경량 스토어(factory + subscribe)
+  /repositories          # 데이터 접근 (API/캐시/IndexedDB 등)
+    storeRepo.js         # 매장 검색/상세
+    orderRepo.js         # 주문/장바구니/결제 준비
+    regionRepo.js        # 행정구역/좌표
+    userRepo.js          # 인증/내 정보
+  /services              # 도메인 로직 (Repo를 조립)
+    searchService.js
+    mapService.js
+    cartService.js
+    authService.js
+    locationService.js
+  /controllers           # 흐름 제어 (이벤트→서비스→뷰)
+    mapController.js
+    searchController.js
+    authController.js
+    cartController.js
+  /views                 # 렌더링 전담 (DOM 조작만)
+    /partials            # 컴포넌트 단위 뷰
+      SearchBar.js
+      StoreCard.js
+      Panel.js
+      Modal.js
+    MapView.js
+    SearchView.js
+    LoginView.js
+    CartView.js
+  /styles                # CSS 레이어
+    base.css             # reset, 변수
+    layout.css           # 레이아웃(헤더/바텀바/그리드)
+    components.css       # 버튼/카드/모달 등
+    pages/
+      map.css
+      search.css
+      login.css
+      cart.css
+  /integrations          # 외부 SDK 연동 (카카오맵 등)
+    kakaoMap.js          # 지도 인스턴스 생성/헬퍼
+    sockets.js           # (필요시) 실시간 업데이트
+
+1) 의존성 방향(엄수)
+
+views → controllers 금지 (컨트롤러가 뷰를 호출)
+
+controllers → services (흐름 제어)
+
+services → repositories / state / core (비즈니스 로직)
+
+repositories → core/http, storage
+
+integrations는 services에서만 직접 사용 (뷰에서 직접 호출 금지)
+
+views  ← controllers  ← services  ← repositories  ← core
+                               ↘ state
+                               ↘ integrations
+
+2) 진입점 & 라우팅
+app/main.js
+import { initRouter } from './router.js';
+import { appState } from '../state/appState.js';
+import '../styles/base.css';
+import '../styles/layout.css';
+import '../styles/components.css';
+
+(async function bootstrap() {
+  // 초기 전역 상태 로드 (토큰, 위치, 장바구니 등)
+  await appState.hydrate();
+  // 라우터 시작
+  initRouter();
+})();
+
+app/router.js (해시 기반)
+import { renderMapPage } from '../views/MapView.js';
+import { renderSearchPage } from '../views/SearchView.js';
+import { renderLoginPage } from '../views/LoginView.js';
+import { renderCartPage } from '../views/CartView.js';
+
+const routes = {
+  '': renderMapPage,          // #/
+  'search': renderSearchPage, // #/search?q=...
+  'login': renderLoginPage,   // #/login
+  'cart': renderCartPage,     // #/cart
+};
+
+export function initRouter() {
+  const onRoute = () => {
+    const hash = location.hash.replace(/^#\//, '');
+    const [path] = hash.split('?');
+    const view = routes[path || ''] || renderMapPage;
+    view(document.getElementById('app')); // root 컨테이너
+  };
+  window.addEventListener('hashchange', onRoute);
+  onRoute();
+}
+
+3) 전역 상태 & 스토어
+state/createStore.js
+export function createStore(initialState = {}) {
+  let state = { ...initialState };
+  const subs = new Set();
+  return {
+    get: () => state,
+    set: (patch) => { state = { ...state, ...patch }; subs.forEach(fn => fn(state)); },
+    subscribe: (fn) => { subs.add(fn); return () => subs.delete(fn); }
+  };
+}
+
+state/appState.js
+import { createStore } from './createStore.js';
+import { getItem, setItem } from '../core/storage.js';
+
+const store = createStore({
+  user: null,
+  location: null,       // { lat, lng, text }
+  cart: {},             // { menuId: qty }
+});
+
+export const appState = {
+  subscribe: store.subscribe,
+  get: store.get,
+  set: store.set,
+  async hydrate() {
+    const saved = getItem('tlg_state');
+    if (saved) store.set(saved);
+  },
+  persist() {
+    setItem('tlg_state', store.get());
+  }
+};
+
+
+컨트롤러/서비스에서 appState.set({...}); appState.persist(); 식으로 사용.
+
+4) 코어 유틸 & HTTP
+core/http.js
+const JSON_HEADERS = { 'Content-Type': 'application/json' };
+
+export async function http(url, options = {}) {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    const msg = await safeText(res);
+    throw new Error(`${res.status} ${res.statusText} :: ${msg}`);
+  }
+  return safeJson(res);
+}
+
+function safeJson(res) {
+  return res.headers.get('content-type')?.includes('application/json')
+    ? res.json()
+    : Promise.resolve(null);
+}
+function safeText(res) { return res.text().catch(() => ''); }
+
+export const get  = (url) => http(url);
+export const post = (url, body) => http(url, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+
+core/storage.js
+export const getItem = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } };
+export const setItem = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+export const removeItem = (k) => localStorage.removeItem(k);
+
+5) 레포지토리 (API 접근 전담)
+repositories/storeRepo.js
+import { get } from '../core/http.js';
+
+export const storeRepo = {
+  search: (q) => get(`/api/stores/search?query=${encodeURIComponent(q)}`),
+  rating: (id) => get(`/api/stores/${id}/rating`),
+  byViewport: ({ sw, ne }) => get(`/api/stores/within?sw=${sw}&ne=${ne}`),
+};
+
+repositories/regionRepo.js
+import { get } from '../core/http.js';
+export const regionRepo = {
+  provinces: () => get('/api/stores/regions/provinces'),
+  cities: (p) => get(`/api/stores/regions/cities?province=${encodeURIComponent(p)}`),
+  districts: (p, c) => get(`/api/stores/regions/districts?province=${encodeURIComponent(p)}&city=${encodeURIComponent(c)}`),
+  eupmyeondongCenter: (p,c,d) => get(`/api/stores/eupmyeondong-center?sido=${encodeURIComponent(p)}&sigungu=${encodeURIComponent(c)}&eupmyeondong=${encodeURIComponent(d)}`)
+};
+
+6) 서비스 (비즈니스 로직)
+services/searchService.js
+import { storeRepo } from '../repositories/storeRepo.js';
+
+export const searchService = {
+  async combined(keyword, mapCenter) {
+    const [stores] = await Promise.all([
+      storeRepo.search(keyword),
+      // 필요하면 장소검색(카카오 REST)은 서버 프록시 통해 다른 repo로 분리
+    ]);
+    return {
+      stores: stores?.stores ?? [],
+      // places: ...
+    };
+  },
+};
+
+services/mapService.js
+import { initKakaoMap } from '../integrations/kakaoMap.js';
+import { storeRepo } from '../repositories/storeRepo.js';
+
+export const mapService = {
+  init(container) {
+    return initKakaoMap(container, { lat: 37.5665, lng: 126.9780, level: 3 });
+  },
+  async loadStoresInView(map) {
+    const bounds = map.getBounds();
+    const sw = `${bounds.getSouthWest().getLat()},${bounds.getSouthWest().getLng()}`;
+    const ne = `${bounds.getNorthEast().getLat()},${bounds.getNorthEast().getLng()}`;
+    const data = await storeRepo.byViewport({ sw, ne });
+    return data?.stores ?? [];
+  }
+};
+
+7) 컨트롤러 (흐름 제어)
+controllers/mapController.js
+import { mapService } from '../services/mapService.js';
+import { renderMapShell, renderMarkers } from '../views/MapView.js';
+
+export async function mountMap(root) {
+  renderMapShell(root);                       // 뷰 골격 먼저
+  const map = mapService.init(document.getElementById('map'));
+  // 이벤트: idle 시 뷰포트 내 매장 갱신
+  kakao.maps.event.addListener(map, 'idle', async () => {
+    const stores = await mapService.loadStoresInView(map);
+    renderMarkers(map, stores);
+  });
+}
+
+controllers/searchController.js
+import { searchService } from '../services/searchService.js';
+import { renderSearchResults } from '../views/SearchView.js';
+
+export async function handleSearch(keyword, mapCenter) {
+  const result = await searchService.combined(keyword, mapCenter);
+  renderSearchResults(result);
+}
+
+8) 뷰 (DOM 조작만)
+views/MapView.js
+import './pages/map.css';
+import { StoreCard } from './partials/StoreCard.js';
+
+export function renderMapShell(root) {
+  root.innerHTML = `
+    <main id="content">
+      <div id="map" class="map"></div>
+      <div id="searchBar" class="searchbar"></div>
+    </main>
+    <nav id="bottomBar" class="bottombar"> ... </nav>
+  `;
+}
+
+export function renderMarkers(map, stores) {
+  // 마커 매니저는 여기서만 DOM/SDK를 다룬다.
+  // 기존 window.MapMarkerManager 대신 내부 클로저로 관리 권장
+  // (필요하면 integrations/ 아래로 마커 전담 모듈 분리)
+  console.log('render markers', stores.length);
+}
+
+export function renderStoreList(container, stores) {
+  container.innerHTML = stores.map(StoreCard).join('');
+}
+
+views/partials/StoreCard.js
+export function StoreCard(store) {
+  return `
+    <div class="store-card" data-id="${store.id}">
+      <div class="store-card__title">🏪 ${store.name}</div>
+      <div class="store-card__meta">${store.category ?? ''} • ★${store.ratingAverage ?? '0.0'}</div>
+    </div>
+  `;
+}
+
+views/SearchView.js
+import './pages/search.css';
+
+export function renderSearchPage(root) {
+  root.innerHTML = `
+    <section class="search-page">
+      <div class="search-page__bar">
+        <input id="q" placeholder="매장명, 카테고리, 위치"/>
+        <button id="go">검색</button>
+      </div>
+      <div id="result" class="search-page__result"></div>
+    </section>
+  `;
+
+  document.getElementById('go').addEventListener('click', () => {
+    const q = document.getElementById('q').value.trim();
+    const evt = new CustomEvent('tlg:search', { detail: { q }});
+    window.dispatchEvent(evt);
+  });
+}
+
+export function renderSearchResults({ stores /*, places*/ }) {
+  const box = document.getElementById('result');
+  if (!stores?.length) {
+    box.innerHTML = `<div class="empty">검색 결과가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = stores.map(s => `
+    <div class="result-item">
+      <div class="name">${s.name}</div>
+      <div class="info">${s.address ?? ''}</div>
+    </div>
+  `).join('');
+}
+
+9) 카카오맵 연동 (분리)
+integrations/kakaoMap.js
+export function initKakaoMap(container, { lat, lng, level }) {
+  const map = new kakao.maps.Map(container, {
+    center: new kakao.maps.LatLng(lat, lng),
+    level
+  });
+  return map;
+}
+
+10) CSS 아키텍처
+
+styles/base.css : 리셋 + CSS 변수
+
+styles/layout.css : 공통 레이아웃 (헤더/바텀바/그리드)
+
+styles/components.css : 버튼/카드/모달 (BEM 네이밍)
+
+styles/pages/*.css : 페이지 전용
+
+예: styles/base.css
+
+:root{
+  --color-primary:#297efc;
+  --color-danger:#dc2626;
+  --radius:16px;
+  --shadow:0 8px 24px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box}
+html,body,#app{height:100%}
+body{margin:0;background:#f8f8f8;font-family:'Noto Sans KR',sans-serif}
+
+11) 이벤트 버스 (선택)
+
+페이지-컴포넌트 간 결합 줄이고 싶으면 간단한 pub/sub로 연결.
+
+app/events.js
+const bus = new Map(); // event -> Set<fn>
+
+export function on(event, fn){
+  if(!bus.has(event)) bus.set(event, new Set());
+  bus.get(event).add(fn);
+  return () => bus.get(event).delete(fn);
+}
+export function emit(event, payload){
+  (bus.get(event) || []).forEach(fn => fn(payload));
+}
+
+
+컨트롤러에서 on('tlg:search', ...) 구독 후 서비스 호출 → 뷰 갱신.
+
+12) 개발 규칙(요점)
+
+뷰는 DOM만, 비즈니스 로직 금지
+
+컨트롤러는 이벤트 바인딩 + 서비스 호출만
+
+서비스는 “규칙과 조립”만, API 호출은 직접 하지 말고 반드시 Repo 사용
+
+Repo는 HTTP/Storage만
+
+외부 SDK(카카오맵)는 integrations로 한 곳에 모음
+
+상태 변경 후에는 필요 시 appState.persist() 호출
+
+13) 시작 방법
+
+index.html에서 ES 모듈로 app/main.js 로드
+
+<script type="module" src="/TLG/app/main.js"></script>
+
+
+페이지 전환은 location.hash = '#/search?q=...' 형식으로 사용
+
+기존 renderMap() 같은 대형 함수는
+
+MapView 골격 + mapController.mountMap + mapService + storeRepo로 찢어서 이전
