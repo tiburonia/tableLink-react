@@ -73,11 +73,72 @@ class StoreService {
       reviews: review || [],               // 최근 리뷰 5개
       promotions: promotion || [],         // 프로모션/단골레벨 정보
       
+      // 메뉴 상세 정보
+      menuItems: menu ? menu.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        description: item.description,
+        cook_station: item.cook_station
+      })) : [],
+      
+      // 테이블 상세 정보
+      tableDetails: table ? table.map(tbl => ({
+        id: tbl.id,
+        table_name: tbl.table_name,
+        capacity: tbl.capacity,
+        status: tbl.status
+      })) : [],
+      
+      // 리뷰 상세 정보
+      reviewDetails: review ? review.map(rev => ({
+        id: rev.id,
+        rating: rev.rating,
+        content: rev.content,
+        user_name: rev.user_name,
+        created_at: rev.created_at,
+        images: rev.images
+      })) : [],
+      
+      // 프로모션 상세 정보
+      promotionDetails: promotion ? promotion.map(promo => ({
+        id: promo.id,
+        level: promo.level,
+        min_orders: promo.min_orders,
+        min_spent: promo.min_spent,
+        benefit: promo.benefit
+      })) : [],
+      
       // 메타 정보
       menuCount: menu ? menu.length : 0,
       tableCount: table ? table.length : 0,
       reviewCount: review ? review.length : 0,
-      promotionCount: promotion ? promotion.length : 0
+      promotionCount: promotion ? promotion.length : 0,
+      
+      // 평균 평점 (리뷰 기반)
+      averageRating: review && review.length > 0 ? 
+        (review.reduce((sum, rev) => sum + (rev.rating || 0), 0) / review.length).toFixed(1) : 
+        store.rating_average ? parseFloat(store.rating_average).toFixed(1) : '0.0',
+      
+      // 테이블 상태 요약
+      tableStatusSummary: table ? {
+        available: table.filter(t => t.status === 'AVAILABLE').length,
+        occupied: table.filter(t => t.status === 'OCCUPIED').length,
+        total: table.length
+      } : { available: 0, occupied: 0, total: 0 },
+      
+      // 메뉴 카테고리별 개수
+      menuByStation: menu ? menu.reduce((acc, item) => {
+        const station = item.cook_station || 'KITCHEN';
+        acc[station] = (acc[station] || 0) + 1;
+        return acc;
+      }, {}) : {},
+      
+      // 프로모션 레벨 요약
+      promotionSummary: promotion ? {
+        maxLevel: Math.max(...promotion.map(p => p.level || 0), 0),
+        levels: promotion.map(p => p.level).sort((a, b) => a - b)
+      } : { maxLevel: 0, levels: [] }
     }; 
 
     console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
