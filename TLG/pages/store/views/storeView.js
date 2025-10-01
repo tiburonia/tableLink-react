@@ -1,5 +1,9 @@
 
-// 매장 뷰 - UI 렌더링 전담 (modules 폴더 의존)
+// 매장 뷰 - UI 렌더링 전담 (직접 모듈 import)
+import { tableStatusHTML } from './modules/tableStatusHTML.js';
+import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
+import { promotionCardHTML } from './modules/promotionCardHTML.js';
+
 export const storeView = {
   /**
    * 메인 매장 HTML 렌더링
@@ -8,7 +12,7 @@ export const storeView = {
     const main = document.getElementById('main');
     const displayRating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
 
-    // modules의 UI 컴포넌트들을 사용하여 렌더링
+    // 직접 import한 모듈들을 사용하여 렌더링
     main.innerHTML = `
       <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
         <span class="header-btn-ico">⬅️</span>
@@ -89,20 +93,12 @@ export const storeView = {
   renderModularComponents(store) {
     let components = '';
     
-    // 리뷰 프리뷰 컴포넌트
-    components += this.renderReviewPreviewHTML();
-    
-    // 상위 사용자 컴포넌트
+    // 직접 import한 모듈들 사용
+    components += reviewPreviewHTML.renderReviewPreviewHTML();
     components += this.renderTopUsersHTML(store);
-    
-    // 단골 레벨 컴포넌트
     components += this.renderLoyaltyLevelHTML();
-    
-    // 프로모션 컴포넌트
-    components += this.renderPromotionCardHTML(store);
-    
-    // 테이블 상태 컴포넌트 (modules/tableStatusHTML.js 의존)
-    components += this.renderTableStatusHTML(store);
+    components += promotionCardHTML.renderPromotionCardHTML(store);
+    components += tableStatusHTML.renderTableStatusHTML(store);
 
     return components;
   },
@@ -271,41 +267,16 @@ export const storeView = {
     }
   },
 
-  // UI 구성요소들 - modules 의존성
-  renderReviewPreviewHTML() {
-    // modules/reviewPreviewHTML.js에 의존
-    return window.reviewPreviewHTML ? window.reviewPreviewHTML.renderReviewPreviewHTML() : 
-           (window.StoreUIManager ? window.StoreUIManager.renderReviewPreviewHTML() : '');
-  },
-
+  // UI 구성요소들 - 기존 StoreUIManager 사용 (추후 modules로 완전 분리)
   renderTopUsersHTML(store) {
-    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.renderTopUsersHTML(store) : '';
   },
 
   renderLoyaltyLevelHTML() {
-    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.renderLoyaltyLevelHTML() : '';
   },
 
-  renderPromotionCardHTML(store) {
-    // modules/promotionCardHTML.js에 의존
-    return window.promotionCardHTML ? window.promotionCardHTML.renderPromotionCardHTML(store) : 
-           (window.StoreUIManager ? window.StoreUIManager.renderPromotionCardHTML(store) : '');
-  },
-
-  renderTableStatusHTML(store) {
-    // modules/tableStatusHTML.js에 의존
-    if (window.tableStatusHTML && typeof window.tableStatusHTML.renderTableStatusHTML === 'function') {
-      return window.tableStatusHTML.renderTableStatusHTML(store);
-    } else {
-      console.warn('⚠️ tableStatusHTML 모듈을 찾을 수 없습니다');
-      return '<div class="table-status-placeholder">테이블 현황을 불러오는 중...</div>';
-    }
-  },
-
   getStoreStyles() {
-    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.getStoreStyles() : '';
   },
 
@@ -375,7 +346,6 @@ export const storeView = {
   },
 
   createLoyaltyCardHTML(levelData, store) {
-    // 기존 단골 레벨 카드 HTML 생성 로직
     return `
       <div class="loyalty-card premium">
         <div class="loyalty-header">

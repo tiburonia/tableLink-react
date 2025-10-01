@@ -110,6 +110,3 @@ export const tableStatusHTML = {
     `;
   },
 };
-
-// 전역 등록
-window.tableStatusHTML = tableStatusHTML;

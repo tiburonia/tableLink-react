@@ -1,3 +1,4 @@
+
 /**
  * 매장 렌더링 메인 함수 - 레이어드 아키텍처 적용
  * @param {Object} storeData - 표준화된 매장 데이터 객체
@@ -40,10 +41,6 @@ async function renderStore(storeData) {
     // 매장 렌더링 로직 > 초기 렌더링 및 데이터 로딩
     await storeController.renderStore(storeData);
 
-    // 매장 테이블 정보 로딩
-
-    //
-
   } catch (error) {
     console.error('❌ renderStore 실행 실패:', error);
 
@@ -68,8 +65,6 @@ async function renderStore(storeData) {
     }
   }
 }
-
-
 
 /**
  * 테이블 배치도 렌더링

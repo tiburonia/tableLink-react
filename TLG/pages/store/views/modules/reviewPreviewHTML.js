@@ -61,6 +61,3 @@ export const reviewPreviewHTML = {
     `;
   }
 };
-
-// 전역 등록
-window.reviewPreviewHTML = reviewPreviewHTML;

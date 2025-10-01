@@ -67,6 +67,3 @@ export const promotionCardHTML = {
     `;
   }
 };
-
-// 전역 등록
-window.promotionCardHTML = promotionCardHTML;
