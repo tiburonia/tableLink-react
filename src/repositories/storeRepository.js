@@ -118,9 +118,39 @@ class StoreRepository {
    */
   async getStoreReview(storeId) {
     const result = await pool.query(`
-    
-    `)
-    
+      SELECT 
+        r.id,
+        r.order_id,
+        r.store_id,
+        r.rating,
+        r.content,
+        r.images,
+        r.status,
+        r.created_at,
+        r.updated_at,
+        r.user_id,
+        u.name as user_name
+      FROM reviews r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1 
+        AND r.status = 'VISIBLE'
+      ORDER BY r.created_at DESC
+      LIMIT 5
+    `, [storeId]);
+
+    return result.rows.map(review => ({
+      id: review.id,
+      order_id: review.order_id,
+      store_id: review.store_id,
+      rating: review.rating,
+      content: review.content || '내용 없음',
+      images: review.images || [],
+      status: review.status,
+      created_at: review.created_at,
+      updated_at: review.updated_at,
+      user_id: review.user_id,
+      user_name: review.user_name || '익명'
+    }));
   }
   
 
