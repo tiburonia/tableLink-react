@@ -1,4 +1,4 @@
-// 개별 매장 전용 지도 마커 관리자 (집계마커 제거)
+// 개별 매장 전용 지도 마커 관리자 (mapDataRepository 연동, 중복 API 호출 방지)
 window.MapMarkerManager = {
   // 현재 표시된 마커들 (위치별 인덱싱)
   currentMarkers: new Map(),
@@ -15,10 +15,10 @@ window.MapMarkerManager = {
   // 현재 뷰포트 영역
   currentBounds: null,
 
-  // 성능 최적화 관련
+  // 성능 최적화 관련 (mapDataRepository가 캐싱 담당)
   lastCallTime: 0,
   debounceTimer: null,
-  requestCache: new Map(),
+  requestCache: new Map(), // 하위 호환성을 위해 유지, 실제로는 mapDataRepository 캐시 사용
 
   // 메인 진입점 - 레벨 변경시 호출 (개별 매장만)
   async handleMapLevelChange(level, map) {
@@ -91,50 +91,22 @@ window.MapMarkerManager = {
     return latDiff > 0.3 || lngDiff > 0.3;
   },
 
-  // 개별 매장 전용 API를 사용한 마커 갱신
+  // mapDataRepository를 통한 마커 갱신 (중복 API 호출 방지)
   async refreshMarkersWithAPI(map, level) {
-    console.log(`🌐 개별 매장 API 호출 시작 (레벨: ${level})`);
-
-    const bounds = map.getBounds();
-    const bbox = [
-      bounds.getSouthWest().getLng(),
-      bounds.getSouthWest().getLat(),
-      bounds.getNorthEast().getLng(),
-      bounds.getNorthEast().getLat()
-    ];
-
-    const params = new URLSearchParams({
-      level: level.toString(),
-      bbox: bbox.join(',')
-    });
-
-    const cacheKey = params.toString();
-    console.log(`📍 API 요청: /api/clusters/clusters?${cacheKey}`);
-
-    // 캐시 확인 (1분간 유효)
-    if (this.requestCache.has(cacheKey)) {
-      const cached = this.requestCache.get(cacheKey);
-      if (Date.now() - cached.timestamp < 60000) {
-        console.log(`⚡ 캐시된 데이터 사용: ${cached.data.features?.length || 0}개`);
-        return this.processAPIResponse(cached.data);
-      }
-    }
+    console.log(`🌐 mapDataRepository를 통한 매장 데이터 조회 시작 (레벨: ${level})`);
 
     try {
-      const response = await fetch(`/api/clusters/clusters?${params}`);
-      const data = await response.json();
-
-      // 성공한 응답만 캐시
-      if (data.success) {
-        this.requestCache.set(cacheKey, {
-          data: data,
-          timestamp: Date.now()
-        });
+      // mapDataRepository 사용 (캐싱 및 API 호출 통합)
+      if (!window.mapDataRepository) {
+        throw new Error('mapDataRepository가 로드되지 않음');
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'API 요청 실패');
-      }
+      const bounds = map.getBounds();
+      const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
+
+      console.log(`📍 mapDataRepository를 통한 API 요청: level=${level}, bbox=${bbox}`);
+
+      const data = await window.mapDataRepository.fetchViewportStores(level, bbox);
 
       // 작업 취소 확인
       if (this.shouldCancel) {
@@ -146,7 +118,7 @@ window.MapMarkerManager = {
 
     } catch (error) {
       if (!this.shouldCancel) {
-        console.error('❌ 개별 매장 API 호출 실패:', error);
+        console.error('❌ mapDataRepository를 통한 매장 데이터 조회 실패:', error);
       }
     }
   },
@@ -379,9 +351,9 @@ window.MapMarkerManager = {
     this.currentMarkers.clear();
   },
 
-  // 완전 초기화 (메모리 관리 강화)
+  // 완전 초기화 (메모리 관리 강화, 캐시 제거)
   reset() {
-    console.log('🔄 MapMarkerManager 완전 초기화 (개별 매장 전용)');
+    console.log('🔄 MapMarkerManager 완전 초기화 (mapDataRepository 연동)');
 
     this.shouldCancel = true;
     this.clearAllMarkers();
@@ -392,8 +364,10 @@ window.MapMarkerManager = {
       this.debounceTimer = null;
     }
 
-    // 캐시 정리 (메모리 절약)
-    this.requestCache.clear();
+    // 기존 캐시 정리 (mapDataRepository 사용으로 중복 제거)
+    if (this.requestCache) {
+      this.requestCache.clear();
+    }
 
     this.currentLevel = 0;
     this.isLoading = false;
@@ -401,6 +375,6 @@ window.MapMarkerManager = {
     this.currentBounds = null;
     this.lastCallTime = 0;
 
-    console.log('✅ MapMarkerManager 초기화 완료 (개별 매장 전용)');
+    console.log('✅ MapMarkerManager 초기화 완료 (mapDataRepository 연동)');
   }
 };
