@@ -4,11 +4,11 @@ export const storeView = {
   /**
    * 메인 매장 HTML 렌더링
    */
-  renderStoreHTML(store) {
+  renderStoreUIHTML(store) {
     const main = document.getElementById('main');
     const displayRating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
 
-    main.innerHTML = `${this.renderStoreUIHTML}`;
+    main.innerHTML = `${this.renderStoreHTML}`;
   },
 
   /**
