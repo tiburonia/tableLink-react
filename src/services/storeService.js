@@ -47,13 +47,14 @@ class StoreService {
   
 
     const storeBasicInfo = {
-      // 기본 매장 정보
-      store: store || {},
+      // 기본 매장 정보를 루트 레벨에 펼침
+      ...(store || {}),
+      
+      // 추가 데이터
       menu: menu || [],                    // 메뉴 목록
       tables: table || [],                 // 테이블 정보
       reviews: review || [],               // 최근 리뷰 5개
       promotions: promotion || [],         // 프로모션/단골레벨 정보
-      
       
       // 메타 정보
       menuCount: menu ? menu.length : 0,
