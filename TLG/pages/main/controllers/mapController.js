@@ -472,3 +472,7 @@ export const mapController = {
     }
   }
 };
+
+// 전역 객체로 등록 (MapMarkerManager 의존성 해결)
+window.mapController = mapController;
+console.log('✅ mapController 전역 객체 등록 완료');
