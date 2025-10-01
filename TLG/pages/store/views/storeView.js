@@ -1,4 +1,5 @@
-// 매장 뷰 - UI 렌더링 전담
+
+// 매장 뷰 - UI 렌더링 전담 (modules 폴더 의존)
 export const storeView = {
   /**
    * 메인 매장 HTML 렌더링
@@ -7,6 +8,7 @@ export const storeView = {
     const main = document.getElementById('main');
     const displayRating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
 
+    // modules의 UI 컴포넌트들을 사용하여 렌더링
     main.innerHTML = `
       <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
         <span class="header-btn-ico">⬅️</span>
@@ -45,11 +47,7 @@ export const storeView = {
                 </div>
               </div>
             </div>
-            ${this.renderReviewPreviewHTML()}
-            ${this.renderTopUsersHTML(store)}
-            ${this.renderLoyaltyLevelHTML()}
-            ${this.renderPromotionCardHTML(store)}
-            ${this.renderTableStatusHTML(store)}
+            ${this.renderModularComponents(store)}
           </div>
           <div id="storeNavBar" class="modern-nav">
             <button class="nav-btn" data-tab="menu">
@@ -83,6 +81,30 @@ export const storeView = {
       </nav>
       ${this.getStoreStyles()}
     `;
+  },
+
+  /**
+   * 모듈식 컴포넌트들 렌더링
+   */
+  renderModularComponents(store) {
+    let components = '';
+    
+    // 리뷰 프리뷰 컴포넌트
+    components += this.renderReviewPreviewHTML();
+    
+    // 상위 사용자 컴포넌트
+    components += this.renderTopUsersHTML(store);
+    
+    // 단골 레벨 컴포넌트
+    components += this.renderLoyaltyLevelHTML();
+    
+    // 프로모션 컴포넌트
+    components += this.renderPromotionCardHTML(store);
+    
+    // 테이블 상태 컴포넌트 (modules/tableStatusHTML.js 의존)
+    components += this.renderTableStatusHTML(store);
+
+    return components;
   },
 
   /**
@@ -249,33 +271,38 @@ export const storeView = {
     }
   },
 
-  // UI 구성요소들 (기존 StoreUIManager에서 가져옴)
+  // UI 구성요소들 - modules 의존성
   renderReviewPreviewHTML() {
-    return window.StoreUIManager ? window.StoreUIManager.renderReviewPreviewHTML() : '';
+    // modules/reviewPreviewHTML.js에 의존
+    return window.reviewPreviewHTML ? window.reviewPreviewHTML.renderReviewPreviewHTML() : 
+           (window.StoreUIManager ? window.StoreUIManager.renderReviewPreviewHTML() : '');
   },
 
   renderTopUsersHTML(store) {
+    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.renderTopUsersHTML(store) : '';
   },
 
   renderLoyaltyLevelHTML() {
+    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.renderLoyaltyLevelHTML() : '';
   },
 
   renderPromotionCardHTML(store) {
-    return window.StoreUIManager ? window.StoreUIManager.renderPromotionCardHTML(store) : '';
+    // modules/promotionCardHTML.js에 의존
+    return window.promotionCardHTML ? window.promotionCardHTML.renderPromotionCardHTML(store) : 
+           (window.StoreUIManager ? window.StoreUIManager.renderPromotionCardHTML(store) : '');
   },
 
   renderTableStatusHTML(store) {
-    return window.tableStatusHTML ? window.tableStatusHTML.renderTableStatusHTML(store): '';
+    // modules/tableStatusHTML.js에 의존
+    return window.tableStatusHTML ? window.tableStatusHTML.renderTableStatusHTML(store) : '';
   },
 
   getStoreStyles() {
+    // 기존 StoreUIManager 사용 (추후 modules로 분리 가능)
     return window.StoreUIManager ? window.StoreUIManager.getStoreStyles() : '';
   },
-
-  
-
 
   // 유틸리티 함수들
   getBenefitIcon(type) {
