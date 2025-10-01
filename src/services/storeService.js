@@ -26,28 +26,7 @@ class StoreService {
     // 매장 기본정보 조회
     const store = await storeRepository.getStoreById(numericStoreId);
 
-    const storeData = {
-      id: store.id,
-      store_id: store.id,
-      name: store.name || '매장명 없음',
-      category: store.category ? store.category : '기타',
-      address: store.full_address ? store.full_address : '주소 정보 없음',
-      rating_average: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      review_count: store.review_count ? store.review_count : 0,
-      favorite_count: 0,
-      isOpen: store.is_open,
-      coord:  {
-        lat: parseFloat(store.lat),
-        lng: parseFloat(store.lng)
-      },
-      region: {
-        sido: store.sido,
-        sigungu: store.sigungu,
-        eupmyeondong: store.eupmyeondong
-      }
-    }
     
-
     //매장 메뉴 조회
     const menu = await storeRepository.getStoreMenu(numericStoreId)
 
@@ -64,9 +43,7 @@ class StoreService {
     if (!store) {
       throw new Error('매장을 찾을 수 없습니다');
     }
-    /**  userId를 활용한 개인화된 매장 정보 조회 로직 구현예정
-     *   const formattedStoreInfo = this.formatStoreData(store)
-     */
+  
 
     const storeBasicInfo = {
       // 기본 매장 정보

@@ -29,7 +29,20 @@ class StoreRepository {
       WHERE s.id = $1
     `, [storeId]);
 
-    return result.rows.length > 0 ? result.rows[0] : null;
+    return result.rows.map(store => ({
+      id: store.id,
+      name: store.name,
+      is_open: store.is_open,
+      store_tel_number: store.store_tel_number,
+      rating_average: store.rating_average,
+      review_count: store.review_count,
+      sido: store.sido,
+      sigungu: store.sigungu,
+      eupmyeondong: store.eupmyeondong,
+      full_address: store.full_address,
+      lng: store.lng,
+      lat: store.lat
+    }))
   }
 
   /**
