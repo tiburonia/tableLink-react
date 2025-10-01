@@ -37,9 +37,13 @@ async function renderStore(storeData) {
       throw new Error('매장 컨트롤러 모듈을 로드할 수 없습니다');
     }
 
-    // 매장 렌더링 로직을 storeController에 위임합니다.
+    // 매장 렌더링 로직 > 초기 렌더링 및 데이터 로딩
     await storeController.renderStore(storeData);
 
+    // 매장 테이블 정보 로딩
+    
+    //
+    
   } catch (error) {
     console.error('❌ renderStore 실행 실패:', error);
 
@@ -65,44 +69,7 @@ async function renderStore(storeData) {
   }
 }
 
-/**
- * 매장 ID로 매장 정보 로드 및 렌더링
- */
-async function loadAndRenderStore(storeId) {
-  try {
-    console.log(`🏪 매장 ${storeId} 정보 로드 시작`);
 
-    // API를 통해 매장 정보를 가져옵니다.
-    const response = await fetch(`/api/stores/${storeId}`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-
-    // 성공적으로 데이터를 가져왔다면 renderStore 함수를 호출합니다.
-    if (data.success && data.store) {
-      await renderStore(data.store);
-    } else {
-      // 데이터 로드 실패 시 오류를 발생시킵니다.
-      throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
-    }
-  } catch (error) {
-    console.error('❌ 매장 정보 로드 실패:', error);
-
-    // 오류 발생 시 사용자에게 표시할 HTML을 설정합니다.
-    const mainElement = document.getElementById('main');
-    if (mainElement) {
-      mainElement.innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <h2>🚫 매장 정보를 불러올 수 없습니다</h2>
-          <p>오류: ${error.message}</p>
-          <button onclick="location.reload()">다시 시도</button>
-        </div>
-      `;
-    }
-  }
-}
 
 /**
  * 테이블 배치도 렌더링
