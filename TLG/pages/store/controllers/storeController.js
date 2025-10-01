@@ -1,4 +1,3 @@
-
 // 매장 컨트롤러 - 이벤트 처리 및 흐름 제어
 let storeService, storeView;
 
@@ -20,34 +19,78 @@ export const storeController = {
   },
 
   /**
-   * 매장 렌더링 메인 함수
+   * 매장 렌더링 메인 함수 - API 요청 후 렌더링
    */
   async renderStore(storeData) {
+    console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
+
     try {
-      console.log('🏪 매장 렌더링 시작:', storeData.name, 'ID:', storeData.id);
+      let finalStoreData;
 
-      // storeData 표준화 및 검증
-      const normalizedStore = await storeService.normalizeStoreData(storeData);
-      this.state.currentStore = normalizedStore;
+      // storeData가 ID만 있는 경우 API에서 전체 데이터 가져오기
+      if (storeData && (storeData.id || storeData.store_id) && !storeData.name) {
+        const storeId = storeData.id || storeData.store_id;
+        finalStoreData = await this.fetchStoreData(storeId);
+      } else if (storeData && storeData.id && storeData.name) {
+        // 전체 데이터가 있는 경우 API로 최신 데이터 가져오기
+        finalStoreData = await this.fetchStoreData(storeData.id);
+      } else {
+        // 데이터가 없는 경우 에러
+        throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
+      }
 
-      // UI 렌더링
+      // 매장 데이터 표준화
+      const normalizedStore = await storeService.normalizeStoreData(finalStoreData);
+
+      // View를 통한 UI 렌더링
       storeView.renderStoreHTML(normalizedStore);
 
-      // 이벤트 설정
-      this.setupEventListeners(normalizedStore);
-
-      // 초기 데이터 로드
-      await this.loadInitialData(normalizedStore);
-
-      // 전역 저장
-      window.currentStore = normalizedStore;
-      this.state.isInitialized = true;
+      // 추가 데이터 로드 및 업데이트 (비동기)
+      this.loadAdditionalData(normalizedStore);
 
       console.log('✅ 매장 렌더링 완료:', normalizedStore.name);
 
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
       storeView.showError(error.message);
+    }
+  },
+
+  /**
+   * API에서 매장 데이터 가져오기
+   */
+  async fetchStoreData(storeId) {
+    console.log(`🔍 매장 ${storeId} API 데이터 요청 시작`);
+
+    try {
+      // 사용자 정보 가져오기
+      const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : null;
+      const userId = userInfo?.userId || userInfo?.id;
+
+      // API 요청 URL 구성
+      let apiUrl = `/api/stores/${storeId}`;
+      if (userId) {
+        apiUrl += `?userId=${userId}`;
+      }
+
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.store) {
+        throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+      }
+
+      console.log(`✅ 매장 ${storeId} API 데이터 로드 완료`);
+      return data.store;
+
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} API 요청 실패:`, error);
+      throw error;
     }
   },
 
@@ -171,7 +214,7 @@ export const storeController = {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = '/TLG/utils/TLL.js';
-      
+
       script.onload = async () => {
         setTimeout(async () => {
           try {
@@ -186,7 +229,7 @@ export const storeController = {
           }
         }, 100);
       };
-      
+
       script.onerror = () => reject(new Error('TLL.js 스크립트 로드 실패'));
       document.head.appendChild(script);
     });
@@ -274,35 +317,32 @@ export const storeController = {
   },
 
   /**
-   * 초기 데이터 로드
+   * 추가 데이터 로드 (비동기)
    */
-  async loadInitialData(store) {
-    try {
-      console.log('📊 초기 데이터 로드 시작...');
+  loadAdditionalData(store) {
+    console.log('📊 추가 데이터 로드 시작...');
 
-      // 리뷰 데이터 로드
-      await this.loadReviewData(store);
+    // 리뷰 데이터 로드
+    this.loadReviewData(store).catch(error => console.warn('⚠️ 리뷰 데이터 로드 실패:', error));
 
-      // 프로모션 데이터 로드
-      await this.loadPromotionData(store);
+    // 프로모션 데이터 로드
+    this.loadPromotionData(store).catch(error => console.warn('⚠️ 프로모션 데이터 로드 실패:', error));
 
-      // 단골 레벨 데이터 로드
-      await this.loadLoyaltyData(store);
+    // 단골 레벨 데이터 로드
+    this.loadLoyaltyData(store).catch(error => console.warn('⚠️ 단골 레벨 데이터 로드 실패:', error));
 
-      // 상위 사용자 데이터 로드
-      await this.loadTopUsersData(store);
+    // 상위 사용자 데이터 로드
+    this.loadTopUsersData(store).catch(error => console.warn('⚠️ 상위 사용자 데이터 로드 실패:', error));
 
-      // 테이블 정보 로드
-      this.loadTableInfo(store);
+    // 테이블 정보 로드
+    this.loadTableInfo(store);
 
-      // 첫 화면(메뉴 탭) 설정
-      this.setInitialTab(store);
+    // 첫 화면(메뉴 탭) 설정
+    this.setInitialTab(store);
 
-      console.log('✅ 초기 데이터 로드 완료');
-    } catch (error) {
-      console.error('❌ 초기 데이터 로드 실패:', error);
-    }
+    console.log('✅ 추가 데이터 로드 완료');
   },
+
 
   /**
    * 리뷰 데이터 로드
@@ -344,7 +384,7 @@ export const storeController = {
   async loadLoyaltyData(store) {
     try {
       const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
-      
+
       if (userInfo && window.RegularLevelManager) {
         const levelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, store.id);
         storeView.updateLoyaltyUI(levelData, store);
@@ -386,7 +426,7 @@ export const storeController = {
     setTimeout(() => {
       if (window.StoreTabManager && typeof window.StoreTabManager.renderStoreTab === 'function') {
         window.StoreTabManager.renderStoreTab('menu', store);
-        
+
         const menuBtn = document.querySelector('[data-tab="menu"]');
         if (menuBtn) {
           menuBtn.classList.add('active');
