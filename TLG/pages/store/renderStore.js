@@ -1,18 +1,3 @@
-// 모듈 import (조건부)
-let storeController;
-
-try {
-  // Store Controller 모듈을 동적으로 임포트합니다.
-  // 이는 레이어드 아키텍처의 Controller 역할을 합니다.
-  const controllerModule = await import('./controllers/storeController.js');
-  storeController = controllerModule.storeController;
-} catch (error) {
-  // 모듈 임포트 실패 시 콘솔에 경고를 출력하고,
-  // 전역에 이미 로드된 storeController 객체를 사용합니다 (폴백).
-  console.warn('⚠️ storeController 모듈 임포트 실패:', error);
-  storeController = window.storeController;
-}
-
 /**
  * 매장 렌더링 메인 함수 - 레이어드 아키텍처 적용
  * @param {Object} storeData - 표준화된 매장 데이터 객체
@@ -31,6 +16,20 @@ try {
 async function renderStore(storeData) {
   try {
     console.log('🏪 renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
+
+    // storeController 동적 로드
+    let storeController;
+    try {
+      // Store Controller 모듈을 동적으로 임포트합니다.
+      // 이는 레이어드 아키텍처의 Controller 역할을 합니다.
+      const controllerModule = await import('./controllers/storeController.js');
+      storeController = controllerModule.storeController;
+    } catch (error) {
+      // 모듈 임포트 실패 시 콘솔에 경고를 출력하고,
+      // 전역에 이미 로드된 storeController 객체를 사용합니다 (폴백).
+      console.warn('⚠️ storeController 모듈 임포트 실패:', error);
+      storeController = window.storeController;
+    }
 
     // storeController가 로드되었는지 확인합니다.
     if (!storeController) {
@@ -118,8 +117,9 @@ async function renderTableLayout(store) {
   }
 }
 
-// 레거시 호환성을 위한 헬퍼 함수들
-// 기존 코드와의 호환성을 위해 showAllPromotions 및 showAllTopUsers 함수를 유지합니다.
+/**
+ * 프로모션 상세보기
+ */
 function showAllPromotions(store) {
   console.log('🎯 showAllPromotions 호출:', store?.name);
 
@@ -136,6 +136,9 @@ function showAllPromotions(store) {
   }
 }
 
+/**
+ * 상위 사용자 전체보기
+ */
 function showAllTopUsers(store) {
   console.log('🏆 상위 사용자 전체 보기:', store?.name);
   // 현재는 알림 메시지만 표시하고, 추후 구현 예정임을 알립니다.
