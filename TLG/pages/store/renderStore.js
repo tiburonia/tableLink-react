@@ -20,8 +20,7 @@ async function renderStore(storeData) {
     // storeController 동적 로드
     let storeController;
     try {
-      // Store Controller 모듈을 동적으로 임포트합니다.
-      // 이는 레이어드 아키텍처의 Controller 역할을 합니다.
+      // Store Controller 모듈을 동적으로 임포트.
       const controllerModule = await import('./controllers/storeController.js');
       storeController = controllerModule.storeController;
     } catch (error) {
