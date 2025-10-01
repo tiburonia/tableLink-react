@@ -102,7 +102,50 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
   `;
 
   const result = await pool.query(query, [xmin, ymin, xmax, ymax]);
-  return result.rows;
+  
+  const data = result.rows.map(row => {
+    if (row.kind === 'cluster') {
+      return {
+        kind: 'cluster',
+        lat: parseFloat(row.lat),
+        lng: parseFloat(row.lng),
+        count: parseInt(row.count),
+        bounds: row.bounds
+      };
+    } else {
+      // 통합된 storeData 객체 형식으로 반환
+      return {
+        kind: 'individual',
+        id: parseInt(row.store_id),
+        store_id: parseInt(row.store_id),
+        name: row.name || '매장명 없음',
+        category: row.category || '기타',
+        address: `${row.sido || ''} ${row.sigungu || ''} ${row.eupmyeondong || ''}`.trim() || '주소 정보 없음',
+        ratingAverage: row.rating_average ? parseFloat(row.rating_average) : 0.0,
+        reviewCount: row.review_count || 0,
+        favoriteCount: 0,
+        isOpen: row.is_open !== false,
+        coord: { 
+          lat: parseFloat(row.lat), 
+          lng: parseFloat(row.lng) 
+        },
+        region: {
+          sido: row.sido,
+          sigungu: row.sigungu,
+          eupmyeondong: row.eupmyeondong
+        },
+        // 하위 호환성을 위한 추가 필드들
+        lat: parseFloat(row.lat),
+        lng: parseFloat(row.lng),
+        full_address: `${row.sido || ''} ${row.sigungu || ''} ${row.eupmyeondong || ''}`.trim(),
+        is_open: row.is_open,
+        rating_average: row.rating_average ? parseFloat(row.rating_average) : 0.0,
+        review_count: row.review_count || 0
+      };
+    }
+  });
+
+  return data;
 }
 
 module.exports = router;

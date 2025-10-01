@@ -186,7 +186,7 @@ export const mapService = {
   },
 
   /**
-   * 매장 데이터 변환 (내부 헬퍼)
+   * 표준화된 storeData 객체 생성 (통합 표준)
    */
   transformStoreData(feature) {
     // ID 우선순위: id > store_id
@@ -201,7 +201,8 @@ export const mapService = {
       return null;
     }
 
-    return {
+    // 통합된 storeData 객체 표준 형식
+    const storeData = {
       id: storeId,
       store_id: storeId,
       name: feature.name || '매장명 없음',
@@ -211,13 +212,54 @@ export const mapService = {
       reviewCount: feature.review_count || 0,
       favoriteCount: 0,
       isOpen: feature.is_open !== false,
-      coord: { lat: feature.lat, lng: feature.lng },
+      coord: { 
+        lat: parseFloat(feature.lat), 
+        lng: parseFloat(feature.lng) 
+      },
       region: {
         sido: feature.sido,
         sigungu: feature.sigungu,
         eupmyeondong: feature.eupmyeondong
       }
     };
+
+    console.log('✅ 표준화된 storeData 생성:', { 
+      id: storeData.id, 
+      name: storeData.name, 
+      category: storeData.category,
+      isOpen: storeData.isOpen
+    });
+
+    return storeData;
+  },
+
+  /**
+   * storeData 객체 유효성 검증
+   */
+  validateStoreData(storeData) {
+    if (!storeData) return false;
+    
+    const required = ['id', 'name', 'coord'];
+    return required.every(field => {
+      if (field === 'coord') {
+        return storeData.coord && 
+               typeof storeData.coord.lat === 'number' && 
+               typeof storeData.coord.lng === 'number';
+      }
+      return storeData.hasOwnProperty(field) && storeData[field];
+    });
+  },
+
+  /**
+   * 레거시 데이터를 storeData 형식으로 변환
+   */
+  normalizeToStoreData(rawData) {
+    if (this.validateStoreData(rawData)) {
+      return rawData; // 이미 올바른 형식
+    }
+
+    // 레거시 형식에서 변환
+    return this.transformStoreData(rawData);
   }
 };
 

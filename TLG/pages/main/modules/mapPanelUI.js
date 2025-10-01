@@ -734,68 +734,33 @@ window.MapPanelUI = {
         console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 레벨: ${level}, bbox: ${bbox}`);
       }
 
-      // 개별 매장 데이터 변환
-      const stores = features.map(feature => {
-        if (feature.kind === 'individual') {
-          // ID 우선순위 확인 및 로깅
-          const originalStoreId = feature.store_id;
-          
-          console.log('🔍 원본 데이터 검사:', {
-            id: originalId,
-            store_id: originalStoreId,
-            name: feature.name,
-            allKeys: Object.keys(feature)
-          });
+      // 표준화된 storeData 객체로 변환
+      const stores = features
+        .filter(feature => feature.kind === 'individual')
+        .map(feature => {
+          // 서버에서 이미 표준화된 형식으로 받았는지 확인
+          if (feature.coord && feature.region) {
+            console.log('✅ 이미 표준화된 storeData:', feature.name);
+            return feature;
+          }
 
-          // ID 결정 - 우선순위: id > store_id
-          let storeId = originalStoreId;
+          // 레거시 형식이면 변환
+          console.log('🔄 레거시 데이터 변환:', feature.name);
+          return window.mapService ? 
+            window.mapService.transformStoreData(feature) : 
+            this.legacyTransformStoreData(feature);
+        })
+        .filter(store => {
+          const isValid = window.mapService ? 
+            window.mapService.validateStoreData(store) : 
+            store && store.id && store.name;
           
-          // 숫자 형태의 문자열을 숫자로 변환
-          if (typeof storeId === 'string' && !isNaN(storeId)) {
-            storeId = parseInt(storeId, 10);
+          if (!isValid) {
+            console.warn('⚠️ 유효하지 않은 storeData:', store);
           }
           
-          if (!storeId || (typeof storeId !== 'number' && typeof storeId !== 'string') || storeId <= 0) {
-            console.error('❌ 유효하지 않은 매장 ID:', {
-              feature,
-              originalId,
-              originalStoreId,
-              finalStoreId: storeId,
-              typeOfStoreId: typeof storeId,
-              hasId: !!feature.id,
-              hasStoreId: !!feature.store_id,
-              keys: Object.keys(feature)
-            });
-            return null;
-          }
-          
-          console.log('✅ 매장 데이터 변환 성공:', { 
-            originalStoreId, 
-            finalId: storeId,
-            finalIdType: typeof storeId,
-            name: feature.name 
-          });
-          
-          return {
-            id: storeId,
-            store_id: storeId,  // 호환성을 위해 store_id도 설정
-            name: feature.name || '매장명 없음',
-            category: feature.category || '기타',
-            address: feature.full_address || '주소 정보 없음',
-            ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
-            reviewCount: feature.review_count || 0,
-            favoriteCount: 0,
-            isOpen: feature.is_open || false,
-            coord: { lat: feature.lat, lng: feature.lng },
-            region: {
-              sido: feature.sido,
-              sigungu: feature.sigungu,
-              eupmyeondong: feature.eupmyeondong
-            }
-          };
-        }
-        return null;
-      }).filter(Boolean);
+          return isValid;
+        });
 
       console.log(`✅ 최종 변환된 매장 데이터 ${stores.length}개:`, stores.map(s => ({ id: s.id, name: s.name, idType: typeof s.id })));
       return stores;
@@ -1059,6 +1024,41 @@ window.MapPanelUI = {
   async updateStoreList(map) {
     console.log('⚠️ updateStoreList 호출됨 - rebuildStorePanel로 리다이렉트');
     return await this.rebuildStorePanel(map);
+  },
+
+  // 레거시 데이터 변환 함수 (폴백용)
+  legacyTransformStoreData(feature) {
+    let storeId = feature.id || feature.store_id;
+    
+    if (typeof storeId === 'string' && !isNaN(storeId)) {
+      storeId = parseInt(storeId, 10);
+    }
+
+    if (!storeId || storeId <= 0) {
+      console.error('❌ 유효하지 않은 매장 ID:', feature);
+      return null;
+    }
+
+    return {
+      id: storeId,
+      store_id: storeId,
+      name: feature.name || '매장명 없음',
+      category: feature.category || '기타',
+      address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
+      ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
+      reviewCount: feature.review_count || 0,
+      favoriteCount: 0,
+      isOpen: feature.is_open !== false,
+      coord: { 
+        lat: parseFloat(feature.lat), 
+        lng: parseFloat(feature.lng) 
+      },
+      region: {
+        sido: feature.sido,
+        sigungu: feature.sigungu,
+        eupmyeondong: feature.eupmyeondong
+      }
+    };
   },
 
   // 수동 새로고침 메서드

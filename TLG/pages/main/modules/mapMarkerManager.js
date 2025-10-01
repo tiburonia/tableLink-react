@@ -220,15 +220,26 @@ window.MapMarkerManager = {
 
     const markerId = `store-${feature.store_id || Math.random().toString(36).substr(2, 9)}`;
 
+    // 표준화된 storeData 객체 생성
     const storeData = {
-      id: feature.store_id,
-      name: feature.name,
-      category: feature.category,
-      ratingAverage: feature.rating_average,
-      reviewCount: feature.review_count,
-      isOpen: feature.is_open,
-      coord: { lat: feature.lat, lng: feature.lng },
-      fullAddress: feature.full_address // 서버에서 조합된 주소 사용
+      id: feature.id || feature.store_id,
+      store_id: feature.id || feature.store_id,
+      name: feature.name || '매장명 없음',
+      category: feature.category || '기타',
+      address: feature.address || feature.full_address || '주소 정보 없음',
+      ratingAverage: feature.ratingAverage || (feature.rating_average ? parseFloat(feature.rating_average) : 0.0),
+      reviewCount: feature.reviewCount || feature.review_count || 0,
+      favoriteCount: feature.favoriteCount || 0,
+      isOpen: feature.isOpen !== undefined ? feature.isOpen : (feature.is_open !== false),
+      coord: feature.coord || { 
+        lat: parseFloat(feature.lat), 
+        lng: parseFloat(feature.lng) 
+      },
+      region: feature.region || {
+        sido: feature.sido,
+        sigungu: feature.sigungu,
+        eupmyeondong: feature.eupmyeondong
+      }
     };
 
     const content = `

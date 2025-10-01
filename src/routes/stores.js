@@ -53,11 +53,23 @@ router.get('/search', async (req, res) => {
 
     const stores = searchResult.rows.map(store => ({
       id: store.id,
-      name: store.name,
+      store_id: store.id,
+      name: store.name || '매장명 없음',
       category: store.category || '기타',
       address: store.address || '주소 정보 없음',
-      isOpen: store.is_open || false,
-      ratingAverage: parseFloat(store.rating_average) || 0
+      ratingAverage: parseFloat(store.rating_average) || 0.0,
+      reviewCount: store.review_count || 0,
+      favoriteCount: 0,
+      isOpen: store.is_open !== false,
+      coord: store.lat && store.lng ? { 
+        lat: parseFloat(store.lat), 
+        lng: parseFloat(store.lng) 
+      } : null,
+      region: {
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      }
     }));
 
     console.log(`✅ 매장 검색 완료: ${stores.length}개 결과`);
