@@ -48,66 +48,12 @@ class StoreService {
 
     const storeBasicInfo = {
       // 기본 매장 정보
-      id: store.id,
-      store_id: store.id,
-      name: store.name,
-      category: store.category || '기타',
-      address: store.full_address || '주소 정보 없음',
-      phone: store.store_tel_number || null,
-      rating_average: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      review_count: store.review_count || 0,
-      isOpen: store.is_open !== false,
-      coord: {
-        lat: parseFloat(store.lat),
-        lng: parseFloat(store.lng)
-      },
-      region: {
-        sido: store.sido,
-        sigungu: store.sigungu,
-        eupmyeondong: store.eupmyeondong
-      },
-      
-      // 추가 데이터
+      store: store || {},
       menu: menu || [],                    // 메뉴 목록
       tables: table || [],                 // 테이블 정보
       reviews: review || [],               // 최근 리뷰 5개
       promotions: promotion || [],         // 프로모션/단골레벨 정보
       
-      // 메뉴 상세 정보
-      menuItems: menu ? menu.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        cook_station: item.cook_station
-      })) : [],
-      
-      // 테이블 상세 정보
-      tableDetails: table ? table.map(tbl => ({
-        id: tbl.id,
-        table_name: tbl.table_name,
-        capacity: tbl.capacity,
-        status: tbl.status
-      })) : [],
-      
-      // 리뷰 상세 정보
-      reviewDetails: review ? review.map(rev => ({
-        id: rev.id,
-        rating: rev.rating,
-        content: rev.content,
-        user_name: rev.user_name,
-        created_at: rev.created_at,
-        images: rev.images
-      })) : [],
-      
-      // 프로모션 상세 정보
-      promotionDetails: promotion ? promotion.map(promo => ({
-        id: promo.id,
-        level: promo.level,
-        min_orders: promo.min_orders,
-        min_spent: promo.min_spent,
-        benefit: promo.benefit
-      })) : [],
       
       // 메타 정보
       menuCount: menu ? menu.length : 0,
