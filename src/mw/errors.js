@@ -1,4 +1,3 @@
-
 /**
  * 404 Not Found 핸들러
  */
@@ -18,7 +17,7 @@ function errorHandler(error, req, res, next) {
   }
 
   let statusCode = res.statusCode !== 200 ? res.statusCode : 500;
-  
+
   // PostgreSQL 에러 코드 매핑
   if (error.code) {
     switch (error.code) {
@@ -64,7 +63,7 @@ function errorHandler(error, req, res, next) {
   console.error(`📊 Status: ${statusCode}`);
   console.error(`💬 Message: ${error.message}`);
   console.error(`🔍 Code: ${error.code || 'N/A'}`);
-  
+
   // PostgreSQL 상세 에러 정보
   if (error.detail) {
     console.error(`📋 Detail: ${error.detail}`);
@@ -75,18 +74,18 @@ function errorHandler(error, req, res, next) {
   if (error.position) {
     console.error(`📍 Position: ${error.position}`);
   }
-  
+
   // 스택 트레이스 출력 (항상)
   if (error.stack) {
     console.error('📚 Stack Trace:');
     console.error(error.stack);
   }
-  
+
   // 요청 본문 로깅 (POST/PUT 요청시)
   if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
     console.error('📦 Request Body:', JSON.stringify(req.body, null, 2));
   }
-  
+
   console.error('=== 📍 에러 종료 ===\n');
 
   res.status(statusCode).json(response);
