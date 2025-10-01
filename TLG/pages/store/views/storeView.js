@@ -1,4 +1,3 @@
-
 // 매장 뷰 - UI 렌더링 전담
 export const storeView = {
   /**
@@ -8,7 +7,61 @@ export const storeView = {
     const main = document.getElementById('main');
     const displayRating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
 
-    main.innerHTML = `${this.renderStoreUIHTML}`;
+    main.innerHTML = `
+      <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
+        <span class="header-btn-ico">⬅️</span>
+      </button>
+      <button id="TLL" class="header-btn" aria-label="QR결제">
+        <span class="header-btn-ico">📱</span>
+      </button>
+      <header id="storeHeader">
+        <div class="imgWrapper">
+          <img src="TableLink.png" alt="메뉴이미지" />
+          <div class="header-overlay"></div>
+        </div>
+      </header>
+      <div id="storePanel" class="collapsed">
+        <div id="panelHandle"></div>
+        <div id="storePanelContainer">
+          <div id="storeInfoContainer">
+            <div class="storeInfo">
+              <div class="store-header-section">
+                <div class="store-main-info">
+                  <div class="score-row">
+                    <div class="rating-container">
+                      <span id="reviewStar">★</span>
+                      <span id="reviewScore">${displayRating}</span>
+                      <span id="reviewLink" class="review-link">리뷰 보기</span>
+                    </div>
+                    <button id="favoriteBtn" class="favorite-btn">♡</button>
+                  </div>
+                  <h2 id="storeName">${store.name}</h2>
+                  <div class="store-status-container">
+                    <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
+                      ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+                    </span>
+                    <span class="store-category-tag">${store.category}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            ${this.renderTableStatusHTML(store)}
+            ${this.renderReviewPreviewHTML()}
+            ${this.renderPromotionCardHTML(store)}
+            ${this.renderLoyaltyLevelHTML()}
+            ${this.renderTopUsersHTML(store)}
+          </div>
+          <div id="storeTabContainer">
+            <div class="store-tab-navigation">
+              <button class="tab-btn active" data-tab="menu">메뉴</button>
+              <button class="tab-btn" data-tab="review">리뷰</button>
+            </div>
+            <div id="storeTabContent"></div>
+          </div>
+        </div>
+      </div>
+      ${this.getStoreStyles()}
+    `;
   },
 
   /**
@@ -18,14 +71,14 @@ export const storeView = {
     const reviewScoreElement = document.getElementById('reviewScore');
     if (reviewScoreElement) {
       const displayRating = parseFloat(rating).toFixed(1);
-      
+
       // 기존 텍스트 노드 업데이트
       const textNode = reviewScoreElement.firstChild;
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
         textNode.textContent = displayRating + '\u00A0';
       } else {
         reviewScoreElement.innerHTML = `${displayRating}&nbsp;<span id="reviewLink" class="review-link">리뷰 보기</span>`;
-        
+
         // 새로 생성된 리뷰 링크에 이벤트 리스너 설정
         const newReviewLink = document.getElementById('reviewLink');
         if (newReviewLink) {
@@ -117,7 +170,7 @@ export const storeView = {
         const rank = index + 1;
         const avatarColor = this.getAvatarColor(user.name || user.user_name);
         const initial = (user.name || user.user_name || '?').charAt(0).toUpperCase();
-        
+
         return `
           <div class="top-user-item rank-${rank}">
             <div class="rank-badge rank-${rank}">${rank}</div>
@@ -202,7 +255,7 @@ export const storeView = {
 
   renderStoreUIHTML() {
     return window.StoreUIManager ? window.StoreUIManager.renderStoreHTML() : '';
-  }
+  },
 
   // 유틸리티 함수들
   getBenefitIcon(type) {
@@ -235,12 +288,12 @@ export const storeView = {
       'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
       'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
     ];
-    
+
     const hash = name.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return colors[Math.abs(hash) % colors.length];
   },
 

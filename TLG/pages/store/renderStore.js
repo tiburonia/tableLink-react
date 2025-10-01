@@ -41,9 +41,9 @@ async function renderStore(storeData) {
     await storeController.renderStore(storeData);
 
     // 매장 테이블 정보 로딩
-    
+
     //
-    
+
   } catch (error) {
     console.error('❌ renderStore 실행 실패:', error);
 
@@ -111,16 +111,16 @@ function showAllTopUsers(store) {
   alert(`${store?.name}의 모든 단골 고객 목록을 보여줍니다. (개발 예정)`);
 }
 
-// 전역 함수 등록
-(function() {
+/**
+ * 전역 함수 등록
+ */
+try {
   console.log('🔧 renderStore 전역 함수 등록 중...');
 
-  // renderStore, loadAndRenderStore, renderTableLayout, showAllPromotions, showAllTopUsers 함수를 전역으로 등록합니다.
+  // renderStore 함수 전역 등록
   window.renderStore = renderStore;
-  window.loadAndRenderStore = loadAndRenderStore;
-  window.renderTableLayout = renderTableLayout;
-  window.showAllPromotions = showAllPromotions;
-  window.showAllTopUsers = showAllTopUsers;
 
-  console.log('✅ renderStore 전역 함수 등록 완료:', typeof window.renderStore);
-})();
+  console.log('✅ renderStore 전역 등록 완료');
+} catch (error) {
+  console.error('❌ renderStore 전역 등록 실패:', error);
+}
