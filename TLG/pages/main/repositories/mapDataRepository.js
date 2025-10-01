@@ -49,53 +49,53 @@ export const mapDataRepository = {
   },
 
   /**
-   * 지역 데이터 조회
+   * 지역 데이터 조회 (비활성화됨)
    */
   async fetchProvinces() {
-    const response = await fetch('/api/stores/regions/provinces');
-    return await response.json();
+    console.log('📍 시도 데이터 조회 기능이 비활성화되었습니다');
+    throw new Error('시도 데이터 조회 기능이 비활성화되었습니다');
   },
 
   async fetchCities(province) {
-    const response = await fetch(`/api/stores/regions/cities?province=${encodeURIComponent(province)}`);
-    return await response.json();
+    console.log('📍 시군구 데이터 조회 기능이 비활성화되었습니다');
+    throw new Error('시군구 데이터 조회 기능이 비활성화되었습니다');
   },
 
   async fetchDistricts(province, city) {
-    const response = await fetch(`/api/stores/regions/districts?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}`);
-    return await response.json();
+    console.log('📍 읍면동 데이터 조회 기능이 비활성화되었습니다');
+    throw new Error('읍면동 데이터 조회 기능이 비활성화되었습니다');
   },
 
   /**
-   * 좌표 정보 조회
+   * 좌표 정보 조회 (비활성화됨)
    */
   async fetchCoordinates(province, city, district) {
-    const response = await fetch(`/api/stores/regions/coordinates?province=${encodeURIComponent(province)}&city=${encodeURIComponent(city)}&district=${encodeURIComponent(district)}`);
-    return await response.json();
+    console.log('📍 좌표 정보 조회 기능이 비활성화되었습니다');
+    throw new Error('좌표 정보 조회 기능이 비활성화되었습니다');
   },
 
   /**
-   * 현재 위치 정보 조회
+   * 현재 위치 정보 조회 (비활성화됨)
    */
   async fetchLocationInfo(lat, lng) {
-    const response = await fetch(`/api/stores/get-location-info?lat=${lat}&lng=${lng}`);
-    return await response.json();
+    console.log('📍 현재 위치 정보 조회 기능이 비활성화되었습니다');
+    throw new Error('현재 위치 정보 조회 기능이 비활성화되었습니다');
   },
 
   /**
-   * 행정기관 좌표 조회
+   * 행정기관 좌표 조회 (비활성화됨)
    */
   async fetchAdministrativeOffice(regionType, regionName) {
-    const response = await fetch(`/api/stores/administrative-office?regionType=${regionType}&regionName=${encodeURIComponent(regionName)}`);
-    return await response.json();
+    console.log('📍 행정기관 좌표 조회 기능이 비활성화되었습니다');
+    throw new Error('행정기관 좌표 조회 기능이 비활성화되었습니다');
   },
 
   /**
-   * 읍면동 중심점 조회
+   * 읍면동 중심점 조회 (비활성화됨)
    */
   async fetchEupmyeondongCenter(sido, sigungu, eupmyeondong) {
-    const response = await fetch(`/api/stores/eupmyeondong-center?sido=${encodeURIComponent(sido)}&sigungu=${encodeURIComponent(sigungu)}&eupmyeondong=${encodeURIComponent(eupmyeondong)}`);
-    return await response.json();
+    console.log('📍 읍면동 중심점 조회 기능이 비활성화되었습니다');
+    throw new Error('읍면동 중심점 조회 기능이 비활성화되었습니다');
   }
 };
 

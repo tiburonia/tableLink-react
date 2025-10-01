@@ -73,116 +73,27 @@ export const mapService = {
   },
 
   /**
-   * 위치 설정 처리
+   * 위치 설정 처리 (비활성화됨)
    */
   async processLocationSetting(province, city, district) {
-    console.log(`📍 위치 설정 처리: ${province} ${city} ${district}`);
-
-    let coords = null;
-    let locationName = `${province} ${city} ${district}`;
-
-    try {
-      // 1. 시군구 행정기관 좌표 시도
-      const adminResponse = await mapDataRepository.fetchAdministrativeOffice('sigungu', city);
-      if (adminResponse.success && adminResponse.office) {
-        coords = {
-          lat: adminResponse.office.latitude,
-          lng: adminResponse.office.longitude
-        };
-        locationName = `${city} (행정기관)`;
-        console.log(`✅ 시군구 행정기관 좌표 발견`);
-      }
-    } catch (error) {
-      console.warn('시군구 행정기관 좌표 조회 실패:', error);
-    }
-
-    // 2. 시도 행정기관 좌표 시도 (실패시)
-    if (!coords) {
-      try {
-        const provinceResponse = await mapDataRepository.fetchAdministrativeOffice('sido', province);
-        if (provinceResponse.success && provinceResponse.office) {
-          coords = {
-            lat: provinceResponse.office.latitude,
-            lng: provinceResponse.office.longitude
-          };
-          locationName = `${province} (도청/시청)`;
-          console.log(`✅ 시도 행정기관 좌표 발견`);
-        }
-      } catch (error) {
-        console.warn('시도 행정기관 좌표 조회 실패:', error);
-      }
-    }
-
-    // 3. 읍면동 중심점 시도 (실패시)
-    if (!coords) {
-      try {
-        const districtResponse = await mapDataRepository.fetchEupmyeondongCenter(province, city, district);
-        if (districtResponse.success && districtResponse.center) {
-          coords = {
-            lat: districtResponse.center.latitude,
-            lng: districtResponse.center.longitude
-          };
-          locationName = `${district} (중심점)`;
-          console.log(`✅ 읍면동 중심점 좌표 발견`);
-        }
-      } catch (error) {
-        console.warn('읍면동 중심점 조회 실패:', error);
-      }
-    }
-
-    // 4. 기본 좌표 API 시도 (모든 것이 실패시)
-    if (!coords) {
-      const response = await mapDataRepository.fetchCoordinates(province, city, district);
-      if (response.success && response.coordinates) {
-        coords = response.coordinates;
-        locationName = `${province} ${city} ${district}`;
-        console.log(`✅ 기본 좌표 API 성공`);
-      }
-    }
-
-    if (!coords) {
-      throw new Error('해당 지역의 좌표를 찾을 수 없습니다');
-    }
-
-    return { coords, locationName };
+    console.log(`📍 위치 설정 기능이 비활성화되었습니다: ${province} ${city} ${district}`);
+    throw new Error('위치 설정 기능이 비활성화되었습니다');
   },
 
   /**
-   * 지역 데이터 로드
+   * 지역 데이터 로드 (비활성화됨)
    */
   async getRegionData(type, parentData = {}) {
-    switch (type) {
-      case 'provinces':
-        return await mapDataRepository.fetchProvinces();
-      case 'cities':
-        return await mapDataRepository.fetchCities(parentData.province);
-      case 'districts':
-        return await mapDataRepository.fetchDistricts(parentData.province, parentData.city);
-      default:
-        throw new Error(`지원하지 않는 지역 타입: ${type}`);
-    }
+    console.log(`📍 지역 데이터 로드 기능이 비활성화되었습니다: ${type}`);
+    throw new Error('지역 데이터 로드 기능이 비활성화되었습니다');
   },
 
   /**
-   * 현재 위치 정보 업데이트
+   * 현재 위치 정보 업데이트 (비활성화됨)
    */
   async updateCurrentLocationInfo(map) {
-    const center = map.getCenter();
-    const lat = center.getLat();
-    const lng = center.getLng();
-
-    try {
-      const data = await mapDataRepository.fetchLocationInfo(lat, lng);
-      
-      if (data.success && data.eupmyeondong) {
-        return data.eupmyeondong;
-      }
-      
-      return '위치 정보 없음';
-    } catch (error) {
-      console.error('현재 위치 정보 로딩 실패:', error);
-      return '위치 정보 없음';
-    }
+    console.log('📍 현재 위치 정보 업데이트 기능이 비활성화되었습니다');
+    return '지도';
   },
 
   /**

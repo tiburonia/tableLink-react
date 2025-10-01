@@ -330,17 +330,11 @@ export const mapController = {
   },
 
   /**
-   * 위치 모달 열기
+   * 위치 모달 열기 (비활성화됨)
    */
   async openLocationModal() {
-    const locationModal = document.getElementById('locationModal');
-    locationModal.classList.remove('hidden');
-
-    try {
-      await this.loadProvinces();
-    } catch (error) {
-      console.error('❌ 지역 데이터 로드 실패:', error);
-    }
+    console.log('📍 위치 선택 기능이 비활성화되었습니다');
+    alert('위치 선택 기능이 비활성화되었습니다');
   },
 
   /**
@@ -353,71 +347,19 @@ export const mapController = {
   },
 
   /**
-   * GPS 현재 위치 가져오기
+   * GPS 현재 위치 가져오기 (비활성화됨)
    */
   getCurrentGPSLocation() {
-    const getCurrentLocationBtn = document.getElementById('getCurrentLocationBtn');
-    
-    if (!navigator.geolocation) {
-      alert('이 브라우저는 위치 서비스를 지원하지 않습니다.');
-      return;
-    }
-
-    getCurrentLocationBtn.textContent = '🔍 위치 찾는 중...';
-    getCurrentLocationBtn.disabled = true;
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        this.setMapLocation(lat, lng, '현재 GPS 위치');
-        this.closeLocationModal();
-
-        getCurrentLocationBtn.textContent = '🎯 현재 GPS 위치 사용';
-        getCurrentLocationBtn.disabled = false;
-      },
-      (error) => {
-        console.error('GPS 위치 가져오기 실패:', error);
-        alert('위치 정보를 가져올 수 없습니다. 브라우저 설정에서 위치 권한을 확인해주세요.');
-
-        getCurrentLocationBtn.textContent = '🎯 현재 GPS 위치 사용';
-        getCurrentLocationBtn.disabled = false;
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000
-      }
-    );
+    console.log('📍 GPS 위치 기능이 비활성화되었습니다');
+    alert('GPS 위치 기능이 비활성화되었습니다');
   },
 
   /**
-   * 위치 설정 확인
+   * 위치 설정 확인 (비활성화됨)
    */
   async confirmLocationSetting() {
-    const provinceSelect = document.getElementById('provinceSelect');
-    const citySelect = document.getElementById('citySelect');
-    const districtSelect = document.getElementById('districtSelect');
-
-    const province = provinceSelect.value;
-    const city = citySelect.value;
-    const district = districtSelect.value;
-
-    if (!province || !city || !district) {
-      alert('모든 지역을 선택해주세요.');
-      return;
-    }
-
-    try {
-      const { coords, locationName } = await mapService.processLocationSetting(province, city, district);
-      this.setMapLocation(coords.lat, coords.lng, locationName);
-      this.closeLocationModal();
-      console.log(`📍 위치 설정 완료: ${locationName}`);
-    } catch (error) {
-      console.error('❌ 위치 설정 실패:', error);
-      alert(error.message || '위치 정보를 가져올 수 없습니다.');
-    }
+    console.log('📍 위치 설정 확인 기능이 비활성화되었습니다');
+    alert('위치 설정 기능이 비활성화되었습니다');
   },
 
   /**
@@ -435,45 +377,26 @@ export const mapController = {
   },
 
   /**
-   * 지역 데이터 로드
+   * 지역 데이터 로드 (비활성화됨)
    */
   async loadProvinces() {
-    try {
-      const data = await mapService.getRegionData('provinces');
-      mapView.populateProvinceSelect(data.provinces);
-    } catch (error) {
-      console.error('❌ 시도 데이터 로드 실패:', error);
-    }
+    console.log('📍 시도 데이터 로드 기능이 비활성화되었습니다');
   },
 
   async loadCities(province) {
-    try {
-      const data = await mapService.getRegionData('cities', { province });
-      mapView.populateCitySelect(data.cities);
-    } catch (error) {
-      console.error('❌ 시군구 데이터 로드 실패:', error);
-    }
+    console.log('📍 시군구 데이터 로드 기능이 비활성화되었습니다');
   },
 
   async loadDistricts(province, city) {
-    try {
-      const data = await mapService.getRegionData('districts', { province, city });
-      mapView.populateDistrictSelect(data.districts);
-    } catch (error) {
-      console.error('❌ 읍면동 데이터 로드 실패:', error);
-    }
+    console.log('📍 읍면동 데이터 로드 기능이 비활성화되었습니다');
   },
 
   /**
-   * 현재 위치 정보 업데이트
+   * 현재 위치 정보 업데이트 (비활성화됨)
    */
   async updateLocationInfo() {
-    try {
-      const locationText = await mapService.updateCurrentLocationInfo(this.state.map);
-      mapView.updateLocationText(locationText);
-    } catch (error) {
-      console.error('❌ 위치 정보 업데이트 실패:', error);
-    }
+    console.log('📍 위치 정보 업데이트 기능이 비활성화되었습니다');
+    mapView.updateLocationText('지도');
   },
 
   /**
