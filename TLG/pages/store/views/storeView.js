@@ -296,7 +296,12 @@ export const storeView = {
 
   renderTableStatusHTML(store) {
     // modules/tableStatusHTML.js에 의존
-    return window.tableStatusHTML ? window.tableStatusHTML.renderTableStatusHTML(store) : '';
+    if (window.tableStatusHTML && typeof window.tableStatusHTML.renderTableStatusHTML === 'function') {
+      return window.tableStatusHTML.renderTableStatusHTML(store);
+    } else {
+      console.warn('⚠️ tableStatusHTML 모듈을 찾을 수 없습니다');
+      return '<div class="table-status-placeholder">테이블 현황을 불러오는 중...</div>';
+    }
   },
 
   getStoreStyles() {
