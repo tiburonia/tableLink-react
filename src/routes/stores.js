@@ -29,7 +29,9 @@ router.get('/search', async (req, res) => {
         si.category,
         si.rating_average,
         si.review_count,
-        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as address
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude
       FROM stores s
       LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN store_addresses sa ON s.id = sa.store_id
@@ -61,9 +63,9 @@ router.get('/search', async (req, res) => {
       reviewCount: store.review_count || 0,
       favoriteCount: 0,
       isOpen: store.is_open !== false,
-      coord: store.lat && store.lng ? { 
-        lat: parseFloat(store.lat), 
-        lng: parseFloat(store.lng) 
+      coord: store.latitude && store.longitude ? { 
+        lat: parseFloat(store.latitude), 
+        lng: parseFloat(store.longitude) 
       } : null,
       region: {
         sido: store.sido,

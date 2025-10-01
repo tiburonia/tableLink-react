@@ -66,7 +66,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
     WHERE ST_X(geom) BETWEEN $1 AND $3 
       AND ST_Y(geom) BETWEEN $2 AND $4
   `;
-  
+
   const bboxResult = await pool.query(bboxQuery, [xmin, ymin, xmax, ymax]);
   console.log(`📍 bbox 영역 내 매장 수: ${bboxResult.rows[0].count}`);
   console.log(`📍 DB 좌표 범위: lng(${bboxResult.rows[0].min_lng} ~ ${bboxResult.rows[0].max_lng}), lat(${bboxResult.rows[0].min_lat} ~ ${bboxResult.rows[0].max_lat})`);
@@ -85,8 +85,8 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
       COALESCE(si.rating_average, 0)::numeric(3,1) as rating_average,
       COALESCE(si.review_count, 0) as review_count,
       s.is_open,
-      ST_X(sa.geom) AS lng,
-      ST_Y(sa.geom) AS lat,
+      ST_Y(sa.geom) AS latitude,
+      ST_X(sa.geom) AS longitude,
       -- 주소 조합을 서버에서 처리
       CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
       sa.sido,
@@ -129,46 +129,46 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
   // 결과가 없으면 더 간단한 쿼리로 테스트
   if (result.rows.length === 0) {
     console.log('❌ 주 쿼리 결과 없음 - 대안 쿼리 실행');
-    
+
     // 조건 완화한 단순 쿼리
     const simpleQuery = `
-      SELECT sa.store_id, ST_X(sa.geom) as lng, ST_Y(sa.geom) as lat, s.name
+      SELECT sa.store_id, ST_X(sa.geom) as longitude, ST_Y(sa.geom) as latitude, s.name
       FROM store_addresses sa
       JOIN stores s ON s.id = sa.store_id  
       WHERE ST_X(sa.geom) BETWEEN $1 AND $3 
         AND ST_Y(sa.geom) BETWEEN $2 AND $4
       LIMIT 10
     `;
-    
+
     const simpleResult = await pool.query(simpleQuery, [xmin, ymin, xmax, ymax]);
     console.log(`📍 간단한 쿼리 결과: ${simpleResult.rows.length}개`);
-    
+
     if (simpleResult.rows.length > 0) {
       console.log('📍 샘플 데이터:', simpleResult.rows[0]);
     }
-    
+
     // 전체 영역에서 가장 가까운 매장 찾기
     const nearestQuery = `
-      SELECT sa.store_id, ST_X(sa.geom) as lng, ST_Y(sa.geom) as lat, s.name,
+      SELECT sa.store_id, ST_X(sa.geom) as longitude, ST_Y(sa.geom) as latitude, s.name,
              ST_Distance(sa.geom, ST_Point($1, $2)) as distance
       FROM store_addresses sa
       JOIN stores s ON s.id = sa.store_id
       ORDER BY distance
       LIMIT 5
     `;
-    
+
     const centerLng = (xmin + xmax) / 2;
     const centerLat = (ymin + ymax) / 2;
     const nearestResult = await pool.query(nearestQuery, [centerLng, centerLat]);
     console.log(`📍 가장 가까운 매장들:`, nearestResult.rows);
   }
-  
+
   const data = result.rows.map(row => {
     if (row.kind === 'cluster') {
       return {
         kind: 'cluster',
-        lat: parseFloat(row.lat),
-        lng: parseFloat(row.lng),
+        lat: parseFloat(row.latitude),
+        lng: parseFloat(row.longitude),
         count: parseInt(row.count),
         bounds: row.bounds
       };
@@ -186,8 +186,8 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
         favoriteCount: 0,
         isOpen: row.is_open !== false,
         coord: { 
-          lat: parseFloat(row.lat), 
-          lng: parseFloat(row.lng) 
+          lat: parseFloat(row.latitude), 
+          lng: parseFloat(row.longitude) 
         },
         region: {
           sido: row.sido,
@@ -195,8 +195,8 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
           eupmyeondong: row.eupmyeondong
         },
         // 하위 호환성을 위한 추가 필드들
-        lat: parseFloat(row.lat),
-        lng: parseFloat(row.lng),
+        lat: parseFloat(row.latitude),
+        lng: parseFloat(row.longitude),
         full_address: `${row.sido || ''} ${row.sigungu || ''} ${row.eupmyeondong || ''}`.trim(),
         is_open: row.is_open,
         rating_average: row.rating_average ? parseFloat(row.rating_average) : 0.0,
