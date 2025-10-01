@@ -92,18 +92,37 @@ class StoreRepository {
     const result = await pool.query(`
       SELECT 
         id,
+        store_id,
         name,
         description,
         price,
-        cook_station,
-        cook_station as category
+        cook_station
       FROM store_menu 
       WHERE store_id = $1
       ORDER BY id
     `, [storeId]);
 
-    return result.rows;
+ 
+    return result.rows.map(menuItem => ({
+      id: menuItem.id,
+      store_id: menuItem.store_id,
+      name: menuItem.name,
+      description: menuItem.description ? menuItem.description : '메뉴 설명 없음',
+      cook_station: menuItem.cook_station,
+      price: menuItem.price,
+    }))
   }
+
+  /**
+   * 매장 리뷰 조회 (ORDER BY created_at DESC) LIMIT 5)
+   */
+  async getStoreReview(storeId) {
+    const result = await pool.query(`
+    
+    `)
+    
+  }
+  
 
   /**
    * 매장 평점 정보 조회

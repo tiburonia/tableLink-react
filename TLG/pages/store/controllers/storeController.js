@@ -27,13 +27,9 @@ export const storeController = {
     try {
       let finalStoreData;
 
-      // storeData가 ID만 있는 경우 API에서 전체 데이터 가져오기
-      if (storeData && (storeData.id || storeData.store_id) && !storeData.name) {
-        const storeId = storeData.id || storeData.store_id;
+      if (storeData && storeData.store_id ) {
+        const storeId =  storeData.store_id;
         finalStoreData = await this.fetchStoreData(storeId);
-      } else if (storeData && storeData.id && storeData.name) {
-        // 전체 데이터가 있는 경우 API로 최신 데이터 가져오기
-        finalStoreData = await this.fetchStoreData(storeData.id);
       } else {
         // 데이터가 없는 경우 에러
         throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
