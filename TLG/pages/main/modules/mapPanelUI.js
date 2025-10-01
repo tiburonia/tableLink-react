@@ -738,7 +738,6 @@ window.MapPanelUI = {
       const stores = features.map(feature => {
         if (feature.kind === 'individual') {
           // ID 우선순위 확인 및 로깅
-          const originalId = feature.id;
           const originalStoreId = feature.store_id;
           
           console.log('🔍 원본 데이터 검사:', {
@@ -749,7 +748,7 @@ window.MapPanelUI = {
           });
 
           // ID 결정 - 우선순위: id > store_id
-          let storeId = originalId || originalStoreId;
+          let storeId = originalStoreId;
           
           // 숫자 형태의 문자열을 숫자로 변환
           if (typeof storeId === 'string' && !isNaN(storeId)) {
@@ -771,7 +770,6 @@ window.MapPanelUI = {
           }
           
           console.log('✅ 매장 데이터 변환 성공:', { 
-            originalId,
             originalStoreId, 
             finalId: storeId,
             finalIdType: typeof storeId,
@@ -783,11 +781,11 @@ window.MapPanelUI = {
             store_id: storeId,  // 호환성을 위해 store_id도 설정
             name: feature.name || '매장명 없음',
             category: feature.category || '기타',
-            address: `${feature.sido || ''} ${feature.sigungu || ''} ${feature.eupmyeondong || ''}`.trim() || '주소 정보 없음',
+            address: feature.full_address || '주소 정보 없음',
             ratingAverage: feature.rating_average ? parseFloat(feature.rating_average) : 0.0,
             reviewCount: feature.review_count || 0,
             favoriteCount: 0,
-            isOpen: feature.is_open !== false,
+            isOpen: feature.is_open || false,
             coord: { lat: feature.lat, lng: feature.lng },
             region: {
               sido: feature.sido,
