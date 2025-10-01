@@ -69,15 +69,43 @@ class StoreService {
      */
 
     const storeBasicInfo = {
+      // 기본 매장 정보
+      id: store.id,
+      store_id: store.id,
+      name: store.name,
+      category: store.category || '기타',
+      address: store.full_address || '주소 정보 없음',
+      phone: store.store_tel_number || null,
+      rating_average: store.rating_average ? parseFloat(store.rating_average) : 0.0,
+      review_count: store.review_count || 0,
+      isOpen: store.is_open !== false,
+      coord: {
+        lat: parseFloat(store.lat),
+        lng: parseFloat(store.lng)
+      },
+      region: {
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      },
       
-    } 
-     
-
-    
+      // 추가 데이터
+      menu: menu || [],                    // 메뉴 목록
+      tables: table || [],                 // 테이블 정보
+      reviews: review || [],               // 최근 리뷰 5개
+      promotions: promotion || [],         // 프로모션/단골레벨 정보
+      
+      // 메타 정보
+      menuCount: menu ? menu.length : 0,
+      tableCount: table ? table.length : 0,
+      reviewCount: review ? review.length : 0,
+      promotionCount: promotion ? promotion.length : 0
+    }; 
 
     console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
+    console.log(`📊 포함된 데이터: 메뉴 ${storeBasicInfo.menuCount}개, 테이블 ${storeBasicInfo.tableCount}개, 리뷰 ${storeBasicInfo.reviewCount}개, 프로모션 ${storeBasicInfo.promotionCount}개`);
     
-    return storeData;
+    return storeBasicInfo;
   }
 
   /**
