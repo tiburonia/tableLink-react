@@ -1,5 +1,6 @@
 
 const storeRepository = require('../repositories/storeRepository');
+const tableRepository = require('../repositories/tableRepository');
 
 /**
  * 매장 서비스 - 비즈니스 로직 처리
@@ -51,7 +52,7 @@ class StoreService {
     const menu = await storeRepository.getStoreMenu(numericStoreId)
 
     //테이블 정보 조회
-    const table = await storeRepository.getStoreTable(numericStoreId)
+    const table = await tableRepository.getStoreTable(numericStoreId)
 
     //매장 리뷰 조회 (ORDER BY created_at DESC) LIMIT 5)
     const review = await storeRepository.getStoreReview(numericStoreId)
@@ -67,7 +68,9 @@ class StoreService {
      *   const formattedStoreInfo = this.formatStoreData(store)
      */
 
-
+    const storeBasicInfo = {
+      
+    } 
      
 
     

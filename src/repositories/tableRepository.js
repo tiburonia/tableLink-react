@@ -196,6 +196,28 @@ class TableRepository {
       VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
     `, [orderId, tableId, storeId])
   }
+  /**
+   * store_id로 테이블 조회
+   */
+  async getStoreTable(storeId) {
+    reselt = pool.query (`
+    SELECT 
+    id,
+    store_id,
+    table_name,
+    capacity,
+    status
+    FROM store_tables
+    WHERE store_id = $1
+    `, [storeId])
+    return reselt.rows.map(table => ({
+      id: table.id,
+      store_id: table.store_id,
+      table_name: table.table_name,
+      capacity: table.capacity,
+      status: table.status
+    }))
+  }
 }
 
 

@@ -152,6 +152,31 @@ class StoreRepository {
       user_name: review.user_name || '익명'
     }));
   }
+  /**
+   * 매장 프로모션 조회
+   */
+   async getStorePromotion(storeId) {
+    const result = await pool.query(`
+      SELECT
+        id,
+        store_id,
+        level,
+        min_orders,
+        min_spent,
+        bebfit
+        FROM store_regular_levels
+        WHERE store_id = $1
+    `, [storeId])
+
+     return result.rows.map(promotion => ({
+        id: promotion.id,
+        store_id: promotion.store_id,
+        level: promotion.level,
+        min_orders: promotion.min_orders,
+        min_spent: promotion.min_spent,
+        benefit: promotion.benefit
+     }))
+   }
   
 
   /**
