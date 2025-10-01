@@ -11,7 +11,7 @@ export const storeView = {
       <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
         <span class="header-btn-ico">⬅️</span>
       </button>
-      <button id="TLL" class="header-btn" aria-label="QR결제">
+      <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
         <span class="header-btn-ico">📱</span>
       </button>
       <header id="storeHeader">
@@ -40,26 +40,47 @@ export const storeView = {
                     <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
                       ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
                     </span>
-                    <span class="store-category-tag">${store.category}</span>
+                    <span class="store-category-tag">음식점</span>
                   </div>
                 </div>
               </div>
             </div>
-            ${this.renderTableStatusHTML(store)}
             ${this.renderReviewPreviewHTML()}
-            ${this.renderPromotionCardHTML(store)}
-            ${this.renderLoyaltyLevelHTML()}
             ${this.renderTopUsersHTML(store)}
+            ${this.renderLoyaltyLevelHTML()}
+            ${this.renderPromotionCardHTML(store)}
+            ${this.renderTableStatusHTML(store)}
           </div>
-          <div id="storeTabContainer">
-            <div class="store-tab-navigation">
-              <button class="tab-btn active" data-tab="menu">메뉴</button>
-              <button class="tab-btn" data-tab="review">리뷰</button>
-            </div>
-            <div id="storeTabContent"></div>
+          <div id="storeNavBar" class="modern-nav">
+            <button class="nav-btn" data-tab="menu">
+              <span class="nav-ico">🍽️</span>
+              <span class="nav-label">메뉴</span>
+            </button>
+            <button class="nav-btn" data-tab="review">
+              <span class="nav-ico">💬</span>
+              <span class="nav-label">리뷰</span>
+            </button>
+            <button class="nav-btn" data-tab="photo">
+              <span class="nav-ico">📸</span>
+              <span class="nav-label">사진</span>
+            </button>
+            <button class="nav-btn" data-tab="info">
+              <span class="nav-ico">ℹ️</span>
+              <span class="nav-label">정보</span>
+            </button>
           </div>
+          <div id="storeContent"></div>
         </div>
       </div>
+      <nav id="storeBottomBar">
+        <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
+          <span class="btm-btn-ico">📞</span>
+        </button>
+        <button id="order" class="btm-btn order-btn">
+          <span class="order-text">포장·예약하기</span>
+          <span class="order-arrow">→</span>
+        </button>
+      </nav>
       ${this.getStoreStyles()}
     `;
   },
@@ -246,16 +267,15 @@ export const storeView = {
   },
 
   renderTableStatusHTML(store) {
-    return window.StoreUIManager ? window.StoreUIManager.renderTableStatusHTML(store) : '';
+    return window.tableStatusHTML ? window.tableStatusHTML.renderTableStatusHTML(store): '';
   },
 
   getStoreStyles() {
     return window.StoreUIManager ? window.StoreUIManager.getStoreStyles() : '';
   },
 
-  renderStoreUIHTML() {
-    return window.StoreUIManager ? window.StoreUIManager.renderStoreHTML() : '';
-  },
+  
+
 
   // 유틸리티 함수들
   getBenefitIcon(type) {
