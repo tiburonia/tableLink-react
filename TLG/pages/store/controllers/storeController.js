@@ -1,0 +1,410 @@
+
+// 매장 컨트롤러 - 이벤트 처리 및 흐름 제어
+let storeService, storeView;
+
+try {
+  const serviceModule = await import('../services/storeService.js');
+  const viewModule = await import('../views/storeView.js');
+  storeService = serviceModule.storeService;
+  storeView = viewModule.storeView;
+} catch (error) {
+  console.warn('⚠️ Store 모듈 임포트 실패:', error);
+}
+
+export const storeController = {
+  // 상태 관리
+  state: {
+    currentStore: null,
+    isInitialized: false,
+    activeTab: 'menu'
+  },
+
+  /**
+   * 매장 렌더링 메인 함수
+   */
+  async renderStore(storeData) {
+    try {
+      console.log('🏪 매장 렌더링 시작:', storeData.name, 'ID:', storeData.id);
+
+      // storeData 표준화 및 검증
+      const normalizedStore = await storeService.normalizeStoreData(storeData);
+      this.state.currentStore = normalizedStore;
+
+      // UI 렌더링
+      storeView.renderStoreHTML(normalizedStore);
+
+      // 이벤트 설정
+      this.setupEventListeners(normalizedStore);
+
+      // 초기 데이터 로드
+      await this.loadInitialData(normalizedStore);
+
+      // 전역 저장
+      window.currentStore = normalizedStore;
+      this.state.isInitialized = true;
+
+      console.log('✅ 매장 렌더링 완료:', normalizedStore.name);
+
+    } catch (error) {
+      console.error('❌ 매장 렌더링 실패:', error);
+      storeView.showError(error.message);
+    }
+  },
+
+  /**
+   * 이벤트 리스너 설정
+   */
+  setupEventListeners(store) {
+    try {
+      console.log('🔧 이벤트 리스너 설정 시작...');
+
+      // 즐겨찾기 버튼
+      this.setupFavoriteButton(store);
+
+      // 리뷰 링크
+      this.setupReviewEvents(store);
+
+      // TLL 버튼 (QR 주문)
+      this.setupTLLButton(store);
+
+      // 탭 네비게이션
+      this.setupTabNavigation(store);
+
+      // 패널 핸들링
+      this.setupPanelHandling();
+
+      // 테이블 관련 이벤트
+      this.setupTableEvents(store);
+
+      console.log('✅ 모든 이벤트 리스너 설정 완료');
+    } catch (error) {
+      console.error('❌ 이벤트 리스너 설정 실패:', error);
+    }
+  },
+
+  /**
+   * 즐겨찾기 버튼 이벤트
+   */
+  setupFavoriteButton(store) {
+    const favoriteBtn = document.getElementById('favoriteBtn');
+    if (favoriteBtn) {
+      favoriteBtn.addEventListener('click', () => {
+        if (typeof toggleFavorite === 'function') {
+          toggleFavorite(store);
+        }
+      });
+
+      if (typeof initializeFavoriteButton === 'function') {
+        initializeFavoriteButton(store);
+      }
+    }
+  },
+
+  /**
+   * 리뷰 관련 이벤트
+   */
+  setupReviewEvents(store) {
+    const reviewLink = document.getElementById('reviewLink');
+    if (reviewLink) {
+      reviewLink.addEventListener('click', () => {
+        if (typeof renderAllReview === 'function') {
+          renderAllReview(store);
+        }
+      });
+    }
+
+    const reviewSeeMoreBtns = document.getElementsByClassName('see-more-btn');
+    if (reviewSeeMoreBtns && reviewSeeMoreBtns.length > 0) {
+      reviewSeeMoreBtns[0].addEventListener('click', () => {
+        if (typeof renderAllReview === 'function') {
+          renderAllReview(store);
+        }
+      });
+    }
+  },
+
+  /**
+   * TLL 버튼 이벤트 (QR 주문)
+   */
+  setupTLLButton(store) {
+    const tllButton = document.getElementById('TLL');
+    if (tllButton) {
+      tllButton.removeAttribute('onclick');
+      tllButton.addEventListener('click', async () => {
+        try {
+          console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 선택`);
+
+          const normalizedStore = {
+            id: store.id,
+            store_id: store.id,
+            name: store.name,
+            category: store.category || '기타',
+            address: store.address || '주소 정보 없음',
+            isOpen: store.isOpen !== false,
+            menu: Array.isArray(store.menu) ? store.menu : []
+          };
+
+          // 전역 저장
+          window.preselectedStoreForTLL = normalizedStore;
+          window.selectedStore = normalizedStore;
+          window.currentStoreForTLL = normalizedStore;
+
+          if (typeof window.TLL === 'function') {
+            await window.TLL(normalizedStore);
+          } else if (typeof TLL === 'function') {
+            await TLL(normalizedStore);
+          } else {
+            await this.loadTLLScript(normalizedStore);
+          }
+        } catch (error) {
+          console.error('❌ TLL 실행 실패:', error);
+          alert('QR 주문 시스템 실행 중 오류가 발생했습니다.');
+        }
+      });
+    }
+  },
+
+  /**
+   * TLL 스크립트 동적 로드
+   */
+  async loadTLLScript(store) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = '/TLG/utils/TLL.js';
+      
+      script.onload = async () => {
+        setTimeout(async () => {
+          try {
+            if (typeof window.TLL === 'function') {
+              await window.TLL(store);
+              resolve();
+            } else {
+              reject(new Error('TLL 함수를 찾을 수 없습니다'));
+            }
+          } catch (error) {
+            reject(error);
+          }
+        }, 100);
+      };
+      
+      script.onerror = () => reject(new Error('TLL.js 스크립트 로드 실패'));
+      document.head.appendChild(script);
+    });
+  },
+
+  /**
+   * 탭 네비게이션 설정
+   */
+  setupTabNavigation(store) {
+    if (window.StoreTabManager && typeof window.StoreTabManager.initializeTabNavigation === 'function') {
+      window.StoreTabManager.initializeTabNavigation(store);
+    }
+  },
+
+  /**
+   * 패널 핸들링 설정
+   */
+  setupPanelHandling() {
+    if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
+      window.StorePanelManager.initializePanelHandling();
+    }
+  },
+
+  /**
+   * 테이블 관련 이벤트
+   */
+  setupTableEvents(store) {
+    const tlrContainer = document.getElementById('TLR');
+    if (tlrContainer) {
+      tlrContainer.addEventListener('click', () => {
+        if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+          window.TableInfoManager.loadTableInfo(store);
+        }
+      });
+    }
+
+    this.setupTableDetailToggle();
+    this.setupTableActions(store);
+  },
+
+  /**
+   * 테이블 상세 토글 버튼
+   */
+  setupTableDetailToggle() {
+    const tableDetailToggleBtn = document.getElementById('tableDetailToggleBtn');
+    const tableDetailContent = document.getElementById('tableDetailContent');
+
+    if (tableDetailToggleBtn && tableDetailContent && !tableDetailToggleBtn.hasAttribute('data-event-set')) {
+      tableDetailToggleBtn.setAttribute('data-event-set', 'true');
+      tableDetailToggleBtn.addEventListener('click', () => {
+        const isExpanded = tableDetailContent.style.display !== 'none';
+
+        if (isExpanded) {
+          tableDetailContent.classList.remove('show');
+          setTimeout(() => {
+            tableDetailContent.style.display = 'none';
+          }, 300);
+          tableDetailToggleBtn.classList.remove('expanded');
+          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 자세히 보기';
+        } else {
+          tableDetailContent.style.display = 'block';
+          setTimeout(() => {
+            tableDetailContent.classList.add('show');
+          }, 10);
+          tableDetailToggleBtn.classList.add('expanded');
+          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 간단히 보기';
+        }
+      });
+    }
+  },
+
+  /**
+   * 테이블 액션 버튼들
+   */
+  setupTableActions(store) {
+    const manualRefreshBtn = document.getElementById('manualRefreshBtn');
+    if (manualRefreshBtn && !manualRefreshBtn.hasAttribute('data-event-set')) {
+      manualRefreshBtn.setAttribute('data-event-set', 'true');
+      manualRefreshBtn.addEventListener('click', () => {
+        if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+          window.TableInfoManager.loadTableInfo(this.state.currentStore);
+        }
+      });
+    }
+  },
+
+  /**
+   * 초기 데이터 로드
+   */
+  async loadInitialData(store) {
+    try {
+      console.log('📊 초기 데이터 로드 시작...');
+
+      // 리뷰 데이터 로드
+      await this.loadReviewData(store);
+
+      // 프로모션 데이터 로드
+      await this.loadPromotionData(store);
+
+      // 단골 레벨 데이터 로드
+      await this.loadLoyaltyData(store);
+
+      // 상위 사용자 데이터 로드
+      await this.loadTopUsersData(store);
+
+      // 테이블 정보 로드
+      this.loadTableInfo(store);
+
+      // 첫 화면(메뉴 탭) 설정
+      this.setInitialTab(store);
+
+      console.log('✅ 초기 데이터 로드 완료');
+    } catch (error) {
+      console.error('❌ 초기 데이터 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 리뷰 데이터 로드
+   */
+  async loadReviewData(store) {
+    try {
+      // 실시간 별점 정보 업데이트
+      const ratingData = await storeService.getStoreRating(store.id);
+      if (ratingData) {
+        store.ratingAverage = ratingData.ratingAverage;
+        store.reviewCount = ratingData.reviewCount;
+        storeView.updateRatingDisplay(ratingData.ratingAverage);
+      }
+
+      // 리뷰 미리보기 로드
+      if (window.ReviewManager && typeof window.ReviewManager.renderTopReviews === 'function') {
+        window.ReviewManager.renderTopReviews(store);
+      }
+    } catch (error) {
+      console.warn('⚠️ 리뷰 데이터 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 프로모션 데이터 로드
+   */
+  async loadPromotionData(store) {
+    try {
+      const promotions = await storeService.getPromotions(store.id);
+      storeView.updatePromotionUI(promotions);
+    } catch (error) {
+      console.warn('⚠️ 프로모션 데이터 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 단골 레벨 데이터 로드
+   */
+  async loadLoyaltyData(store) {
+    try {
+      const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
+      
+      if (userInfo && window.RegularLevelManager) {
+        const levelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, store.id);
+        storeView.updateLoyaltyUI(levelData, store);
+      } else {
+        storeView.updateLoyaltyUI(null, store);
+      }
+    } catch (error) {
+      console.warn('⚠️ 단골 레벨 데이터 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 상위 사용자 데이터 로드
+   */
+  async loadTopUsersData(store) {
+    try {
+      const topUsers = await storeService.getTopUsers(store.id);
+      storeView.updateTopUsersUI(topUsers);
+    } catch (error) {
+      console.warn('⚠️ 상위 사용자 데이터 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 테이블 정보 로드
+   */
+  loadTableInfo(store) {
+    if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+      setTimeout(() => {
+        window.TableInfoManager.loadTableInfo(store);
+      }, 500);
+    }
+  },
+
+  /**
+   * 초기 탭 설정
+   */
+  setInitialTab(store) {
+    setTimeout(() => {
+      if (window.StoreTabManager && typeof window.StoreTabManager.renderStoreTab === 'function') {
+        window.StoreTabManager.renderStoreTab('menu', store);
+        
+        const menuBtn = document.querySelector('[data-tab="menu"]');
+        if (menuBtn) {
+          menuBtn.classList.add('active');
+        }
+      }
+    }, 200);
+  },
+
+  /**
+   * 상태 초기화
+   */
+  reset() {
+    console.log('🔄 Store Controller 상태 초기화');
+    this.state.currentStore = null;
+    this.state.isInitialized = false;
+    this.state.activeTab = 'menu';
+  }
+};
+
+// 전역 등록
+window.storeController = storeController;
