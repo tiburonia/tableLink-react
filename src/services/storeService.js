@@ -115,10 +115,7 @@ class StoreService {
       reviewCount: review ? review.length : 0,
       promotionCount: promotion ? promotion.length : 0,
       
-      // 평균 평점 (리뷰 기반)
-      averageRating: review && review.length > 0 ? 
-        (review.reduce((sum, rev) => sum + (rev.rating || 0), 0) / review.length).toFixed(1) : 
-        store.rating_average ? parseFloat(store.rating_average).toFixed(1) : '0.0',
+      
       
       // 테이블 상태 요약
       tableStatusSummary: table ? {
@@ -127,18 +124,7 @@ class StoreService {
         total: table.length
       } : { available: 0, occupied: 0, total: 0 },
       
-      // 메뉴 카테고리별 개수
-      menuByStation: menu ? menu.reduce((acc, item) => {
-        const station = item.cook_station || 'KITCHEN';
-        acc[station] = (acc[station] || 0) + 1;
-        return acc;
-      }, {}) : {},
       
-      // 프로모션 레벨 요약
-      promotionSummary: promotion ? {
-        maxLevel: Math.max(...promotion.map(p => p.level || 0), 0),
-        levels: promotion.map(p => p.level).sort((a, b) => a - b)
-      } : { maxLevel: 0, levels: [] }
     }; 
 
     console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
