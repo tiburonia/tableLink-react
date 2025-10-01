@@ -24,7 +24,8 @@ class StoreService {
     console.log(`🏪 매장 ${storeId} 기본 정보 조회 요청`);
 
     // 매장 기본정보 조회
-    const store = await storeRepository.getStoreById(numericStoreId);
+    const storeResult = await storeRepository.getStoreById(numericStoreId);
+    const store = storeResult[0]; // 배열의 첫 번째 요소 사용
 
     
     //매장 메뉴 조회

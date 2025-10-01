@@ -176,7 +176,7 @@ class StoreRepository {
         level,
         min_orders,
         min_spent,
-        bebfit
+        benefit
         FROM store_regular_levels
         WHERE store_id = $1
     `, [storeId])

@@ -200,7 +200,7 @@ class TableRepository {
    * store_id로 테이블 조회
    */
   async getStoreTable(storeId) {
-    reselt = pool.query (`
+    const result = await pool.query(`
     SELECT 
     id,
     store_id,
@@ -210,7 +210,7 @@ class TableRepository {
     FROM store_tables
     WHERE store_id = $1
     `, [storeId])
-    return reselt.rows.map(table => ({
+    return result.rows.map(table => ({
       id: table.id,
       store_id: table.store_id,
       table_name: table.table_name,
