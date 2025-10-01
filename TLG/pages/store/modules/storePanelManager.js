@@ -2,6 +2,8 @@
 // 매장 패널 관리자
 window.StorePanelManager = {
   initializePanelHandling() {
+    console.log('🔧 패널 핸들링 초기화 시작...');
+    
     const panel = document.getElementById('storePanel');
     const panelHandle = document.getElementById('panelHandle');
     const storePanelContainer = document.getElementById('storePanelContainer');
@@ -9,7 +11,18 @@ window.StorePanelManager = {
     const storeNavBar = document.getElementById('storeNavBar');
     const storeContent = document.getElementById('storeContent');
 
-    if (!panel || !storePanelContainer) return;
+    if (!panel || !storePanelContainer) {
+      console.warn('⚠️ 필수 패널 요소를 찾을 수 없습니다:', {
+        panel: !!panel,
+        storePanelContainer: !!storePanelContainer
+      });
+      return;
+    }
+
+    console.log('✅ 패널 요소 확인 완료');
+
+    // 스크롤 설정 강제 적용
+    this.forceScrollSettings(storePanelContainer);
 
     // 레이아웃 조정
     this.adjustLayout();
@@ -24,7 +37,29 @@ window.StorePanelManager = {
     // 터치 이벤트 설정
     this.setupTouchEvents(panel, storePanelContainer);
 
-    setTimeout(() => this.adjustLayout(), 0);
+    // 초기 레이아웃 조정
+    setTimeout(() => {
+      this.adjustLayout();
+      console.log('✅ 패널 핸들링 초기화 완료');
+    }, 100);
+  },
+
+  /**
+   * 스크롤 설정 강제 적용
+   */
+  forceScrollSettings(container) {
+    console.log('📜 스크롤 설정 강제 적용...');
+    
+    container.style.cssText += `
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+      scroll-behavior: smooth !important;
+      will-change: scroll-position !important;
+    `;
+    
+    console.log('✅ 스크롤 설정 강제 적용 완료');
   },
 
   adjustLayout() {
@@ -35,7 +70,10 @@ window.StorePanelManager = {
     const storeNavBar = document.getElementById('storeNavBar');
     const storeContent = document.getElementById('storeContent');
 
-    if (!panel || !storePanelContainer) return;
+    if (!panel || !storePanelContainer) {
+      console.warn('⚠️ 레이아웃 조정 실패: 패널 요소 없음');
+      return;
+    }
 
     const vh = window.innerHeight;
     const top = parseInt(window.getComputedStyle(panel).top, 10) || 0;
@@ -45,21 +83,28 @@ window.StorePanelManager = {
     
     // 패널 컨테이너 높이 계산
     const panelHeight = vh - top - bottomBarHeight - handleHeight - panelPadding;
+    
+    // 높이 설정
     storePanelContainer.style.height = `${panelHeight}px`;
+    
+    // 스크롤 설정 재적용 (중요!)
+    this.forceScrollSettings(storePanelContainer);
 
-    // 스크롤 활성화 보장
-    storePanelContainer.style.overflowY = 'auto';
-    storePanelContainer.style.overflowX = 'hidden';
-    storePanelContainer.style.webkitOverflowScrolling = 'touch';
-
+    // 컨텐츠 최소 높이 설정
     if (storeNavBar && storeContent) {
       const navBarOffset = storeNavBar.offsetTop;
       const containerHeight = storePanelContainer.clientHeight;
-      // 네비가 top에 닿기 전까지만 min-height 확보
-      storeContent.style.minHeight = navBarOffset > 0 ? (containerHeight + navBarOffset) + 'px' : '400px';
+      const minHeight = navBarOffset > 0 ? (containerHeight + navBarOffset) : 400;
+      storeContent.style.minHeight = `${minHeight}px`;
     }
 
     console.log(`📐 패널 레이아웃 조정: 높이 ${panelHeight}px, 상단 ${top}px`);
+    
+    // 스크롤 테스트
+    setTimeout(() => {
+      const canScroll = storePanelContainer.scrollHeight > storePanelContainer.clientHeight;
+      console.log(`📜 스크롤 가능 여부: ${canScroll} (scrollHeight: ${storePanelContainer.scrollHeight}, clientHeight: ${storePanelContainer.clientHeight})`);
+    }, 50);
   },
 
   setupWheelEvents(panel, storePanelContainer) {

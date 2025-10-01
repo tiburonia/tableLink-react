@@ -244,8 +244,38 @@ export const storeController = {
    * 패널 핸들링 설정
    */
   setupPanelHandling() {
-    if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
-      window.StorePanelManager.initializePanelHandling();
+    console.log('🔧 패널 핸들링 설정 시작...');
+    
+    // DOM이 준비될 때까지 대기
+    setTimeout(() => {
+      if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
+        console.log('✅ StorePanelManager 초기화 실행');
+        window.StorePanelManager.initializePanelHandling();
+      } else {
+        console.warn('⚠️ StorePanelManager를 찾을 수 없습니다');
+        // 폴백으로 기본 스크롤 설정
+        this.setupFallbackScrolling();
+      }
+    }, 100);
+  },
+
+  /**
+   * 폴백 스크롤 설정
+   */
+  setupFallbackScrolling() {
+    console.log('🔄 폴백 스크롤 설정 시작...');
+    
+    const storePanelContainer = document.getElementById('storePanelContainer');
+    if (storePanelContainer) {
+      // 스크롤 설정 강제 적용
+      storePanelContainer.style.overflowY = 'auto';
+      storePanelContainer.style.overflowX = 'hidden';
+      storePanelContainer.style.webkitOverflowScrolling = 'touch';
+      storePanelContainer.style.height = 'calc(100% - 24px)';
+      
+      console.log('✅ 폴백 스크롤 설정 완료');
+    } else {
+      console.warn('⚠️ storePanelContainer를 찾을 수 없습니다');
     }
   },
 
@@ -317,6 +347,12 @@ export const storeController = {
    */
   loadAdditionalData(store) {
     console.log('📊 추가 데이터 로드 시작...');
+
+    // 상태 저장
+    this.state.currentStore = store;
+
+    // 이벤트 리스너 설정
+    this.setupEventListeners(store);
 
     // 리뷰 데이터 로드
     this.loadReviewData(store).catch(error => console.warn('⚠️ 리뷰 데이터 로드 실패:', error));
