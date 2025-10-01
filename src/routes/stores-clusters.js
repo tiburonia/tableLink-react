@@ -50,6 +50,27 @@ router.get('/clusters', async (req, res) => {
 
 // 개별 매장 조회 - 서버에서 더 많은 집계 처리
 async function getIndividualStores(xmin, ymin, xmax, ymax) {
+  console.log(`🔍 매장 조회 시작 - bbox: [${xmin}, ${ymin}, ${xmax}, ${ymax}]`);
+
+  // 먼저 전체 매장 수 확인
+  const totalStoresQuery = `SELECT COUNT(*) as total FROM store_addresses`;
+  const totalResult = await pool.query(totalStoresQuery);
+  console.log(`📊 전체 매장 수: ${totalResult.rows[0].total}`);
+
+  // bbox 영역 내 매장 수 확인 (조건 완화)
+  const bboxQuery = `
+    SELECT COUNT(*) as count,
+           MIN(ST_X(geom)) as min_lng, MAX(ST_X(geom)) as max_lng,
+           MIN(ST_Y(geom)) as min_lat, MAX(ST_Y(geom)) as max_lat
+    FROM store_addresses sa
+    WHERE ST_X(geom) BETWEEN $1 AND $3 
+      AND ST_Y(geom) BETWEEN $2 AND $4
+  `;
+  
+  const bboxResult = await pool.query(bboxQuery, [xmin, ymin, xmax, ymax]);
+  console.log(`📍 bbox 영역 내 매장 수: ${bboxResult.rows[0].count}`);
+  console.log(`📍 DB 좌표 범위: lng(${bboxResult.rows[0].min_lng} ~ ${bboxResult.rows[0].max_lng}), lat(${bboxResult.rows[0].min_lat} ~ ${bboxResult.rows[0].max_lat})`);
+
   const query = `
     WITH viewport AS (
       SELECT ST_MakeEnvelope($1, $2, $3, $4, 4326) AS box
@@ -101,7 +122,46 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
     LIMIT 2000
   `;
 
+  console.log(`🔍 실행할 SQL 쿼리:`, query);
   const result = await pool.query(query, [xmin, ymin, xmax, ymax]);
+  console.log(`📊 쿼리 결과: ${result.rows.length}개 매장 조회됨`);
+
+  // 결과가 없으면 더 간단한 쿼리로 테스트
+  if (result.rows.length === 0) {
+    console.log('❌ 주 쿼리 결과 없음 - 대안 쿼리 실행');
+    
+    // 조건 완화한 단순 쿼리
+    const simpleQuery = `
+      SELECT sa.store_id, ST_X(sa.geom) as lng, ST_Y(sa.geom) as lat, s.name
+      FROM store_addresses sa
+      JOIN stores s ON s.id = sa.store_id  
+      WHERE ST_X(sa.geom) BETWEEN $1 AND $3 
+        AND ST_Y(sa.geom) BETWEEN $2 AND $4
+      LIMIT 10
+    `;
+    
+    const simpleResult = await pool.query(simpleQuery, [xmin, ymin, xmax, ymax]);
+    console.log(`📍 간단한 쿼리 결과: ${simpleResult.rows.length}개`);
+    
+    if (simpleResult.rows.length > 0) {
+      console.log('📍 샘플 데이터:', simpleResult.rows[0]);
+    }
+    
+    // 전체 영역에서 가장 가까운 매장 찾기
+    const nearestQuery = `
+      SELECT sa.store_id, ST_X(sa.geom) as lng, ST_Y(sa.geom) as lat, s.name,
+             ST_Distance(sa.geom, ST_Point($1, $2)) as distance
+      FROM store_addresses sa
+      JOIN stores s ON s.id = sa.store_id
+      ORDER BY distance
+      LIMIT 5
+    `;
+    
+    const centerLng = (xmin + xmax) / 2;
+    const centerLat = (ymin + ymax) / 2;
+    const nearestResult = await pool.query(nearestQuery, [centerLng, centerLat]);
+    console.log(`📍 가장 가까운 매장들:`, nearestResult.rows);
+  }
   
   const data = result.rows.map(row => {
     if (row.kind === 'cluster') {
