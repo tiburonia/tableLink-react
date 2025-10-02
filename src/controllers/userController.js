@@ -19,7 +19,16 @@ class UserController {
         });
       }
 
-      const data = await userService.getMypageData(parseInt(userId));
+      // userId는 users.id (PK) 값
+      const userPk = parseInt(userId);
+      if (isNaN(userPk) || userPk <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: '유효하지 않은 사용자 ID입니다'
+        });
+      }
+
+      const data = await userService.getMypageData(userPk);
 
       res.json({
         success: true,

@@ -8,10 +8,11 @@ import { mypageRepository } from '../repositories/mypageRepository.js';
 export const mypageService = {
   /**
    * 마이페이지 전체 데이터 로드 (통합 API 사용)
+   * @param {number} userId - users.id (PK 값)
    */
   async loadMypageData(userId) {
     try {
-      console.log('📖 마이페이지 통합 데이터 로드 시작:', userId);
+      console.log('📖 마이페이지 통합 데이터 로드 시작 (PK):', userId);
 
       // 통합 API 한 번 호출로 모든 데이터 조회
       const data = await mypageRepository.getMypageData(userId);

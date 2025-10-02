@@ -7,10 +7,11 @@ const userRepository = require('../repositories/userRepository');
 class UserService {
   /**
    * 마이페이지 통합 데이터 조회
+   * @param {number} userId - users.id (PK 값)
    */
   async getMypageData(userId) {
     try {
-      console.log('📖 마이페이지 통합 데이터 조회:', userId);
+      console.log('📖 마이페이지 통합 데이터 조회 (PK):', userId);
 
       // 병렬로 모든 데이터 조회
       const [userInfo, recentOrders, reviews, favoriteStores, regularLevels] = await Promise.all([

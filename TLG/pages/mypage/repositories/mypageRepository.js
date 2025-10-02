@@ -5,7 +5,8 @@
 
 export const mypageRepository = {
   /**
-   * 마이페이지 통합 데이터 조회 (NEW!)
+   * 마이페이지 통합 데이터 조회
+   * @param {number} userId - users.id (PK 값)
    */
   async getMypageData(userId) {
     try {
