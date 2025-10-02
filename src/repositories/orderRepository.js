@@ -693,14 +693,17 @@ class OrderRepository {
         s.id as store_id, 
         s.name as store_name,
         COUNT(DISTINCT ot.id) as ticket_count,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'menu_name', oi.menu_name,
-            'quantity', oi.quantity,
-            'unit_price', oi.unit_price,
-            'total_price', oi.total_price
-          )
-        ) FILTER (WHERE oi.id IS NOT NULL AND ot.paid_status = 'PAID' AND oi.item_status != 'CANCELED') as order_items
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'menu_name', oi.menu_name,
+              'quantity', oi.quantity,
+              'unit_price', oi.unit_price,
+              'total_price', oi.total_price
+            )
+          ) FILTER (WHERE oi.id IS NOT NULL AND ot.paid_status = 'PAID' AND oi.item_status != 'CANCELED'),
+          '[]'::json
+        ) as order_items
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
@@ -711,7 +714,13 @@ class OrderRepository {
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
 
-    return result.rows;
+    // null 값 필터링 및 빈 배열 처리
+    return result.rows.map(row => ({
+      ...row,
+      order_items: Array.isArray(row.order_items) 
+        ? row.order_items.filter(item => item !== null)
+        : []
+    }));
   }
 
   /**
