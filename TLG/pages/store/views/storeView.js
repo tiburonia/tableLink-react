@@ -1,3 +1,4 @@
+
 // 매장 뷰 - UI 렌더링 전담 (직접 모듈 import)
 import { tableStatusHTML } from './modules/tableStatusHTML.js';
 import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
@@ -33,9 +34,9 @@ export const storeView = {
           <div class="header-overlay"></div>
         </div>
       </header>
-      <div id="storeDetailPanel" class="collapsed">
-        <div id="storeDetailPanelHandle"></div>
-        <div id="storeDetailPanelContainer">
+      <div id="storePanel" class="collapsed">
+        <div id="panelHandle"></div>
+        <div id="storePanelContainer">
           <div id="storeInfoContainer">
             <div class="storeInfo">
               <div class="store-header-section">
@@ -98,7 +99,7 @@ export const storeView = {
    */
   renderModularComponents(store) {
     let components = '';
-
+    
     // 직접 import한 모듈들 사용
     components += reviewPreviewHTML.renderReviewPreviewHTML();
     components += topUsersHTML.renderTopUsersHTML(store);

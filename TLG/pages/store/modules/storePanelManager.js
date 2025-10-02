@@ -4,9 +4,9 @@ window.StorePanelManager = {
   initializePanelHandling() {
     console.log('🔧 패널 핸들링 초기화 시작...');
     
-    const panel = document.getElementById('storeDetailPanel');
-    const panelHandle = document.getElementById('storeDetailPanelHandle');
-    const storePanelContainer = document.getElementById('storeDetailPanelContainer');
+    const panel = document.getElementById('storePanel');
+    const panelHandle = document.getElementById('panelHandle');
+    const storePanelContainer = document.getElementById('storePanelContainer');
     const bottomBar = document.getElementById('storeBottomBar');
     const storeNavBar = document.getElementById('storeNavBar');
     const storeContent = document.getElementById('storeContent');
